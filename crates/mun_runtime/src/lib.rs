@@ -1,3 +1,5 @@
+extern crate cargo;
+extern crate failure;
 extern crate libloading;
 
 mod error;
@@ -35,10 +37,10 @@ impl MunRuntime {
         })
     }
 
-    pub fn add_module(&mut self, src: &Path, dst: &Path, recursive: bool) -> Result<()> {
-        let module = Module::new(src, dst)?;
-        let key = module.src().to_path_buf();
-        if self.modules.contains_key(&key) {
+    pub fn add_manifest(&mut self, manifest_path: &Path) -> Result<()> {
+        let mut module = Module::new(manifest_path)?;
+
+        if self.modules.contains_key(module.manifest_path()) {
             return Err(io::Error::new(
                 io::ErrorKind::AlreadyExists,
                 "A module with the same name already exists.",
@@ -46,24 +48,19 @@ impl MunRuntime {
             .into());
         }
 
-        self.modules.insert(key.clone(), module);
+        let mut source_path = module.manifest_path().parent().unwrap().to_path_buf();
+        source_path.push("src");
 
-        self.watcher.watch(
-            &key,
-            if recursive {
-                RecursiveMode::Recursive
-            } else {
-                RecursiveMode::NonRecursive
-            },
-        )?;
+        let output_path = module.compile()?;
+        module.load(&output_path)?;
 
-        println!("Watching directory: {}", src.to_string_lossy());
+        self.modules
+            .insert(module.manifest_path().to_path_buf(), module);
 
-        // TODO: compile src to dst
+        self.watcher
+            .watch(source_path.clone(), RecursiveMode::Recursive)?;
 
-        let module = self.modules.get_mut(&key).unwrap();
-        module.load()?;
-
+        println!("Watching directory: {}", source_path.to_string_lossy());
         Ok(())
     }
 
@@ -71,16 +68,17 @@ impl MunRuntime {
         self.modules.remove(src);
     }
 
-    pub fn get_symbol<T>(&self, module: &Path, name: &str) -> Result<Symbol<T>> {
-        let src = module.canonicalize()?;
-        if let Some(module) = self.modules.get(&src) {
+    pub fn get_symbol<T>(&self, manifest_path: &Path, name: &str) -> Result<Symbol<T>> {
+        let manifest_path = manifest_path.canonicalize()?;
+
+        if let Some(module) = self.modules.get(&manifest_path) {
             match module.library() {
                 Some(ref lib) => lib.get_fn(name),
                 None => Err(io::Error::new(
                     io::ErrorKind::NotFound,
                     format!(
                         "The library at path '{}' has not been loaded.",
-                        src.to_string_lossy()
+                        manifest_path.to_string_lossy()
                     ),
                 )
                 .into()),
@@ -90,7 +88,7 @@ impl MunRuntime {
                 io::ErrorKind::NotFound,
                 format!(
                     "The module at path '{}' cannot be found.",
-                    src.to_string_lossy()
+                    manifest_path.to_string_lossy()
                 ),
             )
             .into())
@@ -99,26 +97,30 @@ impl MunRuntime {
 
     pub fn update(&mut self) {
         while let Ok(event) = self.watcher_rx.try_recv() {
-            println!("{:?}", event);
             use notify::DebouncedEvent::*;
             match event {
-                NoticeWrite(ref path) | Write(ref path) | Create(ref path) => {
+                Write(ref path) | Create(ref path) => {
                     for ancestor in path.ancestors() {
-                        if let Some(module) = self.modules.get_mut(ancestor) {
+                        let mut manifest_path = ancestor.to_path_buf();
+                        manifest_path.push("Cargo.toml");
+
+                        if let Some(module) = self.modules.get_mut(&manifest_path) {
                             module.unload();
-
-                            // TODO: compile
-                            // For now, you need to manually run 'cargo build' in the command line, and press a key to continue
-                            let stdin = io::stdin();
-                            let mut input = String::new();
-                            stdin.read_line(&mut input);
-
-                            if let Err(e) = module.load() {
-                                println!(
-                                    "An error occured while loading library '{}': {:?}",
-                                    module.dst().to_string_lossy(),
+                            match module.compile() {
+                                Ok(ref output_path) => {
+                                    if let Err(e) = module.load(output_path) {
+                                        println!(
+                                            "An error occured while loading library '{}': {:?}",
+                                            module.manifest_path().to_string_lossy(),
+                                            e,
+                                        )
+                                    }
+                                }
+                                Err(e) => println!(
+                                    "An error occured while compiling library '{}': {:?}",
+                                    module.manifest_path().to_string_lossy(),
                                     e,
-                                )
+                                ),
                             }
 
                             return;

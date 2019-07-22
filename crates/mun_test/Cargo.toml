@@ -5,8 +5,4 @@ authors = ["Wodann <remco.kuijper@gmail.com>"]
 edition = "2018"
 
 [lib]
-name = "test"
 crate-type = ["cdylib"]
-
-[dependencies]
-mun_runtime = { path = "../mun_runtime" }

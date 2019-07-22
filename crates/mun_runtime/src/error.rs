@@ -2,12 +2,20 @@ use std::convert::From;
 use std::io;
 use std::result::Result as StdResult;
 
+use failure;
 use notify;
 
 #[derive(Debug)]
 pub enum Error {
+    Cargo(failure::Error),
     IO(io::Error),
-    Watcher(notify::Error),
+    Watch(notify::Error),
+}
+
+impl From<failure::Error> for Error {
+    fn from(error: failure::Error) -> Self {
+        Error::Cargo(error)
+    }
 }
 
 impl From<io::Error> for Error {
@@ -18,7 +26,7 @@ impl From<io::Error> for Error {
 
 impl From<notify::Error> for Error {
     fn from(error: notify::Error) -> Self {
-        Error::Watcher(error)
+        Error::Watch(error)
     }
 }
 
