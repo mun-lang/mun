@@ -1,5 +1,5 @@
 [package]
-name = "mun_project"
+name = "mun_symbols"
 version = "0.1.0"
 authors = ["Wodann <remco.kuijper@gmail.com>"]
 edition = "2018"
@@ -7,5 +7,5 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-mun_runtime = { path = "../mun_runtime" }
-mun_symbols = { path = "../mun_symbols" }
+lazy_static = "1.3"
+uuid = "0.7.4"

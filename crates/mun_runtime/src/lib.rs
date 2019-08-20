@@ -1,6 +1,7 @@
 extern crate cargo;
 extern crate failure;
 extern crate libloading;
+extern crate mun_symbols;
 
 mod error;
 mod library;
