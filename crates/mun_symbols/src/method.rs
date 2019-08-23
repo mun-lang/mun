@@ -4,28 +4,21 @@ use crate::prelude::*;
 pub struct MethodInfo {
     name: String,
     privacy: Privacy,
-    types: Vec<&'static TypeInfo>,
-    returns: bool,
+    args: &'static [&'static TypeInfo],
+    returns: Option<&'static TypeInfo>,
 }
 
 impl MethodInfo {
     pub fn new(
         name: &str,
         privacy: Privacy,
-        mut args: Vec<&'static TypeInfo>,
-        result: Option<&'static TypeInfo>,
+        args: &'static [&'static TypeInfo],
+        returns: Option<&'static TypeInfo>,
     ) -> MethodInfo {
-        let returns = if let Some(result) = result {
-            args.push(result);
-            true
-        } else {
-            false
-        };
-
         MethodInfo {
             name: name.to_string(),
             privacy,
-            types: args,
+            args,
             returns,
         }
     }

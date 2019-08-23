@@ -1,40 +1,27 @@
 #[macro_use]
 extern crate lazy_static;
 
-use std::collections::HashMap;
-
 use mun_symbols::prelude::*;
 
 lazy_static! {
-    static ref SYMBOLS: ModuleInfo = {
-        let fields = HashMap::new();
+    static ref ADD_TYPES: [&'static TypeInfo; 2] = [ f32::type_info(), f32::type_info() ];
 
-        let mut methods = HashMap::new();
-
-        let load = MethodInfo::new("load", Privacy::Public, Vec::new(), None);
-        methods.insert(load.name().to_string(), load);
-
-        let unload = MethodInfo::new("unload", Privacy::Public, Vec::new(), None);
-        methods.insert(unload.name().to_string(), unload);
-
-        let init = MethodInfo::new("init", Privacy::Public, Vec::new(), None);
-        methods.insert(init.name().to_string(), init);
-
-        let deinit = MethodInfo::new("deinit", Privacy::Public, Vec::new(), None);
-        methods.insert(deinit.name().to_string(), deinit);
-
-        let add = MethodInfo::new(
+    static ref METHODS: [MethodInfo; 5] = [
+        MethodInfo::new("load", Privacy::Public, &[], None),
+        MethodInfo::new("unload", Privacy::Public, &[], None),
+        MethodInfo::new("init", Privacy::Public, &[], None),
+        MethodInfo::new("deinit", Privacy::Public, &[], None),
+        MethodInfo::new(
             "add",
             Privacy::Public,
-            vec![f32::type_info(), f32::type_info()],
+            &ADD_TYPES[..],
             Some(f32::type_info()),
-        );
-        methods.insert(add.name().to_string(), add);
+        )
+    ];
 
-        let modules = HashMap::new();
-        let structs = HashMap::new();
-
-        ModuleInfo::new("mun_test", fields, methods, modules, structs)
+    static ref SYMBOLS: ModuleInfo = {
+        let methods: Vec<&'static MethodInfo> = METHODS.iter().collect();
+        ModuleInfo::new("mun_test", &[], &methods[..], &[])
     };
 }
 
