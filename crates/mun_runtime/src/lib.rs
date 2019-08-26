@@ -8,7 +8,8 @@ mod library;
 mod module;
 
 pub use crate::error::*;
-pub use crate::library::{Library, Symbol};
+pub use crate::library::Library;
+pub use crate::module::Module;
 
 use std::collections::HashMap;
 use std::io;
@@ -16,7 +17,6 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
-use crate::module::Module;
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
 pub struct MunRuntime {
@@ -69,31 +69,19 @@ impl MunRuntime {
         self.modules.remove(src);
     }
 
-    pub fn get_symbol<T>(&self, manifest_path: &Path, name: &str) -> Result<Symbol<T>> {
+    pub fn get_module(&self, manifest_path: &Path) -> Result<&Module> {
         let manifest_path = manifest_path.canonicalize()?;
 
-        if let Some(module) = self.modules.get(&manifest_path) {
-            match module.library() {
-                Some(ref lib) => lib.get_fn(name),
-                None => Err(io::Error::new(
-                    io::ErrorKind::NotFound,
-                    format!(
-                        "The library at path '{}' has not been loaded.",
-                        manifest_path.to_string_lossy()
-                    ),
-                )
-                .into()),
-            }
-        } else {
-            Err(io::Error::new(
+        self.modules.get(&manifest_path).ok_or(
+            io::Error::new(
                 io::ErrorKind::NotFound,
                 format!(
                     "The module at path '{}' cannot be found.",
                     manifest_path.to_string_lossy()
                 ),
             )
-            .into())
-        }
+            .into(),
+        )
     }
 
     pub fn update(&mut self) {

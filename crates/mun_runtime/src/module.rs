@@ -19,8 +19,8 @@ impl Module {
         })
     }
 
-    pub fn library(&self) -> &Option<Library> {
-        &self.library
+    pub fn library(&self) -> &Library {
+        self.library.as_ref().expect("Library was not loaded.")
     }
 
     pub fn manifest_path(&self) -> &Path {

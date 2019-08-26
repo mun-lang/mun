@@ -1,11 +1,9 @@
-extern crate mun_runtime;
-extern crate mun_symbols;
-
-use mun_runtime::{MunRuntime, Symbol};
-use mun_symbols::prelude::*;
 use std::path::Path;
 use std::thread;
 use std::time::Duration;
+
+use mun_runtime::{Library, Module, MunRuntime};
+use mun_symbols::prelude::*;
 
 fn main() {
     let mut runtime =
@@ -20,17 +18,28 @@ fn main() {
     loop {
         runtime.update();
 
-        let symbols_fn: Symbol<fn() -> &'static ModuleInfo> = runtime
-            .get_symbol(&manifest_path, "symbols")
-            .expect("Could not find 'symbols' function symbol.");
+        let module: &Module = runtime.get_module(&manifest_path).unwrap();
+        let library: &Library = module.library();
+        let symbols: &ModuleInfo = library.module_info();
 
-        println!("{:?}", symbols_fn());
+        let add_info = symbols
+            .get_method("add")
+            .expect("Failed to obtain method info");
 
-        let add_fn: Symbol<fn(f32, f32) -> f32> = runtime
-            .get_symbol(&manifest_path, "add")
-            .expect("Could not find 'add' function symbol.");
+        let add_fn = add_info
+            .factory()
+            .of(library.inner(), &add_info)
+            .expect("Failed to load function symbol.");
 
-        println!("2.0 + 2.0 = {}", add_fn(2.0, 2.0));
+        let a: f32 = 2.0;
+        let b: f32 = 2.0;
+        let c: f32 = *add_fn
+            .invoke(&[&a, &b])
+            .expect("Failed to invoke method.")
+            .downcast_ref()
+            .expect("Failed to downcast return value.");
+
+        println!("{a} + {b} = {c}", a = a, b = b, c = c);
 
         thread::sleep(Duration::from_secs(1));
     }

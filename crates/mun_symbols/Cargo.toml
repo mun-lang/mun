@@ -8,4 +8,5 @@ edition = "2018"
 
 [dependencies]
 lazy_static = "1.3"
+libloading = "0.5"
 uuid = "0.7.4"

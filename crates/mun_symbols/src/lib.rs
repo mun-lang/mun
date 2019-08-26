@@ -2,6 +2,7 @@
 
 #[macro_use]
 extern crate lazy_static;
+extern crate libloading;
 extern crate uuid;
 
 mod field;
@@ -13,7 +14,9 @@ mod reflection;
 pub mod prelude {
     pub use crate::field::FieldInfo;
     pub use crate::member::MemberInfo;
-    pub use crate::method::MethodInfo;
+    pub use crate::method::{
+        EmptyMethodFactory, Invokable, MethodArg2RetFactory, MethodFactory, MethodInfo,
+    };
     pub use crate::module::ModuleInfo;
     pub use crate::reflection::{Reflectable, TypeInfo};
     pub use crate::Privacy;
