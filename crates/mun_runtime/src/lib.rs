@@ -1,7 +1,6 @@
 extern crate cargo;
 extern crate failure;
 extern crate libloading;
-extern crate mun_symbols;
 
 mod error;
 mod library;
@@ -11,12 +10,14 @@ pub use crate::error::*;
 pub use crate::library::Library;
 pub use crate::module::Module;
 
+use core::any::Any;
 use std::collections::HashMap;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
+use mun_symbols::prelude::*;
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
 pub struct MunRuntime {
@@ -67,6 +68,44 @@ impl MunRuntime {
 
     pub fn remove_module(&mut self, src: &Path) {
         self.modules.remove(src);
+    }
+
+    pub fn invoke_library_method<Output: Clone + 'static>(
+        &self,
+        manifest_path: &Path,
+        method_name: &str,
+        args: &[&dyn Any],
+    ) -> StdResult<Output, String> {
+        let module: &Module = self.get_module(manifest_path).map_err(|_| {
+            format!(
+                "Unknown module with manifest path: {}",
+                manifest_path.to_string_lossy()
+            )
+        })?;
+
+        let library: &Library = module.library();
+        let symbols: &ModuleInfo = library.module_info();
+
+        let method_info = symbols.get_method(method_name).ok_or(format!(
+            "Failed to obtain method info for {module}::{method}.",
+            module = module.manifest_path().to_string_lossy(),
+            method = method_name
+        ))?;
+
+        let method = method_info.load(library.inner()).map_err(|_| {
+            format!(
+                "Failed to load method symbol for {module}::{method}.",
+                module = module.manifest_path().to_string_lossy(),
+                method = method_name
+            )
+        })?;
+
+        Ok(method
+            .invoke(args)
+            .expect("Failed to invoke method.")
+            .downcast_ref::<Output>()
+            .expect("Failed to downcast return value.")
+            .clone())
     }
 
     pub fn get_module(&self, manifest_path: &Path) -> Result<&Module> {

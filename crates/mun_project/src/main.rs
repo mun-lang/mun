@@ -2,8 +2,7 @@ use std::path::Path;
 use std::thread;
 use std::time::Duration;
 
-use mun_runtime::{Library, Module, MunRuntime};
-use mun_symbols::prelude::*;
+use mun_runtime::MunRuntime;
 
 fn main() {
     let mut runtime =
@@ -18,26 +17,11 @@ fn main() {
     loop {
         runtime.update();
 
-        let module: &Module = runtime.get_module(&manifest_path).unwrap();
-        let library: &Library = module.library();
-        let symbols: &ModuleInfo = library.module_info();
-
-        let add_info = symbols
-            .get_method("add")
-            .expect("Failed to obtain method info");
-
-        let add_fn = add_info
-            .factory()
-            .of(library.inner(), &add_info)
-            .expect("Failed to load function symbol.");
-
         let a: f32 = 2.0;
         let b: f32 = 2.0;
-        let c: f32 = *add_fn
-            .invoke(&[&a, &b])
-            .expect("Failed to invoke method.")
-            .downcast_ref()
-            .expect("Failed to downcast return value.");
+        let c: f32 = runtime
+            .invoke_library_method(&manifest_path, "add", &[&a, &b])
+            .expect("Failed to invoke method.");
 
         println!("{a} + {b} = {c}", a = a, b = b, c = c);
 

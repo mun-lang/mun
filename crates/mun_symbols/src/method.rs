@@ -31,8 +31,8 @@ impl MethodInfo {
         }
     }
 
-    pub fn factory(&self) -> &dyn MethodFactory {
-        self.factory
+    pub fn load<'a>(&'a self, library: &'a Library) -> libloading::Result<Box<dyn Invokable + 'a>> {
+        self.factory.of(library, self)
     }
 }
 
@@ -55,7 +55,7 @@ impl MemberInfo for MethodInfo {
 }
 
 pub trait Invokable {
-    fn invoke(&self, args: &[&dyn Any]) -> Result<Box<dyn Any>, &'static str>;
+    fn invoke(&self, args: &[&dyn Any]) -> Result<Box<dyn Any>, String>;
 }
 
 pub trait MethodFactory: Debug + Sync + Send {
@@ -143,13 +143,20 @@ impl<'lib> EmptyMethod<'lib> {
 }
 
 impl<'lib> Invokable for EmptyMethod<'lib> {
-    fn invoke(&self, args: &[&dyn Any]) -> Result<Box<dyn Any>, &'static str> {
-        if self.info.args.len() != args.len() {
-            return Err("Invalid number of arguments.");
+    fn invoke(&self, args: &[&dyn Any]) -> Result<Box<dyn Any>, String> {
+        if 0 != args.len() {
+            return Err(format!(
+                "Invalid number of arguments. Expected: {}. Found: {}.",
+                0,
+                args.len()
+            ));
         }
 
-        if self.info.returns.is_some() {
-            return Err("Invalid return type");
+        if let Some(return_type) = self.info.returns {
+            return Err(format!(
+                "Invalid return type. Expected: None. Found: Some({})",
+                return_type.name
+            ));
         }
 
         (self.symbol)();
@@ -175,19 +182,37 @@ impl<'lib, A: Reflectable + Clone, B: Reflectable + Clone, Output: Reflectable>
 impl<'lib, A: Reflectable + Clone, B: Reflectable + Clone, Output: Reflectable> Invokable
     for Method<'lib, A, B, Output>
 {
-    fn invoke(&self, args: &[&dyn Any]) -> Result<Box<dyn Any>, &'static str> {
-        if self.info.args.len() != args.len() {
-            return Err("Invalid number of arguments.");
+    fn invoke(&self, args: &[&dyn Any]) -> Result<Box<dyn Any>, String> {
+        if 2 != args.len() {
+            return Err(format!(
+                "Invalid number of arguments. Expected: {}. Found: {}.",
+                2,
+                args.len()
+            ));
         }
 
-        let a: &A = args[0].downcast_ref().ok_or("Invalid A argument type.")?;
-        let b: &B = args[1].downcast_ref().ok_or("Invalid B argument type.")?;
+        let a: &A = args[0].downcast_ref().ok_or(format!(
+            "Invalid argument type at index {}. Expected: {}. Found: {}.",
+            0,
+            self.info.args[0].name,
+            A::type_info().name
+        ))?;
+        let b: &B = args[1].downcast_ref().ok_or(format!(
+            "Invalid argument type at index {}. Expected: {}. Found: {}.",
+            1,
+            self.info.args[1].name,
+            B::type_info().name
+        ))?;
 
         let result = (self.symbol)(a.clone(), b.clone());
 
         if let Some(return_type) = self.info.returns {
-            if result.reflect().uuid != return_type.uuid {
-                return Err("Invalid return type");
+            let result_type = result.reflect();
+            if result_type.uuid != return_type.uuid {
+                return Err(format!(
+                    "Invalid return type. Expected: Some({}). Found: Some({})",
+                    return_type.name, result_type.name,
+                ));
             }
         }
 

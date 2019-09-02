@@ -1,9 +1,10 @@
 use std::convert::From;
 use std::io;
-use std::result::Result as StdResult;
 
 use failure;
 use notify;
+
+pub use std::result::Result as StdResult;
 
 #[derive(Debug)]
 pub enum Error {
