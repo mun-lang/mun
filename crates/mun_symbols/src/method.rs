@@ -1,6 +1,5 @@
 use crate::prelude::*;
 
-use std::any::Any;
 use std::fmt::{self, Debug};
 
 use libloading::{Library, Symbol};
@@ -55,7 +54,7 @@ impl MemberInfo for MethodInfo {
 }
 
 pub trait Invokable {
-    fn invoke(&self, args: &[&dyn Any]) -> Result<Box<dyn Any>, String>;
+    fn invoke(&self, args: &[&dyn Reflectable]) -> Result<Box<dyn Reflectable>, String>;
 }
 
 pub trait MethodFactory: Debug + Sync + Send {
@@ -81,13 +80,13 @@ impl MethodFactory for EmptyMethodFactory {
     }
 }
 
-pub struct MethodArg2RetFactory<A: Reflectable + Clone, B: Reflectable + Clone, Output: Reflectable>(
+pub struct MethodArg2RetFactory<A: Reflection + Clone, B: Reflection + Clone, Output: Reflection>(
     std::marker::PhantomData<A>,
     std::marker::PhantomData<B>,
     std::marker::PhantomData<Output>,
 );
 
-impl<A: Reflectable + Clone, B: Reflectable + Clone, Output: Reflectable> Debug
+impl<A: Reflection + Clone, B: Reflection + Clone, Output: Reflection> Debug
     for MethodArg2RetFactory<A, B, Output>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -95,17 +94,17 @@ impl<A: Reflectable + Clone, B: Reflectable + Clone, Output: Reflectable> Debug
     }
 }
 
-unsafe impl<A: Reflectable + Clone, B: Reflectable + Clone, Output: Reflectable> Send
+unsafe impl<A: Reflection + Clone, B: Reflection + Clone, Output: Reflection> Send
     for MethodArg2RetFactory<A, B, Output>
 {
 }
 
-unsafe impl<A: Reflectable + Clone, B: Reflectable + Clone, Output: Reflectable> Sync
+unsafe impl<A: Reflection + Clone, B: Reflection + Clone, Output: Reflection> Sync
     for MethodArg2RetFactory<A, B, Output>
 {
 }
 
-impl<A: Reflectable + Clone, B: Reflectable + Clone, Output: Reflectable>
+impl<A: Reflection + Clone, B: Reflection + Clone, Output: Reflection>
     MethodArg2RetFactory<A, B, Output>
 {
     pub fn new() -> Self {
@@ -117,7 +116,7 @@ impl<A: Reflectable + Clone, B: Reflectable + Clone, Output: Reflectable>
     }
 }
 
-impl<A: Reflectable + Clone, B: Reflectable + Clone, Output: Reflectable> MethodFactory
+impl<A: Reflection + Clone, B: Reflection + Clone, Output: Reflection> MethodFactory
     for MethodArg2RetFactory<A, B, Output>
 {
     fn of<'a>(
@@ -143,7 +142,7 @@ impl<'lib> EmptyMethod<'lib> {
 }
 
 impl<'lib> Invokable for EmptyMethod<'lib> {
-    fn invoke(&self, args: &[&dyn Any]) -> Result<Box<dyn Any>, String> {
+    fn invoke(&self, args: &[&dyn Reflectable]) -> Result<Box<dyn Reflectable>, String> {
         if 0 != args.len() {
             return Err(format!(
                 "Invalid number of arguments. Expected: {}. Found: {}.",
@@ -165,12 +164,12 @@ impl<'lib> Invokable for EmptyMethod<'lib> {
     }
 }
 
-struct Method<'lib, A: Reflectable + Clone, B: Reflectable + Clone, Output: Reflectable> {
+struct Method<'lib, A: Reflection + Clone, B: Reflection + Clone, Output: Reflection> {
     symbol: Symbol<'lib, fn(A, B) -> Output>,
     info: &'lib MethodInfo,
 }
 
-impl<'lib, A: Reflectable + Clone, B: Reflectable + Clone, Output: Reflectable>
+impl<'lib, A: Reflection + Clone, B: Reflection + Clone, Output: Reflection>
     Method<'lib, A, B, Output>
 {
     pub fn new(symbol: Symbol<'lib, fn(A, B) -> Output>, info: &'lib MethodInfo) -> Self {
@@ -179,10 +178,10 @@ impl<'lib, A: Reflectable + Clone, B: Reflectable + Clone, Output: Reflectable>
 }
 
 // macro this
-impl<'lib, A: Reflectable + Clone, B: Reflectable + Clone, Output: Reflectable> Invokable
+impl<'lib, A: Reflection + Clone, B: Reflection + Clone, Output: Reflection> Invokable
     for Method<'lib, A, B, Output>
 {
-    fn invoke(&self, args: &[&dyn Any]) -> Result<Box<dyn Any>, String> {
+    fn invoke(&self, args: &[&dyn Reflectable]) -> Result<Box<dyn Reflectable>, String> {
         if 2 != args.len() {
             return Err(format!(
                 "Invalid number of arguments. Expected: {}. Found: {}.",
@@ -195,13 +194,13 @@ impl<'lib, A: Reflectable + Clone, B: Reflectable + Clone, Output: Reflectable> 
             "Invalid argument type at index {}. Expected: {}. Found: {}.",
             0,
             self.info.args[0].name,
-            A::type_info().name
+            args[0].reflect().name
         ))?;
         let b: &B = args[1].downcast_ref().ok_or(format!(
             "Invalid argument type at index {}. Expected: {}. Found: {}.",
             1,
             self.info.args[1].name,
-            B::type_info().name
+            args[1].reflect().name
         ))?;
 
         let result = (self.symbol)(a.clone(), b.clone());

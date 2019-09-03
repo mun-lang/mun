@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use uuid::Uuid;
 
-use std::any::{Any, TypeId};
+use std::any::TypeId;
 
 // TODO: How to resolve generic fields and methods?
 #[derive(Debug)]
@@ -42,14 +42,35 @@ impl TypeInfo {
     }
 }
 
-pub trait Reflectable: Any {
-    fn reflect(&self) -> &'static TypeInfo {
-        Self::type_info()
-    }
-
+pub trait Reflection: 'static {
     fn type_info() -> &'static TypeInfo;
 
     fn module_info() -> &'static ModuleInfo;
+}
+
+pub trait Reflectable: 'static {
+    fn reflect(&self) -> &'static TypeInfo;
+}
+
+impl<T: 'static + Reflection> Reflectable for T {
+    fn reflect(&self) -> &'static TypeInfo {
+        Self::type_info()
+    }
+}
+
+impl dyn Reflectable {
+    pub fn is<T: Reflection>(&self) -> bool {
+        // TypeId only works in the same compile unit
+        T::type_info().uuid == self.reflect().uuid
+    }
+
+    pub fn downcast_ref<T: Reflection>(&self) -> Option<&T> {
+        if self.is::<T>() {
+            Some(unsafe { &*(self as *const dyn Reflectable as *const T) })
+        } else {
+            None
+        }
+    }
 }
 
 lazy_static! {
@@ -67,13 +88,17 @@ lazy_static! {
         fields: &[],
         methods: &[],
     };
-}
-
-lazy_static! {
+    static ref EMPTY_TYPE_INFO: TypeInfo = TypeInfo {
+        type_id: TypeId::of::<()>(),
+        uuid: Uuid::parse_str("3575c27d-fee0-4240-a658-d9c3edb73d0e").unwrap(),
+        name: "()",
+        fields: &[],
+        methods: &[],
+    };
     static ref CORE_MODULE: ModuleInfo = { ModuleInfo::new("core", &[], &[], &[]) };
 }
 
-impl Reflectable for f32 {
+impl Reflection for f32 {
     fn type_info() -> &'static TypeInfo {
         &F32_TYPE_INFO
     }
@@ -83,9 +108,19 @@ impl Reflectable for f32 {
     }
 }
 
-impl Reflectable for f64 {
+impl Reflection for f64 {
     fn type_info() -> &'static TypeInfo {
         &F64_TYPE_INFO
+    }
+
+    fn module_info() -> &'static ModuleInfo {
+        &CORE_MODULE
+    }
+}
+
+impl Reflection for () {
+    fn type_info() -> &'static TypeInfo {
+        &EMPTY_TYPE_INFO
     }
 
     fn module_info() -> &'static ModuleInfo {

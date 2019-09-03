@@ -18,7 +18,7 @@ pub mod prelude {
         EmptyMethodFactory, Invokable, MethodArg2RetFactory, MethodFactory, MethodInfo,
     };
     pub use crate::module::ModuleInfo;
-    pub use crate::reflection::{Reflectable, TypeInfo};
+    pub use crate::reflection::{Reflectable, Reflection, TypeInfo};
     pub use crate::Privacy;
     pub use uuid::Uuid;
 }

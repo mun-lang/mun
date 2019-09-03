@@ -17,11 +17,9 @@ fn main() {
     loop {
         runtime.update();
 
-        let a: f32 = 2.0;
+        let a: f32 = 4.0;
         let b: f32 = 2.0;
-        let c: f32 = runtime
-            .invoke_library_method(&manifest_path, "add", &[&a, &b])
-            .expect("Failed to invoke method.");
+        let c: f32 = runtime.invoke_library_method(&manifest_path, "add", &[&a, &b]);
 
         println!("{a} + {b} = {c}", a = a, b = b, c = c);
 

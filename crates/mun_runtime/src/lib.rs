@@ -10,7 +10,6 @@ pub use crate::error::*;
 pub use crate::library::Library;
 pub use crate::module::Module;
 
-use core::any::Any;
 use std::collections::HashMap;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -70,11 +69,34 @@ impl MunRuntime {
         self.modules.remove(src);
     }
 
-    pub fn invoke_library_method<Output: Clone + 'static>(
+    pub fn invoke_library_method<Output: Reflection + Clone + 'static>(
+        &mut self,
+        manifest_path: &Path,
+        method_name: &str,
+        args: &[&dyn Reflectable],
+    ) -> Output {
+        // Initialize `updated` to `true` to guarantee the method is run at least once
+        let mut updated = true;
+        loop {
+            if updated {
+                match self.try_invoke_library_method(manifest_path, method_name, args) {
+                    Ok(res) => return res,
+                    Err(ref e) => {
+                        eprintln!("{}", e);
+                        updated = false;
+                    }
+                }
+            } else {
+                updated = self.update();
+            }
+        }
+    }
+
+    fn try_invoke_library_method<Output: Reflection + Clone + 'static>(
         &self,
         manifest_path: &Path,
         method_name: &str,
-        args: &[&dyn Any],
+        args: &[&dyn Reflectable],
     ) -> StdResult<Output, String> {
         let module: &Module = self.get_module(manifest_path).map_err(|_| {
             format!(
@@ -100,12 +122,19 @@ impl MunRuntime {
             )
         })?;
 
-        Ok(method
-            .invoke(args)
-            .expect("Failed to invoke method.")
-            .downcast_ref::<Output>()
-            .expect("Failed to downcast return value.")
-            .clone())
+        let result = method.invoke(args)?;
+
+        let result = result.downcast_ref::<Output>().ok_or(format!(
+            "Failed to downcast return value. Expected: {}. Found: {}.",
+            Output::type_info().name,
+            if let Some(return_type) = method_info.returns {
+                format!("{}", return_type.name)
+            } else {
+                "()".to_string()
+            }
+        ))?;
+
+        Ok(result.clone())
     }
 
     pub fn get_module(&self, manifest_path: &Path) -> Result<&Module> {
@@ -123,7 +152,7 @@ impl MunRuntime {
         )
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self) -> bool {
         while let Ok(event) = self.watcher_rx.try_recv() {
             use notify::DebouncedEvent::*;
             match event {
@@ -151,13 +180,14 @@ impl MunRuntime {
                                 ),
                             }
 
-                            return;
+                            return true;
                         }
                     }
                 }
                 _ => {}
             }
         }
+        false
         // Err(e) => println!("watch error: {:?}", e)
     }
 }
