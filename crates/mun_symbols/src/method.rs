@@ -90,7 +90,13 @@ impl<A: Reflection + Clone, B: Reflection + Clone, Output: Reflection> Debug
     for MethodArg2RetFactory<A, B, Output>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "MethodArg2RetFactory")
+        write!(
+            f,
+            "MethodFactory::<fn({}, {}) -> {}>",
+            A::type_info().name,
+            B::type_info().name,
+            Output::type_info().name
+        )
     }
 }
 
