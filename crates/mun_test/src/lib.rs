@@ -4,19 +4,21 @@ extern crate lazy_static;
 use mun_symbols::prelude::*;
 
 lazy_static! {
-    static ref METHOD_FACTORY: MethodArg2RetFactory<f32, f32, f32> = MethodArg2RetFactory::new();
+    static ref ADD_METHOD_FACTORY: TwoArgsMethodFactory<f32, f32, f32> =
+        TwoArgsMethodFactory::new();
+    static ref EMPTY_METHOD_FACTORY: NoArgsMethodFactory<()> = NoArgsMethodFactory::new();
     static ref ADD_TYPES: [&'static TypeInfo; 2] = [f32::type_info(), f32::type_info()];
     static ref METHODS: [MethodInfo; 5] = [
-        MethodInfo::new("load", Privacy::Public, &[], None, &EmptyMethodFactory),
-        MethodInfo::new("unload", Privacy::Public, &[], None, &EmptyMethodFactory),
-        MethodInfo::new("init", Privacy::Public, &[], None, &EmptyMethodFactory),
-        MethodInfo::new("deinit", Privacy::Public, &[], None, &EmptyMethodFactory),
+        MethodInfo::new("load", Privacy::Public, &[], None, &*EMPTY_METHOD_FACTORY),
+        MethodInfo::new("unload", Privacy::Public, &[], None, &*EMPTY_METHOD_FACTORY),
+        MethodInfo::new("init", Privacy::Public, &[], None, &*EMPTY_METHOD_FACTORY),
+        MethodInfo::new("deinit", Privacy::Public, &[], None, &*EMPTY_METHOD_FACTORY),
         MethodInfo::new(
             "add",
             Privacy::Public,
             &ADD_TYPES[..],
             Some(f32::type_info()),
-            &*METHOD_FACTORY,
+            &*ADD_METHOD_FACTORY,
         )
     ];
     static ref SYMBOLS: ModuleInfo = {
