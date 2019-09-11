@@ -33,16 +33,24 @@ pub fn symbols() -> &'static ModuleInfo {
 }
 
 #[no_mangle]
-pub fn load() {}
+pub fn load() {
+    println!("load");
+}
 
 #[no_mangle]
-pub fn unload() {}
+pub fn unload() {
+    println!("unload");
+}
 
 #[no_mangle]
-pub fn init() {}
+pub fn init() {
+    println!("init");
+}
 
 #[no_mangle]
-pub fn deinit() {}
+pub fn deinit() {
+    println!("deinit");
+}
 
 #[no_mangle]
 pub fn add(a: f32, b: f32) -> f32 {

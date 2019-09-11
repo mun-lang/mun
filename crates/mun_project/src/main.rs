@@ -6,7 +6,7 @@ use mun_runtime::MunRuntime;
 
 fn main() {
     let mut runtime =
-        MunRuntime::new(Duration::from_secs(1)).expect("Failed to initialize Mun runtime.");
+        MunRuntime::new(Duration::from_millis(10)).expect("Failed to initialize Mun runtime.");
 
     let manifest_path = Path::new("..\\mun_test\\Cargo.toml");
 
@@ -17,11 +17,17 @@ fn main() {
     loop {
         runtime.update();
 
+        runtime.invoke_library_method::<()>(&manifest_path, "load", &[]);
+        runtime.invoke_library_method::<()>(&manifest_path, "init", &[]);
+
         let a: f32 = 4.0;
         let b: f32 = 2.0;
         let c: f32 = runtime.invoke_library_method(&manifest_path, "add", &[&a, &b]);
 
         println!("{a} + {b} = {c}", a = a, b = b, c = c);
+
+        runtime.invoke_library_method::<()>(&manifest_path, "deinit", &[]);
+        runtime.invoke_library_method::<()>(&manifest_path, "unload", &[]);
 
         thread::sleep(Duration::from_secs(1));
     }
@@ -29,14 +35,14 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use mun_runtime::{MunRuntime, Symbol};
+    use mun_runtime::MunRuntime;
     use std::path::Path;
     use std::time::Duration;
 
     #[test]
-    fn mun_fn_call() {
+    fn mun_invoke_library_method() {
         let mut runtime =
-            MunRuntime::new(Duration::from_secs(1)).expect("Failed to initialize Mun runtime.");
+            MunRuntime::new(Duration::from_millis(10)).expect("Failed to initialize Mun runtime.");
 
         let manifest_path = Path::new("..\\mun_test\\Cargo.toml");
 
@@ -44,10 +50,12 @@ mod tests {
             .add_manifest(&manifest_path)
             .expect("Failed to load shared library.");
 
-        let add_fn: Symbol<unsafe extern "C" fn(f32, f32) -> f32> = runtime
-            .get_symbol(&manifest_path, "add")
-            .expect("Could not find 'add' function symbol.");
+        let a: f32 = 4.0;
+        let b: f32 = 2.0;
 
-        assert_eq!(unsafe { add_fn(2.0, 2.0) }, 4.0);
+        assert_eq!(
+            runtime.invoke_library_method::<f32>(&manifest_path, "add", &[&a, &b]),
+            a + b
+        );
     }
 }

@@ -188,6 +188,5 @@ impl MunRuntime {
             }
         }
         false
-        // Err(e) => println!("watch error: {:?}", e)
     }
 }
