@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use crate::prelude::*;
 use libloading::{Library, Symbol};
 
+/// Reflection information about a method.
 #[derive(Debug)]
 pub struct MethodInfo {
     name: String,
@@ -13,6 +14,7 @@ pub struct MethodInfo {
 }
 
 impl MethodInfo {
+    /// Constructs a new `MethodInfo`.
     pub fn new(
         name: &str,
         privacy: Privacy,
@@ -29,6 +31,7 @@ impl MethodInfo {
         }
     }
 
+    /// Loads the method's symbol from the specified shared `library`.
     pub fn load<'a>(&'a self, library: &'a Library) -> libloading::Result<Box<dyn Invokable + 'a>> {
         self.factory.of(library, self)
     }
@@ -52,10 +55,12 @@ impl MemberInfo for MethodInfo {
     }
 }
 
+/// A common trait for invokable methods with reflectable argument types and result.
 pub trait Invokable {
     fn invoke(&self, args: &[&dyn Reflectable]) -> Result<Box<dyn Reflectable>, String>;
 }
 
+/// A common trait for construction of `Invokable` methods based on `MethodInfo`.
 pub trait MethodFactory: Debug + Sync + Send {
     fn of<'a>(
         &self,

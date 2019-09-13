@@ -1,5 +1,6 @@
 use crate::prelude::*;
 
+/// Reflection information about a type field.
 #[derive(Debug)]
 pub struct FieldInfo {
     name: String,
@@ -8,6 +9,7 @@ pub struct FieldInfo {
 }
 
 impl FieldInfo {
+    /// Constructs a new `TypeInfo`.
     pub fn new(name: &str, privacy: Privacy, type_info: &'static TypeInfo) -> FieldInfo {
         Self {
             name: name.to_string(),
@@ -16,6 +18,7 @@ impl FieldInfo {
         }
     }
 
+    /// Retrieves the field's type information.
     pub fn type_info(&self) -> &TypeInfo {
         self.type_info
     }

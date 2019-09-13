@@ -21,6 +21,7 @@ pub mod prelude {
     pub use uuid::Uuid;
 }
 
+/// The privacy level of an identifier, either public or private.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Privacy {
     Public,

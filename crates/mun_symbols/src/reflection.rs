@@ -3,6 +3,7 @@ use uuid::Uuid;
 
 use std::any::TypeId;
 
+/// Reflection information about a type.
 // TODO: How to resolve generic fields and methods?
 #[derive(Debug)]
 pub struct TypeInfo {
@@ -14,18 +15,22 @@ pub struct TypeInfo {
 }
 
 impl TypeInfo {
+    /// Finds the type's fields that match `filter`.
     pub fn find_fields(&self, filter: fn(&&FieldInfo) -> bool) -> impl Iterator<Item = &FieldInfo> {
         self.fields.iter().map(|f| *f).filter(filter)
     }
 
+    /// Retrieves the type's field with the specified `name`, if it exists.
     pub fn get_field(&self, name: &str) -> Option<&FieldInfo> {
         self.fields.iter().find(|f| f.name() == name).map(|f| *f)
     }
 
+    /// Retrieves the type's fields.
     pub fn get_fields(&self) -> impl Iterator<Item = &FieldInfo> {
         self.fields.iter().map(|f| *f)
     }
 
+    /// Finds the type's methods that match `filter`.
     pub fn find_methods(
         &self,
         filter: fn(&&MethodInfo) -> bool,
@@ -33,21 +38,27 @@ impl TypeInfo {
         self.methods.iter().map(|m| *m).filter(filter)
     }
 
+    /// Retrieves the type's method with the specified `name`, if it exists.
     pub fn get_method(&self, name: &str) -> Option<&MethodInfo> {
         self.methods.iter().find(|f| f.name() == name).map(|f| *f)
     }
 
+    /// Retrieves the type's methods.
     pub fn get_methods(&self) -> impl Iterator<Item = &MethodInfo> {
         self.methods.iter().map(|m| *m)
     }
 }
 
+/// A type to emulate dynamic typing across compilation units for static types.
 pub trait Reflection: 'static {
+    /// Retrieves the type's `TypeInfo`.
     fn type_info() -> &'static TypeInfo;
 
+    /// Retrieves the type's `ModuleInfo`.
     fn module_info() -> &'static ModuleInfo;
 }
 
+/// A type to emulate dynamic typing across compilation units for type instances.
 pub trait Reflectable: 'static {
     fn reflect(&self) -> &'static TypeInfo;
 }
@@ -59,11 +70,14 @@ impl<T: 'static + Reflection> Reflectable for T {
 }
 
 impl dyn Reflectable {
+    /// Returns whether the reflectable's type is the same as `T`.
     pub fn is<T: Reflection>(&self) -> bool {
         // TypeId only works in the same compile unit
         T::type_info().uuid == self.reflect().uuid
     }
 
+    /// Returns some reference to the reflectable if it is of type `T`, or `None` if it
+    /// isn't.
     pub fn downcast_ref<T: Reflection>(&self) -> Option<&T> {
         if self.is::<T>() {
             Some(unsafe { &*(self as *const dyn Reflectable as *const T) })

@@ -19,6 +19,7 @@ use std::time::Duration;
 use mun_symbols::prelude::*;
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
+/// A runtime for the Mun scripting language.
 pub struct MunRuntime {
     modules: HashMap<PathBuf, Module>,
     watcher: RecommendedWatcher,
@@ -26,6 +27,8 @@ pub struct MunRuntime {
 }
 
 impl MunRuntime {
+    /// Constructs a new `MunRuntime`, for which the file watcher is triggered with an interval of
+    /// `dur`.
     pub fn new(dur: Duration) -> Result<MunRuntime> {
         let (tx, rx) = channel();
 
@@ -38,6 +41,7 @@ impl MunRuntime {
         })
     }
 
+    /// Adds a module corresponding to the manifest at `manifest_path`.
     pub fn add_manifest(&mut self, manifest_path: &Path) -> Result<()> {
         let mut module = Module::new(manifest_path)?;
 
@@ -65,10 +69,16 @@ impl MunRuntime {
         Ok(())
     }
 
+    /// Removes the module corresponding to the manifest at `src`.
     pub fn remove_module(&mut self, src: &Path) {
         self.modules.remove(src);
     }
 
+    /// Invokes the method `method_name` with arguments `args`, in the library compiled based on
+    /// the manifest at `manifest_path`.
+    ///
+    /// If an error occurs when invoking the method, an error message is logged. The runtime
+    /// continues looping until the cause of the error has been resolved.
     pub fn invoke_library_method<Output: Reflection + Clone + 'static>(
         &mut self,
         manifest_path: &Path,
@@ -92,6 +102,10 @@ impl MunRuntime {
         }
     }
 
+    /// Tries to invoke the method `method_name` with arguments `args`, in the library compiled
+    /// based on the manifest at `manifest_path`.
+    ///
+    /// Returns an error message upon failure.
     fn try_invoke_library_method<Output: Reflection + Clone + 'static>(
         &self,
         manifest_path: &Path,
@@ -137,6 +151,7 @@ impl MunRuntime {
         Ok(result.clone())
     }
 
+    /// Retrieves the module corresponding to the manifest at `manifest_path`.
     pub fn get_module(&self, manifest_path: &Path) -> Result<&Module> {
         let manifest_path = manifest_path.canonicalize()?;
 
@@ -152,6 +167,10 @@ impl MunRuntime {
         )
     }
 
+    /// Updates the state of the runtime. This includes checking for file changes, and consequent
+    /// recompilation.
+    ///
+    /// Currently, the runtime can crash if recompilation fails. Ideally, there is a fallback.
     pub fn update(&mut self) -> bool {
         while let Ok(event) = self.watcher_rx.try_recv() {
             use notify::DebouncedEvent::*;

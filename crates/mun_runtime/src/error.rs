@@ -6,6 +6,9 @@ use notify;
 
 pub use std::result::Result as StdResult;
 
+/// Mun runtime error type.
+///
+/// Errors can be caused by the file watcher, cargo, or IO operations.
 #[derive(Debug)]
 pub enum Error {
     Cargo(failure::Error),
