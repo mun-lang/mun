@@ -6,8 +6,8 @@ use libloading::{Library, Symbol};
 /// Reflection information about a method.
 #[derive(Debug)]
 pub struct MethodInfo {
-    name: String,
-    privacy: Privacy,
+    pub name: String,
+    pub privacy: Privacy,
     pub args: &'static [&'static TypeInfo],
     pub returns: Option<&'static TypeInfo>,
     factory: &'static dyn MethodFactory,
@@ -34,24 +34,6 @@ impl MethodInfo {
     /// Loads the method's symbol from the specified shared `library`.
     pub fn load<'a>(&'a self, library: &'a Library) -> libloading::Result<Box<dyn Invokable + 'a>> {
         self.factory.of(library, self)
-    }
-}
-
-impl MemberInfo for MethodInfo {
-    fn name(&self) -> &str {
-        &self.name
-    }
-
-    fn privacy(&self) -> Privacy {
-        self.privacy
-    }
-
-    fn is_private(&self) -> bool {
-        self.privacy == Privacy::Private
-    }
-
-    fn is_public(&self) -> bool {
-        self.privacy == Privacy::Public
     }
 }
 
@@ -168,7 +150,7 @@ macro_rules! method_factories {
                     library: &'a Library,
                     info: &'a MethodInfo,
                 ) -> libloading::Result<Box<dyn Invokable + 'a>> {
-                    let symbol = unsafe { library.get(info.name().as_ref()) }?;
+                    let symbol = unsafe { library.get(info.name.as_ref()) }?;
 
                     Ok(Box::new($MethodName::<$($T,)* Output>::new(symbol, info)))
                 }

@@ -23,7 +23,7 @@ impl ModuleInfo {
         let fields = {
             let mut map = HashMap::new();
             for field in fields.iter() {
-                map.insert(field.name(), *field);
+                map.insert(field.name.as_ref(), *field);
             }
             map
         };
@@ -31,7 +31,7 @@ impl ModuleInfo {
         let methods = {
             let mut map = HashMap::new();
             for method in methods.iter() {
-                map.insert(method.name(), *method);
+                map.insert(method.name.as_ref(), *method);
             }
             map
         };

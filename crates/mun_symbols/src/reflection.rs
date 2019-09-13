@@ -22,7 +22,7 @@ impl TypeInfo {
 
     /// Retrieves the type's field with the specified `name`, if it exists.
     pub fn get_field(&self, name: &str) -> Option<&FieldInfo> {
-        self.fields.iter().find(|f| f.name() == name).map(|f| *f)
+        self.fields.iter().find(|f| f.name == name).map(|f| *f)
     }
 
     /// Retrieves the type's fields.
@@ -40,7 +40,7 @@ impl TypeInfo {
 
     /// Retrieves the type's method with the specified `name`, if it exists.
     pub fn get_method(&self, name: &str) -> Option<&MethodInfo> {
-        self.methods.iter().find(|f| f.name() == name).map(|f| *f)
+        self.methods.iter().find(|f| f.name == name).map(|f| *f)
     }
 
     /// Retrieves the type's methods.
