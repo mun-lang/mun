@@ -1,10 +1,9 @@
 [workspace]
 members = [
-    "crates\\mun_project",
     "crates\\mun_runtime",
     "crates\\mun_symbols",
 ]
 
 exclude = [
-    "crates\\mun_test"
+    "tests\\mock"
 ]

@@ -209,3 +209,59 @@ impl MunRuntime {
         false
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::MunRuntime;
+    use std::path::PathBuf;
+    use std::time::Duration;
+
+    fn test_lib_manifest_path() -> PathBuf {
+        use std::env;
+
+        let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+        manifest_dir
+            .join("../../")
+            .join("tests")
+            .join("mock")
+            .join("Cargo.toml")
+    }
+
+    #[test]
+    fn mun_new_runtime() {
+        let _runtime =
+            MunRuntime::new(Duration::from_millis(10)).expect("Failed to initialize Mun runtime.");
+    }
+
+    #[test]
+    fn mun_add_manifest() {
+        let mut runtime =
+            MunRuntime::new(Duration::from_millis(10)).expect("Failed to initialize Mun runtime.");
+
+        let manifest_path = test_lib_manifest_path();
+
+        runtime
+            .add_manifest(&manifest_path)
+            .expect("Failed to load shared library.");
+    }
+
+    #[test]
+    fn mun_invoke_library_method() {
+        let mut runtime =
+            MunRuntime::new(Duration::from_millis(10)).expect("Failed to initialize Mun runtime.");
+
+        let manifest_path = test_lib_manifest_path();
+
+        runtime
+            .add_manifest(&manifest_path)
+            .expect("Failed to load shared library.");
+
+        let a: f32 = 4.0;
+        let b: f32 = 2.0;
+
+        assert_eq!(
+            runtime.invoke_library_method::<f32>(&manifest_path, "add", &[&a, &b]),
+            a + b
+        );
+    }
+}

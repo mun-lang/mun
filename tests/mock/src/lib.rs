@@ -23,7 +23,7 @@ lazy_static! {
     ];
     static ref SYMBOLS: ModuleInfo = {
         let methods: Vec<&'static MethodInfo> = METHODS.iter().collect();
-        ModuleInfo::new("mun_test", &[], &methods[..], &[])
+        ModuleInfo::new("mock", &[], &methods[..], &[])
     };
 }
 
