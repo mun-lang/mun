@@ -2,13 +2,13 @@ extern crate cargo;
 extern crate failure;
 extern crate libloading;
 
+mod assembly;
 mod error;
 mod library;
-mod module;
 
+pub use crate::assembly::Assembly;
 pub use crate::error::*;
 pub use crate::library::Library;
-pub use crate::module::Module;
 
 use std::collections::HashMap;
 use std::io;
@@ -16,62 +16,65 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
-use mun_symbols::prelude::*;
+use mun_abi::{FunctionInfo, Reflection};
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
 /// A runtime for the Mun scripting language.
 pub struct MunRuntime {
-    modules: HashMap<PathBuf, Module>,
+    assemblies: HashMap<PathBuf, Assembly>,
+    function_table: HashMap<String, FunctionInfo>,
     watcher: RecommendedWatcher,
     watcher_rx: Receiver<DebouncedEvent>,
 }
 
 impl MunRuntime {
-    /// Constructs a new `MunRuntime`, for which the file watcher is triggered with an interval of
-    /// `dur`.
-    pub fn new(dur: Duration) -> Result<MunRuntime> {
+    /// Constructs a new `MunRuntime` that loads the library at `library_path` and its
+    /// dependencies. The `MunRuntime` contains a file watcher that is triggered with an interval
+    /// of `dur`.
+    pub fn new(library_path: &Path, dur: Duration) -> Result<MunRuntime> {
         let (tx, rx) = channel();
 
         let watcher: RecommendedWatcher = Watcher::new(tx, dur)?;
-
-        Ok(MunRuntime {
-            modules: HashMap::new(),
+        let mut runtime = MunRuntime {
+            assemblies: HashMap::new(),
+            function_table: HashMap::new(),
             watcher,
             watcher_rx: rx,
-        })
+        };
+
+        runtime.add_assembly(library_path)?;
+        Ok(runtime)
     }
 
-    /// Adds a module corresponding to the manifest at `manifest_path`.
-    pub fn add_manifest(&mut self, manifest_path: &Path) -> Result<()> {
-        let mut module = Module::new(manifest_path)?;
-
-        if self.modules.contains_key(module.manifest_path()) {
+    /// Adds an assembly corresponding to the library at `library_path`.
+    fn add_assembly(&mut self, library_path: &Path) -> Result<()> {
+        let library_path = library_path.canonicalize()?;
+        if self.assemblies.contains_key(&library_path) {
             return Err(io::Error::new(
                 io::ErrorKind::AlreadyExists,
-                "A module with the same name already exists.",
+                "An assembly with the same name already exists.",
             )
             .into());
         }
 
-        let mut source_path = module.manifest_path().parent().unwrap().to_path_buf();
-        source_path.push("src");
+        let assembly = Assembly::load(&library_path)?;
+        for function in assembly.functions() {
+            self.function_table
+                .insert(function.name().to_string(), function.clone());
+        }
 
-        let output_path = module.compile()?;
-        module.load(&output_path)?;
-
-        self.modules
-            .insert(module.manifest_path().to_path_buf(), module);
+        self.assemblies.insert(library_path.clone(), assembly);
 
         self.watcher
-            .watch(source_path.clone(), RecursiveMode::Recursive)?;
+            .watch(library_path.clone(), RecursiveMode::NonRecursive)?;
 
-        println!("Watching directory: {}", source_path.to_string_lossy());
+        println!("Watching assembly: {}", library_path.to_string_lossy());
         Ok(())
     }
 
-    /// Removes the module corresponding to the manifest at `src`.
-    pub fn remove_module(&mut self, src: &Path) {
-        self.modules.remove(src);
+    /// Removes the assembly corresponding to the library at `library_path`.
+    fn remove_assembly(&mut self, library_path: &Path) {
+        self.assemblies.remove(library_path);
     }
 
     /// Invokes the method `method_name` with arguments `args`, in the library compiled based on
@@ -79,18 +82,24 @@ impl MunRuntime {
     ///
     /// If an error occurs when invoking the method, an error message is logged. The runtime
     /// continues looping until the cause of the error has been resolved.
-    pub fn invoke_library_method<Output: Reflection + Clone + 'static>(
+    pub fn invoke2<A: Reflection, B: Reflection, Output: Reflection>(
         &mut self,
-        manifest_path: &Path,
-        method_name: &str,
-        args: &[&dyn Reflectable],
+        function_name: &str,
+        a: A,
+        b: B,
     ) -> Output {
         // Initialize `updated` to `true` to guarantee the method is run at least once
         let mut updated = true;
         loop {
             if updated {
-                match self.try_invoke_library_method(manifest_path, method_name, args) {
-                    Ok(res) => return res,
+                let function = self
+                    .function_table
+                    .get(function_name)
+                    .ok_or(format!("Failed to obtain function '{}'", function_name))
+                    .and_then(FunctionInfo::downcast_fn2::<A, B, Output>);
+
+                match function {
+                    Ok(function) => return function(a, b),
                     Err(ref e) => {
                         eprintln!("{}", e);
                         updated = false;
@@ -102,70 +111,21 @@ impl MunRuntime {
         }
     }
 
-    /// Tries to invoke the method `method_name` with arguments `args`, in the library compiled
-    /// based on the manifest at `manifest_path`.
-    ///
-    /// Returns an error message upon failure.
-    fn try_invoke_library_method<Output: Reflection + Clone + 'static>(
-        &self,
-        manifest_path: &Path,
-        method_name: &str,
-        args: &[&dyn Reflectable],
-    ) -> StdResult<Output, String> {
-        let module: &Module = self.get_module(manifest_path).map_err(|_| {
-            format!(
-                "Unknown module with manifest path: {}",
-                manifest_path.to_string_lossy()
-            )
-        })?;
-
-        let library: &Library = module.library();
-        let symbols: &ModuleInfo = library.module_info();
-
-        let method_info = symbols.get_method(method_name).ok_or(format!(
-            "Failed to obtain method info for {module}::{method}.",
-            module = module.manifest_path().to_string_lossy(),
-            method = method_name
-        ))?;
-
-        let method = method_info.load(library.inner()).map_err(|_| {
-            format!(
-                "Failed to load method symbol for {module}::{method}.",
-                module = module.manifest_path().to_string_lossy(),
-                method = method_name
-            )
-        })?;
-
-        let result = method.invoke(args)?;
-
-        let result = result.downcast_ref::<Output>().ok_or(format!(
-            "Failed to downcast return value. Expected: {}. Found: {}.",
-            Output::type_info().name,
-            if let Some(return_type) = method_info.returns {
-                format!("{}", return_type.name)
-            } else {
-                "()".to_string()
-            }
-        ))?;
-
-        Ok(result.clone())
-    }
-
     /// Retrieves the module corresponding to the manifest at `manifest_path`.
-    pub fn get_module(&self, manifest_path: &Path) -> Result<&Module> {
-        let manifest_path = manifest_path.canonicalize()?;
+    // pub fn get_module(&self, manifest_path: &Path) -> Result<&Module> {
+    //     let manifest_path = manifest_path.canonicalize()?;
 
-        self.modules.get(&manifest_path).ok_or(
-            io::Error::new(
-                io::ErrorKind::NotFound,
-                format!(
-                    "The module at path '{}' cannot be found.",
-                    manifest_path.to_string_lossy()
-                ),
-            )
-            .into(),
-        )
-    }
+    //     self.assemblies.get(&manifest_path).ok_or(
+    //         io::Error::new(
+    //             io::ErrorKind::NotFound,
+    //             format!(
+    //                 "The module at path '{}' cannot be found.",
+    //                 manifest_path.to_string_lossy()
+    //             ),
+    //         )
+    //         .into(),
+    //     )
+    // }
 
     /// Updates the state of the runtime. This includes checking for file changes, and consequent
     /// recompilation.
@@ -176,32 +136,34 @@ impl MunRuntime {
             use notify::DebouncedEvent::*;
             match event {
                 Write(ref path) | Create(ref path) => {
-                    for ancestor in path.ancestors() {
-                        let mut manifest_path = ancestor.to_path_buf();
-                        manifest_path.push("Cargo.toml");
+                    println!("{:?}", path);
+                    return true;
+                    // for ancestor in path.ancestors() {
+                    //     let mut library_path = ancestor.to_path_buf();
+                    //     library_path.push("Cargo.toml");
 
-                        if let Some(module) = self.modules.get_mut(&manifest_path) {
-                            module.unload();
-                            match module.compile() {
-                                Ok(ref output_path) => {
-                                    if let Err(e) = module.load(output_path) {
-                                        println!(
-                                            "An error occured while loading library '{}': {:?}",
-                                            module.manifest_path().to_string_lossy(),
-                                            e,
-                                        )
-                                    }
-                                }
-                                Err(e) => println!(
-                                    "An error occured while compiling library '{}': {:?}",
-                                    module.manifest_path().to_string_lossy(),
-                                    e,
-                                ),
-                            }
+                    //     if let Some(module) = self.modules.get_mut(&manifest_path) {
+                    //         module.unload();
+                    //         match module.compile() {
+                    //             Ok(ref output_path) => {
+                    //                 if let Err(e) = module.load(output_path) {
+                    //                     println!(
+                    //                         "An error occured while loading library '{}': {:?}",
+                    //                         module.manifest_path().to_string_lossy(),
+                    //                         e,
+                    //                     )
+                    //                 }
+                    //             }
+                    //             Err(e) => println!(
+                    //                 "An error occured while compiling library '{}': {:?}",
+                    //                 module.manifest_path().to_string_lossy(),
+                    //                 e,
+                    //             ),
+                    //         }
 
-                            return true;
-                        }
-                    }
+                    //         return true;
+                    //     }
+                    // }
                 }
                 _ => {}
             }
@@ -216,52 +178,29 @@ mod tests {
     use std::path::PathBuf;
     use std::time::Duration;
 
-    fn test_lib_manifest_path() -> PathBuf {
+    fn test_lib_path() -> PathBuf {
         use std::env;
 
         let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-        manifest_dir
-            .join("../../")
-            .join("tests")
-            .join("mock")
-            .join("Cargo.toml")
+        manifest_dir.join("../../").join("tests").join("main.dll")
     }
 
     #[test]
     fn mun_new_runtime() {
-        let _runtime =
-            MunRuntime::new(Duration::from_millis(10)).expect("Failed to initialize Mun runtime.");
-    }
-
-    #[test]
-    fn mun_add_manifest() {
-        let mut runtime =
-            MunRuntime::new(Duration::from_millis(10)).expect("Failed to initialize Mun runtime.");
-
-        let manifest_path = test_lib_manifest_path();
-
-        runtime
-            .add_manifest(&manifest_path)
-            .expect("Failed to load shared library.");
+        let _runtime = MunRuntime::new(&test_lib_path(), Duration::from_millis(10))
+            .expect("Failed to initialize Mun runtime.");
     }
 
     #[test]
     fn mun_invoke_library_method() {
-        let mut runtime =
-            MunRuntime::new(Duration::from_millis(10)).expect("Failed to initialize Mun runtime.");
+        let mut runtime = MunRuntime::new(&test_lib_path(), Duration::from_millis(10))
+            .expect("Failed to initialize Mun runtime.");
 
-        let manifest_path = test_lib_manifest_path();
+        let a: f64 = 4.0;
+        let b: f64 = 2.0;
 
-        runtime
-            .add_manifest(&manifest_path)
-            .expect("Failed to load shared library.");
+        let result: f64 = runtime.invoke2("add", a, b);
 
-        let a: f32 = 4.0;
-        let b: f32 = 2.0;
-
-        assert_eq!(
-            runtime.invoke_library_method::<f32>(&manifest_path, "add", &[&a, &b]),
-            a + b
-        );
+        assert_eq!(result, a + b);
     }
 }

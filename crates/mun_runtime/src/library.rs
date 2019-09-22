@@ -2,13 +2,12 @@ use std::path::Path;
 
 use crate::error::*;
 use libloading::{self, Symbol};
-
-use mun_symbols::prelude::*;
+use mun_abi::ModuleInfo;
 
 /// A wrapper for a shared library and its corresponding symbol metadata.
 pub struct Library {
     inner: libloading::Library,
-    symbols: &'static ModuleInfo,
+    symbols: ModuleInfo,
 }
 
 impl Library {
@@ -18,10 +17,10 @@ impl Library {
         let library = libloading::Library::new(path)?;
 
         // Check whether the library has a symbols function
-        let symbols_fn: Symbol<'_, fn() -> &'static ModuleInfo> =
-            unsafe { library.get(b"symbols") }.map_err(Error::from)?;
+        let get_symbols: Symbol<'_, extern "C" fn() -> ModuleInfo> =
+            unsafe { library.get(b"get_symbols") }?;
 
-        let symbols = symbols_fn();
+        let symbols = get_symbols();
 
         Ok(Library {
             inner: library,
@@ -36,6 +35,6 @@ impl Library {
 
     /// Retrieves the libraries symbol metadata.
     pub fn module_info(&self) -> &ModuleInfo {
-        self.symbols
+        &self.symbols
     }
 }

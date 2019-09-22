@@ -2,7 +2,6 @@
 members = [
     "crates\\mun_abi",
     "crates\\mun_runtime",
-    "crates\\mun_symbols",
 ]
 
 exclude = [

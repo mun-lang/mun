@@ -6,3 +6,6 @@ edition = "2018"
 
 [build-dependencies]
 bindgen = "0.51"
+
+[dependencies]
+md5 = "0.6.1"
