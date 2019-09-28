@@ -1,0 +1,4 @@
+function main(_:number) {
+   let a = 0;
+   let _ = a;
+}

@@ -1,0 +1,10 @@
+[package]
+name = "tools"
+version = "0.1.0"
+authors = ["Bas Zalmstra <bas@abbeygames.com>"]
+edition = "2018"
+
+[dependencies]
+teraron = "0.0.1"
+clap = "2.32.0"
+failure = "0.1.4"

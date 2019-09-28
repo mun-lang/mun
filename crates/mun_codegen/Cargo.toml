@@ -1,0 +1,19 @@
+[package]
+name = "mun_codegen"
+version = "0.1.0"
+authors = ["Bas Zalmstra <zalmstra.bas@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "llvm7-0" }
+mun_hir = { path = "../mun_hir" }
+mun_target = { path = "../mun_target" }
+failure = "0.1.5"
+salsa="0.12"
+md5="0.6.1"
+array-init="0.1.0"
+tempfile = "3"
+lazy_static = "1.4.0"
+
+[dev-dependencies]
+test_utils = { path="../test_utils"}

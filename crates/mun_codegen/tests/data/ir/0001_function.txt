@@ -1,0 +1,7 @@
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+define void @main() {
+body:
+  ret void
+}

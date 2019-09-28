@@ -1,0 +1,58 @@
+SOURCE_FILE@[0; 57)
+  FUNCTION_DEF@[0; 57)
+    FUNCTION_KW@[0; 8) "function"
+    WHITESPACE@[8; 9) " "
+    NAME@[9; 12)
+      IDENT@[9; 12) "foo"
+    PARAM_LIST@[12; 14)
+      L_PAREN@[12; 13) "("
+      R_PAREN@[13; 14) ")"
+    WHITESPACE@[14; 15) " "
+    BLOCK@[15; 57)
+      L_CURLY@[15; 16) "{"
+      WHITESPACE@[16; 21) "\n    "
+      LET_STMT@[21; 34)
+        LET_KW@[21; 24) "let"
+        WHITESPACE@[24; 25) " "
+        BIND_PAT@[25; 26)
+          NAME@[25; 26)
+            IDENT@[25; 26) "a"
+        WHITESPACE@[26; 27) " "
+        EQ@[27; 28) "="
+        WHITESPACE@[28; 29) " "
+        BIN_EXPR@[29; 34)
+          LITERAL@[29; 30)
+            INT_NUMBER@[29; 30) "3"
+          PLUS@[30; 31) "+"
+          BIN_EXPR@[31; 34)
+            LITERAL@[31; 32)
+              INT_NUMBER@[31; 32) "4"
+            STAR@[32; 33) "*"
+            LITERAL@[33; 34)
+              INT_NUMBER@[33; 34) "5"
+      WHITESPACE@[34; 39) "\n    "
+      LET_STMT@[39; 55)
+        LET_KW@[39; 42) "let"
+        WHITESPACE@[42; 43) " "
+        BIND_PAT@[43; 44)
+          NAME@[43; 44)
+            IDENT@[43; 44) "b"
+        WHITESPACE@[44; 45) " "
+        EQ@[45; 46) "="
+        WHITESPACE@[46; 47) " "
+        BIN_EXPR@[47; 55)
+          BIN_EXPR@[47; 50)
+            LITERAL@[47; 48)
+              INT_NUMBER@[47; 48) "3"
+            STAR@[48; 49) "*"
+            LITERAL@[49; 50)
+              INT_NUMBER@[49; 50) "4"
+          PLUS@[50; 51) "+"
+          BIN_EXPR@[51; 55)
+            LITERAL@[51; 53)
+              INT_NUMBER@[51; 53) "10"
+            SLASH@[53; 54) "/"
+            LITERAL@[54; 55)
+              INT_NUMBER@[54; 55) "2"
+      WHITESPACE@[55; 56) "\n"
+      R_CURLY@[56; 57) "}"

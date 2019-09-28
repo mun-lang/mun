@@ -1,0 +1,7 @@
+// Source file comment
+
+// Comment that belongs to the function
+function a() {}
+function b(value:number) {}
+export function c() {}
+function b(value:number):number {}

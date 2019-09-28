@@ -1,0 +1,7 @@
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+define i64 @main(i64 %a) {
+body:
+  ret i64 %a
+}

@@ -1,0 +1,4 @@
+function bar(i:number) { }
+function foo(i:number) {
+  bar(i+1)
+}

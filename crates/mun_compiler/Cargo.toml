@@ -1,0 +1,16 @@
+[package]
+name = "mun_compiler"
+version = "0.1.0"
+authors = ["Bas Zalmstra <bas@abbeygames.com>"]
+edition = "2018"
+
+[dependencies]
+failure = "0.1.5"
+
+mun_codegen = { path="../mun_codegen" }
+mun_syntax = { path="../mun_syntax" }
+mun_errors = { path="../mun_errors" }
+mun_hir = {path="../mun_hir"}
+mun_target = {path="../mun_target"}
+
+termcolor = "1.0.5"

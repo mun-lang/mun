@@ -1,0 +1,238 @@
+// Stores definitions which must be used in multiple places
+// See `cargo gen-syntax` (defined in crates/tools/src/main.rs)
+Grammar(
+    single_char_tokens: [
+        // Original Lua symbols
+        ["+", "PLUS"],
+        ["-", "MINUS"],
+        ["*", "STAR"],
+        ["/", "SLASH"],
+        ["%", "PERCENT"],
+        ["^", "CARET"],
+        ["#", "HASH"],
+        [".", "DOT"],
+        ["<", "LT"],
+        [">", "GT"],
+        ["=", "EQ"],
+        ["(", "L_PAREN"],
+        [")", "R_PAREN"],
+        ["{", "L_CURLY"],
+        ["}", "R_CURLY"],
+        ["[", "L_BRACKET"],
+        ["]", "R_BRACKET"],
+        [";", "SEMI"],
+        [":", "COLON"],
+        [",", "COMMA"],
+
+        // Extended symbols
+        ["_", "UNDERSCORE"],
+    ],
+    // Tokens for which the longest match must be chosen (e.g. `..` is a DOTDOT, but `.` is a DOT)
+    multi_char_tokens: [
+        // Original Lua symbols
+        ["==", "EQEQ"],
+        // Not equals differs from Lua in that != is used.
+        ["!=", "NEQ"], //["~= ", ""]
+        ["<=", "LTEQ"],
+        [">=", "GTEQ"],
+        ["..", "DOTDOT"],
+        ["...", "DOTDOTDOT"],
+
+        // Extended symbols
+        ["+=", "PLUSEQ"],
+        ["-=", "MINUSEQ"],
+        ["*=", "STAREQ"],
+        ["/=", "SLASHEQ"],
+        ["^=", "CARETEQ"],
+        ["%=", "PERCENTEQ"],
+        ["..=", "DOTDOTEQ"],
+        ["::", "COLONCOLON"],
+    ],
+    keywords: [
+        // Original Lua keywords
+        "and",
+        "break",
+        "do",
+        "else",
+        // "elseif",    // Simply use else if
+        // "end",       // We use braces
+        "false",
+        "for",
+        "function",
+        "if",
+        "in",
+        // "local",     // We use let
+        "nil",
+        "not",
+        "or",
+        "self",
+        "super",
+        // "repeat",    // Not supported
+        "return",
+        "then",
+        "true",
+        // "until",     // Not supported
+        "while",
+
+        // Extended keywords
+        "let",
+        "mut",
+        "class",
+        "public",
+        "protected",
+        "private",
+        "export"
+    ],
+    literals: [
+        "INT_NUMBER",
+        "FLOAT_NUMBER",
+        "STRING",
+    ],
+    tokens: [
+        "ERROR",
+        "IDENT",
+        "WHITESPACE",
+        "COMMENT",
+    ],
+    nodes: [
+        "SOURCE_FILE",
+
+        "FUNCTION_DEF",
+        "RET_TYPE",
+        "VISIBILITY",
+
+        "PARAM_LIST",
+        "PARAM",
+
+        "PATH_TYPE",
+
+        "LET_STMT",
+        "EXPR_STMT",
+
+        "PATH_EXPR",
+        "PREFIX_EXPR",
+        "LITERAL",
+        "BIN_EXPR",
+        "PAREN_EXPR",
+        "CALL_EXPR",
+
+        "BIND_PAT",
+        "PLACEHOLDER_PAT",
+
+        "ARG_LIST",
+
+        "NAME",
+        "NAME_REF",
+
+        "BLOCK",
+
+        "PATH",
+        "PATH_SEGMENT",
+    ],
+    ast: {
+        "SourceFile": (
+            traits: [ "ModuleItemOwner", "FunctionDefOwner" ],
+        ),
+        "ModuleItem": (
+            enum: ["FunctionDef"]
+        ),
+        "Visibility": (),
+        "FunctionDef": (
+            traits: [
+                "NameOwner",
+                "VisibilityOwner",
+                "DocCommentsOwner",
+            ],
+            options: [ "ParamList", ["body", "Block"], "RetType" ],
+        ),
+        "RetType": (options: ["TypeRef"]),
+        "ParamList": (
+            collections: [
+                ["params", "Param"]
+            ]
+        ),
+        "Param": (
+            options: [ "Pat" ],
+            traits: [
+                "TypeAscriptionOwner"
+            ],
+        ),
+        "LetStmt": (
+            options: [
+                ["pat", "Pat"],
+                ["initializer", "Expr"],
+            ],
+            traits: [
+                "TypeAscriptionOwner",
+            ]
+        ),
+        "ExprStmt": (
+            options: [ ["expr", "Expr"] ]
+        ),
+        "Stmt": (
+            enum: ["LetStmt", "ExprStmt"]
+        ),
+
+        "PathExpr": (options: ["Path"]),
+        "PrefixExpr": (options: ["Expr"]),
+        "BinExpr": (),
+        "Literal": (),
+        "ParenExpr": (options: ["Expr"]),
+        "CallExpr": (
+            traits: ["ArgListOwner"],
+            options: [ "Expr" ],
+        ),
+        "ArgList": (
+            collections: [
+                ["args", "Expr"]
+            ]
+        ),
+
+        "Expr": (
+            enum: [
+                "Literal",
+                "PrefixExpr",
+                "PathExpr",
+                "BinExpr",
+                "ParenExpr",
+                "CallExpr"
+            ]
+        ),
+
+        "Name": (),
+        "NameRef": (),
+        "PathType": (options: ["Path"]),
+        "TypeRef": (
+            enum: [
+                "PathType"
+            ]
+        ),
+        "Block": (
+            options: [ "Expr" ],
+            collections: [
+                ["statements", "Stmt"],
+            ],
+        ),
+        "Path": (
+            options: [
+                ["segment", "PathSegment"],
+                ["qualifier", "Path"],
+            ]
+        ),
+        "PathSegment": (
+            options: [ "NameRef" ]
+        ),
+
+        "BindPat": (
+            options: [ "Pat" ],
+            traits: ["NameOwner"]
+        ),
+        "PlaceholderPat": (),
+        "Pat": (
+            enum: [
+                "BindPat",
+                "PlaceholderPat"
+            ],
+        ),
+    }
+)

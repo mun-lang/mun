@@ -1,0 +1,50 @@
+SOURCE_FILE@[0; 61)
+  FUNCTION_DEF@[0; 61)
+    FUNCTION_KW@[0; 8) "function"
+    WHITESPACE@[8; 9) " "
+    NAME@[9; 12)
+      IDENT@[9; 12) "foo"
+    PARAM_LIST@[12; 14)
+      L_PAREN@[12; 13) "("
+      R_PAREN@[13; 14) ")"
+    WHITESPACE@[14; 15) " "
+    BLOCK@[15; 61)
+      L_CURLY@[15; 16) "{"
+      WHITESPACE@[16; 21) "\n    "
+      LET_STMT@[21; 33)
+        LET_KW@[21; 24) "let"
+        WHITESPACE@[24; 25) " "
+        BIND_PAT@[25; 26)
+          NAME@[25; 26)
+            IDENT@[25; 26) "a"
+        WHITESPACE@[26; 27) " "
+        EQ@[27; 28) "="
+        WHITESPACE@[28; 29) " "
+        PREFIX_EXPR@[29; 32)
+          MINUS@[29; 30) "-"
+          PREFIX_EXPR@[30; 32)
+            MINUS@[30; 31) "-"
+            LITERAL@[31; 32)
+              INT_NUMBER@[31; 32) "3"
+        SEMI@[32; 33) ";"
+      WHITESPACE@[33; 38) "\n    "
+      LET_STMT@[38; 59)
+        LET_KW@[38; 41) "let"
+        WHITESPACE@[41; 42) " "
+        BIND_PAT@[42; 43)
+          NAME@[42; 43)
+            IDENT@[42; 43) "b"
+        WHITESPACE@[43; 44) " "
+        EQ@[44; 45) "="
+        WHITESPACE@[45; 46) " "
+        PREFIX_EXPR@[46; 58)
+          NOT_KW@[46; 49) "not"
+          WHITESPACE@[49; 50) " "
+          PREFIX_EXPR@[50; 58)
+            NOT_KW@[50; 53) "not"
+            WHITESPACE@[53; 54) " "
+            LITERAL@[54; 58)
+              TRUE_KW@[54; 58) "true"
+        SEMI@[58; 59) ";"
+      WHITESPACE@[59; 60) "\n"
+      R_CURLY@[60; 61) "}"

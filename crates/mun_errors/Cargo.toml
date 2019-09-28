@@ -1,0 +1,8 @@
+[package]
+name = "mun_errors"
+version = "0.1.0"
+authors = ["Bas Zalmstra <zalmstra.bas@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+text_unit = { version = "0.1.6", features = ["serde"] }

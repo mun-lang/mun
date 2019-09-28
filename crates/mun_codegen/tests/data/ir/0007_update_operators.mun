@@ -1,0 +1,17 @@
+function add(a:int, b:int):int {
+  let result = a
+  result += b
+  result
+}
+
+function subtract(a:int, b:int):int {
+  let result = a
+  result -= b
+  result
+}
+
+function multiply(a:int, b:int):int {
+  let result = a
+  result *= b
+  result
+}

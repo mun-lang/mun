@@ -1,0 +1,8 @@
+[package]
+name = "test_utils"
+version = "0.1.0"
+authors = ["Bas Zalmstra <zalmstra.bas@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+difference = "2.0.0"

@@ -1,0 +1,19 @@
+// Function to add two floats
+function add(a:float, b:float):float {
+  let c = a+b+5.0
+  c
+}
+
+// Function to subtract two floats
+function subtract(a:float, b:float):float {
+  a-b
+}
+
+// Function to subtract two floats
+function multiply(a:float, b:float):float {
+  a*b
+}
+
+function main():int {
+  5
+}

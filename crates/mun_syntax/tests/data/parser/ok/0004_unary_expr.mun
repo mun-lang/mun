@@ -1,0 +1,4 @@
+function foo() {
+    let a = --3;
+    let b = not not true;
+}

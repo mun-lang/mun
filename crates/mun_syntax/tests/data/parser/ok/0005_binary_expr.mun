@@ -1,0 +1,4 @@
+function foo() {
+    let a = 3+4*5
+    let b = 3*4+10/2
+}

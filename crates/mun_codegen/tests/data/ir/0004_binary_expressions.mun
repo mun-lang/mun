@@ -1,0 +1,11 @@
+function add(a:int, b:int):int {
+  a+b
+}
+
+function subtract(a:int, b:int):int {
+  a-b
+}
+
+function multiply(a:int, b:int):int {
+  a*b
+}
