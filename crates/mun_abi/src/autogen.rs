@@ -2,8 +2,7 @@ use crate::prelude::*;
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
-use std::ffi::CStr;
-use std::mem;
+use std::ffi::{c_void, CStr};
 use std::slice;
 
 impl TypeInfo {
@@ -43,56 +42,8 @@ impl FunctionInfo {
         unsafe { self.return_type.as_ref() }
     }
 
-    /// Tries to downcast the `fn_ptr` to the specified function type.
-    ///
-    /// Returns an error message upon failure.
-    pub fn downcast_fn2<A: Reflection, B: Reflection, Output: Reflection>(
-        &self,
-    ) -> Result<fn(A, B) -> Output, String> {
-        let num_args = 2;
-
-        let arg_types = self.arg_types();
-        if arg_types.len() != num_args {
-            return Err(format!(
-                "Invalid number of arguments. Expected: {}. Found: {}.",
-                arg_types.len(),
-                num_args
-            ));
-        }
-
-        if arg_types[0].guid != A::type_guid() {
-            return Err(format!(
-                "Invalid argument type for 'a'. Expected: {}. Found: {}.",
-                arg_types[0].name(),
-                A::type_name()
-            ));
-        }
-
-        if arg_types[1].guid != B::type_guid() {
-            return Err(format!(
-                "Invalid argument type for 'b'. Expected: {}. Found: {}.",
-                arg_types[1].name(),
-                B::type_name()
-            ));
-        }
-
-        if let Some(return_type) = self.return_type() {
-            if return_type.guid != Output::type_guid() {
-                return Err(format!(
-                    "Invalid return type. Expected: {}. Found: {}",
-                    return_type.name(),
-                    Output::type_name(),
-                ));
-            }
-        } else if <()>::type_guid() != Output::type_guid() {
-            return Err(format!(
-                "Invalid return type. Expected: {}. Found: {}",
-                <()>::type_name(),
-                Output::type_name(),
-            ));
-        }
-
-        Ok(unsafe { mem::transmute(self.fn_ptr) })
+    pub unsafe fn fn_ptr(&self) -> *const c_void {
+        self.fn_ptr
     }
 }
 

@@ -5,6 +5,8 @@ extern crate libloading;
 mod assembly;
 mod error;
 mod library;
+#[macro_use]
+mod macros;
 
 pub use crate::assembly::Assembly;
 pub use crate::error::*;
@@ -77,55 +79,10 @@ impl MunRuntime {
         self.assemblies.remove(library_path);
     }
 
-    /// Invokes the method `method_name` with arguments `args`, in the library compiled based on
-    /// the manifest at `manifest_path`.
-    ///
-    /// If an error occurs when invoking the method, an error message is logged. The runtime
-    /// continues looping until the cause of the error has been resolved.
-    pub fn invoke2<A: Reflection, B: Reflection, Output: Reflection>(
-        &mut self,
-        function_name: &str,
-        a: A,
-        b: B,
-    ) -> Output {
-        // Initialize `updated` to `true` to guarantee the method is run at least once
-        let mut updated = true;
-        loop {
-            if updated {
-                let function = self
-                    .function_table
-                    .get(function_name)
-                    .ok_or(format!("Failed to obtain function '{}'", function_name))
-                    .and_then(FunctionInfo::downcast_fn2::<A, B, Output>);
-
-                match function {
-                    Ok(function) => return function(a, b),
-                    Err(ref e) => {
-                        eprintln!("{}", e);
-                        updated = false;
-                    }
-                }
-            } else {
-                updated = self.update();
-            }
-        }
+    /// Retrieves the function information corresponding to `function_name`, if available.
+    pub fn get_function_info(&self, function_name: &str) -> Option<&FunctionInfo> {
+        self.function_table.get(function_name)
     }
-
-    /// Retrieves the module corresponding to the manifest at `manifest_path`.
-    // pub fn get_module(&self, manifest_path: &Path) -> Result<&Module> {
-    //     let manifest_path = manifest_path.canonicalize()?;
-
-    //     self.assemblies.get(&manifest_path).ok_or(
-    //         io::Error::new(
-    //             io::ErrorKind::NotFound,
-    //             format!(
-    //                 "The module at path '{}' cannot be found.",
-    //                 manifest_path.to_string_lossy()
-    //             ),
-    //         )
-    //         .into(),
-    //     )
-    // }
 
     /// Updates the state of the runtime. This includes checking for file changes, and consequent
     /// recompilation.
@@ -172,9 +129,25 @@ impl MunRuntime {
     }
 }
 
+invoke_fn_impl! {
+    fn invoke_fn0();
+    fn invoke_fn1(a: A);
+    fn invoke_fn2(a: A, b: B);
+    fn invoke_fn3(a: A, b: B, c: C);
+    fn invoke_fn4(a: A, b: B, c: C, d: D);
+    fn invoke_fn5(a: A, b: B, c: C, d: D, e: E);
+    fn invoke_fn6(a: A, b: B, c: C, d: D, e: E, f: F);
+    fn invoke_fn7(a: A, b: B, c: C, d: D, e: E, f: F, g: G);
+    fn invoke_fn8(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H);
+    fn invoke_fn9(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I);
+    fn invoke_fn10(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J);
+    fn invoke_fn11(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K);
+    fn invoke_fn12(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K, l: L);
+}
+
 #[cfg(test)]
 mod tests {
-    use super::MunRuntime;
+    use super::{invoke_fn, MunRuntime};
     use std::path::PathBuf;
     use std::time::Duration;
 
@@ -199,7 +172,7 @@ mod tests {
         let a: f64 = 4.0;
         let b: f64 = 2.0;
 
-        let result: f64 = runtime.invoke2("add", a, b);
+        let result: f64 = invoke_fn!(runtime, "add", a, b);
 
         assert_eq!(result, a + b);
     }

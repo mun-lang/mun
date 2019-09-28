@@ -19,10 +19,9 @@ pub struct Assembly {
 impl Assembly {
     /// Loads an assembly for the library at `library_path` and its dependencies.
     pub fn load(library_path: &Path) -> Result<Self> {
-        let library_name = library_path.file_name().ok_or(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "Incorrect library path.",
-        ))?;
+        let library_name = library_path.file_name().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::InvalidInput, "Incorrect library path.")
+        })?;
 
         let tmp_dir = env::current_dir()?.join(LIB_DIR);
         if !tmp_dir.exists() {
