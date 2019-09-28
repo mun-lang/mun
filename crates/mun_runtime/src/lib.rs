@@ -155,7 +155,7 @@ mod tests {
         use std::env;
 
         let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-        manifest_dir.join("../../").join("tests").join("main.dll")
+        manifest_dir.join("tests/data").join("main.dll")
     }
 
     #[test]
@@ -165,7 +165,7 @@ mod tests {
     }
 
     #[test]
-    fn mun_invoke_library_method() {
+    fn mun_invoke_fn() {
         let mut runtime = MunRuntime::new(&test_lib_path(), Duration::from_millis(10))
             .expect("Failed to initialize Mun runtime.");
 
