@@ -13,7 +13,7 @@ pub(crate) fn scan_number(c: char, cursor: &mut Cursor) -> SyntaxKind {
                 cursor.bump();
                 scan_digits(cursor, true);
             }
-            '0'...'9' | '_' | '.' | 'e' | 'E' => {
+            '0'..='9' | '_' | '.' | 'e' | 'E' => {
                 scan_digits(cursor, true);
             }
             _ => return INT_NUMBER,
@@ -42,10 +42,10 @@ pub(crate) fn scan_number(c: char, cursor: &mut Cursor) -> SyntaxKind {
 fn scan_digits(cursor: &mut Cursor, allow_hex: bool) {
     while let Some(c) = cursor.current() {
         match c {
-            '_' | '0'...'9' => {
+            '_' | '0'..='9' => {
                 cursor.bump();
             }
-            'a'...'f' | 'A'...'F' if allow_hex => {
+            'a'..='f' | 'A'..='F' if allow_hex => {
                 cursor.bump();
             }
             _ => return,

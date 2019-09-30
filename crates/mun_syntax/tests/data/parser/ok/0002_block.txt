@@ -1,50 +1,50 @@
-SOURCE_FILE@[0; 62)
-  FUNCTION_DEF@[0; 62)
-    FUNCTION_KW@[0; 8) "function"
+SOURCE_FILE@[0; 56)
+  FUNCTION_DEF@[0; 56)
+    FN_KW@[0; 2) "fn"
+    WHITESPACE@[2; 3) " "
+    NAME@[3; 6)
+      IDENT@[3; 6) "foo"
+    PARAM_LIST@[6; 8)
+      L_PAREN@[6; 7) "("
+      R_PAREN@[7; 8) ")"
     WHITESPACE@[8; 9) " "
-    NAME@[9; 12)
-      IDENT@[9; 12) "foo"
-    PARAM_LIST@[12; 14)
-      L_PAREN@[12; 13) "("
-      R_PAREN@[13; 14) ")"
-    WHITESPACE@[14; 15) " "
-    BLOCK@[15; 62)
-      L_CURLY@[15; 16) "{"
-      WHITESPACE@[16; 21) "\n    "
-      LET_STMT@[21; 27)
-        LET_KW@[21; 24) "let"
-        WHITESPACE@[24; 25) " "
-        BIND_PAT@[25; 26)
-          NAME@[25; 26)
-            IDENT@[25; 26) "a"
-        SEMI@[26; 27) ";"
-      WHITESPACE@[27; 32) "\n    "
-      LET_STMT@[32; 42)
-        LET_KW@[32; 35) "let"
-        WHITESPACE@[35; 36) " "
-        BIND_PAT@[36; 37)
-          NAME@[36; 37)
-            IDENT@[36; 37) "b"
-        COLON@[37; 38) ":"
-        PATH_TYPE@[38; 41)
-          PATH@[38; 41)
-            PATH_SEGMENT@[38; 41)
-              NAME_REF@[38; 41)
-                IDENT@[38; 41) "i32"
-        SEMI@[41; 42) ";"
-      WHITESPACE@[42; 47) "\n    "
-      LET_STMT@[47; 60)
-        LET_KW@[47; 50) "let"
-        WHITESPACE@[50; 51) " "
-        BIND_PAT@[51; 52)
-          NAME@[51; 52)
-            IDENT@[51; 52) "c"
-        COLON@[52; 53) ":"
-        PATH_TYPE@[53; 59)
-          PATH@[53; 59)
-            PATH_SEGMENT@[53; 59)
-              NAME_REF@[53; 59)
-                IDENT@[53; 59) "string"
-        SEMI@[59; 60) ";"
-      WHITESPACE@[60; 61) "\n"
-      R_CURLY@[61; 62) "}"
+    BLOCK@[9; 56)
+      L_CURLY@[9; 10) "{"
+      WHITESPACE@[10; 15) "\n    "
+      LET_STMT@[15; 21)
+        LET_KW@[15; 18) "let"
+        WHITESPACE@[18; 19) " "
+        BIND_PAT@[19; 20)
+          NAME@[19; 20)
+            IDENT@[19; 20) "a"
+        SEMI@[20; 21) ";"
+      WHITESPACE@[21; 26) "\n    "
+      LET_STMT@[26; 36)
+        LET_KW@[26; 29) "let"
+        WHITESPACE@[29; 30) " "
+        BIND_PAT@[30; 31)
+          NAME@[30; 31)
+            IDENT@[30; 31) "b"
+        COLON@[31; 32) ":"
+        PATH_TYPE@[32; 35)
+          PATH@[32; 35)
+            PATH_SEGMENT@[32; 35)
+              NAME_REF@[32; 35)
+                IDENT@[32; 35) "i32"
+        SEMI@[35; 36) ";"
+      WHITESPACE@[36; 41) "\n    "
+      LET_STMT@[41; 54)
+        LET_KW@[41; 44) "let"
+        WHITESPACE@[44; 45) " "
+        BIND_PAT@[45; 46)
+          NAME@[45; 46)
+            IDENT@[45; 46) "c"
+        COLON@[46; 47) ":"
+        PATH_TYPE@[47; 53)
+          PATH@[47; 53)
+            PATH_SEGMENT@[47; 53)
+              NAME_REF@[47; 53)
+                IDENT@[47; 53) "string"
+        SEMI@[53; 54) ";"
+      WHITESPACE@[54; 55) "\n"
+      R_CURLY@[55; 56) "}"

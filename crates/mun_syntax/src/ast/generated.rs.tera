@@ -9,15 +9,13 @@ the below applies to the result of this template
 //! `.borrowed` functions. Most of the code works with borrowed mode, and only
 //! this mode has all AST accessors.
 
-use rowan::TransparentNewType;
-
 use crate::{
-    SyntaxNode, SyntaxKind::{self, *},
     ast::{self, AstNode},
+    SyntaxKind::{self, *},
+    SyntaxNode,
 };
 
-{% for node, methods in ast %}
-// {{ node }}
+{% for node, methods in ast %}// {{ node }}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct {{ node }} {
@@ -36,14 +34,20 @@ impl AstNode for {{ node }} {
         }
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
-        if Self::can_cast(syntax.kind()) { Some({{ node }} { syntax }) } else { None }
+        if Self::can_cast(syntax.kind()) {
+            Some({{ node }} { syntax })
+        } else {
+            None
+        }
     }
-    fn syntax(&self) -> &SyntaxNode { &self.syntax }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
 }
 
 {%- if methods.enum %}
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum {{ node }}Kind{
+pub enum {{ node }}Kind {
 {%- for kind in methods.enum %}
     {{ kind }}({{ kind }}),
 {%- endfor %}
@@ -51,7 +55,9 @@ pub enum {{ node }}Kind{
 
 {%- for kind in methods.enum %}
 impl From<{{ kind }}> for {{ node }} {
-    fn from(n: {{ kind }}) -> {{ node }} { {{ node }} { syntax: n.syntax } }
+    fn from(n: {{ kind }}) -> {{ node }} {
+        {{ node }} { syntax: n.syntax }
+    }
 }
 {%- endfor %}
 
