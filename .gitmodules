@@ -1,3 +1,3 @@
 [submodule "crates/mun_abi/c"]
 	path = crates/mun_abi/c
-	url = ../abi-c
+	url = ../../mun-lang/abi-c
