@@ -2,6 +2,12 @@ language: rust
 dist: bionic
 rust:
   - stable
+  - beta
+  - nightly
+matrix:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true
 
 cache: cargo
 
@@ -11,3 +17,7 @@ addons:
       - llvm-7
       - llvm-7-*
       - lld-7
+
+script:
+  - cargo build --verbose --all
+  - cargo test --verbose --all -- --test-threads=1
