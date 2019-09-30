@@ -1,5 +1,18 @@
 # Mun Runtime Experiment
 
+[![Build Status][s1]][ci] [![docs page][docs-badge]][docs] [![MIT/Apache][licence-badge]][li]
+[![Join us on Discord][s4]][di] ![Lines of Code][s6]
+
+[s1]: https://travis-ci.org/mun-lang/mun.svg?branch=master
+[docs-badge]: https://img.shields.io/badge/docs-website-blue.svg
+[docs]: https://docs.mun-lang.org/
+[licence-badge]: https://img.shields.io/badge/license-MIT%2FApache-blue.svg
+[s4]: https://img.shields.io/discord/602227728480993281.svg?logo=discord
+[s6]: https://tokei.rs/b1/github/mun-lang/mun?category=code
+[ci]: https://travis-ci.org/mun-lang/mun
+[li]: COPYRIGHT
+[di]: https://discord.gg/SfvvcCU
+
 An experiment to:
 
 * Detect file changes

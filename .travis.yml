@@ -1,0 +1,13 @@
+language: rust
+dist: bionic
+rust:
+  - stable
+
+cache: cargo
+
+addons:
+  apt:
+    packages:
+      - llvm-7
+      - llvm-7-*
+      - lld-7
