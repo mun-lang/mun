@@ -56,7 +56,7 @@ pub enum SyntaxKind {
     ELSE_KW,
     FALSE_KW,
     FOR_KW,
-    FUNCTION_KW,
+    FN_KW,
     IF_KW,
     IN_KW,
     NIL_KW,
@@ -154,7 +154,7 @@ macro_rules! T {
     (else) => { $crate::SyntaxKind::ELSE_KW };
     (false) => { $crate::SyntaxKind::FALSE_KW };
     (for) => { $crate::SyntaxKind::FOR_KW };
-    (function) => { $crate::SyntaxKind::FUNCTION_KW };
+    (fn) => { $crate::SyntaxKind::FN_KW };
     (if) => { $crate::SyntaxKind::IF_KW };
     (in) => { $crate::SyntaxKind::IN_KW };
     (nil) => { $crate::SyntaxKind::NIL_KW };
@@ -197,7 +197,7 @@ impl SyntaxKind {
             | ELSE_KW
             | FALSE_KW
             | FOR_KW
-            | FUNCTION_KW
+            | FN_KW
             | IF_KW
             | IN_KW
             | NIL_KW
@@ -316,7 +316,7 @@ impl SyntaxKind {
                 ELSE_KW => &SyntaxInfo { name: "ELSE_KW" },
                 FALSE_KW => &SyntaxInfo { name: "FALSE_KW" },
                 FOR_KW => &SyntaxInfo { name: "FOR_KW" },
-                FUNCTION_KW => &SyntaxInfo { name: "FUNCTION_KW" },
+                FN_KW => &SyntaxInfo { name: "FN_KW" },
                 IF_KW => &SyntaxInfo { name: "IF_KW" },
                 IN_KW => &SyntaxInfo { name: "IN_KW" },
                 NIL_KW => &SyntaxInfo { name: "NIL_KW" },
@@ -379,7 +379,7 @@ impl SyntaxKind {
                 "else" => ELSE_KW,
                 "false" => FALSE_KW,
                 "for" => FOR_KW,
-                "function" => FUNCTION_KW,
+                "fn" => FN_KW,
                 "if" => IF_KW,
                 "in" => IN_KW,
                 "nil" => NIL_KW,
@@ -431,6 +431,3 @@ impl SyntaxKind {
             Some(tok)
         }
 }
-
-
-

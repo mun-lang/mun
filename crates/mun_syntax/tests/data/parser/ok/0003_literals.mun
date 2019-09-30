@@ -1,4 +1,4 @@
-function foo() {
+fn foo() {
     let a = true;
     let b = false;
     let c = 1;

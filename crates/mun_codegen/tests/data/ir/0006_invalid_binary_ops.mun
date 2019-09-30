@@ -1,4 +1,4 @@
-function main() {
+fn main() {
   let a = 3+3.0;
   let b = 3.0+3;
 }

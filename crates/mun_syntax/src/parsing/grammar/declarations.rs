@@ -1,7 +1,7 @@
 use super::*;
 use crate::T;
 
-pub(super) const DECLARATION_RECOVERY_SET: TokenSet = token_set![FUNCTION_KW, EXPORT_KW];
+pub(super) const DECLARATION_RECOVERY_SET: TokenSet = token_set![FN_KW, EXPORT_KW];
 
 pub(super) fn mod_contents(p: &mut Parser) {
     while !p.matches(EOF) {
@@ -35,7 +35,7 @@ pub(super) fn maybe_declaration(p: &mut Parser, m: Marker) -> Result<(), Marker>
     opt_visibility(p);
 
     match p.current() {
-        FUNCTION_KW => {
+        FN_KW => {
             fn_def(p);
             m.complete(p, FUNCTION_DEF);
         }
@@ -45,7 +45,7 @@ pub(super) fn maybe_declaration(p: &mut Parser, m: Marker) -> Result<(), Marker>
 }
 
 pub(super) fn fn_def(p: &mut Parser) {
-    assert!(p.matches(FUNCTION_KW));
+    assert!(p.matches(FN_KW));
     p.bump();
 
     name_recovery(p, DECLARATION_RECOVERY_SET.union(token_set![L_PAREN]));

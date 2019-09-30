@@ -1,16 +1,16 @@
-function add(a:int, b:int):int {
+fn add(a:int, b:int):int {
   let result = a
   result += b
   result
 }
 
-function subtract(a:int, b:int):int {
+fn subtract(a:int, b:int):int {
   let result = a
   result -= b
   result
 }
 
-function multiply(a:int, b:int):int {
+fn multiply(a:int, b:int):int {
   let result = a
   result *= b
   result

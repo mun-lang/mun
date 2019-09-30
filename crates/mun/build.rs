@@ -8,10 +8,11 @@ extern crate lazy_static;
 const LLVM_VERSION_MAJOR: u32 = 7;
 const LLVM_VERSION_MINOR: u32 = 0;
 
-/// Environment variables that can guide compilation
-///
-/// When adding new ones, they should also be added to main() to force a
-/// rebuild if they are changed.
+// Environment variables that can guide compilation
+//
+// When adding new ones, they should also be added to main() to force a
+// rebuild if they are changed.
+
 lazy_static! {
     /// A single path to search for LLVM in (containing bin/llvm-config)
     static ref ENV_LLVM_PREFIX: String =
@@ -47,9 +48,9 @@ lazy_static! {
 
     static ref LLVM_CONFIG_BINARY_NAMES: Vec<String> = {
         vec![
-            "llvm-config".into(),
-            format!("llvm-config-{}", LLVM_VERSION_MAJOR),
-            format!("llvm-config-{}.{}", LLVM_VERSION_MAJOR, LLVM_VERSION_MINOR),
+            format!("llvm-config{}", std::env::consts::EXE_SUFFIX),
+            format!("llvm-config-{}{}", LLVM_VERSION_MAJOR, std::env::consts::EXE_SUFFIX),
+            format!("llvm-config-{}.{}{}", LLVM_VERSION_MAJOR, LLVM_VERSION_MINOR, std::env::consts::EXE_SUFFIX),
         ]
     };
 

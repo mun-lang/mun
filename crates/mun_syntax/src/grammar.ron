@@ -58,7 +58,7 @@ Grammar(
         // "end",       // We use braces
         "false",
         "for",
-        "function",
+        "fn",
         "if",
         "in",
         // "local",     // We use let

@@ -151,7 +151,7 @@ fn api_walkthrough() {
     use ast::NameOwner;
 
     let source_code = "
-        function foo() {
+        fn foo() {
 
         }
     ";

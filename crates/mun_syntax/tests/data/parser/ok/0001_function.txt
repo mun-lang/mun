@@ -1,86 +1,86 @@
-SOURCE_FILE@[0; 165)
+SOURCE_FILE@[0; 141)
   COMMENT@[0; 22) "// Source file comment"
   WHITESPACE@[22; 24) "\n\n"
-  FUNCTION_DEF@[24; 79)
+  FUNCTION_DEF@[24; 73)
     COMMENT@[24; 63) "// Comment that belon ..."
     WHITESPACE@[63; 64) "\n"
-    FUNCTION_KW@[64; 72) "function"
-    WHITESPACE@[72; 73) " "
-    NAME@[73; 74)
-      IDENT@[73; 74) "a"
-    PARAM_LIST@[74; 76)
-      L_PAREN@[74; 75) "("
-      R_PAREN@[75; 76) ")"
+    FN_KW@[64; 66) "fn"
+    WHITESPACE@[66; 67) " "
+    NAME@[67; 68)
+      IDENT@[67; 68) "a"
+    PARAM_LIST@[68; 70)
+      L_PAREN@[68; 69) "("
+      R_PAREN@[69; 70) ")"
+    WHITESPACE@[70; 71) " "
+    BLOCK@[71; 73)
+      L_CURLY@[71; 72) "{"
+      R_CURLY@[72; 73) "}"
+  FUNCTION_DEF@[73; 95)
+    WHITESPACE@[73; 74) "\n"
+    FN_KW@[74; 76) "fn"
     WHITESPACE@[76; 77) " "
-    BLOCK@[77; 79)
-      L_CURLY@[77; 78) "{"
-      R_CURLY@[78; 79) "}"
-  FUNCTION_DEF@[79; 107)
-    WHITESPACE@[79; 80) "\n"
-    FUNCTION_KW@[80; 88) "function"
-    WHITESPACE@[88; 89) " "
-    NAME@[89; 90)
-      IDENT@[89; 90) "b"
-    PARAM_LIST@[90; 104)
-      L_PAREN@[90; 91) "("
-      PARAM@[91; 103)
-        BIND_PAT@[91; 96)
-          NAME@[91; 96)
-            IDENT@[91; 96) "value"
-        COLON@[96; 97) ":"
-        PATH_TYPE@[97; 103)
-          PATH@[97; 103)
-            PATH_SEGMENT@[97; 103)
-              NAME_REF@[97; 103)
-                IDENT@[97; 103) "number"
-      R_PAREN@[103; 104) ")"
-    WHITESPACE@[104; 105) " "
-    BLOCK@[105; 107)
-      L_CURLY@[105; 106) "{"
-      R_CURLY@[106; 107) "}"
-  FUNCTION_DEF@[107; 130)
-    WHITESPACE@[107; 108) "\n"
-    VISIBILITY@[108; 114)
-      EXPORT_KW@[108; 114) "export"
-    WHITESPACE@[114; 115) " "
-    FUNCTION_KW@[115; 123) "function"
-    WHITESPACE@[123; 124) " "
-    NAME@[124; 125)
-      IDENT@[124; 125) "c"
-    PARAM_LIST@[125; 127)
-      L_PAREN@[125; 126) "("
-      R_PAREN@[126; 127) ")"
-    WHITESPACE@[127; 128) " "
-    BLOCK@[128; 130)
-      L_CURLY@[128; 129) "{"
-      R_CURLY@[129; 130) "}"
-  FUNCTION_DEF@[130; 165)
-    WHITESPACE@[130; 131) "\n"
-    FUNCTION_KW@[131; 139) "function"
-    WHITESPACE@[139; 140) " "
-    NAME@[140; 141)
-      IDENT@[140; 141) "b"
-    PARAM_LIST@[141; 155)
-      L_PAREN@[141; 142) "("
-      PARAM@[142; 154)
-        BIND_PAT@[142; 147)
-          NAME@[142; 147)
-            IDENT@[142; 147) "value"
-        COLON@[147; 148) ":"
-        PATH_TYPE@[148; 154)
-          PATH@[148; 154)
-            PATH_SEGMENT@[148; 154)
-              NAME_REF@[148; 154)
-                IDENT@[148; 154) "number"
-      R_PAREN@[154; 155) ")"
-    RET_TYPE@[155; 162)
-      COLON@[155; 156) ":"
-      PATH_TYPE@[156; 162)
-        PATH@[156; 162)
-          PATH_SEGMENT@[156; 162)
-            NAME_REF@[156; 162)
-              IDENT@[156; 162) "number"
-    WHITESPACE@[162; 163) " "
-    BLOCK@[163; 165)
-      L_CURLY@[163; 164) "{"
-      R_CURLY@[164; 165) "}"
+    NAME@[77; 78)
+      IDENT@[77; 78) "b"
+    PARAM_LIST@[78; 92)
+      L_PAREN@[78; 79) "("
+      PARAM@[79; 91)
+        BIND_PAT@[79; 84)
+          NAME@[79; 84)
+            IDENT@[79; 84) "value"
+        COLON@[84; 85) ":"
+        PATH_TYPE@[85; 91)
+          PATH@[85; 91)
+            PATH_SEGMENT@[85; 91)
+              NAME_REF@[85; 91)
+                IDENT@[85; 91) "number"
+      R_PAREN@[91; 92) ")"
+    WHITESPACE@[92; 93) " "
+    BLOCK@[93; 95)
+      L_CURLY@[93; 94) "{"
+      R_CURLY@[94; 95) "}"
+  FUNCTION_DEF@[95; 112)
+    WHITESPACE@[95; 96) "\n"
+    VISIBILITY@[96; 102)
+      EXPORT_KW@[96; 102) "export"
+    WHITESPACE@[102; 103) " "
+    FN_KW@[103; 105) "fn"
+    WHITESPACE@[105; 106) " "
+    NAME@[106; 107)
+      IDENT@[106; 107) "c"
+    PARAM_LIST@[107; 109)
+      L_PAREN@[107; 108) "("
+      R_PAREN@[108; 109) ")"
+    WHITESPACE@[109; 110) " "
+    BLOCK@[110; 112)
+      L_CURLY@[110; 111) "{"
+      R_CURLY@[111; 112) "}"
+  FUNCTION_DEF@[112; 141)
+    WHITESPACE@[112; 113) "\n"
+    FN_KW@[113; 115) "fn"
+    WHITESPACE@[115; 116) " "
+    NAME@[116; 117)
+      IDENT@[116; 117) "b"
+    PARAM_LIST@[117; 131)
+      L_PAREN@[117; 118) "("
+      PARAM@[118; 130)
+        BIND_PAT@[118; 123)
+          NAME@[118; 123)
+            IDENT@[118; 123) "value"
+        COLON@[123; 124) ":"
+        PATH_TYPE@[124; 130)
+          PATH@[124; 130)
+            PATH_SEGMENT@[124; 130)
+              NAME_REF@[124; 130)
+                IDENT@[124; 130) "number"
+      R_PAREN@[130; 131) ")"
+    RET_TYPE@[131; 138)
+      COLON@[131; 132) ":"
+      PATH_TYPE@[132; 138)
+        PATH@[132; 138)
+          PATH_SEGMENT@[132; 138)
+            NAME_REF@[132; 138)
+              IDENT@[132; 138) "number"
+    WHITESPACE@[138; 139) " "
+    BLOCK@[139; 141)
+      L_CURLY@[139; 140) "{"
+      R_CURLY@[140; 141) "}"
