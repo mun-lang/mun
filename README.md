@@ -10,7 +10,7 @@
 [s4]: https://img.shields.io/discord/602227728480993281.svg?logo=discord
 [s6]: https://tokei.rs/b1/github/mun-lang/mun?category=code
 [ci]: https://travis-ci.org/mun-lang/mun
-[li]: COPYING
+[li]: COPYRIGHT
 [di]: https://discord.gg/SfvvcCU
 
 An experiment to:
