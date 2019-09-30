@@ -145,7 +145,7 @@ invoke_fn_impl! {
     fn invoke_fn12(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K, l: L);
 }
 
-#[cfg(test)]
+#[cfg(all(test, windows))]
 mod tests {
     use super::{invoke_fn, MunRuntime};
     use std::path::PathBuf;
