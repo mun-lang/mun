@@ -1,4 +1,4 @@
-function foo() {
+fn foo() {
     let a = "hello"
     let b = "world"
     let c
