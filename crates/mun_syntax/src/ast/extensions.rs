@@ -1,8 +1,10 @@
+use crate::ast::NameOwner;
 use crate::{
     ast::{self, AstNode},
-    T,
+    SyntaxKind, T,
 };
 use crate::{SmolStr, SyntaxNode};
+use text_unit::TextRange;
 
 impl ast::Name {
     pub fn text(&self) -> &SmolStr {
@@ -13,6 +15,32 @@ impl ast::Name {
 impl ast::NameRef {
     pub fn text(&self) -> &SmolStr {
         text_of_first_token(self.syntax())
+    }
+}
+
+impl ast::FunctionDef {
+    pub fn signature_range(&self) -> TextRange {
+        let fn_kw = self
+            .syntax()
+            .children_with_tokens()
+            .find(|p| p.kind() == SyntaxKind::FN_KW)
+            .map(|kw| kw.text_range());
+        let name = self.name().map(|n| n.syntax.text_range());
+        let param_list = self.param_list().map(|p| p.syntax.text_range());
+        let ret_type = self.ret_type().map(|r| r.syntax.text_range());
+
+        let start = fn_kw
+            .map(|kw| kw.start())
+            .unwrap_or(self.syntax.text_range().start());
+
+        let end = ret_type
+            .map(|p| p.end())
+            .or(param_list.map(|name| name.end()))
+            .or(name.map(|name| name.end()))
+            .or(fn_kw.map(|kw| kw.end()))
+            .unwrap_or(self.syntax().text_range().end());
+
+        TextRange::from_to(start, end)
     }
 }
 

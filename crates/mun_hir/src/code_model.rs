@@ -42,6 +42,9 @@ impl Module {
     }
 
     pub fn diagnostics(self, db: &impl HirDatabase, sink: &mut DiagnosticSink) {
+        for diag in db.module_data(self.file_id).diagnostics.iter() {
+            diag.add_to(db, self, sink);
+        }
         for decl in self.declarations(db) {
             match decl {
                 ModuleDef::Function(f) => f.diagnostics(db, sink),
@@ -54,6 +57,7 @@ impl Module {
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Default)]
 pub struct ModuleData {
     definitions: Vec<ModuleDef>,
+    diagnostics: Vec<ModuleDefinitionDiagnostic>
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
@@ -66,13 +70,25 @@ impl ModuleData {
         let items = db.raw_items(file_id);
         let mut data = ModuleData::default();
         let loc_ctx = LocationCtx::new(db, file_id);
+        let mut definition_by_name = FxHashMap::default();
         for item in items.items().iter() {
             match item {
-                RawFileItem::Definition(def) => match items[*def].kind {
-                    DefKind::Function(ast_id) => {
-                        data.definitions.push(ModuleDef::Function(Function {
-                            id: FunctionId::from_ast_id(loc_ctx, ast_id),
-                        }))
+                RawFileItem::Definition(def) => {
+                    if let Some(prev_definition) = definition_by_name.get(&items[*def].name) {
+                        data.diagnostics.push(diagnostics::ModuleDefinitionDiagnostic::DuplicateName {
+                            name: items[*def].name.clone(),
+                            definition: *def,
+                            first_definition: *prev_definition
+                        })
+                    } else {
+                        definition_by_name.insert(items[*def].name.clone(), *def);
+                    }
+                    match items[*def].kind {
+                        DefKind::Function(ast_id) => {
+                            data.definitions.push(ModuleDef::Function(Function {
+                                id: FunctionId::from_ast_id(loc_ctx, ast_id),
+                            }))
+                        }
                     }
                 },
             };
@@ -258,10 +274,52 @@ pub enum BuiltinType {
 }
 
 use crate::name::*;
+use crate::code_model::diagnostics::ModuleDefinitionDiagnostic;
+
 impl BuiltinType {
     #[rustfmt::skip]
     pub(crate) const ALL: &'static [(Name, BuiltinType)] = &[
         (FLOAT, BuiltinType::Float),
         (INT, BuiltinType::Int),
     ];
+}
+
+mod diagnostics {
+    use crate::{Name, DefDatabase};
+    use crate::raw::{DefId, DefKind};
+    use crate::diagnostics::{DiagnosticSink, DuplicateDefinition};
+    use super::Module;
+    use mun_syntax::{SyntaxNodePtr, AstNode};
+
+    #[derive(Debug, PartialEq, Eq, Clone, Hash)]
+    pub(super) enum ModuleDefinitionDiagnostic {
+        DuplicateName { name: Name, definition: DefId, first_definition: DefId  },
+    }
+
+    fn syntax_ptr_from_def(db: &impl DefDatabase, owner: Module, kind: DefKind) -> SyntaxNodePtr {
+        match kind {
+            DefKind::Function(id) => SyntaxNodePtr::new(id.with_file_id(owner.file_id).to_node(db).syntax()),
+        }
+    }
+
+    impl ModuleDefinitionDiagnostic {
+        pub(super) fn add_to(
+            &self,
+            db: &impl DefDatabase,
+            owner: Module,
+            sink: &mut DiagnosticSink,
+        ) {
+            match self {
+                ModuleDefinitionDiagnostic::DuplicateName { name, definition, first_definition } => {
+                    let raw_items = db.raw_items(owner.file_id);
+                    sink.push(DuplicateDefinition {
+                        file: owner.file_id,
+                        name: name.to_string(),
+                        definition: syntax_ptr_from_def(db, owner, raw_items[*definition].kind),
+                        first_definition: syntax_ptr_from_def(db, owner, raw_items[*first_definition].kind),
+                    })
+                },
+            }
+        }
+    }
 }
