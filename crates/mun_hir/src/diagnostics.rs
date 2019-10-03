@@ -173,3 +173,29 @@ impl Diagnostic for CannotApplyBinaryOp {
         self
     }
 }
+
+#[derive(Debug)]
+pub struct DuplicateDefinition {
+    pub file: FileId,
+    pub name: String,
+    pub first_definition: SyntaxNodePtr,
+    pub definition: SyntaxNodePtr,
+}
+
+impl Diagnostic for DuplicateDefinition {
+    fn message(&self) -> String {
+        format!("the name `{}` is defined multiple times", self.name)
+    }
+
+    fn file(&self) -> FileId {
+        self.file
+    }
+
+    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
+        self.definition
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}

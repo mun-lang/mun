@@ -14,6 +14,7 @@ use std::sync::{Arc, Mutex};
 use termcolor::{ColorChoice, StandardStream};
 
 pub use mun_codegen::OptimizationLevel;
+use mun_syntax::{ast, SyntaxKind};
 use mun_target::spec;
 
 #[derive(Debug, Clone)]
@@ -153,6 +154,21 @@ fn diagnostics(db: &CompilerDatabase, file_id: FileId) -> Vec<Diagnostic> {
                 d.expected.display(db),
                 d.found.display(db)
             ),
+        });
+    })
+    .on::<mun_hir::diagnostics::DuplicateDefinition, _>(|d| {
+        result.borrow_mut().push(Diagnostic {
+            level: Level::Error,
+            loc: match d.definition.kind() {
+                SyntaxKind::FUNCTION_DEF => {
+                    ast::FunctionDef::cast(d.definition.to_node(&parse.tree().syntax()))
+                        .map(|f| f.signature_range())
+                        .unwrap_or(d.highlight_range())
+                        .into()
+                }
+                _ => d.highlight_range().into(),
+            },
+            message: d.message(),
         });
     });
 
