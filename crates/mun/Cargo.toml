@@ -8,6 +8,7 @@ edition = "2018"
 failure = "0.1.5"
 clap = "2.33.0"
 mun_compiler = { path = "../mun_compiler" }
+mun_compiler_daemon = { path = "../mun_compiler_daemon" }
 
 [build-dependencies]
 lazy_static = "1.4.0"
