@@ -1,7 +1,10 @@
 #[macro_use]
 extern crate failure;
 
+use std::time::Duration;
+
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
+use mun_runtime::invoke_fn;
 
 fn main() -> Result<(), failure::Error> {
     let matches = App::new("mun")
@@ -36,10 +39,33 @@ fn main() -> Result<(), failure::Error> {
                 )
                 .about("Compiles a local Mun file into a module"),
         )
+        .subcommand(
+            SubCommand::with_name("start")
+                .arg(
+                    Arg::with_name("LIBRARY")
+                        .help("Sets the library to use")
+                        .required(true)
+                        .index(1),
+                )
+                .arg(
+                    Arg::with_name("entry")
+                        .long("entry")
+                        .takes_value(true)
+                        .help("the function entry point to call on startup"),
+                )
+                .arg(
+                    Arg::with_name("delay")
+                        .long("delay")
+                        .required(true)
+                        .takes_value(true)
+                        .help("how much to delay received filesystem events (in ms). This allows bundling of identical events, e.g. when several writes to the same file are detected. A high delay will make hot reloading less responsive."),
+                ),
+        )
         .get_matches();
 
     match matches.subcommand() {
         ("build", Some(matches)) => build(matches)?,
+        ("start", Some(matches)) => start(matches)?,
         _ => unreachable!(),
     }
 
@@ -56,6 +82,15 @@ fn build(matches: &ArgMatches) -> Result<(), failure::Error> {
     }
 }
 
+/// Starts the runtime with the specified library and invokes function `entry`.
+fn start(matches: &ArgMatches) -> Result<(), failure::Error> {
+    let runtime_options = runtime_options(matches)?;
+    let mut runtime = mun_runtime::MunRuntime::new(runtime_options)?;
+
+    let entry_point = matches.value_of("entry").unwrap_or("main");
+    Ok(invoke_fn!(runtime, entry_point))
+}
+
 fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOptions, failure::Error> {
     let optimization_lvl = match matches.value_of("opt-level") {
         Some("0") => mun_compiler::OptimizationLevel::None,
@@ -69,5 +104,14 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOption
         input: matches.value_of("INPUT").unwrap().into(), // Safe because its a required arg
         target: matches.value_of("target").map(|t| t.to_string()),
         optimization_lvl,
+    })
+}
+
+fn runtime_options(matches: &ArgMatches) -> Result<mun_runtime::RuntimeOptions, failure::Error> {
+    let delay: u64 = matches.value_of("delay").unwrap().parse()?;
+
+    Ok(mun_runtime::RuntimeOptions {
+        library_path: matches.value_of("LIBRARY").unwrap().into(), // Safe because its a required arg
+        delay: Duration::from_millis(delay),
     })
 }

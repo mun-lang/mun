@@ -3,8 +3,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::error::*;
 use crate::library::Library;
+use failure::Error;
 use mun_abi::FunctionInfo;
 
 const LIB_DIR: &str = "tmp";
@@ -18,7 +18,7 @@ pub struct Assembly {
 
 impl Assembly {
     /// Loads an assembly for the library at `library_path` and its dependencies.
-    pub fn load(library_path: &Path) -> Result<Self> {
+    pub fn load(library_path: &Path) -> Result<Self, Error> {
         let library_name = library_path.file_name().ok_or_else(|| {
             io::Error::new(io::ErrorKind::InvalidInput, "Incorrect library path.")
         })?;
@@ -41,7 +41,7 @@ impl Assembly {
         })
     }
 
-    pub fn swap(&mut self, library_path: &Path) -> Result<()> {
+    pub fn swap(&mut self, library_path: &Path) -> Result<(), Error> {
         let library_path = library_path.canonicalize()?;
         let library_name = library_path.file_name().ok_or(io::Error::new(
             io::ErrorKind::InvalidInput,
