@@ -17,10 +17,12 @@ impl ast::NameRef {
 }
 
 fn text_of_first_token(node: &SyntaxNode) -> &SmolStr {
-    match node.0.green().children().first() {
-        Some(rowan::GreenElement::Token(it)) => it.text(),
-        _ => panic!(),
-    }
+    node.green()
+        .children()
+        .first()
+        .and_then(|it| it.as_token())
+        .unwrap()
+        .text()
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

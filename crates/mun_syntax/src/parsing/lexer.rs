@@ -51,13 +51,10 @@ fn next_token_inner(c: char, cursor: &mut Cursor) -> SyntaxKind {
         return WHITESPACE;
     }
 
-    match c {
-        '/' => {
-            if let Some(kind) = scan_comment(cursor) {
-                return kind;
-            }
+    if c == '/' {
+        if let Some(kind) = scan_comment(cursor) {
+            return kind;
         }
-        _ => (),
     }
 
     let ident_start = is_ident_start(c);

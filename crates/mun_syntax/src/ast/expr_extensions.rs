@@ -1,7 +1,7 @@
 use super::{children, BinExpr};
 use crate::ast::Literal;
 use crate::{
-    ast, AstNode, SyntaxElement,
+    ast, AstNode,
     SyntaxKind::{self, *},
     SyntaxToken,
 };
@@ -103,14 +103,11 @@ pub enum LiteralKind {
 
 impl Literal {
     pub fn token(&self) -> SyntaxToken {
-        let elem = self
-            .syntax()
+        self.syntax()
             .children_with_tokens()
-            .find(|e| !e.kind().is_trivia());
-        match elem {
-            Some(SyntaxElement::Token(token)) => token,
-            _ => unreachable!(),
-        }
+            .find(|e| !e.kind().is_trivia())
+            .and_then(|e| e.into_token())
+            .unwrap()
     }
 
     pub fn kind(&self) -> LiteralKind {
