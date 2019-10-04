@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::error::*;
+use failure::Error;
 use libloading::{self, Symbol};
 use mun_abi::ModuleInfo;
 
@@ -13,7 +13,7 @@ pub struct Library {
 impl Library {
     /// Loads the shared library at `path`, retrieves its symbol metadata, and constructs a library
     /// wrapper.
-    pub fn new(path: &Path) -> Result<Library> {
+    pub fn new(path: &Path) -> Result<Library, Error> {
         let library = libloading::Library::new(path)?;
 
         // Check whether the library has a symbols function

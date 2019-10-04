@@ -1,15 +1,9 @@
-extern crate cargo;
-extern crate failure;
-extern crate libloading;
-
 mod assembly;
-mod error;
 mod library;
 #[macro_use]
 mod macros;
 
 pub use crate::assembly::Assembly;
-pub use crate::error::*;
 pub use crate::library::Library;
 
 use std::collections::HashMap;
@@ -18,8 +12,15 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
+use failure::Error;
 use mun_abi::{FunctionInfo, Reflection};
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
+
+#[derive(Clone, Debug)]
+pub struct RuntimeOptions {
+    pub library_path: PathBuf,
+    pub delay: Duration,
+}
 
 /// A runtime for the Mun scripting language.
 pub struct MunRuntime {
@@ -33,10 +34,10 @@ impl MunRuntime {
     /// Constructs a new `MunRuntime` that loads the library at `library_path` and its
     /// dependencies. The `MunRuntime` contains a file watcher that is triggered with an interval
     /// of `dur`.
-    pub fn new(library_path: &Path, dur: Duration) -> Result<MunRuntime> {
+    pub fn new(options: RuntimeOptions) -> Result<MunRuntime, Error> {
         let (tx, rx) = channel();
 
-        let watcher: RecommendedWatcher = Watcher::new(tx, dur)?;
+        let watcher: RecommendedWatcher = Watcher::new(tx, options.delay)?;
         let mut runtime = MunRuntime {
             assemblies: HashMap::new(),
             function_table: HashMap::new(),
@@ -44,12 +45,12 @@ impl MunRuntime {
             watcher_rx: rx,
         };
 
-        runtime.add_assembly(library_path)?;
+        runtime.add_assembly(&options.library_path)?;
         Ok(runtime)
     }
 
     /// Adds an assembly corresponding to the library at `library_path`.
-    fn add_assembly(&mut self, library_path: &Path) -> Result<()> {
+    fn add_assembly(&mut self, library_path: &Path) -> Result<(), Error> {
         let library_path = library_path.canonicalize()?;
         if self.assemblies.contains_key(&library_path) {
             return Err(io::Error::new(
@@ -70,7 +71,6 @@ impl MunRuntime {
         self.watcher
             .watch(library_path.clone(), RecursiveMode::NonRecursive)?;
 
-        println!("Watching assembly: {}", library_path.to_string_lossy());
         Ok(())
     }
 
@@ -84,43 +84,31 @@ impl MunRuntime {
         self.function_table.get(function_name)
     }
 
-    /// Updates the state of the runtime. This includes checking for file changes, and consequent
-    /// recompilation.
-    ///
-    /// Currently, the runtime can crash if recompilation fails. Ideally, there is a fallback.
+    /// Updates the state of the runtime. This includes checking for file changes, and reloading
+    /// compiled assemblies.
     pub fn update(&mut self) -> bool {
         while let Ok(event) = self.watcher_rx.try_recv() {
             use notify::DebouncedEvent::*;
             match event {
-                Write(ref path) | Create(ref path) => {
-                    println!("{:?}", path);
-                    return true;
-                    // for ancestor in path.ancestors() {
-                    //     let mut library_path = ancestor.to_path_buf();
-                    //     library_path.push("Cargo.toml");
-
-                    //     if let Some(module) = self.modules.get_mut(&manifest_path) {
-                    //         module.unload();
-                    //         match module.compile() {
-                    //             Ok(ref output_path) => {
-                    //                 if let Err(e) = module.load(output_path) {
-                    //                     println!(
-                    //                         "An error occured while loading library '{}': {:?}",
-                    //                         module.manifest_path().to_string_lossy(),
-                    //                         e,
-                    //                     )
-                    //                 }
-                    //             }
-                    //             Err(e) => println!(
-                    //                 "An error occured while compiling library '{}': {:?}",
-                    //                 module.manifest_path().to_string_lossy(),
-                    //                 e,
-                    //             ),
-                    //         }
-
-                    //         return true;
-                    //     }
-                    // }
+                Write(ref path) => {
+                    if let Some(assembly) = self.assemblies.get_mut(path) {
+                        for function in assembly.functions() {
+                            self.function_table.remove(function.name());
+                        }
+                        if let Err(e) = assembly.swap(path) {
+                            println!(
+                                "An error occured while reloading assembly '{}': {:?}",
+                                path.to_string_lossy(),
+                                e
+                            );
+                        } else {
+                            for function in assembly.functions() {
+                                self.function_table
+                                    .insert(function.name().to_string(), function.clone());
+                            }
+                            return true;
+                        }
+                    }
                 }
                 _ => {}
             }
@@ -147,7 +135,7 @@ invoke_fn_impl! {
 
 #[cfg(all(test, windows))]
 mod tests {
-    use super::{invoke_fn, MunRuntime};
+    use super::{invoke_fn, MunRuntime, RuntimeOptions};
     use std::path::PathBuf;
     use std::time::Duration;
 
@@ -160,14 +148,22 @@ mod tests {
 
     #[test]
     fn mun_new_runtime() {
-        let _runtime = MunRuntime::new(&test_lib_path(), Duration::from_millis(10))
-            .expect("Failed to initialize Mun runtime.");
+        let options = RuntimeOptions {
+            library_path: test_lib_path(),
+            delay: Duration::from_millis(10),
+        };
+
+        let _runtime = MunRuntime::new(options).expect("Failed to initialize Mun runtime.");
     }
 
     #[test]
     fn mun_invoke_fn() {
-        let mut runtime = MunRuntime::new(&test_lib_path(), Duration::from_millis(10))
-            .expect("Failed to initialize Mun runtime.");
+        let options = RuntimeOptions {
+            library_path: test_lib_path(),
+            delay: Duration::from_millis(10),
+        };
+
+        let mut runtime = MunRuntime::new(options).expect("Failed to initialize Mun runtime.");
 
         let a: f64 = 4.0;
         let b: f64 = 2.0;
