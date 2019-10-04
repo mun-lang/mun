@@ -91,12 +91,16 @@ pub(super) fn gen_symbols(
     let method_info_type = context.opaque_struct_type("struct.MunFunctionInfo");
     method_info_type.set_body(
         &[
-            str_type.into(),                                          // name
-            type_info_type.ptr_type(AddressSpace::Const).into(),      // arg_types
-            type_info_type.ptr_type(AddressSpace::Const).into(),      // return_type
-            context.void_type().fn_type(&[], false).ptr_type(AddressSpace::Const).into(), // fn_ptr
-            context.i16_type().into(),                                // num_arg_types
-            privacy_type.into(),                                      // privacy
+            str_type.into(),                                     // name
+            type_info_type.ptr_type(AddressSpace::Const).into(), // arg_types
+            type_info_type.ptr_type(AddressSpace::Const).into(), // return_type
+            context
+                .void_type()
+                .fn_type(&[], false)
+                .ptr_type(AddressSpace::Const)
+                .into(), // fn_ptr
+            context.i16_type().into(),                           // num_arg_types
+            privacy_type.into(),                                 // privacy
         ],
         false,
     );

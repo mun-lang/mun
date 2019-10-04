@@ -13,7 +13,7 @@ use crate::{
 };
 use rowan::{GreenNodeBuilder, Language};
 
-pub(crate) use rowan::{GreenNode};
+pub(crate) use rowan::GreenNode;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum MunLanguage {}

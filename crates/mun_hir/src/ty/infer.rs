@@ -231,7 +231,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             Some(resolution) => resolution,
             None => {
                 self.diagnostics
-                    .push(InferenceDiagnostic::UnresolvedValue { id: id });
+                    .push(InferenceDiagnostic::UnresolvedValue { id });
                 return None;
             }
         };
@@ -300,8 +300,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                         .unwrap_or(Ty::Unknown);
                     //let decl_ty = self.insert_type_vars(decl_ty);
                     let ty = if let Some(expr) = initializer {
-                        let expr_ty = self.infer_expr(*expr, &Expectation::has_type(decl_ty));
-                        expr_ty
+                        self.infer_expr(*expr, &Expectation::has_type(decl_ty))
                     } else {
                         decl_ty
                     };
@@ -313,12 +312,11 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                 }
             }
         }
-        let ty = if let Some(expr) = tail {
+        if let Some(expr) = tail {
             self.infer_expr(expr, expected)
         } else {
             Ty::Empty
-        };
-        ty
+        }
     }
 
     pub fn report_pat_inference_failure(&mut self, _pat: PatId) {

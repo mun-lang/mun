@@ -51,7 +51,7 @@ impl Path {
             break;
         }
         segments.reverse();
-        return Some(Path { kind, segments });
+        Some(Path { kind, segments })
     }
 
     /// Converts an `ast::NameRef` into a single-identifier `Path`.

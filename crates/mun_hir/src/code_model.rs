@@ -239,8 +239,7 @@ impl Function {
 
     pub(crate) fn resolver(self, db: &impl HirDatabase) -> Resolver {
         // take the outer scope...
-        let r = self.module(db).resolver(db);
-        r
+        self.module(db).resolver(db)
     }
 
     pub fn diagnostics(self, db: &impl HirDatabase, sink: &mut DiagnosticSink) {
