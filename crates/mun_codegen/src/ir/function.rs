@@ -1,8 +1,14 @@
 use super::try_convert_any_to_basic;
 use crate::IrDatabase;
 use inkwell::builder::Builder;
+use inkwell::passes::{PassManager, PassManagerBuilder};
 use inkwell::values::{BasicValueEnum, FloatValue, InstructionOpcode, IntValue};
-use inkwell::{module::Module, types::{AnyTypeEnum, BasicTypeEnum}, values::FunctionValue, OptimizationLevel};
+use inkwell::{
+    module::Module,
+    types::{AnyTypeEnum, BasicTypeEnum},
+    values::FunctionValue,
+    OptimizationLevel,
+};
 use mun_hir::{
     ArithOp, BinaryOp, Body, Expr, ExprId, Function, HirDisplay, InferenceResult, Literal, Pat,
     PatId, Path, Resolution, Resolver, Statement, TypeCtor,
@@ -10,7 +16,6 @@ use mun_hir::{
 use std::collections::HashMap;
 use std::mem;
 use std::sync::Arc;
-use inkwell::passes::{PassManagerBuilder, PassManager};
 
 pub(crate) fn create_pass_manager(
     module: &Module,

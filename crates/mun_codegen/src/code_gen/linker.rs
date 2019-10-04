@@ -2,9 +2,9 @@ use mun_target::spec;
 use mun_target::spec::LinkerFlavor;
 use std::ffi::OsString;
 use std::path::Path;
+use std::path::PathBuf;
 use std::process;
 use std::process::Command;
-use std::path::PathBuf;
 
 pub fn create_with_target(target: &spec::Target) -> Box<dyn Linker> {
     match target.linker_flavor {
@@ -56,8 +56,12 @@ impl Ld64Linker {
 }
 
 lazy_static! {
-    static ref LLD_PATH:PathBuf = {
-        let mut path = std::env::current_exe().unwrap().parent().unwrap().to_path_buf();
+    static ref LLD_PATH: PathBuf = {
+        let mut path = std::env::current_exe()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .to_path_buf();
         path.push(format!("lld{}", std::env::consts::EXE_SUFFIX));
         path
     };
@@ -81,8 +85,8 @@ impl Linker for LdLinker {
     fn build_shared_object(&mut self, path: &Path) {
         // Link as dynamic library
         self.cmd.arg("--shared");
-//        self.cmd.arg("--apply-dynamic-relocs");
-//        self.cmd.arg("--pie");
+        //        self.cmd.arg("--apply-dynamic-relocs");
+        //        self.cmd.arg("--pie");
 
         // Specify output path
         self.cmd.arg("-o");
