@@ -16,7 +16,6 @@ mod parsing;
 mod ptr;
 mod syntax_error;
 mod syntax_node;
-mod syntax_text;
 
 use std::{fmt::Write, marker::PhantomData, sync::Arc};
 
@@ -26,11 +25,7 @@ pub use crate::{
     ptr::{AstPtr, SyntaxNodePtr},
     syntax_error::{SyntaxError, SyntaxErrorKind},
     syntax_kind::SyntaxKind,
-    syntax_node::{
-        Direction, InsertPosition, SyntaxElement, SyntaxNode, SyntaxToken, SyntaxTreeBuilder,
-        WalkEvent,
-    },
-    syntax_text::SyntaxText,
+    syntax_node::{Direction, SyntaxElement, SyntaxNode, SyntaxToken, SyntaxTreeBuilder},
 };
 pub use rowan::{SmolStr, TextRange, TextUnit};
 
@@ -66,7 +61,7 @@ impl<T> Parse<T> {
     }
 
     pub fn syntax_node(&self) -> SyntaxNode {
-        SyntaxNode::new(self.green.clone())
+        SyntaxNode::new_root(self.green.clone())
     }
 }
 
@@ -124,15 +119,6 @@ impl Parse<SourceFile> {
 pub use crate::ast::SourceFile;
 
 impl SourceFile {
-    fn new(green: GreenNode) -> SourceFile {
-        let root = SyntaxNode::new(green);
-        //        if cfg!(debug_assertions) {
-        //            validation::validate_block_structure(&root);
-        //        }
-        assert_eq!(root.kind(), SyntaxKind::SOURCE_FILE);
-        SourceFile::cast(root).unwrap()
-    }
-
     pub fn parse(text: &str) -> Parse<SourceFile> {
         let (green, errors) = parsing::parse_text(text);
         //errors.extend(validation::validate(&SourceFile::new(green.clone())));
