@@ -1,0 +1,22 @@
+parameters:
+  rust_version: stable
+
+jobs:
+- job: ${{ parameters.name }}
+  displayName: ${{ parameters.displayName }}
+  pool:
+    vmImage: ubuntu-18.04
+  steps:
+  - checkout: self
+    submodules: true
+  
+  - template: azure-install-rust.yml
+
+  - script: |
+      rustup component add rustfmt
+      cargo fmt --version
+    displayName: Install rustfmt
+  
+  - script: |
+      cargo fmt --all -- --check
+    displayName: Check formatting
