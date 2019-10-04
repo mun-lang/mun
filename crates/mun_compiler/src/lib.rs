@@ -183,10 +183,10 @@ fn diagnostics(db: &CompilerDatabase, file_id: FileId) -> Vec<Diagnostic> {
     result.into_inner()
 }
 
-pub fn main(options: CompilerOptions) -> Result<(), failure::Error> {
+pub fn main(options: &CompilerOptions) -> Result<(), failure::Error> {
     let (mut db, file_id) = CompilerDatabase::from_file(&options.input)?;
     db.set_optimization_lvl(options.optimization_lvl);
-    if let Some(target) = options.target {
+    if let Some(ref target) = options.target {
         db.set_target(spec::Target::search(&target).unwrap());
     }
 

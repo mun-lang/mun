@@ -17,6 +17,10 @@ fn main() -> Result<(), failure::Error> {
                         .required(true)
                         .index(1),
                 )
+                .arg(Arg::with_name("watch").long("watch").help(
+                    "Run the compiler in watch mode.
+                    Watch input files and trigger recompilation on changes.",
+                ))
                 .arg(
                     Arg::with_name("opt-level")
                         .short("O")
@@ -35,19 +39,7 @@ fn main() -> Result<(), failure::Error> {
         .get_matches();
 
     match matches.subcommand() {
-        ("build", Some(matches)) => {
-            let optimization_lvl = match matches.value_of("opt-level") {
-                Some("0") => mun_compiler::OptimizationLevel::None,
-                Some("1") => mun_compiler::OptimizationLevel::Less,
-                None | Some("2") => mun_compiler::OptimizationLevel::Default,
-                Some("3") => mun_compiler::OptimizationLevel::Aggressive,
-                _ => return Err(format_err!("Only optimization levels 0-3 are supported")),
-            };
-
-            let target = matches.value_of("target").map(|t| t.to_string());
-
-            build(matches, optimization_lvl, target)?
-        }
+        ("build", Some(matches)) => build(matches)?,
         _ => unreachable!(),
     }
 
@@ -55,15 +47,27 @@ fn main() -> Result<(), failure::Error> {
 }
 
 /// Build the source file specified
-fn build(
-    matches: &ArgMatches,
-    optimization_lvl: mun_compiler::OptimizationLevel,
-    target: Option<String>,
-) -> Result<(), failure::Error> {
-    let options = mun_compiler::CompilerOptions {
-        input: matches.value_of("INPUT").unwrap().into(), // Safe because its a required arg
-        target,
-        optimization_lvl,
+fn build(matches: &ArgMatches) -> Result<(), failure::Error> {
+    let options = compiler_options(matches)?;
+    if matches.is_present("watch") {
+        mun_compiler_daemon::main(&options)
+    } else {
+        mun_compiler::main(&options)
+    }
+}
+
+fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOptions, failure::Error> {
+    let optimization_lvl = match matches.value_of("opt-level") {
+        Some("0") => mun_compiler::OptimizationLevel::None,
+        Some("1") => mun_compiler::OptimizationLevel::Less,
+        None | Some("2") => mun_compiler::OptimizationLevel::Default,
+        Some("3") => mun_compiler::OptimizationLevel::Aggressive,
+        _ => return Err(format_err!("Only optimization levels 0-3 are supported")),
     };
-    mun_compiler::main(options)
+
+    Ok(mun_compiler::CompilerOptions {
+        input: matches.value_of("INPUT").unwrap().into(), // Safe because its a required arg
+        target: matches.value_of("target").map(|t| t.to_string()),
+        optimization_lvl,
+    })
 }
