@@ -137,7 +137,7 @@ impl<'t> Parser<'t> {
     }
 
     /// Advances the parser by `n` tokens, remapping its kind. This is useful to create compound
-    /// tokens from parts. For example an `::` is two consecutive remapped `<` tokens.
+    /// tokens from parts. For example an `::` is two consecutive remapped `:` tokens.
     pub(crate) fn bump_compound(&mut self, kind: SyntaxKind, n: u8) {
         self.do_bump(kind, n);
     }
@@ -257,7 +257,7 @@ impl CompletedMarker {
         }
     }
 
-    /// This method allws to create a new node which starts *before* the current one. That is,
+    /// This method allows to create a new node which starts *before* the current one. That is,
     /// the parser could start node `A`, then complete it, and then after parsing the whole `A`,
     /// decide that it should have started some node `B` before starting `A`. `precede` allows to
     /// do exactly that. See also docs about `forward_parent` in `Event::Start`.

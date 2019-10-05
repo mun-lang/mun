@@ -1,7 +1,6 @@
 // function to add two floats
-fn add(a:float, b:float):float {
-  let c = a+b+5.0
-  c
+fn add(a:int, b:int):int {
+  a+b
 }
 
 // function to subtract two floats
@@ -15,5 +14,5 @@ fn multiply(a:float, b:float):float {
 }
 
 fn main():int {
-  5
+  add(5, 3)
 }

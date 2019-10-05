@@ -42,7 +42,7 @@ pub fn write_module_shared_object(db: &impl IrDatabase, file_id: FileId) -> bool
         obj_file
     };
 
-    // Contruct a linker for the target
+    // Construct a linker for the target
     let mut linker = linker::create_with_target(&target);
     linker.add_object(obj_file.path());
 
