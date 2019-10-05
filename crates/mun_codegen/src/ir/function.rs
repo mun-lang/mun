@@ -165,7 +165,7 @@ impl<'a, D: IrDatabase> BodyIrGenerator<'a, D> {
             &Expr::BinaryOp { lhs, rhs, op } => {
                 Some(self.gen_binary_op(lhs, rhs, op.expect("missing op")))
             }
-            _ => None,
+            _ => unreachable!("unimplemented expr type"),
         };
 
         // Check expected type or perform implicit cast

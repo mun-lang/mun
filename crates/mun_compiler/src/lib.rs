@@ -145,6 +145,16 @@ fn diagnostics(db: &CompilerDatabase, file_id: FileId) -> Vec<Diagnostic> {
             message: format!("could not find type `{}` in this scope", text),
         });
     })
+    .on::<mun_hir::diagnostics::ExpectedFunction, _>(|d| {
+        result.borrow_mut().push(Diagnostic {
+            level: Level::Error,
+            loc: d.highlight_range().into(),
+            message: format!(
+                "expected function, found `{}`",
+                d.found.display(db)
+            ),
+        });
+    })
     .on::<mun_hir::diagnostics::MismatchedType, _>(|d| {
         result.borrow_mut().push(Diagnostic {
             level: Level::Error,

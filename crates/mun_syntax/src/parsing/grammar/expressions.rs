@@ -21,6 +21,7 @@ pub(crate) fn expr_block_contents(p: &mut Parser) {
     }
 }
 
+/// Parses a block statement
 pub(crate) fn block(p: &mut Parser) {
     if !p.matches(L_CURLY) {
         p.error("expected a block");
@@ -33,9 +34,11 @@ pub(crate) fn block(p: &mut Parser) {
     m.complete(p, BLOCK);
 }
 
+/// Parses a general statement: (let, expr, etc.)
 pub(super) fn stmt(p: &mut Parser) {
     let m = p.start();
 
+    // Encounters let keyword, so we know it's a let stmt
     if p.matches(LET_KW) {
         let_stmt(p, m);
         return;

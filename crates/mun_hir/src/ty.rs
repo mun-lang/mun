@@ -85,6 +85,18 @@ impl Ty {
     pub fn is_empty(&self) -> bool {
         *self == Ty::Empty
     }
+
+    fn callable_sig(&self, db: &impl HirDatabase) -> Option<FnSig> {
+        match self {
+            Ty::Apply(a_ty) => match a_ty.ctor {
+                TypeCtor::FnDef(def) => {
+                    Some(db.fn_signature(def))
+                }
+                _ => None,
+            },
+            _ => None,
+        }
+    }
 }
 
 /// A list of substitutions for generic parameters.
