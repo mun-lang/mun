@@ -22,6 +22,31 @@ pub struct RuntimeOptions {
     pub delay: Duration,
 }
 
+/// A builder for the runtime.
+pub struct RuntimeBuilder {
+    options: RuntimeOptions,
+}
+
+impl RuntimeBuilder {
+    pub fn new<P: Into<PathBuf>>(library_path: P) -> Self {
+        Self {
+            options: RuntimeOptions {
+                library_path: library_path.into(),
+                delay: Duration::from_millis(10),
+            },
+        }
+    }
+
+    pub fn set_delay(&mut self, delay: Duration) -> &mut Self {
+        self.options.delay = delay;
+        self
+    }
+
+    pub fn spawn(self) -> Result<MunRuntime, Error> {
+        MunRuntime::new(self.options)
+    }
+}
+
 /// A runtime for the Mun scripting language.
 pub struct MunRuntime {
     assemblies: HashMap<PathBuf, Assembly>,
@@ -135,7 +160,7 @@ invoke_fn_impl! {
 
 #[cfg(all(test, windows))]
 mod tests {
-    use super::{invoke_fn, MunRuntime, RuntimeOptions};
+    use super::{invoke_fn, MunRuntime, RuntimeBuilder};
     use std::path::PathBuf;
     use std::time::Duration;
 
@@ -148,22 +173,14 @@ mod tests {
 
     #[test]
     fn mun_new_runtime() {
-        let options = RuntimeOptions {
-            library_path: test_lib_path(),
-            delay: Duration::from_millis(10),
-        };
-
-        let _runtime = MunRuntime::new(options).expect("Failed to initialize Mun runtime.");
+        let builder = RuntimeBuilder::new(test_lib_path());
+        let _runtime = builder.spawn().expect("Failed to initialize Mun runtime.");
     }
 
     #[test]
     fn mun_invoke_fn() {
-        let options = RuntimeOptions {
-            library_path: test_lib_path(),
-            delay: Duration::from_millis(10),
-        };
-
-        let mut runtime = MunRuntime::new(options).expect("Failed to initialize Mun runtime.");
+        let builder = RuntimeBuilder::new(test_lib_path());
+        let mut runtime = builder.spawn().expect("Failed to initialize Mun runtime.");
 
         let a: f64 = 4.0;
         let b: f64 = 2.0;
