@@ -4,7 +4,7 @@ extern crate failure;
 use std::time::Duration;
 
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-use mun_runtime::invoke_fn;
+use mun_runtime::{invoke_fn, MunRuntime, RuntimeBuilder};
 
 fn main() -> Result<(), failure::Error> {
     let matches = App::new("mun")
@@ -56,9 +56,8 @@ fn main() -> Result<(), failure::Error> {
                 .arg(
                     Arg::with_name("delay")
                         .long("delay")
-                        .required(true)
                         .takes_value(true)
-                        .help("how much to delay received filesystem events (in ms). This allows bundling of identical events, e.g. when several writes to the same file are detected. A high delay will make hot reloading less responsive."),
+                        .help("how much to delay received filesystem events (in ms). This allows bundling of identical events, e.g. when several writes to the same file are detected. A high delay will make hot reloading less responsive. (defaults to 10 ms)"),
                 ),
         )
         .get_matches();
@@ -84,10 +83,11 @@ fn build(matches: &ArgMatches) -> Result<(), failure::Error> {
 
 /// Starts the runtime with the specified library and invokes function `entry`.
 fn start(matches: &ArgMatches) -> Result<(), failure::Error> {
-    let runtime_options = runtime_options(matches)?;
-    let mut runtime = mun_runtime::MunRuntime::new(runtime_options)?;
+    let mut runtime = runtime(matches)?;
 
     let entry_point = matches.value_of("entry").unwrap_or("main");
+
+    #[allow(clippy::unit_arg)]
     Ok(invoke_fn!(runtime, entry_point))
 }
 
@@ -107,11 +107,15 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOption
     })
 }
 
-fn runtime_options(matches: &ArgMatches) -> Result<mun_runtime::RuntimeOptions, failure::Error> {
-    let delay: u64 = matches.value_of("delay").unwrap().parse()?;
+fn runtime(matches: &ArgMatches) -> Result<MunRuntime, failure::Error> {
+    let mut builder = RuntimeBuilder::new(
+        matches.value_of("LIBRARY").unwrap(), // Safe because its a required arg
+    );
 
-    Ok(mun_runtime::RuntimeOptions {
-        library_path: matches.value_of("LIBRARY").unwrap().into(), // Safe because its a required arg
-        delay: Duration::from_millis(delay),
-    })
+    if let Some(delay) = matches.value_of("delay") {
+        let delay: u64 = delay.parse()?;
+        builder.set_delay(Duration::from_millis(delay));
+    }
+
+    builder.spawn()
 }
