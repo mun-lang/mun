@@ -4,6 +4,7 @@ use inkwell::{module::Module, values::FunctionValue};
 use mun_hir::{FileId, ModuleDef};
 use std::collections::HashMap;
 use std::sync::Arc;
+use crate::ir::dispatch_table::DispatchTableBuilder;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ModuleIR {
@@ -35,11 +36,14 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
         }
     }
 
-    // Generate the function bodies
+    // Construct requirements for generating the bodies
+    let mut dispatch_table_builder = DispatchTableBuilder::new(&llvm_module);
     let fn_pass_manager = function::create_pass_manager(&llvm_module, db.optimization_lvl());
-    for (f, value) in functions.iter() {
-        function::gen_body(db, *f, *value, &llvm_module);
-        fn_pass_manager.run_on(value);
+
+    // Generate the function bodies
+    for (hir_function, llvm_function) in functions.iter() {
+        function::gen_body(db, *hir_function, *llvm_function, &llvm_module, &functions);
+        fn_pass_manager.run_on(llvm_function);
     }
 
     Arc::new(ModuleIR {

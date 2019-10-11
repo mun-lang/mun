@@ -3,6 +3,7 @@ use inkwell::types::{AnyTypeEnum, BasicTypeEnum};
 pub mod function;
 pub mod module;
 pub mod ty;
+mod dispatch_table;
 
 fn try_convert_any_to_basic(ty: AnyTypeEnum) -> Option<BasicTypeEnum> {
     match ty {

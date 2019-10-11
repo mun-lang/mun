@@ -86,7 +86,7 @@ impl Ty {
         *self == Ty::Empty
     }
 
-    fn callable_sig(&self, db: &impl HirDatabase) -> Option<FnSig> {
+    pub fn callable_sig(&self, db: &impl HirDatabase) -> Option<FnSig> {
         match self {
             Ty::Apply(a_ty) => match a_ty.ctor {
                 TypeCtor::FnDef(def) => {
