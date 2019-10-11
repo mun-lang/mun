@@ -1,10 +1,8 @@
 mod assembly;
-mod library;
 #[macro_use]
 mod macros;
 
 pub use crate::assembly::Assembly;
-pub use crate::library::Library;
 
 use std::collections::HashMap;
 use std::io;
@@ -47,10 +45,38 @@ impl RuntimeBuilder {
     }
 }
 
+pub struct DispatchTable {
+    functions: HashMap<String, FunctionInfo>,
+}
+
+impl DispatchTable {
+    pub fn new() -> Self {
+        Self {
+            functions: HashMap::new(),
+        }
+    }
+
+    pub fn get(&self, fn_path: &str) -> Option<&FunctionInfo> {
+        self.functions.get(fn_path)
+    }
+
+    /// Inserts the `fn_info` for `fn_path` into the dispatch table.
+    ///
+    /// If the dispatch table already contained this `fn_path`, the value is updated, and the old
+    /// value is returned.
+    pub fn insert(&mut self, fn_path: &str, fn_info: FunctionInfo) -> Option<FunctionInfo> {
+        self.functions.insert(fn_path.to_string(), fn_info)
+    }
+
+    pub fn remove(&mut self, fn_path: &str) -> Option<FunctionInfo> {
+        self.functions.remove(fn_path)
+    }
+}
+
 /// A runtime for the Mun scripting language.
 pub struct MunRuntime {
     assemblies: HashMap<PathBuf, Assembly>,
-    function_table: HashMap<String, FunctionInfo>,
+    dispatch_table: DispatchTable,
     watcher: RecommendedWatcher,
     watcher_rx: Receiver<DebouncedEvent>,
 }
@@ -65,7 +91,7 @@ impl MunRuntime {
         let watcher: RecommendedWatcher = Watcher::new(tx, options.delay)?;
         let mut runtime = MunRuntime {
             assemblies: HashMap::new(),
-            function_table: HashMap::new(),
+            dispatch_table: DispatchTable::new(),
             watcher,
             watcher_rx: rx,
         };
@@ -85,28 +111,22 @@ impl MunRuntime {
             .into());
         }
 
-        let assembly = Assembly::load(&library_path)?;
-        for function in assembly.functions() {
-            self.function_table
-                .insert(function.name().to_string(), function.clone());
+        let mut assembly = Assembly::load(&library_path, &mut self.dispatch_table)?;
+        for dependency in assembly.info().dependencies() {
+            self.add_assembly(Path::new(dependency))?;
         }
-
-        self.assemblies.insert(library_path.clone(), assembly);
+        assembly.link(&self.dispatch_table)?;
 
         self.watcher
             .watch(library_path.clone(), RecursiveMode::NonRecursive)?;
 
+        self.assemblies.insert(library_path.clone(), assembly);
         Ok(())
-    }
-
-    /// Removes the assembly corresponding to the library at `library_path`.
-    fn remove_assembly(&mut self, library_path: &Path) {
-        self.assemblies.remove(library_path);
     }
 
     /// Retrieves the function information corresponding to `function_name`, if available.
     pub fn get_function_info(&self, function_name: &str) -> Option<&FunctionInfo> {
-        self.function_table.get(function_name)
+        self.dispatch_table.get(function_name)
     }
 
     /// Updates the state of the runtime. This includes checking for file changes, and reloading
@@ -117,20 +137,13 @@ impl MunRuntime {
             match event {
                 Write(ref path) => {
                     if let Some(assembly) = self.assemblies.get_mut(path) {
-                        for function in assembly.functions() {
-                            self.function_table.remove(function.name());
-                        }
-                        if let Err(e) = assembly.swap(path) {
+                        if let Err(e) = assembly.swap(path, &mut self.dispatch_table) {
                             println!(
                                 "An error occured while reloading assembly '{}': {:?}",
                                 path.to_string_lossy(),
                                 e
                             );
                         } else {
-                            for function in assembly.functions() {
-                                self.function_table
-                                    .insert(function.name().to_string(), function.clone());
-                            }
                             return true;
                         }
                     }
