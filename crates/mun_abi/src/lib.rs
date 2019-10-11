@@ -12,7 +12,7 @@ pub mod prelude {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Privacy {
     Public = 0,
     Private = 1,
