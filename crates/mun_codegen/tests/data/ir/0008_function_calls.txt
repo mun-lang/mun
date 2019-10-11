@@ -1,0 +1,14 @@
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+define i64 @add(i64 %a, i64 %b) {
+body:
+  %add = add i64 %a, %b
+  ret i64 %add
+}
+
+define i64 @test() {
+body:
+  %add = call i64 @add(i64 4, i64 5)
+  ret i64 %add
+}
