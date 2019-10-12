@@ -1,5 +1,9 @@
+fn add_impl(a:int, b:int):int {
+    a+b
+}
+
 fn add(a:int, b:int):int {
-  a+b
+  add_impl(a,b)
 }
 
 fn test():int {

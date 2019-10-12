@@ -37,14 +37,15 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
     }
 
     // Construct requirements for generating the bodies
-    let mut dispatch_table_builder = DispatchTableBuilder::new(&llvm_module);
+    let mut dispatch_table_builder = DispatchTableBuilder::new(db, &llvm_module);
     let fn_pass_manager = function::create_pass_manager(&llvm_module, db.optimization_lvl());
 
     // Generate the function bodies
     for (hir_function, llvm_function) in functions.iter() {
-        function::gen_body(db, *hir_function, *llvm_function, &llvm_module, &functions);
+        function::gen_body(db, *hir_function, *llvm_function, &llvm_module, &functions, &mut dispatch_table_builder);
         fn_pass_manager.run_on(llvm_function);
     }
+    dispatch_table_builder.finalize(&functions);
 
     Arc::new(ModuleIR {
         file_id,
