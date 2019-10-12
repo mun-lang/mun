@@ -1,9 +1,20 @@
 use super::try_convert_any_to_basic;
-use crate::IrDatabase;
+use crate::values::{
+    BasicValueEnum, CallSiteValue, FloatValue, FunctionValue, InstructionOpcode, IntValue,
+};
+use crate::{IrDatabase, Module, OptimizationLevel};
 use inkwell::builder::Builder;
+use inkwell::passes::{PassManager, PassManagerBuilder};
+use inkwell::types::{AnyTypeEnum, BasicTypeEnum};
+use mun_hir::{
+    self as hir,
+    ArithOp, BinaryOp, Body, Expr, ExprId, HirDisplay, InferenceResult, Literal, Pat, PatId, Path,
+    Resolution, Resolver, Statement, Ty, TypeCtor,
+};
 use std::collections::HashMap;
 use std::mem;
 use std::sync::Arc;
+use crate::ir::dispatch_table::DispatchTableBuilder;
 
 /// Constructs a PassManager to optimize functions for the given optimization level.
 pub(crate) fn create_pass_manager(
@@ -38,12 +49,13 @@ pub(crate) fn gen_signature(
 }
 
 /// Generates the body of a `hir::Function` for an associated `FunctionValue`.
-pub(crate) fn gen_body(
-    db: &impl IrDatabase,
+pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
+    db: &'a D,
     hir_function: hir::Function,
     llvm_function: FunctionValue,
-    module: &Module,
-    llvm_functions: &HashMap<mun_hir::Function, FunctionValue>,
+    module: &'a Module,
+    llvm_functions: &'a HashMap<mun_hir::Function, FunctionValue>,
+    dispatch_table_builder: &'b mut DispatchTableBuilder<'a, D>
 ) -> FunctionValue {
     let builder = db.context().create_builder();
     let body_ir = llvm_function.append_basic_block("body");
@@ -56,6 +68,7 @@ pub(crate) fn gen_body(
         llvm_function,
         llvm_functions,
         builder,
+        dispatch_table_builder,
     );
 
     code_gen.gen_fn_body();
@@ -63,8 +76,7 @@ pub(crate) fn gen_body(
     llvm_function
 }
 
-#[derive(Debug)]
-struct BodyIrGenerator<'a, D: IrDatabase> {
+struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
     db: &'a D,
     module: &'a Module,
     body: Arc<Body>,
@@ -76,9 +88,10 @@ struct BodyIrGenerator<'a, D: IrDatabase> {
     pat_to_local: HashMap<PatId, inkwell::values::PointerValue>,
     pat_to_name: HashMap<PatId, String>,
     function_map: &'a HashMap<mun_hir::Function, FunctionValue>,
+    dispatch_table_builder: &'b mut DispatchTableBuilder<'a, D>
 }
 
-impl<'a, D: IrDatabase> BodyIrGenerator<'a, D> {
+impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     fn new(
         db: &'a D,
         module: &'a Module,
@@ -86,6 +99,7 @@ impl<'a, D: IrDatabase> BodyIrGenerator<'a, D> {
         fn_value: FunctionValue,
         function_map: &'a HashMap<mun_hir::Function, FunctionValue>,
         builder: Builder,
+        dispatch_table_builder: &'b mut DispatchTableBuilder<'a, D>,
     ) -> Self {
         let body = f.body(db);
         let infer = f.infer(db);
@@ -102,6 +116,7 @@ impl<'a, D: IrDatabase> BodyIrGenerator<'a, D> {
             pat_to_local: HashMap::default(),
             pat_to_name: HashMap::default(),
             function_map,
+            dispatch_table_builder
         }
     }
 
@@ -358,10 +373,6 @@ impl<'a, D: IrDatabase> BodyIrGenerator<'a, D> {
         let function = self
             .function_def(callee)
             .expect("expected a function expression");
-        let llvm_function = self
-            .function_map
-            .get(&function)
-            .expect("missing function value for hir function");
 
         // Get all the arguments
         let args: Vec<BasicValueEnum> = args
@@ -369,9 +380,16 @@ impl<'a, D: IrDatabase> BodyIrGenerator<'a, D> {
             .map(|expr| self.gen_expr(*expr).expect("expected a value"))
             .collect();
 
-        // Construct the call
+//        let llvm_function = self
+//            .function_map
+//            .get(&function)
+//            .expect("missing function value for hir function");
+//        // Construct the call
+//        self.builder
+//            .build_call(*llvm_function, &args, &function.name(self.db).to_string())
+        let ptr_value = self.dispatch_table_builder.gen_function_lookup(&self.builder, &function);
         self.builder
-            .build_call(*llvm_function, &args, &function.name(self.db).to_string())
+            .build_call(ptr_value, &args, &function.name(self.db).to_string())
     }
 }
 
