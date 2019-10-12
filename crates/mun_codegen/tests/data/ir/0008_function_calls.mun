@@ -8,4 +8,6 @@ fn add(a:int, b:int):int {
 
 fn test():int {
   add(4,5)
+  add_impl(4,5)
+  add(4,5)
 }
