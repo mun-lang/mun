@@ -12,7 +12,7 @@ use crate::{
     ty::op,
     ty::{Ty, TypableDef},
     type_ref::TypeRefId,
-    Function, HirDatabase, ModuleDef, Path, TypeCtor,
+    Function, HirDatabase, Path, TypeCtor,
 };
 use std::mem;
 use std::ops::Index;
@@ -227,15 +227,22 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
     }
 
     /// Inferences the type of a call expression.
-    fn infer_call(&mut self, tgt_expr: &ExprId, callee: &ExprId, args: &Vec<ExprId>, expected: &Expectation) -> Ty {
+    fn infer_call(
+        &mut self,
+        tgt_expr: &ExprId,
+        callee: &ExprId,
+        args: &Vec<ExprId>,
+        _expected: &Expectation,
+    ) -> Ty {
         let callee_ty = self.infer_expr(*callee, &Expectation::none());
         let (param_tys, ret_ty) = match callee_ty.callable_sig(self.db) {
             Some(sig) => (sig.params().to_vec(), sig.ret().clone()),
             None => {
-                self.diagnostics.push(InferenceDiagnostic::ExpectedFunction {
-                    id: *callee,
-                    found: callee_ty
-                });
+                self.diagnostics
+                    .push(InferenceDiagnostic::ExpectedFunction {
+                        id: *callee,
+                        found: callee_ty,
+                    });
                 (Vec::new(), Ty::Unknown)
             }
         };
@@ -246,11 +253,12 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
     /// Checks whether the specified passed arguments match the parameters of a callable definition.
     fn check_call_arguments(&mut self, tgt_expr: &ExprId, args: &[ExprId], param_tys: &[Ty]) {
         if args.len() != param_tys.len() {
-            self.diagnostics.push(InferenceDiagnostic::ParameterCountMismatch {
-                id: *tgt_expr,
-                found: args.len(),
-                expected: param_tys.len()
-            })
+            self.diagnostics
+                .push(InferenceDiagnostic::ParameterCountMismatch {
+                    id: *tgt_expr,
+                    found: args.len(),
+                    expected: param_tys.len(),
+                })
         }
         for (&arg, param_ty) in args.iter().zip(param_tys.iter()) {
             self.infer_expr(arg, &Expectation::has_type(param_ty.clone()));
@@ -408,7 +416,9 @@ impl From<PatId> for ExprOrPatId {
 }
 
 mod diagnostics {
-    use crate::diagnostics::{CannotApplyBinaryOp, MismatchedType, ExpectedFunction, ParameterCountMismatch};
+    use crate::diagnostics::{
+        CannotApplyBinaryOp, ExpectedFunction, MismatchedType, ParameterCountMismatch,
+    };
     use crate::{
         code_model::src::HasSource,
         diagnostics::{DiagnosticSink, UnresolvedType, UnresolvedValue},
@@ -419,12 +429,31 @@ mod diagnostics {
 
     #[derive(Debug, PartialEq, Eq, Clone)]
     pub(super) enum InferenceDiagnostic {
-        UnresolvedValue { id: ExprOrPatId },
-        UnresolvedType { id: TypeRefId },
-        ExpectedFunction { id: ExprId, found: Ty },
-        ParameterCountMismatch { id: ExprId, found: usize, expected: usize },
-        MismatchedTypes { id: ExprId, expected: Ty, found: Ty },
-        CannotApplyBinaryOp { id: ExprId, lhs: Ty, rhs: Ty },
+        UnresolvedValue {
+            id: ExprOrPatId,
+        },
+        UnresolvedType {
+            id: TypeRefId,
+        },
+        ExpectedFunction {
+            id: ExprId,
+            found: Ty,
+        },
+        ParameterCountMismatch {
+            id: ExprId,
+            found: usize,
+            expected: usize,
+        },
+        MismatchedTypes {
+            id: ExprId,
+            expected: Ty,
+            found: Ty,
+        },
+        CannotApplyBinaryOp {
+            id: ExprId,
+            lhs: Ty,
+            rhs: Ty,
+        },
     }
 
     impl InferenceDiagnostic {
@@ -455,7 +484,9 @@ mod diagnostics {
                     sink.push(UnresolvedType { file, type_ref });
                 }
                 InferenceDiagnostic::ParameterCountMismatch {
-                    id, expected, found
+                    id,
+                    expected,
+                    found,
                 } => {
                     let file = owner.source(db).file_id;
                     let body = owner.body_source_map(db);
@@ -463,13 +494,11 @@ mod diagnostics {
                     sink.push(ParameterCountMismatch {
                         file,
                         expr,
-                        expected: *expected, found: *found
+                        expected: *expected,
+                        found: *found,
                     })
                 }
-                InferenceDiagnostic::ExpectedFunction {
-                    id,
-                    found,
-                } => {
+                InferenceDiagnostic::ExpectedFunction { id, found } => {
                     let file = owner.source(db).file_id;
                     let body = owner.body_source_map(db);
                     let expr = body.expr_syntax(*id).unwrap();
@@ -477,8 +506,8 @@ mod diagnostics {
                         file,
                         expr,
                         found: found.clone(),
-                                            });
-                },
+                    });
+                }
                 InferenceDiagnostic::MismatchedTypes {
                     id,
                     found,

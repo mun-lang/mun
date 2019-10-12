@@ -152,12 +152,15 @@ pub struct ParameterCountMismatch {
     pub file: FileId,
     pub expr: SyntaxNodePtr,
     pub expected: usize,
-    pub found: usize
+    pub found: usize,
 }
 
 impl Diagnostic for ParameterCountMismatch {
     fn message(&self) -> String {
-        format!("this function takes {} parameters but {} parameters was supplied", self.expected, self.found)
+        format!(
+            "this function takes {} parameters but {} parameters was supplied",
+            self.expected, self.found
+        )
     }
 
     fn file(&self) -> FileId {

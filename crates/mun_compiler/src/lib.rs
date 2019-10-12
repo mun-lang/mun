@@ -149,10 +149,7 @@ fn diagnostics(db: &CompilerDatabase, file_id: FileId) -> Vec<Diagnostic> {
         result.borrow_mut().push(Diagnostic {
             level: Level::Error,
             loc: d.highlight_range().into(),
-            message: format!(
-                "expected function, found `{}`",
-                d.found.display(db)
-            ),
+            message: format!("expected function, found `{}`", d.found.display(db)),
         });
     })
     .on::<mun_hir::diagnostics::MismatchedType, _>(|d| {
