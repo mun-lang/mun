@@ -11,6 +11,7 @@ pub mod prelude {
     pub use crate::Privacy;
 }
 
+/// A type that represents the privacy level of modules, functions, or variables.
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Privacy {
