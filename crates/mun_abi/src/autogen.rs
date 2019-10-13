@@ -6,6 +6,7 @@ use std::ffi::{c_void, CStr};
 use std::slice;
 
 impl TypeInfo {
+    /// Returns the type's name.
     pub fn name(&self) -> &str {
         unsafe { CStr::from_ptr(self.name) }
             .to_str()
@@ -20,16 +21,19 @@ impl PartialEq for TypeInfo {
 }
 
 impl FunctionSignature {
+    /// Returns the function's name.
     pub fn name(&self) -> &str {
         unsafe { CStr::from_ptr(self.name) }
             .to_str()
             .expect("Function name contains invalid UTF8")
     }
 
+    /// Returns the function's privacy level.
     pub fn privacy(&self) -> Privacy {
         self.privacy
     }
 
+    /// Returns the function's arguments' types.
     pub fn arg_types(&self) -> &[TypeInfo] {
         if self.num_arg_types == 0 {
             &[]
@@ -38,13 +42,14 @@ impl FunctionSignature {
         }
     }
 
+    /// Returns the function's return type
     pub fn return_type(&self) -> Option<&TypeInfo> {
         unsafe { self.return_type.as_ref() }
     }
 }
 
 impl ModuleInfo {
-    /// Returns the module's full `path`.
+    /// Returns the module's full path.
     pub fn path(&self) -> &str {
         unsafe { CStr::from_ptr(self.path) }
             .to_str()
@@ -66,7 +71,7 @@ impl ModuleInfo {
     //     self.fields.iter().map(|f| *f)
     // }
 
-    /// Retrieves the module's functions.
+    /// Returns the module's functions.
     pub fn functions(&self) -> &[FunctionInfo] {
         if self.num_functions == 0 {
             &[]
@@ -77,6 +82,7 @@ impl ModuleInfo {
 }
 
 impl DispatchTable {
+    /// Returns an iterator over pairs of mutable function pointers and signatures.
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (&mut *const c_void, &FunctionSignature)> {
         if self.num_entries == 0 {
             (&mut []).iter_mut().zip((&[]).iter())
@@ -90,6 +96,7 @@ impl DispatchTable {
         }
     }
 
+    /// Returns mutable functions pointers.
     pub fn ptrs_mut(&mut self) -> &mut [*const c_void] {
         if self.num_entries == 0 {
             &mut []
@@ -98,6 +105,7 @@ impl DispatchTable {
         }
     }
 
+    /// Returns function signatures.
     pub fn signatures(&self) -> &[FunctionSignature] {
         if self.num_entries == 0 {
             &[]
@@ -106,10 +114,16 @@ impl DispatchTable {
         }
     }
 
+    /// Returns a function pointer, without doing bounds checking.
+    ///
+    /// This is generally not recommended, use with caution! Calling this method with an
+    /// out-of-bounds index is _undefined behavior_ even if the resulting reference is not used.
+    /// For a safe alternative see [get_ptr](#method.get_ptr).
     pub unsafe fn get_ptr_unchecked(&self, idx: u32) -> *const c_void {
         *self.fn_ptrs.offset(idx as isize)
     }
 
+    /// Returns a function pointer at the given index, or `None` if out of bounds.
     pub fn get_ptr(&self, idx: u32) -> Option<*const c_void> {
         if idx < self.num_entries {
             Some(unsafe { self.get_ptr_unchecked(idx) })
@@ -139,6 +153,7 @@ impl DispatchTable {
 }
 
 impl AssemblyInfo {
+    /// Returns an iterator over the assembly's dependencies.
     pub fn dependencies(&self) -> impl Iterator<Item = &str> {
         let dependencies = if self.num_dependencies == 0 {
             &[]
