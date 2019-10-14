@@ -3,7 +3,6 @@ use crate::prelude::*;
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 use std::ffi::{c_void, CStr};
-use std::os::raw::c_char;
 use std::slice;
 
 impl TypeInfo {
@@ -154,6 +153,7 @@ mod tests {
     use super::*;
     use std::ffi::CString;
     use std::ptr;
+    use std::os::raw::c_char;
 
     fn fake_type_info(name: &CStr) -> TypeInfo {
         TypeInfo {

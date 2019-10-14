@@ -57,13 +57,23 @@ impl Ld64Linker {
 
 lazy_static! {
     static ref LLD_PATH: PathBuf = {
-        let mut path = std::env::current_exe()
+        let path = std::env::current_exe()
             .unwrap()
             .parent()
             .unwrap()
             .to_path_buf();
-        path.push(format!("lld{}", std::env::consts::EXE_SUFFIX));
-        path
+
+        let mut binary_dir:&Path = &path;
+        let mut binary_path;
+        loop {
+            binary_path = binary_dir.to_path_buf();
+            binary_path.push(format!("lld{}", std::env::consts::EXE_SUFFIX));
+            if binary_path.exists() {
+                break;
+            }
+            binary_dir = binary_dir.parent().expect("could not find lld");
+        }
+        binary_path
     };
 }
 

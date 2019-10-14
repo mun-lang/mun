@@ -5,6 +5,10 @@ mod code_gen;
 mod db;
 mod ir;
 pub(crate) mod symbols;
+mod mock;
+
+#[cfg(test)]
+mod test;
 
 pub use inkwell::{builder, context::Context, module::Module, values, OptimizationLevel};
 

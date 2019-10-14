@@ -2,12 +2,15 @@ use std::sync::mpsc::channel;
 use std::time::Duration;
 
 use failure::Error;
-use mun_compiler::CompilerOptions;
+use mun_compiler::{CompilerOptions, PathOrInline};
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 
 pub fn main(options: &CompilerOptions) -> Result<(), Error> {
     // Need to canonicalize path to do comparisons
-    let input_path = options.input.canonicalize()?;
+    let input_path = match &options.input {
+        PathOrInline::Path(path) => path.canonicalize()?,
+        PathOrInline::Inline(_) => panic!("cannot run compiler with inline path")
+    };
 
     // Compile at least once
     mun_compiler::main(&options)?;
