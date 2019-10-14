@@ -1,10 +1,6 @@
 mod assembly;
-mod library;
 #[macro_use]
 mod macros;
-
-pub use crate::assembly::Assembly;
-pub use crate::library::Library;
 
 use std::collections::HashMap;
 use std::io;
@@ -15,6 +11,7 @@ use std::time::Duration;
 use failure::Error;
 use mun_abi::{FunctionInfo, Reflection};
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
+use crate::assembly::Assembly;
 
 #[derive(Clone, Debug)]
 pub struct RuntimeOptions {
