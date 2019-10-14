@@ -348,7 +348,7 @@ pub(super) fn gen_symbols(
     }
 
     let builder = db.context().create_builder();
-    let body_ir = get_symbols_fn.append_basic_block("body");
+    let body_ir = db.context().append_basic_block(&get_symbols_fn, "body");
     builder.position_at_end(&body_ir);
 
     let result_ptr = if target.options.is_like_windows {
