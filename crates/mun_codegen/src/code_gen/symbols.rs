@@ -1,7 +1,7 @@
 use crate::ir::function;
 use crate::IrDatabase;
 use inkwell::attributes::Attribute;
-use inkwell::values::{IntValue, PointerValue};
+use inkwell::values::{IntValue, PointerValue, UnnamedAddress};
 use inkwell::{
     module::{Linkage, Module},
     values::{FunctionValue, StructValue},
@@ -69,10 +69,7 @@ fn type_info_ir(ty: &TypeInfo, module: &Module) -> StructValue {
 /// ```
 fn intern_string(module: &Module, str: &str) -> PointerValue {
     let value = module.get_context().const_string(str, true);
-    let global_value = module.add_global(value.get_type(), None, "");
-    global_value.set_linkage(Linkage::Internal);
-    global_value.set_initializer(&value);
-    global_value.as_pointer_value()
+    gen_global(module, &value, ".str").as_pointer_value()
 }
 
 struct AbiTypes {
@@ -196,10 +193,7 @@ fn gen_signature_from_function<D: IrDatabase>(db: &D, module: &Module, types: &A
         types.type_info_type.ptr_type(AddressSpace::Const).const_null()
     } else {
         let ret_type_const = type_info_ir(&db.type_info(ret_type), &module);
-        let ret_type_ir = module.add_global(ret_type_const.get_type(), None, "");
-        ret_type_ir.set_linkage(Linkage::Internal);
-        ret_type_ir.set_initializer(&ret_type_const);
-        ret_type_ir.as_pointer_value()
+        gen_global(module, &ret_type_const, "").as_pointer_value()
     };
 
     // Get the argument types
@@ -213,10 +207,7 @@ fn gen_signature_from_function<D: IrDatabase>(db: &D, module: &Module, types: &A
                 .map(|(p, _)| type_info_ir(&db.type_info(infer[*p].clone()), &module))
                 .collect::<Vec<StructValue>>(),
         );
-        let params_type_ir = module.add_global(params_type_array_ir.get_type(), None, "");
-        params_type_ir.set_linkage(Linkage::Internal);
-        params_type_ir.set_initializer(&params_type_array_ir);
-        params_type_ir.as_pointer_value()
+        gen_global(module, &params_type_array_ir, "").as_pointer_value()
     };
 
     types.function_signature_type.const_named_struct(
@@ -264,7 +255,9 @@ fn gen_function_info_array<'a, D: IrDatabase>(db: &D, types: &AbiTypes, module: 
 /// Construct a global from the specified value
 fn gen_global(module: &Module, value: &dyn BasicValue, name: &str) -> GlobalValue {
     let global = module.add_global(value.as_basic_value_enum().get_type(), None, name);
-    global.set_linkage(Linkage::Internal);
+    global.set_linkage(Linkage::Private);
+    global.set_constant(true);
+    global.set_unnamed_address(UnnamedAddress::Global);
     global.set_initializer(value);
     global
 }
@@ -312,7 +305,7 @@ fn gen_dispatch_table<D: IrDatabase>(db: &D, types: &AbiTypes, module: &Module, 
 /// Constructs IR that exposes the types and symbols in the specified module. A function called
 /// `get_info` is constructed that returns a struct `MunAssemblyInfo`. See the `mun_abi` crate
 /// for the ABI that `get_info` exposes.
-pub(super) fn gen_symbols(
+pub(super) fn gen_reflection_ir(
     db: &impl IrDatabase,
     function_map: &HashMap<mun_hir::Function, FunctionValue>,
     dispatch_table: &DispatchTable,
@@ -393,6 +386,4 @@ pub(super) fn gen_symbols(
     }
 
     function::create_pass_manager(&module, db.optimization_lvl()).run_on(&get_symbols_fn);
-
-    println!("{}", module.print_to_string().to_string())
 }
