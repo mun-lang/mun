@@ -6,7 +6,6 @@ mod macros;
 mod test;
 
 pub use crate::assembly::Assembly;
-
 use std::collections::HashMap;
 use std::io;
 use std::path::{Path, PathBuf};
