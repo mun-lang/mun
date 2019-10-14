@@ -1,6 +1,6 @@
 use inkwell::types::{AnyTypeEnum, BasicTypeEnum};
 
-mod dispatch_table;
+pub(crate) mod dispatch_table;
 pub mod function;
 pub mod module;
 pub mod ty;

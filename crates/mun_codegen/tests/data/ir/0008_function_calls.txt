@@ -1,0 +1,30 @@
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+%DispatchTable = type { i64 (i64, i64)*, i64 (i64, i64)* }
+
+@dispatchTable = global %DispatchTable { i64 (i64, i64)* @add_impl, i64 (i64, i64)* @add }
+
+define i64 @add_impl(i64 %a, i64 %b) {
+body:
+  %add = add i64 %a, %b
+  ret i64 %add
+}
+
+define i64 @add(i64 %a, i64 %b) {
+body:
+  %add_impl_ptr = load i64 (i64, i64)*, i64 (i64, i64)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
+  %add_impl = call i64 %add_impl_ptr(i64 %a, i64 %b)
+  ret i64 %add_impl
+}
+
+define i64 @test() {
+body:
+  %add_ptr = load i64 (i64, i64)*, i64 (i64, i64)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 1)
+  %add = call i64 %add_ptr(i64 4, i64 5)
+  %add_impl_ptr = load i64 (i64, i64)*, i64 (i64, i64)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
+  %add_impl = call i64 %add_impl_ptr(i64 4, i64 5)
+  %add_ptr1 = load i64 (i64, i64)*, i64 (i64, i64)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 1)
+  %add2 = call i64 %add_ptr1(i64 4, i64 5)
+  ret i64 %add2
+}

@@ -10,8 +10,3 @@ clap = "2.33.0"
 mun_compiler = { path = "../mun_compiler" }
 mun_compiler_daemon = { path = "../mun_compiler_daemon" }
 mun_runtime = { path = "../mun_runtime" }
-
-[build-dependencies]
-lazy_static = "1.4.0"
-semver = "0.9.0"
-regex = "1.3.1"

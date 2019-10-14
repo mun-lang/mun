@@ -2,6 +2,9 @@ mod assembly;
 #[macro_use]
 mod macros;
 
+#[cfg(test)]
+mod test;
+
 pub use crate::assembly::Assembly;
 
 use std::collections::HashMap;

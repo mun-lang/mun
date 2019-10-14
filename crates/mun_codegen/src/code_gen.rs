@@ -2,10 +2,11 @@ use crate::IrDatabase;
 use inkwell::targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target};
 use mun_hir::FileId;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path};
 
 mod linker;
-pub fn write_module_shared_object(db: &impl IrDatabase, file_id: FileId) -> bool {
+
+pub fn write_module_shared_object(db: &impl IrDatabase, file_id: FileId, output_file_path: &Path) -> Result<(), failure::Error> {
     let module = db.module_ir(file_id);
     let target = db.target();
 
@@ -13,7 +14,7 @@ pub fn write_module_shared_object(db: &impl IrDatabase, file_id: FileId) -> bool
     let llvm_module = module.llvm_module.clone();
 
     // Generate the `get_symbols` method.
-    symbols::gen_symbols(db, &module.functions, &llvm_module);
+    symbols::gen_symbols(db, &module.functions, &module.dispatch_table, &llvm_module);
 
     Target::initialize_x86(&InitializationConfig::default());
 
@@ -29,9 +30,6 @@ pub fn write_module_shared_object(db: &impl IrDatabase, file_id: FileId) -> bool
         )
         .unwrap();
 
-    let relative_path = db.file_relative_path(file_id);
-    let original_filename = Path::new(relative_path.file_name().unwrap());
-
     // Generate object file
     let obj_file = {
         let obj = target_machine
@@ -46,21 +44,14 @@ pub fn write_module_shared_object(db: &impl IrDatabase, file_id: FileId) -> bool
     let mut linker = linker::create_with_target(&target);
     linker.add_object(obj_file.path());
 
-    // Determine output file
-    let dll_extension = if target.options.dll_suffix.starts_with(".") {
-        &target.options.dll_suffix[1..]
-    } else {
-        &target.options.dll_suffix
-    };
-    let output_file_path = original_filename.with_extension(dll_extension);
-
     // Link the object
     linker.build_shared_object(&output_file_path);
 
     let mut cmd = linker.finalize();
+    dbg!(&cmd);
     cmd.spawn().unwrap().wait().unwrap();
 
-    true
+    Ok(())
 }
 
 pub mod symbols;

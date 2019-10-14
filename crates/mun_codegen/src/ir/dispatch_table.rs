@@ -15,14 +15,22 @@ use std::collections::HashMap;
 ///     // .. etc
 /// } dispatchTable;
 /// ```
-pub(crate) struct DispatchTable {
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct DispatchTable {
     // This contains the function that map to the DispatchTable struct fields
     function_to_idx: HashMap<hir::Function, usize>,
+    // This contains an ordered list of all the function in the dispatch table
+    entries: Vec<hir::Function>,
     // Contains a reference to the global value containing the DispatchTable
     table_ref: Option<inkwell::values::GlobalValue>,
 }
 
 impl DispatchTable {
+    /// Returns an `Iter` over the functions in the dispatch table.
+    pub fn entries(&self) -> &[hir::Function] {
+        &self.entries
+    }
+
     /// Generate a function lookup through the DispatchTable, equivalent to something along the
     /// lines of: `dispatchTable[i]`, where i is the index of the function and `dispatchTable` is a
     /// struct
@@ -55,6 +63,12 @@ impl DispatchTable {
         builder
             .build_load(ptr_to_function_ptr, &format!("{0}_ptr", function_name))
             .into_pointer_value()
+    }
+
+    /// Returns the value that represents the dispatch table in IR or `None` if no table was
+    /// generated.
+    pub fn global_value(&self) -> Option<&inkwell::values::GlobalValue> {
+        self.table_ref.as_ref()
     }
 }
 
@@ -177,6 +191,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
         DispatchTable {
             function_to_idx: self.function_to_idx,
             table_ref: self.table_ref,
+            entries: self.entries
         }
     }
 }
