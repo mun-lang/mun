@@ -4,16 +4,16 @@ use crate::DispatchTable;
 use failure::Error;
 use mun_abi::AssemblyInfo;
 
-mod private_library;
+mod temp_library;
 
-use self::private_library::PrivateLibrary;
+use self::temp_library::TempLibrary;
 use std::io;
 use libloading::Symbol;
 
 /// An assembly is the smallest compilable unit of code in Mun.
 pub struct Assembly {
     library_path: PathBuf,
-    library: Option<PrivateLibrary>,
+    library: Option<TempLibrary>,
     info: AssemblyInfo,
 }
 
@@ -23,7 +23,7 @@ impl Assembly {
         library_path: &Path,
         runtime_dispatch_table: &mut DispatchTable,
     ) -> Result<Self, Error> {
-        let library = PrivateLibrary::new(library_path)?;
+        let library = TempLibrary::new(library_path)?;
         println!("Loaded module '{}'.", library_path.to_string_lossy());
 
         // Check whether the library has a symbols function

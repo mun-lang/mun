@@ -59,3 +59,20 @@ fn arguments() {
     let result: i64 = invoke_fn!(runtime, "main", a, b);
     assert_eq!(result, a+b);
 }
+
+#[test]
+fn dispatch_table() {
+    let compile_result = compile(r"
+        fn add(a:int, b:int):int { a+b }
+        fn main(a:int, b:int):int { add(a,b) }
+    ");
+    let mut runtime = compile_result.new_runtime();
+    let a:i64 = 52;
+    let b:i64 = 746;
+    let result: i64 = invoke_fn!(runtime, "main", a, b);
+    assert_eq!(result, a+b);
+    let a:i64 = 6274;
+    let b:i64 = 72;
+    let result: i64 = invoke_fn!(runtime, "add", a, b);
+    assert_eq!(result, a+b);
+}
