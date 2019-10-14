@@ -56,8 +56,9 @@ pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
     llvm_functions: &'a HashMap<mun_hir::Function, FunctionValue>,
     dispatch_table: &'b DispatchTable,
 ) -> FunctionValue {
-    let builder = db.context().create_builder();
-    let body_ir = llvm_function.append_basic_block("body");
+    let context = db.context();
+    let builder = context.create_builder();
+    let body_ir = context.append_basic_block(&llvm_function, "body");
     builder.position_at_end(&body_ir);
 
     let mut code_gen = BodyIrGenerator::new(
