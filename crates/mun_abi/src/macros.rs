@@ -16,7 +16,7 @@ macro_rules! downcast_fn {
     ($FunctionInfo:expr, fn($($T:ident),*) -> $Output:ident) => {{
         let num_args = $crate::count_args!($($T),*);
 
-        let arg_types = $FunctionInfo.arg_types();
+        let arg_types = $FunctionInfo.signature.arg_types();
         if arg_types.len() != num_args {
             return Err(format!(
                 "Invalid number of arguments. Expected: {}. Found: {}.",
@@ -38,7 +38,7 @@ macro_rules! downcast_fn {
             idx += 1;
         )*
 
-        if let Some(return_type) = $FunctionInfo.return_type() {
+        if let Some(return_type) = $FunctionInfo.signature.return_type() {
             if return_type.guid != Output::type_guid() {
                 return Err(format!(
                     "Invalid return type. Expected: {}. Found: {}",
@@ -54,6 +54,6 @@ macro_rules! downcast_fn {
             ));
         }
 
-        Ok(unsafe { core::mem::transmute($FunctionInfo.fn_ptr()) })
+        Ok(unsafe { core::mem::transmute($FunctionInfo.fn_ptr) })
     }}
 }
