@@ -4,21 +4,21 @@ use failure::Error;
 use mun_abi::FunctionInfo;
 
 mod library;
-mod private_library;
+mod temp_library;
 
 use self::library::Library;
-use self::private_library::PrivateLibrary;
+use self::temp_library::TempLibrary;
 
 /// An assembly is the smallest compilable unit of code in Mun.
 pub struct Assembly {
     library_path: PathBuf,
-    library: Option<PrivateLibrary>,
+    library: Option<TempLibrary>,
 }
 
 impl Assembly {
     /// Loads an assembly for the library at `library_path` and its dependencies.
     pub fn load(library_path: &Path) -> Result<Self, Error> {
-        let library = PrivateLibrary::new(library_path)?;
+        let library = TempLibrary::new(library_path)?;
         println!("Loaded module '{}'.", library_path.to_string_lossy());
 
         Ok(Assembly {
@@ -28,7 +28,7 @@ impl Assembly {
     }
 
     pub fn swap(&mut self, library_path: &Path) -> Result<(), Error> {
-        let mut library = Some(PrivateLibrary::new(library_path)?);
+        let mut library = Some(TempLibrary::new(library_path)?);
         println!("Reloaded module '{}'.", library_path.to_string_lossy());
 
         std::mem::swap(&mut library, &mut self.library);
