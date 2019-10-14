@@ -48,8 +48,11 @@ pub fn write_module_shared_object(db: &impl IrDatabase, file_id: FileId, output_
     linker.build_shared_object(&output_file_path);
 
     let mut cmd = linker.finalize();
-    dbg!(&cmd);
-    cmd.spawn().unwrap().wait().unwrap();
+    let result = cmd.spawn().unwrap().wait().unwrap();
+
+    if !result.success() {
+        panic!("linking failed")
+    }
 
     Ok(())
 }

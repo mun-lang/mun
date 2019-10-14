@@ -116,7 +116,7 @@ fn gen_abi_types(context: ContextRef) -> AbiTypes {
             context.i16_type().into(),                                           // num_arg_types
             privacy_type.into(),                                                 // privacy
         ],
-        false
+        false,
     );
 
     // Construct the `MunFunctionInfo` struct
@@ -169,7 +169,7 @@ fn gen_abi_types(context: ContextRef) -> AbiTypes {
             str_type.ptr_type(AddressSpace::Const).into(),
             context.i32_type().into()
         ],
-        false
+        false,
     );
 
     AbiTypes {
@@ -180,7 +180,7 @@ fn gen_abi_types(context: ContextRef) -> AbiTypes {
         function_info_type,
         module_info_type,
         dispatch_table_type,
-        assembly_info_type
+        assembly_info_type,
     }
 }
 
@@ -235,28 +235,28 @@ fn gen_signature_from_function<D: IrDatabase>(db: &D, module: &Module, types: &A
 
 /// Construct a global that holds a reference to all functions. e.g.:
 /// MunFunctionInfo[] info = { ... }
-fn gen_function_info_array<'a, D: IrDatabase>(db: &D, types: &AbiTypes, module: &Module, functions: impl Iterator<Item = (&'a mun_hir::Function, &'a FunctionValue)>)  -> GlobalValue {
+fn gen_function_info_array<'a, D: IrDatabase>(db: &D, types: &AbiTypes, module: &Module, functions: impl Iterator<Item=(&'a mun_hir::Function, &'a FunctionValue)>) -> GlobalValue {
     let function_infos: Vec<StructValue> =
         functions
-        .map(|(f, value)| {
-            // Get the function from the cloned module and modify the linkage of the function.
-            let value = module
-                .get_function(value.get_name().to_str().unwrap())
-                .unwrap();
-            value.set_linkage(Linkage::Private);
+            .map(|(f, value)| {
+                // Get the function from the cloned module and modify the linkage of the function.
+                let value = module
+                    .get_function(value.get_name().to_str().unwrap())
+                    .unwrap();
+                value.set_linkage(Linkage::Private);
 
-            // Generate the signature from the function
-            let signature = gen_signature_from_function(db, module, types, *f);
+                // Generate the signature from the function
+                let signature = gen_signature_from_function(db, module, types, *f);
 
-            // Generate the function info value
-            types.function_info_type.const_named_struct(
-                &[
-                    signature.into(),
-                    value.as_global_value().as_pointer_value().into(),
-                ]
-            )
-        })
-        .collect();
+                // Generate the function info value
+                types.function_info_type.const_named_struct(
+                    &[
+                        signature.into(),
+                        value.as_global_value().as_pointer_value().into(),
+                    ]
+                )
+            })
+            .collect();
     let function_infos = types.function_info_type.const_array(&function_infos);
     gen_global(module, &function_infos, "fn.get_info.functions")
 }
@@ -275,7 +275,7 @@ fn gen_global(module: &Module, value: &dyn BasicValue, name: &str) -> GlobalValu
 /// ```
 fn gen_dispatch_table<D: IrDatabase>(db: &D, types: &AbiTypes, module: &Module, dispatch_table: &DispatchTable) -> StructValue {
     // Generate a vector with all the function signatures
-    let signatures:Vec<StructValue> = dispatch_table
+    let signatures: Vec<StructValue> = dispatch_table
         .entries()
         .iter()
         .map(|f| {
@@ -287,9 +287,18 @@ fn gen_dispatch_table<D: IrDatabase>(db: &D, types: &AbiTypes, module: &Module, 
     let signatures = gen_global(module, &types.function_signature_type.const_array(&signatures), "fn.get_info.dispatchTable.signatures");
 
     // Get the pointer to the global table (or nullptr if no global table was defined).
-    let dispatch_table_ptr = dispatch_table.global_value().map(|g| g.as_pointer_value()).unwrap_or_else(||
-        module.get_context().void_type().fn_type(&[], false).ptr_type(AddressSpace::Const).ptr_type(AddressSpace::Generic).const_null()
-    );
+    let dispatch_table_ptr = dispatch_table
+        .global_value()
+        .map(|_g|
+            // TODO: This is a hack, the passed module here is a clone of the module with which the
+            // dispatch table was created. Because of this we have to lookup the dispatch table
+            // global again. There is however not a `GlobalValue::get_name` method so I just
+            // hardcoded the name here.
+            module.get_global("dispatchTable").unwrap().as_pointer_value()
+        )
+        .unwrap_or_else(||
+            module.get_context().void_type().fn_type(&[], false).ptr_type(AddressSpace::Const).ptr_type(AddressSpace::Generic).const_null()
+        );
 
     types.dispatch_table_type.const_named_struct(
         &[

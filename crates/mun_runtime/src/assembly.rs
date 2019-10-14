@@ -6,14 +6,14 @@ use failure::Error;
 use libloading::Symbol;
 use mun_abi::AssemblyInfo;
 
-mod private_library;
+mod temp_library;
 
-use self::private_library::PrivateLibrary;
+use self::temp_library::TempLibrary;
 
 /// An assembly is the smallest compilable unit of code in Mun.
 pub struct Assembly {
     library_path: PathBuf,
-    library: Option<PrivateLibrary>,
+    library: Option<TempLibrary>,
     info: AssemblyInfo,
 }
 
@@ -23,7 +23,7 @@ impl Assembly {
         library_path: &Path,
         runtime_dispatch_table: &mut DispatchTable,
     ) -> Result<Self, Error> {
-        let library = PrivateLibrary::new(library_path)?;
+        let library = TempLibrary::new(library_path)?;
 
         // Check whether the library has a symbols function
         let get_info: Symbol<'_, extern "C" fn() -> AssemblyInfo> =
