@@ -1,19 +1,19 @@
-use std::env;
-use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::DispatchTable;
 use failure::Error;
-use libloading::{Library, Symbol};
+use libloading::Symbol;
 use mun_abi::AssemblyInfo;
 
-const LIB_DIR: &str = "tmp";
+mod private_library;
+
+use self::private_library::PrivateLibrary;
 
 /// An assembly is the smallest compilable unit of code in Mun.
 pub struct Assembly {
     library_path: PathBuf,
-    library: Option<Library>,
+    library: Option<PrivateLibrary>,
     info: AssemblyInfo,
 }
 
@@ -23,24 +23,11 @@ impl Assembly {
         library_path: &Path,
         runtime_dispatch_table: &mut DispatchTable,
     ) -> Result<Self, Error> {
-        let library_name = library_path.file_name().ok_or(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "Incorrect library path.",
-        ))?;
-
-        let tmp_dir = env::current_dir()?.join(LIB_DIR);
-        if !tmp_dir.exists() {
-            fs::create_dir(&tmp_dir)?;
-        }
-
-        let tmp_path = tmp_dir.join(library_name);
-        fs::copy(&library_path, &tmp_path)?;
-
-        let library = Library::new(&tmp_path)?;
+        let library = PrivateLibrary::new(library_path)?;
 
         // Check whether the library has a symbols function
         let get_info: Symbol<'_, extern "C" fn() -> AssemblyInfo> =
-            unsafe { library.get(b"get_info") }?;
+            unsafe { library.library().get(b"get_info") }?;
 
         let info = get_info();
 

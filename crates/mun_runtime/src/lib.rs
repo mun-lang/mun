@@ -5,8 +5,6 @@ mod macros;
 #[cfg(test)]
 mod test;
 
-pub use crate::assembly::Assembly;
-
 use std::collections::HashMap;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -16,6 +14,8 @@ use std::time::Duration;
 use failure::Error;
 use mun_abi::{FunctionInfo, Reflection};
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
+
+pub use crate::assembly::Assembly;
 
 #[derive(Clone, Debug)]
 pub struct RuntimeOptions {
