@@ -63,7 +63,7 @@ lazy_static! {
             .unwrap()
             .to_path_buf();
 
-        let mut binary_dir:&Path = &path;
+        let mut binary_dir: &Path = &path;
         let mut binary_path;
         loop {
             binary_path = binary_dir.to_path_buf();
@@ -136,7 +136,7 @@ impl Linker for MsvcLinker {
     fn build_shared_object(&mut self, path: &Path) {
         self.cmd.arg("/DLL");
         self.cmd.arg("/NOENTRY");
-        self.cmd.arg("/EXPORT:get_symbols");
+        self.cmd.arg("/EXPORT:get_info");
 
         let mut arg = OsString::from("/IMPLIB:");
         arg.push(path.with_extension("dll.lib"));

@@ -7,8 +7,8 @@ use mun_abi::AssemblyInfo;
 mod temp_library;
 
 use self::temp_library::TempLibrary;
-use std::io;
 use libloading::Symbol;
+use std::io;
 
 /// An assembly is the smallest compilable unit of code in Mun.
 pub struct Assembly {

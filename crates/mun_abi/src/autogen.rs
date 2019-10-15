@@ -152,8 +152,8 @@ impl AssemblyInfo {
 mod tests {
     use super::*;
     use std::ffi::CString;
-    use std::ptr;
     use std::os::raw::c_char;
+    use std::ptr;
 
     fn fake_type_info(name: &CStr) -> TypeInfo {
         TypeInfo {

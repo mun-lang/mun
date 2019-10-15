@@ -1,6 +1,6 @@
 use crate::values::FunctionValue;
 use crate::IrDatabase;
-use inkwell::module::{Module};
+use inkwell::module::Module;
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::{BasicValueEnum, PointerValue};
 use mun_hir as hir;
@@ -191,7 +191,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
         DispatchTable {
             function_to_idx: self.function_to_idx,
             table_ref: self.table_ref,
-            entries: self.entries
+            entries: self.entries,
         }
     }
 }

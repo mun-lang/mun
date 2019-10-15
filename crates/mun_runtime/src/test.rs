@@ -1,10 +1,10 @@
-use std::path::{PathBuf};
+use crate::{MunRuntime, RuntimeBuilder};
 use mun_compiler::CompilerOptions;
-use crate::{RuntimeBuilder, MunRuntime};
+use std::path::PathBuf;
 
 struct CompileResult {
     _temp_dir: tempfile::TempDir,
-    result: PathBuf
+    result: PathBuf,
 }
 
 impl CompileResult {
@@ -20,29 +20,33 @@ fn compile(text: &str) -> CompileResult {
     let temp_dir = tempfile::TempDir::new().unwrap();
     let options = CompilerOptions {
         out_dir: Some(temp_dir.path().to_path_buf()),
-        .. CompilerOptions::with_file(text)
+        ..CompilerOptions::with_file(text)
     };
     let result = mun_compiler::main(&options).unwrap().unwrap();
     CompileResult {
         _temp_dir: temp_dir,
-        result
+        result,
     }
 }
 
 #[test]
 fn compile_and_run() {
-    let compile_result = compile(r"
+    let compile_result = compile(
+        r"
         fn main() {}
-    ");
+    ",
+    );
     let mut runtime = compile_result.new_runtime();
     let _result: () = invoke_fn!(runtime, "main");
 }
 
 #[test]
 fn return_value() {
-    let compile_result = compile(r"
+    let compile_result = compile(
+        r"
         fn main():int { 3 }
-    ");
+    ",
+    );
     let mut runtime = compile_result.new_runtime();
     let result: i64 = invoke_fn!(runtime, "main");
     assert_eq!(result, 3);
@@ -50,31 +54,35 @@ fn return_value() {
 
 #[test]
 fn arguments() {
-    let compile_result = compile(r"
+    let compile_result = compile(
+        r"
         fn main(a:int, b:int):int { a+b }
-    ");
+    ",
+    );
     let mut runtime = compile_result.new_runtime();
-    let a:i64 = 52;
-    let b:i64 = 746;
+    let a: i64 = 52;
+    let b: i64 = 746;
     let result: i64 = invoke_fn!(runtime, "main", a, b);
-    assert_eq!(result, a+b);
+    assert_eq!(result, a + b);
 }
 
 #[test]
 fn dispatch_table() {
-    let compile_result = compile(r"
+    let compile_result = compile(
+        r"
         fn add(a:int, b:int):int { a+b }
         fn main(a:int, b:int):int { add(a,b) }
-    ");
+    ",
+    );
     let mut runtime = compile_result.new_runtime();
 
-    let a:i64 = 52;
-    let b:i64 = 746;
+    let a: i64 = 52;
+    let b: i64 = 746;
     let result: i64 = invoke_fn!(runtime, "main", a, b);
-    assert_eq!(result, a+b);
+    assert_eq!(result, a + b);
 
-    let a:i64 = 6274;
-    let b:i64 = 72;
+    let a: i64 = 6274;
+    let b: i64 = 72;
     let result: i64 = invoke_fn!(runtime, "add", a, b);
-    assert_eq!(result, a+b);
+    assert_eq!(result, a + b);
 }

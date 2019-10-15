@@ -1,9 +1,9 @@
+use crate::{mock::MockDatabase, IrDatabase};
 use mun_hir::diagnostics::DiagnosticSink;
-use mun_hir::{Module};
+use mun_hir::Module;
 use std::cell::RefCell;
 use std::path::PathBuf;
 use test_utils::{dir_tests, project_dir};
-use crate::{IrDatabase, mock::{MockDatabase}};
 
 fn test_data_dir() -> PathBuf {
     project_dir().join("crates/mun_codegen/tests/data/")

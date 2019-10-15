@@ -1,13 +1,13 @@
 use crate::IrDatabase;
+use inkwell::module::Module;
+use inkwell::passes::{PassManager, PassManagerBuilder};
 use inkwell::targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target};
+use inkwell::OptimizationLevel;
 use mun_hir::FileId;
 use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::process::{Child, Stdio};
-use inkwell::passes::{PassManagerBuilder, PassManager};
-use inkwell::OptimizationLevel;
-use inkwell::module::Module;
 
 mod linker;
 

@@ -20,7 +20,7 @@ use mun_target::spec;
 #[derive(Debug, Clone)]
 pub enum PathOrInline {
     Path(PathBuf),
-    Inline(String)
+    Inline(String),
 }
 
 #[derive(Debug, Clone)]
@@ -117,11 +117,11 @@ impl CompilerDatabase {
             PathOrInline::Path(p) => {
                 db.set_file_relative_path(file_id, RelativePathBuf::from_path(p).unwrap());
                 db.set_file_text(file_id, Arc::new(std::fs::read_to_string(p)?));
-            },
+            }
             PathOrInline::Inline(text) => {
                 db.set_file_relative_path(file_id, RelativePathBuf::from_path("main.mun").unwrap());
                 db.set_file_text(file_id, Arc::new(text.clone()));
-            },
+            }
         };
 
         let mut package_input = PackageInput::default();

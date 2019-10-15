@@ -9,7 +9,7 @@ pub fn main(options: &CompilerOptions) -> Result<(), Error> {
     // Need to canonicalize path to do comparisons
     let input_path = match &options.input {
         PathOrInline::Path(path) => path.canonicalize()?,
-        PathOrInline::Inline(_) => panic!("cannot run compiler with inline path")
+        PathOrInline::Inline(_) => panic!("cannot run compiler with inline path"),
     };
 
     // Compile at least once

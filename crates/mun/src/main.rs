@@ -4,8 +4,8 @@ extern crate failure;
 use std::time::Duration;
 
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-use mun_runtime::{invoke_fn, MunRuntime, RuntimeBuilder};
 use mun_compiler::PathOrInline;
+use mun_runtime::{invoke_fn, MunRuntime, RuntimeBuilder};
 
 fn main() -> Result<(), failure::Error> {
     let matches = App::new("mun")

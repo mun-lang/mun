@@ -3,13 +3,14 @@
 #[macro_use]
 extern crate lazy_static;
 
-#[macro_use] extern crate failure;
+#[macro_use]
+extern crate failure;
 
 mod code_gen;
 mod db;
 mod ir;
-pub(crate) mod symbols;
 mod mock;
+pub(crate) mod symbols;
 
 #[cfg(test)]
 mod test;

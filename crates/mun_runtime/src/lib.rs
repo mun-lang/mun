@@ -172,36 +172,3 @@ invoke_fn_impl! {
     fn invoke_fn11(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K);
     fn invoke_fn12(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K, l: L);
 }
-
-#[cfg(all(test, windows))]
-mod tests {
-    use super::{invoke_fn, MunRuntime, RuntimeBuilder};
-    use std::path::PathBuf;
-    use std::time::Duration;
-
-    fn test_lib_path() -> PathBuf {
-        use std::env;
-
-        let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-        manifest_dir.join("tests/data").join("main.dll")
-    }
-
-    #[test]
-    fn mun_new_runtime() {
-        let builder = RuntimeBuilder::new(test_lib_path());
-        let _runtime = builder.spawn().expect("Failed to initialize Mun runtime.");
-    }
-
-    #[test]
-    fn mun_invoke_fn() {
-        let builder = RuntimeBuilder::new(test_lib_path());
-        let mut runtime = builder.spawn().expect("Failed to initialize Mun runtime.");
-
-        let a: f64 = 4.0;
-        let b: f64 = 2.0;
-
-        let result: f64 = invoke_fn!(runtime, "add", a, b);
-
-        assert_eq!(result, a + b);
-    }
-}

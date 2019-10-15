@@ -1,6 +1,10 @@
+use crate::ir::dispatch_table::DispatchTable;
 use crate::ir::function;
+use crate::values::{BasicValue, GlobalValue};
 use crate::IrDatabase;
 use inkwell::attributes::Attribute;
+use inkwell::context::ContextRef;
+use inkwell::types::{ArrayType, IntType, StructType};
 use inkwell::values::{IntValue, PointerValue, UnnamedAddress};
 use inkwell::{
     module::{Linkage, Module},
@@ -10,10 +14,6 @@ use inkwell::{
 use mun_hir::{self as hir, Ty, TypeCtor};
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
-use inkwell::types::{StructType, IntType, ArrayType};
-use crate::values::{GlobalValue, BasicValue};
-use inkwell::context::ContextRef;
-use crate::ir::dispatch_table::DispatchTable;
 
 pub type Guid = [u8; 16];
 
@@ -97,8 +97,8 @@ fn gen_abi_types(context: ContextRef) -> AbiTypes {
     let type_info_type = context.opaque_struct_type("struct.MunTypeInfo");
     type_info_type.set_body(
         &[
-            guid_type.into(),                                                   // guid
-            str_type.into(),                                                    // name
+            guid_type.into(), // guid
+            str_type.into(),  // name
         ],
         false,
     );
@@ -107,11 +107,11 @@ fn gen_abi_types(context: ContextRef) -> AbiTypes {
     let function_signature_type = context.opaque_struct_type("struct.MunFunctionSignature");
     function_signature_type.set_body(
         &[
-            str_type.into(),                                                     // name
+            str_type.into(),                                     // name
             type_info_type.ptr_type(AddressSpace::Const).into(), // arg_types
             type_info_type.ptr_type(AddressSpace::Const).into(), // return_type
-            context.i16_type().into(),                                           // num_arg_types
-            privacy_type.into(),                                                 // privacy
+            context.i16_type().into(),                           // num_arg_types
+            privacy_type.into(),                                 // privacy
         ],
         false,
     );
@@ -120,12 +120,12 @@ fn gen_abi_types(context: ContextRef) -> AbiTypes {
     let function_info_type = context.opaque_struct_type("struct.MunFunctionInfo");
     function_info_type.set_body(
         &[
-            function_signature_type.into(),                                      // signature
+            function_signature_type.into(), // signature
             context
                 .void_type()
                 .fn_type(&[], false)
                 .ptr_type(AddressSpace::Const)
-                .into(),                                                        // fn_ptr
+                .into(), // fn_ptr
         ],
         false,
     );
@@ -134,9 +134,9 @@ fn gen_abi_types(context: ContextRef) -> AbiTypes {
     let module_info_type = context.opaque_struct_type("struct.MunModuleInfo");
     module_info_type.set_body(
         &[
-            str_type.into(),                                                    // path
+            str_type.into(),                                         // path
             function_info_type.ptr_type(AddressSpace::Const).into(), // functions
-            context.i32_type().into(),                                          // num_functions
+            context.i32_type().into(),                               // num_functions
         ],
         false,
     );
@@ -145,14 +145,14 @@ fn gen_abi_types(context: ContextRef) -> AbiTypes {
     let dispatch_table_type = context.opaque_struct_type("struct.MunDispatchTable");
     dispatch_table_type.set_body(
         &[
-            function_signature_type.ptr_type(AddressSpace::Const).into(),   // signatures
+            function_signature_type.ptr_type(AddressSpace::Const).into(), // signatures
             context
                 .void_type()
                 .fn_type(&[], false)
                 .ptr_type(AddressSpace::Generic)
                 .ptr_type(AddressSpace::Const)
-                .into(),    // fn_ptrs
-            context.i32_type().into(),                                          // num_entries
+                .into(), // fn_ptrs
+            context.i32_type().into(),                                    // num_entries
         ],
         false,
     );
@@ -164,7 +164,7 @@ fn gen_abi_types(context: ContextRef) -> AbiTypes {
             module_info_type.into(),
             dispatch_table_type.into(),
             str_type.ptr_type(AddressSpace::Const).into(),
-            context.i32_type().into()
+            context.i32_type().into(),
         ],
         false,
     );
@@ -181,7 +181,12 @@ fn gen_abi_types(context: ContextRef) -> AbiTypes {
     }
 }
 
-fn gen_signature_from_function<D: IrDatabase>(db: &D, module: &Module, types: &AbiTypes, function: hir::Function) -> StructValue {
+fn gen_signature_from_function<D: IrDatabase>(
+    db: &D,
+    module: &Module,
+    types: &AbiTypes,
+    function: hir::Function,
+) -> StructValue {
     // Intern the name of the function
     let name_str = intern_string(&module, &function.name(db).to_string());
 
@@ -190,7 +195,10 @@ fn gen_signature_from_function<D: IrDatabase>(db: &D, module: &Module, types: &A
     let infer = function.infer(db);
     let ret_type = infer[body.body_expr()].clone();
     let ret_type_ir: PointerValue = if ret_type.is_empty() {
-        types.type_info_type.ptr_type(AddressSpace::Const).const_null()
+        types
+            .type_info_type
+            .ptr_type(AddressSpace::Const)
+            .const_null()
     } else {
         let ret_type_const = type_info_ir(&db.type_info(ret_type), &module);
         gen_global(module, &ret_type_const, "").as_pointer_value()
@@ -198,7 +206,10 @@ fn gen_signature_from_function<D: IrDatabase>(db: &D, module: &Module, types: &A
 
     // Get the argument types
     let params_type_ir: PointerValue = if body.params().is_empty() {
-        types.type_info_type.ptr_type(AddressSpace::Const).const_null()
+        types
+            .type_info_type
+            .ptr_type(AddressSpace::Const)
+            .const_null()
     } else {
         let params_type_array_ir = types.type_info_type.const_array(
             &body
@@ -210,44 +221,45 @@ fn gen_signature_from_function<D: IrDatabase>(db: &D, module: &Module, types: &A
         gen_global(module, &params_type_array_ir, "").as_pointer_value()
     };
 
-    types.function_signature_type.const_named_struct(
-        &[
-            name_str.into(),
-            params_type_ir.into(),
-            ret_type_ir.into(),
-            module.get_context()
-                .i16_type()
-                .const_int(body.params().len() as u64, false)
-                .into(),
-            module.get_context().i8_type().const_int(0, false).into(),
-        ]
-    )
+    types.function_signature_type.const_named_struct(&[
+        name_str.into(),
+        params_type_ir.into(),
+        ret_type_ir.into(),
+        module
+            .get_context()
+            .i16_type()
+            .const_int(body.params().len() as u64, false)
+            .into(),
+        module.get_context().i8_type().const_int(0, false).into(),
+    ])
 }
 
 /// Construct a global that holds a reference to all functions. e.g.:
 /// MunFunctionInfo[] info = { ... }
-fn gen_function_info_array<'a, D: IrDatabase>(db: &D, types: &AbiTypes, module: &Module, functions: impl Iterator<Item=(&'a mun_hir::Function, &'a FunctionValue)>) -> GlobalValue {
-    let function_infos: Vec<StructValue> =
-        functions
-            .map(|(f, value)| {
-                // Get the function from the cloned module and modify the linkage of the function.
-                let value = module
-                    .get_function(value.get_name().to_str().unwrap())
-                    .unwrap();
-                value.set_linkage(Linkage::Private);
+fn gen_function_info_array<'a, D: IrDatabase>(
+    db: &D,
+    types: &AbiTypes,
+    module: &Module,
+    functions: impl Iterator<Item = (&'a mun_hir::Function, &'a FunctionValue)>,
+) -> GlobalValue {
+    let function_infos: Vec<StructValue> = functions
+        .map(|(f, value)| {
+            // Get the function from the cloned module and modify the linkage of the function.
+            let value = module
+                .get_function(value.get_name().to_str().unwrap())
+                .unwrap();
+            value.set_linkage(Linkage::Private);
 
-                // Generate the signature from the function
-                let signature = gen_signature_from_function(db, module, types, *f);
+            // Generate the signature from the function
+            let signature = gen_signature_from_function(db, module, types, *f);
 
-                // Generate the function info value
-                types.function_info_type.const_named_struct(
-                    &[
-                        signature.into(),
-                        value.as_global_value().as_pointer_value().into(),
-                    ]
-                )
-            })
-            .collect();
+            // Generate the function info value
+            types.function_info_type.const_named_struct(&[
+                signature.into(),
+                value.as_global_value().as_pointer_value().into(),
+            ])
+        })
+        .collect();
     let function_infos = types.function_info_type.const_array(&function_infos);
     gen_global(module, &function_infos, "fn.get_info.functions")
 }
@@ -266,18 +278,25 @@ fn gen_global(module: &Module, value: &dyn BasicValue, name: &str) -> GlobalValu
 /// ```c
 /// MunDispatchTable dispatchTable = { ... }
 /// ```
-fn gen_dispatch_table<D: IrDatabase>(db: &D, types: &AbiTypes, module: &Module, dispatch_table: &DispatchTable) -> StructValue {
+fn gen_dispatch_table<D: IrDatabase>(
+    db: &D,
+    types: &AbiTypes,
+    module: &Module,
+    dispatch_table: &DispatchTable,
+) -> StructValue {
     // Generate a vector with all the function signatures
     let signatures: Vec<StructValue> = dispatch_table
         .entries()
         .iter()
-        .map(|f| {
-            gen_signature_from_function(db, module, types, *f)
-        })
+        .map(|f| gen_signature_from_function(db, module, types, *f))
         .collect();
 
     // Construct an IR array from the signatures
-    let signatures = gen_global(module, &types.function_signature_type.const_array(&signatures), "fn.get_info.dispatchTable.signatures");
+    let signatures = gen_global(
+        module,
+        &types.function_signature_type.const_array(&signatures),
+        "fn.get_info.dispatchTable.signatures",
+    );
 
     // Get the pointer to the global table (or nullptr if no global table was defined).
     let dispatch_table_ptr = dispatch_table
@@ -287,19 +306,26 @@ fn gen_dispatch_table<D: IrDatabase>(db: &D, types: &AbiTypes, module: &Module, 
             // dispatch table was created. Because of this we have to lookup the dispatch table
             // global again. There is however not a `GlobalValue::get_name` method so I just
             // hardcoded the name here.
-            module.get_global("dispatchTable").unwrap().as_pointer_value()
-        )
-        .unwrap_or_else(||
-            module.get_context().void_type().fn_type(&[], false).ptr_type(AddressSpace::Const).ptr_type(AddressSpace::Generic).const_null()
-        );
+            module.get_global("dispatchTable").unwrap().as_pointer_value())
+        .unwrap_or_else(|| {
+            module
+                .get_context()
+                .void_type()
+                .fn_type(&[], false)
+                .ptr_type(AddressSpace::Const)
+                .ptr_type(AddressSpace::Generic)
+                .const_null()
+        });
 
-    types.dispatch_table_type.const_named_struct(
-        &[
-            signatures.as_pointer_value().into(),
-            dispatch_table_ptr.into(),
-            module.get_context().i32_type().const_int(dispatch_table.entries().len() as u64, false).into()
-        ]
-    )
+    types.dispatch_table_type.const_named_struct(&[
+        signatures.as_pointer_value().into(),
+        dispatch_table_ptr.into(),
+        module
+            .get_context()
+            .i32_type()
+            .const_int(dispatch_table.entries().len() as u64, false)
+            .into(),
+    ])
 }
 
 /// Constructs IR that exposes the types and symbols in the specified module. A function called
@@ -319,20 +345,27 @@ pub(super) fn gen_reflection_ir(
     let abi_types = gen_abi_types(module.get_context());
 
     // Construct the module info struct
-    let module_info = abi_types.module_info_type.const_named_struct(
-        &[
-            intern_string(module, "").into(),
-            gen_function_info_array(db, &abi_types, module, function_map.iter()).as_pointer_value().into(),
-            module.get_context().i32_type().const_int(function_map.len() as u64, false).into()
-        ]
-    );
+    let module_info = abi_types.module_info_type.const_named_struct(&[
+        intern_string(module, "").into(),
+        gen_function_info_array(db, &abi_types, module, function_map.iter())
+            .as_pointer_value()
+            .into(),
+        module
+            .get_context()
+            .i32_type()
+            .const_int(function_map.len() as u64, false)
+            .into(),
+    ]);
 
     // Construct the dispatch table struct
     let dispatch_table = gen_dispatch_table(db, &abi_types, module, dispatch_table);
 
     let get_symbols_type = if target.options.is_like_windows {
         context.void_type().fn_type(
-            &[abi_types.assembly_info_type.ptr_type(AddressSpace::Generic).into()],
+            &[abi_types
+                .assembly_info_type
+                .ptr_type(AddressSpace::Generic)
+                .into()],
             false,
         )
     } else {
@@ -366,17 +399,19 @@ pub(super) fn gen_reflection_ir(
     let symbols_addr = unsafe { builder.build_struct_gep(result_ptr, 0, "symbols") };
     let dispatch_table_addr = unsafe { builder.build_struct_gep(result_ptr, 1, "dispatch_table") };
     let dependencies_addr = unsafe { builder.build_struct_gep(result_ptr, 2, "dependencies") };
-    let num_dependencies_addr = unsafe { builder.build_struct_gep(result_ptr, 3, "num_dependencies") };
+    let num_dependencies_addr =
+        unsafe { builder.build_struct_gep(result_ptr, 3, "num_dependencies") };
 
     // Fill them with values
     builder.build_store(symbols_addr, module_info);
     builder.build_store(dispatch_table_addr, dispatch_table);
-    builder.build_store(dependencies_addr, str_type.ptr_type(AddressSpace::Const).const_null());
+    builder.build_store(
+        dependencies_addr,
+        str_type.ptr_type(AddressSpace::Const).const_null(),
+    );
     builder.build_store(
         num_dependencies_addr,
-        context
-            .i32_type()
-            .const_int(0 as u64, false),
+        context.i32_type().const_int(0 as u64, false),
     );
 
     if target.options.is_like_windows {

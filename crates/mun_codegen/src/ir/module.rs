@@ -1,4 +1,4 @@
-use crate::ir::dispatch_table::{DispatchTableBuilder, DispatchTable};
+use crate::ir::dispatch_table::{DispatchTable, DispatchTableBuilder};
 use crate::ir::function;
 use crate::IrDatabase;
 use inkwell::{module::Module, values::FunctionValue};
@@ -18,7 +18,7 @@ pub struct ModuleIR {
     pub functions: HashMap<mun_hir::Function, FunctionValue>,
 
     /// The dispatch table
-    pub dispatch_table: DispatchTable
+    pub dispatch_table: DispatchTable,
 }
 
 /// Generates IR for the specified file
@@ -67,6 +67,6 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
         file_id,
         llvm_module,
         functions,
-        dispatch_table
+        dispatch_table,
     })
 }

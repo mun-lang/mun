@@ -1,7 +1,7 @@
-use libloading::Library;
-use std::path::Path;
 use failure::Error;
+use libloading::Library;
 use std::fs;
+use std::path::Path;
 
 /// A structure that holds a `Library` instance but creates a unique file per load. This enables
 /// writing to the original library and ensures that each shared object on Linux is loaded
@@ -11,7 +11,7 @@ use std::fs;
 /// keeps the file open (Windows) or keeping the file is not required in the first place (*nix).
 pub struct TempLibrary {
     _tmp_path: tempfile::TempPath,
-    library: Library
+    library: Library,
 }
 
 impl TempLibrary {
@@ -21,7 +21,7 @@ impl TempLibrary {
         let library = Library::new(&tmp_path)?;
         Ok(TempLibrary {
             _tmp_path: tmp_path,
-            library
+            library,
         })
     }
 
