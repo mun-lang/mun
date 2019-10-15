@@ -1,4 +1,5 @@
 use crate::IrDatabase;
+use failure::Fail;
 use inkwell::module::Module;
 use inkwell::passes::{PassManager, PassManagerBuilder};
 use inkwell::targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target};
@@ -9,6 +10,7 @@ use std::io::Write;
 use std::path::Path;
 use std::process::{Child, Stdio};
 
+mod abi_types;
 mod linker;
 
 #[derive(Debug, Fail)]
@@ -70,7 +72,7 @@ pub fn write_module_shared_object(
     optimize_module(&assembly_module, db.optimization_lvl());
 
     // Debug print the IR
-    println!("{}", assembly_module.print_to_string().to_string());
+    //println!("{}", assembly_module.print_to_string().to_string());
 
     // Construct target machine for machine code generation
     let target_machine = llvm_target

@@ -26,7 +26,7 @@ pub struct DispatchTable {
 }
 
 impl DispatchTable {
-    /// Returns an `Iter` over the functions in the dispatch table.
+    /// Returns a slice containing all the functions in the dispatch table.
     pub fn entries(&self) -> &[hir::Function] {
         &self.entries
     }
@@ -76,7 +76,7 @@ impl DispatchTable {
 pub(crate) struct DispatchTableBuilder<'a, D: IrDatabase> {
     db: &'a D,
     module: &'a Module,
-    // This contains the function that map to the DispatchTable struct fields
+    // This contains the functions that map to the DispatchTable struct fields
     function_to_idx: HashMap<hir::Function, usize>,
     // These are *all* called functions in the modules
     entries: Vec<hir::Function>,
@@ -87,7 +87,7 @@ pub(crate) struct DispatchTableBuilder<'a, D: IrDatabase> {
 }
 
 impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
-    /// Create a new builder that can generate a dispatch function
+    /// Creates a new builder that can generate a dispatch function.
     pub fn new(db: &'a D, module: &'a Module) -> Self {
         DispatchTableBuilder {
             db,
@@ -99,7 +99,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
         }
     }
 
-    /// This function creates the dispatch table global in the module if it does not exist.
+    /// Creates the global dispatch table in the module if it does not exist.
     fn ensure_table_ref(&mut self) {
         if self.table_ref.is_none() {
             self.table_ref = Some(
@@ -109,7 +109,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
         }
     }
 
-    /// Collect call expression from the given expression and sub expressions.
+    /// Collects call expression from the given expression and sub expressions.
     fn collect_expr(&mut self, expr: ExprId, body: &Body, infer: &InferenceResult) {
         let expr = &body[expr];
 
@@ -140,10 +140,9 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
         self.collect_expr(body.body_expr(), body, infer);
     }
 
-    /// This creates the final DispatchTable with all *called* function from within the module
+    /// This creates the final DispatchTable with all *called* functions from within the module
     /// # Parameters
-    /// * **functions**: This is mapping of *defined* mun-functions mapped to the respective IR
-    ///   values.
+    /// * **functions**: Mapping of *defined* Mun functions to their respective IR values.
     pub fn finalize(self, functions: &HashMap<mun_hir::Function, FunctionValue>) -> DispatchTable {
         // Construct the table body from all the entries in the dispatch table
         let table_body: Vec<BasicTypeEnum> = self

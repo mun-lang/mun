@@ -31,9 +31,9 @@ pub(crate) fn create_pass_manager(
 }
 
 /// Generates a `FunctionValue` for a `hir::Function`. This function does not generate a body for
-/// the `hir::Function`. That tasks is left to the `gen_body` function. The reason this is split
+/// the `hir::Function`. That task is left to the `gen_body` function. The reason this is split
 /// between two functions is that first all signatures are generated and then all bodies. This
-/// allows bodies to reference `FunctionValue` wherever there are declared in the file.
+/// allows bodies to reference `FunctionValue` wherever they are declared in the file.
 pub(crate) fn gen_signature(
     db: &impl IrDatabase,
     f: hir::Function,
@@ -212,7 +212,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         value
     }
 
-    /// Construct a builder that should be used to emit an `alloca` instruction. These instructions
+    /// Constructs a builder that should be used to emit an `alloca` instruction. These instructions
     /// should be at the start of the IR.
     fn new_alloca_builder(&self) -> Builder {
         let temp_builder = Builder::create();
@@ -358,7 +358,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         true
     }
 
-    /// Generate IR for a function call
+    /// Generates IR for a function call.
     fn gen_call(&mut self, callee: ExprId, args: &Vec<ExprId>) -> CallSiteValue {
         // Get the function value from the map
         let function = self.infer[callee]
