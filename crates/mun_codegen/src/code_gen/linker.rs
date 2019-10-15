@@ -55,7 +55,7 @@ impl Ld64Linker {
     }
 }
 
-lazy_static! {
+lazy_static::lazy_static! {
     static ref LLD_PATH: PathBuf = {
         let path = std::env::current_exe()
             .unwrap()
