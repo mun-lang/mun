@@ -99,10 +99,10 @@ impl MunRuntime {
         Ok(())
     }
 
-    /// Removes the assembly corresponding to the library at `library_path`.
-    fn remove_assembly(&mut self, library_path: &Path) {
-        self.assemblies.remove(library_path);
-    }
+    //    /// Removes the assembly corresponding to the library at `library_path`.
+    //    fn remove_assembly(&mut self, library_path: &Path) {
+    //        self.assemblies.remove(library_path);
+    //    }
 
     /// Retrieves the function information corresponding to `function_name`, if available.
     pub fn get_function_info(&self, function_name: &str) -> Option<&FunctionInfo> {
@@ -160,9 +160,8 @@ invoke_fn_impl! {
 
 #[cfg(all(test, windows))]
 mod tests {
-    use super::{invoke_fn, MunRuntime, RuntimeBuilder};
+    use super::{invoke_fn, RuntimeBuilder};
     use std::path::PathBuf;
-    use std::time::Duration;
 
     fn test_lib_path() -> PathBuf {
         use std::env;

@@ -57,7 +57,7 @@ impl Module {
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Default)]
 pub struct ModuleData {
     definitions: Vec<ModuleDef>,
-    diagnostics: Vec<ModuleDefinitionDiagnostic>
+    diagnostics: Vec<ModuleDefinitionDiagnostic>,
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
@@ -75,11 +75,13 @@ impl ModuleData {
             match item {
                 RawFileItem::Definition(def) => {
                     if let Some(prev_definition) = definition_by_name.get(&items[*def].name) {
-                        data.diagnostics.push(diagnostics::ModuleDefinitionDiagnostic::DuplicateName {
-                            name: items[*def].name.clone(),
-                            definition: *def,
-                            first_definition: *prev_definition
-                        })
+                        data.diagnostics.push(
+                            diagnostics::ModuleDefinitionDiagnostic::DuplicateName {
+                                name: items[*def].name.clone(),
+                                definition: *def,
+                                first_definition: *prev_definition,
+                            },
+                        )
                     } else {
                         definition_by_name.insert(items[*def].name.clone(), *def);
                     }
@@ -90,7 +92,7 @@ impl ModuleData {
                             }))
                         }
                     }
-                },
+                }
             };
         }
         Arc::new(data)
@@ -272,8 +274,8 @@ pub enum BuiltinType {
     Int,
 }
 
-use crate::name::*;
 use crate::code_model::diagnostics::ModuleDefinitionDiagnostic;
+use crate::name::*;
 
 impl BuiltinType {
     #[rustfmt::skip]
@@ -284,20 +286,26 @@ impl BuiltinType {
 }
 
 mod diagnostics {
-    use crate::{Name, DefDatabase};
-    use crate::raw::{DefId, DefKind};
-    use crate::diagnostics::{DiagnosticSink, DuplicateDefinition};
     use super::Module;
-    use mun_syntax::{SyntaxNodePtr, AstNode};
+    use crate::diagnostics::{DiagnosticSink, DuplicateDefinition};
+    use crate::raw::{DefId, DefKind};
+    use crate::{DefDatabase, Name};
+    use mun_syntax::{AstNode, SyntaxNodePtr};
 
     #[derive(Debug, PartialEq, Eq, Clone, Hash)]
     pub(super) enum ModuleDefinitionDiagnostic {
-        DuplicateName { name: Name, definition: DefId, first_definition: DefId  },
+        DuplicateName {
+            name: Name,
+            definition: DefId,
+            first_definition: DefId,
+        },
     }
 
     fn syntax_ptr_from_def(db: &impl DefDatabase, owner: Module, kind: DefKind) -> SyntaxNodePtr {
         match kind {
-            DefKind::Function(id) => SyntaxNodePtr::new(id.with_file_id(owner.file_id).to_node(db).syntax()),
+            DefKind::Function(id) => {
+                SyntaxNodePtr::new(id.with_file_id(owner.file_id).to_node(db).syntax())
+            }
         }
     }
 
@@ -309,15 +317,23 @@ mod diagnostics {
             sink: &mut DiagnosticSink,
         ) {
             match self {
-                ModuleDefinitionDiagnostic::DuplicateName { name, definition, first_definition } => {
+                ModuleDefinitionDiagnostic::DuplicateName {
+                    name,
+                    definition,
+                    first_definition,
+                } => {
                     let raw_items = db.raw_items(owner.file_id);
                     sink.push(DuplicateDefinition {
                         file: owner.file_id,
                         name: name.to_string(),
                         definition: syntax_ptr_from_def(db, owner, raw_items[*definition].kind),
-                        first_definition: syntax_ptr_from_def(db, owner, raw_items[*first_definition].kind),
+                        first_definition: syntax_ptr_from_def(
+                            db,
+                            owner,
+                            raw_items[*first_definition].kind,
+                        ),
                     })
-                },
+                }
             }
         }
     }

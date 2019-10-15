@@ -1,0 +1,63 @@
+parameters:
+  rust: stable
+
+jobs:
+- job: ${{ parameters.name }}
+  displayName: compute test coverage
+  pool:
+    vmImage: ubuntu-18.04
+
+  steps:
+  - checkout: self
+    submodules: true
+
+  #
+  # Use kcov
+  #
+
+  - template: azure-install-rust.yml
+    parameters: 
+      rust: ${{ parameters.rust }}
+
+  - template: azure-install-llvm.yml
+
+  - script: |
+      cargo install cargo-kcov
+      sudo apt-get install cmake g++ pkg-config jq
+      sudo apt-get install libcurl4-openssl-dev libelf-dev libdw-dev binutils-dev libiberty-dev
+      cargo kcov --print-install-kcov-sh | sh      
+    displayName: "Install kcov"
+
+  - script: cargo kcov --all
+    displayName: Run kcov
+
+  - script: bash <(curl -s https://codecov.io/bash)
+    displayName: Upload results to codecov
+    env:
+      CODECOV_TOKEN: ${{ parameters.codecov_token }}
+
+  #
+  # Use grcov
+  #
+
+  # - template: azure-install-rust.yml
+  #   parameters: 
+  #     rust: nightly #${{ parameters.rust }}
+
+  # - template: azure-install-llvm.yml
+  #  
+  # - script: |
+  #     curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-linux-x86_64.tar.bz2 | tar jxf -
+  #     export CARGO_OPTIONS="--all"
+  #     export CARGO_INCREMENTAL=0
+  #     export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zno-landing-pads"
+  #     cargo build --verbose $CARGO_OPTIONS
+  #     cargo test --verbose $CARGO_OPTIONS
+  #     zip -0 ccov.zip `find . \( -name "*mun*.gc*" \) -print`;
+  #     ./grcov ccov.zip -s . -t lcov --llvm --branch --ignore-not-existing --ignore "/*" -o lcov.info;
+  #     bash <(curl -s https://codecov.io/bash) -f lcov.info;
+  #   displayName: "Compute coverage"
+  #   env:
+  #     CODECOV_TOKEN: ${{ parameters.codecov_token }}
+  #     LLVM_SYS_70_PREFIX: ${{ variables.llvm_sys_prefix }}
+
