@@ -3,7 +3,7 @@ use std::sync::Arc;
 use mun_hir::SourceDatabase;
 use crate::{IrDatabase, OptimizationLevel};
 
-/// A mock implementation of the IR database.
+/// A mock implementation of the IR database. It can be used to set up a simple test case.
 #[salsa::database(
 mun_hir::SourceDatabaseStorage,
 mun_hir::DefDatabaseStorage,

@@ -1,5 +1,9 @@
+/// This library generates machine code from HIR using inkwell which is a safe wrapper around LLVM.
+
 #[macro_use]
 extern crate lazy_static;
+
+#[macro_use] extern crate failure;
 
 mod code_gen;
 mod db;

@@ -1,6 +1,6 @@
 use crate::values::FunctionValue;
 use crate::IrDatabase;
-use inkwell::module::{Module, Linkage};
+use inkwell::module::{Module};
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::{BasicValueEnum, PointerValue};
 use mun_hir as hir;

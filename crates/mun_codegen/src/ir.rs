@@ -5,6 +5,7 @@ pub mod function;
 pub mod module;
 pub mod ty;
 
+/// Try to down cast an `AnyTypeEnum` into a `BasicTypeEnum`.
 fn try_convert_any_to_basic(ty: AnyTypeEnum) -> Option<BasicTypeEnum> {
     match ty {
         AnyTypeEnum::ArrayType(t) => Some(t.into()),
