@@ -11,25 +11,21 @@ jobs:
   - checkout: self
     submodules: true
 
-  #
-  # Use kcov
-  #
-
   - template: azure-install-rust.yml
     parameters: 
       rust: ${{ parameters.rust }}
 
   - template: azure-install-llvm.yml
 
-  - script: |
-      cargo install cargo-kcov
-      sudo apt-get install cmake g++ pkg-config jq
-      sudo apt-get install libcurl4-openssl-dev libelf-dev libdw-dev binutils-dev libiberty-dev
-      cargo kcov --print-install-kcov-sh | sh      
-    displayName: "Install kcov"
+  #
+  # Use tarpaulin
+  #
 
-  - script: cargo kcov --all
-    displayName: Run kcov
+  - script: |    
+      sudo apt-get install libssl-dev pkg-config cmake zlib1g-dev
+      cargo install cargo-tarpaulin
+      cargo tarpaulin -v --out Xml
+    displayName: "Install and run tarpaulin"
 
   - script: bash <(curl -s https://codecov.io/bash)
     displayName: Upload results to codecov
@@ -37,14 +33,25 @@ jobs:
       CODECOV_TOKEN: ${{ parameters.codecov_token }}
 
   #
+  # Use kcov
+  #
+
+  # - script: |
+  #     cargo install cargo-kcov
+  #     sudo apt-get install cmake g++ pkg-config jq
+  #     sudo apt-get install libcurl4-openssl-dev libelf-dev libdw-dev binutils-dev libiberty-dev
+  #     cargo kcov --print-install-kcov-sh | sh      
+  #   displayName: "Install and run kcov"
+
+  # - script: bash <(curl -s https://codecov.io/bash)
+  #   displayName: Upload results to codecov
+  #   env:
+  #     CODECOV_TOKEN: ${{ parameters.codecov_token }}
+
+  #
   # Use grcov
   #
 
-  # - template: azure-install-rust.yml
-  #   parameters: 
-  #     rust: nightly #${{ parameters.rust }}
-
-  # - template: azure-install-llvm.yml
   #  
   # - script: |
   #     curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-linux-x86_64.tar.bz2 | tar jxf -
