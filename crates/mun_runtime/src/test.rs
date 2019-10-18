@@ -37,7 +37,7 @@ fn compile_and_run() {
     ",
     );
     let mut runtime = compile_result.new_runtime();
-    let _result: () = invoke_fn!(runtime, "main");
+    let _result: () = invoke_fn!(runtime, "main").unwrap();
 }
 
 #[test]
@@ -48,7 +48,7 @@ fn return_value() {
     ",
     );
     let mut runtime = compile_result.new_runtime();
-    let result: i64 = invoke_fn!(runtime, "main");
+    let result: i64 = invoke_fn!(runtime, "main").unwrap();
     assert_eq!(result, 3);
 }
 
@@ -62,7 +62,7 @@ fn arguments() {
     let mut runtime = compile_result.new_runtime();
     let a: i64 = 52;
     let b: i64 = 746;
-    let result: i64 = invoke_fn!(runtime, "main", a, b);
+    let result: i64 = invoke_fn!(runtime, "main", a, b).unwrap();
     assert_eq!(result, a + b);
 }
 
@@ -78,11 +78,11 @@ fn dispatch_table() {
 
     let a: i64 = 52;
     let b: i64 = 746;
-    let result: i64 = invoke_fn!(runtime, "main", a, b);
+    let result: i64 = invoke_fn!(runtime, "main", a, b).unwrap();
     assert_eq!(result, a + b);
 
     let a: i64 = 6274;
     let b: i64 = 72;
-    let result: i64 = invoke_fn!(runtime, "add", a, b);
+    let result: i64 = invoke_fn!(runtime, "add", a, b).unwrap();
     assert_eq!(result, a + b);
 }
