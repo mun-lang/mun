@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate failure;
 
+use std::error::Error;
 use std::time::Duration;
 
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
@@ -89,7 +90,7 @@ fn start(matches: &ArgMatches) -> Result<(), failure::Error> {
     let entry_point = matches.value_of("entry").unwrap_or("main");
 
     #[allow(clippy::unit_arg)]
-    Ok(invoke_fn!(runtime, entry_point))
+    invoke_fn!(runtime, entry_point).map_err(|e| failure::err_msg(e.description().to_string()))
 }
 
 fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOptions, failure::Error> {

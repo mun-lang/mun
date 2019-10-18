@@ -48,6 +48,7 @@ impl RuntimeBuilder {
     }
 }
 
+/// A runtime dispatch table that maps full function paths to function information.
 pub struct DispatchTable {
     functions: HashMap<String, FunctionInfo>,
 }
@@ -158,18 +159,29 @@ impl MunRuntime {
     }
 }
 
+/// Extends a result object with functions that allow retrying of an action.
+pub trait Retriable: Sized {
+    type Output;
+
+    /// Retries an action, resulting in a potentially mutated version of itself.
+    fn retry(self) -> Self;
+
+    /// Keeps retrying the same action until it succeeds, resulting in an output.
+    fn wait(self) -> Self::Output;
+}
+
 invoke_fn_impl! {
-    fn invoke_fn0();
-    fn invoke_fn1(a: A);
-    fn invoke_fn2(a: A, b: B);
-    fn invoke_fn3(a: A, b: B, c: C);
-    fn invoke_fn4(a: A, b: B, c: C, d: D);
-    fn invoke_fn5(a: A, b: B, c: C, d: D, e: E);
-    fn invoke_fn6(a: A, b: B, c: C, d: D, e: E, f: F);
-    fn invoke_fn7(a: A, b: B, c: C, d: D, e: E, f: F, g: G);
-    fn invoke_fn8(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H);
-    fn invoke_fn9(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I);
-    fn invoke_fn10(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J);
-    fn invoke_fn11(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K);
-    fn invoke_fn12(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K, l: L);
+    fn invoke_fn0() -> InvokeErr0;
+    fn invoke_fn1(a: A) -> InvokeErr1;
+    fn invoke_fn2(a: A, b: B) -> InvokeErr2;
+    fn invoke_fn3(a: A, b: B, c: C) -> InvokeErr3;
+    fn invoke_fn4(a: A, b: B, c: C, d: D) -> InvokeErr4;
+    fn invoke_fn5(a: A, b: B, c: C, d: D, e: E) -> InvokeErr5;
+    fn invoke_fn6(a: A, b: B, c: C, d: D, e: E, f: F) -> InvokeErr6;
+    fn invoke_fn7(a: A, b: B, c: C, d: D, e: E, f: F, g: G) -> InvokeErr7;
+    fn invoke_fn8(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H) -> InvokeErr8;
+    fn invoke_fn9(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I) -> InvokeErr9;
+    fn invoke_fn10(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J) -> InvokeErr10;
+    fn invoke_fn11(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K) -> InvokeErr11;
+    fn invoke_fn12(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K, l: L) -> InvokeErr12;
 }

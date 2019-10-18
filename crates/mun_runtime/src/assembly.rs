@@ -10,7 +10,7 @@ mod temp_library;
 
 use self::temp_library::TempLibrary;
 
-/// An assembly is the smallest compilable unit of code in Mun.
+/// An assembly is a hot reloadable compilation unit, consisting of one or more Mun modules.
 pub struct Assembly {
     library_path: PathBuf,
     library: Option<TempLibrary>,
@@ -18,7 +18,7 @@ pub struct Assembly {
 }
 
 impl Assembly {
-    /// Loads an assembly for the library at `library_path` and its dependencies.
+    /// Loads an assembly and its information for the shared library at `library_path`.
     pub fn load(
         library_path: &Path,
         runtime_dispatch_table: &mut DispatchTable,
@@ -42,6 +42,7 @@ impl Assembly {
         })
     }
 
+    /// Links the assembly using the runtime's dispatch table.
     pub fn link(&mut self, runtime_dispatch_table: &DispatchTable) -> Result<(), Error> {
         for (dispatch_ptr, fn_signature) in self.info.dispatch_table.iter_mut() {
             let fn_ptr = runtime_dispatch_table
@@ -60,6 +61,7 @@ impl Assembly {
         Ok(())
     }
 
+    /// Swaps the assembly's shared library and its information for the library at `library_path`.
     pub fn swap(
         &mut self,
         library_path: &Path,
@@ -67,7 +69,8 @@ impl Assembly {
     ) -> Result<(), Error> {
         // let library_path = library_path.canonicalize()?;
 
-        // Drop the old library, as some operating systems don't allow editing of in-use shared libraries
+        // Drop the old library, as some operating systems don't allow editing of in-use shared
+        // libraries
         self.library.take();
 
         for function in self.info.symbols.functions() {
@@ -79,12 +82,12 @@ impl Assembly {
         Ok(())
     }
 
-    /// Retrieves the assembly's loaded shared library.
+    /// Returns the assembly's information.
     pub fn info(&self) -> &AssemblyInfo {
         &self.info
     }
 
-    /// Returns the path corresponding tot the assembly's library.
+    /// Returns the path corresponding to the assembly's library.
     pub fn library_path(&self) -> &Path {
         self.library_path.as_path()
     }
