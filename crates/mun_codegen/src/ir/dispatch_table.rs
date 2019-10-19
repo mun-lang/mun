@@ -17,8 +17,8 @@ use std::collections::HashMap;
 /// ```
 ///
 /// The dispatch table is used to add a patchable indirection when calling a function from IR. The
-/// DispatchTable is exposed to the Runtime which fills the structure with valid points to
-/// functions. This basically enables all hot-loading within Mun.
+/// DispatchTable is exposed to the Runtime which fills the structure with valid pointers to
+/// functions. This basically enables all hot reloading within Mun.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct DispatchTable {
     // This contains the function that map to the DispatchTable struct fields
