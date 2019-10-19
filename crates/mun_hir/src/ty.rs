@@ -85,6 +85,28 @@ impl Ty {
     pub fn is_empty(&self) -> bool {
         *self == Ty::Empty
     }
+
+    /// Returns the function definition for the given expression or `None` if the type does not
+    /// represent a function.
+    pub fn as_function_def(&self) -> Option<Function> {
+        match self {
+            Ty::Apply(a_ty) => match a_ty.ctor {
+                TypeCtor::FnDef(def) => Some(def),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
+    pub fn callable_sig(&self, db: &impl HirDatabase) -> Option<FnSig> {
+        match self {
+            Ty::Apply(a_ty) => match a_ty.ctor {
+                TypeCtor::FnDef(def) => Some(db.fn_signature(def)),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
 }
 
 /// A list of substitutions for generic parameters.

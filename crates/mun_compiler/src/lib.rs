@@ -18,10 +18,44 @@ use mun_syntax::{ast, SyntaxKind};
 use mun_target::spec;
 
 #[derive(Debug, Clone)]
+pub enum PathOrInline {
+    Path(PathBuf),
+    Inline(String),
+}
+
+#[derive(Debug, Clone)]
 pub struct CompilerOptions {
-    pub input: PathBuf,
+    /// The input for the compiler
+    pub input: PathOrInline,
+
+    /// The target triple to compile the code for
     pub target: Option<String>,
+
+    /// The Optimization level to use for the IR generation
     pub optimization_lvl: OptimizationLevel,
+
+    /// An optional output directory to store all outputs
+    pub out_dir: Option<PathBuf>,
+}
+
+impl CompilerOptions {
+    pub fn with_path<P: AsRef<Path>>(input: P) -> CompilerOptions {
+        CompilerOptions {
+            input: PathOrInline::Path(input.as_ref().to_path_buf()),
+            target: None,
+            optimization_lvl: OptimizationLevel::default(),
+            out_dir: None,
+        }
+    }
+
+    pub fn with_file<P: AsRef<str>>(input: P) -> CompilerOptions {
+        CompilerOptions {
+            input: PathOrInline::Inline(input.as_ref().to_string()),
+            target: None,
+            optimization_lvl: OptimizationLevel::default(),
+            out_dir: None,
+        }
+    }
 }
 
 #[salsa::database(
@@ -73,14 +107,23 @@ impl CompilerDatabase {
 }
 
 impl CompilerDatabase {
-    fn from_file(path: &Path) -> Result<(CompilerDatabase, FileId), Error> {
+    fn from_file(path: &PathOrInline) -> Result<(CompilerDatabase, FileId), Error> {
         let mut db = CompilerDatabase {
             runtime: salsa::Runtime::default(),
             events: Mutex::new(Some(Vec::new())),
         };
         let file_id = FileId(0);
-        db.set_file_relative_path(file_id, RelativePathBuf::from_path(path).unwrap());
-        db.set_file_text(file_id, Arc::new(std::fs::read_to_string(path)?));
+        match path {
+            PathOrInline::Path(p) => {
+                db.set_file_relative_path(file_id, RelativePathBuf::from_path(p).unwrap());
+                db.set_file_text(file_id, Arc::new(std::fs::read_to_string(p)?));
+            }
+            PathOrInline::Inline(text) => {
+                db.set_file_relative_path(file_id, RelativePathBuf::from_path("main.mun").unwrap());
+                db.set_file_text(file_id, Arc::new(text.clone()));
+            }
+        };
+
         let mut package_input = PackageInput::default();
         package_input.add_module(file_id);
         db.set_package_input(Arc::new(package_input));
@@ -145,6 +188,13 @@ fn diagnostics(db: &CompilerDatabase, file_id: FileId) -> Vec<Diagnostic> {
             message: format!("could not find type `{}` in this scope", text),
         });
     })
+    .on::<mun_hir::diagnostics::ExpectedFunction, _>(|d| {
+        result.borrow_mut().push(Diagnostic {
+            level: Level::Error,
+            loc: d.highlight_range().into(),
+            message: format!("expected function, found `{}`", d.found.display(db)),
+        });
+    })
     .on::<mun_hir::diagnostics::MismatchedType, _>(|d| {
         result.borrow_mut().push(Diagnostic {
             level: Level::Error,
@@ -183,7 +233,7 @@ fn diagnostics(db: &CompilerDatabase, file_id: FileId) -> Vec<Diagnostic> {
     result.into_inner()
 }
 
-pub fn main(options: &CompilerOptions) -> Result<(), failure::Error> {
+pub fn main(options: &CompilerOptions) -> Result<Option<PathBuf>, failure::Error> {
     let (mut db, file_id) = CompilerDatabase::from_file(&options.input)?;
     db.set_optimization_lvl(options.optimization_lvl);
     if let Some(ref target) = options.target {
@@ -196,13 +246,26 @@ pub fn main(options: &CompilerOptions) -> Result<(), failure::Error> {
         for diagnostic in diagnostics {
             diagnostic.emit(&mut writer, &db, file_id)?;
         }
-        return Ok(());
+        return Ok(None);
     }
 
-    //let module = db.module_ir(file_id);
-    //println!("{}", module.llvm_module.print_to_string().to_string());
+    // Determine output file path
+    let target = db.target();
+    let relative_path = db.file_relative_path(file_id);
+    let original_filename = Path::new(relative_path.file_name().unwrap());
+    let dll_extension = if target.options.dll_suffix.starts_with(".") {
+        &target.options.dll_suffix[1..]
+    } else {
+        &target.options.dll_suffix
+    };
+    let output_file_name = original_filename.with_extension(dll_extension);
+    let output_file_path = if let Some(ref out_dir) = options.out_dir {
+        out_dir.join(output_file_name)
+    } else {
+        output_file_name
+    };
 
-    mun_codegen::write_module_shared_object(&db, file_id);
+    mun_codegen::write_module_shared_object(&db, file_id, &output_file_path)?;
 
-    Ok(())
+    Ok(Some(output_file_path))
 }

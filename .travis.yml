@@ -10,6 +10,10 @@ matrix:
   fast_finish: true
 
 cache: cargo
+before_cache:
+  - find ./target/debug -maxdepth 1 -type f -delete
+  - rm -fr ./target/debug/{deps,.fingerprint}/{*mun*,*mun_*,*test_utils*, *tools*}
+  - rm -f  ./target/.rustc_info.json
 
 addons:
   apt:

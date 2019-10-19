@@ -4,6 +4,7 @@ extern crate failure;
 use std::time::Duration;
 
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
+use mun_compiler::PathOrInline;
 use mun_runtime::{invoke_fn, MunRuntime, RuntimeBuilder};
 
 fn main() -> Result<(), failure::Error> {
@@ -77,7 +78,7 @@ fn build(matches: &ArgMatches) -> Result<(), failure::Error> {
     if matches.is_present("watch") {
         mun_compiler_daemon::main(&options)
     } else {
-        mun_compiler::main(&options)
+        mun_compiler::main(&options).map(|_| {})
     }
 }
 
@@ -101,9 +102,10 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOption
     };
 
     Ok(mun_compiler::CompilerOptions {
-        input: matches.value_of("INPUT").unwrap().into(), // Safe because its a required arg
+        input: PathOrInline::Path(matches.value_of("INPUT").unwrap().into()), // Safe because its a required arg
         target: matches.value_of("target").map(|t| t.to_string()),
         optimization_lvl,
+        out_dir: None,
     })
 }
 

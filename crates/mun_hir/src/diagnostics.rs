@@ -123,6 +123,60 @@ impl Diagnostic for UnresolvedType {
 }
 
 #[derive(Debug)]
+pub struct ExpectedFunction {
+    pub file: FileId,
+    pub expr: SyntaxNodePtr,
+    pub found: Ty,
+}
+
+impl Diagnostic for ExpectedFunction {
+    fn message(&self) -> String {
+        "expected function type".to_string()
+    }
+
+    fn file(&self) -> FileId {
+        self.file
+    }
+
+    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
+        self.expr
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct ParameterCountMismatch {
+    pub file: FileId,
+    pub expr: SyntaxNodePtr,
+    pub expected: usize,
+    pub found: usize,
+}
+
+impl Diagnostic for ParameterCountMismatch {
+    fn message(&self) -> String {
+        format!(
+            "this function takes {} parameters but {} parameters was supplied",
+            self.expected, self.found
+        )
+    }
+
+    fn file(&self) -> FileId {
+        self.file
+    }
+
+    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
+        self.expr
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
 pub struct MismatchedType {
     pub file: FileId,
     pub expr: SyntaxNodePtr,

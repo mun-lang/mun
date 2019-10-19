@@ -1,3 +1,4 @@
+use crate::ir::dispatch_table::{DispatchTable, DispatchTableBuilder};
 use crate::ir::function;
 use crate::IrDatabase;
 use inkwell::{module::Module, values::FunctionValue};
@@ -15,6 +16,9 @@ pub struct ModuleIR {
 
     /// A mapping from HIR functions to LLVM IR values
     pub functions: HashMap<mun_hir::Function, FunctionValue>,
+
+    /// The dispatch table
+    pub dispatch_table: DispatchTable,
 }
 
 /// Generates IR for the specified file
@@ -25,26 +29,44 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
 
     // Generate all the function signatures
     let mut functions = HashMap::new();
+    let mut dispatch_table_builder = DispatchTableBuilder::new(db, &llvm_module);
     for def in db.module_data(file_id).definitions() {
         match def {
             ModuleDef::Function(f) => {
+                // Construct the function signature
                 let fun = function::gen_signature(db, *f, &llvm_module);
                 functions.insert(*f, fun);
+
+                // Add calls to the dispatch table
+                let body = f.body(db);
+                let infer = f.infer(db);
+                dispatch_table_builder.collect_body(&body, &infer);
             }
             _ => {}
         }
     }
 
-    // Generate the function bodies
+    // Construct requirements for generating the bodies
+    let dispatch_table = dispatch_table_builder.finalize(&functions);
     let fn_pass_manager = function::create_pass_manager(&llvm_module, db.optimization_lvl());
-    for (f, value) in functions.iter() {
-        function::gen_body(db, *f, *value, &llvm_module);
-        fn_pass_manager.run_on(value);
+
+    // Generate the function bodies
+    for (hir_function, llvm_function) in functions.iter() {
+        function::gen_body(
+            db,
+            *hir_function,
+            *llvm_function,
+            &llvm_module,
+            &functions,
+            &dispatch_table,
+        );
+        fn_pass_manager.run_on(llvm_function);
     }
 
     Arc::new(ModuleIR {
         file_id,
         llvm_module,
         functions,
+        dispatch_table,
     })
 }

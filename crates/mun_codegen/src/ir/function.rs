@@ -1,22 +1,21 @@
 use super::try_convert_any_to_basic;
-use crate::IrDatabase;
+use crate::ir::dispatch_table::DispatchTable;
+use crate::values::{
+    BasicValueEnum, CallSiteValue, FloatValue, FunctionValue, InstructionOpcode, IntValue,
+};
+use crate::{IrDatabase, Module, OptimizationLevel};
 use inkwell::builder::Builder;
 use inkwell::passes::{PassManager, PassManagerBuilder};
-use inkwell::values::{BasicValueEnum, FloatValue, InstructionOpcode, IntValue};
-use inkwell::{
-    module::Module,
-    types::{AnyTypeEnum, BasicTypeEnum},
-    values::FunctionValue,
-    OptimizationLevel,
-};
+use inkwell::types::{AnyTypeEnum, BasicTypeEnum};
 use mun_hir::{
-    ArithOp, BinaryOp, Body, Expr, ExprId, Function, HirDisplay, InferenceResult, Literal, Pat,
+    self as hir, ArithOp, BinaryOp, Body, Expr, ExprId, HirDisplay, InferenceResult, Literal, Pat,
     PatId, Path, Resolution, Resolver, Statement, TypeCtor,
 };
 use std::collections::HashMap;
 use std::mem;
 use std::sync::Arc;
 
+/// Constructs a PassManager to optimize functions for the given optimization level.
 pub(crate) fn create_pass_manager(
     module: &Module,
     optimization_lvl: OptimizationLevel,
@@ -31,7 +30,15 @@ pub(crate) fn create_pass_manager(
     function_pass_manager
 }
 
-pub(crate) fn gen_signature(db: &impl IrDatabase, f: Function, module: &Module) -> FunctionValue {
+/// Generates a `FunctionValue` for a `hir::Function`. This function does not generate a body for
+/// the `hir::Function`. That task is left to the `gen_body` function. The reason this is split
+/// between two functions is that first all signatures are generated and then all bodies. This
+/// allows bodies to reference `FunctionValue` wherever they are declared in the file.
+pub(crate) fn gen_signature(
+    db: &impl IrDatabase,
+    f: hir::Function,
+    module: &Module,
+) -> FunctionValue {
     let name = f.name(db).to_string();
     if let AnyTypeEnum::FunctionType(ty) = db.type_ir(f.ty(db)) {
         module.add_function(&name, ty, None)
@@ -40,44 +47,58 @@ pub(crate) fn gen_signature(db: &impl IrDatabase, f: Function, module: &Module) 
     }
 }
 
-pub(crate) fn gen_body(
-    db: &impl IrDatabase,
-    f: Function,
-    fun: FunctionValue,
-    module: &Module,
+/// Generates the body of a `hir::Function` for an associated `FunctionValue`.
+pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
+    db: &'a D,
+    hir_function: hir::Function,
+    llvm_function: FunctionValue,
+    module: &'a Module,
+    llvm_functions: &'a HashMap<mun_hir::Function, FunctionValue>,
+    dispatch_table: &'b DispatchTable,
 ) -> FunctionValue {
-    let builder = db.context().create_builder();
-    let body_ir = fun.append_basic_block("body");
+    let context = db.context();
+    let builder = context.create_builder();
+    let body_ir = context.append_basic_block(&llvm_function, "body");
     builder.position_at_end(&body_ir);
 
-    let mut code_gen = BodyIrGenerator::new(db, module, f, fun, builder);
+    let mut code_gen = BodyIrGenerator::new(
+        db,
+        module,
+        hir_function,
+        llvm_function,
+        llvm_functions,
+        builder,
+        dispatch_table,
+    );
 
     code_gen.gen_fn_body();
 
-    fun
+    llvm_function
 }
 
-#[derive(Debug)]
-struct BodyIrGenerator<'a, D: IrDatabase> {
+struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
     db: &'a D,
     module: &'a Module,
     body: Arc<Body>,
     infer: Arc<InferenceResult>,
     builder: Builder,
     fn_value: FunctionValue,
-    hir: Function,
     pat_to_param: HashMap<PatId, inkwell::values::BasicValueEnum>,
     pat_to_local: HashMap<PatId, inkwell::values::PointerValue>,
     pat_to_name: HashMap<PatId, String>,
+    function_map: &'a HashMap<mun_hir::Function, FunctionValue>,
+    dispatch_table: &'b DispatchTable,
 }
 
-impl<'a, D: IrDatabase> BodyIrGenerator<'a, D> {
+impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     fn new(
         db: &'a D,
         module: &'a Module,
-        f: Function,
+        f: hir::Function,
         fn_value: FunctionValue,
+        function_map: &'a HashMap<mun_hir::Function, FunctionValue>,
         builder: Builder,
+        dispatch_table: &'b DispatchTable,
     ) -> Self {
         let body = f.body(db);
         let infer = f.infer(db);
@@ -89,10 +110,11 @@ impl<'a, D: IrDatabase> BodyIrGenerator<'a, D> {
             infer,
             builder,
             fn_value,
-            hir: f,
             pat_to_param: HashMap::default(),
             pat_to_local: HashMap::default(),
             pat_to_name: HashMap::default(),
+            function_map,
+            dispatch_table,
         }
     }
 
@@ -165,7 +187,11 @@ impl<'a, D: IrDatabase> BodyIrGenerator<'a, D> {
             &Expr::BinaryOp { lhs, rhs, op } => {
                 Some(self.gen_binary_op(lhs, rhs, op.expect("missing op")))
             }
-            _ => None,
+            Expr::Call {
+                ref callee,
+                ref args,
+            } => self.gen_call(*callee, &args).try_as_basic_value().left(),
+            _ => unreachable!("unimplemented expr type"),
         };
 
         // Check expected type or perform implicit cast
@@ -186,6 +212,8 @@ impl<'a, D: IrDatabase> BodyIrGenerator<'a, D> {
         value
     }
 
+    /// Constructs a builder that should be used to emit an `alloca` instruction. These instructions
+    /// should be at the start of the IR.
     fn new_alloca_builder(&self) -> Builder {
         let temp_builder = Builder::create();
         let block = self
@@ -200,6 +228,7 @@ impl<'a, D: IrDatabase> BodyIrGenerator<'a, D> {
         temp_builder
     }
 
+    /// Generate IR for a let statement: `let a:int = 3`
     fn gen_let_statement(&mut self, pat: &PatId, initializer: &Option<ExprId>) {
         let initializer = initializer.and_then(|expr| self.gen_expr(expr));
 
@@ -321,6 +350,40 @@ impl<'a, D: IrDatabase> BodyIrGenerator<'a, D> {
             //                BinaryOp::RemainderAssign,
             //                BinaryOp::PowerAssign,
             _ => unreachable!(),
+        }
+    }
+
+    // TODO: Implement me!
+    fn should_use_dispatch_table(&self) -> bool {
+        true
+    }
+
+    /// Generates IR for a function call.
+    fn gen_call(&mut self, callee: ExprId, args: &Vec<ExprId>) -> CallSiteValue {
+        // Get the function value from the map
+        let function = self.infer[callee]
+            .as_function_def()
+            .expect("expected a function expression");
+
+        // Get all the arguments
+        let args: Vec<BasicValueEnum> = args
+            .iter()
+            .map(|expr| self.gen_expr(*expr).expect("expected a value"))
+            .collect();
+
+        if self.should_use_dispatch_table() {
+            let ptr_value =
+                self.dispatch_table
+                    .gen_function_lookup(self.db, &self.builder, &function);
+            self.builder
+                .build_call(ptr_value, &args, &function.name(self.db).to_string())
+        } else {
+            let llvm_function = self
+                .function_map
+                .get(&function)
+                .expect("missing function value for hir function");
+            self.builder
+                .build_call(*llvm_function, &args, &function.name(self.db).to_string())
         }
     }
 }
