@@ -48,13 +48,15 @@ impl Assembly {
             let fn_ptr = runtime_dispatch_table
                 .get(fn_signature.name())
                 .map(|f| f.fn_ptr)
-                .ok_or(io::Error::new(
-                    io::ErrorKind::NotFound,
-                    format!(
-                        "Failed to link: function '{}' is missing.",
-                        fn_signature.name()
-                    ),
-                ))?;
+                .ok_or_else(|| {
+                    io::Error::new(
+                        io::ErrorKind::NotFound,
+                        format!(
+                            "Failed to link: function '{}' is missing.",
+                            fn_signature.name()
+                        ),
+                    )
+                })?;
 
             *dispatch_ptr = fn_ptr;
         }

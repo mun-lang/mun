@@ -2,9 +2,10 @@
 mod code_gen;
 mod db;
 mod ir;
-mod mock;
 pub(crate) mod symbols;
 
+#[cfg(test)]
+mod mock;
 #[cfg(test)]
 mod test;
 

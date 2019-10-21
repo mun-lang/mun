@@ -31,6 +31,8 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
     let mut functions = HashMap::new();
     let mut dispatch_table_builder = DispatchTableBuilder::new(db, &llvm_module);
     for def in db.module_data(file_id).definitions() {
+        // TODO: Remove once we have more ModuleDef variants
+        #[allow(clippy::single_match)]
         match def {
             ModuleDef::Function(f) => {
                 // Construct the function signature
