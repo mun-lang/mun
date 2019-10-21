@@ -24,7 +24,7 @@ jobs:
   - script: |    
       sudo apt-get install libssl-dev pkg-config cmake zlib1g-dev
       cargo install cargo-tarpaulin
-      cargo tarpaulin -v --out Xml
+      cargo tarpaulin -v --out Xml -- --test-threads=1
     displayName: "Install and run tarpaulin"
 
   - script: bash <(curl -s https://codecov.io/bash)
