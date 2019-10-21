@@ -21,7 +21,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty) -> AnyTypeEnum {
                     .collect();
                 let ret_ty = match db.type_ir(ty.ret().clone()) {
                     AnyTypeEnum::VoidType(v) => return v.fn_type(&params, false).into(),
-                    v @ _ => try_convert_any_to_basic(v).expect("could not convert return value"),
+                    v => try_convert_any_to_basic(v).expect("could not convert return value"),
                 };
 
                 ret_ty.fn_type(&params, false).into()

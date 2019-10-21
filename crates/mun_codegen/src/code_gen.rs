@@ -115,7 +115,7 @@ pub fn write_module_shared_object(
 
     if !result.status.success() {
         let error = String::from_utf8(result.stderr)
-            .unwrap_or("<linker error contains invalid utf8>".to_owned());
+            .unwrap_or_else(|_| "<linker error contains invalid utf8>".to_owned());
         Err(CodeGenerationError::LinkerError(error).into())
     } else {
         Ok(())

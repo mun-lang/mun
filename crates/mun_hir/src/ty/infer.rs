@@ -198,10 +198,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                 _ => Ty::Unknown,
             },
             Expr::Block { statements, tail } => self.infer_block(statements, *tail, expected),
-            Expr::Call {
-                callee: call,
-                args: args,
-            } => self.infer_call(&tgt_expr, call, args, expected),
+            Expr::Call { callee: call, args } => self.infer_call(&tgt_expr, call, args, expected),
             Expr::Literal(lit) => match lit {
                 Literal::String(_) => Ty::Unknown,
                 Literal::Bool(_) => Ty::Unknown,

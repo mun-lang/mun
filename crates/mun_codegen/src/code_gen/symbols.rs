@@ -16,7 +16,7 @@ use std::hash::{Hash, Hasher};
 
 pub type Guid = [u8; 16];
 
-#[derive(Clone, Eq, Ord, PartialOrd, PartialEq, Debug)]
+#[derive(Clone, Eq, Ord, PartialOrd, Debug)]
 pub struct TypeInfo {
     pub guid: Guid,
     pub name: String,
@@ -25,6 +25,12 @@ pub struct TypeInfo {
 impl Hash for TypeInfo {
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write(&self.guid)
+    }
+}
+
+impl PartialEq for TypeInfo {
+    fn eq(&self, other: &Self) -> bool {
+        self.guid == other.guid
     }
 }
 
@@ -53,7 +59,7 @@ pub fn type_info_query(_db: &impl IrDatabase, ty: Ty) -> TypeInfo {
 fn type_info_ir(ty: &TypeInfo, module: &Module) -> StructValue {
     let context = module.get_context();
     let guid_values: [IntValue; 16] =
-        array_init::array_init(|i| context.i8_type().const_int(ty.guid[i] as u64, false));
+        array_init::array_init(|i| context.i8_type().const_int(u64::from(ty.guid[i]), false));
     context.const_struct(
         &[
             context.i8_type().const_array(&guid_values).into(),
@@ -77,7 +83,7 @@ fn gen_signature_from_function<D: IrDatabase>(
     db: &D,
     module: &Module,
     types: &AbiTypes,
-    function: &hir::Function,
+    function: hir::Function,
 ) -> StructValue {
     let name_str = intern_string(&module, &function.name(db).to_string());
     let ret_type_ir = gen_signature_return_type(db, module, types, function);
@@ -103,7 +109,7 @@ fn gen_signature_argument_types<D: IrDatabase>(
     db: &D,
     module: &Module,
     types: &AbiTypes,
-    function: &hir::Function,
+    function: hir::Function,
 ) -> PointerValue {
     let body = function.body(db);
     let infer = function.infer(db);
@@ -130,7 +136,7 @@ fn gen_signature_return_type<D: IrDatabase>(
     db: &D,
     module: &Module,
     types: &AbiTypes,
-    function: &hir::Function,
+    function: hir::Function,
 ) -> PointerValue {
     let body = function.body(db);
     let infer = function.infer(db);
@@ -163,7 +169,7 @@ fn gen_function_info_array<'a, D: IrDatabase>(
             value.set_linkage(Linkage::Private);
 
             // Generate the signature from the function
-            let signature = gen_signature_from_function(db, module, types, f);
+            let signature = gen_signature_from_function(db, module, types, *f);
 
             // Generate the function info value
             types.function_info_type.const_named_struct(&[
@@ -200,7 +206,7 @@ fn gen_dispatch_table<D: IrDatabase>(
     let signatures: Vec<StructValue> = dispatch_table
         .entries()
         .iter()
-        .map(|f| gen_signature_from_function(db, module, types, f))
+        .map(|f| gen_signature_from_function(db, module, types, *f))
         .collect();
 
     // Construct an IR array from the signatures
@@ -269,13 +275,13 @@ pub(super) fn gen_reflection_ir(
     let dispatch_table = gen_dispatch_table(db, &abi_types, module, dispatch_table);
 
     // Construct the actual `get_info` function
-    gen_get_info_fn(db, &module, &abi_types, module_info, dispatch_table);
+    gen_get_info_fn(db, module, &abi_types, module_info, dispatch_table);
 }
 
 /// Construct the actual `get_info` function.
 fn gen_get_info_fn(
     db: &impl IrDatabase,
-    module: &&Module,
+    module: &Module,
     abi_types: &AbiTypes,
     module_info: StructValue,
     dispatch_table: StructValue,

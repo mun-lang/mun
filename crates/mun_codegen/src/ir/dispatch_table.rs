@@ -42,14 +42,14 @@ impl DispatchTable {
         &self,
         db: &D,
         builder: &inkwell::builder::Builder,
-        function: &hir::Function,
+        function: hir::Function,
     ) -> PointerValue {
         let function_name = function.name(db).to_string();
 
         // Get the index of the function
         let index = *self
             .function_to_idx
-            .get(function)
+            .get(&function)
             .expect("unknown function");
 
         // Get the internal table reference
@@ -118,7 +118,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
         let expr = &body[expr];
 
         // If this expression is a call, store it in the dispatch table
-        if let Expr::Call { callee, args: _ } = expr {
+        if let Expr::Call { callee, .. } = expr {
             self.ensure_table_ref();
 
             // Get the function from the expression

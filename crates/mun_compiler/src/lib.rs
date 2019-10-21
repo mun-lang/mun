@@ -213,7 +213,7 @@ fn diagnostics(db: &CompilerDatabase, file_id: FileId) -> Vec<Diagnostic> {
                 SyntaxKind::FUNCTION_DEF => {
                     ast::FunctionDef::cast(d.definition.to_node(&parse.tree().syntax()))
                         .map(|f| f.signature_range())
-                        .unwrap_or(d.highlight_range())
+                        .unwrap_or_else(|| d.highlight_range())
                         .into()
                 }
                 _ => d.highlight_range().into(),
@@ -253,7 +253,7 @@ pub fn main(options: &CompilerOptions) -> Result<Option<PathBuf>, failure::Error
     let target = db.target();
     let relative_path = db.file_relative_path(file_id);
     let original_filename = Path::new(relative_path.file_name().unwrap());
-    let dll_extension = if target.options.dll_suffix.starts_with(".") {
+    let dll_extension = if target.options.dll_suffix.starts_with('.') {
         &target.options.dll_suffix[1..]
     } else {
         &target.options.dll_suffix

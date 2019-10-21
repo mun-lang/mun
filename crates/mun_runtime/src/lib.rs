@@ -48,17 +48,12 @@ impl RuntimeBuilder {
 }
 
 /// A runtime dispatch table that maps full function paths to function information.
+#[derive(Default)]
 pub struct DispatchTable {
     functions: HashMap<String, FunctionInfo>,
 }
 
 impl DispatchTable {
-    pub fn new() -> Self {
-        Self {
-            functions: HashMap::new(),
-        }
-    }
-
     pub fn get(&self, fn_path: &str) -> Option<&FunctionInfo> {
         self.functions.get(fn_path)
     }
@@ -94,7 +89,7 @@ impl MunRuntime {
         let watcher: RecommendedWatcher = Watcher::new(tx, options.delay)?;
         let mut runtime = MunRuntime {
             assemblies: HashMap::new(),
-            dispatch_table: DispatchTable::new(),
+            dispatch_table: DispatchTable::default(),
             watcher,
             watcher_rx: rx,
         };
@@ -137,21 +132,18 @@ impl MunRuntime {
     pub fn update(&mut self) -> bool {
         while let Ok(event) = self.watcher_rx.try_recv() {
             use notify::DebouncedEvent::*;
-            match event {
-                Write(ref path) => {
-                    if let Some(assembly) = self.assemblies.get_mut(path) {
-                        if let Err(e) = assembly.swap(path, &mut self.dispatch_table) {
-                            println!(
-                                "An error occured while reloading assembly '{}': {:?}",
-                                path.to_string_lossy(),
-                                e
-                            );
-                        } else {
-                            return true;
-                        }
+            if let Write(ref path) = event {
+                if let Some(assembly) = self.assemblies.get_mut(path) {
+                    if let Err(e) = assembly.swap(path, &mut self.dispatch_table) {
+                        println!(
+                            "An error occured while reloading assembly '{}': {:?}",
+                            path.to_string_lossy(),
+                            e
+                        );
+                    } else {
+                        return true;
                     }
                 }
-                _ => {}
             }
         }
         false

@@ -154,7 +154,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                         Statement::Let {
                             pat, initializer, ..
                         } => {
-                            self.gen_let_statement(pat, initializer);
+                            self.gen_let_statement(*pat, *initializer);
                         }
                         Statement::Expr(expr) => {
                             self.gen_expr(*expr);
@@ -202,8 +202,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             ) {
                 (BasicTypeEnum::IntType(_), Some(target @ BasicTypeEnum::FloatType(_))) => self
                     .builder
-                    .build_cast(InstructionOpcode::SIToFP, value, target, "implicit_cast")
-                    .into(),
+                    .build_cast(InstructionOpcode::SIToFP, value, target, "implicit_cast"),
                 (a, Some(b)) if a == b => value,
                 _ => unreachable!("could not perform implicit cast"),
             }
@@ -229,17 +228,17 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     }
 
     /// Generate IR for a let statement: `let a:int = 3`
-    fn gen_let_statement(&mut self, pat: &PatId, initializer: &Option<ExprId>) {
+    fn gen_let_statement(&mut self, pat: PatId, initializer: Option<ExprId>) {
         let initializer = initializer.and_then(|expr| self.gen_expr(expr));
 
-        match &self.body[*pat] {
+        match &self.body[pat] {
             Pat::Bind { name } => {
                 let builder = self.new_alloca_builder();
-                let ty = try_convert_any_to_basic(self.db.type_ir(self.infer[*pat].clone()))
+                let ty = try_convert_any_to_basic(self.db.type_ir(self.infer[pat].clone()))
                     .expect("expected basic type");
                 let ptr = builder.build_alloca(ty, &name.to_string());
-                self.pat_to_local.insert(*pat, ptr);
-                self.pat_to_name.insert(*pat, name.to_string());
+                self.pat_to_local.insert(pat, ptr);
+                self.pat_to_name.insert(pat, name.to_string());
                 if let Some(value) = initializer {
                     self.builder.build_store(ptr, value);
                 };
@@ -359,7 +358,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     }
 
     /// Generates IR for a function call.
-    fn gen_call(&mut self, callee: ExprId, args: &Vec<ExprId>) -> CallSiteValue {
+    fn gen_call(&mut self, callee: ExprId, args: &[ExprId]) -> CallSiteValue {
         // Get the function value from the map
         let function = self.infer[callee]
             .as_function_def()
@@ -374,7 +373,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         if self.should_use_dispatch_table() {
             let ptr_value =
                 self.dispatch_table
-                    .gen_function_lookup(self.db, &self.builder, &function);
+                    .gen_function_lookup(self.db, &self.builder, function);
             self.builder
                 .build_call(ptr_value, &args, &function.name(self.db).to_string())
         } else {
