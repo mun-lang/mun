@@ -159,7 +159,7 @@ impl MunRuntime {
 }
 
 /// Extends a result object with functions that allow retrying of an action.
-pub trait Retriable: Sized {
+pub trait RetryResultExt: Sized {
     type Output;
 
     /// Retries an action, resulting in a potentially mutated version of itself.
