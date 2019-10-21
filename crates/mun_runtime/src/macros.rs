@@ -45,7 +45,7 @@ macro_rules! invoke_fn_impl {
                 }
             }
 
-            impl<'r, 's, $($T: Reflection,)* Output: Reflection> $crate::Retriable for core::result::Result<Output, $ErrName<'r, 's, $($T,)* Output>> {
+            impl<'r, 's, $($T: Reflection,)* Output: Reflection> $crate::RetryResultExt for core::result::Result<Output, $ErrName<'r, 's, $($T,)* Output>> {
                 type Output = Output;
 
                 fn retry(self) -> Self {
