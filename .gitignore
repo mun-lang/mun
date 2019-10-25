@@ -27,3 +27,6 @@ Cargo.lock
 # Gradle
 .idea/**/gradle.xml
 .idea/**/libraries
+
+# Generated Rust bindings
+crates/mun_abi/src/autogen.rs

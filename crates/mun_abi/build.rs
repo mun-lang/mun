@@ -35,12 +35,14 @@ fn main() {
         .whitelist_type("Mun.*")
         .blacklist_type("MunPrivacy.*")
         .parse_callbacks(Box::new(RemoveVendorName))
+        .raw_line("#![allow(non_snake_case, non_camel_case_types, non_upper_case_globals)]")
+        .raw_line("use crate::Privacy;")
         .generate()
         .expect("Unable to generate bindings for 'mun_abi.h'");
 
-    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let out_path = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     bindings
-        .write_to_file(out_path.join("bindings.rs"))
+        .write_to_file(out_path.join("src/autogen.rs"))
         .expect(&format!(
             "Couldn't write bindings to '{}'",
             out_path.as_path().to_string_lossy()
