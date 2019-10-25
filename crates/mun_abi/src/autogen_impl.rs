@@ -1,10 +1,7 @@
-#![allow(non_snake_case, non_camel_case_types, non_upper_case_globals)]
-
 use crate::prelude::*;
 
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
-
 use std::ffi::{c_void, CStr};
+use std::marker::{Send, Sync};
 use std::slice;
 
 impl TypeInfo {
@@ -21,6 +18,9 @@ impl PartialEq for TypeInfo {
         self.guid == other.guid
     }
 }
+
+unsafe impl Send for TypeInfo {}
+unsafe impl Sync for TypeInfo {}
 
 impl FunctionSignature {
     /// Returns the function's name.
@@ -49,6 +49,12 @@ impl FunctionSignature {
         unsafe { self.return_type.as_ref() }
     }
 }
+
+unsafe impl Send for FunctionSignature {}
+unsafe impl Sync for FunctionSignature {}
+
+unsafe impl Send for FunctionInfo {}
+unsafe impl Sync for FunctionInfo {}
 
 impl ModuleInfo {
     /// Returns the module's full path.
@@ -82,6 +88,9 @@ impl ModuleInfo {
         }
     }
 }
+
+unsafe impl Send for ModuleInfo {}
+unsafe impl Sync for ModuleInfo {}
 
 impl DispatchTable {
     /// Returns an iterator over pairs of mutable function pointers and signatures.
@@ -170,6 +179,9 @@ impl AssemblyInfo {
         })
     }
 }
+
+unsafe impl Send for AssemblyInfo {}
+unsafe impl Sync for AssemblyInfo {}
 
 #[cfg(test)]
 mod tests {

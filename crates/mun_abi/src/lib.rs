@@ -1,4 +1,7 @@
+// Bindings are automatically generated from C
 mod autogen;
+
+mod autogen_impl;
 mod macros;
 mod reflection;
 
