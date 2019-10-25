@@ -56,7 +56,7 @@ macro_rules! invoke_fn_impl {
                             while !err.runtime.update() {
                                 // Wait until there has been an update that might fix the error
                             }
-                            err.runtime.$FnName(err.function_name, $(err.$Arg,)*)
+                            $crate::MunRuntime::$FnName(err.runtime, err.function_name, $(err.$Arg,)*)
                         }
                     }
                 }
@@ -78,18 +78,18 @@ macro_rules! invoke_fn_impl {
                 /// If an error occurs when invoking the method, an error message is logged. The
                 /// runtime continues looping until the cause of the error has been resolved.
                 pub fn $FnName<'r, 's, $($T: Reflection,)* Output: Reflection>(
-                    &'r mut self,
+                    runtime: &'r mut MunRuntime,
                     function_name: &'s str,
                     $($Arg: $T,)*
                 ) -> core::result::Result<Output, $ErrName<'r, 's, $($T,)* Output>> {
-                    let function: core::result::Result<fn($($T),*) -> Output, String> = self
+                    let function: core::result::Result<fn($($T),*) -> Output, String> = runtime
                         .get_function_info(function_name)
                         .ok_or(format!("Failed to obtain function '{}'", function_name))
                         .and_then(|function| mun_abi::downcast_fn!(function, fn($($T),*) -> Output));
 
                     match function {
                         Ok(function) => Ok(function($($Arg),*)),
-                        Err(e) => Err($ErrName::new(e, self, function_name, $($Arg),*)),
+                        Err(e) => Err($ErrName::new(e, runtime, function_name, $($Arg),*)),
                     }
                 }
             }
@@ -100,42 +100,59 @@ macro_rules! invoke_fn_impl {
 #[macro_export]
 macro_rules! invoke_fn {
     ($Runtime:expr, $FnName:expr) => {
-        $Runtime.invoke_fn0($FnName)
+        $crate::MunRuntime::invoke_fn0(&mut $Runtime, $FnName)
     };
     ($Runtime:expr, $FnName:expr, $A:expr) => {
-        $Runtime.invoke_fn1($FnName, $A)
+        $crate::MunRuntime::invoke_fn1(&mut $Runtime, $FnName, $A)
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr) => {
-        $Runtime.invoke_fn2($FnName, $A, $B)
+        $crate::MunRuntime::invoke_fn2(&mut $Runtime, $FnName, $A, $B)
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr) => {
-        $Runtime.invoke_fn3($FnName, $A, $B, $C)
+        $crate::MunRuntime::invoke_fn3(&mut $Runtime, $FnName, $A, $B, $C)
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr, $D:expr) => {
-        $Runtime.invoke_fn4($FnName, $A, $B, $C, $D)
+        $crate::MunRuntime::invoke_fn4(&mut $Runtime, $FnName, $A, $B, $C, $D)
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr, $D:expr, $E:expr) => {
-        $Runtime.invoke_fn5($FnName, $A, $B, $C, $D, $E)
+        $crate::MunRuntime::invoke_fn5(&mut $Runtime, $FnName, $A, $B, $C, $D, $E)
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr, $D:expr, $E:expr, $F:expr) => {
-        $Runtime.invoke_fn6($FnName, $A, $B, $C, $D, $E, $F)
+        $crate::MunRuntime::invoke_fn6(&mut $Runtime, $FnName, $A, $B, $C, $D, $E, $F)
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr, $D:expr, $E:expr, $F:expr, $G:expr) => {
-        $Runtime.invoke_fn7($FnName, $A, $B, $C, $D, $E, $F, $G)
+        $crate::MunRuntime::invoke_fn7(&mut $Runtime, $FnName, $A, $B, $C, $D, $E, $F, $G)
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr, $D:expr, $E:expr, $F:expr, $G:expr, $H:expr) => {
-        $Runtime.invoke_fn8($FnName, $A, $B, $C, $D, $E, $F, $G, $H)
+        $crate::MunRuntime::invoke_fn8(&mut $Runtime, $FnName, $A, $B, $C, $D, $E, $F, $G, $H)
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr, $D:expr, $E:expr, $F:expr, $G:expr, $H:expr, $I:expr) => {
-        $Runtime.invoke_fn9($FnName, $A, $B, $C, $D, $E, $F, $G, $H, $I)
+        $crate::MunRuntime::invoke_fn9(&mut $Runtime, $FnName, $A, $B, $C, $D, $E, $F, $G, $H, $I)
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr, $D:expr, $E:expr, $F:expr, $G:expr, $H:expr, $I:expr, $J:expr) => {
-        $Runtime.invoke_fn10($FnName, $A, $B, $C, $D, $E, $F, $G, $H, $I, $J)
+        $crate::MunRuntime::invoke_fn10(
+            &mut $Runtime,
+            $FnName,
+            $A,
+            $B,
+            $C,
+            $D,
+            $E,
+            $F,
+            $G,
+            $H,
+            $I,
+            $J,
+        )
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr, $D:expr, $E:expr, $F:expr, $G:expr, $H:expr, $I:expr, $J:expr, $K:expr) => {
-        $Runtime.invoke_fn11($FnName, $A, $B, $C, $D, $E, $F, $G, $H, $I, $J, $K)
+        $crate::MunRuntime::invoke_fn11(
+            $Runtime, $FnName, $A, $B, $C, $D, $E, $F, $G, $H, $I, $J, $K,
+        )
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr, $D:expr, $E:expr, $F:expr, $G:expr, $H:expr, $I:expr, $J:expr, $K:expr, $L:expr) => {
-        $Runtime.invoke_fn12($FnName, $A, $B, $C, $D, $E, $F, $G, $H, $I, $J, $K, $L)
+        $crate::MunRuntime::invoke_fn12(
+            $Runtime, $FnName, $A, $B, $C, $D, $E, $F, $G, $H, $I, $J, $K, $L,
+        )
     };
 }
