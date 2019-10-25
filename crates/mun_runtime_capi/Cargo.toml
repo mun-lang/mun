@@ -1,0 +1,12 @@
+[package]
+name = "mun_runtime_capi"
+version = "0.1.0"
+authors = ["Wodann <wodannson@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+mun_abi = { path = "../mun_abi" }
+mun_runtime = { path = "../mun_runtime" }
+
+[build-dependencies]
+cbindgen = "0.9.1"

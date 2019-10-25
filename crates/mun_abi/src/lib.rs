@@ -1,4 +1,4 @@
-// Bindings are automatically generated from C
+// Bindings are automatically generated from C on `cargo build`
 mod autogen;
 
 mod autogen_impl;

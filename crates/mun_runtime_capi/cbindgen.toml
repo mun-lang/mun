@@ -1,0 +1,17 @@
+language = "C"
+cpp_compat = true
+
+include_guard = "MUN_RUNTIME_BINDINGS_H_"
+include_version = true
+sys_includes = ["stdbool.h", "stdint.h"]
+no_includes = true
+
+line_length = 100
+tab_width = 4
+
+[export]
+prefix = "Mun"
+
+[parse]
+parse_deps = true
+include = ["mun_abi"]
