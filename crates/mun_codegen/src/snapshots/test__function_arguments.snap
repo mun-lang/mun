@@ -1,0 +1,12 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn main(a:int):int {\n  a\n}"
+---
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+define i64 @main(i64 %a) {
+body:
+  ret i64 %a
+}
+

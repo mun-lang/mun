@@ -23,6 +23,7 @@ Grammar(
         [";", "SEMI"],
         [":", "COLON"],
         [",", "COMMA"],
+        ["!", "EXCLAMATION"],
 
         // Extended symbols
         ["_", "UNDERSCORE"],
@@ -63,7 +64,7 @@ Grammar(
         "in",
         // "local",     // We use let
         "nil",
-        "not",
+        //"not",        // We use !
         "or",
         "self",
         "super",

@@ -48,3 +48,4 @@ impl AsName for ast::Name {
 
 pub(crate) const FLOAT: Name = Name::new(SmolStr::new_inline_from_ascii(5, b"float"));
 pub(crate) const INT: Name = Name::new(SmolStr::new_inline_from_ascii(3, b"int"));
+pub(crate) const BOOLEAN: Name = Name::new(SmolStr::new_inline_from_ascii(4, b"bool"));

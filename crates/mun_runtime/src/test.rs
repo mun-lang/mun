@@ -86,3 +86,124 @@ fn dispatch_table() {
     let result: i64 = invoke_fn!(runtime, "add", a, b).unwrap();
     assert_eq!(result, a + b);
 }
+
+#[test]
+fn booleans() {
+    let compile_result = compile(
+        r#"
+        fn equal(a:int, b:int):bool                 { a==b }
+        fn equalf(a:float, b:float):bool            { a==b }
+        fn not_equal(a:int, b:int):bool             { a!=b }
+        fn not_equalf(a:float, b:float):bool        { a!=b }
+        fn less(a:int, b:int):bool                  { a<b }
+        fn lessf(a:float, b:float):bool             { a<b }
+        fn greater(a:int, b:int):bool               { a>b }
+        fn greaterf(a:float, b:float):bool          { a>b }
+        fn less_equal(a:int, b:int):bool            { a<=b }
+        fn lessf_equal(a:float, b:float):bool       { a<=b }
+        fn greater_equal(a:int, b:int):bool         { a>=b }
+        fn greaterf_equal(a:float, b:float):bool    { a>=b }
+    "#,
+    );
+    let mut runtime = compile_result.new_runtime();
+    assert_eq!(
+        MunRuntime::invoke_fn2::<i64, i64, bool>(&mut runtime, "equal", 52, 764).unwrap(),
+        false
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<i64, i64, bool>(&mut runtime, "equal", 64, 64).unwrap(),
+        true
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<f64, f64, bool>(&mut runtime, "equalf", 123.0, 123.0).unwrap(),
+        true
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<f64, f64, bool>(&mut runtime, "equalf", 123.0, 234.0).unwrap(),
+        false
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<i64, i64, bool>(&mut runtime, "not_equal", 52, 764).unwrap(),
+        true
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<i64, i64, bool>(&mut runtime, "not_equal", 64, 64).unwrap(),
+        false
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<f64, f64, bool>(&mut runtime, "not_equalf", 123.0, 123.0).unwrap(),
+        false
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<f64, f64, bool>(&mut runtime, "not_equalf", 123.0, 234.0).unwrap(),
+        true
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<i64, i64, bool>(&mut runtime, "less", 52, 764).unwrap(),
+        true
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<i64, i64, bool>(&mut runtime, "less", 64, 64).unwrap(),
+        false
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<f64, f64, bool>(&mut runtime, "lessf", 123.0, 123.0).unwrap(),
+        false
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<f64, f64, bool>(&mut runtime, "lessf", 123.0, 234.0).unwrap(),
+        true
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<i64, i64, bool>(&mut runtime, "greater", 52, 764).unwrap(),
+        false
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<i64, i64, bool>(&mut runtime, "greater", 64, 64).unwrap(),
+        false
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<f64, f64, bool>(&mut runtime, "greaterf", 123.0, 123.0).unwrap(),
+        false
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<f64, f64, bool>(&mut runtime, "greaterf", 123.0, 234.0).unwrap(),
+        false
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<i64, i64, bool>(&mut runtime, "less_equal", 52, 764).unwrap(),
+        true
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<i64, i64, bool>(&mut runtime, "less_equal", 64, 64).unwrap(),
+        true
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<f64, f64, bool>(&mut runtime, "lessf_equal", 123.0, 123.0)
+            .unwrap(),
+        true
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<f64, f64, bool>(&mut runtime, "lessf_equal", 123.0, 234.0)
+            .unwrap(),
+        true
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<i64, i64, bool>(&mut runtime, "greater_equal", 52, 764).unwrap(),
+        false
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<i64, i64, bool>(&mut runtime, "greater_equal", 64, 64).unwrap(),
+        true
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<f64, f64, bool>(&mut runtime, "greaterf_equal", 123.0, 123.0)
+            .unwrap(),
+        true
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn2::<f64, f64, bool>(&mut runtime, "greaterf_equal", 123.0, 234.0)
+            .unwrap(),
+        false
+    );
+}

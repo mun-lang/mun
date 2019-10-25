@@ -122,6 +122,7 @@ fn type_for_builtin(def: BuiltinType) -> Ty {
     Ty::simple(match def {
         BuiltinType::Float => TypeCtor::Float,
         BuiltinType::Int => TypeCtor::Int,
+        BuiltinType::Boolean => TypeCtor::Bool,
     })
 }
 

@@ -1,39 +1,79 @@
 use crate::{
-    parsing::{lexer::Token, TokenSource},
-    SyntaxKind::{self, *},
+    parsing::{lexer::Token, Token as PToken, TokenSource},
+    SyntaxKind::*,
     TextUnit,
 };
+use text_unit::TextRange;
 
 /// An implementation of `TokenSource` for text.
-pub(crate) struct TextTokenSource {
-    /// Holds the start position of each token
+pub(crate) struct TextTokenSource<'t> {
+    text: &'t str,
+    /// start position of each token(expect whitespace and comment)
+    /// ```non-rust
+    ///  struct Foo;
+    /// ^------^---
+    /// |      |  ^-
+    /// 0      7  10
+    /// ```
+    /// (token, start_offset): `[(struct, 0), (Foo, 7), (;, 10)]`
     start_offsets: Vec<TextUnit>,
-
-    /// Non-whitespace/comment tokens
+    /// non-whitespace/comment tokens
+    /// ```non-rust
+    /// struct Foo {}
+    /// ^^^^^^ ^^^ ^^
+    /// ```
+    /// tokens: `[struct, Foo, {, }]`
     tokens: Vec<Token>,
+
+    /// Current token and position
+    curr: (PToken, usize),
 }
 
-impl TokenSource for TextTokenSource {
-    fn token_kind(&self, pos: usize) -> SyntaxKind {
-        if pos >= self.tokens.len() {
-            EOF
-        } else {
-            self.tokens[pos].kind
-        }
+impl<'t> TokenSource for TextTokenSource<'t> {
+    fn current(&self) -> PToken {
+        self.curr.0
     }
 
-    fn is_token_joint_to_next(&self, pos: usize) -> bool {
-        if (pos + 1) >= self.tokens.len() {
-            true
-        } else {
-            self.start_offsets[pos] + self.tokens[pos].len == self.start_offsets[pos + 1]
+    fn lookahead_nth(&self, n: usize) -> PToken {
+        mk_token(self.curr.1 + n, &self.start_offsets, &self.tokens)
+    }
+
+    fn bump(&mut self) {
+        if self.curr.0.kind == EOF {
+            return;
         }
+
+        let pos = self.curr.1 + 1;
+        self.curr = (mk_token(pos, &self.start_offsets, &self.tokens), pos);
+    }
+
+    fn is_keyword(&self, kw: &str) -> bool {
+        let pos = self.curr.1;
+        if !(pos < self.tokens.len()) {
+            return false;
+        }
+        let range = TextRange::offset_len(self.start_offsets[pos], self.tokens[pos].len);
+        self.text[range] == *kw
     }
 }
 
-impl TextTokenSource {
-    /// Generate input for tokens (expect comment and whitespace).
-    pub fn new(_text: &str, raw_tokens: &[Token]) -> Self {
+fn mk_token(pos: usize, start_offsets: &[TextUnit], tokens: &[Token]) -> PToken {
+    let kind = tokens.get(pos).map(|t| t.kind).unwrap_or(EOF);
+    let is_jointed_to_next = if pos + 1 < start_offsets.len() {
+        start_offsets[pos] + tokens[pos].len == start_offsets[pos + 1]
+    } else {
+        false
+    };
+
+    PToken {
+        kind,
+        is_jointed_to_next,
+    }
+}
+
+impl<'t> TextTokenSource<'t> {
+    /// Generate input from tokens(expect comment and whitespace).
+    pub fn new(text: &'t str, raw_tokens: &'t [Token]) -> TextTokenSource<'t> {
         let mut tokens = Vec::new();
         let mut start_offsets = Vec::new();
         let mut len = 0.into();
@@ -45,9 +85,12 @@ impl TextTokenSource {
             len += token.len;
         }
 
+        let first = mk_token(0, &start_offsets, &tokens);
         TextTokenSource {
+            text,
             start_offsets,
             tokens,
+            curr: (first, 0),
         }
     }
 }

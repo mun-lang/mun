@@ -13,4 +13,4 @@ drop_bomb = "0.1.4"
 mun_errors = { path = "../mun_errors"}
 
 [dev-dependencies]
-test_utils = { path="../test_utils"}
+insta = "0.12.0"

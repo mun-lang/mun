@@ -1,0 +1,22 @@
+---
+source: crates/mun_syntax/src/tests/lexer.rs
+expression: "h e ll  o\nw\n\no r     l   d"
+---
+IDENT 1 "h"
+WHITESPACE 1 " "
+IDENT 1 "e"
+WHITESPACE 1 " "
+IDENT 2 "ll"
+WHITESPACE 2 "  "
+IDENT 1 "o"
+WHITESPACE 1 "\n"
+IDENT 1 "w"
+WHITESPACE 2 "\n\n"
+IDENT 1 "o"
+WHITESPACE 1 " "
+IDENT 1 "r"
+WHITESPACE 5 "     "
+IDENT 1 "l"
+WHITESPACE 3 "   "
+IDENT 1 "d"
+

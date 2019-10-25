@@ -1,0 +1,28 @@
+---
+source: crates/mun_syntax/src/tests/lexer.rs
+expression: "a==b\na ==b\na== b\na == b"
+---
+IDENT 1 "a"
+EQ 1 "="
+EQ 1 "="
+IDENT 1 "b"
+WHITESPACE 1 "\n"
+IDENT 1 "a"
+WHITESPACE 1 " "
+EQ 1 "="
+EQ 1 "="
+IDENT 1 "b"
+WHITESPACE 1 "\n"
+IDENT 1 "a"
+EQ 1 "="
+EQ 1 "="
+WHITESPACE 1 " "
+IDENT 1 "b"
+WHITESPACE 1 "\n"
+IDENT 1 "a"
+WHITESPACE 1 " "
+EQ 1 "="
+EQ 1 "="
+WHITESPACE 1 " "
+IDENT 1 "b"
+

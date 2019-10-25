@@ -7,13 +7,13 @@ const EXPR_RECOVERY_SET: TokenSet = token_set![LET_KW];
 
 const ATOM_EXPR_FIRST: TokenSet = LITERAL_FIRST.union(token_set![IDENT, L_PAREN]);
 
-const LHS_FIRST: TokenSet = ATOM_EXPR_FIRST.union(token_set![NOT_KW, MINUS]);
+const LHS_FIRST: TokenSet = ATOM_EXPR_FIRST.union(token_set![EXCLAMATION, MINUS]);
 
 const EXPR_FIRST: TokenSet = LHS_FIRST;
 
 pub(crate) fn expr_block_contents(p: &mut Parser) {
-    while !p.matches(EOF) && !p.matches(R_CURLY) {
-        if p.eat(SEMI) {
+    while !p.at(EOF) && !p.at(T!['}']) {
+        if p.eat(T![;]) {
             continue;
         }
 
@@ -23,14 +23,14 @@ pub(crate) fn expr_block_contents(p: &mut Parser) {
 
 /// Parses a block statement
 pub(crate) fn block(p: &mut Parser) {
-    if !p.matches(L_CURLY) {
+    if !p.at(T!['{']) {
         p.error("expected a block");
         return;
     }
     let m = p.start();
-    p.bump();
+    p.bump(T!['{']);
     expr_block_contents(p);
-    p.expect(R_CURLY);
+    p.expect(T!['}']);
     m.complete(p, BLOCK);
 }
 
@@ -39,7 +39,7 @@ pub(super) fn stmt(p: &mut Parser) {
     let m = p.start();
 
     // Encounters let keyword, so we know it's a let stmt
-    if p.matches(LET_KW) {
+    if p.at(T![let]) {
         let_stmt(p, m);
         return;
     }
@@ -47,7 +47,7 @@ pub(super) fn stmt(p: &mut Parser) {
     let cm = expr_stmt(p);
     let kind = cm.as_ref().map(|cm| cm.kind()).unwrap_or(ERROR);
 
-    if p.matches(R_CURLY) {
+    if p.at(T!['}']) {
         if let Some(cm) = cm {
             cm.undo_completion(p).abandon(p);
             m.complete(p, kind);
@@ -55,23 +55,23 @@ pub(super) fn stmt(p: &mut Parser) {
             m.abandon(p);
         }
     } else {
-        p.eat(SEMI);
+        p.eat(T![;]);
         m.complete(p, EXPR_STMT);
     }
 }
 
 fn let_stmt(p: &mut Parser, m: Marker) {
-    assert!(p.matches(LET_KW));
-    p.bump();
+    assert!(p.at(T![let]));
+    p.bump(T![let]);
     patterns::pattern(p);
-    if p.matches(COLON) {
+    if p.at(T![:]) {
         types::ascription(p);
     }
-    if p.eat(EQ) {
+    if p.eat(T![=]) {
         expressions::expr(p);
     }
 
-    p.eat(SEMI); // Semicolon at the end of statement belongs to the statement
+    p.eat(T![;]); // Semicolon at the end of statement belongs to the statement
     m.complete(p, LET_STMT);
 }
 
@@ -97,12 +97,7 @@ fn expr_bp(p: &mut Parser, bp: u8) -> Option<CompletedMarker> {
         }
 
         let m = lhs.precede(p);
-        match op {
-            Op::Simple => p.bump(),
-            Op::Composite(kind, n) => {
-                p.bump_compound(kind, n);
-            }
-        }
+        p.bump(op);
 
         expr_bp(p, op_bp + 1);
         lhs = m.complete(p, BIN_EXPR);
@@ -111,43 +106,33 @@ fn expr_bp(p: &mut Parser, bp: u8) -> Option<CompletedMarker> {
     Some(lhs)
 }
 
-enum Op {
-    Simple,
-    Composite(SyntaxKind, u8),
-}
-
-fn current_op(p: &Parser) -> (u8, Op) {
-    if let Some(t) = p.current2() {
-        match t {
-            (PLUS, EQ) => return (1, Op::Composite(PLUSEQ, 2)),
-            (MINUS, EQ) => return (1, Op::Composite(MINUSEQ, 2)),
-            (STAR, EQ) => return (1, Op::Composite(STAREQ, 2)),
-            (SLASH, EQ) => return (1, Op::Composite(SLASHEQ, 2)),
-            (CARET, EQ) => return (1, Op::Composite(CARETEQ, 2)),
-            (PERCENT, EQ) => return (1, Op::Composite(PERCENTEQ, 2)),
-            (LT, EQ) => return (5, Op::Composite(LTEQ, 2)),
-            (GT, EQ) => return (5, Op::Composite(GTEQ, 2)),
-            _ => (),
-        }
+fn current_op(p: &Parser) -> (u8, SyntaxKind) {
+    match p.current() {
+        T![+] if p.at(T![+=]) => (1, T![+=]),
+        T![+] => (10, T![+]),
+        T![-] if p.at(T![-=]) => (1, T![-=]),
+        T![-] => (10, T![-]),
+        T![*] if p.at(T![*=]) => (1, T![*=]),
+        T![*] => (11, T![*]),
+        T![/] if p.at(T![/=]) => (1, T![/=]),
+        T![/] => (11, T![/]),
+        T![=] if p.at(T![==]) => (5, T![==]),
+        T![=] => (1, T![=]),
+        T![!] if p.at(T![!=]) => (5, T![!=]),
+        T![>] if p.at(T![>=]) => (5, T![>=]),
+        T![>] => (5, T![>]),
+        T![<] if p.at(T![<=]) => (5, T![<=]),
+        T![<] => (5, T![<]),
+        _ => (0, T![_]),
     }
-
-    let bp = match p.current() {
-        EQ => 1,
-        EQEQ | NEQ | LT | GT => 5,
-        MINUS | PLUS => 10,
-        STAR | SLASH | PERCENT => 11,
-        CARET => 12,
-        _ => 0,
-    };
-    (bp, Op::Simple)
 }
 
 fn lhs(p: &mut Parser) -> Option<CompletedMarker> {
     let m;
     let kind = match p.current() {
-        MINUS | NOT_KW => {
+        T![-] | T![!] => {
             m = p.start();
-            p.bump();
+            p.bump_any();
             PREFIX_EXPR
         }
         _ => {
@@ -162,7 +147,7 @@ fn lhs(p: &mut Parser) -> Option<CompletedMarker> {
 fn postfix_expr(p: &mut Parser, mut lhs: CompletedMarker) -> CompletedMarker {
     loop {
         lhs = match p.current() {
-            L_PAREN => call_expr(p, lhs),
+            T!['('] => call_expr(p, lhs),
             _ => break,
         }
     }
@@ -170,28 +155,28 @@ fn postfix_expr(p: &mut Parser, mut lhs: CompletedMarker) -> CompletedMarker {
 }
 
 fn call_expr(p: &mut Parser, lhs: CompletedMarker) -> CompletedMarker {
-    assert!(p.matches(L_PAREN));
+    assert!(p.at(T!['(']));
     let m = lhs.precede(p);
     arg_list(p);
     m.complete(p, CALL_EXPR)
 }
 
 fn arg_list(p: &mut Parser) {
-    assert!(p.matches(L_PAREN));
+    assert!(p.at(T!['(']));
     let m = p.start();
-    p.bump();
-    while !p.matches(R_PAREN) && !p.matches(EOF) {
-        if !p.matches_any(EXPR_FIRST) {
+    p.bump(T!['(']);
+    while !p.at(T![')']) && !p.at(EOF) {
+        if !p.at_ts(EXPR_FIRST) {
             p.error("expected expression");
             break;
         }
 
         expr(p);
-        if !p.matches(R_PAREN) && !p.expect(COMMA) {
+        if !p.at(T![')']) && !p.expect(T![,]) {
             break;
         }
     }
-    p.eat(R_PAREN);
+    p.eat(T![')']);
     m.complete(p, ARG_LIST);
 }
 
@@ -204,14 +189,8 @@ fn atom_expr(p: &mut Parser) -> Option<CompletedMarker> {
         return Some(path_expr(p));
     }
 
-    if p.matches(IDENT) {
-        let m = p.start();
-        p.bump();
-        return Some(m.complete(p, NAME_REF));
-    }
-
     let marker = match p.current() {
-        L_PAREN => paren_expr(p),
+        T!['('] => paren_expr(p),
         _ => {
             p.error_recover("expected expression", EXPR_RECOVERY_SET);
             return None;
@@ -227,19 +206,19 @@ fn path_expr(p: &mut Parser) -> CompletedMarker {
 }
 
 fn literal(p: &mut Parser) -> Option<CompletedMarker> {
-    if !p.matches_any(LITERAL_FIRST) {
+    if !p.at_ts(LITERAL_FIRST) {
         return None;
     }
     let m = p.start();
-    p.bump();
+    p.bump_any();
     Some(m.complete(p, LITERAL))
 }
 
 fn paren_expr(p: &mut Parser) -> CompletedMarker {
-    assert!(p.matches(L_PAREN));
+    assert!(p.at(T!['(']));
     let m = p.start();
-    p.bump();
+    p.bump(T!['(']);
     expr(p);
-    p.expect(R_PAREN);
+    p.expect(T![')']);
     m.complete(p, PAREN_EXPR)
 }

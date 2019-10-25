@@ -1,0 +1,16 @@
+---
+source: crates/mun_syntax/src/tests/lexer.rs
+expression: "// hello, world!\n/**/\n/* block comment */\n/* multi\n   line\n   comment */\n/* /* nested */ */\n/* unclosed comment"
+---
+COMMENT 16 "// hello, world!"
+WHITESPACE 1 "\n"
+COMMENT 4 "/**/"
+WHITESPACE 1 "\n"
+COMMENT 19 "/* block comment */"
+WHITESPACE 1 "\n"
+COMMENT 30 "/* multi\n   line\n   comment */"
+WHITESPACE 1 "\n"
+COMMENT 18 "/* /* nested */ */"
+WHITESPACE 1 "\n"
+COMMENT 19 "/* unclosed comment"
+

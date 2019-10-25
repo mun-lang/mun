@@ -1,0 +1,6 @@
+---
+source: crates/mun_syntax/src/tests/lexer.rs
+expression: "\"test"
+---
+STRING 5 "\"test"
+

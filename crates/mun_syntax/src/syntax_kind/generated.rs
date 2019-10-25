@@ -35,6 +35,7 @@ pub enum SyntaxKind {
     SEMI,
     COLON,
     COMMA,
+    EXCLAMATION,
     UNDERSCORE,
     EQEQ,
     NEQ,
@@ -60,7 +61,6 @@ pub enum SyntaxKind {
     IF_KW,
     IN_KW,
     NIL_KW,
-    NOT_KW,
     OR_KW,
     SELF_KW,
     SUPER_KW,
@@ -133,6 +133,7 @@ macro_rules! T {
     (;) => { $crate::SyntaxKind::SEMI };
     (:) => { $crate::SyntaxKind::COLON };
     (,) => { $crate::SyntaxKind::COMMA };
+    (!) => { $crate::SyntaxKind::EXCLAMATION };
     (_) => { $crate::SyntaxKind::UNDERSCORE };
     (==) => { $crate::SyntaxKind::EQEQ };
     (!=) => { $crate::SyntaxKind::NEQ };
@@ -158,7 +159,6 @@ macro_rules! T {
     (if) => { $crate::SyntaxKind::IF_KW };
     (in) => { $crate::SyntaxKind::IN_KW };
     (nil) => { $crate::SyntaxKind::NIL_KW };
-    (not) => { $crate::SyntaxKind::NOT_KW };
     (or) => { $crate::SyntaxKind::OR_KW };
     (self) => { $crate::SyntaxKind::SELF_KW };
     (super) => { $crate::SyntaxKind::SUPER_KW };
@@ -201,7 +201,6 @@ impl SyntaxKind {
             | IF_KW
             | IN_KW
             | NIL_KW
-            | NOT_KW
             | OR_KW
             | SELF_KW
             | SUPER_KW
@@ -243,6 +242,7 @@ impl SyntaxKind {
                 | SEMI
                 | COLON
                 | COMMA
+                | EXCLAMATION
                 | UNDERSCORE
                 | EQEQ
                 | NEQ
@@ -295,6 +295,7 @@ impl SyntaxKind {
                 SEMI => &SyntaxInfo { name: "SEMI" },
                 COLON => &SyntaxInfo { name: "COLON" },
                 COMMA => &SyntaxInfo { name: "COMMA" },
+                EXCLAMATION => &SyntaxInfo { name: "EXCLAMATION" },
                 UNDERSCORE => &SyntaxInfo { name: "UNDERSCORE" },
                 EQEQ => &SyntaxInfo { name: "EQEQ" },
                 NEQ => &SyntaxInfo { name: "NEQ" },
@@ -320,7 +321,6 @@ impl SyntaxKind {
                 IF_KW => &SyntaxInfo { name: "IF_KW" },
                 IN_KW => &SyntaxInfo { name: "IN_KW" },
                 NIL_KW => &SyntaxInfo { name: "NIL_KW" },
-                NOT_KW => &SyntaxInfo { name: "NOT_KW" },
                 OR_KW => &SyntaxInfo { name: "OR_KW" },
                 SELF_KW => &SyntaxInfo { name: "SELF_KW" },
                 SUPER_KW => &SyntaxInfo { name: "SUPER_KW" },
@@ -383,7 +383,6 @@ impl SyntaxKind {
                 "if" => IF_KW,
                 "in" => IN_KW,
                 "nil" => NIL_KW,
-                "not" => NOT_KW,
                 "or" => OR_KW,
                 "self" => SELF_KW,
                 "super" => SUPER_KW,
@@ -425,9 +424,13 @@ impl SyntaxKind {
                 ';' => SEMI,
                 ':' => COLON,
                 ',' => COMMA,
+                '!' => EXCLAMATION,
                 '_' => UNDERSCORE,
                 _ => return None,
             };
             Some(tok)
         }
 }
+
+
+

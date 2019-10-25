@@ -29,9 +29,9 @@ fn atom_pat(p: &mut Parser, recovery_set: TokenSet) -> Option<CompletedMarker> {
 }
 
 fn placeholder_pat(p: &mut Parser) -> CompletedMarker {
-    assert!(p.matches(T![_]));
+    assert!(p.at(T![_]));
     let m = p.start();
-    p.bump();
+    p.bump(T![_]);
     m.complete(p, PLACEHOLDER_PAT)
 }
 

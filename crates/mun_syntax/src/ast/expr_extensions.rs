@@ -17,7 +17,7 @@ pub enum PrefixOp {
 impl ast::PrefixExpr {
     pub fn op_kind(&self) -> Option<PrefixOp> {
         match self.op_token()?.kind() {
-            T![not] => Some(PrefixOp::Not),
+            T![!] => Some(PrefixOp::Not),
             T![-] => Some(PrefixOp::Neg),
             _ => None,
         }
@@ -34,15 +34,21 @@ pub enum BinOp {
     Subtract,
     Divide,
     Multiply,
-    Remainder,
-    Power,
+    //    Remainder,
+    //    Power,
     Assign,
     AddAssign,
     SubtractAssign,
     DivideAssign,
     MultiplyAssign,
-    RemainderAssign,
-    PowerAssign,
+    //    RemainderAssign,
+    //    PowerAssign,
+    Equals,
+    NotEquals,
+    LessEqual,
+    Less,
+    GreatEqual,
+    Greater,
 }
 
 impl BinExpr {
@@ -56,15 +62,21 @@ impl BinExpr {
                 MINUS => Some((c, BinOp::Subtract)),
                 SLASH => Some((c, BinOp::Divide)),
                 STAR => Some((c, BinOp::Multiply)),
-                PERCENT => Some((c, BinOp::Remainder)),
-                CARET => Some((c, BinOp::Power)),
-                EQ => Some((c, BinOp::Assign)),
+                //                PERCENT => Some((c, BinOp::Remainder)),
+                //                CARET => Some((c, BinOp::Power)),
+                T![=] => Some((c, BinOp::Assign)),
                 PLUSEQ => Some((c, BinOp::AddAssign)),
                 MINUSEQ => Some((c, BinOp::SubtractAssign)),
                 SLASHEQ => Some((c, BinOp::DivideAssign)),
                 STAREQ => Some((c, BinOp::MultiplyAssign)),
-                PERCENTEQ => Some((c, BinOp::RemainderAssign)),
-                CARETEQ => Some((c, BinOp::PowerAssign)),
+                //                PERCENTEQ => Some((c, BinOp::RemainderAssign)),
+                //                CARETEQ => Some((c, BinOp::PowerAssign)),
+                EQEQ => Some((c, BinOp::Equals)),
+                NEQ => Some((c, BinOp::NotEquals)),
+                LT => Some((c, BinOp::Less)),
+                LTEQ => Some((c, BinOp::LessEqual)),
+                GT => Some((c, BinOp::Greater)),
+                GTEQ => Some((c, BinOp::GreatEqual)),
                 _ => None,
             })
     }

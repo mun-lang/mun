@@ -24,7 +24,7 @@ use std::{fmt::Write, marker::PhantomData, sync::Arc};
 
 pub use crate::{
     ast::AstNode,
-    parsing::{tokenize, Token},
+    parsing::{lexer::Token, tokenize},
     ptr::{AstPtr, SyntaxNodePtr},
     syntax_error::{SyntaxError, SyntaxErrorKind},
     syntax_kind::SyntaxKind,

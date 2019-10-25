@@ -1,0 +1,18 @@
+---
+source: crates/mun_syntax/src/tests/lexer.rs
+expression: hello world_ _a2 _ __ x 即可编著课程
+---
+IDENT 5 "hello"
+WHITESPACE 1 " "
+IDENT 6 "world_"
+WHITESPACE 1 " "
+IDENT 3 "_a2"
+WHITESPACE 1 " "
+UNDERSCORE 1 "_"
+WHITESPACE 1 " "
+IDENT 2 "__"
+WHITESPACE 1 " "
+IDENT 1 "x"
+WHITESPACE 1 " "
+IDENT 18 "即可编著课程"
+

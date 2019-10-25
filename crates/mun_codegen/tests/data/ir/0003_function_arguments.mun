@@ -1,3 +1,0 @@
-fn main(a:int):int {
-  a
-}

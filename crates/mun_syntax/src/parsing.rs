@@ -5,25 +5,38 @@ mod token_set;
 
 mod event;
 mod grammar;
-mod lexer;
+pub mod lexer;
 mod parser;
 mod text_token_source;
 mod text_tree_sink;
 
-pub use lexer::{tokenize, Token};
+pub use lexer::tokenize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ParseError(pub String);
 
 /// `TokenSource` abstract the source of the tokens.
 trait TokenSource {
-    /// Returns the token at `pos`
-    fn token_kind(&self, pos: usize) -> SyntaxKind;
+    fn current(&self) -> Token;
 
-    /// Returns true if the token at `pos` is joined to the next token. For example
-    /// * `. .` -> not joined
-    /// * `..` -> tokens are joined
-    fn is_token_joint_to_next(&self, pos: usize) -> bool;
+    /// Lookahead n token
+    fn lookahead_nth(&self, n: usize) -> Token;
+
+    /// bump cursor to next token
+    fn bump(&mut self);
+
+    /// Is the current token a specified keyword?
+    fn is_keyword(&self, kw: &str) -> bool;
+}
+
+/// `TokenCursor` abstracts the cursor of `TokenSource` operates one.
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct Token {
+    /// What is the current token?
+    pub kind: SyntaxKind,
+
+    /// Is the current token joined to the next one (`> >` vs `>>`).
+    pub is_jointed_to_next: bool,
 }
 
 /// `TreeSink` abstracts details of a particular syntax tree implementation.
@@ -43,13 +56,13 @@ pub trait TreeSink {
 
 pub(crate) fn parse_text(text: &str) -> (GreenNode, Vec<SyntaxError>) {
     let tokens = tokenize(&text);
-    let token_source = text_token_source::TextTokenSource::new(text, &tokens);
+    let mut token_source = text_token_source::TextTokenSource::new(text, &tokens);
     let mut tree_sink = text_tree_sink::TextTreeSink::new(text, &tokens);
-    parse(&token_source, &mut tree_sink);
+    parse(&mut token_source, &mut tree_sink);
     tree_sink.finish()
 }
 
-fn parse_from_tokens<F>(token_source: &dyn TokenSource, tree_sink: &mut dyn TreeSink, f: F)
+fn parse_from_tokens<F>(token_source: &mut dyn TokenSource, tree_sink: &mut dyn TreeSink, f: F)
 where
     F: FnOnce(&mut parser::Parser),
 {
@@ -60,6 +73,6 @@ where
 }
 
 /// Parse given tokens into the given sink as a rust file.
-fn parse(token_source: &dyn TokenSource, tree_sink: &mut dyn TreeSink) {
+fn parse(token_source: &mut dyn TokenSource, tree_sink: &mut dyn TreeSink) {
     parse_from_tokens(token_source, tree_sink, grammar::root);
 }

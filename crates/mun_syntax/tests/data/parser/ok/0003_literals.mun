@@ -1,7 +1,0 @@
-fn foo() {
-    let a = true;
-    let b = false;
-    let c = 1;
-    let d = 1.12;
-    let e = "Hello, world!";
-}

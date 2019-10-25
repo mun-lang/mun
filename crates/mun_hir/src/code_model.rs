@@ -272,6 +272,7 @@ impl Function {
 pub enum BuiltinType {
     Float,
     Int,
+    Boolean,
 }
 
 use crate::code_model::diagnostics::ModuleDefinitionDiagnostic;
@@ -282,6 +283,7 @@ impl BuiltinType {
     pub(crate) const ALL: &'static [(Name, BuiltinType)] = &[
         (FLOAT, BuiltinType::Float),
         (INT, BuiltinType::Int),
+        (BOOLEAN, BuiltinType::Boolean),
     ];
 }
 
