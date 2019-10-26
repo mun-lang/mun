@@ -25,6 +25,9 @@ pub enum Ty {
     /// A type variable used during type checking. Not to be confused with a type parameter.
     Infer(TypeVarId),
 
+    /// The never type `never`.
+    Never,
+
     /// A placeholder for a type which could not be computed; this is propagated to avoid useless
     /// error messages. Doubles as a placeholder where type variables are inserted before type
     /// checking, since we want to try to infer a better type here anyway -- for the IDE use case,
@@ -153,12 +156,12 @@ impl FnSig {
 impl HirDisplay for Ty {
     fn hir_fmt(&self, f: &mut HirFormatter<impl HirDatabase>) -> fmt::Result {
         match self {
-            Ty::Apply(a_ty) => a_ty.hir_fmt(f)?,
-            Ty::Unknown => write!(f, "{{unknown}}")?,
-            Ty::Empty => write!(f, "nothing")?,
-            Ty::Infer(tv) => write!(f, "'{}", tv.0)?,
+            Ty::Apply(a_ty) => a_ty.hir_fmt(f),
+            Ty::Unknown => write!(f, "{{unknown}}"),
+            Ty::Empty => write!(f, "nothing"),
+            Ty::Infer(tv) => write!(f, "'{}", tv.0),
+            Ty::Never => write!(f, "never"),
         }
-        Ok(())
     }
 }
 

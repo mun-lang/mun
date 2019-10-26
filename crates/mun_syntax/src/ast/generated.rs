@@ -570,6 +570,33 @@ impl AstNode for NameRef {
 }
 impl NameRef {}
 
+// NeverType
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct NeverType {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for NeverType {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            NEVER_TYPE => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(NeverType { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl NeverType {}
+
 // Param
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1028,7 +1055,7 @@ pub struct TypeRef {
 impl AstNode for TypeRef {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
-            PATH_TYPE => true,
+            PATH_TYPE | NEVER_TYPE => true,
             _ => false,
         }
     }
@@ -1046,9 +1073,15 @@ impl AstNode for TypeRef {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeRefKind {
     PathType(PathType),
+    NeverType(NeverType),
 }
 impl From<PathType> for TypeRef {
     fn from(n: PathType) -> TypeRef {
+        TypeRef { syntax: n.syntax }
+    }
+}
+impl From<NeverType> for TypeRef {
+    fn from(n: NeverType) -> TypeRef {
         TypeRef { syntax: n.syntax }
     }
 }
@@ -1057,6 +1090,7 @@ impl TypeRef {
     pub fn kind(&self) -> TypeRefKind {
         match self.syntax.kind() {
             PATH_TYPE => TypeRefKind::PathType(PathType::cast(self.syntax.clone()).unwrap()),
+            NEVER_TYPE => TypeRefKind::NeverType(NeverType::cast(self.syntax.clone()).unwrap()),
             _ => unreachable!(),
         }
     }

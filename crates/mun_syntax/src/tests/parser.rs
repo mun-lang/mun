@@ -27,7 +27,7 @@ fn function() {
     // Comment that belongs to the function
     fn a() {}
     fn b(value:number) {}
-    export fn c() {}
+    export fn c():never {}
     fn b(value:number):number {}"#,
     );
 }
