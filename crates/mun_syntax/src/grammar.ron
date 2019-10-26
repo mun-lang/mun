@@ -82,7 +82,8 @@ Grammar(
         "public",
         "protected",
         "private",
-        "export"
+        "export",
+        "never",
     ],
     literals: [
         "INT_NUMBER",
@@ -106,6 +107,7 @@ Grammar(
         "PARAM",
 
         "PATH_TYPE",
+        "NEVER_TYPE",
 
         "LET_STMT",
         "EXPR_STMT",
@@ -213,9 +215,11 @@ Grammar(
         "Name": (),
         "NameRef": (),
         "PathType": (options: ["Path"]),
+        "NeverType": (),
         "TypeRef": (
             enum: [
-                "PathType"
+                "PathType",
+                "NeverType",
             ]
         ),
         "BlockExpr": (

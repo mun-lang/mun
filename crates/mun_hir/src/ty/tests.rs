@@ -11,10 +11,11 @@ use std::sync::Arc;
 fn infer_basics() {
     infer_snapshot(
         r#"
-    fn test(a:int, b:float, c:bool): bool {
+    fn test(a:int, b:float, c:never, d:bool): bool {
         a;
         b;
-        c
+        c;
+        d
     }
     "#,
     )

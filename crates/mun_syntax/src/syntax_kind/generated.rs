@@ -73,6 +73,7 @@ pub enum SyntaxKind {
     PROTECTED_KW,
     PRIVATE_KW,
     EXPORT_KW,
+    NEVER_KW,
     INT_NUMBER,
     FLOAT_NUMBER,
     STRING,
@@ -87,6 +88,7 @@ pub enum SyntaxKind {
     PARAM_LIST,
     PARAM,
     PATH_TYPE,
+    NEVER_TYPE,
     LET_STMT,
     EXPR_STMT,
     PATH_EXPR,
@@ -171,6 +173,7 @@ macro_rules! T {
     (protected) => { $crate::SyntaxKind::PROTECTED_KW };
     (private) => { $crate::SyntaxKind::PRIVATE_KW };
     (export) => { $crate::SyntaxKind::EXPORT_KW };
+    (never) => { $crate::SyntaxKind::NEVER_KW };
 }
 
 impl From<u16> for SyntaxKind {
@@ -211,6 +214,7 @@ impl SyntaxKind {
             | PROTECTED_KW
             | PRIVATE_KW
             | EXPORT_KW
+            | NEVER_KW
                 => true,
             _ => false
         }
@@ -329,6 +333,7 @@ impl SyntaxKind {
                 PROTECTED_KW => &SyntaxInfo { name: "PROTECTED_KW" },
                 PRIVATE_KW => &SyntaxInfo { name: "PRIVATE_KW" },
                 EXPORT_KW => &SyntaxInfo { name: "EXPORT_KW" },
+                NEVER_KW => &SyntaxInfo { name: "NEVER_KW" },
                 INT_NUMBER => &SyntaxInfo { name: "INT_NUMBER" },
                 FLOAT_NUMBER => &SyntaxInfo { name: "FLOAT_NUMBER" },
                 STRING => &SyntaxInfo { name: "STRING" },
@@ -343,6 +348,7 @@ impl SyntaxKind {
                 PARAM_LIST => &SyntaxInfo { name: "PARAM_LIST" },
                 PARAM => &SyntaxInfo { name: "PARAM" },
                 PATH_TYPE => &SyntaxInfo { name: "PATH_TYPE" },
+                NEVER_TYPE => &SyntaxInfo { name: "NEVER_TYPE" },
                 LET_STMT => &SyntaxInfo { name: "LET_STMT" },
                 EXPR_STMT => &SyntaxInfo { name: "EXPR_STMT" },
                 PATH_EXPR => &SyntaxInfo { name: "PATH_EXPR" },
@@ -391,6 +397,7 @@ impl SyntaxKind {
                 "protected" => PROTECTED_KW,
                 "private" => PRIVATE_KW,
                 "export" => EXPORT_KW,
+                "never" => NEVER_KW,
                 _ => return None,
             };
             Some(kw)

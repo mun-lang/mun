@@ -16,6 +16,7 @@ impl_arena_id!(TypeRefId);
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub enum TypeRef {
     Path(Path),
+    Never,
     Empty,
     Error,
 }
@@ -80,6 +81,7 @@ impl TypeRefBuilder {
                 .and_then(Path::from_ast)
                 .map(TypeRef::Path)
                 .unwrap_or(TypeRef::Error),
+            NeverType(_) => TypeRef::Never,
         };
         self.alloc_type_ref(type_ref, ptr)
     }
