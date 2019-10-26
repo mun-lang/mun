@@ -6,12 +6,12 @@ use crate::{
 };
 
 //pub use mun_syntax::ast::PrefixOp as UnaryOp;
-use crate::code_model::src::HasSource;
+use crate::code_model::src::{HasSource, Source};
 use crate::name::AsName;
 use crate::type_ref::{TypeRef, TypeRefBuilder, TypeRefId, TypeRefMap, TypeRefSourceMap};
 pub use mun_syntax::ast::PrefixOp as UnaryOp;
 use mun_syntax::ast::{ArgListOwner, BinOp, NameOwner, TypeAscriptionOwner};
-use mun_syntax::{ast, AstNode, AstPtr, SyntaxNodePtr, T};
+use mun_syntax::{ast, AstNode, AstPtr, T};
 use rustc_hash::FxHashMap;
 use std::ops::Index;
 use std::sync::Arc;
@@ -102,21 +102,27 @@ impl Index<TypeRefId> for Body {
     }
 }
 
+type ExprPtr = AstPtr<ast::Expr>; //Either<AstPtr<ast::Pat>, AstPtr<ast::SelfParam>>;
+type ExprSource = Source<ExprPtr>;
+
+type PatPtr = AstPtr<ast::Pat>; //Either<AstPtr<ast::Pat>, AstPtr<ast::SelfParam>>;
+type PatSource = Source<PatPtr>;
+
 /// An item body together with the mapping from syntax nodes to HIR expression Ids. This is needed
 /// to go from e.g. a position in a file to the HIR expression containing it; but for type
 /// inference etc., we want to operate on a structure that is agnostic to the action positions of
 /// expressions in the file, so that we don't recompute types whenever some whitespace is typed.
 #[derive(Default, Debug, Eq, PartialEq)]
 pub struct BodySourceMap {
-    expr_map: FxHashMap<SyntaxNodePtr, ExprId>,
-    expr_map_back: ArenaMap<ExprId, SyntaxNodePtr>,
-    pat_map: FxHashMap<AstPtr<ast::Pat>, PatId>,
-    pat_map_back: ArenaMap<PatId, AstPtr<ast::Pat>>,
+    expr_map: FxHashMap<ExprPtr, ExprId>,
+    expr_map_back: ArenaMap<ExprId, ExprSource>,
+    pat_map: FxHashMap<PatPtr, PatId>,
+    pat_map_back: ArenaMap<PatId, PatSource>,
     type_refs: TypeRefSourceMap,
 }
 
 impl BodySourceMap {
-    pub(crate) fn expr_syntax(&self, expr: ExprId) -> Option<SyntaxNodePtr> {
+    pub(crate) fn expr_syntax(&self, expr: ExprId) -> Option<ExprSource> {
         self.expr_map_back.get(expr).cloned()
     }
 
@@ -124,17 +130,15 @@ impl BodySourceMap {
         self.type_refs.type_ref_syntax(type_ref)
     }
 
-    pub(crate) fn syntax_expr(&self, ptr: SyntaxNodePtr) -> Option<ExprId> {
+    pub(crate) fn syntax_expr(&self, ptr: ExprPtr) -> Option<ExprId> {
         self.expr_map.get(&ptr).cloned()
     }
 
     pub(crate) fn node_expr(&self, node: &ast::Expr) -> Option<ExprId> {
-        self.expr_map
-            .get(&SyntaxNodePtr::new(node.syntax()))
-            .cloned()
+        self.expr_map.get(&AstPtr::new(node)).cloned()
     }
 
-    pub(crate) fn pat_syntax(&self, pat: PatId) -> Option<AstPtr<ast::Pat>> {
+    pub(crate) fn pat_syntax(&self, pat: PatId) -> Option<PatSource> {
         self.pat_map_back.get(pat).cloned()
     }
 
@@ -267,7 +271,11 @@ impl Expr {
                 f(*expr);
             }
             Expr::Literal(_) => {}
-            Expr::If { condition, then_branch, else_branch } => {
+            Expr::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
                 f(*condition);
                 f(*then_branch);
                 if let Some(else_expr) = else_branch {
@@ -305,13 +313,14 @@ pub(crate) struct ExprCollector<DB> {
     body_expr: Option<ExprId>,
     ret_type: Option<TypeRefId>,
     type_ref_builder: TypeRefBuilder,
+    current_file_id: FileId,
 }
 
 impl<'a, DB> ExprCollector<&'a DB>
 where
     DB: HirDatabase,
 {
-    pub fn new(owner: DefWithBody, _file_id: FileId, db: &'a DB) -> Self {
+    pub fn new(owner: DefWithBody, file_id: FileId, db: &'a DB) -> Self {
         ExprCollector {
             owner,
             db,
@@ -322,20 +331,33 @@ where
             body_expr: None,
             ret_type: None,
             type_ref_builder: TypeRefBuilder::default(),
+            current_file_id: file_id,
         }
     }
 
-    fn alloc_pat(&mut self, pat: Pat, ptr: AstPtr<ast::Pat>) -> PatId {
+    fn alloc_pat(&mut self, pat: Pat, ptr: PatPtr) -> PatId {
         let id = self.pats.alloc(pat);
         self.source_map.pat_map.insert(ptr, id);
-        self.source_map.pat_map_back.insert(id, ptr);
+        self.source_map.pat_map_back.insert(
+            id,
+            Source {
+                file_id: self.current_file_id,
+                ast: ptr,
+            },
+        );
         id
     }
 
-    fn alloc_expr(&mut self, expr: Expr, syntax_ptr: SyntaxNodePtr) -> ExprId {
+    fn alloc_expr(&mut self, expr: Expr, ptr: ExprPtr) -> ExprId {
         let id = self.exprs.alloc(expr);
-        self.source_map.expr_map.insert(syntax_ptr, id);
-        self.source_map.expr_map_back.insert(id, syntax_ptr);
+        self.source_map.expr_map.insert(ptr, id);
+        self.source_map.expr_map_back.insert(
+            id,
+            Source {
+                file_id: self.current_file_id,
+                ast: ptr,
+            },
+        );
         id
     }
 
@@ -379,6 +401,7 @@ where
     }
 
     fn collect_block(&mut self, block: ast::BlockExpr) -> ExprId {
+        let syntax_node_ptr = AstPtr::new(&block.clone().into());
         let statements = block
             .statements()
             .map(|s| match s.kind() {
@@ -400,10 +423,7 @@ where
             })
             .collect();
         let tail = block.expr().map(|e| self.collect_expr(e));
-        self.alloc_expr(
-            Expr::Block { statements, tail },
-            SyntaxNodePtr::new(block.syntax()),
-        )
+        self.alloc_expr(Expr::Block { statements, tail }, syntax_node_ptr)
     }
 
     fn collect_pat_opt(&mut self, pat: Option<ast::Pat>) -> PatId {
@@ -423,7 +443,7 @@ where
     }
 
     fn collect_expr(&mut self, expr: ast::Expr) -> ExprId {
-        let syntax_ptr = SyntaxNodePtr::new(expr.syntax());
+        let syntax_ptr = AstPtr::new(&expr.clone());
         match expr.kind() {
             ast::ExprKind::BlockExpr(b) => self.collect_block(b),
             ast::ExprKind::Literal(e) => {
@@ -569,10 +589,17 @@ where
                     Some(condition) => match condition.pat() {
                         None => self.collect_expr_opt(condition.expr()),
                         _ => unreachable!("patterns in conditions are not yet supported"),
-                    }
+                    },
                 };
 
-                self.alloc_expr(Expr::If { condition, then_branch, else_branch }, syntax_ptr)
+                self.alloc_expr(
+                    Expr::If {
+                        condition,
+                        then_branch,
+                        else_branch,
+                    },
+                    syntax_ptr,
+                )
             }
             ast::ExprKind::ParenExpr(e) => {
                 let inner = self.collect_expr_opt(e.expr());

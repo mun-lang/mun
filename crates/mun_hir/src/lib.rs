@@ -22,6 +22,9 @@ mod source_id;
 mod ty;
 mod type_ref;
 
+#[cfg(test)]
+mod mock;
+
 pub use salsa;
 
 pub use crate::{

@@ -25,8 +25,8 @@ pub use type_variable::TypeVarId;
 /// The result of type inference: A mapping from expressions and patterns to types.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct InferenceResult {
-    type_of_expr: ArenaMap<ExprId, Ty>,
-    type_of_pat: ArenaMap<PatId, Ty>,
+    pub(crate) type_of_expr: ArenaMap<ExprId, Ty>,
+    pub(crate) type_of_pat: ArenaMap<PatId, Ty>,
     diagnostics: Vec<diagnostics::InferenceDiagnostic>,
 }
 
@@ -465,9 +465,11 @@ mod diagnostics {
                     let file = owner.source(db).file_id;
                     let body = owner.body_source_map(db);
                     let expr = match id {
-                        ExprOrPatId::ExprId(id) => body.expr_syntax(*id),
+                        ExprOrPatId::ExprId(id) => {
+                            body.expr_syntax(*id).map(|ptr| ptr.ast.syntax_node_ptr())
+                        }
                         ExprOrPatId::PatId(id) => {
-                            body.pat_syntax(*id).map(|ptr| ptr.syntax_node_ptr())
+                            body.pat_syntax(*id).map(|ptr| ptr.ast.syntax_node_ptr())
                         }
                     }
                     .unwrap();
@@ -487,7 +489,7 @@ mod diagnostics {
                 } => {
                     let file = owner.source(db).file_id;
                     let body = owner.body_source_map(db);
-                    let expr = body.expr_syntax(*id).unwrap();
+                    let expr = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
                     sink.push(ParameterCountMismatch {
                         file,
                         expr,
@@ -498,7 +500,7 @@ mod diagnostics {
                 InferenceDiagnostic::ExpectedFunction { id, found } => {
                     let file = owner.source(db).file_id;
                     let body = owner.body_source_map(db);
-                    let expr = body.expr_syntax(*id).unwrap();
+                    let expr = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
                     sink.push(ExpectedFunction {
                         file,
                         expr,
@@ -512,7 +514,7 @@ mod diagnostics {
                 } => {
                     let file = owner.source(db).file_id;
                     let body = owner.body_source_map(db);
-                    let expr = body.expr_syntax(*id).unwrap();
+                    let expr = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
                     sink.push(MismatchedType {
                         file,
                         expr,
@@ -523,7 +525,7 @@ mod diagnostics {
                 InferenceDiagnostic::CannotApplyBinaryOp { id, lhs, rhs } => {
                     let file = owner.source(db).file_id;
                     let body = owner.body_source_map(db);
-                    let expr = body.expr_syntax(*id).unwrap();
+                    let expr = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
                     sink.push(CannotApplyBinaryOp {
                         file,
                         expr,

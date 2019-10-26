@@ -12,6 +12,9 @@ use std::sync::Arc;
 
 mod op;
 
+#[cfg(test)]
+mod tests;
+
 /// This should be cheap to clone.
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub enum Ty {
