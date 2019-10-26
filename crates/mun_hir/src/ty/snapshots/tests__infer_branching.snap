@@ -1,0 +1,28 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "fn test() {\n    let a = if true { 3 } else { 4 }\n    let b = if true { 3 }\n    let c = if true { 5 } else if false { 3 } else { 4 }\n}"
+---
+[10; 133) '{     ... 4 } }': nothing
+[20; 21) 'a': int
+[24; 48) 'if tru... { 4 }': int
+[27; 31) 'true': bool
+[32; 37) '{ 3 }': int
+[34; 35) '3': int
+[43; 48) '{ 4 }': int
+[45; 46) '4': int
+[57; 58) 'b': nothing
+[61; 74) 'if true { 3 }': nothing
+[64; 68) 'true': bool
+[69; 74) '{ 3 }': int
+[71; 72) '3': int
+[83; 84) 'c': int
+[87; 131) 'if tru... { 4 }': int
+[90; 94) 'true': bool
+[95; 100) '{ 5 }': int
+[97; 98) '5': int
+[106; 131) 'if fal... { 4 }': int
+[109; 114) 'false': bool
+[115; 120) '{ 3 }': int
+[117; 118) '3': int
+[126; 131) '{ 4 }': int
+[128; 129) '4': int

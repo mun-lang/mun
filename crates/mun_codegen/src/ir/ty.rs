@@ -26,6 +26,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty) -> AnyTypeEnum {
 
                 ret_ty.fn_type(&params, false).into()
             }
+            _ => unreachable!(),
         },
         _ => unreachable!("unknown type can not be converted"),
     }

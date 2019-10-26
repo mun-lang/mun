@@ -22,6 +22,20 @@ mod type_variable;
 
 pub use type_variable::TypeVarId;
 
+macro_rules! ty_app {
+    ($ctor:pat, $param:pat) => {
+        $crate::ty::Ty::Apply($crate::ty::ApplicationTy {
+            ctor: $ctor,
+            parameters: $param,
+        })
+    };
+    ($ctor:pat) => {
+        ty_app!($ctor, _)
+    };
+}
+
+mod coerce;
+
 /// The result of type inference: A mapping from expressions and patterns to types.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct InferenceResult {
@@ -142,6 +156,25 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
 }
 
 impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
+    /// Unify the specified types, returns true if successful; false otherwise.
+    fn unify(&mut self, ty1: &Ty, ty2: &Ty) -> bool {
+        if ty1 == ty2 {
+            return true;
+        }
+
+        self.unify_inner_trivial(&ty1, &ty2)
+    }
+
+    /// This function performs trivial unifications. Returns true if a unification took place;
+    fn unify_inner_trivial(&mut self, ty1: &Ty, ty2: &Ty) -> bool {
+        match (ty1, ty2) {
+            (Ty::Unknown, _) | (_, Ty::Unknown) => true,
+            _ => false,
+        }
+    }
+}
+
+impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
     /// Collect all the parameter patterns from the body. After calling this method the `return_ty`
     /// will have a valid value, also all parameters are added inferred.
     fn infer_signature(&mut self) {
@@ -188,6 +221,34 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                 self.infer_path_expr(&resolver, p, tgt_expr.into())
                     .unwrap_or(Ty::Unknown)
             }
+            Expr::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                self.infer_expr(
+                    *condition,
+                    &Expectation::has_type(Ty::simple(TypeCtor::Bool)),
+                );
+                let then_ty = self.infer_expr(*then_branch, &expected);
+                match else_branch {
+                    Some(else_branch) => {
+                        let else_ty = self.infer_expr(*else_branch, &expected);
+                        match self.coerce_merge_branch(&then_ty, &else_ty) {
+                            Some(ty) => ty,
+                            None => {
+                                self.diagnostics.push(InferenceDiagnostic::MismatchedTypes {
+                                    id: *else_branch,
+                                    expected: then_ty.clone(),
+                                    found: else_ty,
+                                });
+                                then_ty
+                            }
+                        }
+                    }
+                    None => Ty::Empty,
+                }
+            }
             Expr::BinaryOp { lhs, rhs, op } => match op {
                 Some(op) => {
                     let lhs_ty = self.infer_expr(*lhs, &Expectation::none());
@@ -201,7 +262,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             Expr::Call { callee: call, args } => self.infer_call(&tgt_expr, call, args, expected),
             Expr::Literal(lit) => match lit {
                 Literal::String(_) => Ty::Unknown,
-                Literal::Bool(_) => Ty::Unknown,
+                Literal::Bool(_) => Ty::simple(TypeCtor::Bool),
                 Literal::Int(_) => Ty::simple(TypeCtor::Int),
                 Literal::Float(_) => Ty::simple(TypeCtor::Float),
             },
@@ -391,6 +452,10 @@ impl Expectation {
     /// This expresses no expectation on the type.
     fn none() -> Self {
         Expectation { ty: Ty::Unknown }
+    }
+
+    fn is_none(&self) -> bool {
+        self.ty == Ty::Unknown
     }
 }
 
