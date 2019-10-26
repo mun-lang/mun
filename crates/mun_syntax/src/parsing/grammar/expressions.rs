@@ -27,11 +27,16 @@ pub(crate) fn block(p: &mut Parser) {
         p.error("expected a block");
         return;
     }
+    block_expr(p);
+}
+
+fn block_expr(p: &mut Parser) -> CompletedMarker {
+    assert!(p.at(T!['{']));
     let m = p.start();
     p.bump(T!['{']);
     expr_block_contents(p);
     p.expect(T!['}']);
-    m.complete(p, BLOCK);
+    m.complete(p, BLOCK_EXPR)
 }
 
 /// Parses a general statement: (let, expr, etc.)
@@ -191,6 +196,8 @@ fn atom_expr(p: &mut Parser) -> Option<CompletedMarker> {
 
     let marker = match p.current() {
         T!['('] => paren_expr(p),
+        T!['{'] => block_expr(p),
+        T![if] => if_expr(p),
         _ => {
             p.error_recover("expected expression", EXPR_RECOVERY_SET);
             return None;
@@ -221,4 +228,27 @@ fn paren_expr(p: &mut Parser) -> CompletedMarker {
     expr(p);
     p.expect(T![')']);
     m.complete(p, PAREN_EXPR)
+}
+
+fn if_expr(p: &mut Parser) -> CompletedMarker {
+    assert!(p.at(T![if]));
+    let m = p.start();
+    p.bump(T![if]);
+    cond(p);
+    block(p);
+    if p.at(T![else]) {
+        p.bump(T![else]);
+        if p.at(T![if]) {
+            if_expr(p);
+        } else {
+            block(p);
+        }
+    }
+    m.complete(p, IF_EXPR)
+}
+
+fn cond(p: &mut Parser) {
+    let m = p.start();
+    expr(p);
+    m.complete(p, CONDITION);
 }

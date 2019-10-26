@@ -103,23 +103,23 @@ impl BindPat {
     }
 }
 
-// Block
+// BlockExpr
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Block {
+pub struct BlockExpr {
     pub(crate) syntax: SyntaxNode,
 }
 
-impl AstNode for Block {
+impl AstNode for BlockExpr {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
-            BLOCK => true,
+            BLOCK_EXPR => true,
             _ => false,
         }
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
-            Some(Block { syntax })
+            Some(BlockExpr { syntax })
         } else {
             None
         }
@@ -128,7 +128,7 @@ impl AstNode for Block {
         &self.syntax
     }
 }
-impl Block {
+impl BlockExpr {
     pub fn statements(&self) -> impl Iterator<Item = Stmt> {
         super::children(self)
     }
@@ -170,6 +170,41 @@ impl CallExpr {
     }
 }
 
+// Condition
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Condition {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for Condition {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            CONDITION => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(Condition { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl Condition {
+    pub fn pat(&self) -> Option<Pat> {
+        super::child_opt(self)
+    }
+
+    pub fn expr(&self) -> Option<Expr> {
+        super::child_opt(self)
+    }
+}
+
 // Expr
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -180,7 +215,7 @@ pub struct Expr {
 impl AstNode for Expr {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
-            LITERAL | PREFIX_EXPR | PATH_EXPR | BIN_EXPR | PAREN_EXPR | CALL_EXPR => true,
+             | LITERAL | PREFIX_EXPR | PATH_EXPR | BIN_EXPR | PAREN_EXPR | CALL_EXPR | IF_EXPR | BLOCK_EXPR => true,
             _ => false,
         }
     }
@@ -203,6 +238,8 @@ pub enum ExprKind {
     BinExpr(BinExpr),
     ParenExpr(ParenExpr),
     CallExpr(CallExpr),
+    IfExpr(IfExpr),
+    BlockExpr(BlockExpr),
 }
 impl From<Literal> for Expr {
     fn from(n: Literal) -> Expr {
@@ -234,6 +271,16 @@ impl From<CallExpr> for Expr {
         Expr { syntax: n.syntax }
     }
 }
+impl From<IfExpr> for Expr {
+    fn from(n: IfExpr) -> Expr {
+        Expr { syntax: n.syntax }
+    }
+}
+impl From<BlockExpr> for Expr {
+    fn from(n: BlockExpr) -> Expr {
+        Expr { syntax: n.syntax }
+    }
+}
 
 impl Expr {
     pub fn kind(&self) -> ExprKind {
@@ -244,10 +291,13 @@ impl Expr {
             BIN_EXPR => ExprKind::BinExpr(BinExpr::cast(self.syntax.clone()).unwrap()),
             PAREN_EXPR => ExprKind::ParenExpr(ParenExpr::cast(self.syntax.clone()).unwrap()),
             CALL_EXPR => ExprKind::CallExpr(CallExpr::cast(self.syntax.clone()).unwrap()),
+            IF_EXPR => ExprKind::IfExpr(IfExpr::cast(self.syntax.clone()).unwrap()),
+            BLOCK_EXPR => ExprKind::BlockExpr(BlockExpr::cast(self.syntax.clone()).unwrap()),
             _ => unreachable!(),
         }
     }
 }
+
 
 impl Expr {}
 
@@ -315,11 +365,42 @@ impl FunctionDef {
         super::child_opt(self)
     }
 
-    pub fn body(&self) -> Option<Block> {
+    pub fn body(&self) -> Option<BlockExpr> {
         super::child_opt(self)
     }
 
     pub fn ret_type(&self) -> Option<RetType> {
+        super::child_opt(self)
+    }
+}
+
+// IfExpr
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct IfExpr {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for IfExpr {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            IF_EXPR => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(IfExpr { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl IfExpr {
+    pub fn condition(&self) -> Option<Condition> {
         super::child_opt(self)
     }
 }
@@ -397,7 +478,7 @@ pub struct ModuleItem {
 impl AstNode for ModuleItem {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
-            FUNCTION_DEF => true,
+             | FUNCTION_DEF => true,
             _ => false,
         }
     }
@@ -425,13 +506,12 @@ impl From<FunctionDef> for ModuleItem {
 impl ModuleItem {
     pub fn kind(&self) -> ModuleItemKind {
         match self.syntax.kind() {
-            FUNCTION_DEF => {
-                ModuleItemKind::FunctionDef(FunctionDef::cast(self.syntax.clone()).unwrap())
-            }
+            FUNCTION_DEF => ModuleItemKind::FunctionDef(FunctionDef::cast(self.syntax.clone()).unwrap()),
             _ => unreachable!(),
         }
     }
 }
+
 
 impl ModuleItem {}
 
@@ -593,7 +673,7 @@ pub struct Pat {
 impl AstNode for Pat {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
-            BIND_PAT | PLACEHOLDER_PAT => true,
+             | BIND_PAT | PLACEHOLDER_PAT => true,
             _ => false,
         }
     }
@@ -628,13 +708,12 @@ impl Pat {
     pub fn kind(&self) -> PatKind {
         match self.syntax.kind() {
             BIND_PAT => PatKind::BindPat(BindPat::cast(self.syntax.clone()).unwrap()),
-            PLACEHOLDER_PAT => {
-                PatKind::PlaceholderPat(PlaceholderPat::cast(self.syntax.clone()).unwrap())
-            }
+            PLACEHOLDER_PAT => PatKind::PlaceholderPat(PlaceholderPat::cast(self.syntax.clone()).unwrap()),
             _ => unreachable!(),
         }
     }
 }
+
 
 impl Pat {}
 
@@ -894,7 +973,7 @@ pub struct Stmt {
 impl AstNode for Stmt {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
-            LET_STMT | EXPR_STMT => true,
+             | LET_STMT | EXPR_STMT => true,
             _ => false,
         }
     }
@@ -935,6 +1014,7 @@ impl Stmt {
     }
 }
 
+
 impl Stmt {}
 
 // TypeRef
@@ -947,7 +1027,7 @@ pub struct TypeRef {
 impl AstNode for TypeRef {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
-            PATH_TYPE => true,
+             | PATH_TYPE => true,
             _ => false,
         }
     }
@@ -981,6 +1061,7 @@ impl TypeRef {
     }
 }
 
+
 impl TypeRef {}
 
 // Visibility
@@ -1009,3 +1090,4 @@ impl AstNode for Visibility {
     }
 }
 impl Visibility {}
+

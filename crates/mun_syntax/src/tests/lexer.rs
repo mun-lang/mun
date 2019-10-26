@@ -108,8 +108,8 @@ fn strings() {
 fn keywords() {
     lex_snapshot(
         r#"
-    and break do else false for fn if in nil or
-    return then true while let mut class public protected
+    and break do else false for fn if in nil
+    return true while let mut class public protected
     private
     "#,
     )

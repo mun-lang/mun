@@ -139,3 +139,24 @@ fn compare_operands() {
     "#,
     )
 }
+
+#[test]
+fn if_expr() {
+    ok_snapshot_test(r#"
+    fn bar() {
+        if true {};
+        if true {} else {};
+        if true {} else if false {} else {};
+        if {true} {} else {}
+    }
+    "#);
+}
+
+#[test]
+fn block_expr() {
+    ok_snapshot_test(r#"
+    fn bar() {
+        {3}
+    }
+    "#);
+}

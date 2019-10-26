@@ -61,11 +61,9 @@ pub enum SyntaxKind {
     IF_KW,
     IN_KW,
     NIL_KW,
-    OR_KW,
     SELF_KW,
     SUPER_KW,
     RETURN_KW,
-    THEN_KW,
     TRUE_KW,
     WHILE_KW,
     LET_KW,
@@ -97,12 +95,14 @@ pub enum SyntaxKind {
     BIN_EXPR,
     PAREN_EXPR,
     CALL_EXPR,
+    IF_EXPR,
+    BLOCK_EXPR,
+    CONDITION,
     BIND_PAT,
     PLACEHOLDER_PAT,
     ARG_LIST,
     NAME,
     NAME_REF,
-    BLOCK,
     PATH,
     PATH_SEGMENT,
     // Technical kind so that we can cast from u16 safely
@@ -159,11 +159,9 @@ macro_rules! T {
     (if) => { $crate::SyntaxKind::IF_KW };
     (in) => { $crate::SyntaxKind::IN_KW };
     (nil) => { $crate::SyntaxKind::NIL_KW };
-    (or) => { $crate::SyntaxKind::OR_KW };
     (self) => { $crate::SyntaxKind::SELF_KW };
     (super) => { $crate::SyntaxKind::SUPER_KW };
     (return) => { $crate::SyntaxKind::RETURN_KW };
-    (then) => { $crate::SyntaxKind::THEN_KW };
     (true) => { $crate::SyntaxKind::TRUE_KW };
     (while) => { $crate::SyntaxKind::WHILE_KW };
     (let) => { $crate::SyntaxKind::LET_KW };
@@ -201,11 +199,9 @@ impl SyntaxKind {
             | IF_KW
             | IN_KW
             | NIL_KW
-            | OR_KW
             | SELF_KW
             | SUPER_KW
             | RETURN_KW
-            | THEN_KW
             | TRUE_KW
             | WHILE_KW
             | LET_KW
@@ -321,11 +317,9 @@ impl SyntaxKind {
                 IF_KW => &SyntaxInfo { name: "IF_KW" },
                 IN_KW => &SyntaxInfo { name: "IN_KW" },
                 NIL_KW => &SyntaxInfo { name: "NIL_KW" },
-                OR_KW => &SyntaxInfo { name: "OR_KW" },
                 SELF_KW => &SyntaxInfo { name: "SELF_KW" },
                 SUPER_KW => &SyntaxInfo { name: "SUPER_KW" },
                 RETURN_KW => &SyntaxInfo { name: "RETURN_KW" },
-                THEN_KW => &SyntaxInfo { name: "THEN_KW" },
                 TRUE_KW => &SyntaxInfo { name: "TRUE_KW" },
                 WHILE_KW => &SyntaxInfo { name: "WHILE_KW" },
                 LET_KW => &SyntaxInfo { name: "LET_KW" },
@@ -357,12 +351,14 @@ impl SyntaxKind {
                 BIN_EXPR => &SyntaxInfo { name: "BIN_EXPR" },
                 PAREN_EXPR => &SyntaxInfo { name: "PAREN_EXPR" },
                 CALL_EXPR => &SyntaxInfo { name: "CALL_EXPR" },
+                IF_EXPR => &SyntaxInfo { name: "IF_EXPR" },
+                BLOCK_EXPR => &SyntaxInfo { name: "BLOCK_EXPR" },
+                CONDITION => &SyntaxInfo { name: "CONDITION" },
                 BIND_PAT => &SyntaxInfo { name: "BIND_PAT" },
                 PLACEHOLDER_PAT => &SyntaxInfo { name: "PLACEHOLDER_PAT" },
                 ARG_LIST => &SyntaxInfo { name: "ARG_LIST" },
                 NAME => &SyntaxInfo { name: "NAME" },
                 NAME_REF => &SyntaxInfo { name: "NAME_REF" },
-                BLOCK => &SyntaxInfo { name: "BLOCK" },
                 PATH => &SyntaxInfo { name: "PATH" },
                 PATH_SEGMENT => &SyntaxInfo { name: "PATH_SEGMENT" },
                 TOMBSTONE => &SyntaxInfo { name: "TOMBSTONE" },
@@ -383,11 +379,9 @@ impl SyntaxKind {
                 "if" => IF_KW,
                 "in" => IN_KW,
                 "nil" => NIL_KW,
-                "or" => OR_KW,
                 "self" => SELF_KW,
                 "super" => SUPER_KW,
                 "return" => RETURN_KW,
-                "then" => THEN_KW,
                 "true" => TRUE_KW,
                 "while" => WHILE_KW,
                 "let" => LET_KW,

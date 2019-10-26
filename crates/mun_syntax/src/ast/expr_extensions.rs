@@ -1,5 +1,5 @@
 use super::{children, BinExpr};
-use crate::ast::Literal;
+use crate::ast::{Literal, child_opt, AstChildren};
 use crate::{
     ast, AstNode,
     SyntaxKind::{self, *},
@@ -130,5 +130,31 @@ impl Literal {
             T![true] | T![false] => LiteralKind::Bool,
             _ => unreachable!(),
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ElseBranch {
+    Block(ast::BlockExpr),
+    IfExpr(ast::IfExpr),
+}
+
+impl ast::IfExpr {
+    pub fn then_branch(&self) -> Option<ast::BlockExpr> {
+        self.blocks().nth(0)
+    }
+    pub fn else_branch(&self) -> Option<ElseBranch> {
+        let res = match self.blocks().nth(1) {
+            Some(block) => ElseBranch::Block(block),
+            None => {
+                let elif: ast::IfExpr = child_opt(self)?;
+                ElseBranch::IfExpr(elif)
+            }
+        };
+        Some(res)
+    }
+
+    fn blocks(&self) -> AstChildren<ast::BlockExpr> {
+        children(self)
     }
 }

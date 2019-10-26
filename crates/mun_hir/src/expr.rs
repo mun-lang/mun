@@ -176,6 +176,11 @@ pub enum Expr {
         args: Vec<ExprId>,
     },
     Path(Path),
+    If {
+        condition: ExprId,
+        then_branch: ExprId,
+        else_branch: Option<ExprId>,
+    },
     UnaryOp {
         expr: ExprId,
         op: UnaryOp,
@@ -262,6 +267,13 @@ impl Expr {
                 f(*expr);
             }
             Expr::Literal(_) => {}
+            Expr::If { condition, then_branch, else_branch } => {
+                f(*condition);
+                f(*then_branch);
+                if let Some(else_expr) = else_branch {
+                    f(*else_expr);
+                }
+            }
         }
     }
 }
@@ -327,6 +339,10 @@ where
         id
     }
 
+    fn missing_expr(&mut self) -> ExprId {
+        self.exprs.alloc(Expr::Missing)
+    }
+
     fn collect_fn_body(&mut self, node: &ast::FunctionDef) {
         if let Some(param_list) = node.param_list() {
             for param in param_list.params() {
@@ -354,7 +370,7 @@ where
         self.ret_type = Some(ret_type);
     }
 
-    fn collect_block_opt(&mut self, block: Option<ast::Block>) -> ExprId {
+    fn collect_block_opt(&mut self, block: Option<ast::BlockExpr>) -> ExprId {
         if let Some(block) = block {
             self.collect_block(block)
         } else {
@@ -362,7 +378,7 @@ where
         }
     }
 
-    fn collect_block(&mut self, block: ast::Block) -> ExprId {
+    fn collect_block(&mut self, block: ast::BlockExpr) -> ExprId {
         let statements = block
             .statements()
             .map(|s| match s.kind() {
@@ -409,6 +425,7 @@ where
     fn collect_expr(&mut self, expr: ast::Expr) -> ExprId {
         let syntax_ptr = SyntaxNodePtr::new(expr.syntax());
         match expr.kind() {
+            ast::ExprKind::BlockExpr(b) => self.collect_block(b),
             ast::ExprKind::Literal(e) => {
                 let lit = match e.kind() {
                     ast::LiteralKind::Bool => Literal::Bool(e.syntax().kind() == T![true]),
@@ -535,6 +552,27 @@ where
                     .map(Expr::Path)
                     .unwrap_or(Expr::Missing);
                 self.alloc_expr(path, syntax_ptr)
+            }
+            ast::ExprKind::IfExpr(e) => {
+                let then_branch = self.collect_block_opt(e.then_branch());
+
+                let else_branch = e.else_branch().map(|b| match b {
+                    ast::ElseBranch::Block(it) => self.collect_block(it),
+                    ast::ElseBranch::IfExpr(elif) => {
+                        let expr = ast::Expr::cast(elif.syntax().clone()).unwrap();
+                        self.collect_expr(expr)
+                    }
+                });
+
+                let condition = match e.condition() {
+                    None => self.missing_expr(),
+                    Some(condition) => match condition.pat() {
+                        None => self.collect_expr_opt(condition.expr()),
+                        _ => unreachable!("patterns in conditions are not yet supported"),
+                    }
+                };
+
+                self.alloc_expr(Expr::If { condition, then_branch, else_branch }, syntax_ptr)
             }
             ast::ExprKind::ParenExpr(e) => {
                 let inner = self.collect_expr_opt(e.expr());

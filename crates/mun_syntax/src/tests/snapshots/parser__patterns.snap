@@ -21,7 +21,7 @@ SOURCE_FILE@[0; 49)
                 IDENT@[10; 16) "number"
       R_PAREN@[16; 17) ")"
     WHITESPACE@[17; 18) " "
-    BLOCK@[18; 49)
+    BLOCK_EXPR@[18; 49)
       L_CURLY@[18; 19) "{"
       WHITESPACE@[19; 23) "\n   "
       LET_STMT@[23; 33)
