@@ -21,6 +21,19 @@ fn infer_basics() {
     )
 }
 
+#[test]
+fn infer_branching() {
+    infer_snapshot(
+        r#"
+    fn test() {
+        let a = if true { 3 } else { 4 }
+        let b = if true { 3 }
+        let c = if true { 5 } else if false { 3 } else { 4 }
+    }
+    "#,
+    )
+}
+
 fn infer_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
     insta::assert_snapshot!(insta::_macro_support::AutoName, infer(&text), &text);

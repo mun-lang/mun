@@ -36,7 +36,7 @@ impl Ty {
             TypeRef::Path(path) => Ty::from_hir_path(db, resolver, path),
             TypeRef::Error => Some(Ty::Unknown),
             TypeRef::Empty => Some(Ty::Empty),
-            TypeRef::Never => Some(Ty::Never),
+            TypeRef::Never => Some(Ty::simple(TypeCtor::Never)),
         };
         if let Some(ty) = res {
             ty

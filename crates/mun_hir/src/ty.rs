@@ -25,9 +25,6 @@ pub enum Ty {
     /// A type variable used during type checking. Not to be confused with a type parameter.
     Infer(TypeVarId),
 
-    /// The never type `never`.
-    Never,
-
     /// A placeholder for a type which could not be computed; this is propagated to avoid useless
     /// error messages. Doubles as a placeholder where type variables are inserted before type
     /// checking, since we want to try to infer a better type here anyway -- for the IDE use case,
@@ -57,6 +54,9 @@ pub enum TypeCtor {
 
     /// The primitive boolean type. Written as `bool`.
     Bool,
+
+    /// The never type `never`.
+    Never,
 
     /// The anonymous type of a function declaration/definition. Each
     /// function has a unique type, which is output (for a function
@@ -160,7 +160,6 @@ impl HirDisplay for Ty {
             Ty::Unknown => write!(f, "{{unknown}}"),
             Ty::Empty => write!(f, "nothing"),
             Ty::Infer(tv) => write!(f, "'{}", tv.0),
-            Ty::Never => write!(f, "never"),
         }
     }
 }
@@ -168,19 +167,19 @@ impl HirDisplay for Ty {
 impl HirDisplay for ApplicationTy {
     fn hir_fmt(&self, f: &mut HirFormatter<impl HirDatabase>) -> fmt::Result {
         match self.ctor {
-            TypeCtor::Float => write!(f, "float")?,
-            TypeCtor::Int => write!(f, "int")?,
-            TypeCtor::Bool => write!(f, "bool")?,
+            TypeCtor::Float => write!(f, "float"),
+            TypeCtor::Int => write!(f, "int"),
+            TypeCtor::Bool => write!(f, "bool"),
+            TypeCtor::Never => write!(f, "never"),
             TypeCtor::FnDef(def) => {
                 let sig = f.db.fn_signature(def);
                 let name = def.name(f.db);
                 write!(f, "function {}", name)?;
                 write!(f, "(")?;
                 f.write_joined(sig.params(), ", ")?;
-                write!(f, ") -> {}", sig.ret().display(f.db))?;
+                write!(f, ") -> {}", sig.ret().display(f.db))
             }
         }
-        Ok(())
     }
 }
 
