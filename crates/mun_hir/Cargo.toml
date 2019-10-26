@@ -13,3 +13,7 @@ once_cell = "0.2"
 relative-path = "0.4.0"
 ena = "0.13"
 drop_bomb = "0.1.4"
+either = "1.5.3"
+
+[dev-dependencies]
+insta = "0.12.0"

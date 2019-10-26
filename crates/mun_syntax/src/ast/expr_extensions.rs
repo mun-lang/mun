@@ -1,5 +1,5 @@
 use super::{children, BinExpr};
-use crate::ast::{Literal, child_opt, AstChildren};
+use crate::ast::{child_opt, AstChildren, Literal};
 use crate::{
     ast, AstNode,
     SyntaxKind::{self, *},

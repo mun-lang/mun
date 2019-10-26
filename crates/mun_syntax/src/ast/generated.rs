@@ -215,7 +215,8 @@ pub struct Expr {
 impl AstNode for Expr {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
-             | LITERAL | PREFIX_EXPR | PATH_EXPR | BIN_EXPR | PAREN_EXPR | CALL_EXPR | IF_EXPR | BLOCK_EXPR => true,
+            LITERAL | PREFIX_EXPR | PATH_EXPR | BIN_EXPR | PAREN_EXPR | CALL_EXPR | IF_EXPR
+            | BLOCK_EXPR => true,
             _ => false,
         }
     }
@@ -297,7 +298,6 @@ impl Expr {
         }
     }
 }
-
 
 impl Expr {}
 
@@ -478,7 +478,7 @@ pub struct ModuleItem {
 impl AstNode for ModuleItem {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
-             | FUNCTION_DEF => true,
+            FUNCTION_DEF => true,
             _ => false,
         }
     }
@@ -506,12 +506,13 @@ impl From<FunctionDef> for ModuleItem {
 impl ModuleItem {
     pub fn kind(&self) -> ModuleItemKind {
         match self.syntax.kind() {
-            FUNCTION_DEF => ModuleItemKind::FunctionDef(FunctionDef::cast(self.syntax.clone()).unwrap()),
+            FUNCTION_DEF => {
+                ModuleItemKind::FunctionDef(FunctionDef::cast(self.syntax.clone()).unwrap())
+            }
             _ => unreachable!(),
         }
     }
 }
-
 
 impl ModuleItem {}
 
@@ -673,7 +674,7 @@ pub struct Pat {
 impl AstNode for Pat {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
-             | BIND_PAT | PLACEHOLDER_PAT => true,
+            BIND_PAT | PLACEHOLDER_PAT => true,
             _ => false,
         }
     }
@@ -708,12 +709,13 @@ impl Pat {
     pub fn kind(&self) -> PatKind {
         match self.syntax.kind() {
             BIND_PAT => PatKind::BindPat(BindPat::cast(self.syntax.clone()).unwrap()),
-            PLACEHOLDER_PAT => PatKind::PlaceholderPat(PlaceholderPat::cast(self.syntax.clone()).unwrap()),
+            PLACEHOLDER_PAT => {
+                PatKind::PlaceholderPat(PlaceholderPat::cast(self.syntax.clone()).unwrap())
+            }
             _ => unreachable!(),
         }
     }
 }
-
 
 impl Pat {}
 
@@ -973,7 +975,7 @@ pub struct Stmt {
 impl AstNode for Stmt {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
-             | LET_STMT | EXPR_STMT => true,
+            LET_STMT | EXPR_STMT => true,
             _ => false,
         }
     }
@@ -1014,7 +1016,6 @@ impl Stmt {
     }
 }
 
-
 impl Stmt {}
 
 // TypeRef
@@ -1027,7 +1028,7 @@ pub struct TypeRef {
 impl AstNode for TypeRef {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
-             | PATH_TYPE => true,
+            PATH_TYPE => true,
             _ => false,
         }
     }
@@ -1061,7 +1062,6 @@ impl TypeRef {
     }
 }
 
-
 impl TypeRef {}
 
 // Visibility
@@ -1090,4 +1090,3 @@ impl AstNode for Visibility {
     }
 }
 impl Visibility {}
-

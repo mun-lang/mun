@@ -1,0 +1,11 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "fn test(a:int, b:float, c:bool): bool {\n    a;\n    b;\n    c\n}"
+---
+[8; 9) 'a': int
+[15; 16) 'b': float
+[24; 25) 'c': bool
+[38; 61) '{     ...   c }': bool
+[44; 45) 'a': int
+[51; 52) 'b': float
+[58; 59) 'c': bool
