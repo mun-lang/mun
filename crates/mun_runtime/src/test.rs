@@ -207,3 +207,31 @@ fn booleans() {
         false
     );
 }
+
+#[test]
+fn fibonacci() {
+    let compile_result = compile(
+        r#"
+    fn fibonacci(n:int):int {
+        if n <= 1 {
+            n
+        } else {
+            fibonacci(n-1) + fibonacci(n-2)
+        }
+    }
+    "#,
+    );
+    let mut runtime = compile_result.new_runtime();
+    assert_eq!(
+        MunRuntime::invoke_fn1::<i64, i64>(&mut runtime, "fibonacci", 5).unwrap(),
+        5
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn1::<i64, i64>(&mut runtime, "fibonacci", 11).unwrap(),
+        89
+    );
+    assert_eq!(
+        MunRuntime::invoke_fn1::<i64, i64>(&mut runtime, "fibonacci", 16).unwrap(),
+        987
+    );
+}
