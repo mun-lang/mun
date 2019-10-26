@@ -1,12 +1,10 @@
 use super::try_convert_any_to_basic;
 use crate::ir::dispatch_table::DispatchTable;
-use crate::values::{
-    BasicValueEnum, CallSiteValue, FloatValue, FunctionValue, InstructionOpcode, IntValue,
-};
+use crate::values::{BasicValueEnum, CallSiteValue, FloatValue, FunctionValue, IntValue};
 use crate::{IrDatabase, Module, OptimizationLevel};
 use inkwell::builder::Builder;
 use inkwell::passes::{PassManager, PassManagerBuilder};
-use inkwell::types::{AnyTypeEnum, BasicTypeEnum};
+use inkwell::types::AnyTypeEnum;
 use inkwell::{FloatPredicate, IntPredicate};
 use mun_hir::{
     self as hir, ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDisplay, InferenceResult,
@@ -145,7 +143,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
 
     fn gen_expr(&mut self, expr: ExprId) -> Option<inkwell::values::BasicValueEnum> {
         let body = self.body.clone();
-        let mut value = match &body[expr] {
+        let value = match &body[expr] {
             &Expr::Block {
                 ref statements,
                 tail,
@@ -192,22 +190,27 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 ref callee,
                 ref args,
             } => self.gen_call(*callee, &args).try_as_basic_value().left(),
+            Expr::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => self.gen_if(expr, *condition, *then_branch, *else_branch),
             _ => unreachable!("unimplemented expr type"),
         };
 
-        // Check expected type or perform implicit cast
-        value = value.map(|value| {
-            match (
-                value.get_type(),
-                try_convert_any_to_basic(self.db.type_ir(self.infer[expr].clone())),
-            ) {
-                (BasicTypeEnum::IntType(_), Some(target @ BasicTypeEnum::FloatType(_))) => self
-                    .builder
-                    .build_cast(InstructionOpcode::SIToFP, value, target, "implicit_cast"),
-                (a, Some(b)) if a == b => value,
-                _ => unreachable!("could not perform implicit cast"),
-            }
-        });
+        //        // Check expected type or perform implicit cast
+        //        value = value.map(|value| {
+        //            match (
+        //                value.get_type(),
+        //                try_convert_any_to_basic(self.db.type_ir(self.infer[expr].clone())),
+        //            ) {
+        //                (BasicTypeEnum::IntType(_), Some(target @ BasicTypeEnum::FloatType(_))) => self
+        //                    .builder
+        //                    .build_cast(InstructionOpcode::SIToFP, value, target, "implicit_cast"),
+        //                (a, Some(b)) if a == b => value,
+        //                _ => unreachable!("could not perform implicit cast"),
+        //            }
+        //        });
 
         value
     }
@@ -217,8 +220,8 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     fn new_alloca_builder(&self) -> Builder {
         let temp_builder = Builder::create();
         let block = self
-            .builder
-            .get_insert_block()
+            .fn_value
+            .get_first_basic_block()
             .expect("at this stage there must be a block");
         if let Some(first_instruction) = block.get_first_instruction() {
             temp_builder.position_before(&first_instruction);
@@ -349,7 +352,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                     .build_float_compare(predicate, lhs, rhs, name)
                     .into()
             }
-            _ => unreachable!(),
+            _ => unreachable!(format!("Operator {:?} is not implemented for float", op)),
         }
     }
 
@@ -365,8 +368,6 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             BinaryOp::ArithOp(ArithOp::Multiply) => {
                 self.builder.build_int_mul(lhs, rhs, "mul").into()
             }
-            //                BinaryOp::Remainder => Some(self.gen_remainder(lhs, rhs)),
-            //                BinaryOp::Power =>,
             //                BinaryOp::Assign,
             //                BinaryOp::AddAssign,
             //                BinaryOp::SubtractAssign,
@@ -399,7 +400,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                     .build_int_compare(predicate, lhs, rhs, name)
                     .into()
             }
-            _ => unreachable!(),
+            _ => unreachable!(format!("Operator {:?} is not implemented for integer", op)),
         }
     }
 
@@ -434,6 +435,75 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 .expect("missing function value for hir function");
             self.builder
                 .build_call(*llvm_function, &args, &function.name(self.db).to_string())
+        }
+    }
+
+    /// Generates IR for an if statement.
+    fn gen_if(
+        &mut self,
+        _expr: ExprId,
+        condition: ExprId,
+        then_branch: ExprId,
+        else_branch: Option<ExprId>,
+    ) -> Option<inkwell::values::BasicValueEnum> {
+        // Generate IR for the condition
+        let condition_ir = self
+            .gen_expr(condition)
+            .expect("condition must have a value")
+            .into_int_value();
+
+        // Generate the code blocks to branch to
+        let context = self.module.get_context();
+        let mut then_block = context.append_basic_block(&self.fn_value, "then");
+        let else_block_and_expr = match &else_branch {
+            Some(else_branch) => Some((
+                context.append_basic_block(&self.fn_value, "else"),
+                else_branch,
+            )),
+            None => None,
+        };
+        let merge_block = context.append_basic_block(&self.fn_value, "if_merge");
+
+        // Build the actual branching IR for the if statement
+        let else_block = else_block_and_expr
+            .as_ref()
+            .map(|e| &e.0)
+            .unwrap_or(&merge_block);
+        self.builder
+            .build_conditional_branch(condition_ir, &then_block, else_block);
+
+        // Fill the then block
+        self.builder.position_at_end(&then_block);
+        let then_block_ir = self.gen_expr(then_branch);
+        self.builder.build_unconditional_branch(&merge_block);
+        then_block = self.builder.get_insert_block().unwrap();
+
+        // Fill the else block, if it exists and get the result back
+        let else_ir_and_block = if let Some((else_block, else_branch)) = else_block_and_expr {
+            else_block.move_after(&then_block);
+            self.builder.position_at_end(&else_block);
+            let result_ir = self.gen_expr(*else_branch);
+            self.builder.build_unconditional_branch(&merge_block);
+            result_ir.map(|res| (res, self.builder.get_insert_block().unwrap()))
+        } else {
+            None
+        };
+
+        // Create merge block
+        merge_block.move_after(&self.builder.get_insert_block().unwrap());
+        self.builder.position_at_end(&merge_block);
+
+        // Construct phi block if a value was returned
+        if let Some(then_block_ir) = then_block_ir {
+            if let Some((else_block_ir, else_block)) = else_ir_and_block {
+                let phi = self.builder.build_phi(then_block_ir.get_type(), "iftmp");
+                phi.add_incoming(&[(&then_block_ir, &then_block), (&else_block_ir, &else_block)]);
+                Some(phi.as_basic_value())
+            } else {
+                Some(then_block_ir)
+            }
+        } else {
+            None
         }
     }
 }

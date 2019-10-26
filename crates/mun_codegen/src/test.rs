@@ -6,45 +6,6 @@ use mun_hir::SourceDatabase;
 use std::cell::RefCell;
 use std::sync::Arc;
 
-fn test_snapshot(text: &str) {
-    let text = text.trim().replace("\n    ", "\n");
-
-    let (db, file_id) = MockDatabase::with_single_file(&text);
-
-    let line_index: Arc<LineIndex> = db.line_index(file_id);
-    let messages = RefCell::new(Vec::new());
-    let mut sink = DiagnosticSink::new(|diag| {
-        let line_col = line_index.line_col(diag.highlight_range().start());
-        messages.borrow_mut().push(format!(
-            "error {}:{}: {}",
-            line_col.line + 1,
-            line_col.col + 1,
-            diag.message()
-        ));
-    });
-    if let Some(module) = Module::package_modules(&db)
-        .iter()
-        .find(|m| m.file_id() == file_id)
-    {
-        module.diagnostics(&db, &mut sink)
-    }
-    drop(sink);
-    let messages = messages.into_inner();
-
-    let name = if !messages.is_empty() {
-        messages.join("\n")
-    } else {
-        format!(
-            "{}",
-            db.module_ir(file_id)
-                .llvm_module
-                .print_to_string()
-                .to_string()
-        )
-    };
-    insta::assert_snapshot!(insta::_macro_support::AutoName, name, &text);
-}
-
 #[test]
 fn function() {
     test_snapshot(
@@ -184,4 +145,79 @@ fn equality_operands() {
     fn greater_equalf(a:float, b:float):bool    { a >= b }
     "#,
     );
+}
+
+#[test]
+fn if_statement() {
+    test_snapshot(
+        r#"
+    fn foo(a:int):int {
+        let b = if a > 3 {
+            let c = if a > 4 {
+                a+1
+            } else {
+                a+3
+            }
+            c
+        } else {
+            a-1
+        }
+        b
+    }
+    "#,
+    )
+}
+
+#[test]
+fn fibonacci() {
+    test_snapshot(
+        r#"
+    fn fibonacci(n:int):int {
+        if n <= 1 {
+            n
+        } else {
+            fibonacci(n-1) + fibonacci(n-2)
+        }
+    }
+    "#,
+    )
+}
+
+fn test_snapshot(text: &str) {
+    let text = text.trim().replace("\n    ", "\n");
+
+    let (db, file_id) = MockDatabase::with_single_file(&text);
+
+    let line_index: Arc<LineIndex> = db.line_index(file_id);
+    let messages = RefCell::new(Vec::new());
+    let mut sink = DiagnosticSink::new(|diag| {
+        let line_col = line_index.line_col(diag.highlight_range().start());
+        messages.borrow_mut().push(format!(
+            "error {}:{}: {}",
+            line_col.line + 1,
+            line_col.col + 1,
+            diag.message()
+        ));
+    });
+    if let Some(module) = Module::package_modules(&db)
+        .iter()
+        .find(|m| m.file_id() == file_id)
+    {
+        module.diagnostics(&db, &mut sink)
+    }
+    drop(sink);
+    let messages = messages.into_inner();
+
+    let name = if !messages.is_empty() {
+        messages.join("\n")
+    } else {
+        format!(
+            "{}",
+            db.module_ir(file_id)
+                .llvm_module
+                .print_to_string()
+                .to_string()
+        )
+    };
+    insta::assert_snapshot!(insta::_macro_support::AutoName, name, &text);
 }
