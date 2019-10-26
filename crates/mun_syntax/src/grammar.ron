@@ -64,13 +64,13 @@ Grammar(
         "in",
         // "local",     // We use let
         "nil",
-        //"not",        // We use !
-        "or",
+        // "not",        // We use !
+        // "or",
         "self",
         "super",
         // "repeat",    // Not supported
         "return",
-        "then",
+        // "then",      // Not supported
         "true",
         // "until",     // Not supported
         "while",
@@ -116,6 +116,9 @@ Grammar(
         "BIN_EXPR",
         "PAREN_EXPR",
         "CALL_EXPR",
+        "IF_EXPR",
+        "BLOCK_EXPR",
+        "CONDITION",
 
         "BIND_PAT",
         "PLACEHOLDER_PAT",
@@ -124,8 +127,6 @@ Grammar(
 
         "NAME",
         "NAME_REF",
-
-        "BLOCK",
 
         "PATH",
         "PATH_SEGMENT",
@@ -144,7 +145,7 @@ Grammar(
                 "VisibilityOwner",
                 "DocCommentsOwner",
             ],
-            options: [ "ParamList", ["body", "Block"], "RetType" ],
+            options: [ "ParamList", ["body", "BlockExpr"], "RetType" ],
         ),
         "RetType": (options: ["TypeRef"]),
         "ParamList": (
@@ -167,6 +168,10 @@ Grammar(
                 "TypeAscriptionOwner",
             ]
         ),
+        "Condition": (
+            options: [ "Pat", "Expr" ]
+        ),
+
         "ExprStmt": (
             options: [ ["expr", "Expr"] ]
         ),
@@ -183,6 +188,9 @@ Grammar(
             traits: ["ArgListOwner"],
             options: [ "Expr" ],
         ),
+        "IfExpr": (
+            options: [ "Condition" ]
+        ),
         "ArgList": (
             collections: [
                 ["args", "Expr"]
@@ -196,7 +204,9 @@ Grammar(
                 "PathExpr",
                 "BinExpr",
                 "ParenExpr",
-                "CallExpr"
+                "CallExpr",
+                "IfExpr",
+                "BlockExpr",
             ]
         ),
 
@@ -208,7 +218,7 @@ Grammar(
                 "PathType"
             ]
         ),
-        "Block": (
+        "BlockExpr": (
             options: [ "Expr" ],
             collections: [
                 ["statements", "Stmt"],

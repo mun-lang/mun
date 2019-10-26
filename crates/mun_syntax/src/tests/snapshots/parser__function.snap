@@ -16,7 +16,7 @@ SOURCE_FILE@[0; 141)
       L_PAREN@[68; 69) "("
       R_PAREN@[69; 70) ")"
     WHITESPACE@[70; 71) " "
-    BLOCK@[71; 73)
+    BLOCK_EXPR@[71; 73)
       L_CURLY@[71; 72) "{"
       R_CURLY@[72; 73) "}"
   FUNCTION_DEF@[73; 95)
@@ -39,7 +39,7 @@ SOURCE_FILE@[0; 141)
                 IDENT@[85; 91) "number"
       R_PAREN@[91; 92) ")"
     WHITESPACE@[92; 93) " "
-    BLOCK@[93; 95)
+    BLOCK_EXPR@[93; 95)
       L_CURLY@[93; 94) "{"
       R_CURLY@[94; 95) "}"
   FUNCTION_DEF@[95; 112)
@@ -55,7 +55,7 @@ SOURCE_FILE@[0; 141)
       L_PAREN@[107; 108) "("
       R_PAREN@[108; 109) ")"
     WHITESPACE@[109; 110) " "
-    BLOCK@[110; 112)
+    BLOCK_EXPR@[110; 112)
       L_CURLY@[110; 111) "{"
       R_CURLY@[111; 112) "}"
   FUNCTION_DEF@[112; 141)
@@ -85,7 +85,7 @@ SOURCE_FILE@[0; 141)
             NAME_REF@[132; 138)
               IDENT@[132; 138) "number"
     WHITESPACE@[138; 139) " "
-    BLOCK@[139; 141)
+    BLOCK_EXPR@[139; 141)
       L_CURLY@[139; 140) "{"
       R_CURLY@[140; 141) "}"
 
