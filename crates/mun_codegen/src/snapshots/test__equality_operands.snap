@@ -1,0 +1,79 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn equals(a:int, b:int):bool                { a == b }\nfn not_equals(a:int, b:int):bool            { a != b }\nfn less(a:int, b:int):bool                  { a < b }\nfn less_equal(a:int, b:int):bool            { a <= b }\nfn greater(a:int, b:int):bool               { a > b }\nfn greater_equal(a:int, b:int):bool         { a >= b }\nfn equalsf(a:float, b:float):bool           { a == b }\nfn not_equalsf(a:float, b:float):bool       { a != b }\nfn lessf(a:float, b:float):bool             { a < b }\nfn less_equalf(a:float, b:float):bool       { a <= b }\nfn greaterf(a:float, b:float):bool          { a > b }\nfn greater_equalf(a:float, b:float):bool    { a >= b }"
+---
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+define i1 @equals(i64 %a, i64 %b) {
+body:
+  %eq = icmp eq i64 %a, %b
+  ret i1 %eq
+}
+
+define i1 @not_equals(i64 %a, i64 %b) {
+body:
+  %neq = icmp ne i64 %a, %b
+  ret i1 %neq
+}
+
+define i1 @less(i64 %a, i64 %b) {
+body:
+  %less = icmp slt i64 %a, %b
+  ret i1 %less
+}
+
+define i1 @less_equal(i64 %a, i64 %b) {
+body:
+  %lesseq = icmp sle i64 %a, %b
+  ret i1 %lesseq
+}
+
+define i1 @greater(i64 %a, i64 %b) {
+body:
+  %greater = icmp sgt i64 %a, %b
+  ret i1 %greater
+}
+
+define i1 @greater_equal(i64 %a, i64 %b) {
+body:
+  %greatereq = icmp sge i64 %a, %b
+  ret i1 %greatereq
+}
+
+define i1 @equalsf(double %a, double %b) {
+body:
+  %eq = fcmp oeq double %a, %b
+  ret i1 %eq
+}
+
+define i1 @not_equalsf(double %a, double %b) {
+body:
+  %neq = fcmp one double %a, %b
+  ret i1 %neq
+}
+
+define i1 @lessf(double %a, double %b) {
+body:
+  %less = fcmp olt double %a, %b
+  ret i1 %less
+}
+
+define i1 @less_equalf(double %a, double %b) {
+body:
+  %lesseq = fcmp ole double %a, %b
+  ret i1 %lesseq
+}
+
+define i1 @greaterf(double %a, double %b) {
+body:
+  %greater = fcmp ogt double %a, %b
+  ret i1 %greater
+}
+
+define i1 @greater_equalf(double %a, double %b) {
+body:
+  %greatereq = fcmp oge double %a, %b
+  ret i1 %greatereq
+}
+

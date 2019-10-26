@@ -37,6 +37,6 @@ fn token_set_works_for_tokens() {
     use crate::SyntaxKind::*;
     let ts = token_set![EOF, EQ];
     assert!(ts.contains(EOF));
-    assert!(ts.contains(EQ));
+    assert!(ts.contains(T![=]));
     assert!(!ts.contains(PLUS));
 }

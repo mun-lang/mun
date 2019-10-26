@@ -6,8 +6,8 @@ pub(super) fn binary_op_rhs_expectation(_op: BinaryOp, lhs_ty: Ty) -> Ty {
 
 pub(super) fn binary_op_return_ty(op: BinaryOp, rhs_ty: Ty) -> Ty {
     match op {
-        BinaryOp::ArithOp(_) | BinaryOp::CmpOp(_) => rhs_ty,
-        BinaryOp::LogicOp(_) => Ty::simple(TypeCtor::Bool),
+        BinaryOp::ArithOp(_) => rhs_ty,
+        BinaryOp::CmpOp(_) | BinaryOp::LogicOp(_) => Ty::simple(TypeCtor::Bool),
         BinaryOp::Assignment => Ty::Empty,
     }
 }

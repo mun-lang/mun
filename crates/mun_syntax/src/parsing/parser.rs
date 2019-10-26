@@ -12,17 +12,15 @@ use std::cell::Cell;
 /// events of the form 'start expression, consume number literal, finish espression'. See `Event`
 /// docs for more info.
 pub(crate) struct Parser<'t> {
-    token_source: &'t dyn TokenSource,
-    token_pos: usize,
+    token_source: &'t mut dyn TokenSource,
     events: Vec<Event>,
     steps: Cell<u32>,
 }
 
 impl<'t> Parser<'t> {
-    pub(super) fn new(token_source: &'t dyn TokenSource) -> Parser<'t> {
+    pub(super) fn new(token_source: &'t mut dyn TokenSource) -> Parser<'t> {
         Parser {
             token_source,
-            token_pos: 0,
             events: Vec::new(),
             steps: Cell::new(0),
         }
@@ -38,52 +36,77 @@ impl<'t> Parser<'t> {
         self.nth(0)
     }
 
-    /// Returns the kind of the current two tokens, if they are not separated by trivia.
-    pub(crate) fn current2(&self) -> Option<(SyntaxKind, SyntaxKind)> {
-        let c1 = self.nth(0);
-        let c2 = self.nth(1);
-
-        if self.token_source.is_token_joint_to_next(self.token_pos) {
-            Some((c1, c2))
-        } else {
-            None
-        }
-    }
-
-    /// Lookahead operation: returns the kind of the next nth token.
+    /// Lookahead operation: returns the kind of the next nth
+    /// token.
     pub(crate) fn nth(&self, n: usize) -> SyntaxKind {
+        assert!(n <= 3);
+
         let steps = self.steps.get();
-        assert!(steps <= 10_000, "the parser seems stuck");
+        assert!(steps <= 10_000_000, "the parser seems stuck");
         self.steps.set(steps + 1);
 
-        let mut i = 0;
-        let mut count = 0;
-        loop {
-            let mut kind = self.token_source.token_kind(self.token_pos + i);
-            if let Some((composited, step)) = self.is_composite(kind, i) {
-                kind = composited;
-                i += step;
-            } else {
-                i += 1;
-            }
+        self.token_source.lookahead_nth(n).kind
+    }
 
-            match kind {
-                EOF => return EOF,
-                _ if count == n => return kind,
-                _ => count += 1,
-            }
+    // Checks if the current token is `kind`.
+    pub(crate) fn at(&self, kind: SyntaxKind) -> bool {
+        self.nth_at(0, kind)
+    }
+
+    pub(crate) fn nth_at(&self, n: usize, kind: SyntaxKind) -> bool {
+        match kind {
+            T![-=] => self.at_composite2(n, T![-], T![=]),
+            //T![->] => self.at_composite2(n, T![-], T![>]),
+            T![::] => self.at_composite2(n, T![:], T![:]),
+            T![!=] => self.at_composite2(n, T![!], T![=]),
+            T![..] => self.at_composite2(n, T![.], T![.]),
+            T![*=] => self.at_composite2(n, T![*], T![=]),
+            T![/=] => self.at_composite2(n, T![/], T![=]),
+            //T![&&] => self.at_composite2(n, T![&], T![&]),
+            //T![&=] => self.at_composite2(n, T![&], T![=]),
+            //T![%=] => self.at_composite2(n, T![%], T![=]),
+            //T![^=] => self.at_composite2(n, T![^], T![=]),
+            T![+=] => self.at_composite2(n, T![+], T![=]),
+            //T![<<] => self.at_composite2(n, T![<], T![<]),
+            T![<=] => self.at_composite2(n, T![<], T![=]),
+            T![==] => self.at_composite2(n, T![=], T![=]),
+            //T![=>] => self.at_composite2(n, T![=], T![>]),
+            T![>=] => self.at_composite2(n, T![>], T![=]),
+            //T![>>] => self.at_composite2(n, T![>], T![>]),
+            //T![|=] => self.at_composite2(n, T![|], T![=]),
+            //T![||] => self.at_composite2(n, T![|], T![|]),
+            T![...] => self.at_composite3(n, T![.], T![.], T![.]),
+            //T![..=] => self.at_composite3(n, T![.], T![.], T![=]),
+            //T![<<=] => self.at_composite3(n, T![<], T![<], T![=]),
+            //T![>>=] => self.at_composite3(n, T![>], T![>], T![=]),
+            _ => self.token_source.lookahead_nth(n).kind == kind,
         }
     }
 
-    /// Checks if the current token is `kind`
-    pub(crate) fn matches(&self, kind: SyntaxKind) -> bool {
-        self.current() == kind
+    fn at_composite2(&self, n: usize, k1: SyntaxKind, k2: SyntaxKind) -> bool {
+        let t1 = self.token_source.lookahead_nth(n + 0);
+        let t2 = self.token_source.lookahead_nth(n + 1);
+        t1.kind == k1 && t1.is_jointed_to_next && t2.kind == k2
     }
 
-    /// Checks if the current tokens is in `kinds`
-    pub(crate) fn matches_any(&self, kinds: TokenSet) -> bool {
+    fn at_composite3(&self, n: usize, k1: SyntaxKind, k2: SyntaxKind, k3: SyntaxKind) -> bool {
+        let t1 = self.token_source.lookahead_nth(n + 0);
+        let t2 = self.token_source.lookahead_nth(n + 1);
+        let t3 = self.token_source.lookahead_nth(n + 2);
+        (t1.kind == k1 && t1.is_jointed_to_next)
+            && (t2.kind == k2 && t2.is_jointed_to_next)
+            && t3.kind == k3
+    }
+
+    /// Checks if the current token is in `kinds`.
+    pub(crate) fn at_ts(&self, kinds: TokenSet) -> bool {
         kinds.contains(self.current())
     }
+
+    //    /// Checks if the current token is contextual keyword with text `t`.
+    //    pub(crate) fn at_contextual_kw(&self, kw: &str) -> bool {
+    //        self.token_source.is_keyword(kw)
+    //    }
 
     /// Starts a new node in the syntax tree. All nodes and tokens consumed between the `start` and
     /// the corresponding `Marker::complete` belong to the same node.
@@ -93,57 +116,24 @@ impl<'t> Parser<'t> {
         Marker::new(pos)
     }
 
-    pub(crate) fn bump(&mut self) {
+    /// Consume the next token if `kind` matches.
+    pub(crate) fn bump(&mut self, kind: SyntaxKind) {
+        assert!(self.eat(kind), "kind != {:?}", kind);
+    }
+
+    /// Advances the parser by one token with composite puncts handled
+    pub(crate) fn bump_any(&mut self) {
         let kind = self.nth(0);
         if kind == EOF {
             return;
         }
-
-        use SyntaxKind::*;
-        match kind {
-            DOTDOTDOT => {
-                self.bump_compound(kind, 3);
-            }
-            DOTDOT | COLONCOLON | EQEQ => {
-                self.bump_compound(kind, 2);
-            }
-            _ => {
-                self.do_bump(kind, 1);
-            }
-        }
-    }
-
-    pub fn is_composite(&self, kind: SyntaxKind, n: usize) -> Option<(SyntaxKind, usize)> {
-        let joint1 = self.token_source.is_token_joint_to_next(self.token_pos + n);
-        let kind1 = self.token_source.token_kind(self.token_pos + n + 1);
-        let joint2 = self
-            .token_source
-            .is_token_joint_to_next(self.token_pos + n + 1);
-        let kind2 = self.token_source.token_kind(self.token_pos + n + 2);
-
-        use SyntaxKind::*;
-
-        // This does not match all the multi character symbols because they are still context
-        // sensitive (for example `+=` and `..=`).
-        match kind {
-            DOT if joint1 && kind1 == DOT && joint2 && kind2 == DOT => Some((DOTDOTDOT, 3)),
-            DOT if joint1 && kind1 == DOT => Some((DOTDOT, 2)),
-
-            COLON if joint1 && kind1 == COLON => Some((COLONCOLON, 2)),
-            EQ if joint2 && kind1 == EQ => Some((EQEQ, 2)),
-
-            _ => None,
-        }
-    }
-
-    /// Advances the parser by `n` tokens, remapping its kind. This is useful to create compound
-    /// tokens from parts. For example an `::` is two consecutive remapped `:` tokens.
-    pub(crate) fn bump_compound(&mut self, kind: SyntaxKind, n: u8) {
-        self.do_bump(kind, n);
+        self.do_bump(kind, 1)
     }
 
     fn do_bump(&mut self, kind: SyntaxKind, n_raw_tokens: u8) {
-        self.token_pos += n_raw_tokens as usize;
+        for _ in 0..n_raw_tokens {
+            self.token_source.bump();
+        }
         self.push_event(Event::Token { kind, n_raw_tokens });
     }
 
@@ -160,12 +150,12 @@ impl<'t> Parser<'t> {
 
     /// Create an error node and consume the next token.
     pub(crate) fn error_recover(&mut self, message: &str, recovery: TokenSet) {
-        if self.matches(L_CURLY) || self.matches(R_CURLY) || self.matches_any(recovery) {
+        if self.at(T!['{']) || self.at(T!['{']) || self.at_ts(recovery) {
             self.error(message);
         } else {
             let m = self.start();
             self.error(message);
-            self.bump();
+            self.bump_any();
             m.complete(self, ERROR);
         }
     }
@@ -176,12 +166,41 @@ impl<'t> Parser<'t> {
 
     /// Consume the next token if `kind` matches.
     pub(crate) fn eat(&mut self, kind: SyntaxKind) -> bool {
-        if self.matches(kind) {
-            self.bump();
-            true
-        } else {
-            false
+        if !self.at(kind) {
+            return false;
         }
+        let n_raw_tokens = match kind {
+            T![-=]
+            //| T![->]
+            | T![::]
+            | T![!=]
+            | T![..]
+            | T![*=]
+            | T![/=]
+            //| T![&&]
+            //| T![&=]
+            //| T![%=]
+            //| T![^=]
+            | T![+=]
+            //| T![<<]
+            | T![<=]
+            | T![==]
+            //| T![=>]
+            | T![>=]
+            //| T![>>]
+            //| T![|=]
+            //| T![||]
+            => 2,
+
+            T![...]
+            //| T![..=]
+            //| T![<<=]
+            //| T![>>=]
+            => 3,
+            _ => 1,
+        };
+        self.do_bump(kind, n_raw_tokens);
+        true
     }
 
     /// Consume the next token if it is `kind` or emit an error otherwise.

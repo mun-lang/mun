@@ -4,7 +4,7 @@ pub(super) const PATH_FIRST: TokenSet = token_set![IDENT, SELF_KW, SUPER_KW, COL
 
 pub(super) fn is_path_start(p: &Parser) -> bool {
     match p.current() {
-        IDENT | COLONCOLON => true,
+        IDENT | T![::] => true,
         _ => false,
     }
 }
@@ -28,12 +28,12 @@ fn path(p: &mut Parser, mode: Mode) {
     let mut qualifier = path.complete(p, PATH);
     loop {
         let import_tree = match p.nth(1) {
-            STAR | L_CURLY => true,
+            T![*] | T!['{'] => true,
             _ => false,
         };
-        if p.matches(COLONCOLON) && !import_tree {
+        if p.at(T![::]) && !import_tree {
             let path = qualifier.precede(p);
-            p.bump();
+            p.bump(T![::]);
             path_segment(p, mode, false);
             let path = path.complete(p, PATH);
             qualifier = path;
@@ -46,13 +46,13 @@ fn path(p: &mut Parser, mode: Mode) {
 fn path_segment(p: &mut Parser, _mode: Mode, first: bool) {
     let m = p.start();
     if first {
-        p.eat(COLONCOLON);
+        p.eat(T![::]);
     }
     match p.current() {
         IDENT => {
             name_ref(p);
         }
-        SELF_KW | SUPER_KW => p.bump(),
+        T![self] | T![super] => p.bump_any(),
         _ => p.error_recover(
             "expected identifier",
             declarations::DECLARATION_RECOVERY_SET,

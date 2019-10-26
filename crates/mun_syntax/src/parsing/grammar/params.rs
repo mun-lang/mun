@@ -5,20 +5,20 @@ pub(super) fn param_list(p: &mut Parser) {
 }
 
 fn list(p: &mut Parser) {
-    assert!(p.matches(L_PAREN));
+    assert!(p.at(T!['(']));
     let m = p.start();
-    p.bump();
-    while !p.matches(EOF) && !p.matches(R_PAREN) {
-        if !p.matches_any(VALUE_PARAMETER_FIRST) {
+    p.bump(T!['(']);
+    while !p.at(EOF) && !p.at(T![')']) {
+        if !p.at_ts(VALUE_PARAMETER_FIRST) {
             p.error("expected value parameter");
             break;
         }
         param(p);
-        if !p.matches(R_PAREN) {
-            p.expect(COMMA);
+        if !p.at(T![')']) {
+            p.expect(T![,]);
         }
     }
-    p.expect(R_PAREN);
+    p.expect(T![')']);
     m.complete(p, PARAM_LIST);
 }
 

@@ -438,15 +438,28 @@ where
                         | op @ BinOp::Subtract
                         | op @ BinOp::Divide
                         | op @ BinOp::Multiply
-                        | op @ BinOp::Remainder
-                        | op @ BinOp::Power => {
+                        | op @ BinOp::Equals
+                        | op @ BinOp::NotEquals
+                        | op @ BinOp::Less
+                        | op @ BinOp::LessEqual
+                        | op @ BinOp::Greater
+                        | op @ BinOp::GreatEqual
+                        //| op @ BinOp::Remainder
+                        //| op @ BinOp::Power
+                        => {
                             let op = match op {
                                 BinOp::Add => BinaryOp::ArithOp(ArithOp::Add),
                                 BinOp::Subtract => BinaryOp::ArithOp(ArithOp::Subtract),
                                 BinOp::Divide => BinaryOp::ArithOp(ArithOp::Divide),
                                 BinOp::Multiply => BinaryOp::ArithOp(ArithOp::Multiply),
-                                BinOp::Remainder => BinaryOp::ArithOp(ArithOp::Remainder),
-                                BinOp::Power => BinaryOp::ArithOp(ArithOp::Power),
+                                BinOp::Equals => BinaryOp::CmpOp(CmpOp::Eq { negated: false }),
+                                BinOp::NotEquals => BinaryOp::CmpOp(CmpOp::Eq { negated: true }),
+                                BinOp::Less => BinaryOp::CmpOp(CmpOp::Ord { ordering: Ordering::Less, strict: true } ),
+                                BinOp::LessEqual => BinaryOp::CmpOp(CmpOp::Ord { ordering: Ordering::Less, strict: false } ),
+                                BinOp::Greater => BinaryOp::CmpOp(CmpOp::Ord { ordering: Ordering::Greater, strict: true } ),
+                                BinOp::GreatEqual => BinaryOp::CmpOp(CmpOp::Ord { ordering: Ordering::Greater, strict: false } ),
+                                //BinOp::Remainder => BinaryOp::ArithOp(ArithOp::Remainder),
+                                //BinOp::Power => BinaryOp::ArithOp(ArithOp::Power),
                                 _ => unreachable!(),
                             };
                             let lhs = self.collect_expr_opt(e.lhs());
@@ -476,15 +489,16 @@ where
                         | op @ BinOp::SubtractAssign
                         | op @ BinOp::DivideAssign
                         | op @ BinOp::MultiplyAssign
-                        | op @ BinOp::RemainderAssign
-                        | op @ BinOp::PowerAssign => {
+                        //| op @ BinOp::RemainderAssign
+                        //| op @ BinOp::PowerAssign
+                        => {
                             let op = match op {
                                 BinOp::AddAssign => BinaryOp::ArithOp(ArithOp::Add),
                                 BinOp::SubtractAssign => BinaryOp::ArithOp(ArithOp::Subtract),
                                 BinOp::DivideAssign => BinaryOp::ArithOp(ArithOp::Divide),
                                 BinOp::MultiplyAssign => BinaryOp::ArithOp(ArithOp::Multiply),
-                                BinOp::RemainderAssign => BinaryOp::ArithOp(ArithOp::Remainder),
-                                BinOp::PowerAssign => BinaryOp::ArithOp(ArithOp::Power),
+                                //BinOp::RemainderAssign => BinaryOp::ArithOp(ArithOp::Remainder),
+                                //BinOp::PowerAssign => BinaryOp::ArithOp(ArithOp::Power),
                                 _ => unreachable!(),
                             };
                             let lhs = self.collect_expr_opt(e.lhs());

@@ -1,5 +1,0 @@
-fn foo() {
-    let a;
-    let b:i32;
-    let c:string;
-}

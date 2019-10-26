@@ -1,7 +1,7 @@
 use crate::ast::NameOwner;
 use crate::{
     ast::{self, AstNode},
-    SyntaxKind, T,
+    T,
 };
 use crate::{SmolStr, SyntaxNode};
 use text_unit::TextRange;
@@ -23,7 +23,7 @@ impl ast::FunctionDef {
         let fn_kw = self
             .syntax()
             .children_with_tokens()
-            .find(|p| p.kind() == SyntaxKind::FN_KW)
+            .find(|p| p.kind() == T![fn])
             .map(|kw| kw.text_range());
         let name = self.name().map(|n| n.syntax.text_range());
         let param_list = self.param_list().map(|p| p.syntax.text_range());

@@ -14,7 +14,9 @@ md5="0.6.1"
 array-init="0.1.0"
 tempfile = "3"
 lazy_static = "1.4.0"
-test_utils = { path="../test_utils"}
+
+[dev-dependencies]
+insta = "0.12.0"
 
 [build-dependencies]
 lazy_static = "1.4.0"

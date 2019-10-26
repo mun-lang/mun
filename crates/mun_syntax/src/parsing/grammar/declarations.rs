@@ -4,7 +4,7 @@ use crate::T;
 pub(super) const DECLARATION_RECOVERY_SET: TokenSet = token_set![FN_KW, EXPORT_KW];
 
 pub(super) fn mod_contents(p: &mut Parser) {
-    while !p.matches(EOF) {
+    while !p.at(EOF) {
         declaration(p);
     }
 }
@@ -17,14 +17,14 @@ pub(super) fn declaration(p: &mut Parser) {
     };
 
     m.abandon(p);
-    if p.matches(L_CURLY) {
+    if p.at(T!['{']) {
         error_block(p, "expected a declaration")
-    } else if p.matches(R_CURLY) {
+    } else if p.at(T!['{']) {
         let e = p.start();
         p.error("unmatched }");
-        p.bump();
+        p.bump(T!['{']);
         e.complete(p, ERROR);
-    } else if !p.matches(EOF) {
+    } else if !p.at(EOF) {
         p.error_and_bump("expected a declaration");
     } else {
         p.error("expected a declaration");
@@ -35,7 +35,7 @@ pub(super) fn maybe_declaration(p: &mut Parser, m: Marker) -> Result<(), Marker>
     opt_visibility(p);
 
     match p.current() {
-        FN_KW => {
+        T![fn] => {
             fn_def(p);
             m.complete(p, FUNCTION_DEF);
         }
@@ -45,12 +45,12 @@ pub(super) fn maybe_declaration(p: &mut Parser, m: Marker) -> Result<(), Marker>
 }
 
 pub(super) fn fn_def(p: &mut Parser) {
-    assert!(p.matches(FN_KW));
-    p.bump();
+    assert!(p.at(T![fn]));
+    p.bump(T![fn]);
 
     name_recovery(p, DECLARATION_RECOVERY_SET.union(token_set![L_PAREN]));
 
-    if p.matches(L_PAREN) {
+    if p.at(T!['(']) {
         params::param_list(p);
     } else {
         p.error("expected function arguments")
@@ -62,9 +62,9 @@ pub(super) fn fn_def(p: &mut Parser) {
 }
 
 fn opt_fn_ret_type(p: &mut Parser) -> bool {
-    if p.matches(T![:]) {
+    if p.at(T![:]) {
         let m = p.start();
-        p.bump();
+        p.bump(T![:]);
         types::type_(p);
         m.complete(p, RET_TYPE);
         true

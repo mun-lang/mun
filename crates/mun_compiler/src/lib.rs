@@ -241,6 +241,7 @@ pub fn main(options: &CompilerOptions) -> Result<Option<PathBuf>, failure::Error
     }
 
     let diagnostics = diagnostics(&db, file_id);
+    dbg!(&diagnostics);
     if !diagnostics.is_empty() {
         let mut writer = StandardStream::stderr(ColorChoice::Auto);
         for diagnostic in diagnostics {

@@ -1,4 +1,0 @@
-fn main(a:int):int {
-  let b = a+1
-  b
-}

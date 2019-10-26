@@ -7,9 +7,10 @@ use crate::{IrDatabase, Module, OptimizationLevel};
 use inkwell::builder::Builder;
 use inkwell::passes::{PassManager, PassManagerBuilder};
 use inkwell::types::{AnyTypeEnum, BasicTypeEnum};
+use inkwell::{FloatPredicate, IntPredicate};
 use mun_hir::{
-    self as hir, ArithOp, BinaryOp, Body, Expr, ExprId, HirDisplay, InferenceResult, Literal, Pat,
-    PatId, Path, Resolution, Resolver, Statement, TypeCtor,
+    self as hir, ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDisplay, InferenceResult,
+    Literal, Ordering, Pat, PatId, Path, Resolution, Resolver, Statement, TypeCtor,
 };
 use std::collections::HashMap;
 use std::mem;
@@ -323,6 +324,31 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             //                BinaryOp::MultiplyAssign,
             //                BinaryOp::RemainderAssign,
             //                BinaryOp::PowerAssign,
+            BinaryOp::CmpOp(op) => {
+                let (name, predicate) = match op {
+                    CmpOp::Eq { negated: false } => ("eq", FloatPredicate::OEQ),
+                    CmpOp::Eq { negated: true } => ("neq", FloatPredicate::ONE),
+                    CmpOp::Ord {
+                        ordering: Ordering::Less,
+                        strict: false,
+                    } => ("lesseq", FloatPredicate::OLE),
+                    CmpOp::Ord {
+                        ordering: Ordering::Less,
+                        strict: true,
+                    } => ("less", FloatPredicate::OLT),
+                    CmpOp::Ord {
+                        ordering: Ordering::Greater,
+                        strict: false,
+                    } => ("greatereq", FloatPredicate::OGE),
+                    CmpOp::Ord {
+                        ordering: Ordering::Greater,
+                        strict: true,
+                    } => ("greater", FloatPredicate::OGT),
+                };
+                self.builder
+                    .build_float_compare(predicate, lhs, rhs, name)
+                    .into()
+            }
             _ => unreachable!(),
         }
     }
@@ -348,6 +374,31 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             //                BinaryOp::MultiplyAssign,
             //                BinaryOp::RemainderAssign,
             //                BinaryOp::PowerAssign,
+            BinaryOp::CmpOp(op) => {
+                let (name, predicate) = match op {
+                    CmpOp::Eq { negated: false } => ("eq", IntPredicate::EQ),
+                    CmpOp::Eq { negated: true } => ("neq", IntPredicate::NE),
+                    CmpOp::Ord {
+                        ordering: Ordering::Less,
+                        strict: false,
+                    } => ("lesseq", IntPredicate::SLE),
+                    CmpOp::Ord {
+                        ordering: Ordering::Less,
+                        strict: true,
+                    } => ("less", IntPredicate::SLT),
+                    CmpOp::Ord {
+                        ordering: Ordering::Greater,
+                        strict: false,
+                    } => ("greatereq", IntPredicate::SGE),
+                    CmpOp::Ord {
+                        ordering: Ordering::Greater,
+                        strict: true,
+                    } => ("greater", IntPredicate::SGT),
+                };
+                self.builder
+                    .build_int_compare(predicate, lhs, rhs, name)
+                    .into()
+            }
             _ => unreachable!(),
         }
     }

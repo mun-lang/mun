@@ -1,8 +1,0 @@
-; ModuleID = 'main.mun'
-source_filename = "main.mun"
-
-define i64 @main(i64 %a) {
-body:
-  %add = add i64 %a, 1
-  ret i64 %add
-}

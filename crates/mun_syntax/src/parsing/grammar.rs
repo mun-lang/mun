@@ -30,9 +30,9 @@ pub(crate) fn root(p: &mut Parser) {
 //}
 
 fn name_recovery(p: &mut Parser, recovery: TokenSet) {
-    if p.matches(IDENT) {
+    if p.at(IDENT) {
         let m = p.start();
-        p.bump();
+        p.bump(IDENT);
         m.complete(p, NAME);
     } else {
         p.error_recover("expected a name", recovery)
@@ -44,9 +44,9 @@ fn name(p: &mut Parser) {
 }
 
 fn name_ref(p: &mut Parser) {
-    if p.matches(IDENT) {
+    if p.at(IDENT) {
         let m = p.start();
-        p.bump();
+        p.bump(IDENT);
         m.complete(p, NAME_REF);
     } else {
         p.error_and_bump("expected identifier");
@@ -54,9 +54,9 @@ fn name_ref(p: &mut Parser) {
 }
 
 fn opt_visibility(p: &mut Parser) -> bool {
-    if p.matches(EXPORT_KW) {
+    if p.at(EXPORT_KW) {
         let m = p.start();
-        p.bump();
+        p.bump(EXPORT_KW);
         m.complete(p, VISIBILITY);
         true
     } else {
@@ -65,11 +65,11 @@ fn opt_visibility(p: &mut Parser) -> bool {
 }
 
 fn error_block(p: &mut Parser, message: &str) {
-    assert!(p.matches(L_CURLY));
+    assert!(p.at(T!['{']));
     let m = p.start();
     p.error(message);
-    p.bump();
+    p.bump(T!['{']);
     expressions::expr_block_contents(p);
-    p.eat(R_CURLY);
+    p.eat(T!['{']);
     m.complete(p, ERROR);
 }
