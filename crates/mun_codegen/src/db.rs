@@ -1,3 +1,5 @@
+#![allow(clippy::type_repetition_in_bounds)]
+
 use mun_hir as hir;
 
 use crate::{code_gen::symbols::TypeInfo, ir::module::ModuleIR, Context};

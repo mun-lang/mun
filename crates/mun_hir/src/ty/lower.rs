@@ -17,7 +17,7 @@ impl Ty {
         db: &impl HirDatabase,
         resolver: &Resolver,
         type_ref_map: &TypeRefMap,
-        type_ref: &TypeRefId,
+        type_ref: TypeRefId,
     ) -> LowerResult {
         let mut diagnostics = Vec::new();
         let ty =
@@ -30,9 +30,9 @@ impl Ty {
         resolver: &Resolver,
         type_ref_map: &TypeRefMap,
         diagnostics: &mut Vec<LowerDiagnostic>,
-        type_ref: &TypeRefId,
+        type_ref: TypeRefId,
     ) -> Ty {
-        let res = match &type_ref_map[*type_ref] {
+        let res = match &type_ref_map[type_ref] {
             TypeRef::Path(path) => Ty::from_hir_path(db, resolver, path),
             TypeRef::Error => Some(Ty::Unknown),
             TypeRef::Empty => Some(Ty::Empty),
@@ -41,9 +41,7 @@ impl Ty {
         if let Some(ty) = res {
             ty
         } else {
-            diagnostics.push(LowerDiagnostic::UnresolvedType {
-                id: type_ref.clone(),
-            });
+            diagnostics.push(LowerDiagnostic::UnresolvedType { id: type_ref });
             Ty::Unknown
         }
     }
@@ -139,9 +137,9 @@ pub fn fn_sig_for_fn(db: &impl HirDatabase, def: Function) -> FnSig {
     let params = data
         .params()
         .iter()
-        .map(|tr| Ty::from_hir(db, &resolver, data.type_ref_map(), tr).ty)
+        .map(|tr| Ty::from_hir(db, &resolver, data.type_ref_map(), *tr).ty)
         .collect::<Vec<_>>();
-    let ret = Ty::from_hir(db, &resolver, data.type_ref_map(), data.ret_type()).ty;
+    let ret = Ty::from_hir(db, &resolver, data.type_ref_map(), *data.ret_type()).ty;
     FnSig::from_params_and_return(params, ret)
 }
 

@@ -1,3 +1,5 @@
+#![allow(clippy::type_repetition_in_bounds)]
+
 use crate::name_resolution::Namespace;
 use crate::ty::{FnSig, Ty, TypableDef};
 use crate::{

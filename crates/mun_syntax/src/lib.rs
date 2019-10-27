@@ -69,7 +69,7 @@ impl<T> Parse<T> {
 }
 
 impl<T: AstNode> Parse<T> {
-    pub fn to_syntax(self) -> Parse<SyntaxNode> {
+    pub fn into_syntax(self) -> Parse<SyntaxNode> {
         Parse {
             green: self.green,
             errors: self.errors,

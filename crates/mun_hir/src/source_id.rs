@@ -33,11 +33,11 @@ impl<N: AstNode> Hash for AstId<N> {
 }
 
 impl<N: AstNode> AstId<N> {
-    pub(crate) fn file_id(&self) -> FileId {
+    pub(crate) fn file_id(self) -> FileId {
         self.file_id
     }
 
-    pub(crate) fn to_node(&self, db: &impl DefDatabase) -> N {
+    pub(crate) fn to_node(self, db: &impl DefDatabase) -> N {
         let syntax_node = db.ast_id_to_node(self.file_id, self.file_ast_id.raw);
         N::cast(syntax_node).unwrap()
     }

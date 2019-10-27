@@ -21,7 +21,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
 
     fn coerce_inner(&mut self, from_ty: Ty, to_ty: &Ty) -> bool {
         match (&from_ty, to_ty) {
-            (ty_app!(TypeCtor::Never), _) => return true,
+            (ty_app!(TypeCtor::Never), ..) => return true,
             _ => {
                 if self.unify_inner_trivial(&from_ty, &to_ty) {
                     return true;

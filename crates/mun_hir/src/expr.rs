@@ -376,7 +376,7 @@ where
                 let param_pat = self.collect_pat(pat);
                 let param_type = self
                     .type_ref_builder
-                    .from_node_opt(param.ascribed_type().as_ref());
+                    .alloc_from_node_opt(param.ascribed_type().as_ref());
                 self.params.push((param_pat, param_type));
             }
         }
@@ -385,7 +385,7 @@ where
         self.body_expr = Some(body);
 
         let ret_type = if let Some(type_ref) = node.ret_type().and_then(|rt| rt.type_ref()) {
-            self.type_ref_builder.from_node(&type_ref)
+            self.type_ref_builder.alloc_from_node(&type_ref)
         } else {
             self.type_ref_builder.unit()
         };
@@ -409,7 +409,7 @@ where
                     let pat = self.collect_pat_opt(stmt.pat());
                     let type_ref = stmt
                         .ascribed_type()
-                        .map(|t| self.type_ref_builder.from_node(&t));
+                        .map(|t| self.type_ref_builder.alloc_from_node(&t));
                     let initializer = stmt.initializer().map(|e| self.collect_expr(e));
                     Statement::Let {
                         pat,

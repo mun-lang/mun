@@ -13,7 +13,7 @@ pub struct ArenaMap<ID, T> {
 
 impl<ID: ArenaId, T> ArenaMap<ID, T> {
     pub fn insert(&mut self, id: ID, t: T) {
-        let idx = Self::to_idx(id);
+        let idx = to_idx(id);
         if self.v.capacity() <= idx {
             self.v.reserve(idx + 1 - self.v.capacity());
         }
@@ -26,11 +26,11 @@ impl<ID: ArenaId, T> ArenaMap<ID, T> {
     }
 
     pub fn get(&self, id: ID) -> Option<&T> {
-        self.v.get(Self::to_idx(id)).and_then(|it| it.as_ref())
+        self.v.get(to_idx(id)).and_then(|it| it.as_ref())
     }
 
     pub fn get_mut(&mut self, id: ID) -> Option<&mut T> {
-        self.v.get_mut(Self::to_idx(id)).and_then(|it| it.as_mut())
+        self.v.get_mut(to_idx(id)).and_then(|it| it.as_mut())
     }
 
     pub fn values(&self) -> impl Iterator<Item = &T> {
@@ -45,29 +45,29 @@ impl<ID: ArenaId, T> ArenaMap<ID, T> {
         self.v
             .iter()
             .enumerate()
-            .filter_map(|(idx, o)| Some((Self::from_idx(idx), o.as_ref()?)))
+            .filter_map(|(idx, o)| Some((from_idx(idx), o.as_ref()?)))
     }
 
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (ID, &mut T)> {
         self.v
             .iter_mut()
             .enumerate()
-            .filter_map(|(idx, o)| Some((Self::from_idx(idx), o.as_mut()?)))
+            .filter_map(|(idx, o)| Some((from_idx(idx), o.as_mut()?)))
     }
+}
 
-    fn to_idx(id: ID) -> usize {
-        u32::from(id.into_raw()) as usize
-    }
+fn to_idx<ID: ArenaId>(id: ID) -> usize {
+    u32::from(id.into_raw()) as usize
+}
 
-    fn from_idx(idx: usize) -> ID {
-        ID::from_raw((idx as u32).into())
-    }
+fn from_idx<ID: ArenaId>(idx: usize) -> ID {
+    ID::from_raw((idx as u32).into())
 }
 
 impl<ID: ArenaId, T> std::ops::Index<ID> for ArenaMap<ID, T> {
     type Output = T;
     fn index(&self, id: ID) -> &T {
-        self.v[Self::to_idx(id)].as_ref().unwrap()
+        self.v[to_idx(id)].as_ref().unwrap()
     }
 }
 

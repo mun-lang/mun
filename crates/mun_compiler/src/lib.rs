@@ -1,3 +1,5 @@
+#![allow(clippy::enum_variant_names)] // This is a HACK because we use salsa
+
 ///! This library contains the code required to go from source code to binaries.
 mod diagnostic;
 

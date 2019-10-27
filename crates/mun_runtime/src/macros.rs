@@ -34,6 +34,7 @@ macro_rules! invoke_fn_impl {
 
             impl<'r, 's, $($T: Reflection,)* Output: Reflection> $ErrName<'r, 's, $($T,)* Output> {
                 /// Constructs a new invocation error.
+                #[allow(clippy::too_many_arguments)]
                 pub fn new(err_msg: String, runtime: &'r mut MunRuntime, function_name: &'s str, $($Arg: $T),*) -> Self {
                     Self {
                         msg: err_msg,
@@ -77,6 +78,7 @@ macro_rules! invoke_fn_impl {
                 ///
                 /// If an error occurs when invoking the method, an error message is logged. The
                 /// runtime continues looping until the cause of the error has been resolved.
+                #[allow(clippy::too_many_arguments)]
                 pub fn $FnName<'r, 's, $($T: Reflection,)* Output: Reflection>(
                     runtime: &'r mut MunRuntime,
                     function_name: &'s str,

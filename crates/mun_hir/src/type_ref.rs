@@ -64,15 +64,15 @@ impl TypeRefBuilder {
         id
     }
 
-    pub fn from_node_opt(&mut self, node: Option<&ast::TypeRef>) -> TypeRefId {
+    pub fn alloc_from_node_opt(&mut self, node: Option<&ast::TypeRef>) -> TypeRefId {
         if let Some(node) = node {
-            self.from_node(node)
+            self.alloc_from_node(node)
         } else {
             self.error()
         }
     }
 
-    pub fn from_node(&mut self, node: &ast::TypeRef) -> TypeRefId {
+    pub fn alloc_from_node(&mut self, node: &ast::TypeRef) -> TypeRefId {
         use mun_syntax::ast::TypeRefKind::*;
         let ptr = AstPtr::new(node);
         let type_ref = match node.kind() {
