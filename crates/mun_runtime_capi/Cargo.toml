@@ -4,9 +4,17 @@ version = "0.1.0"
 authors = ["Wodann <wodannson@gmail.com>"]
 edition = "2018"
 
+[lib]
+name = "mun_runtime"
+crate-type = ["cdylib"]
+
 [dependencies]
+failure = "0.1.5"
+lazy_static = "1.4.0"
 mun_abi = { path = "../mun_abi" }
 mun_runtime = { path = "../mun_runtime" }
+parking_lot = "0.9.0"
+rand = "0.7.2"
 
 [build-dependencies]
 cbindgen = "0.9.1"
