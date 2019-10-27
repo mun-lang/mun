@@ -7,7 +7,7 @@ use mun_hir::{ApplicationTy, Ty, TypeCtor};
 pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty) -> AnyTypeEnum {
     let context = db.context();
     match ty {
-        Ty::Empty => AnyTypeEnum::VoidType(context.void_type()),
+        Ty::Empty => AnyTypeEnum::StructType(context.struct_type(&[], false)),
         Ty::Apply(ApplicationTy { ctor, .. }) => match ctor {
             TypeCtor::Float => AnyTypeEnum::FloatType(context.f64_type()),
             TypeCtor::Int => AnyTypeEnum::IntType(context.i64_type()),
@@ -19,12 +19,15 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty) -> AnyTypeEnum {
                     .iter()
                     .map(|p| try_convert_any_to_basic(db.type_ir(p.clone())).unwrap())
                     .collect();
-                let ret_ty = match db.type_ir(ty.ret().clone()) {
-                    AnyTypeEnum::VoidType(v) => return v.fn_type(&params, false).into(),
-                    v => try_convert_any_to_basic(v).expect("could not convert return value"),
+
+                let fn_type = match ty.ret() {
+                    Ty::Empty => context.void_type().fn_type(&params, false),
+                    ty => try_convert_any_to_basic(db.type_ir(ty.clone()))
+                        .expect("could not convert return value")
+                        .fn_type(&params, false),
                 };
 
-                ret_ty.fn_type(&params, false).into()
+                AnyTypeEnum::FunctionType(fn_type)
             }
             _ => unreachable!(),
         },

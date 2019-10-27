@@ -41,7 +41,7 @@ mod coerce;
 pub struct InferenceResult {
     pub(crate) type_of_expr: ArenaMap<ExprId, Ty>,
     pub(crate) type_of_pat: ArenaMap<PatId, Ty>,
-    diagnostics: Vec<diagnostics::InferenceDiagnostic>,
+    pub(crate) diagnostics: Vec<diagnostics::InferenceDiagnostic>,
 }
 
 impl Index<ExprId> for InferenceResult {
@@ -237,16 +237,26 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                         match self.coerce_merge_branch(&then_ty, &else_ty) {
                             Some(ty) => ty,
                             None => {
-                                self.diagnostics.push(InferenceDiagnostic::MismatchedTypes {
-                                    id: *else_branch,
-                                    expected: then_ty.clone(),
-                                    found: else_ty,
-                                });
+                                self.diagnostics
+                                    .push(InferenceDiagnostic::IncompatibleBranches {
+                                        id: tgt_expr,
+                                        then_ty: then_ty.clone(),
+                                        else_ty: else_ty.clone(),
+                                    });
                                 then_ty
                             }
                         }
                     }
-                    None => Ty::Empty,
+                    None => {
+                        if !self.coerce(&then_ty, &Ty::Empty) {
+                            self.diagnostics
+                                .push(InferenceDiagnostic::MissingElseBranch {
+                                    id: tgt_expr,
+                                    then_ty: then_ty.clone(),
+                                })
+                        }
+                        Ty::Empty
+                    }
                 }
             }
             Expr::BinaryOp { lhs, rhs, op } => match op {
@@ -460,7 +470,7 @@ impl Expectation {
 }
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub(super) enum ExprOrPatId {
+pub(crate) enum ExprOrPatId {
     ExprId(ExprId),
     PatId(PatId),
 }
@@ -479,7 +489,8 @@ impl From<PatId> for ExprOrPatId {
 
 mod diagnostics {
     use crate::diagnostics::{
-        CannotApplyBinaryOp, ExpectedFunction, MismatchedType, ParameterCountMismatch,
+        CannotApplyBinaryOp, ExpectedFunction, IncompatibleBranch, MismatchedType,
+        MissingElseBranch, ParameterCountMismatch,
     };
     use crate::{
         code_model::src::HasSource,
@@ -490,7 +501,7 @@ mod diagnostics {
     };
 
     #[derive(Debug, PartialEq, Eq, Clone)]
-    pub(super) enum InferenceDiagnostic {
+    pub(crate) enum InferenceDiagnostic {
         UnresolvedValue {
             id: ExprOrPatId,
         },
@@ -511,6 +522,15 @@ mod diagnostics {
             expected: Ty,
             found: Ty,
         },
+        IncompatibleBranches {
+            id: ExprId,
+            then_ty: Ty,
+            else_ty: Ty,
+        },
+        MissingElseBranch {
+            id: ExprId,
+            then_ty: Ty,
+        },
         CannotApplyBinaryOp {
             id: ExprId,
             lhs: Ty,
@@ -519,7 +539,7 @@ mod diagnostics {
     }
 
     impl InferenceDiagnostic {
-        pub(super) fn add_to(
+        pub(crate) fn add_to(
             &self,
             db: &impl HirDatabase,
             owner: Function,
@@ -585,6 +605,31 @@ mod diagnostics {
                         expr,
                         found: found.clone(),
                         expected: expected.clone(),
+                    });
+                }
+                InferenceDiagnostic::IncompatibleBranches {
+                    id,
+                    then_ty,
+                    else_ty,
+                } => {
+                    let file = owner.source(db).file_id;
+                    let body = owner.body_source_map(db);
+                    let expr = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
+                    sink.push(IncompatibleBranch {
+                        file,
+                        if_expr: expr,
+                        expected: then_ty.clone(),
+                        found: else_ty.clone(),
+                    });
+                }
+                InferenceDiagnostic::MissingElseBranch { id, then_ty } => {
+                    let file = owner.source(db).file_id;
+                    let body = owner.body_source_map(db);
+                    let expr = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
+                    sink.push(MissingElseBranch {
+                        file,
+                        if_expr: expr,
+                        found: then_ty.clone(),
                     });
                 }
                 InferenceDiagnostic::CannotApplyBinaryOp { id, lhs, rhs } => {

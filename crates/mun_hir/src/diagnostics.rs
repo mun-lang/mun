@@ -203,6 +203,57 @@ impl Diagnostic for MismatchedType {
 }
 
 #[derive(Debug)]
+pub struct IncompatibleBranch {
+    pub file: FileId,
+    pub if_expr: SyntaxNodePtr,
+    pub expected: Ty,
+    pub found: Ty,
+}
+
+impl Diagnostic for IncompatibleBranch {
+    fn message(&self) -> String {
+        "mismatched branches".to_string()
+    }
+
+    fn file(&self) -> FileId {
+        self.file
+    }
+
+    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
+        self.if_expr
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct MissingElseBranch {
+    pub file: FileId,
+    pub if_expr: SyntaxNodePtr,
+    pub found: Ty,
+}
+
+impl Diagnostic for MissingElseBranch {
+    fn message(&self) -> String {
+        "missing else branch".to_string()
+    }
+
+    fn file(&self) -> FileId {
+        self.file
+    }
+
+    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
+        self.if_expr
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
 pub struct CannotApplyBinaryOp {
     pub file: FileId,
     pub expr: SyntaxNodePtr,
