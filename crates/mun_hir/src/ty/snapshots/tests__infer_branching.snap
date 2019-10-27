@@ -1,8 +1,10 @@
 ---
 source: crates/mun_hir/src/ty/tests.rs
-expression: "fn test() {\n    let a = if true { 3 } else { 4 }\n    let b = if true { 3 }\n    let c = if true { 5 } else if false { 3 } else { 4 }\n}"
+expression: "fn test() {\n    let a = if true { 3 } else { 4 }\n    let b = if true { 3 }               // Missing else branch\n    let c = if true { 3; }\n    let d = if true { 5 } else if false { 3 } else { 4 }\n    let e = if true { 5.0 } else { 5 }  // Mismatched branches\n}"
 ---
-[10; 133) '{     ... 4 } }': nothing
+[61; 74): missing else branch
+[208; 234): mismatched branches
+[10; 260) '{     ...ches }': nothing
 [20; 21) 'a': int
 [24; 48) 'if tru... { 4 }': int
 [27; 31) 'true': bool
@@ -15,14 +17,26 @@ expression: "fn test() {\n    let a = if true { 3 } else { 4 }\n    let b = if t
 [64; 68) 'true': bool
 [69; 74) '{ 3 }': int
 [71; 72) '3': int
-[83; 84) 'c': int
-[87; 131) 'if tru... { 4 }': int
-[90; 94) 'true': bool
-[95; 100) '{ 5 }': int
-[97; 98) '5': int
-[106; 131) 'if fal... { 4 }': int
-[109; 114) 'false': bool
-[115; 120) '{ 3 }': int
-[117; 118) '3': int
-[126; 131) '{ 4 }': int
-[128; 129) '4': int
+[120; 121) 'c': nothing
+[124; 138) 'if true { 3; }': nothing
+[127; 131) 'true': bool
+[132; 138) '{ 3; }': nothing
+[134; 135) '3': int
+[147; 148) 'd': int
+[151; 195) 'if tru... { 4 }': int
+[154; 158) 'true': bool
+[159; 164) '{ 5 }': int
+[161; 162) '5': int
+[170; 195) 'if fal... { 4 }': int
+[173; 178) 'false': bool
+[179; 184) '{ 3 }': int
+[181; 182) '3': int
+[190; 195) '{ 4 }': int
+[192; 193) '4': int
+[204; 205) 'e': float
+[208; 234) 'if tru... { 5 }': float
+[211; 215) 'true': bool
+[216; 223) '{ 5.0 }': float
+[218; 221) '5.0': float
+[229; 234) '{ 5 }': int
+[231; 232) '5': int

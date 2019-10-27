@@ -1,0 +1,12 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "fn bar() {\n    let a = 3;\n}\nfn foo(a:int) {\n    let c = bar()\n}"
+---
+[9; 27) '{     ...= 3; }': nothing
+[19; 20) 'a': int
+[23; 24) '3': int
+[35; 36) 'a': int
+[42; 63) '{     ...ar() }': nothing
+[52; 53) 'c': nothing
+[56; 59) 'bar': function bar() -> nothing
+[56; 61) 'bar()': nothing

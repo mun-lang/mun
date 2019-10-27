@@ -169,6 +169,20 @@ fn if_statement() {
 }
 
 #[test]
+fn void_return() {
+    test_snapshot(
+        r#"
+    fn bar() {
+        let a = 3;
+    }
+    fn foo(a:int) {
+        let c = bar()
+    }
+    "#,
+    )
+}
+
+#[test]
 fn fibonacci() {
     test_snapshot(
         r#"

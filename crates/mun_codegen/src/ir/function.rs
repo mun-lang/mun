@@ -181,7 +181,14 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                         .const_float(*v as f64)
                         .into(),
                 ),
-                Literal::String(_) | Literal::Bool(_) => unreachable!(),
+                Literal::Bool(value) => Some(
+                    self.module
+                        .get_context()
+                        .bool_type()
+                        .const_int(if *value { 1 } else { 0 }, false)
+                        .into(),
+                ),
+                Literal::String(_) => unreachable!("string literals are not implemented yet"),
             },
             &Expr::BinaryOp { lhs, rhs, op } => {
                 Some(self.gen_binary_op(lhs, rhs, op.expect("missing op")))
@@ -238,14 +245,17 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         match &self.body[pat] {
             Pat::Bind { name } => {
                 let builder = self.new_alloca_builder();
-                let ty = try_convert_any_to_basic(self.db.type_ir(self.infer[pat].clone()))
+                let pat_ty = self.infer[pat].clone();
+                let ty = try_convert_any_to_basic(self.db.type_ir(pat_ty.clone()))
                     .expect("expected basic type");
                 let ptr = builder.build_alloca(ty, &name.to_string());
                 self.pat_to_local.insert(pat, ptr);
                 self.pat_to_name.insert(pat, name.to_string());
-                if let Some(value) = initializer {
-                    self.builder.build_store(ptr, value);
-                };
+                if !(pat_ty.is_empty() || pat_ty.is_never()) {
+                    if let Some(value) = initializer {
+                        self.builder.build_store(ptr, value);
+                    };
+                }
             }
             Pat::Wild => {}
             Pat::Missing | Pat::Path(_) => unreachable!(),

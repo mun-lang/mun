@@ -1,4 +1,5 @@
 use crate::db::SourceDatabase;
+use crate::diagnostics::DiagnosticSink;
 use crate::expr::BodySourceMap;
 use crate::ids::LocationCtx;
 use crate::mock::MockDatabase;
@@ -27,8 +28,24 @@ fn infer_branching() {
         r#"
     fn test() {
         let a = if true { 3 } else { 4 }
-        let b = if true { 3 }
-        let c = if true { 5 } else if false { 3 } else { 4 }
+        let b = if true { 3 }               // Missing else branch
+        let c = if true { 3; }
+        let d = if true { 5 } else if false { 3 } else { 4 }
+        let e = if true { 5.0 } else { 5 }  // Mismatched branches
+    }
+    "#,
+    )
+}
+
+#[test]
+fn void_return() {
+    infer_snapshot(
+        r#"
+    fn bar() {
+        let a = 3;
+    }
+    fn foo(a:int) {
+        let c = bar()
     }
     "#,
     )
@@ -85,6 +102,12 @@ fn infer(content: &str) -> String {
         }
     };
 
+    let mut diags = String::new();
+
+    let mut diag_sink = DiagnosticSink::new(|diag| {
+        write!(diags, "{}: {}\n", diag.highlight_range(), diag.message()).unwrap();
+    });
+
     let ctx = LocationCtx::new(&db, file_id);
     for node in source_file.syntax().descendants() {
         if let Some(def) = ast::FunctionDef::cast(node.clone()) {
@@ -93,12 +116,20 @@ fn infer(content: &str) -> String {
             };
             let source_map = fun.body_source_map(&db);
             let infer_result = fun.infer(&db);
+
+            for diag in infer_result.diagnostics.iter() {
+                diag.add_to(&db, fun, &mut diag_sink);
+            }
+
             infer_def(infer_result, source_map);
         }
     }
 
+    drop(diag_sink);
+
     acc.truncate(acc.trim_end().len());
-    acc
+    diags.truncate(diags.trim_end().len());
+    [diags, acc].join("\n").trim().to_string()
 }
 
 fn ellipsize(mut text: String, max_len: usize) -> String {

@@ -92,6 +92,13 @@ impl Ty {
         *self == Ty::Empty
     }
 
+    pub fn is_never(&self) -> bool {
+        match self.as_simple() {
+            Some(TypeCtor::Never) => true,
+            _ => false,
+        }
+    }
+
     /// Returns the function definition for the given expression or `None` if the type does not
     /// represent a function.
     pub fn as_function_def(&self) -> Option<Function> {
