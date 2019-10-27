@@ -27,3 +27,9 @@ Cargo.lock
 # Gradle
 .idea/**/gradle.xml
 .idea/**/libraries
+
+# Build artifacts
+*.dll
+*.dll.lib
+*.so
+*.dylib
