@@ -71,13 +71,13 @@ impl Assembly {
     ) -> Result<(), Error> {
         // let library_path = library_path.canonicalize()?;
 
-        // Drop the old library, as some operating systems don't allow editing of in-use shared
-        // libraries
-        self.library.take();
-
         for function in self.info.symbols.functions() {
             runtime_dispatch_table.remove(function.signature.name());
         }
+
+        // Drop the old library, as some operating systems don't allow editing of in-use shared
+        // libraries
+        self.library.take();
 
         // TODO: Partial hot reload of an assembly
         *self = Assembly::load(library_path, runtime_dispatch_table)?;

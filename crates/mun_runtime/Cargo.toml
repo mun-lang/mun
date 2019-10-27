@@ -5,7 +5,6 @@ authors = ["Wodann <remco.kuijper@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-cargo = "0.37"
 failure = "0.1.5"
 libloading = "0.5"
 mun_abi = { path = "../mun_abi" }
