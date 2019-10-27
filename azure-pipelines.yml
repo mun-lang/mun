@@ -25,6 +25,10 @@ stages:
     parameters:
       name: rustfmt
       displayName: cargo fmt
+  - template: ci/azure-clippy.yml
+    parameters:
+      name: clippy
+      displayName: cargo clippy
 
 - stage: coverage
   displayName: Code Coverage

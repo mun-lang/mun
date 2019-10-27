@@ -37,8 +37,10 @@ impl dyn Diagnostic {
     }
 }
 
+type DiagnosticCallback<'a> = Box<dyn FnMut(&dyn Diagnostic) -> Result<(), ()> + 'a>;
+
 pub struct DiagnosticSink<'a> {
-    callbacks: Vec<Box<dyn FnMut(&dyn Diagnostic) -> Result<(), ()> + 'a>>,
+    callbacks: Vec<DiagnosticCallback<'a>>,
     default_callback: Box<dyn FnMut(&dyn Diagnostic) + 'a>,
 }
 

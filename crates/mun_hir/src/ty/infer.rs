@@ -30,7 +30,10 @@ macro_rules! ty_app {
         })
     };
     ($ctor:pat) => {
-        ty_app!($ctor, _)
+        $crate::ty::Ty::Apply($crate::ty::ApplicationTy {
+            ctor: $ctor,
+            ..
+        })
     };
 }
 
@@ -131,7 +134,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
 
     /// Given a `TypeRefId`, resolve the reference to an actual `Ty`. If the the type could not
     /// be resolved an error is emitted and `Ty::Error` is returned.
-    fn resolve_type(&mut self, type_ref: &TypeRefId) -> Ty {
+    fn resolve_type(&mut self, type_ref: TypeRefId) -> Ty {
         // Try to resolve the type from the Hir
         let result = Ty::from_hir(
             self.db,
@@ -183,17 +186,18 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         // Iterate over all the parameters and associated types of the body and infer the types of
         // the parameters.
         for (pat, type_ref) in body.params().iter() {
-            let ty = self.resolve_type(type_ref);
+            let ty = self.resolve_type(*type_ref);
             self.infer_pat(*pat, ty);
         }
 
         // Resolve the return type
-        self.return_ty = self.resolve_type(&body.ret_type())
+        self.return_ty = self.resolve_type(body.ret_type())
     }
 
     /// Record the type of the specified pattern and all sub-patterns.
     fn infer_pat(&mut self, pat: PatId, ty: Ty) {
         let body = Arc::clone(&self.body); // avoid borrow checker problem
+        #[allow(clippy::single_match)]
         match &body[pat] {
             Pat::Bind { .. } => {
                 self.set_pat_type(pat, ty);
@@ -269,7 +273,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                 _ => Ty::Unknown,
             },
             Expr::Block { statements, tail } => self.infer_block(statements, *tail, expected),
-            Expr::Call { callee: call, args } => self.infer_call(&tgt_expr, call, args, expected),
+            Expr::Call { callee: call, args } => self.infer_call(tgt_expr, *call, args, expected),
             Expr::Literal(lit) => match lit {
                 Literal::String(_) => Ty::Unknown,
                 Literal::Bool(_) => Ty::simple(TypeCtor::Bool),
@@ -297,18 +301,18 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
     /// Inferences the type of a call expression.
     fn infer_call(
         &mut self,
-        tgt_expr: &ExprId,
-        callee: &ExprId,
-        args: &Vec<ExprId>,
+        tgt_expr: ExprId,
+        callee: ExprId,
+        args: &[ExprId],
         _expected: &Expectation,
     ) -> Ty {
-        let callee_ty = self.infer_expr(*callee, &Expectation::none());
+        let callee_ty = self.infer_expr(callee, &Expectation::none());
         let (param_tys, ret_ty) = match callee_ty.callable_sig(self.db) {
             Some(sig) => (sig.params().to_vec(), sig.ret().clone()),
             None => {
                 self.diagnostics
                     .push(InferenceDiagnostic::ExpectedFunction {
-                        id: *callee,
+                        id: callee,
                         found: callee_ty,
                     });
                 (Vec::new(), Ty::Unknown)
@@ -319,11 +323,11 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
     }
 
     /// Checks whether the specified passed arguments match the parameters of a callable definition.
-    fn check_call_arguments(&mut self, tgt_expr: &ExprId, args: &[ExprId], param_tys: &[Ty]) {
+    fn check_call_arguments(&mut self, tgt_expr: ExprId, args: &[ExprId], param_tys: &[Ty]) {
         if args.len() != param_tys.len() {
             self.diagnostics
                 .push(InferenceDiagnostic::ParameterCountMismatch {
-                    id: *tgt_expr,
+                    id: tgt_expr,
                     found: args.len(),
                     expected: param_tys.len(),
                 })
@@ -406,7 +410,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                 } => {
                     let decl_ty = type_ref
                         .as_ref()
-                        .map(|tr| self.resolve_type(tr))
+                        .map(|tr| self.resolve_type(*tr))
                         .unwrap_or(Ty::Unknown);
                     //let decl_ty = self.insert_type_vars(decl_ty);
                     let ty = if let Some(expr) = initializer {

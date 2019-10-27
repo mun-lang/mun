@@ -21,7 +21,7 @@ pub struct Module {
 }
 
 impl Module {
-    pub fn file_id(&self) -> FileId {
+    pub fn file_id(self) -> FileId {
         self.file_id
     }
 
@@ -46,6 +46,7 @@ impl Module {
             diag.add_to(db, self, sink);
         }
         for decl in self.declarations(db) {
+            #[allow(clippy::single_match)]
             match decl {
                 ModuleDef::Function(f) => f.diagnostics(db, sink),
                 _ => (),
@@ -181,13 +182,13 @@ impl FnData {
         let mut params = Vec::new();
         if let Some(param_list) = src.ast.param_list() {
             for param in param_list.params() {
-                let type_ref = type_ref_builder.from_node_opt(param.ascribed_type().as_ref());
+                let type_ref = type_ref_builder.alloc_from_node_opt(param.ascribed_type().as_ref());
                 params.push(type_ref);
             }
         }
 
         let ret_type = if let Some(type_ref) = src.ast.ret_type().and_then(|rt| rt.type_ref()) {
-            type_ref_builder.from_node(&type_ref)
+            type_ref_builder.alloc_from_node(&type_ref)
         } else {
             type_ref_builder.unit()
         };

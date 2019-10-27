@@ -31,14 +31,14 @@ impl ast::FunctionDef {
 
         let start = fn_kw
             .map(|kw| kw.start())
-            .unwrap_or(self.syntax.text_range().start());
+            .unwrap_or_else(|| self.syntax.text_range().start());
 
         let end = ret_type
             .map(|p| p.end())
-            .or(param_list.map(|name| name.end()))
-            .or(name.map(|name| name.end()))
-            .or(fn_kw.map(|kw| kw.end()))
-            .unwrap_or(self.syntax().text_range().end());
+            .or_else(|| param_list.map(|name| name.end()))
+            .or_else(|| name.map(|name| name.end()))
+            .or_else(|| fn_kw.map(|kw| kw.end()))
+            .unwrap_or_else(|| self.syntax().text_range().end());
 
         TextRange::from_to(start, end)
     }

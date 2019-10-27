@@ -25,31 +25,31 @@ impl Path {
     pub fn from_ast(path: ast::Path) -> Option<Path> {
         let mut kind = PathKind::Plain;
         let mut segments = Vec::new();
-        loop {
-            let segment = path.segment()?;
+        //        loop {
+        let segment = path.segment()?;
 
-            if segment.has_colon_colon() {
-                kind = PathKind::Abs;
-            }
-
-            match segment.kind()? {
-                ast::PathSegmentKind::Name(name) => {
-                    let segment = PathSegment {
-                        name: name.as_name(),
-                    };
-                    segments.push(segment);
-                }
-                ast::PathSegmentKind::SelfKw => {
-                    kind = PathKind::Self_;
-                    break;
-                }
-                ast::PathSegmentKind::SuperKw => {
-                    kind = PathKind::Super;
-                    break;
-                }
-            }
-            break;
+        if segment.has_colon_colon() {
+            kind = PathKind::Abs;
         }
+
+        match segment.kind()? {
+            ast::PathSegmentKind::Name(name) => {
+                let segment = PathSegment {
+                    name: name.as_name(),
+                };
+                segments.push(segment);
+            }
+            ast::PathSegmentKind::SelfKw => {
+                kind = PathKind::Self_;
+                //                    break;
+            }
+            ast::PathSegmentKind::SuperKw => {
+                kind = PathKind::Super;
+                //                    break;
+            }
+        }
+        //            break;
+        //        }
         segments.reverse();
         Some(Path { kind, segments })
     }

@@ -148,13 +148,13 @@ impl DispatchTable {
     /// This is generally not recommended, use with caution! Calling this method with an
     /// out-of-bounds index is _undefined behavior_ even if the resulting reference is not used.
     /// For a safe alternative see [get_ptr_mut](#method.get_ptr_mut).
-    pub unsafe fn get_ptr_unchecked_mut(&self, idx: u32) -> &mut *const c_void {
+    pub unsafe fn get_ptr_unchecked_mut(&mut self, idx: u32) -> &mut *const c_void {
         &mut *self.fn_ptrs.offset(idx as isize)
     }
 
     /// Returns a mutable reference to a function pointer at the given index, or `None` if out of
     /// bounds.
-    pub fn get_ptr_mut(&self, idx: u32) -> Option<&mut *const c_void> {
+    pub fn get_ptr_mut(&mut self, idx: u32) -> Option<&mut *const c_void> {
         if idx < self.num_entries {
             Some(unsafe { self.get_ptr_unchecked_mut(idx) })
         } else {
@@ -502,7 +502,7 @@ mod tests {
         let signatures = &[fn_signature];
         let fn_ptrs = &mut [ptr::null()];
 
-        let dispatch_table = fake_dispatch_table(signatures, fn_ptrs);
+        let mut dispatch_table = fake_dispatch_table(signatures, fn_ptrs);
         assert_eq!(
             unsafe { dispatch_table.get_ptr_unchecked_mut(0) },
             &mut fn_ptrs[0]
@@ -521,7 +521,7 @@ mod tests {
         let signatures = &[fn_signature];
         let fn_ptrs = &mut [ptr::null()];
 
-        let dispatch_table = fake_dispatch_table(signatures, fn_ptrs);
+        let mut dispatch_table = fake_dispatch_table(signatures, fn_ptrs);
         assert_eq!(dispatch_table.get_ptr_mut(1), None);
     }
 
@@ -537,7 +537,7 @@ mod tests {
         let signatures = &[fn_signature];
         let fn_ptrs = &mut [ptr::null()];
 
-        let dispatch_table = fake_dispatch_table(signatures, fn_ptrs);
+        let mut dispatch_table = fake_dispatch_table(signatures, fn_ptrs);
         assert_eq!(dispatch_table.get_ptr_mut(0), Some(&mut fn_ptrs[0]));
     }
 

@@ -7,18 +7,21 @@ use std::os::raw::c_char;
 pub struct RuntimeHandle(*mut c_void);
 
 #[no_mangle]
-pub extern "C" fn create_runtime(library_path: *const c_char, handle: *mut RuntimeHandle) -> u64 /* error */
+pub unsafe extern "C" fn create_runtime(
+    library_path: *const c_char,
+    handle: *mut RuntimeHandle,
+) -> u64 /* error */
 {
     if library_path.is_null() {
         return 1;
     }
 
-    let library_path = match unsafe { CStr::from_ptr(library_path) }.to_str() {
+    let library_path = match CStr::from_ptr(library_path).to_str() {
         Ok(path) => path,
         Err(_) => return 2,
     };
 
-    let handle = match unsafe { handle.as_mut() } {
+    let handle = match handle.as_mut() {
         Some(handle) => handle,
         None => return 3,
     };
@@ -40,28 +43,28 @@ pub extern "C" fn destroy_runtime(handle: RuntimeHandle) {
 }
 
 #[no_mangle]
-pub extern "C" fn runtime_get_function_info(
+pub unsafe extern "C" fn runtime_get_function_info(
     handle: RuntimeHandle,
     fn_name: *const c_char,
     has_fn_info: *mut bool,
     fn_info: *mut FunctionInfo,
 ) -> u64 /* error */ {
-    let runtime = match unsafe { (handle.0 as *mut MunRuntime).as_ref() } {
+    let runtime = match (handle.0 as *mut MunRuntime).as_ref() {
         Some(runtime) => runtime,
         None => return 1,
     };
 
-    let fn_name = match unsafe { CStr::from_ptr(fn_name) }.to_str() {
+    let fn_name = match CStr::from_ptr(fn_name).to_str() {
         Ok(name) => name,
         Err(_) => return 2,
     };
 
-    let has_fn_info = match unsafe { has_fn_info.as_mut() } {
+    let has_fn_info = match has_fn_info.as_mut() {
         Some(has_info) => has_info,
         None => return 3,
     };
 
-    let fn_info = match unsafe { fn_info.as_mut() } {
+    let fn_info = match fn_info.as_mut() {
         Some(info) => info,
         None => return 4,
     };
@@ -78,13 +81,14 @@ pub extern "C" fn runtime_get_function_info(
 }
 
 #[no_mangle]
-pub extern "C" fn runtime_update(handle: RuntimeHandle, updated: *mut bool) -> u64 /* error */ {
-    let runtime = match unsafe { (handle.0 as *mut MunRuntime).as_mut() } {
+pub unsafe extern "C" fn runtime_update(handle: RuntimeHandle, updated: *mut bool) -> u64 /* error */
+{
+    let runtime = match (handle.0 as *mut MunRuntime).as_mut() {
         Some(runtime) => runtime,
         None => return 1,
     };
 
-    let updated = match unsafe { updated.as_mut() } {
+    let updated = match updated.as_mut() {
         Some(updated) => updated,
         None => return 2,
     };

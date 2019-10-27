@@ -143,7 +143,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
 
     fn gen_expr(&mut self, expr: ExprId) -> Option<inkwell::values::BasicValueEnum> {
         let body = self.body.clone();
-        let value = match &body[expr] {
+        match &body[expr] {
             &Expr::Block {
                 ref statements,
                 tail,
@@ -203,7 +203,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 else_branch,
             } => self.gen_if(expr, *condition, *then_branch, *else_branch),
             _ => unreachable!("unimplemented expr type"),
-        };
+        }
 
         //        // Check expected type or perform implicit cast
         //        value = value.map(|value| {
@@ -218,8 +218,6 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         //                _ => unreachable!("could not perform implicit cast"),
         //            }
         //        });
-
-        value
     }
 
     /// Constructs a builder that should be used to emit an `alloca` instruction. These instructions
