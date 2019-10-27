@@ -27,7 +27,7 @@ fn function() {
     // Comment that belongs to the function
     fn a() {}
     fn b(value:number) {}
-    export fn c() {}
+    pub fn c() {}
     fn b(value:number):number {}"#,
     );
 }

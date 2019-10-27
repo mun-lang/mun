@@ -1,8 +1,8 @@
 ---
 source: crates/mun_syntax/src/tests/parser.rs
-expression: "// Source file comment\n\n// Comment that belongs to the function\nfn a() {}\nfn b(value:number) {}\nexport fn c() {}\nfn b(value:number):number {}"
+expression: "// Source file comment\n\n// Comment that belongs to the function\nfn a() {}\nfn b(value:number) {}\npub fn c() {}\nfn b(value:number):number {}"
 ---
-SOURCE_FILE@[0; 141)
+SOURCE_FILE@[0; 138)
   COMMENT@[0; 22) "// Source file comment"
   WHITESPACE@[22; 24) "\n\n"
   FUNCTION_DEF@[24; 73)
@@ -42,50 +42,50 @@ SOURCE_FILE@[0; 141)
     BLOCK@[93; 95)
       L_CURLY@[93; 94) "{"
       R_CURLY@[94; 95) "}"
-  FUNCTION_DEF@[95; 112)
+  FUNCTION_DEF@[95; 109)
     WHITESPACE@[95; 96) "\n"
-    VISIBILITY@[96; 102)
-      EXPORT_KW@[96; 102) "export"
+    VISIBILITY@[96; 99)
+      PUB_KW@[96; 99) "pub"
+    WHITESPACE@[99; 100) " "
+    FN_KW@[100; 102) "fn"
     WHITESPACE@[102; 103) " "
-    FN_KW@[103; 105) "fn"
-    WHITESPACE@[105; 106) " "
-    NAME@[106; 107)
-      IDENT@[106; 107) "c"
-    PARAM_LIST@[107; 109)
-      L_PAREN@[107; 108) "("
-      R_PAREN@[108; 109) ")"
-    WHITESPACE@[109; 110) " "
-    BLOCK@[110; 112)
-      L_CURLY@[110; 111) "{"
-      R_CURLY@[111; 112) "}"
-  FUNCTION_DEF@[112; 141)
-    WHITESPACE@[112; 113) "\n"
-    FN_KW@[113; 115) "fn"
-    WHITESPACE@[115; 116) " "
-    NAME@[116; 117)
-      IDENT@[116; 117) "b"
-    PARAM_LIST@[117; 131)
-      L_PAREN@[117; 118) "("
-      PARAM@[118; 130)
-        BIND_PAT@[118; 123)
-          NAME@[118; 123)
-            IDENT@[118; 123) "value"
-        COLON@[123; 124) ":"
-        PATH_TYPE@[124; 130)
-          PATH@[124; 130)
-            PATH_SEGMENT@[124; 130)
-              NAME_REF@[124; 130)
-                IDENT@[124; 130) "number"
-      R_PAREN@[130; 131) ")"
-    RET_TYPE@[131; 138)
-      COLON@[131; 132) ":"
-      PATH_TYPE@[132; 138)
-        PATH@[132; 138)
-          PATH_SEGMENT@[132; 138)
-            NAME_REF@[132; 138)
-              IDENT@[132; 138) "number"
-    WHITESPACE@[138; 139) " "
-    BLOCK@[139; 141)
-      L_CURLY@[139; 140) "{"
-      R_CURLY@[140; 141) "}"
+    NAME@[103; 104)
+      IDENT@[103; 104) "c"
+    PARAM_LIST@[104; 106)
+      L_PAREN@[104; 105) "("
+      R_PAREN@[105; 106) ")"
+    WHITESPACE@[106; 107) " "
+    BLOCK@[107; 109)
+      L_CURLY@[107; 108) "{"
+      R_CURLY@[108; 109) "}"
+  FUNCTION_DEF@[109; 138)
+    WHITESPACE@[109; 110) "\n"
+    FN_KW@[110; 112) "fn"
+    WHITESPACE@[112; 113) " "
+    NAME@[113; 114)
+      IDENT@[113; 114) "b"
+    PARAM_LIST@[114; 128)
+      L_PAREN@[114; 115) "("
+      PARAM@[115; 127)
+        BIND_PAT@[115; 120)
+          NAME@[115; 120)
+            IDENT@[115; 120) "value"
+        COLON@[120; 121) ":"
+        PATH_TYPE@[121; 127)
+          PATH@[121; 127)
+            PATH_SEGMENT@[121; 127)
+              NAME_REF@[121; 127)
+                IDENT@[121; 127) "number"
+      R_PAREN@[127; 128) ")"
+    RET_TYPE@[128; 135)
+      COLON@[128; 129) ":"
+      PATH_TYPE@[129; 135)
+        PATH@[129; 135)
+          PATH_SEGMENT@[129; 135)
+            NAME_REF@[129; 135)
+              IDENT@[129; 135) "number"
+    WHITESPACE@[135; 136) " "
+    BLOCK@[136; 138)
+      L_CURLY@[136; 137) "{"
+      R_CURLY@[137; 138) "}"
 

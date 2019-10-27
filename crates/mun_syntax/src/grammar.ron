@@ -79,10 +79,7 @@ Grammar(
         "let",
         "mut",
         "class",
-        "public",
-        "protected",
-        "private",
-        "export"
+        "pub"
     ],
     literals: [
         "INT_NUMBER",

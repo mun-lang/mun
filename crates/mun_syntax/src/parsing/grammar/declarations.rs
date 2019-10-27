@@ -1,7 +1,7 @@
 use super::*;
 use crate::T;
 
-pub(super) const DECLARATION_RECOVERY_SET: TokenSet = token_set![FN_KW, EXPORT_KW];
+pub(super) const DECLARATION_RECOVERY_SET: TokenSet = token_set![FN_KW, PUB_KW];
 
 pub(super) fn mod_contents(p: &mut Parser) {
     while !p.at(EOF) {

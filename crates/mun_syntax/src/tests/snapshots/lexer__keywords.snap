@@ -1,6 +1,6 @@
 ---
 source: crates/mun_syntax/src/tests/lexer.rs
-expression: "and break do else false for fn if in nil or\nreturn then true while let mut class public protected\nprivate"
+expression: "and break do else false for fn if in nil or\nreturn then true while let mut class pub"
 ---
 AND_KW 3 "and"
 WHITESPACE 1 " "
@@ -38,9 +38,5 @@ MUT_KW 3 "mut"
 WHITESPACE 1 " "
 CLASS_KW 5 "class"
 WHITESPACE 1 " "
-PUBLIC_KW 6 "public"
-WHITESPACE 1 " "
-PROTECTED_KW 9 "protected"
-WHITESPACE 1 "\n"
-PRIVATE_KW 7 "private"
+PUB_KW 3 "pub"
 
