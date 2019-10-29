@@ -9,7 +9,7 @@ pub enum LinkerFlavor {
     Msvc,
 }
 
-/// Everything Mun knows a bout a target.
+/// Everything Mun knows about a target.
 /// Every field must be specified, there are no default values.
 #[derive(PartialEq, Clone, Debug)]
 pub struct Target {
@@ -93,7 +93,7 @@ macro_rules! supported_targets {
                             .map_err(LoadTargetError::Other)?;
                         t.options.is_builtin = true;
 
-                        debug!("got builtin target: {:?}", t);
+                        log::debug!("got builtin target: {:?}", t);
                         Ok(t)
                     },
                 )+
