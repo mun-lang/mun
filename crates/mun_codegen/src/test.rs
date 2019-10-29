@@ -215,6 +215,30 @@ fn fibonacci() {
     )
 }
 
+#[test]
+fn shadowing() {
+    test_snapshot(
+        r#"
+    fn foo(a:int):int {
+        let a = a+1;
+        {
+            let a = a+2;
+        }
+        a+3
+    }
+
+    fn bar(a:int):int {
+        let a = a+1;
+        let a = {
+            let a = a+2;
+            a
+        }
+        a+3
+    }
+    "#,
+    );
+}
+
 fn test_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
 
