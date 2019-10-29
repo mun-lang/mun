@@ -1,12 +1,11 @@
 //! Syntax Tree Library used throughout Mun.
 //!
-//! This crate is heavily inspired by Rust Analyzers ra_syntax crate.
+//! This crate is heavily inspired by Rust Analyzers ra_syntax and ra_parsing crate.
 //!
 //! Properties:
 //!     - easy and fast incremental re-parsing
 //!     - graceful handling of errors
-//!     - full-fidelity representation (*any* text can be precisely represented as
-//!       a syntax tree)
+//!     - full-fidelity representation (*any* text can be precisely represented as a syntax tree)
 
 #[macro_use]
 mod syntax_kind;
