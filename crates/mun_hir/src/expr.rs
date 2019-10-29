@@ -286,13 +286,13 @@ impl Expr {
     }
 }
 
-// Similar to ast::PatKind
+/// Similar to `ast::PatKind`
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Pat {
-    Missing,
-    Wild,
-    Path(Path),
-    Bind { name: Name },
+    Missing,             // Indicates an error
+    Wild,                // `_`
+    Path(Path),          // E.g. `foo::bar`
+    Bind { name: Name }, // E.g. `a`
 }
 
 impl Pat {
