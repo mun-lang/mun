@@ -5,75 +5,75 @@ expression: "fn equals(a:int, b:int):bool                { a == b }\nfn not_equa
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
 
-define i1 @equals(i64 %a, i64 %b) {
+define i1 @equals(i64, i64) {
 body:
-  %eq = icmp eq i64 %a, %b
+  %eq = icmp eq i64 %0, %1
   ret i1 %eq
 }
 
-define i1 @not_equals(i64 %a, i64 %b) {
+define i1 @not_equals(i64, i64) {
 body:
-  %neq = icmp ne i64 %a, %b
+  %neq = icmp ne i64 %0, %1
   ret i1 %neq
 }
 
-define i1 @less(i64 %a, i64 %b) {
+define i1 @less(i64, i64) {
 body:
-  %less = icmp slt i64 %a, %b
+  %less = icmp slt i64 %0, %1
   ret i1 %less
 }
 
-define i1 @less_equal(i64 %a, i64 %b) {
+define i1 @less_equal(i64, i64) {
 body:
-  %lesseq = icmp sle i64 %a, %b
+  %lesseq = icmp sle i64 %0, %1
   ret i1 %lesseq
 }
 
-define i1 @greater(i64 %a, i64 %b) {
+define i1 @greater(i64, i64) {
 body:
-  %greater = icmp sgt i64 %a, %b
+  %greater = icmp sgt i64 %0, %1
   ret i1 %greater
 }
 
-define i1 @greater_equal(i64 %a, i64 %b) {
+define i1 @greater_equal(i64, i64) {
 body:
-  %greatereq = icmp sge i64 %a, %b
+  %greatereq = icmp sge i64 %0, %1
   ret i1 %greatereq
 }
 
-define i1 @equalsf(double %a, double %b) {
+define i1 @equalsf(double, double) {
 body:
-  %eq = fcmp oeq double %a, %b
+  %eq = fcmp oeq double %0, %1
   ret i1 %eq
 }
 
-define i1 @not_equalsf(double %a, double %b) {
+define i1 @not_equalsf(double, double) {
 body:
-  %neq = fcmp one double %a, %b
+  %neq = fcmp one double %0, %1
   ret i1 %neq
 }
 
-define i1 @lessf(double %a, double %b) {
+define i1 @lessf(double, double) {
 body:
-  %less = fcmp olt double %a, %b
+  %less = fcmp olt double %0, %1
   ret i1 %less
 }
 
-define i1 @less_equalf(double %a, double %b) {
+define i1 @less_equalf(double, double) {
 body:
-  %lesseq = fcmp ole double %a, %b
+  %lesseq = fcmp ole double %0, %1
   ret i1 %lesseq
 }
 
-define i1 @greaterf(double %a, double %b) {
+define i1 @greaterf(double, double) {
 body:
-  %greater = fcmp ogt double %a, %b
+  %greater = fcmp ogt double %0, %1
   ret i1 %greater
 }
 
-define i1 @greater_equalf(double %a, double %b) {
+define i1 @greater_equalf(double, double) {
 body:
-  %greatereq = fcmp oge double %a, %b
+  %greatereq = fcmp oge double %0, %1
   ret i1 %greatereq
 }
 

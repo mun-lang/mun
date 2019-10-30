@@ -14,7 +14,7 @@ body:
   ret void
 }
 
-define void @foo(i64 %a) {
+define void @foo(i64) {
 body:
   %bar_ptr = load void ()*, void ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
   call void %bar_ptr()

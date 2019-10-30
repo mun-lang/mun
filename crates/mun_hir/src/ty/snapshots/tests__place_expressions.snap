@@ -1,0 +1,13 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "fn foo(a:int) {\n    a += 3;\n    3 = 5; // error: invalid left hand side of expression\n}"
+---
+[32; 33): invalid left hand side of expression
+[7; 8) 'a': int
+[14; 87) '{     ...sion }': nothing
+[20; 21) 'a': int
+[20; 26) 'a += 3': nothing
+[25; 26) '3': int
+[32; 33) '3': int
+[32; 37) '3 = 5': nothing
+[36; 37) '5': int

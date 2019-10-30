@@ -206,7 +206,7 @@ pub enum BinaryOp {
     LogicOp(LogicOp),
     ArithOp(ArithOp),
     CmpOp(CmpOp),
-    Assignment, // { op: Option<ArithOp> }
+    Assignment { op: Option<ArithOp> },
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -233,8 +233,8 @@ pub enum ArithOp {
     Multiply,
     Subtract,
     Divide,
-    Remainder,
-    Power,
+    //Remainder,
+    //Power,
 }
 
 impl Expr {
@@ -510,50 +510,28 @@ where
                                 syntax_ptr,
                             )
                         }
-                        BinOp::Assign => {
-                            let lhs = self.collect_expr_opt(e.lhs());
-                            let rhs = self.collect_expr_opt(e.rhs());
-                            self.alloc_expr(
-                                Expr::BinaryOp {
-                                    lhs,
-                                    rhs,
-                                    op: Some(BinaryOp::Assignment),
-                                },
-                                syntax_ptr,
-                            )
-                        }
-                        op @ BinOp::AddAssign
+                        op @ BinOp::Assign
+                        | op @ BinOp::AddAssign
                         | op @ BinOp::SubtractAssign
-                        | op @ BinOp::DivideAssign
                         | op @ BinOp::MultiplyAssign
-                        //| op @ BinOp::RemainderAssign
-                        //| op @ BinOp::PowerAssign
-                        => {
-                            let op = match op {
-                                BinOp::AddAssign => BinaryOp::ArithOp(ArithOp::Add),
-                                BinOp::SubtractAssign => BinaryOp::ArithOp(ArithOp::Subtract),
-                                BinOp::DivideAssign => BinaryOp::ArithOp(ArithOp::Divide),
-                                BinOp::MultiplyAssign => BinaryOp::ArithOp(ArithOp::Multiply),
-                                //BinOp::RemainderAssign => BinaryOp::ArithOp(ArithOp::Remainder),
-                                //BinOp::PowerAssign => BinaryOp::ArithOp(ArithOp::Power),
-                                _ => unreachable!(),
-                            };
+                        | op @ BinOp::DivideAssign => {
+
+                            let assign_op = match op {
+                                BinOp::Assign => None,
+                                BinOp::AddAssign => Some(ArithOp::Add),
+                                BinOp::SubtractAssign => Some(ArithOp::Subtract),
+                                BinOp::MultiplyAssign => Some(ArithOp::Multiply),
+                                BinOp::DivideAssign => Some(ArithOp::Divide),
+                                _ => unreachable!("invalid assignment operator")
+                            } ;
+
                             let lhs = self.collect_expr_opt(e.lhs());
-                            let lhs_rhs = self.collect_expr_opt(e.lhs());
                             let rhs = self.collect_expr_opt(e.rhs());
-                            let update_expr = self.alloc_expr(
-                                Expr::BinaryOp {
-                                    lhs: lhs_rhs,
-                                    rhs,
-                                    op: Some(op),
-                                },
-                                syntax_ptr,
-                            );
                             self.alloc_expr(
                                 Expr::BinaryOp {
                                     lhs,
-                                    rhs: update_expr,
-                                    op: Some(op),
+                                    rhs,
+                                    op: Some(BinaryOp::Assignment { op: assign_op }),
                                 },
                                 syntax_ptr,
                             )

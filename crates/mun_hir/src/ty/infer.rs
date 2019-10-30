@@ -12,12 +12,13 @@ use crate::{
     ty::op,
     ty::{Ty, TypableDef},
     type_ref::TypeRefId,
-    Function, HirDatabase, Path, TypeCtor,
+    BinaryOp, Function, HirDatabase, Path, TypeCtor,
 };
 use std::mem;
 use std::ops::Index;
 use std::sync::Arc;
 
+mod place_expr;
 mod type_variable;
 
 pub use type_variable::TypeVarId;
@@ -229,43 +230,20 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                 condition,
                 then_branch,
                 else_branch,
-            } => {
-                self.infer_expr(
-                    *condition,
-                    &Expectation::has_type(Ty::simple(TypeCtor::Bool)),
-                );
-                let then_ty = self.infer_expr(*then_branch, &expected);
-                match else_branch {
-                    Some(else_branch) => {
-                        let else_ty = self.infer_expr(*else_branch, &expected);
-                        match self.coerce_merge_branch(&then_ty, &else_ty) {
-                            Some(ty) => ty,
-                            None => {
-                                self.diagnostics
-                                    .push(InferenceDiagnostic::IncompatibleBranches {
-                                        id: tgt_expr,
-                                        then_ty: then_ty.clone(),
-                                        else_ty: else_ty.clone(),
-                                    });
-                                then_ty
-                            }
-                        }
-                    }
-                    None => {
-                        if !self.coerce(&then_ty, &Ty::Empty) {
-                            self.diagnostics
-                                .push(InferenceDiagnostic::MissingElseBranch {
-                                    id: tgt_expr,
-                                    then_ty: then_ty.clone(),
-                                })
-                        }
-                        Ty::Empty
-                    }
-                }
-            }
+            } => self.infer_if(tgt_expr, &expected, *condition, *then_branch, *else_branch),
             Expr::BinaryOp { lhs, rhs, op } => match op {
                 Some(op) => {
                     let lhs_ty = self.infer_expr(*lhs, &Expectation::none());
+                    if let BinaryOp::Assignment { op: _op } = op {
+                        let resolver =
+                            expr::resolver_for_expr(self.body.clone(), self.db, tgt_expr);
+                        if !self.check_place_expression(&resolver, *lhs) {
+                            self.diagnostics.push(InferenceDiagnostic::InvalidLHS {
+                                id: tgt_expr,
+                                lhs: *lhs,
+                            })
+                        }
+                    };
                     let rhs_expected = op::binary_op_rhs_expectation(*op, lhs_ty.clone());
                     let rhs_ty = self.infer_expr(*rhs, &Expectation::has_type(rhs_expected));
                     op::binary_op_return_ty(*op, rhs_ty)
@@ -296,6 +274,49 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
 
         self.set_expr_type(tgt_expr, ty.clone());
         ty
+    }
+
+    /// Inferences the type of an if statement.
+    fn infer_if(
+        &mut self,
+        tgt_expr: ExprId,
+        expected: &Expectation,
+        condition: ExprId,
+        then_branch: ExprId,
+        else_branch: Option<ExprId>,
+    ) -> Ty {
+        self.infer_expr(
+            condition,
+            &Expectation::has_type(Ty::simple(TypeCtor::Bool)),
+        );
+        let then_ty = self.infer_expr(then_branch, expected);
+        match else_branch {
+            Some(else_branch) => {
+                let else_ty = self.infer_expr(else_branch, expected);
+                match self.coerce_merge_branch(&then_ty, &else_ty) {
+                    Some(ty) => ty,
+                    None => {
+                        self.diagnostics
+                            .push(InferenceDiagnostic::IncompatibleBranches {
+                                id: tgt_expr,
+                                then_ty: then_ty.clone(),
+                                else_ty: else_ty.clone(),
+                            });
+                        then_ty
+                    }
+                }
+            }
+            None => {
+                if !self.coerce(&then_ty, &Ty::Empty) {
+                    self.diagnostics
+                        .push(InferenceDiagnostic::MissingElseBranch {
+                            id: tgt_expr,
+                            then_ty: then_ty.clone(),
+                        })
+                }
+                Ty::Empty
+            }
+        }
     }
 
     /// Inferences the type of a call expression.
@@ -493,7 +514,7 @@ impl From<PatId> for ExprOrPatId {
 
 mod diagnostics {
     use crate::diagnostics::{
-        CannotApplyBinaryOp, ExpectedFunction, IncompatibleBranch, MismatchedType,
+        CannotApplyBinaryOp, ExpectedFunction, IncompatibleBranch, InvalidLHS, MismatchedType,
         MissingElseBranch, ParameterCountMismatch,
     };
     use crate::{
@@ -540,6 +561,10 @@ mod diagnostics {
             lhs: Ty,
             rhs: Ty,
         },
+        InvalidLHS {
+            id: ExprId,
+            lhs: ExprId,
+        },
     }
 
     impl InferenceDiagnostic {
@@ -549,10 +574,10 @@ mod diagnostics {
             owner: Function,
             sink: &mut DiagnosticSink,
         ) {
+            let file = owner.source(db).file_id;
+            let body = owner.body_source_map(db);
             match self {
                 InferenceDiagnostic::UnresolvedValue { id } => {
-                    let file = owner.source(db).file_id;
-                    let body = owner.body_source_map(db);
                     let expr = match id {
                         ExprOrPatId::ExprId(id) => {
                             body.expr_syntax(*id).map(|ptr| ptr.ast.syntax_node_ptr())
@@ -566,8 +591,6 @@ mod diagnostics {
                     sink.push(UnresolvedValue { file, expr });
                 }
                 InferenceDiagnostic::UnresolvedType { id } => {
-                    let file = owner.source(db).file_id;
-                    let body = owner.body_source_map(db);
                     let type_ref = body.type_ref_syntax(*id).expect("If this is not found, it must be a type ref generated by the library which should never be unresolved.");
                     sink.push(UnresolvedType { file, type_ref });
                 }
@@ -576,8 +599,6 @@ mod diagnostics {
                     expected,
                     found,
                 } => {
-                    let file = owner.source(db).file_id;
-                    let body = owner.body_source_map(db);
                     let expr = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
                     sink.push(ParameterCountMismatch {
                         file,
@@ -587,8 +608,6 @@ mod diagnostics {
                     })
                 }
                 InferenceDiagnostic::ExpectedFunction { id, found } => {
-                    let file = owner.source(db).file_id;
-                    let body = owner.body_source_map(db);
                     let expr = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
                     sink.push(ExpectedFunction {
                         file,
@@ -601,8 +620,6 @@ mod diagnostics {
                     found,
                     expected,
                 } => {
-                    let file = owner.source(db).file_id;
-                    let body = owner.body_source_map(db);
                     let expr = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
                     sink.push(MismatchedType {
                         file,
@@ -616,8 +633,6 @@ mod diagnostics {
                     then_ty,
                     else_ty,
                 } => {
-                    let file = owner.source(db).file_id;
-                    let body = owner.body_source_map(db);
                     let expr = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
                     sink.push(IncompatibleBranch {
                         file,
@@ -627,8 +642,6 @@ mod diagnostics {
                     });
                 }
                 InferenceDiagnostic::MissingElseBranch { id, then_ty } => {
-                    let file = owner.source(db).file_id;
-                    let body = owner.body_source_map(db);
                     let expr = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
                     sink.push(MissingElseBranch {
                         file,
@@ -637,14 +650,21 @@ mod diagnostics {
                     });
                 }
                 InferenceDiagnostic::CannotApplyBinaryOp { id, lhs, rhs } => {
-                    let file = owner.source(db).file_id;
-                    let body = owner.body_source_map(db);
                     let expr = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
                     sink.push(CannotApplyBinaryOp {
                         file,
                         expr,
                         lhs: lhs.clone(),
                         rhs: rhs.clone(),
+                    });
+                }
+                InferenceDiagnostic::InvalidLHS { id, lhs } => {
+                    let id = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
+                    let lhs = body.expr_syntax(*lhs).unwrap().ast.syntax_node_ptr();
+                    sink.push(InvalidLHS {
+                        file,
+                        expr: id,
+                        lhs,
                     });
                 }
             }

@@ -231,6 +231,36 @@ impl Diagnostic for IncompatibleBranch {
 }
 
 #[derive(Debug)]
+pub struct InvalidLHS {
+    /// The file that contains the expressions
+    pub file: FileId,
+
+    /// The expression containing the `lhs`
+    pub expr: SyntaxNodePtr,
+
+    /// The left-hand side of the expression.
+    pub lhs: SyntaxNodePtr,
+}
+
+impl Diagnostic for InvalidLHS {
+    fn message(&self) -> String {
+        "invalid left hand side of expression".to_string()
+    }
+
+    fn file(&self) -> FileId {
+        self.file
+    }
+
+    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
+        self.lhs
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
 pub struct MissingElseBranch {
     pub file: FileId,
     pub if_expr: SyntaxNodePtr,
