@@ -1,6 +1,8 @@
 //! Syntax Tree Library used throughout Mun.
 //!
-//! This crate is heavily inspired by Rust Analyzers ra_syntax and ra_parsing crate.
+//! This crate is heavily inspired by Rust Analyzers 
+//! [ra_syntax](https://rust-analyzer.github.io/rust-analyzer/ra_syntax) 
+//! and [ra_parser](https://rust-analyzer.github.io/rust-analyzer/ra_parser) crates.
 //!
 //! Properties:
 //!     - easy and fast incremental re-parsing
