@@ -1,5 +1,11 @@
-mod error;
-mod hub;
+//! The Mun Runtime C API
+//!
+//! The Mun Runtime C API exposes runtime functionality using the C ABI. This can be used to
+//! integrate the Mun Runtime into other languages that allow interoperability with C.
+#![warn(missing_docs)]
+
+pub mod error;
+pub mod hub;
 
 use std::ffi::{c_void, CStr};
 use std::os::raw::c_char;
@@ -12,14 +18,27 @@ use mun_runtime::{MunRuntime, RuntimeBuilder};
 
 pub(crate) type Token = usize;
 
+/// A type to uniquely index typed collections.
 pub trait TypedHandle {
+    /// Constructs a new `TypedHandle`.
     fn new(token: Token) -> Self;
+    /// Retrieves the handle's token.
     fn token(&self) -> Token;
 }
 
+/// A C-style handle to a runtime.
 #[repr(C)]
 pub struct RuntimeHandle(*mut c_void);
 
+/// Constructs a new runtime that loads the library at `library_path` and its dependencies. If
+/// successful, the runtime `handle` is set, otherwise a non-zero error handle is returned.
+///
+/// If a non-zero error handle is returned, it must be manually destructed using
+/// [`mun_error_destroy`].
+///
+/// The runtime must be manually destructed using [`mun_runtime_destroy`].
+///
+/// TOOD: expose interval at which the runtime's file watcher operates.
 #[no_mangle]
 pub unsafe extern "C" fn mun_runtime_create(
     library_path: *const c_char,
@@ -58,6 +77,7 @@ pub unsafe extern "C" fn mun_runtime_create(
     ErrorHandle::default()
 }
 
+/// Destructs the runtime corresponding to `handle`.
 #[no_mangle]
 pub extern "C" fn mun_runtime_destroy(handle: RuntimeHandle) {
     if !handle.0.is_null() {
@@ -65,6 +85,11 @@ pub extern "C" fn mun_runtime_destroy(handle: RuntimeHandle) {
     }
 }
 
+/// Retrieves the [`FunctionInfo`] for `fn_name` from the runtime corresponding to `handle`. If
+/// successful, `has_fn_info` and `fn_info` are set, otherwise a non-zero error handle is returned.
+///
+/// If a non-zero error handle is returned, it must be manually destructed using
+/// [`mun_error_destroy`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_runtime_get_function_info(
     handle: RuntimeHandle,
@@ -119,6 +144,11 @@ pub unsafe extern "C" fn mun_runtime_get_function_info(
     ErrorHandle::default()
 }
 
+/// Updates the runtime corresponding to `handle`. If successful, `updated` is set, otherwise a
+/// non-zero error handle is returned.
+///
+/// If a non-zero error handle is returned, it must be manually destructed using
+/// [`mun_error_destroy`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_runtime_update(
     handle: RuntimeHandle,

@@ -1,3 +1,6 @@
+//! A statically-allocated, concurrent data structure for storage of Rust objects that are utilized
+//! through Mun Runtime C API calls.
+
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::Arc;
@@ -18,6 +21,7 @@ fn generate_handle<H: TypedHandle>() -> H {
     }
 }
 
+/// A concurrent registry for uniquely indexed values.
 pub struct Registry<H, T> {
     data: RwLock<HashMap<H, T>>,
 }
@@ -26,6 +30,7 @@ impl<H, T> Registry<H, T>
 where
     H: Copy + Eq + Hash + TypedHandle,
 {
+    /// Inserts `value` and returns a unique handle to it.
     pub fn register(&self, value: T) -> H {
         let handle = {
             let data = self.data.read();
@@ -41,10 +46,12 @@ where
         handle
     }
 
+    /// Removes and returns the value corresponding to `handle`, if it is found.
     pub fn unregister(&self, handle: H) -> Option<T> {
         self.data.write().remove(&handle)
     }
 
+    /// Retrieves the inner data
     pub fn get_data(&self) -> RwLockReadGuard<HashMap<H, T>> {
         self.data.read()
     }
@@ -61,11 +68,15 @@ where
     }
 }
 
+/// Concurrent data structure for storage of Rust objects that are utilized through Mun Runtime
+/// C API calls.
 #[derive(Default)]
 pub struct Hub {
+    /// Error registry
     pub errors: Arc<Registry<ErrorHandle, Box<Error>>>,
 }
 
 lazy_static! {
+    /// Storage for Rust objects that are utilized through Mun Runtime C API calls.
     pub static ref HUB: Hub = Hub::default();
 }
