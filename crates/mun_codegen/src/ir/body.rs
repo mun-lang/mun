@@ -11,8 +11,7 @@ use mun_hir::{
 };
 use std::{collections::HashMap, mem, sync::Arc};
 
-mod name;
-use name::OptName;
+use inkwell::values::PointerValue;
 
 pub(crate) struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
     db: &'a D,
@@ -73,8 +72,10 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 Pat::Bind { name } => {
                     let name = name.to_string();
                     let param = self.fn_value.get_nth_param(i as u32).unwrap();
-                    param.set_name(&name); // Assign a name to the IR value consistent with the code.
-                    self.pat_to_param.insert(*pat, param);
+                    let builder = self.new_alloca_builder();
+                    let param_ptr = builder.build_alloca(param.get_type(), &name);
+                    builder.build_store(param_ptr, param);
+                    self.pat_to_local.insert(*pat, param_ptr);
                     self.pat_to_name.insert(*pat, name);
                 }
                 Pat::Wild => {
@@ -115,7 +116,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             }
             Expr::Literal(lit) => Some(self.gen_literal(lit)),
             Expr::BinaryOp { lhs, rhs, op } => {
-                Some(self.gen_binary_op(expr, *lhs, *rhs, op.expect("missing op")))
+                self.gen_binary_op(expr, *lhs, *rhs, op.expect("missing op"))
             }
             Expr::Call {
                 ref callee,
@@ -247,6 +248,27 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         }
     }
 
+    /// Generates IR for looking up a certain path expression.
+    fn gen_path_place_expr(
+        &self,
+        path: &Path,
+        _expr: ExprId,
+        resolver: &Resolver,
+    ) -> inkwell::values::PointerValue {
+        let resolution = resolver
+            .resolve_path_without_assoc_items(self.db, path)
+            .take_values()
+            .expect("unknown path");
+
+        match resolution {
+            Resolution::LocalBinding(pat) => *self
+                .pat_to_local
+                .get(&pat)
+                .expect("unresolved local binding"),
+            Resolution::Def(_) => panic!("no support for module definitions"),
+        }
+    }
+
     /// Generates IR to calculate a binary operation between two expressions.
     fn gen_binary_op(
         &mut self,
@@ -254,21 +276,12 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         lhs: ExprId,
         rhs: ExprId,
         op: BinaryOp,
-    ) -> BasicValueEnum {
-        let lhs_value = self.gen_expr(lhs).expect("no lhs value");
-        let rhs_value = self.gen_expr(rhs).expect("no rhs value");
+    ) -> Option<BasicValueEnum> {
         let lhs_type = self.infer[lhs].clone();
         let rhs_type = self.infer[rhs].clone();
-
         match lhs_type.as_simple() {
-            Some(TypeCtor::Float) => self.gen_binary_op_float(
-                *lhs_value.as_float_value(),
-                *rhs_value.as_float_value(),
-                op,
-            ),
-            Some(TypeCtor::Int) => {
-                self.gen_binary_op_int(*lhs_value.as_int_value(), *rhs_value.as_int_value(), op)
-            }
+            Some(TypeCtor::Float) => self.gen_binary_op_float(lhs, rhs, op),
+            Some(TypeCtor::Int) => self.gen_binary_op_int(lhs, rhs, op),
             _ => unimplemented!(
                 "unimplemented operation {0}op{1}",
                 lhs_type.display(self.db),
@@ -280,21 +293,20 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     /// Generates IR to calculate a binary operation between two floating point values.
     fn gen_binary_op_float(
         &mut self,
-        lhs: FloatValue,
-        rhs: FloatValue,
+        lhs_expr: ExprId,
+        rhs_expr: ExprId,
         op: BinaryOp,
-    ) -> BasicValueEnum {
+    ) -> Option<BasicValueEnum> {
+        let lhs = self
+            .gen_expr(lhs_expr)
+            .expect("no lhs value")
+            .into_float_value();
+        let rhs = self
+            .gen_expr(rhs_expr)
+            .expect("no rhs value")
+            .into_float_value();
         match op {
-            BinaryOp::ArithOp(ArithOp::Add) => self.builder.build_float_add(lhs, rhs, "add").into(),
-            BinaryOp::ArithOp(ArithOp::Subtract) => {
-                self.builder.build_float_sub(lhs, rhs, "sub").into()
-            }
-            BinaryOp::ArithOp(ArithOp::Divide) => {
-                self.builder.build_float_div(lhs, rhs, "div").into()
-            }
-            BinaryOp::ArithOp(ArithOp::Multiply) => {
-                self.builder.build_float_mul(lhs, rhs, "mul").into()
-            }
+            BinaryOp::ArithOp(op) => Some(self.gen_arith_bin_op_float(lhs, rhs, op).into()),
             BinaryOp::CmpOp(op) => {
                 let (name, predicate) = match op {
                     CmpOp::Eq { negated: false } => ("eq", FloatPredicate::OEQ),
@@ -316,27 +328,42 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                         strict: true,
                     } => ("greater", FloatPredicate::OGT),
                 };
-                self.builder
-                    .build_float_compare(predicate, lhs, rhs, name)
-                    .into()
+                Some(
+                    self.builder
+                        .build_float_compare(predicate, lhs, rhs, name)
+                        .into(),
+                )
+            }
+            BinaryOp::Assignment { op } => {
+                let rhs = match op {
+                    Some(op) => self.gen_arith_bin_op_float(lhs, rhs, op),
+                    None => rhs,
+                };
+                let place = self.gen_place_expr(lhs_expr);
+                self.builder.build_store(place, rhs);
+                None
             }
             _ => unimplemented!("Operator {:?} is not implemented for float", op),
         }
     }
 
     /// Generates IR to calculate a binary operation between two integer values.
-    fn gen_binary_op_int(&mut self, lhs: IntValue, rhs: IntValue, op: BinaryOp) -> BasicValueEnum {
+    fn gen_binary_op_int(
+        &mut self,
+        lhs_expr: ExprId,
+        rhs_expr: ExprId,
+        op: BinaryOp,
+    ) -> Option<BasicValueEnum> {
+        let lhs = self
+            .gen_expr(lhs_expr)
+            .expect("no lhs value")
+            .into_int_value();
+        let rhs = self
+            .gen_expr(rhs_expr)
+            .expect("no rhs value")
+            .into_int_value();
         match op {
-            BinaryOp::ArithOp(ArithOp::Add) => self.builder.build_int_add(lhs, rhs, "add").into(),
-            BinaryOp::ArithOp(ArithOp::Subtract) => {
-                self.builder.build_int_sub(lhs, rhs, "sub").into()
-            }
-            BinaryOp::ArithOp(ArithOp::Divide) => {
-                self.builder.build_int_signed_div(lhs, rhs, "div").into()
-            }
-            BinaryOp::ArithOp(ArithOp::Multiply) => {
-                self.builder.build_int_mul(lhs, rhs, "mul").into()
-            }
+            BinaryOp::ArithOp(op) => Some(self.gen_arith_bin_op_int(lhs, rhs, op).into()),
             BinaryOp::CmpOp(op) => {
                 let (name, predicate) = match op {
                     CmpOp::Eq { negated: false } => ("eq", IntPredicate::EQ),
@@ -358,11 +385,58 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                         strict: true,
                     } => ("greater", IntPredicate::SGT),
                 };
-                self.builder
-                    .build_int_compare(predicate, lhs, rhs, name)
-                    .into()
+                Some(
+                    self.builder
+                        .build_int_compare(predicate, lhs, rhs, name)
+                        .into(),
+                )
+            }
+            BinaryOp::Assignment { op } => {
+                let rhs = match op {
+                    Some(op) => self.gen_arith_bin_op_int(lhs, rhs, op),
+                    None => rhs,
+                };
+                let place = self.gen_place_expr(lhs_expr);
+                self.builder.build_store(place, rhs);
+                None
             }
             _ => unreachable!(format!("Operator {:?} is not implemented for integer", op)),
+        }
+    }
+
+    fn gen_arith_bin_op_int(&mut self, lhs: IntValue, rhs: IntValue, op: ArithOp) -> IntValue {
+        match op {
+            ArithOp::Add => self.builder.build_int_add(lhs, rhs, "add"),
+            ArithOp::Subtract => self.builder.build_int_sub(lhs, rhs, "sub"),
+            ArithOp::Divide => self.builder.build_int_signed_div(lhs, rhs, "div"),
+            ArithOp::Multiply => self.builder.build_int_mul(lhs, rhs, "mul"),
+        }
+    }
+
+    fn gen_arith_bin_op_float(
+        &mut self,
+        lhs: FloatValue,
+        rhs: FloatValue,
+        op: ArithOp,
+    ) -> FloatValue {
+        match op {
+            ArithOp::Add => self.builder.build_float_add(lhs, rhs, "add"),
+            ArithOp::Subtract => self.builder.build_float_sub(lhs, rhs, "sub"),
+            ArithOp::Divide => self.builder.build_float_div(lhs, rhs, "div"),
+            ArithOp::Multiply => self.builder.build_float_mul(lhs, rhs, "mul"),
+        }
+    }
+
+    /// Given an expression generate code that results in a memory address that can be used for
+    /// other place operations.
+    fn gen_place_expr(&mut self, expr: ExprId) -> PointerValue {
+        let body = self.body.clone();
+        match &body[expr] {
+            Expr::Path(ref p) => {
+                let resolver = mun_hir::resolver_for_expr(self.body.clone(), self.db, expr);
+                self.gen_path_place_expr(p, expr, &resolver)
+            }
+            _ => unreachable!("invalid place expression"),
         }
     }
 

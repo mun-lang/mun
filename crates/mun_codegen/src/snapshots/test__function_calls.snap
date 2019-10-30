@@ -9,16 +9,16 @@ source_filename = "main.mun"
 
 @dispatchTable = global %DispatchTable { i64 (i64, i64)* @add_impl, i64 (i64, i64)* @add }
 
-define i64 @add_impl(i64 %a, i64 %b) {
+define i64 @add_impl(i64, i64) {
 body:
-  %add = add i64 %a, %b
+  %add = add i64 %0, %1
   ret i64 %add
 }
 
-define i64 @add(i64 %a, i64 %b) {
+define i64 @add(i64, i64) {
 body:
   %add_impl_ptr = load i64 (i64, i64)*, i64 (i64, i64)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
-  %add_impl = call i64 %add_impl_ptr(i64 %a, i64 %b)
+  %add_impl = call i64 %add_impl_ptr(i64 %0, i64 %1)
   ret i64 %add_impl
 }
 

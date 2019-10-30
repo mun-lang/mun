@@ -5,24 +5,24 @@ expression: "fn foo(a:int):int {\n    let b = if a > 3 {\n        let c = if a >
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
 
-define i64 @foo(i64 %a) {
+define i64 @foo(i64) {
 body:
-  %greater = icmp sgt i64 %a, 3
+  %greater = icmp sgt i64 %0, 3
   br i1 %greater, label %then, label %else
 
 then:                                             ; preds = %body
-  %greater1 = icmp sgt i64 %a, 4
-  %add = add i64 %a, 1
-  %add5 = add i64 %a, 3
-  %iftmp = select i1 %greater1, i64 %add, i64 %add5
+  %greater3 = icmp sgt i64 %0, 4
+  %add = add i64 %0, 1
+  %add9 = add i64 %0, 3
+  %iftmp = select i1 %greater3, i64 %add, i64 %add9
   br label %if_merge
 
 else:                                             ; preds = %body
-  %sub = sub i64 %a, 1
+  %sub = sub i64 %0, 1
   br label %if_merge
 
 if_merge:                                         ; preds = %else, %then
-  %iftmp7 = phi i64 [ %iftmp, %then ], [ %sub, %else ]
-  ret i64 %iftmp7
+  %iftmp12 = phi i64 [ %iftmp, %then ], [ %sub, %else ]
+  ret i64 %iftmp12
 }
 

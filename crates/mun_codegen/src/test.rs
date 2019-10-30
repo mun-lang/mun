@@ -107,6 +107,18 @@ fn update_operators() {
 }
 
 #[test]
+fn update_parameter() {
+    test_snapshot(
+        r#"
+    fn add_three(a:int):int {
+      a += 3;
+      a
+    }
+    "#,
+    );
+}
+
+#[test]
 fn function_calls() {
     test_snapshot(
         r#"

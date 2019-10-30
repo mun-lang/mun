@@ -51,6 +51,18 @@ fn void_return() {
     )
 }
 
+#[test]
+fn place_expressions() {
+    infer_snapshot(
+        r#"
+    fn foo(a:int) {
+        a += 3;
+        3 = 5; // error: invalid left hand side of expression
+    }
+    "#,
+    )
+}
+
 fn infer_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
     insta::assert_snapshot!(insta::_macro_support::AutoName, infer(&text), &text);

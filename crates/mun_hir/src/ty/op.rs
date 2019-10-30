@@ -8,6 +8,6 @@ pub(super) fn binary_op_return_ty(op: BinaryOp, rhs_ty: Ty) -> Ty {
     match op {
         BinaryOp::ArithOp(_) => rhs_ty,
         BinaryOp::CmpOp(_) | BinaryOp::LogicOp(_) => Ty::simple(TypeCtor::Bool),
-        BinaryOp::Assignment => Ty::Empty,
+        BinaryOp::Assignment { .. } => Ty::Empty,
     }
 }
