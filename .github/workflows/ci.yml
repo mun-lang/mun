@@ -1,0 +1,152 @@
+name: CI
+
+on: [pull_request, push]
+
+env:
+  RUSTFLAGS: -Dwarnings
+
+jobs:
+
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          submodules: true
+
+      - name: Install Rust (stable)
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Install LLVM
+        uses: ./.github/actions/install-llvm
+
+      - name: Cargo check
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+
+  test:
+    name: Test
+    runs-on: ${{ matrix.config.os }}
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - { os: "ubuntu-latest", toolchain: "stable"}
+        - { os: "ubuntu-latest", toolchain: "beta"}
+        - { os: "ubuntu-latest", toolchain: "nightly"}
+        - { os: "windows-2016", toolchain: "stable"}
+        - { os: "macOS-latest", toolchain: "stable"}
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          submodules: true
+
+      - name: Install ${{ matrix.config.toolchain }} toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.config.toolchain }}
+          override: true
+
+      - name: Install LLVM
+        uses: ./.github/actions/install-llvm
+
+      - name: Cargo check
+        uses: actions-rs/cargo@v1
+        continue-on-error: ${{ matrix.config.toolchain == 'nightly' }}
+        with:
+          command: test
+
+  style:
+    name: Check Style
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          submodules: true
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: clippy, rustfmt
+
+      - name: Run cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+      - name: Install LLVM
+        uses: ./.github/actions/install-llvm
+
+      - name: Run cargo clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features
+
+  grcov:
+    runs-on: ${{ matrix.os }}
+    needs: check
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macOS-latest
+          - windows-2016
+
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          submodules: true
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: Install LLVM
+        uses: ./.github/actions/install-llvm
+
+      - name: Execute tests
+        uses: actions-rs/cargo@v1
+        continue-on-error: true
+        with:
+          command: test
+          args: --all
+        env:
+          CARGO_INCREMENTAL: 0
+          RUSTFLAGS: "-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zno-landing-pads"
+
+      - name: Gather coverage data
+        id: coverage
+        uses: actions-rs/grcov@v0.1
+
+      - name: Coveralls upload
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ${{ steps.coverage.outputs.report }}
+          parallel: true
+
+  grcov_finalize:
+    runs-on: ubuntu-latest
+    needs: grcov
+    steps:
+      - name: Coveralls finalization
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel-finished: true
