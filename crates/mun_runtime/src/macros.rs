@@ -99,6 +99,14 @@ macro_rules! invoke_fn_impl {
     }
 }
 
+/// Invokes a runtime function and returns a [`Result`] that implements the [`RetryResultExt`]
+/// trait.
+///
+/// The first argument `invoke_fn` receives is a `Runtime` and the second argument is a function
+/// string. This must be a `&str`.
+///
+/// Additional parameters passed to `invoke_fn` are the arguments of the function in the order
+/// given.
 #[macro_export]
 macro_rules! invoke_fn {
     ($Runtime:expr, $FnName:expr) => {
