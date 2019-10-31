@@ -14,7 +14,7 @@ use crate::error::ErrorHandle;
 use crate::hub::HUB;
 use failure::err_msg;
 use mun_abi::FunctionInfo;
-use mun_runtime::{MunRuntime, RuntimeBuilder};
+use mun_runtime::{Runtime, RuntimeBuilder};
 
 pub(crate) type Token = usize;
 
@@ -97,7 +97,7 @@ pub unsafe extern "C" fn mun_runtime_get_function_info(
     has_fn_info: *mut bool,
     fn_info: *mut FunctionInfo,
 ) -> ErrorHandle {
-    let runtime = match (handle.0 as *mut MunRuntime).as_ref() {
+    let runtime = match (handle.0 as *mut Runtime).as_ref() {
         Some(runtime) => runtime,
         None => {
             return HUB.errors.register(Box::new(err_msg(
@@ -154,7 +154,7 @@ pub unsafe extern "C" fn mun_runtime_update(
     handle: RuntimeHandle,
     updated: *mut bool,
 ) -> ErrorHandle {
-    let runtime = match (handle.0 as *mut MunRuntime).as_mut() {
+    let runtime = match (handle.0 as *mut Runtime).as_mut() {
         Some(runtime) => runtime,
         None => {
             return HUB.errors.register(Box::new(err_msg(
