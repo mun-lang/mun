@@ -8,7 +8,7 @@ macro_rules! invoke_fn_impl {
             /// the function invocation using the `Retriable` trait.
             pub struct $ErrName<'r, 's, $($T: Reflection,)* Output:Reflection> {
                 msg: String,
-                runtime: &'r mut MunRuntime,
+                runtime: &'r mut Runtime,
                 function_name: &'s str,
                 $($Arg: $T,)*
                 output: core::marker::PhantomData<Output>,
@@ -35,7 +35,7 @@ macro_rules! invoke_fn_impl {
             impl<'r, 's, $($T: Reflection,)* Output: Reflection> $ErrName<'r, 's, $($T,)* Output> {
                 /// Constructs a new invocation error.
                 #[allow(clippy::too_many_arguments)]
-                pub fn new(err_msg: String, runtime: &'r mut MunRuntime, function_name: &'s str, $($Arg: $T),*) -> Self {
+                pub fn new(err_msg: String, runtime: &'r mut Runtime, function_name: &'s str, $($Arg: $T),*) -> Self {
                     Self {
                         msg: err_msg,
                         runtime,
@@ -57,7 +57,7 @@ macro_rules! invoke_fn_impl {
                             while !err.runtime.update() {
                                 // Wait until there has been an update that might fix the error
                             }
-                            $crate::MunRuntime::$FnName(err.runtime, err.function_name, $(err.$Arg,)*)
+                            $crate::Runtime::$FnName(err.runtime, err.function_name, $(err.$Arg,)*)
                         }
                     }
                 }
@@ -72,7 +72,7 @@ macro_rules! invoke_fn_impl {
                 }
             }
 
-            impl MunRuntime {
+            impl Runtime {
                 /// Invokes the method `method_name` with arguments `args`, in the library compiled
                 /// based on the manifest at `manifest_path`.
                 ///
@@ -80,7 +80,7 @@ macro_rules! invoke_fn_impl {
                 /// runtime continues looping until the cause of the error has been resolved.
                 #[allow(clippy::too_many_arguments)]
                 pub fn $FnName<'r, 's, $($T: Reflection,)* Output: Reflection>(
-                    runtime: &'r mut MunRuntime,
+                    runtime: &'r mut Runtime,
                     function_name: &'s str,
                     $($Arg: $T,)*
                 ) -> core::result::Result<Output, $ErrName<'r, 's, $($T,)* Output>> {
@@ -102,37 +102,37 @@ macro_rules! invoke_fn_impl {
 #[macro_export]
 macro_rules! invoke_fn {
     ($Runtime:expr, $FnName:expr) => {
-        $crate::MunRuntime::invoke_fn0(&mut $Runtime, $FnName)
+        $crate::Runtime::invoke_fn0(&mut $Runtime, $FnName)
     };
     ($Runtime:expr, $FnName:expr, $A:expr) => {
-        $crate::MunRuntime::invoke_fn1(&mut $Runtime, $FnName, $A)
+        $crate::Runtime::invoke_fn1(&mut $Runtime, $FnName, $A)
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr) => {
-        $crate::MunRuntime::invoke_fn2(&mut $Runtime, $FnName, $A, $B)
+        $crate::Runtime::invoke_fn2(&mut $Runtime, $FnName, $A, $B)
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr) => {
-        $crate::MunRuntime::invoke_fn3(&mut $Runtime, $FnName, $A, $B, $C)
+        $crate::Runtime::invoke_fn3(&mut $Runtime, $FnName, $A, $B, $C)
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr, $D:expr) => {
-        $crate::MunRuntime::invoke_fn4(&mut $Runtime, $FnName, $A, $B, $C, $D)
+        $crate::Runtime::invoke_fn4(&mut $Runtime, $FnName, $A, $B, $C, $D)
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr, $D:expr, $E:expr) => {
-        $crate::MunRuntime::invoke_fn5(&mut $Runtime, $FnName, $A, $B, $C, $D, $E)
+        $crate::Runtime::invoke_fn5(&mut $Runtime, $FnName, $A, $B, $C, $D, $E)
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr, $D:expr, $E:expr, $F:expr) => {
-        $crate::MunRuntime::invoke_fn6(&mut $Runtime, $FnName, $A, $B, $C, $D, $E, $F)
+        $crate::Runtime::invoke_fn6(&mut $Runtime, $FnName, $A, $B, $C, $D, $E, $F)
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr, $D:expr, $E:expr, $F:expr, $G:expr) => {
-        $crate::MunRuntime::invoke_fn7(&mut $Runtime, $FnName, $A, $B, $C, $D, $E, $F, $G)
+        $crate::Runtime::invoke_fn7(&mut $Runtime, $FnName, $A, $B, $C, $D, $E, $F, $G)
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr, $D:expr, $E:expr, $F:expr, $G:expr, $H:expr) => {
-        $crate::MunRuntime::invoke_fn8(&mut $Runtime, $FnName, $A, $B, $C, $D, $E, $F, $G, $H)
+        $crate::Runtime::invoke_fn8(&mut $Runtime, $FnName, $A, $B, $C, $D, $E, $F, $G, $H)
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr, $D:expr, $E:expr, $F:expr, $G:expr, $H:expr, $I:expr) => {
-        $crate::MunRuntime::invoke_fn9(&mut $Runtime, $FnName, $A, $B, $C, $D, $E, $F, $G, $H, $I)
+        $crate::Runtime::invoke_fn9(&mut $Runtime, $FnName, $A, $B, $C, $D, $E, $F, $G, $H, $I)
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr, $D:expr, $E:expr, $F:expr, $G:expr, $H:expr, $I:expr, $J:expr) => {
-        $crate::MunRuntime::invoke_fn10(
+        $crate::Runtime::invoke_fn10(
             &mut $Runtime,
             $FnName,
             $A,
@@ -148,12 +148,12 @@ macro_rules! invoke_fn {
         )
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr, $D:expr, $E:expr, $F:expr, $G:expr, $H:expr, $I:expr, $J:expr, $K:expr) => {
-        $crate::MunRuntime::invoke_fn11(
+        $crate::Runtime::invoke_fn11(
             $Runtime, $FnName, $A, $B, $C, $D, $E, $F, $G, $H, $I, $J, $K,
         )
     };
     ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr, $D:expr, $E:expr, $F:expr, $G:expr, $H:expr, $I:expr, $J:expr, $K:expr, $L:expr) => {
-        $crate::MunRuntime::invoke_fn12(
+        $crate::Runtime::invoke_fn12(
             $Runtime, $FnName, $A, $B, $C, $D, $E, $F, $G, $H, $I, $J, $K, $L,
         )
     };

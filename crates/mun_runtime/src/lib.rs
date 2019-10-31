@@ -43,8 +43,8 @@ impl RuntimeBuilder {
         self
     }
 
-    pub fn spawn(self) -> Result<MunRuntime, Error> {
-        MunRuntime::new(self.options)
+    pub fn spawn(self) -> Result<Runtime, Error> {
+        Runtime::new(self.options)
     }
 }
 
@@ -72,23 +72,23 @@ impl DispatchTable {
     }
 }
 
-/// A runtime for the Mun scripting language.
-pub struct MunRuntime {
+/// A runtime for the Mun language.
+pub struct Runtime {
     assemblies: HashMap<PathBuf, Assembly>,
     dispatch_table: DispatchTable,
     watcher: RecommendedWatcher,
     watcher_rx: Receiver<DebouncedEvent>,
 }
 
-impl MunRuntime {
-    /// Constructs a new `MunRuntime` that loads the library at `library_path` and its
-    /// dependencies. The `MunRuntime` contains a file watcher that is triggered with an interval
+impl Runtime {
+    /// Constructs a new `Runtime` that loads the library at `library_path` and its
+    /// dependencies. The `Runtime` contains a file watcher that is triggered with an interval
     /// of `dur`.
-    pub fn new(options: RuntimeOptions) -> Result<MunRuntime, Error> {
+    pub fn new(options: RuntimeOptions) -> Result<Runtime, Error> {
         let (tx, rx) = channel();
 
         let watcher: RecommendedWatcher = Watcher::new(tx, options.delay)?;
-        let mut runtime = MunRuntime {
+        let mut runtime = Runtime {
             assemblies: HashMap::new(),
             dispatch_table: DispatchTable::default(),
             watcher,

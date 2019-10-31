@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use mun_compiler::PathOrInline;
-use mun_runtime::{invoke_fn, MunRuntime, RuntimeBuilder};
+use mun_runtime::{invoke_fn, Runtime, RuntimeBuilder};
 
 fn main() -> Result<(), failure::Error> {
     let matches = App::new("mun")
@@ -109,7 +109,7 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOption
     })
 }
 
-fn runtime(matches: &ArgMatches) -> Result<MunRuntime, failure::Error> {
+fn runtime(matches: &ArgMatches) -> Result<Runtime, failure::Error> {
     let mut builder = RuntimeBuilder::new(
         matches.value_of("LIBRARY").unwrap(), // Safe because its a required arg
     );
