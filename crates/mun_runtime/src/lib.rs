@@ -119,7 +119,7 @@ impl MunRuntime {
         self.watcher
             .watch(library_path.clone(), RecursiveMode::NonRecursive)?;
 
-        self.assemblies.insert(library_path.clone(), assembly);
+        self.assemblies.insert(library_path, assembly);
         Ok(())
     }
 

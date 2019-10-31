@@ -36,7 +36,7 @@ impl Emit for Diagnostic {
             .set_bold(true)
             .set_intense(true)
             .clone();
-        let snippet_text = ColorSpec::new().clone();
+        let snippet_text = ColorSpec::new();
 
         // Write severity name
         writer.set_color(&error)?;

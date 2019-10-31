@@ -1,0 +1,18 @@
+{
+  "name": "install-llvm",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "package": "ncc build index.js -o dist"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@actions/core": "^1.2.0",
+    "@actions/exec": "^1.0.1",
+    "@actions/tool-cache": "^1.1.2",
+    "@zeit/ncc": "^0.20.5"
+  }
+}

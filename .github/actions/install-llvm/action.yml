@@ -1,0 +1,5 @@
+name: Install LLVM
+description: Installs all LLVM binaries required to build Mun.
+runs:
+  using: 'node12'
+  main: 'dist/index.js'

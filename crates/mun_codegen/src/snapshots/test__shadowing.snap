@@ -5,18 +5,18 @@ expression: "fn foo(a:int):int {\n    let a = a+1;\n    {\n        let a = a+2;\
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
 
-define i64 @foo(i64 %a) {
+define i64 @foo(i64) {
 body:
-  %add = add i64 %a, 1
-  %add6 = add i64 %add, 3
-  ret i64 %add6
+  %add = add i64 %0, 1
+  %add7 = add i64 %add, 3
+  ret i64 %add7
 }
 
-define i64 @bar(i64 %a) {
+define i64 @bar(i64) {
 body:
-  %add = add i64 %a, 1
-  %add3 = add i64 %add, 2
-  %add8 = add i64 %add3, 3
-  ret i64 %add8
+  %add = add i64 %0, 1
+  %add4 = add i64 %add, 2
+  %add9 = add i64 %add4, 3
+  ret i64 %add9
 }
 

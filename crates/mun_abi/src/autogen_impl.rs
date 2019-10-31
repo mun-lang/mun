@@ -130,6 +130,10 @@ impl DispatchTable {
     /// This is generally not recommended, use with caution! Calling this method with an
     /// out-of-bounds index is _undefined behavior_ even if the resulting reference is not used.
     /// For a safe alternative see [get_ptr](#method.get_ptr).
+    ///
+    /// # Safety
+    ///
+    /// The `idx` is not bounds checked and should therefor be used with care.
     pub unsafe fn get_ptr_unchecked(&self, idx: u32) -> *const c_void {
         *self.fn_ptrs.offset(idx as isize)
     }
@@ -148,6 +152,10 @@ impl DispatchTable {
     /// This is generally not recommended, use with caution! Calling this method with an
     /// out-of-bounds index is _undefined behavior_ even if the resulting reference is not used.
     /// For a safe alternative see [get_ptr_mut](#method.get_ptr_mut).
+    ///
+    /// # Safety
+    ///
+    /// The `idx` is not bounds checked and should therefor be used with care.
     pub unsafe fn get_ptr_unchecked_mut(&mut self, idx: u32) -> &mut *const c_void {
         &mut *self.fn_ptrs.offset(idx as isize)
     }
