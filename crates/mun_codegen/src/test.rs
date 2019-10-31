@@ -102,6 +102,12 @@ fn update_operators() {
       result *= b
       result
     }
+
+    fn divide(a:int, b:int):int {
+      let result = a
+      result /= b
+      result
+    }
     "#,
     );
 }
