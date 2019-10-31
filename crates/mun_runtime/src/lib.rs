@@ -1,3 +1,9 @@
+//! The Mun Runtime
+//!
+//! The Mun Runtime provides functionality for automatically hot reloading Mun C ABI
+//! compliant shared libraries.
+#![warn(missing_docs)]
+
 mod assembly;
 #[macro_use]
 mod macros;
@@ -17,18 +23,22 @@ use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
 pub use crate::assembly::Assembly;
 
+/// Options for the construction of a [`Runtime`].
 #[derive(Clone, Debug)]
 pub struct RuntimeOptions {
+    /// Path to the entry point library
     pub library_path: PathBuf,
+    /// Delay during which filesystem events are collected, deduplicated, and after which emitted.
     pub delay: Duration,
 }
 
-/// A builder for the runtime.
+/// A builder for the [`Runtime`].
 pub struct RuntimeBuilder {
     options: RuntimeOptions,
 }
 
 impl RuntimeBuilder {
+    /// Constructs a new `RuntimeBuilder` for the shared library at `library_path`.
     pub fn new<P: Into<PathBuf>>(library_path: P) -> Self {
         Self {
             options: RuntimeOptions {
@@ -38,11 +48,13 @@ impl RuntimeBuilder {
         }
     }
 
+    /// Sets the `delay`.
     pub fn set_delay(&mut self, delay: Duration) -> &mut Self {
         self.options.delay = delay;
         self
     }
 
+    /// Spawns a [`Runtime`] with the builder's options.
     pub fn spawn(self) -> Result<Runtime, Error> {
         Runtime::new(self.options)
     }
@@ -55,6 +67,7 @@ pub struct DispatchTable {
 }
 
 impl DispatchTable {
+    /// Retrieves the [`FunctionInfo`] corresponding to `fn_path`, if it exists.
     pub fn get(&self, fn_path: &str) -> Option<&FunctionInfo> {
         self.functions.get(fn_path)
     }
@@ -67,6 +80,7 @@ impl DispatchTable {
         self.functions.insert(fn_path.to_string(), fn_info)
     }
 
+    /// Removes and returns the `fn_info` corresponding to `fn_path`, if it exists.
     pub fn remove(&mut self, fn_path: &str) -> Option<FunctionInfo> {
         self.functions.remove(fn_path)
     }
@@ -153,6 +167,7 @@ impl Runtime {
 
 /// Extends a result object with functions that allow retrying of an action.
 pub trait RetryResultExt: Sized {
+    /// Output type on success
     type Output;
 
     /// Retries an action, resulting in a potentially mutated version of itself.
