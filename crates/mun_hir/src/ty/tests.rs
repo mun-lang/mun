@@ -63,6 +63,26 @@ fn place_expressions() {
     )
 }
 
+#[test]
+fn update_operators() {
+    infer_snapshot(
+        r#"
+    fn foo(a:int, b:float) {
+        a += 3;
+        a -= 3;
+        a *= 3;
+        a /= 3;
+        b += 3.0;
+        b -= 3.0;
+        b *= 3.0;
+        b /= 3.0;
+        a *= 3.0; // mismatched type
+        b *= 3; // mismatched type
+    }
+    "#,
+    )
+}
+
 fn infer_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
     insta::assert_snapshot!(insta::_macro_support::AutoName, infer(&text), &text);

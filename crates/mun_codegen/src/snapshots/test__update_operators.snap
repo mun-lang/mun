@@ -1,6 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "fn add(a:int, b:int):int {\n  let result = a\n  result += b\n  result\n}\n\nfn subtract(a:int, b:int):int {\n  let result = a\n  result -= b\n  result\n}\n\nfn multiply(a:int, b:int):int {\n  let result = a\n  result *= b\n  result\n}"
+expression: "fn add(a:int, b:int):int {\n  let result = a\n  result += b\n  result\n}\n\nfn subtract(a:int, b:int):int {\n  let result = a\n  result -= b\n  result\n}\n\nfn multiply(a:int, b:int):int {\n  let result = a\n  result *= b\n  result\n}\n\nfn divide(a:int, b:int):int {\n  let result = a\n  result /= b\n  result\n}"
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
@@ -21,5 +21,11 @@ define i64 @multiply(i64, i64) {
 body:
   %mul = mul i64 %0, %1
   ret i64 %mul
+}
+
+define i64 @divide(i64, i64) {
+body:
+  %div = sdiv i64 %0, %1
+  ret i64 %div
 }
 

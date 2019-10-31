@@ -1,0 +1,39 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "fn foo(a:int, b:float) {\n    a += 3;\n    a -= 3;\n    a *= 3;\n    a /= 3;\n    b += 3.0;\n    b -= 3.0;\n    b *= 3.0;\n    b /= 3.0;\n    a *= 3.0; // mismatched type\n    b *= 3; // mismatched type\n}"
+---
+[138; 141): mismatched type
+[171; 172): mismatched type
+[7; 8) 'a': int
+[14; 15) 'b': float
+[23; 194) '{     ...type }': nothing
+[29; 30) 'a': int
+[29; 35) 'a += 3': nothing
+[34; 35) '3': int
+[41; 42) 'a': int
+[41; 47) 'a -= 3': nothing
+[46; 47) '3': int
+[53; 54) 'a': int
+[53; 59) 'a *= 3': nothing
+[58; 59) '3': int
+[65; 66) 'a': int
+[65; 71) 'a /= 3': nothing
+[70; 71) '3': int
+[77; 78) 'b': float
+[77; 85) 'b += 3.0': nothing
+[82; 85) '3.0': float
+[91; 92) 'b': float
+[91; 99) 'b -= 3.0': nothing
+[96; 99) '3.0': float
+[105; 106) 'b': float
+[105; 113) 'b *= 3.0': nothing
+[110; 113) '3.0': float
+[119; 120) 'b': float
+[119; 127) 'b /= 3.0': nothing
+[124; 127) '3.0': float
+[133; 134) 'a': int
+[133; 141) 'a *= 3.0': nothing
+[138; 141) '3.0': int
+[166; 167) 'b': float
+[166; 172) 'b *= 3': nothing
+[171; 172) '3': float
