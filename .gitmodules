@@ -1,9 +1,6 @@
 [submodule "crates/mun_abi/c"]
 	path = crates/mun_abi/c
 	url = ../../mun-lang/abi-c
-[submodule "crates/mun_runtime_capi/c"]
-	path = crates/mun_runtime_capi/c
-	url = ../../mun-lang/runtime-c.git
-[submodule "crates/mun_runtime_capi/cpp"]
-	path = crates/mun_runtime_capi/cpp
-	url = ../../mun-lang/runtime-cpp.git
+[submodule "crates/mun_runtime_capi/ffi"]
+	path = crates/mun_runtime_capi/ffi
+	url = ../../mun-lang/runtime-ffi.git
