@@ -7,7 +7,6 @@ use inkwell::OptimizationLevel;
 use mun_hir::FileId;
 use std::io::{self, Write};
 use std::path::Path;
-use std::process::{Child, Stdio};
 
 mod abi_types;
 mod linker;
@@ -16,8 +15,6 @@ mod linker;
 enum CodeGenerationError {
     #[fail(display = "linker error: {}", 0)]
     LinkerError(String),
-    #[fail(display = "linker error: {}", 0)]
-    SpawningLinkerError(io::Error),
     #[fail(display = "unknown target triple: {}", 0)]
     UnknownTargetTriple(String),
     #[fail(display = "error creating target machine")]
@@ -105,20 +102,9 @@ pub fn write_module_shared_object(
     // Link the object
     linker.build_shared_object(&output_file_path);
 
-    let mut cmd = linker.finalize();
-    let result = cmd
-        .stderr(Stdio::piped())
-        .spawn()
-        .and_then(Child::wait_with_output)
-        .map_err(CodeGenerationError::SpawningLinkerError)?;
-
-    if !result.status.success() {
-        let error = String::from_utf8(result.stderr)
-            .unwrap_or_else(|_| "<linker error contains invalid utf8>".to_owned());
-        Err(CodeGenerationError::LinkerError(error).into())
-    } else {
-        Ok(())
-    }
+    linker
+        .finalize()
+        .map_err(|e| CodeGenerationError::LinkerError(e).into())
 }
 
 /// Optimizes the specified LLVM `Module` using the default passes for the given

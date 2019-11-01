@@ -1,0 +1,20 @@
+[package]
+name = "mun_lld"
+version = "70.2.0"
+authors = ["Bas Zalmstra <zalmstra.bas@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+libc = "0.2.65"
+
+[build-dependencies.cc]
+version = "1.0"
+
+[build-dependencies.lazy_static]
+version = "1.0"
+
+[build-dependencies.regex]
+version = "1.0"
+
+[build-dependencies.semver]
+version = "0.9"
