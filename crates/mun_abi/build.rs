@@ -34,7 +34,14 @@ fn main() {
         .header("c/include/mun_abi.h")
         .whitelist_type("Mun.*")
         .blacklist_type("MunPrivacy.*")
+        // Remove type aliasing on Linux
+        .blacklist_type("__uint8_t")
+        .blacklist_type("__uint16_t")
+        .blacklist_type("__uint32_t")
         .parse_callbacks(Box::new(RemoveVendorName))
+        // FIXME: Prevent double derivation of Copy and Debug attributes on Windows
+        .derive_copy(false)
+        .derive_debug(false)
         .raw_line("#![allow(non_snake_case, non_camel_case_types, non_upper_case_globals)]")
         .raw_line("use crate::Privacy;")
         .generate()
