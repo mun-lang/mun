@@ -20,8 +20,8 @@ macro_rules! downcast_fn {
         if arg_types.len() != num_args {
             return Err(format!(
                 "Invalid number of arguments. Expected: {}. Found: {}.",
+                num_args,
                 arg_types.len(),
-                num_args
             ));
         }
 
@@ -31,8 +31,8 @@ macro_rules! downcast_fn {
                 return Err(format!(
                     "Invalid argument type at index {}. Expected: {}. Found: {}.",
                     idx,
+                    $T::type_name(),
                     arg_types[idx].name(),
-                    $T::type_name()
                 ));
             }
             idx += 1;
@@ -42,15 +42,15 @@ macro_rules! downcast_fn {
             if return_type.guid != Output::type_guid() {
                 return Err(format!(
                     "Invalid return type. Expected: {}. Found: {}",
-                    return_type.name(),
                     Output::type_name(),
+                    return_type.name(),
                 ));
             }
         } else if <()>::type_guid() != Output::type_guid() {
             return Err(format!(
                 "Invalid return type. Expected: {}. Found: {}",
-                <()>::type_name(),
                 Output::type_name(),
+                <()>::type_name(),
             ));
         }
 
