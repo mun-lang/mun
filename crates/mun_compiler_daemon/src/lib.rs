@@ -12,22 +12,25 @@ pub fn main(options: &CompilerOptions) -> Result<(), Error> {
         PathOrInline::Inline(_) => panic!("cannot run compiler with inline path"),
     };
 
-    // Compile at least once
-    mun_compiler::main(&options)?;
-
     let (tx, rx) = channel();
 
     let mut watcher: RecommendedWatcher = Watcher::new(tx, Duration::from_millis(10))?;
     watcher.watch(&input_path, RecursiveMode::NonRecursive)?;
+    println!("Watching: {}", input_path.display());
+
+    // Compile at least once
+    if let Err(e) = mun_compiler::main(&options) {
+        println!("Compilation failed with error: {}", e);
+    }
 
     loop {
         use notify::DebouncedEvent::*;
         match rx.recv() {
             Ok(Write(ref path)) => {
                 // TODO: Check whether file contents changed (using sha hash?)
-                if *path == input_path {
-                    mun_compiler::main(&options)?;
-                    println!("Compiled: {}", path.to_string_lossy());
+                match mun_compiler::main(&options) {
+                    Ok(_) => println!("Successfully compiled: {}", path.to_string_lossy()),
+                    Err(e) => println!("Compilation failed with error: {}", e),
                 }
             }
             Ok(_) => (),
