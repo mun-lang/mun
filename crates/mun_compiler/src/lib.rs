@@ -117,7 +117,13 @@ impl CompilerDatabase {
         let file_id = FileId(0);
         match path {
             PathOrInline::Path(p) => {
-                db.set_file_relative_path(file_id, RelativePathBuf::from_path(p).unwrap());
+                let filename = p.file_name().ok_or_else(|| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "Input path is missing a filename.",
+                    )
+                })?;
+                db.set_file_relative_path(file_id, RelativePathBuf::from_path(filename).unwrap());
                 db.set_file_text(file_id, Arc::new(std::fs::read_to_string(p)?));
             }
             PathOrInline::Inline(text) => {
