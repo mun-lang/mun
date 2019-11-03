@@ -72,13 +72,17 @@ impl Emit for Diagnostic {
             writer.set_color(&snippet_gutter)?;
             write!(writer, "{} |", gutter_indent)?;
             writer.set_color(&error)?;
-            writeln!(
-                writer,
-                " {}{}",
-                " ".to_string().repeat(line_col.col as usize),
-                "^".to_string()
-                    .repeat((line_col_end.col - line_col.col) as usize)
-            )?;
+
+            if line_col.line == line_col_end.line {
+                // single-line diagnostic
+                writeln!(
+                    writer,
+                    " {}{}",
+                    " ".to_string().repeat(line_col.col as usize),
+                    "^".to_string()
+                        .repeat((line_col_end.col - line_col.col) as usize)
+                )?;
+            }
         }
 
         //        // Write the start location
