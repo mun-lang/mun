@@ -216,7 +216,7 @@ impl AstNode for Expr {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
             LITERAL | PREFIX_EXPR | PATH_EXPR | BIN_EXPR | PAREN_EXPR | CALL_EXPR | IF_EXPR
-            | BLOCK_EXPR => true,
+            | RETURN_EXPR | BLOCK_EXPR => true,
             _ => false,
         }
     }
@@ -240,6 +240,7 @@ pub enum ExprKind {
     ParenExpr(ParenExpr),
     CallExpr(CallExpr),
     IfExpr(IfExpr),
+    ReturnExpr(ReturnExpr),
     BlockExpr(BlockExpr),
 }
 impl From<Literal> for Expr {
@@ -277,6 +278,11 @@ impl From<IfExpr> for Expr {
         Expr { syntax: n.syntax }
     }
 }
+impl From<ReturnExpr> for Expr {
+    fn from(n: ReturnExpr) -> Expr {
+        Expr { syntax: n.syntax }
+    }
+}
 impl From<BlockExpr> for Expr {
     fn from(n: BlockExpr) -> Expr {
         Expr { syntax: n.syntax }
@@ -293,6 +299,7 @@ impl Expr {
             PAREN_EXPR => ExprKind::ParenExpr(ParenExpr::cast(self.syntax.clone()).unwrap()),
             CALL_EXPR => ExprKind::CallExpr(CallExpr::cast(self.syntax.clone()).unwrap()),
             IF_EXPR => ExprKind::IfExpr(IfExpr::cast(self.syntax.clone()).unwrap()),
+            RETURN_EXPR => ExprKind::ReturnExpr(ReturnExpr::cast(self.syntax.clone()).unwrap()),
             BLOCK_EXPR => ExprKind::BlockExpr(BlockExpr::cast(self.syntax.clone()).unwrap()),
             _ => unreachable!(),
         }
@@ -959,6 +966,37 @@ impl AstNode for RetType {
 }
 impl RetType {
     pub fn type_ref(&self) -> Option<TypeRef> {
+        super::child_opt(self)
+    }
+}
+
+// ReturnExpr
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ReturnExpr {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for ReturnExpr {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            RETURN_EXPR => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(ReturnExpr { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl ReturnExpr {
+    pub fn expr(&self) -> Option<Expr> {
         super::child_opt(self)
     }
 }

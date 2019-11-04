@@ -33,7 +33,7 @@ expression: "fn foo(a:int, b:float) {\n    a += 3;\n    a -= 3;\n    a *= 3;\n  
 [124; 127) '3.0': float
 [133; 134) 'a': int
 [133; 141) 'a *= 3.0': nothing
-[138; 141) '3.0': int
+[138; 141) '3.0': float
 [166; 167) 'b': float
 [166; 172) 'b *= 3': nothing
-[171; 172) '3': float
+[171; 172) '3': int

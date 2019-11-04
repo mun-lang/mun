@@ -239,6 +239,47 @@ fn shadowing() {
     );
 }
 
+#[test]
+fn return_expr() {
+    test_snapshot(
+        r#"
+    fn main():int {
+        return 5;
+        let a = 3; // Nothing regarding this statement should be in the IR
+    }
+    "#,
+    );
+}
+
+#[test]
+fn conditional_return_expr() {
+    test_snapshot(
+        r#"
+    fn main(a:int):int {
+        if a > 4 {
+            return a;
+        }
+        a - 1
+    }
+    "#,
+    );
+}
+
+#[test]
+fn never_conditional_return_expr() {
+    test_snapshot(
+        r#"
+    fn main(a:int):int {
+        if a > 4 {
+            return a;
+        } else {
+            return a - 1;
+        }
+    }
+    "#,
+    );
+}
+
 fn test_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
 

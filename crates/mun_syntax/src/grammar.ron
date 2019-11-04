@@ -120,6 +120,7 @@ Grammar(
         "CALL_EXPR",
         "IF_EXPR",
         "BLOCK_EXPR",
+        "RETURN_EXPR",
         "CONDITION",
 
         "BIND_PAT",
@@ -208,6 +209,7 @@ Grammar(
                 "ParenExpr",
                 "CallExpr",
                 "IfExpr",
+                "ReturnExpr",
                 "BlockExpr",
             ]
         ),
@@ -222,6 +224,7 @@ Grammar(
                 "NeverType",
             ]
         ),
+        "ReturnExpr": (options: ["Expr"]),
         "BlockExpr": (
             options: [ "Expr" ],
             collections: [

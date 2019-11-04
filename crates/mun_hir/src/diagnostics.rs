@@ -336,3 +336,27 @@ impl Diagnostic for DuplicateDefinition {
         self
     }
 }
+
+#[derive(Debug)]
+pub struct ReturnMissingExpression {
+    pub file: FileId,
+    pub return_expr: SyntaxNodePtr,
+}
+
+impl Diagnostic for ReturnMissingExpression {
+    fn message(&self) -> String {
+        "`return;` in a function whose return type is not `()`".to_owned()
+    }
+
+    fn file(&self) -> FileId {
+        self.file
+    }
+
+    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
+        self.return_expr
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}

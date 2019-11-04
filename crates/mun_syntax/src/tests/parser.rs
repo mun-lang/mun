@@ -164,3 +164,15 @@ fn block_expr() {
     "#,
     );
 }
+
+#[test]
+fn return_expr() {
+    ok_snapshot_test(
+        r#"
+    fn foo() {
+        return;
+        return 50;
+    }
+    "#,
+    )
+}

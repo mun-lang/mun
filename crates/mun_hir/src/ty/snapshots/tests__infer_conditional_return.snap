@@ -1,0 +1,26 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "fn foo(a:int):int {\n    if a > 4 {\n        return 4;\n    }\n    a\n}\n\nfn bar(a:int):int {\n    if a > 4 {\n        return 4;\n    } else {\n        return 1;\n    }\n}"
+---
+[7; 8) 'a': int
+[18; 66) '{     ...   a }': int
+[24; 58) 'if a >...     }': nothing
+[27; 28) 'a': int
+[27; 32) 'a > 4': bool
+[31; 32) '4': int
+[33; 58) '{     ...     }': never
+[43; 51) 'return 4': never
+[50; 51) '4': int
+[63; 64) 'a': int
+[75; 76) 'a': int
+[86; 159) '{     ...   } }': int
+[92; 157) 'if a >...     }': int
+[95; 96) 'a': int
+[95; 100) 'a > 4': bool
+[99; 100) '4': int
+[101; 126) '{     ...     }': never
+[111; 119) 'return 4': never
+[118; 119) '4': int
+[132; 157) '{     ...     }': never
+[142; 150) 'return 1': never
+[149; 150) '1': int

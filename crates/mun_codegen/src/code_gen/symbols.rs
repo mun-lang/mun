@@ -49,7 +49,7 @@ pub fn type_info_query(_db: &impl IrDatabase, ty: Ty) -> TypeInfo {
             TypeCtor::Float => TypeInfo::from_name("@core::float"),
             TypeCtor::Int => TypeInfo::from_name("@core::int"),
             TypeCtor::Bool => TypeInfo::from_name("@core::bool"),
-            _ => unreachable!(),
+            _ => unreachable!("{:?} unhandled", ctor),
         },
         _ => unreachable!(),
     }
@@ -138,9 +138,8 @@ fn gen_signature_return_type<D: IrDatabase>(
     types: &AbiTypes,
     function: hir::Function,
 ) -> PointerValue {
-    let body = function.body(db);
-    let infer = function.infer(db);
-    let ret_type = infer[body.body_expr()].clone();
+    let sig = function.ty(db).callable_sig(db).unwrap();
+    let ret_type = sig.ret().clone();
     if ret_type.is_empty() {
         types
             .type_info_type
