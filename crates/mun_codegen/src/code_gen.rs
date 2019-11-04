@@ -1,3 +1,4 @@
+use crate::code_gen::linker::LinkerError;
 use crate::IrDatabase;
 use failure::Fail;
 use inkwell::module::Module;
@@ -13,8 +14,10 @@ mod linker;
 
 #[derive(Debug, Fail)]
 enum CodeGenerationError {
-    #[fail(display = "linker error: {}", 0)]
-    LinkerError(String),
+    #[fail(display = "{}", 0)]
+    LinkerError(#[fail(cause)] LinkerError),
+    #[fail(display = "error linking modules: {}", 0)]
+    ModuleLinkerError(String),
     #[fail(display = "unknown target triple: {}", 0)]
     UnknownTargetTriple(String),
     #[fail(display = "error creating target machine")]
@@ -23,6 +26,12 @@ enum CodeGenerationError {
     CouldNotCreateObjectFile(io::Error),
     #[fail(display = "error generating machine code")]
     CodeGenerationError(String),
+}
+
+impl From<LinkerError> for CodeGenerationError {
+    fn from(e: LinkerError) -> Self {
+        CodeGenerationError::LinkerError(e)
+    }
 }
 
 /// Construct a shared object for the given `hir::FileId` at the specified output file location.
@@ -46,7 +55,7 @@ pub fn write_module_shared_object(
     let module = db.module_ir(file_id);
     assembly_module
         .link_in_module(module.llvm_module.clone())
-        .map_err(|e| CodeGenerationError::LinkerError(e.to_string()))?;
+        .map_err(|e| CodeGenerationError::ModuleLinkerError(e.to_string()))?;
 
     // Generate the `get_info` method.
     symbols::gen_reflection_ir(
@@ -97,14 +106,13 @@ pub fn write_module_shared_object(
 
     // Construct a linker for the target
     let mut linker = linker::create_with_target(&target);
-    linker.add_object(obj_file.path());
+    linker.add_object(obj_file.path())?;
 
     // Link the object
-    linker.build_shared_object(&output_file_path);
+    linker.build_shared_object(&output_file_path)?;
+    linker.finalize()?;
 
-    linker
-        .finalize()
-        .map_err(|e| CodeGenerationError::LinkerError(e).into())
+    Ok(())
 }
 
 /// Optimizes the specified LLVM `Module` using the default passes for the given

@@ -88,7 +88,7 @@ runners](.github/actions/install-llvm/index.js):
 * ***nix**: Package managers of recent *nix distros can install binary versions of LLVM, e.g.:
   ```bash
   # Ubuntu 18.04
-  sudo apt install llvm-7 llvm-7-* lld-7 liblld-7*
+  sudo apt install llvm-7 llvm-7-* liblld-7*
   ```
 * **macOS**: [Brew](https://brew.sh/) contains a binary distribution of LLVM 7.1.0. However, as it's
   not the latest version, it won't be added to the path. We are using

@@ -30,7 +30,7 @@ export async function execute(cmd) {
 (async () => {
     try {
         if(isLinux) {
-            await exec.exec("sudo apt install llvm-7 llvm-7-* lld-7 liblld-7*");
+            await exec.exec("sudo apt install llvm-7 llvm-7-* liblld-7*");
         } else if(isMacOS) {
             await exec.exec("brew install llvm@7")
             let llvmPath = await execute("brew --prefix llvm@7");

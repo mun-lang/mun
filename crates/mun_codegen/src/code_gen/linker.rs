@@ -1,6 +1,30 @@
+use failure::Fail;
 use mun_target::spec;
 use mun_target::spec::LinkerFlavor;
-use std::path::Path;
+use std::fmt;
+use std::path::{Path, PathBuf};
+
+#[derive(Fail, Debug)]
+pub enum LinkerError {
+    /// Error emitted by the linker
+    LinkError(String),
+
+    /// Error in path conversion
+    PathError(PathBuf),
+}
+
+impl fmt::Display for LinkerError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        match self {
+            LinkerError::LinkError(e) => write!(f, "{}", e),
+            LinkerError::PathError(path) => write!(
+                f,
+                "path contains invalid UTF-8 characters: {}",
+                path.display()
+            ),
+        }
+    }
+}
 
 pub fn create_with_target(target: &spec::Target) -> Box<dyn Linker> {
     match target.linker_flavor {
@@ -11,9 +35,9 @@ pub fn create_with_target(target: &spec::Target) -> Box<dyn Linker> {
 }
 
 pub trait Linker {
-    fn add_object(&mut self, path: &Path);
-    fn build_shared_object(&mut self, path: &Path);
-    fn finalize(&mut self) -> Result<(), String>;
+    fn add_object(&mut self, path: &Path) -> Result<(), LinkerError>;
+    fn build_shared_object(&mut self, path: &Path) -> Result<(), LinkerError>;
+    fn finalize(&mut self) -> Result<(), LinkerError>;
 }
 
 struct LdLinker {
@@ -29,21 +53,34 @@ impl LdLinker {
 }
 
 impl Linker for LdLinker {
-    fn add_object(&mut self, path: &Path) {
-        self.args.push(path.to_string_lossy().to_string());
+    fn add_object(&mut self, path: &Path) -> Result<(), LinkerError> {
+        let path_str = path
+            .to_str()
+            .ok_or_else(|| LinkerError::PathError(path.to_owned()))?
+            .to_owned();
+        self.args.push(path_str);
+        Ok(())
     }
 
-    fn build_shared_object(&mut self, path: &Path) {
+    fn build_shared_object(&mut self, path: &Path) -> Result<(), LinkerError> {
+        let path_str = path
+            .to_str()
+            .ok_or_else(|| LinkerError::PathError(path.to_owned()))?;
+
         // Link as dynamic library
-        self.args.push("--shared".to_string());
+        self.args.push("--shared".to_owned());
 
         // Specify output path
-        self.args.push("-o".to_string());
-        self.args.push(path.to_str().unwrap().to_string());
+        self.args.push("-o".to_owned());
+        self.args.push(path_str.to_owned());
+
+        Ok(())
     }
 
-    fn finalize(&mut self) -> Result<(), String> {
-        mun_lld::link(mun_lld::LldFlavor::Elf, &self.args).ok()
+    fn finalize(&mut self) -> Result<(), LinkerError> {
+        mun_lld::link(mun_lld::LldFlavor::Elf, &self.args)
+            .ok()
+            .map_err(LinkerError::LinkError)
     }
 }
 
@@ -60,22 +97,35 @@ impl Ld64Linker {
 }
 
 impl Linker for Ld64Linker {
-    fn add_object(&mut self, path: &Path) {
-        self.args.push(path.to_string_lossy().to_string());
+    fn add_object(&mut self, path: &Path) -> Result<(), LinkerError> {
+        let path_str = path
+            .to_str()
+            .ok_or_else(|| LinkerError::PathError(path.to_owned()))?
+            .to_owned();
+        self.args.push(path_str);
+        Ok(())
     }
 
-    fn build_shared_object(&mut self, path: &Path) {
+    fn build_shared_object(&mut self, path: &Path) -> Result<(), LinkerError> {
+        let path_str = path
+            .to_str()
+            .ok_or_else(|| LinkerError::PathError(path.to_owned()))?;
+
         // Link as dynamic library
-        self.args.push("-dylib".to_string());
-        self.args.push("-lsystem".to_string());
+        self.args.push("-dylib".to_owned());
+        self.args.push("-lsystem".to_owned());
 
         // Specify output path
-        self.args.push("-o".to_string());
-        self.args.push(path.to_str().unwrap().to_string());
+        self.args.push("-o".to_owned());
+        self.args.push(path_str.to_owned());
+
+        Ok(())
     }
 
-    fn finalize(&mut self) -> Result<(), String> {
-        mun_lld::link(mun_lld::LldFlavor::MachO, &self.args).ok()
+    fn finalize(&mut self) -> Result<(), LinkerError> {
+        mun_lld::link(mun_lld::LldFlavor::MachO, &self.args)
+            .ok()
+            .map_err(LinkerError::LinkError)
     }
 }
 
@@ -92,22 +142,35 @@ impl MsvcLinker {
 }
 
 impl Linker for MsvcLinker {
-    fn add_object(&mut self, path: &Path) {
-        self.args.push(path.to_string_lossy().to_string());
+    fn add_object(&mut self, path: &Path) -> Result<(), LinkerError> {
+        let path_str = path
+            .to_str()
+            .ok_or_else(|| LinkerError::PathError(path.to_owned()))?
+            .to_owned();
+        self.args.push(path_str);
+        Ok(())
     }
 
-    fn build_shared_object(&mut self, path: &Path) {
-        self.args.push("/DLL".to_string());
-        self.args.push("/NOENTRY".to_string());
-        self.args.push("/EXPORT:get_info".to_string());
-        self.args.push(format!(
-            "/IMPLIB:{}",
-            path.with_extension("dll.lib").to_string_lossy()
-        ));
-        self.args.push(format!("/OUT:{}", path.to_string_lossy()));
+    fn build_shared_object(&mut self, path: &Path) -> Result<(), LinkerError> {
+        let dll_path_str = path
+            .to_str()
+            .ok_or_else(|| LinkerError::PathError(path.to_owned()))?;
+
+        let dll_lib_path_str = path
+            .to_str()
+            .ok_or_else(|| LinkerError::PathError(path.to_owned()))?;
+
+        self.args.push("/DLL".to_owned());
+        self.args.push("/NOENTRY".to_owned());
+        self.args.push("/EXPORT:get_info".to_owned());
+        self.args.push(format!("/IMPLIB:{}", dll_lib_path_str));
+        self.args.push(format!("/OUT:{}", dll_path_str));
+        Ok(())
     }
 
-    fn finalize(&mut self) -> Result<(), String> {
-        mun_lld::link(mun_lld::LldFlavor::Coff, &self.args).ok()
+    fn finalize(&mut self) -> Result<(), LinkerError> {
+        mun_lld::link(mun_lld::LldFlavor::Coff, &self.args)
+            .ok()
+            .map_err(LinkerError::LinkError)
     }
 }
