@@ -9,6 +9,40 @@ use std::fmt::Write;
 use std::sync::Arc;
 
 #[test]
+fn infer_conditional_return() {
+    infer_snapshot(
+        r#"
+    fn foo(a:int):int {
+        if a > 4 {
+            return 4;
+        }
+        a
+    }
+
+    fn bar(a:int):int {
+        if a > 4 {
+            return 4;
+        } else {
+            return 1;
+        }
+    }
+    "#,
+    )
+}
+
+#[test]
+fn infer_return() {
+    infer_snapshot(
+        r#"
+    fn test():int {
+        return; // error: mismatched type
+        return 5;
+    }
+    "#,
+    )
+}
+
+#[test]
 fn infer_basics() {
     infer_snapshot(
         r#"

@@ -209,16 +209,34 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
 
     /// Infer the types of all the expressions and sub-expressions in the body.
     fn infer_body(&mut self) {
-        self.infer_expr(
+        self.infer_expr_coerce(
             self.body.body_expr(),
             &Expectation::has_type(self.return_ty.clone()),
         );
     }
 
+    /// Infer type of expression with possibly implicit coerce to the expected type. Return the type
+    /// after possible coercion.
+    fn infer_expr_coerce(&mut self, expr: ExprId, expected: &Expectation) -> Ty {
+        let ty = self.infer_expr_inner(expr, expected);
+        if !self.coerce(&ty, &expected.ty) {
+            self.diagnostics.push(InferenceDiagnostic::MismatchedTypes {
+                expected: expected.ty.clone(),
+                found: ty.clone(),
+                id: expr,
+            });
+            ty
+        } else if expected.ty == Ty::Unknown {
+            ty
+        } else {
+            expected.ty.clone()
+        }
+    }
+
     /// Infer the type of the given expression. Returns the type of the expression.
-    fn infer_expr(&mut self, tgt_expr: ExprId, expected: &Expectation) -> Ty {
+    fn infer_expr_inner(&mut self, tgt_expr: ExprId, expected: &Expectation) -> Ty {
         let body = Arc::clone(&self.body); // avoid borrow checker problem
-        let mut ty = match &body[tgt_expr] {
+        let ty = match &body[tgt_expr] {
             Expr::Missing => Ty::Unknown,
             Expr::Path(p) => {
                 // FIXME this could be more efficient...
@@ -233,7 +251,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             } => self.infer_if(tgt_expr, &expected, *condition, *then_branch, *else_branch),
             Expr::BinaryOp { lhs, rhs, op } => match op {
                 Some(op) => {
-                    let lhs_ty = self.infer_expr(*lhs, &Expectation::none());
+                    let lhs_ty = self.infer_expr_coerce(*lhs, &Expectation::none());
                     if let BinaryOp::Assignment { op: _op } = op {
                         let resolver =
                             expr::resolver_for_expr(self.body.clone(), self.db, tgt_expr);
@@ -245,7 +263,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                         }
                     };
                     let rhs_expected = op::binary_op_rhs_expectation(*op, lhs_ty);
-                    let rhs_ty = self.infer_expr(*rhs, &Expectation::has_type(rhs_expected));
+                    let rhs_ty = self.infer_expr_coerce(*rhs, &Expectation::has_type(rhs_expected));
                     op::binary_op_return_ty(*op, rhs_ty)
                 }
                 _ => Ty::Unknown,
@@ -258,19 +276,20 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                 Literal::Int(_) => Ty::simple(TypeCtor::Int),
                 Literal::Float(_) => Ty::simple(TypeCtor::Float),
             },
+            Expr::Return { expr } => {
+                if let Some(expr) = expr {
+                    self.infer_expr_coerce(*expr, &Expectation::has_type(self.return_ty.clone()));
+                } else if self.return_ty != Ty::Empty {
+                    self.diagnostics
+                        .push(InferenceDiagnostic::ReturnMissingExpression { id: tgt_expr });
+                }
+
+                Ty::simple(TypeCtor::Never)
+            }
             _ => Ty::Unknown,
             //            Expr::UnaryOp { expr: _, op: _ } => {}
             //            Expr::Block { statements: _, tail: _ } => {}
         };
-
-        if expected.ty != Ty::Unknown && ty != Ty::Unknown && ty != expected.ty {
-            self.diagnostics.push(InferenceDiagnostic::MismatchedTypes {
-                expected: expected.ty.clone(),
-                found: ty.clone(),
-                id: tgt_expr,
-            });
-            ty = expected.ty.clone();
-        }
 
         self.set_expr_type(tgt_expr, ty.clone());
         ty
@@ -285,14 +304,14 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         then_branch: ExprId,
         else_branch: Option<ExprId>,
     ) -> Ty {
-        self.infer_expr(
+        self.infer_expr_coerce(
             condition,
             &Expectation::has_type(Ty::simple(TypeCtor::Bool)),
         );
-        let then_ty = self.infer_expr(then_branch, expected);
+        let then_ty = self.infer_expr_coerce(then_branch, expected);
         match else_branch {
             Some(else_branch) => {
-                let else_ty = self.infer_expr(else_branch, expected);
+                let else_ty = self.infer_expr_coerce(else_branch, expected);
                 match self.coerce_merge_branch(&then_ty, &else_ty) {
                     Some(ty) => ty,
                     None => {
@@ -327,7 +346,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         args: &[ExprId],
         _expected: &Expectation,
     ) -> Ty {
-        let callee_ty = self.infer_expr(callee, &Expectation::none());
+        let callee_ty = self.infer_expr_coerce(callee, &Expectation::none());
         let (param_tys, ret_ty) = match callee_ty.callable_sig(self.db) {
             Some(sig) => (sig.params().to_vec(), sig.ret().clone()),
             None => {
@@ -354,7 +373,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                 })
         }
         for (&arg, param_ty) in args.iter().zip(param_tys.iter()) {
-            self.infer_expr(arg, &Expectation::has_type(param_ty.clone()));
+            self.infer_expr_coerce(arg, &Expectation::has_type(param_ty.clone()));
         }
     }
 
@@ -422,6 +441,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         tail: Option<ExprId>,
         expected: &Expectation,
     ) -> Ty {
+        let mut diverges = false;
         for stmt in statements {
             match stmt {
                 Statement::Let {
@@ -435,7 +455,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                         .unwrap_or(Ty::Unknown);
                     //let decl_ty = self.insert_type_vars(decl_ty);
                     let ty = if let Some(expr) = initializer {
-                        self.infer_expr(*expr, &Expectation::has_type(decl_ty))
+                        self.infer_expr_coerce(*expr, &Expectation::has_type(decl_ty))
                     } else {
                         decl_ty
                     };
@@ -443,14 +463,24 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                     self.infer_pat(*pat, ty);
                 }
                 Statement::Expr(expr) => {
-                    self.infer_expr(*expr, &Expectation::none());
+                    if let ty_app!(TypeCtor::Never) =
+                        self.infer_expr_coerce(*expr, &Expectation::none())
+                    {
+                        diverges = true;
+                    };
                 }
             }
         }
-        if let Some(expr) = tail {
-            self.infer_expr(expr, expected)
+        let ty = if let Some(expr) = tail {
+            self.infer_expr_coerce(expr, expected)
         } else {
             Ty::Empty
+        };
+
+        if diverges {
+            Ty::simple(TypeCtor::Never)
+        } else {
+            ty
         }
     }
 
@@ -515,7 +545,7 @@ impl From<PatId> for ExprOrPatId {
 mod diagnostics {
     use crate::diagnostics::{
         CannotApplyBinaryOp, ExpectedFunction, IncompatibleBranch, InvalidLHS, MismatchedType,
-        MissingElseBranch, ParameterCountMismatch,
+        MissingElseBranch, ParameterCountMismatch, ReturnMissingExpression,
     };
     use crate::{
         code_model::src::HasSource,
@@ -564,6 +594,9 @@ mod diagnostics {
         InvalidLHS {
             id: ExprId,
             lhs: ExprId,
+        },
+        ReturnMissingExpression {
+            id: ExprId,
         },
     }
 
@@ -665,6 +698,13 @@ mod diagnostics {
                         file,
                         expr: id,
                         lhs,
+                    });
+                }
+                InferenceDiagnostic::ReturnMissingExpression { id } => {
+                    let id = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
+                    sink.push(ReturnMissingExpression {
+                        file,
+                        return_expr: id,
                     });
                 }
             }

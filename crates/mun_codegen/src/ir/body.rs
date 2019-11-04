@@ -93,11 +93,16 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         // Generate code for the body of the function
         let ret_value = self.gen_expr(self.body.body_expr());
 
-        // Construct a return statement from the returned value of the body
-        if let Some(value) = ret_value {
-            self.builder.build_return(Some(&value));
-        } else {
-            self.builder.build_return(None);
+        // Construct a return statement from the returned value of the body if a return is expected
+        // in the first place. If the return type of the body is `never` there is no need to
+        // generate a return statement.
+        let ret_type = &self.infer[self.body.body_expr()];
+        if !ret_type.is_never() {
+            if let Some(value) = ret_value {
+                self.builder.build_return(Some(&value));
+            } else {
+                self.builder.build_return(None);
+            }
         }
     }
 
@@ -127,6 +132,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 then_branch,
                 else_branch,
             } => self.gen_if(expr, *condition, *then_branch, *else_branch),
+            Expr::Return { expr: ret_expr } => self.gen_return(expr, *ret_expr),
             _ => unimplemented!("unimplemented expr type {:?}", &body[expr]),
         }
     }
@@ -175,6 +181,11 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 }
                 Statement::Expr(expr) => {
                     self.gen_expr(*expr);
+
+                    // No need to generate code after a statement that has a `never` return type.
+                    if self.infer[*expr].is_never() {
+                        return None;
+                    }
                 }
             };
         }
@@ -511,7 +522,9 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         // Fill the then block
         self.builder.position_at_end(&then_block);
         let then_block_ir = self.gen_expr(then_branch);
-        self.builder.build_unconditional_branch(&merge_block);
+        if !self.infer[then_branch].is_never() {
+            self.builder.build_unconditional_branch(&merge_block);
+        }
         then_block = self.builder.get_insert_block().unwrap();
 
         // Fill the else block, if it exists and get the result back
@@ -519,7 +532,9 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             else_block.move_after(&then_block);
             self.builder.position_at_end(&else_block);
             let result_ir = self.gen_expr(*else_branch);
-            self.builder.build_unconditional_branch(&merge_block);
+            if !self.infer[*else_branch].is_never() {
+                self.builder.build_unconditional_branch(&merge_block);
+            }
             result_ir.map(|res| (res, self.builder.get_insert_block().unwrap()))
         } else {
             None
@@ -541,5 +556,18 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         } else {
             None
         }
+    }
+
+    fn gen_return(&mut self, _expr: ExprId, ret_expr: Option<ExprId>) -> Option<BasicValueEnum> {
+        let ret_value = ret_expr.and_then(|expr| self.gen_expr(expr));
+
+        // Construct a return statement from the returned value of the body
+        if let Some(value) = ret_value {
+            self.builder.build_return(Some(&value));
+        } else {
+            self.builder.build_return(None);
+        }
+
+        None
     }
 }

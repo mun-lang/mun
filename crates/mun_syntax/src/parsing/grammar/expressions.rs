@@ -1,11 +1,14 @@
 use super::*;
+use crate::parsing::grammar::paths::PATH_FIRST;
 
 pub(crate) const LITERAL_FIRST: TokenSet =
     token_set![TRUE_KW, FALSE_KW, INT_NUMBER, FLOAT_NUMBER, STRING];
 
 const EXPR_RECOVERY_SET: TokenSet = token_set![LET_KW];
 
-const ATOM_EXPR_FIRST: TokenSet = LITERAL_FIRST.union(token_set![IDENT, L_PAREN]);
+const ATOM_EXPR_FIRST: TokenSet = LITERAL_FIRST
+    .union(PATH_FIRST)
+    .union(token_set![IDENT, L_PAREN, L_CURLY, IF_KW, RETURN_KW,]);
 
 const LHS_FIRST: TokenSet = ATOM_EXPR_FIRST.union(token_set![EXCLAMATION, MINUS]);
 
@@ -198,6 +201,7 @@ fn atom_expr(p: &mut Parser) -> Option<CompletedMarker> {
         T!['('] => paren_expr(p),
         T!['{'] => block_expr(p),
         T![if] => if_expr(p),
+        T![return] => ret_expr(p),
         _ => {
             p.error_recover("expected expression", EXPR_RECOVERY_SET);
             return None;
@@ -251,4 +255,14 @@ fn cond(p: &mut Parser) {
     let m = p.start();
     expr(p);
     m.complete(p, CONDITION);
+}
+
+fn ret_expr(p: &mut Parser) -> CompletedMarker {
+    assert!(p.at(T![return]));
+    let m = p.start();
+    p.bump(T![return]);
+    if p.at_ts(EXPR_FIRST) {
+        expr(p);
+    }
+    m.complete(p, RETURN_EXPR)
 }

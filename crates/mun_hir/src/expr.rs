@@ -198,6 +198,9 @@ pub enum Expr {
         statements: Vec<Statement>,
         tail: Option<ExprId>,
     },
+    Return {
+        expr: Option<ExprId>,
+    },
     Literal(Literal),
 }
 
@@ -280,6 +283,11 @@ impl Expr {
                 f(*then_branch);
                 if let Some(else_expr) = else_branch {
                     f(*else_expr);
+                }
+            }
+            Expr::Return { expr } => {
+                if let Some(expr) = expr {
+                    f(*expr);
                 }
             }
         }
@@ -445,6 +453,7 @@ where
     fn collect_expr(&mut self, expr: ast::Expr) -> ExprId {
         let syntax_ptr = AstPtr::new(&expr.clone());
         match expr.kind() {
+            ast::ExprKind::ReturnExpr(r) => self.collect_return(r),
             ast::ExprKind::BlockExpr(b) => self.collect_block(b),
             ast::ExprKind::Literal(e) => {
                 let lit = match e.kind() {
@@ -610,6 +619,12 @@ where
         };
         let ptr = AstPtr::new(&pat);
         self.alloc_pat(pattern, ptr)
+    }
+
+    fn collect_return(&mut self, expr: ast::ReturnExpr) -> ExprId {
+        let syntax_node_ptr = AstPtr::new(&expr.clone().into());
+        let expr = expr.expr().map(|e| self.collect_expr(e));
+        self.alloc_expr(Expr::Return { expr }, syntax_node_ptr)
     }
 
     fn finish(mut self) -> (Body, BodySourceMap) {

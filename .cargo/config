@@ -1,0 +1,3 @@
+[alias]
+# Automatically generates the ast and syntax kinds files
+gen-syntax   = "run --package tools --bin tools -- gen-syntax"
