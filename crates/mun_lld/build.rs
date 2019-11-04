@@ -284,33 +284,6 @@ fn get_link_libraries() -> Vec<String> {
         .collect::<Vec<String>>()
 }
 
-// fn get_llvm_cflags() -> String {
-//     let output = llvm_config("--cflags");
-
-//     // llvm-config includes cflags from its own compilation with --cflags that
-//     // may not be relevant to us. In particularly annoying cases, these might
-//     // include flags that aren't understood by the default compiler we're
-//     // using. Unless requested otherwise, clean CFLAGS of options that are
-//     // known to be possibly-harmful.
-//     let no_clean = env::var_os(format!(
-//         "LLVM_SYS_{}_NO_CLEAN_CFLAGS",
-//         env!("CARGO_PKG_VERSION_MAJOR")
-//     ))
-//     .is_some();
-//     if no_clean || cfg!(target_env = "msvc") {
-//         // MSVC doesn't accept -W... options, so don't try to strip them and
-//         // possibly strip something that should be retained. Also do nothing if
-//         // the user requests it.
-//         return output;
-//     }
-
-//     llvm_config("--cflags")
-//         .split(&[' ', '\n'][..])
-//         .filter(|word| !word.starts_with("-W"))
-//         .collect::<Vec<_>>()
-//         .join(" ")
-// }
-
 fn get_llvm_cxxflags() -> String {
     let output = llvm_config("--cxxflags");
 
