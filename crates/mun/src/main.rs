@@ -12,7 +12,7 @@ fn main() -> Result<(), failure::Error> {
         .version(env!("CARGO_PKG_VERSION"))
         .author("The Mun Project Developers")
         .about("The Mun executable enables compiling and running standalone Mun code")
-        .setting(AppSettings::SubcommandRequired)
+        .setting(AppSettings::SubcommandRequiredElseHelp)
         .subcommand(
             SubCommand::with_name("build")
                 .arg(
