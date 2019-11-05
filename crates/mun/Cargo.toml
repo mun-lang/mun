@@ -3,6 +3,7 @@ name = "mun"
 version = "0.1.0"
 authors = ["Bas Zalmstra <bas@abbeygames.com>"]
 edition = "2018"
+default-run = "mun"
 
 [dependencies]
 failure = "0.1.5"
