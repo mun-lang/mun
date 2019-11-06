@@ -16,7 +16,7 @@ pub trait HasSource {
 
 impl HasSource for Function {
     type Ast = ast::FunctionDef;
-    fn source(self, db: &(impl DefDatabase)) -> Source<ast::FunctionDef> {
+    fn source(self, db: &impl DefDatabase) -> Source<ast::FunctionDef> {
         self.id.source(db)
     }
 }

@@ -170,7 +170,7 @@ pub struct FnData {
 }
 
 impl FnData {
-    pub(crate) fn fn_data_query(db: &(impl DefDatabase), func: Function) -> Arc<FnData> {
+    pub(crate) fn fn_data_query(db: &impl DefDatabase, func: Function) -> Arc<FnData> {
         let src = func.source(db);
         let mut type_ref_builder = TypeRefBuilder::default();
         let name = src
