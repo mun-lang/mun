@@ -52,8 +52,6 @@ pub fn link(target: LldFlavor, args: &[String]) -> LldResult {
         .collect::<Vec<CString>>();
     let args: Vec<*const c_char> = Vec::from_iter(c_args.iter().map(|arg| arg.as_ptr()));
 
-    dbg!(&c_args);
-
     // Invoke LLD
     let mut lld_result = unsafe { mun_lld_link(target, args.len() as c_int, args.as_ptr()) };
 
