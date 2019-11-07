@@ -1,6 +1,6 @@
 use clap::{App, SubCommand};
 
-use tools::{generate, Overwrite, Result};
+use tools::{generate_all, Overwrite, Result};
 
 fn main() -> Result<()> {
     let matches = App::new("tasks")
@@ -11,7 +11,7 @@ fn main() -> Result<()> {
         .subcommand_name()
         .expect("Subcommand must be specified")
     {
-        "gen-syntax" => generate(Overwrite)?,
+        "gen-syntax" => generate_all(Overwrite)?,
         _ => unreachable!(),
     }
     Ok(())
