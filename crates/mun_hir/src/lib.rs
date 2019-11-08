@@ -27,6 +27,8 @@ mod type_ref;
 
 #[cfg(test)]
 mod mock;
+#[cfg(test)]
+mod tests;
 
 pub use salsa;
 
