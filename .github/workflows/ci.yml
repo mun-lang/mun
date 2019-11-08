@@ -54,6 +54,7 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.config.toolchain }}
           override: true
+          components: rustfmt
 
       - name: Install LLVM
         uses: ./.github/actions/install-llvm
