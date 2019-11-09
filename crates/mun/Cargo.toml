@@ -8,6 +8,7 @@ default-run = "mun"
 [dependencies]
 failure = "0.1.5"
 clap = "2.33.0"
+mun_abi = { path = "../mun_abi" }
 mun_compiler = { path = "../mun_compiler" }
 mun_compiler_daemon = { path = "../mun_compiler_daemon" }
 mun_runtime = { path = "../mun_runtime" }

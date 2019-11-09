@@ -4,6 +4,7 @@ extern crate failure;
 use std::time::Duration;
 
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
+use mun_abi::Reflection;
 use mun_compiler::PathOrInline;
 use mun_runtime::{invoke_fn, Runtime, RuntimeBuilder};
 
@@ -87,9 +88,41 @@ fn start(matches: &ArgMatches) -> Result<(), failure::Error> {
     let mut runtime = runtime(matches)?;
 
     let entry_point = matches.value_of("entry").unwrap_or("main");
+    let fn_info = runtime.get_function_info(entry_point).ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("Failed to obtain entry point '{}'", entry_point),
+        )
+    })?;
 
-    #[allow(clippy::unit_arg)]
-    invoke_fn!(runtime, entry_point).map_err(|e| failure::err_msg(format!("{}", e)))
+    if let Some(ret_type) = fn_info.signature.return_type() {
+        let type_guid = ret_type.guid;
+        if type_guid == bool::type_guid() {
+            let result: bool =
+                invoke_fn!(runtime, entry_point).map_err(|e| failure::err_msg(format!("{}", e)))?;
+
+            println!("{}", result)
+        } else if type_guid == f64::type_guid() {
+            let result: f64 =
+                invoke_fn!(runtime, entry_point).map_err(|e| failure::err_msg(format!("{}", e)))?;
+
+            println!("{}", result)
+        } else if type_guid == i64::type_guid() {
+            let result: i64 =
+                invoke_fn!(runtime, entry_point).map_err(|e| failure::err_msg(format!("{}", e)))?;
+
+            println!("{}", result)
+        } else {
+            return Err(failure::err_msg(format!(
+                "Only native Mun return types are supported for entry points. Found: {}",
+                ret_type.name()
+            )));
+        };
+        Ok(())
+    } else {
+        #[allow(clippy::unit_arg)]
+        invoke_fn!(runtime, entry_point).map_err(|e| failure::err_msg(format!("{}", e)))
+    }
 }
 
 fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOptions, failure::Error> {
