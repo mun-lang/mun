@@ -163,20 +163,17 @@ jobs:
         - {
           os: "ubuntu-latest",
           dir: linux64,
-          cli: "mun",
-          lib: "libmun_runtime.so"
+          artifacts: "mun libmun_runtime.so"
         }
         - {
           os: "windows-2016",
           dir: win64,
-          cli: "mun.exe",
-          lib: "mun_runtime.dll"
+          artifacts: "mun.exe mun_runtime.dll mun_runtime.dll.lib"
         }
         - {
           os: "macOS-latest",
           dir: osx64,
-          cli: "mun",
-          lib: "libmun_runtime.dylib"
+          artifacts: "mun libmun_runtime.dylib"
         }
     steps:
       - uses: actions/checkout@v1
@@ -201,9 +198,18 @@ jobs:
 
       - run: mkdir -p ${{ matrix.config.dir }}
 
-      - run: mv target/release/${{ matrix.config.cli }} ${{ matrix.config.dir }}
-
-      - run: mv target/release/${{ matrix.config.lib }} ${{ matrix.config.dir }}
+      - name: Move artifacts
+        env:
+          ARTIFACTS: ${{ matrix.config.artifacts }}
+          OUT_DIR: ${{ matrix.config.dir }}
+        run: |
+          import os
+          artifacts = os.environ['ARTIFACTS'].split()
+          for artifact in artifacts:
+            src = "target/release/%s" % artifact
+            dst = os.environ['OUT_DIR'] + "/" + artifact
+            os.rename(src, dst)
+        shell: python
 
       - name: Shorten commit SHA
         run: |
