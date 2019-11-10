@@ -457,7 +457,7 @@ where
             ast::ExprKind::BlockExpr(b) => self.collect_block(b),
             ast::ExprKind::Literal(e) => {
                 let lit = match e.kind() {
-                    ast::LiteralKind::Bool => Literal::Bool(e.syntax().kind() == T![true]),
+                    ast::LiteralKind::Bool => Literal::Bool(e.token().kind() == T![true]),
                     ast::LiteralKind::IntNumber => {
                         Literal::Int(e.syntax().text().to_string().parse().unwrap())
                     }

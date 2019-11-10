@@ -280,6 +280,20 @@ fn never_conditional_return_expr() {
     );
 }
 
+#[test]
+fn true_is_true() {
+    test_snapshot(
+        r#"
+    fn test_true():bool {
+        true
+    }
+
+    fn test_false():bool {
+        false
+    }"#,
+    );
+}
+
 fn test_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
 

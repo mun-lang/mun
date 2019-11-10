@@ -154,12 +154,14 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 .const_float(*v as f64)
                 .into(),
 
-            Literal::Bool(value) => self
-                .module
-                .get_context()
-                .bool_type()
-                .const_int(if *value { 1 } else { 0 }, false)
-                .into(),
+            Literal::Bool(value) => {
+                let ty = self.module.get_context().bool_type();
+                if *value {
+                    ty.const_all_ones().into()
+                } else {
+                    ty.const_zero().into()
+                }
+            }
 
             Literal::String(_) => unimplemented!("string literals are not implemented yet"),
         }
