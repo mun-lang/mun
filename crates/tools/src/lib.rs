@@ -36,7 +36,9 @@ pub fn generate(template: &Path, src: &Path, mode: Mode) -> Result<()> {
 /// With verify = false,
 fn update(path: &Path, contents: &str, mode: Mode) -> Result<()> {
     match fs::read_to_string(path) {
-        Ok(ref old_contents) if old_contents == contents => {
+        Ok(ref old_contents)
+            if old_contents.replace("\r\n", "\n") == contents.replace("\r\n", "\n") =>
+        {
             return Ok(());
         }
         _ => (),
