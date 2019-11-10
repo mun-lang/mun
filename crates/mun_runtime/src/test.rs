@@ -233,3 +233,27 @@ fn fibonacci() {
         987
     );
 }
+
+#[test]
+fn true_is_true() {
+    let compile_result = compile(
+        r#"
+    fn test_true():bool {
+        true
+    }
+
+    fn test_false():bool {
+        false
+    }
+    "#,
+    );
+    let mut runtime = compile_result.new_runtime();
+    assert_eq!(
+        Runtime::invoke_fn0::<bool>(&mut runtime, "test_true").unwrap(),
+        true
+    );
+    assert_eq!(
+        Runtime::invoke_fn0::<bool>(&mut runtime, "test_false").unwrap(),
+        false
+    );
+}
