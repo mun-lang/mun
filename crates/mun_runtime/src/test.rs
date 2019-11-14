@@ -1,5 +1,5 @@
 use crate::{Runtime, RuntimeBuilder};
-use mun_compiler::CompilerOptions;
+use mun_compiler::{CompilerOptions, Config, RelativePathBuf};
 use std::path::PathBuf;
 
 struct CompileResult {
@@ -19,10 +19,13 @@ impl CompileResult {
 fn compile(text: &str) -> CompileResult {
     let temp_dir = tempfile::TempDir::new().unwrap();
     let options = CompilerOptions {
-        out_dir: Some(temp_dir.path().to_path_buf()),
-        ..CompilerOptions::with_file(text)
+        config: Config {
+            out_dir: Some(temp_dir.path().to_path_buf()),
+            ..Config::default()
+        },
+        ..CompilerOptions::with_file(RelativePathBuf::from_path("main.mun").unwrap(), text)
     };
-    let result = mun_compiler::main(&options).unwrap().unwrap();
+    let result = mun_compiler::main(options).unwrap().unwrap();
     CompileResult {
         _temp_dir: temp_dir,
         result,

@@ -310,12 +310,7 @@ fn test_snapshot(text: &str) {
             diag.message()
         ));
     });
-    if let Some(module) = Module::package_modules(&db)
-        .iter()
-        .find(|m| m.file_id() == file_id)
-    {
-        module.diagnostics(&db, &mut sink)
-    }
+    Module::from(file_id).diagnostics(&db, &mut sink);
     drop(sink);
     let messages = messages.into_inner();
 

@@ -1,5 +1,6 @@
 #![allow(clippy::type_repetition_in_bounds)]
 
+use crate::input::{SourceRoot, SourceRootId};
 use crate::name_resolution::Namespace;
 use crate::ty::{FnSig, Ty, TypableDef};
 use crate::{
@@ -9,7 +10,7 @@ use crate::{
     name_resolution::ModuleScope,
     source_id::ErasedFileAstId,
     ty::InferenceResult,
-    AstIdMap, ExprScopes, FileId, PackageInput, RawItems,
+    AstIdMap, ExprScopes, FileId, RawItems,
 };
 use mun_syntax::{ast, Parse, SourceFile, SyntaxNode};
 pub use relative_path::RelativePathBuf;
@@ -31,13 +32,17 @@ pub trait SourceDatabase: std::fmt::Debug {
     #[salsa::invoke(parse_query)]
     fn parse(&self, file_id: FileId) -> Parse<ast::SourceFile>;
 
+    /// Source root of a file
+    #[salsa::input]
+    fn file_source_root(&self, file_id: FileId) -> SourceRootId;
+
+    /// Contents of the source root
+    #[salsa::input]
+    fn source_root(&self, id: SourceRootId) -> Arc<SourceRoot>;
+
     /// Returns the line index of a file
     #[salsa::invoke(line_index_query)]
     fn line_index(&self, file_id: FileId) -> Arc<LineIndex>;
-
-    /// The input to the package
-    #[salsa::input]
-    fn package_input(&self) -> Arc<PackageInput>;
 }
 
 #[salsa::query_group(DefDatabaseStorage)]

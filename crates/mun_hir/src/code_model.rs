@@ -20,16 +20,15 @@ pub struct Module {
     pub(crate) file_id: FileId,
 }
 
+impl From<FileId> for Module {
+    fn from(file_id: FileId) -> Self {
+        Module { file_id }
+    }
+}
+
 impl Module {
     pub fn file_id(self) -> FileId {
         self.file_id
-    }
-
-    pub fn package_modules(db: &impl DefDatabase) -> Vec<Module> {
-        db.package_input()
-            .modules()
-            .map(|m| Module { file_id: m })
-            .collect()
     }
 
     /// Returns all the definitions declared in this module.

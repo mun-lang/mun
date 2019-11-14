@@ -1,6 +1,7 @@
 mod apple_base;
 mod linux_base;
 mod windows_msvc_base;
+use failure::Fail;
 
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash)]
 pub enum LinkerFlavor {
@@ -70,9 +71,12 @@ impl Default for TargetOptions {
         }
     }
 }
-
+#[derive(Fail, Debug)]
 pub enum LoadTargetError {
+    #[fail(display = "target not found: {}", 0)]
     BuiltinTargetNotFound(String),
+
+    #[fail(display = "{}", 0)]
     Other(String),
 }
 
@@ -119,14 +123,7 @@ supported_targets!(
 );
 
 impl Target {
-    pub fn search(target_triple: &str) -> Result<Target, String> {
-        match load_specific(target_triple) {
-            Ok(t) => Ok(t),
-            Err(LoadTargetError::BuiltinTargetNotFound(_)) => Err(format!(
-                "Could not find specification for target {:?}",
-                target_triple
-            )),
-            Err(LoadTargetError::Other(e)) => Err(e),
-        }
+    pub fn search(target_triple: &str) -> Result<Target, LoadTargetError> {
+        load_specific(target_triple)
     }
 }
