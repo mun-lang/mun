@@ -82,7 +82,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                     // Wildcard patterns cannot be referenced from code. So nothing to do.
                 }
                 Pat::Path(_) => unreachable!(
-                    "Path patterns are not supported as parameters, are we missing a diagnostics?"
+                    "Path patterns are not supported as parameters, are we missing a diagnostic?"
                 ),
                 Pat::Missing => unreachable!(
                     "found missing Pattern, should not be generating IR for incomplete code"
