@@ -5,7 +5,7 @@ mod db;
 mod diagnostics;
 mod driver;
 
-pub use mun_hir::{RelativePath, RelativePathBuf};
+pub use mun_hir::{FileId, RelativePath, RelativePathBuf};
 pub use mun_target::spec::Target;
 use std::path::{Path, PathBuf};
 pub use termcolor::{ColorChoice, StandardStream};

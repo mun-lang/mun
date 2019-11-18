@@ -48,7 +48,7 @@ impl Driver {
         driver
     }
 
-    /// Constructs a driver with a configuration
+    /// Constructs a driver with a configuration and a single file.
     pub fn with_file(
         config: Config,
         path: PathOrInline,
