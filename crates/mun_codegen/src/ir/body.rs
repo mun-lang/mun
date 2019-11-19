@@ -531,7 +531,9 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
 
         // Fill the else block, if it exists and get the result back
         let else_ir_and_block = if let Some((else_block, else_branch)) = else_block_and_expr {
-            else_block.move_after(&then_block);
+            else_block
+                .move_after(&then_block)
+                .expect("programmer error, then_block is invalid");
             self.builder.position_at_end(&else_block);
             let result_ir = self.gen_expr(*else_branch);
             if !self.infer[*else_branch].is_never() {
@@ -543,7 +545,8 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         };
 
         // Create merge block
-        merge_block.move_after(&self.builder.get_insert_block().unwrap());
+        let current_block = self.builder.get_insert_block().unwrap();
+        merge_block.move_after(&current_block).unwrap();
         self.builder.position_at_end(&merge_block);
 
         // Construct phi block if a value was returned
