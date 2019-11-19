@@ -131,7 +131,7 @@ impl Runtime {
         assembly.link(&self.dispatch_table)?;
 
         self.watcher
-            .watch(library_path.clone(), RecursiveMode::NonRecursive)?;
+            .watch(library_path.parent().unwrap(), RecursiveMode::NonRecursive)?;
 
         self.assemblies.insert(library_path, assembly);
         Ok(())
