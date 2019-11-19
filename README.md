@@ -68,6 +68,13 @@ fn add(a: int, b: int): int {
 
 [The Mun Programming Language Book](https://docs.mun-lang.org/)
 
+## Pre-Built Binaries
+
+**[NOTE] We do not provide support for milestone releases**
+
+Download pre-built binaries of [milestone releases](https://github.com/mun-lang/mun/releases) for
+macOS, Linux, and Windows (64-bit only).
+
 ## Building from Source
 
 ### Installing dependencies
