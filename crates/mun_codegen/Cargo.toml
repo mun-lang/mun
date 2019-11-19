@@ -5,7 +5,6 @@ authors = ["Bas Zalmstra <zalmstra.bas@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "llvm7-0" }
 mun_hir = { path = "../mun_hir" }
 mun_target = { path = "../mun_target" }
 mun_lld = { path = "../mun_lld" }
@@ -15,6 +14,11 @@ md5="0.6.1"
 array-init="0.1.0"
 tempfile = "3"
 lazy_static = "1.4.0"
+
+[dependencies.inkwell]
+git = "https://github.com/mun-lang/inkwell"
+rev = "4448bcd"
+features = ["llvm7-0"]
 
 [dev-dependencies]
 insta = "0.12.0"
