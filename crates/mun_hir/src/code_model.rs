@@ -11,7 +11,7 @@ use crate::resolve::{Resolution, Resolver};
 use crate::ty::InferenceResult;
 use crate::type_ref::{TypeRefBuilder, TypeRefId, TypeRefMap, TypeRefSourceMap};
 use crate::{ids::FunctionId, AsName, DefDatabase, FileId, HirDatabase, Name, Ty};
-use mun_syntax::ast::{NameOwner, TypeAscriptionOwner};
+use mun_syntax::ast::{NameOwner, TypeAscriptionOwner, VisibilityOwner};
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
@@ -128,6 +128,12 @@ pub enum DefWithBody {
     Function(Function),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Visibility {
+    Public,
+    Private,
+}
+
 impl DefWithBody {
     pub fn infer(self, db: &impl HirDatabase) -> Arc<InferenceResult> {
         db.infer(self)
@@ -164,6 +170,7 @@ pub struct Function {
 pub struct FnData {
     name: Name,
     params: Vec<TypeRefId>,
+    visibility: Visibility,
     ret_type: TypeRefId,
     type_ref_map: TypeRefMap,
     type_ref_source_map: TypeRefSourceMap,
@@ -178,6 +185,12 @@ impl FnData {
             .name()
             .map(|n| n.as_name())
             .unwrap_or_else(Name::missing);
+
+        let visibility = src
+            .ast
+            .visibility()
+            .map(|_v| Visibility::Public)
+            .unwrap_or(Visibility::Private);
 
         let mut params = Vec::new();
         if let Some(param_list) = src.ast.param_list() {
@@ -198,6 +211,7 @@ impl FnData {
         Arc::new(FnData {
             name,
             params,
+            visibility,
             ret_type,
             type_ref_map,
             type_ref_source_map,
@@ -210,6 +224,10 @@ impl FnData {
 
     pub fn params(&self) -> &[TypeRefId] {
         &self.params
+    }
+
+    pub fn visibility(&self) -> Visibility {
+        self.visibility
     }
 
     pub fn ret_type(&self) -> &TypeRefId {
@@ -234,6 +252,10 @@ impl Function {
 
     pub fn name(self, db: &impl HirDatabase) -> Name {
         self.data(db).name.clone()
+    }
+
+    pub fn visibility(self, db: &impl HirDatabase) -> Visibility {
+        self.data(db).visibility()
     }
 
     pub fn data(self, db: &impl HirDatabase) -> Arc<FnData> {
