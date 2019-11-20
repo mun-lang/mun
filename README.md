@@ -1,7 +1,7 @@
 # Mun
 
 [![Build Status](https://github.com/mun-lang/mun/workflows/CI/badge.svg?branch=master)](https://github.com/mun-lang/mun/actions)
-[![Coverage Status](https://coveralls.io/repos/github/mun-lang/mun/badge.svg?branch=master)](https://coveralls.io/github/mun-lang/mun?branch=master)
+[![codecov](https://codecov.io/gh/mun-lang/mun/branch/master/graph/badge.svg)](https://codecov.io/gh/mun-lang/mun)
 [![docs page][docs-badge]][docs] [![MIT/Apache][licence-badge]][li]
 [![Join us on Discord][s4]][di]
 ![Lines of Code][s6]
