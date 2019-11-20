@@ -42,7 +42,7 @@ impl Emit for Diagnostic {
         writer.set_color(&error)?;
         write!(writer, "error")?;
 
-        // Write diagnostics message
+        // Write diagnostic message
         writer.set_color(&header)?;
         writeln!(writer, ": {}", self.message)?;
 
@@ -74,7 +74,7 @@ impl Emit for Diagnostic {
             writer.set_color(&error)?;
 
             if line_col.line == line_col_end.line {
-                // single-line diagnostics
+                // single-line diagnostic
                 writeln!(
                     writer,
                     " {}{}",

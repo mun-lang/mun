@@ -8,7 +8,7 @@ mod emit;
 pub use emit::Emit;
 use mun_errors::{Diagnostic, Level};
 
-/// Constructs diagnostics message for the given file.
+/// Constructs diagnostic messages for the given file.
 pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Diagnostic> {
     let parse = db.parse(file_id);
     let mut result = Vec::new();

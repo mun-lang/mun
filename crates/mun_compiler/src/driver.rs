@@ -29,7 +29,7 @@ pub struct Driver {
 }
 
 impl Driver {
-    /// Construct a driver with a specific configuration.
+    /// Constructs a driver with a specific configuration.
     pub fn with_config(config: Config) -> Self {
         let mut driver = Driver {
             db: CompilerDatabase::new(),
@@ -106,7 +106,7 @@ impl Driver {
             .collect()
     }
 
-    /// Emits all diagnostic messages currently in the database; returns true if errors where
+    /// Emits all diagnostic messages currently in the database; returns true if errors were
     /// emitted.
     pub fn emit_diagnostics(&self, writer: &mut impl WriteColor) -> Result<bool, failure::Error> {
         let mut has_errors = false;
