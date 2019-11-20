@@ -3,6 +3,9 @@
 #![allow(non_snake_case, non_camel_case_types, non_upper_case_globals)]
 use crate::Privacy;
 
+pub type __uint8_t = ::std::os::raw::c_uchar;
+pub type __uint16_t = ::std::os::raw::c_ushort;
+pub type __uint32_t = ::std::os::raw::c_uint;
 #[doc = " <div rustbindgen derive=\"PartialEq\">"]
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq)]
