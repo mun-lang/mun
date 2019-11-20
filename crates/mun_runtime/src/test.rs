@@ -43,7 +43,7 @@ impl TestDriver {
         }
     }
 
-    /// Updates the text of the Mun source and ensure the generated assembly has been reloaded.
+    /// Updates the text of the Mun source and ensures that the generated assembly has been reloaded.
     fn update(&mut self, text: &str) {
         self.driver.set_file_text(self.file_id, text);
         let out_path = self.driver.write_assembly(self.file_id).unwrap().unwrap();
