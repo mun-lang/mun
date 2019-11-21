@@ -117,6 +117,17 @@ fn update_operators() {
     )
 }
 
+#[test]
+fn infer_loop() {
+    infer_snapshot(
+        r#"
+    fn foo() {
+        loop {}
+    }
+    "#,
+    )
+}
+
 fn infer_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
     insta::assert_snapshot!(insta::_macro_support::AutoName, infer(&text), &text);

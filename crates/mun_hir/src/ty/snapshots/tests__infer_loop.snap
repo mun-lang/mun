@@ -1,0 +1,7 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "fn foo() {\n    loop {}\n}"
+---
+[9; 24) '{     loop {} }': never
+[15; 22) 'loop {}': never
+[20; 22) '{}': nothing
