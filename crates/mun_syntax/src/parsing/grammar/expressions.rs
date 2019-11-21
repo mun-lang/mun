@@ -201,6 +201,7 @@ fn atom_expr(p: &mut Parser) -> Option<CompletedMarker> {
         T!['('] => paren_expr(p),
         T!['{'] => block_expr(p),
         T![if] => if_expr(p),
+        T![loop] => loop_expr(p),
         T![return] => ret_expr(p),
         _ => {
             p.error_recover("expected expression", EXPR_RECOVERY_SET);
@@ -249,6 +250,14 @@ fn if_expr(p: &mut Parser) -> CompletedMarker {
         }
     }
     m.complete(p, IF_EXPR)
+}
+
+fn loop_expr(p: &mut Parser) -> CompletedMarker {
+    assert!(p.at(T![loop]));
+    let m = p.start();
+    p.bump(T![loop]);
+    block(p);
+    m.complete(p, LOOP_EXPR)
 }
 
 fn cond(p: &mut Parser) {

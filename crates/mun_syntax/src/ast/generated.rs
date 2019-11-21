@@ -218,7 +218,7 @@ impl AstNode for Expr {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
             LITERAL | PREFIX_EXPR | PATH_EXPR | BIN_EXPR | PAREN_EXPR | CALL_EXPR | IF_EXPR
-            | RETURN_EXPR | BLOCK_EXPR => true,
+            | LOOP_EXPR | RETURN_EXPR | BLOCK_EXPR => true,
             _ => false,
         }
     }
@@ -242,6 +242,7 @@ pub enum ExprKind {
     ParenExpr(ParenExpr),
     CallExpr(CallExpr),
     IfExpr(IfExpr),
+    LoopExpr(LoopExpr),
     ReturnExpr(ReturnExpr),
     BlockExpr(BlockExpr),
 }
@@ -280,6 +281,11 @@ impl From<IfExpr> for Expr {
         Expr { syntax: n.syntax }
     }
 }
+impl From<LoopExpr> for Expr {
+    fn from(n: LoopExpr) -> Expr {
+        Expr { syntax: n.syntax }
+    }
+}
 impl From<ReturnExpr> for Expr {
     fn from(n: ReturnExpr) -> Expr {
         Expr { syntax: n.syntax }
@@ -301,6 +307,7 @@ impl Expr {
             PAREN_EXPR => ExprKind::ParenExpr(ParenExpr::cast(self.syntax.clone()).unwrap()),
             CALL_EXPR => ExprKind::CallExpr(CallExpr::cast(self.syntax.clone()).unwrap()),
             IF_EXPR => ExprKind::IfExpr(IfExpr::cast(self.syntax.clone()).unwrap()),
+            LOOP_EXPR => ExprKind::LoopExpr(LoopExpr::cast(self.syntax.clone()).unwrap()),
             RETURN_EXPR => ExprKind::ReturnExpr(ReturnExpr::cast(self.syntax.clone()).unwrap()),
             BLOCK_EXPR => ExprKind::BlockExpr(BlockExpr::cast(self.syntax.clone()).unwrap()),
             _ => unreachable!(),
@@ -476,6 +483,34 @@ impl AstNode for Literal {
     }
 }
 impl Literal {}
+
+// LoopExpr
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct LoopExpr {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for LoopExpr {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            LOOP_EXPR => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(LoopExpr { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl ast::LoopBodyOwner for LoopExpr {}
+impl LoopExpr {}
 
 // ModuleItem
 

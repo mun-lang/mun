@@ -176,3 +176,13 @@ fn return_expr() {
     "#,
     )
 }
+
+#[test]
+fn loop_expr() {
+    ok_snapshot_test(
+        r#"
+    fn foo() {
+        loop {}
+    }"#,
+    )
+}
