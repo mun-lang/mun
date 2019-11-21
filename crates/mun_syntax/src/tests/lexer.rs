@@ -110,7 +110,7 @@ fn keywords() {
         r#"
     and break do else false for fn if in nil
     return true while let mut class public protected
-    private never
+    private never loop
     "#,
     )
 }

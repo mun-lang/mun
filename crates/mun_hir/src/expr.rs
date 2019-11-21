@@ -10,7 +10,7 @@ use crate::code_model::src::{HasSource, Source};
 use crate::name::AsName;
 use crate::type_ref::{TypeRef, TypeRefBuilder, TypeRefId, TypeRefMap, TypeRefSourceMap};
 pub use mun_syntax::ast::PrefixOp as UnaryOp;
-use mun_syntax::ast::{ArgListOwner, BinOp, NameOwner, TypeAscriptionOwner};
+use mun_syntax::ast::{ArgListOwner, BinOp, LoopBodyOwner, NameOwner, TypeAscriptionOwner};
 use mun_syntax::{ast, AstNode, AstPtr, T};
 use rustc_hash::FxHashMap;
 use std::ops::Index;
@@ -201,6 +201,9 @@ pub enum Expr {
     Return {
         expr: Option<ExprId>,
     },
+    Loop {
+        body: ExprId,
+    },
     Literal(Literal),
 }
 
@@ -289,6 +292,9 @@ impl Expr {
                 if let Some(expr) = expr {
                     f(*expr);
                 }
+            }
+            Expr::Loop { body } => {
+                f(*body);
             }
         }
     }
@@ -453,6 +459,7 @@ where
     fn collect_expr(&mut self, expr: ast::Expr) -> ExprId {
         let syntax_ptr = AstPtr::new(&expr.clone());
         match expr.kind() {
+            ast::ExprKind::LoopExpr(expr) => self.collect_loop(expr),
             ast::ExprKind::ReturnExpr(r) => self.collect_return(r),
             ast::ExprKind::BlockExpr(b) => self.collect_block(b),
             ast::ExprKind::Literal(e) => {
@@ -625,6 +632,12 @@ where
         let syntax_node_ptr = AstPtr::new(&expr.clone().into());
         let expr = expr.expr().map(|e| self.collect_expr(e));
         self.alloc_expr(Expr::Return { expr }, syntax_node_ptr)
+    }
+
+    fn collect_loop(&mut self, expr: ast::LoopExpr) -> ExprId {
+        let syntax_node_ptr = AstPtr::new(&expr.clone().into());
+        let body = self.collect_block_opt(expr.loop_body());
+        self.alloc_expr(Expr::Loop { body }, syntax_node_ptr)
     }
 
     fn finish(mut self) -> (Body, BodySourceMap) {
