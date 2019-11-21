@@ -1,5 +1,4 @@
 use crate::{Runtime, RuntimeBuilder};
-use mun_abi::Reflection;
 use mun_compiler::{ColorChoice, Config, Driver, FileId, PathOrInline, RelativePathBuf};
 use std::path::PathBuf;
 use std::thread::sleep;
@@ -62,24 +61,16 @@ impl TestDriver {
         }
     }
 
-    /// Calls the function with the specified name
-    fn invoke0<T: Reflection>(&mut self, fn_name: &str) -> T {
-        Runtime::invoke_fn0::<T>(&mut self.runtime, fn_name).unwrap()
+    /// Returns the `Runtime` used by this instance
+    fn runtime_mut(&mut self) -> &mut Runtime {
+        &mut self.runtime
     }
+}
 
-    /// Calls the function with the specified name passing a single argument
-    fn invoke1<A: Reflection, T: Reflection>(&mut self, fn_name: &str, arg0: A) -> T {
-        Runtime::invoke_fn1::<A, T>(&mut self.runtime, fn_name, arg0).unwrap()
-    }
-
-    /// Calls the function with the specified name passing two arguments
-    fn invoke2<A: Reflection, B: Reflection, T: Reflection>(
-        &mut self,
-        fn_name: &str,
-        arg0: A,
-        arg1: B,
-    ) -> T {
-        Runtime::invoke_fn2::<A, B, T>(&mut self.runtime, fn_name, arg0, arg1).unwrap()
+macro_rules! assert_invoke_eq {
+    ($ExpectedType:ty, $ExpectedResult:expr, $Driver:expr, $($Arg:tt)+) => {
+        let result: $ExpectedType = invoke_fn!($Driver.runtime_mut(), $($Arg)*).unwrap();
+        assert_eq!(result, $ExpectedResult, "{} == {:?}", stringify!(invoke_fn!($Driver.runtime_mut(), $($Arg)*).unwrap()), $ExpectedResult);
     }
 }
 
@@ -90,7 +81,7 @@ fn compile_and_run() {
         fn main() {}
     ",
     );
-    let _result: () = driver.invoke0("main");
+    assert_invoke_eq!((), (), driver, "main");
 }
 
 #[test]
@@ -100,8 +91,7 @@ fn return_value() {
         fn main():int { 3 }
     ",
     );
-    let result: i64 = driver.invoke0("main");
-    assert_eq!(result, 3);
+    assert_invoke_eq!(i64, 3, driver, "main");
 }
 
 #[test]
@@ -113,8 +103,7 @@ fn arguments() {
     );
     let a: i64 = 52;
     let b: i64 = 746;
-    let result: i64 = driver.invoke2("main", a, b);
-    assert_eq!(result, a + b);
+    assert_invoke_eq!(i64, a + b, driver, "main", a, b);
 }
 
 #[test]
@@ -128,11 +117,11 @@ fn dispatch_table() {
 
     let a: i64 = 52;
     let b: i64 = 746;
-    assert_eq!(driver.invoke2::<i64, i64, i64>("main", a, b), a + b);
+    assert_invoke_eq!(i64, a + b, driver, "main", a, b);
 
     let a: i64 = 6274;
     let b: i64 = 72;
-    assert_eq!(driver.invoke2::<i64, i64, i64>("add", a, b), a + b);
+    assert_invoke_eq!(i64, a + b, driver, "add", a, b);
 }
 
 #[test]
@@ -148,80 +137,35 @@ fn booleans() {
         fn greater(a:int, b:int):bool               { a>b }
         fn greaterf(a:float, b:float):bool          { a>b }
         fn less_equal(a:int, b:int):bool            { a<=b }
-        fn lessf_equal(a:float, b:float):bool       { a<=b }
+        fn less_equalf(a:float, b:float):bool       { a<=b }
         fn greater_equal(a:int, b:int):bool         { a>=b }
-        fn greaterf_equal(a:float, b:float):bool    { a>=b }
+        fn greater_equalf(a:float, b:float):bool    { a>=b }
     "#,
     );
-    assert_eq!(driver.invoke2::<_, _, bool>("equal", 52i64, 764i64), false);
-    assert_eq!(driver.invoke2::<_, _, bool>("equal", 64i64, 64i64), true);
-    assert_eq!(driver.invoke2::<_, _, bool>("equalf", 52f64, 764f64), false);
-    assert_eq!(driver.invoke2::<_, _, bool>("equalf", 64f64, 64f64), true);
-    assert_eq!(
-        driver.invoke2::<_, _, bool>("not_equal", 52i64, 764i64),
-        true
-    );
-    assert_eq!(
-        driver.invoke2::<_, _, bool>("not_equal", 64i64, 64i64),
-        false
-    );
-    assert_eq!(
-        driver.invoke2::<_, _, bool>("not_equalf", 52f64, 764f64),
-        true
-    );
-    assert_eq!(
-        driver.invoke2::<_, _, bool>("not_equalf", 64f64, 64f64),
-        false
-    );
-    assert_eq!(driver.invoke2::<_, _, bool>("less", 52i64, 764i64), true);
-    assert_eq!(driver.invoke2::<_, _, bool>("less", 64i64, 64i64), false);
-    assert_eq!(driver.invoke2::<_, _, bool>("lessf", 52f64, 764f64), true);
-    assert_eq!(driver.invoke2::<_, _, bool>("lessf", 64f64, 64f64), false);
-    assert_eq!(
-        driver.invoke2::<_, _, bool>("greater", 52i64, 764i64),
-        false
-    );
-    assert_eq!(driver.invoke2::<_, _, bool>("greater", 64i64, 64i64), false);
-    assert_eq!(
-        driver.invoke2::<_, _, bool>("greaterf", 52f64, 764f64),
-        false
-    );
-    assert_eq!(
-        driver.invoke2::<_, _, bool>("greaterf", 64f64, 64f64),
-        false
-    );
-    assert_eq!(
-        driver.invoke2::<_, _, bool>("less_equal", 52i64, 764i64),
-        true
-    );
-    assert_eq!(
-        driver.invoke2::<_, _, bool>("less_equal", 64i64, 64i64),
-        true
-    );
-    assert_eq!(
-        driver.invoke2::<_, _, bool>("lessf_equal", 52f64, 764f64),
-        true
-    );
-    assert_eq!(
-        driver.invoke2::<_, _, bool>("lessf_equal", 64f64, 64f64),
-        true
-    );
-    assert_eq!(
-        driver.invoke2::<_, _, bool>("greater_equal", 52i64, 764i64),
-        false
-    );
-    assert_eq!(
-        driver.invoke2::<_, _, bool>("greater_equal", 64i64, 64i64),
-        true
-    );
-    assert_eq!(
-        driver.invoke2::<_, _, bool>("greaterf_equal", 52f64, 764f64),
-        false
-    );
-    assert_eq!(
-        driver.invoke2::<_, _, bool>("greaterf_equal", 64f64, 64f64),
-        true
-    );
+    assert_invoke_eq!(bool, false, driver, "equal", 52i64, 764i64);
+    assert_invoke_eq!(bool, true, driver, "equal", 64i64, 64i64);
+    assert_invoke_eq!(bool, false, driver, "equalf", 52f64, 764f64);
+    assert_invoke_eq!(bool, true, driver, "equalf", 64f64, 64f64);
+    assert_invoke_eq!(bool, true, driver, "not_equal", 52i64, 764i64);
+    assert_invoke_eq!(bool, false, driver, "not_equal", 64i64, 64i64);
+    assert_invoke_eq!(bool, true, driver, "not_equalf", 52f64, 764f64);
+    assert_invoke_eq!(bool, false, driver, "not_equalf", 64f64, 64f64);
+    assert_invoke_eq!(bool, true, driver, "less", 52i64, 764i64);
+    assert_invoke_eq!(bool, false, driver, "less", 64i64, 64i64);
+    assert_invoke_eq!(bool, true, driver, "lessf", 52f64, 764f64);
+    assert_invoke_eq!(bool, false, driver, "lessf", 64f64, 64f64);
+    assert_invoke_eq!(bool, false, driver, "greater", 52i64, 764i64);
+    assert_invoke_eq!(bool, false, driver, "greater", 64i64, 64i64);
+    assert_invoke_eq!(bool, false, driver, "greaterf", 52f64, 764f64);
+    assert_invoke_eq!(bool, false, driver, "greaterf", 64f64, 64f64);
+    assert_invoke_eq!(bool, true, driver, "less_equal", 52i64, 764i64);
+    assert_invoke_eq!(bool, true, driver, "less_equal", 64i64, 64i64);
+    assert_invoke_eq!(bool, true, driver, "less_equalf", 52f64, 764f64);
+    assert_invoke_eq!(bool, true, driver, "less_equalf", 64f64, 64f64);
+    assert_invoke_eq!(bool, false, driver, "greater_equal", 52i64, 764i64);
+    assert_invoke_eq!(bool, true, driver, "greater_equal", 64i64, 64i64);
+    assert_invoke_eq!(bool, false, driver, "greater_equalf", 52f64, 764f64);
+    assert_invoke_eq!(bool, true, driver, "greater_equalf", 64f64, 64f64);
 }
 
 #[test]
@@ -238,9 +182,9 @@ fn fibonacci() {
     "#,
     );
 
-    assert_eq!(driver.invoke1::<i64, i64>("fibonacci", 5i64), 5);
-    assert_eq!(driver.invoke1::<i64, i64>("fibonacci", 11i64), 89);
-    assert_eq!(driver.invoke1::<i64, i64>("fibonacci", 16i64), 987);
+    assert_invoke_eq!(i64, 5, driver, "fibonacci", 5i64);
+    assert_invoke_eq!(i64, 89, driver, "fibonacci", 11i64);
+    assert_invoke_eq!(i64, 987, driver, "fibonacci", 16i64);
 }
 
 #[test]
@@ -256,8 +200,8 @@ fn true_is_true() {
     }
     "#,
     );
-    assert_eq!(driver.invoke0::<bool>("test_true"), true);
-    assert_eq!(driver.invoke0::<bool>("test_false"), false);
+    assert_invoke_eq!(bool, true, driver, "test_true");
+    assert_invoke_eq!(bool, false, driver, "test_false");
 }
 
 #[test]
@@ -267,11 +211,11 @@ fn hotreloadable() {
     fn main():int { 5 }
     ",
     );
-    assert_eq!(driver.invoke0::<i64>("main"), 5);
+    assert_invoke_eq!(i64, 5, driver, "main");
     driver.update(
         r"
     fn main():int { 10 }
     ",
     );
-    assert_eq!(driver.invoke0::<i64>("main"), 10);
+    assert_invoke_eq!(i64, 10, driver, "main");
 }
