@@ -216,6 +216,28 @@ fn fibonacci() {
 }
 
 #[test]
+fn fibonacci_loop() {
+    test_snapshot(
+        r#"
+    fn fibonacci(n:int):int {
+        let a = 0;
+        let b = 1;
+        let i = 1;
+        loop {
+            if i > n {
+                return a
+            }
+            let sum = a + b;
+            a = b;
+            b = sum;
+            i += 1;
+        }
+    }
+    "#,
+    )
+}
+
+#[test]
 fn shadowing() {
     test_snapshot(
         r#"
@@ -292,6 +314,17 @@ fn true_is_true() {
         false
     }"#,
     );
+}
+
+#[test]
+fn loop_expr() {
+    test_snapshot(
+        r#"
+    fn foo() {
+        loop {}
+    }
+    "#,
+    )
 }
 
 fn test_snapshot(text: &str) {

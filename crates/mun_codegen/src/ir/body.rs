@@ -97,12 +97,10 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         // in the first place. If the return type of the body is `never` there is no need to
         // generate a return statement.
         let ret_type = &self.infer[self.body.body_expr()];
-        if !ret_type.is_never() {
-            if let Some(value) = ret_value {
-                self.builder.build_return(Some(&value));
-            } else {
-                self.builder.build_return(None);
-            }
+        if let Some(value) = ret_value {
+            self.builder.build_return(Some(&value));
+        } else if !ret_type.is_never() {
+            self.builder.build_return(None);
         }
     }
 
@@ -133,6 +131,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 else_branch,
             } => self.gen_if(expr, *condition, *then_branch, *else_branch),
             Expr::Return { expr: ret_expr } => self.gen_return(expr, *ret_expr),
+            Expr::Loop { body } => self.gen_loop(expr, *body),
             _ => unimplemented!("unimplemented expr type {:?}", &body[expr]),
         }
     }
@@ -572,6 +571,23 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         } else {
             self.builder.build_return(None);
         }
+
+        None
+    }
+
+    fn gen_loop(&mut self, _expr: ExprId, body_expr: ExprId) -> Option<BasicValueEnum> {
+        let context = self.module.get_context();
+        let loop_block = context.append_basic_block(&self.fn_value, "loop");
+
+        // Insert an explicit fall through from the current block to the loop
+        self.builder.build_unconditional_branch(&loop_block);
+
+        // Start generating code inside the loop
+        self.builder.position_at_end(&loop_block);
+        let _ = self.gen_expr(body_expr);
+
+        // Jump to the start of the loop
+        self.builder.build_unconditional_branch(&loop_block);
 
         None
     }

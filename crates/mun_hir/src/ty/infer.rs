@@ -215,10 +215,31 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         );
     }
 
+    /// Infers the type of the `tgt_expr`
+    fn infer_expr(&mut self, tgt_expr: ExprId, expected: &Expectation) -> Ty {
+        let ty = self.infer_expr_inner(tgt_expr, expected);
+        if !expected.is_none() && ty != expected.ty {
+            self.diagnostics.push(InferenceDiagnostic::MismatchedTypes {
+                expected: expected.ty.clone(),
+                found: ty.clone(),
+                id: tgt_expr,
+            });
+            ty
+        } else {
+            ty
+        }
+    }
+
     /// Infer type of expression with possibly implicit coerce to the expected type. Return the type
-    /// after possible coercion.
+    /// after possible coercion. Adds a diagnostic message if coercion failed.
     fn infer_expr_coerce(&mut self, expr: ExprId, expected: &Expectation) -> Ty {
         let ty = self.infer_expr_inner(expr, expected);
+        self.coerce_expr_ty(expr, ty, expected)
+    }
+
+    /// Performs implicit coercion of the specified `Ty` to an expected type. Returns the type after
+    /// possible coercion. Adds a diagnostic message if coercion failed.
+    fn coerce_expr_ty(&mut self, expr: ExprId, ty: Ty, expected: &Expectation) -> Ty {
         if !self.coerce(&ty, &expected.ty) {
             self.diagnostics.push(InferenceDiagnostic::MismatchedTypes {
                 expected: expected.ty.clone(),
@@ -251,7 +272,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             } => self.infer_if(tgt_expr, &expected, *condition, *then_branch, *else_branch),
             Expr::BinaryOp { lhs, rhs, op } => match op {
                 Some(op) => {
-                    let lhs_ty = self.infer_expr_coerce(*lhs, &Expectation::none());
+                    let lhs_ty = self.infer_expr(*lhs, &Expectation::none());
                     if let BinaryOp::Assignment { op: _op } = op {
                         let resolver =
                             expr::resolver_for_expr(self.body.clone(), self.db, tgt_expr);
@@ -263,7 +284,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                         }
                     };
                     let rhs_expected = op::binary_op_rhs_expectation(*op, lhs_ty);
-                    let rhs_ty = self.infer_expr_coerce(*rhs, &Expectation::has_type(rhs_expected));
+                    let rhs_ty = self.infer_expr(*rhs, &Expectation::has_type(rhs_expected));
                     op::binary_op_return_ty(*op, rhs_ty)
                 }
                 _ => Ty::Unknown,
@@ -278,12 +299,16 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             },
             Expr::Return { expr } => {
                 if let Some(expr) = expr {
-                    self.infer_expr_coerce(*expr, &Expectation::has_type(self.return_ty.clone()));
+                    self.infer_expr(*expr, &Expectation::has_type(self.return_ty.clone()));
                 } else if self.return_ty != Ty::Empty {
                     self.diagnostics
                         .push(InferenceDiagnostic::ReturnMissingExpression { id: tgt_expr });
                 }
 
+                Ty::simple(TypeCtor::Never)
+            }
+            Expr::Loop { body } => {
+                self.infer_expr(*body, &Expectation::has_type(Ty::Empty));
                 Ty::simple(TypeCtor::Never)
             }
             _ => Ty::Unknown,
@@ -304,7 +329,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         then_branch: ExprId,
         else_branch: Option<ExprId>,
     ) -> Ty {
-        self.infer_expr_coerce(
+        self.infer_expr(
             condition,
             &Expectation::has_type(Ty::simple(TypeCtor::Bool)),
         );
@@ -346,7 +371,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         args: &[ExprId],
         _expected: &Expectation,
     ) -> Ty {
-        let callee_ty = self.infer_expr_coerce(callee, &Expectation::none());
+        let callee_ty = self.infer_expr(callee, &Expectation::none());
         let (param_tys, ret_ty) = match callee_ty.callable_sig(self.db) {
             Some(sig) => (sig.params().to_vec(), sig.ret().clone()),
             None => {
@@ -463,16 +488,21 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                     self.infer_pat(*pat, ty);
                 }
                 Statement::Expr(expr) => {
-                    if let ty_app!(TypeCtor::Never) =
-                        self.infer_expr_coerce(*expr, &Expectation::none())
-                    {
+                    if let ty_app!(TypeCtor::Never) = self.infer_expr(*expr, &Expectation::none()) {
                         diverges = true;
                     };
                 }
             }
         }
         let ty = if let Some(expr) = tail {
-            self.infer_expr_coerce(expr, expected)
+            // Perform coercion of the trailing expression unless the expression has a Never return
+            // type because we want the block to get the Never type in that case.
+            let ty = self.infer_expr_inner(expr, expected);
+            if let ty_app!(TypeCtor::Never) = ty {
+                Ty::simple(TypeCtor::Never)
+            } else {
+                self.coerce_expr_ty(expr, ty, expected)
+            }
         } else {
             Ty::Empty
         };
