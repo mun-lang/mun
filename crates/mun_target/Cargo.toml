@@ -1,6 +1,6 @@
 [package]
 name = "mun_target"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Bas Zalmstra <zalmstra.bas@gmail.com>"]
 edition = "2018"
 
