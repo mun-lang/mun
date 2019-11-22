@@ -1,7 +1,7 @@
 [package]
 name = "mun_abi"
 version = "0.2.0"
-authors = ["Wodann <remco.kuijper@gmail.com>"]
+authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 
 [build-dependencies]

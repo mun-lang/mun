@@ -1,7 +1,7 @@
 [package]
 name = "mun_codegen"
 version = "0.2.0"
-authors = ["Bas Zalmstra <zalmstra.bas@gmail.com>"]
+authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 
 [dependencies]
