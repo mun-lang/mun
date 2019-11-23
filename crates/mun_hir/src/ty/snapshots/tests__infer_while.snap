@@ -1,9 +1,9 @@
 ---
 source: crates/mun_hir/src/ty/tests.rs
-expression: "fn foo() {\n    let n = 0;\n    while n < 3 { n += 1; };\n    while n < 3 { n += 1; break; };\n    while n < 3 { break 3; };   // Error: break with value in while\n    while n < 3 { loop { break 3; }; };\n}"
+expression: "fn foo() {\n    let n = 0;\n    while n < 3 { n += 1; };\n    while n < 3 { n += 1; break; };\n    while n < 3 { break 3; };   // error: break with value can only appear in a loop\n    while n < 3 { loop { break 3; }; };\n}"
 ---
 [109; 116): `break` with value can only appear in a `loop`
-[9; 200) '{     ...; }; }': nothing
+[9; 217) '{     ...; }; }': nothing
 [19; 20) 'n': int
 [23; 24) '0': int
 [30; 53) 'while ...= 1; }': nothing
@@ -29,12 +29,12 @@ expression: "fn foo() {\n    let n = 0;\n    while n < 3 { n += 1; };\n    while
 [105; 106) '3': int
 [107; 119) '{ break 3; }': never
 [109; 116) 'break 3': never
-[163; 197) 'while ...; }; }': nothing
-[169; 170) 'n': int
-[169; 174) 'n < 3': bool
-[173; 174) '3': int
-[175; 197) '{ loop...; }; }': nothing
-[177; 194) 'loop {...k 3; }': int
-[182; 194) '{ break 3; }': never
-[184; 191) 'break 3': never
+[180; 214) 'while ...; }; }': nothing
+[186; 187) 'n': int
+[186; 191) 'n < 3': bool
 [190; 191) '3': int
+[192; 214) '{ loop...; }; }': nothing
+[194; 211) 'loop {...k 3; }': int
+[199; 211) '{ break 3; }': never
+[201; 208) 'break 3': never
+[207; 208) '3': int

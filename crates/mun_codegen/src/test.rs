@@ -346,6 +346,24 @@ fn loop_break_expr() {
     )
 }
 
+#[test]
+fn while_expr() {
+    test_snapshot(
+        r#"
+    fn foo(n:int) {
+        while n<3 {
+            n += 1;
+        };
+
+        // This will be completely optimized out
+        while n<4 {
+            break;
+        };
+    }
+    "#,
+    )
+}
+
 fn test_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
 
