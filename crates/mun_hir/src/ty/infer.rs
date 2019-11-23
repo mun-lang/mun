@@ -92,6 +92,12 @@ pub fn infer_query(db: &impl HirDatabase, def: DefWithBody) -> Arc<InferenceResu
     Arc::new(ctx.resolve_all())
 }
 
+enum ActiveLoop {
+    Loop(Ty, Expectation),
+    While,
+    For,
+}
+
 /// The inference context contains all information needed during type inference.
 struct InferenceResultBuilder<'a, D: HirDatabase> {
     db: &'a D,
@@ -108,7 +114,7 @@ struct InferenceResultBuilder<'a, D: HirDatabase> {
     /// entry contains the current type of the loop statement (initially `never`) and the expected
     /// type of the loop expression. Both these values are updated when a break statement is
     /// encountered.
-    active_loop: Option<(Ty, Expectation)>,
+    active_loop: Option<ActiveLoop>,
 
     /// The return type of the function being inferred.
     return_ty: Ty,
@@ -315,6 +321,9 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             }
             Expr::Break { expr } => self.infer_break(tgt_expr, *expr),
             Expr::Loop { body } => self.infer_loop_expr(tgt_expr, *body, expected),
+            Expr::While { condition, body } => {
+                self.infer_while_expr(tgt_expr, *condition, *body, expected)
+            }
             _ => Ty::Unknown,
             //            Expr::UnaryOp { expr: _, op: _ } => {}
             //            Expr::Block { statements: _, tail: _ } => {}
@@ -519,13 +528,20 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
     }
 
     fn infer_break(&mut self, tgt_expr: ExprId, expr: Option<ExprId>) -> Ty {
-        // Fetch the expected type
-        let expected = if let Some((_, info)) = &self.active_loop {
-            info.clone()
-        } else {
-            self.diagnostics
-                .push(InferenceDiagnostic::BreakOutsideLoop { id: tgt_expr });
-            return Ty::simple(TypeCtor::Never);
+        let expected = match &self.active_loop {
+            Some(ActiveLoop::Loop(_, info)) => info.clone(),
+            Some(_) => {
+                if expr.is_some() {
+                    self.diagnostics
+                        .push(InferenceDiagnostic::BreakWithValueOutsideLoop { id: tgt_expr });
+                }
+                return Ty::simple(TypeCtor::Never);
+            }
+            None => {
+                self.diagnostics
+                    .push(InferenceDiagnostic::BreakOutsideLoop { id: tgt_expr });
+                return Ty::simple(TypeCtor::Never);
+            }
         };
 
         // Infer the type of the break expression
@@ -548,29 +564,46 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         };
 
         // Update the expected type for the rest of the loop
-        self.active_loop = Some((ty.clone(), Expectation::has_type(ty)));
+        self.active_loop = Some(ActiveLoop::Loop(ty.clone(), Expectation::has_type(ty)));
 
         Ty::simple(TypeCtor::Never)
     }
 
     fn infer_loop_expr(&mut self, _tgt_expr: ExprId, body: ExprId, expected: &Expectation) -> Ty {
-        self.infer_loop_block(body, expected)
+        if let ActiveLoop::Loop(ty, _) = self.infer_loop_block(
+            body,
+            ActiveLoop::Loop(Ty::simple(TypeCtor::Never), expected.clone()),
+        ) {
+            ty
+        } else {
+            panic!("returned active loop must be a loop")
+        }
     }
 
-    /// Infers the type of a loop body, taking into account breaks.
-    fn infer_loop_block(&mut self, body: ExprId, expected: &Expectation) -> Ty {
-        // Take the previous loop information and replace it with a new entry
-        let top_level_loop = std::mem::replace(
-            &mut self.active_loop,
-            Some((Ty::simple(TypeCtor::Never), expected.clone())),
-        );
+    fn infer_loop_block(&mut self, body: ExprId, lp: ActiveLoop) -> ActiveLoop {
+        let top_level_loop = std::mem::replace(&mut self.active_loop, Some(lp));
 
         // Infer the body of the loop
         self.infer_expr_coerce(body, &Expectation::has_type(Ty::Empty));
 
         // Take the result of the loop information and replace with top level loop
-        let (ty, _) = std::mem::replace(&mut self.active_loop, top_level_loop).unwrap();
-        ty
+        std::mem::replace(&mut self.active_loop, top_level_loop).unwrap()
+    }
+
+    fn infer_while_expr(
+        &mut self,
+        _tgt_expr: ExprId,
+        condition: ExprId,
+        body: ExprId,
+        _expected: &Expectation,
+    ) -> Ty {
+        self.infer_expr(
+            condition,
+            &Expectation::has_type(Ty::simple(TypeCtor::Bool)),
+        );
+
+        self.infer_loop_block(body, ActiveLoop::While);
+        Ty::Empty
     }
 
     pub fn report_pat_inference_failure(&mut self, _pat: PatId) {
@@ -633,8 +666,9 @@ impl From<PatId> for ExprOrPatId {
 
 mod diagnostics {
     use crate::diagnostics::{
-        BreakOutsideLoop, CannotApplyBinaryOp, ExpectedFunction, IncompatibleBranch, InvalidLHS,
-        MismatchedType, MissingElseBranch, ParameterCountMismatch, ReturnMissingExpression,
+        BreakOutsideLoop, BreakWithValueOutsideLoop, CannotApplyBinaryOp, ExpectedFunction,
+        IncompatibleBranch, InvalidLHS, MismatchedType, MissingElseBranch, ParameterCountMismatch,
+        ReturnMissingExpression,
     };
     use crate::{
         code_model::src::HasSource,
@@ -688,6 +722,9 @@ mod diagnostics {
             id: ExprId,
         },
         BreakOutsideLoop {
+            id: ExprId,
+        },
+        BreakWithValueOutsideLoop {
             id: ExprId,
         },
     }
@@ -802,6 +839,13 @@ mod diagnostics {
                 InferenceDiagnostic::BreakOutsideLoop { id } => {
                     let id = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
                     sink.push(BreakOutsideLoop {
+                        file,
+                        break_expr: id,
+                    });
+                }
+                InferenceDiagnostic::BreakWithValueOutsideLoop { id } => {
+                    let id = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
+                    sink.push(BreakWithValueOutsideLoop {
                         file,
                         break_expr: id,
                     });

@@ -144,6 +144,21 @@ fn infer_break() {
     )
 }
 
+#[test]
+fn infer_while() {
+    infer_snapshot(
+        r#"
+    fn foo() {
+        let n = 0;
+        while n < 3 { n += 1; };
+        while n < 3 { n += 1; break; };
+        while n < 3 { break 3; };   // Error: break with value in while
+        while n < 3 { loop { break 3; }; };
+    }
+    "#,
+    )
+}
+
 fn infer_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
     insta::assert_snapshot!(insta::_macro_support::AutoName, infer(&text), &text);
