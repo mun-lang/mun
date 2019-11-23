@@ -201,6 +201,9 @@ pub enum Expr {
     Return {
         expr: Option<ExprId>,
     },
+    Break {
+        expr: Option<ExprId>,
+    },
     Loop {
         body: ExprId,
     },
@@ -289,6 +292,11 @@ impl Expr {
                 }
             }
             Expr::Return { expr } => {
+                if let Some(expr) = expr {
+                    f(*expr);
+                }
+            }
+            Expr::Break { expr } => {
                 if let Some(expr) = expr {
                     f(*expr);
                 }
@@ -461,6 +469,7 @@ where
         match expr.kind() {
             ast::ExprKind::LoopExpr(expr) => self.collect_loop(expr),
             ast::ExprKind::ReturnExpr(r) => self.collect_return(r),
+            ast::ExprKind::BreakExpr(r) => self.collect_break(r),
             ast::ExprKind::BlockExpr(b) => self.collect_block(b),
             ast::ExprKind::Literal(e) => {
                 let lit = match e.kind() {
@@ -632,6 +641,12 @@ where
         let syntax_node_ptr = AstPtr::new(&expr.clone().into());
         let expr = expr.expr().map(|e| self.collect_expr(e));
         self.alloc_expr(Expr::Return { expr }, syntax_node_ptr)
+    }
+
+    fn collect_break(&mut self, expr: ast::BreakExpr) -> ExprId {
+        let syntax_node_ptr = AstPtr::new(&expr.clone().into());
+        let expr = expr.expr().map(|e| self.collect_expr(e));
+        self.alloc_expr(Expr::Break { expr }, syntax_node_ptr)
     }
 
     fn collect_loop(&mut self, expr: ast::LoopExpr) -> ExprId {
