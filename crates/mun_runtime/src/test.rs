@@ -215,6 +215,33 @@ fn fibonacci_loop() {
 }
 
 #[test]
+fn fibonacci_loop_break() {
+    let mut driver = TestDriver::new(
+        r#"
+    fn fibonacci(n:int):int {
+        let a = 0;
+        let b = 1;
+        let i = 1;
+        loop {
+            if i > n {
+                break a;
+            }
+            let sum = a + b;
+            a = b;
+            b = sum;
+            i += 1;
+        }
+    }
+    "#,
+    );
+
+    assert_invoke_eq!(i64, 5, driver, "fibonacci", 5i64);
+    assert_invoke_eq!(i64, 89, driver, "fibonacci", 11i64);
+    assert_invoke_eq!(i64, 987, driver, "fibonacci", 16i64);
+    assert_invoke_eq!(i64, 46368, driver, "fibonacci", 24i64);
+}
+
+#[test]
 fn true_is_true() {
     let mut driver = TestDriver::new(
         r#"
