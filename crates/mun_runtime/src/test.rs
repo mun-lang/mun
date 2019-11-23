@@ -185,30 +185,6 @@ fn fibonacci() {
     assert_invoke_eq!(i64, 5, driver, "fibonacci", 5i64);
     assert_invoke_eq!(i64, 89, driver, "fibonacci", 11i64);
     assert_invoke_eq!(i64, 987, driver, "fibonacci", 16i64);
-
-    driver.update(
-        r#"
-    fn fibonacci(n:int):int {
-        let a = 0;
-        let b = 1;
-        let i = 1;
-        loop {
-            if i > n {
-                return a
-            }
-            let sum = a + b;
-            a = b;
-            b = sum;
-            i += 1;
-        }
-    }
-    "#,
-    );
-
-    assert_invoke_eq!(i64, 5, driver, "fibonacci", 5i64);
-    assert_invoke_eq!(i64, 89, driver, "fibonacci", 11i64);
-    assert_invoke_eq!(i64, 987, driver, "fibonacci", 16i64);
-    assert_invoke_eq!(i64, 46368, driver, "fibonacci", 24i64);
 }
 
 #[test]

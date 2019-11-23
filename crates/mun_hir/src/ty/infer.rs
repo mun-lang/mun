@@ -224,10 +224,9 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                 found: ty.clone(),
                 id: tgt_expr,
             });
-            ty
-        } else {
-            ty
-        }
+        };
+
+        ty
     }
 
     /// Infer type of expression with possibly implicit coerce to the expected type. Return the type
