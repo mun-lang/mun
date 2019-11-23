@@ -152,7 +152,7 @@ fn infer_while() {
         let n = 0;
         while n < 3 { n += 1; };
         while n < 3 { n += 1; break; };
-        while n < 3 { break 3; };   // Error: break with value in while
+        while n < 3 { break 3; };   // error: break with value can only appear in a loop
         while n < 3 { loop { break 3; }; };
     }
     "#,

@@ -23,15 +23,16 @@ mod type_variable;
 
 pub use type_variable::TypeVarId;
 
+#[macro_export]
 macro_rules! ty_app {
     ($ctor:pat, $param:pat) => {
-        $crate::ty::Ty::Apply($crate::ty::ApplicationTy {
+        $crate::Ty::Apply($crate::ApplicationTy {
             ctor: $ctor,
             parameters: $param,
         })
     };
     ($ctor:pat) => {
-        $crate::ty::Ty::Apply($crate::ty::ApplicationTy {
+        $crate::Ty::Apply($crate::ApplicationTy {
             ctor: $ctor,
             ..
         })

@@ -35,6 +35,7 @@ pub(crate) struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
     function_map: &'a HashMap<mun_hir::Function, FunctionValue>,
     dispatch_table: &'b DispatchTable,
     active_loop: Option<LoopInfo>,
+    hir_function: hir::Function,
 }
 
 impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
@@ -69,6 +70,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             function_map,
             dispatch_table,
             active_loop: None,
+            hir_function,
         }
     }
 
@@ -107,11 +109,20 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         // Construct a return statement from the returned value of the body if a return is expected
         // in the first place. If the return type of the body is `never` there is no need to
         // generate a return statement.
-        let ret_type = &self.infer[self.body.body_expr()];
-        if let Some(value) = ret_value {
-            self.builder.build_return(Some(&value));
-        } else if !ret_type.is_never() {
-            self.builder.build_return(None);
+        let block_ret_type = &self.infer[self.body.body_expr()];
+        let fn_ret_type = self
+            .hir_function
+            .ty(self.db)
+            .callable_sig(self.db)
+            .unwrap()
+            .ret()
+            .clone();
+        if !block_ret_type.is_never() {
+            if fn_ret_type.is_empty() {
+                self.builder.build_return(None);
+            } else if let Some(value) = ret_value {
+                self.builder.build_return(Some(&value));
+            }
         }
     }
 
@@ -143,6 +154,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             } => self.gen_if(expr, *condition, *then_branch, *else_branch),
             Expr::Return { expr: ret_expr } => self.gen_return(expr, *ret_expr),
             Expr::Loop { body } => self.gen_loop(expr, *body),
+            Expr::While { condition, body } => self.gen_while(expr, *condition, *body),
             Expr::Break { expr: break_expr } => self.gen_break(expr, *break_expr),
             _ => unimplemented!("unimplemented expr type {:?}", &body[expr]),
         }
@@ -178,6 +190,11 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         }
     }
 
+    /// Constructs an empty struct value e.g. `{}`
+    fn gen_empty(&mut self) -> BasicValueEnum {
+        self.module.get_context().const_struct(&[], false).into()
+    }
+
     /// Generates IR for the specified block expression.
     fn gen_block(
         &mut self,
@@ -193,16 +210,13 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                     self.gen_let_statement(*pat, *initializer);
                 }
                 Statement::Expr(expr) => {
-                    self.gen_expr(*expr);
-
                     // No need to generate code after a statement that has a `never` return type.
-                    if self.infer[*expr].is_never() {
-                        return None;
-                    }
+                    self.gen_expr(*expr)?;
                 }
             };
         }
         tail.and_then(|expr| self.gen_expr(expr))
+            .or_else(|| Some(self.gen_empty()))
     }
 
     /// Constructs a builder that should be used to emit an `alloca` instruction. These instructions
@@ -365,7 +379,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 };
                 let place = self.gen_place_expr(lhs_expr);
                 self.builder.build_store(place, rhs);
-                None
+                Some(self.gen_empty())
             }
             _ => unimplemented!("Operator {:?} is not implemented for float", op),
         }
@@ -422,7 +436,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 };
                 let place = self.gen_place_expr(lhs_expr);
                 self.builder.build_store(place, rhs);
-                None
+                Some(self.gen_empty())
             }
             _ => unreachable!(format!("Operator {:?} is not implemented for integer", op)),
         }
@@ -507,10 +521,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         else_branch: Option<ExprId>,
     ) -> Option<inkwell::values::BasicValueEnum> {
         // Generate IR for the condition
-        let condition_ir = self
-            .gen_expr(condition)
-            .expect("condition must have a value")
-            .into_int_value();
+        let condition_ir = self.gen_expr(condition)?.into_int_value();
 
         // Generate the code blocks to branch to
         let context = self.module.get_context();
@@ -570,7 +581,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 Some(then_block_ir)
             }
         } else {
-            None
+            Some(self.gen_empty())
         }
     }
 
@@ -600,33 +611,91 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         None
     }
 
-    fn gen_loop(&mut self, _expr: ExprId, body_expr: ExprId) -> Option<BasicValueEnum> {
-        let context = self.module.get_context();
-        let loop_block = context.append_basic_block(&self.fn_value, "loop");
-        let exit_block = context.append_basic_block(&self.fn_value, "exit");
-
+    fn gen_loop_block_expr(
+        &mut self,
+        block: ExprId,
+        exit_block: BasicBlock,
+    ) -> (
+        BasicBlock,
+        Vec<(BasicValueEnum, BasicBlock)>,
+        Option<BasicValueEnum>,
+    ) {
         // Build a new loop info struct
         let loop_info = LoopInfo {
             exit_block,
             break_values: Vec::new(),
         };
 
+        // Replace previous loop info
         let prev_loop = std::mem::replace(&mut self.active_loop, Some(loop_info));
 
-        // Insert an explicit fall through from the current block to the loop
-        self.builder.build_unconditional_branch(&loop_block);
-
         // Start generating code inside the loop
-        self.builder.position_at_end(&loop_block);
-        let _ = self.gen_expr(body_expr);
-
-        // Jump to the start of the loop
-        self.builder.build_unconditional_branch(&loop_block);
+        let value = self.gen_expr(block);
 
         let LoopInfo {
             exit_block,
             break_values,
         } = std::mem::replace(&mut self.active_loop, prev_loop).unwrap();
+
+        (exit_block, break_values, value)
+    }
+
+    fn gen_while(
+        &mut self,
+        _expr: ExprId,
+        condition_expr: ExprId,
+        body_expr: ExprId,
+    ) -> Option<BasicValueEnum> {
+        let context = self.module.get_context();
+        let cond_block = context.append_basic_block(&self.fn_value, "whilecond");
+        let loop_block = context.append_basic_block(&self.fn_value, "while");
+        let exit_block = context.append_basic_block(&self.fn_value, "afterwhile");
+
+        // Insert an explicit fall through from the current block to the condition check
+        self.builder.build_unconditional_branch(&cond_block);
+
+        // Generate condition block
+        self.builder.position_at_end(&cond_block);
+        let condition_ir = self.gen_expr(condition_expr);
+        if let Some(condition_ir) = condition_ir {
+            self.builder.build_conditional_branch(
+                condition_ir.into_int_value(),
+                &loop_block,
+                &exit_block,
+            );
+        } else {
+            // If the condition doesn't return a value, we also immediately return without a value.
+            // This can happen if the expression is a `never` expression.
+            return None;
+        }
+
+        // Generate loop block
+        self.builder.position_at_end(&loop_block);
+        let (exit_block, _, value) = self.gen_loop_block_expr(body_expr, exit_block);
+        if value.is_some() {
+            self.builder.build_unconditional_branch(&cond_block);
+        }
+
+        // Generate exit block
+        self.builder.position_at_end(&exit_block);
+
+        Some(self.gen_empty())
+    }
+
+    fn gen_loop(&mut self, _expr: ExprId, body_expr: ExprId) -> Option<BasicValueEnum> {
+        let context = self.module.get_context();
+        let loop_block = context.append_basic_block(&self.fn_value, "loop");
+        let exit_block = context.append_basic_block(&self.fn_value, "exit");
+
+        // Insert an explicit fall through from the current block to the loop
+        self.builder.build_unconditional_branch(&loop_block);
+
+        // Generate the body of the loop
+        self.builder.position_at_end(&loop_block);
+        let (exit_block, break_values, value) = self.gen_loop_block_expr(body_expr, exit_block);
+        if value.is_some() {
+            self.builder.build_unconditional_branch(&loop_block);
+        }
 
         // Move the builder to the exit block
         self.builder.position_at_end(&exit_block);
