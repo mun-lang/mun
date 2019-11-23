@@ -207,6 +207,10 @@ pub enum Expr {
     Loop {
         body: ExprId,
     },
+    While {
+        condition: ExprId,
+        body: ExprId,
+    },
     Literal(Literal),
 }
 
@@ -302,6 +306,10 @@ impl Expr {
                 }
             }
             Expr::Loop { body } => {
+                f(*body);
+            }
+            Expr::While { condition, body } => {
+                f(*condition);
                 f(*body);
             }
         }
@@ -468,6 +476,7 @@ where
         let syntax_ptr = AstPtr::new(&expr.clone());
         match expr.kind() {
             ast::ExprKind::LoopExpr(expr) => self.collect_loop(expr),
+            ast::ExprKind::WhileExpr(expr) => self.collect_while(expr),
             ast::ExprKind::ReturnExpr(r) => self.collect_return(r),
             ast::ExprKind::BreakExpr(r) => self.collect_break(r),
             ast::ExprKind::BlockExpr(b) => self.collect_block(b),
@@ -587,13 +596,7 @@ where
                     }
                 });
 
-                let condition = match e.condition() {
-                    None => self.missing_expr(),
-                    Some(condition) => match condition.pat() {
-                        None => self.collect_expr_opt(condition.expr()),
-                        _ => unreachable!("patterns in conditions are not yet supported"),
-                    },
-                };
+                let condition = self.collect_condition_opt(e.condition());
 
                 self.alloc_expr(
                     Expr::If {
@@ -619,6 +622,21 @@ where
                 };
                 self.alloc_expr(Expr::Call { callee, args }, syntax_ptr)
             }
+        }
+    }
+
+    fn collect_condition_opt(&mut self, cond: Option<ast::Condition>) -> ExprId {
+        if let Some(cond) = cond {
+            self.collect_condition(cond)
+        } else {
+            self.exprs.alloc(Expr::Missing)
+        }
+    }
+
+    fn collect_condition(&mut self, cond: ast::Condition) -> ExprId {
+        match cond.pat() {
+            None => self.collect_expr_opt(cond.expr()),
+            _ => unreachable!("patterns in conditions are not yet supported"),
         }
     }
 
@@ -653,6 +671,13 @@ where
         let syntax_node_ptr = AstPtr::new(&expr.clone().into());
         let body = self.collect_block_opt(expr.loop_body());
         self.alloc_expr(Expr::Loop { body }, syntax_node_ptr)
+    }
+
+    fn collect_while(&mut self, expr: ast::WhileExpr) -> ExprId {
+        let syntax_node_ptr = AstPtr::new(&expr.clone().into());
+        let condition = self.collect_condition_opt(expr.condition());
+        let body = self.collect_block_opt(expr.loop_body());
+        self.alloc_expr(Expr::While { condition, body }, syntax_node_ptr)
     }
 
     fn finish(mut self) -> (Body, BodySourceMap) {

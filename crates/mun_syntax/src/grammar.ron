@@ -122,6 +122,7 @@ Grammar(
         "IF_EXPR",
         "BLOCK_EXPR",
         "RETURN_EXPR",
+        "WHILE_EXPR",
         "LOOP_EXPR",
         "BREAK_EXPR",
         "CONDITION",
@@ -189,6 +190,11 @@ Grammar(
             traits: ["LoopBodyOwner"]
         ),
 
+        "WhileExpr": (
+            traits: ["LoopBodyOwner"],
+            options: [ "Condition" ]
+        ),
+
         "PathExpr": (options: ["Path"]),
         "PrefixExpr": (options: ["Expr"]),
         "BinExpr": (),
@@ -218,6 +224,7 @@ Grammar(
                 "CallExpr",
                 "IfExpr",
                 "LoopExpr",
+                "WhileExpr",
                 "ReturnExpr",
                 "BreakExpr",
                 "BlockExpr",

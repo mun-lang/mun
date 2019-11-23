@@ -199,3 +199,15 @@ fn break_expr() {
     "#,
     )
 }
+
+#[test]
+fn while_expr() {
+    ok_snapshot_test(
+        r#"
+    fn foo() {
+        while true {};
+        while { true } {};
+    }
+    "#,
+    )
+}
