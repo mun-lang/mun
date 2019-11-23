@@ -11,7 +11,16 @@ use mun_hir::{
 };
 use std::{collections::HashMap, mem, sync::Arc};
 
+use inkwell::basic_block::BasicBlock;
 use inkwell::values::PointerValue;
+
+struct LoopInfo {
+    break_values: Vec<(
+        inkwell::values::BasicValueEnum,
+        inkwell::basic_block::BasicBlock,
+    )>,
+    exit_block: BasicBlock,
+}
 
 pub(crate) struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
     db: &'a D,
@@ -25,6 +34,7 @@ pub(crate) struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
     pat_to_name: HashMap<PatId, String>,
     function_map: &'a HashMap<mun_hir::Function, FunctionValue>,
     dispatch_table: &'b DispatchTable,
+    active_loop: Option<LoopInfo>,
 }
 
 impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
@@ -58,6 +68,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             pat_to_name: HashMap::default(),
             function_map,
             dispatch_table,
+            active_loop: None,
         }
     }
 
@@ -132,6 +143,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             } => self.gen_if(expr, *condition, *then_branch, *else_branch),
             Expr::Return { expr: ret_expr } => self.gen_return(expr, *ret_expr),
             Expr::Loop { body } => self.gen_loop(expr, *body),
+            Expr::Break { expr: break_expr } => self.gen_break(expr, *break_expr),
             _ => unimplemented!("unimplemented expr type {:?}", &body[expr]),
         }
     }
@@ -575,9 +587,31 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         None
     }
 
+    fn gen_break(&mut self, _expr: ExprId, break_expr: Option<ExprId>) -> Option<BasicValueEnum> {
+        let break_value = break_expr.and_then(|expr| self.gen_expr(expr));
+        let loop_info = self.active_loop.as_mut().unwrap();
+        if let Some(break_value) = break_value {
+            loop_info
+                .break_values
+                .push((break_value, self.builder.get_insert_block().unwrap()));
+        }
+        self.builder
+            .build_unconditional_branch(&loop_info.exit_block);
+        None
+    }
+
     fn gen_loop(&mut self, _expr: ExprId, body_expr: ExprId) -> Option<BasicValueEnum> {
         let context = self.module.get_context();
         let loop_block = context.append_basic_block(&self.fn_value, "loop");
+        let exit_block = context.append_basic_block(&self.fn_value, "exit");
+
+        // Build a new loop info struct
+        let loop_info = LoopInfo {
+            exit_block,
+            break_values: Vec::new(),
+        };
+
+        let prev_loop = std::mem::replace(&mut self.active_loop, Some(loop_info));
 
         // Insert an explicit fall through from the current block to the loop
         self.builder.build_unconditional_branch(&loop_block);
@@ -589,6 +623,23 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         // Jump to the start of the loop
         self.builder.build_unconditional_branch(&loop_block);
 
-        None
+        let LoopInfo {
+            exit_block,
+            break_values,
+        } = std::mem::replace(&mut self.active_loop, prev_loop).unwrap();
+
+        // Move the builder to the exit block
+        self.builder.position_at_end(&exit_block);
+
+        if !break_values.is_empty() {
+            let (value, _) = break_values.first().unwrap();
+            let phi = self.builder.build_phi(value.get_type(), "exit");
+            for (ref value, ref block) in break_values {
+                phi.add_incoming(&[(value, block)])
+            }
+            Some(phi.as_basic_value())
+        } else {
+            None
+        }
     }
 }

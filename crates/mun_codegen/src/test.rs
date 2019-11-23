@@ -327,6 +327,25 @@ fn loop_expr() {
     )
 }
 
+#[test]
+fn loop_break_expr() {
+    test_snapshot(
+        r#"
+    fn foo(n:int):int {
+        loop {
+            if n > 5 {
+                break n;
+            }
+            if n > 10 {
+                break 10;
+            }
+            n += 1;
+        }
+    }
+    "#,
+    )
+}
+
 fn test_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
 
