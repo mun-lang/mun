@@ -128,6 +128,22 @@ fn infer_loop() {
     )
 }
 
+#[test]
+fn infer_break() {
+    infer_snapshot(
+        r#"
+    fn foo():int {
+        break; // error: not in a loop
+        loop { break 3; break 3.0; } // error: mismatched type
+        let a:int = loop { break 3.0; } // error: mismatched type
+        loop { break 3; }
+        let a:int = loop { break loop { break 3; } }
+        loop { break loop { break 3.0; } } // error: mismatched type
+    }
+    "#,
+    )
+}
+
 fn infer_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
     insta::assert_snapshot!(insta::_macro_support::AutoName, infer(&text), &text);
