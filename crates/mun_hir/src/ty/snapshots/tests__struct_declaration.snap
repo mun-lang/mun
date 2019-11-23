@@ -1,0 +1,8 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "struct Foo;\nstruct Bar {}\nstruct Baz {\n    f: float,\n    i: int,\n}\n\nfn main() {\n    let foo: Foo;\n    let bar: Bar;\n    let baz: Baz;\n}"
+---
+[78; 135) '{     ...Baz; }': nothing
+[88; 91) 'foo': Foo
+[106; 109) 'bar': Bar
+[124; 127) 'baz': Baz

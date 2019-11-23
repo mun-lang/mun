@@ -172,6 +172,26 @@ fn invalid_binary_ops() {
     )
 }
 
+#[test]
+fn struct_declaration() {
+    infer_snapshot(
+        r#"
+    struct Foo;
+    struct Bar {}
+    struct Baz {
+        f: float,
+        i: int,
+    }
+
+    fn main() {
+        let foo: Foo;
+        let bar: Bar;
+        let baz: Baz;
+    }
+    "#,
+    )
+}
+
 fn infer_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
     insta::assert_snapshot!(insta::_macro_support::AutoName, infer(&text), &text);
