@@ -384,3 +384,27 @@ impl Diagnostic for BreakOutsideLoop {
         self
     }
 }
+
+#[derive(Debug)]
+pub struct BreakWithValueOutsideLoop {
+    pub file: FileId,
+    pub break_expr: SyntaxNodePtr,
+}
+
+impl Diagnostic for BreakWithValueOutsideLoop {
+    fn message(&self) -> String {
+        "`break` with value can only appear in a `loop`".to_owned()
+    }
+
+    fn file(&self) -> FileId {
+        self.file
+    }
+
+    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
+        self.break_expr
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
