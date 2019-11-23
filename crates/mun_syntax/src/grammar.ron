@@ -123,6 +123,7 @@ Grammar(
         "BLOCK_EXPR",
         "RETURN_EXPR",
         "LOOP_EXPR",
+        "BREAK_EXPR",
         "CONDITION",
 
         "BIND_PAT",
@@ -200,6 +201,7 @@ Grammar(
         "IfExpr": (
             options: [ "Condition" ]
         ),
+        "BreakExpr": (options: ["Expr"]),
         "ArgList": (
             collections: [
                 ["args", "Expr"]
@@ -217,6 +219,7 @@ Grammar(
                 "IfExpr",
                 "LoopExpr",
                 "ReturnExpr",
+                "BreakExpr",
                 "BlockExpr",
             ]
         ),

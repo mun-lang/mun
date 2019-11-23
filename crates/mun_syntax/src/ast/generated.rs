@@ -140,6 +140,37 @@ impl BlockExpr {
     }
 }
 
+// BreakExpr
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct BreakExpr {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for BreakExpr {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            BREAK_EXPR => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(BreakExpr { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl BreakExpr {
+    pub fn expr(&self) -> Option<Expr> {
+        super::child_opt(self)
+    }
+}
+
 // CallExpr
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -218,7 +249,7 @@ impl AstNode for Expr {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
             LITERAL | PREFIX_EXPR | PATH_EXPR | BIN_EXPR | PAREN_EXPR | CALL_EXPR | IF_EXPR
-            | LOOP_EXPR | RETURN_EXPR | BLOCK_EXPR => true,
+            | LOOP_EXPR | RETURN_EXPR | BREAK_EXPR | BLOCK_EXPR => true,
             _ => false,
         }
     }
@@ -244,6 +275,7 @@ pub enum ExprKind {
     IfExpr(IfExpr),
     LoopExpr(LoopExpr),
     ReturnExpr(ReturnExpr),
+    BreakExpr(BreakExpr),
     BlockExpr(BlockExpr),
 }
 impl From<Literal> for Expr {
@@ -291,6 +323,11 @@ impl From<ReturnExpr> for Expr {
         Expr { syntax: n.syntax }
     }
 }
+impl From<BreakExpr> for Expr {
+    fn from(n: BreakExpr) -> Expr {
+        Expr { syntax: n.syntax }
+    }
+}
 impl From<BlockExpr> for Expr {
     fn from(n: BlockExpr) -> Expr {
         Expr { syntax: n.syntax }
@@ -309,6 +346,7 @@ impl Expr {
             IF_EXPR => ExprKind::IfExpr(IfExpr::cast(self.syntax.clone()).unwrap()),
             LOOP_EXPR => ExprKind::LoopExpr(LoopExpr::cast(self.syntax.clone()).unwrap()),
             RETURN_EXPR => ExprKind::ReturnExpr(ReturnExpr::cast(self.syntax.clone()).unwrap()),
+            BREAK_EXPR => ExprKind::BreakExpr(BreakExpr::cast(self.syntax.clone()).unwrap()),
             BLOCK_EXPR => ExprKind::BlockExpr(BlockExpr::cast(self.syntax.clone()).unwrap()),
             _ => unreachable!(),
         }

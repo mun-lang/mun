@@ -186,3 +186,16 @@ fn loop_expr() {
     }"#,
     )
 }
+
+#[test]
+fn break_expr() {
+    ok_snapshot_test(
+        r#"
+    fn foo() {
+        break;
+        if break { 3; }
+        if break 4 { 3; }
+    }
+    "#,
+    )
+}
