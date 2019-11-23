@@ -249,7 +249,7 @@ impl AstNode for Expr {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
             LITERAL | PREFIX_EXPR | PATH_EXPR | BIN_EXPR | PAREN_EXPR | CALL_EXPR | IF_EXPR
-            | LOOP_EXPR | RETURN_EXPR | BREAK_EXPR | BLOCK_EXPR => true,
+            | LOOP_EXPR | WHILE_EXPR | RETURN_EXPR | BREAK_EXPR | BLOCK_EXPR => true,
             _ => false,
         }
     }
@@ -274,6 +274,7 @@ pub enum ExprKind {
     CallExpr(CallExpr),
     IfExpr(IfExpr),
     LoopExpr(LoopExpr),
+    WhileExpr(WhileExpr),
     ReturnExpr(ReturnExpr),
     BreakExpr(BreakExpr),
     BlockExpr(BlockExpr),
@@ -318,6 +319,11 @@ impl From<LoopExpr> for Expr {
         Expr { syntax: n.syntax }
     }
 }
+impl From<WhileExpr> for Expr {
+    fn from(n: WhileExpr) -> Expr {
+        Expr { syntax: n.syntax }
+    }
+}
 impl From<ReturnExpr> for Expr {
     fn from(n: ReturnExpr) -> Expr {
         Expr { syntax: n.syntax }
@@ -345,6 +351,7 @@ impl Expr {
             CALL_EXPR => ExprKind::CallExpr(CallExpr::cast(self.syntax.clone()).unwrap()),
             IF_EXPR => ExprKind::IfExpr(IfExpr::cast(self.syntax.clone()).unwrap()),
             LOOP_EXPR => ExprKind::LoopExpr(LoopExpr::cast(self.syntax.clone()).unwrap()),
+            WHILE_EXPR => ExprKind::WhileExpr(WhileExpr::cast(self.syntax.clone()).unwrap()),
             RETURN_EXPR => ExprKind::ReturnExpr(ReturnExpr::cast(self.syntax.clone()).unwrap()),
             BREAK_EXPR => ExprKind::BreakExpr(BreakExpr::cast(self.syntax.clone()).unwrap()),
             BLOCK_EXPR => ExprKind::BlockExpr(BlockExpr::cast(self.syntax.clone()).unwrap()),
@@ -1237,3 +1244,35 @@ impl AstNode for Visibility {
     }
 }
 impl Visibility {}
+
+// WhileExpr
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct WhileExpr {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for WhileExpr {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            WHILE_EXPR => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(WhileExpr { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl ast::LoopBodyOwner for WhileExpr {}
+impl WhileExpr {
+    pub fn condition(&self) -> Option<Condition> {
+        super::child_opt(self)
+    }
+}

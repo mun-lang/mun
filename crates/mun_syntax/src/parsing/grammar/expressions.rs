@@ -14,6 +14,7 @@ const ATOM_EXPR_FIRST: TokenSet = LITERAL_FIRST.union(PATH_FIRST).union(token_se
     T![loop],
     T![return],
     T![break],
+    T![while],
 ]);
 
 const LHS_FIRST: TokenSet = ATOM_EXPR_FIRST.union(token_set![EXCLAMATION, MINUS]);
@@ -234,6 +235,7 @@ fn atom_expr(p: &mut Parser, r: Restrictions) -> Option<CompletedMarker> {
         T![if] => if_expr(p),
         T![loop] => loop_expr(p),
         T![return] => ret_expr(p),
+        T![while] => while_expr(p),
         T![break] => break_expr(p, r),
         _ => {
             p.error_recover("expected expression", EXPR_RECOVERY_SET);
@@ -316,4 +318,13 @@ fn break_expr(p: &mut Parser, r: Restrictions) -> CompletedMarker {
         expr(p);
     }
     m.complete(p, BREAK_EXPR)
+}
+
+fn while_expr(p: &mut Parser) -> CompletedMarker {
+    assert!(p.at(T![while]));
+    let m = p.start();
+    p.bump(T![while]);
+    cond(p);
+    block(p);
+    m.complete(p, WHILE_EXPR)
 }
