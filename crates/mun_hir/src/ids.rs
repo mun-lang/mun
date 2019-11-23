@@ -104,3 +104,17 @@ impl AstItemDef<ast::FunctionDef> for FunctionId {
         db.lookup_intern_function(self)
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct StructId(salsa::InternId);
+impl_intern_key!(StructId);
+
+impl AstItemDef<ast::StructDef> for StructId {
+    fn intern(db: &impl DefDatabase, loc: ItemLoc<ast::StructDef>) -> Self {
+        db.intern_struct(loc)
+    }
+
+    fn lookup_intern(self, db: &impl DefDatabase) -> ItemLoc<ast::StructDef> {
+        db.lookup_intern_struct(self)
+    }
+}

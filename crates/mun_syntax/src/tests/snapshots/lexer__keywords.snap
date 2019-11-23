@@ -1,6 +1,6 @@
 ---
 source: crates/mun_syntax/src/tests/lexer.rs
-expression: "and break do else false for fn if in nil\nreturn true while let mut class \nnever loop pub"
+expression: "and break do else false for fn if in nil\nreturn true while let mut struct class\nnever loop pub"
 ---
 AND_KW 3 "and"
 WHITESPACE 1 " "
@@ -32,8 +32,10 @@ LET_KW 3 "let"
 WHITESPACE 1 " "
 MUT_KW 3 "mut"
 WHITESPACE 1 " "
+STRUCT_KW 6 "struct"
+WHITESPACE 1 " "
 CLASS_KW 5 "class"
-WHITESPACE 2 " \n"
+WHITESPACE 1 "\n"
 NEVER_KW 5 "never"
 WHITESPACE 1 " "
 LOOP_KW 4 "loop"

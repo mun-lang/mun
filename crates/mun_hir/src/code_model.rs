@@ -1,6 +1,7 @@
 pub(crate) mod src;
 
 use self::src::HasSource;
+use crate::adt::{LocalStructFieldId, StructData};
 use crate::diagnostics::DiagnosticSink;
 use crate::expr::{Body, BodySourceMap};
 use crate::ids::AstItemDef;
@@ -10,7 +11,10 @@ use crate::raw::{DefKind, RawFileItem};
 use crate::resolve::{Resolution, Resolver};
 use crate::ty::InferenceResult;
 use crate::type_ref::{TypeRefBuilder, TypeRefId, TypeRefMap, TypeRefSourceMap};
-use crate::{ids::FunctionId, AsName, DefDatabase, FileId, HirDatabase, Name, Ty};
+use crate::{
+    ids::{FunctionId, StructId},
+    AsName, DefDatabase, FileId, HirDatabase, Name, Ty,
+};
 use mun_syntax::ast::{NameOwner, TypeAscriptionOwner, VisibilityOwner};
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
@@ -91,6 +95,11 @@ impl ModuleData {
                                 id: FunctionId::from_ast_id(loc_ctx, ast_id),
                             }))
                         }
+                        DefKind::Struct(ast_id) => {
+                            data.definitions.push(ModuleDef::Struct(Struct {
+                                id: StructId::from_ast_id(loc_ctx, ast_id),
+                            }))
+                        }
                     }
                 }
             };
@@ -107,6 +116,7 @@ impl ModuleData {
 pub enum ModuleDef {
     Function(Function),
     BuiltinType(BuiltinType),
+    Struct(Struct),
 }
 
 impl From<Function> for ModuleDef {
@@ -118,6 +128,12 @@ impl From<Function> for ModuleDef {
 impl From<BuiltinType> for ModuleDef {
     fn from(t: BuiltinType) -> Self {
         ModuleDef::BuiltinType(t)
+    }
+}
+
+impl From<Struct> for ModuleDef {
+    fn from(t: Struct) -> Self {
+        ModuleDef::Struct(t)
     }
 }
 
@@ -309,6 +325,43 @@ impl BuiltinType {
     ];
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Struct {
+    pub(crate) id: StructId,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct StructField {
+    pub(crate) parent: Struct,
+    pub(crate) id: LocalStructFieldId,
+}
+
+impl Struct {
+    pub fn module(self, db: &impl DefDatabase) -> Module {
+        Module {
+            file_id: self.id.file_id(db),
+        }
+    }
+
+    pub fn data(self, db: &impl DefDatabase) -> Arc<StructData> {
+        db.struct_data(self.id)
+    }
+
+    pub fn name(self, db: &impl DefDatabase) -> Name {
+        self.data(db).name.clone()
+    }
+
+    pub fn fields(self, db: &impl HirDatabase) -> Vec<StructField> {
+        self.data(db)
+            .fields
+            .as_ref()
+            .into_iter()
+            .flat_map(|it| it.iter())
+            .map(|(id, _)| StructField { parent: self, id })
+            .collect()
+    }
+}
+
 mod diagnostics {
     use super::Module;
     use crate::diagnostics::{DiagnosticSink, DuplicateDefinition};
@@ -328,6 +381,9 @@ mod diagnostics {
     fn syntax_ptr_from_def(db: &impl DefDatabase, owner: Module, kind: DefKind) -> SyntaxNodePtr {
         match kind {
             DefKind::Function(id) => {
+                SyntaxNodePtr::new(id.with_file_id(owner.file_id).to_node(db).syntax())
+            }
+            DefKind::Struct(id) => {
                 SyntaxNodePtr::new(id.with_file_id(owner.file_id).to_node(db).syntax())
             }
         }

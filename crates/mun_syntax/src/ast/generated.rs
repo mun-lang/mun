@@ -567,7 +567,7 @@ pub struct ModuleItem {
 impl AstNode for ModuleItem {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
-            FUNCTION_DEF => true,
+            FUNCTION_DEF | STRUCT_DEF => true,
             _ => false,
         }
     }
@@ -585,9 +585,15 @@ impl AstNode for ModuleItem {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModuleItemKind {
     FunctionDef(FunctionDef),
+    StructDef(StructDef),
 }
 impl From<FunctionDef> for ModuleItem {
     fn from(n: FunctionDef) -> ModuleItem {
+        ModuleItem { syntax: n.syntax }
+    }
+}
+impl From<StructDef> for ModuleItem {
+    fn from(n: StructDef) -> ModuleItem {
         ModuleItem { syntax: n.syntax }
     }
 }
@@ -598,6 +604,7 @@ impl ModuleItem {
             FUNCTION_DEF => {
                 ModuleItemKind::FunctionDef(FunctionDef::cast(self.syntax.clone()).unwrap())
             }
+            STRUCT_DEF => ModuleItemKind::StructDef(StructDef::cast(self.syntax.clone()).unwrap()),
             _ => unreachable!(),
         }
     }
@@ -1021,6 +1028,68 @@ impl PrefixExpr {
     }
 }
 
+// RecordFieldDef
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RecordFieldDef {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for RecordFieldDef {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            RECORD_FIELD_DEF => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(RecordFieldDef { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl ast::NameOwner for RecordFieldDef {}
+impl ast::VisibilityOwner for RecordFieldDef {}
+impl ast::DocCommentsOwner for RecordFieldDef {}
+impl ast::TypeAscriptionOwner for RecordFieldDef {}
+impl RecordFieldDef {}
+
+// RecordFieldDefList
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RecordFieldDefList {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for RecordFieldDefList {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            RECORD_FIELD_DEF_LIST => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(RecordFieldDefList { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl RecordFieldDefList {
+    pub fn fields(&self) -> impl Iterator<Item = RecordFieldDef> {
+        super::children(self)
+    }
+}
+
 // RetType
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1164,6 +1233,36 @@ impl Stmt {
 }
 
 impl Stmt {}
+
+// StructDef
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct StructDef {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for StructDef {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            STRUCT_DEF => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(StructDef { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl ast::NameOwner for StructDef {}
+impl ast::VisibilityOwner for StructDef {}
+impl ast::DocCommentsOwner for StructDef {}
+impl StructDef {}
 
 // TypeRef
 

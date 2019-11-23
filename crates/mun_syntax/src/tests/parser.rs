@@ -61,6 +61,20 @@ fn literals() {
 }
 
 #[test]
+fn structures() {
+    ok_snapshot_test(
+        r#"
+    struct Foo;
+    struct Foo {}
+    struct Foo {
+        a: float,
+        b: int,
+    }
+    "#,
+    )
+}
+
+#[test]
 fn unary_expr() {
     ok_snapshot_test(
         r#"

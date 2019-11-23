@@ -4,6 +4,7 @@ use crate::input::{SourceRoot, SourceRootId};
 use crate::name_resolution::Namespace;
 use crate::ty::{FnSig, Ty, TypableDef};
 use crate::{
+    adt::StructData,
     code_model::{DefWithBody, FnData, Function, ModuleData},
     ids,
     line_index::LineIndex,
@@ -59,9 +60,16 @@ pub trait DefDatabase: SourceDatabase {
     #[salsa::invoke(RawItems::raw_file_items_query)]
     fn raw_items(&self, file_id: FileId) -> Arc<RawItems>;
 
+    #[salsa::invoke(StructData::struct_data_query)]
+    fn struct_data(&self, id: ids::StructId) -> Arc<StructData>;
+
     /// Interns a function definition
     #[salsa::interned]
     fn intern_function(&self, loc: ids::ItemLoc<ast::FunctionDef>) -> ids::FunctionId;
+
+    /// Interns a struct definition
+    #[salsa::interned]
+    fn intern_struct(&self, loc: ids::ItemLoc<ast::StructDef>) -> ids::StructId;
 }
 
 #[salsa::query_group(HirDatabaseStorage)]

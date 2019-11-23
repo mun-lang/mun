@@ -4,7 +4,7 @@ use crate::name_resolution::Namespace;
 use crate::resolve::{Resolution, Resolver};
 use crate::ty::{FnSig, Ty, TypeCtor};
 use crate::type_ref::{TypeRef, TypeRefId, TypeRefMap};
-use crate::{Function, HirDatabase, ModuleDef, Path};
+use crate::{Function, HirDatabase, ModuleDef, Path, Struct};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub(crate) struct LowerResult {
@@ -78,6 +78,7 @@ impl Ty {
 pub enum TypableDef {
     Function(Function),
     BuiltinType(BuiltinType),
+    Struct(Struct),
 }
 
 impl From<Function> for TypableDef {
@@ -92,13 +93,26 @@ impl From<BuiltinType> for TypableDef {
     }
 }
 
+impl From<Struct> for TypableDef {
+    fn from(f: Struct) -> Self {
+        TypableDef::Struct(f)
+    }
+}
+
 impl From<ModuleDef> for Option<TypableDef> {
     fn from(d: ModuleDef) -> Self {
         match d {
             ModuleDef::Function(f) => Some(TypableDef::Function(f)),
             ModuleDef::BuiltinType(t) => Some(TypableDef::BuiltinType(t)),
+            ModuleDef::Struct(t) => Some(TypableDef::Struct(t)),
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum CallableDef {
+    Function(Function),
+    Struct(Struct),
 }
 
 /// Build the declared type of an item. This depends on the namespace; e.g. for
@@ -109,6 +123,8 @@ pub(crate) fn type_for_def(db: &impl HirDatabase, def: TypableDef, ns: Namespace
     match (def, ns) {
         (TypableDef::Function(f), Namespace::Values) => type_for_fn(db, f),
         (TypableDef::BuiltinType(t), Namespace::Types) => type_for_builtin(t),
+        (TypableDef::Struct(s), Namespace::Values) => type_for_struct_constructor(db, s),
+        (TypableDef::Struct(s), Namespace::Types) => type_for_struct(db, s),
 
         // 'error' cases:
         (TypableDef::Function(_), Namespace::Types) => Ty::Unknown,
@@ -141,6 +157,20 @@ pub fn fn_sig_for_fn(db: &impl HirDatabase, def: Function) -> FnSig {
         .collect::<Vec<_>>();
     let ret = Ty::from_hir(db, &resolver, data.type_ref_map(), *data.ret_type()).ty;
     FnSig::from_params_and_return(params, ret)
+}
+
+/// Build the type of a struct constructor.
+fn type_for_struct_constructor(db: &impl HirDatabase, def: Struct) -> Ty {
+    let struct_data = db.struct_data(def.id);
+    if struct_data.fields.is_none() {
+        type_for_struct(db, def) // Unit struct
+    } else {
+        unreachable!();
+    }
+}
+
+fn type_for_struct(_db: &impl HirDatabase, def: Struct) -> Ty {
+    Ty::simple(TypeCtor::Struct(def))
 }
 
 pub mod diagnostics {

@@ -8,7 +8,11 @@ mod traits;
 use crate::{syntax_node::SyntaxNodeChildren, SmolStr, SyntaxKind, SyntaxNode, SyntaxToken};
 
 pub use self::{
-    expr_extensions::*, extensions::PathSegmentKind, generated::*, tokens::*, traits::*,
+    expr_extensions::*,
+    extensions::{PathSegmentKind, StructKind},
+    generated::*,
+    tokens::*,
+    traits::*,
 };
 
 use std::marker::PhantomData;

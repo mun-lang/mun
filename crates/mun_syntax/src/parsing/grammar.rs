@@ -1,3 +1,4 @@
+mod adt;
 mod declarations;
 mod expressions;
 mod params;

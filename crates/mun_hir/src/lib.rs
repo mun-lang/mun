@@ -7,6 +7,7 @@
 
 #[macro_use]
 mod arena;
+mod adt;
 mod code_model;
 mod db;
 pub mod diagnostics;
@@ -60,4 +61,4 @@ use crate::{
     source_id::{AstIdMap, FileAstId},
 };
 
-pub use self::code_model::{FnData, Function, Module, ModuleDef, Visibility};
+pub use self::code_model::{FnData, Function, Module, ModuleDef, Struct, Visibility};

@@ -1,4 +1,4 @@
-use crate::code_model::Function;
+use crate::code_model::{Function, Struct, StructField};
 use crate::ids::AstItemDef;
 use crate::{DefDatabase, FileId, SourceDatabase};
 use mun_syntax::{ast, AstNode, SyntaxNode};
@@ -18,6 +18,36 @@ impl HasSource for Function {
     type Ast = ast::FunctionDef;
     fn source(self, db: &impl DefDatabase) -> Source<ast::FunctionDef> {
         self.id.source(db)
+    }
+}
+
+impl HasSource for Struct {
+    type Ast = ast::StructDef;
+    fn source(self, db: &impl DefDatabase) -> Source<ast::StructDef> {
+        self.id.source(db)
+    }
+}
+
+impl HasSource for StructField {
+    type Ast = ast::RecordFieldDef;
+
+    fn source(self, db: &impl DefDatabase) -> Source<ast::RecordFieldDef> {
+        let src = self.parent.source(db);
+        let file_id = src.file_id;
+        let field_sources = if let ast::StructKind::Record(r) = src.ast.kind() {
+            r.fields().collect()
+        } else {
+            Vec::new()
+        };
+
+        let ast = field_sources
+            .into_iter()
+            .zip(self.parent.data(db).fields.as_ref().unwrap().iter())
+            .find(|(_syntax, (id, _))| *id == self.id)
+            .unwrap()
+            .0;
+
+        Source { file_id, ast }
     }
 }
 

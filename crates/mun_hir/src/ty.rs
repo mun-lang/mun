@@ -3,7 +3,7 @@ mod lower;
 
 use crate::display::{HirDisplay, HirFormatter};
 use crate::ty::infer::TypeVarId;
-use crate::{Function, HirDatabase};
+use crate::{Function, HirDatabase, Struct};
 pub(crate) use infer::infer_query;
 pub use infer::InferenceResult;
 pub(crate) use lower::{fn_sig_for_fn, type_for_def, TypableDef};
@@ -54,6 +54,10 @@ pub enum TypeCtor {
 
     /// The primitive boolean type. Written as `bool`.
     Bool,
+
+    /// An abstract datatype (structures, tuples, or enumerations)
+    /// TODO: Add tuples and enumerations
+    Struct(Struct),
 
     /// The never type `never`.
     Never,
@@ -177,6 +181,7 @@ impl HirDisplay for ApplicationTy {
             TypeCtor::Float => write!(f, "float"),
             TypeCtor::Int => write!(f, "int"),
             TypeCtor::Bool => write!(f, "bool"),
+            TypeCtor::Struct(def) => write!(f, "{}", def.name(f.db)),
             TypeCtor::Never => write!(f, "never"),
             TypeCtor::FnDef(def) => {
                 let sig = f.db.fn_signature(def);

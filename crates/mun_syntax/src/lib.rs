@@ -162,6 +162,7 @@ fn api_walkthrough() {
     for item in file.items() {
         match item.kind() {
             ast::ModuleItemKind::FunctionDef(f) => func = Some(f),
+            ast::ModuleItemKind::StructDef(_) => (),
         }
     }
 

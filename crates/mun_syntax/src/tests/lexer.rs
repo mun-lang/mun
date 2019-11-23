@@ -109,7 +109,7 @@ fn keywords() {
     lex_snapshot(
         r#"
     and break do else false for fn if in nil
-    return true while let mut class 
+    return true while let mut struct class
     never loop pub
     "#,
     )

@@ -1,6 +1,5 @@
-use crate::ast::NameOwner;
 use crate::{
-    ast::{self, AstNode},
+    ast::{self, child_opt, AstNode, NameOwner},
     T,
 };
 use crate::{SmolStr, SyntaxNode};
@@ -86,5 +85,27 @@ impl ast::PathSegment {
             Some(T![::]) => true,
             _ => false,
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StructKind {
+    Record(ast::RecordFieldDefList),
+    Unit,
+}
+
+impl StructKind {
+    fn from_node<N: AstNode>(node: &N) -> StructKind {
+        if let Some(r) = child_opt::<_, ast::RecordFieldDefList>(node) {
+            StructKind::Record(r)
+        } else {
+            StructKind::Unit
+        }
+    }
+}
+
+impl ast::StructDef {
+    pub fn kind(&self) -> StructKind {
+        StructKind::from_node(self)
     }
 }

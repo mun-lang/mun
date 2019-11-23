@@ -26,6 +26,7 @@ pub(super) struct DefData {
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub(super) enum DefKind {
     Function(FileAstId<ast::FunctionDef>),
+    Struct(FileAstId<ast::StructDef>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -53,6 +54,9 @@ impl RawItems {
             let (kind, name) = match item.kind() {
                 ast::ModuleItemKind::FunctionDef(it) => {
                     (DefKind::Function((*ast_id_map).ast_id(&it)), it.name())
+                }
+                ast::ModuleItemKind::StructDef(it) => {
+                    (DefKind::Struct((*ast_id_map).ast_id(&it)), it.name())
                 }
             };
 
