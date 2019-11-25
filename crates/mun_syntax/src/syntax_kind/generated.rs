@@ -71,11 +71,8 @@ pub enum SyntaxKind {
     LET_KW,
     MUT_KW,
     CLASS_KW,
-    PUBLIC_KW,
-    PROTECTED_KW,
-    PRIVATE_KW,
-    EXPORT_KW,
     NEVER_KW,
+    PUB_KW,
     INT_NUMBER,
     FLOAT_NUMBER,
     STRING,
@@ -172,11 +169,8 @@ macro_rules! T {
     (let) => { $crate::SyntaxKind::LET_KW };
     (mut) => { $crate::SyntaxKind::MUT_KW };
     (class) => { $crate::SyntaxKind::CLASS_KW };
-    (public) => { $crate::SyntaxKind::PUBLIC_KW };
-    (protected) => { $crate::SyntaxKind::PROTECTED_KW };
-    (private) => { $crate::SyntaxKind::PRIVATE_KW };
-    (export) => { $crate::SyntaxKind::EXPORT_KW };
     (never) => { $crate::SyntaxKind::NEVER_KW };
+    (pub) => { $crate::SyntaxKind::PUB_KW };
 }
 
 impl From<u16> for SyntaxKind {
@@ -213,11 +207,8 @@ impl SyntaxKind {
             | LET_KW
             | MUT_KW
             | CLASS_KW
-            | PUBLIC_KW
-            | PROTECTED_KW
-            | PRIVATE_KW
-            | EXPORT_KW
             | NEVER_KW
+            | PUB_KW
                 => true,
             _ => false
         }
@@ -332,11 +323,8 @@ impl SyntaxKind {
                 LET_KW => &SyntaxInfo { name: "LET_KW" },
                 MUT_KW => &SyntaxInfo { name: "MUT_KW" },
                 CLASS_KW => &SyntaxInfo { name: "CLASS_KW" },
-                PUBLIC_KW => &SyntaxInfo { name: "PUBLIC_KW" },
-                PROTECTED_KW => &SyntaxInfo { name: "PROTECTED_KW" },
-                PRIVATE_KW => &SyntaxInfo { name: "PRIVATE_KW" },
-                EXPORT_KW => &SyntaxInfo { name: "EXPORT_KW" },
                 NEVER_KW => &SyntaxInfo { name: "NEVER_KW" },
+                PUB_KW => &SyntaxInfo { name: "PUB_KW" },
                 INT_NUMBER => &SyntaxInfo { name: "INT_NUMBER" },
                 FLOAT_NUMBER => &SyntaxInfo { name: "FLOAT_NUMBER" },
                 STRING => &SyntaxInfo { name: "STRING" },
@@ -397,11 +385,8 @@ impl SyntaxKind {
                 "let" => LET_KW,
                 "mut" => MUT_KW,
                 "class" => CLASS_KW,
-                "public" => PUBLIC_KW,
-                "protected" => PROTECTED_KW,
-                "private" => PRIVATE_KW,
-                "export" => EXPORT_KW,
                 "never" => NEVER_KW,
+                "pub" => PUB_KW,
                 _ => return None,
             };
             Some(kw)

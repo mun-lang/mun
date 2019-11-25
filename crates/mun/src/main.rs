@@ -96,18 +96,18 @@ fn start(matches: &ArgMatches) -> Result<(), failure::Error> {
     })?;
 
     if let Some(ret_type) = fn_info.signature.return_type() {
-        let type_guid = ret_type.guid;
-        if type_guid == bool::type_guid() {
+        let type_guid = &ret_type.guid;
+        if *type_guid == bool::type_guid() {
             let result: bool =
                 invoke_fn!(runtime, entry_point).map_err(|e| failure::err_msg(format!("{}", e)))?;
 
             println!("{}", result)
-        } else if type_guid == f64::type_guid() {
+        } else if *type_guid == f64::type_guid() {
             let result: f64 =
                 invoke_fn!(runtime, entry_point).map_err(|e| failure::err_msg(format!("{}", e)))?;
 
             println!("{}", result)
-        } else if type_guid == i64::type_guid() {
+        } else if *type_guid == i64::type_guid() {
             let result: i64 =
                 invoke_fn!(runtime, entry_point).map_err(|e| failure::err_msg(format!("{}", e)))?;
 

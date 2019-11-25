@@ -54,9 +54,9 @@ fn name_ref(p: &mut Parser) {
 }
 
 fn opt_visibility(p: &mut Parser) -> bool {
-    if p.at(EXPORT_KW) {
+    if p.at(PUB_KW) {
         let m = p.start();
-        p.bump(EXPORT_KW);
+        p.bump(PUB_KW);
         m.complete(p, VISIBILITY);
         true
     } else {
