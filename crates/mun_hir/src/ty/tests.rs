@@ -117,6 +117,48 @@ fn update_operators() {
     )
 }
 
+#[test]
+fn infer_loop() {
+    infer_snapshot(
+        r#"
+    fn foo() {
+        loop {}
+    }
+    "#,
+    )
+}
+
+#[test]
+fn infer_break() {
+    infer_snapshot(
+        r#"
+    fn foo():int {
+        break; // error: not in a loop
+        loop { break 3; break 3.0; } // error: mismatched type
+        let a:int = loop { break 3.0; } // error: mismatched type
+        loop { break 3; }
+        let a:int = loop { break loop { break 3; } }
+        loop { break loop { break 3.0; } } // error: mismatched type
+    }
+    "#,
+    )
+}
+
+#[test]
+fn infer_while() {
+    infer_snapshot(
+        r#"
+    fn foo() {
+        let n = 0;
+        while n < 3 { n += 1; };
+        while n < 3 { n += 1; break; };
+        while n < 3 { break 3; };   // error: break with value can only appear in a loop
+        while n < 3 { loop { break 3; }; };
+    }
+    "#,
+    )
+}
+
 fn infer_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
     insta::assert_snapshot!(insta::_macro_support::AutoName, infer(&text), &text);

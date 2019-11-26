@@ -1,3 +1,4 @@
+use relative_path::{RelativePath, RelativePathBuf};
 use rustc_hash::FxHashMap;
 
 /// `FileId` is an integer which uniquely identifies a file. File paths are messy and
@@ -7,34 +8,36 @@ use rustc_hash::FxHashMap;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FileId(pub u32);
 
-/// `PackageInput` contains which files belong to a specific package.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct PackageInput {
-    arena: FxHashMap<ModuleId, ModuleData>,
+/// Files are grouped into source roots. A source root is a directory on the file systems which is
+/// watched for changes. Typically it corresponds to a single library.
+///
+/// Paths to files are always relative to a source root, the compiler does not know the root path
+/// of the source root at all. So, a file from one source root can't refer to a file in another
+/// source root by path.
+///
+/// Multiple source roots can be present if the language server is monitoring multiple directories.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct SourceRootId(pub u32);
+
+#[derive(Default, Clone, Debug, PartialEq, Eq)]
+pub struct SourceRoot {
+    files: FxHashMap<RelativePathBuf, FileId>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ModuleId(pub u32);
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ModuleData {
-    file_id: FileId,
-}
-
-impl ModuleData {
-    fn new(file_id: FileId) -> ModuleData {
-        ModuleData { file_id }
+impl SourceRoot {
+    pub fn new() -> SourceRoot {
+        Default::default()
     }
-}
-
-impl PackageInput {
-    pub fn add_module(&mut self, file_id: FileId) -> ModuleId {
-        let module_id = ModuleId(self.arena.len() as u32);
-        self.arena.insert(module_id, ModuleData::new(file_id));
-        module_id
+    pub fn insert_file(&mut self, path: RelativePathBuf, file_id: FileId) {
+        self.files.insert(path, file_id);
     }
-
-    pub fn modules<'a>(&'a self) -> impl Iterator<Item = FileId> + 'a {
-        self.arena.values().map(|module| module.file_id)
+    pub fn remove_file(&mut self, path: &RelativePath) {
+        self.files.remove(path);
+    }
+    pub fn files(&self) -> impl Iterator<Item = FileId> + '_ {
+        self.files.values().copied()
+    }
+    pub fn file_by_relative_path(&self, path: &RelativePath) -> Option<FileId> {
+        self.files.get(path).copied()
     }
 }

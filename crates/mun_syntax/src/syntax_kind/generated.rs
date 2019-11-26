@@ -68,6 +68,7 @@ pub enum SyntaxKind {
     RETURN_KW,
     TRUE_KW,
     WHILE_KW,
+    LOOP_KW,
     LET_KW,
     MUT_KW,
     CLASS_KW,
@@ -99,6 +100,9 @@ pub enum SyntaxKind {
     IF_EXPR,
     BLOCK_EXPR,
     RETURN_EXPR,
+    WHILE_EXPR,
+    LOOP_EXPR,
+    BREAK_EXPR,
     CONDITION,
     BIND_PAT,
     PLACEHOLDER_PAT,
@@ -166,6 +170,7 @@ macro_rules! T {
     (return) => { $crate::SyntaxKind::RETURN_KW };
     (true) => { $crate::SyntaxKind::TRUE_KW };
     (while) => { $crate::SyntaxKind::WHILE_KW };
+    (loop) => { $crate::SyntaxKind::LOOP_KW };
     (let) => { $crate::SyntaxKind::LET_KW };
     (mut) => { $crate::SyntaxKind::MUT_KW };
     (class) => { $crate::SyntaxKind::CLASS_KW };
@@ -204,6 +209,7 @@ impl SyntaxKind {
             | RETURN_KW
             | TRUE_KW
             | WHILE_KW
+            | LOOP_KW
             | LET_KW
             | MUT_KW
             | CLASS_KW
@@ -320,6 +326,7 @@ impl SyntaxKind {
                 RETURN_KW => &SyntaxInfo { name: "RETURN_KW" },
                 TRUE_KW => &SyntaxInfo { name: "TRUE_KW" },
                 WHILE_KW => &SyntaxInfo { name: "WHILE_KW" },
+                LOOP_KW => &SyntaxInfo { name: "LOOP_KW" },
                 LET_KW => &SyntaxInfo { name: "LET_KW" },
                 MUT_KW => &SyntaxInfo { name: "MUT_KW" },
                 CLASS_KW => &SyntaxInfo { name: "CLASS_KW" },
@@ -351,6 +358,9 @@ impl SyntaxKind {
                 IF_EXPR => &SyntaxInfo { name: "IF_EXPR" },
                 BLOCK_EXPR => &SyntaxInfo { name: "BLOCK_EXPR" },
                 RETURN_EXPR => &SyntaxInfo { name: "RETURN_EXPR" },
+                WHILE_EXPR => &SyntaxInfo { name: "WHILE_EXPR" },
+                LOOP_EXPR => &SyntaxInfo { name: "LOOP_EXPR" },
+                BREAK_EXPR => &SyntaxInfo { name: "BREAK_EXPR" },
                 CONDITION => &SyntaxInfo { name: "CONDITION" },
                 BIND_PAT => &SyntaxInfo { name: "BIND_PAT" },
                 PLACEHOLDER_PAT => &SyntaxInfo { name: "PLACEHOLDER_PAT" },
@@ -382,6 +392,7 @@ impl SyntaxKind {
                 "return" => RETURN_KW,
                 "true" => TRUE_KW,
                 "while" => WHILE_KW,
+                "loop" => LOOP_KW,
                 "let" => LET_KW,
                 "mut" => MUT_KW,
                 "class" => CLASS_KW,

@@ -32,10 +32,12 @@ mod tests;
 
 pub use salsa;
 
+pub use relative_path::{RelativePath, RelativePathBuf};
+
 pub use crate::{
     db::{
-        DefDatabase, DefDatabaseStorage, HirDatabase, HirDatabaseStorage, RelativePathBuf,
-        SourceDatabase, SourceDatabaseStorage,
+        DefDatabase, DefDatabaseStorage, HirDatabase, HirDatabaseStorage, SourceDatabase,
+        SourceDatabaseStorage,
     },
     display::HirDisplay,
     expr::{
@@ -43,7 +45,7 @@ pub use crate::{
         LogicOp, Ordering, Pat, PatId, Statement,
     },
     ids::ItemLoc,
-    input::{FileId, PackageInput},
+    input::{FileId, SourceRoot, SourceRootId},
     name::Name,
     name_resolution::PerNs,
     path::{Path, PathKind},

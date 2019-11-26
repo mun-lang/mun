@@ -23,15 +23,16 @@ mod type_variable;
 
 pub use type_variable::TypeVarId;
 
+#[macro_export]
 macro_rules! ty_app {
     ($ctor:pat, $param:pat) => {
-        $crate::ty::Ty::Apply($crate::ty::ApplicationTy {
+        $crate::Ty::Apply($crate::ApplicationTy {
             ctor: $ctor,
             parameters: $param,
         })
     };
     ($ctor:pat) => {
-        $crate::ty::Ty::Apply($crate::ty::ApplicationTy {
+        $crate::Ty::Apply($crate::ApplicationTy {
             ctor: $ctor,
             ..
         })
@@ -92,6 +93,12 @@ pub fn infer_query(db: &impl HirDatabase, def: DefWithBody) -> Arc<InferenceResu
     Arc::new(ctx.resolve_all())
 }
 
+enum ActiveLoop {
+    Loop(Ty, Expectation),
+    While,
+    For,
+}
+
 /// The inference context contains all information needed during type inference.
 struct InferenceResultBuilder<'a, D: HirDatabase> {
     db: &'a D,
@@ -104,6 +111,12 @@ struct InferenceResultBuilder<'a, D: HirDatabase> {
 
     type_variables: TypeVariableTable,
 
+    /// Information on the current loop that we're processing (or None if we're not in a loop) the
+    /// entry contains the current type of the loop statement (initially `never`) and the expected
+    /// type of the loop expression. Both these values are updated when a break statement is
+    /// encountered.
+    active_loop: Option<ActiveLoop>,
+
     /// The return type of the function being inferred.
     return_ty: Ty,
 }
@@ -115,6 +128,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             type_of_expr: ArenaMap::default(),
             type_of_pat: ArenaMap::default(),
             diagnostics: Vec::default(),
+            active_loop: None,
             type_variables: TypeVariableTable::default(),
             db,
             body,
@@ -215,10 +229,30 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         );
     }
 
+    /// Infers the type of the `tgt_expr`
+    fn infer_expr(&mut self, tgt_expr: ExprId, expected: &Expectation) -> Ty {
+        let ty = self.infer_expr_inner(tgt_expr, expected);
+        if !expected.is_none() && ty != expected.ty {
+            self.diagnostics.push(InferenceDiagnostic::MismatchedTypes {
+                expected: expected.ty.clone(),
+                found: ty.clone(),
+                id: tgt_expr,
+            });
+        };
+
+        ty
+    }
+
     /// Infer type of expression with possibly implicit coerce to the expected type. Return the type
-    /// after possible coercion.
+    /// after possible coercion. Adds a diagnostic message if coercion failed.
     fn infer_expr_coerce(&mut self, expr: ExprId, expected: &Expectation) -> Ty {
         let ty = self.infer_expr_inner(expr, expected);
+        self.coerce_expr_ty(expr, ty, expected)
+    }
+
+    /// Performs implicit coercion of the specified `Ty` to an expected type. Returns the type after
+    /// possible coercion. Adds a diagnostic message if coercion failed.
+    fn coerce_expr_ty(&mut self, expr: ExprId, ty: Ty, expected: &Expectation) -> Ty {
         if !self.coerce(&ty, &expected.ty) {
             self.diagnostics.push(InferenceDiagnostic::MismatchedTypes {
                 expected: expected.ty.clone(),
@@ -251,7 +285,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             } => self.infer_if(tgt_expr, &expected, *condition, *then_branch, *else_branch),
             Expr::BinaryOp { lhs, rhs, op } => match op {
                 Some(op) => {
-                    let lhs_ty = self.infer_expr_coerce(*lhs, &Expectation::none());
+                    let lhs_ty = self.infer_expr(*lhs, &Expectation::none());
                     if let BinaryOp::Assignment { op: _op } = op {
                         let resolver =
                             expr::resolver_for_expr(self.body.clone(), self.db, tgt_expr);
@@ -263,7 +297,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                         }
                     };
                     let rhs_expected = op::binary_op_rhs_expectation(*op, lhs_ty);
-                    let rhs_ty = self.infer_expr_coerce(*rhs, &Expectation::has_type(rhs_expected));
+                    let rhs_ty = self.infer_expr(*rhs, &Expectation::has_type(rhs_expected));
                     op::binary_op_return_ty(*op, rhs_ty)
                 }
                 _ => Ty::Unknown,
@@ -278,13 +312,18 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             },
             Expr::Return { expr } => {
                 if let Some(expr) = expr {
-                    self.infer_expr_coerce(*expr, &Expectation::has_type(self.return_ty.clone()));
+                    self.infer_expr(*expr, &Expectation::has_type(self.return_ty.clone()));
                 } else if self.return_ty != Ty::Empty {
                     self.diagnostics
                         .push(InferenceDiagnostic::ReturnMissingExpression { id: tgt_expr });
                 }
 
                 Ty::simple(TypeCtor::Never)
+            }
+            Expr::Break { expr } => self.infer_break(tgt_expr, *expr),
+            Expr::Loop { body } => self.infer_loop_expr(tgt_expr, *body, expected),
+            Expr::While { condition, body } => {
+                self.infer_while_expr(tgt_expr, *condition, *body, expected)
             }
             _ => Ty::Unknown,
             //            Expr::UnaryOp { expr: _, op: _ } => {}
@@ -304,7 +343,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         then_branch: ExprId,
         else_branch: Option<ExprId>,
     ) -> Ty {
-        self.infer_expr_coerce(
+        self.infer_expr(
             condition,
             &Expectation::has_type(Ty::simple(TypeCtor::Bool)),
         );
@@ -346,7 +385,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         args: &[ExprId],
         _expected: &Expectation,
     ) -> Ty {
-        let callee_ty = self.infer_expr_coerce(callee, &Expectation::none());
+        let callee_ty = self.infer_expr(callee, &Expectation::none());
         let (param_tys, ret_ty) = match callee_ty.callable_sig(self.db) {
             Some(sig) => (sig.params().to_vec(), sig.ret().clone()),
             None => {
@@ -463,16 +502,21 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                     self.infer_pat(*pat, ty);
                 }
                 Statement::Expr(expr) => {
-                    if let ty_app!(TypeCtor::Never) =
-                        self.infer_expr_coerce(*expr, &Expectation::none())
-                    {
+                    if let ty_app!(TypeCtor::Never) = self.infer_expr(*expr, &Expectation::none()) {
                         diverges = true;
                     };
                 }
             }
         }
         let ty = if let Some(expr) = tail {
-            self.infer_expr_coerce(expr, expected)
+            // Perform coercion of the trailing expression unless the expression has a Never return
+            // type because we want the block to get the Never type in that case.
+            let ty = self.infer_expr_inner(expr, expected);
+            if let ty_app!(TypeCtor::Never) = ty {
+                Ty::simple(TypeCtor::Never)
+            } else {
+                self.coerce_expr_ty(expr, ty, expected)
+            }
         } else {
             Ty::Empty
         };
@@ -482,6 +526,85 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         } else {
             ty
         }
+    }
+
+    fn infer_break(&mut self, tgt_expr: ExprId, expr: Option<ExprId>) -> Ty {
+        let expected = match &self.active_loop {
+            Some(ActiveLoop::Loop(_, info)) => info.clone(),
+            Some(_) => {
+                if expr.is_some() {
+                    self.diagnostics
+                        .push(InferenceDiagnostic::BreakWithValueOutsideLoop { id: tgt_expr });
+                }
+                return Ty::simple(TypeCtor::Never);
+            }
+            None => {
+                self.diagnostics
+                    .push(InferenceDiagnostic::BreakOutsideLoop { id: tgt_expr });
+                return Ty::simple(TypeCtor::Never);
+            }
+        };
+
+        // Infer the type of the break expression
+        let ty = if let Some(expr) = expr {
+            self.infer_expr_inner(expr, &expected)
+        } else {
+            Ty::Empty
+        };
+
+        // Verify that it matches what we expected
+        let ty = if !expected.is_none() && ty != expected.ty {
+            self.diagnostics.push(InferenceDiagnostic::MismatchedTypes {
+                expected: expected.ty.clone(),
+                found: ty.clone(),
+                id: tgt_expr,
+            });
+            expected.ty
+        } else {
+            ty
+        };
+
+        // Update the expected type for the rest of the loop
+        self.active_loop = Some(ActiveLoop::Loop(ty.clone(), Expectation::has_type(ty)));
+
+        Ty::simple(TypeCtor::Never)
+    }
+
+    fn infer_loop_expr(&mut self, _tgt_expr: ExprId, body: ExprId, expected: &Expectation) -> Ty {
+        if let ActiveLoop::Loop(ty, _) = self.infer_loop_block(
+            body,
+            ActiveLoop::Loop(Ty::simple(TypeCtor::Never), expected.clone()),
+        ) {
+            ty
+        } else {
+            panic!("returned active loop must be a loop")
+        }
+    }
+
+    fn infer_loop_block(&mut self, body: ExprId, lp: ActiveLoop) -> ActiveLoop {
+        let top_level_loop = std::mem::replace(&mut self.active_loop, Some(lp));
+
+        // Infer the body of the loop
+        self.infer_expr_coerce(body, &Expectation::has_type(Ty::Empty));
+
+        // Take the result of the loop information and replace with top level loop
+        std::mem::replace(&mut self.active_loop, top_level_loop).unwrap()
+    }
+
+    fn infer_while_expr(
+        &mut self,
+        _tgt_expr: ExprId,
+        condition: ExprId,
+        body: ExprId,
+        _expected: &Expectation,
+    ) -> Ty {
+        self.infer_expr(
+            condition,
+            &Expectation::has_type(Ty::simple(TypeCtor::Bool)),
+        );
+
+        self.infer_loop_block(body, ActiveLoop::While);
+        Ty::Empty
     }
 
     pub fn report_pat_inference_failure(&mut self, _pat: PatId) {
@@ -544,8 +667,9 @@ impl From<PatId> for ExprOrPatId {
 
 mod diagnostics {
     use crate::diagnostics::{
-        CannotApplyBinaryOp, ExpectedFunction, IncompatibleBranch, InvalidLHS, MismatchedType,
-        MissingElseBranch, ParameterCountMismatch, ReturnMissingExpression,
+        BreakOutsideLoop, BreakWithValueOutsideLoop, CannotApplyBinaryOp, ExpectedFunction,
+        IncompatibleBranch, InvalidLHS, MismatchedType, MissingElseBranch, ParameterCountMismatch,
+        ReturnMissingExpression,
     };
     use crate::{
         code_model::src::HasSource,
@@ -596,6 +720,12 @@ mod diagnostics {
             lhs: ExprId,
         },
         ReturnMissingExpression {
+            id: ExprId,
+        },
+        BreakOutsideLoop {
+            id: ExprId,
+        },
+        BreakWithValueOutsideLoop {
             id: ExprId,
         },
     }
@@ -705,6 +835,20 @@ mod diagnostics {
                     sink.push(ReturnMissingExpression {
                         file,
                         return_expr: id,
+                    });
+                }
+                InferenceDiagnostic::BreakOutsideLoop { id } => {
+                    let id = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
+                    sink.push(BreakOutsideLoop {
+                        file,
+                        break_expr: id,
+                    });
+                }
+                InferenceDiagnostic::BreakWithValueOutsideLoop { id } => {
+                    let id = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
+                    sink.push(BreakWithValueOutsideLoop {
+                        file,
+                        break_expr: id,
                     });
                 }
             }

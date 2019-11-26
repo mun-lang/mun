@@ -10,7 +10,7 @@ use crate::code_model::src::{HasSource, Source};
 use crate::name::AsName;
 use crate::type_ref::{TypeRef, TypeRefBuilder, TypeRefId, TypeRefMap, TypeRefSourceMap};
 pub use mun_syntax::ast::PrefixOp as UnaryOp;
-use mun_syntax::ast::{ArgListOwner, BinOp, NameOwner, TypeAscriptionOwner};
+use mun_syntax::ast::{ArgListOwner, BinOp, LoopBodyOwner, NameOwner, TypeAscriptionOwner};
 use mun_syntax::{ast, AstNode, AstPtr, T};
 use rustc_hash::FxHashMap;
 use std::ops::Index;
@@ -201,6 +201,16 @@ pub enum Expr {
     Return {
         expr: Option<ExprId>,
     },
+    Break {
+        expr: Option<ExprId>,
+    },
+    Loop {
+        body: ExprId,
+    },
+    While {
+        condition: ExprId,
+        body: ExprId,
+    },
     Literal(Literal),
 }
 
@@ -289,6 +299,18 @@ impl Expr {
                 if let Some(expr) = expr {
                     f(*expr);
                 }
+            }
+            Expr::Break { expr } => {
+                if let Some(expr) = expr {
+                    f(*expr);
+                }
+            }
+            Expr::Loop { body } => {
+                f(*body);
+            }
+            Expr::While { condition, body } => {
+                f(*condition);
+                f(*body);
             }
         }
     }
@@ -453,7 +475,10 @@ where
     fn collect_expr(&mut self, expr: ast::Expr) -> ExprId {
         let syntax_ptr = AstPtr::new(&expr.clone());
         match expr.kind() {
+            ast::ExprKind::LoopExpr(expr) => self.collect_loop(expr),
+            ast::ExprKind::WhileExpr(expr) => self.collect_while(expr),
             ast::ExprKind::ReturnExpr(r) => self.collect_return(r),
+            ast::ExprKind::BreakExpr(r) => self.collect_break(r),
             ast::ExprKind::BlockExpr(b) => self.collect_block(b),
             ast::ExprKind::Literal(e) => {
                 let lit = match e.kind() {
@@ -571,13 +596,7 @@ where
                     }
                 });
 
-                let condition = match e.condition() {
-                    None => self.missing_expr(),
-                    Some(condition) => match condition.pat() {
-                        None => self.collect_expr_opt(condition.expr()),
-                        _ => unreachable!("patterns in conditions are not yet supported"),
-                    },
-                };
+                let condition = self.collect_condition_opt(e.condition());
 
                 self.alloc_expr(
                     Expr::If {
@@ -606,6 +625,21 @@ where
         }
     }
 
+    fn collect_condition_opt(&mut self, cond: Option<ast::Condition>) -> ExprId {
+        if let Some(cond) = cond {
+            self.collect_condition(cond)
+        } else {
+            self.exprs.alloc(Expr::Missing)
+        }
+    }
+
+    fn collect_condition(&mut self, cond: ast::Condition) -> ExprId {
+        match cond.pat() {
+            None => self.collect_expr_opt(cond.expr()),
+            _ => unreachable!("patterns in conditions are not yet supported"),
+        }
+    }
+
     fn collect_pat(&mut self, pat: ast::Pat) -> PatId {
         let pattern = match pat.kind() {
             ast::PatKind::BindPat(bp) => {
@@ -625,6 +659,25 @@ where
         let syntax_node_ptr = AstPtr::new(&expr.clone().into());
         let expr = expr.expr().map(|e| self.collect_expr(e));
         self.alloc_expr(Expr::Return { expr }, syntax_node_ptr)
+    }
+
+    fn collect_break(&mut self, expr: ast::BreakExpr) -> ExprId {
+        let syntax_node_ptr = AstPtr::new(&expr.clone().into());
+        let expr = expr.expr().map(|e| self.collect_expr(e));
+        self.alloc_expr(Expr::Break { expr }, syntax_node_ptr)
+    }
+
+    fn collect_loop(&mut self, expr: ast::LoopExpr) -> ExprId {
+        let syntax_node_ptr = AstPtr::new(&expr.clone().into());
+        let body = self.collect_block_opt(expr.loop_body());
+        self.alloc_expr(Expr::Loop { body }, syntax_node_ptr)
+    }
+
+    fn collect_while(&mut self, expr: ast::WhileExpr) -> ExprId {
+        let syntax_node_ptr = AstPtr::new(&expr.clone().into());
+        let condition = self.collect_condition_opt(expr.condition());
+        let body = self.collect_block_opt(expr.loop_body());
+        self.alloc_expr(Expr::While { condition, body }, syntax_node_ptr)
     }
 
     fn finish(mut self) -> (Body, BodySourceMap) {

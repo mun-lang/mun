@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use mun_abi::Reflection;
-use mun_compiler::PathOrInline;
+use mun_compiler::{host_triple, Config, PathOrInline, Target};
 use mun_runtime::{invoke_fn, Runtime, RuntimeBuilder};
 
 fn main() -> Result<(), failure::Error> {
@@ -77,9 +77,9 @@ fn main() -> Result<(), failure::Error> {
 fn build(matches: &ArgMatches) -> Result<(), failure::Error> {
     let options = compiler_options(matches)?;
     if matches.is_present("watch") {
-        mun_compiler_daemon::main(&options)
+        mun_compiler_daemon::main(options)
     } else {
-        mun_compiler::main(&options).map(|_| {})
+        mun_compiler::main(options).map(|_| {})
     }
 }
 
@@ -136,9 +136,11 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOption
 
     Ok(mun_compiler::CompilerOptions {
         input: PathOrInline::Path(matches.value_of("INPUT").unwrap().into()), // Safe because its a required arg
-        target: matches.value_of("target").map(|t| t.to_string()),
-        optimization_lvl,
-        out_dir: None,
+        config: Config {
+            target: Target::search(matches.value_of("target").unwrap_or_else(|| host_triple()))?,
+            optimization_lvl,
+            out_dir: None,
+        },
     })
 }
 

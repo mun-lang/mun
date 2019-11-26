@@ -177,3 +177,38 @@ fn return_expr() {
     "#,
     )
 }
+
+#[test]
+fn loop_expr() {
+    ok_snapshot_test(
+        r#"
+    fn foo() {
+        loop {}
+    }"#,
+    )
+}
+
+#[test]
+fn break_expr() {
+    ok_snapshot_test(
+        r#"
+    fn foo() {
+        break;
+        if break { 3; }
+        if break 4 { 3; }
+    }
+    "#,
+    )
+}
+
+#[test]
+fn while_expr() {
+    ok_snapshot_test(
+        r#"
+    fn foo() {
+        while true {};
+        while { true } {};
+    }
+    "#,
+    )
+}

@@ -1,25 +1,8 @@
-// function to subtract two floats
-fn subtract(a:float, b:float):float {
-  a-b
-}
-
-// function to subtract two floats
-fn multiply(a:float, b:float):float {
-  a*b
-}
-
-fn main():int {
-  add(5, 3)
-}
-
-fn add_impl(a:int, b:int):int {
-    a+b
-}
-
-fn add(a:int, b:int):int {
-  add_impl(a,b)
-}
-
-fn test():int {
-  add(4,5)
-}
+fn foo():int {
+        break; // error: not in a loop
+        loop { break 3; break 3.0; } // error: mismatched type
+        let a:int = loop { break 3.0; } // error: mismatched type
+        loop { break 3; }
+        let a:int = loop { break loop { break 3; } }
+        loop { break loop { break 3.0; } } // error: mismatched type
+    }

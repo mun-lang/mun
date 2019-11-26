@@ -216,6 +216,28 @@ fn fibonacci() {
 }
 
 #[test]
+fn fibonacci_loop() {
+    test_snapshot(
+        r#"
+    fn fibonacci(n:int):int {
+        let a = 0;
+        let b = 1;
+        let i = 1;
+        loop {
+            if i > n {
+                return a
+            }
+            let sum = a + b;
+            a = b;
+            b = sum;
+            i += 1;
+        }
+    }
+    "#,
+    )
+}
+
+#[test]
 fn shadowing() {
     test_snapshot(
         r#"
@@ -294,6 +316,54 @@ fn true_is_true() {
     );
 }
 
+#[test]
+fn loop_expr() {
+    test_snapshot(
+        r#"
+    fn foo() {
+        loop {}
+    }
+    "#,
+    )
+}
+
+#[test]
+fn loop_break_expr() {
+    test_snapshot(
+        r#"
+    fn foo(n:int):int {
+        loop {
+            if n > 5 {
+                break n;
+            }
+            if n > 10 {
+                break 10;
+            }
+            n += 1;
+        }
+    }
+    "#,
+    )
+}
+
+#[test]
+fn while_expr() {
+    test_snapshot(
+        r#"
+    fn foo(n:int) {
+        while n<3 {
+            n += 1;
+        };
+
+        // This will be completely optimized out
+        while n<4 {
+            break;
+        };
+    }
+    "#,
+    )
+}
+
 fn test_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
 
@@ -310,12 +380,7 @@ fn test_snapshot(text: &str) {
             diag.message()
         ));
     });
-    if let Some(module) = Module::package_modules(&db)
-        .iter()
-        .find(|m| m.file_id() == file_id)
-    {
-        module.diagnostics(&db, &mut sink)
-    }
+    Module::from(file_id).diagnostics(&db, &mut sink);
     drop(sink);
     let messages = messages.into_inner();
 

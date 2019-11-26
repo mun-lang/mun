@@ -135,22 +135,10 @@ jobs:
         id: coverage
         uses: actions-rs/grcov@v0.1
 
-      - name: Coveralls upload
-        uses: coverallsapp/github-action@master
+      - uses: codecov/codecov-action@v1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: ${{ steps.coverage.outputs.report }}
-          parallel: true
-
-  grcov_finalize:
-    runs-on: ubuntu-latest
-    needs: grcov
-    steps:
-      - name: Coveralls finalization
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          parallel-finished: true
+          token: 9664cbca-39d7-4c44-931a-064d2e75f80b # Not secure, have to wait for this issue: https://github.com/codecov/codecov-action/issues/29
+          file: ${{ steps.coverage.outputs.report }}
   
   artifacts:
     name: Artifacts

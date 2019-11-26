@@ -4,11 +4,11 @@ use std::{any::Any, fmt};
 
 /// Diagnostic defines hir API for errors and warnings.
 ///
-/// It is used as a `dyn` object, which you can downcast to a concrete diagnostic. DiagnosticSink
+/// It is used as a `dyn` object, which you can downcast to concrete diagnostics. DiagnosticSink
 /// are structured, meaning that they include rich information which can be used by IDE to create
 /// fixes.
 ///
-/// Internally, various subsystems of HIR produce diagnostic specific to a subsystem (typically,
+/// Internally, various subsystems of HIR produce diagnostics specific to a subsystem (typically,
 /// an `enum`), which are safe to store in salsa but do not include source locations. Such internal
 /// diagnostics are transformed into an instance of `Diagnostic` on demand.
 pub trait Diagnostic: Any + Send + Sync + fmt::Debug + 'static {
@@ -354,6 +354,54 @@ impl Diagnostic for ReturnMissingExpression {
 
     fn syntax_node_ptr(&self) -> SyntaxNodePtr {
         self.return_expr
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct BreakOutsideLoop {
+    pub file: FileId,
+    pub break_expr: SyntaxNodePtr,
+}
+
+impl Diagnostic for BreakOutsideLoop {
+    fn message(&self) -> String {
+        "`break` outside of a loop".to_owned()
+    }
+
+    fn file(&self) -> FileId {
+        self.file
+    }
+
+    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
+        self.break_expr
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct BreakWithValueOutsideLoop {
+    pub file: FileId,
+    pub break_expr: SyntaxNodePtr,
+}
+
+impl Diagnostic for BreakWithValueOutsideLoop {
+    fn message(&self) -> String {
+        "`break` with value can only appear in a `loop`".to_owned()
+    }
+
+    fn file(&self) -> FileId {
+        self.file
+    }
+
+    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
+        self.break_expr
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {

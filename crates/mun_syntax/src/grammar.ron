@@ -74,6 +74,7 @@ Grammar(
         "true",
         // "until",     // Not supported
         "while",
+        "loop",
 
         // Extended keywords
         "let",
@@ -118,6 +119,9 @@ Grammar(
         "IF_EXPR",
         "BLOCK_EXPR",
         "RETURN_EXPR",
+        "WHILE_EXPR",
+        "LOOP_EXPR",
+        "BREAK_EXPR",
         "CONDITION",
 
         "BIND_PAT",
@@ -179,6 +183,15 @@ Grammar(
             enum: ["LetStmt", "ExprStmt"]
         ),
 
+        "LoopExpr": (
+            traits: ["LoopBodyOwner"]
+        ),
+
+        "WhileExpr": (
+            traits: ["LoopBodyOwner"],
+            options: [ "Condition" ]
+        ),
+
         "PathExpr": (options: ["Path"]),
         "PrefixExpr": (options: ["Expr"]),
         "BinExpr": (),
@@ -191,6 +204,7 @@ Grammar(
         "IfExpr": (
             options: [ "Condition" ]
         ),
+        "BreakExpr": (options: ["Expr"]),
         "ArgList": (
             collections: [
                 ["args", "Expr"]
@@ -206,7 +220,10 @@ Grammar(
                 "ParenExpr",
                 "CallExpr",
                 "IfExpr",
+                "LoopExpr",
+                "WhileExpr",
                 "ReturnExpr",
+                "BreakExpr",
                 "BlockExpr",
             ]
         ),

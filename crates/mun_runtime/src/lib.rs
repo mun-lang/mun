@@ -131,7 +131,7 @@ impl Runtime {
         assembly.link(&self.dispatch_table)?;
 
         self.watcher
-            .watch(library_path.clone(), RecursiveMode::NonRecursive)?;
+            .watch(library_path.parent().unwrap(), RecursiveMode::NonRecursive)?;
 
         self.assemblies.insert(library_path, assembly);
         Ok(())
@@ -147,18 +147,21 @@ impl Runtime {
     pub fn update(&mut self) -> bool {
         while let Ok(event) = self.watcher_rx.try_recv() {
             use notify::DebouncedEvent::*;
-            if let Write(ref path) = event {
-                if let Some(assembly) = self.assemblies.get_mut(path) {
-                    if let Err(e) = assembly.swap(path, &mut self.dispatch_table) {
-                        println!(
-                            "An error occured while reloading assembly '{}': {:?}",
-                            path.to_string_lossy(),
-                            e
-                        );
-                    } else {
-                        return true;
+            match event {
+                Write(ref path) | Rename(_, ref path) | Create(ref path) => {
+                    if let Some(assembly) = self.assemblies.get_mut(path) {
+                        if let Err(e) = assembly.swap(path, &mut self.dispatch_table) {
+                            println!(
+                                "An error occured while reloading assembly '{}': {:?}",
+                                path.to_string_lossy(),
+                                e
+                            );
+                        } else {
+                            return true;
+                        }
                     }
                 }
+                _ => {}
             }
         }
         false
