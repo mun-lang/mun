@@ -97,6 +97,17 @@ runners](.github/actions/install-llvm/index.js):
   # Ubuntu 18.04
   sudo apt install llvm-7 llvm-7-* liblld-7*
   ```
+* **Arch Linux** As its package manager doesn't have lld7, it's easier to download all binaries
+  manually.
+  ```bash
+  # Download binaries for Ubuntu 14.04 (works across distros)
+  wget https://github.com/llvm/llvm-project/releases/download/llvmorg-7.1.0/clang+llvm-7.1.0-x86_64-linux-gnu-ubuntu-14.04.tar.xz
+  # Unpack to /usr/ directory
+  tar -xf clang+llvm-7.1.0-x86_64-linux-gnu-ubuntu-14.04.tar.xz -C /usr/
+  ```
+  When running `llvm-config`, an error can occur signalling that `/usr/lib/libtinfo.so.5` is
+  missing. If a newer version is present, create a symlink; e.g. `ln -s /usr/lib/libtinfo.so.6
+  /usr/lib/libtinfo.so.5`), otherwise download the library.
 * **macOS**: [Brew](https://brew.sh/) contains a binary distribution of LLVM 7.1.0. However, as it's
   not the latest version, it won't be added to the path. We are using
   [llvm-sys](https://crates.io/crates/llvm-sys) to manage version, but another option is to export 
