@@ -11,7 +11,7 @@ pub(super) fn struct_def(p: &mut Parser, m: Marker) {
         }
         T!['{'] => record_field_def_list(p),
         _ => {
-            p.error("expected ';', pr '{'");
+            p.error("expected ';', or '{'");
         }
     }
     m.complete(p, STRUCT_DEF);
@@ -32,6 +32,7 @@ pub(super) fn record_field_def_list(p: &mut Parser) {
         }
     }
     p.expect(T!['}']);
+    p.eat(T![;]);
     m.complete(p, RECORD_FIELD_DEF_LIST);
 }
 

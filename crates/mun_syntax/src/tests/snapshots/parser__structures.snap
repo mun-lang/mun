@@ -1,57 +1,125 @@
 ---
 source: crates/mun_syntax/src/tests/parser.rs
-expression: "struct Foo;\nstruct Foo {}\nstruct Foo {\n    a: float,\n    b: int,\n}"
+expression: "struct Foo      // error: expected ';', or '{'\nstruct Foo;\nstruct Foo;;    // error: expected a declaration\nstruct Foo {}\nstruct Foo {};\nstruct Foo {\n    a: float,\n    b: int,\n}\nstruct Foo {\n    a: float,\n    b: int,\n};"
 ---
-SOURCE_FILE@[0; 66)
-  STRUCT_DEF@[0; 11)
+SOURCE_FILE@[0; 219)
+  STRUCT_DEF@[0; 10)
     STRUCT_KW@[0; 6) "struct"
     WHITESPACE@[6; 7) " "
     NAME@[7; 10)
       IDENT@[7; 10) "Foo"
-    SEMI@[10; 11) ";"
-  WHITESPACE@[11; 12) "\n"
-  STRUCT_DEF@[12; 25)
-    STRUCT_KW@[12; 18) "struct"
-    WHITESPACE@[18; 19) " "
-    NAME@[19; 22)
-      IDENT@[19; 22) "Foo"
-    WHITESPACE@[22; 23) " "
-    RECORD_FIELD_DEF_LIST@[23; 25)
-      L_CURLY@[23; 24) "{"
-      R_CURLY@[24; 25) "}"
-  WHITESPACE@[25; 26) "\n"
-  STRUCT_DEF@[26; 66)
-    STRUCT_KW@[26; 32) "struct"
-    WHITESPACE@[32; 33) " "
-    NAME@[33; 36)
-      IDENT@[33; 36) "Foo"
-    WHITESPACE@[36; 37) " "
-    RECORD_FIELD_DEF_LIST@[37; 66)
-      L_CURLY@[37; 38) "{"
-      WHITESPACE@[38; 43) "\n    "
-      RECORD_FIELD_DEF@[43; 51)
-        NAME@[43; 44)
-          IDENT@[43; 44) "a"
-        COLON@[44; 45) ":"
-        WHITESPACE@[45; 46) " "
-        PATH_TYPE@[46; 51)
-          PATH@[46; 51)
-            PATH_SEGMENT@[46; 51)
-              NAME_REF@[46; 51)
-                IDENT@[46; 51) "float"
-      COMMA@[51; 52) ","
-      WHITESPACE@[52; 57) "\n    "
-      RECORD_FIELD_DEF@[57; 63)
-        NAME@[57; 58)
-          IDENT@[57; 58) "b"
-        COLON@[58; 59) ":"
-        WHITESPACE@[59; 60) " "
-        PATH_TYPE@[60; 63)
-          PATH@[60; 63)
-            PATH_SEGMENT@[60; 63)
-              NAME_REF@[60; 63)
-                IDENT@[60; 63) "int"
-      COMMA@[63; 64) ","
-      WHITESPACE@[64; 65) "\n"
-      R_CURLY@[65; 66) "}"
+  WHITESPACE@[10; 16) "      "
+  COMMENT@[16; 46) "// error: expected \'; ..."
+  WHITESPACE@[46; 47) "\n"
+  STRUCT_DEF@[47; 58)
+    STRUCT_KW@[47; 53) "struct"
+    WHITESPACE@[53; 54) " "
+    NAME@[54; 57)
+      IDENT@[54; 57) "Foo"
+    SEMI@[57; 58) ";"
+  WHITESPACE@[58; 59) "\n"
+  STRUCT_DEF@[59; 70)
+    STRUCT_KW@[59; 65) "struct"
+    WHITESPACE@[65; 66) " "
+    NAME@[66; 69)
+      IDENT@[66; 69) "Foo"
+    SEMI@[69; 70) ";"
+  ERROR@[70; 71)
+    SEMI@[70; 71) ";"
+  WHITESPACE@[71; 75) "    "
+  COMMENT@[75; 107) "// error: expected a  ..."
+  WHITESPACE@[107; 108) "\n"
+  STRUCT_DEF@[108; 121)
+    STRUCT_KW@[108; 114) "struct"
+    WHITESPACE@[114; 115) " "
+    NAME@[115; 118)
+      IDENT@[115; 118) "Foo"
+    WHITESPACE@[118; 119) " "
+    RECORD_FIELD_DEF_LIST@[119; 121)
+      L_CURLY@[119; 120) "{"
+      R_CURLY@[120; 121) "}"
+  WHITESPACE@[121; 122) "\n"
+  STRUCT_DEF@[122; 136)
+    STRUCT_KW@[122; 128) "struct"
+    WHITESPACE@[128; 129) " "
+    NAME@[129; 132)
+      IDENT@[129; 132) "Foo"
+    WHITESPACE@[132; 133) " "
+    RECORD_FIELD_DEF_LIST@[133; 136)
+      L_CURLY@[133; 134) "{"
+      R_CURLY@[134; 135) "}"
+      SEMI@[135; 136) ";"
+  WHITESPACE@[136; 137) "\n"
+  STRUCT_DEF@[137; 177)
+    STRUCT_KW@[137; 143) "struct"
+    WHITESPACE@[143; 144) " "
+    NAME@[144; 147)
+      IDENT@[144; 147) "Foo"
+    WHITESPACE@[147; 148) " "
+    RECORD_FIELD_DEF_LIST@[148; 177)
+      L_CURLY@[148; 149) "{"
+      WHITESPACE@[149; 154) "\n    "
+      RECORD_FIELD_DEF@[154; 162)
+        NAME@[154; 155)
+          IDENT@[154; 155) "a"
+        COLON@[155; 156) ":"
+        WHITESPACE@[156; 157) " "
+        PATH_TYPE@[157; 162)
+          PATH@[157; 162)
+            PATH_SEGMENT@[157; 162)
+              NAME_REF@[157; 162)
+                IDENT@[157; 162) "float"
+      COMMA@[162; 163) ","
+      WHITESPACE@[163; 168) "\n    "
+      RECORD_FIELD_DEF@[168; 174)
+        NAME@[168; 169)
+          IDENT@[168; 169) "b"
+        COLON@[169; 170) ":"
+        WHITESPACE@[170; 171) " "
+        PATH_TYPE@[171; 174)
+          PATH@[171; 174)
+            PATH_SEGMENT@[171; 174)
+              NAME_REF@[171; 174)
+                IDENT@[171; 174) "int"
+      COMMA@[174; 175) ","
+      WHITESPACE@[175; 176) "\n"
+      R_CURLY@[176; 177) "}"
+  WHITESPACE@[177; 178) "\n"
+  STRUCT_DEF@[178; 219)
+    STRUCT_KW@[178; 184) "struct"
+    WHITESPACE@[184; 185) " "
+    NAME@[185; 188)
+      IDENT@[185; 188) "Foo"
+    WHITESPACE@[188; 189) " "
+    RECORD_FIELD_DEF_LIST@[189; 219)
+      L_CURLY@[189; 190) "{"
+      WHITESPACE@[190; 195) "\n    "
+      RECORD_FIELD_DEF@[195; 203)
+        NAME@[195; 196)
+          IDENT@[195; 196) "a"
+        COLON@[196; 197) ":"
+        WHITESPACE@[197; 198) " "
+        PATH_TYPE@[198; 203)
+          PATH@[198; 203)
+            PATH_SEGMENT@[198; 203)
+              NAME_REF@[198; 203)
+                IDENT@[198; 203) "float"
+      COMMA@[203; 204) ","
+      WHITESPACE@[204; 209) "\n    "
+      RECORD_FIELD_DEF@[209; 215)
+        NAME@[209; 210)
+          IDENT@[209; 210) "b"
+        COLON@[210; 211) ":"
+        WHITESPACE@[211; 212) " "
+        PATH_TYPE@[212; 215)
+          PATH@[212; 215)
+            PATH_SEGMENT@[212; 215)
+              NAME_REF@[212; 215)
+                IDENT@[212; 215) "int"
+      COMMA@[215; 216) ","
+      WHITESPACE@[216; 217) "\n"
+      R_CURLY@[217; 218) "}"
+      SEMI@[218; 219) ";"
+error Offset(10): expected ';', or '{'
+error Offset(70): expected a declaration
 
