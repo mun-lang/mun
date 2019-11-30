@@ -1,6 +1,6 @@
 use crate::{
     ast::{self, child_opt, AstNode, NameOwner},
-    T,
+    SyntaxKind, T,
 };
 use crate::{SmolStr, SyntaxNode};
 use text_unit::TextRange;
@@ -14,6 +14,17 @@ impl ast::Name {
 impl ast::NameRef {
     pub fn text(&self) -> &SmolStr {
         text_of_first_token(self.syntax())
+    }
+
+    pub fn as_tuple_field(&self) -> Option<usize> {
+        self.syntax().children_with_tokens().find_map(|c| {
+            if c.kind() == SyntaxKind::INT_NUMBER {
+                c.as_token()
+                    .and_then(|tok| tok.text().as_str().parse().ok())
+            } else {
+                None
+            }
+        })
     }
 }
 
@@ -91,6 +102,7 @@ impl ast::PathSegment {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StructKind {
     Record(ast::RecordFieldDefList),
+    Tuple(ast::TupleFieldDefList),
     Unit,
 }
 
@@ -98,6 +110,8 @@ impl StructKind {
     fn from_node<N: AstNode>(node: &N) -> StructKind {
         if let Some(r) = child_opt::<_, ast::RecordFieldDefList>(node) {
             StructKind::Record(r)
+        } else if let Some(t) = child_opt::<_, ast::TupleFieldDefList>(node) {
+            StructKind::Tuple(t)
         } else {
             StructKind::Unit
         }

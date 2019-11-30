@@ -1,7 +1,7 @@
 pub(crate) mod src;
 
 use self::src::HasSource;
-use crate::adt::{LocalStructFieldId, StructData};
+use crate::adt::{StructData, StructFieldId};
 use crate::diagnostics::DiagnosticSink;
 use crate::expr::{Body, BodySourceMap};
 use crate::ids::AstItemDef;
@@ -333,7 +333,7 @@ pub struct Struct {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct StructField {
     pub(crate) parent: Struct,
-    pub(crate) id: LocalStructFieldId,
+    pub(crate) id: StructFieldId,
 }
 
 impl Struct {
@@ -354,9 +354,7 @@ impl Struct {
     pub fn fields(self, db: &impl HirDatabase) -> Vec<StructField> {
         self.data(db)
             .fields
-            .as_ref()
-            .into_iter()
-            .flat_map(|it| it.iter())
+            .iter()
             .map(|(id, _)| StructField { parent: self, id })
             .collect()
     }

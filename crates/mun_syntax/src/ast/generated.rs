@@ -1264,6 +1264,69 @@ impl ast::VisibilityOwner for StructDef {}
 impl ast::DocCommentsOwner for StructDef {}
 impl StructDef {}
 
+// TupleFieldDef
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TupleFieldDef {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for TupleFieldDef {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            TUPLE_FIELD_DEF => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(TupleFieldDef { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl ast::VisibilityOwner for TupleFieldDef {}
+impl TupleFieldDef {
+    pub fn type_ref(&self) -> Option<TypeRef> {
+        super::child_opt(self)
+    }
+}
+
+// TupleFieldDefList
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TupleFieldDefList {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for TupleFieldDefList {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            TUPLE_FIELD_DEF_LIST => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(TupleFieldDefList { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl TupleFieldDefList {
+    pub fn fields(&self) -> impl Iterator<Item = TupleFieldDef> {
+        super::children(self)
+    }
+}
+
 // TypeRef
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

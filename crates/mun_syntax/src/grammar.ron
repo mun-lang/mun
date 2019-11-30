@@ -108,6 +108,8 @@ Grammar(
         "STRUCT_DEF",
         "RECORD_FIELD_DEF_LIST",
         "RECORD_FIELD_DEF",
+        "TUPLE_FIELD_DEF_LIST",
+        "TUPLE_FIELD_DEF",
 
         "PATH_TYPE",
         "NEVER_TYPE",
@@ -182,6 +184,15 @@ Grammar(
                 "VisibilityOwner",
                 "DocCommentsOwner",
                 "TypeAscriptionOwner"
+            ]
+        ),
+        "TupleFieldDefList": (collections: [("fields", "TupleFieldDef")]),
+        "TupleFieldDef": (
+            options: [
+                "TypeRef",
+            ],
+            traits: [
+                "VisibilityOwner",
             ]
         ),
         "LetStmt": (

@@ -1,4 +1,5 @@
 pub(crate) use self::diagnostics::LowerDiagnostic;
+use crate::adt::StructKind;
 use crate::code_model::BuiltinType;
 use crate::name_resolution::Namespace;
 use crate::resolve::{Resolution, Resolver};
@@ -162,8 +163,8 @@ pub fn fn_sig_for_fn(db: &impl HirDatabase, def: Function) -> FnSig {
 /// Build the type of a struct constructor.
 fn type_for_struct_constructor(db: &impl HirDatabase, def: Struct) -> Ty {
     let struct_data = db.struct_data(def.id);
-    if struct_data.fields.is_none() {
-        type_for_struct(db, def) // Unit struct
+    if struct_data.kind == StructKind::Unit {
+        type_for_struct(db, def)
     } else {
         unreachable!();
     }

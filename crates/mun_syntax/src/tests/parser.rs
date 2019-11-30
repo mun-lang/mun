@@ -57,19 +57,25 @@ fn literals() {
 fn structures() {
     snapshot_test(
         r#"
-    struct Foo      // error: expected ';', or '{'
+    struct Foo      // error: expected a ';', or a '{'
     struct Foo;
     struct Foo;;    // error: expected a declaration
     struct Foo {}
     struct Foo {};
+    struct Foo {,}; // error: expected a field declaration
     struct Foo {
         a: float,
-        b: int,
     }
     struct Foo {
         a: float,
         b: int,
     };
+    struct Foo()
+    struct Foo();
+    struct Foo(,);  // error: expected a type
+    struct Foo(float)
+    struct Foo(float,);
+    struct Foo(float, int)
     "#,
     )
 }

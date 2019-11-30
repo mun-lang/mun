@@ -8,21 +8,42 @@ use crate::{
 };
 use mun_syntax::ast::{self, NameOwner, TypeAscriptionOwner};
 
-/// A single field of an enum variant or struct
+/// A single field of a record
+/// ```mun
+/// struct Foo {
+///     a: int, // <- this
+/// }
+/// ```
+/// or
+/// ```mun
+/// struct Foo(
+///     int, // <- this
+/// )
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FieldData {
+pub struct StructFieldData {
     pub name: Name,
     pub type_ref: TypeRef,
 }
 
+/// An identifier for a struct's or tuple's field
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct LocalStructFieldId(RawId);
-impl_arena_id!(LocalStructFieldId);
+pub struct StructFieldId(RawId);
+impl_arena_id!(StructFieldId);
+
+/// A struct's fields' data (record, tuple, or unit struct)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum StructKind {
+    Record,
+    Tuple,
+    Unit,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StructData {
     pub name: Name,
-    pub fields: Option<Arc<Arena<LocalStructFieldId, FieldData>>>,
+    pub fields: Arena<StructFieldId, StructFieldData>,
+    pub kind: StructKind,
 }
 
 impl StructData {
@@ -34,18 +55,30 @@ impl StructData {
             .map(|n| n.as_name())
             .unwrap_or_else(Name::missing);
 
-        let fields = if let ast::StructKind::Record(r) = src.ast.kind() {
-            let fields = r
-                .fields()
-                .map(|fd| FieldData {
-                    name: fd.name().map(|n| n.as_name()).unwrap_or_else(Name::missing),
-                    type_ref: TypeRef::from_ast_opt(fd.ascribed_type()),
-                })
-                .collect();
-            Some(Arc::new(fields))
-        } else {
-            None
+        let (fields, kind) = match src.ast.kind() {
+            ast::StructKind::Record(r) => {
+                let fields = r
+                    .fields()
+                    .map(|fd| StructFieldData {
+                        name: fd.name().map(|n| n.as_name()).unwrap_or_else(Name::missing),
+                        type_ref: TypeRef::from_ast_opt(fd.ascribed_type()),
+                    })
+                    .collect();
+                (fields, StructKind::Record)
+            }
+            ast::StructKind::Tuple(t) => {
+                let fields = t
+                    .fields()
+                    .enumerate()
+                    .map(|(index, fd)| StructFieldData {
+                        name: Name::new_tuple_field(index),
+                        type_ref: TypeRef::from_ast_opt(fd.type_ref()),
+                    })
+                    .collect();
+                (fields, StructKind::Tuple)
+            }
+            ast::StructKind::Unit => (Arena::default(), StructKind::Unit),
         };
-        Arc::new(StructData { name, fields })
+        Arc::new(StructData { name, fields, kind })
     }
 }

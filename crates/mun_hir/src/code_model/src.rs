@@ -42,7 +42,7 @@ impl HasSource for StructField {
 
         let ast = field_sources
             .into_iter()
-            .zip(self.parent.data(db).fields.as_ref().unwrap().iter())
+            .zip(self.parent.data(db).fields.iter())
             .find(|(_syntax, (id, _))| *id == self.id)
             .unwrap()
             .0;

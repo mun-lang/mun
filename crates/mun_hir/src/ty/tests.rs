@@ -177,11 +177,12 @@ fn struct_declaration() {
     infer_snapshot(
         r#"
     struct Foo;
-    struct Bar {}
-    struct Baz {
+    struct Bar {
         f: float,
         i: int,
     }
+    struct Baz(float, int);
+
 
     fn main() {
         let foo: Foo;
