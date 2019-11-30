@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
+use crate::type_ref::{TypeRefBuilder, TypeRefId, TypeRefMap, TypeRefSourceMap};
 use crate::{
     arena::{Arena, RawId},
     ids::{AstItemDef, StructId},
-    type_ref::TypeRef,
     AsName, DefDatabase, Name,
 };
 use mun_syntax::ast::{self, NameOwner, TypeAscriptionOwner};
@@ -23,7 +23,7 @@ use mun_syntax::ast::{self, NameOwner, TypeAscriptionOwner};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StructFieldData {
     pub name: Name,
-    pub type_ref: TypeRef,
+    pub type_ref: TypeRefId,
 }
 
 /// An identifier for a struct's or tuple's field
@@ -39,11 +39,13 @@ pub enum StructKind {
     Unit,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct StructData {
     pub name: Name,
     pub fields: Arena<StructFieldId, StructFieldData>,
     pub kind: StructKind,
+    type_ref_map: TypeRefMap,
+    type_ref_source_map: TypeRefSourceMap,
 }
 
 impl StructData {
@@ -55,13 +57,14 @@ impl StructData {
             .map(|n| n.as_name())
             .unwrap_or_else(Name::missing);
 
+        let mut type_ref_builder = TypeRefBuilder::default();
         let (fields, kind) = match src.ast.kind() {
             ast::StructKind::Record(r) => {
                 let fields = r
                     .fields()
                     .map(|fd| StructFieldData {
                         name: fd.name().map(|n| n.as_name()).unwrap_or_else(Name::missing),
-                        type_ref: TypeRef::from_ast_opt(fd.ascribed_type()),
+                        type_ref: type_ref_builder.alloc_from_node_opt(fd.ascribed_type().as_ref()),
                     })
                     .collect();
                 (fields, StructKind::Record)
@@ -72,13 +75,29 @@ impl StructData {
                     .enumerate()
                     .map(|(index, fd)| StructFieldData {
                         name: Name::new_tuple_field(index),
-                        type_ref: TypeRef::from_ast_opt(fd.type_ref()),
+                        type_ref: type_ref_builder.alloc_from_node_opt(fd.type_ref().as_ref()),
                     })
                     .collect();
                 (fields, StructKind::Tuple)
             }
             ast::StructKind::Unit => (Arena::default(), StructKind::Unit),
         };
-        Arc::new(StructData { name, fields, kind })
+
+        let (type_ref_map, type_ref_source_map) = type_ref_builder.finish();
+        Arc::new(StructData {
+            name,
+            fields,
+            kind,
+            type_ref_map,
+            type_ref_source_map,
+        })
+    }
+
+    pub fn type_ref_source_map(&self) -> &TypeRefSourceMap {
+        &self.type_ref_source_map
+    }
+
+    pub fn type_ref_map(&self) -> &TypeRefMap {
+        &self.type_ref_map
     }
 }

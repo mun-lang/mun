@@ -4,7 +4,7 @@ use crate::values::FunctionValue;
 use crate::{IrDatabase, Module, OptimizationLevel};
 use inkwell::passes::{PassManager, PassManagerBuilder};
 use inkwell::types::AnyTypeEnum;
-use mun_hir as hir;
+
 use std::collections::HashMap;
 
 /// Constructs a PassManager to optimize functions for the given optimization level.
@@ -45,7 +45,7 @@ pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
     hir_function: hir::Function,
     llvm_function: FunctionValue,
     module: &'a Module,
-    llvm_functions: &'a HashMap<mun_hir::Function, FunctionValue>,
+    llvm_functions: &'a HashMap<hir::Function, FunctionValue>,
     dispatch_table: &'b DispatchTable,
 ) -> FunctionValue {
     let mut code_gen = BodyIrGenerator::new(

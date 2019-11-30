@@ -1,7 +1,7 @@
 use super::try_convert_any_to_basic;
 use crate::IrDatabase;
+use hir::{ApplicationTy, Ty, TypeCtor};
 use inkwell::types::{AnyTypeEnum, BasicType, BasicTypeEnum};
-use mun_hir::{ApplicationTy, Ty, TypeCtor};
 
 /// Given a mun type, construct an LLVM IR type
 pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty) -> AnyTypeEnum {
@@ -28,6 +28,10 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty) -> AnyTypeEnum {
                 };
 
                 AnyTypeEnum::FunctionType(fn_type)
+            }
+            TypeCtor::Struct(s) => {
+                let name = s.name(db).to_string();
+                context.opaque_struct_type(&name).into()
             }
             _ => unreachable!(),
         },

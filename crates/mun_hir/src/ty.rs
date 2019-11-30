@@ -1,5 +1,6 @@
 mod infer;
-mod lower;
+pub(super) mod lower;
+mod op;
 
 use crate::display::{HirDisplay, HirFormatter};
 use crate::ty::infer::TypeVarId;
@@ -9,8 +10,6 @@ pub use infer::InferenceResult;
 pub(crate) use lower::{fn_sig_for_fn, type_for_def, TypableDef};
 use std::fmt;
 use std::sync::Arc;
-
-mod op;
 
 #[cfg(test)]
 mod tests;

@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 description = "LLVM IR code generation for Mun"
 
 [dependencies]
-mun_hir = { path = "../mun_hir" }
+hir = { path = "../mun_hir", package = "mun_hir" }
 mun_target = { path = "../mun_target" }
 mun_lld = { path = "../mun_lld" }
 failure = "0.1.5"

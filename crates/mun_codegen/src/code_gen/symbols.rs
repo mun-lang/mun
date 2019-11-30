@@ -3,6 +3,7 @@ use crate::ir::dispatch_table::DispatchTable;
 use crate::ir::function;
 use crate::values::{BasicValue, GlobalValue};
 use crate::IrDatabase;
+use hir::{Ty, TypeCtor};
 use inkwell::attributes::Attribute;
 use inkwell::values::{IntValue, PointerValue, UnnamedAddress};
 use inkwell::{
@@ -10,7 +11,6 @@ use inkwell::{
     values::{FunctionValue, StructValue},
     AddressSpace,
 };
-use mun_hir::{self as hir, Ty, TypeCtor};
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
@@ -161,7 +161,7 @@ fn gen_function_info_array<'a, D: IrDatabase>(
     db: &D,
     types: &AbiTypes,
     module: &Module,
-    functions: impl Iterator<Item = (&'a mun_hir::Function, &'a FunctionValue)>,
+    functions: impl Iterator<Item = (&'a hir::Function, &'a FunctionValue)>,
 ) -> GlobalValue {
     let function_infos: Vec<StructValue> = functions
         .map(|(f, value)| {
@@ -254,7 +254,7 @@ fn gen_dispatch_table<D: IrDatabase>(
 /// for the ABI that `get_info` exposes.
 pub(super) fn gen_reflection_ir(
     db: &impl IrDatabase,
-    function_map: &HashMap<mun_hir::Function, FunctionValue>,
+    function_map: &HashMap<hir::Function, FunctionValue>,
     dispatch_table: &DispatchTable,
     module: &Module,
 ) {

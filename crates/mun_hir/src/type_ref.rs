@@ -67,6 +67,13 @@ pub struct TypeRefMap {
     type_refs: Arena<TypeRefId, TypeRef>,
 }
 
+impl TypeRefMap {
+    /// Iterate over the elements in the map
+    pub fn iter(&self) -> impl Iterator<Item = (TypeRefId, &TypeRef)> {
+        self.type_refs.iter()
+    }
+}
+
 impl Index<TypeRefId> for TypeRefMap {
     type Output = TypeRef;
 

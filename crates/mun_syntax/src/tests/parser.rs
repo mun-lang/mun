@@ -210,7 +210,7 @@ fn loop_expr() {
 
 #[test]
 fn break_expr() {
-    ok_snapshot_test(
+    snapshot_test(
         r#"
     fn foo() {
         break;
@@ -223,7 +223,7 @@ fn break_expr() {
 
 #[test]
 fn while_expr() {
-    ok_snapshot_test(
+    snapshot_test(
         r#"
     fn foo() {
         while true {};

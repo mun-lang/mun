@@ -3,8 +3,8 @@ use crate::IrDatabase;
 use inkwell::module::Module;
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::{BasicValueEnum, PointerValue};
-use mun_hir as hir;
-use mun_hir::{Body, Expr, ExprId, InferenceResult};
+
+use hir::{Body, Expr, ExprId, InferenceResult};
 use std::collections::HashMap;
 
 /// A dispatch table in IR is a struct that contains pointers to all functions that are called from
@@ -147,7 +147,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
     /// This creates the final DispatchTable with all *called* functions from within the module
     /// # Parameters
     /// * **functions**: Mapping of *defined* Mun functions to their respective IR values.
-    pub fn finalize(self, functions: &HashMap<mun_hir::Function, FunctionValue>) -> DispatchTable {
+    pub fn finalize(self, functions: &HashMap<hir::Function, FunctionValue>) -> DispatchTable {
         // Construct the table body from all the entries in the dispatch table
         let table_body: Vec<BasicTypeEnum> = self
             .entries

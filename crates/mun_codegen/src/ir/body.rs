@@ -1,13 +1,13 @@
 use crate::{ir::dispatch_table::DispatchTable, ir::try_convert_any_to_basic, IrDatabase};
+use hir::{
+    ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDisplay, InferenceResult, Literal, Ordering,
+    Pat, PatId, Path, Resolution, Resolver, Statement, TypeCtor,
+};
 use inkwell::{
     builder::Builder,
     module::Module,
     values::{BasicValueEnum, CallSiteValue, FloatValue, FunctionValue, IntValue},
     FloatPredicate, IntPredicate,
-};
-use mun_hir::{
-    self as hir, ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDisplay, InferenceResult,
-    Literal, Ordering, Pat, PatId, Path, Resolution, Resolver, Statement, TypeCtor,
 };
 use std::{collections::HashMap, mem, sync::Arc};
 
@@ -32,7 +32,7 @@ pub(crate) struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
     pat_to_param: HashMap<PatId, inkwell::values::BasicValueEnum>,
     pat_to_local: HashMap<PatId, inkwell::values::PointerValue>,
     pat_to_name: HashMap<PatId, String>,
-    function_map: &'a HashMap<mun_hir::Function, FunctionValue>,
+    function_map: &'a HashMap<hir::Function, FunctionValue>,
     dispatch_table: &'b DispatchTable,
     active_loop: Option<LoopInfo>,
     hir_function: hir::Function,
@@ -44,7 +44,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         module: &'a Module,
         hir_function: hir::Function,
         ir_function: FunctionValue,
-        function_map: &'a HashMap<mun_hir::Function, FunctionValue>,
+        function_map: &'a HashMap<hir::Function, FunctionValue>,
         dispatch_table: &'b DispatchTable,
     ) -> Self {
         // Get the type information from the `hir::Function`
@@ -136,7 +136,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 tail,
             } => self.gen_block(expr, statements, *tail),
             Expr::Path(ref p) => {
-                let resolver = mun_hir::resolver_for_expr(self.body.clone(), self.db, expr);
+                let resolver = hir::resolver_for_expr(self.body.clone(), self.db, expr);
                 Some(self.gen_path_expr(p, expr, &resolver))
             }
             Expr::Literal(lit) => Some(self.gen_literal(lit)),
@@ -471,7 +471,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         let body = self.body.clone();
         match &body[expr] {
             Expr::Path(ref p) => {
-                let resolver = mun_hir::resolver_for_expr(self.body.clone(), self.db, expr);
+                let resolver = hir::resolver_for_expr(self.body.clone(), self.db, expr);
                 self.gen_path_place_expr(p, expr, &resolver)
             }
             _ => unreachable!("invalid place expression"),

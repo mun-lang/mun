@@ -2,6 +2,7 @@
 
 use crate::input::{SourceRoot, SourceRootId};
 use crate::name_resolution::Namespace;
+use crate::ty::lower::LowerBatchResult;
 use crate::ty::{FnSig, Ty, TypableDef};
 use crate::{
     adt::StructData,
@@ -11,7 +12,7 @@ use crate::{
     name_resolution::ModuleScope,
     source_id::ErasedFileAstId,
     ty::InferenceResult,
-    AstIdMap, ExprScopes, FileId, RawItems,
+    AstIdMap, ExprScopes, FileId, RawItems, Struct,
 };
 use mun_syntax::{ast, Parse, SourceFile, SyntaxNode};
 pub use relative_path::RelativePathBuf;
@@ -82,6 +83,9 @@ pub trait HirDatabase: DefDatabase {
 
     #[salsa::invoke(crate::ty::infer_query)]
     fn infer(&self, def: DefWithBody) -> Arc<InferenceResult>;
+
+    #[salsa::invoke(crate::ty::lower::lower_struct_query)]
+    fn lower_struct(&self, def: Struct) -> Arc<LowerBatchResult>;
 
     #[salsa::invoke(crate::FnData::fn_data_query)]
     fn fn_data(&self, func: Function) -> Arc<FnData>;

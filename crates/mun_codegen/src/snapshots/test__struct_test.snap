@@ -1,0 +1,19 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "struct Bar(float, int, bool, Foo);\nstruct Foo { a: int };\nstruct Baz;\nfn foo() {\n    let a: Foo;\n    let b: Bar;\n    let c: Baz;\n}"
+---
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+%Baz = type {}
+%Bar = type { double, i64, i1, %Foo }
+%Foo = type { i64 }
+
+define void @foo() {
+body:
+  %c = alloca %Baz
+  %b = alloca %Bar
+  %a = alloca %Foo
+  ret void
+}
+

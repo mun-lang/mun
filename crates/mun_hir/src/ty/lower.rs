@@ -1,16 +1,48 @@
 pub(crate) use self::diagnostics::LowerDiagnostic;
 use crate::adt::StructKind;
+use crate::arena::map::ArenaMap;
 use crate::code_model::BuiltinType;
+use crate::diagnostics::DiagnosticSink;
 use crate::name_resolution::Namespace;
 use crate::resolve::{Resolution, Resolver};
 use crate::ty::{FnSig, Ty, TypeCtor};
-use crate::type_ref::{TypeRef, TypeRefId, TypeRefMap};
-use crate::{Function, HirDatabase, ModuleDef, Path, Struct};
+use crate::type_ref::{TypeRef, TypeRefId, TypeRefMap, TypeRefSourceMap};
+use crate::{FileId, Function, HirDatabase, ModuleDef, Path, Struct};
+use std::ops::Index;
+use std::sync::Arc;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub(crate) struct LowerResult {
     pub(crate) ty: Ty,
     pub(crate) diagnostics: Vec<LowerDiagnostic>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct LowerBatchResult {
+    pub(crate) type_ref_to_type: ArenaMap<TypeRefId, Ty>,
+    pub(crate) diagnostics: Vec<LowerDiagnostic>,
+}
+
+impl Index<TypeRefId> for LowerBatchResult {
+    type Output = Ty;
+    fn index(&self, expr: TypeRefId) -> &Ty {
+        self.type_ref_to_type.get(expr).unwrap_or(&Ty::Unknown)
+    }
+}
+
+impl LowerBatchResult {
+    /// Adds all the `LowerDiagnostic`s of the result to the `DiagnosticSink`.
+    pub(crate) fn add_diagnostics(
+        &self,
+        db: &impl HirDatabase,
+        file_id: FileId,
+        source_map: &TypeRefSourceMap,
+        sink: &mut DiagnosticSink,
+    ) {
+        self.diagnostics
+            .iter()
+            .for_each(|it| it.add_to(db, file_id, source_map, sink))
+    }
 }
 
 impl Ty {
@@ -73,6 +105,28 @@ impl Ty {
         let ty = db.type_for_def(typable, Namespace::Types);
         Some(ty)
     }
+}
+
+pub fn types_from_hir(
+    db: &impl HirDatabase,
+    resolver: &Resolver,
+    type_ref_map: &TypeRefMap,
+) -> Arc<LowerBatchResult> {
+    let mut result = LowerBatchResult::default();
+    for (id, _) in type_ref_map.iter() {
+        let LowerResult { ty, diagnostics } = Ty::from_hir(db, resolver, type_ref_map, id);
+        for diagnostic in diagnostics {
+            result.diagnostics.push(diagnostic);
+        }
+        // TODO: Add detection of cyclic types
+        result.type_ref_to_type.insert(id, ty);
+    }
+    Arc::new(result)
+}
+
+pub fn lower_struct_query(db: &impl HirDatabase, s: Struct) -> Arc<LowerBatchResult> {
+    let data = s.data(db);
+    types_from_hir(db, &s.resolver(db), data.type_ref_map())
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -175,10 +229,32 @@ fn type_for_struct(_db: &impl HirDatabase, def: Struct) -> Ty {
 }
 
 pub mod diagnostics {
-    use crate::type_ref::TypeRefId;
+    use crate::diagnostics::UnresolvedType;
+    use crate::{
+        diagnostics::DiagnosticSink,
+        type_ref::{TypeRefId, TypeRefSourceMap},
+        FileId, HirDatabase,
+    };
 
     #[derive(Debug, PartialEq, Eq, Clone)]
     pub(crate) enum LowerDiagnostic {
         UnresolvedType { id: TypeRefId },
+    }
+
+    impl LowerDiagnostic {
+        pub(crate) fn add_to(
+            &self,
+            _db: &impl HirDatabase,
+            file_id: FileId,
+            source_map: &TypeRefSourceMap,
+            sink: &mut DiagnosticSink,
+        ) {
+            match self {
+                LowerDiagnostic::UnresolvedType { id } => sink.push(UnresolvedType {
+                    file: file_id,
+                    type_ref: source_map.type_ref_syntax(*id).unwrap(),
+                }),
+            }
+        }
     }
 }

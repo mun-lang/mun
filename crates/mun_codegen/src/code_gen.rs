@@ -1,11 +1,11 @@
 use crate::code_gen::linker::LinkerError;
 use crate::IrDatabase;
 use failure::Fail;
+use hir::FileId;
 use inkwell::module::Module;
 use inkwell::passes::{PassManager, PassManagerBuilder};
 use inkwell::targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target};
 use inkwell::OptimizationLevel;
-use mun_hir::FileId;
 use std::io::{self, Write};
 use std::path::Path;
 

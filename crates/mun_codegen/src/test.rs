@@ -1,8 +1,6 @@
 use crate::{mock::MockDatabase, IrDatabase};
-use mun_hir::diagnostics::DiagnosticSink;
-use mun_hir::line_index::LineIndex;
-use mun_hir::Module;
-use mun_hir::SourceDatabase;
+use hir::{diagnostics::DiagnosticSink, line_index::LineIndex, Module, SourceDatabase};
+use inkwell::OptimizationLevel;
 use std::cell::RefCell;
 use std::sync::Arc;
 
@@ -359,15 +357,40 @@ fn while_expr() {
         while n<4 {
             break;
         };
+       }
+    "#,
+    )
+}
+
+#[test]
+fn struct_test() {
+    test_snapshot_unoptimized(
+        r#"
+    struct Bar(float, int, bool, Foo);
+    struct Foo { a: int };
+    struct Baz;
+    fn foo() {
+        let a: Foo;
+        let b: Bar;
+        let c: Baz;
     }
     "#,
     )
 }
 
 fn test_snapshot(text: &str) {
+    test_snapshot_with_optimization(text, OptimizationLevel::Default);
+}
+
+fn test_snapshot_unoptimized(text: &str) {
+    test_snapshot_with_optimization(text, OptimizationLevel::None);
+}
+
+fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
     let text = text.trim().replace("\n    ", "\n");
 
-    let (db, file_id) = MockDatabase::with_single_file(&text);
+    let (mut db, file_id) = MockDatabase::with_single_file(&text);
+    db.set_optimization_lvl(opt);
 
     let line_index: Arc<LineIndex> = db.line_index(file_id);
     let messages = RefCell::new(Vec::new());

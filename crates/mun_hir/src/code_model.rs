@@ -9,7 +9,7 @@ use crate::ids::LocationCtx;
 use crate::name_resolution::Namespace;
 use crate::raw::{DefKind, RawFileItem};
 use crate::resolve::{Resolution, Resolver};
-use crate::ty::InferenceResult;
+use crate::ty::{lower::LowerBatchResult, InferenceResult};
 use crate::type_ref::{TypeRefBuilder, TypeRefId, TypeRefMap, TypeRefSourceMap};
 use crate::{
     ids::{FunctionId, StructId},
@@ -52,6 +52,7 @@ impl Module {
             #[allow(clippy::single_match)]
             match decl {
                 ModuleDef::Function(f) => f.diagnostics(db, sink),
+                ModuleDef::Struct(s) => s.diagnostics(db, sink),
                 _ => (),
             }
         }
@@ -336,6 +337,19 @@ pub struct StructField {
     pub(crate) id: StructFieldId,
 }
 
+impl StructField {
+    pub fn ty(self, db: &impl HirDatabase) -> Ty {
+        let data = self.parent.data(db);
+        let type_ref_id = data.fields[self.id].type_ref;
+        let lower = self.parent.lower(db);
+        lower[type_ref_id].clone()
+    }
+
+    pub fn name(self, db: &impl HirDatabase) -> Name {
+        self.parent.data(db).fields[self.id].name.clone()
+    }
+}
+
 impl Struct {
     pub fn module(self, db: &impl DefDatabase) -> Module {
         Module {
@@ -357,6 +371,30 @@ impl Struct {
             .iter()
             .map(|(id, _)| StructField { parent: self, id })
             .collect()
+    }
+
+    pub fn ty(self, db: &impl HirDatabase) -> Ty {
+        db.type_for_def(self.into(), Namespace::Types)
+    }
+
+    pub fn lower(self, db: &impl HirDatabase) -> Arc<LowerBatchResult> {
+        db.lower_struct(self)
+    }
+
+    pub(crate) fn resolver(self, db: &impl HirDatabase) -> Resolver {
+        // take the outer scope...
+        self.module(db).resolver(db)
+    }
+
+    pub fn diagnostics(self, db: &impl HirDatabase, sink: &mut DiagnosticSink) {
+        let data = self.data(db);
+        let lower = self.lower(db);
+        lower.add_diagnostics(
+            db,
+            self.module(db).file_id,
+            data.type_ref_source_map(),
+            sink,
+        );
     }
 }
 
