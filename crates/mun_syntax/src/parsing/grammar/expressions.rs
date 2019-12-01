@@ -226,7 +226,7 @@ fn atom_expr(p: &mut Parser, r: Restrictions) -> Option<CompletedMarker> {
     }
 
     if paths::is_path_start(p) {
-        return Some(path_expr(p));
+        return Some(path_expr(p, r));
     }
 
     let marker = match p.current() {
@@ -245,10 +245,17 @@ fn atom_expr(p: &mut Parser, r: Restrictions) -> Option<CompletedMarker> {
     Some(marker)
 }
 
-fn path_expr(p: &mut Parser) -> CompletedMarker {
+fn path_expr(p: &mut Parser, r: Restrictions) -> CompletedMarker {
+    assert!(paths::is_path_start(p));
     let m = p.start();
     paths::expr_path(p);
-    m.complete(p, PATH_EXPR)
+    match p.current() {
+        T!['{'] if !r.forbid_structs => {
+            record_field_list(p);
+            m.complete(p, RECORD_LIT)
+        }
+        _ => m.complete(p, PATH_EXPR),
+    }
 }
 
 fn literal(p: &mut Parser) -> Option<CompletedMarker> {
@@ -327,4 +334,29 @@ fn while_expr(p: &mut Parser) -> CompletedMarker {
     cond(p);
     block(p);
     m.complete(p, WHILE_EXPR)
+}
+
+fn record_field_list(p: &mut Parser) {
+    assert!(p.at(T!['{']));
+    let m = p.start();
+    p.bump(T!['{']);
+    while !p.at(EOF) && !p.at(T!['}']) {
+        match p.current() {
+            IDENT | INT_NUMBER => {
+                let m = p.start();
+                name_ref_or_index(p);
+                if p.eat(T![:]) {
+                    expr(p);
+                }
+                m.complete(p, RECORD_FIELD);
+            }
+            T!['{'] => error_block(p, "expected a field"),
+            _ => p.error_and_bump("expected identifier"),
+        }
+        if !p.at(T!['}']) {
+            p.expect(T![,]);
+        }
+    }
+    p.expect(T!['}']);
+    m.complete(p, RECORD_FIELD_LIST);
 }

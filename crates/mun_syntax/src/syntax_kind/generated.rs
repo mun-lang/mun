@@ -117,6 +117,9 @@ pub enum SyntaxKind {
     NAME_REF,
     PATH,
     PATH_SEGMENT,
+    RECORD_LIT,
+    RECORD_FIELD_LIST,
+    RECORD_FIELD,
     // Technical kind so that we can cast from u16 safely
     #[doc(hidden)]
     __LAST,
@@ -383,6 +386,9 @@ impl SyntaxKind {
                 NAME_REF => &SyntaxInfo { name: "NAME_REF" },
                 PATH => &SyntaxInfo { name: "PATH" },
                 PATH_SEGMENT => &SyntaxInfo { name: "PATH_SEGMENT" },
+                RECORD_LIT => &SyntaxInfo { name: "RECORD_LIT" },
+                RECORD_FIELD_LIST => &SyntaxInfo { name: "RECORD_FIELD_LIST" },
+                RECORD_FIELD => &SyntaxInfo { name: "RECORD_FIELD" },
                 TOMBSTONE => &SyntaxInfo { name: "TOMBSTONE" },
                 EOF => &SyntaxInfo { name: "EOF" },
                 __LAST => &SyntaxInfo { name: "__LAST" },

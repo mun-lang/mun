@@ -1028,6 +1028,41 @@ impl PrefixExpr {
     }
 }
 
+// RecordField
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RecordField {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for RecordField {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            RECORD_FIELD => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(RecordField { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl RecordField {
+    pub fn name_ref(&self) -> Option<NameRef> {
+        super::child_opt(self)
+    }
+
+    pub fn expr(&self) -> Option<Expr> {
+        super::child_opt(self)
+    }
+}
+
 // RecordFieldDef
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1087,6 +1122,76 @@ impl AstNode for RecordFieldDefList {
 impl RecordFieldDefList {
     pub fn fields(&self) -> impl Iterator<Item = RecordFieldDef> {
         super::children(self)
+    }
+}
+
+// RecordFieldList
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RecordFieldList {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for RecordFieldList {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            RECORD_FIELD_LIST => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(RecordFieldList { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl RecordFieldList {
+    pub fn fields(&self) -> impl Iterator<Item = RecordField> {
+        super::children(self)
+    }
+
+    pub fn spread(&self) -> Option<Expr> {
+        super::child_opt(self)
+    }
+}
+
+// RecordLit
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RecordLit {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for RecordLit {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            RECORD_LIT => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(RecordLit { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl RecordLit {
+    pub fn path(&self) -> Option<Path> {
+        super::child_opt(self)
+    }
+
+    pub fn record_field_list(&self) -> Option<RecordFieldList> {
+        super::child_opt(self)
     }
 }
 
