@@ -7,7 +7,7 @@ use crate::ty::infer::TypeVarId;
 use crate::{Function, HirDatabase, Struct};
 pub(crate) use infer::infer_query;
 pub use infer::InferenceResult;
-pub(crate) use lower::{fn_sig_for_fn, type_for_def, TypableDef};
+pub(crate) use lower::{callable_item_sig, fn_sig_for_fn, type_for_def, CallableDef, TypableDef};
 use std::fmt;
 use std::sync::Arc;
 
@@ -73,7 +73,7 @@ pub enum TypeCtor {
     /// function foo() -> number { 1 }
     /// let bar = foo; // bar: function() -> number {foo}
     /// ```
-    FnDef(Function),
+    FnDef(CallableDef),
 }
 
 impl Ty {
@@ -107,7 +107,7 @@ impl Ty {
     pub fn as_function_def(&self) -> Option<Function> {
         match self {
             Ty::Apply(a_ty) => match a_ty.ctor {
-                TypeCtor::FnDef(def) => Some(def),
+                TypeCtor::FnDef(CallableDef::Function(def)) => Some(def),
                 _ => None,
             },
             _ => None,
@@ -117,7 +117,7 @@ impl Ty {
     pub fn callable_sig(&self, db: &impl HirDatabase) -> Option<FnSig> {
         match self {
             Ty::Apply(a_ty) => match a_ty.ctor {
-                TypeCtor::FnDef(def) => Some(db.fn_signature(def)),
+                TypeCtor::FnDef(def) => Some(db.callable_sig(def)),
                 _ => None,
             },
             _ => None,
@@ -180,10 +180,12 @@ impl HirDisplay for ApplicationTy {
             TypeCtor::Float => write!(f, "float"),
             TypeCtor::Int => write!(f, "int"),
             TypeCtor::Bool => write!(f, "bool"),
-            TypeCtor::Struct(def) => write!(f, "{}", def.name(f.db)),
+            TypeCtor::Struct(def) | TypeCtor::FnDef(CallableDef::Struct(def)) => {
+                write!(f, "{}", def.name(f.db))
+            }
             TypeCtor::Never => write!(f, "never"),
-            TypeCtor::FnDef(def) => {
-                let sig = f.db.fn_signature(def);
+            TypeCtor::FnDef(CallableDef::Function(def)) => {
+                let sig = fn_sig_for_fn(f.db, def);
                 let name = def.name(f.db);
                 write!(f, "function {}", name)?;
                 write!(f, "(")?;

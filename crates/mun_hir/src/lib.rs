@@ -54,7 +54,7 @@ pub use crate::{
     path::{Path, PathKind},
     raw::RawItems,
     resolve::{Resolution, Resolver},
-    ty::{ApplicationTy, InferenceResult, Ty, TypeCtor},
+    ty::{lower::CallableDef, ApplicationTy, InferenceResult, Ty, TypeCtor},
 };
 
 use crate::{

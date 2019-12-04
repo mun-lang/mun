@@ -1,6 +1,6 @@
 use super::try_convert_any_to_basic;
 use crate::IrDatabase;
-use hir::{ApplicationTy, Ty, TypeCtor};
+use hir::{ApplicationTy, CallableDef, Ty, TypeCtor};
 use inkwell::types::{AnyTypeEnum, BasicType, BasicTypeEnum};
 
 /// Given a mun type, construct an LLVM IR type
@@ -12,8 +12,8 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty) -> AnyTypeEnum {
             TypeCtor::Float => AnyTypeEnum::FloatType(context.f64_type()),
             TypeCtor::Int => AnyTypeEnum::IntType(context.i64_type()),
             TypeCtor::Bool => AnyTypeEnum::IntType(context.bool_type()),
-            TypeCtor::FnDef(f) => {
-                let ty = db.fn_signature(f);
+            TypeCtor::FnDef(def @ CallableDef::Function(_)) => {
+                let ty = db.callable_sig(def);
                 let params: Vec<BasicTypeEnum> = ty
                     .params()
                     .iter()
@@ -29,7 +29,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty) -> AnyTypeEnum {
 
                 AnyTypeEnum::FunctionType(fn_type)
             }
-            TypeCtor::Struct(s) => {
+            TypeCtor::FnDef(CallableDef::Struct(s)) | TypeCtor::Struct(s) => {
                 let name = s.name(db).to_string();
                 context.opaque_struct_type(&name).into()
             }

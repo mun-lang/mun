@@ -1,10 +1,15 @@
 ---
 source: crates/mun_hir/src/ty/tests.rs
-expression: "struct Foo;\nstruct Bar {\n    a: float,\n}\n\nfn main() {\n    let a: Foo = Foo;\n    let b: Bar = Bar { a: 1.23, };\n}"
+expression: "struct Foo;\nstruct Bar {\n    a: float,\n}\nstruct Baz(float, int);\n\nfn main() {\n    let a: Foo = Foo;\n    let b: Bar = Bar { a: 1.23, };\n    let c = Baz(1.23, 1);\n}"
 ---
-[52; 112) '{     ..., }; }': nothing
-[62; 63) 'a': Foo
-[71; 74) 'Foo': Foo
-[84; 85) 'b': Bar
-[93; 109) 'Bar { ....23, }': Bar
-[102; 106) '1.23': float
+[76; 162) '{     ... 1); }': nothing
+[86; 87) 'a': Foo
+[95; 98) 'Foo': Foo
+[108; 109) 'b': Bar
+[117; 133) 'Bar { ....23, }': Bar
+[126; 130) '1.23': float
+[143; 144) 'c': Baz
+[147; 150) 'Baz': Baz
+[147; 159) 'Baz(1.23, 1)': Baz
+[151; 155) '1.23': float
+[157; 158) '1': int

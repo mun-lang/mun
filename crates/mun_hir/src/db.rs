@@ -3,7 +3,7 @@
 use crate::input::{SourceRoot, SourceRootId};
 use crate::name_resolution::Namespace;
 use crate::ty::lower::LowerBatchResult;
-use crate::ty::{FnSig, Ty, TypableDef};
+use crate::ty::{CallableDef, FnSig, Ty, TypableDef};
 use crate::{
     adt::StructData,
     code_model::{DefWithBody, FnData, Function, ModuleData},
@@ -90,8 +90,8 @@ pub trait HirDatabase: DefDatabase {
     #[salsa::invoke(crate::FnData::fn_data_query)]
     fn fn_data(&self, func: Function) -> Arc<FnData>;
 
-    #[salsa::invoke(crate::ty::fn_sig_for_fn)]
-    fn fn_signature(&self, func: Function) -> FnSig;
+    #[salsa::invoke(crate::ty::callable_item_sig)]
+    fn callable_sig(&self, def: CallableDef) -> FnSig;
 
     #[salsa::invoke(crate::ty::type_for_def)]
     fn type_for_def(&self, def: TypableDef, ns: Namespace) -> Ty;

@@ -169,6 +169,7 @@ pub enum CallableDef {
     Function(Function),
     Struct(Struct),
 }
+impl_froms!(CallableDef: Function, Struct);
 
 /// Build the declared type of an item. This depends on the namespace; e.g. for
 /// `struct Foo(usize)`, we have two types: The type of the struct itself, and
@@ -199,7 +200,14 @@ fn type_for_builtin(def: BuiltinType) -> Ty {
 /// Build the declared type of a function. This should not need to look at the
 /// function body.
 fn type_for_fn(_db: &impl HirDatabase, def: Function) -> Ty {
-    Ty::simple(TypeCtor::FnDef(def))
+    Ty::simple(TypeCtor::FnDef(def.into()))
+}
+
+pub(crate) fn callable_item_sig(db: &impl HirDatabase, def: CallableDef) -> FnSig {
+    match def {
+        CallableDef::Function(f) => fn_sig_for_fn(db, f),
+        CallableDef::Struct(s) => fn_sig_for_struct_constructor(db, s),
+    }
 }
 
 pub fn fn_sig_for_fn(db: &impl HirDatabase, def: Function) -> FnSig {
@@ -214,13 +222,25 @@ pub fn fn_sig_for_fn(db: &impl HirDatabase, def: Function) -> FnSig {
     FnSig::from_params_and_return(params, ret)
 }
 
+fn fn_sig_for_struct_constructor(db: &impl HirDatabase, def: Struct) -> FnSig {
+    let data = def.data(db);
+    let resolver = def.resolver(db);
+    let params = data
+        .fields
+        .iter()
+        .map(|(_, field)| Ty::from_hir(db, &resolver, data.type_ref_map(), field.type_ref).ty)
+        .collect::<Vec<_>>();
+    let ret = type_for_struct(db, def);
+    FnSig::from_params_and_return(params, ret)
+}
+
 /// Build the type of a struct constructor.
 fn type_for_struct_constructor(db: &impl HirDatabase, def: Struct) -> Ty {
     let struct_data = db.struct_data(def.id);
     if struct_data.kind == StructKind::Unit {
         type_for_struct(db, def)
     } else {
-        unreachable!();
+        Ty::simple(TypeCtor::FnDef(def.into()))
     }
 }
 

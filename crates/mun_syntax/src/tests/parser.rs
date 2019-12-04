@@ -234,13 +234,17 @@ fn while_expr() {
 }
 
 #[test]
-fn record_lit() {
+fn struct_lit() {
     snapshot_test(
         r#"
     fn foo() {
+        U;
         S {};
         S { x, y: 32, };
+        S { x: 32, y: 64 };
         TupleStruct { 0: 1 };
+        T(1.23);
+        T(1.23, 4,)
     }
     "#,
     )

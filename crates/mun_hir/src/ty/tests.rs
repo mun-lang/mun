@@ -201,10 +201,12 @@ fn struct_lit() {
     struct Bar {
         a: float,
     }
+    struct Baz(float, int);
 
     fn main() {
         let a: Foo = Foo;
         let b: Bar = Bar { a: 1.23, };
+        let c = Baz(1.23, 1);
     }
     "#,
     )
