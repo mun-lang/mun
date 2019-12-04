@@ -249,7 +249,7 @@ impl AstNode for Expr {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
             LITERAL | PREFIX_EXPR | PATH_EXPR | BIN_EXPR | PAREN_EXPR | CALL_EXPR | IF_EXPR
-            | LOOP_EXPR | WHILE_EXPR | RETURN_EXPR | BREAK_EXPR | BLOCK_EXPR => true,
+            | LOOP_EXPR | WHILE_EXPR | RETURN_EXPR | BREAK_EXPR | BLOCK_EXPR | RECORD_LIT => true,
             _ => false,
         }
     }
@@ -278,6 +278,7 @@ pub enum ExprKind {
     ReturnExpr(ReturnExpr),
     BreakExpr(BreakExpr),
     BlockExpr(BlockExpr),
+    RecordLit(RecordLit),
 }
 impl From<Literal> for Expr {
     fn from(n: Literal) -> Expr {
@@ -339,6 +340,11 @@ impl From<BlockExpr> for Expr {
         Expr { syntax: n.syntax }
     }
 }
+impl From<RecordLit> for Expr {
+    fn from(n: RecordLit) -> Expr {
+        Expr { syntax: n.syntax }
+    }
+}
 
 impl Expr {
     pub fn kind(&self) -> ExprKind {
@@ -355,6 +361,7 @@ impl Expr {
             RETURN_EXPR => ExprKind::ReturnExpr(ReturnExpr::cast(self.syntax.clone()).unwrap()),
             BREAK_EXPR => ExprKind::BreakExpr(BreakExpr::cast(self.syntax.clone()).unwrap()),
             BLOCK_EXPR => ExprKind::BlockExpr(BlockExpr::cast(self.syntax.clone()).unwrap()),
+            RECORD_LIT => ExprKind::RecordLit(RecordLit::cast(self.syntax.clone()).unwrap()),
             _ => unreachable!(),
         }
     }

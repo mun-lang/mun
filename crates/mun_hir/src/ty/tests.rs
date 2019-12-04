@@ -173,7 +173,7 @@ fn invalid_binary_ops() {
 }
 
 #[test]
-fn struct_declaration() {
+fn struct_decl() {
     infer_snapshot(
         r#"
     struct Foo;
@@ -188,6 +188,23 @@ fn struct_declaration() {
         let foo: Foo;
         let bar: Bar;
         let baz: Baz;
+    }
+    "#,
+    )
+}
+
+#[test]
+fn struct_lit() {
+    infer_snapshot(
+        r#"
+    struct Foo;
+    struct Bar {
+        a: float,
+    }
+
+    fn main() {
+        let a: Foo = Foo;
+        let b: Bar = Bar { a: 1.23, };
     }
     "#,
     )
@@ -218,7 +235,9 @@ fn infer(content: &str) -> String {
 
         for (expr, ty) in infer_result.type_of_expr.iter() {
             let syntax_ptr = match body_source_map.expr_syntax(expr) {
-                Some(sp) => sp.map(|ast| ast.syntax_node_ptr()),
+                Some(sp) => {
+                    sp.map(|ast| ast.either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr()))
+                }
                 None => continue,
             };
             types.push((syntax_ptr, ty));

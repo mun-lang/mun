@@ -12,6 +12,18 @@ use super::{
     SyntaxKind::{self, *},
 };
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum BlockLike {
+    Block,
+    NotBlock,
+}
+
+impl BlockLike {
+    fn is_block(self) -> bool {
+        self == BlockLike::Block
+    }
+}
+
 pub(crate) fn root(p: &mut Parser) {
     let m = p.start();
     declarations::mod_contents(p);
@@ -54,6 +66,16 @@ fn name_ref(p: &mut Parser) {
     }
 }
 
+fn name_ref_or_index(p: &mut Parser) {
+    if p.at(IDENT) || p.at(INT_NUMBER) {
+        let m = p.start();
+        p.bump_any();
+        m.complete(p, NAME_REF);
+    } else {
+        p.error_and_bump("expected an identifier");
+    }
+}
+
 fn opt_visibility(p: &mut Parser) -> bool {
     if p.at(PUB_KW) {
         let m = p.start();
@@ -62,16 +84,6 @@ fn opt_visibility(p: &mut Parser) -> bool {
         true
     } else {
         false
-    }
-}
-
-fn name_ref_or_index(p: &mut Parser) {
-    if p.at(IDENT) || p.at(INT_NUMBER) {
-        let m = p.start();
-        p.bump_any();
-        m.complete(p, NAME_REF);
-    } else {
-        p.error_and_bump("expected identifier");
     }
 }
 

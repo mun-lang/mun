@@ -143,6 +143,7 @@ impl From<Struct> for ModuleDef {
 pub enum DefWithBody {
     Function(Function),
 }
+impl_froms!(DefWithBody: Function);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Visibility {
@@ -171,9 +172,36 @@ impl DefWithBody {
     }
 }
 
-impl From<Function> for DefWithBody {
-    fn from(f: Function) -> Self {
-        DefWithBody::Function(f)
+/// Definitions that have a struct.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum DefWithStruct {
+    Struct(Struct),
+}
+impl_froms!(DefWithStruct: Struct);
+
+impl DefWithStruct {
+    pub fn fields(self, db: &impl HirDatabase) -> Vec<StructField> {
+        match self {
+            DefWithStruct::Struct(s) => s.fields(db),
+        }
+    }
+
+    pub fn field(self, db: &impl HirDatabase, name: &Name) -> Option<StructField> {
+        match self {
+            DefWithStruct::Struct(s) => s.field(db, name),
+        }
+    }
+
+    pub fn module(self, db: &impl HirDatabase) -> Module {
+        match self {
+            DefWithStruct::Struct(s) => s.module(db),
+        }
+    }
+
+    pub fn data(self, db: &impl HirDatabase) -> Arc<StructData> {
+        match self {
+            DefWithStruct::Struct(s) => s.data(db),
+        }
     }
 }
 
@@ -371,6 +399,14 @@ impl Struct {
             .iter()
             .map(|(id, _)| StructField { parent: self, id })
             .collect()
+    }
+
+    pub fn field(self, db: &impl HirDatabase, name: &Name) -> Option<StructField> {
+        self.data(db)
+            .fields
+            .iter()
+            .find(|(_, data)| data.name == *name)
+            .map(|(id, _)| StructField { parent: self, id })
     }
 
     pub fn ty(self, db: &impl HirDatabase) -> Ty {

@@ -71,7 +71,7 @@ pub(super) fn stmt(p: &mut Parser) {
         return;
     }
 
-    let cm = expr_stmt(p);
+    let (cm, _blocklike) = expr_stmt(p);
     let kind = cm.as_ref().map(|cm| cm.kind()).unwrap_or(ERROR);
 
     if p.at(T!['}']) {
@@ -116,18 +116,23 @@ fn expr_no_struct(p: &mut Parser) {
     expr_bp(p, r, 1);
 }
 
-fn expr_stmt(p: &mut Parser) -> Option<CompletedMarker> {
+fn expr_stmt(p: &mut Parser) -> (Option<CompletedMarker>, BlockLike) {
     let r = Restrictions {
         forbid_structs: false,
     };
     expr_bp(p, r, 1)
 }
 
-fn expr_bp(p: &mut Parser, r: Restrictions, bp: u8) -> Option<CompletedMarker> {
+fn expr_bp(p: &mut Parser, r: Restrictions, bp: u8) -> (Option<CompletedMarker>, BlockLike) {
     // Parse left hand side of the expression
     let mut lhs = match lhs(p, r) {
-        Some(lhs) => lhs,
-        None => return None,
+        Some((lhs, blocklike)) => {
+            if blocklike.is_block() {
+                return (Some(lhs), BlockLike::Block);
+            }
+            lhs
+        }
+        None => return (None, BlockLike::NotBlock),
     };
 
     loop {
@@ -143,7 +148,7 @@ fn expr_bp(p: &mut Parser, r: Restrictions, bp: u8) -> Option<CompletedMarker> {
         lhs = m.complete(p, BIN_EXPR);
     }
 
-    Some(lhs)
+    (Some(lhs), BlockLike::NotBlock)
 }
 
 fn current_op(p: &Parser) -> (u8, SyntaxKind) {
@@ -167,7 +172,7 @@ fn current_op(p: &Parser) -> (u8, SyntaxKind) {
     }
 }
 
-fn lhs(p: &mut Parser, r: Restrictions) -> Option<CompletedMarker> {
+fn lhs(p: &mut Parser, r: Restrictions) -> Option<(CompletedMarker, BlockLike)> {
     let m;
     let kind = match p.current() {
         T![-] | T![!] => {
@@ -176,22 +181,26 @@ fn lhs(p: &mut Parser, r: Restrictions) -> Option<CompletedMarker> {
             PREFIX_EXPR
         }
         _ => {
-            let lhs = atom_expr(p, r)?;
-            return Some(postfix_expr(p, lhs));
+            let (lhs, blocklike) = atom_expr(p, r)?;
+            return Some(postfix_expr(p, lhs, blocklike));
         }
     };
     expr_bp(p, r, 255);
-    Some(m.complete(p, kind))
+    Some((m.complete(p, kind), BlockLike::NotBlock))
 }
 
-fn postfix_expr(p: &mut Parser, mut lhs: CompletedMarker) -> CompletedMarker {
+fn postfix_expr(
+    p: &mut Parser,
+    mut lhs: CompletedMarker,
+    _blocklike: BlockLike,
+) -> (CompletedMarker, BlockLike) {
     loop {
         lhs = match p.current() {
             T!['('] => call_expr(p, lhs),
             _ => break,
         }
     }
-    lhs
+    (lhs, BlockLike::NotBlock)
 }
 
 fn call_expr(p: &mut Parser, lhs: CompletedMarker) -> CompletedMarker {
@@ -220,9 +229,9 @@ fn arg_list(p: &mut Parser) {
     m.complete(p, ARG_LIST);
 }
 
-fn atom_expr(p: &mut Parser, r: Restrictions) -> Option<CompletedMarker> {
+fn atom_expr(p: &mut Parser, r: Restrictions) -> Option<(CompletedMarker, BlockLike)> {
     if let Some(m) = literal(p) {
-        return Some(m);
+        return Some((m, BlockLike::NotBlock));
     }
 
     if paths::is_path_start(p) {
@@ -242,19 +251,23 @@ fn atom_expr(p: &mut Parser, r: Restrictions) -> Option<CompletedMarker> {
             return None;
         }
     };
-    Some(marker)
+    let blocklike = match marker.kind() {
+        IF_EXPR | WHILE_EXPR | LOOP_EXPR | BLOCK_EXPR => BlockLike::Block,
+        _ => BlockLike::NotBlock,
+    };
+    Some((marker, blocklike))
 }
 
-fn path_expr(p: &mut Parser, r: Restrictions) -> CompletedMarker {
+fn path_expr(p: &mut Parser, r: Restrictions) -> (CompletedMarker, BlockLike) {
     assert!(paths::is_path_start(p));
     let m = p.start();
     paths::expr_path(p);
     match p.current() {
         T!['{'] if !r.forbid_structs => {
             record_field_list(p);
-            m.complete(p, RECORD_LIT)
+            (m.complete(p, RECORD_LIT), BlockLike::NotBlock)
         }
-        _ => m.complete(p, PATH_EXPR),
+        _ => (m.complete(p, PATH_EXPR), BlockLike::NotBlock),
     }
 }
 
@@ -351,7 +364,7 @@ fn record_field_list(p: &mut Parser) {
                 m.complete(p, RECORD_FIELD);
             }
             T!['{'] => error_block(p, "expected a field"),
-            _ => p.error_and_bump("expected identifier"),
+            _ => p.error_and_bump("expected an identifier"),
         }
         if !p.at(T!['}']) {
             p.expect(T![,]);

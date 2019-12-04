@@ -261,6 +261,7 @@ Grammar(
                 "ReturnExpr",
                 "BreakExpr",
                 "BlockExpr",
+                "RecordLit",
             ]
         ),
 

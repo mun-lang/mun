@@ -1,6 +1,6 @@
 use crate::{
     arena::map::ArenaMap,
-    code_model::DefWithBody,
+    code_model::{DefWithBody, DefWithStruct},
     diagnostics::DiagnosticSink,
     expr,
     expr::{Body, Expr, ExprId, Literal, Pat, PatId, Statement},
@@ -333,7 +333,36 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             Expr::While { condition, body } => {
                 self.infer_while_expr(tgt_expr, *condition, *body, expected)
             }
-            _ => Ty::Unknown,
+            Expr::RecordLit {
+                path,
+                fields,
+                spread,
+            } => {
+                let (ty, def_id) = self.resolve_struct(path.as_ref());
+                self.unify(&ty, &expected.ty);
+
+                for (idx, field) in fields.iter().enumerate() {
+                    let field_ty = def_id
+                        .as_ref()
+                        .and_then(|it| match it.field(self.db, &field.name) {
+                            Some(field) => Some(field),
+                            None => {
+                                self.diagnostics.push(InferenceDiagnostic::NoSuchField {
+                                    expr: tgt_expr,
+                                    field: idx,
+                                });
+                                None
+                            }
+                        })
+                        .map_or(Ty::Unknown, |field| field.ty(self.db));
+                    self.infer_expr_coerce(field.expr, &Expectation::has_type(field_ty));
+                }
+                if let Some(expr) = spread {
+                    self.infer_expr(*expr, &Expectation::has_type(ty.clone()));
+                }
+                ty
+            }
+            Expr::UnaryOp { .. } => Ty::Unknown,
             //            Expr::UnaryOp { expr: _, op: _ } => {}
             //            Expr::Block { statements: _, tail: _ } => {}
         };
@@ -479,6 +508,42 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             type_of_expr: expr_types,
             type_of_pat: pat_types,
             diagnostics: self.diagnostics,
+        }
+    }
+
+    fn resolve_struct(&mut self, path: Option<&Path>) -> (Ty, Option<DefWithStruct>) {
+        let path = match path {
+            Some(path) => path,
+            None => return (Ty::Unknown, None),
+        };
+        let resolver = &self.resolver;
+        let resolution = match resolver
+            .resolve_path_without_assoc_items(self.db, &path)
+            .take_types()
+        {
+            Some(resolution) => resolution,
+            None => return (Ty::Unknown, None),
+        };
+
+        match resolution {
+            Resolution::LocalBinding(pat) => {
+                let ty = self
+                    .type_of_pat
+                    .get(pat)
+                    .map_or(Ty::Unknown, |ty| ty.clone());
+                //let ty = self.resolve_ty_as_possible(&mut vec![], ty);
+                (ty, None)
+            }
+            Resolution::Def(def) => {
+                if let Some(typable) = def.into() {
+                    match typable {
+                        TypableDef::Struct(s) => (s.ty(self.db), Some(s.into())),
+                        TypableDef::BuiltinType(_) | TypableDef::Function(_) => (Ty::Unknown, None),
+                    }
+                } else {
+                    unreachable!();
+                }
+            }
         }
     }
 
@@ -676,8 +741,8 @@ impl From<PatId> for ExprOrPatId {
 mod diagnostics {
     use crate::diagnostics::{
         BreakOutsideLoop, BreakWithValueOutsideLoop, CannotApplyBinaryOp, ExpectedFunction,
-        IncompatibleBranch, InvalidLHS, MismatchedType, MissingElseBranch, ParameterCountMismatch,
-        ReturnMissingExpression,
+        IncompatibleBranch, InvalidLHS, MismatchedType, MissingElseBranch, NoSuchField,
+        ParameterCountMismatch, ReturnMissingExpression,
     };
     use crate::{
         code_model::src::HasSource,
@@ -736,6 +801,10 @@ mod diagnostics {
         BreakWithValueOutsideLoop {
             id: ExprId,
         },
+        NoSuchField {
+            expr: ExprId,
+            field: usize,
+        },
     }
 
     impl InferenceDiagnostic {
@@ -750,9 +819,10 @@ mod diagnostics {
             match self {
                 InferenceDiagnostic::UnresolvedValue { id } => {
                     let expr = match id {
-                        ExprOrPatId::ExprId(id) => {
-                            body.expr_syntax(*id).map(|ptr| ptr.ast.syntax_node_ptr())
-                        }
+                        ExprOrPatId::ExprId(id) => body.expr_syntax(*id).map(|ptr| {
+                            ptr.ast
+                                .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr())
+                        }),
                         ExprOrPatId::PatId(id) => {
                             body.pat_syntax(*id).map(|ptr| ptr.ast.syntax_node_ptr())
                         }
@@ -770,7 +840,11 @@ mod diagnostics {
                     expected,
                     found,
                 } => {
-                    let expr = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
+                    let expr = body
+                        .expr_syntax(*id)
+                        .unwrap()
+                        .ast
+                        .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(ParameterCountMismatch {
                         file,
                         expr,
@@ -779,7 +853,11 @@ mod diagnostics {
                     })
                 }
                 InferenceDiagnostic::ExpectedFunction { id, found } => {
-                    let expr = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
+                    let expr = body
+                        .expr_syntax(*id)
+                        .unwrap()
+                        .ast
+                        .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(ExpectedFunction {
                         file,
                         expr,
@@ -791,7 +869,11 @@ mod diagnostics {
                     found,
                     expected,
                 } => {
-                    let expr = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
+                    let expr = body
+                        .expr_syntax(*id)
+                        .unwrap()
+                        .ast
+                        .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(MismatchedType {
                         file,
                         expr,
@@ -804,7 +886,11 @@ mod diagnostics {
                     then_ty,
                     else_ty,
                 } => {
-                    let expr = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
+                    let expr = body
+                        .expr_syntax(*id)
+                        .unwrap()
+                        .ast
+                        .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(IncompatibleBranch {
                         file,
                         if_expr: expr,
@@ -813,7 +899,11 @@ mod diagnostics {
                     });
                 }
                 InferenceDiagnostic::MissingElseBranch { id, then_ty } => {
-                    let expr = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
+                    let expr = body
+                        .expr_syntax(*id)
+                        .unwrap()
+                        .ast
+                        .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(MissingElseBranch {
                         file,
                         if_expr: expr,
@@ -821,7 +911,11 @@ mod diagnostics {
                     });
                 }
                 InferenceDiagnostic::CannotApplyBinaryOp { id, lhs, rhs } => {
-                    let expr = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
+                    let expr = body
+                        .expr_syntax(*id)
+                        .unwrap()
+                        .ast
+                        .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(CannotApplyBinaryOp {
                         file,
                         expr,
@@ -830,8 +924,16 @@ mod diagnostics {
                     });
                 }
                 InferenceDiagnostic::InvalidLHS { id, lhs } => {
-                    let id = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
-                    let lhs = body.expr_syntax(*lhs).unwrap().ast.syntax_node_ptr();
+                    let id = body
+                        .expr_syntax(*id)
+                        .unwrap()
+                        .ast
+                        .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
+                    let lhs = body
+                        .expr_syntax(*lhs)
+                        .unwrap()
+                        .ast
+                        .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(InvalidLHS {
                         file,
                         expr: id,
@@ -839,25 +941,42 @@ mod diagnostics {
                     });
                 }
                 InferenceDiagnostic::ReturnMissingExpression { id } => {
-                    let id = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
+                    let id = body
+                        .expr_syntax(*id)
+                        .unwrap()
+                        .ast
+                        .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(ReturnMissingExpression {
                         file,
                         return_expr: id,
                     });
                 }
                 InferenceDiagnostic::BreakOutsideLoop { id } => {
-                    let id = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
+                    let id = body
+                        .expr_syntax(*id)
+                        .unwrap()
+                        .ast
+                        .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(BreakOutsideLoop {
                         file,
                         break_expr: id,
                     });
                 }
                 InferenceDiagnostic::BreakWithValueOutsideLoop { id } => {
-                    let id = body.expr_syntax(*id).unwrap().ast.syntax_node_ptr();
+                    let id = body
+                        .expr_syntax(*id)
+                        .unwrap()
+                        .ast
+                        .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(BreakWithValueOutsideLoop {
                         file,
                         break_expr: id,
                     });
+                }
+                InferenceDiagnostic::NoSuchField { expr, field } => {
+                    let file = owner.source(db).file_id;
+                    let field = owner.body_source_map(db).field_syntax(*expr, *field).into();
+                    sink.push(NoSuchField { file, field })
                 }
             }
         }

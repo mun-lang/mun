@@ -61,7 +61,7 @@ pub(crate) fn module_scope_query(db: &impl HirDatabase, file_id: FileId) -> Arc<
                 scope.items.insert(
                     s.name(db),
                     Resolution {
-                        def: PerNs::types(*def),
+                        def: PerNs::both(*def, *def),
                     },
                 );
             }

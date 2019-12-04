@@ -54,7 +54,7 @@ fn literals() {
 }
 
 #[test]
-fn structures() {
+fn struct_def() {
     snapshot_test(
         r#"
     struct Foo      // error: expected a ';', or a '{'

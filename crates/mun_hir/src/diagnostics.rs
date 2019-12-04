@@ -408,3 +408,27 @@ impl Diagnostic for BreakWithValueOutsideLoop {
         self
     }
 }
+
+#[derive(Debug)]
+pub struct NoSuchField {
+    pub file: FileId,
+    pub field: SyntaxNodePtr,
+}
+
+impl Diagnostic for NoSuchField {
+    fn message(&self) -> String {
+        "no such field".to_string()
+    }
+
+    fn file(&self) -> FileId {
+        self.file
+    }
+
+    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
+        self.field
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}

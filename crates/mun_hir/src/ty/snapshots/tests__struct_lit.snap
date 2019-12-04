@@ -1,0 +1,10 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "struct Foo;\nstruct Bar {\n    a: float,\n}\n\nfn main() {\n    let a: Foo = Foo;\n    let b: Bar = Bar { a: 1.23, };\n}"
+---
+[52; 112) '{     ..., }; }': nothing
+[62; 63) 'a': Foo
+[71; 74) 'Foo': Foo
+[84; 85) 'b': Bar
+[93; 109) 'Bar { ....23, }': Bar
+[102; 106) '1.23': float

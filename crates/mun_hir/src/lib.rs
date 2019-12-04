@@ -6,6 +6,8 @@
 #![allow(dead_code)]
 
 #[macro_use]
+mod macros;
+#[macro_use]
 mod arena;
 mod adt;
 mod code_model;

@@ -9,6 +9,7 @@ use crate::{
 use crate::code_model::src::{HasSource, Source};
 use crate::name::AsName;
 use crate::type_ref::{TypeRef, TypeRefBuilder, TypeRefId, TypeRefMap, TypeRefSourceMap};
+use either::Either;
 pub use mun_syntax::ast::PrefixOp as UnaryOp;
 use mun_syntax::ast::{ArgListOwner, BinOp, LoopBodyOwner, NameOwner, TypeAscriptionOwner};
 use mun_syntax::{ast, AstNode, AstPtr, T};
@@ -102,11 +103,13 @@ impl Index<TypeRefId> for Body {
     }
 }
 
-type ExprPtr = AstPtr<ast::Expr>; //Either<AstPtr<ast::Pat>, AstPtr<ast::SelfParam>>;
+type ExprPtr = Either<AstPtr<ast::Expr>, AstPtr<ast::RecordField>>;
 type ExprSource = Source<ExprPtr>;
 
 type PatPtr = AstPtr<ast::Pat>; //Either<AstPtr<ast::Pat>, AstPtr<ast::SelfParam>>;
 type PatSource = Source<PatPtr>;
+
+type RecordPtr = AstPtr<ast::RecordField>;
 
 /// An item body together with the mapping from syntax nodes to HIR expression Ids. This is needed
 /// to go from e.g. a position in a file to the HIR expression containing it; but for type
@@ -119,6 +122,7 @@ pub struct BodySourceMap {
     pat_map: FxHashMap<PatPtr, PatId>,
     pat_map_back: ArenaMap<PatId, PatSource>,
     type_refs: TypeRefSourceMap,
+    field_map: FxHashMap<(ExprId, usize), RecordPtr>,
 }
 
 impl BodySourceMap {
@@ -135,7 +139,7 @@ impl BodySourceMap {
     }
 
     pub(crate) fn node_expr(&self, node: &ast::Expr) -> Option<ExprId> {
-        self.expr_map.get(&AstPtr::new(node)).cloned()
+        self.expr_map.get(&Either::Left(AstPtr::new(node))).cloned()
     }
 
     pub(crate) fn pat_syntax(&self, pat: PatId) -> Option<PatSource> {
@@ -149,6 +153,16 @@ impl BodySourceMap {
     pub fn type_refs(&self) -> &TypeRefSourceMap {
         &self.type_refs
     }
+
+    pub fn field_syntax(&self, expr: ExprId, field: usize) -> RecordPtr {
+        self.field_map[&(expr, field)]
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct RecordLitField {
+    pub name: Name,
+    pub expr: ExprId,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -210,6 +224,11 @@ pub enum Expr {
     While {
         condition: ExprId,
         body: ExprId,
+    },
+    RecordLit {
+        path: Option<Path>,
+        fields: Vec<RecordLitField>,
+        spread: Option<ExprId>,
     },
     Literal(Literal),
 }
@@ -312,6 +331,14 @@ impl Expr {
                 f(*condition);
                 f(*body);
             }
+            Expr::RecordLit { fields, spread, .. } => {
+                for field in fields {
+                    f(field.expr);
+                }
+                if let Some(expr) = spread {
+                    f(*expr);
+                }
+            }
         }
     }
 }
@@ -376,7 +403,22 @@ where
         id
     }
 
-    fn alloc_expr(&mut self, expr: Expr, ptr: ExprPtr) -> ExprId {
+    fn alloc_expr(&mut self, expr: Expr, ptr: AstPtr<ast::Expr>) -> ExprId {
+        let ptr = Either::Left(ptr);
+        let id = self.exprs.alloc(expr);
+        self.source_map.expr_map.insert(ptr, id);
+        self.source_map.expr_map_back.insert(
+            id,
+            Source {
+                file_id: self.current_file_id,
+                ast: ptr,
+            },
+        );
+        id
+    }
+
+    fn alloc_expr_field_shorthand(&mut self, expr: Expr, ptr: RecordPtr) -> ExprId {
+        let ptr = Either::Right(ptr);
         let id = self.exprs.alloc(expr);
         self.source_map.expr_map.insert(ptr, id);
         self.source_map.expr_map_back.insert(
@@ -583,6 +625,50 @@ where
                     .unwrap_or(Expr::Missing);
                 self.alloc_expr(path, syntax_ptr)
             }
+            ast::ExprKind::RecordLit(e) => {
+                let path = e.path().and_then(Path::from_ast);
+                let mut field_ptrs = Vec::new();
+                let record_lit = if let Some(r) = e.record_field_list() {
+                    let fields = r
+                        .fields()
+                        .inspect(|field| field_ptrs.push(AstPtr::new(field)))
+                        .map(|field| RecordLitField {
+                            name: field
+                                .name_ref()
+                                .map(|nr| nr.as_name())
+                                .unwrap_or_else(Name::missing),
+                            expr: if let Some(e) = field.expr() {
+                                self.collect_expr(e)
+                            } else if let Some(nr) = field.name_ref() {
+                                self.alloc_expr_field_shorthand(
+                                    Expr::Path(Path::from_name_ref(&nr)),
+                                    AstPtr::new(&field),
+                                )
+                            } else {
+                                self.missing_expr()
+                            },
+                        })
+                        .collect();
+                    let spread = r.spread().map(|s| self.collect_expr(s));
+                    Expr::RecordLit {
+                        path,
+                        fields,
+                        spread,
+                    }
+                } else {
+                    Expr::RecordLit {
+                        path,
+                        fields: Vec::new(),
+                        spread: None,
+                    }
+                };
+
+                let res = self.alloc_expr(record_lit, syntax_ptr);
+                for (idx, ptr) in field_ptrs.into_iter().enumerate() {
+                    self.source_map.field_map.insert((res, idx), ptr);
+                }
+                res
+            }
             ast::ExprKind::IfExpr(e) => {
                 let then_branch = self.collect_block_opt(e.then_branch());
 
@@ -608,7 +694,8 @@ where
             ast::ExprKind::ParenExpr(e) => {
                 let inner = self.collect_expr_opt(e.expr());
                 // make the paren expr point to the inner expression as well
-                self.source_map.expr_map.insert(syntax_ptr, inner);
+                let src = Either::Left(syntax_ptr);
+                self.source_map.expr_map.insert(src, inner);
                 inner
             }
             ast::ExprKind::CallExpr(e) => {
