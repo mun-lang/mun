@@ -79,6 +79,15 @@ impl AsName for ast::Name {
     }
 }
 
+impl AsName for ast::FieldKind {
+    fn as_name(&self) -> Name {
+        match self {
+            ast::FieldKind::Name(nr) => nr.as_name(),
+            ast::FieldKind::Index(idx) => Name::new_tuple_field(idx.text()[1..].parse().unwrap()),
+        }
+    }
+}
+
 pub(crate) const FLOAT: Name = Name::new_inline_ascii(5, b"float");
 pub(crate) const INT: Name = Name::new_inline_ascii(3, b"int");
 pub(crate) const BOOLEAN: Name = Name::new_inline_ascii(4, b"bool");

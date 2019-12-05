@@ -230,6 +230,10 @@ pub enum Expr {
         fields: Vec<RecordLitField>,
         spread: Option<ExprId>,
     },
+    Field {
+        expr: ExprId,
+        name: Name,
+    },
     Literal(Literal),
 }
 
@@ -299,7 +303,7 @@ impl Expr {
                 f(*lhs);
                 f(*rhs);
             }
-            Expr::UnaryOp { expr, .. } => {
+            Expr::Field { expr, .. } | Expr::UnaryOp { expr, .. } => {
                 f(*expr);
             }
             Expr::Literal(_) => {}
@@ -668,6 +672,14 @@ where
                     self.source_map.field_map.insert((res, idx), ptr);
                 }
                 res
+            }
+            ast::ExprKind::FieldExpr(e) => {
+                let expr = self.collect_expr_opt(e.expr());
+                let name = match e.field_access() {
+                    Some(kind) => kind.as_name(),
+                    None => Name::missing(),
+                };
+                self.alloc_expr(Expr::Field { expr, name }, syntax_ptr)
             }
             ast::ExprKind::IfExpr(e) => {
                 let then_branch = self.collect_block_opt(e.then_branch());

@@ -197,6 +197,14 @@ fn postfix_expr(
     loop {
         lhs = match p.current() {
             T!['('] => call_expr(p, lhs),
+            T![.] => match postfix_dot_expr(p, lhs) {
+                Ok(it) => it,
+                Err(it) => {
+                    lhs = it;
+                    break;
+                }
+            },
+            INDEX => field_expr(p, lhs),
             _ => break,
         }
     }
@@ -227,6 +235,32 @@ fn arg_list(p: &mut Parser) {
     }
     p.eat(T![')']);
     m.complete(p, ARG_LIST);
+}
+
+fn postfix_dot_expr(
+    p: &mut Parser,
+    lhs: CompletedMarker,
+) -> Result<CompletedMarker, CompletedMarker> {
+    assert!(p.at(T![.]));
+    if p.nth(1) == IDENT && p.nth(2) == T!['('] {
+        unimplemented!("Method calls are not supported yet.");
+    }
+
+    Ok(field_expr(p, lhs))
+}
+
+fn field_expr(p: &mut Parser, lhs: CompletedMarker) -> CompletedMarker {
+    assert!(p.at(T![.]) || p.at(INDEX));
+    let m = lhs.precede(p);
+    if p.at(T![.]) {
+        p.bump(T![.]);
+        name_ref_or_index(p);
+    } else if p.at(INDEX) {
+        p.bump(INDEX);
+    } else {
+        p.error("expected field name or number");
+    }
+    m.complete(p, FIELD_EXPR)
 }
 
 fn atom_expr(p: &mut Parser, r: Restrictions) -> Option<(CompletedMarker, BlockLike)> {

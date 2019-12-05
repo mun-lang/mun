@@ -1,0 +1,22 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "struct Foo {\n    a: float,\n    b: int,\n}\nstruct Bar(float, int)\n\nfn main() {\n    let foo = Foo { a: 1.23, b: 4 };\n    foo.a\n    foo.b\n    let bar = Bar(1.23, 4);\n    bar.0\n    bar.1;\n}"
+---
+[75; 184) '{     ...r.1; }': nothing
+[85; 88) 'foo': Foo
+[91; 112) 'Foo { ...b: 4 }': Foo
+[100; 104) '1.23': float
+[109; 110) '4': int
+[118; 121) 'foo': Foo
+[118; 123) 'foo.a': float
+[128; 131) 'foo': Foo
+[128; 133) 'foo.b': int
+[142; 145) 'bar': Bar
+[148; 151) 'Bar': Bar
+[148; 160) 'Bar(1.23, 4)': Bar
+[152; 156) '1.23': float
+[158; 159) '4': int
+[166; 169) 'bar': Bar
+[166; 171) 'bar.0': float
+[176; 179) 'bar': Bar
+[176; 181) 'bar.1': int

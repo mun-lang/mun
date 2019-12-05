@@ -92,6 +92,7 @@ Grammar(
     tokens: [
         "ERROR",
         "IDENT",
+        "INDEX",
         "WHITESPACE",
         "COMMENT",
     ],
@@ -123,6 +124,7 @@ Grammar(
         "BIN_EXPR",
         "PAREN_EXPR",
         "CALL_EXPR",
+        "FIELD_EXPR",
         "IF_EXPR",
         "BLOCK_EXPR",
         "RETURN_EXPR",
@@ -237,6 +239,9 @@ Grammar(
             traits: ["ArgListOwner"],
             options: [ "Expr" ],
         ),
+        "FieldExpr": (
+            options: ["Expr", "NameRef"]
+        ),
         "IfExpr": (
             options: [ "Condition" ]
         ),
@@ -255,6 +260,7 @@ Grammar(
                 "BinExpr",
                 "ParenExpr",
                 "CallExpr",
+                "FieldExpr",
                 "IfExpr",
                 "LoopExpr",
                 "WhileExpr",

@@ -66,6 +66,10 @@ fn next_token_inner(c: char, cursor: &mut Cursor) -> SyntaxKind {
         return scan_number(c, cursor);
     }
 
+    if let Some(kind) = scan_index(c, cursor) {
+        return kind;
+    }
+
     if let Some(kind) = SyntaxKind::from_char(c) {
         return kind;
     }
@@ -95,4 +99,34 @@ fn scan_identifier_or_keyword(c: char, cursor: &mut Cursor) -> SyntaxKind {
         return kind;
     }
     IDENT
+}
+
+fn scan_index(c: char, cursor: &mut Cursor) -> Option<SyntaxKind> {
+    if c == '.' {
+        let mut is_first = true;
+        while let Some(cc) = cursor.current() {
+            match cc {
+                '0' => {
+                    cursor.bump();
+                    if is_first {
+                        break;
+                    }
+                }
+                '1'..='9' => {
+                    cursor.bump();
+                }
+                _ => {
+                    if is_first {
+                        return None;
+                    } else {
+                        break;
+                    }
+                }
+            }
+            is_first = false;
+        }
+        Some(SyntaxKind::INDEX)
+    } else {
+        None
+    }
 }

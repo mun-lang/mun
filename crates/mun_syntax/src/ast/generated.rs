@@ -248,8 +248,9 @@ pub struct Expr {
 impl AstNode for Expr {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
-            LITERAL | PREFIX_EXPR | PATH_EXPR | BIN_EXPR | PAREN_EXPR | CALL_EXPR | IF_EXPR
-            | LOOP_EXPR | WHILE_EXPR | RETURN_EXPR | BREAK_EXPR | BLOCK_EXPR | RECORD_LIT => true,
+            LITERAL | PREFIX_EXPR | PATH_EXPR | BIN_EXPR | PAREN_EXPR | CALL_EXPR | FIELD_EXPR
+            | IF_EXPR | LOOP_EXPR | WHILE_EXPR | RETURN_EXPR | BREAK_EXPR | BLOCK_EXPR
+            | RECORD_LIT => true,
             _ => false,
         }
     }
@@ -272,6 +273,7 @@ pub enum ExprKind {
     BinExpr(BinExpr),
     ParenExpr(ParenExpr),
     CallExpr(CallExpr),
+    FieldExpr(FieldExpr),
     IfExpr(IfExpr),
     LoopExpr(LoopExpr),
     WhileExpr(WhileExpr),
@@ -307,6 +309,11 @@ impl From<ParenExpr> for Expr {
 }
 impl From<CallExpr> for Expr {
     fn from(n: CallExpr) -> Expr {
+        Expr { syntax: n.syntax }
+    }
+}
+impl From<FieldExpr> for Expr {
+    fn from(n: FieldExpr) -> Expr {
         Expr { syntax: n.syntax }
     }
 }
@@ -355,6 +362,7 @@ impl Expr {
             BIN_EXPR => ExprKind::BinExpr(BinExpr::cast(self.syntax.clone()).unwrap()),
             PAREN_EXPR => ExprKind::ParenExpr(ParenExpr::cast(self.syntax.clone()).unwrap()),
             CALL_EXPR => ExprKind::CallExpr(CallExpr::cast(self.syntax.clone()).unwrap()),
+            FIELD_EXPR => ExprKind::FieldExpr(FieldExpr::cast(self.syntax.clone()).unwrap()),
             IF_EXPR => ExprKind::IfExpr(IfExpr::cast(self.syntax.clone()).unwrap()),
             LOOP_EXPR => ExprKind::LoopExpr(LoopExpr::cast(self.syntax.clone()).unwrap()),
             WHILE_EXPR => ExprKind::WhileExpr(WhileExpr::cast(self.syntax.clone()).unwrap()),
@@ -396,6 +404,41 @@ impl AstNode for ExprStmt {
 }
 impl ExprStmt {
     pub fn expr(&self) -> Option<Expr> {
+        super::child_opt(self)
+    }
+}
+
+// FieldExpr
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct FieldExpr {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for FieldExpr {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            FIELD_EXPR => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(FieldExpr { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl FieldExpr {
+    pub fn expr(&self) -> Option<Expr> {
+        super::child_opt(self)
+    }
+
+    pub fn name_ref(&self) -> Option<NameRef> {
         super::child_opt(self)
     }
 }

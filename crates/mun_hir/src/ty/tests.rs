@@ -212,6 +212,28 @@ fn struct_lit() {
     )
 }
 
+#[test]
+fn struct_field_index() {
+    infer_snapshot(
+        r#"
+    struct Foo {
+        a: float,
+        b: int,
+    }
+    struct Bar(float, int)
+
+    fn main() {
+        let foo = Foo { a: 1.23, b: 4 };
+        foo.a
+        foo.b
+        let bar = Bar(1.23, 4);
+        bar.0
+        bar.1;
+    }
+    "#,
+    )
+}
+
 fn infer_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
     insta::assert_snapshot!(insta::_macro_support::AutoName, infer(&text), &text);

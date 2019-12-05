@@ -362,6 +362,20 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                 }
                 ty
             }
+            Expr::Field { expr, name } => {
+                let receiver_ty = self.infer_expr(*expr, &Expectation::none());
+                match receiver_ty {
+                    Ty::Apply(a_ty) => {
+                        if let TypeCtor::Struct(s) = a_ty.ctor {
+                            s.field(self.db, name).map(|field| field.ty(self.db))
+                        } else {
+                            None
+                        }
+                    }
+                    _ => None,
+                }
+                .unwrap_or(Ty::Unknown)
+            }
             Expr::UnaryOp { .. } => Ty::Unknown,
             //            Expr::UnaryOp { expr: _, op: _ } => {}
             //            Expr::Block { statements: _, tail: _ } => {}
