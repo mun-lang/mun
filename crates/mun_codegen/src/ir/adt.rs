@@ -2,6 +2,7 @@
 use crate::ir::try_convert_any_to_basic;
 use crate::IrDatabase;
 use inkwell::types::{AnyTypeEnum, BasicTypeEnum};
+use inkwell::values::BasicValueEnum;
 
 pub(super) fn gen_struct_decl(db: &impl IrDatabase, s: hir::Struct) {
     if let AnyTypeEnum::StructType(struct_type) = db.type_ir(s.ty(db)) {
@@ -20,5 +21,17 @@ pub(super) fn gen_struct_decl(db: &impl IrDatabase, s: hir::Struct) {
         }
     } else {
         unreachable!()
+    }
+}
+
+pub(crate) fn gen_named_struct_lit(
+    db: &impl IrDatabase,
+    ty: hir::Ty,
+    values: &[BasicValueEnum],
+) -> BasicValueEnum {
+    if let inkwell::types::AnyTypeEnum::StructType(struct_type) = db.type_ir(ty) {
+        struct_type.const_named_struct(&values).into()
+    } else {
+        unreachable!("at this stage there must be a struct type");
     }
 }

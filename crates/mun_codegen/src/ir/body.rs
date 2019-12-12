@@ -1,4 +1,7 @@
-use crate::{ir::dispatch_table::DispatchTable, ir::try_convert_any_to_basic, IrDatabase};
+use crate::{
+    ir::adt::gen_named_struct_lit, ir::dispatch_table::DispatchTable, ir::try_convert_any_to_basic,
+    IrDatabase,
+};
 use hir::{
     ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDisplay, InferenceResult, Literal, Ordering,
     Pat, PatId, Path, Resolution, Resolver, Statement, TypeCtor,
@@ -140,13 +143,23 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 Some(self.gen_path_expr(p, expr, &resolver))
             }
             Expr::Literal(lit) => Some(self.gen_literal(lit)),
+            Expr::RecordLit { fields, .. } => Some(self.gen_record_lit(expr, fields)),
             Expr::BinaryOp { lhs, rhs, op } => {
                 self.gen_binary_op(expr, *lhs, *rhs, op.expect("missing op"))
             }
             Expr::Call {
                 ref callee,
                 ref args,
-            } => self.gen_call(*callee, &args).try_as_basic_value().left(),
+            } => {
+                // Get the callable definition from the map
+                match self.infer[*callee].as_callable_def() {
+                    Some(hir::CallableDef::Function(def)) => {
+                        self.gen_call(def, &args).try_as_basic_value().left()
+                    }
+                    Some(hir::CallableDef::Struct(_)) => Some(self.gen_named_tuple_lit(expr, args)),
+                    None => panic!("expected a callable expression"),
+                }
+            }
             Expr::If {
                 condition,
                 then_branch,
@@ -193,6 +206,38 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     /// Constructs an empty struct value e.g. `{}`
     fn gen_empty(&mut self) -> BasicValueEnum {
         self.module.get_context().const_struct(&[], false).into()
+    }
+
+    /// Generates IR for a record literal, e.g. `Foo { a: 1.23, b: 4 }`
+    fn gen_record_lit(
+        &mut self,
+        type_expr: ExprId,
+        fields: &[hir::RecordLitField],
+    ) -> BasicValueEnum {
+        let struct_ty = self.infer[type_expr].clone();
+        let fields: Vec<BasicValueEnum> = fields
+            .iter()
+            .map(|field| self.gen_expr(field.expr).expect("expected a field value"))
+            .collect();
+
+        gen_named_struct_lit(self.db, struct_ty, &fields)
+    }
+
+    /// Generates IR for a named tuple literal, e.g. `Foo(1.23, 4)`
+    fn gen_named_tuple_lit(&mut self, type_expr: ExprId, args: &[ExprId]) -> BasicValueEnum {
+        let struct_ty = self.infer[type_expr].clone();
+        let args: Vec<BasicValueEnum> = args
+            .iter()
+            .map(|expr| self.gen_expr(*expr).expect("expected a field value"))
+            .collect();
+
+        gen_named_struct_lit(self.db, struct_ty, &args)
+    }
+
+    /// Generates IR for a unit struct literal, e.g `Foo`
+    fn gen_unit_struct_lit(&self, type_expr: ExprId) -> BasicValueEnum {
+        let struct_ty = self.infer[type_expr].clone();
+        gen_named_struct_lit(self.db, struct_ty, &[])
     }
 
     /// Generates IR for the specified block expression.
@@ -263,7 +308,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     fn gen_path_expr(
         &self,
         path: &Path,
-        _expr: ExprId,
+        expr: ExprId,
         resolver: &Resolver,
     ) -> inkwell::values::BasicValueEnum {
         let resolution = resolver
@@ -282,6 +327,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                     unreachable!("could not find the pattern..");
                 }
             }
+            Resolution::Def(hir::ModuleDef::Struct(_)) => self.gen_unit_struct_lit(expr),
             Resolution::Def(_) => panic!("no support for module definitions"),
         }
     }
@@ -484,12 +530,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     }
 
     /// Generates IR for a function call.
-    fn gen_call(&mut self, callee: ExprId, args: &[ExprId]) -> CallSiteValue {
-        // Get the function value from the map
-        let function = self.infer[callee]
-            .as_function_def()
-            .expect("expected a function expression");
-
+    fn gen_call(&mut self, function: hir::Function, args: &[ExprId]) -> CallSiteValue {
         // Get all the arguments
         let args: Vec<BasicValueEnum> = args
             .iter()

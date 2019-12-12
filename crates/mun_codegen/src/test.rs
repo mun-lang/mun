@@ -370,9 +370,9 @@ fn struct_test() {
     struct Foo { a: int };
     struct Baz;
     fn foo() {
-        let a: Foo;
-        let b: Bar;
-        let c: Baz;
+        let a: Foo = Foo { a: 5 };
+        let b: Bar = Bar(1.23, 4, true, a);
+        let c: Baz = Baz;
     }
     "#,
     )

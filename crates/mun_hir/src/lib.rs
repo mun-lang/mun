@@ -45,7 +45,7 @@ pub use crate::{
     display::HirDisplay,
     expr::{
         resolver_for_expr, ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, ExprScopes, Literal,
-        LogicOp, Ordering, Pat, PatId, Statement,
+        LogicOp, Ordering, Pat, PatId, RecordLitField, Statement,
     },
     ids::ItemLoc,
     input::{FileId, SourceRoot, SourceRootId},

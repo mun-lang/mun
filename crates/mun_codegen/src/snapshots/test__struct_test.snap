@@ -1,6 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "struct Bar(float, int, bool, Foo);\nstruct Foo { a: int };\nstruct Baz;\nfn foo() {\n    let a: Foo;\n    let b: Bar;\n    let c: Baz;\n}"
+expression: "struct Bar(float, int, bool, Foo);\nstruct Foo { a: int };\nstruct Baz;\nfn foo() {\n    let a: Foo = Foo { a: 5 };\n    let b: Bar = Bar(1.23, 4, true, a);\n    let c: Baz = Baz;\n}"
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
@@ -14,6 +14,10 @@ body:
   %c = alloca %Baz
   %b = alloca %Bar
   %a = alloca %Foo
+  store %Foo { i64 5 }, %Foo* %a
+  %a1 = load %Foo, %Foo* %a
+  store %Bar { double 1.230000e+00, i64 4, i1 true, %Foo %a1 }, %Bar* %b
+  store %Baz zeroinitializer, %Baz* %c
   ret void
 }
 

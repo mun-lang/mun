@@ -4,7 +4,7 @@ mod op;
 
 use crate::display::{HirDisplay, HirFormatter};
 use crate::ty::infer::TypeVarId;
-use crate::{Function, HirDatabase, Struct};
+use crate::{HirDatabase, Struct};
 pub(crate) use infer::infer_query;
 pub use infer::InferenceResult;
 pub(crate) use lower::{callable_item_sig, fn_sig_for_fn, type_for_def, CallableDef, TypableDef};
@@ -102,12 +102,12 @@ impl Ty {
         }
     }
 
-    /// Returns the function definition for the given expression or `None` if the type does not
-    /// represent a function.
-    pub fn as_function_def(&self) -> Option<Function> {
+    /// Returns the callable definition for the given expression or `None` if the type does not
+    /// represent a callable.
+    pub fn as_callable_def(&self) -> Option<CallableDef> {
         match self {
             Ty::Apply(a_ty) => match a_ty.ctor {
-                TypeCtor::FnDef(CallableDef::Function(def)) => Some(def),
+                TypeCtor::FnDef(def) => Some(def),
                 _ => None,
             },
             _ => None,
