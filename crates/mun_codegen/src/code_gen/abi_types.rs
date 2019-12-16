@@ -8,6 +8,7 @@ pub(super) struct AbiTypes {
     pub type_info_type: StructType,
     pub function_signature_type: StructType,
     pub function_info_type: StructType,
+    pub struct_info_type: StructType,
     pub module_info_type: StructType,
     pub dispatch_table_type: StructType,
     pub assembly_info_type: StructType,
@@ -60,6 +61,17 @@ pub(super) fn gen_abi_types(context: ContextRef) -> AbiTypes {
         false,
     );
 
+    // Construct the `MunStructInfo` struct
+    let struct_info_type = context.opaque_struct_type("struct.MunStructInfo");
+    struct_info_type.set_body(
+        &[
+            str_type.into(),                                     // name
+            type_info_type.ptr_type(AddressSpace::Const).into(), // field_types
+            context.i16_type().into(),                           // num_fields
+        ],
+        false,
+    );
+
     // Construct the `MunModuleInfo` struct
     let module_info_type = context.opaque_struct_type("struct.MunModuleInfo");
     module_info_type.set_body(
@@ -67,6 +79,8 @@ pub(super) fn gen_abi_types(context: ContextRef) -> AbiTypes {
             str_type.into(),                                         // path
             function_info_type.ptr_type(AddressSpace::Const).into(), // functions
             context.i32_type().into(),                               // num_functions
+            struct_info_type.ptr_type(AddressSpace::Const).into(),   // structs
+            context.i32_type().into(),                               // num_structs
         ],
         false,
     );
@@ -105,6 +119,7 @@ pub(super) fn gen_abi_types(context: ContextRef) -> AbiTypes {
         type_info_type,
         function_signature_type,
         function_info_type,
+        struct_info_type,
         module_info_type,
         dispatch_table_type,
         assembly_info_type,

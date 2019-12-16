@@ -61,6 +61,7 @@ pub fn write_module_shared_object(
     symbols::gen_reflection_ir(
         db,
         &module.functions,
+        &module.structs,
         &module.dispatch_table,
         &assembly_module,
     );

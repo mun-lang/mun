@@ -1,10 +1,10 @@
 //use crate::ir::module::Types;
 use crate::ir::try_convert_any_to_basic;
 use crate::IrDatabase;
-use inkwell::types::{AnyTypeEnum, BasicTypeEnum};
+use inkwell::types::{AnyTypeEnum, BasicTypeEnum, StructType};
 use inkwell::values::BasicValueEnum;
 
-pub(super) fn gen_struct_decl(db: &impl IrDatabase, s: hir::Struct) {
+pub(super) fn gen_struct_decl(db: &impl IrDatabase, s: hir::Struct) -> StructType {
     if let AnyTypeEnum::StructType(struct_type) = db.type_ir(s.ty(db)) {
         if struct_type.is_opaque() {
             let field_types: Vec<BasicTypeEnum> = s
@@ -19,6 +19,7 @@ pub(super) fn gen_struct_decl(db: &impl IrDatabase, s: hir::Struct) {
 
             struct_type.set_body(&field_types, false);
         }
+        struct_type
     } else {
         unreachable!()
     }

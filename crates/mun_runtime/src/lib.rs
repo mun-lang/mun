@@ -18,7 +18,7 @@ use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
 use failure::Error;
-use mun_abi::{FunctionInfo, Reflection};
+use mun_abi::{FunctionInfo, Reflection, StructInfo};
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
 pub use crate::assembly::Assembly;
@@ -60,15 +60,16 @@ impl RuntimeBuilder {
     }
 }
 
-/// A runtime dispatch table that maps full function paths to function information.
+/// A runtime dispatch table that maps full paths to function and struct information.
 #[derive(Default)]
 pub struct DispatchTable {
     functions: HashMap<String, FunctionInfo>,
+    structs: HashMap<String, StructInfo>,
 }
 
 impl DispatchTable {
     /// Retrieves the [`FunctionInfo`] corresponding to `fn_path`, if it exists.
-    pub fn get(&self, fn_path: &str) -> Option<&FunctionInfo> {
+    pub fn get_fn(&self, fn_path: &str) -> Option<&FunctionInfo> {
         self.functions.get(fn_path)
     }
 
@@ -76,13 +77,39 @@ impl DispatchTable {
     ///
     /// If the dispatch table already contained this `fn_path`, the value is updated, and the old
     /// value is returned.
-    pub fn insert(&mut self, fn_path: &str, fn_info: FunctionInfo) -> Option<FunctionInfo> {
+    pub fn insert_fn<T: std::string::ToString>(
+        &mut self,
+        fn_path: T,
+        fn_info: FunctionInfo,
+    ) -> Option<FunctionInfo> {
         self.functions.insert(fn_path.to_string(), fn_info)
     }
 
     /// Removes and returns the `fn_info` corresponding to `fn_path`, if it exists.
-    pub fn remove(&mut self, fn_path: &str) -> Option<FunctionInfo> {
-        self.functions.remove(fn_path)
+    pub fn remove_fn<T: AsRef<str>>(&mut self, fn_path: T) -> Option<FunctionInfo> {
+        self.functions.remove(fn_path.as_ref())
+    }
+
+    /// Retrieves the [`StructInfo`] corresponding to `struct_path`, if it exists.
+    pub fn get_struct<T: AsRef<str>>(&self, struct_path: T) -> Option<&StructInfo> {
+        self.structs.get(struct_path.as_ref())
+    }
+
+    /// Inserts the `struct_info` for `struct_path` into the dispatch table.
+    ///
+    /// If the dispatch table already contained this `struct_path`, the value is updated, and the
+    /// old value is returned.
+    pub fn insert_struct<T: std::string::ToString>(
+        &mut self,
+        struct_path: T,
+        struct_info: StructInfo,
+    ) -> Option<StructInfo> {
+        self.structs.insert(struct_path.to_string(), struct_info)
+    }
+
+    /// Removes and returns the `struct_info` corresponding to `struct_path`, if it exists.
+    pub fn remove_struct<T: AsRef<str>>(&mut self, struct_path: T) -> Option<StructInfo> {
+        self.structs.remove(struct_path.as_ref())
     }
 }
 
@@ -139,7 +166,12 @@ impl Runtime {
 
     /// Retrieves the function information corresponding to `function_name`, if available.
     pub fn get_function_info(&self, function_name: &str) -> Option<&FunctionInfo> {
-        self.dispatch_table.get(function_name)
+        self.dispatch_table.get_fn(function_name)
+    }
+
+    /// Retrieves the struct information corresponding to `struct_name`, if available.
+    pub fn get_struct_info(&self, struct_name: &str) -> Option<&StructInfo> {
+        self.dispatch_table.get_struct(struct_name)
     }
 
     /// Updates the state of the runtime. This includes checking for file changes, and reloading
