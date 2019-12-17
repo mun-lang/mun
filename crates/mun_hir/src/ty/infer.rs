@@ -365,16 +365,20 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             Expr::Field { expr, name } => {
                 let receiver_ty = self.infer_expr(*expr, &Expectation::none());
                 match receiver_ty {
-                    Ty::Apply(a_ty) => {
-                        if let TypeCtor::Struct(s) = a_ty.ctor {
-                            s.field(self.db, name).map(|field| field.ty(self.db))
-                        } else {
-                            None
+                    ty_app!(TypeCtor::Struct(s)) => {
+                        match s.field(self.db, name).map(|field| field.ty(self.db)) {
+                            Some(field_ty) => field_ty,
+                            None => {
+                                // TODO: Unknown struct field
+                                Ty::Unknown
+                            }
                         }
                     }
-                    _ => None,
+                    _ => {
+                        // TODO: Expected receiver to be struct type
+                        Ty::Unknown
+                    }
                 }
-                .unwrap_or(Ty::Unknown)
             }
             Expr::UnaryOp { .. } => Ty::Unknown,
             //            Expr::UnaryOp { expr: _, op: _ } => {}

@@ -3,8 +3,8 @@ use crate::{
     IrDatabase,
 };
 use hir::{
-    ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDisplay, InferenceResult, Literal, Ordering,
-    Pat, PatId, Path, Resolution, Resolver, Statement, TypeCtor,
+    ArenaId, ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDisplay, InferenceResult, Literal,
+    Name, Ordering, Pat, PatId, Path, Resolution, Resolver, Statement, TypeCtor,
 };
 use inkwell::{
     builder::Builder,
@@ -169,6 +169,13 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             Expr::Loop { body } => self.gen_loop(expr, *body),
             Expr::While { condition, body } => self.gen_while(expr, *condition, *body),
             Expr::Break { expr: break_expr } => self.gen_break(expr, *break_expr),
+            Expr::Field {
+                expr: receiver_expr,
+                name,
+            } => {
+                let ptr = self.gen_field(expr, *receiver_expr, name);
+                Some(self.builder.build_load(ptr, &name.to_string()))
+            }
             _ => unimplemented!("unimplemented expr type {:?}", &body[expr]),
         }
     }
@@ -520,6 +527,10 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 let resolver = hir::resolver_for_expr(self.body.clone(), self.db, expr);
                 self.gen_path_place_expr(p, expr, &resolver)
             }
+            Expr::Field {
+                expr: receiver_expr,
+                name,
+            } => self.gen_field(expr, *receiver_expr, name),
             _ => unreachable!("invalid place expression"),
         }
     }
@@ -750,6 +761,28 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             Some(phi.as_basic_value())
         } else {
             None
+        }
+    }
+
+    fn gen_field(&mut self, _expr: ExprId, receiver_expr: ExprId, name: &Name) -> PointerValue {
+        let receiver_ty = &self.infer[receiver_expr]
+            .as_struct()
+            .expect("expected a struct");
+
+        let field_idx = receiver_ty
+            .field(self.db, name)
+            .expect("expected a struct field")
+            .id()
+            .into_raw()
+            .into();
+
+        let receiver_ptr = self.gen_place_expr(receiver_expr);
+        unsafe {
+            self.builder.build_struct_gep(
+                receiver_ptr,
+                field_idx,
+                &format!("{}.{}", receiver_ty.name(self.db), name),
+            )
         }
     }
 }

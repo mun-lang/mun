@@ -38,6 +38,7 @@ pub use salsa;
 pub use relative_path::{RelativePath, RelativePathBuf};
 
 pub use crate::{
+    arena::{ArenaId, RawId},
     db::{
         DefDatabase, DefDatabaseStorage, HirDatabase, HirDatabaseStorage, SourceDatabase,
         SourceDatabaseStorage,
@@ -58,7 +59,7 @@ pub use crate::{
 };
 
 use crate::{
-    arena::{Arena, ArenaId, RawId},
+    arena::Arena,
     name::AsName,
     source_id::{AstIdMap, FileAstId},
 };

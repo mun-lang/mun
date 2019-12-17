@@ -378,6 +378,44 @@ fn struct_test() {
     )
 }
 
+#[test]
+fn field_expr() {
+    test_snapshot(
+        r#"
+    struct Bar(float, Foo);
+    struct Foo { a: int };
+
+    fn bar_0(bar: Bar): float {
+        bar.0
+    }
+    
+    fn bar_1(bar: Bar): Foo {
+        bar.1
+    }
+
+    fn bar_1_a(bar: Bar): int {
+        bar.1.a
+    }
+
+    fn foo_a(foo: Foo): int {
+        foo.a
+    }
+
+    fn bar_1_foo_a(bar: Bar): int {
+        foo_a(bar_1(bar))
+    }
+
+    fn main(): int {
+        let a: Foo = Foo { a: 5 };
+        let b: Bar = Bar(1.23, a);
+        let aa_lhs = a.a + 2;
+        let aa_rhs = 2 + a.a;
+        aa_lhs + aa_rhs
+    }
+    "#,
+    )
+}
+
 fn test_snapshot(text: &str) {
     test_snapshot_with_optimization(text, OptimizationLevel::Default);
 }

@@ -114,6 +114,16 @@ impl Ty {
         }
     }
 
+    pub fn as_struct(&self) -> Option<Struct> {
+        match self {
+            Ty::Apply(a_ty) => match a_ty.ctor {
+                TypeCtor::FnDef(CallableDef::Struct(s)) | TypeCtor::Struct(s) => Some(s),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
     pub fn callable_sig(&self, db: &impl HirDatabase) -> Option<FnSig> {
         match self {
             Ty::Apply(a_ty) => match a_ty.ctor {
