@@ -3,6 +3,10 @@ name = "mun_runtime_capi"
 version = "0.2.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
+homepage = "https://mun-lang.org"
+repository = "https://github.com/mun-lang/mun"
+license = "MIT OR Apache-2.0"
+description = "Provides a C api to the mun_runtime crate"
 
 [lib]
 name = "mun_runtime"

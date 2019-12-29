@@ -4,6 +4,10 @@ version = "0.2.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 default-run = "mun"
+homepage = "https://mun-lang.org"
+repository = "https://github.com/mun-lang/mun"
+license = "MIT OR Apache-2.0"
+description = "Binary to compile, monitor and run Mun code"
 
 [dependencies]
 failure = "0.1.5"
