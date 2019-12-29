@@ -4,8 +4,5 @@ version = "0.2.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 
-[build-dependencies]
-bindgen = "0.51"
-
 [dependencies]
 md5 = "0.6.1"

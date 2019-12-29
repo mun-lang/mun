@@ -1,5 +1,8 @@
-use std::env;
-use std::path::PathBuf;
+use crate::{project_root, reformat, update, Result};
+use failure::format_err;
+use teraron::Mode;
+
+pub const ABI_DIR: &str = "crates/mun_abi";
 
 use bindgen::{self, callbacks::EnumVariantValue, callbacks::ParseCallbacks};
 
@@ -29,9 +32,17 @@ impl ParseCallbacks for RemoveVendorName {
     }
 }
 
-fn main() {
+/// Generates the FFI bindings for the Mun ABI
+pub fn generate(mode: Mode) -> Result<()> {
+    let crate_dir = project_root().join(ABI_DIR);
+    let output_file_path = crate_dir.join("src/autogen.rs");
+    let input_file_path = crate_dir.join("c/include/mun_abi.h");
+
+    let input_file_str = input_file_path
+        .to_str()
+        .ok_or_else(|| failure::err_msg("could not create path to mun_abi.h"))?;
     let bindings = bindgen::Builder::default()
-        .header("c/include/mun_abi.h")
+        .header(input_file_str)
         .whitelist_type("Mun.*")
         .blacklist_type("MunPrivacy.*")
         // Remove type aliasing on Linux
@@ -45,13 +56,8 @@ fn main() {
         .raw_line("#![allow(non_snake_case, non_camel_case_types, non_upper_case_globals)]")
         .raw_line("use crate::Privacy;")
         .generate()
-        .expect("Unable to generate bindings for 'mun_abi.h'");
+        .map_err(|_| format_err!("Unable to generate bindings from 'mun_abi.h'"))?;
 
-    let out_path = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    bindings
-        .write_to_file(out_path.join("src/autogen.rs"))
-        .expect(&format!(
-            "Couldn't write bindings to '{}'",
-            out_path.as_path().to_string_lossy()
-        ));
+    let file_contents = reformat(bindings.to_string())?;
+    update(&output_file_path, &file_contents, mode)
 }

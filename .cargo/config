@@ -1,3 +1,5 @@
 [alias]
 # Automatically generates the ast and syntax kinds files
-gen-syntax   = "run --package tools --bin tools -- gen-syntax"
+gen-syntax        = "run --package tools --bin tools -- gen-syntax"
+gen-runtime-capi  = "run --package tools --bin tools -- gen-runtime-capi"
+gen-abi           = "run --package tools --bin tools -- gen-abi"

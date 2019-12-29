@@ -6,45 +6,23 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 pub use teraron::{Mode, Overwrite, Verify};
 
-pub const GRAMMAR: &str = "crates/mun_syntax/src/grammar.ron";
-pub const SYNTAX_KINDS: &str = "crates/mun_syntax/src/syntax_kind/generated.rs.tera";
-pub const AST: &str = "crates/mun_syntax/src/ast/generated.rs.tera";
-
-pub fn generate_all(mode: Mode) -> Result<()> {
-    let grammar = project_root().join(GRAMMAR);
-    let syntax_kinds = project_root().join(SYNTAX_KINDS);
-    let ast = project_root().join(AST);
-    generate(&syntax_kinds, &grammar, mode)?;
-    generate(&ast, &grammar, mode)?;
-    Ok(())
-}
-
-pub fn generate(template: &Path, src: &Path, mode: Mode) -> Result<()> {
-    let file_name = template.file_stem().unwrap().to_str().unwrap();
-    let tgt = template.with_file_name(file_name);
-    let template = fs::read_to_string(template)?;
-    let src: ron::Value = {
-        let text = fs::read_to_string(src)?;
-        ron::de::from_str(&text)?
-    };
-    let content = teraron::render(&template, src)?;
-    let content = reformat(content)?;
-    update(&tgt, &content, mode)
-}
+pub mod abi;
+pub mod runtime_capi;
+pub mod syntax;
 
 /// A helper to update file on disk if it has changed.
 /// With verify = false,
 fn update(path: &Path, contents: &str, mode: Mode) -> Result<()> {
-    match fs::read_to_string(path) {
-        Ok(ref old_contents)
-            if old_contents.replace("\r\n", "\n") == contents.replace("\r\n", "\n") =>
-        {
-            return Ok(());
-        }
-        _ => (),
+    let old_contents = fs::read_to_string(path)?;
+    let old_contents = old_contents.replace("\r\n", "\n");
+    let contents = contents.replace("\r\n", "\n");
+    if old_contents == contents {
+        return Ok(());
     }
+
     if mode == Mode::Verify {
-        failure::bail!("`{}` is not up-to-date", path.display());
+        let changes = difference::Changeset::new(&old_contents, &contents, "\n");
+        failure::bail!("`{}` is not up-to-date:\n{}", path.display(), changes);
     }
     eprintln!("updating {}", path.display());
     fs::write(path, contents)?;
@@ -79,8 +57,31 @@ mod tests {
 
     #[test]
     fn grammar_is_fresh() {
-        if let Err(error) = super::generate_all(Mode::Verify) {
-            panic!("{}. Please update it by running `cargo gen-syntax`", error);
+        if let Err(error) = super::syntax::generate(Mode::Verify) {
+            panic!(
+                "Please update syntax by running `cargo gen-syntax`, its out of date.\n{}",
+                error
+            );
+        }
+    }
+
+    #[test]
+    fn runtime_capi_is_fresh() {
+        if let Err(error) = super::runtime_capi::generate(Mode::Verify) {
+            panic!(
+                "Please update runtime-capi by running `cargo gen-runtime-capi`, its out of date.\n{}",
+                error
+            );
+        }
+    }
+
+    #[test]
+    fn abi_is_fresh() {
+        if let Err(error) = super::abi::generate(Mode::Verify) {
+            panic!(
+                "Please update abi by running `cargo gen-abi`, its out of date.\n{}",
+                error
+            );
         }
     }
 }
