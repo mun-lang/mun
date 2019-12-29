@@ -556,7 +556,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         let ty = if !expected.is_none() && ty != expected.ty {
             self.diagnostics.push(InferenceDiagnostic::MismatchedTypes {
                 expected: expected.ty.clone(),
-                found: ty.clone(),
+                found: ty,
                 id: tgt_expr,
             });
             expected.ty
