@@ -296,7 +296,15 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                             })
                         }
                     };
-                    let rhs_expected = op::binary_op_rhs_expectation(*op, lhs_ty);
+                    let rhs_expected = op::binary_op_rhs_expectation(*op, lhs_ty.clone());
+                    if lhs_ty != Ty::Unknown && rhs_expected == Ty::Unknown {
+                        self.diagnostics
+                            .push(InferenceDiagnostic::CannotApplyBinaryOp {
+                                id: tgt_expr,
+                                lhs: lhs_ty,
+                                rhs: rhs_expected.clone(),
+                            })
+                    }
                     let rhs_ty = self.infer_expr(*rhs, &Expectation::has_type(rhs_expected));
                     op::binary_op_return_ty(*op, rhs_ty)
                 }

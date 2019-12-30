@@ -326,9 +326,7 @@ pub enum Pat {
 }
 
 impl Pat {
-    pub fn walk_child_pats(&self, mut _f: impl FnMut(PatId)) {
-        unreachable!()
-    }
+    pub fn walk_child_pats(&self, mut _f: impl FnMut(PatId)) {}
 }
 
 // Queries

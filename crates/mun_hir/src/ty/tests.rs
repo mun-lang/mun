@@ -159,6 +159,19 @@ fn infer_while() {
     )
 }
 
+#[test]
+fn invalid_binary_ops() {
+    infer_snapshot(
+        r#"
+    fn foo() {
+        let b = false;
+        let n = 1;
+        let _ = b + n; // error: invalid binary operation
+    }
+    "#,
+    )
+}
+
 fn infer_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
     insta::assert_snapshot!(insta::_macro_support::AutoName, infer(&text), &text);

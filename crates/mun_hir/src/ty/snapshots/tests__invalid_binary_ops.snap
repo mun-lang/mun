@@ -1,0 +1,13 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "fn foo() {\n    let b = false;\n    let n = 1;\n    let _ = b + n; // error: invalid binary operation\n}"
+---
+[57; 62): cannot apply binary operator
+[9; 100) '{     ...tion }': nothing
+[19; 20) 'b': bool
+[23; 28) 'false': bool
+[38; 39) 'n': int
+[42; 43) '1': int
+[57; 58) 'b': bool
+[57; 62) 'b + n': int
+[61; 62) 'n': int
