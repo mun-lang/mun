@@ -61,7 +61,7 @@ jobs:
 
       - name: Cargo check
         uses: actions-rs/cargo@v1
-        continue-on-error: ${{ matrix.config.toolchain != 'stable' }}
+        continue-on-error: ${{ matrix.config.toolchain == 'nightly' }}
         with:
           command: test
 
