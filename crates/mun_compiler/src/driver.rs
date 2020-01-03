@@ -8,7 +8,6 @@ use crate::{
 };
 use mun_codegen::IrDatabase;
 use mun_hir::{FileId, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
-use mun_target::spec::Target;
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
@@ -126,19 +125,11 @@ impl Driver {
 impl Driver {
     /// Computes the output path for the assembly of the specified file.
     fn assembly_output_path(&self, file_id: FileId) -> PathBuf {
-        let target: Target = self.db.target();
         let relative_path: RelativePathBuf = self.db.file_relative_path(file_id);
         let original_filename = Path::new(relative_path.file_name().unwrap());
 
-        // Get the dll suffix without the starting dot
-        let dll_extension = if target.options.dll_suffix.starts_with('.') {
-            &target.options.dll_suffix[1..]
-        } else {
-            &target.options.dll_suffix
-        };
-
-        // Add the dll suffix to the original filename
-        let output_file_name = original_filename.with_extension(dll_extension);
+        // Add the `munlib` suffix to the original filename
+        let output_file_name = original_filename.with_extension("munlib");
 
         // If there is an out dir specified, prepend the output directory
         if let Some(ref out_dir) = self.out_dir {
