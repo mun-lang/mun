@@ -86,6 +86,10 @@ fn gen_signature_from_function<D: IrDatabase>(
     function: hir::Function,
 ) -> StructValue {
     let name_str = intern_string(&module, &function.name(db).to_string());
+    let _visibility = match function.visibility(db) {
+        hir::Visibility::Public => 0,
+        _ => 1,
+    };
     let ret_type_ir = gen_signature_return_type(db, module, types, function);
     let params_type_ir = gen_signature_argument_types(db, module, types, function);
 

@@ -60,4 +60,4 @@ use crate::{
     source_id::{AstIdMap, FileAstId},
 };
 
-pub use self::code_model::{FnData, Function, Module, ModuleDef};
+pub use self::code_model::{FnData, Function, Module, ModuleDef, Visibility};
