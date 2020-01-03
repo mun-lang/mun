@@ -298,3 +298,39 @@ fn hotreloadable() {
     );
     assert_invoke_eq!(i64, 10, driver, "main");
 }
+
+#[test]
+fn compiler_valid_utf8() {
+    use std::ffi::CStr;
+    use std::str;
+
+    let mut driver = TestDriver::new(
+        r#"
+    fn foo(n:int):bool { false }
+    "#,
+    );
+
+    let foo_func = driver.runtime.get_function_info("foo").unwrap();
+
+    // Check foo name for valid utf8
+    assert_eq!(
+        str::from_utf8(&unsafe { CStr::from_ptr(foo_func.signature.name).to_bytes() }).is_err(),
+        false
+    );
+    // Check foo arg type for valid utf8
+    assert_eq!(
+        str::from_utf8(&unsafe { CStr::from_ptr((*foo_func.signature.arg_types).name).to_bytes() })
+            .is_err(),
+        false
+    );
+    // Check foo return type for valid utf8
+    assert_eq!(
+        str::from_utf8(&unsafe {
+            CStr::from_ptr((*foo_func.signature.return_type).name).to_bytes()
+        })
+        .is_err(),
+        false
+    );
+
+    assert_invoke_eq!(bool, false, driver, "foo", 10i64);
+}
