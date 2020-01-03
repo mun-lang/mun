@@ -6,7 +6,7 @@ edition = "2018"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
 license = "MIT OR Apache-2.0"
-description = "A runtime to enable running Mun code from Rust"
+description = "A runtime for hot reloading and invoking Mun from Rust"
 
 [dependencies]
 failure = "0.1.5"

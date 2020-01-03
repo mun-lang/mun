@@ -6,7 +6,7 @@ edition = "2018"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
 license = "MIT OR Apache-2.0"
-description = "Enables continiously monitoring of Mun source and recompiling changes"
+description = "Functionality for continuously monitoring Mun source files for changes and triggering recompilation"
 
 [dependencies]
 failure = "0.1.5"

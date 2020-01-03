@@ -6,7 +6,7 @@ edition = "2018"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
 license = "MIT OR Apache-2.0"
-description = "Describes the Mun binary ABI"
+description = "Rust wrapper for the Mun ABI"
 
 [build-dependencies]
 bindgen = "0.51"
