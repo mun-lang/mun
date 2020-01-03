@@ -3,13 +3,12 @@ use crate::prelude::*;
 use std::ffi::{c_void, CStr};
 use std::marker::{Send, Sync};
 use std::slice;
+use std::str;
 
 impl TypeInfo {
     /// Returns the type's name.
     pub fn name(&self) -> &str {
-        unsafe { CStr::from_ptr(self.name) }
-            .to_str()
-            .expect("Type name contains invalid UTF8")
+        unsafe { str::from_utf8_unchecked(CStr::from_ptr(self.name).to_bytes()) }
     }
 }
 
@@ -25,9 +24,7 @@ unsafe impl Sync for TypeInfo {}
 impl FunctionSignature {
     /// Returns the function's name.
     pub fn name(&self) -> &str {
-        unsafe { CStr::from_ptr(self.name) }
-            .to_str()
-            .expect("Function name contains invalid UTF8")
+        unsafe { str::from_utf8_unchecked(CStr::from_ptr(self.name).to_bytes()) }
     }
 
     /// Returns the function's privacy level.
@@ -59,9 +56,7 @@ unsafe impl Sync for FunctionInfo {}
 impl ModuleInfo {
     /// Returns the module's full path.
     pub fn path(&self) -> &str {
-        unsafe { CStr::from_ptr(self.path) }
-            .to_str()
-            .expect("Module path contains invalid UTF8")
+        unsafe { str::from_utf8_unchecked(CStr::from_ptr(self.path).to_bytes()) }
     }
 
     // /// Finds the type's fields that match `filter`.
@@ -180,11 +175,9 @@ impl AssemblyInfo {
             unsafe { slice::from_raw_parts(self.dependencies, self.num_dependencies as usize) }
         };
 
-        dependencies.iter().map(|d| {
-            unsafe { CStr::from_ptr(*d) }
-                .to_str()
-                .expect("dependency path contains invalid UTF8")
-        })
+        dependencies
+            .iter()
+            .map(|d| unsafe { str::from_utf8_unchecked(CStr::from_ptr(*d).to_bytes()) })
     }
 }
 
