@@ -34,8 +34,8 @@ pub fn main(options: CompilerOptions) -> Result<(), Error> {
                 driver.set_file_text(file_id, &contents);
                 if !driver.emit_diagnostics(&mut writer)? {
                     driver.write_assembly(file_id)?;
+                    println!("Successfully compiled: {}", path.display())
                 }
-                println!("Successfully compiled: {}", path.display())
             }
             Ok(_) => {}
             Err(e) => eprintln!("Watcher error: {:?}", e),
