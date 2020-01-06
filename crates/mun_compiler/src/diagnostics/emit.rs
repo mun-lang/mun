@@ -82,6 +82,9 @@ impl Emit for Diagnostic {
                     "^".to_string()
                         .repeat((line_col_end.col - line_col.col) as usize)
                 )?;
+            } else {
+                // move cursor to next line
+                writeln!(writer)?;
             }
         }
 
