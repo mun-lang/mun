@@ -267,3 +267,16 @@ fn struct_field_index() {
     "#,
     )
 }
+
+#[test]
+fn memory_type_specifier() {
+    snapshot_test(
+        r#"
+    struct Foo {};
+    struct(gc) Baz {};
+    struct(value) Baz {};
+    struct() Err1 {};    // expected memory type specifier
+    struct(foo) Err2 {}; // expected memory type specifier
+    "#,
+    )
+}

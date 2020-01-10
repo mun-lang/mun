@@ -118,6 +118,26 @@ impl StructKind {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StructMemoryKind {
+    /// A garbage collected struct is allocated on the heap and uses reference semantics when passed
+    /// around.
+    GC,
+
+    /// A value struct is allocated on the stack and uses value semantics when passed around.
+    Value,
+}
+
+impl ast::MemoryTypeSpecifier {
+    pub fn kind(&self) -> Option<StructMemoryKind> {
+        match self.syntax.first_child_or_token().map(|s| s.kind()) {
+            Some(SyntaxKind::GC_KW) => Some(StructMemoryKind::GC),
+            Some(SyntaxKind::VALUE_KW) => Some(StructMemoryKind::Value),
+            _ => None,
+        }
+    }
+}
+
 impl ast::StructDef {
     pub fn kind(&self) -> StructKind {
         StructKind::from_node(self)

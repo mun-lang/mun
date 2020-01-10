@@ -95,6 +95,10 @@ Grammar(
         "INDEX",
         "WHITESPACE",
         "COMMENT",
+
+        // Contextual keywords
+        "GC_KW",
+        "VALUE_KW",
     ],
     nodes: [
         "SOURCE_FILE",
@@ -105,8 +109,9 @@ Grammar(
 
         "PARAM_LIST",
         "PARAM",
-        
+
         "STRUCT_DEF",
+        "MEMORY_TYPE_SPECIFIER",
         "RECORD_FIELD_DEF_LIST",
         "RECORD_FIELD_DEF",
         "TUPLE_FIELD_DEF_LIST",
@@ -177,12 +182,14 @@ Grammar(
             ],
         ),
         "StructDef": (
+            options: ["MemoryTypeSpecifier"],
             traits: [
                 "NameOwner",
                 "VisibilityOwner",
                 "DocCommentsOwner",
             ]
         ),
+        "MemoryTypeSpecifier": (),
         "RecordFieldDefList": (collections: [("fields", "RecordFieldDef")]),
         "RecordFieldDef": (
             traits: [

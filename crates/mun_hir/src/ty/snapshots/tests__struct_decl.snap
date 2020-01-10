@@ -1,8 +1,8 @@
 ---
 source: crates/mun_hir/src/ty/tests.rs
-expression: "struct Foo;\nstruct Bar {\n    f: float,\n    i: int,\n}\nstruct Baz(float, int);\n\n\nfn main() {\n    let foo: Foo;\n    let bar: Bar;\n    let baz: Baz;\n}"
+expression: "struct Foo;\nstruct(gc) Bar {\n    f: float,\n    i: int,\n}\nstruct(value) Baz(float, int);\n\n\nfn main() {\n    let foo: Foo;\n    let bar: Bar;\n    let baz: Baz;\n}"
 ---
-[89; 146) '{     ...Baz; }': nothing
-[99; 102) 'foo': Foo
-[117; 120) 'bar': Bar
-[135; 138) 'baz': Baz
+[100; 157) '{     ...Baz; }': nothing
+[110; 113) 'foo': Foo
+[128; 131) 'bar': Bar
+[146; 149) 'baz': Baz

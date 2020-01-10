@@ -103,10 +103,10 @@ impl<'t> Parser<'t> {
         kinds.contains(self.current())
     }
 
-    //    /// Checks if the current token is contextual keyword with text `t`.
-    //    pub(crate) fn at_contextual_kw(&self, kw: &str) -> bool {
-    //        self.token_source.is_keyword(kw)
-    //    }
+    /// Checks if the current token is contextual keyword with text `t`.
+    pub(crate) fn at_contextual_kw(&self, kw: &str) -> bool {
+        self.token_source.is_keyword(kw)
+    }
 
     /// Starts a new node in the syntax tree. All nodes and tokens consumed between the `start` and
     /// the corresponding `Marker::complete` belong to the same node.
@@ -128,6 +128,20 @@ impl<'t> Parser<'t> {
             return;
         }
         self.do_bump(kind, 1)
+    }
+
+    /// Advances the parser by one token, remapping its kind.
+    /// This is useful to create contextual keywords from
+    /// identifiers. For example, the lexer creates an `union`
+    /// *identifier* token, but the parser remaps it to the
+    /// `union` keyword, and keyword is what ends up in the
+    /// final tree.
+    pub(crate) fn bump_remap(&mut self, kind: SyntaxKind) {
+        if self.nth(0) == EOF {
+            // FIXME: panic!?
+            return;
+        }
+        self.do_bump(kind, 1);
     }
 
     fn do_bump(&mut self, kind: SyntaxKind, n_raw_tokens: u8) {

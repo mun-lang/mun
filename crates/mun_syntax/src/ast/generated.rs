@@ -607,6 +607,33 @@ impl AstNode for LoopExpr {
 impl ast::LoopBodyOwner for LoopExpr {}
 impl LoopExpr {}
 
+// MemoryTypeSpecifier
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct MemoryTypeSpecifier {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for MemoryTypeSpecifier {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            MEMORY_TYPE_SPECIFIER => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(MemoryTypeSpecifier { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl MemoryTypeSpecifier {}
+
 // ModuleItem
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1417,7 +1444,11 @@ impl AstNode for StructDef {
 impl ast::NameOwner for StructDef {}
 impl ast::VisibilityOwner for StructDef {}
 impl ast::DocCommentsOwner for StructDef {}
-impl StructDef {}
+impl StructDef {
+    pub fn memory_type_specifier(&self) -> Option<MemoryTypeSpecifier> {
+        super::child_opt(self)
+    }
+}
 
 // TupleFieldDef
 

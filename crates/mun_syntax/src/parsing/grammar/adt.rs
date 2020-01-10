@@ -3,7 +3,7 @@ use super::*;
 pub(super) fn struct_def(p: &mut Parser, m: Marker) {
     assert!(p.at(T![struct]));
     p.bump(T![struct]);
-
+    memory_type_specifier(p);
     name_recovery(p, declarations::DECLARATION_RECOVERY_SET);
     match p.current() {
         T![;] => {
@@ -35,6 +35,26 @@ pub(super) fn record_field_def_list(p: &mut Parser) {
     p.expect(T!['}']);
     p.eat(T![;]);
     m.complete(p, RECORD_FIELD_DEF_LIST);
+}
+
+fn memory_type_specifier(p: &mut Parser) {
+    if p.at(T!['(']) {
+        let m = p.start();
+        p.bump(T!['(']);
+        if p.at(IDENT) {
+            if p.at_contextual_kw("gc") {
+                p.bump_remap(GC_KW)
+            } else if p.at_contextual_kw("value") {
+                p.bump_remap(VALUE_KW)
+            } else {
+                p.error_and_bump("expected memory type specifier");
+            }
+        } else {
+            p.error("expected memory type specifier");
+        }
+        p.expect(T![')']);
+        m.complete(p, MEMORY_TYPE_SPECIFIER);
+    }
 }
 
 pub(super) fn tuple_field_def_list(p: &mut Parser) {

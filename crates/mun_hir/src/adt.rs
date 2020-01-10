@@ -8,6 +8,8 @@ use crate::{
 };
 use mun_syntax::ast::{self, NameOwner, TypeAscriptionOwner};
 
+pub use mun_syntax::ast::StructMemoryKind;
+
 /// A single field of a record
 /// ```mun
 /// struct Foo {
@@ -44,6 +46,7 @@ pub struct StructData {
     pub name: Name,
     pub fields: Arena<StructFieldId, StructFieldData>,
     pub kind: StructKind,
+    pub memory_kind: StructMemoryKind,
     type_ref_map: TypeRefMap,
     type_ref_source_map: TypeRefSourceMap,
 }
@@ -56,6 +59,12 @@ impl StructData {
             .name()
             .map(|n| n.as_name())
             .unwrap_or_else(Name::missing);
+
+        let memory_kind = src
+            .ast
+            .memory_type_specifier()
+            .and_then(|s| s.kind())
+            .unwrap_or(StructMemoryKind::GC);
 
         let mut type_ref_builder = TypeRefBuilder::default();
         let (fields, kind) = match src.ast.kind() {
@@ -88,6 +97,7 @@ impl StructData {
             name,
             fields,
             kind,
+            memory_kind,
             type_ref_map,
             type_ref_source_map,
         })

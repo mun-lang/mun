@@ -177,11 +177,11 @@ fn struct_decl() {
     infer_snapshot(
         r#"
     struct Foo;
-    struct Bar {
+    struct(gc) Bar {
         f: float,
         i: int,
     }
-    struct Baz(float, int);
+    struct(value) Baz(float, int);
 
 
     fn main() {
