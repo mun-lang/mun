@@ -3,7 +3,7 @@ use super::*;
 pub(super) fn struct_def(p: &mut Parser, m: Marker) {
     assert!(p.at(T![struct]));
     p.bump(T![struct]);
-    memory_type_specifier(p);
+    opt_memory_type_specifier(p);
     name_recovery(p, declarations::DECLARATION_RECOVERY_SET);
     match p.current() {
         T![;] => {
@@ -37,7 +37,7 @@ pub(super) fn record_field_def_list(p: &mut Parser) {
     m.complete(p, RECORD_FIELD_DEF_LIST);
 }
 
-fn memory_type_specifier(p: &mut Parser) {
+fn opt_memory_type_specifier(p: &mut Parser) {
     if p.at(T!['(']) {
         let m = p.start();
         p.bump(T!['(']);

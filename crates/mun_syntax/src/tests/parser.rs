@@ -280,3 +280,16 @@ fn memory_type_specifier() {
     "#,
     )
 }
+
+#[test]
+fn visibility() {
+    snapshot_test(
+        r#"
+    pub struct Foo {};
+    pub(package) struct(gc) Baz {};
+    pub(super) fn foo() {}
+    pub(package) fn bar() {}
+    pub fn baz() {}
+    "#,
+    )
+}

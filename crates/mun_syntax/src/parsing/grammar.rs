@@ -77,13 +77,24 @@ fn name_ref_or_index(p: &mut Parser) {
 }
 
 fn opt_visibility(p: &mut Parser) -> bool {
-    if p.at(PUB_KW) {
-        let m = p.start();
-        p.bump(PUB_KW);
-        m.complete(p, VISIBILITY);
-        true
-    } else {
-        false
+    match p.current() {
+        T![pub] => {
+            let m = p.start();
+            p.bump(T![pub]);
+            if p.at(T!['(']) {
+                match p.nth(1) {
+                    T![package] | T![super] => {
+                        p.bump_any();
+                        p.bump_any();
+                        p.expect(T![')']);
+                    }
+                    _ => (),
+                }
+            }
+            m.complete(p, VISIBILITY);
+            true
+        }
+        _ => false,
     }
 }
 

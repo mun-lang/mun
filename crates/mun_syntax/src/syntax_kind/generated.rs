@@ -63,8 +63,6 @@ pub enum SyntaxKind {
     IF_KW,
     IN_KW,
     NIL_KW,
-    SELF_KW,
-    SUPER_KW,
     RETURN_KW,
     TRUE_KW,
     WHILE_KW,
@@ -75,6 +73,9 @@ pub enum SyntaxKind {
     STRUCT_KW,
     NEVER_KW,
     PUB_KW,
+    PACKAGE_KW,
+    SUPER_KW,
+    SELF_KW,
     INT_NUMBER,
     FLOAT_NUMBER,
     STRING,
@@ -179,8 +180,6 @@ macro_rules! T {
     (if) => { $crate::SyntaxKind::IF_KW };
     (in) => { $crate::SyntaxKind::IN_KW };
     (nil) => { $crate::SyntaxKind::NIL_KW };
-    (self) => { $crate::SyntaxKind::SELF_KW };
-    (super) => { $crate::SyntaxKind::SUPER_KW };
     (return) => { $crate::SyntaxKind::RETURN_KW };
     (true) => { $crate::SyntaxKind::TRUE_KW };
     (while) => { $crate::SyntaxKind::WHILE_KW };
@@ -191,6 +190,9 @@ macro_rules! T {
     (struct) => { $crate::SyntaxKind::STRUCT_KW };
     (never) => { $crate::SyntaxKind::NEVER_KW };
     (pub) => { $crate::SyntaxKind::PUB_KW };
+    (package) => { $crate::SyntaxKind::PACKAGE_KW };
+    (super) => { $crate::SyntaxKind::SUPER_KW };
+    (self) => { $crate::SyntaxKind::SELF_KW };
 }
 
 impl From<u16> for SyntaxKind {
@@ -219,8 +221,6 @@ impl SyntaxKind {
             | IF_KW
             | IN_KW
             | NIL_KW
-            | SELF_KW
-            | SUPER_KW
             | RETURN_KW
             | TRUE_KW
             | WHILE_KW
@@ -231,6 +231,9 @@ impl SyntaxKind {
             | STRUCT_KW
             | NEVER_KW
             | PUB_KW
+            | PACKAGE_KW
+            | SUPER_KW
+            | SELF_KW
                 => true,
             _ => false
         }
@@ -337,8 +340,6 @@ impl SyntaxKind {
                 IF_KW => &SyntaxInfo { name: "IF_KW" },
                 IN_KW => &SyntaxInfo { name: "IN_KW" },
                 NIL_KW => &SyntaxInfo { name: "NIL_KW" },
-                SELF_KW => &SyntaxInfo { name: "SELF_KW" },
-                SUPER_KW => &SyntaxInfo { name: "SUPER_KW" },
                 RETURN_KW => &SyntaxInfo { name: "RETURN_KW" },
                 TRUE_KW => &SyntaxInfo { name: "TRUE_KW" },
                 WHILE_KW => &SyntaxInfo { name: "WHILE_KW" },
@@ -349,6 +350,9 @@ impl SyntaxKind {
                 STRUCT_KW => &SyntaxInfo { name: "STRUCT_KW" },
                 NEVER_KW => &SyntaxInfo { name: "NEVER_KW" },
                 PUB_KW => &SyntaxInfo { name: "PUB_KW" },
+                PACKAGE_KW => &SyntaxInfo { name: "PACKAGE_KW" },
+                SUPER_KW => &SyntaxInfo { name: "SUPER_KW" },
+                SELF_KW => &SyntaxInfo { name: "SELF_KW" },
                 INT_NUMBER => &SyntaxInfo { name: "INT_NUMBER" },
                 FLOAT_NUMBER => &SyntaxInfo { name: "FLOAT_NUMBER" },
                 STRING => &SyntaxInfo { name: "STRING" },
@@ -417,8 +421,6 @@ impl SyntaxKind {
                 "if" => IF_KW,
                 "in" => IN_KW,
                 "nil" => NIL_KW,
-                "self" => SELF_KW,
-                "super" => SUPER_KW,
                 "return" => RETURN_KW,
                 "true" => TRUE_KW,
                 "while" => WHILE_KW,
@@ -429,6 +431,9 @@ impl SyntaxKind {
                 "struct" => STRUCT_KW,
                 "never" => NEVER_KW,
                 "pub" => PUB_KW,
+                "package" => PACKAGE_KW,
+                "super" => SUPER_KW,
+                "self" => SELF_KW,
                 _ => return None,
             };
             Some(kw)

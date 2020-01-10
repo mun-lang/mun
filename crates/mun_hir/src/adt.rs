@@ -63,8 +63,8 @@ impl StructData {
         let memory_kind = src
             .ast
             .memory_type_specifier()
-            .and_then(|s| s.kind())
-            .unwrap_or(StructMemoryKind::GC);
+            .map(|s| s.kind())
+            .unwrap_or_default();
 
         let mut type_ref_builder = TypeRefBuilder::default();
         let (fields, kind) = match src.ast.kind() {

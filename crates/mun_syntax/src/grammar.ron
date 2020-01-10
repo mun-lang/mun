@@ -66,8 +66,6 @@ Grammar(
         "nil",
         // "not",        // We use !
         // "or",
-        "self",
-        "super",
         // "repeat",    // Not supported
         "return",
         // "then",      // Not supported
@@ -82,7 +80,11 @@ Grammar(
         "class",
         "struct",
         "never",
-        "pub"
+        "pub",
+
+        "package",
+        "super",
+        "self"
     ],
     literals: [
         "INT_NUMBER",

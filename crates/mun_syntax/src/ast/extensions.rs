@@ -128,12 +128,18 @@ pub enum StructMemoryKind {
     Value,
 }
 
+impl Default for StructMemoryKind {
+    fn default() -> Self {
+        StructMemoryKind::GC
+    }
+}
+
 impl ast::MemoryTypeSpecifier {
-    pub fn kind(&self) -> Option<StructMemoryKind> {
+    pub fn kind(&self) -> StructMemoryKind {
         match self.syntax.first_child_or_token().map(|s| s.kind()) {
-            Some(SyntaxKind::GC_KW) => Some(StructMemoryKind::GC),
-            Some(SyntaxKind::VALUE_KW) => Some(StructMemoryKind::Value),
-            _ => None,
+            Some(SyntaxKind::VALUE_KW) => StructMemoryKind::Value,
+            Some(SyntaxKind::GC_KW) => StructMemoryKind::GC,
+            _ => StructMemoryKind::default(),
         }
     }
 }
@@ -141,5 +147,35 @@ impl ast::MemoryTypeSpecifier {
 impl ast::StructDef {
     pub fn kind(&self) -> StructKind {
         StructKind::from_node(self)
+    }
+}
+
+pub enum VisibilityKind {
+    PubPackage,
+    PubSuper,
+    Pub,
+}
+
+impl ast::Visibility {
+    pub fn kind(&self) -> VisibilityKind {
+        if self.is_pub_package() {
+            VisibilityKind::PubPackage
+        } else if self.is_pub_super() {
+            VisibilityKind::PubSuper
+        } else {
+            VisibilityKind::Pub
+        }
+    }
+
+    fn is_pub_package(&self) -> bool {
+        self.syntax()
+            .children_with_tokens()
+            .any(|it| it.kind() == T![package])
+    }
+
+    fn is_pub_super(&self) -> bool {
+        self.syntax()
+            .children_with_tokens()
+            .any(|it| it.kind() == T![super])
     }
 }
