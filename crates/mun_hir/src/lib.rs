@@ -16,6 +16,7 @@ pub mod diagnostics;
 mod display;
 mod expr;
 mod ids;
+mod in_file;
 mod input;
 pub mod line_index;
 mod model;

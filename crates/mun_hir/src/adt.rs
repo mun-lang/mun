@@ -55,19 +55,19 @@ impl StructData {
     pub(crate) fn struct_data_query(db: &impl DefDatabase, id: StructId) -> Arc<StructData> {
         let src = id.source(db);
         let name = src
-            .ast
+            .value
             .name()
             .map(|n| n.as_name())
             .unwrap_or_else(Name::missing);
 
         let memory_kind = src
-            .ast
+            .value
             .memory_type_specifier()
             .map(|s| s.kind())
             .unwrap_or_default();
 
         let mut type_ref_builder = TypeRefBuilder::default();
-        let (fields, kind) = match src.ast.kind() {
+        let (fields, kind) = match src.value.kind() {
             ast::StructKind::Record(r) => {
                 let fields = r
                     .fields()

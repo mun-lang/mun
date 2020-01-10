@@ -838,11 +838,11 @@ mod diagnostics {
                 InferenceDiagnostic::UnresolvedValue { id } => {
                     let expr = match id {
                         ExprOrPatId::ExprId(id) => body.expr_syntax(*id).map(|ptr| {
-                            ptr.ast
+                            ptr.value
                                 .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr())
                         }),
                         ExprOrPatId::PatId(id) => {
-                            body.pat_syntax(*id).map(|ptr| ptr.ast.syntax_node_ptr())
+                            body.pat_syntax(*id).map(|ptr| ptr.value.syntax_node_ptr())
                         }
                     }
                     .unwrap();
@@ -861,7 +861,7 @@ mod diagnostics {
                     let expr = body
                         .expr_syntax(*id)
                         .unwrap()
-                        .ast
+                        .value
                         .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(ParameterCountMismatch {
                         file,
@@ -874,7 +874,7 @@ mod diagnostics {
                     let expr = body
                         .expr_syntax(*id)
                         .unwrap()
-                        .ast
+                        .value
                         .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(ExpectedFunction {
                         file,
@@ -890,7 +890,7 @@ mod diagnostics {
                     let expr = body
                         .expr_syntax(*id)
                         .unwrap()
-                        .ast
+                        .value
                         .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(MismatchedType {
                         file,
@@ -907,7 +907,7 @@ mod diagnostics {
                     let expr = body
                         .expr_syntax(*id)
                         .unwrap()
-                        .ast
+                        .value
                         .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(IncompatibleBranch {
                         file,
@@ -920,7 +920,7 @@ mod diagnostics {
                     let expr = body
                         .expr_syntax(*id)
                         .unwrap()
-                        .ast
+                        .value
                         .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(MissingElseBranch {
                         file,
@@ -932,7 +932,7 @@ mod diagnostics {
                     let expr = body
                         .expr_syntax(*id)
                         .unwrap()
-                        .ast
+                        .value
                         .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(CannotApplyBinaryOp {
                         file,
@@ -945,12 +945,12 @@ mod diagnostics {
                     let id = body
                         .expr_syntax(*id)
                         .unwrap()
-                        .ast
+                        .value
                         .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     let lhs = body
                         .expr_syntax(*lhs)
                         .unwrap()
-                        .ast
+                        .value
                         .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(InvalidLHS {
                         file,
@@ -962,7 +962,7 @@ mod diagnostics {
                     let id = body
                         .expr_syntax(*id)
                         .unwrap()
-                        .ast
+                        .value
                         .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(ReturnMissingExpression {
                         file,
@@ -973,7 +973,7 @@ mod diagnostics {
                     let id = body
                         .expr_syntax(*id)
                         .unwrap()
-                        .ast
+                        .value
                         .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(BreakOutsideLoop {
                         file,
@@ -984,7 +984,7 @@ mod diagnostics {
                     let id = body
                         .expr_syntax(*id)
                         .unwrap()
-                        .ast
+                        .value
                         .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(BreakWithValueOutsideLoop {
                         file,

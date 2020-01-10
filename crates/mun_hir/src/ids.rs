@@ -1,5 +1,6 @@
+use crate::in_file::InFile;
 use crate::source_id::{AstId, FileAstId};
-use crate::{code_model::src::Source, DefDatabase, FileId};
+use crate::{DefDatabase, FileId};
 use mun_syntax::{ast, AstNode};
 use std::hash::{Hash, Hasher};
 
@@ -78,13 +79,10 @@ pub(crate) trait AstItemDef<N: AstNode>: salsa::InternKey + Clone {
         Self::intern(ctx.db, loc)
     }
 
-    fn source(self, db: &impl DefDatabase) -> Source<N> {
+    fn source(self, db: &impl DefDatabase) -> InFile<N> {
         let loc = self.lookup_intern(db);
         let ast = loc.ast_id.to_node(db);
-        Source {
-            file_id: loc.ast_id.file_id(),
-            ast,
-        }
+        InFile::new(loc.ast_id.file_id(), ast)
     }
 
     fn file_id(self, db: &impl DefDatabase) -> FileId {

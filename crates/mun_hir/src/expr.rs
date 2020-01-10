@@ -6,7 +6,7 @@ use crate::{
 };
 
 //pub use mun_syntax::ast::PrefixOp as UnaryOp;
-use crate::code_model::src::{HasSource, Source};
+use crate::code_model::src::HasSource;
 use crate::name::AsName;
 use crate::type_ref::{TypeRef, TypeRefBuilder, TypeRefId, TypeRefMap, TypeRefSourceMap};
 use either::Either;
@@ -18,6 +18,7 @@ use std::ops::Index;
 use std::sync::Arc;
 
 pub use self::scope::ExprScopes;
+use crate::in_file::InFile;
 use crate::resolve::Resolver;
 use std::mem;
 
@@ -105,10 +106,10 @@ impl Index<TypeRefId> for Body {
 }
 
 type ExprPtr = Either<AstPtr<ast::Expr>, AstPtr<ast::RecordField>>;
-type ExprSource = Source<ExprPtr>;
+type ExprSource = InFile<ExprPtr>;
 
 type PatPtr = AstPtr<ast::Pat>; //Either<AstPtr<ast::Pat>, AstPtr<ast::SelfParam>>;
-type PatSource = Source<PatPtr>;
+type PatSource = InFile<PatPtr>;
 
 type RecordPtr = AstPtr<ast::RecordField>;
 
@@ -398,13 +399,9 @@ where
     fn alloc_pat(&mut self, pat: Pat, ptr: PatPtr) -> PatId {
         let id = self.pats.alloc(pat);
         self.source_map.pat_map.insert(ptr, id);
-        self.source_map.pat_map_back.insert(
-            id,
-            Source {
-                file_id: self.current_file_id,
-                ast: ptr,
-            },
-        );
+        self.source_map
+            .pat_map_back
+            .insert(id, InFile::new(self.current_file_id, ptr));
         id
     }
 
@@ -412,13 +409,9 @@ where
         let ptr = Either::Left(ptr);
         let id = self.exprs.alloc(expr);
         self.source_map.expr_map.insert(ptr, id);
-        self.source_map.expr_map_back.insert(
-            id,
-            Source {
-                file_id: self.current_file_id,
-                ast: ptr,
-            },
-        );
+        self.source_map
+            .expr_map_back
+            .insert(id, InFile::new(self.current_file_id, ptr));
         id
     }
 
@@ -426,13 +419,9 @@ where
         let ptr = Either::Right(ptr);
         let id = self.exprs.alloc(expr);
         self.source_map.expr_map.insert(ptr, id);
-        self.source_map.expr_map_back.insert(
-            id,
-            Source {
-                file_id: self.current_file_id,
-                ast: ptr,
-            },
-        );
+        self.source_map
+            .expr_map_back
+            .insert(id, InFile::new(self.current_file_id, ptr));
         id
     }
 
@@ -806,7 +795,7 @@ pub(crate) fn body_with_source_map_query(
         DefWithBody::Function(ref f) => {
             let src = f.source(db);
             collector = ExprCollector::new(def, src.file_id, db);
-            collector.collect_fn_body(&src.ast)
+            collector.collect_fn_body(&src.value)
         }
     }
 

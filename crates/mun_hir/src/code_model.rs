@@ -228,26 +228,26 @@ impl FnData {
         let src = func.source(db);
         let mut type_ref_builder = TypeRefBuilder::default();
         let name = src
-            .ast
+            .value
             .name()
             .map(|n| n.as_name())
             .unwrap_or_else(Name::missing);
 
         let visibility = src
-            .ast
+            .value
             .visibility()
             .map(|_v| Visibility::Public)
             .unwrap_or(Visibility::Private);
 
         let mut params = Vec::new();
-        if let Some(param_list) = src.ast.param_list() {
+        if let Some(param_list) = src.value.param_list() {
             for param in param_list.params() {
                 let type_ref = type_ref_builder.alloc_from_node_opt(param.ascribed_type().as_ref());
                 params.push(type_ref);
             }
         }
 
-        let ret_type = if let Some(type_ref) = src.ast.ret_type().and_then(|rt| rt.type_ref()) {
+        let ret_type = if let Some(type_ref) = src.value.ret_type().and_then(|rt| rt.type_ref()) {
             type_ref_builder.alloc_from_node(&type_ref)
         } else {
             type_ref_builder.unit()

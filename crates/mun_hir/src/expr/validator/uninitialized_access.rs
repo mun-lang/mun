@@ -198,7 +198,7 @@ impl<'a, 'b, 'd, D: HirDatabase> ExprValidator<'a, 'b, 'd, D> {
                     pat: body_source_map
                         .expr_syntax(expr)
                         .unwrap()
-                        .ast
+                        .value
                         .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr()),
                 })
             }
