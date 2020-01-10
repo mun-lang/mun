@@ -1,4 +1,0 @@
-fn foo():int {
-    let a:float = 3.0;
-    a
-}
