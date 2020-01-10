@@ -101,7 +101,7 @@ pub trait HirDatabase: DefDatabase {
     fn module_data(&self, file_id: FileId) -> Arc<ModuleData>;
 
     #[salsa::invoke(crate::expr::body_hir_query)]
-    fn body_hir(&self, def: DefWithBody) -> Arc<crate::expr::Body>;
+    fn body(&self, def: DefWithBody) -> Arc<crate::expr::Body>;
 
     #[salsa::invoke(crate::expr::body_with_source_map_query)]
     fn body_with_source_map(

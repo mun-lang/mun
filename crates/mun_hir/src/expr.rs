@@ -22,6 +22,7 @@ use crate::resolve::Resolver;
 use std::mem;
 
 pub(crate) mod scope;
+pub(crate) mod validator;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ExprId(RawId);

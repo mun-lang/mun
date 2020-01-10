@@ -2,10 +2,13 @@ pub(crate) mod src;
 
 use self::src::HasSource;
 use crate::adt::{StructData, StructFieldId};
+use crate::code_model::diagnostics::ModuleDefinitionDiagnostic;
 use crate::diagnostics::DiagnosticSink;
+use crate::expr::validator::ExprValidator;
 use crate::expr::{Body, BodySourceMap};
 use crate::ids::AstItemDef;
 use crate::ids::LocationCtx;
+use crate::name::*;
 use crate::name_resolution::Namespace;
 use crate::raw::{DefKind, RawFileItem};
 use crate::resolve::{Resolution, Resolver};
@@ -157,7 +160,7 @@ impl DefWithBody {
     }
 
     pub fn body(self, db: &impl HirDatabase) -> Arc<Body> {
-        db.body_hir(self)
+        db.body(self)
     }
 
     pub fn body_source_map(self, db: &impl HirDatabase) -> Arc<BodySourceMap> {
@@ -307,7 +310,7 @@ impl Function {
     }
 
     pub fn body(self, db: &impl HirDatabase) -> Arc<Body> {
-        db.body_hir(self.into())
+        db.body(self.into())
     }
 
     pub fn ty(self, db: &impl HirDatabase) -> Ty {
@@ -330,8 +333,8 @@ impl Function {
     pub fn diagnostics(self, db: &impl HirDatabase, sink: &mut DiagnosticSink) {
         let infer = self.infer(db);
         infer.add_diagnostics(db, self, sink);
-        //        let mut validator = ExprValidator::new(self, infer, sink);
-        //        validator.validate_body(db);
+        let mut validator = ExprValidator::new(self, db, sink);
+        validator.validate_body();
     }
 }
 
@@ -341,9 +344,6 @@ pub enum BuiltinType {
     Int,
     Boolean,
 }
-
-use crate::code_model::diagnostics::ModuleDefinitionDiagnostic;
-use crate::name::*;
 
 impl BuiltinType {
     #[rustfmt::skip]
