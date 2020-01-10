@@ -1,0 +1,6 @@
+---
+source: crates/mun_hir/src/expr/validator/tests.rs
+expression: "fn foo() {\n    let a:int;\n    if true { a = 3; } else { a = 4; }\n    let b = a + 4;  // correct, `a` is initialized either way\n}\n\nfn bar() {\n    let a:int;\n    if true { a = 3; }\n    let b = a + 4;  // `a` is possibly-unitialized\n}\n\nfn baz() {\n    let a:int;\n    if true { return } else { a = 4 };\n    let b = a + 4;  // correct, `a` is initialized either way\n}\n\nfn foz() {\n    let a:int;\n    if true { a = 4 } else { return };\n    let b = a + 4;  // correct, `a` is initialized either way\n}\n\nfn boz() {\n    let a:int;\n    return;\n    let b = a + 4;  // `a` is not initialized but this is dead code anyway\n}"
+---
+[191; 192): use of possibly-uninitialized variable
+

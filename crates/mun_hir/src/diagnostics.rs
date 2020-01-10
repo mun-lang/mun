@@ -432,3 +432,27 @@ impl Diagnostic for NoSuchField {
         self
     }
 }
+
+#[derive(Debug)]
+pub struct PossiblyUninitializedVariable {
+    pub file: FileId,
+    pub pat: SyntaxNodePtr,
+}
+
+impl Diagnostic for PossiblyUninitializedVariable {
+    fn message(&self) -> String {
+        "use of possibly-uninitialized variable".to_string()
+    }
+
+    fn file(&self) -> FileId {
+        self.file
+    }
+
+    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
+        self.pat
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}

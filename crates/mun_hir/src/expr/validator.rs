@@ -3,6 +3,9 @@ use std::sync::Arc;
 
 mod uninitialized_access;
 
+#[cfg(test)]
+mod tests;
+
 pub struct ExprValidator<'a, 'b: 'a, 'd, DB: HirDatabase> {
     func: Function,
     infer: Arc<InferenceResult>,
