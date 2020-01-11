@@ -18,7 +18,7 @@ expression: "struct Foo {\n    a: float,\n    b: int,\n}\nstruct Bar(float, int)
 [150; 153) 'foo': Foo
 [150; 155) 'foo.c': {unknown}
 [228; 231) 'bar': Bar
-[234; 237) 'Bar': Bar
+[234; 237) 'Bar': ctor Bar(float, int) -> Bar
 [234; 246) 'Bar(1.23, 4)': Bar
 [238; 242) '1.23': float
 [244; 245) '4': int

@@ -19,7 +19,7 @@ expression: "struct Foo;\nstruct Bar {\n    a: float,\n}\nstruct Baz(float, int)
 [117; 133) 'Bar { ....23, }': Bar
 [126; 130) '1.23': float
 [143; 144) 'c': Baz
-[147; 150) 'Baz': Baz
+[147; 150) 'Baz': ctor Baz(float, int) -> Baz
 [147; 159) 'Baz(1.23, 1)': Baz
 [151; 155) '1.23': float
 [157; 158) '1': int
@@ -35,10 +35,10 @@ expression: "struct Foo;\nstruct Bar {\n    a: float,\n}\nstruct Baz(float, int)
 [471; 476) 'Bar()': Bar
 [561; 562) 'b': Bar
 [565; 570) 'Bar{}': Bar
-[615; 616) 'c': Baz
-[619; 622) 'Baz': Baz
+[615; 616) 'c': ctor Baz(float, int) -> Baz
+[619; 622) 'Baz': ctor Baz(float, int) -> Baz
 [712; 713) 'c': Baz
 [716; 721) 'Baz{}': Baz
 [806; 807) 'c': Baz
-[810; 813) 'Baz': Baz
+[810; 813) 'Baz': ctor Baz(float, int) -> Baz
 [810; 815) 'Baz()': Baz

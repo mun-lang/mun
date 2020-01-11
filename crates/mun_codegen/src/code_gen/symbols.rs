@@ -3,7 +3,7 @@ use crate::ir::dispatch_table::DispatchTable;
 use crate::ir::function;
 use crate::values::{BasicValue, GlobalValue};
 use crate::IrDatabase;
-use hir::{CallableDef, Ty, TypeCtor};
+use hir::{Ty, TypeCtor};
 use inkwell::{
     attributes::Attribute,
     module::{Linkage, Module},
@@ -49,9 +49,7 @@ pub fn type_info_query(db: &impl IrDatabase, ty: Ty) -> TypeInfo {
             TypeCtor::Float => TypeInfo::from_name("@core::float"),
             TypeCtor::Int => TypeInfo::from_name("@core::int"),
             TypeCtor::Bool => TypeInfo::from_name("@core::bool"),
-            TypeCtor::Struct(s) | TypeCtor::FnDef(CallableDef::Struct(s)) => {
-                TypeInfo::from_name(s.name(db).to_string())
-            }
+            TypeCtor::Struct(s) => TypeInfo::from_name(s.name(db).to_string()),
             _ => unreachable!("{:?} unhandled", ctor),
         },
         _ => unreachable!(),

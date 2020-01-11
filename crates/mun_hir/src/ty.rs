@@ -4,6 +4,7 @@ mod op;
 
 use crate::display::{HirDisplay, HirFormatter};
 use crate::ty::infer::TypeVarId;
+use crate::ty::lower::fn_sig_for_struct_constructor;
 use crate::{HirDatabase, Struct};
 pub(crate) use infer::infer_query;
 pub use infer::InferenceResult;
@@ -190,14 +191,20 @@ impl HirDisplay for ApplicationTy {
             TypeCtor::Float => write!(f, "float"),
             TypeCtor::Int => write!(f, "int"),
             TypeCtor::Bool => write!(f, "bool"),
-            TypeCtor::Struct(def) | TypeCtor::FnDef(CallableDef::Struct(def)) => {
-                write!(f, "{}", def.name(f.db))
-            }
+            TypeCtor::Struct(def) => write!(f, "{}", def.name(f.db)),
             TypeCtor::Never => write!(f, "never"),
             TypeCtor::FnDef(CallableDef::Function(def)) => {
                 let sig = fn_sig_for_fn(f.db, def);
                 let name = def.name(f.db);
                 write!(f, "function {}", name)?;
+                write!(f, "(")?;
+                f.write_joined(sig.params(), ", ")?;
+                write!(f, ") -> {}", sig.ret().display(f.db))
+            }
+            TypeCtor::FnDef(CallableDef::Struct(def)) => {
+                let sig = fn_sig_for_struct_constructor(f.db, def);
+                let name = def.name(f.db);
+                write!(f, "ctor {}", name)?;
                 write!(f, "(")?;
                 f.write_joined(sig.params(), ", ")?;
                 write!(f, ") -> {}", sig.ret().display(f.db))

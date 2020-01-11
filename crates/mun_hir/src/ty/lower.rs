@@ -226,7 +226,7 @@ pub(crate) fn callable_item_sig(db: &impl HirDatabase, def: CallableDef) -> FnSi
     }
 }
 
-pub fn fn_sig_for_fn(db: &impl HirDatabase, def: Function) -> FnSig {
+pub(crate) fn fn_sig_for_fn(db: &impl HirDatabase, def: Function) -> FnSig {
     let data = def.data(db);
     let resolver = def.resolver(db);
     let params = data
@@ -238,7 +238,7 @@ pub fn fn_sig_for_fn(db: &impl HirDatabase, def: Function) -> FnSig {
     FnSig::from_params_and_return(params, ret)
 }
 
-fn fn_sig_for_struct_constructor(db: &impl HirDatabase, def: Struct) -> FnSig {
+pub(crate) fn fn_sig_for_struct_constructor(db: &impl HirDatabase, def: Struct) -> FnSig {
     let data = def.data(db);
     let resolver = def.resolver(db);
     let params = data
