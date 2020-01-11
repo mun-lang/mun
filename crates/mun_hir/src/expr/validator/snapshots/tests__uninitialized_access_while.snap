@@ -1,0 +1,6 @@
+---
+source: crates/mun_hir/src/expr/validator/tests.rs
+expression: "fn foo(b:int) {\n    let a:int;\n    while b < 4 { b += 1; a = b; a += 1; }\n    let c = a + 4;  // `a` is possibly-unitialized\n}"
+---
+[86; 87): use of possibly-uninitialized variable
+

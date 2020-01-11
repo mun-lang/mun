@@ -1,7 +1,8 @@
 use super::try_convert_any_to_basic;
 use crate::IrDatabase;
-use inkwell::types::{AnyTypeEnum, BasicType, BasicTypeEnum};
-use mun_hir::{ApplicationTy, Ty, TypeCtor};
+use hir::{ApplicationTy, CallableDef, Ty, TypeCtor};
+use inkwell::types::{AnyTypeEnum, BasicType, BasicTypeEnum, StructType};
+use inkwell::AddressSpace;
 
 /// Given a mun type, construct an LLVM IR type
 pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty) -> AnyTypeEnum {
@@ -12,8 +13,8 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty) -> AnyTypeEnum {
             TypeCtor::Float => AnyTypeEnum::FloatType(context.f64_type()),
             TypeCtor::Int => AnyTypeEnum::IntType(context.i64_type()),
             TypeCtor::Bool => AnyTypeEnum::IntType(context.bool_type()),
-            TypeCtor::FnDef(f) => {
-                let ty = db.fn_signature(f);
+            TypeCtor::FnDef(def @ CallableDef::Function(_)) => {
+                let ty = db.callable_sig(def);
                 let params: Vec<BasicTypeEnum> = ty
                     .params()
                     .iter()
@@ -29,8 +30,21 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty) -> AnyTypeEnum {
 
                 AnyTypeEnum::FunctionType(fn_type)
             }
+            TypeCtor::Struct(s) => {
+                let struct_ty = db.struct_ty(s);
+                match s.data(db).memory_kind {
+                    hir::StructMemoryKind::GC => struct_ty.ptr_type(AddressSpace::Generic).into(),
+                    hir::StructMemoryKind::Value => struct_ty.into(),
+                }
+            }
             _ => unreachable!(),
         },
         _ => unreachable!("unknown type can not be converted"),
     }
+}
+
+/// Returns the LLVM IR type of the specified struct
+pub fn struct_ty_query(db: &impl IrDatabase, s: hir::Struct) -> StructType {
+    let name = s.name(db).to_string();
+    db.context().opaque_struct_type(&name)
 }

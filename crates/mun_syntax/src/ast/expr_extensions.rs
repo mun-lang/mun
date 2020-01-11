@@ -3,7 +3,7 @@ use crate::ast::{child_opt, AstChildren, Literal};
 use crate::{
     ast, AstNode,
     SyntaxKind::{self, *},
-    SyntaxToken,
+    SyntaxToken, TextRange, TextUnit,
 };
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -102,6 +102,49 @@ impl BinExpr {
         let first = children.next();
         let second = children.next();
         (first, second)
+    }
+}
+
+#[derive(PartialEq, Eq)]
+pub enum FieldKind {
+    Name(ast::NameRef),
+    Index(SyntaxToken),
+}
+
+impl ast::FieldExpr {
+    pub fn index_token(&self) -> Option<SyntaxToken> {
+        self.syntax
+            .children_with_tokens()
+            .find(|e| e.kind() == SyntaxKind::INDEX)
+            .and_then(|e| e.into_token())
+    }
+
+    pub fn field_access(&self) -> Option<FieldKind> {
+        if let Some(nr) = self.name_ref() {
+            Some(FieldKind::Name(nr))
+        } else if let Some(tok) = self.index_token() {
+            Some(FieldKind::Index(tok))
+        } else {
+            None
+        }
+    }
+
+    pub fn field_range(&self) -> TextRange {
+        let field_name = self.name_ref().map(|n| n.syntax().text_range());
+
+        let field_index = self.index_token().map(|i| i.text_range());
+
+        let start = field_name
+            .map(|f| f.start())
+            .or_else(|| field_index.map(|i| TextUnit::from_usize(i.start().to_usize() + 1)))
+            .unwrap_or_else(|| self.syntax().text_range().start());
+
+        let end = field_name
+            .map(|f| f.end())
+            .or_else(|| field_index.map(|f| f.end()))
+            .unwrap_or_else(|| self.syntax().text_range().end());
+
+        TextRange::from_to(start, end)
     }
 }
 

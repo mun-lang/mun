@@ -1,8 +1,8 @@
 use crate::ir::dispatch_table::{DispatchTable, DispatchTableBuilder};
-use crate::ir::function;
+use crate::ir::{adt, function};
 use crate::IrDatabase;
-use inkwell::{module::Module, values::FunctionValue};
-use mun_hir::{FileId, ModuleDef};
+use hir::{FileId, ModuleDef};
+use inkwell::{module::Module, types::StructType, values::FunctionValue};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -15,7 +15,10 @@ pub struct ModuleIR {
     pub llvm_module: Module,
 
     /// A mapping from HIR functions to LLVM IR values
-    pub functions: HashMap<mun_hir::Function, FunctionValue>,
+    pub functions: HashMap<hir::Function, FunctionValue>,
+
+    /// A mapping from HIR structs to LLVM IR types
+    pub structs: HashMap<hir::Struct, StructType>,
 
     /// The dispatch table
     pub dispatch_table: DispatchTable,
@@ -26,6 +29,17 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
     let llvm_module = db
         .context()
         .create_module(db.file_relative_path(file_id).as_str());
+
+    // Generate all type definitions
+    let mut structs = HashMap::new();
+    for def in db.module_data(file_id).definitions() {
+        match def {
+            ModuleDef::Struct(s) => {
+                structs.insert(*s, adt::gen_struct_decl(db, *s));
+            }
+            ModuleDef::BuiltinType(_) | ModuleDef::Function(_) => (),
+        }
+    }
 
     // Generate all the function signatures
     let mut functions = HashMap::new();
@@ -69,6 +83,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
         file_id,
         llvm_module,
         functions,
+        structs,
         dispatch_table,
     })
 }

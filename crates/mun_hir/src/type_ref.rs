@@ -21,6 +21,31 @@ pub enum TypeRef {
     Error,
 }
 
+impl TypeRef {
+    /// Converts an `ast::TypeRef` to a `hir::TypeRef`.
+    pub fn from_ast(node: ast::TypeRef) -> Self {
+        match node.kind() {
+            ast::TypeRefKind::NeverType(..) => TypeRef::Never,
+            ast::TypeRefKind::PathType(inner) => {
+                // FIXME: Use `Path::from_src`
+                inner
+                    .path()
+                    .and_then(Path::from_ast)
+                    .map(TypeRef::Path)
+                    .unwrap_or(TypeRef::Error)
+            }
+        }
+    }
+
+    pub fn from_ast_opt(node: Option<ast::TypeRef>) -> Self {
+        if let Some(node) = node {
+            TypeRef::from_ast(node)
+        } else {
+            TypeRef::Error
+        }
+    }
+}
+
 #[derive(Default, Debug, Eq, PartialEq)]
 pub struct TypeRefSourceMap {
     type_ref_map: FxHashMap<AstPtr<ast::TypeRef>, TypeRefId>,
@@ -40,6 +65,13 @@ impl TypeRefSourceMap {
 #[derive(Default, Debug, Eq, PartialEq)]
 pub struct TypeRefMap {
     type_refs: Arena<TypeRefId, TypeRef>,
+}
+
+impl TypeRefMap {
+    /// Iterate over the elements in the map
+    pub fn iter(&self) -> impl Iterator<Item = (TypeRefId, &TypeRef)> {
+        self.type_refs.iter()
+    }
 }
 
 impl Index<TypeRefId> for TypeRefMap {

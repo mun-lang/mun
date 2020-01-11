@@ -2,15 +2,17 @@
 
 use crate::input::{SourceRoot, SourceRootId};
 use crate::name_resolution::Namespace;
-use crate::ty::{FnSig, Ty, TypableDef};
+use crate::ty::lower::LowerBatchResult;
+use crate::ty::{CallableDef, FnSig, Ty, TypableDef};
 use crate::{
+    adt::StructData,
     code_model::{DefWithBody, FnData, Function, ModuleData},
     ids,
     line_index::LineIndex,
     name_resolution::ModuleScope,
     source_id::ErasedFileAstId,
     ty::InferenceResult,
-    AstIdMap, ExprScopes, FileId, RawItems,
+    AstIdMap, ExprScopes, FileId, RawItems, Struct,
 };
 use mun_syntax::{ast, Parse, SourceFile, SyntaxNode};
 pub use relative_path::RelativePathBuf;
@@ -59,9 +61,16 @@ pub trait DefDatabase: SourceDatabase {
     #[salsa::invoke(RawItems::raw_file_items_query)]
     fn raw_items(&self, file_id: FileId) -> Arc<RawItems>;
 
+    #[salsa::invoke(StructData::struct_data_query)]
+    fn struct_data(&self, id: ids::StructId) -> Arc<StructData>;
+
     /// Interns a function definition
     #[salsa::interned]
     fn intern_function(&self, loc: ids::ItemLoc<ast::FunctionDef>) -> ids::FunctionId;
+
+    /// Interns a struct definition
+    #[salsa::interned]
+    fn intern_struct(&self, loc: ids::ItemLoc<ast::StructDef>) -> ids::StructId;
 }
 
 #[salsa::query_group(HirDatabaseStorage)]
@@ -75,11 +84,14 @@ pub trait HirDatabase: DefDatabase {
     #[salsa::invoke(crate::ty::infer_query)]
     fn infer(&self, def: DefWithBody) -> Arc<InferenceResult>;
 
+    #[salsa::invoke(crate::ty::lower::lower_struct_query)]
+    fn lower_struct(&self, def: Struct) -> Arc<LowerBatchResult>;
+
     #[salsa::invoke(crate::FnData::fn_data_query)]
     fn fn_data(&self, func: Function) -> Arc<FnData>;
 
-    #[salsa::invoke(crate::ty::fn_sig_for_fn)]
-    fn fn_signature(&self, func: Function) -> FnSig;
+    #[salsa::invoke(crate::ty::callable_item_sig)]
+    fn callable_sig(&self, def: CallableDef) -> FnSig;
 
     #[salsa::invoke(crate::ty::type_for_def)]
     fn type_for_def(&self, def: TypableDef, ns: Namespace) -> Ty;
@@ -89,7 +101,7 @@ pub trait HirDatabase: DefDatabase {
     fn module_data(&self, file_id: FileId) -> Arc<ModuleData>;
 
     #[salsa::invoke(crate::expr::body_hir_query)]
-    fn body_hir(&self, def: DefWithBody) -> Arc<crate::expr::Body>;
+    fn body(&self, def: DefWithBody) -> Arc<crate::expr::Body>;
 
     #[salsa::invoke(crate::expr::body_with_source_map_query)]
     fn body_with_source_map(

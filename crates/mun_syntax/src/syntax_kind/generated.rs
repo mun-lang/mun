@@ -63,8 +63,6 @@ pub enum SyntaxKind {
     IF_KW,
     IN_KW,
     NIL_KW,
-    SELF_KW,
-    SUPER_KW,
     RETURN_KW,
     TRUE_KW,
     WHILE_KW,
@@ -72,21 +70,34 @@ pub enum SyntaxKind {
     LET_KW,
     MUT_KW,
     CLASS_KW,
+    STRUCT_KW,
     NEVER_KW,
     PUB_KW,
+    PACKAGE_KW,
+    SUPER_KW,
+    SELF_KW,
     INT_NUMBER,
     FLOAT_NUMBER,
     STRING,
     ERROR,
     IDENT,
+    INDEX,
     WHITESPACE,
     COMMENT,
+    GC_KW,
+    VALUE_KW,
     SOURCE_FILE,
     FUNCTION_DEF,
     RET_TYPE,
     VISIBILITY,
     PARAM_LIST,
     PARAM,
+    STRUCT_DEF,
+    MEMORY_TYPE_SPECIFIER,
+    RECORD_FIELD_DEF_LIST,
+    RECORD_FIELD_DEF,
+    TUPLE_FIELD_DEF_LIST,
+    TUPLE_FIELD_DEF,
     PATH_TYPE,
     NEVER_TYPE,
     LET_STMT,
@@ -97,6 +108,7 @@ pub enum SyntaxKind {
     BIN_EXPR,
     PAREN_EXPR,
     CALL_EXPR,
+    FIELD_EXPR,
     IF_EXPR,
     BLOCK_EXPR,
     RETURN_EXPR,
@@ -111,6 +123,9 @@ pub enum SyntaxKind {
     NAME_REF,
     PATH,
     PATH_SEGMENT,
+    RECORD_LIT,
+    RECORD_FIELD_LIST,
+    RECORD_FIELD,
     // Technical kind so that we can cast from u16 safely
     #[doc(hidden)]
     __LAST,
@@ -165,8 +180,6 @@ macro_rules! T {
     (if) => { $crate::SyntaxKind::IF_KW };
     (in) => { $crate::SyntaxKind::IN_KW };
     (nil) => { $crate::SyntaxKind::NIL_KW };
-    (self) => { $crate::SyntaxKind::SELF_KW };
-    (super) => { $crate::SyntaxKind::SUPER_KW };
     (return) => { $crate::SyntaxKind::RETURN_KW };
     (true) => { $crate::SyntaxKind::TRUE_KW };
     (while) => { $crate::SyntaxKind::WHILE_KW };
@@ -174,8 +187,12 @@ macro_rules! T {
     (let) => { $crate::SyntaxKind::LET_KW };
     (mut) => { $crate::SyntaxKind::MUT_KW };
     (class) => { $crate::SyntaxKind::CLASS_KW };
+    (struct) => { $crate::SyntaxKind::STRUCT_KW };
     (never) => { $crate::SyntaxKind::NEVER_KW };
     (pub) => { $crate::SyntaxKind::PUB_KW };
+    (package) => { $crate::SyntaxKind::PACKAGE_KW };
+    (super) => { $crate::SyntaxKind::SUPER_KW };
+    (self) => { $crate::SyntaxKind::SELF_KW };
 }
 
 impl From<u16> for SyntaxKind {
@@ -204,8 +221,6 @@ impl SyntaxKind {
             | IF_KW
             | IN_KW
             | NIL_KW
-            | SELF_KW
-            | SUPER_KW
             | RETURN_KW
             | TRUE_KW
             | WHILE_KW
@@ -213,8 +228,12 @@ impl SyntaxKind {
             | LET_KW
             | MUT_KW
             | CLASS_KW
+            | STRUCT_KW
             | NEVER_KW
             | PUB_KW
+            | PACKAGE_KW
+            | SUPER_KW
+            | SELF_KW
                 => true,
             _ => false
         }
@@ -321,8 +340,6 @@ impl SyntaxKind {
                 IF_KW => &SyntaxInfo { name: "IF_KW" },
                 IN_KW => &SyntaxInfo { name: "IN_KW" },
                 NIL_KW => &SyntaxInfo { name: "NIL_KW" },
-                SELF_KW => &SyntaxInfo { name: "SELF_KW" },
-                SUPER_KW => &SyntaxInfo { name: "SUPER_KW" },
                 RETURN_KW => &SyntaxInfo { name: "RETURN_KW" },
                 TRUE_KW => &SyntaxInfo { name: "TRUE_KW" },
                 WHILE_KW => &SyntaxInfo { name: "WHILE_KW" },
@@ -330,21 +347,34 @@ impl SyntaxKind {
                 LET_KW => &SyntaxInfo { name: "LET_KW" },
                 MUT_KW => &SyntaxInfo { name: "MUT_KW" },
                 CLASS_KW => &SyntaxInfo { name: "CLASS_KW" },
+                STRUCT_KW => &SyntaxInfo { name: "STRUCT_KW" },
                 NEVER_KW => &SyntaxInfo { name: "NEVER_KW" },
                 PUB_KW => &SyntaxInfo { name: "PUB_KW" },
+                PACKAGE_KW => &SyntaxInfo { name: "PACKAGE_KW" },
+                SUPER_KW => &SyntaxInfo { name: "SUPER_KW" },
+                SELF_KW => &SyntaxInfo { name: "SELF_KW" },
                 INT_NUMBER => &SyntaxInfo { name: "INT_NUMBER" },
                 FLOAT_NUMBER => &SyntaxInfo { name: "FLOAT_NUMBER" },
                 STRING => &SyntaxInfo { name: "STRING" },
                 ERROR => &SyntaxInfo { name: "ERROR" },
                 IDENT => &SyntaxInfo { name: "IDENT" },
+                INDEX => &SyntaxInfo { name: "INDEX" },
                 WHITESPACE => &SyntaxInfo { name: "WHITESPACE" },
                 COMMENT => &SyntaxInfo { name: "COMMENT" },
+                GC_KW => &SyntaxInfo { name: "GC_KW" },
+                VALUE_KW => &SyntaxInfo { name: "VALUE_KW" },
                 SOURCE_FILE => &SyntaxInfo { name: "SOURCE_FILE" },
                 FUNCTION_DEF => &SyntaxInfo { name: "FUNCTION_DEF" },
                 RET_TYPE => &SyntaxInfo { name: "RET_TYPE" },
                 VISIBILITY => &SyntaxInfo { name: "VISIBILITY" },
                 PARAM_LIST => &SyntaxInfo { name: "PARAM_LIST" },
                 PARAM => &SyntaxInfo { name: "PARAM" },
+                STRUCT_DEF => &SyntaxInfo { name: "STRUCT_DEF" },
+                MEMORY_TYPE_SPECIFIER => &SyntaxInfo { name: "MEMORY_TYPE_SPECIFIER" },
+                RECORD_FIELD_DEF_LIST => &SyntaxInfo { name: "RECORD_FIELD_DEF_LIST" },
+                RECORD_FIELD_DEF => &SyntaxInfo { name: "RECORD_FIELD_DEF" },
+                TUPLE_FIELD_DEF_LIST => &SyntaxInfo { name: "TUPLE_FIELD_DEF_LIST" },
+                TUPLE_FIELD_DEF => &SyntaxInfo { name: "TUPLE_FIELD_DEF" },
                 PATH_TYPE => &SyntaxInfo { name: "PATH_TYPE" },
                 NEVER_TYPE => &SyntaxInfo { name: "NEVER_TYPE" },
                 LET_STMT => &SyntaxInfo { name: "LET_STMT" },
@@ -355,6 +385,7 @@ impl SyntaxKind {
                 BIN_EXPR => &SyntaxInfo { name: "BIN_EXPR" },
                 PAREN_EXPR => &SyntaxInfo { name: "PAREN_EXPR" },
                 CALL_EXPR => &SyntaxInfo { name: "CALL_EXPR" },
+                FIELD_EXPR => &SyntaxInfo { name: "FIELD_EXPR" },
                 IF_EXPR => &SyntaxInfo { name: "IF_EXPR" },
                 BLOCK_EXPR => &SyntaxInfo { name: "BLOCK_EXPR" },
                 RETURN_EXPR => &SyntaxInfo { name: "RETURN_EXPR" },
@@ -369,6 +400,9 @@ impl SyntaxKind {
                 NAME_REF => &SyntaxInfo { name: "NAME_REF" },
                 PATH => &SyntaxInfo { name: "PATH" },
                 PATH_SEGMENT => &SyntaxInfo { name: "PATH_SEGMENT" },
+                RECORD_LIT => &SyntaxInfo { name: "RECORD_LIT" },
+                RECORD_FIELD_LIST => &SyntaxInfo { name: "RECORD_FIELD_LIST" },
+                RECORD_FIELD => &SyntaxInfo { name: "RECORD_FIELD" },
                 TOMBSTONE => &SyntaxInfo { name: "TOMBSTONE" },
                 EOF => &SyntaxInfo { name: "EOF" },
                 __LAST => &SyntaxInfo { name: "__LAST" },
@@ -387,8 +421,6 @@ impl SyntaxKind {
                 "if" => IF_KW,
                 "in" => IN_KW,
                 "nil" => NIL_KW,
-                "self" => SELF_KW,
-                "super" => SUPER_KW,
                 "return" => RETURN_KW,
                 "true" => TRUE_KW,
                 "while" => WHILE_KW,
@@ -396,8 +428,12 @@ impl SyntaxKind {
                 "let" => LET_KW,
                 "mut" => MUT_KW,
                 "class" => CLASS_KW,
+                "struct" => STRUCT_KW,
                 "never" => NEVER_KW,
                 "pub" => PUB_KW,
+                "package" => PACKAGE_KW,
+                "super" => SUPER_KW,
+                "self" => SELF_KW,
                 _ => return None,
             };
             Some(kw)

@@ -3,14 +3,14 @@ use crate::ir::dispatch_table::DispatchTable;
 use crate::ir::function;
 use crate::values::{BasicValue, GlobalValue};
 use crate::IrDatabase;
-use inkwell::attributes::Attribute;
-use inkwell::values::{IntValue, PointerValue, UnnamedAddress};
+use hir::{Ty, TypeCtor};
 use inkwell::{
+    attributes::Attribute,
     module::{Linkage, Module},
-    values::{FunctionValue, StructValue},
+    types::StructType,
+    values::{FunctionValue, IntValue, PointerValue, StructValue, UnnamedAddress},
     AddressSpace,
 };
-use mun_hir::{self as hir, Ty, TypeCtor};
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
@@ -43,12 +43,13 @@ impl TypeInfo {
     }
 }
 
-pub fn type_info_query(_db: &impl IrDatabase, ty: Ty) -> TypeInfo {
+pub fn type_info_query(db: &impl IrDatabase, ty: Ty) -> TypeInfo {
     match ty {
         Ty::Apply(ctor) => match ctor.ctor {
             TypeCtor::Float => TypeInfo::from_name("@core::float"),
             TypeCtor::Int => TypeInfo::from_name("@core::int"),
             TypeCtor::Bool => TypeInfo::from_name("@core::bool"),
+            TypeCtor::Struct(s) => TypeInfo::from_name(s.name(db).to_string()),
             _ => unreachable!("{:?} unhandled", ctor),
         },
         _ => unreachable!(),
@@ -91,9 +92,8 @@ fn gen_signature_from_function<D: IrDatabase>(
         _ => 1,
     };
     let ret_type_ir = gen_signature_return_type(db, module, types, function);
-    let params_type_ir = gen_signature_argument_types(db, module, types, function);
+    let (params_type_ir, num_params) = gen_signature_argument_types(db, module, types, function);
 
-    let body = function.body(db);
     types.function_signature_type.const_named_struct(&[
         name_str.into(),
         params_type_ir.into(),
@@ -101,7 +101,7 @@ fn gen_signature_from_function<D: IrDatabase>(
         module
             .get_context()
             .i16_type()
-            .const_int(body.params().len() as u64, false)
+            .const_int(num_params as u64, false)
             .into(),
         module.get_context().i8_type().const_int(0, false).into(),
     ])
@@ -114,23 +114,41 @@ fn gen_signature_argument_types<D: IrDatabase>(
     module: &Module,
     types: &AbiTypes,
     function: hir::Function,
-) -> PointerValue {
+) -> (PointerValue, usize) {
     let body = function.body(db);
     let infer = function.infer(db);
-    if body.params().is_empty() {
-        types
-            .type_info_type
-            .ptr_type(AddressSpace::Const)
-            .const_null()
+
+    let hir_types = body.params().iter().map(|(p, _)| infer[*p].clone());
+
+    gen_type_info_array(db, module, types, hir_types)
+}
+
+/// Generates
+fn gen_type_info_array<D: IrDatabase>(
+    db: &D,
+    module: &Module,
+    types: &AbiTypes,
+    hir_types: impl Iterator<Item = Ty>,
+) -> (PointerValue, usize) {
+    let mut hir_types = hir_types.peekable();
+    if hir_types.peek().is_none() {
+        (
+            types
+                .type_info_type
+                .ptr_type(AddressSpace::Const)
+                .const_null(),
+            0,
+        )
     } else {
-        let params_type_array_ir = types.type_info_type.const_array(
-            &body
-                .params()
-                .iter()
-                .map(|(p, _)| type_info_ir(&db.type_info(infer[*p].clone()), &module))
-                .collect::<Vec<StructValue>>(),
-        );
-        gen_global(module, &params_type_array_ir, "").as_pointer_value()
+        let type_infos = hir_types
+            .map(|ty| type_info_ir(&db.type_info(ty), &module))
+            .collect::<Vec<StructValue>>();
+
+        let type_array_ir = types.type_info_type.const_array(&type_infos);
+        (
+            gen_global(module, &type_array_ir, "").as_pointer_value(),
+            type_infos.len(),
+        )
     }
 }
 
@@ -161,7 +179,7 @@ fn gen_function_info_array<'a, D: IrDatabase>(
     db: &D,
     types: &AbiTypes,
     module: &Module,
-    functions: impl Iterator<Item = (&'a mun_hir::Function, &'a FunctionValue)>,
+    functions: impl Iterator<Item = (&'a hir::Function, &'a FunctionValue)>,
 ) -> GlobalValue {
     let function_infos: Vec<StructValue> = functions
         .map(|(f, value)| {
@@ -183,6 +201,38 @@ fn gen_function_info_array<'a, D: IrDatabase>(
         .collect();
     let function_infos = types.function_info_type.const_array(&function_infos);
     gen_global(module, &function_infos, "fn.get_info.functions")
+}
+
+/// Construct a global that holds a reference to all structs. e.g.:
+/// MunStructInfo[] info = { ... }
+fn gen_struct_info_array<'a, D: IrDatabase>(
+    db: &D,
+    types: &AbiTypes,
+    module: &Module,
+    structs: impl Iterator<Item = (&'a hir::Struct, &'a StructType)>,
+) -> GlobalValue {
+    let struct_infos: Vec<StructValue> = structs
+        .map(|(s, _)| {
+            let name_str = intern_string(&module, &s.name(db).to_string());
+
+            let fields = s.fields(db);
+            let field_types = fields.iter().map(|field| field.ty(db));
+            let (fields, num_fields) = gen_type_info_array(db, module, types, field_types);
+
+            types.struct_info_type.const_named_struct(&[
+                name_str.into(),
+                fields.into(),
+                module
+                    .get_context()
+                    .i16_type()
+                    .const_int(num_fields as u64, false)
+                    .into(),
+            ])
+        })
+        .collect();
+
+    let struct_infos = types.struct_info_type.const_array(&struct_infos);
+    gen_global(module, &struct_infos, "fn.get_info.structs")
 }
 
 /// Construct a global from the specified value
@@ -254,7 +304,8 @@ fn gen_dispatch_table<D: IrDatabase>(
 /// for the ABI that `get_info` exposes.
 pub(super) fn gen_reflection_ir(
     db: &impl IrDatabase,
-    function_map: &HashMap<mun_hir::Function, FunctionValue>,
+    function_map: &HashMap<hir::Function, FunctionValue>,
+    struct_map: &HashMap<hir::Struct, StructType>,
     dispatch_table: &DispatchTable,
     module: &Module,
 ) {
@@ -271,6 +322,14 @@ pub(super) fn gen_reflection_ir(
             .get_context()
             .i32_type()
             .const_int(function_map.len() as u64, false)
+            .into(),
+        gen_struct_info_array(db, &abi_types, module, struct_map.iter())
+            .as_pointer_value()
+            .into(),
+        module
+            .get_context()
+            .i32_type()
+            .const_int(struct_map.len() as u64, false)
             .into(),
     ]);
 

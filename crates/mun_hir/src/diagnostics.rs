@@ -1,4 +1,6 @@
-use crate::{FileId, HirDatabase, Ty};
+use crate::adt::StructKind;
+use crate::in_file::InFile;
+use crate::{FileId, HirDatabase, Name, Ty};
 use mun_syntax::{ast, AstPtr, SyntaxNode, SyntaxNodePtr, TextRange};
 use std::{any::Any, fmt};
 
@@ -13,10 +15,9 @@ use std::{any::Any, fmt};
 /// diagnostics are transformed into an instance of `Diagnostic` on demand.
 pub trait Diagnostic: Any + Send + Sync + fmt::Debug + 'static {
     fn message(&self) -> String;
-    fn file(&self) -> FileId;
-    fn syntax_node_ptr(&self) -> SyntaxNodePtr;
+    fn source(&self) -> InFile<SyntaxNodePtr>;
     fn highlight_range(&self) -> TextRange {
-        self.syntax_node_ptr().range()
+        self.source().value.range()
     }
     fn as_any(&self) -> &(dyn Any + Send + 'static);
 }
@@ -28,8 +29,8 @@ pub trait AstDiagnostic {
 
 impl dyn Diagnostic {
     pub fn syntax_node(&self, db: &impl HirDatabase) -> SyntaxNode {
-        let node = db.parse(self.file()).syntax_node();
-        self.syntax_node_ptr().to_node(&node)
+        let node = db.parse(self.source().file_id).syntax_node();
+        self.source().value.to_node(&node)
     }
 
     pub fn downcast_ref<D: Diagnostic>(&self) -> Option<&D> {
@@ -87,12 +88,8 @@ impl Diagnostic for UnresolvedValue {
         "undefined value".to_string()
     }
 
-    fn file(&self) -> FileId {
-        self.file
-    }
-
-    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
-        self.expr
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.expr)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -111,12 +108,8 @@ impl Diagnostic for UnresolvedType {
         "undefined type".to_string()
     }
 
-    fn file(&self) -> FileId {
-        self.file
-    }
-
-    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
-        self.type_ref.syntax_node_ptr()
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.type_ref.syntax_node_ptr())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -136,12 +129,8 @@ impl Diagnostic for ExpectedFunction {
         "expected function type".to_string()
     }
 
-    fn file(&self) -> FileId {
-        self.file
-    }
-
-    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
-        self.expr
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.expr)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -165,12 +154,8 @@ impl Diagnostic for ParameterCountMismatch {
         )
     }
 
-    fn file(&self) -> FileId {
-        self.file
-    }
-
-    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
-        self.expr
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.expr)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -191,12 +176,8 @@ impl Diagnostic for MismatchedType {
         "mismatched type".to_string()
     }
 
-    fn file(&self) -> FileId {
-        self.file
-    }
-
-    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
-        self.expr
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.expr)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -217,12 +198,8 @@ impl Diagnostic for IncompatibleBranch {
         "mismatched branches".to_string()
     }
 
-    fn file(&self) -> FileId {
-        self.file
-    }
-
-    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
-        self.if_expr
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.if_expr)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -247,12 +224,8 @@ impl Diagnostic for InvalidLHS {
         "invalid left hand side of expression".to_string()
     }
 
-    fn file(&self) -> FileId {
-        self.file
-    }
-
-    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
-        self.lhs
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.lhs)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -272,12 +245,8 @@ impl Diagnostic for MissingElseBranch {
         "missing else branch".to_string()
     }
 
-    fn file(&self) -> FileId {
-        self.file
-    }
-
-    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
-        self.if_expr
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.if_expr)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -298,12 +267,8 @@ impl Diagnostic for CannotApplyBinaryOp {
         "cannot apply binary operator".to_string()
     }
 
-    fn file(&self) -> FileId {
-        self.file
-    }
-
-    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
-        self.expr
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.expr)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -324,12 +289,8 @@ impl Diagnostic for DuplicateDefinition {
         format!("the name `{}` is defined multiple times", self.name)
     }
 
-    fn file(&self) -> FileId {
-        self.file
-    }
-
-    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
-        self.definition
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.definition)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -348,12 +309,8 @@ impl Diagnostic for ReturnMissingExpression {
         "`return;` in a function whose return type is not `()`".to_owned()
     }
 
-    fn file(&self) -> FileId {
-        self.file
-    }
-
-    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
-        self.return_expr
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.return_expr)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -372,12 +329,8 @@ impl Diagnostic for BreakOutsideLoop {
         "`break` outside of a loop".to_owned()
     }
 
-    fn file(&self) -> FileId {
-        self.file
-    }
-
-    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
-        self.break_expr
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.break_expr)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -396,12 +349,169 @@ impl Diagnostic for BreakWithValueOutsideLoop {
         "`break` with value can only appear in a `loop`".to_owned()
     }
 
-    fn file(&self) -> FileId {
-        self.file
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.break_expr)
     }
 
-    fn syntax_node_ptr(&self) -> SyntaxNodePtr {
-        self.break_expr
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct AccessUnknownField {
+    pub file: FileId,
+    pub expr: SyntaxNodePtr,
+    pub receiver_ty: Ty,
+    pub name: Name,
+}
+
+impl Diagnostic for AccessUnknownField {
+    fn message(&self) -> String {
+        "attempted to access a non-existent field in a struct.".to_string()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.expr)
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct FieldCountMismatch {
+    pub file: FileId,
+    pub expr: SyntaxNodePtr,
+    pub expected: usize,
+    pub found: usize,
+}
+
+impl Diagnostic for FieldCountMismatch {
+    fn message(&self) -> String {
+        format!(
+            "this tuple struct literal has {} field{} but {} field{} supplied",
+            self.expected,
+            if self.expected == 1 { "" } else { "s" },
+            self.found,
+            if self.found == 1 { " was" } else { "s were" },
+        )
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.expr)
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct MissingFields {
+    pub file: FileId,
+    pub fields: SyntaxNodePtr,
+    pub field_names: Vec<Name>,
+}
+
+impl Diagnostic for MissingFields {
+    fn message(&self) -> String {
+        use std::fmt::Write;
+        let mut message = "missing record fields:\n".to_string();
+        for field in &self.field_names {
+            writeln!(message, "- {}", field).unwrap();
+        }
+        message
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.fields)
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct MismatchedStructLit {
+    pub file: FileId,
+    pub expr: SyntaxNodePtr,
+    pub expected: StructKind,
+    pub found: StructKind,
+}
+
+impl Diagnostic for MismatchedStructLit {
+    fn message(&self) -> String {
+        format!(
+            "mismatched struct literal kind. expected `{}`, found `{}`",
+            self.expected, self.found
+        )
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.expr)
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct NoFields {
+    pub file: FileId,
+    pub receiver_expr: SyntaxNodePtr,
+    pub found: Ty,
+}
+
+impl Diagnostic for NoFields {
+    fn message(&self) -> String {
+        "attempted to access a field on a primitive type.".to_string()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.receiver_expr)
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+#[derive(Debug)]
+pub struct NoSuchField {
+    pub file: FileId,
+    pub field: SyntaxNodePtr,
+}
+
+impl Diagnostic for NoSuchField {
+    fn message(&self) -> String {
+        "no such field".to_string()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.field)
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct PossiblyUninitializedVariable {
+    pub file: FileId,
+    pub pat: SyntaxNodePtr,
+}
+
+impl Diagnostic for PossiblyUninitializedVariable {
+    fn message(&self) -> String {
+        "use of possibly-uninitialized variable".to_string()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.pat)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {

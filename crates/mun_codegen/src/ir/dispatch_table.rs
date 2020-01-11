@@ -3,8 +3,8 @@ use crate::IrDatabase;
 use inkwell::module::Module;
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::{BasicValueEnum, PointerValue};
-use mun_hir as hir;
-use mun_hir::{Body, Expr, ExprId, InferenceResult};
+
+use hir::{Body, Expr, ExprId, InferenceResult};
 use std::collections::HashMap;
 
 /// A dispatch table in IR is a struct that contains pointers to all functions that are called from
@@ -119,23 +119,28 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
 
         // If this expression is a call, store it in the dispatch table
         if let Expr::Call { callee, .. } = expr {
-            self.ensure_table_ref();
-
-            // Get the function from the expression
-            let function = &infer[*callee]
-                .as_function_def()
-                .expect("expected a function expression");
-
-            // If the function is not yet contained in the table, add it
-            if !self.function_to_idx.contains_key(function) {
-                self.entries.push(*function);
-                self.function_to_idx
-                    .insert(*function, self.function_to_idx.len());
+            match infer[*callee].as_callable_def() {
+                Some(hir::CallableDef::Function(def)) => self.collect_fn_def(def),
+                Some(hir::CallableDef::Struct(_)) => (),
+                None => panic!("expected a callable expression"),
             }
         }
 
         // Recurse further
         expr.walk_child_exprs(|expr_id| self.collect_expr(expr_id, body, infer))
+    }
+
+    /// Collects function call expression from the given expression.
+    #[allow(clippy::map_entry)]
+    fn collect_fn_def(&mut self, function: hir::Function) {
+        self.ensure_table_ref();
+
+        // If the function is not yet contained in the table, add it
+        if !self.function_to_idx.contains_key(&function) {
+            self.entries.push(function);
+            self.function_to_idx
+                .insert(function, self.function_to_idx.len());
+        }
     }
 
     /// Collect all the call expressions from the specified body with the given type inference
@@ -147,7 +152,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
     /// This creates the final DispatchTable with all *called* functions from within the module
     /// # Parameters
     /// * **functions**: Mapping of *defined* Mun functions to their respective IR values.
-    pub fn finalize(self, functions: &HashMap<mun_hir::Function, FunctionValue>) -> DispatchTable {
+    pub fn finalize(self, functions: &HashMap<hir::Function, FunctionValue>) -> DispatchTable {
         // Construct the table body from all the entries in the dispatch table
         let table_body: Vec<BasicTypeEnum> = self
             .entries

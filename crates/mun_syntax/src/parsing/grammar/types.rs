@@ -1,5 +1,7 @@
 use super::*;
 
+pub(super) const TYPE_FIRST: TokenSet = paths::PATH_FIRST.union(token_set![T![never],]);
+
 pub(super) const TYPE_RECOVERY_SET: TokenSet = token_set![R_PAREN, COMMA];
 
 pub(super) fn ascription(p: &mut Parser) {

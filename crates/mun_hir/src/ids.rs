@@ -1,5 +1,6 @@
+use crate::in_file::InFile;
 use crate::source_id::{AstId, FileAstId};
-use crate::{code_model::src::Source, DefDatabase, FileId};
+use crate::{DefDatabase, FileId};
 use mun_syntax::{ast, AstNode};
 use std::hash::{Hash, Hasher};
 
@@ -78,13 +79,10 @@ pub(crate) trait AstItemDef<N: AstNode>: salsa::InternKey + Clone {
         Self::intern(ctx.db, loc)
     }
 
-    fn source(self, db: &impl DefDatabase) -> Source<N> {
+    fn source(self, db: &impl DefDatabase) -> InFile<N> {
         let loc = self.lookup_intern(db);
         let ast = loc.ast_id.to_node(db);
-        Source {
-            file_id: loc.ast_id.file_id(),
-            ast,
-        }
+        InFile::new(loc.ast_id.file_id(), ast)
     }
 
     fn file_id(self, db: &impl DefDatabase) -> FileId {
@@ -102,5 +100,19 @@ impl AstItemDef<ast::FunctionDef> for FunctionId {
     }
     fn lookup_intern(self, db: &impl DefDatabase) -> ItemLoc<ast::FunctionDef> {
         db.lookup_intern_function(self)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct StructId(salsa::InternId);
+impl_intern_key!(StructId);
+
+impl AstItemDef<ast::StructDef> for StructId {
+    fn intern(db: &impl DefDatabase, loc: ItemLoc<ast::StructDef>) -> Self {
+        db.intern_struct(loc)
+    }
+
+    fn lookup_intern(self, db: &impl DefDatabase) -> ItemLoc<ast::StructDef> {
+        db.lookup_intern_struct(self)
     }
 }

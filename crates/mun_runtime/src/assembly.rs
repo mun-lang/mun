@@ -32,7 +32,11 @@ impl Assembly {
         let info = get_info();
 
         for function in info.symbols.functions() {
-            runtime_dispatch_table.insert(function.signature.name(), function.clone());
+            runtime_dispatch_table.insert_fn(function.signature.name(), function.clone());
+        }
+
+        for s in info.symbols.structs() {
+            runtime_dispatch_table.insert_struct(s.name(), s.clone());
         }
 
         Ok(Assembly {
@@ -46,7 +50,7 @@ impl Assembly {
     pub fn link(&mut self, runtime_dispatch_table: &DispatchTable) -> Result<(), Error> {
         for (dispatch_ptr, fn_signature) in self.info.dispatch_table.iter_mut() {
             let fn_ptr = runtime_dispatch_table
-                .get(fn_signature.name())
+                .get_fn(fn_signature.name())
                 .map(|f| f.fn_ptr)
                 .ok_or_else(|| {
                     io::Error::new(
@@ -72,7 +76,11 @@ impl Assembly {
         // let library_path = library_path.canonicalize()?;
 
         for function in self.info.symbols.functions() {
-            runtime_dispatch_table.remove(function.signature.name());
+            runtime_dispatch_table.remove_fn(function.signature.name());
+        }
+
+        for s in self.info.symbols.structs() {
+            runtime_dispatch_table.remove_struct(s.name());
         }
 
         // Drop the old library, as some operating systems don't allow editing of in-use shared

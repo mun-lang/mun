@@ -1,16 +1,23 @@
 pub(crate) mod src;
 
 use self::src::HasSource;
+use crate::adt::{StructData, StructFieldId};
+use crate::code_model::diagnostics::ModuleDefinitionDiagnostic;
 use crate::diagnostics::DiagnosticSink;
+use crate::expr::validator::ExprValidator;
 use crate::expr::{Body, BodySourceMap};
 use crate::ids::AstItemDef;
 use crate::ids::LocationCtx;
+use crate::name::*;
 use crate::name_resolution::Namespace;
 use crate::raw::{DefKind, RawFileItem};
 use crate::resolve::{Resolution, Resolver};
-use crate::ty::InferenceResult;
+use crate::ty::{lower::LowerBatchResult, InferenceResult};
 use crate::type_ref::{TypeRefBuilder, TypeRefId, TypeRefMap, TypeRefSourceMap};
-use crate::{ids::FunctionId, AsName, DefDatabase, FileId, HirDatabase, Name, Ty};
+use crate::{
+    ids::{FunctionId, StructId},
+    AsName, DefDatabase, FileId, HirDatabase, Name, Ty,
+};
 use mun_syntax::ast::{NameOwner, TypeAscriptionOwner, VisibilityOwner};
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
@@ -48,6 +55,7 @@ impl Module {
             #[allow(clippy::single_match)]
             match decl {
                 ModuleDef::Function(f) => f.diagnostics(db, sink),
+                ModuleDef::Struct(s) => s.diagnostics(db, sink),
                 _ => (),
             }
         }
@@ -91,6 +99,11 @@ impl ModuleData {
                                 id: FunctionId::from_ast_id(loc_ctx, ast_id),
                             }))
                         }
+                        DefKind::Struct(ast_id) => {
+                            data.definitions.push(ModuleDef::Struct(Struct {
+                                id: StructId::from_ast_id(loc_ctx, ast_id),
+                            }))
+                        }
                     }
                 }
             };
@@ -107,6 +120,7 @@ impl ModuleData {
 pub enum ModuleDef {
     Function(Function),
     BuiltinType(BuiltinType),
+    Struct(Struct),
 }
 
 impl From<Function> for ModuleDef {
@@ -121,11 +135,18 @@ impl From<BuiltinType> for ModuleDef {
     }
 }
 
+impl From<Struct> for ModuleDef {
+    fn from(t: Struct) -> Self {
+        ModuleDef::Struct(t)
+    }
+}
+
 /// The definitions that have a body.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DefWithBody {
     Function(Function),
 }
+impl_froms!(DefWithBody: Function);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Visibility {
@@ -139,7 +160,7 @@ impl DefWithBody {
     }
 
     pub fn body(self, db: &impl HirDatabase) -> Arc<Body> {
-        db.body_hir(self)
+        db.body(self)
     }
 
     pub fn body_source_map(self, db: &impl HirDatabase) -> Arc<BodySourceMap> {
@@ -154,9 +175,36 @@ impl DefWithBody {
     }
 }
 
-impl From<Function> for DefWithBody {
-    fn from(f: Function) -> Self {
-        DefWithBody::Function(f)
+/// Definitions that have a struct.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum DefWithStruct {
+    Struct(Struct),
+}
+impl_froms!(DefWithStruct: Struct);
+
+impl DefWithStruct {
+    pub fn fields(self, db: &impl HirDatabase) -> Vec<StructField> {
+        match self {
+            DefWithStruct::Struct(s) => s.fields(db),
+        }
+    }
+
+    pub fn field(self, db: &impl HirDatabase, name: &Name) -> Option<StructField> {
+        match self {
+            DefWithStruct::Struct(s) => s.field(db, name),
+        }
+    }
+
+    pub fn module(self, db: &impl HirDatabase) -> Module {
+        match self {
+            DefWithStruct::Struct(s) => s.module(db),
+        }
+    }
+
+    pub fn data(self, db: &impl HirDatabase) -> Arc<StructData> {
+        match self {
+            DefWithStruct::Struct(s) => s.data(db),
+        }
     }
 }
 
@@ -180,26 +228,26 @@ impl FnData {
         let src = func.source(db);
         let mut type_ref_builder = TypeRefBuilder::default();
         let name = src
-            .ast
+            .value
             .name()
             .map(|n| n.as_name())
             .unwrap_or_else(Name::missing);
 
         let visibility = src
-            .ast
+            .value
             .visibility()
             .map(|_v| Visibility::Public)
             .unwrap_or(Visibility::Private);
 
         let mut params = Vec::new();
-        if let Some(param_list) = src.ast.param_list() {
+        if let Some(param_list) = src.value.param_list() {
             for param in param_list.params() {
                 let type_ref = type_ref_builder.alloc_from_node_opt(param.ascribed_type().as_ref());
                 params.push(type_ref);
             }
         }
 
-        let ret_type = if let Some(type_ref) = src.ast.ret_type().and_then(|rt| rt.type_ref()) {
+        let ret_type = if let Some(type_ref) = src.value.ret_type().and_then(|rt| rt.type_ref()) {
             type_ref_builder.alloc_from_node(&type_ref)
         } else {
             type_ref_builder.unit()
@@ -262,7 +310,7 @@ impl Function {
     }
 
     pub fn body(self, db: &impl HirDatabase) -> Arc<Body> {
-        db.body_hir(self.into())
+        db.body(self.into())
     }
 
     pub fn ty(self, db: &impl HirDatabase) -> Ty {
@@ -285,8 +333,8 @@ impl Function {
     pub fn diagnostics(self, db: &impl HirDatabase, sink: &mut DiagnosticSink) {
         let infer = self.infer(db);
         infer.add_diagnostics(db, self, sink);
-        //        let mut validator = ExprValidator::new(self, infer, sink);
-        //        validator.validate_body(db);
+        let mut validator = ExprValidator::new(self, db, sink);
+        validator.validate_body();
     }
 }
 
@@ -297,9 +345,6 @@ pub enum BuiltinType {
     Boolean,
 }
 
-use crate::code_model::diagnostics::ModuleDefinitionDiagnostic;
-use crate::name::*;
-
 impl BuiltinType {
     #[rustfmt::skip]
     pub(crate) const ALL: &'static [(Name, BuiltinType)] = &[
@@ -307,6 +352,90 @@ impl BuiltinType {
         (INT, BuiltinType::Int),
         (BOOLEAN, BuiltinType::Boolean),
     ];
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Struct {
+    pub(crate) id: StructId,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct StructField {
+    pub(crate) parent: Struct,
+    pub(crate) id: StructFieldId,
+}
+
+impl StructField {
+    pub fn ty(self, db: &impl HirDatabase) -> Ty {
+        let data = self.parent.data(db);
+        let type_ref_id = data.fields[self.id].type_ref;
+        let lower = self.parent.lower(db);
+        lower[type_ref_id].clone()
+    }
+
+    pub fn name(self, db: &impl HirDatabase) -> Name {
+        self.parent.data(db).fields[self.id].name.clone()
+    }
+
+    pub fn id(self) -> StructFieldId {
+        self.id
+    }
+}
+
+impl Struct {
+    pub fn module(self, db: &impl DefDatabase) -> Module {
+        Module {
+            file_id: self.id.file_id(db),
+        }
+    }
+
+    pub fn data(self, db: &impl DefDatabase) -> Arc<StructData> {
+        db.struct_data(self.id)
+    }
+
+    pub fn name(self, db: &impl DefDatabase) -> Name {
+        self.data(db).name.clone()
+    }
+
+    pub fn fields(self, db: &impl HirDatabase) -> Vec<StructField> {
+        self.data(db)
+            .fields
+            .iter()
+            .map(|(id, _)| StructField { parent: self, id })
+            .collect()
+    }
+
+    pub fn field(self, db: &impl HirDatabase, name: &Name) -> Option<StructField> {
+        self.data(db)
+            .fields
+            .iter()
+            .find(|(_, data)| data.name == *name)
+            .map(|(id, _)| StructField { parent: self, id })
+    }
+
+    pub fn ty(self, db: &impl HirDatabase) -> Ty {
+        db.type_for_def(self.into(), Namespace::Types)
+    }
+
+    pub fn lower(self, db: &impl HirDatabase) -> Arc<LowerBatchResult> {
+        db.lower_struct(self)
+    }
+
+    pub(crate) fn resolver(self, db: &impl HirDatabase) -> Resolver {
+        // take the outer scope...
+        self.module(db).resolver(db)
+    }
+
+    pub fn diagnostics(self, db: &impl HirDatabase, sink: &mut DiagnosticSink) {
+        let data = self.data(db);
+        let lower = self.lower(db);
+        lower.add_diagnostics(
+            db,
+            self.module(db).file_id,
+            data.type_ref_source_map(),
+            sink,
+        );
+    }
 }
 
 mod diagnostics {
@@ -328,6 +457,9 @@ mod diagnostics {
     fn syntax_ptr_from_def(db: &impl DefDatabase, owner: Module, kind: DefKind) -> SyntaxNodePtr {
         match kind {
             DefKind::Function(id) => {
+                SyntaxNodePtr::new(id.with_file_id(owner.file_id).to_node(db).syntax())
+            }
+            DefKind::Struct(id) => {
                 SyntaxNodePtr::new(id.with_file_id(owner.file_id).to_node(db).syntax())
             }
         }

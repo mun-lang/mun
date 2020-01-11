@@ -1,3 +1,4 @@
+mod adt;
 mod declarations;
 mod expressions;
 mod params;
@@ -10,6 +11,18 @@ use super::{
     token_set::TokenSet,
     SyntaxKind::{self, *},
 };
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum BlockLike {
+    Block,
+    NotBlock,
+}
+
+impl BlockLike {
+    fn is_block(self) -> bool {
+        self == BlockLike::Block
+    }
+}
 
 pub(crate) fn root(p: &mut Parser) {
     let m = p.start();
@@ -53,14 +66,35 @@ fn name_ref(p: &mut Parser) {
     }
 }
 
-fn opt_visibility(p: &mut Parser) -> bool {
-    if p.at(PUB_KW) {
+fn name_ref_or_index(p: &mut Parser) {
+    if p.at(IDENT) || p.at(INT_NUMBER) {
         let m = p.start();
-        p.bump(PUB_KW);
-        m.complete(p, VISIBILITY);
-        true
+        p.bump_any();
+        m.complete(p, NAME_REF);
     } else {
-        false
+        p.error_and_bump("expected an identifier");
+    }
+}
+
+fn opt_visibility(p: &mut Parser) -> bool {
+    match p.current() {
+        T![pub] => {
+            let m = p.start();
+            p.bump(T![pub]);
+            if p.at(T!['(']) {
+                match p.nth(1) {
+                    T![package] | T![super] => {
+                        p.bump_any();
+                        p.bump_any();
+                        p.expect(T![')']);
+                    }
+                    _ => (),
+                }
+            }
+            m.complete(p, VISIBILITY);
+            true
+        }
+        _ => false,
     }
 }
 

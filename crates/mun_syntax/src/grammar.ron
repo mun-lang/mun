@@ -66,8 +66,6 @@ Grammar(
         "nil",
         // "not",        // We use !
         // "or",
-        "self",
-        "super",
         // "repeat",    // Not supported
         "return",
         // "then",      // Not supported
@@ -80,8 +78,13 @@ Grammar(
         "let",
         "mut",
         "class",
+        "struct",
         "never",
-        "pub"
+        "pub",
+
+        "package",
+        "super",
+        "self"
     ],
     literals: [
         "INT_NUMBER",
@@ -91,8 +94,13 @@ Grammar(
     tokens: [
         "ERROR",
         "IDENT",
+        "INDEX",
         "WHITESPACE",
         "COMMENT",
+
+        // Contextual keywords
+        "GC_KW",
+        "VALUE_KW",
     ],
     nodes: [
         "SOURCE_FILE",
@@ -103,6 +111,13 @@ Grammar(
 
         "PARAM_LIST",
         "PARAM",
+
+        "STRUCT_DEF",
+        "MEMORY_TYPE_SPECIFIER",
+        "RECORD_FIELD_DEF_LIST",
+        "RECORD_FIELD_DEF",
+        "TUPLE_FIELD_DEF_LIST",
+        "TUPLE_FIELD_DEF",
 
         "PATH_TYPE",
         "NEVER_TYPE",
@@ -116,6 +131,7 @@ Grammar(
         "BIN_EXPR",
         "PAREN_EXPR",
         "CALL_EXPR",
+        "FIELD_EXPR",
         "IF_EXPR",
         "BLOCK_EXPR",
         "RETURN_EXPR",
@@ -134,13 +150,17 @@ Grammar(
 
         "PATH",
         "PATH_SEGMENT",
+
+        "RECORD_LIT",
+        "RECORD_FIELD_LIST",
+        "RECORD_FIELD",
     ],
     ast: {
         "SourceFile": (
             traits: [ "ModuleItemOwner", "FunctionDefOwner" ],
         ),
         "ModuleItem": (
-            enum: ["FunctionDef"]
+            enum: ["FunctionDef", "StructDef"]
         ),
         "Visibility": (),
         "FunctionDef": (
@@ -162,6 +182,33 @@ Grammar(
             traits: [
                 "TypeAscriptionOwner"
             ],
+        ),
+        "StructDef": (
+            options: ["MemoryTypeSpecifier"],
+            traits: [
+                "NameOwner",
+                "VisibilityOwner",
+                "DocCommentsOwner",
+            ]
+        ),
+        "MemoryTypeSpecifier": (),
+        "RecordFieldDefList": (collections: [("fields", "RecordFieldDef")]),
+        "RecordFieldDef": (
+            traits: [
+                "NameOwner",
+                "VisibilityOwner",
+                "DocCommentsOwner",
+                "TypeAscriptionOwner"
+            ]
+        ),
+        "TupleFieldDefList": (collections: [("fields", "TupleFieldDef")]),
+        "TupleFieldDef": (
+            options: [
+                "TypeRef",
+            ],
+            traits: [
+                "VisibilityOwner",
+            ]
         ),
         "LetStmt": (
             options: [
@@ -201,6 +248,9 @@ Grammar(
             traits: ["ArgListOwner"],
             options: [ "Expr" ],
         ),
+        "FieldExpr": (
+            options: ["Expr", "NameRef"]
+        ),
         "IfExpr": (
             options: [ "Condition" ]
         ),
@@ -219,12 +269,14 @@ Grammar(
                 "BinExpr",
                 "ParenExpr",
                 "CallExpr",
+                "FieldExpr",
                 "IfExpr",
                 "LoopExpr",
                 "WhileExpr",
                 "ReturnExpr",
                 "BreakExpr",
                 "BlockExpr",
+                "RecordLit",
             ]
         ),
 
@@ -266,5 +318,12 @@ Grammar(
                 "PlaceholderPat"
             ],
         ),
+
+        "RecordLit": (options: ["Path", "RecordFieldList"]),
+        "RecordFieldList": (
+            collections: [ ("fields", "RecordField") ],
+            options: [["spread", "Expr"]]
+        ),
+        "RecordField": (options: ["NameRef", "Expr"]),
     }
 )

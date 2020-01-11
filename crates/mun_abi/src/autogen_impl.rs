@@ -53,6 +53,24 @@ unsafe impl Sync for FunctionSignature {}
 unsafe impl Send for FunctionInfo {}
 unsafe impl Sync for FunctionInfo {}
 
+impl StructInfo {
+    /// Returns the struct's name.
+    pub fn name(&self) -> &str {
+        unsafe { CStr::from_ptr(self.name) }
+            .to_str()
+            .expect("Function name contains invalid UTF8")
+    }
+
+    /// Returns the struct's fields' types.
+    pub fn field_types(&self) -> &[TypeInfo] {
+        if self.num_fields == 0 {
+            &[]
+        } else {
+            unsafe { slice::from_raw_parts(self.field_types, self.num_fields as usize) }
+        }
+    }
+}
+
 impl ModuleInfo {
     /// Returns the module's full path.
     pub fn path(&self) -> &str {
@@ -80,6 +98,15 @@ impl ModuleInfo {
             &[]
         } else {
             unsafe { slice::from_raw_parts(self.functions, self.num_functions as usize) }
+        }
+    }
+
+    /// Returns the module's structs.
+    pub fn structs(&self) -> &[StructInfo] {
+        if self.num_structs == 0 {
+            &[]
+        } else {
+            unsafe { slice::from_raw_parts(self.structs, self.num_structs as usize) }
         }
     }
 }
@@ -202,7 +229,7 @@ mod tests {
         b: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     };
 
-    const FAKE_TYPE_NAME: &'static str = "type-name";
+    const FAKE_TYPE_NAME: &str = "type-name";
 
     #[test]
     fn test_type_info_name() {
@@ -235,7 +262,7 @@ mod tests {
         }
     }
 
-    const FAKE_FN_NAME: &'static str = "fn-name";
+    const FAKE_FN_NAME: &str = "fn-name";
 
     #[test]
     fn test_fn_signature_name() {
@@ -296,35 +323,82 @@ mod tests {
         assert_eq!(fn_signature.return_type(), return_type);
     }
 
-    fn fake_module_info(path: &CStr, functions: &[FunctionInfo]) -> ModuleInfo {
+    fn fake_struct_info(name: &CStr, field_types: &[TypeInfo]) -> StructInfo {
+        StructInfo {
+            name: name.as_ptr(),
+            field_types: field_types.as_ptr(),
+            num_fields: field_types.len() as u16,
+        }
+    }
+
+    const FAKE_STRUCT_NAME: &str = "struct-name";
+
+    #[test]
+    fn test_struct_info_name() {
+        let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
+        let struct_info = fake_struct_info(&struct_name, &[]);
+
+        assert_eq!(struct_info.name(), FAKE_STRUCT_NAME);
+    }
+
+    #[test]
+    fn test_struct_info_field_types_none() {
+        let field_types = &[];
+        let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
+        let struct_info = fake_struct_info(&struct_name, field_types);
+
+        assert_eq!(struct_info.field_types(), field_types);
+    }
+
+    #[test]
+    fn test_struct_info_field_types_some() {
+        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
+        let type_info = fake_type_info(&type_name);
+
+        let field_types = &[type_info];
+        let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
+        let struct_info = fake_struct_info(&struct_name, field_types);
+
+        assert_eq!(struct_info.field_types(), field_types);
+    }
+
+    fn fake_module_info(
+        path: &CStr,
+        functions: &[FunctionInfo],
+        structs: &[StructInfo],
+    ) -> ModuleInfo {
         ModuleInfo {
             path: path.as_ptr(),
             functions: functions.as_ptr(),
             num_functions: functions.len() as u32,
+            structs: structs.as_ptr(),
+            num_structs: structs.len() as u32,
         }
     }
 
-    const FAKE_MODULE_PATH: &'static str = "path::to::module";
+    const FAKE_MODULE_PATH: &str = "path::to::module";
 
     #[test]
     fn test_module_info_path() {
         let module_path = CString::new(FAKE_MODULE_PATH).expect("Invalid fake module path.");
-        let module = fake_module_info(&module_path, &[]);
+        let module = fake_module_info(&module_path, &[], &[]);
 
         assert_eq!(module.path(), FAKE_MODULE_PATH);
     }
 
     #[test]
-    fn test_module_info_functions_none() {
+    fn test_module_info_types_none() {
         let functions = &[];
+        let structs = &[];
         let module_path = CString::new(FAKE_MODULE_PATH).expect("Invalid fake module path.");
-        let module = fake_module_info(&module_path, functions);
+        let module = fake_module_info(&module_path, functions, structs);
 
         assert_eq!(module.functions().len(), functions.len());
+        assert_eq!(module.structs().len(), structs.len());
     }
 
     #[test]
-    fn test_module_info_functions_some() {
+    fn test_module_info_types_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
         let type_info = fake_type_info(&type_name);
 
@@ -336,19 +410,30 @@ mod tests {
             signature: fn_signature,
             fn_ptr: ptr::null(),
         };
-
         let functions = &[fn_info];
-        let module_path = CString::new(FAKE_MODULE_PATH).expect("Invalid fake module path.");
-        let module = fake_module_info(&module_path, functions);
 
-        let result = module.functions();
-        assert_eq!(result.len(), functions.len());
-        for (lhs, rhs) in result.iter().zip(functions.iter()) {
+        let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name");
+        let struct_info = fake_struct_info(&struct_name, &[]);
+        let structs = &[struct_info];
+
+        let module_path = CString::new(FAKE_MODULE_PATH).expect("Invalid fake module path.");
+        let module = fake_module_info(&module_path, functions, structs);
+
+        let result_functions = module.functions();
+        assert_eq!(result_functions.len(), functions.len());
+        for (lhs, rhs) in result_functions.iter().zip(functions.iter()) {
             assert_eq!(lhs.fn_ptr, rhs.fn_ptr);
             assert_eq!(lhs.signature.name(), rhs.signature.name());
             assert_eq!(lhs.signature.arg_types(), rhs.signature.arg_types());
             assert_eq!(lhs.signature.return_type(), rhs.signature.return_type());
             assert_eq!(lhs.signature.privacy(), rhs.signature.privacy());
+        }
+
+        let result_structs = module.structs();
+        assert_eq!(result_structs.len(), structs.len());
+        for (lhs, rhs) in result_structs.iter().zip(structs.iter()) {
+            assert_eq!(lhs.name(), rhs.name());
+            assert_eq!(lhs.field_types(), rhs.field_types());
         }
     }
 
@@ -555,12 +640,12 @@ mod tests {
         }
     }
 
-    const FAKE_DEPENDENCY: &'static str = "path/to/dependency.dylib";
+    const FAKE_DEPENDENCY: &str = "path/to/dependency.dylib";
 
     #[test]
     fn test_assembly_info_dependencies() {
         let module_path = CString::new(FAKE_MODULE_PATH).expect("Invalid fake module path.");
-        let module = fake_module_info(&module_path, &[]);
+        let module = fake_module_info(&module_path, &[], &[]);
 
         let dispatch_table = fake_dispatch_table(&[], &mut []);
 

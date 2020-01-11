@@ -6,13 +6,17 @@
 #![allow(dead_code)]
 
 #[macro_use]
+mod macros;
+#[macro_use]
 mod arena;
+mod adt;
 mod code_model;
 mod db;
 pub mod diagnostics;
 mod display;
 mod expr;
 mod ids;
+mod in_file;
 mod input;
 pub mod line_index;
 mod model;
@@ -35,6 +39,7 @@ pub use salsa;
 pub use relative_path::{RelativePath, RelativePathBuf};
 
 pub use crate::{
+    arena::{ArenaId, RawId},
     db::{
         DefDatabase, DefDatabaseStorage, HirDatabase, HirDatabaseStorage, SourceDatabase,
         SourceDatabaseStorage,
@@ -42,7 +47,7 @@ pub use crate::{
     display::HirDisplay,
     expr::{
         resolver_for_expr, ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, ExprScopes, Literal,
-        LogicOp, Ordering, Pat, PatId, Statement,
+        LogicOp, Ordering, Pat, PatId, RecordLitField, Statement,
     },
     ids::ItemLoc,
     input::{FileId, SourceRoot, SourceRootId},
@@ -51,13 +56,14 @@ pub use crate::{
     path::{Path, PathKind},
     raw::RawItems,
     resolve::{Resolution, Resolver},
-    ty::{ApplicationTy, InferenceResult, Ty, TypeCtor},
+    ty::{lower::CallableDef, ApplicationTy, InferenceResult, Ty, TypeCtor},
 };
 
 use crate::{
-    arena::{Arena, ArenaId, RawId},
+    arena::Arena,
     name::AsName,
     source_id::{AstIdMap, FileAstId},
 };
 
-pub use self::code_model::{FnData, Function, Module, ModuleDef, Visibility};
+pub use self::adt::StructMemoryKind;
+pub use self::code_model::{FnData, Function, Module, ModuleDef, Struct, Visibility};

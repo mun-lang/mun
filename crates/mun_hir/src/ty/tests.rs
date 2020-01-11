@@ -172,6 +172,84 @@ fn invalid_binary_ops() {
     )
 }
 
+#[test]
+fn struct_decl() {
+    infer_snapshot(
+        r#"
+    struct Foo;
+    struct(gc) Bar {
+        f: float,
+        i: int,
+    }
+    struct(value) Baz(float, int);
+
+
+    fn main() {
+        let foo: Foo;
+        let bar: Bar;
+        let baz: Baz;
+    }
+    "#,
+    )
+}
+
+#[test]
+fn struct_lit() {
+    infer_snapshot(
+        r#"
+    struct Foo;
+    struct Bar {
+        a: float,
+    }
+    struct Baz(float, int);
+
+    fn main() {
+        let a: Foo = Foo;
+        let b: Bar = Bar { a: 1.23, };
+        let c = Baz(1.23, 1);
+
+        let a = Foo{}; // error: mismatched struct literal kind. expected `unit struct`, found `record`
+        let a = Foo(); // error: mismatched struct literal kind. expected `unit struct`, found `tuple`
+        let b = Bar; // error: mismatched struct literal kind. expected `record`, found `unit struct`
+        let b = Bar(); // error: mismatched struct literal kind. expected `record`, found `tuple`
+        let b = Bar{}; // error: missing record fields: a
+        let c = Baz; // error: mismatched struct literal kind. expected `tuple`, found `unit struct`
+        let c = Baz{}; // error: mismatched struct literal kind. expected `tuple`, found `record`
+        let c = Baz(); // error: this tuple struct literal has 2 fields but 0 fields were supplied
+    }
+    "#,
+    )
+}
+
+#[test]
+fn struct_field_index() {
+    infer_snapshot(
+        r#"
+    struct Foo {
+        a: float,
+        b: int,
+    }
+    struct Bar(float, int)
+    struct Baz;
+
+    fn main() {
+        let foo = Foo { a: 1.23, b: 4 };
+        foo.a
+        foo.b
+        foo.c // error: attempted to access a non-existent field in a struct.
+        let bar = Bar(1.23, 4);
+        bar.0
+        bar.1
+        bar.2 // error: attempted to access a non-existent field in a struct.
+        let baz = Baz;
+        baz.a // error: attempted to access a non-existent field in a struct.
+        let f = 1.0
+        f.0; // error: attempted to access a field on a primitive type.
+    }
+    "#,
+    )
+}
+
 fn infer_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
     insta::assert_snapshot!(insta::_macro_support::AutoName, infer(&text), &text);
@@ -197,19 +275,23 @@ fn infer(content: &str) -> String {
 
         for (expr, ty) in infer_result.type_of_expr.iter() {
             let syntax_ptr = match body_source_map.expr_syntax(expr) {
-                Some(sp) => sp.map(|ast| ast.syntax_node_ptr()),
+                Some(sp) => {
+                    sp.map(|ast| ast.either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr()))
+                }
                 None => continue,
             };
             types.push((syntax_ptr, ty));
         }
 
         // Sort ranges for consistency
-        types.sort_by_key(|(src_ptr, _)| (src_ptr.ast.range().start(), src_ptr.ast.range().end()));
+        types.sort_by_key(|(src_ptr, _)| {
+            (src_ptr.value.range().start(), src_ptr.value.range().end())
+        });
         for (src_ptr, ty) in &types {
-            let node = src_ptr.ast.to_node(&src_ptr.file_syntax(&db));
+            let node = src_ptr.value.to_node(&src_ptr.file_syntax(&db));
 
             let (range, text) = (
-                src_ptr.ast.range(),
+                src_ptr.value.range(),
                 node.text().to_string().replace("\n", " "),
             );
             write!(

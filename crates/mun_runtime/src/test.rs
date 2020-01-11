@@ -334,3 +334,56 @@ fn compiler_valid_utf8() {
 
     assert_invoke_eq!(bool, false, driver, "foo", 10i64);
 }
+
+#[test]
+fn struct_info() {
+    use mun_abi::{Guid, Reflection};
+
+    let driver = TestDriver::new(
+        r"
+    struct Foo;
+    struct Bar(bool);
+    struct Baz { a: int, b: float };
+    ",
+    );
+
+    assert_struct_info_eq(&driver, "Foo", &[]);
+    assert_struct_info_eq(&driver, "Bar", &[bool::type_guid()]);
+    assert_struct_info_eq(&driver, "Baz", &[i64::type_guid(), f64::type_guid()]);
+
+    fn assert_struct_info_eq(
+        driver: &TestDriver,
+        expected_name: &str,
+        expected_field_types: &[Guid],
+    ) {
+        let struct_info = driver.runtime.get_struct_info(expected_name).unwrap();
+
+        assert_eq!(struct_info.name(), expected_name);
+        if expected_field_types.is_empty() {
+            assert_eq!(struct_info.field_types(), &[]);
+        } else {
+            let field_types = struct_info.field_types();
+            assert_eq!(field_types.len(), expected_field_types.len());
+            for (idx, field_type) in expected_field_types.iter().enumerate() {
+                assert_eq!(field_types[idx].guid, *field_type);
+            }
+        }
+    }
+}
+
+#[test]
+fn fields() {
+    let mut driver = TestDriver::new(
+        r#"
+        struct(gc) Foo { a:int, b:int };
+        fn main(foo:int):bool {
+            let a = Foo { a: foo, b: foo };
+            a.a += a.b;
+            let result = a;
+            result.a += a.b;
+            result.a == a.a
+        }
+    "#,
+    );
+    assert_invoke_eq!(bool, true, driver, "main", 48);
+}

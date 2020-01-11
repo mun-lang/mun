@@ -28,7 +28,7 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Diagnostic> {
         });
     })
     .on::<mun_hir::diagnostics::UnresolvedValue, _>(|d| {
-        let text = d.expr.to_node(&parse.tree().syntax()).text().to_string();
+        let text = d.expr.to_node(&parse.syntax_node()).text().to_string();
         result.borrow_mut().push(Diagnostic {
             level: Level::Error,
             loc: d.highlight_range().into(),
@@ -38,7 +38,7 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Diagnostic> {
     .on::<mun_hir::diagnostics::UnresolvedType, _>(|d| {
         let text = d
             .type_ref
-            .to_node(&parse.tree().syntax())
+            .to_node(&parse.syntax_node())
             .syntax()
             .text()
             .to_string();
@@ -71,7 +71,7 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Diagnostic> {
             level: Level::Error,
             loc: match d.definition.kind() {
                 SyntaxKind::FUNCTION_DEF => {
-                    ast::FunctionDef::cast(d.definition.to_node(&parse.tree().syntax()))
+                    ast::FunctionDef::cast(d.definition.to_node(&parse.syntax_node()))
                         .map(|f| f.signature_range())
                         .unwrap_or_else(|| d.highlight_range())
                         .into()
@@ -80,6 +80,30 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Diagnostic> {
             },
             message: d.message(),
         });
+    })
+    .on::<mun_hir::diagnostics::PossiblyUninitializedVariable, _>(|d| {
+        result.borrow_mut().push(Diagnostic {
+            level: Level::Error,
+            loc: d.highlight_range().into(),
+            message: format!(
+                "use of possibly-uninitialized variable: `{}`",
+                d.pat.to_node(&parse.syntax_node()).text().to_string()
+            ),
+        })
+    })
+    .on::<mun_hir::diagnostics::AccessUnknownField, _>(|d| {
+        result.borrow_mut().push(Diagnostic {
+            level: Level::Error,
+            loc: ast::FieldExpr::cast(d.expr.to_node(&parse.syntax_node()))
+                .map(|f| f.field_range())
+                .unwrap_or_else(|| d.highlight_range())
+                .into(),
+            message: format!(
+                "no field `{}` on type `{}`",
+                d.name,
+                d.receiver_ty.display(db),
+            ),
+        })
     });
 
     Module::from(file_id).diagnostics(db, &mut sink);

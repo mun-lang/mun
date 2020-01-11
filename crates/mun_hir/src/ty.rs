@@ -1,16 +1,16 @@
 mod infer;
-mod lower;
+pub(super) mod lower;
+mod op;
 
 use crate::display::{HirDisplay, HirFormatter};
 use crate::ty::infer::TypeVarId;
-use crate::{Function, HirDatabase};
+use crate::ty::lower::fn_sig_for_struct_constructor;
+use crate::{HirDatabase, Struct};
 pub(crate) use infer::infer_query;
 pub use infer::InferenceResult;
-pub(crate) use lower::{fn_sig_for_fn, type_for_def, TypableDef};
+pub(crate) use lower::{callable_item_sig, fn_sig_for_fn, type_for_def, CallableDef, TypableDef};
 use std::fmt;
 use std::sync::Arc;
-
-mod op;
 
 #[cfg(test)]
 mod tests;
@@ -55,6 +55,10 @@ pub enum TypeCtor {
     /// The primitive boolean type. Written as `bool`.
     Bool,
 
+    /// An abstract datatype (structures, tuples, or enumerations)
+    /// TODO: Add tuples and enumerations
+    Struct(Struct),
+
     /// The never type `never`.
     Never,
 
@@ -70,7 +74,7 @@ pub enum TypeCtor {
     /// function foo() -> number { 1 }
     /// let bar = foo; // bar: function() -> number {foo}
     /// ```
-    FnDef(Function),
+    FnDef(CallableDef),
 }
 
 impl Ty {
@@ -99,9 +103,9 @@ impl Ty {
         }
     }
 
-    /// Returns the function definition for the given expression or `None` if the type does not
-    /// represent a function.
-    pub fn as_function_def(&self) -> Option<Function> {
+    /// Returns the callable definition for the given expression or `None` if the type does not
+    /// represent a callable.
+    pub fn as_callable_def(&self) -> Option<CallableDef> {
         match self {
             Ty::Apply(a_ty) => match a_ty.ctor {
                 TypeCtor::FnDef(def) => Some(def),
@@ -111,10 +115,20 @@ impl Ty {
         }
     }
 
+    pub fn as_struct(&self) -> Option<Struct> {
+        match self {
+            Ty::Apply(a_ty) => match a_ty.ctor {
+                TypeCtor::FnDef(CallableDef::Struct(s)) | TypeCtor::Struct(s) => Some(s),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
     pub fn callable_sig(&self, db: &impl HirDatabase) -> Option<FnSig> {
         match self {
             Ty::Apply(a_ty) => match a_ty.ctor {
-                TypeCtor::FnDef(def) => Some(db.fn_signature(def)),
+                TypeCtor::FnDef(def) => Some(db.callable_sig(def)),
                 _ => None,
             },
             _ => None,
@@ -177,11 +191,20 @@ impl HirDisplay for ApplicationTy {
             TypeCtor::Float => write!(f, "float"),
             TypeCtor::Int => write!(f, "int"),
             TypeCtor::Bool => write!(f, "bool"),
+            TypeCtor::Struct(def) => write!(f, "{}", def.name(f.db)),
             TypeCtor::Never => write!(f, "never"),
-            TypeCtor::FnDef(def) => {
-                let sig = f.db.fn_signature(def);
+            TypeCtor::FnDef(CallableDef::Function(def)) => {
+                let sig = fn_sig_for_fn(f.db, def);
                 let name = def.name(f.db);
                 write!(f, "function {}", name)?;
+                write!(f, "(")?;
+                f.write_joined(sig.params(), ", ")?;
+                write!(f, ") -> {}", sig.ret().display(f.db))
+            }
+            TypeCtor::FnDef(CallableDef::Struct(def)) => {
+                let sig = fn_sig_for_struct_constructor(f.db, def);
+                let name = def.name(f.db);
+                write!(f, "ctor {}", name)?;
                 write!(f, "(")?;
                 f.write_joined(sig.params(), ", ")?;
                 write!(f, ") -> {}", sig.ret().display(f.db))

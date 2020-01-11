@@ -1,0 +1,38 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "struct Foo {\n    a: float,\n    b: int,\n}\nstruct Bar(float, int)\nstruct Baz;\n\nfn main() {\n    let foo = Foo { a: 1.23, b: 4 };\n    foo.a\n    foo.b\n    foo.c // error: attempted to access a non-existent field in a struct.\n    let bar = Bar(1.23, 4);\n    bar.0\n    bar.1\n    bar.2 // error: attempted to access a non-existent field in a struct.\n    let baz = Baz;\n    baz.a // error: attempted to access a non-existent field in a struct.\n    let f = 1.0\n    f.0; // error: attempted to access a field on a primitive type.\n}"
+---
+[150; 155): attempted to access a non-existent field in a struct.
+[272; 277): attempted to access a non-existent field in a struct.
+[365; 370): attempted to access a non-existent field in a struct.
+[455; 456): attempted to access a field on a primitive type.
+[87; 520) '{     ...ype. }': nothing
+[97; 100) 'foo': Foo
+[103; 124) 'Foo { ...b: 4 }': Foo
+[112; 116) '1.23': float
+[121; 122) '4': int
+[130; 133) 'foo': Foo
+[130; 135) 'foo.a': float
+[140; 143) 'foo': Foo
+[140; 145) 'foo.b': int
+[150; 153) 'foo': Foo
+[150; 155) 'foo.c': {unknown}
+[228; 231) 'bar': Bar
+[234; 237) 'Bar': ctor Bar(float, int) -> Bar
+[234; 246) 'Bar(1.23, 4)': Bar
+[238; 242) '1.23': float
+[244; 245) '4': int
+[252; 255) 'bar': Bar
+[252; 257) 'bar.0': float
+[262; 265) 'bar': Bar
+[262; 267) 'bar.1': int
+[272; 275) 'bar': Bar
+[272; 277) 'bar.2': {unknown}
+[350; 353) 'baz': Baz
+[356; 359) 'Baz': Baz
+[365; 368) 'baz': Baz
+[365; 370) 'baz.a': {unknown}
+[443; 444) 'f': float
+[447; 450) '1.0': float
+[455; 456) 'f': float
+[455; 458) 'f.0': {unknown}

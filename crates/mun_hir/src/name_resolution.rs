@@ -47,13 +47,20 @@ pub(crate) fn module_scope_query(db: &impl HirDatabase, file_id: FileId) -> Arc<
     let mut scope = ModuleScope::default();
     let defs = db.module_data(file_id);
     for def in defs.definitions() {
-        #[allow(clippy::single_match)]
         match def {
             ModuleDef::Function(f) => {
                 scope.items.insert(
                     f.name(db),
                     Resolution {
                         def: PerNs::values(*def),
+                    },
+                );
+            }
+            ModuleDef::Struct(s) => {
+                scope.items.insert(
+                    s.name(db),
+                    Resolution {
+                        def: PerNs::both(*def, *def),
                     },
                 );
             }

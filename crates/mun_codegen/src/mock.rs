@@ -1,13 +1,12 @@
 use crate::{IrDatabase, OptimizationLevel};
-use mun_hir::{FileId, RelativePathBuf};
-use mun_hir::{SourceDatabase, SourceRoot, SourceRootId};
+use hir::{FileId, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
 use std::sync::Arc;
 
 /// A mock implementation of the IR database. It can be used to set up a simple test case.
 #[salsa::database(
-    mun_hir::SourceDatabaseStorage,
-    mun_hir::DefDatabaseStorage,
-    mun_hir::HirDatabaseStorage,
+    hir::SourceDatabaseStorage,
+    hir::DefDatabaseStorage,
+    hir::HirDatabaseStorage,
     crate::IrDatabaseStorage
 )]
 #[derive(Default, Debug)]
@@ -38,7 +37,7 @@ impl MockDatabase {
         source_root.insert_file(rel_path, file_id);
 
         db.set_source_root(source_root_id, Arc::new(source_root));
-        db.set_optimization_lvl(OptimizationLevel::Default);
+        db.set_optimization_lvl(OptimizationLevel::None);
 
         let context = crate::Context::create();
         db.set_context(Arc::new(context));

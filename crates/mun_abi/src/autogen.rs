@@ -206,6 +206,62 @@ fn bindgen_test_layout_FunctionInfo() {
         )
     );
 }
+#[doc = " Represents a struct declaration."]
+#[doc = ""]
+#[doc = " <div rustbindgen derive=\"Clone\" derive=\"Debug\"></div>"]
+#[repr(C)]
+#[derive(Clone, Debug)]
+pub struct StructInfo {
+    #[doc = " Struct name"]
+    pub name: *const ::std::os::raw::c_char,
+    #[doc = " Struct fields' information"]
+    pub field_types: *const TypeInfo,
+    #[doc = " Number of fields"]
+    pub num_fields: u16,
+}
+#[test]
+fn bindgen_test_layout_StructInfo() {
+    assert_eq!(
+        ::std::mem::size_of::<StructInfo>(),
+        24usize,
+        concat!("Size of: ", stringify!(StructInfo))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<StructInfo>(),
+        8usize,
+        concat!("Alignment of ", stringify!(StructInfo))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<StructInfo>())).name as *const _ as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(StructInfo),
+            "::",
+            stringify!(name)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<StructInfo>())).field_types as *const _ as usize },
+        8usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(StructInfo),
+            "::",
+            stringify!(field_types)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<StructInfo>())).num_fields as *const _ as usize },
+        16usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(StructInfo),
+            "::",
+            stringify!(num_fields)
+        )
+    );
+}
 #[doc = " Represents a module declaration."]
 #[doc = ""]
 #[doc = " <div rustbindgen derive=\"Debug\"></div>"]
@@ -218,12 +274,16 @@ pub struct ModuleInfo {
     pub functions: *const FunctionInfo,
     #[doc = " Number of module functions"]
     pub num_functions: u32,
+    #[doc = " Module structs"]
+    pub structs: *const StructInfo,
+    #[doc = " Number of module structs"]
+    pub num_structs: u32,
 }
 #[test]
 fn bindgen_test_layout_ModuleInfo() {
     assert_eq!(
         ::std::mem::size_of::<ModuleInfo>(),
-        24usize,
+        40usize,
         concat!("Size of: ", stringify!(ModuleInfo))
     );
     assert_eq!(
@@ -259,6 +319,26 @@ fn bindgen_test_layout_ModuleInfo() {
             stringify!(ModuleInfo),
             "::",
             stringify!(num_functions)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<ModuleInfo>())).structs as *const _ as usize },
+        24usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(ModuleInfo),
+            "::",
+            stringify!(structs)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<ModuleInfo>())).num_structs as *const _ as usize },
+        32usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(ModuleInfo),
+            "::",
+            stringify!(num_structs)
         )
     );
 }
@@ -339,7 +419,7 @@ pub struct AssemblyInfo {
 fn bindgen_test_layout_AssemblyInfo() {
     assert_eq!(
         ::std::mem::size_of::<AssemblyInfo>(),
-        64usize,
+        80usize,
         concat!("Size of: ", stringify!(AssemblyInfo))
     );
     assert_eq!(
@@ -359,7 +439,7 @@ fn bindgen_test_layout_AssemblyInfo() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<AssemblyInfo>())).dispatch_table as *const _ as usize },
-        24usize,
+        40usize,
         concat!(
             "Offset of field: ",
             stringify!(AssemblyInfo),
@@ -369,7 +449,7 @@ fn bindgen_test_layout_AssemblyInfo() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<AssemblyInfo>())).dependencies as *const _ as usize },
-        48usize,
+        64usize,
         concat!(
             "Offset of field: ",
             stringify!(AssemblyInfo),
@@ -379,7 +459,7 @@ fn bindgen_test_layout_AssemblyInfo() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<AssemblyInfo>())).num_dependencies as *const _ as usize },
-        56usize,
+        72usize,
         concat!(
             "Offset of field: ",
             stringify!(AssemblyInfo),

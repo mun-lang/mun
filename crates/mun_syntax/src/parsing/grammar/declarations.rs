@@ -1,7 +1,7 @@
 use super::*;
 use crate::T;
 
-pub(super) const DECLARATION_RECOVERY_SET: TokenSet = token_set![FN_KW, PUB_KW];
+pub(super) const DECLARATION_RECOVERY_SET: TokenSet = token_set![FN_KW, PUB_KW, STRUCT_KW];
 
 pub(super) fn mod_contents(p: &mut Parser) {
     while !p.at(EOF) {
@@ -34,6 +34,11 @@ pub(super) fn declaration(p: &mut Parser) {
 pub(super) fn maybe_declaration(p: &mut Parser, m: Marker) -> Result<(), Marker> {
     opt_visibility(p);
 
+    let m = match declarations_without_modifiers(p, m) {
+        Ok(()) => return Ok(()),
+        Err(m) => m,
+    };
+
     match p.current() {
         T![fn] => {
             fn_def(p);
@@ -41,6 +46,16 @@ pub(super) fn maybe_declaration(p: &mut Parser, m: Marker) -> Result<(), Marker>
         }
         _ => return Err(m),
     }
+    Ok(())
+}
+
+fn declarations_without_modifiers(p: &mut Parser, m: Marker) -> Result<(), Marker> {
+    match p.current() {
+        T![struct] => {
+            adt::struct_def(p, m);
+        }
+        _ => return Err(m),
+    };
     Ok(())
 }
 

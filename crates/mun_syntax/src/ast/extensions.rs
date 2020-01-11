@@ -1,7 +1,6 @@
-use crate::ast::NameOwner;
 use crate::{
-    ast::{self, AstNode},
-    T,
+    ast::{self, child_opt, AstNode, NameOwner},
+    SyntaxKind, T,
 };
 use crate::{SmolStr, SyntaxNode};
 use text_unit::TextRange;
@@ -15,6 +14,17 @@ impl ast::Name {
 impl ast::NameRef {
     pub fn text(&self) -> &SmolStr {
         text_of_first_token(self.syntax())
+    }
+
+    pub fn as_tuple_field(&self) -> Option<usize> {
+        self.syntax().children_with_tokens().find_map(|c| {
+            if c.kind() == SyntaxKind::INT_NUMBER {
+                c.as_token()
+                    .and_then(|tok| tok.text().as_str().parse().ok())
+            } else {
+                None
+            }
+        })
     }
 }
 
@@ -86,5 +96,100 @@ impl ast::PathSegment {
             Some(T![::]) => true,
             _ => false,
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StructKind {
+    Record(ast::RecordFieldDefList),
+    Tuple(ast::TupleFieldDefList),
+    Unit,
+}
+
+impl StructKind {
+    fn from_node<N: AstNode>(node: &N) -> StructKind {
+        if let Some(r) = child_opt::<_, ast::RecordFieldDefList>(node) {
+            StructKind::Record(r)
+        } else if let Some(t) = child_opt::<_, ast::TupleFieldDefList>(node) {
+            StructKind::Tuple(t)
+        } else {
+            StructKind::Unit
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StructMemoryKind {
+    /// A garbage collected struct is allocated on the heap and uses reference semantics when passed
+    /// around.
+    GC,
+
+    /// A value struct is allocated on the stack and uses value semantics when passed around.
+    Value,
+}
+
+impl Default for StructMemoryKind {
+    fn default() -> Self {
+        StructMemoryKind::GC
+    }
+}
+
+impl ast::MemoryTypeSpecifier {
+    pub fn kind(&self) -> StructMemoryKind {
+        if self.is_value() {
+            StructMemoryKind::Value
+        } else if self.is_gc() {
+            StructMemoryKind::GC
+        } else {
+            StructMemoryKind::default()
+        }
+    }
+
+    fn is_gc(&self) -> bool {
+        self.syntax()
+            .children_with_tokens()
+            .any(|it| it.kind() == SyntaxKind::GC_KW)
+    }
+
+    fn is_value(&self) -> bool {
+        self.syntax()
+            .children_with_tokens()
+            .any(|it| it.kind() == SyntaxKind::VALUE_KW)
+    }
+}
+
+impl ast::StructDef {
+    pub fn kind(&self) -> StructKind {
+        StructKind::from_node(self)
+    }
+}
+
+pub enum VisibilityKind {
+    PubPackage,
+    PubSuper,
+    Pub,
+}
+
+impl ast::Visibility {
+    pub fn kind(&self) -> VisibilityKind {
+        if self.is_pub_package() {
+            VisibilityKind::PubPackage
+        } else if self.is_pub_super() {
+            VisibilityKind::PubSuper
+        } else {
+            VisibilityKind::Pub
+        }
+    }
+
+    fn is_pub_package(&self) -> bool {
+        self.syntax()
+            .children_with_tokens()
+            .any(|it| it.kind() == T![package])
+    }
+
+    fn is_pub_super(&self) -> bool {
+        self.syntax()
+            .children_with_tokens()
+            .any(|it| it.kind() == T![super])
     }
 }

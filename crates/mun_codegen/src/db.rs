@@ -1,8 +1,9 @@
 #![allow(clippy::type_repetition_in_bounds)]
 
-use mun_hir as hir;
+
 
 use crate::{code_gen::symbols::TypeInfo, ir::module::ModuleIR, Context};
+use inkwell::types::StructType;
 use inkwell::{types::AnyTypeEnum, OptimizationLevel};
 use mun_target::spec::Target;
 use std::sync::Arc;
@@ -26,6 +27,10 @@ pub trait IrDatabase: hir::HirDatabase {
     /// Given a type, return the corresponding IR type.
     #[salsa::invoke(crate::ir::ty::ir_query)]
     fn type_ir(&self, ty: hir::Ty) -> AnyTypeEnum;
+
+    /// Given a struct, return the corresponding IR type.
+    #[salsa::invoke(crate::ir::ty::struct_ty_query)]
+    fn struct_ty(&self, s: hir::Struct) -> StructType;
 
     /// Given a `hir::FileId` generate code for the module.
     #[salsa::invoke(crate::ir::module::ir_query)]

@@ -1,8 +1,6 @@
 use crate::{mock::MockDatabase, IrDatabase};
-use mun_hir::diagnostics::DiagnosticSink;
-use mun_hir::line_index::LineIndex;
-use mun_hir::Module;
-use mun_hir::SourceDatabase;
+use hir::{diagnostics::DiagnosticSink, line_index::LineIndex, Module, SourceDatabase};
+use inkwell::OptimizationLevel;
 use std::cell::RefCell;
 use std::sync::Arc;
 
@@ -359,15 +357,93 @@ fn while_expr() {
         while n<4 {
             break;
         };
+       }
+    "#,
+    )
+}
+
+#[test]
+fn struct_test() {
+    test_snapshot_unoptimized(
+        r#"
+    struct(value) Bar(float, int, bool, Foo);
+    struct(value) Foo { a: int };
+    struct(value) Baz;
+    fn foo() {
+        let a: Foo = Foo { a: 5 };
+        let b: Bar = Bar(1.23, 4, true, a);
+        let c: Baz = Baz;
+    }
+    "#,
+    )
+}
+
+#[test]
+fn field_expr() {
+    test_snapshot(
+        r#"
+    struct(value) Bar(float, Foo);
+    struct(value) Foo { a: int };
+
+    fn bar_0(bar: Bar): float {
+        bar.0
+    }
+
+    fn bar_1(bar: Bar): Foo {
+        bar.1
+    }
+
+    fn bar_1_a(bar: Bar): int {
+        bar.1.a
+    }
+
+    fn foo_a(foo: Foo): int {
+        foo.a
+    }
+
+    fn bar_1_foo_a(bar: Bar): int {
+        foo_a(bar_1(bar))
+    }
+
+    fn main(): int {
+        let a: Foo = Foo { a: 5 };
+        let b: Bar = Bar(1.23, a);
+        let aa_lhs = a.a + 2;
+        let aa_rhs = 2 + a.a;
+        aa_lhs + aa_rhs
+    }
+    "#,
+    )
+}
+
+#[test]
+fn gc_struct() {
+    test_snapshot_unoptimized(
+        r#"
+    struct(gc) Foo { a: int, b: int };
+
+    fn foo() {
+        let a = Foo { a: 3, b: 4 };
+        a.b += 3;
+        let b = a;
     }
     "#,
     )
 }
 
 fn test_snapshot(text: &str) {
+    test_snapshot_with_optimization(text, OptimizationLevel::Default);
+}
+
+fn test_snapshot_unoptimized(text: &str) {
+    test_snapshot_with_optimization(text, OptimizationLevel::None);
+}
+
+fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
     let text = text.trim().replace("\n    ", "\n");
 
-    let (db, file_id) = MockDatabase::with_single_file(&text);
+    let (mut db, file_id) = MockDatabase::with_single_file(&text);
+    db.set_optimization_lvl(opt);
 
     let line_index: Arc<LineIndex> = db.line_index(file_id);
     let messages = RefCell::new(Vec::new());

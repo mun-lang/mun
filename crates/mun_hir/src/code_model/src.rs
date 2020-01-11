@@ -1,35 +1,47 @@
-use crate::code_model::Function;
+use crate::code_model::{Function, Struct, StructField};
 use crate::ids::AstItemDef;
-use crate::{DefDatabase, FileId, SourceDatabase};
-use mun_syntax::{ast, AstNode, SyntaxNode};
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub struct Source<T> {
-    pub file_id: FileId,
-    pub ast: T,
-}
+use crate::in_file::InFile;
+use crate::DefDatabase;
+use mun_syntax::ast;
 
 pub trait HasSource {
     type Ast;
-    fn source(self, db: &impl DefDatabase) -> Source<Self::Ast>;
+    fn source(self, db: &impl DefDatabase) -> InFile<Self::Ast>;
 }
 
 impl HasSource for Function {
     type Ast = ast::FunctionDef;
-    fn source(self, db: &impl DefDatabase) -> Source<ast::FunctionDef> {
+    fn source(self, db: &impl DefDatabase) -> InFile<ast::FunctionDef> {
         self.id.source(db)
     }
 }
 
-impl<T> Source<T> {
-    pub(crate) fn map<F: FnOnce(T) -> U, U>(self, f: F) -> Source<U> {
-        Source {
-            file_id: self.file_id,
-            ast: f(self.ast),
-        }
+impl HasSource for Struct {
+    type Ast = ast::StructDef;
+    fn source(self, db: &impl DefDatabase) -> InFile<ast::StructDef> {
+        self.id.source(db)
     }
+}
 
-    pub(crate) fn file_syntax(&self, db: &impl SourceDatabase) -> SyntaxNode {
-        db.parse(self.file_id).tree().syntax().clone()
+impl HasSource for StructField {
+    type Ast = ast::RecordFieldDef;
+
+    fn source(self, db: &impl DefDatabase) -> InFile<ast::RecordFieldDef> {
+        let src = self.parent.source(db);
+        let file_id = src.file_id;
+        let field_sources = if let ast::StructKind::Record(r) = src.value.kind() {
+            r.fields().collect()
+        } else {
+            Vec::new()
+        };
+
+        let ast = field_sources
+            .into_iter()
+            .zip(self.parent.data(db).fields.iter())
+            .find(|(_syntax, (id, _))| *id == self.id)
+            .unwrap()
+            .0;
+
+        InFile::new(file_id, ast)
     }
 }
