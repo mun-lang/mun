@@ -370,3 +370,20 @@ fn struct_info() {
         }
     }
 }
+
+#[test]
+fn fields() {
+    let mut driver = TestDriver::new(
+        r#"
+        struct(gc) Foo { a:int, b:int };
+        fn main(foo:int):bool {
+            let a = Foo { a: foo, b: foo };
+            a.a += a.b;
+            let result = a;
+            result.a += a.b;
+            result.a == a.a
+        }
+    "#,
+    );
+    assert_invoke_eq!(bool, true, driver, "main", 48);
+}

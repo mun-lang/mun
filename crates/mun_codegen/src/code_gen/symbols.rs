@@ -7,7 +7,7 @@ use hir::{CallableDef, Ty, TypeCtor};
 use inkwell::{
     attributes::Attribute,
     module::{Linkage, Module},
-    types::{AnyTypeEnum, StructType},
+    types::StructType,
     values::{FunctionValue, IntValue, PointerValue, StructValue, UnnamedAddress},
     AddressSpace,
 };
@@ -215,25 +215,21 @@ fn gen_struct_info_array<'a, D: IrDatabase>(
 ) -> GlobalValue {
     let struct_infos: Vec<StructValue> = structs
         .map(|(s, _)| {
-            if let AnyTypeEnum::StructType(_) = db.type_ir(s.ty(db)) {
-                let name_str = intern_string(&module, &s.name(db).to_string());
+            let name_str = intern_string(&module, &s.name(db).to_string());
 
-                let fields = s.fields(db);
-                let field_types = fields.iter().map(|field| field.ty(db));
-                let (fields, num_fields) = gen_type_info_array(db, module, types, field_types);
+            let fields = s.fields(db);
+            let field_types = fields.iter().map(|field| field.ty(db));
+            let (fields, num_fields) = gen_type_info_array(db, module, types, field_types);
 
-                types.struct_info_type.const_named_struct(&[
-                    name_str.into(),
-                    fields.into(),
-                    module
-                        .get_context()
-                        .i16_type()
-                        .const_int(num_fields as u64, false)
-                        .into(),
-                ])
-            } else {
-                unreachable!();
-            }
+            types.struct_info_type.const_named_struct(&[
+                name_str.into(),
+                fields.into(),
+                module
+                    .get_context()
+                    .i16_type()
+                    .const_int(num_fields as u64, false)
+                    .into(),
+            ])
         })
         .collect();
 

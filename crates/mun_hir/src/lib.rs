@@ -65,4 +65,5 @@ use crate::{
     source_id::{AstIdMap, FileAstId},
 };
 
+pub use self::adt::StructMemoryKind;
 pub use self::code_model::{FnData, Function, Module, ModuleDef, Struct, Visibility};

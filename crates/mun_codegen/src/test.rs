@@ -366,9 +366,9 @@ fn while_expr() {
 fn struct_test() {
     test_snapshot_unoptimized(
         r#"
-    struct Bar(float, int, bool, Foo);
-    struct Foo { a: int };
-    struct Baz;
+    struct(value) Bar(float, int, bool, Foo);
+    struct(value) Foo { a: int };
+    struct(value) Baz;
     fn foo() {
         let a: Foo = Foo { a: 5 };
         let b: Bar = Bar(1.23, 4, true, a);
@@ -382,13 +382,13 @@ fn struct_test() {
 fn field_expr() {
     test_snapshot(
         r#"
-    struct Bar(float, Foo);
-    struct Foo { a: int };
+    struct(value) Bar(float, Foo);
+    struct(value) Foo { a: int };
 
     fn bar_0(bar: Bar): float {
         bar.0
     }
-    
+
     fn bar_1(bar: Bar): Foo {
         bar.1
     }
@@ -411,6 +411,21 @@ fn field_expr() {
         let aa_lhs = a.a + 2;
         let aa_rhs = 2 + a.a;
         aa_lhs + aa_rhs
+    }
+    "#,
+    )
+}
+
+#[test]
+fn gc_struct() {
+    test_snapshot_unoptimized(
+        r#"
+    struct(gc) Foo { a: int, b: int };
+
+    fn foo() {
+        let a = Foo { a: 3, b: 4 };
+        a.b += 3;
+        let b = a;
     }
     "#,
     )

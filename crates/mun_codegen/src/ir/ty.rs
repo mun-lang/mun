@@ -1,7 +1,8 @@
 use super::try_convert_any_to_basic;
 use crate::IrDatabase;
 use hir::{ApplicationTy, CallableDef, Ty, TypeCtor};
-use inkwell::types::{AnyTypeEnum, BasicType, BasicTypeEnum};
+use inkwell::types::{AnyTypeEnum, BasicType, BasicTypeEnum, StructType};
+use inkwell::AddressSpace;
 
 /// Given a mun type, construct an LLVM IR type
 pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty) -> AnyTypeEnum {
@@ -29,12 +30,21 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty) -> AnyTypeEnum {
 
                 AnyTypeEnum::FunctionType(fn_type)
             }
-            TypeCtor::FnDef(CallableDef::Struct(s)) | TypeCtor::Struct(s) => {
-                let name = s.name(db).to_string();
-                context.opaque_struct_type(&name).into()
+            TypeCtor::Struct(s) => {
+                let struct_ty = db.struct_ty(s);
+                match s.data(db).memory_kind {
+                    hir::StructMemoryKind::GC => struct_ty.ptr_type(AddressSpace::Generic).into(),
+                    hir::StructMemoryKind::Value => struct_ty.into(),
+                }
             }
             _ => unreachable!(),
         },
         _ => unreachable!("unknown type can not be converted"),
     }
+}
+
+/// Returns the LLVM IR type of the specified struct
+pub fn struct_ty_query(db: &impl IrDatabase, s: hir::Struct) -> StructType {
+    let name = s.name(db).to_string();
+    db.context().opaque_struct_type(&name)
 }

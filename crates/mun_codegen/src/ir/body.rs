@@ -1,7 +1,4 @@
-use crate::{
-    ir::adt::gen_named_struct_lit, ir::dispatch_table::DispatchTable, ir::try_convert_any_to_basic,
-    IrDatabase,
-};
+use crate::{ir::dispatch_table::DispatchTable, ir::try_convert_any_to_basic, IrDatabase};
 use hir::{
     ArenaId, ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDisplay, InferenceResult, Literal,
     Name, Ordering, Pat, PatId, Path, Resolution, Resolver, Statement, TypeCtor,
@@ -14,6 +11,7 @@ use inkwell::{
 };
 use std::{collections::HashMap, mem, sync::Arc};
 
+use crate::ir::adt::gen_named_struct_lit;
 use inkwell::basic_block::BasicBlock;
 use inkwell::values::PointerValue;
 
@@ -174,7 +172,8 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 name,
             } => {
                 let ptr = self.gen_field(expr, *receiver_expr, name);
-                Some(self.builder.build_load(ptr, &name.to_string()))
+                let value = self.builder.build_load(ptr, &name.to_string());
+                Some(value)
             }
             _ => unimplemented!("unimplemented expr type {:?}", &body[expr]),
         }
@@ -215,6 +214,28 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         self.module.get_context().const_struct(&[], false).into()
     }
 
+    /// Allocate a struct literal either on the stack or the heap based on the type of the struct.
+    fn gen_struct_alloc(
+        &mut self,
+        hir_struct: hir::Struct,
+        args: &[BasicValueEnum],
+    ) -> BasicValueEnum {
+        let struct_lit = gen_named_struct_lit(self.db, hir_struct, &args);
+        match hir_struct.data(self.db).memory_kind {
+            hir::StructMemoryKind::Value => struct_lit.into(),
+            hir::StructMemoryKind::GC => {
+                // TODO: Root memory in GC
+                let struct_ir_ty = self.db.struct_ty(hir_struct);
+                let struct_ptr: PointerValue = self
+                    .builder
+                    .build_malloc(struct_ir_ty, &hir_struct.name(self.db).to_string());
+                let struct_value = gen_named_struct_lit(self.db, hir_struct, &args);
+                self.builder.build_store(struct_ptr, struct_value);
+                struct_ptr.into()
+            }
+        }
+    }
+
     /// Generates IR for a record literal, e.g. `Foo { a: 1.23, b: 4 }`
     fn gen_record_lit(
         &mut self,
@@ -222,29 +243,32 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         fields: &[hir::RecordLitField],
     ) -> BasicValueEnum {
         let struct_ty = self.infer[type_expr].clone();
+        let hir_struct = struct_ty.as_struct().unwrap(); // Can only really get here if the type is a struct
         let fields: Vec<BasicValueEnum> = fields
             .iter()
             .map(|field| self.gen_expr(field.expr).expect("expected a field value"))
             .collect();
 
-        gen_named_struct_lit(self.db, struct_ty, &fields)
+        self.gen_struct_alloc(hir_struct, &fields)
     }
 
     /// Generates IR for a named tuple literal, e.g. `Foo(1.23, 4)`
     fn gen_named_tuple_lit(&mut self, type_expr: ExprId, args: &[ExprId]) -> BasicValueEnum {
         let struct_ty = self.infer[type_expr].clone();
+        let hir_struct = struct_ty.as_struct().unwrap(); // Can only really get here if the type is a struct
         let args: Vec<BasicValueEnum> = args
             .iter()
             .map(|expr| self.gen_expr(*expr).expect("expected a field value"))
             .collect();
 
-        gen_named_struct_lit(self.db, struct_ty, &args)
+        self.gen_struct_alloc(hir_struct, &args)
     }
 
     /// Generates IR for a unit struct literal, e.g `Foo`
-    fn gen_unit_struct_lit(&self, type_expr: ExprId) -> BasicValueEnum {
+    fn gen_unit_struct_lit(&mut self, type_expr: ExprId) -> BasicValueEnum {
         let struct_ty = self.infer[type_expr].clone();
-        gen_named_struct_lit(self.db, struct_ty, &[])
+        let hir_struct = struct_ty.as_struct().unwrap(); // Can only really get here if the type is a struct
+        self.gen_struct_alloc(hir_struct, &[])
     }
 
     /// Generates IR for the specified block expression.
@@ -313,7 +337,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
 
     /// Generates IR for looking up a certain path expression.
     fn gen_path_expr(
-        &self,
+        &mut self,
         path: &Path,
         expr: ExprId,
         resolver: &Resolver,
@@ -336,6 +360,22 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             }
             Resolution::Def(hir::ModuleDef::Struct(_)) => self.gen_unit_struct_lit(expr),
             Resolution::Def(_) => panic!("no support for module definitions"),
+        }
+    }
+
+    /// Given an expression and the type of the expression, optionally dereference the value.
+    fn opt_deref_value(&mut self, expr: ExprId, value: BasicValueEnum) -> BasicValueEnum {
+        match &self.infer[expr] {
+            hir::Ty::Apply(hir::ApplicationTy {
+                ctor: hir::TypeCtor::Struct(s),
+                ..
+            }) => match s.data(self.db).memory_kind {
+                hir::StructMemoryKind::GC => {
+                    self.builder.build_load(value.into_pointer_value(), "deref")
+                }
+                hir::StructMemoryKind::Value => value,
+            },
+            _ => value,
         }
     }
 
@@ -390,10 +430,12 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     ) -> Option<BasicValueEnum> {
         let lhs = self
             .gen_expr(lhs_expr)
+            .map(|value| self.opt_deref_value(lhs_expr, value))
             .expect("no lhs value")
             .into_float_value();
         let rhs = self
             .gen_expr(rhs_expr)
+            .map(|value| self.opt_deref_value(rhs_expr, value))
             .expect("no rhs value")
             .into_float_value();
         match op {
@@ -447,10 +489,12 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     ) -> Option<BasicValueEnum> {
         let lhs = self
             .gen_expr(lhs_expr)
+            .map(|value| self.opt_deref_value(lhs_expr, value))
             .expect("no lhs value")
             .into_int_value();
         let rhs = self
             .gen_expr(rhs_expr)
+            .map(|value| self.opt_deref_value(lhs_expr, value))
             .expect("no rhs value")
             .into_int_value();
         match op {
@@ -573,7 +617,10 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         else_branch: Option<ExprId>,
     ) -> Option<inkwell::values::BasicValueEnum> {
         // Generate IR for the condition
-        let condition_ir = self.gen_expr(condition)?.into_int_value();
+        let condition_ir = self
+            .gen_expr(condition)
+            .map(|value| self.opt_deref_value(condition, value))?
+            .into_int_value();
 
         // Generate the code blocks to branch to
         let context = self.module.get_context();
@@ -708,7 +755,9 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
 
         // Generate condition block
         self.builder.position_at_end(&cond_block);
-        let condition_ir = self.gen_expr(condition_expr);
+        let condition_ir = self
+            .gen_expr(condition_expr)
+            .map(|value| self.opt_deref_value(condition_expr, value));
         if let Some(condition_ir) = condition_ir {
             self.builder.build_conditional_branch(
                 condition_ir.into_int_value(),
@@ -777,6 +826,9 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             .into();
 
         let receiver_ptr = self.gen_place_expr(receiver_expr);
+        let receiver_ptr = self
+            .opt_deref_value(receiver_expr, receiver_ptr.into())
+            .into_pointer_value();
         unsafe {
             self.builder.build_struct_gep(
                 receiver_ptr,

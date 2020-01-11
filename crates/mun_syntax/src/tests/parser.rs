@@ -275,8 +275,8 @@ fn memory_type_specifier() {
     struct Foo {};
     struct(gc) Baz {};
     struct(value) Baz {};
-    struct() Err1 {};    // expected memory type specifier
-    struct(foo) Err2 {}; // expected memory type specifier
+    struct() Err1 {};    // error: expected memory type specifier
+    struct(foo) Err2 {}; // error: expected memory type specifier
     "#,
     )
 }

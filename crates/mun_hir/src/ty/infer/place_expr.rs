@@ -10,7 +10,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         let body = Arc::clone(&self.body); // avoid borrow checker problem
         match &body[expr] {
             Expr::Path(p) => self.check_place_path(resolver, p),
-            Expr::Field { .. } => false, // TODO: add support for assigning structs
+            Expr::Field { .. } => true,
             _ => false,
         }
     }

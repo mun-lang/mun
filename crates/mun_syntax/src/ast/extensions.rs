@@ -136,11 +136,25 @@ impl Default for StructMemoryKind {
 
 impl ast::MemoryTypeSpecifier {
     pub fn kind(&self) -> StructMemoryKind {
-        match self.syntax.first_child_or_token().map(|s| s.kind()) {
-            Some(SyntaxKind::VALUE_KW) => StructMemoryKind::Value,
-            Some(SyntaxKind::GC_KW) => StructMemoryKind::GC,
-            _ => StructMemoryKind::default(),
+        if self.is_value() {
+            StructMemoryKind::Value
+        } else if self.is_gc() {
+            StructMemoryKind::GC
+        } else {
+            StructMemoryKind::default()
         }
+    }
+
+    fn is_gc(&self) -> bool {
+        self.syntax()
+            .children_with_tokens()
+            .any(|it| it.kind() == SyntaxKind::GC_KW)
+    }
+
+    fn is_value(&self) -> bool {
+        self.syntax()
+            .children_with_tokens()
+            .any(|it| it.kind() == SyntaxKind::VALUE_KW)
     }
 }
 
