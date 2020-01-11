@@ -90,6 +90,20 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Diagnostic> {
                 d.pat.to_node(&parse.syntax_node()).text().to_string()
             ),
         })
+    })
+    .on::<mun_hir::diagnostics::AccessUnknownField, _>(|d| {
+        result.borrow_mut().push(Diagnostic {
+            level: Level::Error,
+            loc: ast::FieldExpr::cast(d.expr.to_node(&parse.syntax_node()))
+                .map(|f| f.field_range())
+                .unwrap_or_else(|| d.highlight_range())
+                .into(),
+            message: format!(
+                "no field `{}` on type `{}`",
+                d.name,
+                d.receiver_ty.display(db),
+            ),
+        })
     });
 
     Module::from(file_id).diagnostics(db, &mut sink);

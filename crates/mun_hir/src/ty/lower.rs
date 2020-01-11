@@ -171,6 +171,22 @@ pub enum CallableDef {
 }
 impl_froms!(CallableDef: Function, Struct);
 
+impl CallableDef {
+    pub fn is_function(self) -> bool {
+        match self {
+            CallableDef::Function(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_struct(self) -> bool {
+        match self {
+            CallableDef::Struct(_) => true,
+            _ => false,
+        }
+    }
+}
+
 /// Build the declared type of an item. This depends on the namespace; e.g. for
 /// `struct Foo(usize)`, we have two types: The type of the struct itself, and
 /// the constructor function `(usize) -> Foo` which lives in the values
@@ -237,10 +253,10 @@ fn fn_sig_for_struct_constructor(db: &impl HirDatabase, def: Struct) -> FnSig {
 /// Build the type of a struct constructor.
 fn type_for_struct_constructor(db: &impl HirDatabase, def: Struct) -> Ty {
     let struct_data = db.struct_data(def.id);
-    if struct_data.kind == StructKind::Unit {
-        type_for_struct(db, def)
-    } else {
+    if struct_data.kind == StructKind::Tuple {
         Ty::simple(TypeCtor::FnDef(def.into()))
+    } else {
+        type_for_struct(db, def)
     }
 }
 

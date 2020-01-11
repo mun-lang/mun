@@ -207,6 +207,15 @@ fn struct_lit() {
         let a: Foo = Foo;
         let b: Bar = Bar { a: 1.23, };
         let c = Baz(1.23, 1);
+
+        let a = Foo{}; // error: mismatched struct literal kind. expected `unit struct`, found `record`
+        let a = Foo(); // error: mismatched struct literal kind. expected `unit struct`, found `tuple`
+        let b = Bar; // error: mismatched struct literal kind. expected `record`, found `unit struct`
+        let b = Bar(); // error: mismatched struct literal kind. expected `record`, found `tuple`
+        let b = Bar{}; // error: missing record fields: a
+        let c = Baz; // error: mismatched struct literal kind. expected `tuple`, found `unit struct`
+        let c = Baz{}; // error: mismatched struct literal kind. expected `tuple`, found `record`
+        let c = Baz(); // error: this tuple struct literal has 2 fields but 0 fields were supplied
     }
     "#,
     )
@@ -221,14 +230,21 @@ fn struct_field_index() {
         b: int,
     }
     struct Bar(float, int)
+    struct Baz;
 
     fn main() {
         let foo = Foo { a: 1.23, b: 4 };
         foo.a
         foo.b
+        foo.c // error: attempted to access a non-existent field in a struct.
         let bar = Bar(1.23, 4);
         bar.0
-        bar.1;
+        bar.1
+        bar.2 // error: attempted to access a non-existent field in a struct.
+        let baz = Baz;
+        baz.a // error: attempted to access a non-existent field in a struct.
+        let f = 1.0
+        f.0; // error: attempted to access a field on a primitive type.
     }
     "#,
     )

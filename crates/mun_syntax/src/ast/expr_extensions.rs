@@ -3,7 +3,7 @@ use crate::ast::{child_opt, AstChildren, Literal};
 use crate::{
     ast, AstNode,
     SyntaxKind::{self, *},
-    SyntaxToken,
+    SyntaxToken, TextRange, TextUnit,
 };
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -127,6 +127,24 @@ impl ast::FieldExpr {
         } else {
             None
         }
+    }
+
+    pub fn field_range(&self) -> TextRange {
+        let field_name = self.name_ref().map(|n| n.syntax().text_range());
+
+        let field_index = self.index_token().map(|i| i.text_range());
+
+        let start = field_name
+            .map(|f| f.start())
+            .or_else(|| field_index.map(|i| TextUnit::from_usize(i.start().to_usize() + 1)))
+            .unwrap_or_else(|| self.syntax().text_range().start());
+
+        let end = field_name
+            .map(|f| f.end())
+            .or_else(|| field_index.map(|f| f.end()))
+            .unwrap_or_else(|| self.syntax().text_range().end());
+
+        TextRange::from_to(start, end)
     }
 }
 

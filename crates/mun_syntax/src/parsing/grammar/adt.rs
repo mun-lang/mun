@@ -12,7 +12,7 @@ pub(super) fn struct_def(p: &mut Parser, m: Marker) {
         T!['{'] => record_field_def_list(p),
         T!['('] => tuple_field_def_list(p),
         _ => {
-            p.error("expected a ';', or '{'");
+            p.error("expected a ';', '{', or '('");
         }
     }
     m.complete(p, STRUCT_DEF);

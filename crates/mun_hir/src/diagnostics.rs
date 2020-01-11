@@ -1,5 +1,6 @@
+use crate::adt::StructKind;
 use crate::in_file::InFile;
-use crate::{FileId, HirDatabase, Ty};
+use crate::{FileId, HirDatabase, Name, Ty};
 use mun_syntax::{ast, AstPtr, SyntaxNode, SyntaxNodePtr, TextRange};
 use std::{any::Any, fmt};
 
@@ -357,6 +358,127 @@ impl Diagnostic for BreakWithValueOutsideLoop {
     }
 }
 
+#[derive(Debug)]
+pub struct AccessUnknownField {
+    pub file: FileId,
+    pub expr: SyntaxNodePtr,
+    pub receiver_ty: Ty,
+    pub name: Name,
+}
+
+impl Diagnostic for AccessUnknownField {
+    fn message(&self) -> String {
+        "attempted to access a non-existent field in a struct.".to_string()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.expr)
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct FieldCountMismatch {
+    pub file: FileId,
+    pub expr: SyntaxNodePtr,
+    pub expected: usize,
+    pub found: usize,
+}
+
+impl Diagnostic for FieldCountMismatch {
+    fn message(&self) -> String {
+        format!(
+            "this tuple struct literal has {} field{} but {} field{} supplied",
+            self.expected,
+            if self.expected == 1 { "" } else { "s" },
+            self.found,
+            if self.found == 1 { " was" } else { "s were" },
+        )
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.expr)
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct MissingFields {
+    pub file: FileId,
+    pub fields: SyntaxNodePtr,
+    pub field_names: Vec<Name>,
+}
+
+impl Diagnostic for MissingFields {
+    fn message(&self) -> String {
+        use std::fmt::Write;
+        let mut message = "missing record fields:\n".to_string();
+        for field in &self.field_names {
+            writeln!(message, "- {}", field).unwrap();
+        }
+        message
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.fields)
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct MismatchedStructLit {
+    pub file: FileId,
+    pub expr: SyntaxNodePtr,
+    pub expected: StructKind,
+    pub found: StructKind,
+}
+
+impl Diagnostic for MismatchedStructLit {
+    fn message(&self) -> String {
+        format!(
+            "mismatched struct literal kind. expected `{}`, found `{}`",
+            self.expected, self.found
+        )
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.expr)
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct NoFields {
+    pub file: FileId,
+    pub receiver_expr: SyntaxNodePtr,
+    pub found: Ty,
+}
+
+impl Diagnostic for NoFields {
+    fn message(&self) -> String {
+        "attempted to access a field on a primitive type.".to_string()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.receiver_expr)
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
 #[derive(Debug)]
 pub struct NoSuchField {
     pub file: FileId,

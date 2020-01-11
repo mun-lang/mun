@@ -211,7 +211,7 @@ SOURCE_FILE@[0; 396)
               NAME_REF@[392; 395)
                 IDENT@[392; 395) "int"
       R_PAREN@[395; 396) ")"
-error Offset(10): expected a ';', or '{'
+error Offset(10): expected a ';', '{', or '('
 error Offset(74): expected a declaration
 error Offset(153): expected a field declaration
 error Offset(305): expected a type

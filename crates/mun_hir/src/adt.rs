@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{fmt, sync::Arc};
 
 use crate::type_ref::{TypeRefBuilder, TypeRefId, TypeRefMap, TypeRefSourceMap};
 use crate::{
@@ -34,11 +34,21 @@ pub struct StructFieldId(RawId);
 impl_arena_id!(StructFieldId);
 
 /// A struct's fields' data (record, tuple, or unit struct)
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StructKind {
     Record,
     Tuple,
     Unit,
+}
+
+impl fmt::Display for StructKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            StructKind::Record => write!(f, "record"),
+            StructKind::Tuple => write!(f, "tuple"),
+            StructKind::Unit => write!(f, "unit struct"),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]

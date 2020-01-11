@@ -1,8 +1,18 @@
 ---
 source: crates/mun_hir/src/ty/tests.rs
-expression: "struct Foo;\nstruct Bar {\n    a: float,\n}\nstruct Baz(float, int);\n\nfn main() {\n    let a: Foo = Foo;\n    let b: Bar = Bar { a: 1.23, };\n    let c = Baz(1.23, 1);\n}"
+expression: "struct Foo;\nstruct Bar {\n    a: float,\n}\nstruct Baz(float, int);\n\nfn main() {\n    let a: Foo = Foo;\n    let b: Bar = Bar { a: 1.23, };\n    let c = Baz(1.23, 1);\n\n    let a = Foo{}; // error: mismatched struct literal kind. expected `unit struct`, found `record`\n    let a = Foo(); // error: mismatched struct literal kind. expected `unit struct`, found `tuple`\n    let b = Bar; // error: mismatched struct literal kind. expected `record`, found `unit struct`\n    let b = Bar(); // error: mismatched struct literal kind. expected `record`, found `tuple`\n    let b = Bar{}; // error: missing record fields: a\n    let c = Baz; // error: mismatched struct literal kind. expected `tuple`, found `unit struct`\n    let c = Baz{}; // error: mismatched struct literal kind. expected `tuple`, found `record`\n    let c = Baz(); // error: this tuple struct literal has 2 fields but 0 fields were supplied\n}"
 ---
-[76; 162) '{     ... 1); }': nothing
+[174; 179): mismatched struct literal kind. expected `unit struct`, found `record`
+[274; 279): mismatched struct literal kind. expected `unit struct`, found `tuple`
+[373; 376): mismatched struct literal kind. expected `record`, found `unit struct`
+[471; 476): mismatched struct literal kind. expected `record`, found `tuple`
+[565; 570): missing record fields:
+- a
+
+[619; 622): mismatched struct literal kind. expected `tuple`, found `unit struct`
+[716; 721): mismatched struct literal kind. expected `tuple`, found `record`
+[810; 815): this tuple struct literal has 2 fields but 0 fields were supplied
+[76; 894) '{     ...lied }': nothing
 [86; 87) 'a': Foo
 [95; 98) 'Foo': Foo
 [108; 109) 'b': Bar
@@ -13,3 +23,22 @@ expression: "struct Foo;\nstruct Bar {\n    a: float,\n}\nstruct Baz(float, int)
 [147; 159) 'Baz(1.23, 1)': Baz
 [151; 155) '1.23': float
 [157; 158) '1': int
+[170; 171) 'a': Foo
+[174; 179) 'Foo{}': Foo
+[270; 271) 'a': Foo
+[274; 277) 'Foo': Foo
+[274; 279) 'Foo()': Foo
+[369; 370) 'b': Bar
+[373; 376) 'Bar': Bar
+[467; 468) 'b': Bar
+[471; 474) 'Bar': Bar
+[471; 476) 'Bar()': Bar
+[561; 562) 'b': Bar
+[565; 570) 'Bar{}': Bar
+[615; 616) 'c': Baz
+[619; 622) 'Baz': Baz
+[712; 713) 'c': Baz
+[716; 721) 'Baz{}': Baz
+[806; 807) 'c': Baz
+[810; 813) 'Baz': Baz
+[810; 815) 'Baz()': Baz
