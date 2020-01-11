@@ -516,7 +516,16 @@ mod tests {
     }
 
     #[test]
-    fn test_dispatch_table_ptrs_mut() {
+    fn test_dispatch_table_ptrs_mut_none() {
+        let signatures = &[];
+        let fn_ptrs = &mut [];
+        let mut dispatch_table = fake_dispatch_table(signatures, fn_ptrs);
+
+        assert_eq!(dispatch_table.ptrs_mut().len(), 0);
+    }
+
+    #[test]
+    fn test_dispatch_table_ptrs_mut_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
         let type_info = fake_type_info(&type_name);
 
@@ -536,7 +545,16 @@ mod tests {
     }
 
     #[test]
-    fn test_dispatch_table_signatures() {
+    fn test_dispatch_table_signatures_none() {
+        let signatures = &[];
+        let fn_ptrs = &mut [];
+        let dispatch_table = fake_dispatch_table(signatures, fn_ptrs);
+
+        assert_eq!(dispatch_table.signatures().len(), 0);
+    }
+
+    #[test]
+    fn test_dispatch_table_signatures_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
         let type_info = fake_type_info(&type_name);
 
