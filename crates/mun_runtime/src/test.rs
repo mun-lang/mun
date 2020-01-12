@@ -354,7 +354,8 @@ fn compiler_valid_utf8() {
 
 #[test]
 fn struct_info() {
-    use abi::{Guid, Reflection};
+    use crate::ReturnTypeReflection;
+    use abi::Guid;
 
     let driver = TestDriver::new(
         r"

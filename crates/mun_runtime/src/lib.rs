@@ -7,25 +7,30 @@
 mod assembly;
 #[macro_use]
 mod macros;
+mod marshal;
+mod reflection;
+mod r#struct;
 
 #[cfg(test)]
 mod test;
 
+use std::alloc::Layout;
 use std::collections::HashMap;
+use std::ffi::CString;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
-use abi::{
-    FunctionInfo, FunctionSignature, Guid, Privacy, Reflection, StructInfo, TypeGroup, TypeInfo,
-};
+use abi::{FunctionInfo, FunctionSignature, Guid, Privacy, StructInfo, TypeGroup, TypeInfo};
 use failure::Error;
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
+pub use crate::marshal::MarshalInto;
+pub use crate::reflection::{ArgumentReflection, ReturnTypeReflection};
+
 pub use crate::assembly::Assembly;
-use std::alloc::Layout;
-use std::ffi::CString;
+pub use crate::r#struct::Struct;
 
 /// Options for the construction of a [`Runtime`].
 #[derive(Clone, Debug)]
