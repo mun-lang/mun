@@ -1,14 +1,21 @@
 use crate::prelude::*;
 
 use std::ffi::{c_void, CStr};
+use std::fmt::Formatter;
 use std::marker::{Send, Sync};
-use std::slice;
 use std::str;
+use std::{fmt, slice};
 
 impl TypeInfo {
     /// Returns the type's name.
     pub fn name(&self) -> &str {
         unsafe { str::from_utf8_unchecked(CStr::from_ptr(self.name).to_bytes()) }
+    }
+}
+
+impl fmt::Display for TypeInfo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name())
     }
 }
 
@@ -47,6 +54,23 @@ impl FunctionSignature {
     }
 }
 
+impl fmt::Display for FunctionSignature {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "fn {}(", self.name())?;
+        for (i, arg) in self.arg_types().iter().enumerate() {
+            if i > 0 {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", arg)?;
+        }
+        write!(f, ")")?;
+        if let Some(ret_type) = self.return_type() {
+            write!(f, ":{}", ret_type)?
+        }
+        Ok(())
+    }
+}
+
 unsafe impl Send for FunctionSignature {}
 unsafe impl Sync for FunctionSignature {}
 
@@ -68,6 +92,12 @@ impl StructInfo {
         } else {
             unsafe { slice::from_raw_parts(self.field_types, self.num_fields as usize) }
         }
+    }
+}
+
+impl fmt::Display for StructInfo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name())
     }
 }
 
