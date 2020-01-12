@@ -214,8 +214,14 @@ fn bindgen_test_layout_FunctionInfo() {
 pub struct StructInfo {
     #[doc = " Struct name"]
     pub name: *const ::std::os::raw::c_char,
+    #[doc = " Struct fields' names"]
+    pub field_names: *const *const ::std::os::raw::c_char,
     #[doc = " Struct fields' information"]
     pub field_types: *const TypeInfo,
+    #[doc = " Struct fields' offsets"]
+    pub field_offsets: *const u16,
+    #[doc = " Struct fields' sizes (in bytes)"]
+    pub field_sizes: *const u16,
     #[doc = " Number of fields"]
     pub num_fields: u16,
 }
@@ -223,7 +229,7 @@ pub struct StructInfo {
 fn bindgen_test_layout_StructInfo() {
     assert_eq!(
         ::std::mem::size_of::<StructInfo>(),
-        24usize,
+        48usize,
         concat!("Size of: ", stringify!(StructInfo))
     );
     assert_eq!(
@@ -242,8 +248,18 @@ fn bindgen_test_layout_StructInfo() {
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<StructInfo>())).field_types as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<StructInfo>())).field_names as *const _ as usize },
         8usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(StructInfo),
+            "::",
+            stringify!(field_names)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<StructInfo>())).field_types as *const _ as usize },
+        16usize,
         concat!(
             "Offset of field: ",
             stringify!(StructInfo),
@@ -252,8 +268,28 @@ fn bindgen_test_layout_StructInfo() {
         )
     );
     assert_eq!(
+        unsafe { &(*(::std::ptr::null::<StructInfo>())).field_offsets as *const _ as usize },
+        24usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(StructInfo),
+            "::",
+            stringify!(field_offsets)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<StructInfo>())).field_sizes as *const _ as usize },
+        32usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(StructInfo),
+            "::",
+            stringify!(field_sizes)
+        )
+    );
+    assert_eq!(
         unsafe { &(*(::std::ptr::null::<StructInfo>())).num_fields as *const _ as usize },
-        16usize,
+        40usize,
         concat!(
             "Offset of field: ",
             stringify!(StructInfo),

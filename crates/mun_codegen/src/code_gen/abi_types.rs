@@ -65,9 +65,12 @@ pub(super) fn gen_abi_types(context: ContextRef) -> AbiTypes {
     let struct_info_type = context.opaque_struct_type("struct.MunStructInfo");
     struct_info_type.set_body(
         &[
-            str_type.into(),                                     // name
-            type_info_type.ptr_type(AddressSpace::Const).into(), // field_types
-            context.i16_type().into(),                           // num_fields
+            str_type.into(),                                         // name
+            str_type.ptr_type(AddressSpace::Const).into(),           // field_names
+            type_info_type.ptr_type(AddressSpace::Const).into(),     // field_types
+            context.i16_type().ptr_type(AddressSpace::Const).into(), // field_offsets
+            context.i16_type().ptr_type(AddressSpace::Const).into(), // field_sizes
+            context.i16_type().into(),                               // num_fields
         ],
         false,
     );

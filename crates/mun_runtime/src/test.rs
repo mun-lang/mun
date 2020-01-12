@@ -302,34 +302,51 @@ fn hotreloadable() {
 #[test]
 fn compiler_valid_utf8() {
     use std::ffi::CStr;
-    use std::str;
+    use std::slice;
 
     let mut driver = TestDriver::new(
         r#"
+    struct Foo {
+        a: int,
+    }
+
     fn foo(n:int):bool { false }
     "#,
     );
 
-    let foo_func = driver.runtime.get_function_info("foo").unwrap();
+    let foo_struct = driver.runtime.get_struct_info("Foo").unwrap();
+    assert_eq!(
+        unsafe { CStr::from_ptr(foo_struct.name) }.to_str().is_ok(),
+        true
+    );
 
-    // Check foo name for valid utf8
+    let field_names =
+        unsafe { slice::from_raw_parts(foo_struct.field_names, foo_struct.num_fields as usize) };
+    for field_name in field_names {
+        assert_eq!(
+            unsafe { CStr::from_ptr(*field_name) }.to_str().is_ok(),
+            true
+        );
+    }
+
+    let foo_func = driver.runtime.get_function_info("foo").unwrap();
     assert_eq!(
-        str::from_utf8(&unsafe { CStr::from_ptr(foo_func.signature.name).to_bytes() }).is_err(),
-        false
+        unsafe { CStr::from_ptr(foo_func.signature.name) }
+            .to_str()
+            .is_ok(),
+        true
     );
-    // Check foo arg type for valid utf8
     assert_eq!(
-        str::from_utf8(&unsafe { CStr::from_ptr((*foo_func.signature.arg_types).name).to_bytes() })
-            .is_err(),
-        false
+        unsafe { CStr::from_ptr((*foo_func.signature.arg_types).name) }
+            .to_str()
+            .is_ok(),
+        true
     );
-    // Check foo return type for valid utf8
     assert_eq!(
-        str::from_utf8(&unsafe {
-            CStr::from_ptr((*foo_func.signature.return_type).name).to_bytes()
-        })
-        .is_err(),
-        false
+        unsafe { CStr::from_ptr((*foo_func.signature.return_type).name) }
+            .to_str()
+            .is_ok(),
+        true
     );
 
     assert_invoke_eq!(bool, false, driver, "foo", 10i64);

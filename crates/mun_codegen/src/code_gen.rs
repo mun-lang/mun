@@ -57,15 +57,6 @@ pub fn write_module_shared_object(
         .link_in_module(module.llvm_module.clone())
         .map_err(|e| CodeGenerationError::ModuleLinkerError(e.to_string()))?;
 
-    // Generate the `get_info` method.
-    symbols::gen_reflection_ir(
-        db,
-        &module.functions,
-        &module.structs,
-        &module.dispatch_table,
-        &assembly_module,
-    );
-
     // Initialize the x86 target
     Target::initialize_x86(&InitializationConfig::default());
 
@@ -91,6 +82,16 @@ pub fn write_module_shared_object(
             CodeModel::Default,
         )
         .ok_or(CodeGenerationError::CouldNotCreateTargetMachine)?;
+
+    // Generate the `get_info` method.
+    symbols::gen_reflection_ir(
+        db,
+        &module.functions,
+        &module.structs,
+        &module.dispatch_table,
+        &assembly_module,
+        &target_machine,
+    );
 
     // Generate object file
     let obj_file = {
