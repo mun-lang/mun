@@ -17,7 +17,9 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
-use abi::{FunctionInfo, FunctionSignature, Guid, Privacy, Reflection, StructInfo, TypeInfo};
+use abi::{
+    FunctionInfo, FunctionSignature, Guid, Privacy, Reflection, StructInfo, TypeGroup, TypeInfo,
+};
 use failure::Error;
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
@@ -152,12 +154,14 @@ impl Runtime {
                     b: md5::compute("core::u64").0,
                 },
                 name: u64_type.as_ptr(),
+                group: TypeGroup::FundamentalTypes,
             },
             TypeInfo {
                 guid: Guid {
                     b: md5::compute("core::u64").0,
                 },
                 name: u64_type.as_ptr(),
+                group: TypeGroup::FundamentalTypes,
             },
         ];
 
@@ -166,6 +170,7 @@ impl Runtime {
                 b: md5::compute("*mut core::u8").0,
             },
             name: ptr_mut_u8_type.as_ptr(),
+            group: TypeGroup::FundamentalTypes,
         });
 
         let fn_info = FunctionInfo {

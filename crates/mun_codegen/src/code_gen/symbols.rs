@@ -4,6 +4,7 @@ use crate::ir::function;
 use crate::type_info::TypeInfo;
 use crate::values::{BasicValue, GlobalValue};
 use crate::IrDatabase;
+use abi::TypeGroup;
 use hir::{Ty, TypeCtor};
 use inkwell::{
     attributes::Attribute,
@@ -18,10 +19,10 @@ use std::collections::HashMap;
 pub fn type_info_query(db: &impl IrDatabase, ty: Ty) -> TypeInfo {
     match ty {
         Ty::Apply(ctor) => match ctor.ctor {
-            TypeCtor::Float => TypeInfo::from_name("@core::float"),
-            TypeCtor::Int => TypeInfo::from_name("@core::int"),
-            TypeCtor::Bool => TypeInfo::from_name("@core::bool"),
-            TypeCtor::Struct(s) => TypeInfo::from_name(s.name(db).to_string()),
+            TypeCtor::Float => TypeInfo::new("@core::float", TypeGroup::FundamentalTypes),
+            TypeCtor::Int => TypeInfo::new("@core::int", TypeGroup::FundamentalTypes),
+            TypeCtor::Bool => TypeInfo::new("@core::bool", TypeGroup::FundamentalTypes),
+            TypeCtor::Struct(s) => TypeInfo::new(s.name(db).to_string(), TypeGroup::StructTypes),
             _ => unreachable!("{:?} unhandled", ctor),
         },
         _ => unreachable!(),
@@ -37,6 +38,7 @@ fn type_info_ir(ty: &TypeInfo, module: &Module) -> StructValue {
         &[
             context.i8_type().const_array(&guid_values).into(),
             intern_string(module, &ty.name).into(),
+            context.i8_type().const_int(ty.group as u64, false).into(),
         ],
         false,
     )

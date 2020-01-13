@@ -4,6 +4,7 @@ use inkwell::AddressSpace;
 
 pub(super) struct AbiTypes {
     pub guid_type: ArrayType,
+    pub type_group_type: IntType,
     pub privacy_type: IntType,
     pub type_info_type: StructType,
     pub function_signature_type: StructType,
@@ -21,6 +22,9 @@ pub(super) fn gen_abi_types(context: ContextRef) -> AbiTypes {
     // Construct the `MunGuid` type
     let guid_type = context.i8_type().array_type(16);
 
+    // Construct the `MunTypeGroup` type
+    let type_group_type = context.i8_type();
+
     // Construct the `MunPrivacy` enum
     let privacy_type = context.i8_type();
 
@@ -28,8 +32,9 @@ pub(super) fn gen_abi_types(context: ContextRef) -> AbiTypes {
     let type_info_type = context.opaque_struct_type("struct.MunTypeInfo");
     type_info_type.set_body(
         &[
-            guid_type.into(), // guid
-            str_type.into(),  // name
+            guid_type.into(),       // guid
+            str_type.into(),        // name
+            type_group_type.into(), // group
         ],
         false,
     );
@@ -118,6 +123,7 @@ pub(super) fn gen_abi_types(context: ContextRef) -> AbiTypes {
 
     AbiTypes {
         guid_type,
+        type_group_type,
         privacy_type,
         type_info_type,
         function_signature_type,
