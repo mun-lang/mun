@@ -371,7 +371,7 @@ fn struct_test() {
     struct(value) Baz;
     fn foo() {
         let a: Foo = Foo { a: 5 };
-        let b: Bar = Bar(1.23, 4, true, a);
+        let b: Bar = Bar(1.23, a.a, true, a);
         let c: Baz = Baz;
     }
     "#,
@@ -411,6 +411,20 @@ fn field_expr() {
         let aa_lhs = a.a + 2;
         let aa_rhs = 2 + a.a;
         aa_lhs + aa_rhs
+    }
+    "#,
+    )
+}
+
+#[test]
+fn field_crash() {
+    test_snapshot_unoptimized(
+        r#"
+    struct(gc) Foo { a: int };
+
+    fn main(c:int):int {
+        let b = Foo { a: c + 5 }
+        b.a
     }
     "#,
     )
