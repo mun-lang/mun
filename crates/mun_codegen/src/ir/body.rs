@@ -11,9 +11,8 @@ use inkwell::{
 };
 use std::{collections::HashMap, mem, sync::Arc};
 
-use crate::ir::adt::gen_named_struct_lit;
 use inkwell::basic_block::BasicBlock;
-use inkwell::values::PointerValue;
+use inkwell::values::{AggregateValueEnum, PointerValue};
 
 struct LoopInfo {
     break_values: Vec<(
@@ -218,9 +217,19 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     fn gen_struct_alloc(
         &mut self,
         hir_struct: hir::Struct,
-        args: &[BasicValueEnum],
+        args: Vec<BasicValueEnum>,
     ) -> BasicValueEnum {
-        let struct_lit = gen_named_struct_lit(self.db, hir_struct, &args);
+        // Construct the struct literal
+        let struct_ty = self.db.struct_ty(hir_struct);
+        let mut value: AggregateValueEnum = struct_ty.get_undef().into();
+        for (i, arg) in args.into_iter().enumerate() {
+            value = self
+                .builder
+                .build_insert_value(value, arg, i as u32, "init")
+                .expect("Failed to initialize struct field.");
+        }
+        let struct_lit = value.into_struct_value();
+
         match hir_struct.data(self.db).memory_kind {
             hir::StructMemoryKind::Value => struct_lit.into(),
             hir::StructMemoryKind::GC => {
@@ -229,8 +238,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 let struct_ptr: PointerValue = self
                     .builder
                     .build_malloc(struct_ir_ty, &hir_struct.name(self.db).to_string());
-                let struct_value = gen_named_struct_lit(self.db, hir_struct, &args);
-                self.builder.build_store(struct_ptr, struct_value);
+                self.builder.build_store(struct_ptr, struct_lit);
                 struct_ptr.into()
             }
         }
@@ -249,7 +257,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             .map(|field| self.gen_expr(field.expr).expect("expected a field value"))
             .collect();
 
-        self.gen_struct_alloc(hir_struct, &fields)
+        self.gen_struct_alloc(hir_struct, fields)
     }
 
     /// Generates IR for a named tuple literal, e.g. `Foo(1.23, 4)`
@@ -261,14 +269,14 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             .map(|expr| self.gen_expr(*expr).expect("expected a field value"))
             .collect();
 
-        self.gen_struct_alloc(hir_struct, &args)
+        self.gen_struct_alloc(hir_struct, args)
     }
 
     /// Generates IR for a unit struct literal, e.g `Foo`
     fn gen_unit_struct_lit(&mut self, type_expr: ExprId) -> BasicValueEnum {
         let struct_ty = self.infer[type_expr].clone();
         let hir_struct = struct_ty.as_struct().unwrap(); // Can only really get here if the type is a struct
-        self.gen_struct_alloc(hir_struct, &[])
+        self.gen_struct_alloc(hir_struct, Vec::new())
     }
 
     /// Generates IR for the specified block expression.

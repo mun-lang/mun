@@ -387,3 +387,18 @@ fn fields() {
     );
     assert_invoke_eq!(bool, true, driver, "main", 48);
 }
+
+#[test]
+fn field_crash() {
+    let mut driver = TestDriver::new(
+        r#"
+    struct(gc) Foo { a: int };
+
+    fn main(c:int):int {
+        let b = Foo { a: c + 5 }
+        b.a
+    }
+    "#,
+    );
+    assert_invoke_eq!(i64, 15, driver, "main", 10);
+}

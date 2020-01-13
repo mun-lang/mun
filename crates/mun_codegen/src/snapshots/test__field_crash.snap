@@ -1,0 +1,29 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "struct(gc) Foo { a: int };\n\nfn main(c:int):int {\n    let b = Foo { a: c + 5 }\n    b.a\n}"
+---
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+%Foo = type { i64 }
+
+define i64 @main(i64) {
+body:
+  %b = alloca %Foo*
+  %c = alloca i64
+  store i64 %0, i64* %c
+  %c1 = load i64, i64* %c
+  %add = add i64 %c1, 5
+  %init = insertvalue %Foo undef, i64 %add, 0
+  %malloccall = tail call i8* @malloc(i32 ptrtoint (i64* getelementptr (i64, i64* null, i32 1) to i32))
+  %Foo = bitcast i8* %malloccall to %Foo*
+  store %Foo %init, %Foo* %Foo
+  store %Foo* %Foo, %Foo** %b
+  %deref = load %Foo*, %Foo** %b
+  %Foo.a = getelementptr inbounds %Foo, %Foo* %deref, i32 0, i32 0
+  %a = load i64, i64* %Foo.a
+  ret i64 %a
+}
+
+declare noalias i8* @malloc(i32)
+

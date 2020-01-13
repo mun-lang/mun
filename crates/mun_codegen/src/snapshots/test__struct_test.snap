@@ -1,6 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "struct Bar(float, int, bool, Foo);\nstruct Foo { a: int };\nstruct Baz;\nfn foo() {\n    let a: Foo = Foo { a: 5 };\n    let b: Bar = Bar(1.23, 4, true, a);\n    let c: Baz = Baz;\n}"
+expression: "struct(value) Bar(float, int, bool, Foo);\nstruct(value) Foo { a: int };\nstruct(value) Baz;\nfn foo() {\n    let a: Foo = Foo { a: 5 };\n    let b: Bar = Bar(1.23, a.a, true, a);\n    let c: Baz = Baz;\n}"
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
@@ -15,9 +15,14 @@ body:
   %b = alloca %Bar
   %a = alloca %Foo
   store %Foo { i64 5 }, %Foo* %a
-  %a1 = load %Foo, %Foo* %a
-  store %Bar { double 1.230000e+00, i64 4, i1 true, %Foo %a1 }, %Bar* %b
-  store %Baz zeroinitializer, %Baz* %c
+  %Foo.a = getelementptr inbounds %Foo, %Foo* %a, i32 0, i32 0
+  %a1 = load i64, i64* %Foo.a
+  %a2 = load %Foo, %Foo* %a
+  %init = insertvalue %Bar { double 1.230000e+00, i64 undef, i1 undef, %Foo undef }, i64 %a1, 1
+  %init3 = insertvalue %Bar %init, i1 true, 2
+  %init4 = insertvalue %Bar %init3, %Foo %a2, 3
+  store %Bar %init4, %Bar* %b
+  store %Baz undef, %Baz* %c
   ret void
 }
 
