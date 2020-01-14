@@ -165,6 +165,7 @@ impl Linker for MsvcLinker {
         self.args.push("/EXPORT:get_info".to_owned());
         self.args.push(format!("/IMPLIB:{}", dll_lib_path_str));
         self.args.push(format!("/OUT:{}", dll_path_str));
+        self.args.push("ucrt.lib".to_string()); // link malloc
         Ok(())
     }
 

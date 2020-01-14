@@ -7,6 +7,63 @@ env:
 
 jobs:
 
+  malloc:
+    name: Malloc
+    runs-on: "windows-2016"
+    steps:
+      - name: Set LIB environment variable (Windows-only)
+        if: runner.os == 'Windows'
+        run: |
+          @echo off
+
+          :GetWin10SdkDir
+
+          call :GetWin10SdkDirHelper HKLM\SOFTWARE\Wow6432Node > nul 2>&1
+          if errorlevel 1 call :GetWin10SdkDirHelper HKCU\SOFTWARE\Wow6432Node > nul 2>&1
+          if errorlevel 1 call :GetWin10SdkDirHelper HKLM\SOFTWARE > nul 2>&1
+          if errorlevel 1 call :GetWin10SdkDirHelper HKCU\SOFTWARE > nul 2>&1
+          if errorlevel 1 exit /B 1
+
+          @REM `get windows 10 sdk version number`\
+          setlocal enableDelayedExpansion
+
+          @REM `Due to the SDK installer changes beginning with the 10.0.15063.0 (RS2 SDK), there is a chance that the
+          @REM Windows SDK installed may not have the full set of bits required for all application scenarios.
+          @REM We check for the existence of a file we know to be included in the "App" and "Desktop" portions
+          @REM of the Windows SDK, depending on the Developer Command Prompt's -app_platform configuration.
+          @REM If "windows.h" (UWP) or "winsdkver.h" (Desktop) are not found, the directory will be skipped as
+          @REM a candidate default value for [WindowsSdkDir].`
+          set __check_file=winsdkver.h
+          if /I "%VSCMD_ARG_APP_PLAT%"=="UWP" set __check_file=Windows.h
+
+          if not "%WindowsSdkDir%"=="" for /f %%i IN ('dir "%WindowsSdkDir%include\" /b /ad-h /on') DO (
+              @REM `Skip if Windows.h|winsdkver (based upon -app_platform configuration) is not found in %%i\um.`
+              if EXIST "%WindowsSdkDir%include\%%i\um\%__check_file%" (
+                  set result=%%i
+                  if "!result:~0,3!"=="10." (
+                      set SDK=!result!
+                      if "!result!"=="%VSCMD_ARG_WINSDK%" set findSDK=1
+                  )
+              )
+          )
+
+          @REM Set the LIB environment variable to the Windows SDK
+          setx LIB "%WindowsSdkDir%Lib\%result%\ucrt\x64"
+          cd %LIB%
+          dir
+
+          exit /B 0
+
+          :GetWin10SdkDirHelper
+
+          @REM `Get Windows 10 SDK installed folder`
+          for /F "tokens=1,2*" %%i in ('reg query "%1\Microsoft\Microsoft SDKs\Windows\v10.0" /v "InstallationFolder"') DO (
+              if "%%i"=="InstallationFolder" (
+                  SET WindowsSdkDir=%%~k
+              )
+          )
+        shell: cmd
+
   check:
     name: Check
     runs-on: ubuntu-latest
@@ -58,6 +115,57 @@ jobs:
 
       - name: Install LLVM
         uses: ./.github/actions/install-llvm
+
+      - name: Set LIB environment variable (Windows-only)
+        if: runner.os == 'Windows'
+        run: |
+          @echo off
+
+          :GetWin10SdkDir
+
+          call :GetWin10SdkDirHelper HKLM\SOFTWARE\Wow6432Node > nul 2>&1
+          if errorlevel 1 call :GetWin10SdkDirHelper HKCU\SOFTWARE\Wow6432Node > nul 2>&1
+          if errorlevel 1 call :GetWin10SdkDirHelper HKLM\SOFTWARE > nul 2>&1
+          if errorlevel 1 call :GetWin10SdkDirHelper HKCU\SOFTWARE > nul 2>&1
+          if errorlevel 1 exit /B 1
+
+          @REM `get windows 10 sdk version number`\
+          setlocal enableDelayedExpansion
+
+          @REM `Due to the SDK installer changes beginning with the 10.0.15063.0 (RS2 SDK), there is a chance that the
+          @REM Windows SDK installed may not have the full set of bits required for all application scenarios.
+          @REM We check for the existence of a file we know to be included in the "App" and "Desktop" portions
+          @REM of the Windows SDK, depending on the Developer Command Prompt's -app_platform configuration.
+          @REM If "windows.h" (UWP) or "winsdkver.h" (Desktop) are not found, the directory will be skipped as
+          @REM a candidate default value for [WindowsSdkDir].`
+          set __check_file=winsdkver.h
+          if /I "%VSCMD_ARG_APP_PLAT%"=="UWP" set __check_file=Windows.h
+
+          if not "%WindowsSdkDir%"=="" for /f %%i IN ('dir "%WindowsSdkDir%include\" /b /ad-h /on') DO (
+              @REM `Skip if Windows.h|winsdkver (based upon -app_platform configuration) is not found in %%i\um.`
+              if EXIST "%WindowsSdkDir%include\%%i\um\%__check_file%" (
+                  set result=%%i
+                  if "!result:~0,3!"=="10." (
+                      set SDK=!result!
+                      if "!result!"=="%VSCMD_ARG_WINSDK%" set findSDK=1
+                  )
+              )
+          )
+
+          @REM Set the LIB environment variable to the Windows SDK
+          setx LIB "%WindowsSdkDir%Lib\%result%\ucrt\x64"
+
+          exit /B 0
+
+          :GetWin10SdkDirHelper
+
+          @REM `Get Windows 10 SDK installed folder`
+          for /F "tokens=1,2*" %%i in ('reg query "%1\Microsoft\Microsoft SDKs\Windows\v10.0" /v "InstallationFolder"') DO (
+              if "%%i"=="InstallationFolder" (
+                  SET WindowsSdkDir=%%~k
+              )
+          )
+        shell: cmd
 
       - name: Cargo check
         uses: actions-rs/cargo@v1
@@ -120,6 +228,57 @@ jobs:
 
       - name: Install LLVM
         uses: ./.github/actions/install-llvm
+
+      - name: Set LIB environment variable (Windows-only)
+        if: runner.os == 'Windows'
+        run: |
+          @echo off
+
+          :GetWin10SdkDir
+
+          call :GetWin10SdkDirHelper HKLM\SOFTWARE\Wow6432Node > nul 2>&1
+          if errorlevel 1 call :GetWin10SdkDirHelper HKCU\SOFTWARE\Wow6432Node > nul 2>&1
+          if errorlevel 1 call :GetWin10SdkDirHelper HKLM\SOFTWARE > nul 2>&1
+          if errorlevel 1 call :GetWin10SdkDirHelper HKCU\SOFTWARE > nul 2>&1
+          if errorlevel 1 exit /B 1
+
+          @REM `get windows 10 sdk version number`\
+          setlocal enableDelayedExpansion
+
+          @REM `Due to the SDK installer changes beginning with the 10.0.15063.0 (RS2 SDK), there is a chance that the
+          @REM Windows SDK installed may not have the full set of bits required for all application scenarios.
+          @REM We check for the existence of a file we know to be included in the "App" and "Desktop" portions
+          @REM of the Windows SDK, depending on the Developer Command Prompt's -app_platform configuration.
+          @REM If "windows.h" (UWP) or "winsdkver.h" (Desktop) are not found, the directory will be skipped as
+          @REM a candidate default value for [WindowsSdkDir].`
+          set __check_file=winsdkver.h
+          if /I "%VSCMD_ARG_APP_PLAT%"=="UWP" set __check_file=Windows.h
+
+          if not "%WindowsSdkDir%"=="" for /f %%i IN ('dir "%WindowsSdkDir%include\" /b /ad-h /on') DO (
+              @REM `Skip if Windows.h|winsdkver (based upon -app_platform configuration) is not found in %%i\um.`
+              if EXIST "%WindowsSdkDir%include\%%i\um\%__check_file%" (
+                  set result=%%i
+                  if "!result:~0,3!"=="10." (
+                      set SDK=!result!
+                      if "!result!"=="%VSCMD_ARG_WINSDK%" set findSDK=1
+                  )
+              )
+          )
+
+          @REM Set the LIB environment variable to the Windows SDK
+          setx LIB "%WindowsSdkDir%Lib\%result%\ucrt\x64"
+
+          exit /B 0
+
+          :GetWin10SdkDirHelper
+
+          @REM `Get Windows 10 SDK installed folder`
+          for /F "tokens=1,2*" %%i in ('reg query "%1\Microsoft\Microsoft SDKs\Windows\v10.0" /v "InstallationFolder"') DO (
+              if "%%i"=="InstallationFolder" (
+                  SET WindowsSdkDir=%%~k
+              )
+          )
+        shell: cmd
 
       - name: Execute tests
         uses: actions-rs/cargo@v1

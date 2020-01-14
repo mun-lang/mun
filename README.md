@@ -126,6 +126,13 @@ runners](.github/actions/install-llvm/index.js):
   that you can download and extract to your machine. Once downloaded and extracted, add the `<extract_dir>/bin`
   folder to the `PATH` environment variable.
 
+  On Windows, the linker needs to link with the `ucrt.lib` static library, which can be found in the
+  Windows SDK. To direct the linker to the library folder you need to set the `LIB` environment
+  variable, e.g.:
+  ```
+  "LIB": "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.17763.0\\ucrt\\x64"
+  ```
+
 ### Compiling
 
 ```
