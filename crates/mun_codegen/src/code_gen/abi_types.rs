@@ -39,15 +39,17 @@ pub(super) fn gen_abi_types(context: ContextRef) -> AbiTypes {
         false,
     );
 
+    let type_info_ptr_type = type_info_type.ptr_type(AddressSpace::Const);
+
     // Construct the `MunFunctionSignature` type
     let function_signature_type = context.opaque_struct_type("struct.MunFunctionSignature");
     function_signature_type.set_body(
         &[
-            str_type.into(),                                     // name
-            type_info_type.ptr_type(AddressSpace::Const).into(), // arg_types
-            type_info_type.ptr_type(AddressSpace::Const).into(), // return_type
-            context.i16_type().into(),                           // num_arg_types
-            privacy_type.into(),                                 // privacy
+            str_type.into(),                                         // name
+            type_info_ptr_type.ptr_type(AddressSpace::Const).into(), // arg_types
+            type_info_ptr_type.into(),                               // return_type
+            context.i16_type().into(),                               // num_arg_types
+            privacy_type.into(),                                     // privacy
         ],
         false,
     );
@@ -72,7 +74,7 @@ pub(super) fn gen_abi_types(context: ContextRef) -> AbiTypes {
         &[
             str_type.into(),                                         // name
             str_type.ptr_type(AddressSpace::Const).into(),           // field_names
-            type_info_type.ptr_type(AddressSpace::Const).into(),     // field_types
+            type_info_ptr_type.ptr_type(AddressSpace::Const).into(), // field_types
             context.i16_type().ptr_type(AddressSpace::Const).into(), // field_offsets
             context.i16_type().ptr_type(AddressSpace::Const).into(), // field_sizes
             context.i16_type().into(),                               // num_fields
@@ -87,8 +89,8 @@ pub(super) fn gen_abi_types(context: ContextRef) -> AbiTypes {
             str_type.into(),                                         // path
             function_info_type.ptr_type(AddressSpace::Const).into(), // functions
             context.i32_type().into(),                               // num_functions
-            struct_info_type.ptr_type(AddressSpace::Const).into(),   // structs
-            context.i32_type().into(),                               // num_structs
+            type_info_ptr_type.ptr_type(AddressSpace::Const).into(), // types
+            context.i32_type().into(),                               // num_types
         ],
         false,
     );

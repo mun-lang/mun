@@ -3,6 +3,7 @@ use crate::prelude::*;
 use std::ffi::{c_void, CStr};
 use std::fmt::Formatter;
 use std::marker::{Send, Sync};
+use std::mem;
 use std::str;
 use std::{fmt, slice};
 
@@ -10,6 +11,19 @@ impl TypeInfo {
     /// Returns the type's name.
     pub fn name(&self) -> &str {
         unsafe { str::from_utf8_unchecked(CStr::from_ptr(self.name).to_bytes()) }
+    }
+
+    /// Retrieves the type's struct information, if available.
+    pub fn as_struct(&self) -> Option<&StructInfo> {
+        if self.group.is_struct() {
+            let ptr = (self as *const TypeInfo).cast::<u8>();
+            let ptr = ptr.wrapping_add(mem::size_of::<TypeInfo>());
+            let offset = ptr.align_offset(mem::align_of::<StructInfo>());
+            let ptr = ptr.wrapping_add(offset);
+            Some(unsafe { &*ptr.cast::<StructInfo>() })
+        } else {
+            None
+        }
     }
 }
 
@@ -40,11 +54,16 @@ impl FunctionSignature {
     }
 
     /// Returns the function's arguments' types.
-    pub fn arg_types(&self) -> &[TypeInfo] {
+    pub fn arg_types(&self) -> &[&TypeInfo] {
         if self.num_arg_types == 0 {
             &[]
         } else {
-            unsafe { slice::from_raw_parts(self.arg_types, self.num_arg_types as usize) }
+            unsafe {
+                slice::from_raw_parts(
+                    self.arg_types.cast::<&TypeInfo>(),
+                    self.num_arg_types as usize,
+                )
+            }
         }
     }
 
@@ -97,11 +116,16 @@ impl StructInfo {
     }
 
     /// Returns the struct's field types.
-    pub fn field_types(&self) -> &[TypeInfo] {
+    pub fn field_types(&self) -> &[&TypeInfo] {
         if self.num_fields == 0 {
             &[]
         } else {
-            unsafe { slice::from_raw_parts(self.field_types, self.num_fields as usize) }
+            unsafe {
+                slice::from_raw_parts(
+                    self.field_types.cast::<&TypeInfo>(),
+                    self.num_fields as usize,
+                )
+            }
         }
     }
 
@@ -160,12 +184,14 @@ impl ModuleInfo {
         }
     }
 
-    /// Returns the module's structs.
-    pub fn structs(&self) -> &[StructInfo] {
-        if self.num_structs == 0 {
+    /// Returns the module's types.
+    pub fn types(&self) -> &[&TypeInfo] {
+        if self.num_types == 0 {
             &[]
         } else {
-            unsafe { slice::from_raw_parts(self.structs, self.num_structs as usize) }
+            unsafe {
+                slice::from_raw_parts(self.types.cast::<&TypeInfo>(), self.num_types as usize)
+            }
         }
     }
 }
@@ -277,11 +303,25 @@ mod tests {
     use std::os::raw::c_char;
     use std::ptr;
 
+    /// A dummy struct for initializing a struct's `TypeInfo`
+    #[allow(dead_code)]
+    struct StructTypeInfo {
+        type_info: TypeInfo,
+        struct_info: StructInfo,
+    }
+
     fn fake_type_info(name: &CStr, group: TypeGroup) -> TypeInfo {
         TypeInfo {
             guid: FAKE_TYPE_GUID,
             name: name.as_ptr(),
             group,
+        }
+    }
+
+    fn fake_struct_type_info(name: &CStr, struct_info: StructInfo) -> StructTypeInfo {
+        StructTypeInfo {
+            type_info: fake_type_info(name, TypeGroup::StructTypes),
+            struct_info,
         }
     }
 
@@ -301,6 +341,28 @@ mod tests {
     }
 
     #[test]
+    fn test_type_info_group_fundamental() {
+        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
+        let type_group = TypeGroup::FundamentalTypes;
+        let type_info = fake_type_info(&type_name, type_group);
+
+        assert_eq!(type_info.group, type_group);
+        assert!(type_info.group.is_fundamental());
+        assert!(!type_info.group.is_struct());
+    }
+
+    #[test]
+    fn test_type_info_group_struct() {
+        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
+        let type_group = TypeGroup::StructTypes;
+        let type_info = fake_type_info(&type_name, type_group);
+
+        assert_eq!(type_info.group, type_group);
+        assert!(type_info.group.is_struct());
+        assert!(!type_info.group.is_fundamental());
+    }
+
+    #[test]
     fn test_type_info_eq() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
         let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes);
@@ -310,13 +372,13 @@ mod tests {
 
     fn fake_fn_signature(
         name: &CStr,
-        arg_types: &[TypeInfo],
+        arg_types: &[&TypeInfo],
         return_type: Option<&TypeInfo>,
         privacy: Privacy,
     ) -> FunctionSignature {
         FunctionSignature {
             name: name.as_ptr(),
-            arg_types: arg_types.as_ptr(),
+            arg_types: arg_types.as_ptr().cast::<*const TypeInfo>(),
             return_type: return_type.map_or(ptr::null(), |t| t as *const TypeInfo),
             num_arg_types: arg_types.len() as u16,
             privacy,
@@ -356,7 +418,7 @@ mod tests {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
         let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes);
 
-        let arg_types = &[type_info];
+        let arg_types = &[&type_info];
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
         let fn_signature = fake_fn_signature(&fn_name, arg_types, None, Privacy::Public);
 
@@ -387,7 +449,7 @@ mod tests {
     fn fake_struct_info(
         name: &CStr,
         field_names: &[*const c_char],
-        field_types: &[TypeInfo],
+        field_types: &[&TypeInfo],
         field_offsets: &[u16],
         field_sizes: &[u16],
     ) -> StructInfo {
@@ -398,7 +460,7 @@ mod tests {
         StructInfo {
             name: name.as_ptr(),
             field_names: field_names.as_ptr(),
-            field_types: field_types.as_ptr(),
+            field_types: field_types.as_ptr().cast::<*const TypeInfo>(),
             field_offsets: field_offsets.as_ptr(),
             field_sizes: field_sizes.as_ptr(),
             num_fields: field_names.len() as u16,
@@ -443,7 +505,7 @@ mod tests {
         let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes);
 
         let field_names = &[field_name.as_ptr()];
-        let field_types = &[type_info];
+        let field_types = &[&type_info];
         let field_offsets = &[1];
         let field_sizes = &[2];
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
@@ -466,14 +528,14 @@ mod tests {
     fn fake_module_info(
         path: &CStr,
         functions: &[FunctionInfo],
-        structs: &[StructInfo],
+        types: &[&TypeInfo],
     ) -> ModuleInfo {
         ModuleInfo {
             path: path.as_ptr(),
             functions: functions.as_ptr(),
             num_functions: functions.len() as u32,
-            structs: structs.as_ptr(),
-            num_structs: structs.len() as u32,
+            types: types.as_ptr().cast::<*const TypeInfo>(),
+            num_types: types.len() as u32,
         }
     }
 
@@ -490,12 +552,12 @@ mod tests {
     #[test]
     fn test_module_info_types_none() {
         let functions = &[];
-        let structs = &[];
+        let types = &[];
         let module_path = CString::new(FAKE_MODULE_PATH).expect("Invalid fake module path.");
-        let module = fake_module_info(&module_path, functions, structs);
+        let module = fake_module_info(&module_path, functions, types);
 
         assert_eq!(module.functions().len(), functions.len());
-        assert_eq!(module.structs().len(), structs.len());
+        assert_eq!(module.types().len(), types.len());
     }
 
     #[test]
@@ -515,10 +577,11 @@ mod tests {
 
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name");
         let struct_info = fake_struct_info(&struct_name, &[], &[], &[], &[]);
-        let structs = &[struct_info];
+        let struct_type_info = fake_struct_type_info(&struct_name, struct_info);
+        let types = &[unsafe { mem::transmute(&struct_type_info) }];
 
         let module_path = CString::new(FAKE_MODULE_PATH).expect("Invalid fake module path.");
-        let module = fake_module_info(&module_path, functions, structs);
+        let module = fake_module_info(&module_path, functions, types);
 
         let result_functions = module.functions();
         assert_eq!(result_functions.len(), functions.len());
@@ -530,11 +593,18 @@ mod tests {
             assert_eq!(lhs.signature.privacy(), rhs.signature.privacy());
         }
 
-        let result_structs = module.structs();
-        assert_eq!(result_structs.len(), structs.len());
-        for (lhs, rhs) in result_structs.iter().zip(structs.iter()) {
+        let result_types: &[&TypeInfo] = module.types();
+        assert_eq!(result_types.len(), types.len());
+        for (lhs, rhs) in result_types.iter().zip(types.iter()) {
+            assert_eq!(lhs, rhs);
             assert_eq!(lhs.name(), rhs.name());
-            assert_eq!(lhs.field_types(), rhs.field_types());
+            assert_eq!(lhs.group, rhs.group);
+            if lhs.group == TypeGroup::StructTypes {
+                let lhs_struct = lhs.as_struct().unwrap();
+                let rhs_struct = rhs.as_struct().unwrap();
+                assert_eq!(lhs_struct.name(), rhs_struct.name());
+                assert_eq!(lhs_struct.field_types(), rhs_struct.field_types());
+            }
         }
     }
 

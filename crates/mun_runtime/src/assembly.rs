@@ -35,10 +35,6 @@ impl Assembly {
             runtime_dispatch_table.insert_fn(function.signature.name(), function.clone());
         }
 
-        for s in info.symbols.structs() {
-            runtime_dispatch_table.insert_struct(s.name(), s.clone());
-        }
-
         Ok(Assembly {
             library_path: library_path.to_path_buf(),
             library: Some(library),
@@ -74,10 +70,6 @@ impl Assembly {
 
         for function in self.info.symbols.functions() {
             runtime_dispatch_table.remove_fn(function.signature.name());
-        }
-
-        for s in self.info.symbols.structs() {
-            runtime_dispatch_table.remove_struct(s.name());
         }
 
         // Drop the old library, as some operating systems don't allow editing of in-use shared

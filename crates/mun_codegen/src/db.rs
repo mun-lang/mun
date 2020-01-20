@@ -1,7 +1,5 @@
 #![allow(clippy::type_repetition_in_bounds)]
 
-
-
 use crate::{ir::module::ModuleIR, type_info::TypeInfo, Context};
 use inkwell::types::StructType;
 use inkwell::{types::AnyTypeEnum, OptimizationLevel};
@@ -37,6 +35,6 @@ pub trait IrDatabase: hir::HirDatabase {
     fn module_ir(&self, file: hir::FileId) -> Arc<ModuleIR>;
 
     /// Given a type, return the runtime `TypeInfo` that can be used to reflect the type.
-    #[salsa::invoke(crate::code_gen::symbols::type_info_query)]
+    #[salsa::invoke(crate::ir::ty::type_info_query)]
     fn type_info(&self, ty: hir::Ty) -> TypeInfo;
 }

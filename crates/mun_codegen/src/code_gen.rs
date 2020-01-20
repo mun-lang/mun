@@ -80,11 +80,11 @@ pub fn write_module_shared_object(
     // Generate the `get_info` method.
     symbols::gen_reflection_ir(
         db,
-        &module.functions,
-        &module.structs,
-        &module.dispatch_table,
-        &assembly_module,
         &target_machine,
+        &assembly_module,
+        &module.types,
+        &module.functions,
+        &module.dispatch_table,
     );
 
     // Optimize the assembly module

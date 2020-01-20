@@ -162,7 +162,7 @@ macro_rules! invoke_fn_impl {
                             let result = function($($Arg.marshal()),*);
 
                             // Marshall the result
-                            Ok(result.marshal_into(runtime, function_info.signature.return_type()))
+                            Ok(result.marshal_into(function_info.signature.return_type()))
                         }
                         Err(e) => Err($ErrName::new(e, runtime, function_name, $($Arg),*))
                     }

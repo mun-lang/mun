@@ -89,7 +89,7 @@ impl ReturnTypeReflection for f64 {
     type Marshalled = f64;
 
     fn type_name() -> &'static str {
-        "@core::float"
+        "core::float"
     }
 }
 
@@ -97,7 +97,7 @@ impl ReturnTypeReflection for i64 {
     type Marshalled = i64;
 
     fn type_name() -> &'static str {
-        "@core::int"
+        "core::int"
     }
 }
 
@@ -105,7 +105,7 @@ impl ReturnTypeReflection for bool {
     type Marshalled = bool;
 
     fn type_name() -> &'static str {
-        "@core::bool"
+        "core::bool"
     }
 }
 
@@ -113,6 +113,6 @@ impl ReturnTypeReflection for () {
     type Marshalled = ();
 
     fn type_name() -> &'static str {
-        "@core::empty"
+        "core::empty"
     }
 }

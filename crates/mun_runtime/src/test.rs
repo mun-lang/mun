@@ -304,30 +304,15 @@ fn compiler_valid_utf8() {
     use std::ffi::CStr;
     use std::slice;
 
-    let mut driver = TestDriver::new(
+    let driver = TestDriver::new(
         r#"
     struct Foo {
         a: int,
     }
 
-    fn foo(n:int):bool { false }
+    fn foo(n:Foo):bool { false }
     "#,
     );
-
-    let foo_struct = driver.runtime.get_struct_info("Foo").unwrap();
-    assert_eq!(
-        unsafe { CStr::from_ptr(foo_struct.name) }.to_str().is_ok(),
-        true
-    );
-
-    let field_names =
-        unsafe { slice::from_raw_parts(foo_struct.field_names, foo_struct.num_fields as usize) };
-    for field_name in field_names {
-        assert_eq!(
-            unsafe { CStr::from_ptr(*field_name) }.to_str().is_ok(),
-            true
-        );
-    }
 
     let foo_func = driver.runtime.get_function_info("foo").unwrap();
     assert_eq!(
@@ -336,57 +321,33 @@ fn compiler_valid_utf8() {
             .is_ok(),
         true
     );
-    assert_eq!(
-        unsafe { CStr::from_ptr((*foo_func.signature.arg_types).name) }
-            .to_str()
-            .is_ok(),
-        true
-    );
+
+    for arg_type in foo_func.signature.arg_types() {
+        assert_eq!(
+            unsafe { CStr::from_ptr(arg_type.name) }.to_str().is_ok(),
+            true
+        );
+
+        if let Some(s) = arg_type.as_struct() {
+            assert_eq!(unsafe { CStr::from_ptr(s.name) }.to_str().is_ok(), true);
+
+            let field_names =
+                unsafe { slice::from_raw_parts(s.field_names, s.num_fields as usize) };
+
+            for field_name in field_names {
+                assert_eq!(
+                    unsafe { CStr::from_ptr(*field_name) }.to_str().is_ok(),
+                    true
+                );
+            }
+        }
+    }
     assert_eq!(
         unsafe { CStr::from_ptr((*foo_func.signature.return_type).name) }
             .to_str()
             .is_ok(),
         true
     );
-
-    assert_invoke_eq!(bool, false, driver, "foo", 10i64);
-}
-
-#[test]
-fn struct_info() {
-    use crate::ReturnTypeReflection;
-    use abi::Guid;
-
-    let driver = TestDriver::new(
-        r"
-    struct Foo;
-    struct Bar(bool);
-    struct Baz { a: int, b: float };
-    ",
-    );
-
-    assert_struct_info_eq(&driver, "Foo", &[]);
-    assert_struct_info_eq(&driver, "Bar", &[bool::type_guid()]);
-    assert_struct_info_eq(&driver, "Baz", &[i64::type_guid(), f64::type_guid()]);
-
-    fn assert_struct_info_eq(
-        driver: &TestDriver,
-        expected_name: &str,
-        expected_field_types: &[Guid],
-    ) {
-        let struct_info = driver.runtime.get_struct_info(expected_name).unwrap();
-
-        assert_eq!(struct_info.name(), expected_name);
-        if expected_field_types.is_empty() {
-            assert_eq!(struct_info.field_types(), &[]);
-        } else {
-            let field_types = struct_info.field_types();
-            assert_eq!(field_types.len(), expected_field_types.len());
-            for (idx, field_type) in expected_field_types.iter().enumerate() {
-                assert_eq!(field_types[idx].guid, *field_type);
-            }
-        }
-    }
 }
 
 #[test]
