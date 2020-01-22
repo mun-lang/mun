@@ -1,6 +1,8 @@
 use crate::{
     marshal::MarshalInto,
-    reflection::{ArgumentReflection, ReturnTypeReflection},
+    reflection::{
+        equals_argument_type, equals_return_type, ArgumentReflection, ReturnTypeReflection,
+    },
 };
 use abi::{StructInfo, TypeInfo};
 use std::mem;
@@ -39,38 +41,33 @@ impl Struct {
     }
 
     /// Retrieves the value of the field corresponding to the specified `field_name`.
-    pub fn get<T: ReturnTypeReflection>(&self, field_name: &str) -> Result<&T, String> {
-        let field_idx = self
-            .info
-            .field_names()
-            .enumerate()
-            .find(|(_, name)| *name == field_name)
-            .map(|(idx, _)| idx)
-            .ok_or_else(|| {
-                format!(
-                    "Struct `{}` does not contain field `{}`.",
-                    self.info.name(),
-                    field_name
-                )
-            })?;
-
+    pub fn get<T: ReturnTypeReflection>(&self, field_name: &str) -> Result<T, String> {
+        let field_idx = StructInfo::find_field_index(&self.info, field_name)?;
         let field_type = unsafe { self.info.field_types().get_unchecked(field_idx) };
-        if T::type_guid() != field_type.guid {
-            return Err(format!(
+        equals_return_type::<T>(&field_type).map_err(|(expected, found)| {
+            format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
                 self.info.name(),
                 field_name,
-                field_type.name(),
-                T::type_name()
-            ));
-        }
+                expected,
+                found,
+            )
+        })?;
 
-        unsafe {
+        let field_value = unsafe {
             // If we found the `field_idx`, we are guaranteed to also have the `field_offset`
             let offset = *self.info.field_offsets().get_unchecked(field_idx);
             // self.ptr is never null
-            Ok(&*self.raw.0.add(offset as usize).cast::<T>())
-        }
+            // TODO: The unsafe `read` fn could be avoided by adding the `Clone` bound on
+            // `T::Marshalled`, but its only available on nightly:
+            // `ReturnTypeReflection<Marshalled: Clone>`
+            self.raw
+                .0
+                .add(offset as usize)
+                .cast::<T::Marshalled>()
+                .read()
+        };
+        Ok(field_value.marshal_into(Some(*field_type)))
     }
 
     /// Replaces the value of the field corresponding to the specified `field_name` and returns the
@@ -78,75 +75,50 @@ impl Struct {
     pub fn replace<T: ArgumentReflection>(
         &mut self,
         field_name: &str,
-        mut value: T,
+        value: T,
     ) -> Result<T, String> {
-        let field_idx = self
-            .info
-            .field_names()
-            .enumerate()
-            .find(|(_, name)| *name == field_name)
-            .map(|(idx, _)| idx)
-            .ok_or_else(|| {
-                format!(
-                    "Struct `{}` does not contain field `{}`.",
-                    self.info.name(),
-                    field_name
-                )
-            })?;
-
+        let field_idx = StructInfo::find_field_index(&self.info, field_name)?;
         let field_type = unsafe { self.info.field_types().get_unchecked(field_idx) };
-        if value.type_guid() != field_type.guid {
-            return Err(format!(
+        equals_argument_type(&field_type, &value).map_err(|(expected, found)| {
+            format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
                 self.info.name(),
                 field_name,
-                field_type.name(),
-                value.type_name()
-            ));
-        }
+                expected,
+                found,
+            )
+        })?;
 
+        let mut marshalled: T::Marshalled = value.marshal();
         let ptr = unsafe {
             // If we found the `field_idx`, we are guaranteed to also have the `field_offset`
             let offset = *self.info.field_offsets().get_unchecked(field_idx);
             // self.ptr is never null
-            &mut *self.raw.0.add(offset as usize).cast::<T>()
+            &mut *self.raw.0.add(offset as usize).cast::<T::Marshalled>()
         };
-        mem::swap(&mut value, ptr);
-        Ok(value)
+        mem::swap(&mut marshalled, ptr);
+        Ok(marshalled.marshal_into(Some(*field_type)))
     }
 
     /// Sets the value of the field corresponding to the specified `field_name`.
     pub fn set<T: ArgumentReflection>(&mut self, field_name: &str, value: T) -> Result<(), String> {
-        let field_idx = self
-            .info
-            .field_names()
-            .enumerate()
-            .find(|(_, name)| *name == field_name)
-            .map(|(idx, _)| idx)
-            .ok_or_else(|| {
-                format!(
-                    "Struct `{}` does not contain field `{}`.",
-                    self.info.name(),
-                    field_name
-                )
-            })?;
-
+        let field_idx = StructInfo::find_field_index(&self.info, field_name)?;
         let field_type = unsafe { self.info.field_types().get_unchecked(field_idx) };
-        if value.type_guid() != field_type.guid {
-            return Err(format!(
+        equals_argument_type(&field_type, &value).map_err(|(expected, found)| {
+            format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
                 self.info.name(),
                 field_name,
-                field_type.name(),
-                value.type_name()
-            ));
-        }
+                expected,
+                found,
+            )
+        })?;
 
         unsafe {
             // If we found the `field_idx`, we are guaranteed to also have the `field_offset`
             let offset = *self.info.field_offsets().get_unchecked(field_idx);
             // self.ptr is never null
-            *self.raw.0.add(offset as usize).cast::<T>() = value;
+            *self.raw.0.add(offset as usize).cast::<T::Marshalled>() = value.marshal();
         }
         Ok(())
     }

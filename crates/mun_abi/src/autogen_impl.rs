@@ -146,6 +146,22 @@ impl StructInfo {
             unsafe { slice::from_raw_parts(self.field_sizes, self.num_fields as usize) }
         }
     }
+
+    /// Returns the index of the field matching the specified `field_name`.
+    pub fn find_field_index(struct_info: &StructInfo, field_name: &str) -> Result<usize, String> {
+        struct_info
+            .field_names()
+            .enumerate()
+            .find(|(_, name)| *name == field_name)
+            .map(|(idx, _)| idx)
+            .ok_or_else(|| {
+                format!(
+                    "Struct `{}` does not contain field `{}`.",
+                    struct_info.name(),
+                    field_name
+                )
+            })
+    }
 }
 
 impl fmt::Display for StructInfo {

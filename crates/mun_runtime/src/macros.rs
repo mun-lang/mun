@@ -105,53 +105,39 @@ macro_rules! invoke_fn_impl {
                             if arg_types.len() != num_args {
                                 return Err(format!(
                                     "Invalid number of arguments. Expected: {}. Found: {}.",
-                                    num_args,
                                     arg_types.len(),
+                                    num_args,
                                 ));
                             }
 
                             #[allow(unused_mut, unused_variables)]
                             let mut idx = 0;
                             $(
-                                if arg_types[idx].guid != $Arg.type_guid() {
-                                    return Err(format!(
-                                        "Invalid argument type at index {}. Expected: {}. Found: {}.",
-                                        idx,
-                                        $Arg.type_name(),
-                                        arg_types[idx].name(),
-                                    ));
-                                }
+                                crate::reflection::equals_argument_type(&arg_types[idx], &$Arg)
+                                    .map_err(|(expected, found)| {
+                                        format!(
+                                            "Invalid argument type at index {}. Expected: {}. Found: {}.",
+                                            idx,
+                                            expected,
+                                            found,
+                                        )
+                                    })?;
                                 idx += 1;
                             )*
 
                             if let Some(return_type) = function_info.signature.return_type() {
-                                match return_type.group {
-                                    abi::TypeGroup::FundamentalTypes => {
-                                        if return_type.guid != Output::type_guid() {
-                                            return Err(format!(
-                                                "Invalid return type. Expected: {}. Found: {}",
-                                                Output::type_name(),
-                                                return_type.name(),
-                                            ));
-                                        }
-                                    }
-                                    abi::TypeGroup::StructTypes => {
-                                        if <Struct as ReturnTypeReflection>::type_guid() != Output::type_guid() {
-                                            return Err(format!(
-                                                "Invalid return type. Expected: {}. Found: Struct",
-                                                Output::type_name(),
-                                            ));
-                                        }
-                                    }
-                                }
-
+                                crate::reflection::equals_return_type::<Output>(return_type)
                             } else if <() as ReturnTypeReflection>::type_guid() != Output::type_guid() {
-                                return Err(format!(
+                                Err((<() as ReturnTypeReflection>::type_name(), Output::type_name()))
+                            } else {
+                                Ok(())
+                            }.map_err(|(expected, found)| {
+                                format!(
                                     "Invalid return type. Expected: {}. Found: {}",
-                                    Output::type_name(),
-                                    <() as ReturnTypeReflection>::type_name(),
-                                ));
-                            }
+                                    expected,
+                                    found,
+                                )
+                            })?;
 
                             Ok(function_info)
                         }) {
