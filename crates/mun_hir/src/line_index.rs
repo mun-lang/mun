@@ -63,4 +63,13 @@ mod tests {
         assert_eq!(index.line_col(6.into()), LineCol { line: 1, col: 0 });
         assert_eq!(index.line_col(7.into()), LineCol { line: 1, col: 1 });
     }
+    #[test]
+    fn test_line_str() {
+        let text = "ℱ٥ℜ\n†ěṦτ\nℙน尺קő$ع";
+        let index = LineIndex::new(text);
+        assert_eq!(index.line_str(0, &text), Some("ℱ٥ℜ"));
+        assert_eq!(index.line_str(1, &text), Some("†ěṦτ"));
+        assert_eq!(index.line_str(2, &text), Some("ℙน尺קő$ع"));
+        assert_eq!(index.line_str(3, &text), None);
+    }
 }
