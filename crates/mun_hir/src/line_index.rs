@@ -44,7 +44,7 @@ impl LineIndex {
             .newlines
             .get((line + 1) as usize)
             .map(|u| u.to_usize() - 1)
-            .unwrap_or(text.len() as usize);
+            .unwrap_or_else(|| text.chars().count());
         Some(&text[start_of_line..end_of_line])
     }
 }
