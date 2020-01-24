@@ -238,7 +238,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 let struct_ir_ty = self.db.struct_ty(hir_struct);
                 let malloc_fn_ptr = self
                     .dispatch_table
-                    .get_intrinsic_lookup(&self.builder, &intrinsics::malloc);
+                    .gen_intrinsic_lookup(&self.builder, &intrinsics::malloc);
                 let mem_ptr = self
                     .builder
                     .build_call(

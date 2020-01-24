@@ -74,13 +74,13 @@ impl DispatchTable {
             .get(&function)
             .expect("unknown function");
 
-        self.gen_function_loopup_by_index(builder, &function_name, index)
+        self.gen_function_lookup_by_index(builder, &function_name, index)
     }
 
     /// Generates a function lookup through the DispatchTable, equivalent to something alone the
     /// lines of: `dispatchTable[i]`, where i is the index of the intrinsic and `dispatchTable` is a
     /// struct
-    pub fn get_intrinsic_lookup(
+    pub fn gen_intrinsic_lookup(
         &self,
         builder: &inkwell::builder::Builder,
         intrinsic: &impl Intrinsic,
@@ -93,12 +93,12 @@ impl DispatchTable {
             .get(&prototype)
             .expect("unknown function");
 
-        self.gen_function_loopup_by_index(builder, &prototype.name, index)
+        self.gen_function_lookup_by_index(builder, &prototype.name, index)
     }
 
     /// Generates a function lookup through the DispatchTable, equivalent to something alone the
     /// lines of: `dispatchTable[i]`, where i is the index and `dispatchTable` is a struct
-    fn gen_function_loopup_by_index(
+    fn gen_function_lookup_by_index(
         &self,
         builder: &inkwell::builder::Builder,
         function_name: &str,
