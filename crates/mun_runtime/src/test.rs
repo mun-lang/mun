@@ -459,3 +459,39 @@ fn marshal_struct() {
     let bar_err: Result<Struct, _> = invoke_fn!(driver.runtime, "bar_new", bar);
     assert!(bar_err.is_err());
 }
+
+#[test]
+fn hotreload_struct_decl() {
+    let mut driver = TestDriver::new(
+        r#"
+    struct(value) Args {
+        n: int,
+        foo: Bar,
+    }
+    
+    struct(gc) Bar {
+        m: float,
+    }
+
+    fn args(): Args {
+        Args { n: 3, foo: Bar { m: 1.0 }, }
+    }
+    "#,
+    );
+    driver.update(
+        r#"
+    struct(value) Args {
+        n: int,
+        foo: Bar,
+    }
+    
+    struct(gc) Bar {
+        m: int,
+    }
+
+    fn args(): Args {
+        Args { n: 3, foo: Bar { m: 1 }, }
+    }
+    "#,
+    );
+}
