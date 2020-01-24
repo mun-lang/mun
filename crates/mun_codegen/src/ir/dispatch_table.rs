@@ -1,9 +1,10 @@
 use crate::values::FunctionValue;
 use crate::IrDatabase;
 use inkwell::module::Module;
-use inkwell::types::BasicTypeEnum;
+use inkwell::types::{BasicTypeEnum, FunctionType};
 use inkwell::values::{BasicValueEnum, PointerValue};
 
+use crate::code_gen::symbols::TypeInfo;
 use hir::{Body, Expr, ExprId, InferenceResult};
 use std::collections::HashMap;
 
@@ -24,14 +25,30 @@ pub struct DispatchTable {
     // This contains the function that map to the DispatchTable struct fields
     function_to_idx: HashMap<hir::Function, usize>,
     // This contains an ordered list of all the function in the dispatch table
-    entries: Vec<hir::Function>,
+    entries: Vec<DispatchableFunction>,
     // Contains a reference to the global value containing the DispatchTable
     table_ref: Option<inkwell::values::GlobalValue>,
 }
 
+/// A `FunctionPrototype` defines a unique signature that can be added to the dispatch table.
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct FunctionPrototype {
+    pub name: String,
+    pub arg_types: Vec<TypeInfo>,
+    pub ret_type: Option<TypeInfo>,
+}
+
+/// A `DispatchableFunction` is an entry in the dispatch table that may or may not be pointing to an
+/// existing hir function.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct DispatchableFunction {
+    pub prototype: FunctionPrototype,
+    pub hir: Option<hir::Function>,
+}
+
 impl DispatchTable {
     /// Returns a slice containing all the functions in the dispatch table.
-    pub fn entries(&self) -> &[hir::Function] {
+    pub fn entries(&self) -> &[DispatchableFunction] {
         &self.entries
     }
 
@@ -83,11 +100,16 @@ pub(crate) struct DispatchTableBuilder<'a, D: IrDatabase> {
     // This contains the functions that map to the DispatchTable struct fields
     function_to_idx: HashMap<hir::Function, usize>,
     // These are *all* called functions in the modules
-    entries: Vec<hir::Function>,
+    entries: Vec<TypedDispatchableFunction>,
     // Contains a reference to the global value containing the DispatchTable
     table_ref: Option<inkwell::values::GlobalValue>,
     // This is the actual DispatchTable type
     table_type: inkwell::types::StructType,
+}
+
+struct TypedDispatchableFunction {
+    function: DispatchableFunction,
+    ir_type: FunctionType,
 }
 
 impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
@@ -137,7 +159,32 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
 
         // If the function is not yet contained in the table, add it
         if !self.function_to_idx.contains_key(&function) {
-            self.entries.push(function);
+            let name = function.name(self.db).to_string();
+            let hir_type = function.ty(self.db);
+            let sig = hir_type.callable_sig(self.db).unwrap();
+            let ir_type = self.db.type_ir(hir_type).into_function_type();
+            let arg_types = sig
+                .params()
+                .iter()
+                .map(|arg| self.db.type_info(arg.clone()))
+                .collect();
+            let ret_type = if !sig.ret().is_empty() {
+                Some(self.db.type_info(sig.ret().clone()))
+            } else {
+                None
+            };
+
+            self.entries.push(TypedDispatchableFunction {
+                function: DispatchableFunction {
+                    prototype: FunctionPrototype {
+                        name,
+                        arg_types,
+                        ret_type,
+                    },
+                    hir: Some(function),
+                },
+                ir_type,
+            });
             self.function_to_idx
                 .insert(function, self.function_to_idx.len());
         }
@@ -157,17 +204,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
         let table_body: Vec<BasicTypeEnum> = self
             .entries
             .iter()
-            .map(|f| {
-                // Push the associated IR function value type in the table_body field
-                // So that we can fill the DispatchTable struct intermediately
-                self.db
-                    // This returns the associated IR type declaration
-                    .type_ir(f.ty(self.db))
-                    .into_function_type()
-                    // This converts it into a function pointer type
-                    .ptr_type(inkwell::AddressSpace::Generic)
-                    .into()
-            })
+            .map(|f| f.ir_type.ptr_type(inkwell::AddressSpace::Generic).into())
             .collect();
 
         // We can fill in the DispatchTable body, i.e: struct DispatchTable { <this part> };
@@ -180,10 +217,10 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
                 .iter()
                 .enumerate()
                 // Maps over all HIR functions
-                .map(|(i, f)| {
+                .map(|(i, entry)| {
                     let function_type = table_body[i].into_pointer_type();
                     // Find the associated IR function if it exists
-                    match functions.get(f) {
+                    match entry.function.hir.and_then(|f| functions.get(&f)) {
                         // Case external function: Convert to typed null for the given function
                         None => function_type.const_null(),
                         // Case mun function: Get the function location as the initializer
@@ -199,7 +236,11 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
         DispatchTable {
             function_to_idx: self.function_to_idx,
             table_ref: self.table_ref,
-            entries: self.entries,
+            entries: self
+                .entries
+                .into_iter()
+                .map(|entry| entry.function)
+                .collect(),
         }
     }
 }
