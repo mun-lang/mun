@@ -1,6 +1,7 @@
 use super::abi_types::{gen_abi_types, AbiTypes};
 use crate::ir::dispatch_table::{DispatchTable, DispatchableFunction};
 use crate::ir::function;
+use crate::type_info::TypeInfo;
 use crate::values::{BasicValue, GlobalValue};
 use crate::IrDatabase;
 use hir::{Ty, TypeCtor};
@@ -12,36 +13,6 @@ use inkwell::{
     AddressSpace,
 };
 use std::collections::HashMap;
-use std::hash::{Hash, Hasher};
-
-pub type Guid = [u8; 16];
-
-#[derive(Clone, Eq, Ord, PartialOrd, Debug)]
-pub struct TypeInfo {
-    pub guid: Guid,
-    pub name: String,
-}
-
-impl Hash for TypeInfo {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write(&self.guid)
-    }
-}
-
-impl PartialEq for TypeInfo {
-    fn eq(&self, other: &Self) -> bool {
-        self.guid == other.guid
-    }
-}
-
-impl TypeInfo {
-    fn from_name<S: AsRef<str>>(name: S) -> TypeInfo {
-        TypeInfo {
-            name: name.as_ref().to_string(),
-            guid: md5::compute(name.as_ref()).0,
-        }
-    }
-}
 
 pub fn type_info_query(db: &impl IrDatabase, ty: Ty) -> TypeInfo {
     match ty {

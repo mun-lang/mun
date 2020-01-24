@@ -17,11 +17,13 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
+use abi::{FunctionInfo, FunctionSignature, Guid, Privacy, Reflection, StructInfo, TypeInfo};
 use failure::Error;
-use mun_abi::{FunctionInfo, Reflection, StructInfo};
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
 pub use crate::assembly::Assembly;
+use std::alloc::Layout;
+use std::ffi::CString;
 
 /// Options for the construction of a [`Runtime`].
 #[derive(Clone, Debug)]
@@ -68,7 +70,7 @@ pub struct DispatchTable {
 }
 
 impl DispatchTable {
-    /// Retrieves the [`FunctionInfo`] corresponding to `fn_path`, if it exists.
+    /// Retrieves the [`abi::FunctionInfo`] corresponding to `fn_path`, if it exists.
     pub fn get_fn(&self, fn_path: &str) -> Option<&FunctionInfo> {
         self.functions.get(fn_path)
     }
@@ -119,6 +121,18 @@ pub struct Runtime {
     dispatch_table: DispatchTable,
     watcher: RecommendedWatcher,
     watcher_rx: Receiver<DebouncedEvent>,
+
+    _name: CString,
+    _u64_type: CString,
+    _ptr_mut_u8_type: CString,
+    _arg_types: Vec<abi::TypeInfo>,
+    _ret_type: Box<abi::TypeInfo>,
+}
+
+extern "C" fn malloc(size: u64, alignment: u64) -> *mut u8 {
+    unsafe {
+        std::alloc::alloc(Layout::from_size_align(size as usize, alignment as usize).unwrap())
+    }
 }
 
 impl Runtime {
@@ -128,12 +142,58 @@ impl Runtime {
     pub fn new(options: RuntimeOptions) -> Result<Runtime, Error> {
         let (tx, rx) = channel();
 
+        let name = CString::new("malloc").unwrap();
+        let u64_type = CString::new("core::u64").unwrap();
+        let ptr_mut_u8_type = CString::new("core::u8*").unwrap();
+
+        let arg_types = vec![
+            TypeInfo {
+                guid: Guid {
+                    b: md5::compute("core::u64").0,
+                },
+                name: u64_type.as_ptr(),
+            },
+            TypeInfo {
+                guid: Guid {
+                    b: md5::compute("core::u64").0,
+                },
+                name: u64_type.as_ptr(),
+            },
+        ];
+
+        let ret_type = Box::new(TypeInfo {
+            guid: Guid {
+                b: md5::compute("core::u8*").0,
+            },
+            name: ptr_mut_u8_type.as_ptr(),
+        });
+
+        let fn_info = FunctionInfo {
+            signature: FunctionSignature {
+                name: name.as_ptr(),
+                arg_types: arg_types.as_ptr(),
+                return_type: ret_type.as_ref(),
+                num_arg_types: 2,
+                privacy: Privacy::Public,
+            },
+            fn_ptr: malloc as *const std::ffi::c_void,
+        };
+
+        let mut dispatch_table = DispatchTable::default();
+        dispatch_table.insert_fn("malloc", fn_info);
+
         let watcher: RecommendedWatcher = Watcher::new(tx, options.delay)?;
         let mut runtime = Runtime {
             assemblies: HashMap::new(),
-            dispatch_table: DispatchTable::default(),
+            dispatch_table,
             watcher,
             watcher_rx: rx,
+
+            _name: name,
+            _u64_type: u64_type,
+            _ptr_mut_u8_type: ptr_mut_u8_type,
+            _arg_types: arg_types,
+            _ret_type: ret_type,
         };
 
         runtime.add_assembly(&options.library_path)?;

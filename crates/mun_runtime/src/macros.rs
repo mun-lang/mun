@@ -87,7 +87,7 @@ macro_rules! invoke_fn_impl {
                     let function: core::result::Result<fn($($T),*) -> Output, String> = runtime
                         .get_function_info(function_name)
                         .ok_or(format!("Failed to obtain function '{}'", function_name))
-                        .and_then(|function| mun_abi::downcast_fn!(function, fn($($T),*) -> Output));
+                        .and_then(|function| abi::downcast_fn!(function, fn($($T),*) -> Output));
 
                     match function {
                         Ok(function) => Ok(function($($Arg),*)),

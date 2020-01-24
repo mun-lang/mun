@@ -2,7 +2,7 @@
 
 
 
-use crate::{code_gen::symbols::TypeInfo, ir::module::ModuleIR, Context};
+use crate::{ir::module::ModuleIR, type_info::TypeInfo, Context};
 use inkwell::types::StructType;
 use inkwell::{types::AnyTypeEnum, OptimizationLevel};
 use mun_target::spec::Target;

@@ -2,9 +2,9 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::DispatchTable;
+use abi::AssemblyInfo;
 use failure::Error;
 use libloading::Symbol;
-use mun_abi::AssemblyInfo;
 
 mod temp_library;
 
@@ -55,10 +55,7 @@ impl Assembly {
                 .ok_or_else(|| {
                     io::Error::new(
                         io::ErrorKind::NotFound,
-                        format!(
-                            "Failed to link: function '{}' is missing.",
-                            fn_signature.name()
-                        ),
+                        format!("Failed to link: function '{}' is missing.", fn_signature),
                     )
                 })?;
 
