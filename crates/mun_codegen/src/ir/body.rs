@@ -260,9 +260,6 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                         &hir_struct.name(self.db).to_string(),
                     )
                     .into_pointer_value();
-                //                let struct_ptr: PointerValue = self
-                //                    .builder
-                //                    .build_malloc(struct_ir_ty, &hir_struct.name(self.db).to_string());
                 self.builder.build_store(struct_ptr, struct_lit);
                 struct_ptr.into()
             }

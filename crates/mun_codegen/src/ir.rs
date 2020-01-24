@@ -1,4 +1,3 @@
-use failure::_core::marker::PhantomData;
 use inkwell::context::Context;
 use inkwell::types::{
     AnyType, AnyTypeEnum, BasicType, BasicTypeEnum, FunctionType, IntType, PointerType,
@@ -66,14 +65,6 @@ pub trait AsIrType {
     type Type: AnyType;
 
     fn as_ir_type(&self, context: &Context) -> Self::Type;
-}
-
-impl<S: AnyType, T: IsIrType<Type = S>> AsIrType for PhantomData<T> {
-    type Type = S;
-
-    fn as_ir_type(&self, context: &Context) -> Self::Type {
-        T::ir_type(context)
-    }
 }
 
 pub trait AsBasicIrType {

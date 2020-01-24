@@ -77,7 +77,7 @@ impl DispatchTable {
         self.gen_function_lookup_by_index(builder, &function_name, index)
     }
 
-    /// Generates a function lookup through the DispatchTable, equivalent to something alone the
+    /// Generates a function lookup through the DispatchTable, equivalent to something along the
     /// lines of: `dispatchTable[i]`, where i is the index of the intrinsic and `dispatchTable` is a
     /// struct
     pub fn gen_intrinsic_lookup(
@@ -96,7 +96,7 @@ impl DispatchTable {
         self.gen_function_lookup_by_index(builder, &prototype.name, index)
     }
 
-    /// Generates a function lookup through the DispatchTable, equivalent to something alone the
+    /// Generates a function lookup through the DispatchTable, equivalent to something along the
     /// lines of: `dispatchTable[i]`, where i is the index and `dispatchTable` is a struct
     fn gen_function_lookup_by_index(
         &self,

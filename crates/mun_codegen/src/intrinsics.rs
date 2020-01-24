@@ -3,7 +3,7 @@ use inkwell::context::Context;
 use inkwell::types::FunctionType;
 
 #[macro_use]
-mod r#macro;
+mod macros;
 
 /// Defines the properties of an intrinsic function that can be called from Mun. These functions
 /// are mostly used internally.

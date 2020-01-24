@@ -163,7 +163,7 @@ impl Runtime {
 
         let ret_type = Box::new(TypeInfo {
             guid: Guid {
-                b: md5::compute("core::u8*").0,
+                b: md5::compute("*mut core::u8").0,
             },
             name: ptr_mut_u8_type.as_ptr(),
         });

@@ -1,6 +1,4 @@
 use std::hash::{Hash, Hasher};
-use std::marker::PhantomData;
-use std::mem::size_of;
 
 pub type Guid = [u8; 16];
 
@@ -38,12 +36,6 @@ pub trait HasStaticTypeInfo {
 
 pub trait HasTypeInfo {
     fn type_info(&self) -> TypeInfo;
-}
-
-impl<T: HasStaticTypeInfo> HasTypeInfo for PhantomData<T> {
-    fn type_info(&self) -> TypeInfo {
-        T::type_info()
-    }
 }
 
 impl<T: HasStaticTypeInfo> HasTypeInfo for T {
@@ -84,22 +76,19 @@ impl HasStaticTypeInfo for bool {
 
 impl<T: HasStaticTypeInfo> HasStaticTypeInfo for *mut T {
     fn type_info() -> TypeInfo {
-        TypeInfo::from_name(format!("{}*", T::type_info().name))
+        TypeInfo::from_name(format!("*mut {}", T::type_info().name))
     }
 }
 
 impl HasStaticTypeInfo for usize {
     fn type_info() -> TypeInfo {
-        match size_of::<usize>() {
-            64 => <u64 as HasStaticTypeInfo>::type_info(),
-            _ => panic!("unsupported usize size"),
-        }
+        TypeInfo::from_name("core::usize")
     }
 }
 
 impl<T: HasStaticTypeInfo> HasStaticTypeInfo for *const T {
     fn type_info() -> TypeInfo {
-        TypeInfo::from_name(format!("{}*", T::type_info().name))
+        TypeInfo::from_name(format!("*const {}", T::type_info().name))
     }
 }
 
@@ -111,12 +100,6 @@ pub trait HasStaticReturnTypeInfo {
 /// A trait that defines that a type can be used as a return type for a function.
 pub trait HasReturnTypeInfo {
     fn return_type_info(&self) -> Option<TypeInfo>;
-}
-
-impl<T: HasStaticReturnTypeInfo> HasReturnTypeInfo for PhantomData<T> {
-    fn return_type_info(&self) -> Option<TypeInfo> {
-        T::return_type_info()
-    }
 }
 
 impl<T: HasStaticReturnTypeInfo> HasReturnTypeInfo for T {
