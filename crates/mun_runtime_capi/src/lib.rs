@@ -13,7 +13,7 @@ use std::os::raw::c_char;
 use crate::error::ErrorHandle;
 use crate::hub::HUB;
 use failure::err_msg;
-use mun_abi::FunctionInfo;
+use mun_abi::{FunctionInfo, StructInfo, TypeInfo};
 use mun_runtime::{Runtime, RuntimeBuilder};
 
 pub(crate) type Token = usize;
@@ -188,5 +188,51 @@ pub unsafe extern "C" fn mun_runtime_update(
     };
 
     *updated = runtime.update();
+    ErrorHandle::default()
+}
+
+/// Retrieves the [`StructInfo`] corresponding to `type_info`, if the type is a struct. If
+/// successful, `struct_info` is set, otherwise a non-zero error handle is returned.
+///
+/// If a non-zero error handle is returned, it must be manually destructed using
+/// [`mun_error_destroy`].
+///
+/// # Safety
+///
+/// This function receives raw pointers as parameters. If any of the arguments is a null pointer,
+/// an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
+#[no_mangle]
+pub unsafe extern "C" fn mun_type_info_as_struct(
+    type_info: *const TypeInfo,
+    struct_info: *mut StructInfo,
+) -> ErrorHandle {
+    let type_info = match type_info.as_ref() {
+        Some(info) => info,
+        None => {
+            return HUB.errors.register(Box::new(err_msg(
+                "Invalid argument: `type_info` is null pointer",
+            )))
+        }
+    };
+
+    let struct_info = match struct_info.as_mut() {
+        Some(info) => info,
+        None => {
+            return HUB.errors.register(Box::new(err_msg(
+                "Invalid argument: `struct_info` is null pointer",
+            )))
+        }
+    };
+
+    match type_info.as_struct() {
+        Some(info) => *struct_info = info.clone(),
+        None => {
+            return HUB.errors.register(Box::new(err_msg(format!(
+                "Provided type `{}` is not a struct.",
+                type_info.name()
+            ))))
+        }
+    }
+
     ErrorHandle::default()
 }
