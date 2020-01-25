@@ -11,10 +11,11 @@ description = "A runtime for hot reloading and invoking Mun from Rust"
 [dependencies]
 failure = "0.1.5"
 libloading = "0.5"
-mun_abi = { path = "../mun_abi" }
+abi = { path = "../mun_abi", package = "mun_abi" }
 notify = "4.0.12"
 parking_lot = "0.9"
 tempfile = "3"
+md5="0.7.0"
 
 [dev-dependencies]
 mun_compiler = { path="../mun_compiler" }

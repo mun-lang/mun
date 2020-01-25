@@ -1,3 +1,4 @@
+use crate::intrinsics;
 use crate::{ir::dispatch_table::DispatchTable, ir::try_convert_any_to_basic, IrDatabase};
 use hir::{
     ArenaId, ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDisplay, InferenceResult, Literal,
@@ -7,7 +8,7 @@ use inkwell::{
     builder::Builder,
     module::Module,
     values::{BasicValueEnum, CallSiteValue, FloatValue, FunctionValue, IntValue},
-    FloatPredicate, IntPredicate,
+    AddressSpace, FloatPredicate, IntPredicate,
 };
 use std::{collections::HashMap, mem, sync::Arc};
 
@@ -235,9 +236,30 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             hir::StructMemoryKind::GC => {
                 // TODO: Root memory in GC
                 let struct_ir_ty = self.db.struct_ty(hir_struct);
-                let struct_ptr: PointerValue = self
+                let malloc_fn_ptr = self
+                    .dispatch_table
+                    .gen_intrinsic_lookup(&self.builder, &intrinsics::malloc);
+                let mem_ptr = self
                     .builder
-                    .build_malloc(struct_ir_ty, &hir_struct.name(self.db).to_string());
+                    .build_call(
+                        malloc_fn_ptr,
+                        &[
+                            struct_ir_ty.size_of().unwrap().into(),
+                            struct_ir_ty.get_alignment().into(),
+                        ],
+                        "malloc",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+                let struct_ptr = self
+                    .builder
+                    .build_bitcast(
+                        mem_ptr,
+                        struct_ir_ty.ptr_type(AddressSpace::Generic),
+                        &hir_struct.name(self.db).to_string(),
+                    )
+                    .into_pointer_value();
                 self.builder.build_store(struct_ptr, struct_lit);
                 struct_ptr.into()
             }
