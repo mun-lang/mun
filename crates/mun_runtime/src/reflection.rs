@@ -1,6 +1,37 @@
-use crate::marshal::MarshalInto;
-use abi::Guid;
+use crate::{marshal::MarshalInto, Struct};
+use abi::{Guid, TypeInfo};
 use md5;
+
+/// Returns whether the specified argument type matches the `type_info`.
+pub fn equals_argument_type<'e, 'f, T: ArgumentReflection>(
+    type_info: &'e TypeInfo,
+    arg: &'f T,
+) -> Result<(), (&'e str, &'f str)> {
+    if type_info.guid != arg.type_guid() {
+        Err((type_info.name(), arg.type_name()))
+    } else {
+        Ok(())
+    }
+}
+
+/// Returns whether the specified return type matches the `type_info`.
+pub fn equals_return_type<T: ReturnTypeReflection>(
+    type_info: &TypeInfo,
+) -> Result<(), (&str, &str)> {
+    match type_info.group {
+        abi::TypeGroup::FundamentalTypes => {
+            if type_info.guid != T::type_guid() {
+                return Err((type_info.name(), T::type_name()));
+            }
+        }
+        abi::TypeGroup::StructTypes => {
+            if <Struct as ReturnTypeReflection>::type_guid() != T::type_guid() {
+                return Err(("struct", T::type_name()));
+            }
+        }
+    }
+    Ok(())
+}
 
 /// A type to emulate dynamic typing across compilation units for static types.
 pub trait ReturnTypeReflection: Sized + 'static {
@@ -19,9 +50,9 @@ pub trait ReturnTypeReflection: Sized + 'static {
 }
 
 /// A type to emulate dynamic typing across compilation units for statically typed values.
-pub trait ArgumentReflection {
+pub trait ArgumentReflection: Sized {
     /// The resulting type after dereferencing.
-    type Marshalled: Sized;
+    type Marshalled: MarshalInto<Self>;
 
     /// Retrieves the `Guid` of the value's type.
     fn type_guid(&self) -> Guid {

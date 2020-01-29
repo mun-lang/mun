@@ -387,10 +387,15 @@ fn marshal_struct() {
     let mut driver = TestDriver::new(
         r#"
     struct(gc) Foo { a: int, b: bool, c: float, };
+    struct Bar(Foo);
 
     fn foo_new(a: int, b: bool, c: float): Foo {
         Foo { a, b, c, }
     }
+    fn bar_new(foo: Foo): Bar {
+        Bar(foo)
+    }
+
     fn foo_a(foo: Foo):int { foo.a }
     fn foo_b(foo: Foo):bool { foo.b }
     fn foo_c(foo: Foo):float { foo.c }
@@ -401,9 +406,9 @@ fn marshal_struct() {
     let b = true;
     let c = 1.23f64;
     let mut foo: Struct = invoke_fn!(driver.runtime, "foo_new", a, b, c).unwrap();
-    assert_eq!(Ok(&a), foo.get::<i64>("a"));
-    assert_eq!(Ok(&b), foo.get::<bool>("b"));
-    assert_eq!(Ok(&c), foo.get::<f64>("c"));
+    assert_eq!(Ok(a), foo.get::<i64>("a"));
+    assert_eq!(Ok(b), foo.get::<bool>("b"));
+    assert_eq!(Ok(c), foo.get::<f64>("c"));
 
     let d = 6i64;
     let e = false;
@@ -412,19 +417,45 @@ fn marshal_struct() {
     foo.set("b", e).unwrap();
     foo.set("c", f).unwrap();
 
-    assert_eq!(Ok(&d), foo.get::<i64>("a"));
-    assert_eq!(Ok(&e), foo.get::<bool>("b"));
-    assert_eq!(Ok(&f), foo.get::<f64>("c"));
+    assert_eq!(Ok(d), foo.get::<i64>("a"));
+    assert_eq!(Ok(e), foo.get::<bool>("b"));
+    assert_eq!(Ok(f), foo.get::<f64>("c"));
 
     assert_eq!(Ok(d), foo.replace("a", a));
     assert_eq!(Ok(e), foo.replace("b", b));
     assert_eq!(Ok(f), foo.replace("c", c));
 
-    assert_eq!(Ok(&a), foo.get::<i64>("a"));
-    assert_eq!(Ok(&b), foo.get::<bool>("b"));
-    assert_eq!(Ok(&c), foo.get::<f64>("c"));
+    assert_eq!(Ok(a), foo.get::<i64>("a"));
+    assert_eq!(Ok(b), foo.get::<bool>("b"));
+    assert_eq!(Ok(c), foo.get::<f64>("c"));
 
     assert_invoke_eq!(i64, a, driver, "foo_a", foo.clone());
     assert_invoke_eq!(bool, b, driver, "foo_b", foo.clone());
-    assert_invoke_eq!(f64, c, driver, "foo_c", foo);
+    assert_invoke_eq!(f64, c, driver, "foo_c", foo.clone());
+
+    let mut bar: Struct = invoke_fn!(driver.runtime, "bar_new", foo.clone()).unwrap();
+    let foo2 = bar.get::<Struct>("0").unwrap();
+    assert_eq!(Ok(a), foo2.get::<i64>("a"));
+    assert_eq!(foo2.get::<bool>("b"), foo.get::<bool>("b"));
+    assert_eq!(foo2.get::<f64>("c"), foo.get::<f64>("c"));
+
+    // Specify invalid return type
+    let bar_err = bar.get::<i64>("0");
+    assert!(bar_err.is_err());
+
+    // Specify invalid argument type
+    let bar_err = bar.replace("0", 1i64);
+    assert!(bar_err.is_err());
+
+    // Specify invalid argument type
+    let bar_err = bar.set("0", 1i64);
+    assert!(bar_err.is_err());
+
+    // Specify invalid return type
+    let bar_err: Result<i64, _> = invoke_fn!(driver.runtime, "bar_new", foo);
+    assert!(bar_err.is_err());
+
+    // Pass invalid struct type
+    let bar_err: Result<Struct, _> = invoke_fn!(driver.runtime, "bar_new", bar);
+    assert!(bar_err.is_err());
 }
