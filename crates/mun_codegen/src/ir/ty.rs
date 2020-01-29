@@ -1,5 +1,8 @@
 use super::try_convert_any_to_basic;
-use crate::IrDatabase;
+use crate::{
+    type_info::{TypeGroup, TypeInfo},
+    IrDatabase,
+};
 use hir::{ApplicationTy, CallableDef, Ty, TypeCtor};
 use inkwell::types::{AnyTypeEnum, BasicType, BasicTypeEnum, StructType};
 use inkwell::AddressSpace;
@@ -47,4 +50,18 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty) -> AnyTypeEnum {
 pub fn struct_ty_query(db: &impl IrDatabase, s: hir::Struct) -> StructType {
     let name = s.name(db).to_string();
     db.context().opaque_struct_type(&name)
+}
+
+/// Constructs the `TypeInfo` for the specified HIR type
+pub fn type_info_query(db: &impl IrDatabase, ty: Ty) -> TypeInfo {
+    match ty {
+        Ty::Apply(ctor) => match ctor.ctor {
+            TypeCtor::Float => TypeInfo::new("core::float", TypeGroup::FundamentalTypes),
+            TypeCtor::Int => TypeInfo::new("core::int", TypeGroup::FundamentalTypes),
+            TypeCtor::Bool => TypeInfo::new("core::bool", TypeGroup::FundamentalTypes),
+            TypeCtor::Struct(s) => TypeInfo::new(s.name(db).to_string(), TypeGroup::StructTypes(s)),
+            _ => unreachable!("{:?} unhandled", ctor),
+        },
+        _ => unreachable!("{:?} unhandled", ty),
+    }
 }

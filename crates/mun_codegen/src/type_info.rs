@@ -1,9 +1,22 @@
-use abi::TypeGroup;
+use abi::Guid;
 use std::hash::{Hash, Hasher};
 
-pub type Guid = [u8; 16];
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum TypeGroup {
+    FundamentalTypes,
+    StructTypes(hir::Struct),
+}
 
-#[derive(Clone, Eq, Ord, PartialOrd, Debug)]
+impl From<TypeGroup> for u64 {
+    fn from(group: TypeGroup) -> Self {
+        match group {
+            TypeGroup::FundamentalTypes => 0,
+            TypeGroup::StructTypes(_) => 1,
+        }
+    }
+}
+
+#[derive(Clone, Eq, Debug)]
 pub struct TypeInfo {
     pub guid: Guid,
     pub name: String,
@@ -12,7 +25,7 @@ pub struct TypeInfo {
 
 impl Hash for TypeInfo {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write(&self.guid)
+        state.write(&self.guid.b)
     }
 }
 
@@ -26,7 +39,9 @@ impl TypeInfo {
     pub fn new<S: AsRef<str>>(name: S, group: TypeGroup) -> TypeInfo {
         TypeInfo {
             name: name.as_ref().to_string(),
-            guid: md5::compute(name.as_ref()).0,
+            guid: Guid {
+                b: md5::compute(name.as_ref()).0,
+            },
             group,
         }
     }

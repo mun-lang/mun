@@ -1,7 +1,6 @@
 use crate::{
     marshal::MarshalInto,
     reflection::{ArgumentReflection, ReturnTypeReflection},
-    Runtime,
 };
 use abi::{StructInfo, TypeInfo};
 use std::mem;
@@ -23,18 +22,15 @@ pub struct Struct {
 
 impl Struct {
     /// Creates a struct that wraps a raw Mun struct.
-    pub fn new(runtime: &Runtime, type_info: &TypeInfo, raw: RawStruct) -> Result<Struct, String> {
-        let struct_info = runtime.get_struct_info(type_info.name()).ok_or_else(|| {
-            format!(
-                "Could not find information for struct `{}`.",
-                type_info.name()
-            )
-        })?;
+    ///
+    /// The provided [`TypeInfo`] must be for a struct type.
+    fn new(type_info: &TypeInfo, raw: RawStruct) -> Self {
+        assert!(type_info.group.is_struct());
 
-        Ok(Self {
+        Self {
             raw,
-            info: struct_info.clone(),
-        })
+            info: type_info.as_struct().unwrap().clone(),
+        }
     }
 
     /// Consumes the `Struct`, returning a raw Mun struct.
@@ -177,9 +173,8 @@ impl ReturnTypeReflection for Struct {
 }
 
 impl MarshalInto<Struct> for RawStruct {
-    fn marshal_into(self, runtime: &Runtime, type_info: Option<&TypeInfo>) -> Struct {
+    fn marshal_into(self, type_info: Option<&TypeInfo>) -> Struct {
         // `type_info` is only `None` for the `()` type
-        // the `StructInfo` for this type must have been loaded for a function to return its type
-        Struct::new(runtime, type_info.unwrap(), self).unwrap()
+        Struct::new(type_info.unwrap(), self)
     }
 }

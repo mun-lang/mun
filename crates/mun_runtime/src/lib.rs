@@ -22,7 +22,7 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
-use abi::{FunctionInfo, FunctionSignature, Guid, Privacy, StructInfo, TypeGroup, TypeInfo};
+use abi::{FunctionInfo, FunctionSignature, Guid, Privacy, TypeGroup, TypeInfo};
 use failure::Error;
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
@@ -73,7 +73,6 @@ impl RuntimeBuilder {
 #[derive(Default)]
 pub struct DispatchTable {
     functions: HashMap<String, FunctionInfo>,
-    structs: HashMap<String, StructInfo>,
 }
 
 impl DispatchTable {
@@ -98,28 +97,6 @@ impl DispatchTable {
     pub fn remove_fn<T: AsRef<str>>(&mut self, fn_path: T) -> Option<FunctionInfo> {
         self.functions.remove(fn_path.as_ref())
     }
-
-    /// Retrieves the [`StructInfo`] corresponding to `struct_path`, if it exists.
-    pub fn get_struct<T: AsRef<str>>(&self, struct_path: T) -> Option<&StructInfo> {
-        self.structs.get(struct_path.as_ref())
-    }
-
-    /// Inserts the `struct_info` for `struct_path` into the dispatch table.
-    ///
-    /// If the dispatch table already contained this `struct_path`, the value is updated, and the
-    /// old value is returned.
-    pub fn insert_struct<T: std::string::ToString>(
-        &mut self,
-        struct_path: T,
-        struct_info: StructInfo,
-    ) -> Option<StructInfo> {
-        self.structs.insert(struct_path.to_string(), struct_info)
-    }
-
-    /// Removes and returns the `struct_info` corresponding to `struct_path`, if it exists.
-    pub fn remove_struct<T: AsRef<str>>(&mut self, struct_path: T) -> Option<StructInfo> {
-        self.structs.remove(struct_path.as_ref())
-    }
 }
 
 /// A runtime for the Mun language.
@@ -132,7 +109,7 @@ pub struct Runtime {
     _name: CString,
     _u64_type: CString,
     _ptr_mut_u8_type: CString,
-    _arg_types: Vec<abi::TypeInfo>,
+    _arg_types: Vec<*mut abi::TypeInfo>,
     _ret_type: Box<abi::TypeInfo>,
 }
 
@@ -154,20 +131,20 @@ impl Runtime {
         let ptr_mut_u8_type = CString::new("core::u8*").unwrap();
 
         let arg_types = vec![
-            TypeInfo {
+            Box::into_raw(Box::new(TypeInfo {
                 guid: Guid {
                     b: md5::compute("core::u64").0,
                 },
                 name: u64_type.as_ptr(),
                 group: TypeGroup::FundamentalTypes,
-            },
-            TypeInfo {
+            })),
+            Box::into_raw(Box::new(TypeInfo {
                 guid: Guid {
                     b: md5::compute("core::u64").0,
                 },
                 name: u64_type.as_ptr(),
                 group: TypeGroup::FundamentalTypes,
-            },
+            })),
         ];
 
         let ret_type = Box::new(TypeInfo {
@@ -181,7 +158,7 @@ impl Runtime {
         let fn_info = FunctionInfo {
             signature: FunctionSignature {
                 name: name.as_ptr(),
-                arg_types: arg_types.as_ptr(),
+                arg_types: arg_types.as_ptr() as *const *const _,
                 return_type: ret_type.as_ref(),
                 num_arg_types: 2,
                 privacy: Privacy::Public,
@@ -239,11 +216,6 @@ impl Runtime {
         self.dispatch_table.get_fn(function_name)
     }
 
-    /// Retrieves the struct information corresponding to `struct_name`, if available.
-    pub fn get_struct_info(&self, struct_name: &str) -> Option<&StructInfo> {
-        self.dispatch_table.get_struct(struct_name)
-    }
-
     /// Updates the state of the runtime. This includes checking for file changes, and reloading
     /// compiled assemblies.
     pub fn update(&mut self) -> bool {
@@ -267,6 +239,15 @@ impl Runtime {
             }
         }
         false
+    }
+}
+
+impl Drop for Runtime {
+    fn drop(&mut self) {
+        for raw_arg_type in self._arg_types.iter() {
+            // Drop arg type memory
+            let _arg_type = unsafe { Box::from_raw(*raw_arg_type) };
+        }
     }
 }
 

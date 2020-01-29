@@ -1,9 +1,11 @@
+use super::adt;
 use crate::ir::dispatch_table::{DispatchTable, DispatchTableBuilder};
-use crate::ir::{adt, function};
+use crate::ir::function;
+use crate::type_info::TypeInfo;
 use crate::IrDatabase;
 use hir::{FileId, ModuleDef};
-use inkwell::{module::Module, types::StructType, values::FunctionValue};
-use std::collections::HashMap;
+use inkwell::{module::Module, values::FunctionValue};
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -17,8 +19,8 @@ pub struct ModuleIR {
     /// A mapping from HIR functions to LLVM IR values
     pub functions: HashMap<hir::Function, FunctionValue>,
 
-    /// A mapping from HIR structs to LLVM IR types
-    pub structs: HashMap<hir::Struct, StructType>,
+    /// A set of unique TypeInfo values
+    pub types: HashSet<TypeInfo>,
 
     /// The dispatch table
     pub dispatch_table: DispatchTable,
@@ -30,12 +32,14 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
         .context()
         .create_module(db.file_relative_path(file_id).as_str());
 
-    // Generate all type definitions
-    let mut structs = HashMap::new();
+    // Collect type definitions for all used types
+    let mut types = HashSet::new();
+
     for def in db.module_data(file_id).definitions() {
         match def {
             ModuleDef::Struct(s) => {
-                structs.insert(*s, adt::gen_struct_decl(db, *s));
+                let _t = adt::gen_struct_decl(db, *s);
+                types.insert(db.type_info(s.ty(db)));
             }
             ModuleDef::BuiltinType(_) | ModuleDef::Function(_) => (),
         }
@@ -49,6 +53,17 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
         #[allow(clippy::single_match)]
         match def {
             ModuleDef::Function(f) => {
+                // Collect argument types
+                let fn_sig = f.ty(db).callable_sig(db).unwrap();
+                for ty in fn_sig.params().iter() {
+                    types.insert(db.type_info(ty.clone()));
+                }
+                // Collect return type
+                let ret_ty = fn_sig.ret();
+                if !ret_ty.is_empty() {
+                    types.insert(db.type_info(ret_ty.clone()));
+                }
+
                 // Construct the function signature
                 let fun = function::gen_signature(db, *f, &llvm_module);
                 functions.insert(*f, fun);
@@ -79,11 +94,23 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
         fn_pass_manager.run_on(llvm_function);
     }
 
+    // Dispatch entries can include previously unchecked intrinsics
+    for entry in dispatch_table.entries().iter() {
+        // Collect argument types
+        for ty in entry.prototype.arg_types.iter() {
+            types.insert(ty.clone());
+        }
+        // Collect return type
+        if let Some(ret_ty) = entry.prototype.ret_type.as_ref() {
+            types.insert(ret_ty.clone());
+        }
+    }
+
     Arc::new(ModuleIR {
         file_id,
         llvm_module,
         functions,
-        structs,
+        types,
         dispatch_table,
     })
 }
