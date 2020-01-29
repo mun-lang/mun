@@ -4,9 +4,8 @@ extern crate failure;
 use std::time::Duration;
 
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-use mun_abi::Reflection;
 use mun_compiler::{host_triple, Config, PathOrInline, Target};
-use mun_runtime::{invoke_fn, Runtime, RuntimeBuilder};
+use mun_runtime::{invoke_fn, ReturnTypeReflection, Runtime, RuntimeBuilder};
 
 fn main() -> Result<(), failure::Error> {
     let matches = App::new("mun")

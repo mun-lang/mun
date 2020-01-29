@@ -7,23 +7,30 @@
 mod assembly;
 #[macro_use]
 mod macros;
+mod marshal;
+mod reflection;
+mod r#struct;
 
 #[cfg(test)]
 mod test;
 
+use std::alloc::Layout;
 use std::collections::HashMap;
+use std::ffi::CString;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
-use abi::{FunctionInfo, FunctionSignature, Guid, Privacy, Reflection, StructInfo, TypeInfo};
+use abi::{FunctionInfo, FunctionSignature, Guid, Privacy, StructInfo, TypeGroup, TypeInfo};
 use failure::Error;
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
+pub use crate::marshal::MarshalInto;
+pub use crate::reflection::{ArgumentReflection, ReturnTypeReflection};
+
 pub use crate::assembly::Assembly;
-use std::alloc::Layout;
-use std::ffi::CString;
+pub use crate::r#struct::Struct;
 
 /// Options for the construction of a [`Runtime`].
 #[derive(Clone, Debug)]
@@ -152,12 +159,14 @@ impl Runtime {
                     b: md5::compute("core::u64").0,
                 },
                 name: u64_type.as_ptr(),
+                group: TypeGroup::FundamentalTypes,
             },
             TypeInfo {
                 guid: Guid {
                     b: md5::compute("core::u64").0,
                 },
                 name: u64_type.as_ptr(),
+                group: TypeGroup::FundamentalTypes,
             },
         ];
 
@@ -166,6 +175,7 @@ impl Runtime {
                 b: md5::compute("*mut core::u8").0,
             },
             name: ptr_mut_u8_type.as_ptr(),
+            group: TypeGroup::FundamentalTypes,
         });
 
         let fn_info = FunctionInfo {

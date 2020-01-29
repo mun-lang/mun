@@ -50,6 +50,26 @@ pub fn write_module_shared_object(
             .unwrap_or("unknown"),
     );
 
+    // Initialize the x86 target
+    Target::initialize_x86(&InitializationConfig::default());
+
+    // Construct the LLVM target from the specified target.
+    let llvm_target = Target::from_triple(&target.llvm_target)
+        .map_err(|e| CodeGenerationError::UnknownTargetTriple(e.to_string()))?;
+    assembly_module.set_target(&llvm_target);
+
+    // Construct target machine for machine code generation
+    let target_machine = llvm_target
+        .create_target_machine(
+            &target.llvm_target,
+            &target.options.cpu,
+            &target.options.features,
+            db.optimization_lvl(),
+            RelocMode::PIC,
+            CodeModel::Default,
+        )
+        .ok_or(CodeGenerationError::CouldNotCreateTargetMachine)?;
+
     // Generate IR for the module and clone it so that we can modify it without modifying the
     // cached value.
     let module = db.module_ir(file_id);
@@ -64,33 +84,14 @@ pub fn write_module_shared_object(
         &module.structs,
         &module.dispatch_table,
         &assembly_module,
+        &target_machine,
     );
-
-    // Initialize the x86 target
-    Target::initialize_x86(&InitializationConfig::default());
-
-    // Construct the LLVM target from the specified target.
-    let llvm_target = Target::from_triple(&target.llvm_target)
-        .map_err(|e| CodeGenerationError::UnknownTargetTriple(e.to_string()))?;
-    assembly_module.set_target(&llvm_target);
 
     // Optimize the assembly module
     optimize_module(&assembly_module, db.optimization_lvl());
 
     // Debug print the IR
     //println!("{}", assembly_module.print_to_string().to_string());
-
-    // Construct target machine for machine code generation
-    let target_machine = llvm_target
-        .create_target_machine(
-            &target.llvm_target,
-            &target.options.cpu,
-            &target.options.features,
-            db.optimization_lvl(),
-            RelocMode::PIC,
-            CodeModel::Default,
-        )
-        .ok_or(CodeGenerationError::CouldNotCreateTargetMachine)?;
 
     // Generate object file
     let obj_file = {

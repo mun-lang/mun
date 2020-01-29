@@ -9,13 +9,13 @@ license = "MIT OR Apache-2.0"
 description = "A runtime for hot reloading and invoking Mun from Rust"
 
 [dependencies]
+abi = { path = "../mun_abi", package = "mun_abi" }
 failure = "0.1.5"
 libloading = "0.5"
-abi = { path = "../mun_abi", package = "mun_abi" }
+md5= "0.7.0"
 notify = "4.0.12"
 parking_lot = "0.9"
 tempfile = "3"
-md5="0.7.0"
 
 [dev-dependencies]
 mun_compiler = { path="../mun_compiler" }

@@ -1,3 +1,4 @@
+use abi::TypeGroup;
 use std::hash::{Hash, Hasher};
 
 pub type Guid = [u8; 16];
@@ -6,6 +7,7 @@ pub type Guid = [u8; 16];
 pub struct TypeInfo {
     pub guid: Guid,
     pub name: String,
+    pub group: TypeGroup,
 }
 
 impl Hash for TypeInfo {
@@ -21,10 +23,11 @@ impl PartialEq for TypeInfo {
 }
 
 impl TypeInfo {
-    pub fn from_name<S: AsRef<str>>(name: S) -> TypeInfo {
+    pub fn new<S: AsRef<str>>(name: S, group: TypeGroup) -> TypeInfo {
         TypeInfo {
             name: name.as_ref().to_string(),
             guid: md5::compute(name.as_ref()).0,
+            group,
         }
     }
 }
@@ -46,49 +49,55 @@ impl<T: HasStaticTypeInfo> HasTypeInfo for T {
 
 impl HasStaticTypeInfo for u8 {
     fn type_info() -> TypeInfo {
-        TypeInfo::from_name("core::u8")
+        TypeInfo::new("core::u8", TypeGroup::FundamentalTypes)
     }
 }
 
 impl HasStaticTypeInfo for u64 {
     fn type_info() -> TypeInfo {
-        TypeInfo::from_name("core::u64")
+        TypeInfo::new("core::u64", TypeGroup::FundamentalTypes)
     }
 }
 
 impl HasStaticTypeInfo for i64 {
     fn type_info() -> TypeInfo {
-        TypeInfo::from_name("core::i64")
+        TypeInfo::new("core::i64", TypeGroup::FundamentalTypes)
     }
 }
 
 impl HasStaticTypeInfo for f32 {
     fn type_info() -> TypeInfo {
-        TypeInfo::from_name("core::f32")
+        TypeInfo::new("core::f32", TypeGroup::FundamentalTypes)
     }
 }
 
 impl HasStaticTypeInfo for bool {
     fn type_info() -> TypeInfo {
-        TypeInfo::from_name("core::bool")
+        TypeInfo::new("core::bool", TypeGroup::FundamentalTypes)
     }
 }
 
 impl<T: HasStaticTypeInfo> HasStaticTypeInfo for *mut T {
     fn type_info() -> TypeInfo {
-        TypeInfo::from_name(format!("*mut {}", T::type_info().name))
+        TypeInfo::new(
+            format!("*mut {}", T::type_info().name),
+            TypeGroup::FundamentalTypes,
+        )
     }
 }
 
 impl HasStaticTypeInfo for usize {
     fn type_info() -> TypeInfo {
-        TypeInfo::from_name("core::usize")
+        TypeInfo::new("core::usize", TypeGroup::FundamentalTypes)
     }
 }
 
 impl<T: HasStaticTypeInfo> HasStaticTypeInfo for *const T {
     fn type_info() -> TypeInfo {
-        TypeInfo::from_name(format!("*const {}", T::type_info().name))
+        TypeInfo::new(
+            format!("*const {}", T::type_info().name),
+            TypeGroup::FundamentalTypes,
+        )
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::{Runtime, RuntimeBuilder};
+use crate::{Runtime, RuntimeBuilder, Struct};
 use mun_compiler::{ColorChoice, Config, Driver, FileId, PathOrInline, RelativePathBuf};
 use std::path::PathBuf;
 use std::thread::sleep;
@@ -302,34 +302,51 @@ fn hotreloadable() {
 #[test]
 fn compiler_valid_utf8() {
     use std::ffi::CStr;
-    use std::str;
+    use std::slice;
 
     let mut driver = TestDriver::new(
         r#"
+    struct Foo {
+        a: int,
+    }
+
     fn foo(n:int):bool { false }
     "#,
     );
 
-    let foo_func = driver.runtime.get_function_info("foo").unwrap();
+    let foo_struct = driver.runtime.get_struct_info("Foo").unwrap();
+    assert_eq!(
+        unsafe { CStr::from_ptr(foo_struct.name) }.to_str().is_ok(),
+        true
+    );
 
-    // Check foo name for valid utf8
+    let field_names =
+        unsafe { slice::from_raw_parts(foo_struct.field_names, foo_struct.num_fields as usize) };
+    for field_name in field_names {
+        assert_eq!(
+            unsafe { CStr::from_ptr(*field_name) }.to_str().is_ok(),
+            true
+        );
+    }
+
+    let foo_func = driver.runtime.get_function_info("foo").unwrap();
     assert_eq!(
-        str::from_utf8(&unsafe { CStr::from_ptr(foo_func.signature.name).to_bytes() }).is_err(),
-        false
+        unsafe { CStr::from_ptr(foo_func.signature.name) }
+            .to_str()
+            .is_ok(),
+        true
     );
-    // Check foo arg type for valid utf8
     assert_eq!(
-        str::from_utf8(&unsafe { CStr::from_ptr((*foo_func.signature.arg_types).name).to_bytes() })
-            .is_err(),
-        false
+        unsafe { CStr::from_ptr((*foo_func.signature.arg_types).name) }
+            .to_str()
+            .is_ok(),
+        true
     );
-    // Check foo return type for valid utf8
     assert_eq!(
-        str::from_utf8(&unsafe {
-            CStr::from_ptr((*foo_func.signature.return_type).name).to_bytes()
-        })
-        .is_err(),
-        false
+        unsafe { CStr::from_ptr((*foo_func.signature.return_type).name) }
+            .to_str()
+            .is_ok(),
+        true
     );
 
     assert_invoke_eq!(bool, false, driver, "foo", 10i64);
@@ -337,7 +354,8 @@ fn compiler_valid_utf8() {
 
 #[test]
 fn struct_info() {
-    use abi::{Guid, Reflection};
+    use crate::ReturnTypeReflection;
+    use abi::Guid;
 
     let driver = TestDriver::new(
         r"
@@ -401,4 +419,51 @@ fn field_crash() {
     "#,
     );
     assert_invoke_eq!(i64, 15, driver, "main", 10);
+}
+
+#[test]
+fn marshal_struct() {
+    let mut driver = TestDriver::new(
+        r#"
+    struct(gc) Foo { a: int, b: bool, c: float, };
+
+    fn foo_new(a: int, b: bool, c: float): Foo {
+        Foo { a, b, c, }
+    }
+    fn foo_a(foo: Foo):int { foo.a }
+    fn foo_b(foo: Foo):bool { foo.b }
+    fn foo_c(foo: Foo):float { foo.c }
+    "#,
+    );
+
+    let a = 3i64;
+    let b = true;
+    let c = 1.23f64;
+    let mut foo: Struct = invoke_fn!(driver.runtime, "foo_new", a, b, c).unwrap();
+    assert_eq!(Ok(&a), foo.get::<i64>("a"));
+    assert_eq!(Ok(&b), foo.get::<bool>("b"));
+    assert_eq!(Ok(&c), foo.get::<f64>("c"));
+
+    let d = 6i64;
+    let e = false;
+    let f = 4.56f64;
+    foo.set("a", d).unwrap();
+    foo.set("b", e).unwrap();
+    foo.set("c", f).unwrap();
+
+    assert_eq!(Ok(&d), foo.get::<i64>("a"));
+    assert_eq!(Ok(&e), foo.get::<bool>("b"));
+    assert_eq!(Ok(&f), foo.get::<f64>("c"));
+
+    assert_eq!(Ok(d), foo.replace("a", a));
+    assert_eq!(Ok(e), foo.replace("b", b));
+    assert_eq!(Ok(f), foo.replace("c", c));
+
+    assert_eq!(Ok(&a), foo.get::<i64>("a"));
+    assert_eq!(Ok(&b), foo.get::<bool>("b"));
+    assert_eq!(Ok(&c), foo.get::<f64>("c"));
+
+    assert_invoke_eq!(i64, a, driver, "foo_a", foo.clone());
+    assert_invoke_eq!(bool, b, driver, "foo_b", foo.clone());
+    assert_invoke_eq!(f64, c, driver, "foo_c", foo);
 }

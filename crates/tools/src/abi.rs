@@ -26,6 +26,8 @@ impl ParseCallbacks for RemoveVendorName {
     fn item_name(&self, original_item_name: &str) -> Option<String> {
         if original_item_name == "MunPrivacy_t" {
             Some("Privacy".to_string())
+        } else if original_item_name == "MunTypeGroup_t" {
+            Some("TypeGroup".to_string())
         } else {
             Some(original_item_name.trim_start_matches("Mun").to_string())
         }
@@ -44,7 +46,6 @@ pub fn generate(mode: Mode) -> Result<()> {
     let bindings = bindgen::Builder::default()
         .header(input_file_str)
         .whitelist_type("Mun.*")
-        .blacklist_type("MunPrivacy.*")
         // Remove type aliasing on Linux
         .blacklist_type("__uint8_t")
         .blacklist_type("__uint16_t")
@@ -54,7 +55,7 @@ pub fn generate(mode: Mode) -> Result<()> {
         .derive_copy(false)
         .derive_debug(false)
         .raw_line("#![allow(non_snake_case, non_camel_case_types, non_upper_case_globals)]")
-        .raw_line("use crate::Privacy;")
+        .raw_line("use crate::{Privacy, TypeGroup};")
         .generate()
         .map_err(|_| format_err!("Unable to generate bindings from 'mun_abi.h'"))?;
 

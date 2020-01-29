@@ -1,3 +1,13 @@
+#[doc(hidden)]
+#[macro_export(local_inner_macros)]
+macro_rules! count_args {
+    () => { 0 };
+    ($name:ident) => { 1 };
+    ($first:ident, $($rest:ident),*) => {
+        1 + count_args!($($rest),*)
+    }
+}
+
 macro_rules! invoke_fn_impl {
     ($(
         fn $FnName:ident($($Arg:tt: $T:ident),*) -> $ErrName:ident;
@@ -6,7 +16,7 @@ macro_rules! invoke_fn_impl {
             /// An invocation error that contains the function name, a mutable reference to the
             /// runtime, passed arguments, and the output type. This allows the caller to retry
             /// the function invocation using the `Retriable` trait.
-            pub struct $ErrName<'r, 's, $($T: Reflection,)* Output:Reflection> {
+            pub struct $ErrName<'r, 's, $($T: ArgumentReflection,)* Output:ReturnTypeReflection> {
                 msg: String,
                 runtime: &'r mut Runtime,
                 function_name: &'s str,
@@ -14,25 +24,25 @@ macro_rules! invoke_fn_impl {
                 output: core::marker::PhantomData<Output>,
             }
 
-            impl<'r, 's, $($T: Reflection,)* Output: Reflection> core::fmt::Debug for $ErrName<'r, 's, $($T,)* Output> {
+            impl<'r, 's, $($T: ArgumentReflection,)* Output: ReturnTypeReflection> core::fmt::Debug for $ErrName<'r, 's, $($T,)* Output> {
                 fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                     write!(f, "{}", &self.msg)
                 }
             }
 
-            impl<'r, 's, $($T: Reflection,)* Output: Reflection> core::fmt::Display for $ErrName<'r, 's, $($T,)* Output> {
+            impl<'r, 's, $($T: ArgumentReflection,)* Output: ReturnTypeReflection> core::fmt::Display for $ErrName<'r, 's, $($T,)* Output> {
                 fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                     write!(f, "{}", &self.msg)
                 }
             }
 
-            impl<'r, 's, $($T: Reflection,)* Output: Reflection> std::error::Error for $ErrName<'r, 's, $($T,)* Output> {
+            impl<'r, 's, $($T: ArgumentReflection,)* Output: ReturnTypeReflection> std::error::Error for $ErrName<'r, 's, $($T,)* Output> {
                 fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
                     None
                 }
             }
 
-            impl<'r, 's, $($T: Reflection,)* Output: Reflection> $ErrName<'r, 's, $($T,)* Output> {
+            impl<'r, 's, $($T: ArgumentReflection,)* Output: ReturnTypeReflection> $ErrName<'r, 's, $($T,)* Output> {
                 /// Constructs a new invocation error.
                 #[allow(clippy::too_many_arguments)]
                 pub fn new(err_msg: String, runtime: &'r mut Runtime, function_name: &'s str, $($Arg: $T),*) -> Self {
@@ -46,7 +56,7 @@ macro_rules! invoke_fn_impl {
                 }
             }
 
-            impl<'r, 's, $($T: Reflection,)* Output: Reflection> $crate::RetryResultExt for core::result::Result<Output, $ErrName<'r, 's, $($T,)* Output>> {
+            impl<'r, 's, $($T: ArgumentReflection,)* Output: ReturnTypeReflection> $crate::RetryResultExt for core::result::Result<Output, $ErrName<'r, 's, $($T,)* Output>> {
                 type Output = Output;
 
                 fn retry(self) -> Self {
@@ -78,20 +88,83 @@ macro_rules! invoke_fn_impl {
                 ///
                 /// If an error occurs when invoking the method, an error message is logged. The
                 /// runtime continues looping until the cause of the error has been resolved.
-                #[allow(clippy::too_many_arguments)]
-                pub fn $FnName<'r, 's, $($T: Reflection,)* Output: Reflection>(
+                #[allow(clippy::too_many_arguments, unused_assignments)]
+                pub fn $FnName<'r, 's, $($T: ArgumentReflection,)* Output: ReturnTypeReflection>(
                     runtime: &'r mut Runtime,
                     function_name: &'s str,
                     $($Arg: $T,)*
                 ) -> core::result::Result<Output, $ErrName<'r, 's, $($T,)* Output>> {
-                    let function: core::result::Result<fn($($T),*) -> Output, String> = runtime
+                    match runtime
                         .get_function_info(function_name)
                         .ok_or(format!("Failed to obtain function '{}'", function_name))
-                        .and_then(|function| abi::downcast_fn!(function, fn($($T),*) -> Output));
+                        .and_then(|function_info| {
+                            // Validate function signature
+                            let num_args = $crate::count_args!($($T),*);
 
-                    match function {
-                        Ok(function) => Ok(function($($Arg),*)),
-                        Err(e) => Err($ErrName::new(e, runtime, function_name, $($Arg),*)),
+                            let arg_types = function_info.signature.arg_types();
+                            if arg_types.len() != num_args {
+                                return Err(format!(
+                                    "Invalid number of arguments. Expected: {}. Found: {}.",
+                                    num_args,
+                                    arg_types.len(),
+                                ));
+                            }
+
+                            #[allow(unused_mut, unused_variables)]
+                            let mut idx = 0;
+                            $(
+                                if arg_types[idx].guid != $Arg.type_guid() {
+                                    return Err(format!(
+                                        "Invalid argument type at index {}. Expected: {}. Found: {}.",
+                                        idx,
+                                        $Arg.type_name(),
+                                        arg_types[idx].name(),
+                                    ));
+                                }
+                                idx += 1;
+                            )*
+
+                            if let Some(return_type) = function_info.signature.return_type() {
+                                match return_type.group {
+                                    abi::TypeGroup::FundamentalTypes => {
+                                        if return_type.guid != Output::type_guid() {
+                                            return Err(format!(
+                                                "Invalid return type. Expected: {}. Found: {}",
+                                                Output::type_name(),
+                                                return_type.name(),
+                                            ));
+                                        }
+                                    }
+                                    abi::TypeGroup::StructTypes => {
+                                        if <Struct as ReturnTypeReflection>::type_guid() != Output::type_guid() {
+                                            return Err(format!(
+                                                "Invalid return type. Expected: {}. Found: Struct",
+                                                Output::type_name(),
+                                            ));
+                                        }
+                                    }
+                                }
+
+                            } else if <() as ReturnTypeReflection>::type_guid() != Output::type_guid() {
+                                return Err(format!(
+                                    "Invalid return type. Expected: {}. Found: {}",
+                                    Output::type_name(),
+                                    <() as ReturnTypeReflection>::type_name(),
+                                ));
+                            }
+
+                            Ok(function_info)
+                        }) {
+                        Ok(function_info) => {
+                            let function: fn($($T::Marshalled),*) -> Output::Marshalled = unsafe {
+                                core::mem::transmute(function_info.fn_ptr)
+                            };
+                            let result = function($($Arg.marshal()),*);
+
+                            // Marshall the result
+                            Ok(result.marshal_into(runtime, function_info.signature.return_type()))
+                        }
+                        Err(e) => Err($ErrName::new(e, runtime, function_name, $($Arg),*))
                     }
                 }
             }

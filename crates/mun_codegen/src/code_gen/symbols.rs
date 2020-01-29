@@ -4,10 +4,12 @@ use crate::ir::function;
 use crate::type_info::TypeInfo;
 use crate::values::{BasicValue, GlobalValue};
 use crate::IrDatabase;
+use abi::TypeGroup;
 use hir::{Ty, TypeCtor};
 use inkwell::{
     attributes::Attribute,
     module::{Linkage, Module},
+    targets::TargetMachine,
     types::StructType,
     values::{FunctionValue, IntValue, PointerValue, StructValue, UnnamedAddress},
     AddressSpace,
@@ -17,10 +19,10 @@ use std::collections::HashMap;
 pub fn type_info_query(db: &impl IrDatabase, ty: Ty) -> TypeInfo {
     match ty {
         Ty::Apply(ctor) => match ctor.ctor {
-            TypeCtor::Float => TypeInfo::from_name("@core::float"),
-            TypeCtor::Int => TypeInfo::from_name("@core::int"),
-            TypeCtor::Bool => TypeInfo::from_name("@core::bool"),
-            TypeCtor::Struct(s) => TypeInfo::from_name(s.name(db).to_string()),
+            TypeCtor::Float => TypeInfo::new("@core::float", TypeGroup::FundamentalTypes),
+            TypeCtor::Int => TypeInfo::new("@core::int", TypeGroup::FundamentalTypes),
+            TypeCtor::Bool => TypeInfo::new("@core::bool", TypeGroup::FundamentalTypes),
+            TypeCtor::Struct(s) => TypeInfo::new(s.name(db).to_string(), TypeGroup::StructTypes),
             _ => unreachable!("{:?} unhandled", ctor),
         },
         _ => unreachable!(),
@@ -36,6 +38,7 @@ fn type_info_ir(ty: &TypeInfo, module: &Module) -> StructValue {
         &[
             context.i8_type().const_array(&guid_values).into(),
             intern_string(module, &ty.name).into(),
+            context.i8_type().const_int(ty.group as u64, false).into(),
         ],
         false,
     )
@@ -223,24 +226,41 @@ fn gen_struct_info_array<'a, D: IrDatabase>(
     db: &D,
     types: &AbiTypes,
     module: &Module,
+    target: &TargetMachine,
     structs: impl Iterator<Item = (&'a hir::Struct, &'a StructType)>,
 ) -> GlobalValue {
+    let target_data = target.get_target_data();
     let struct_infos: Vec<StructValue> = structs
-        .map(|(s, _)| {
+        .map(|(s, t)| {
             let name_str = intern_string(&module, &s.name(db).to_string());
 
             let fields = s.fields(db);
-            let num_fields = fields.len();
-            let fields = gen_type_info_array(
+
+            let field_names = fields.iter().map(|field| field.name(db).to_string());
+            let (field_names, num_fields) = gen_string_array(module, field_names);
+
+            let field_types = gen_type_info_array(
                 db,
                 module,
                 types,
                 fields.iter().map(|field| db.type_info(field.ty(db))),
             );
 
+            let field_offsets =
+                (0..fields.len()).map(|idx| target_data.offset_of_element(t, idx as u32).unwrap());
+            let (field_offsets, _) = gen_u16_array(module, field_offsets);
+
+            let field_sizes = fields
+                .iter()
+                .map(|field| target_data.get_store_size(&db.type_ir(field.ty(db))));
+            let (field_sizes, _) = gen_u16_array(module, field_sizes);
+
             types.struct_info_type.const_named_struct(&[
                 name_str.into(),
-                fields.into(),
+                field_names.into(),
+                field_types.into(),
+                field_offsets.into(),
+                field_sizes.into(),
                 module
                     .get_context()
                     .i16_type()
@@ -252,6 +272,49 @@ fn gen_struct_info_array<'a, D: IrDatabase>(
 
     let struct_infos = types.struct_info_type.const_array(&struct_infos);
     gen_global(module, &struct_infos, "fn.get_info.structs")
+}
+
+/// Constructs a global from the specified list of strings
+fn gen_string_array(
+    module: &Module,
+    strings: impl Iterator<Item = String>,
+) -> (PointerValue, usize) {
+    let str_type = module.get_context().i8_type().ptr_type(AddressSpace::Const);
+
+    let mut strings = strings.peekable();
+    if strings.peek().is_none() {
+        (str_type.ptr_type(AddressSpace::Const).const_null(), 0)
+    } else {
+        let strings = strings
+            .map(|s| intern_string(module, &s))
+            .collect::<Vec<PointerValue>>();
+
+        let strings_ir = str_type.const_array(&strings);
+        (
+            gen_global(module, &strings_ir, "").as_pointer_value(),
+            strings.len(),
+        )
+    }
+}
+
+/// Constructs a global from the specified list of strings
+fn gen_u16_array(module: &Module, integers: impl Iterator<Item = u64>) -> (PointerValue, usize) {
+    let u16_type = module.get_context().i16_type();
+
+    let mut integers = integers.peekable();
+    if integers.peek().is_none() {
+        (u16_type.ptr_type(AddressSpace::Const).const_null(), 0)
+    } else {
+        let integers = integers
+            .map(|i| u16_type.const_int(i, false))
+            .collect::<Vec<IntValue>>();
+
+        let array_ir = u16_type.const_array(&integers);
+        (
+            gen_global(module, &array_ir, "").as_pointer_value(),
+            integers.len(),
+        )
+    }
 }
 
 /// Construct a global from the specified value
@@ -327,6 +390,7 @@ pub(super) fn gen_reflection_ir(
     struct_map: &HashMap<hir::Struct, StructType>,
     dispatch_table: &DispatchTable,
     module: &Module,
+    target: &TargetMachine,
 ) {
     // Get all the types
     let abi_types = gen_abi_types(module.get_context());
@@ -342,7 +406,7 @@ pub(super) fn gen_reflection_ir(
             .i32_type()
             .const_int(function_map.len() as u64, false)
             .into(),
-        gen_struct_info_array(db, &abi_types, module, struct_map.iter())
+        gen_struct_info_array(db, &abi_types, module, target, struct_map.iter())
             .as_pointer_value()
             .into(),
         module
