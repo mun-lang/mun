@@ -116,6 +116,12 @@ pub unsafe extern "C" fn mun_runtime_get_function_info(
         }
     };
 
+    if fn_name.is_null() {
+        return HUB.errors.register(Box::new(err_msg(
+            "Invalid argument: 'fn_name' is null pointer.",
+        )));
+    }
+
     let fn_name = match CStr::from_ptr(fn_name).to_str() {
         Ok(name) => name,
         Err(_) => {
