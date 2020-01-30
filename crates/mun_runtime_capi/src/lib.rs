@@ -7,13 +7,16 @@
 pub mod error;
 pub mod hub;
 
-use std::ffi::{c_void, CStr};
+#[cfg(test)]
+mod tests;
+
+use std::ffi::{c_void, CStr, CString};
 use std::os::raw::c_char;
 
 use crate::error::ErrorHandle;
 use crate::hub::HUB;
 use failure::err_msg;
-use mun_abi::FunctionInfo;
+use mun_abi::{FunctionInfo, StructInfo, TypeInfo};
 use mun_runtime::{Runtime, RuntimeBuilder};
 
 pub(crate) type Token = usize;
@@ -28,6 +31,7 @@ pub trait TypedHandle {
 
 /// A C-style handle to a runtime.
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct RuntimeHandle(*mut c_void);
 
 /// Constructs a new runtime that loads the library at `library_path` and its dependencies. If
@@ -116,6 +120,12 @@ pub unsafe extern "C" fn mun_runtime_get_function_info(
         }
     };
 
+    if fn_name.is_null() {
+        return HUB.errors.register(Box::new(err_msg(
+            "Invalid argument: 'fn_name' is null pointer.",
+        )));
+    }
+
     let fn_name = match CStr::from_ptr(fn_name).to_str() {
         Ok(name) => name,
         Err(_) => {
@@ -189,4 +199,65 @@ pub unsafe extern "C" fn mun_runtime_update(
 
     *updated = runtime.update();
     ErrorHandle::default()
+}
+
+/// Retrieves the [`StructInfo`] corresponding to `type_info`, if the type is a struct. If
+/// successful, `struct_info` is set, otherwise a non-zero error handle is returned.
+///
+/// If a non-zero error handle is returned, it must be manually destructed using
+/// [`mun_error_destroy`].
+///
+/// # Safety
+///
+/// This function receives raw pointers as parameters. If any of the arguments is a null pointer,
+/// an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
+#[no_mangle]
+pub unsafe extern "C" fn mun_type_info_as_struct(
+    type_info: *const TypeInfo,
+    struct_info: *mut StructInfo,
+) -> ErrorHandle {
+    let type_info = match type_info.as_ref() {
+        Some(info) => info,
+        None => {
+            return HUB.errors.register(Box::new(err_msg(
+                "Invalid argument: 'type_info' is null pointer.",
+            )))
+        }
+    };
+
+    let struct_info = match struct_info.as_mut() {
+        Some(info) => info,
+        None => {
+            return HUB.errors.register(Box::new(err_msg(
+                "Invalid argument: 'struct_info' is null pointer.",
+            )))
+        }
+    };
+
+    match type_info.as_struct() {
+        Some(info) => *struct_info = info.clone(),
+        None => {
+            return HUB.errors.register(Box::new(err_msg(format!(
+                "`{}` is not a struct.",
+                type_info.name()
+            ))))
+        }
+    }
+
+    ErrorHandle::default()
+}
+
+/// Deallocates a string that was allocated by the runtime.
+///
+/// # Safety
+///
+/// This function receives a raw pointer as parameter. Only when the argument is not a null pointer,
+/// its content will be deallocated. Passing pointers to invalid data or memory allocated by other
+/// processes, will lead to undefined behavior.
+#[no_mangle]
+pub unsafe fn mun_destroy_string(string: *const c_char) {
+    if !string.is_null() {
+        // Destroy the string
+        let _string = CString::from_raw(string as *mut _);
+    }
 }
