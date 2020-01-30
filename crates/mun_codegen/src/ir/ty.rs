@@ -49,6 +49,11 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty) -> AnyTypeEnum {
 /// Returns the LLVM IR type of the specified struct
 pub fn struct_ty_query(db: &impl IrDatabase, s: hir::Struct) -> StructType {
     let name = s.name(db).to_string();
+    for field in s.fields(db).iter() {
+        // Ensure that salsa's cached value incorporates the struct fields
+        let _field_type_ir = db.type_ir(field.ty(db));
+    }
+
     db.context().opaque_struct_type(&name)
 }
 
