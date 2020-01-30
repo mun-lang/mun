@@ -7,6 +7,9 @@
 pub mod error;
 pub mod hub;
 
+#[cfg(test)]
+mod tests;
+
 use std::ffi::{c_void, CStr, CString};
 use std::os::raw::c_char;
 
@@ -28,6 +31,7 @@ pub trait TypedHandle {
 
 /// A C-style handle to a runtime.
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct RuntimeHandle(*mut c_void);
 
 /// Constructs a new runtime that loads the library at `library_path` and its dependencies. If
@@ -216,7 +220,7 @@ pub unsafe extern "C" fn mun_type_info_as_struct(
         Some(info) => info,
         None => {
             return HUB.errors.register(Box::new(err_msg(
-                "Invalid argument: `type_info` is null pointer",
+                "Invalid argument: 'type_info' is null pointer.",
             )))
         }
     };
@@ -225,7 +229,7 @@ pub unsafe extern "C" fn mun_type_info_as_struct(
         Some(info) => info,
         None => {
             return HUB.errors.register(Box::new(err_msg(
-                "Invalid argument: `struct_info` is null pointer",
+                "Invalid argument: 'struct_info' is null pointer.",
             )))
         }
     };
@@ -234,7 +238,7 @@ pub unsafe extern "C" fn mun_type_info_as_struct(
         Some(info) => *struct_info = info.clone(),
         None => {
             return HUB.errors.register(Box::new(err_msg(format!(
-                "Provided type `{}` is not a struct.",
+                "`{}` is not a struct.",
                 type_info.name()
             ))))
         }
