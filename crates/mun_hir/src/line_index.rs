@@ -38,17 +38,29 @@ impl LineIndex {
         }
     }
 
-    pub fn line_str<'a>(&self, line: u32, text: &'a str) -> Option<&'a str> {
-        let start_of_line = self.newlines.get(line as usize)?.to_usize();
-        let end_of_line = self
+    /// Get part of text between two lines
+    pub fn text_part<'a>(
+        &self,
+        first_line: u32,
+        last_line: u32,
+        text: &'a str,
+        text_len: usize,
+    ) -> Option<&'a str> {
+        let start_of_part = self.newlines.get(first_line as usize)?.to_usize();
+        let end_of_part = self
             .newlines
-            .get((line + 1) as usize)
+            .get(last_line as usize + 1)
             .map(|u| u.to_usize() - 1)
-            .unwrap_or(text.len() as usize);
-        Some(&text[start_of_line..end_of_line])
+            .unwrap_or(text_len);
+        Some(&text[start_of_part..end_of_part])
+    }
+
+    /// Get offset to specific line
+    #[inline]
+    pub fn line_offset(&self, line_index: u32) -> usize {
+        self.newlines[line_index as usize].to_usize()
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -64,12 +76,24 @@ mod tests {
         assert_eq!(index.line_col(7.into()), LineCol { line: 1, col: 1 });
     }
     #[test]
-    fn test_line_str() {
+    fn test_text_part() {
         let text = "ℱ٥ℜ\n†ěṦτ\nℙน尺קő$ع";
+        let text_len = text.len();
         let index = LineIndex::new(text);
-        assert_eq!(index.line_str(0, &text), Some("ℱ٥ℜ"));
-        assert_eq!(index.line_str(1, &text), Some("†ěṦτ"));
-        assert_eq!(index.line_str(2, &text), Some("ℙน尺קő$ع"));
-        assert_eq!(index.line_str(3, &text), None);
+        assert_eq!(index.text_part(0, 0, &text, text_len), Some("ℱ٥ℜ"));
+        assert_eq!(index.text_part(0, 1, &text, text_len), Some("ℱ٥ℜ\n†ěṦτ"));
+        assert_eq!(
+            index.text_part(1, 2, &text, text_len),
+            Some("†ěṦτ\nℙน尺קő$ع")
+        );
+        assert_eq!(index.text_part(0, 2, &text, text_len), Some(text));
+    }
+    #[test]
+    fn test_line_offset() {
+        let text = "for\ntest\npurpose";
+        let index = LineIndex::new(text);
+        assert_eq!(index.line_offset(0), 0);
+        assert_eq!(index.line_offset(1), 4);
+        assert_eq!(index.line_offset(2), 9);
     }
 }

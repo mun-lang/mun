@@ -13,7 +13,7 @@ failure = "0.1.7"
 
 mun_codegen = { path="../mun_codegen" }
 mun_syntax = { path="../mun_syntax" }
-mun_errors = { path="../mun_errors" }
 mun_hir = {path="../mun_hir"}
 mun_target = {path="../mun_target"}
-termcolor = "1.0.5"
+annotate-snippets = "0.6.1"
+unicode-segmentation = "1.6.0"

@@ -1,11 +1,7 @@
 //! `Driver` is a stateful compiler frontend that enables incremental compilation by retaining state
 //! from previous compilation.
 
-use crate::{
-    db::CompilerDatabase,
-    diagnostics::{diagnostics, Emit},
-    PathOrInline,
-};
+use crate::{db::CompilerDatabase, diagnostics::diagnostics, PathOrInline};
 use mun_codegen::{IrDatabase, ModuleBuilder};
 use mun_hir::{FileId, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
 use std::{path::PathBuf, sync::Arc};
@@ -13,8 +9,11 @@ use std::{path::PathBuf, sync::Arc};
 mod config;
 
 pub use self::config::Config;
-use mun_errors::{Diagnostic, Level};
-use termcolor::WriteColor;
+use annotate_snippets::{
+    display_list::DisplayList,
+    formatter::DisplayListFormatter,
+    snippet::{AnnotationType, Snippet},
+};
 
 pub const WORKSPACE: SourceRootId = SourceRootId(0);
 
@@ -93,7 +92,7 @@ impl Driver {
 
 impl Driver {
     /// Returns a vector containing all the diagnostic messages for the project.
-    pub fn diagnostics(&self) -> Vec<Diagnostic> {
+    pub fn diagnostics(&self) -> Vec<Snippet> {
         self.db
             .source_root(WORKSPACE)
             .files()
@@ -104,14 +103,22 @@ impl Driver {
 
     /// Emits all diagnostic messages currently in the database; returns true if errors were
     /// emitted.
-    pub fn emit_diagnostics(&self, writer: &mut impl WriteColor) -> Result<bool, failure::Error> {
+    pub fn emit_diagnostics(&self) -> Result<bool, failure::Error> {
         let mut has_errors = false;
+        let dlf = DisplayListFormatter::new(true, false);
         for file_id in self.db.source_root(WORKSPACE).files() {
             let diags = diagnostics(&self.db, file_id);
-            for diagnostic in diags.iter() {
-                diagnostic.emit(writer, &self.db, file_id)?;
-                if diagnostic.level == Level::Error {
-                    has_errors = true;
+            for diagnostic in diags {
+                let dl = DisplayList::from(diagnostic.clone());
+                eprintln!("{}", dlf.format(&dl));
+                if let Some(annotation) = diagnostic.title {
+                    #[allow(clippy::single_match)]
+                    match annotation.annotation_type {
+                        AnnotationType::Error => {
+                            has_errors = true;
+                        }
+                        _ => {}
+                    }
                 }
             }
         }

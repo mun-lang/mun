@@ -2,7 +2,7 @@ use std::sync::mpsc::channel;
 use std::time::Duration;
 
 use failure::Error;
-use mun_compiler::{ColorChoice, CompilerOptions, Driver, PathOrInline, StandardStream};
+use mun_compiler::{CompilerOptions, Driver, PathOrInline};
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 
 pub fn main(options: CompilerOptions) -> Result<(), Error> {
@@ -21,8 +21,7 @@ pub fn main(options: CompilerOptions) -> Result<(), Error> {
     let (mut driver, file_id) = Driver::with_file(options.config, options.input)?;
 
     // Compile at least once
-    let mut writer = StandardStream::stderr(ColorChoice::Auto);
-    if !driver.emit_diagnostics(&mut writer)? {
+    if !driver.emit_diagnostics()? {
         driver.write_assembly(file_id)?;
     }
 
@@ -32,7 +31,7 @@ pub fn main(options: CompilerOptions) -> Result<(), Error> {
             Ok(Write(ref path)) | Ok(Create(ref path)) if path == &input_path => {
                 let contents = std::fs::read_to_string(path)?;
                 driver.set_file_text(file_id, &contents);
-                if !driver.emit_diagnostics(&mut writer)? {
+                if !driver.emit_diagnostics()? {
                     driver.write_assembly(file_id)?;
                     println!("Successfully compiled: {}", path.display())
                 }

@@ -2,7 +2,7 @@ use crate::function::IntoFunctionInfo;
 use crate::{
     ArgumentReflection, RetryResultExt, ReturnTypeReflection, Runtime, RuntimeBuilder, StructRef,
 };
-use mun_compiler::{ColorChoice, Config, Driver, FileId, PathOrInline, RelativePathBuf};
+use mun_compiler::{Config, Driver, FileId, PathOrInline, RelativePathBuf};
 use std::cell::RefCell;
 use std::io::Write;
 use std::path::PathBuf;
@@ -51,9 +51,7 @@ impl TestDriver {
             contents: text.to_owned(),
         };
         let (mut driver, file_id) = Driver::with_file(config, input).unwrap();
-        let mut err_stream = mun_compiler::StandardStream::stderr(ColorChoice::Auto);
-        if driver.emit_diagnostics(&mut err_stream).unwrap() {
-            err_stream.flush().unwrap();
+        if driver.emit_diagnostics().unwrap() {
             panic!("compiler errors..")
         }
         let out_path = driver.write_assembly(file_id).unwrap();

@@ -8,7 +8,6 @@ mod driver;
 pub use mun_hir::{FileId, RelativePath, RelativePathBuf};
 pub use mun_target::spec::Target;
 use std::path::{Path, PathBuf};
-pub use termcolor::{ColorChoice, StandardStream};
 
 pub use crate::driver::{Config, Driver};
 pub use mun_codegen::OptimizationLevel;
@@ -56,8 +55,7 @@ impl CompilerOptions {
 pub fn main(options: CompilerOptions) -> Result<Option<PathBuf>, failure::Error> {
     let (mut driver, file_id) = Driver::with_file(options.config, options.input)?;
 
-    let mut writer = StandardStream::stderr(ColorChoice::Auto);
-    if driver.emit_diagnostics(&mut writer)? {
+    if driver.emit_diagnostics()? {
         Ok(None)
     } else {
         driver.write_assembly(file_id).map(Some)
