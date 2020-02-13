@@ -5,6 +5,8 @@ use failure::Error;
 use mun_compiler::{CompilerOptions, Driver, PathOrInline};
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 
+use std::io::stderr;
+
 pub fn main(options: CompilerOptions) -> Result<(), Error> {
     // Need to canonicalize path to do comparisons
     let input_path = match &options.input {
@@ -21,7 +23,7 @@ pub fn main(options: CompilerOptions) -> Result<(), Error> {
     let (mut driver, file_id) = Driver::with_file(options.config, options.input)?;
 
     // Compile at least once
-    if !driver.emit_diagnostics()? {
+    if !driver.emit_diagnostics(&mut stderr())? {
         driver.write_assembly(file_id)?;
     }
 
@@ -31,7 +33,7 @@ pub fn main(options: CompilerOptions) -> Result<(), Error> {
             Ok(Write(ref path)) | Ok(Create(ref path)) if path == &input_path => {
                 let contents = std::fs::read_to_string(path)?;
                 driver.set_file_text(file_id, &contents);
-                if !driver.emit_diagnostics()? {
+                if !driver.emit_diagnostics(&mut stderr())? {
                     driver.write_assembly(file_id)?;
                     println!("Successfully compiled: {}", path.display())
                 }

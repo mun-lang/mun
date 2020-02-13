@@ -103,14 +103,17 @@ impl Driver {
 
     /// Emits all diagnostic messages currently in the database; returns true if errors were
     /// emitted.
-    pub fn emit_diagnostics(&self) -> Result<bool, failure::Error> {
+    pub fn emit_diagnostics(
+        &self,
+        writer: &mut dyn std::io::Write,
+    ) -> Result<bool, failure::Error> {
         let mut has_errors = false;
         let dlf = DisplayListFormatter::new(true, false);
         for file_id in self.db.source_root(WORKSPACE).files() {
             let diags = diagnostics(&self.db, file_id);
             for diagnostic in diags {
                 let dl = DisplayList::from(diagnostic.clone());
-                eprintln!("{}", dlf.format(&dl));
+                writeln!(writer, "{}", dlf.format(&dl)).unwrap();
                 if let Some(annotation) = diagnostic.title {
                     #[allow(clippy::single_match)]
                     match annotation.annotation_type {

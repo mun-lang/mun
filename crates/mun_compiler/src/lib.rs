@@ -1,5 +1,5 @@
 #![allow(clippy::enum_variant_names)] // This is a HACK because we use salsa
-
+mod annotate_snippets_builders;
 mod db;
 ///! This library contains the code required to go from source code to binaries.
 mod diagnostics;
@@ -10,7 +10,10 @@ pub use mun_target::spec::Target;
 use std::path::{Path, PathBuf};
 
 pub use crate::driver::{Config, Driver};
+pub use annotate_snippets_builders::{AnnotationBuilder, SliceBuilder, SnippetBuilder};
 pub use mun_codegen::OptimizationLevel;
+
+use std::io::stderr;
 
 #[derive(Debug, Clone)]
 pub enum PathOrInline {
@@ -55,7 +58,7 @@ impl CompilerOptions {
 pub fn main(options: CompilerOptions) -> Result<Option<PathBuf>, failure::Error> {
     let (mut driver, file_id) = Driver::with_file(options.config, options.input)?;
 
-    if driver.emit_diagnostics()? {
+    if driver.emit_diagnostics(&mut stderr())? {
         Ok(None)
     } else {
         driver.write_assembly(file_id).map(Some)

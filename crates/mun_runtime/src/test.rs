@@ -10,6 +10,8 @@ use std::rc::Rc;
 use std::thread::sleep;
 use std::time::Duration;
 
+use std::io::stderr;
+
 /// Implements a compiler and runtime in one that can invoke functions. Use of the TestDriver
 /// enables quick testing of Mun constructs in the runtime with hot-reloading support.
 struct TestDriver {
@@ -51,7 +53,7 @@ impl TestDriver {
             contents: text.to_owned(),
         };
         let (mut driver, file_id) = Driver::with_file(config, input).unwrap();
-        if driver.emit_diagnostics().unwrap() {
+        if driver.emit_diagnostics(&mut stderr()).unwrap() {
             panic!("compiler errors..")
         }
         let out_path = driver.write_assembly(file_id).unwrap();

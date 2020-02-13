@@ -2,6 +2,8 @@ use crate::{error::*, *};
 use mun_compiler::{Config, Driver, PathOrInline, RelativePathBuf};
 use std::{ffi::CString, mem, path::Path, ptr};
 
+use std::io::stderr;
+
 /// Combines a compiler and runtime in one. Use of the TestDriver allows for quick testing of Mun
 /// constructs in the runtime with hot-reloading support.
 struct TestDriver {
@@ -22,7 +24,7 @@ impl TestDriver {
             contents: text.to_owned(),
         };
         let (mut driver, file_id) = Driver::with_file(config, input).unwrap();
-        if driver.emit_diagnostics().unwrap() {
+        if driver.emit_diagnostics(&mut stderr()).unwrap() {
             panic!("compiler errors..")
         }
         let out_path = driver.write_assembly(file_id).unwrap();
