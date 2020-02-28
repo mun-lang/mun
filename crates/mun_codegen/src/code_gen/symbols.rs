@@ -16,6 +16,8 @@ use inkwell::{
 };
 use std::collections::{HashMap, HashSet};
 
+struct GlobalArrayValue(GlobalValue, usize);
+
 /// Construct an IR `MunTypeInfo` struct value for the specified `TypeInfo`
 fn type_info_ir<D: IrDatabase>(
     db: &D,
@@ -258,8 +260,9 @@ fn gen_function_info_array<'a, D: IrDatabase>(
     types: &AbiTypes,
     global_type_info_lookup_table: &HashMap<TypeInfo, PointerValue>,
     functions: impl Iterator<Item = (&'a hir::Function, &'a FunctionValue)>,
-) -> GlobalValue {
+) -> GlobalArrayValue {
     let function_infos: Vec<StructValue> = functions
+        .filter(|(f, _)| f.visibility(db) == hir::Visibility::Public)
         .map(|(f, value)| {
             // Get the function from the cloned module and modify the linkage of the function.
             let value = module
@@ -278,8 +281,13 @@ fn gen_function_info_array<'a, D: IrDatabase>(
             ])
         })
         .collect();
+    let num_functions = function_infos.len();
     let function_infos = types.function_info_type.const_array(&function_infos);
-    gen_global(module, &function_infos, "fn.get_info.functions")
+
+    GlobalArrayValue(
+        gen_global(module, &function_infos, "fn.get_info.functions"),
+        num_functions,
+    )
 }
 
 /// Construct a global that holds a reference to all structs. e.g.:
@@ -473,22 +481,22 @@ pub(super) fn gen_reflection_ir(
         types.iter().cloned(),
     );
 
+    let GlobalArrayValue(function_info, num_functions) = gen_function_info_array(
+        db,
+        module,
+        &abi_types,
+        &global_type_info_lookup_table,
+        function_map.iter(),
+    );
+
     // Construct the module info struct
     let module_info = abi_types.module_info_type.const_named_struct(&[
         intern_string(module, "").into(),
-        gen_function_info_array(
-            db,
-            module,
-            &abi_types,
-            &global_type_info_lookup_table,
-            function_map.iter(),
-        )
-        .as_pointer_value()
-        .into(),
+        function_info.as_pointer_value().into(),
         module
             .get_context()
             .i32_type()
-            .const_int(function_map.len() as u64, false)
+            .const_int(num_functions as u64, false)
             .into(),
         types.into(),
         module

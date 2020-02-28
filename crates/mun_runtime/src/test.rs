@@ -78,7 +78,7 @@ macro_rules! assert_invoke_eq {
 fn compile_and_run() {
     let mut driver = TestDriver::new(
         r"
-        fn main() {}
+        pub fn main() {}
     ",
     );
     assert_invoke_eq!((), (), driver, "main");
@@ -88,7 +88,7 @@ fn compile_and_run() {
 fn return_value() {
     let mut driver = TestDriver::new(
         r"
-        fn main():int { 3 }
+        pub fn main():int { 3 }
     ",
     );
     assert_invoke_eq!(i64, 3, driver, "main");
@@ -98,7 +98,7 @@ fn return_value() {
 fn arguments() {
     let mut driver = TestDriver::new(
         r"
-        fn main(a:int, b:int):int { a+b }
+        pub fn main(a:int, b:int):int { a+b }
     ",
     );
     let a: i64 = 52;
@@ -110,8 +110,8 @@ fn arguments() {
 fn dispatch_table() {
     let mut driver = TestDriver::new(
         r"
-        fn add(a:int, b:int):int { a+b }
-        fn main(a:int, b:int):int { add(a,b) }
+        pub fn add(a:int, b:int):int { a+b }
+        pub fn main(a:int, b:int):int { add(a,b) }
     ",
     );
 
@@ -128,18 +128,18 @@ fn dispatch_table() {
 fn booleans() {
     let mut driver = TestDriver::new(
         r#"
-        fn equal(a:int, b:int):bool                 { a==b }
-        fn equalf(a:float, b:float):bool            { a==b }
-        fn not_equal(a:int, b:int):bool             { a!=b }
-        fn not_equalf(a:float, b:float):bool        { a!=b }
-        fn less(a:int, b:int):bool                  { a<b }
-        fn lessf(a:float, b:float):bool             { a<b }
-        fn greater(a:int, b:int):bool               { a>b }
-        fn greaterf(a:float, b:float):bool          { a>b }
-        fn less_equal(a:int, b:int):bool            { a<=b }
-        fn less_equalf(a:float, b:float):bool       { a<=b }
-        fn greater_equal(a:int, b:int):bool         { a>=b }
-        fn greater_equalf(a:float, b:float):bool    { a>=b }
+        pub fn equal(a:int, b:int):bool                 { a==b }
+        pub fn equalf(a:float, b:float):bool            { a==b }
+        pub fn not_equal(a:int, b:int):bool             { a!=b }
+        pub fn not_equalf(a:float, b:float):bool        { a!=b }
+        pub fn less(a:int, b:int):bool                  { a<b }
+        pub fn lessf(a:float, b:float):bool             { a<b }
+        pub fn greater(a:int, b:int):bool               { a>b }
+        pub fn greaterf(a:float, b:float):bool          { a>b }
+        pub fn less_equal(a:int, b:int):bool            { a<=b }
+        pub fn less_equalf(a:float, b:float):bool       { a<=b }
+        pub fn greater_equal(a:int, b:int):bool         { a>=b }
+        pub fn greater_equalf(a:float, b:float):bool    { a>=b }
     "#,
     );
     assert_invoke_eq!(bool, false, driver, "equal", 52i64, 764i64);
@@ -172,7 +172,7 @@ fn booleans() {
 fn fibonacci() {
     let mut driver = TestDriver::new(
         r#"
-    fn fibonacci(n:int):int {
+    pub fn fibonacci(n:int):int {
         if n <= 1 {
             n
         } else {
@@ -191,7 +191,7 @@ fn fibonacci() {
 fn fibonacci_loop() {
     let mut driver = TestDriver::new(
         r#"
-    fn fibonacci(n:int):int {
+    pub fn fibonacci(n:int):int {
         let a = 0;
         let b = 1;
         let i = 1;
@@ -218,7 +218,7 @@ fn fibonacci_loop() {
 fn fibonacci_loop_break() {
     let mut driver = TestDriver::new(
         r#"
-    fn fibonacci(n:int):int {
+    pub fn fibonacci(n:int):int {
         let a = 0;
         let b = 1;
         let i = 1;
@@ -245,7 +245,7 @@ fn fibonacci_loop_break() {
 fn fibonacci_while() {
     let mut driver = TestDriver::new(
         r#"
-    fn fibonacci(n:int):int {
+    pub fn fibonacci(n:int):int {
         let a = 0;
         let b = 1;
         let i = 1;
@@ -270,11 +270,11 @@ fn fibonacci_while() {
 fn true_is_true() {
     let mut driver = TestDriver::new(
         r#"
-    fn test_true():bool {
+    pub fn test_true():bool {
         true
     }
 
-    fn test_false():bool {
+    pub fn test_false():bool {
         false
     }
     "#,
@@ -287,13 +287,13 @@ fn true_is_true() {
 fn hotreloadable() {
     let mut driver = TestDriver::new(
         r"
-    fn main():int { 5 }
+    pub fn main():int { 5 }
     ",
     );
     assert_invoke_eq!(i64, 5, driver, "main");
     driver.update(
         r"
-    fn main():int { 10 }
+    pub fn main():int { 10 }
     ",
     );
     assert_invoke_eq!(i64, 10, driver, "main");
@@ -310,7 +310,7 @@ fn compiler_valid_utf8() {
         a: int,
     }
 
-    fn foo(n:Foo):bool { false }
+    pub fn foo(n:Foo):bool { false }
     "#,
     );
 
@@ -355,7 +355,7 @@ fn fields() {
     let mut driver = TestDriver::new(
         r#"
         struct(gc) Foo { a:int, b:int };
-        fn main(foo:int):bool {
+        pub fn main(foo:int):bool {
             let a = Foo { a: foo, b: foo };
             a.a += a.b;
             let result = a;
@@ -373,7 +373,7 @@ fn field_crash() {
         r#"
     struct(gc) Foo { a: int };
 
-    fn main(c:int):int {
+    pub fn main(c:int):int {
         let b = Foo { a: c + 5 }
         b.a
     }
@@ -389,16 +389,16 @@ fn marshal_struct() {
     struct(gc) Foo { a: int, b: bool, c: float, };
     struct Bar(Foo);
 
-    fn foo_new(a: int, b: bool, c: float): Foo {
+    pub fn foo_new(a: int, b: bool, c: float): Foo {
         Foo { a, b, c, }
     }
-    fn bar_new(foo: Foo): Bar {
+    pub fn bar_new(foo: Foo): Bar {
         Bar(foo)
     }
 
-    fn foo_a(foo: Foo):int { foo.a }
-    fn foo_b(foo: Foo):bool { foo.b }
-    fn foo_c(foo: Foo):float { foo.c }
+    pub fn foo_a(foo: Foo):int { foo.a }
+    pub fn foo_b(foo: Foo):bool { foo.b }
+    pub fn foo_c(foo: Foo):float { foo.c }
     "#,
     );
 
@@ -473,7 +473,7 @@ fn hotreload_struct_decl() {
         m: float,
     }
 
-    fn args(): Args {
+    pub fn args(): Args {
         Args { n: 3, foo: Bar { m: 1.0 }, }
     }
     "#,
@@ -489,7 +489,7 @@ fn hotreload_struct_decl() {
         m: int,
     }
 
-    fn args(): Args {
+    pub fn args(): Args {
         Args { n: 3, foo: Bar { m: 1 }, }
     }
     "#,

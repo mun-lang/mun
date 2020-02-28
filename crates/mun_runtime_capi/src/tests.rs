@@ -118,7 +118,7 @@ fn test_runtime_get_function_info_invalid_runtime() {
 fn test_runtime_get_function_info_invalid_fn_name() {
     let driver = TestDriver::new(
         r#"
-        fn main(): int { 3 }
+        pub fn main(): int { 3 }
     "#,
     );
 
@@ -144,7 +144,7 @@ fn test_runtime_get_function_info_invalid_fn_name() {
 fn test_runtime_get_function_info_invalid_fn_name_encoding() {
     let driver = TestDriver::new(
         r#"
-        fn main(): int { 3 }
+        pub fn main(): int { 3 }
     "#,
     );
 
@@ -171,7 +171,7 @@ fn test_runtime_get_function_info_invalid_fn_name_encoding() {
 fn test_runtime_get_function_info_invalid_has_fn_info() {
     let driver = TestDriver::new(
         r#"
-        fn main(): int { 3 }
+        pub fn main(): int { 3 }
     "#,
     );
 
@@ -198,7 +198,7 @@ fn test_runtime_get_function_info_invalid_has_fn_info() {
 fn test_runtime_get_function_info_invalid_fn_info() {
     let driver = TestDriver::new(
         r#"
-        fn main(): int { 3 }
+        pub fn main(): int { 3 }
     "#,
     );
 
@@ -226,7 +226,7 @@ fn test_runtime_get_function_info_invalid_fn_info() {
 fn test_runtime_get_function_info() {
     let driver = TestDriver::new(
         r#"
-        fn main(): int { 3 }
+        pub fn main(): int { 3 }
     "#,
     );
 
@@ -262,7 +262,7 @@ fn test_runtime_update_invalid_runtime() {
 fn test_runtime_update_invalid_updated() {
     let driver = TestDriver::new(
         r#"
-        fn main(): int { 3 }
+        pub fn main(): int { 3 }
     "#,
     );
 
@@ -281,7 +281,7 @@ fn test_runtime_update_invalid_updated() {
 fn test_runtime_update() {
     let driver = TestDriver::new(
         r#"
-        fn main(): int { 3 }
+        pub fn main(): int { 3 }
     "#,
     );
 
@@ -321,7 +321,7 @@ fn test_type_info_as_struct_invalid_struct_info() {
 fn test_type_info_as_struct_not_a_struct() {
     let driver = TestDriver::new(
         r#"
-        fn main(): int { 3 }
+        pub fn main(): int { 3 }
     "#,
     );
 
@@ -356,7 +356,7 @@ fn test_type_info_as_struct() {
         r#"
         struct Foo;
 
-        fn main(): Foo { Foo }
+        pub fn main(): Foo { Foo }
     "#,
     );
 
