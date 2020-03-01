@@ -1,6 +1,6 @@
 #![allow(clippy::type_repetition_in_bounds)]
 
-use crate::{ir::module::ModuleIR, type_info::TypeInfo, Context};
+use crate::{ir::module::ModuleIR, type_info::TypeInfo, CodeGenParams, Context};
 use inkwell::types::StructType;
 use inkwell::{types::AnyTypeEnum, OptimizationLevel};
 use mun_target::spec::Target;
@@ -22,9 +22,9 @@ pub trait IrDatabase: hir::HirDatabase {
     #[salsa::input]
     fn target(&self) -> Target;
 
-    /// Given a type, return the corresponding IR type.
+    /// Given a type and code generation parameters, return the corresponding IR type.
     #[salsa::invoke(crate::ir::ty::ir_query)]
-    fn type_ir(&self, ty: hir::Ty) -> AnyTypeEnum;
+    fn type_ir(&self, ty: hir::Ty, params: CodeGenParams) -> AnyTypeEnum;
 
     /// Given a struct, return the corresponding IR type.
     #[salsa::invoke(crate::ir::ty::struct_ty_query)]

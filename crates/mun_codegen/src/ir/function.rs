@@ -1,7 +1,7 @@
 use crate::ir::body::BodyIrGenerator;
 use crate::ir::dispatch_table::DispatchTable;
 use crate::values::FunctionValue;
-use crate::{IrDatabase, Module, OptimizationLevel};
+use crate::{CodeGenParams, IrDatabase, Module, OptimizationLevel};
 use inkwell::passes::{PassManager, PassManagerBuilder};
 use inkwell::types::AnyTypeEnum;
 
@@ -30,9 +30,10 @@ pub(crate) fn gen_signature(
     db: &impl IrDatabase,
     f: hir::Function,
     module: &Module,
+    params: CodeGenParams,
 ) -> FunctionValue {
     let name = f.name(db).to_string();
-    if let AnyTypeEnum::FunctionType(ty) = db.type_ir(f.ty(db)) {
+    if let AnyTypeEnum::FunctionType(ty) = db.type_ir(f.ty(db), params) {
         module.add_function(&name, ty, None)
     } else {
         panic!("not a function type")
@@ -55,9 +56,35 @@ pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
         llvm_function,
         llvm_functions,
         dispatch_table,
+        CodeGenParams { is_extern: false },
     );
 
     code_gen.gen_fn_body();
+
+    llvm_function
+}
+
+/// Generates the body of a wrapper around `hir::Function` for its associated
+/// `FunctionValue`
+pub(crate) fn gen_wrapper_body<'a, 'b, D: IrDatabase>(
+    db: &'a D,
+    hir_function: hir::Function,
+    llvm_function: FunctionValue,
+    module: &'a Module,
+    llvm_functions: &'a HashMap<hir::Function, FunctionValue>,
+    dispatch_table: &'b DispatchTable,
+) -> FunctionValue {
+    let mut code_gen = BodyIrGenerator::new(
+        db,
+        module,
+        hir_function,
+        llvm_function,
+        llvm_functions,
+        dispatch_table,
+        CodeGenParams { is_extern: true },
+    );
+
+    code_gen.gen_fn_wrapper();
 
     llvm_function
 }

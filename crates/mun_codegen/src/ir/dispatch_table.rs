@@ -1,6 +1,6 @@
 use crate::intrinsics;
 use crate::values::FunctionValue;
-use crate::IrDatabase;
+use crate::{CodeGenParams, IrDatabase};
 use inkwell::module::Module;
 use inkwell::types::{BasicTypeEnum, FunctionType};
 use inkwell::values::{BasicValueEnum, PointerValue};
@@ -225,7 +225,10 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
             let name = function.name(self.db).to_string();
             let hir_type = function.ty(self.db);
             let sig = hir_type.callable_sig(self.db).unwrap();
-            let ir_type = self.db.type_ir(hir_type).into_function_type();
+            let ir_type = self
+                .db
+                .type_ir(hir_type, CodeGenParams { is_extern: false })
+                .into_function_type();
             let arg_types = sig
                 .params()
                 .iter()
@@ -280,6 +283,11 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
     /// result.
     pub fn collect_body(&mut self, body: &Arc<Body>, infer: &InferenceResult) {
         self.collect_expr(body.body_expr(), body, infer);
+    }
+
+    /// Collect the call expression from the body of a wrapper for the specified function.
+    pub fn collect_wrapper_body(&mut self, _function: hir::Function) {
+        self.collect_intrinsic(&intrinsics::malloc)
     }
 
     /// This creates the final DispatchTable with all *called* functions from within the module
