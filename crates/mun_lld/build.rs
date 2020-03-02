@@ -52,7 +52,7 @@ lazy_static! {
                 pb.push(binary_name);
 
                 let ver = llvm_version(&pb)
-                    .expect(&format!("Failed to execute {:?}", &pb));
+                    .unwrap_or_else(|_| panic!("Failed to execute {:?}", &pb));
                 if is_compatible_llvm(&ver) {
                     return pb;
                 } else {
@@ -108,7 +108,7 @@ fn locate_system_llvm_config() -> Option<&'static str> {
 /// Check whether the given version of LLVM is blacklisted,
 /// returning `Some(reason)` if it is.
 fn is_blacklisted_llvm(llvm_version: &Version) -> Option<&'static str> {
-    static BLACKLIST: &'static [(u64, u64, u64, &'static str)] = &[];
+    static BLACKLIST: &[(u64, u64, u64, &str)] = &[];
 
     let blacklist_var = format!(
         "LLVM_SYS_{}_IGNORE_BLACKLIST",
@@ -131,9 +131,9 @@ fn is_blacklisted_llvm(llvm_version: &Version) -> Option<&'static str> {
 
     for &(major, minor, patch, reason) in BLACKLIST.iter() {
         let bad_version = Version {
-            major: major,
-            minor: minor,
-            patch: patch,
+            major,
+            minor,
+            patch,
             pre: vec![],
             build: vec![],
         };
@@ -241,15 +241,13 @@ fn get_system_libcpp() -> Option<&'static str> {
     if cfg!(target_env = "msvc") {
         // MSVC doesn't need an explicit one.
         None
-    } else if cfg!(target_os = "macos") {
+    } else if cfg!(target_os = "macos") || cfg!(target_os = "freebsd") {
         // On OS X 10.9 and later, LLVM's libc++ is the default. On earlier
         // releases GCC's libstdc++ is default. Unfortunately we can't
         // reasonably detect which one we need (on older ones libc++ is
         // available and can be selected with -stdlib=lib++), so assume the
         // latest, at the cost of breaking the build on older OS releases
         // when LLVM was built against libstdc++.
-        Some("c++")
-    } else if cfg!(target_os = "freebsd") {
         Some("c++")
     } else {
         // Otherwise assume GCC's libstdc++.
@@ -357,7 +355,7 @@ fn main() {
     ))
     .is_some();
     if cfg!(target_env = "msvc") && (use_debug_msvcrt || is_llvm_debug()) {
-        println!("cargo:rustc-link-lib={}", "msvcrtd");
+        println!("cargo:rustc-link-lib=msvcrtd");
     }
 
     // Link libffi if the user requested this workaround.
@@ -368,19 +366,19 @@ fn main() {
     ))
     .is_some();
     if force_ffi {
-        println!("cargo:rustc-link-lib=dylib={}", "ffi");
+        println!("cargo:rustc-link-lib=dylib=ffi");
     }
 
-    println!("cargo:rustc-link-lib=static={}", "lldCOFF");
-    println!("cargo:rustc-link-lib=static={}", "lldCommon");
-    println!("cargo:rustc-link-lib=static={}", "lldCore");
-    println!("cargo:rustc-link-lib=static={}", "lldDriver");
-    println!("cargo:rustc-link-lib=static={}", "lldELF");
-    println!("cargo:rustc-link-lib=static={}", "lldMachO");
-    println!("cargo:rustc-link-lib=static={}", "lldMinGW");
-    println!("cargo:rustc-link-lib=static={}", "lldReaderWriter");
-    println!("cargo:rustc-link-lib=static={}", "lldWasm");
-    println!("cargo:rustc-link-lib=static={}", "lldYAML");
+    println!("cargo:rustc-link-lib=static=lldCOFF");
+    println!("cargo:rustc-link-lib=static=lldCommon");
+    println!("cargo:rustc-link-lib=static=lldCore");
+    println!("cargo:rustc-link-lib=static=lldDriver");
+    println!("cargo:rustc-link-lib=static=lldELF");
+    println!("cargo:rustc-link-lib=static=lldMachO");
+    println!("cargo:rustc-link-lib=static=lldMinGW");
+    println!("cargo:rustc-link-lib=static=lldReaderWriter");
+    println!("cargo:rustc-link-lib=static=lldWasm");
+    println!("cargo:rustc-link-lib=static=lldYAML");
 
     if cfg!(not(target_os = "windows")) {
         println!("cargo:rustc-link-lib=dylib=ffi");
