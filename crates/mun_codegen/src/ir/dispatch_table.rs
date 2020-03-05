@@ -242,6 +242,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
                 arg_types,
                 ret_type,
             };
+            let index = self.entries.len();
             self.entries.push(TypedDispatchableFunction {
                 function: DispatchableFunction {
                     prototype: prototype.clone(),
@@ -249,10 +250,8 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
                 },
                 ir_type,
             });
-            self.prototype_to_idx
-                .insert(prototype, self.function_to_idx.len());
-            self.function_to_idx
-                .insert(function, self.function_to_idx.len());
+            self.prototype_to_idx.insert(prototype, index);
+            self.function_to_idx.insert(function, index);
         }
     }
 
@@ -264,6 +263,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
         // If the function is not yet contained in the table add it
         let prototype = intrinsic.prototype();
         if !self.prototype_to_idx.contains_key(&prototype) {
+            let index = self.entries.len();
             self.entries.push(TypedDispatchableFunction {
                 function: DispatchableFunction {
                     prototype: prototype.clone(),
@@ -272,8 +272,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
                 ir_type: intrinsic.ir_type(&self.module.get_context()),
             });
 
-            self.prototype_to_idx
-                .insert(prototype, self.function_to_idx.len());
+            self.prototype_to_idx.insert(prototype, index);
         }
     }
 
