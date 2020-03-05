@@ -337,6 +337,11 @@ fn gen_struct_info<D: IrDatabase>(
             .i16_type()
             .const_int(num_fields as u64, false)
             .into(),
+        module
+            .get_context()
+            .i8_type()
+            .const_int(s.data(db).memory_kind.clone().into(), false)
+            .into(),
     ])
 }
 

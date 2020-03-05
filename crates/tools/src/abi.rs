@@ -28,6 +28,8 @@ impl ParseCallbacks for RemoveVendorName {
             Some("Privacy".to_string())
         } else if original_item_name == "MunTypeGroup_t" {
             Some("TypeGroup".to_string())
+        } else if original_item_name == "MunStructMemoryKind_t" {
+            Some("StructMemoryKind".to_string())
         } else {
             Some(original_item_name.trim_start_matches("Mun").to_string())
         }
@@ -55,7 +57,7 @@ pub fn generate(mode: Mode) -> Result<()> {
         .derive_copy(false)
         .derive_debug(false)
         .raw_line("#![allow(non_snake_case, non_camel_case_types, non_upper_case_globals)]")
-        .raw_line("use crate::{Privacy, TypeGroup};")
+        .raw_line("use crate::{Privacy, StructMemoryKind, TypeGroup};")
         .generate()
         .map_err(|_| format_err!("Unable to generate bindings from 'mun_abi.h'"))?;
 

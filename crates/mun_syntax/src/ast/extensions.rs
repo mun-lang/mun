@@ -3,6 +3,7 @@ use crate::{
     SyntaxKind, T,
 };
 use crate::{SmolStr, SyntaxNode};
+use abi::StructMemoryKind;
 use text_unit::TextRange;
 
 impl ast::Name {
@@ -115,22 +116,6 @@ impl StructKind {
         } else {
             StructKind::Unit
         }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum StructMemoryKind {
-    /// A garbage collected struct is allocated on the heap and uses reference semantics when passed
-    /// around.
-    GC,
-
-    /// A value struct is allocated on the stack and uses value semantics when passed around.
-    Value,
-}
-
-impl Default for StructMemoryKind {
-    fn default() -> Self {
-        StructMemoryKind::GC
     }
 }
 
