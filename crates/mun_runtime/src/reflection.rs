@@ -1,4 +1,4 @@
-use crate::{marshal::MarshalInto, Struct};
+use crate::{marshal::Marshal, StructRef};
 use abi::{Guid, TypeInfo};
 use md5;
 
@@ -25,7 +25,7 @@ pub fn equals_return_type<T: ReturnTypeReflection>(
             }
         }
         abi::TypeGroup::StructTypes => {
-            if <Struct as ReturnTypeReflection>::type_guid() != T::type_guid() {
+            if <StructRef as ReturnTypeReflection>::type_guid() != T::type_guid() {
                 return Err(("struct", T::type_name()));
             }
         }
@@ -34,9 +34,9 @@ pub fn equals_return_type<T: ReturnTypeReflection>(
 }
 
 /// A type to emulate dynamic typing across compilation units for static types.
-pub trait ReturnTypeReflection: Sized + 'static {
+pub trait ReturnTypeReflection: Sized {
     /// The resulting type after marshaling.
-    type Marshalled: MarshalInto<Self>;
+    type Marshalled: Marshal<Self>;
 
     /// Retrieves the type's `Guid`.
     fn type_guid() -> Guid {
@@ -52,7 +52,7 @@ pub trait ReturnTypeReflection: Sized + 'static {
 /// A type to emulate dynamic typing across compilation units for statically typed values.
 pub trait ArgumentReflection: Sized {
     /// The resulting type after dereferencing.
-    type Marshalled: MarshalInto<Self>;
+    type Marshalled: Marshal<Self>;
 
     /// Retrieves the `Guid` of the value's type.
     fn type_guid(&self) -> Guid {
@@ -116,6 +116,42 @@ impl ArgumentReflection for () {
     }
 }
 
+impl ArgumentReflection for *const u8 {
+    type Marshalled = Self;
+
+    fn type_name(&self) -> &str {
+        <Self as ReturnTypeReflection>::type_name()
+    }
+
+    fn marshal(self) -> Self::Marshalled {
+        self
+    }
+}
+
+impl ArgumentReflection for *mut u8 {
+    type Marshalled = Self;
+
+    fn type_name(&self) -> &str {
+        <Self as ReturnTypeReflection>::type_name()
+    }
+
+    fn marshal(self) -> Self::Marshalled {
+        self
+    }
+}
+
+impl ArgumentReflection for *const TypeInfo {
+    type Marshalled = Self;
+
+    fn type_name(&self) -> &str {
+        "*const TypeInfo"
+    }
+
+    fn marshal(self) -> Self::Marshalled {
+        self
+    }
+}
+
 impl ReturnTypeReflection for f64 {
     type Marshalled = f64;
 
@@ -145,5 +181,21 @@ impl ReturnTypeReflection for () {
 
     fn type_name() -> &'static str {
         "core::empty"
+    }
+}
+
+impl ReturnTypeReflection for *const u8 {
+    type Marshalled = Self;
+
+    fn type_name() -> &'static str {
+        "*const core::u8"
+    }
+}
+
+impl ReturnTypeReflection for *mut u8 {
+    type Marshalled = Self;
+
+    fn type_name() -> &'static str {
+        "*mut core::u8"
     }
 }

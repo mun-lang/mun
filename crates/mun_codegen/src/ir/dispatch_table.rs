@@ -181,6 +181,9 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
             match infer[*callee].as_callable_def() {
                 Some(hir::CallableDef::Function(def)) => self.collect_fn_def(def),
                 Some(hir::CallableDef::Struct(s)) => {
+                    // self.collect_intrinsic(&intrinsics::new);
+                    self.collect_intrinsic(&intrinsics::clone);
+                    // self.collect_intrinsic(&intrinsics::drop);
                     if s.data(self.db).memory_kind == hir::StructMemoryKind::GC {
                         self.collect_intrinsic(&intrinsics::malloc)
                     }
@@ -192,6 +195,9 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
         if let Expr::RecordLit { .. } = expr {
             let struct_ty = infer[expr_id].clone();
             let hir_struct = struct_ty.as_struct().unwrap(); // Can only really get here if the type is a struct
+                                                             // self.collect_intrinsic(&intrinsics::new);
+            self.collect_intrinsic(&intrinsics::clone);
+            // self.collect_intrinsic(&intrinsics::drop);
             if hir_struct.data(self.db).memory_kind == hir::StructMemoryKind::GC {
                 self.collect_intrinsic(&intrinsics::malloc)
             }
@@ -205,6 +211,9 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
                 .expect("unknown path");
 
             if let hir::Resolution::Def(hir::ModuleDef::Struct(s)) = resolution {
+                // self.collect_intrinsic(&intrinsics::new);
+                self.collect_intrinsic(&intrinsics::clone);
+                // self.collect_intrinsic(&intrinsics::drop);
                 if s.data(self.db).memory_kind == hir::StructMemoryKind::GC {
                     self.collect_intrinsic(&intrinsics::malloc)
                 }

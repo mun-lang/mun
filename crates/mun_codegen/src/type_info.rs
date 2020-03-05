@@ -116,6 +116,13 @@ impl<T: HasStaticTypeInfo> HasStaticTypeInfo for *const T {
     }
 }
 
+// HACK: Manually add `*const TypeInfo`
+impl HasStaticTypeInfo for *const TypeInfo {
+    fn type_info() -> TypeInfo {
+        TypeInfo::new("*const TypeInfo", TypeGroup::FundamentalTypes)
+    }
+}
+
 /// A trait that statically defines that a type can be used as a return type for a function.
 pub trait HasStaticReturnTypeInfo {
     fn return_type_info() -> Option<TypeInfo>;
