@@ -1,4 +1,4 @@
-use crate::buildin_type::{BuiltinFloat, BuiltinInt, FloatBitness, IntBitness, Signedness};
+use crate::builtin_type::{BuiltinFloat, BuiltinInt, FloatBitness, IntBitness, Signedness};
 use std::fmt::{self};
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
