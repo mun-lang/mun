@@ -137,8 +137,8 @@ jobs:
 
       - uses: codecov/codecov-action@v1
         with:
-          token: 9664cbca-39d7-4c44-931a-064d2e75f80b # Not secure, have to wait for this issue: https://github.com/codecov/codecov-action/issues/29
           file: ${{ steps.coverage.outputs.report }}
+          name: ${{ matrix.os }}
   
   artifacts:
     name: Artifacts
