@@ -1,0 +1,19 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn add(a: u8, b: u8): u8 { a+b }\n   fn less(a: u8, b: u8): bool { a<b }"
+---
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+define i8 @add(i8, i8) {
+body:
+  %add = add i8 %0, %1
+  ret i8 %add
+}
+
+define i1 @less(i8, i8) {
+body:
+  %less = icmp ult i8 %0, %1
+  ret i1 %less
+}
+
