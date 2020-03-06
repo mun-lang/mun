@@ -1,7 +1,7 @@
 pub(crate) use self::diagnostics::LowerDiagnostic;
 use crate::adt::StructKind;
 use crate::arena::map::ArenaMap;
-use crate::buildin_type::BuiltinType;
+use crate::builtin_type::BuiltinType;
 use crate::diagnostics::DiagnosticSink;
 use crate::name_resolution::Namespace;
 use crate::resolve::{Resolution, Resolver};

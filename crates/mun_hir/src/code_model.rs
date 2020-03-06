@@ -2,7 +2,7 @@ pub(crate) mod src;
 
 use self::src::HasSource;
 use crate::adt::{StructData, StructFieldId};
-use crate::buildin_type::BuiltinType;
+use crate::builtin_type::BuiltinType;
 use crate::code_model::diagnostics::ModuleDefinitionDiagnostic;
 use crate::diagnostics::DiagnosticSink;
 use crate::expr::validator::ExprValidator;

@@ -10,7 +10,7 @@ mod macros;
 #[macro_use]
 mod arena;
 mod adt;
-mod buildin_type;
+mod builtin_type;
 mod code_model;
 mod db;
 pub mod diagnostics;
@@ -41,7 +41,7 @@ pub use relative_path::{RelativePath, RelativePathBuf};
 
 pub use crate::{
     arena::{ArenaId, RawId},
-    buildin_type::{FloatBitness, IntBitness, Signedness},
+    builtin_type::{FloatBitness, IntBitness, Signedness},
     db::{
         DefDatabase, DefDatabaseStorage, HirDatabase, HirDatabaseStorage, SourceDatabase,
         SourceDatabaseStorage,
