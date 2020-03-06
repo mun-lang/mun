@@ -445,6 +445,16 @@ fn gc_struct() {
     )
 }
 
+#[test]
+fn primitive_types() {
+    test_snapshot(
+        r#"
+   fn add(a: u8, b: u8): u8 { a+b }
+   fn less(a: u8, b: u8): bool { a<b }
+    "#,
+    )
+}
+
 fn test_snapshot(text: &str) {
     test_snapshot_with_optimization(text, OptimizationLevel::Default);
 }
