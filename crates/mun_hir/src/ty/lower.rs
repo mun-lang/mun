@@ -1,7 +1,7 @@
 pub(crate) use self::diagnostics::LowerDiagnostic;
 use crate::adt::StructKind;
 use crate::arena::map::ArenaMap;
-use crate::code_model::BuiltinType;
+use crate::buildin_type::BuiltinType;
 use crate::diagnostics::DiagnosticSink;
 use crate::name_resolution::Namespace;
 use crate::resolve::{Resolution, Resolver};
@@ -207,9 +207,9 @@ pub(crate) fn type_for_def(db: &impl HirDatabase, def: TypableDef, ns: Namespace
 /// Build the declared type of a static.
 fn type_for_builtin(def: BuiltinType) -> Ty {
     Ty::simple(match def {
-        BuiltinType::Float => TypeCtor::Float,
-        BuiltinType::Int => TypeCtor::Int,
-        BuiltinType::Boolean => TypeCtor::Bool,
+        BuiltinType::Float(f) => TypeCtor::Float(f.into()),
+        BuiltinType::Int(i) => TypeCtor::Int(i.into()),
+        BuiltinType::Bool => TypeCtor::Bool,
     })
 }
 

@@ -34,8 +34,8 @@ impl Name {
     }
 
     /// Shortcut to create inline plain text name
-    const fn new_inline_ascii(len: usize, text: &[u8]) -> Name {
-        Name::new_text(SmolStr::new_inline_from_ascii(len, text))
+    const fn new_inline_ascii(text: &[u8]) -> Name {
+        Name::new_text(SmolStr::new_inline_from_ascii(text.len(), text))
     }
 
     /// Resolve a name from the text of token.
@@ -88,6 +88,28 @@ impl AsName for ast::FieldKind {
     }
 }
 
-pub(crate) const FLOAT: Name = Name::new_inline_ascii(5, b"float");
-pub(crate) const INT: Name = Name::new_inline_ascii(3, b"int");
-pub(crate) const BOOLEAN: Name = Name::new_inline_ascii(4, b"bool");
+pub mod known {
+    macro_rules! known_names {
+        ($($ident:ident),* $(,)?) => {
+            $(
+                #[allow(bad_style)]
+                pub const $ident: super::Name =
+                    super::Name::new_inline_ascii(stringify!($ident).as_bytes());
+            )*
+        };
+    }
+
+    known_names!(
+        // Primitives
+        int, isize, i8, i16, i32, i64, uint, usize, u8, u16, u32, u64, float, f32, f64, bool,
+    );
+
+    #[macro_export]
+    macro_rules! name {
+        ($ident:ident) => {
+            $crate::name::known::$ident
+        };
+    }
+}
+
+pub use crate::name;
