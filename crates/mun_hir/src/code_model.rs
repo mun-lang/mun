@@ -2,13 +2,13 @@ pub(crate) mod src;
 
 use self::src::HasSource;
 use crate::adt::{StructData, StructFieldId};
+use crate::buildin_type::BuiltinType;
 use crate::code_model::diagnostics::ModuleDefinitionDiagnostic;
 use crate::diagnostics::DiagnosticSink;
 use crate::expr::validator::ExprValidator;
 use crate::expr::{Body, BodySourceMap};
 use crate::ids::AstItemDef;
 use crate::ids::LocationCtx;
-use crate::name::*;
 use crate::name_resolution::Namespace;
 use crate::raw::{DefKind, RawFileItem};
 use crate::resolve::{Resolution, Resolver};
@@ -336,22 +336,6 @@ impl Function {
         let mut validator = ExprValidator::new(self, db, sink);
         validator.validate_body();
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum BuiltinType {
-    Float,
-    Int,
-    Boolean,
-}
-
-impl BuiltinType {
-    #[rustfmt::skip]
-    pub(crate) const ALL: &'static [(Name, BuiltinType)] = &[
-        (FLOAT, BuiltinType::Float),
-        (INT, BuiltinType::Int),
-        (BOOLEAN, BuiltinType::Boolean),
-    ];
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

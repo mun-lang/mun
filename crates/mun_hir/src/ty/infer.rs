@@ -23,6 +23,7 @@ use std::sync::Arc;
 mod place_expr;
 mod type_variable;
 
+use crate::ty::primitives::{FloatTy, IntTy};
 pub use type_variable::TypeVarId;
 
 #[macro_export]
@@ -322,8 +323,8 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             Expr::Literal(lit) => match lit {
                 Literal::String(_) => Ty::Unknown,
                 Literal::Bool(_) => Ty::simple(TypeCtor::Bool),
-                Literal::Int(_) => Ty::simple(TypeCtor::Int),
-                Literal::Float(_) => Ty::simple(TypeCtor::Float),
+                Literal::Int(_) => Ty::simple(TypeCtor::Int(IntTy::int())),
+                Literal::Float(_) => Ty::simple(TypeCtor::Float(FloatTy::float())),
             },
             Expr::Return { expr } => {
                 if let Some(expr) = expr {
