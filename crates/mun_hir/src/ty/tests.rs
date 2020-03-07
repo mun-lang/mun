@@ -274,6 +274,7 @@ fn extern_fn() {
 
     struct S;
     extern fn with_non_primitive(s:S);  // extern functions can only have primitives as parameters
+    extern fn with_non_primitive_return(): S;  // extern functions can only have primitives as parameters
     "#,
     )
 }

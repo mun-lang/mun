@@ -1,6 +1,7 @@
 use crate::code_model::src::HasSource;
 use crate::diagnostics::{ExternCannotHaveBody, ExternNonPrimitiveParam};
 use crate::expr::BodySourceMap;
+use crate::in_file::InFile;
 use crate::{diagnostics::DiagnosticSink, Body, Expr, Function, HirDatabase, InferenceResult};
 use mun_syntax::{AstNode, SyntaxNodePtr};
 use std::sync::Arc;
@@ -52,16 +53,30 @@ impl<'a, 'b, 'd, DB: HirDatabase> ExprValidator<'a, 'b, 'd, DB> {
             }),
         }
 
-        // Validate the arguments
-        for (arg, _) in &self.body.params {
-            let param_id = &self.infer[*arg];
-            if param_id.as_struct().is_some() {
+        if let Some(sig) = self.func.ty(self.db).callable_sig(self.db) {
+            let fn_data = self.func.data(self.db);
+            for (arg_ty, ty_ref) in sig.params().iter().zip(fn_data.params()) {
+                if arg_ty.as_struct().is_some() {
+                    let arg_ptr = fn_data
+                        .type_ref_source_map()
+                        .type_ref_syntax(*ty_ref)
+                        .map(|ptr| ptr.syntax_node_ptr())
+                        .unwrap();
+                    self.sink.push(ExternNonPrimitiveParam {
+                        param: InFile::new(self.func.source(self.db).file_id, arg_ptr),
+                    })
+                }
+            }
+
+            let return_ty = sig.ret();
+            if return_ty.as_struct().is_some() {
+                let arg_ptr = fn_data
+                    .type_ref_source_map()
+                    .type_ref_syntax(*fn_data.ret_type())
+                    .map(|ptr| ptr.syntax_node_ptr())
+                    .unwrap();
                 self.sink.push(ExternNonPrimitiveParam {
-                    param: self
-                        .body_source_map
-                        .pat_syntax(*arg)
-                        .unwrap()
-                        .map(|arg| arg.syntax_node_ptr()),
+                    param: InFile::new(self.func.source(self.db).file_id, arg_ptr),
                 })
             }
         }

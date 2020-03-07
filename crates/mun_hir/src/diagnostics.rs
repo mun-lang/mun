@@ -545,7 +545,7 @@ pub struct ExternNonPrimitiveParam {
 
 impl Diagnostic for ExternNonPrimitiveParam {
     fn message(&self) -> String {
-        "extern functions can only have primitives as parameters".to_string()
+        "extern functions can only have primitives as parameter- and return types".to_string()
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
