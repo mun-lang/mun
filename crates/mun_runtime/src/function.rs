@@ -1,6 +1,7 @@
 use std::ffi::CString;
 use std::ptr;
 
+use crate::ReturnTypeReflection;
 use abi::{FunctionInfo, FunctionSignature, Guid, Privacy, TypeGroup, TypeInfo};
 
 pub struct FunctionInfoStorage {
@@ -81,5 +82,53 @@ impl FunctionInfoStorage {
         };
 
         (fn_info, fn_storage)
+    }
+}
+
+pub trait IntoFunctionInfo {
+    fn into<S: AsRef<str>>(
+        self,
+        name: S,
+        privacy: abi::Privacy,
+    ) -> (FunctionInfo, FunctionInfoStorage);
+}
+
+impl<R: ReturnTypeReflection> IntoFunctionInfo for extern "C" fn() -> R {
+    fn into<S: AsRef<str>>(self, name: S, privacy: Privacy) -> (FunctionInfo, FunctionInfoStorage) {
+        FunctionInfoStorage::new_function(
+            name.as_ref(),
+            &[],
+            Some(R::type_name().to_string()),
+            privacy,
+            self as *const std::ffi::c_void,
+        )
+    }
+}
+
+impl<Arg0: ReturnTypeReflection, R: ReturnTypeReflection> IntoFunctionInfo
+    for extern "C" fn(Arg0) -> R
+{
+    fn into<S: AsRef<str>>(self, name: S, privacy: Privacy) -> (FunctionInfo, FunctionInfoStorage) {
+        FunctionInfoStorage::new_function(
+            name.as_ref(),
+            &[Arg0::type_name().to_string()],
+            Some(R::type_name().to_string()),
+            privacy,
+            self as *const std::ffi::c_void,
+        )
+    }
+}
+
+impl<Arg0: ReturnTypeReflection, Arg1: ReturnTypeReflection, R: ReturnTypeReflection>
+    IntoFunctionInfo for extern "C" fn(Arg0, Arg1) -> R
+{
+    fn into<S: AsRef<str>>(self, name: S, privacy: Privacy) -> (FunctionInfo, FunctionInfoStorage) {
+        FunctionInfoStorage::new_function(
+            name.as_ref(),
+            &[Arg0::type_name().to_string(), Arg1::type_name().to_string()],
+            Some(R::type_name().to_string()),
+            privacy,
+            self as *const std::ffi::c_void,
+        )
     }
 }

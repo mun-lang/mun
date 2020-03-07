@@ -76,6 +76,7 @@ pub enum SyntaxKind {
     PACKAGE_KW,
     SUPER_KW,
     SELF_KW,
+    EXTERN_KW,
     INT_NUMBER,
     FLOAT_NUMBER,
     STRING,
@@ -88,6 +89,7 @@ pub enum SyntaxKind {
     VALUE_KW,
     SOURCE_FILE,
     FUNCTION_DEF,
+    EXTERN,
     RET_TYPE,
     VISIBILITY,
     PARAM_LIST,
@@ -193,6 +195,7 @@ macro_rules! T {
     (package) => { $crate::SyntaxKind::PACKAGE_KW };
     (super) => { $crate::SyntaxKind::SUPER_KW };
     (self) => { $crate::SyntaxKind::SELF_KW };
+    (extern) => { $crate::SyntaxKind::EXTERN_KW };
 }
 
 impl From<u16> for SyntaxKind {
@@ -234,6 +237,7 @@ impl SyntaxKind {
             | PACKAGE_KW
             | SUPER_KW
             | SELF_KW
+            | EXTERN_KW
                 => true,
             _ => false
         }
@@ -353,6 +357,7 @@ impl SyntaxKind {
                 PACKAGE_KW => &SyntaxInfo { name: "PACKAGE_KW" },
                 SUPER_KW => &SyntaxInfo { name: "SUPER_KW" },
                 SELF_KW => &SyntaxInfo { name: "SELF_KW" },
+                EXTERN_KW => &SyntaxInfo { name: "EXTERN_KW" },
                 INT_NUMBER => &SyntaxInfo { name: "INT_NUMBER" },
                 FLOAT_NUMBER => &SyntaxInfo { name: "FLOAT_NUMBER" },
                 STRING => &SyntaxInfo { name: "STRING" },
@@ -365,6 +370,7 @@ impl SyntaxKind {
                 VALUE_KW => &SyntaxInfo { name: "VALUE_KW" },
                 SOURCE_FILE => &SyntaxInfo { name: "SOURCE_FILE" },
                 FUNCTION_DEF => &SyntaxInfo { name: "FUNCTION_DEF" },
+                EXTERN => &SyntaxInfo { name: "EXTERN" },
                 RET_TYPE => &SyntaxInfo { name: "RET_TYPE" },
                 VISIBILITY => &SyntaxInfo { name: "VISIBILITY" },
                 PARAM_LIST => &SyntaxInfo { name: "PARAM_LIST" },
@@ -434,6 +440,7 @@ impl SyntaxKind {
                 "package" => PACKAGE_KW,
                 "super" => SUPER_KW,
                 "self" => SELF_KW,
+                "extern" => EXTERN_KW,
                 _ => return None,
             };
             Some(kw)

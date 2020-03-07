@@ -888,3 +888,12 @@ mod tests {
         }
     }
 }
+
+impl fmt::Display for Guid {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        for value in self.b.iter() {
+            write!(f, "{:02x}", value)?
+        }
+        Ok(())
+    }
+}

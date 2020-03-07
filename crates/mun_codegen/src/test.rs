@@ -1,6 +1,7 @@
 use crate::{mock::MockDatabase, IrDatabase};
 use hir::{diagnostics::DiagnosticSink, line_index::LineIndex, Module, SourceDatabase};
 use inkwell::OptimizationLevel;
+use mun_target::spec::Target;
 use std::cell::RefCell;
 use std::sync::Arc;
 
@@ -455,6 +456,18 @@ fn primitive_types() {
     )
 }
 
+#[test]
+fn extern_fn() {
+    test_snapshot(
+        r#"
+    extern fn add(a:int, b:int): int;
+    fn main() {
+        add(3,4);
+    }
+    "#,
+    )
+}
+
 fn test_snapshot(text: &str) {
     test_snapshot_with_optimization(text, OptimizationLevel::Default);
 }
@@ -468,6 +481,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
 
     let (mut db, file_id) = MockDatabase::with_single_file(&text);
     db.set_optimization_lvl(opt);
+    db.set_target(Target::host_target().unwrap());
 
     let line_index: Arc<LineIndex> = db.line_index(file_id);
     let messages = RefCell::new(Vec::new());

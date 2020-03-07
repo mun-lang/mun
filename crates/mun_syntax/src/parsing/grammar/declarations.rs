@@ -39,6 +39,10 @@ pub(super) fn maybe_declaration(p: &mut Parser, m: Marker) -> Result<(), Marker>
         Err(m) => m,
     };
 
+    if p.at(T![extern]) {
+        abi(p);
+    }
+
     match p.current() {
         T![fn] => {
             fn_def(p);
@@ -47,6 +51,13 @@ pub(super) fn maybe_declaration(p: &mut Parser, m: Marker) -> Result<(), Marker>
         _ => return Err(m),
     }
     Ok(())
+}
+
+fn abi(p: &mut Parser) {
+    assert!(p.at(T![extern]));
+    let abi = p.start();
+    p.bump(T![extern]);
+    abi.complete(p, EXTERN);
 }
 
 fn declarations_without_modifiers(p: &mut Parser, m: Marker) -> Result<(), Marker> {
@@ -73,7 +84,11 @@ pub(super) fn fn_def(p: &mut Parser) {
 
     opt_fn_ret_type(p);
 
-    expressions::block(p);
+    if p.at(T![;]) {
+        p.bump(T![;]);
+    } else {
+        expressions::block(p);
+    }
 }
 
 fn opt_fn_ret_type(p: &mut Parser) -> bool {

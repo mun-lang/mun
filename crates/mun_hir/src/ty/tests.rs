@@ -261,6 +261,18 @@ fn primitives() {
     )
 }
 
+#[test]
+fn extern_fn() {
+    infer_snapshot(
+        r#"
+    extern fn foo(a:int, b:int): int;
+    fn main() {
+        foo(3,4);
+    }
+    "#,
+    )
+}
+
 fn infer_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
     insta::assert_snapshot!(insta::_macro_support::AutoName, infer(&text), &text);

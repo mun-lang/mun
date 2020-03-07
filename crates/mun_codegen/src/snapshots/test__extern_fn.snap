@@ -1,0 +1,18 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "extern fn add(a:int, b:int): int;\nfn main() {\n    add(3,4);\n}"
+---
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+%DispatchTable = type { i64 (i64, i64)* }
+
+@dispatchTable = global %DispatchTable zeroinitializer
+
+define void @main() {
+body:
+  %add_ptr = load i64 (i64, i64)*, i64 (i64, i64)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
+  %add = call i64 %add_ptr(i64 3, i64 4)
+  ret void
+}
+

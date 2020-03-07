@@ -293,3 +293,12 @@ fn visibility() {
     "#,
     )
 }
+
+#[test]
+fn extern_fn() {
+    snapshot_test(
+        r#"
+    pub extern fn foo();
+    "#,
+    )
+}

@@ -1,4 +1,3 @@
-use crate::host_triple;
 use mun_codegen::OptimizationLevel;
 use mun_target::spec::Target;
 use std::path::PathBuf;
@@ -19,7 +18,7 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        let target = Target::search(&host_triple());
+        let target = Target::host_target();
         Config {
             // This unwrap is safe because we only compile for targets that have an implemented host
             // triple.

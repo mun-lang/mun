@@ -1,0 +1,21 @@
+---
+source: crates/mun_syntax/src/tests/parser.rs
+expression: pub extern fn foo();
+---
+SOURCE_FILE@[0; 20)
+  FUNCTION_DEF@[0; 20)
+    VISIBILITY@[0; 3)
+      PUB_KW@[0; 3) "pub"
+    WHITESPACE@[3; 4) " "
+    EXTERN@[4; 10)
+      EXTERN_KW@[4; 10) "extern"
+    WHITESPACE@[10; 11) " "
+    FN_KW@[11; 13) "fn"
+    WHITESPACE@[13; 14) " "
+    NAME@[14; 17)
+      IDENT@[14; 17) "foo"
+    PARAM_LIST@[17; 19)
+      L_PAREN@[17; 18) "("
+      R_PAREN@[18; 19) ")"
+    SEMI@[19; 20) ";"
+

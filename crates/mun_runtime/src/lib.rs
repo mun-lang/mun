@@ -11,6 +11,7 @@ mod macros;
 mod marshal;
 mod reflection;
 mod r#struct;
+mod type_info;
 
 #[cfg(test)]
 mod test;
@@ -23,7 +24,6 @@ use std::ptr;
 use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
-use abi::{FunctionInfo, Privacy, TypeInfo};
 use failure::Error;
 use function::FunctionInfoStorage;
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
@@ -32,15 +32,17 @@ pub use crate::marshal::Marshal;
 pub use crate::reflection::{ArgumentReflection, ReturnTypeReflection};
 
 pub use crate::assembly::Assembly;
+use crate::function::IntoFunctionInfo;
 pub use crate::r#struct::StructRef;
 
 /// Options for the construction of a [`Runtime`].
-#[derive(Clone, Debug)]
 pub struct RuntimeOptions {
     /// Path to the entry point library
     pub library_path: PathBuf,
     /// Delay during which filesystem events are collected, deduplicated, and after which emitted.
     pub delay: Duration,
+    /// Custom user injected functions
+    pub user_functions: Vec<(abi::FunctionInfo, FunctionInfoStorage)>,
 }
 
 /// A builder for the [`Runtime`].
@@ -48,20 +50,54 @@ pub struct RuntimeBuilder {
     options: RuntimeOptions,
 }
 
+impl ReturnTypeReflection for *const abi::TypeInfo {
+    type Marshalled = *const abi::TypeInfo;
+
+    fn type_name() -> &'static str {
+        "*const TypeInfo"
+    }
+}
+
 impl RuntimeBuilder {
     /// Constructs a new `RuntimeBuilder` for the shared library at `library_path`.
     pub fn new<P: Into<PathBuf>>(library_path: P) -> Self {
-        Self {
+        let mut result = Self {
             options: RuntimeOptions {
                 library_path: library_path.into(),
                 delay: Duration::from_millis(10),
+                user_functions: Default::default(),
             },
-        }
+        };
+
+        result.insert_fn(
+            abi::Privacy::Private,
+            "malloc",
+            malloc as extern "C" fn(u64, u64) -> *mut u8,
+        );
+
+        result.insert_fn(
+            abi::Privacy::Private,
+            "clone",
+            clone as extern "C" fn(*const u8, *const abi::TypeInfo) -> *mut u8,
+        );
+
+        result
     }
 
     /// Sets the `delay`.
     pub fn set_delay(&mut self, delay: Duration) -> &mut Self {
         self.options.delay = delay;
+        self
+    }
+
+    /// Adds a custom user function to the dispatch table.
+    pub fn insert_fn<S: AsRef<str>, F: IntoFunctionInfo>(
+        &mut self,
+        privacy: abi::Privacy,
+        name: S,
+        func: F,
+    ) -> &mut Self {
+        self.options.user_functions.push(func.into(name, privacy));
         self
     }
 
@@ -74,12 +110,12 @@ impl RuntimeBuilder {
 /// A runtime dispatch table that maps full paths to function and struct information.
 #[derive(Default)]
 pub struct DispatchTable {
-    functions: HashMap<String, FunctionInfo>,
+    functions: HashMap<String, abi::FunctionInfo>,
 }
 
 impl DispatchTable {
-    /// Retrieves the [`abi::FunctionInfo`] corresponding to `fn_path`, if it exists.
-    pub fn get_fn(&self, fn_path: &str) -> Option<&FunctionInfo> {
+    /// Retrieves the [`abi::abi::FunctionInfo`] corresponding to `fn_path`, if it exists.
+    pub fn get_fn(&self, fn_path: &str) -> Option<&abi::FunctionInfo> {
         self.functions.get(fn_path)
     }
 
@@ -90,13 +126,13 @@ impl DispatchTable {
     pub fn insert_fn<T: std::string::ToString>(
         &mut self,
         fn_path: T,
-        fn_info: FunctionInfo,
-    ) -> Option<FunctionInfo> {
+        fn_info: abi::FunctionInfo,
+    ) -> Option<abi::FunctionInfo> {
         self.functions.insert(fn_path.to_string(), fn_info)
     }
 
     /// Removes and returns the `fn_info` corresponding to `fn_path`, if it exists.
-    pub fn remove_fn<T: AsRef<str>>(&mut self, fn_path: T) -> Option<FunctionInfo> {
+    pub fn remove_fn<T: AsRef<str>>(&mut self, fn_path: T) -> Option<abi::FunctionInfo> {
         self.functions.remove(fn_path.as_ref())
     }
 }
@@ -107,8 +143,7 @@ pub struct Runtime {
     dispatch_table: DispatchTable,
     watcher: RecommendedWatcher,
     watcher_rx: Receiver<DebouncedEvent>,
-
-    _local_fn_storage: Vec<FunctionInfoStorage>,
+    _user_functions: Vec<FunctionInfoStorage>,
 }
 
 extern "C" fn malloc(size: u64, alignment: u64) -> *mut u8 {
@@ -117,7 +152,7 @@ extern "C" fn malloc(size: u64, alignment: u64) -> *mut u8 {
     }
 }
 
-extern "C" fn clone(src: *const u8, ty: *const TypeInfo) -> *mut u8 {
+extern "C" fn clone(src: *const u8, ty: *const abi::TypeInfo) -> *mut u8 {
     let type_info = unsafe { ty.as_ref().unwrap() };
     let struct_info = type_info.as_struct().unwrap();
     let size = struct_info.field_offsets().last().cloned().unwrap_or(0)
@@ -136,25 +171,13 @@ impl Runtime {
     pub fn new(options: RuntimeOptions) -> Result<Runtime, Error> {
         let (tx, rx) = channel();
 
-        let (malloc_info, malloc_storage) = FunctionInfoStorage::new_function(
-            "malloc",
-            &["core::u8".to_string(), "core::u64".to_string()],
-            Some("*mut core::u8".to_string()),
-            Privacy::Public,
-            malloc as *const std::ffi::c_void,
-        );
-
-        let (clone_info, clone_storage) = FunctionInfoStorage::new_function(
-            "clone",
-            &["*const core::u8".to_string(), "*const TypeInfo".to_string()],
-            Some("*mut core::u8".to_string()),
-            Privacy::Public,
-            clone as *const std::ffi::c_void,
-        );
-
         let mut dispatch_table = DispatchTable::default();
-        dispatch_table.insert_fn("malloc", malloc_info);
-        dispatch_table.insert_fn("clone", clone_info);
+
+        let mut storages = Vec::with_capacity(options.user_functions.len());
+        for (info, storage) in options.user_functions.into_iter() {
+            dispatch_table.insert_fn(info.signature.name().to_string(), info);
+            storages.push(storage)
+        }
 
         let watcher: RecommendedWatcher = Watcher::new(tx, options.delay)?;
         let mut runtime = Runtime {
@@ -162,8 +185,7 @@ impl Runtime {
             dispatch_table,
             watcher,
             watcher_rx: rx,
-
-            _local_fn_storage: vec![malloc_storage, clone_storage],
+            _user_functions: storages,
         };
 
         runtime.add_assembly(&options.library_path)?;
@@ -195,7 +217,7 @@ impl Runtime {
     }
 
     /// Retrieves the function information corresponding to `function_name`, if available.
-    pub fn get_function_info(&self, function_name: &str) -> Option<&FunctionInfo> {
+    pub fn get_function_info(&self, function_name: &str) -> Option<&abi::FunctionInfo> {
         self.dispatch_table.get_fn(function_name)
     }
 

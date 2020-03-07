@@ -18,7 +18,7 @@ use crate::{
     ids::{FunctionId, StructId},
     AsName, DefDatabase, FileId, HirDatabase, Name, Ty,
 };
-use mun_syntax::ast::{NameOwner, TypeAscriptionOwner, VisibilityOwner};
+use mun_syntax::ast::{ExternOwner, NameOwner, TypeAscriptionOwner, VisibilityOwner};
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
@@ -221,6 +221,7 @@ pub struct FnData {
     ret_type: TypeRefId,
     type_ref_map: TypeRefMap,
     type_ref_source_map: TypeRefSourceMap,
+    is_extern: bool,
 }
 
 impl FnData {
@@ -255,6 +256,8 @@ impl FnData {
 
         let (type_ref_map, type_ref_source_map) = type_ref_builder.finish();
 
+        let is_extern = src.value.is_extern();
+
         Arc::new(FnData {
             name,
             params,
@@ -262,6 +265,7 @@ impl FnData {
             ret_type,
             type_ref_map,
             type_ref_source_map,
+            is_extern,
         })
     }
 
@@ -319,6 +323,10 @@ impl Function {
 
     pub fn infer(self, db: &impl HirDatabase) -> Arc<InferenceResult> {
         db.infer(self.into())
+    }
+
+    pub fn is_extern(self, db: &impl HirDatabase) -> bool {
+        db.fn_data(self).is_extern
     }
 
     pub(crate) fn body_source_map(self, db: &impl HirDatabase) -> Arc<BodySourceMap> {

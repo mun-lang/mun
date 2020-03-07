@@ -53,7 +53,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
         // TODO: Remove once we have more ModuleDef variants
         #[allow(clippy::single_match)]
         match def {
-            ModuleDef::Function(f) => {
+            ModuleDef::Function(f) if !f.is_extern(db) => {
                 // Collect argument types
                 let fn_sig = f.ty(db).callable_sig(db).unwrap();
                 for ty in fn_sig.params().iter() {
