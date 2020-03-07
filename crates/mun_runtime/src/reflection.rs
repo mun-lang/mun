@@ -283,7 +283,7 @@ impl ReturnTypeReflection for f32 {
     type Marshalled = f32;
 
     fn type_name() -> &'static str {
-        "core::f64"
+        "core::f32"
     }
 }
 

@@ -451,7 +451,18 @@ fn primitive_types() {
     test_snapshot(
         r#"
    fn add(a: u8, b: u8): u8 { a+b }
-   fn less(a: u8, b: u8): bool { a<b }
+   fn less(a: u16, b: u16): bool { a<b }
+   fn greater(a: u32, b: u32): bool { a>b }
+   fn equal(a: u64, b: u64): bool { a==b }
+   fn greater_equal(a: usize, b: usize): bool { a>=b }
+   fn less_equal(a: uint, b: uint): bool { a<=b }
+
+   fn iadd(a: i8, b: i8): i8 { a+b }
+   fn iless(a: i16, b: i16): bool { a<b }
+   fn igreater(a: i32, b: i32): bool { a>b }
+   fn iequal(a: i64, b: i64): bool { a==b }
+   fn igreater_equal(a: isize, b: isize): bool { a>=b }
+   fn iless_equal(a: int, b: int): bool { a<=b }
     "#,
     )
 }

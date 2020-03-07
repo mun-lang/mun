@@ -32,7 +32,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty, params: CodeGenParams) -> A
             }
 
             // Boolean
-            TypeCtor::Bool                                                => AnyTypeEnum::IntType(context.bool_type()),
+            TypeCtor::Bool => AnyTypeEnum::IntType(context.bool_type()),
 
             TypeCtor::FnDef(def @ CallableDef::Function(_)) => {
                 let ty = db.callable_sig(def);

@@ -1,6 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "fn add(a: u8, b: u8): u8 { a+b }\n   fn less(a: u8, b: u8): bool { a<b }"
+expression: "fn add(a: u8, b: u8): u8 { a+b }\n   fn less(a: u16, b: u16): bool { a<b }\n   fn greater(a: u32, b: u32): bool { a>b }\n   fn equal(a: u64, b: u64): bool { a==b }\n   fn greater_equal(a: usize, b: usize): bool { a>=b }\n   fn less_equal(a: uint, b: uint): bool { a<=b }\n\n   fn iadd(a: i8, b: i8): i8 { a+b }\n   fn iless(a: i16, b: i16): bool { a<b }\n   fn igreater(a: i32, b: i32): bool { a>b }\n   fn iequal(a: i64, b: i64): bool { a==b }\n   fn igreater_equal(a: isize, b: isize): bool { a>=b }\n   fn iless_equal(a: int, b: int): bool { a<=b }"
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
@@ -11,9 +11,69 @@ body:
   ret i8 %add
 }
 
-define i1 @less(i8, i8) {
+define i1 @less(i16, i16) {
 body:
-  %less = icmp ult i8 %0, %1
+  %less = icmp ult i16 %0, %1
   ret i1 %less
+}
+
+define i1 @greater(i32, i32) {
+body:
+  %greater = icmp ugt i32 %0, %1
+  ret i1 %greater
+}
+
+define i1 @equal(i64, i64) {
+body:
+  %eq = icmp eq i64 %0, %1
+  ret i1 %eq
+}
+
+define i1 @greater_equal(i64, i64) {
+body:
+  %greatereq = icmp uge i64 %0, %1
+  ret i1 %greatereq
+}
+
+define i1 @less_equal(i64, i64) {
+body:
+  %lesseq = icmp ule i64 %0, %1
+  ret i1 %lesseq
+}
+
+define i8 @iadd(i8, i8) {
+body:
+  %add = add i8 %0, %1
+  ret i8 %add
+}
+
+define i1 @iless(i16, i16) {
+body:
+  %less = icmp slt i16 %0, %1
+  ret i1 %less
+}
+
+define i1 @igreater(i32, i32) {
+body:
+  %greater = icmp sgt i32 %0, %1
+  ret i1 %greater
+}
+
+define i1 @iequal(i64, i64) {
+body:
+  %eq = icmp eq i64 %0, %1
+  ret i1 %eq
+}
+
+define i1 @igreater_equal(i64, i64) {
+body:
+  %greatereq = icmp sge i64 %0, %1
+  ret i1 %greatereq
+}
+
+define i1 @iless_equal(i64, i64) {
+body:
+  %lesseq = icmp sle i64 %0, %1
+  ret i1 %lesseq
 }
 

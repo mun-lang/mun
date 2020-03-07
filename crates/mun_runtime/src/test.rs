@@ -614,3 +614,36 @@ fn extern_fn() {
     );
     assert_invoke_eq!(isize, 16, driver, "main");
 }
+
+#[test]
+#[should_panic]
+fn extern_fn_missing() {
+    let mut driver = TestDriver::new(
+        r#"
+    extern fn add(a: int, b: int): int;
+    pub fn main(): int { add(3,4) }
+    "#,
+    );
+    assert_invoke_eq!(isize, 16, driver, "main");
+}
+
+#[test]
+#[should_panic]
+fn extern_fn_invalid_sig() {
+    extern "C" fn add_int(a: i8, b: isize) -> isize {
+        3
+    }
+
+    let mut driver = TestDriver::new(
+        r#"
+    extern fn add(a: int, b: int): int;
+    pub fn main(): int { add(3,4) }
+    "#,
+    )
+    .insert_fn(
+        abi::Privacy::Private,
+        "add",
+        add_int as extern "C" fn(i8, isize) -> isize,
+    );
+    assert_invoke_eq!(isize, 16, driver, "main");
+}
