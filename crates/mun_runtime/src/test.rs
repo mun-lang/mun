@@ -1,7 +1,7 @@
+use crate::function::IntoFunctionInfo;
 use crate::{ArgumentReflection, ReturnTypeReflection, Runtime, RuntimeBuilder, StructRef};
 use mun_compiler::{ColorChoice, Config, Driver, FileId, PathOrInline, RelativePathBuf};
 use std::cell::RefCell;
-use crate::function::IntoFunctionInfo;
 use std::io::Write;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -500,13 +500,17 @@ fn marshal_struct() {
 
     // Verify that struct marshalling works for struct types
     let mut baz: StructRef = invoke_fn!(driver.runtime_mut(), "baz_new", foo).unwrap();
-    let c1: StructRef = invoke_fn!(driver.runtime_mut(), "foo_new", int_data.0, bool_data.0).unwrap();
-    let c2: StructRef = invoke_fn!(driver.runtime_mut(), "foo_new", int_data.1, bool_data.1).unwrap();
+    let c1: StructRef =
+        invoke_fn!(driver.runtime_mut(), "foo_new", int_data.0, bool_data.0).unwrap();
+    let c2: StructRef =
+        invoke_fn!(driver.runtime_mut(), "foo_new", int_data.1, bool_data.1).unwrap();
     test_struct(&mut baz, c1, c2);
 
     let mut qux: StructRef = invoke_fn!(driver.runtime_mut(), "qux_new", bar).unwrap();
-    let c1: StructRef = invoke_fn!(driver.runtime_mut(), "bar_new", int_data.0, bool_data.0).unwrap();
-    let c2: StructRef = invoke_fn!(driver.runtime_mut(), "bar_new", int_data.1, bool_data.1).unwrap();
+    let c1: StructRef =
+        invoke_fn!(driver.runtime_mut(), "bar_new", int_data.0, bool_data.0).unwrap();
+    let c2: StructRef =
+        invoke_fn!(driver.runtime_mut(), "bar_new", int_data.1, bool_data.1).unwrap();
     test_struct(&mut qux, c1, c2);
 
     fn test_shallow_copy<
@@ -630,7 +634,7 @@ fn extern_fn_missing() {
 #[test]
 #[should_panic]
 fn extern_fn_invalid_sig() {
-    extern "C" fn add_int(a: i8, b: isize) -> isize {
+    extern "C" fn add_int(_a: i8, _b: isize) -> isize {
         3
     }
 

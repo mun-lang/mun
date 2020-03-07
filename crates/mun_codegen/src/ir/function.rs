@@ -56,7 +56,9 @@ pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
         llvm_function,
         llvm_functions,
         dispatch_table,
-        CodeGenParams { is_extern: false },
+        CodeGenParams {
+            make_marshallable: false,
+        },
     );
 
     code_gen.gen_fn_body();
@@ -81,7 +83,9 @@ pub(crate) fn gen_wrapper_body<'a, 'b, D: IrDatabase>(
         llvm_function,
         llvm_functions,
         dispatch_table,
-        CodeGenParams { is_extern: true },
+        CodeGenParams {
+            make_marshallable: true,
+        },
     );
 
     code_gen.gen_fn_wrapper();

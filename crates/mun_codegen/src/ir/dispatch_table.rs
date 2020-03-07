@@ -236,7 +236,12 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
             let sig = hir_type.callable_sig(self.db).unwrap();
             let ir_type = self
                 .db
-                .type_ir(hir_type, CodeGenParams { is_extern: false })
+                .type_ir(
+                    hir_type,
+                    CodeGenParams {
+                        make_marshallable: false,
+                    },
+                )
                 .into_function_type();
             let arg_types = sig
                 .params()

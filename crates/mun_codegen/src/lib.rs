@@ -24,5 +24,5 @@ pub use crate::{
 pub struct CodeGenParams {
     /// Whether generated code should support extern function calls.
     /// This allows function parameters with `struct(value)` types to be marshalled.
-    is_extern: bool,
+    make_marshallable: bool,
 }

@@ -23,7 +23,11 @@ pub trait Marshal<T>: Sized {
 }
 
 impl<T> Marshal<T> for T {
-    fn marshal_value(self, _runtime: Rc<RefCell<Runtime>>, _type_info: Option<&abi::TypeInfo>) -> T {
+    fn marshal_value(
+        self,
+        _runtime: Rc<RefCell<Runtime>>,
+        _type_info: Option<&abi::TypeInfo>,
+    ) -> T {
         self
     }
 

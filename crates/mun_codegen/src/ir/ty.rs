@@ -58,7 +58,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty, params: CodeGenParams) -> A
                 match s.data(db).memory_kind {
                     hir::StructMemoryKind::GC => struct_ty.ptr_type(AddressSpace::Generic).into(),
                     hir::StructMemoryKind::Value => {
-                        if params.is_extern {
+                        if params.make_marshallable {
                             struct_ty.ptr_type(AddressSpace::Generic).into()
                         } else {
                             struct_ty.into()
@@ -77,7 +77,12 @@ pub fn struct_ty_query(db: &impl IrDatabase, s: hir::Struct) -> StructType {
     let name = s.name(db).to_string();
     for field in s.fields(db).iter() {
         // Ensure that salsa's cached value incorporates the struct fields
-        let _field_type_ir = db.type_ir(field.ty(db), CodeGenParams { is_extern: false });
+        let _field_type_ir = db.type_ir(
+            field.ty(db),
+            CodeGenParams {
+                make_marshallable: false,
+            },
+        );
     }
 
     db.context().opaque_struct_type(&name)

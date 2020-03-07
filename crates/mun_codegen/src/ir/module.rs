@@ -70,7 +70,9 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
                     db,
                     *f,
                     &llvm_module,
-                    CodeGenParams { is_extern: false },
+                    CodeGenParams {
+                        make_marshallable: false,
+                    },
                 );
                 functions.insert(*f, fun);
 
@@ -84,7 +86,9 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
                         db,
                         *f,
                         &llvm_module,
-                        CodeGenParams { is_extern: true },
+                        CodeGenParams {
+                            make_marshallable: true,
+                        },
                     );
                     wrappers.insert(*f, wrapper_fun);
 
