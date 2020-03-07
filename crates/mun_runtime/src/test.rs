@@ -638,3 +638,79 @@ fn extern_fn_invalid_sig() {
     .insert_fn("add", add_int as extern "C" fn(i8, isize) -> isize);
     assert_invoke_eq!(isize, 16, driver, "main");
 }
+
+#[test]
+fn test_primitive_types() {
+    let mut driver = TestDriver::new(
+        r#"
+    struct Primitives {
+        a:u8,
+        b:u16,
+        c:u32,
+        d:u64,
+
+        e:i8,
+        f:i16,
+        g:i32,
+        h:i64,
+
+        i:f32,
+        j:f64,
+
+        k: int,
+        l: uint,
+        m: float
+    }
+
+    pub fn new_primitives(a:u8, b:u16, c:u32, d:u64, e:i8, f:i16, g:i32, h:i64, i:f32, j:f64, k: int, l: uint, m: float): Primitives {
+        Primitives { a:a, b:b, c:c, d:d, e:e, f:f, g:g, h:h, i:i, j:j, k:k, l:l, m:m }
+    }
+    "#,
+    );
+
+    fn test_field<
+        T: Copy + std::fmt::Debug + PartialEq + ArgumentReflection + ReturnTypeReflection,
+    >(
+        s: &mut StructRef,
+        data: (T, T),
+        field_name: &str,
+    ) {
+        assert_eq!(Ok(data.0), s.get::<T>(field_name));
+        s.set(field_name, data.1).unwrap();
+        assert_eq!(Ok(data.1), s.replace(field_name, data.0));
+        assert_eq!(Ok(data.0), s.get::<T>(field_name));
+    }
+
+    let mut foo: StructRef = invoke_fn!(
+        driver.runtime_mut(),
+        "new_primitives",
+        1u8,
+        2u16,
+        3u32,
+        4u64,
+        5i8,
+        6i16,
+        7i32,
+        8i64,
+        9.0f32,
+        10.0f64,
+        11isize,
+        12usize,
+        13.0f64
+    )
+    .unwrap();
+
+    test_field(&mut foo, (1u8, 100u8), "a");
+    test_field(&mut foo, (2u16, 101u16), "b");
+    test_field(&mut foo, (3u32, 102u32), "c");
+    test_field(&mut foo, (4u64, 103u64), "d");
+    test_field(&mut foo, (5i8, 104i8), "e");
+    test_field(&mut foo, (6i16, 105i16), "f");
+    test_field(&mut foo, (7i32, 106i32), "g");
+    test_field(&mut foo, (8i64, 107i64), "h");
+    test_field(&mut foo, (9f32, 108f32), "i");
+    test_field(&mut foo, (10f64, 109f64), "j");
+    test_field(&mut foo, (11isize, 110isize), "k");
+    test_field(&mut foo, (12usize, 111usize), "l");
+    test_field(&mut foo, (13f64, 112f64), "m");
+}
