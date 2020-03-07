@@ -10,6 +10,7 @@ mod macros;
 #[macro_use]
 mod arena;
 mod adt;
+mod builtin_type;
 mod code_model;
 mod db;
 pub mod diagnostics;
@@ -40,6 +41,7 @@ pub use relative_path::{RelativePath, RelativePathBuf};
 
 pub use crate::{
     arena::{ArenaId, RawId},
+    builtin_type::{FloatBitness, IntBitness, Signedness},
     db::{
         DefDatabase, DefDatabaseStorage, HirDatabase, HirDatabaseStorage, SourceDatabase,
         SourceDatabaseStorage,
@@ -56,7 +58,7 @@ pub use crate::{
     path::{Path, PathKind},
     raw::RawItems,
     resolve::{Resolution, Resolver},
-    ty::{lower::CallableDef, ApplicationTy, InferenceResult, Ty, TypeCtor},
+    ty::{lower::CallableDef, ApplicationTy, FloatTy, InferenceResult, IntTy, Ty, TypeCtor},
 };
 
 use crate::{

@@ -345,7 +345,7 @@ fn test_type_info_as_struct_not_a_struct() {
     };
 
     let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
-    assert_eq!(message.to_str().unwrap(), "`core::int` is not a struct.");
+    assert_eq!(message.to_str().unwrap(), "`core::i64` is not a struct.");
 
     unsafe { mun_destroy_string(message.as_ptr()) };
 }

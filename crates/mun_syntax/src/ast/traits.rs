@@ -1,5 +1,6 @@
 use crate::ast::{self, child_opt, children, AstChildren, AstNode, AstToken};
 use crate::syntax_node::SyntaxElementChildren;
+use crate::SyntaxKind;
 
 pub trait ModuleItemOwner: AstNode {
     fn items(&self) -> AstChildren<ast::ModuleItem> {
@@ -67,5 +68,13 @@ impl Iterator for CommentIter {
 pub trait DefaultTypeParamOwner: AstNode {
     fn default_type(&self) -> Option<ast::PathType> {
         child_opt(self)
+    }
+}
+
+pub trait ExternOwner: AstNode {
+    fn is_extern(&self) -> bool {
+        self.syntax()
+            .children()
+            .any(|p| p.kind() == SyntaxKind::EXTERN)
     }
 }

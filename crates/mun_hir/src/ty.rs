@@ -1,6 +1,7 @@
 mod infer;
 pub(super) mod lower;
 mod op;
+mod primitives;
 
 use crate::display::{HirDisplay, HirFormatter};
 use crate::ty::infer::TypeVarId;
@@ -9,6 +10,7 @@ use crate::{HirDatabase, Struct, StructMemoryKind};
 pub(crate) use infer::infer_query;
 pub use infer::InferenceResult;
 pub(crate) use lower::{callable_item_sig, fn_sig_for_fn, type_for_def, CallableDef, TypableDef};
+pub use primitives::{FloatTy, IntTy};
 use std::fmt;
 use std::sync::Arc;
 
@@ -47,10 +49,10 @@ pub struct ApplicationTy {
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum TypeCtor {
     /// The primitive floating point type. Written as `float`.
-    Float,
+    Float(FloatTy),
 
     /// The primitive integral type. Written as `int`.
-    Int,
+    Int(IntTy),
 
     /// The primitive boolean type. Written as `bool`.
     Bool,
@@ -199,8 +201,8 @@ impl HirDisplay for Ty {
 impl HirDisplay for ApplicationTy {
     fn hir_fmt(&self, f: &mut HirFormatter<impl HirDatabase>) -> fmt::Result {
         match self.ctor {
-            TypeCtor::Float => write!(f, "float"),
-            TypeCtor::Int => write!(f, "int"),
+            TypeCtor::Float(ty) => write!(f, "{}", ty),
+            TypeCtor::Int(ty) => write!(f, "{}", ty),
             TypeCtor::Bool => write!(f, "bool"),
             TypeCtor::Struct(def) => write!(f, "{}", def.name(f.db)),
             TypeCtor::Never => write!(f, "never"),

@@ -1,6 +1,7 @@
 use std::ffi::CString;
 use std::ptr;
 
+use crate::ReturnTypeReflection;
 use abi::{FunctionInfo, FunctionSignature, Guid, Privacy, TypeGroup, TypeInfo};
 
 pub struct FunctionInfoStorage {
@@ -82,4 +83,48 @@ impl FunctionInfoStorage {
 
         (fn_info, fn_storage)
     }
+}
+
+pub trait IntoFunctionInfo {
+    fn into<S: AsRef<str>>(
+        self,
+        name: S,
+        privacy: abi::Privacy,
+    ) -> (FunctionInfo, FunctionInfoStorage);
+}
+
+macro_rules! into_function_info_impl {
+    ($(
+        extern "C" fn($($T:ident),*) -> $R:ident;
+    )+) => {
+        $(
+            impl<$R: ReturnTypeReflection, $($T: ReturnTypeReflection,)*> IntoFunctionInfo
+            for extern "C" fn($($T),*) -> $R
+            {
+                fn into<S: AsRef<str>>(self, name: S, privacy: Privacy) -> (FunctionInfo, FunctionInfoStorage) {
+                    FunctionInfoStorage::new_function(
+                        name.as_ref(),
+                        &[$($T::type_name().to_string(),)*],
+                        Some($R::type_name().to_string()),
+                        privacy,
+                        self as *const std::ffi::c_void,
+                    )
+                }
+            }
+        )+
+    }
+}
+
+into_function_info_impl! {
+    extern "C" fn() -> R;
+    extern "C" fn(A) -> R;
+    extern "C" fn(A, B) -> R;
+    extern "C" fn(A, B, C) -> R;
+    extern "C" fn(A, B, C, D) -> R;
+    extern "C" fn(A, B, C, D, E) -> R;
+    extern "C" fn(A, B, C, D, E, F) -> R;
+    extern "C" fn(A, B, C, D, E, F, G) -> R;
+    extern "C" fn(A, B, C, D, E, F, G, H) -> R;
+    extern "C" fn(A, B, C, D, E, F, G, H, I) -> R;
+    extern "C" fn(A, B, C, D, E, F, G, H, I, J) -> R;
 }

@@ -1,6 +1,8 @@
+use crate::function::IntoFunctionInfo;
 use crate::{ArgumentReflection, ReturnTypeReflection, Runtime, RuntimeBuilder, StructRef};
 use mun_compiler::{ColorChoice, Config, Driver, FileId, PathOrInline, RelativePathBuf};
 use std::cell::RefCell;
+use std::io::Write;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::thread::sleep;
@@ -13,7 +15,25 @@ struct TestDriver {
     out_path: PathBuf,
     file_id: FileId,
     driver: Driver,
-    runtime: Rc<RefCell<Runtime>>,
+    runtime: RuntimeOrBuilder,
+}
+
+enum RuntimeOrBuilder {
+    Runtime(Rc<RefCell<Runtime>>),
+    Builder(RuntimeBuilder),
+    Pending,
+}
+
+impl RuntimeOrBuilder {
+    pub fn spawn(&mut self) -> RuntimeOrBuilder {
+        let previous = std::mem::replace(self, RuntimeOrBuilder::Pending);
+        let runtime = match previous {
+            RuntimeOrBuilder::Runtime(runtime) => runtime,
+            RuntimeOrBuilder::Builder(builder) => Rc::new(RefCell::new(builder.spawn().unwrap())),
+            _ => unreachable!(),
+        };
+        std::mem::replace(self, RuntimeOrBuilder::Runtime(runtime))
+    }
 }
 
 impl TestDriver {
@@ -31,21 +51,23 @@ impl TestDriver {
         let (driver, file_id) = Driver::with_file(config, input).unwrap();
         let mut err_stream = mun_compiler::StandardStream::stderr(ColorChoice::Auto);
         if driver.emit_diagnostics(&mut err_stream).unwrap() {
+            err_stream.flush().unwrap();
             panic!("compiler errors..")
         }
         let out_path = driver.write_assembly(file_id).unwrap().unwrap();
-        let runtime = RuntimeBuilder::new(&out_path).spawn().unwrap();
+        let builder = RuntimeBuilder::new(&out_path);
         TestDriver {
             _temp_dir: temp_dir,
             driver,
             out_path,
             file_id,
-            runtime: Rc::new(RefCell::new(runtime)),
+            runtime: RuntimeOrBuilder::Builder(builder),
         }
     }
 
     /// Updates the text of the Mun source and ensures that the generated assembly has been reloaded.
     fn update(&mut self, text: &str) {
+        self.runtime_mut(); // Ensures that the runtime is spawned prior to the update
         self.driver.set_file_text(self.file_id, text);
         let out_path = self.driver.write_assembly(self.file_id).unwrap().unwrap();
         assert_eq!(
@@ -53,7 +75,7 @@ impl TestDriver {
             "recompiling did not result in the same assembly"
         );
         let start_time = std::time::Instant::now();
-        while !self.runtime.borrow_mut().update() {
+        while !self.runtime_mut().borrow_mut().update() {
             let now = std::time::Instant::now();
             if now - start_time > std::time::Duration::from_secs(10) {
                 panic!("runtime did not update after recompilation within 10secs");
@@ -62,18 +84,36 @@ impl TestDriver {
             }
         }
     }
+
+    /// Adds a custom user function to the dispatch table.
+    pub fn insert_fn<S: AsRef<str>, F: IntoFunctionInfo>(mut self, name: S, func: F) -> Self {
+        match &mut self.runtime {
+            RuntimeOrBuilder::Builder(builder) => builder.insert_fn(name, func),
+            _ => unreachable!(),
+        };
+        self
+    }
+
+    /// Returns the `Runtime` used by this instance
+    fn runtime_mut(&mut self) -> &mut Rc<RefCell<Runtime>> {
+        self.runtime.spawn();
+        match &mut self.runtime {
+            RuntimeOrBuilder::Runtime(r) => r,
+            _ => unreachable!(),
+        }
+    }
 }
 
 macro_rules! assert_invoke_eq {
     ($ExpectedType:ty, $ExpectedResult:expr, $Driver:expr, $($Arg:tt)+) => {
-        let result: $ExpectedType = invoke_fn!($Driver.runtime, $($Arg)*).unwrap();
+        let result: $ExpectedType = invoke_fn!($Driver.runtime_mut(), $($Arg)*).unwrap();
         assert_eq!(result, $ExpectedResult, "{} == {:?}", stringify!(invoke_fn!($Driver.runtime_mut(), $($Arg)*).unwrap()), $ExpectedResult);
     }
 }
 
 #[test]
 fn compile_and_run() {
-    let driver = TestDriver::new(
+    let mut driver = TestDriver::new(
         r"
         pub fn main() {}
     ",
@@ -83,7 +123,7 @@ fn compile_and_run() {
 
 #[test]
 fn return_value() {
-    let driver = TestDriver::new(
+    let mut driver = TestDriver::new(
         r"
         pub fn main():int { 3 }
     ",
@@ -93,7 +133,7 @@ fn return_value() {
 
 #[test]
 fn arguments() {
-    let driver = TestDriver::new(
+    let mut driver = TestDriver::new(
         r"
         pub fn main(a:int, b:int):int { a+b }
     ",
@@ -105,7 +145,7 @@ fn arguments() {
 
 #[test]
 fn dispatch_table() {
-    let driver = TestDriver::new(
+    let mut driver = TestDriver::new(
         r"
         pub fn add(a:int, b:int):int { a+b }
         pub fn main(a:int, b:int):int { add(a,b) }
@@ -123,7 +163,7 @@ fn dispatch_table() {
 
 #[test]
 fn booleans() {
-    let driver = TestDriver::new(
+    let mut driver = TestDriver::new(
         r#"
         pub fn equal(a:int, b:int):bool                 { a==b }
         pub fn equalf(a:float, b:float):bool            { a==b }
@@ -167,7 +207,7 @@ fn booleans() {
 
 #[test]
 fn fibonacci() {
-    let driver = TestDriver::new(
+    let mut driver = TestDriver::new(
         r#"
     pub fn fibonacci(n:int):int {
         if n <= 1 {
@@ -186,7 +226,7 @@ fn fibonacci() {
 
 #[test]
 fn fibonacci_loop() {
-    let driver = TestDriver::new(
+    let mut driver = TestDriver::new(
         r#"
     pub fn fibonacci(n:int):int {
         let a = 0;
@@ -213,7 +253,7 @@ fn fibonacci_loop() {
 
 #[test]
 fn fibonacci_loop_break() {
-    let driver = TestDriver::new(
+    let mut driver = TestDriver::new(
         r#"
     pub fn fibonacci(n:int):int {
         let a = 0;
@@ -240,7 +280,7 @@ fn fibonacci_loop_break() {
 
 #[test]
 fn fibonacci_while() {
-    let driver = TestDriver::new(
+    let mut driver = TestDriver::new(
         r#"
     pub fn fibonacci(n:int):int {
         let a = 0;
@@ -265,7 +305,7 @@ fn fibonacci_while() {
 
 #[test]
 fn true_is_true() {
-    let driver = TestDriver::new(
+    let mut driver = TestDriver::new(
         r#"
     pub fn test_true():bool {
         true
@@ -301,7 +341,7 @@ fn compiler_valid_utf8() {
     use std::ffi::CStr;
     use std::slice;
 
-    let driver = TestDriver::new(
+    let mut driver = TestDriver::new(
         r#"
     struct Foo {
         a: int,
@@ -311,7 +351,7 @@ fn compiler_valid_utf8() {
     "#,
     );
 
-    let borrowed = driver.runtime.borrow();
+    let borrowed = driver.runtime_mut().borrow();
     let foo_func = borrowed.get_function_info("foo").unwrap();
     assert_eq!(
         unsafe { CStr::from_ptr(foo_func.signature.name) }
@@ -350,7 +390,7 @@ fn compiler_valid_utf8() {
 
 #[test]
 fn fields() {
-    let driver = TestDriver::new(
+    let mut driver = TestDriver::new(
         r#"
         struct(gc) Foo { a:int, b:int };
         pub fn main(foo:int):bool {
@@ -362,12 +402,12 @@ fn fields() {
         }
     "#,
     );
-    assert_invoke_eq!(bool, true, driver, "main", 48);
+    assert_invoke_eq!(bool, true, driver, "main", 48isize);
 }
 
 #[test]
 fn field_crash() {
-    let driver = TestDriver::new(
+    let mut driver = TestDriver::new(
         r#"
     struct(gc) Foo { a: int };
 
@@ -377,12 +417,12 @@ fn field_crash() {
     }
     "#,
     );
-    assert_invoke_eq!(i64, 15, driver, "main", 10);
+    assert_invoke_eq!(i64, 15, driver, "main", 10isize);
 }
 
 #[test]
 fn marshal_struct() {
-    let driver = TestDriver::new(
+    let mut driver = TestDriver::new(
         r#"
     struct(value) Foo { a: int, b: bool };
     struct Bar(int, bool);
@@ -424,12 +464,12 @@ fn marshal_struct() {
 
     // Verify that struct marshalling works for fundamental types
     let mut foo: StructRef =
-        invoke_fn!(driver.runtime, "foo_new", int_data.0, bool_data.0).unwrap();
+        invoke_fn!(driver.runtime_mut(), "foo_new", int_data.0, bool_data.0).unwrap();
     test_field(&mut foo, &int_data, "a");
     test_field(&mut foo, &bool_data, "b");
 
     let mut bar: StructRef =
-        invoke_fn!(driver.runtime, "bar_new", int_data.0, bool_data.0).unwrap();
+        invoke_fn!(driver.runtime_mut(), "bar_new", int_data.0, bool_data.0).unwrap();
     test_field(&mut bar, &int_data, "0");
     test_field(&mut bar, &bool_data, "1");
 
@@ -454,14 +494,18 @@ fn marshal_struct() {
     }
 
     // Verify that struct marshalling works for struct types
-    let mut baz: StructRef = invoke_fn!(driver.runtime, "baz_new", foo).unwrap();
-    let c1: StructRef = invoke_fn!(driver.runtime, "foo_new", int_data.0, bool_data.0).unwrap();
-    let c2: StructRef = invoke_fn!(driver.runtime, "foo_new", int_data.1, bool_data.1).unwrap();
+    let mut baz: StructRef = invoke_fn!(driver.runtime_mut(), "baz_new", foo).unwrap();
+    let c1: StructRef =
+        invoke_fn!(driver.runtime_mut(), "foo_new", int_data.0, bool_data.0).unwrap();
+    let c2: StructRef =
+        invoke_fn!(driver.runtime_mut(), "foo_new", int_data.1, bool_data.1).unwrap();
     test_struct(&mut baz, c1, c2);
 
-    let mut qux: StructRef = invoke_fn!(driver.runtime, "qux_new", bar).unwrap();
-    let c1: StructRef = invoke_fn!(driver.runtime, "bar_new", int_data.0, bool_data.0).unwrap();
-    let c2: StructRef = invoke_fn!(driver.runtime, "bar_new", int_data.1, bool_data.1).unwrap();
+    let mut qux: StructRef = invoke_fn!(driver.runtime_mut(), "qux_new", bar).unwrap();
+    let c1: StructRef =
+        invoke_fn!(driver.runtime_mut(), "bar_new", int_data.0, bool_data.0).unwrap();
+    let c2: StructRef =
+        invoke_fn!(driver.runtime_mut(), "bar_new", int_data.1, bool_data.1).unwrap();
     test_struct(&mut qux, c1, c2);
 
     fn test_shallow_copy<
@@ -503,11 +547,11 @@ fn marshal_struct() {
     assert!(bar_err.is_err());
 
     // Specify invalid return type
-    let bar_err: Result<i64, _> = invoke_fn!(driver.runtime, "baz_new", foo);
+    let bar_err: Result<i64, _> = invoke_fn!(driver.runtime_mut(), "baz_new", foo);
     assert!(bar_err.is_err());
 
     // Pass invalid struct type
-    let bar_err: Result<StructRef, _> = invoke_fn!(driver.runtime, "baz_new", bar);
+    let bar_err: Result<StructRef, _> = invoke_fn!(driver.runtime_mut(), "baz_new", bar);
     assert!(bar_err.is_err());
 }
 
@@ -545,4 +589,128 @@ fn hotreload_struct_decl() {
     }
     "#,
     );
+}
+
+#[test]
+fn extern_fn() {
+    extern "C" fn add_int(a: isize, b: isize) -> isize {
+        dbg!("add_int is called!");
+        a + b + 9
+    }
+
+    let mut driver = TestDriver::new(
+        r#"
+    extern fn add(a: int, b: int): int;
+    pub fn main(): int {
+        add(3,4)
+    }
+    "#,
+    )
+    .insert_fn("add", add_int as extern "C" fn(isize, isize) -> isize);
+    assert_invoke_eq!(isize, 16, driver, "main");
+}
+
+#[test]
+#[should_panic]
+fn extern_fn_missing() {
+    let mut driver = TestDriver::new(
+        r#"
+    extern fn add(a: int, b: int): int;
+    pub fn main(): int { add(3,4) }
+    "#,
+    );
+    assert_invoke_eq!(isize, 16, driver, "main");
+}
+
+#[test]
+#[should_panic]
+fn extern_fn_invalid_sig() {
+    extern "C" fn add_int(_a: i8, _b: isize) -> isize {
+        3
+    }
+
+    let mut driver = TestDriver::new(
+        r#"
+    extern fn add(a: int, b: int): int;
+    pub fn main(): int { add(3,4) }
+    "#,
+    )
+    .insert_fn("add", add_int as extern "C" fn(i8, isize) -> isize);
+    assert_invoke_eq!(isize, 16, driver, "main");
+}
+
+#[test]
+fn test_primitive_types() {
+    let mut driver = TestDriver::new(
+        r#"
+    struct Primitives {
+        a:u8,
+        b:u16,
+        c:u32,
+        d:u64,
+
+        e:i8,
+        f:i16,
+        g:i32,
+        h:i64,
+
+        i:f32,
+        j:f64,
+
+        k: int,
+        l: uint,
+        m: float
+    }
+
+    pub fn new_primitives(a:u8, b:u16, c:u32, d:u64, e:i8, f:i16, g:i32, h:i64, i:f32, j:f64, k: int, l: uint, m: float): Primitives {
+        Primitives { a:a, b:b, c:c, d:d, e:e, f:f, g:g, h:h, i:i, j:j, k:k, l:l, m:m }
+    }
+    "#,
+    );
+
+    fn test_field<
+        T: Copy + std::fmt::Debug + PartialEq + ArgumentReflection + ReturnTypeReflection,
+    >(
+        s: &mut StructRef,
+        data: (T, T),
+        field_name: &str,
+    ) {
+        assert_eq!(Ok(data.0), s.get::<T>(field_name));
+        s.set(field_name, data.1).unwrap();
+        assert_eq!(Ok(data.1), s.replace(field_name, data.0));
+        assert_eq!(Ok(data.0), s.get::<T>(field_name));
+    }
+
+    let mut foo: StructRef = invoke_fn!(
+        driver.runtime_mut(),
+        "new_primitives",
+        1u8,
+        2u16,
+        3u32,
+        4u64,
+        5i8,
+        6i16,
+        7i32,
+        8i64,
+        9.0f32,
+        10.0f64,
+        11isize,
+        12usize,
+        13.0f64
+    )
+    .unwrap();
+
+    test_field(&mut foo, (1u8, 100u8), "a");
+    test_field(&mut foo, (2u16, 101u16), "b");
+    test_field(&mut foo, (3u32, 102u32), "c");
+    test_field(&mut foo, (4u64, 103u64), "d");
+    test_field(&mut foo, (5i8, 104i8), "e");
+    test_field(&mut foo, (6i16, 105i16), "f");
+    test_field(&mut foo, (7i32, 106i32), "g");
+    test_field(&mut foo, (8i64, 107i64), "h");
+    test_field(&mut foo, (9f32, 108f32), "i");
+    test_field(&mut foo, (10f64, 109f64), "j");
+    test_field(&mut foo, (11isize, 110isize), "k");
+    test_field(&mut foo, (12usize, 111usize), "l");
+    test_field(&mut foo, (13f64, 112f64), "m");
 }

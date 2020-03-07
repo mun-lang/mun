@@ -321,7 +321,12 @@ fn gen_struct_info<D: IrDatabase>(
     let (field_offsets, _) = gen_u16_array(module, field_offsets);
 
     let field_sizes = fields.iter().map(|field| {
-        target_data.get_store_size(&db.type_ir(field.ty(db), CodeGenParams { is_extern: false }))
+        target_data.get_store_size(&db.type_ir(
+            field.ty(db),
+            CodeGenParams {
+                make_marshallable: false,
+            },
+        ))
     });
     let (field_sizes, _) = gen_u16_array(module, field_sizes);
 

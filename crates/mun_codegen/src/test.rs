@@ -1,6 +1,7 @@
 use crate::{mock::MockDatabase, IrDatabase};
 use hir::{diagnostics::DiagnosticSink, line_index::LineIndex, Module, SourceDatabase};
 use inkwell::OptimizationLevel;
+use mun_target::spec::Target;
 use std::cell::RefCell;
 use std::sync::Arc;
 
@@ -445,6 +446,39 @@ fn gc_struct() {
     )
 }
 
+#[test]
+fn primitive_types() {
+    test_snapshot(
+        r#"
+   fn add(a: u8, b: u8): u8 { a+b }
+   fn less(a: u16, b: u16): bool { a<b }
+   fn greater(a: u32, b: u32): bool { a>b }
+   fn equal(a: u64, b: u64): bool { a==b }
+   fn greater_equal(a: usize, b: usize): bool { a>=b }
+   fn less_equal(a: uint, b: uint): bool { a<=b }
+
+   fn iadd(a: i8, b: i8): i8 { a+b }
+   fn iless(a: i16, b: i16): bool { a<b }
+   fn igreater(a: i32, b: i32): bool { a>b }
+   fn iequal(a: i64, b: i64): bool { a==b }
+   fn igreater_equal(a: isize, b: isize): bool { a>=b }
+   fn iless_equal(a: int, b: int): bool { a<=b }
+    "#,
+    )
+}
+
+#[test]
+fn extern_fn() {
+    test_snapshot(
+        r#"
+    extern fn add(a:int, b:int): int;
+    fn main() {
+        add(3,4);
+    }
+    "#,
+    )
+}
+
 fn test_snapshot(text: &str) {
     test_snapshot_with_optimization(text, OptimizationLevel::Default);
 }
@@ -458,6 +492,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
 
     let (mut db, file_id) = MockDatabase::with_single_file(&text);
     db.set_optimization_lvl(opt);
+    db.set_target(Target::host_target().unwrap());
 
     let line_index: Arc<LineIndex> = db.line_index(file_id);
     let messages = RefCell::new(Vec::new());

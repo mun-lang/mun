@@ -103,7 +103,7 @@ impl<T: HasStaticTypeInfo> HasStaticTypeInfo for *mut T {
 
 impl HasStaticTypeInfo for usize {
     fn type_info() -> TypeInfo {
-        TypeInfo::new("core::usize", TypeGroup::FundamentalTypes)
+        TypeInfo::new("core::u64", TypeGroup::FundamentalTypes)
     }
 }
 

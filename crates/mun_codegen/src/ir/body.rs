@@ -412,10 +412,12 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             Pat::Bind { name } => {
                 let builder = self.new_alloca_builder();
                 let pat_ty = self.infer[pat].clone();
-                let ty = try_convert_any_to_basic(
-                    self.db
-                        .type_ir(pat_ty.clone(), CodeGenParams { is_extern: false }),
-                )
+                let ty = try_convert_any_to_basic(self.db.type_ir(
+                    pat_ty.clone(),
+                    CodeGenParams {
+                        make_marshallable: false,
+                    },
+                ))
                 .expect("expected basic type");
                 let ptr = builder.build_alloca(ty, &name.to_string());
                 self.pat_to_local.insert(pat, ptr);
@@ -470,7 +472,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                     self.builder.build_load(value.into_pointer_value(), "deref")
                 }
                 hir::StructMemoryKind::Value => {
-                    if self.params.is_extern {
+                    if self.params.make_marshallable {
                         self.builder.build_load(value.into_pointer_value(), "deref")
                     } else {
                         value
@@ -513,8 +515,8 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         let lhs_type = self.infer[lhs].clone();
         let rhs_type = self.infer[rhs].clone();
         match lhs_type.as_simple() {
-            Some(TypeCtor::Float) => self.gen_binary_op_float(lhs, rhs, op),
-            Some(TypeCtor::Int) => self.gen_binary_op_int(lhs, rhs, op),
+            Some(TypeCtor::Float(_ty)) => self.gen_binary_op_float(lhs, rhs, op),
+            Some(TypeCtor::Int(ty)) => self.gen_binary_op_int(lhs, rhs, op, ty.signedness),
             _ => unimplemented!(
                 "unimplemented operation {0}op{1}",
                 lhs_type.display(self.db),
@@ -588,6 +590,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         lhs_expr: ExprId,
         rhs_expr: ExprId,
         op: BinaryOp,
+        signedness: hir::Signedness,
     ) -> Option<BasicValueEnum> {
         let lhs = self
             .gen_expr(lhs_expr)
@@ -608,19 +611,43 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                     CmpOp::Ord {
                         ordering: Ordering::Less,
                         strict: false,
-                    } => ("lesseq", IntPredicate::SLE),
+                    } => (
+                        "lesseq",
+                        match signedness {
+                            hir::Signedness::Signed => IntPredicate::SLE,
+                            hir::Signedness::Unsigned => IntPredicate::ULE,
+                        },
+                    ),
                     CmpOp::Ord {
                         ordering: Ordering::Less,
                         strict: true,
-                    } => ("less", IntPredicate::SLT),
+                    } => (
+                        "less",
+                        match signedness {
+                            hir::Signedness::Signed => IntPredicate::SLT,
+                            hir::Signedness::Unsigned => IntPredicate::ULT,
+                        },
+                    ),
                     CmpOp::Ord {
                         ordering: Ordering::Greater,
                         strict: false,
-                    } => ("greatereq", IntPredicate::SGE),
+                    } => (
+                        "greatereq",
+                        match signedness {
+                            hir::Signedness::Signed => IntPredicate::SGE,
+                            hir::Signedness::Unsigned => IntPredicate::UGE,
+                        },
+                    ),
                     CmpOp::Ord {
                         ordering: Ordering::Greater,
                         strict: true,
-                    } => ("greater", IntPredicate::SGT),
+                    } => (
+                        "greater",
+                        match signedness {
+                            hir::Signedness::Signed => IntPredicate::SGT,
+                            hir::Signedness::Unsigned => IntPredicate::UGT,
+                        },
+                    ),
                 };
                 Some(
                     self.builder
@@ -683,7 +710,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
 
     fn should_use_dispatch_table(&self) -> bool {
         // FIXME: When we use the dispatch table, generated wrappers have infinite recursion
-        !self.params.is_extern
+        !self.params.make_marshallable
     }
 
     /// Generates IR for a function call.

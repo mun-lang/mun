@@ -6,7 +6,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-use mun_compiler::{host_triple, Config, PathOrInline, Target};
+use mun_compiler::{Config, PathOrInline, Target};
 use mun_runtime::{invoke_fn, ReturnTypeReflection, Runtime, RuntimeBuilder};
 
 fn main() -> Result<(), failure::Error> {
@@ -139,7 +139,9 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOption
     Ok(mun_compiler::CompilerOptions {
         input: PathOrInline::Path(matches.value_of("INPUT").unwrap().into()), // Safe because its a required arg
         config: Config {
-            target: Target::search(matches.value_of("target").unwrap_or_else(|| host_triple()))?,
+            target: matches
+                .value_of("target")
+                .map_or_else(Target::host_target, Target::search)?,
             optimization_lvl,
             out_dir: None,
         },

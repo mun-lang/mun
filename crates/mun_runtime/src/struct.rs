@@ -5,7 +5,6 @@ use crate::{
     },
     Runtime,
 };
-use abi::{StructInfo, StructMemoryKind, TypeInfo};
 use std::cell::RefCell;
 use std::ptr::{self, NonNull};
 use std::rc::Rc;
@@ -22,14 +21,14 @@ pub struct RawStruct(*mut u8);
 pub struct StructRef {
     runtime: Rc<RefCell<Runtime>>,
     raw: RawStruct,
-    info: StructInfo,
+    info: abi::StructInfo,
 }
 
 impl StructRef {
     /// Creates a struct that wraps a raw Mun struct.
     ///
     /// The provided [`TypeInfo`] must be for a struct type.
-    fn new(runtime: Rc<RefCell<Runtime>>, type_info: &TypeInfo, raw: RawStruct) -> StructRef {
+    fn new(runtime: Rc<RefCell<Runtime>>, type_info: &abi::TypeInfo, raw: RawStruct) -> StructRef {
         assert!(type_info.group.is_struct());
 
         Self {
@@ -45,7 +44,7 @@ impl StructRef {
     }
 
     /// Retrieves its struct information.
-    pub fn info(&self) -> &StructInfo {
+    pub fn info(&self) -> &abi::StructInfo {
         &self.info
     }
 
@@ -62,7 +61,7 @@ impl StructRef {
 
     /// Retrieves the value of the field corresponding to the specified `field_name`.
     pub fn get<T: ReturnTypeReflection>(&self, field_name: &str) -> Result<T, String> {
-        let field_idx = StructInfo::find_field_index(&self.info, field_name)?;
+        let field_idx = abi::StructInfo::find_field_index(&self.info, field_name)?;
         let field_type = unsafe { self.info.field_types().get_unchecked(field_idx) };
         equals_return_type::<T>(&field_type).map_err(|(expected, found)| {
             format!(
@@ -90,7 +89,7 @@ impl StructRef {
         field_name: &str,
         value: T,
     ) -> Result<T, String> {
-        let field_idx = StructInfo::find_field_index(&self.info, field_name)?;
+        let field_idx = abi::StructInfo::find_field_index(&self.info, field_name)?;
         let field_type = unsafe { self.info.field_types().get_unchecked(field_idx) };
         equals_argument_type(&field_type, &value).map_err(|(expected, found)| {
             format!(
@@ -110,7 +109,7 @@ impl StructRef {
 
     /// Sets the value of the field corresponding to the specified `field_name`.
     pub fn set<T: ArgumentReflection>(&mut self, field_name: &str, value: T) -> Result<(), String> {
-        let field_idx = StructInfo::find_field_index(&self.info, field_name)?;
+        let field_idx = abi::StructInfo::find_field_index(&self.info, field_name)?;
         let field_type = unsafe { self.info.field_types().get_unchecked(field_idx) };
         equals_argument_type(&field_type, &value).map_err(|(expected, found)| {
             format!(
@@ -152,7 +151,7 @@ impl Marshal<StructRef> for RawStruct {
     fn marshal_value(
         self,
         runtime: Rc<RefCell<Runtime>>,
-        type_info: Option<&TypeInfo>,
+        type_info: Option<&abi::TypeInfo>,
     ) -> StructRef {
         // `type_info` is only `None` for the `()` type
         StructRef::new(runtime, type_info.unwrap(), self)
@@ -161,13 +160,13 @@ impl Marshal<StructRef> for RawStruct {
     fn marshal_from_ptr(
         ptr: NonNull<Self>,
         runtime: Rc<RefCell<Runtime>>,
-        type_info: Option<&TypeInfo>,
+        type_info: Option<&abi::TypeInfo>,
     ) -> StructRef {
         // `type_info` is only `None` for the `()` type
         let type_info = type_info.unwrap();
 
         let struct_info = type_info.as_struct().unwrap();
-        let ptr = if struct_info.memory_kind == StructMemoryKind::Value {
+        let ptr = if struct_info.memory_kind == abi::StructMemoryKind::Value {
             ptr.cast::<u8>().as_ptr() as *const _
         } else {
             unsafe { ptr.as_ref() }.0 as *const _
@@ -178,12 +177,12 @@ impl Marshal<StructRef> for RawStruct {
         StructRef::new(runtime, type_info, RawStruct(cloned_ptr))
     }
 
-    fn marshal_to_ptr(value: RawStruct, mut ptr: NonNull<Self>, type_info: Option<&TypeInfo>) {
+    fn marshal_to_ptr(value: RawStruct, mut ptr: NonNull<Self>, type_info: Option<&abi::TypeInfo>) {
         // `type_info` is only `None` for the `()` type
         let type_info = type_info.unwrap();
 
         let struct_info = type_info.as_struct().unwrap();
-        if struct_info.memory_kind == StructMemoryKind::Value {
+        if struct_info.memory_kind == abi::StructMemoryKind::Value {
             let dest = ptr.cast::<u8>().as_ptr();
             let size = struct_info.field_offsets().last().cloned().unwrap_or(0)
                 + struct_info.field_sizes().last().cloned().unwrap_or(0);

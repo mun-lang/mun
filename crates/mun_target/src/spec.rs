@@ -1,6 +1,7 @@
 mod apple_base;
 mod linux_base;
 mod windows_msvc_base;
+use crate::host_triple;
 use failure::Fail;
 
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash)]
@@ -121,5 +122,9 @@ supported_targets!(
 impl Target {
     pub fn search(target_triple: &str) -> Result<Target, LoadTargetError> {
         load_specific(target_triple)
+    }
+
+    pub fn host_target() -> Result<Target, LoadTargetError> {
+        Self::search(host_triple())
     }
 }

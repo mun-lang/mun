@@ -471,6 +471,7 @@ impl AstNode for FunctionDef {
 impl ast::NameOwner for FunctionDef {}
 impl ast::VisibilityOwner for FunctionDef {}
 impl ast::DocCommentsOwner for FunctionDef {}
+impl ast::ExternOwner for FunctionDef {}
 impl FunctionDef {
     pub fn param_list(&self) -> Option<ParamList> {
         super::child_opt(self)

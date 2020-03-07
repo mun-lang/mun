@@ -250,6 +250,35 @@ fn struct_field_index() {
     )
 }
 
+#[test]
+fn primitives() {
+    infer_snapshot(
+        r#"
+    fn unsigned_primitives(a: u8, b: u16, c: u32, d: u64, e: usize, f: uint) : u8 { a }
+    fn signed_primitives(a: i8, b: i16, c: i32, d: i64, e: isize, f: int) : i8 { a }
+    fn float_primitives(a: f32, b: f64, c: float) : f32 { a }
+    "#,
+    )
+}
+
+#[test]
+fn extern_fn() {
+    infer_snapshot(
+        r#"
+    extern fn foo(a:int, b:int): int;
+    fn main() {
+        foo(3,4);
+    }
+
+    extern fn with_body() {}    // extern functions cannot have bodies
+
+    struct S;
+    extern fn with_non_primitive(s:S);  // extern functions can only have primitives as parameters
+    extern fn with_non_primitive_return(): S;  // extern functions can only have primitives as parameters
+    "#,
+    )
+}
+
 fn infer_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
     insta::assert_snapshot!(insta::_macro_support::AutoName, infer(&text), &text);
@@ -320,9 +349,7 @@ fn infer(content: &str) -> String {
             let source_map = fun.body_source_map(&db);
             let infer_result = fun.infer(&db);
 
-            for diag in infer_result.diagnostics.iter() {
-                diag.add_to(&db, fun, &mut diag_sink);
-            }
+            fun.diagnostics(&db, &mut diag_sink);
 
             infer_def(infer_result, source_map);
         }

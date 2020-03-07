@@ -84,7 +84,9 @@ Grammar(
 
         "package",
         "super",
-        "self"
+        "self",
+
+        "extern"
     ],
     literals: [
         "INT_NUMBER",
@@ -106,6 +108,7 @@ Grammar(
         "SOURCE_FILE",
 
         "FUNCTION_DEF",
+        "EXTERN",
         "RET_TYPE",
         "VISIBILITY",
 
@@ -168,6 +171,7 @@ Grammar(
                 "NameOwner",
                 "VisibilityOwner",
                 "DocCommentsOwner",
+                "ExternOwner",
             ],
             options: [ "ParamList", ["body", "BlockExpr"], "RetType" ],
         ),

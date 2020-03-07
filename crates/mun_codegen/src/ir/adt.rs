@@ -11,8 +11,13 @@ pub(super) fn gen_struct_decl(db: &impl IrDatabase, s: hir::Struct) -> StructTyp
             .iter()
             .map(|field| {
                 let field_type = field.ty(db);
-                try_convert_any_to_basic(db.type_ir(field_type, CodeGenParams { is_extern: false }))
-                    .expect("could not convert field type")
+                try_convert_any_to_basic(db.type_ir(
+                    field_type,
+                    CodeGenParams {
+                        make_marshallable: false,
+                    },
+                ))
+                .expect("could not convert field type")
             })
             .collect();
 
