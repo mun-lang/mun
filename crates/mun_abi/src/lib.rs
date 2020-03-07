@@ -15,7 +15,37 @@ pub use autogen::*;
 /// The *prelude* contains imports that are used almost every time.
 pub mod prelude {
     pub use crate::autogen::*;
-    pub use crate::{Privacy, TypeGroup};
+    pub use crate::{Privacy, StructMemoryKind, TypeGroup};
+}
+
+/// Represents the kind of memory management a struct uses.
+#[repr(u8)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StructMemoryKind {
+    /// A garbage collected struct is allocated on the heap and uses reference semantics when passed
+    /// around.
+    GC,
+
+    /// A value struct is allocated on the stack and uses value semantics when passed around.
+    ///
+    /// NOTE: When a value struct is used in an external API, a wrapper is created that _pins_ the
+    /// value on the heap. The heap-allocated value needs to be *manually deallocated*!
+    Value,
+}
+
+impl Default for StructMemoryKind {
+    fn default() -> Self {
+        StructMemoryKind::GC
+    }
+}
+
+impl From<StructMemoryKind> for u64 {
+    fn from(kind: StructMemoryKind) -> Self {
+        match kind {
+            StructMemoryKind::GC => 0,
+            StructMemoryKind::Value => 1,
+        }
+    }
 }
 
 /// Represents the privacy level of modules, functions, or variables.

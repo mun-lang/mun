@@ -1,15 +1,15 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "struct Bar(float, Foo);\nstruct Foo { a: int };\n\nfn bar_0(bar: Bar): float {\n    bar.0\n}\n\nfn bar_1(bar: Bar): Foo {\n    bar.1\n}\n\nfn bar_1_a(bar: Bar): int {\n    bar.1.a\n}\n\nfn foo_a(foo: Foo): int {\n    foo.a\n}\n\nfn bar_1_foo_a(bar: Bar): int {\n    foo_a(bar_1(bar))\n}\n\nfn main(): int {\n    let a: Foo = Foo { a: 5 };\n    let b: Bar = Bar(1.23, a);\n    let aa_lhs = a.a + 2;\n    let aa_rhs = 2 + a.a;\n    aa_lhs + aa_rhs\n}"
+expression: "struct(value) Bar(float, Foo);\nstruct(value) Foo { a: int };\n\nfn bar_0(bar: Bar): float {\n    bar.0\n}\n\nfn bar_1(bar: Bar): Foo {\n    bar.1\n}\n\nfn bar_1_a(bar: Bar): int {\n    bar.1.a\n}\n\nfn foo_a(foo: Foo): int {\n    foo.a\n}\n\nfn bar_1_foo_a(bar: Bar): int {\n    foo_a(bar_1(bar))\n}\n\nfn main(): int {\n    let a: Foo = Foo { a: 5 };\n    let b: Bar = Bar(1.23, a);\n    let aa_lhs = a.a + 2;\n    let aa_rhs = 2 + a.a;\n    aa_lhs + aa_rhs\n}"
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
 
-%DispatchTable = type { i64 (%Foo)*, %Foo (%Bar)* }
+%DispatchTable = type { i64 (%Foo)*, %Foo (%Bar)*, i8* (i8 addrspace(4)*, i8 addrspace(4)*)* }
 %Foo = type { i64 }
 %Bar = type { double, %Foo }
 
-@dispatchTable = global %DispatchTable { i64 (%Foo)* @foo_a, %Foo (%Bar)* @bar_1 }
+@dispatchTable = global %DispatchTable { i64 (%Foo)* @foo_a, %Foo (%Bar)* @bar_1, i8* (i8 addrspace(4)*, i8 addrspace(4)*)* null }
 
 define double @bar_0(%Bar) {
 body:

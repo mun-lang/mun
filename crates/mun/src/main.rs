@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate failure;
 
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::time::Duration;
 
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
@@ -84,10 +86,11 @@ fn build(matches: &ArgMatches) -> Result<(), failure::Error> {
 
 /// Starts the runtime with the specified library and invokes function `entry`.
 fn start(matches: &ArgMatches) -> Result<(), failure::Error> {
-    let mut runtime = runtime(matches)?;
+    let runtime = Rc::new(RefCell::new(runtime(matches)?));
 
+    let borrowed = runtime.borrow();
     let entry_point = matches.value_of("entry").unwrap_or("main");
-    let fn_info = runtime.get_function_info(entry_point).ok_or_else(|| {
+    let fn_info = borrowed.get_function_info(entry_point).ok_or_else(|| {
         std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
             format!("Failed to obtain entry point '{}'", entry_point),

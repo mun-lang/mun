@@ -1,6 +1,6 @@
 use crate::intrinsics;
 use crate::values::FunctionValue;
-use crate::IrDatabase;
+use crate::{CodeGenParams, IrDatabase};
 use inkwell::module::Module;
 use inkwell::types::{BasicTypeEnum, FunctionType};
 use inkwell::values::{BasicValueEnum, PointerValue};
@@ -181,6 +181,9 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
             match infer[*callee].as_callable_def() {
                 Some(hir::CallableDef::Function(def)) => self.collect_fn_def(def),
                 Some(hir::CallableDef::Struct(s)) => {
+                    // self.collect_intrinsic(&intrinsics::new);
+                    self.collect_intrinsic(&intrinsics::clone);
+                    // self.collect_intrinsic(&intrinsics::drop);
                     if s.data(self.db).memory_kind == hir::StructMemoryKind::GC {
                         self.collect_intrinsic(&intrinsics::malloc)
                     }
@@ -192,6 +195,9 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
         if let Expr::RecordLit { .. } = expr {
             let struct_ty = infer[expr_id].clone();
             let hir_struct = struct_ty.as_struct().unwrap(); // Can only really get here if the type is a struct
+                                                             // self.collect_intrinsic(&intrinsics::new);
+            self.collect_intrinsic(&intrinsics::clone);
+            // self.collect_intrinsic(&intrinsics::drop);
             if hir_struct.data(self.db).memory_kind == hir::StructMemoryKind::GC {
                 self.collect_intrinsic(&intrinsics::malloc)
             }
@@ -205,6 +211,9 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
                 .expect("unknown path");
 
             if let hir::Resolution::Def(hir::ModuleDef::Struct(s)) = resolution {
+                // self.collect_intrinsic(&intrinsics::new);
+                self.collect_intrinsic(&intrinsics::clone);
+                // self.collect_intrinsic(&intrinsics::drop);
                 if s.data(self.db).memory_kind == hir::StructMemoryKind::GC {
                     self.collect_intrinsic(&intrinsics::malloc)
                 }
@@ -225,7 +234,10 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
             let name = function.name(self.db).to_string();
             let hir_type = function.ty(self.db);
             let sig = hir_type.callable_sig(self.db).unwrap();
-            let ir_type = self.db.type_ir(hir_type).into_function_type();
+            let ir_type = self
+                .db
+                .type_ir(hir_type, CodeGenParams { is_extern: false })
+                .into_function_type();
             let arg_types = sig
                 .params()
                 .iter()
@@ -242,6 +254,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
                 arg_types,
                 ret_type,
             };
+            let index = self.entries.len();
             self.entries.push(TypedDispatchableFunction {
                 function: DispatchableFunction {
                     prototype: prototype.clone(),
@@ -249,10 +262,8 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
                 },
                 ir_type,
             });
-            self.prototype_to_idx
-                .insert(prototype, self.function_to_idx.len());
-            self.function_to_idx
-                .insert(function, self.function_to_idx.len());
+            self.prototype_to_idx.insert(prototype, index);
+            self.function_to_idx.insert(function, index);
         }
     }
 
@@ -264,6 +275,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
         // If the function is not yet contained in the table add it
         let prototype = intrinsic.prototype();
         if !self.prototype_to_idx.contains_key(&prototype) {
+            let index = self.entries.len();
             self.entries.push(TypedDispatchableFunction {
                 function: DispatchableFunction {
                     prototype: prototype.clone(),
@@ -272,8 +284,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
                 ir_type: intrinsic.ir_type(&self.module.get_context()),
             });
 
-            self.prototype_to_idx
-                .insert(prototype, self.function_to_idx.len());
+            self.prototype_to_idx.insert(prototype, index);
         }
     }
 
@@ -281,6 +292,11 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
     /// result.
     pub fn collect_body(&mut self, body: &Arc<Body>, infer: &InferenceResult) {
         self.collect_expr(body.body_expr(), body, infer);
+    }
+
+    /// Collect the call expression from the body of a wrapper for the specified function.
+    pub fn collect_wrapper_body(&mut self, _function: hir::Function) {
+        self.collect_intrinsic(&intrinsics::malloc)
     }
 
     /// This creates the final DispatchTable with all *called* functions from within the module

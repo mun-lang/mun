@@ -5,7 +5,7 @@ mod op;
 use crate::display::{HirDisplay, HirFormatter};
 use crate::ty::infer::TypeVarId;
 use crate::ty::lower::fn_sig_for_struct_constructor;
-use crate::{HirDatabase, Struct};
+use crate::{HirDatabase, Struct, StructMemoryKind};
 pub(crate) use infer::infer_query;
 pub use infer::InferenceResult;
 pub(crate) use lower::{callable_item_sig, fn_sig_for_fn, type_for_def, CallableDef, TypableDef};
@@ -171,6 +171,17 @@ impl FnSig {
 
     pub fn ret(&self) -> &Ty {
         &self.params_and_return[self.params_and_return.len() - 1]
+    }
+
+    pub fn marshallable(&self, db: &impl HirDatabase) -> bool {
+        for ty in self.params_and_return.iter() {
+            if let Some(s) = ty.as_struct() {
+                if s.data(db).memory_kind == StructMemoryKind::Value {
+                    return false;
+                }
+            }
+        }
+        true
     }
 }
 

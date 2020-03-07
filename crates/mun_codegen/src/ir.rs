@@ -1,3 +1,4 @@
+use crate::type_info::TypeInfo;
 use inkwell::context::Context;
 use inkwell::types::{
     AnyType, AnyTypeEnum, BasicType, BasicTypeEnum, FunctionType, IntType, PointerType,
@@ -180,6 +181,13 @@ pub trait IsPointerType {
 impl<S: BasicType, T: IsIrType<Type = S>> IsPointerType for *const T {
     fn ir_type(context: &Context) -> PointerType {
         T::ir_type(context).ptr_type(AddressSpace::Const)
+    }
+}
+
+// HACK: Manually add `*const TypeInfo`
+impl IsPointerType for *const TypeInfo {
+    fn ir_type(context: &Context) -> PointerType {
+        context.i8_type().ptr_type(AddressSpace::Const)
     }
 }
 

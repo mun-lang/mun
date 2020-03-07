@@ -78,6 +78,7 @@ pub(super) fn gen_abi_types(context: ContextRef) -> AbiTypes {
             context.i16_type().ptr_type(AddressSpace::Const).into(), // field_offsets
             context.i16_type().ptr_type(AddressSpace::Const).into(), // field_sizes
             context.i16_type().into(),                               // num_fields
+            context.i8_type().into(),                                // memory_kind
         ],
         false,
     );

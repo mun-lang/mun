@@ -2,7 +2,7 @@ use super::adt;
 use crate::ir::dispatch_table::{DispatchTable, DispatchTableBuilder};
 use crate::ir::function;
 use crate::type_info::TypeInfo;
-use crate::IrDatabase;
+use crate::{CodeGenParams, IrDatabase};
 use hir::{FileId, ModuleDef};
 use inkwell::{module::Module, values::FunctionValue};
 use std::collections::{HashMap, HashSet};
@@ -47,6 +47,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
 
     // Generate all the function signatures
     let mut functions = HashMap::new();
+    let mut wrappers = HashMap::new();
     let mut dispatch_table_builder = DispatchTableBuilder::new(db, &llvm_module);
     for def in db.module_data(file_id).definitions() {
         // TODO: Remove once we have more ModuleDef variants
@@ -65,13 +66,31 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
                 }
 
                 // Construct the function signature
-                let fun = function::gen_signature(db, *f, &llvm_module);
+                let fun = function::gen_signature(
+                    db,
+                    *f,
+                    &llvm_module,
+                    CodeGenParams { is_extern: false },
+                );
                 functions.insert(*f, fun);
 
                 // Add calls to the dispatch table
                 let body = f.body(db);
                 let infer = f.infer(db);
                 dispatch_table_builder.collect_body(&body, &infer);
+
+                if f.data(db).visibility() != hir::Visibility::Private && !fn_sig.marshallable(db) {
+                    let wrapper_fun = function::gen_signature(
+                        db,
+                        *f,
+                        &llvm_module,
+                        CodeGenParams { is_extern: true },
+                    );
+                    wrappers.insert(*f, wrapper_fun);
+
+                    // Add calls from the function's wrapper to the dispatch table
+                    dispatch_table_builder.collect_wrapper_body(*f);
+                }
             }
             _ => {}
         }
@@ -94,6 +113,18 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
         fn_pass_manager.run_on(llvm_function);
     }
 
+    for (hir_function, llvm_function) in wrappers.iter() {
+        function::gen_wrapper_body(
+            db,
+            *hir_function,
+            *llvm_function,
+            &llvm_module,
+            &functions,
+            &dispatch_table,
+        );
+        fn_pass_manager.run_on(llvm_function);
+    }
+
     // Dispatch entries can include previously unchecked intrinsics
     for entry in dispatch_table.entries().iter() {
         // Collect argument types
@@ -106,10 +137,21 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
         }
     }
 
+    // Filter private methods
+    let mut api: HashMap<hir::Function, FunctionValue> = functions
+        .into_iter()
+        .filter(|(f, _)| f.visibility(db) != hir::Visibility::Private)
+        .collect();
+
+    // Replace non-marshallable functions with their marshallable wrappers
+    for (hir_function, llvm_function) in wrappers {
+        api.insert(hir_function, llvm_function);
+    }
+
     Arc::new(ModuleIR {
         file_id,
         llvm_module,
-        functions,
+        functions: api,
         types,
         dispatch_table,
     })

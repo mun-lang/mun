@@ -5,7 +5,7 @@ use crate::ir::{
 };
 use crate::type_info::{TypeGroup, TypeInfo};
 use crate::values::{BasicValue, GlobalValue};
-use crate::IrDatabase;
+use crate::{CodeGenParams, IrDatabase};
 use hir::Ty;
 use inkwell::{
     attributes::Attribute,
@@ -262,7 +262,6 @@ fn gen_function_info_array<'a, D: IrDatabase>(
     functions: impl Iterator<Item = (&'a hir::Function, &'a FunctionValue)>,
 ) -> GlobalArrayValue {
     let function_infos: Vec<StructValue> = functions
-        .filter(|(f, _)| f.visibility(db) == hir::Visibility::Public)
         .map(|(f, value)| {
             // Get the function from the cloned module and modify the linkage of the function.
             let value = module
@@ -321,9 +320,9 @@ fn gen_struct_info<D: IrDatabase>(
         (0..fields.len()).map(|idx| target_data.offset_of_element(&t, idx as u32).unwrap());
     let (field_offsets, _) = gen_u16_array(module, field_offsets);
 
-    let field_sizes = fields
-        .iter()
-        .map(|field| target_data.get_store_size(&db.type_ir(field.ty(db))));
+    let field_sizes = fields.iter().map(|field| {
+        target_data.get_store_size(&db.type_ir(field.ty(db), CodeGenParams { is_extern: false }))
+    });
     let (field_sizes, _) = gen_u16_array(module, field_sizes);
 
     types.struct_info_type.const_named_struct(&[
@@ -336,6 +335,11 @@ fn gen_struct_info<D: IrDatabase>(
             .get_context()
             .i16_type()
             .const_int(num_fields as u64, false)
+            .into(),
+        module
+            .get_context()
+            .i8_type()
+            .const_int(s.data(db).memory_kind.clone().into(), false)
             .into(),
     ])
 }

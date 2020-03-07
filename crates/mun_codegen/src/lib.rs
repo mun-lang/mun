@@ -19,3 +19,10 @@ pub use crate::{
     code_gen::write_module_shared_object,
     db::{IrDatabase, IrDatabaseStorage},
 };
+
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
+pub struct CodeGenParams {
+    /// Whether generated code should support extern function calls.
+    /// This allows function parameters with `struct(value)` types to be marshalled.
+    is_extern: bool,
+}

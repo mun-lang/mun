@@ -9,11 +9,12 @@ use crate::{syntax_node::SyntaxNodeChildren, SmolStr, SyntaxKind, SyntaxNode, Sy
 
 pub use self::{
     expr_extensions::*,
-    extensions::{PathSegmentKind, StructKind, StructMemoryKind},
+    extensions::{PathSegmentKind, StructKind},
     generated::*,
     tokens::*,
     traits::*,
 };
+pub use abi::StructMemoryKind;
 
 use std::marker::PhantomData;
 

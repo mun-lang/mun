@@ -1,5 +1,5 @@
 macro_rules! intrinsics{
-    ($($(#[$attr:meta])* pub fn $name:ident($($arg_name:ident:$arg:ty),*) -> $ret:ty;);*) => {
+    ($($(#[$attr:meta])* pub fn $name:ident($($arg_name:ident:$arg:ty),+) -> $ret:ty;)+) => {
         $(
             paste::item! {
                 pub struct [<Intrinsic $name>];
