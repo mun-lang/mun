@@ -47,13 +47,26 @@ impl Assembly {
         for (dispatch_ptr, fn_signature) in self.info.dispatch_table.iter_mut() {
             let fn_ptr = runtime_dispatch_table
                 .get_fn(fn_signature.name())
-                .map(|f| f.fn_ptr)
                 .ok_or_else(|| {
                     io::Error::new(
                         io::ErrorKind::NotFound,
                         format!("Failed to link: function '{}' is missing.", fn_signature),
                     )
-                })?;
+                })
+                .and_then(|dispatch_func| {
+                    // TODO: This is a hack
+                    if dispatch_func.signature.return_type() != fn_signature.return_type() ||
+                        dispatch_func.signature.arg_types().len() != fn_signature.arg_types().len() ||
+                        !dispatch_func.signature.arg_types().iter().zip(fn_signature.arg_types().iter()).all(|(a,b)| PartialEq::eq(a,b)) {
+                        Err(io::Error::new(
+                            io::ErrorKind::NotFound,
+                            format!("Failed to link while looking for function '{}', a function by the same name does exists but the signatures do not match ({}).", fn_signature, dispatch_func.signature),
+                        ))
+                    } else {
+                        Ok(dispatch_func)
+                    }
+                })
+                .map(|f| f.fn_ptr)?;
 
             *dispatch_ptr = fn_ptr;
         }
