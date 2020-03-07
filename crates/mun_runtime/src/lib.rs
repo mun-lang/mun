@@ -50,14 +50,6 @@ pub struct RuntimeBuilder {
     options: RuntimeOptions,
 }
 
-impl ReturnTypeReflection for *const abi::TypeInfo {
-    type Marshalled = *const abi::TypeInfo;
-
-    fn type_name() -> &'static str {
-        "*const TypeInfo"
-    }
-}
-
 impl RuntimeBuilder {
     /// Constructs a new `RuntimeBuilder` for the shared library at `library_path`.
     pub fn new<P: Into<PathBuf>>(library_path: P) -> Self {
@@ -69,14 +61,9 @@ impl RuntimeBuilder {
             },
         };
 
-        result.insert_fn(
-            abi::Privacy::Private,
-            "malloc",
-            malloc as extern "C" fn(u64, u64) -> *mut u8,
-        );
+        result.insert_fn("malloc", malloc as extern "C" fn(u64, u64) -> *mut u8);
 
         result.insert_fn(
-            abi::Privacy::Private,
             "clone",
             clone as extern "C" fn(*const u8, *const abi::TypeInfo) -> *mut u8,
         );
@@ -91,13 +78,10 @@ impl RuntimeBuilder {
     }
 
     /// Adds a custom user function to the dispatch table.
-    pub fn insert_fn<S: AsRef<str>, F: IntoFunctionInfo>(
-        &mut self,
-        privacy: abi::Privacy,
-        name: S,
-        func: F,
-    ) -> &mut Self {
-        self.options.user_functions.push(func.into(name, privacy));
+    pub fn insert_fn<S: AsRef<str>, F: IntoFunctionInfo>(&mut self, name: S, func: F) -> &mut Self {
+        self.options
+            .user_functions
+            .push(func.into(name, abi::Privacy::Public));
         self
     }
 

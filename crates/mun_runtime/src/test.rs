@@ -86,14 +86,9 @@ impl TestDriver {
     }
 
     /// Adds a custom user function to the dispatch table.
-    pub fn insert_fn<S: AsRef<str>, F: IntoFunctionInfo>(
-        mut self,
-        privacy: abi::Privacy,
-        name: S,
-        func: F,
-    ) -> Self {
+    pub fn insert_fn<S: AsRef<str>, F: IntoFunctionInfo>(mut self, name: S, func: F) -> Self {
         match &mut self.runtime {
-            RuntimeOrBuilder::Builder(builder) => builder.insert_fn(privacy, name, func),
+            RuntimeOrBuilder::Builder(builder) => builder.insert_fn(name, func),
             _ => unreachable!(),
         };
         self
@@ -611,11 +606,7 @@ fn extern_fn() {
     }
     "#,
     )
-    .insert_fn(
-        abi::Privacy::Private,
-        "add",
-        add_int as extern "C" fn(isize, isize) -> isize,
-    );
+    .insert_fn("add", add_int as extern "C" fn(isize, isize) -> isize);
     assert_invoke_eq!(isize, 16, driver, "main");
 }
 
@@ -644,10 +635,6 @@ fn extern_fn_invalid_sig() {
     pub fn main(): int { add(3,4) }
     "#,
     )
-    .insert_fn(
-        abi::Privacy::Private,
-        "add",
-        add_int as extern "C" fn(i8, isize) -> isize,
-    );
+    .insert_fn("add", add_int as extern "C" fn(i8, isize) -> isize);
     assert_invoke_eq!(isize, 16, driver, "main");
 }

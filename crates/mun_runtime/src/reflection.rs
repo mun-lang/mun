@@ -271,6 +271,14 @@ impl ArgumentReflection for *const abi::TypeInfo {
     }
 }
 
+impl ReturnTypeReflection for *const abi::TypeInfo {
+    type Marshalled = *const abi::TypeInfo;
+
+    fn type_name() -> &'static str {
+        "*const TypeInfo"
+    }
+}
+
 impl ReturnTypeReflection for f64 {
     type Marshalled = f64;
 
