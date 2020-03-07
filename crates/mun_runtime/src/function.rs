@@ -93,42 +93,38 @@ pub trait IntoFunctionInfo {
     ) -> (FunctionInfo, FunctionInfoStorage);
 }
 
-impl<R: ReturnTypeReflection> IntoFunctionInfo for extern "C" fn() -> R {
-    fn into<S: AsRef<str>>(self, name: S, privacy: Privacy) -> (FunctionInfo, FunctionInfoStorage) {
-        FunctionInfoStorage::new_function(
-            name.as_ref(),
-            &[],
-            Some(R::type_name().to_string()),
-            privacy,
-            self as *const std::ffi::c_void,
-        )
+macro_rules! into_function_info_impl {
+    ($(
+        extern "C" fn($($T:ident),*) -> $R:ident;
+    )+) => {
+        $(
+            impl<$R: ReturnTypeReflection, $($T: ReturnTypeReflection,)*> IntoFunctionInfo
+            for extern "C" fn($($T),*) -> $R
+            {
+                fn into<S: AsRef<str>>(self, name: S, privacy: Privacy) -> (FunctionInfo, FunctionInfoStorage) {
+                    FunctionInfoStorage::new_function(
+                        name.as_ref(),
+                        &[$($T::type_name().to_string(),)*],
+                        Some($R::type_name().to_string()),
+                        privacy,
+                        self as *const std::ffi::c_void,
+                    )
+                }
+            }
+        )+
     }
 }
 
-impl<Arg0: ReturnTypeReflection, R: ReturnTypeReflection> IntoFunctionInfo
-    for extern "C" fn(Arg0) -> R
-{
-    fn into<S: AsRef<str>>(self, name: S, privacy: Privacy) -> (FunctionInfo, FunctionInfoStorage) {
-        FunctionInfoStorage::new_function(
-            name.as_ref(),
-            &[Arg0::type_name().to_string()],
-            Some(R::type_name().to_string()),
-            privacy,
-            self as *const std::ffi::c_void,
-        )
-    }
-}
-
-impl<Arg0: ReturnTypeReflection, Arg1: ReturnTypeReflection, R: ReturnTypeReflection>
-    IntoFunctionInfo for extern "C" fn(Arg0, Arg1) -> R
-{
-    fn into<S: AsRef<str>>(self, name: S, privacy: Privacy) -> (FunctionInfo, FunctionInfoStorage) {
-        FunctionInfoStorage::new_function(
-            name.as_ref(),
-            &[Arg0::type_name().to_string(), Arg1::type_name().to_string()],
-            Some(R::type_name().to_string()),
-            privacy,
-            self as *const std::ffi::c_void,
-        )
-    }
+into_function_info_impl! {
+    extern "C" fn() -> R;
+    extern "C" fn(A) -> R;
+    extern "C" fn(A, B) -> R;
+    extern "C" fn(A, B, C) -> R;
+    extern "C" fn(A, B, C, D) -> R;
+    extern "C" fn(A, B, C, D, E) -> R;
+    extern "C" fn(A, B, C, D, E, F) -> R;
+    extern "C" fn(A, B, C, D, E, F, G) -> R;
+    extern "C" fn(A, B, C, D, E, F, G, H) -> R;
+    extern "C" fn(A, B, C, D, E, F, G, H, I) -> R;
+    extern "C" fn(A, B, C, D, E, F, G, H, I, J) -> R;
 }

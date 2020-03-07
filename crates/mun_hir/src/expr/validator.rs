@@ -42,7 +42,7 @@ impl<'a, 'b, 'd, DB: HirDatabase> ExprValidator<'a, 'b, 'd, DB> {
             return;
         }
 
-        // Validate that there is not body
+        // Validate that there is no body
         match self.body[self.func.body(self.db).body_expr] {
             Expr::Missing => {}
             _ => self.sink.push(ExternCannotHaveBody {
