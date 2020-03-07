@@ -6,6 +6,10 @@ use abi::{FunctionInfo, FunctionSignature, Guid, Privacy, TypeGroup, TypeInfo};
 pub struct FunctionInfoStorage {
     _name: CString,
     _type_names: Vec<CString>,
+
+    // Clippy warns: `Vec<T>` is already on the heap, the boxing is unnecessary.
+    // However, in this case we explicitly want to have a Vec<T> of pointers.
+    #[allow(clippy::vec_box)]
     _type_infos: Vec<Box<TypeInfo>>,
 }
 
