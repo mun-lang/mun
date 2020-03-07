@@ -1,7 +1,9 @@
 ---
 source: crates/mun_hir/src/ty/tests.rs
-expression: "extern fn foo(a:int, b:int): int;\nfn main() {\n    foo(3,4);\n}"
+expression: "extern fn foo(a:int, b:int): int;\nfn main() {\n    foo(3,4);\n}\n\nextern fn with_body() {}    // extern functions cannot have bodies\n\nstruct S;\nextern fn with_non_primitive(s:S);  // extern functions can only have primitives as parameters"
 ---
+[63; 87): extern functions cannot have bodies
+[170; 171): extern functions can only have primitives as parameters
 [14; 15) 'a': int
 [21; 22) 'b': int
 [44; 61) '{     ...,4); }': nothing
@@ -9,3 +11,5 @@ expression: "extern fn foo(a:int, b:int): int;\nfn main() {\n    foo(3,4);\n}"
 [50; 58) 'foo(3,4)': int
 [54; 55) '3': int
 [56; 57) '4': int
+[85; 87) '{}': nothing
+[170; 171) 's': S

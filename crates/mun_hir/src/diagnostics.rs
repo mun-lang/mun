@@ -518,3 +518,41 @@ impl Diagnostic for PossiblyUninitializedVariable {
         self
     }
 }
+
+#[derive(Debug)]
+pub struct ExternCannotHaveBody {
+    pub func: InFile<SyntaxNodePtr>,
+}
+
+impl Diagnostic for ExternCannotHaveBody {
+    fn message(&self) -> String {
+        "extern functions cannot have bodies".to_string()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        self.func
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct ExternNonPrimitiveParam {
+    pub param: InFile<SyntaxNodePtr>,
+}
+
+impl Diagnostic for ExternNonPrimitiveParam {
+    fn message(&self) -> String {
+        "extern functions can only have primitives as parameters".to_string()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        self.param
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}

@@ -269,6 +269,11 @@ fn extern_fn() {
     fn main() {
         foo(3,4);
     }
+
+    extern fn with_body() {}    // extern functions cannot have bodies
+
+    struct S;
+    extern fn with_non_primitive(s:S);  // extern functions can only have primitives as parameters
     "#,
     )
 }
@@ -343,9 +348,7 @@ fn infer(content: &str) -> String {
             let source_map = fun.body_source_map(&db);
             let infer_result = fun.infer(&db);
 
-            for diag in infer_result.diagnostics.iter() {
-                diag.add_to(&db, fun, &mut diag_sink);
-            }
+            fun.diagnostics(&db, &mut diag_sink);
 
             infer_def(infer_result, source_map);
         }
