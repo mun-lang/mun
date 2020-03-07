@@ -5,6 +5,7 @@
 #![warn(missing_docs)]
 
 mod assembly;
+mod function;
 #[macro_use]
 mod macros;
 mod marshal;
@@ -16,14 +17,14 @@ mod test;
 
 use std::alloc::Layout;
 use std::collections::HashMap;
-use std::ffi::CString;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
-use abi::{FunctionInfo, FunctionSignature, Guid, Privacy, TypeGroup, TypeInfo};
+use abi::{FunctionInfo, Privacy};
 use failure::Error;
+use function::FunctionInfoStorage;
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
 pub use crate::marshal::MarshalInto;
@@ -106,11 +107,7 @@ pub struct Runtime {
     watcher: RecommendedWatcher,
     watcher_rx: Receiver<DebouncedEvent>,
 
-    _name: CString,
-    _u64_type: CString,
-    _ptr_mut_u8_type: CString,
-    _arg_types: Vec<*mut abi::TypeInfo>,
-    _ret_type: Box<abi::TypeInfo>,
+    _local_fn_storage: Vec<FunctionInfoStorage>,
 }
 
 extern "C" fn malloc(size: u64, alignment: u64) -> *mut u8 {
@@ -126,48 +123,16 @@ impl Runtime {
     pub fn new(options: RuntimeOptions) -> Result<Runtime, Error> {
         let (tx, rx) = channel();
 
-        let name = CString::new("malloc").unwrap();
-        let u64_type = CString::new("core::u64").unwrap();
-        let ptr_mut_u8_type = CString::new("core::u8*").unwrap();
-
-        let arg_types = vec![
-            Box::into_raw(Box::new(TypeInfo {
-                guid: Guid {
-                    b: md5::compute("core::u64").0,
-                },
-                name: u64_type.as_ptr(),
-                group: TypeGroup::FundamentalTypes,
-            })),
-            Box::into_raw(Box::new(TypeInfo {
-                guid: Guid {
-                    b: md5::compute("core::u64").0,
-                },
-                name: u64_type.as_ptr(),
-                group: TypeGroup::FundamentalTypes,
-            })),
-        ];
-
-        let ret_type = Box::new(TypeInfo {
-            guid: Guid {
-                b: md5::compute("*mut core::u8").0,
-            },
-            name: ptr_mut_u8_type.as_ptr(),
-            group: TypeGroup::FundamentalTypes,
-        });
-
-        let fn_info = FunctionInfo {
-            signature: FunctionSignature {
-                name: name.as_ptr(),
-                arg_types: arg_types.as_ptr() as *const *const _,
-                return_type: ret_type.as_ref(),
-                num_arg_types: 2,
-                privacy: Privacy::Public,
-            },
-            fn_ptr: malloc as *const std::ffi::c_void,
-        };
+        let (malloc_info, malloc_storage) = FunctionInfoStorage::new_function(
+            "malloc",
+            &["core::u8".to_string(), "core::u64".to_string()],
+            Some("*mut core::u8".to_string()),
+            Privacy::Public,
+            malloc as *const std::ffi::c_void,
+        );
 
         let mut dispatch_table = DispatchTable::default();
-        dispatch_table.insert_fn("malloc", fn_info);
+        dispatch_table.insert_fn("malloc", malloc_info);
 
         let watcher: RecommendedWatcher = Watcher::new(tx, options.delay)?;
         let mut runtime = Runtime {
@@ -176,11 +141,7 @@ impl Runtime {
             watcher,
             watcher_rx: rx,
 
-            _name: name,
-            _u64_type: u64_type,
-            _ptr_mut_u8_type: ptr_mut_u8_type,
-            _arg_types: arg_types,
-            _ret_type: ret_type,
+            _local_fn_storage: vec![malloc_storage],
         };
 
         runtime.add_assembly(&options.library_path)?;
@@ -239,15 +200,6 @@ impl Runtime {
             }
         }
         false
-    }
-}
-
-impl Drop for Runtime {
-    fn drop(&mut self) {
-        for raw_arg_type in self._arg_types.iter() {
-            // Drop arg type memory
-            let _arg_type = unsafe { Box::from_raw(*raw_arg_type) };
-        }
     }
 }
 
