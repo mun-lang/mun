@@ -18,7 +18,7 @@ pub trait Intrinsic: Sync {
 
 intrinsics! {
     /// Allocates memory from the runtime to use in code.
-    pub fn malloc(size: u64, alignment: u64) -> *mut u8;
+    pub fn malloc(allocator_handle: *mut std::ffi::c_void, size: u64, alignment: u64) -> *mut u8;
     /// Allocates memory for and clones the specified type located at `src` into it.
     pub fn clone(src: *const u8, ty: *const TypeInfo) -> *mut u8;
 }

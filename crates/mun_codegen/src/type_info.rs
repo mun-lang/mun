@@ -92,6 +92,12 @@ impl HasStaticTypeInfo for bool {
     }
 }
 
+impl HasStaticTypeInfo for *mut std::ffi::c_void {
+    fn type_info() -> TypeInfo {
+        TypeInfo::new("*mut core::void", TypeGroup::FundamentalTypes)
+    }
+}
+
 impl<T: HasStaticTypeInfo> HasStaticTypeInfo for *mut T {
     fn type_info() -> TypeInfo {
         TypeInfo::new(

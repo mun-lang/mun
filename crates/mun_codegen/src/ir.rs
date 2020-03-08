@@ -191,6 +191,12 @@ impl IsPointerType for *const TypeInfo {
     }
 }
 
+impl IsPointerType for *mut std::ffi::c_void {
+    fn ir_type(context: &Context) -> PointerType {
+        context.i8_type().ptr_type(AddressSpace::Generic)
+    }
+}
+
 impl<S: BasicType, T: IsIrType<Type = S>> IsPointerType for *mut T {
     fn ir_type(context: &Context) -> PointerType {
         T::ir_type(context).ptr_type(AddressSpace::Generic)

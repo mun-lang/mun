@@ -5,10 +5,11 @@ expression: "struct(gc) Foo { a: int };\n\nfn main(c:int):int {\n    let b = Foo
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
 
-%DispatchTable = type { i8* (i8 addrspace(4)*, i8 addrspace(4)*)*, i8* (i64, i64)* }
+%DispatchTable = type { i8* (i8 addrspace(4)*, i8 addrspace(4)*)*, i8* (i8*, i64, i64)* }
 %Foo = type { i64 }
 
 @dispatchTable = global %DispatchTable zeroinitializer
+@allocatorHandle = private unnamed_addr global i8* null
 
 define i64 @main(i64) {
 body:
@@ -18,8 +19,9 @@ body:
   %c1 = load i64, i64* %c
   %add = add i64 %c1, 5
   %init = insertvalue %Foo undef, i64 %add, 0
-  %malloc_ptr = load i8* (i64, i64)*, i8* (i64, i64)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 1)
-  %malloc = call i8* %malloc_ptr(i64 ptrtoint (i64* getelementptr (i64, i64* null, i32 1) to i64), i64 ptrtoint (i64* getelementptr ({ i1, i64 }, { i1, i64 }* null, i64 0, i32 1) to i64))
+  %malloc_ptr = load i8* (i8*, i64, i64)*, i8* (i8*, i64, i64)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 1)
+  %allocator_handle = load i8*, i8** @allocatorHandle
+  %malloc = call i8* %malloc_ptr(i8* %allocator_handle, i64 ptrtoint (i64* getelementptr (i64, i64* null, i32 1) to i64), i64 ptrtoint (i64* getelementptr ({ i1, i64 }, { i1, i64 }* null, i64 0, i32 1) to i64))
   %Foo = bitcast i8* %malloc to %Foo*
   store %Foo %init, %Foo* %Foo
   store %Foo* %Foo, %Foo** %b

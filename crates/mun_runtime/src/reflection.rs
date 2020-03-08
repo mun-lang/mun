@@ -279,6 +279,14 @@ impl ReturnTypeReflection for *const abi::TypeInfo {
     }
 }
 
+impl ReturnTypeReflection for *mut std::ffi::c_void {
+    type Marshalled = *mut std::ffi::c_void;
+
+    fn type_name() -> &'static str {
+        "*mut core::void"
+    }
+}
+
 impl ReturnTypeReflection for f64 {
     type Marshalled = f64;
 

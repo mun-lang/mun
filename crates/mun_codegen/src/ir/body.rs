@@ -15,7 +15,7 @@ use inkwell::{
 use std::{collections::HashMap, mem, sync::Arc};
 
 use inkwell::basic_block::BasicBlock;
-use inkwell::values::{AggregateValueEnum, PointerValue};
+use inkwell::values::{AggregateValueEnum, GlobalValue, PointerValue};
 
 struct LoopInfo {
     break_values: Vec<(
@@ -40,6 +40,7 @@ pub(crate) struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
     active_loop: Option<LoopInfo>,
     hir_function: hir::Function,
     params: CodeGenParams,
+    allocator_handle_global: Option<GlobalValue>,
 }
 
 impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
@@ -51,6 +52,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         function_map: &'a HashMap<hir::Function, FunctionValue>,
         dispatch_table: &'b DispatchTable,
         params: CodeGenParams,
+        allocator_handle_global: Option<GlobalValue>,
     ) -> Self {
         // Get the type information from the `hir::Function`
         let body = hir_function.body(db);
@@ -77,6 +79,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             active_loop: None,
             hir_function,
             params,
+            allocator_handle_global,
         }
     }
 
@@ -304,11 +307,20 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         let malloc_fn_ptr = self
             .dispatch_table
             .gen_intrinsic_lookup(&self.builder, &intrinsics::malloc);
+
+        let allocator_handle = self.builder.build_load(
+            self.allocator_handle_global
+                .expect("no allocator handle was specified, this is required to be able to malloc")
+                .as_pointer_value(),
+            "allocator_handle",
+        );
+
         let mem_ptr = self
             .builder
             .build_call(
                 malloc_fn_ptr,
                 &[
+                    allocator_handle,
                     struct_ir_ty.size_of().unwrap().into(),
                     struct_ir_ty.get_alignment().into(),
                 ],

@@ -1,6 +1,6 @@
 use crate::ir::body::BodyIrGenerator;
 use crate::ir::dispatch_table::DispatchTable;
-use crate::values::FunctionValue;
+use crate::values::{FunctionValue, GlobalValue};
 use crate::{CodeGenParams, IrDatabase, Module, OptimizationLevel};
 use inkwell::passes::{PassManager, PassManagerBuilder};
 use inkwell::types::AnyTypeEnum;
@@ -48,6 +48,7 @@ pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
     module: &'a Module,
     llvm_functions: &'a HashMap<hir::Function, FunctionValue>,
     dispatch_table: &'b DispatchTable,
+    allocator_handle_global: Option<GlobalValue>,
 ) -> FunctionValue {
     let mut code_gen = BodyIrGenerator::new(
         db,
@@ -59,6 +60,7 @@ pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
         CodeGenParams {
             make_marshallable: false,
         },
+        allocator_handle_global,
     );
 
     code_gen.gen_fn_body();
@@ -75,6 +77,7 @@ pub(crate) fn gen_wrapper_body<'a, 'b, D: IrDatabase>(
     module: &'a Module,
     llvm_functions: &'a HashMap<hir::Function, FunctionValue>,
     dispatch_table: &'b DispatchTable,
+    allocator_handle_global: Option<GlobalValue>,
 ) -> FunctionValue {
     let mut code_gen = BodyIrGenerator::new(
         db,
@@ -86,6 +89,7 @@ pub(crate) fn gen_wrapper_body<'a, 'b, D: IrDatabase>(
         CodeGenParams {
             make_marshallable: true,
         },
+        allocator_handle_global,
     );
 
     code_gen.gen_fn_wrapper();

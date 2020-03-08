@@ -163,6 +163,7 @@ impl Linker for MsvcLinker {
         self.args.push("/DLL".to_owned());
         self.args.push("/NOENTRY".to_owned());
         self.args.push("/EXPORT:get_info".to_owned());
+        self.args.push("/EXPORT:set_allocator_handle".to_owned());
         self.args.push(format!("/IMPLIB:{}", dll_lib_path_str));
         self.args.push(format!("/OUT:{}", dll_path_str));
         Ok(())

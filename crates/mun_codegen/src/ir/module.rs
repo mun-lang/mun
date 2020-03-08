@@ -4,7 +4,8 @@ use crate::ir::function;
 use crate::type_info::TypeInfo;
 use crate::{CodeGenParams, IrDatabase};
 use hir::{FileId, ModuleDef};
-use inkwell::{module::Module, values::FunctionValue};
+use inkwell::values::UnnamedAddress;
+use inkwell::{module::Module, values::FunctionValue, AddressSpace};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -104,6 +105,19 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
     let dispatch_table = dispatch_table_builder.finalize(&functions);
     let fn_pass_manager = function::create_pass_manager(&llvm_module, db.optimization_lvl());
 
+    // Create the allocator handle global value
+    let allocator_handle_global = if dispatch_table.has_intrinsic(&crate::intrinsics::malloc) {
+        let allocator_handle_global_type = db.context().i8_type().ptr_type(AddressSpace::Generic);
+        let allocator_handle_global =
+            llvm_module.add_global(allocator_handle_global_type, None, "allocatorHandle");
+        allocator_handle_global.set_initializer(&allocator_handle_global_type.const_null());
+        allocator_handle_global.set_linkage(inkwell::module::Linkage::Private);
+        allocator_handle_global.set_unnamed_address(UnnamedAddress::Global);
+        Some(allocator_handle_global)
+    } else {
+        None
+    };
+
     // Generate the function bodies
     for (hir_function, llvm_function) in functions.iter() {
         function::gen_body(
@@ -113,6 +127,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
             &llvm_module,
             &functions,
             &dispatch_table,
+            allocator_handle_global,
         );
         fn_pass_manager.run_on(llvm_function);
     }
@@ -125,6 +140,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
             &llvm_module,
             &functions,
             &dispatch_table,
+            allocator_handle_global,
         );
         fn_pass_manager.run_on(llvm_function);
     }

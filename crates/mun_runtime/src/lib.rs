@@ -8,6 +8,7 @@ mod assembly;
 mod function;
 #[macro_use]
 mod macros;
+mod allocator;
 mod marshal;
 mod reflection;
 mod r#struct;
@@ -31,9 +32,11 @@ use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 pub use crate::marshal::Marshal;
 pub use crate::reflection::{ArgumentReflection, ReturnTypeReflection};
 
+pub use crate::allocator::Allocator;
 pub use crate::assembly::Assembly;
 use crate::function::IntoFunctionInfo;
 pub use crate::r#struct::StructRef;
+use std::sync::Arc;
 
 /// Options for the construction of a [`Runtime`].
 pub struct RuntimeOptions {
@@ -61,7 +64,10 @@ impl RuntimeBuilder {
             },
         };
 
-        result.insert_fn("malloc", malloc as extern "C" fn(u64, u64) -> *mut u8);
+        result.insert_fn(
+            "malloc",
+            malloc as extern "C" fn(*mut std::ffi::c_void, u64, u64) -> *mut u8,
+        );
 
         result.insert_fn(
             "clone",
@@ -127,13 +133,19 @@ pub struct Runtime {
     dispatch_table: DispatchTable,
     watcher: RecommendedWatcher,
     watcher_rx: Receiver<DebouncedEvent>,
+    allocator: Arc<Allocator>,
     _user_functions: Vec<FunctionInfoStorage>,
 }
 
-extern "C" fn malloc(size: u64, alignment: u64) -> *mut u8 {
-    unsafe {
-        std::alloc::alloc(Layout::from_size_align(size as usize, alignment as usize).unwrap())
-    }
+extern "C" fn malloc(
+    allocator_handle: *mut std::ffi::c_void,
+    size: u64,
+    alignment: u64,
+) -> *mut u8 {
+    // Get the allocator from the passed in handle. This value must have initially been set by
+    // the call the `set_allocator_handle` exposed by the Mun library.
+    let allocator = unsafe { Arc::from_raw(allocator_handle as *const Allocator) };
+    allocator.alloc(size, alignment)
 }
 
 extern "C" fn clone(src: *const u8, ty: *const abi::TypeInfo) -> *mut u8 {
@@ -143,7 +155,10 @@ extern "C" fn clone(src: *const u8, ty: *const abi::TypeInfo) -> *mut u8 {
         + struct_info.field_sizes().last().cloned().unwrap_or(0);
     let alignment = 8;
 
-    let dest = malloc(size as u64, alignment);
+    //let dest = malloc(size as u64, alignment);
+    let dest = unsafe {
+        std::alloc::alloc(Layout::from_size_align(size as usize, alignment as usize).unwrap())
+    };
     unsafe { ptr::copy_nonoverlapping(src, dest, size as usize) };
     dest
 }
@@ -169,6 +184,7 @@ impl Runtime {
             dispatch_table,
             watcher,
             watcher_rx: rx,
+            allocator: Arc::new(Allocator::new()),
             _user_functions: storages,
         };
 
@@ -187,7 +203,11 @@ impl Runtime {
             .into());
         }
 
-        let mut assembly = Assembly::load(&library_path, &mut self.dispatch_table)?;
+        let mut assembly = Assembly::load(
+            &library_path,
+            &mut self.dispatch_table,
+            self.allocator.clone(),
+        )?;
         for dependency in assembly.info().dependencies() {
             self.add_assembly(Path::new(dependency))?;
         }

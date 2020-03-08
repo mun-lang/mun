@@ -526,6 +526,7 @@ pub(super) fn gen_reflection_ir(
 
     // Construct the actual `get_info` function
     gen_get_info_fn(db, module, &abi_types, module_info, dispatch_table);
+    gen_set_allocator_handle_fn(db, module);
 }
 
 /// Construct the actual `get_info` function.
@@ -616,4 +617,34 @@ fn gen_get_info_fn(
 
     // Run the function optimizer on the generate function
     function::create_pass_manager(&module, db.optimization_lvl()).run_on(&get_symbols_fn);
+}
+
+fn gen_set_allocator_handle_fn(db: &impl IrDatabase, module: &Module) {
+    let context = module.get_context();
+    let allocator_handle_type = context.i8_type().ptr_type(AddressSpace::Generic);
+
+    let set_allocator_handle_fn_type = context
+        .void_type()
+        .fn_type(&[allocator_handle_type.into()], false);
+
+    let set_allocator_handle_fn = module.add_function(
+        "set_allocator_handle",
+        set_allocator_handle_fn_type,
+        Some(Linkage::DLLExport),
+    );
+
+    let builder = db.context().create_builder();
+    let body_ir = db
+        .context()
+        .append_basic_block(&set_allocator_handle_fn, "body");
+    builder.position_at_end(&body_ir);
+
+    if let Some(allocator_handle_global) = module.get_global("allocatorHandle") {
+        builder.build_store(
+            allocator_handle_global.as_pointer_value(),
+            set_allocator_handle_fn.get_nth_param(0).unwrap(),
+        );
+    }
+
+    builder.build_return(None);
 }
