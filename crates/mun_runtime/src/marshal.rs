@@ -31,7 +31,7 @@ impl<T> Marshal<T> for T {
         self
     }
 
-    fn marshal_from_ptr<'r>(
+    fn marshal_from_ptr(
         ptr: NonNull<Self>,
         _runtime: Rc<RefCell<Runtime>>,
         _type_info: Option<&abi::TypeInfo>,

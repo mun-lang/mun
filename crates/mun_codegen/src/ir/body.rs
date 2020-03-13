@@ -1,6 +1,7 @@
 use crate::intrinsics;
 use crate::{
-    ir::dispatch_table::DispatchTable, ir::try_convert_any_to_basic, CodeGenParams, IrDatabase,
+    ir::{dispatch_table::DispatchTable, try_convert_any_to_basic, type_table::TypeTable},
+    CodeGenParams, IrDatabase,
 };
 use hir::{
     ArenaId, ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDisplay, InferenceResult, Literal,
@@ -37,6 +38,7 @@ pub(crate) struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
     pat_to_name: HashMap<PatId, String>,
     function_map: &'a HashMap<hir::Function, FunctionValue>,
     dispatch_table: &'b DispatchTable,
+    type_table: &'b TypeTable,
     active_loop: Option<LoopInfo>,
     hir_function: hir::Function,
     params: CodeGenParams,
@@ -51,6 +53,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         ir_function: FunctionValue,
         function_map: &'a HashMap<hir::Function, FunctionValue>,
         dispatch_table: &'b DispatchTable,
+        type_table: &'b TypeTable,
         params: CodeGenParams,
         allocator_handle_global: Option<GlobalValue>,
     ) -> Self {
@@ -76,6 +79,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             pat_to_name: HashMap::default(),
             function_map,
             dispatch_table,
+            type_table,
             active_loop: None,
             hir_function,
             params,
@@ -304,31 +308,42 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         struct_lit: StructValue,
     ) -> BasicValueEnum {
         let struct_ir_ty = self.db.struct_ty(hir_struct);
-        let malloc_fn_ptr = self
+        let new_fn_ptr = self
             .dispatch_table
-            .gen_intrinsic_lookup(&self.builder, &intrinsics::malloc);
+            .gen_intrinsic_lookup(&self.builder, &intrinsics::new);
+
+        let type_info_ptr = self
+            .type_table
+            .gen_type_info_lookup(&self.builder, &self.db.type_info(hir_struct.ty(self.db)));
+
+        // HACK: We should be able to use pointers for built-in struct types like `TypeInfo` in intrinsics
+        let type_info_ptr = self.builder.build_bitcast(
+            type_info_ptr,
+            self.module
+                .get_context()
+                .i8_type()
+                .ptr_type(AddressSpace::Const),
+            "type_info_ptr_to_i8_ptr",
+        );
 
         let allocator_handle = self.builder.build_load(
             self.allocator_handle_global
-                .expect("no allocator handle was specified, this is required to be able to malloc")
+                .expect("no allocator handle was specified, this is required for structs")
                 .as_pointer_value(),
             "allocator_handle",
         );
 
-        let mem_ptr = self
+        let object_ptr = self
             .builder
-            .build_call(
-                malloc_fn_ptr,
-                &[
-                    allocator_handle,
-                    struct_ir_ty.size_of().unwrap().into(),
-                    struct_ir_ty.get_alignment().into(),
-                ],
-                "malloc",
-            )
+            .build_call(new_fn_ptr, &[type_info_ptr, allocator_handle], "new")
             .try_as_basic_value()
             .left()
-            .unwrap();
+            .unwrap()
+            .into_pointer_value();
+        let mem_ptr = self
+            .builder
+            .build_load(object_ptr, "mem_ptr")
+            .into_pointer_value();
         let struct_ptr = self
             .builder
             .build_bitcast(
@@ -338,7 +353,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             )
             .into_pointer_value();
         self.builder.build_store(struct_ptr, struct_lit);
-        struct_ptr.into()
+        object_ptr.into()
     }
 
     /// Generates IR for a record literal, e.g. `Foo { a: 1.23, b: 4 }`
@@ -481,11 +496,21 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 ..
             }) => match s.data(self.db).memory_kind {
                 hir::StructMemoryKind::GC => {
-                    self.builder.build_load(value.into_pointer_value(), "deref")
+                    let mem_ptr = self
+                        .builder
+                        .build_load(value.into_pointer_value(), "mem_ptr")
+                        .into_pointer_value();
+
+                    self.builder.build_load(mem_ptr, "deref")
                 }
                 hir::StructMemoryKind::Value => {
                     if self.params.make_marshallable {
-                        self.builder.build_load(value.into_pointer_value(), "deref")
+                        let mem_ptr = self
+                            .builder
+                            .build_load(value.into_pointer_value(), "mem_ptr")
+                            .into_pointer_value();
+
+                        self.builder.build_load(mem_ptr, "deref")
                     } else {
                         value
                     }

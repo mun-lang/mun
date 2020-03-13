@@ -21,12 +21,12 @@ impl TestDriver {
             rel_path: RelativePathBuf::from("main.mun"),
             contents: text.to_owned(),
         };
-        let (driver, file_id) = Driver::with_file(config, input).unwrap();
+        let (mut driver, file_id) = Driver::with_file(config, input).unwrap();
         let mut err_stream = mun_compiler::StandardStream::stderr(ColorChoice::Auto);
         if driver.emit_diagnostics(&mut err_stream).unwrap() {
             panic!("compiler errors..")
         }
-        let out_path = driver.write_assembly(file_id).unwrap().unwrap();
+        let out_path = driver.write_assembly(file_id).unwrap();
         let runtime = make_runtime(&out_path);
         TestDriver {
             _temp_dir: temp_dir,

@@ -3,7 +3,6 @@ mod code_gen;
 mod db;
 #[macro_use]
 mod ir;
-pub(crate) mod symbols;
 
 #[cfg(test)]
 mod mock;
@@ -16,7 +15,7 @@ pub(crate) mod type_info;
 pub use inkwell::{builder, context::Context, module::Module, values, OptimizationLevel};
 
 pub use crate::{
-    code_gen::write_module_shared_object,
+    code_gen::ModuleBuilder,
     db::{IrDatabase, IrDatabaseStorage},
 };
 

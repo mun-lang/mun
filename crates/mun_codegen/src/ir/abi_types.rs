@@ -2,7 +2,7 @@ use inkwell::context::ContextRef;
 use inkwell::types::{ArrayType, IntType, StructType};
 use inkwell::AddressSpace;
 
-pub(super) struct AbiTypes {
+pub(crate) struct AbiTypes {
     pub guid_type: ArrayType,
     pub type_group_type: IntType,
     pub privacy_type: IntType,
@@ -16,7 +16,7 @@ pub(super) struct AbiTypes {
 }
 
 /// Returns an `AbiTypes` struct that contains references to all LLVM ABI types.
-pub(super) fn gen_abi_types(context: ContextRef) -> AbiTypes {
+pub(crate) fn gen_abi_types(context: ContextRef) -> AbiTypes {
     let str_type = context.i8_type().ptr_type(AddressSpace::Const);
 
     // Construct the `MunGuid` type
@@ -78,6 +78,7 @@ pub(super) fn gen_abi_types(context: ContextRef) -> AbiTypes {
             context.i16_type().ptr_type(AddressSpace::Const).into(), // field_offsets
             context.i16_type().ptr_type(AddressSpace::Const).into(), // field_sizes
             context.i16_type().into(),                               // num_fields
+            context.i16_type().into(),                               // alignment
             context.i8_type().into(),                                // memory_kind
         ],
         false,

@@ -16,7 +16,7 @@ impl From<TypeGroup> for u64 {
     }
 }
 
-#[derive(Clone, Eq, Debug)]
+#[derive(Clone, Debug, Eq)]
 pub struct TypeInfo {
     pub guid: Guid,
     pub name: String,
@@ -32,6 +32,18 @@ impl Hash for TypeInfo {
 impl PartialEq for TypeInfo {
     fn eq(&self, other: &Self) -> bool {
         self.guid == other.guid
+    }
+}
+
+impl Ord for TypeInfo {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.guid.cmp(&other.guid)
+    }
+}
+
+impl PartialOrd for TypeInfo {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -92,9 +104,9 @@ impl HasStaticTypeInfo for bool {
     }
 }
 
-impl HasStaticTypeInfo for *mut std::ffi::c_void {
+impl HasStaticTypeInfo for std::ffi::c_void {
     fn type_info() -> TypeInfo {
-        TypeInfo::new("*mut core::void", TypeGroup::FundamentalTypes)
+        TypeInfo::new("core::void", TypeGroup::FundamentalTypes)
     }
 }
 

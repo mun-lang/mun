@@ -1,111 +1,57 @@
-use super::abi_types::{gen_abi_types, AbiTypes};
+use crate::code_gen::{gen_global, gen_struct_ptr_array, intern_string};
 use crate::ir::{
+    abi_types::{gen_abi_types, AbiTypes},
     dispatch_table::{DispatchTable, DispatchableFunction},
     function,
+    type_table::TypeTable,
 };
-use crate::type_info::{TypeGroup, TypeInfo};
-use crate::values::{BasicValue, GlobalValue};
-use crate::{CodeGenParams, IrDatabase};
+use crate::type_info::TypeInfo;
+use crate::IrDatabase;
 use hir::Ty;
 use inkwell::{
     attributes::Attribute,
     module::{Linkage, Module},
-    targets::TargetMachine,
-    values::{FunctionValue, IntValue, PointerValue, StructValue, UnnamedAddress},
+    values::{FunctionValue, GlobalValue, PointerValue, StructValue},
     AddressSpace,
 };
-use std::collections::{HashMap, HashSet};
-
-struct GlobalArrayValue(GlobalValue, usize);
-
-/// Construct an IR `MunTypeInfo` struct value for the specified `TypeInfo`
-fn type_info_ir<D: IrDatabase>(
-    db: &D,
-    target: &TargetMachine,
-    module: &Module,
-    types: &AbiTypes,
-    global_type_info_lookup_table: &mut HashMap<TypeInfo, PointerValue>,
-    type_info: TypeInfo,
-) -> PointerValue {
-    if let Some(value) = global_type_info_lookup_table.get(&type_info) {
-        *value
-    } else {
-        let context = module.get_context();
-        let guid_values: [IntValue; 16] = array_init::array_init(|i| {
-            context
-                .i8_type()
-                .const_int(u64::from(type_info.guid.b[i]), false)
-        });
-
-        let type_info_ir = context.const_struct(
-            &[
-                context.i8_type().const_array(&guid_values).into(),
-                intern_string(module, &type_info.name).into(),
-                context
-                    .i8_type()
-                    .const_int(type_info.group.clone().into(), false)
-                    .into(),
-            ],
-            false,
-        );
-
-        let type_info_ir = match type_info.group {
-            TypeGroup::FundamentalTypes => type_info_ir,
-            TypeGroup::StructTypes(s) => {
-                let struct_info_ir =
-                    gen_struct_info(db, target, module, types, global_type_info_lookup_table, s);
-                context.const_struct(&[type_info_ir.into(), struct_info_ir.into()], false)
-            }
-        };
-
-        let type_info_ir = gen_global(module, &type_info_ir, "").as_pointer_value();
-        global_type_info_lookup_table.insert(type_info, type_info_ir);
-        type_info_ir
-    }
-}
-
-/// Intern a string by constructing a global value. Looks something like this:
-/// ```c
-/// const char[] GLOBAL_ = "str";
-/// ```
-fn intern_string(module: &Module, str: &str) -> PointerValue {
-    let value = module.get_context().const_string(str, true);
-    gen_global(module, &value, ".str").as_pointer_value()
-}
+use std::collections::HashMap;
 
 /// Construct a `MunFunctionSignature` struct for the specified HIR function.
 fn gen_signature_from_function<D: IrDatabase>(
     db: &D,
     module: &Module,
     types: &AbiTypes,
-    global_type_info_lookup_table: &HashMap<TypeInfo, PointerValue>,
+    type_table: &TypeTable,
     function: hir::Function,
 ) -> StructValue {
-    let name_str = intern_string(&module, &function.name(db).to_string());
+    let name = function.name(db).to_string();
+
+    let name_ir = intern_string(&module, &name, &name);
     let _visibility = match function.visibility(db) {
         hir::Visibility::Public => 0,
         _ => 1,
     };
 
     let fn_sig = function.ty(db).callable_sig(db).unwrap();
-    let ret_type_ir = gen_signature_return_type(
-        db,
-        types,
-        global_type_info_lookup_table,
-        fn_sig.ret().clone(),
-    );
+    let ret_type_ir = gen_signature_return_type(db, types, type_table, fn_sig.ret().clone());
 
-    let params_type_ir = gen_type_info_ptr_array(
+    let param_types: Vec<PointerValue> = fn_sig
+        .params()
+        .iter()
+        .map(|ty| type_table.get(&db.type_info(ty.clone())).unwrap())
+        .collect();
+
+    let param_types = gen_struct_ptr_array(
         module,
-        types,
-        global_type_info_lookup_table,
-        fn_sig.params().iter().map(|ty| db.type_info(ty.clone())),
+        types.type_info_type,
+        &param_types,
+        &format!("fn_sig::<{}>::arg_types", name),
     );
     let num_params = fn_sig.params().len();
 
     types.function_signature_type.const_named_struct(&[
-        name_str.into(),
-        params_type_ir.into(),
+        name_ir.into(),
+        param_types.into(),
         ret_type_ir.into(),
         module
             .get_context()
@@ -121,10 +67,14 @@ fn gen_signature_from_dispatch_entry<D: IrDatabase>(
     db: &D,
     module: &Module,
     types: &AbiTypes,
-    global_type_info_lookup_table: &HashMap<TypeInfo, PointerValue>,
+    type_table: &TypeTable,
     function: &DispatchableFunction,
 ) -> StructValue {
-    let name_str = intern_string(&module, &function.prototype.name);
+    let name_str = intern_string(
+        &module,
+        &function.prototype.name,
+        &format!("fn_sig::<{}>::name", function.prototype.name),
+    );
     //    let _visibility = match function.visibility(db) {
     //        hir::Visibility::Public => 0,
     //        _ => 1,
@@ -132,20 +82,26 @@ fn gen_signature_from_dispatch_entry<D: IrDatabase>(
     let ret_type_ir = gen_signature_return_type_from_type_info(
         db,
         types,
-        global_type_info_lookup_table,
+        type_table,
         function.prototype.ret_type.clone(),
     );
-    let params_type_ir = gen_type_info_ptr_array(
+    let param_types: Vec<PointerValue> = function
+        .prototype
+        .arg_types
+        .iter()
+        .map(|type_info| type_table.get(type_info).unwrap())
+        .collect();
+    let param_types = gen_struct_ptr_array(
         module,
-        types,
-        global_type_info_lookup_table,
-        function.prototype.arg_types.iter().cloned(),
+        types.type_info_type,
+        &param_types,
+        &format!("{}_param_types", function.prototype.name),
     );
     let num_params = function.prototype.arg_types.len();
 
     types.function_signature_type.const_named_struct(&[
         name_str.into(),
-        params_type_ir.into(),
+        param_types.into(),
         ret_type_ir.into(),
         module
             .get_context()
@@ -156,76 +112,18 @@ fn gen_signature_from_dispatch_entry<D: IrDatabase>(
     ])
 }
 
-/// Recursively expands an array of TypeInfo into an array of IR pointers
-fn expand_type_info<D: IrDatabase>(
-    db: &D,
-    target: &TargetMachine,
-    module: &Module,
-    types: &AbiTypes,
-    global_type_info_lookup_table: &mut HashMap<TypeInfo, PointerValue>,
-    hir_types: impl Iterator<Item = TypeInfo>,
-) -> PointerValue {
-    let mut hir_types = hir_types.peekable();
-    if hir_types.peek().is_none() {
-        types
-            .type_info_type
-            .ptr_type(AddressSpace::Const)
-            .ptr_type(AddressSpace::Const)
-            .const_null()
-    } else {
-        let type_infos = hir_types
-            .map(|ty| type_info_ir(db, target, module, types, global_type_info_lookup_table, ty))
-            .collect::<Vec<PointerValue>>();
-
-        let type_array_ir = types
-            .type_info_type
-            .ptr_type(AddressSpace::Const)
-            .const_array(&type_infos);
-
-        gen_global(module, &type_array_ir, "").as_pointer_value()
-    }
-}
-
-/// Generates IR for an array of TypeInfo values
-fn gen_type_info_ptr_array(
-    module: &Module,
-    types: &AbiTypes,
-    global_type_info_lookup_table: &HashMap<TypeInfo, PointerValue>,
-    hir_types: impl Iterator<Item = TypeInfo>,
-) -> PointerValue {
-    let mut hir_types = hir_types.peekable();
-    if hir_types.peek().is_none() {
-        types
-            .type_info_type
-            .ptr_type(AddressSpace::Const)
-            .ptr_type(AddressSpace::Const)
-            .const_null()
-    } else {
-        let type_infos = hir_types
-            .map(|ty| *global_type_info_lookup_table.get(&ty).unwrap())
-            .collect::<Vec<PointerValue>>();
-
-        let type_array_ir = types
-            .type_info_type
-            .ptr_type(AddressSpace::Const)
-            .const_array(&type_infos);
-
-        gen_global(module, &type_array_ir, "").as_pointer_value()
-    }
-}
-
 /// Given a function, construct a pointer to a `MunTypeInfo` global that represents the return type
 /// of the function; or `null` if the return type is empty.
 fn gen_signature_return_type<D: IrDatabase>(
     db: &D,
     types: &AbiTypes,
-    global_type_info_lookup_table: &HashMap<TypeInfo, PointerValue>,
+    type_table: &TypeTable,
     ret_type: Ty,
 ) -> PointerValue {
     gen_signature_return_type_from_type_info(
         db,
         types,
-        global_type_info_lookup_table,
+        type_table,
         if ret_type.is_empty() {
             None
         } else {
@@ -239,11 +137,11 @@ fn gen_signature_return_type<D: IrDatabase>(
 fn gen_signature_return_type_from_type_info<D: IrDatabase>(
     _db: &D,
     types: &AbiTypes,
-    global_type_info_lookup_table: &HashMap<TypeInfo, PointerValue>,
+    type_table: &TypeTable,
     ret_type: Option<TypeInfo>,
 ) -> PointerValue {
     if let Some(ret_type) = ret_type {
-        *global_type_info_lookup_table.get(&ret_type).unwrap()
+        type_table.get(&ret_type).unwrap()
     } else {
         types
             .type_info_type
@@ -258,9 +156,9 @@ fn gen_function_info_array<'a, D: IrDatabase>(
     db: &D,
     module: &Module,
     types: &AbiTypes,
-    global_type_info_lookup_table: &HashMap<TypeInfo, PointerValue>,
+    type_table: &TypeTable,
     functions: impl Iterator<Item = (&'a hir::Function, &'a FunctionValue)>,
-) -> GlobalArrayValue {
+) -> GlobalValue {
     let function_infos: Vec<StructValue> = functions
         .map(|(f, value)| {
             // Get the function from the cloned module and modify the linkage of the function.
@@ -270,8 +168,7 @@ fn gen_function_info_array<'a, D: IrDatabase>(
             value.set_linkage(Linkage::Private);
 
             // Generate the signature from the function
-            let signature =
-                gen_signature_from_function(db, module, types, global_type_info_lookup_table, *f);
+            let signature = gen_signature_from_function(db, module, types, type_table, *f);
 
             // Generate the function info value
             types.function_info_type.const_named_struct(&[
@@ -280,126 +177,8 @@ fn gen_function_info_array<'a, D: IrDatabase>(
             ])
         })
         .collect();
-    let num_functions = function_infos.len();
     let function_infos = types.function_info_type.const_array(&function_infos);
-
-    GlobalArrayValue(
-        gen_global(module, &function_infos, "fn.get_info.functions"),
-        num_functions,
-    )
-}
-
-/// Construct a global that holds a reference to all structs. e.g.:
-/// MunStructInfo[] info = { ... }
-fn gen_struct_info<D: IrDatabase>(
-    db: &D,
-    target: &TargetMachine,
-    module: &Module,
-    types: &AbiTypes,
-    global_type_info_lookup_table: &mut HashMap<TypeInfo, PointerValue>,
-    s: hir::Struct,
-) -> StructValue {
-    let name_str = intern_string(&module, &s.name(db).to_string());
-
-    let fields = s.fields(db);
-    let field_names = fields.iter().map(|field| field.name(db).to_string());
-    let (field_names, num_fields) = gen_string_array(module, field_names);
-
-    let field_types = expand_type_info(
-        db,
-        target,
-        module,
-        types,
-        global_type_info_lookup_table,
-        fields.iter().map(|field| db.type_info(field.ty(db))),
-    );
-
-    let target_data = target.get_target_data();
-    let t = db.struct_ty(s);
-    let field_offsets =
-        (0..fields.len()).map(|idx| target_data.offset_of_element(&t, idx as u32).unwrap());
-    let (field_offsets, _) = gen_u16_array(module, field_offsets);
-
-    let field_sizes = fields.iter().map(|field| {
-        target_data.get_store_size(&db.type_ir(
-            field.ty(db),
-            CodeGenParams {
-                make_marshallable: false,
-            },
-        ))
-    });
-    let (field_sizes, _) = gen_u16_array(module, field_sizes);
-
-    types.struct_info_type.const_named_struct(&[
-        name_str.into(),
-        field_names.into(),
-        field_types.into(),
-        field_offsets.into(),
-        field_sizes.into(),
-        module
-            .get_context()
-            .i16_type()
-            .const_int(num_fields as u64, false)
-            .into(),
-        module
-            .get_context()
-            .i8_type()
-            .const_int(s.data(db).memory_kind.clone().into(), false)
-            .into(),
-    ])
-}
-
-/// Constructs a global from the specified list of strings
-fn gen_string_array(
-    module: &Module,
-    strings: impl Iterator<Item = String>,
-) -> (PointerValue, usize) {
-    let str_type = module.get_context().i8_type().ptr_type(AddressSpace::Const);
-
-    let mut strings = strings.peekable();
-    if strings.peek().is_none() {
-        (str_type.ptr_type(AddressSpace::Const).const_null(), 0)
-    } else {
-        let strings = strings
-            .map(|s| intern_string(module, &s))
-            .collect::<Vec<PointerValue>>();
-
-        let strings_ir = str_type.const_array(&strings);
-        (
-            gen_global(module, &strings_ir, "").as_pointer_value(),
-            strings.len(),
-        )
-    }
-}
-
-/// Constructs a global from the specified list of strings
-fn gen_u16_array(module: &Module, integers: impl Iterator<Item = u64>) -> (PointerValue, usize) {
-    let u16_type = module.get_context().i16_type();
-
-    let mut integers = integers.peekable();
-    if integers.peek().is_none() {
-        (u16_type.ptr_type(AddressSpace::Const).const_null(), 0)
-    } else {
-        let integers = integers
-            .map(|i| u16_type.const_int(i, false))
-            .collect::<Vec<IntValue>>();
-
-        let array_ir = u16_type.const_array(&integers);
-        (
-            gen_global(module, &array_ir, "").as_pointer_value(),
-            integers.len(),
-        )
-    }
-}
-
-/// Construct a global from the specified value
-fn gen_global(module: &Module, value: &dyn BasicValue, name: &str) -> GlobalValue {
-    let global = module.add_global(value.as_basic_value_enum().get_type(), None, name);
-    global.set_linkage(Linkage::Private);
-    global.set_constant(true);
-    global.set_unnamed_address(UnnamedAddress::Global);
-    global.set_initializer(value);
-    global
+    gen_global(module, &function_infos, "fn.get_info.functions")
 }
 
 /// Generate the dispatch table information. e.g.:
@@ -410,22 +189,14 @@ fn gen_dispatch_table<D: IrDatabase>(
     db: &D,
     module: &Module,
     types: &AbiTypes,
-    global_type_info_lookup_table: &HashMap<TypeInfo, PointerValue>,
     dispatch_table: &DispatchTable,
+    type_table: &TypeTable,
 ) -> StructValue {
     // Generate a vector with all the function signatures
     let signatures: Vec<StructValue> = dispatch_table
         .entries()
         .iter()
-        .map(|entry| {
-            gen_signature_from_dispatch_entry(
-                db,
-                module,
-                types,
-                global_type_info_lookup_table,
-                entry,
-            )
-        })
+        .map(|entry| gen_signature_from_dispatch_entry(db, module, types, type_table, entry))
         .collect();
 
     // Construct an IR array from the signatures
@@ -470,59 +241,37 @@ fn gen_dispatch_table<D: IrDatabase>(
 /// for the ABI that `get_info` exposes.
 pub(super) fn gen_reflection_ir(
     db: &impl IrDatabase,
-    target: &TargetMachine,
     module: &Module,
-    types: &HashSet<TypeInfo>,
     function_map: &HashMap<hir::Function, FunctionValue>,
     dispatch_table: &DispatchTable,
+    type_table: &TypeTable,
 ) {
     // Get all the types
     let abi_types = gen_abi_types(module.get_context());
 
-    let mut global_type_info_lookup_table = HashMap::new();
-    let num_types = types.len();
-    let types = expand_type_info(
-        db,
-        target,
-        module,
-        &abi_types,
-        &mut global_type_info_lookup_table,
-        types.iter().cloned(),
-    );
-
-    let GlobalArrayValue(function_info, num_functions) = gen_function_info_array(
-        db,
-        module,
-        &abi_types,
-        &global_type_info_lookup_table,
-        function_map.iter(),
-    );
+    let num_functions = function_map.len();
+    let function_info =
+        gen_function_info_array(db, module, &abi_types, type_table, function_map.iter());
 
     // Construct the module info struct
     let module_info = abi_types.module_info_type.const_named_struct(&[
-        intern_string(module, "").into(),
+        intern_string(module, "", "module_info::path").into(),
         function_info.as_pointer_value().into(),
         module
             .get_context()
             .i32_type()
             .const_int(num_functions as u64, false)
             .into(),
-        types.into(),
+        type_table.pointer_value().into(),
         module
             .get_context()
             .i32_type()
-            .const_int(num_types as u64, false)
+            .const_int(type_table.num_types() as u64, false)
             .into(),
     ]);
 
     // Construct the dispatch table struct
-    let dispatch_table = gen_dispatch_table(
-        db,
-        module,
-        &abi_types,
-        &global_type_info_lookup_table,
-        dispatch_table,
-    );
+    let dispatch_table = gen_dispatch_table(db, module, &abi_types, dispatch_table, type_table);
 
     // Construct the actual `get_info` function
     gen_get_info_fn(db, module, &abi_types, module_info, dispatch_table);

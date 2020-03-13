@@ -1,5 +1,4 @@
-use crate::ir::body::BodyIrGenerator;
-use crate::ir::dispatch_table::DispatchTable;
+use crate::ir::{body::BodyIrGenerator, dispatch_table::DispatchTable, type_table::TypeTable};
 use crate::values::{FunctionValue, GlobalValue};
 use crate::{CodeGenParams, IrDatabase, Module, OptimizationLevel};
 use inkwell::passes::{PassManager, PassManagerBuilder};
@@ -48,6 +47,7 @@ pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
     module: &'a Module,
     llvm_functions: &'a HashMap<hir::Function, FunctionValue>,
     dispatch_table: &'b DispatchTable,
+    type_table: &'b TypeTable,
     allocator_handle_global: Option<GlobalValue>,
 ) -> FunctionValue {
     let mut code_gen = BodyIrGenerator::new(
@@ -57,6 +57,7 @@ pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
         llvm_function,
         llvm_functions,
         dispatch_table,
+        type_table,
         CodeGenParams {
             make_marshallable: false,
         },
@@ -77,6 +78,7 @@ pub(crate) fn gen_wrapper_body<'a, 'b, D: IrDatabase>(
     module: &'a Module,
     llvm_functions: &'a HashMap<hir::Function, FunctionValue>,
     dispatch_table: &'b DispatchTable,
+    type_table: &'b TypeTable,
     allocator_handle_global: Option<GlobalValue>,
 ) -> FunctionValue {
     let mut code_gen = BodyIrGenerator::new(
@@ -86,6 +88,7 @@ pub(crate) fn gen_wrapper_body<'a, 'b, D: IrDatabase>(
         llvm_function,
         llvm_functions,
         dispatch_table,
+        type_table,
         CodeGenParams {
             make_marshallable: true,
         },

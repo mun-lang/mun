@@ -1,4 +1,4 @@
-use crate::{mock::MockDatabase, IrDatabase};
+use crate::{mock::MockDatabase, IrDatabase, ModuleBuilder};
 use hir::{diagnostics::DiagnosticSink, line_index::LineIndex, Module, SourceDatabase};
 use inkwell::OptimizationLevel;
 use mun_target::spec::Target;
@@ -358,7 +358,7 @@ fn while_expr() {
         while n<4 {
             break;
         };
-       }
+    }
     "#,
     )
 }
@@ -512,13 +512,12 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
     let name = if !messages.is_empty() {
         messages.join("\n")
     } else {
-        format!(
-            "{}",
-            db.module_ir(file_id)
-                .llvm_module
-                .print_to_string()
-                .to_string()
-        )
+        let _module_builder =
+            ModuleBuilder::new(&mut db, file_id).expect("Failed to initialize module builder");
+
+        // Generate IR
+        db.module_ir(file_id);
+        format!("{}", db.module().print_to_string().to_string())
     };
     insta::assert_snapshot!(insta::_macro_support::AutoName, name, &text);
 }

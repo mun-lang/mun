@@ -4,6 +4,7 @@ expression: "fn fibonacci(n:int):int {\n    if n <= 1 {\n        n\n    } else {
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
+target triple = "x86-64"
 
 %DispatchTable = type { i64 (i64)* }
 

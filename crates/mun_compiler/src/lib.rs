@@ -54,12 +54,12 @@ impl CompilerOptions {
 }
 
 pub fn main(options: CompilerOptions) -> Result<Option<PathBuf>, failure::Error> {
-    let (driver, file_id) = Driver::with_file(options.config, options.input)?;
+    let (mut driver, file_id) = Driver::with_file(options.config, options.input)?;
 
     let mut writer = StandardStream::stderr(ColorChoice::Auto);
     if driver.emit_diagnostics(&mut writer)? {
         Ok(None)
     } else {
-        driver.write_assembly(file_id)
+        driver.write_assembly(file_id).map(Some)
     }
 }

@@ -4,6 +4,7 @@ expression: "extern fn add(a:int, b:int): int;\nfn main() {\n    add(3,4);\n}"
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
+target triple = "x86-64"
 
 %DispatchTable = type { i64 (i64, i64)* }
 

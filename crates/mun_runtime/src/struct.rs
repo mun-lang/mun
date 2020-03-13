@@ -1,4 +1,5 @@
 use crate::{
+    allocator::ObjectHandle,
     marshal::Marshal,
     reflection::{
         equals_argument_type, equals_return_type, ArgumentReflection, ReturnTypeReflection,
@@ -6,15 +7,23 @@ use crate::{
     Runtime,
 };
 use std::cell::RefCell;
+use std::ffi;
 use std::ptr::{self, NonNull};
 use std::rc::Rc;
+use std::sync::Arc;
 
 /// Represents a Mun struct pointer.
 ///
 /// A byte pointer is used to make pointer arithmetic easier.
 #[repr(transparent)]
 #[derive(Clone)]
-pub struct RawStruct(*mut u8);
+pub struct RawStruct(ObjectHandle);
+
+impl RawStruct {
+    pub fn get_ptr(&self) -> *mut u8 {
+        unsafe { self.0.as_ref().unwrap() }.ptr
+    }
+}
 
 /// Type-agnostic wrapper for interoperability with a Mun struct.
 /// TODO: Handle destruction of `struct(value)`
@@ -56,7 +65,7 @@ impl StructRef {
     unsafe fn offset_unchecked<T>(&self, field_idx: usize) -> NonNull<T> {
         let offset = *self.info.field_offsets().get_unchecked(field_idx);
         // self.raw is never null
-        NonNull::new_unchecked(self.raw.0.add(offset as usize)).cast::<T>()
+        NonNull::new_unchecked(self.raw.get_ptr().add(offset as usize).cast::<T>())
     }
 
     /// Retrieves the value of the field corresponding to the specified `field_name`.
@@ -166,15 +175,30 @@ impl Marshal<StructRef> for RawStruct {
         let type_info = type_info.unwrap();
 
         let struct_info = type_info.as_struct().unwrap();
-        let ptr = if struct_info.memory_kind == abi::StructMemoryKind::Value {
-            ptr.cast::<u8>().as_ptr() as *const _
+        let alloc_handle = Arc::into_raw(runtime.borrow().get_allocator()) as *mut std::ffi::c_void;
+        let object_handle = if struct_info.memory_kind == abi::StructMemoryKind::Value {
+            // Create a new object using the runtime's intrinsic
+            let object_ptr: *const *mut ffi::c_void =
+                invoke_fn!(runtime.clone(), "new", type_info as *const _, alloc_handle).unwrap();
+            let handle = object_ptr as ObjectHandle;
+
+            let src = ptr.cast::<u8>().as_ptr() as *const _;
+            let dest = unsafe { handle.as_ref() }.unwrap().ptr;
+            let size = struct_info.size();
+            unsafe { ptr::copy_nonoverlapping(src, dest, size) };
+
+            handle
         } else {
-            unsafe { ptr.as_ref() }.0 as *const _
+            let ptr = unsafe { ptr.as_ref() }.0 as *const ffi::c_void;
+
+            // Clone the struct using the runtime's intrinsic
+            let cloned_ptr: *const *mut ffi::c_void =
+                invoke_fn!(runtime.clone(), "clone", ptr, alloc_handle).unwrap();
+
+            cloned_ptr as ObjectHandle
         };
 
-        // Clone the struct using the runtime's intrinsic
-        let cloned_ptr = invoke_fn!(runtime.clone(), "clone", ptr, type_info as *const _).unwrap();
-        StructRef::new(runtime, type_info, RawStruct(cloned_ptr))
+        StructRef::new(runtime, type_info, RawStruct(object_handle))
     }
 
     fn marshal_to_ptr(value: RawStruct, mut ptr: NonNull<Self>, type_info: Option<&abi::TypeInfo>) {
@@ -186,7 +210,7 @@ impl Marshal<StructRef> for RawStruct {
             let dest = ptr.cast::<u8>().as_ptr();
             let size = struct_info.field_offsets().last().cloned().unwrap_or(0)
                 + struct_info.field_sizes().last().cloned().unwrap_or(0);
-            unsafe { ptr::copy_nonoverlapping(value.0, dest, size as usize) };
+            unsafe { ptr::copy_nonoverlapping(value.get_ptr(), dest, size as usize) };
         } else {
             unsafe { *ptr.as_mut() = value };
         }

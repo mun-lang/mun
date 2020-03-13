@@ -4,6 +4,7 @@ expression: "fn main(a:int):int {\n    if a > 4 {\n        return a;\n    }\n   
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
+target triple = "x86-64"
 
 define i64 @main(i64) {
 body:
