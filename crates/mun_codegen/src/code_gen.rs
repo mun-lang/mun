@@ -2,6 +2,7 @@ use crate::code_gen::linker::LinkerError;
 use crate::IrDatabase;
 use failure::Fail;
 use hir::{FileId, RelativePathBuf};
+use inkwell::targets::TargetData;
 use inkwell::{
     module::{Linkage, Module},
     passes::{PassManager, PassManagerBuilder},
@@ -80,7 +81,6 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
 
         // Initialize the module and target data
         db.set_module(assembly_module.clone());
-        db.set_target_data(Arc::new(target_machine.get_target_data()));
 
         Ok(Self {
             db,
@@ -242,4 +242,9 @@ pub(crate) fn gen_u16_array(module: &Module, integers: impl Iterator<Item = u64>
         let array_ir = u16_type.const_array(&integers);
         gen_global(module, &array_ir, "").as_pointer_value()
     }
+}
+
+/// Create an inkwell TargetData from the target in the database
+pub(crate) fn target_data_query(db: &impl IrDatabase) -> Arc<TargetData> {
+    Arc::new(TargetData::create(&db.target().data_layout))
 }

@@ -30,6 +30,9 @@ pub struct Target {
     /// The name of the architecture. For example "x86" or "x86_64"
     pub arch: String,
 
+    /// [Data layout](http://llvm.org/docs/LangRef.html#data-layout) to pass to LLVM.
+    pub data_layout: String,
+
     /// Linker flavor
     pub linker_flavor: LinkerFlavor,
 

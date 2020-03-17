@@ -123,6 +123,6 @@ impl Driver {
     /// Generate an assembly for the given file
     pub fn write_assembly(&mut self, file_id: FileId) -> Result<PathBuf, failure::Error> {
         let module_builder = ModuleBuilder::new(&mut self.db, file_id)?;
-        module_builder.finalize(self.out_dir.as_ref().map(|p| p.as_path()))
+        module_builder.finalize(self.out_dir.as_deref())
     }
 }

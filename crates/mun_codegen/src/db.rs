@@ -31,7 +31,7 @@ pub trait IrDatabase: hir::HirDatabase {
     fn target(&self) -> Target;
 
     /// Returns the target machine's data layout for code generation.
-    #[salsa::input]
+    #[salsa::invoke(crate::code_gen::target_data_query)]
     fn target_data(&self) -> Arc<TargetData>;
 
     /// Given a type and code generation parameters, return the corresponding IR type.
