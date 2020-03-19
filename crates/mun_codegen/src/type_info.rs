@@ -1,6 +1,8 @@
+use super::ir::IsIrType;
 use abi::Guid;
 use inkwell::context::Context;
 use inkwell::targets::TargetData;
+use inkwell::types::AnyType;
 use std::hash::{Hash, Hasher};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -18,11 +20,38 @@ impl From<TypeGroup> for u64 {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TypeSize {
+    // The size of the type in bits
+    pub bit_size: u64,
+
+    // The number of bytes required to store the type
+    pub store_size: u64,
+
+    // The number of bytes between successive object, including alignment and padding
+    pub alloc_size: u64,
+
+    // The alignment of the type
+    pub alignment: u32,
+}
+
+impl TypeSize {
+    pub fn from_ir_type(ty: &impl AnyType, target: &TargetData) -> Self {
+        Self {
+            bit_size: target.get_bit_size(ty),
+            store_size: target.get_store_size(ty),
+            alloc_size: target.get_abi_size(ty),
+            alignment: target.get_abi_alignment(ty),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq)]
 pub struct TypeInfo {
     pub guid: Guid,
     pub name: String,
     pub group: TypeGroup,
+    pub size: TypeSize,
 }
 
 impl Hash for TypeInfo {
@@ -50,13 +79,14 @@ impl PartialOrd for TypeInfo {
 }
 
 impl TypeInfo {
-    pub fn new<S: AsRef<str>>(name: S, group: TypeGroup) -> TypeInfo {
+    pub fn new<S: AsRef<str>>(name: S, group: TypeGroup, type_size: TypeSize) -> TypeInfo {
         TypeInfo {
             name: name.as_ref().to_string(),
             guid: Guid {
                 b: md5::compute(name.as_ref()).0,
             },
             group,
+            size: type_size,
         }
     }
 }
@@ -95,13 +125,12 @@ macro_rules! impl_fundamental_static_type_info {
     ),+) => {
         $(
             impl HasStaticTypeInfo for $ty {
-                fn type_info(_context: &Context, _target: &TargetData) -> TypeInfo {
-                    //let ty = <$ty>::ir_type(context, target);
+                fn type_info(context: &Context, target: &TargetData) -> TypeInfo {
+                    let ty = <$ty as IsIrType>::ir_type(context, target);
                     TypeInfo::new(
                         format!("core::{}", stringify!($ty)),
-                        // target.get_abi_size(&ty),
-                        // target.get_abi_alignment(&ty),
                         TypeGroup::FundamentalTypes,
+                        TypeSize::from_ir_type(&ty, target)
                     )
                 }
             }
@@ -113,12 +142,11 @@ impl_fundamental_static_type_info!(u8, u16, u32, u64, i8, i16, i32, i64, f32, f6
 
 impl<T: HasStaticTypeName> HasStaticTypeInfo for *mut T {
     fn type_info(context: &Context, target: &TargetData) -> TypeInfo {
-        //let ty = target.ptr_sized_int_type(None);
+        let ty = target.ptr_sized_int_type(None);
         TypeInfo::new(
             format!("*mut {}", T::type_name(context, target)),
-            // target.get_abi_size(&ty),
-            // target.get_abi_alignment(&ty),
             TypeGroup::FundamentalTypes,
+            TypeSize::from_ir_type(&ty, target),
         )
     }
 }
@@ -128,12 +156,11 @@ impl<T: HasStaticTypeName> HasStaticTypeInfo for *const T {
         context: &inkwell::context::Context,
         target: &inkwell::targets::TargetData,
     ) -> TypeInfo {
-        //let ty = target.ptr_sized_int_type(None);
+        let ty = target.ptr_sized_int_type(None);
         TypeInfo::new(
             format!("*const {}", T::type_name(context, target)),
-            // target.get_abi_size(&ty),
-            // target.get_abi_alignment(&ty),
             TypeGroup::FundamentalTypes,
+            TypeSize::from_ir_type(&ty, target),
         )
     }
 }

@@ -1,10 +1,11 @@
 use super::try_convert_any_to_basic;
+use crate::type_info::TypeSize;
 use crate::{
     type_info::{TypeGroup, TypeInfo},
     CodeGenParams, IrDatabase,
 };
 use hir::{ApplicationTy, CallableDef, FloatBitness, FloatTy, IntBitness, IntTy, Ty, TypeCtor};
-use inkwell::types::{AnyTypeEnum, BasicType, BasicTypeEnum, StructType};
+use inkwell::types::{AnyTypeEnum, BasicType, BasicTypeEnum, FloatType, IntType, StructType};
 use inkwell::AddressSpace;
 use mun_target::spec::Target;
 
@@ -15,23 +16,8 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty, params: CodeGenParams) -> A
     match ty {
         Ty::Empty => AnyTypeEnum::StructType(context.struct_type(&[], false)),
         Ty::Apply(ApplicationTy { ctor, .. }) => match ctor {
-            // Float primitives
-            TypeCtor::Float(fty) => match fty.resolve(&db.target()).bitness {
-                FloatBitness::X64 => AnyTypeEnum::FloatType(context.f64_type()),
-                FloatBitness::X32 => AnyTypeEnum::FloatType(context.f32_type()),
-                _ => unreachable!()
-            }
-
-            // Int primitives
-            TypeCtor::Int(ity) => match ity.resolve(&db.target()).bitness {
-                IntBitness::X64 => AnyTypeEnum::IntType(context.i64_type()),
-                IntBitness::X32 => AnyTypeEnum::IntType(context.i32_type()),
-                IntBitness::X16 => AnyTypeEnum::IntType(context.i16_type()),
-                IntBitness::X8  => AnyTypeEnum::IntType(context.i8_type()),
-                _ => unreachable!()
-            }
-
-            // Boolean
+            TypeCtor::Float(fty) => float_ty_query(db, fty).into(),
+            TypeCtor::Int(ity) => int_ty_query(db, ity).into(),
             TypeCtor::Bool => AnyTypeEnum::IntType(context.bool_type()),
 
             TypeCtor::FnDef(def @ CallableDef::Function(_)) => {
@@ -72,6 +58,28 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty, params: CodeGenParams) -> A
     }
 }
 
+/// Returns the LLVM IR type of the specified float type
+fn float_ty_query(db: &impl IrDatabase, fty: FloatTy) -> FloatType {
+    let context = db.context();
+    match fty.resolve(&db.target()).bitness {
+        FloatBitness::X64 => context.f64_type(),
+        FloatBitness::X32 => context.f32_type(),
+        _ => unreachable!(),
+    }
+}
+
+/// Returns the LLVM IR type of the specified int type
+fn int_ty_query(db: &impl IrDatabase, ity: IntTy) -> IntType {
+    let context = db.context();
+    match ity.resolve(&db.target()).bitness {
+        IntBitness::X64 => context.i64_type(),
+        IntBitness::X32 => context.i32_type(),
+        IntBitness::X16 => context.i16_type(),
+        IntBitness::X8 => context.i8_type(),
+        _ => unreachable!(),
+    }
+}
+
 /// Returns the LLVM IR type of the specified struct
 pub fn struct_ty_query(db: &impl IrDatabase, s: hir::Struct) -> StructType {
     let name = s.name(db).to_string();
@@ -90,18 +98,37 @@ pub fn struct_ty_query(db: &impl IrDatabase, s: hir::Struct) -> StructType {
 
 /// Constructs the `TypeInfo` for the specified HIR type
 pub fn type_info_query(db: &impl IrDatabase, ty: Ty) -> TypeInfo {
+    let target = db.target_data();
     match ty {
         Ty::Apply(ctor) => match ctor.ctor {
-            TypeCtor::Float(ty) => TypeInfo::new(
-                format!("core::{}", ty.resolve(&db.target())),
-                TypeGroup::FundamentalTypes,
-            ),
-            TypeCtor::Int(ty) => TypeInfo::new(
-                format!("core::{}", ty.resolve(&db.target())),
-                TypeGroup::FundamentalTypes,
-            ),
-            TypeCtor::Bool => TypeInfo::new("core::bool", TypeGroup::FundamentalTypes),
-            TypeCtor::Struct(s) => TypeInfo::new(s.name(db).to_string(), TypeGroup::StructTypes(s)),
+            TypeCtor::Float(ty) => {
+                let ir_ty = float_ty_query(db, ty);
+                let type_size = TypeSize::from_ir_type(&ir_ty, target.as_ref());
+                TypeInfo::new(
+                    format!("core::{}", ty.resolve(&db.target())),
+                    TypeGroup::FundamentalTypes,
+                    type_size,
+                )
+            }
+            TypeCtor::Int(ty) => {
+                let ir_ty = int_ty_query(db, ty);
+                let type_size = TypeSize::from_ir_type(&ir_ty, target.as_ref());
+                TypeInfo::new(
+                    format!("core::{}", ty.resolve(&db.target())),
+                    TypeGroup::FundamentalTypes,
+                    type_size,
+                )
+            }
+            TypeCtor::Bool => {
+                let ir_ty = db.context().bool_type();
+                let type_size = TypeSize::from_ir_type(&ir_ty, target.as_ref());
+                TypeInfo::new("core::bool", TypeGroup::FundamentalTypes, type_size)
+            }
+            TypeCtor::Struct(s) => {
+                let ir_ty = db.struct_ty(s);
+                let type_size = TypeSize::from_ir_type(&ir_ty, target.as_ref());
+                TypeInfo::new(s.name(db).to_string(), TypeGroup::StructTypes(s), type_size)
+            }
             _ => unreachable!("{:?} unhandled", ctor),
         },
         _ => unreachable!("{:?} unhandled", ty),

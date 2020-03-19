@@ -80,10 +80,23 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
     let mut type_table_builder =
         TypeTableBuilder::new(db, &llvm_module, &abi_types, intrinsics_map.keys());
 
+    // First generate the bodies of all structs
+    for s in db
+        .module_data(file_id)
+        .definitions()
+        .iter()
+        .filter_map(|def| match def {
+            ModuleDef::Struct(s) => Some(s),
+            _ => None,
+        })
+    {
+        adt::gen_struct_decl(db, *s);
+    }
+
+    // Next, collect type information of all structs
     for def in db.module_data(file_id).definitions() {
         match def {
             ModuleDef::Struct(s) => {
-                adt::gen_struct_decl(db, *s);
                 type_table_builder.collect_struct(*s);
             }
             ModuleDef::Function(f) => {
