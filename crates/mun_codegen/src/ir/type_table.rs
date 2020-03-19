@@ -169,22 +169,19 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
                 .i8_type()
                 .const_int(u64::from(type_info.guid.b[i]), false)
         });
-        let type_info_ir = context.const_struct(
-            &[
-                context.i8_type().const_array(&guid_bytes_ir).into(),
-                intern_string(
-                    self.module,
-                    &type_info.name,
-                    &format!("type_info::<{}>::name", type_info.name),
-                )
+        let type_info_ir = self.abi_types.type_info_type.const_named_struct(&[
+            context.i8_type().const_array(&guid_bytes_ir).into(),
+            intern_string(
+                self.module,
+                &type_info.name,
+                &format!("type_info::<{}>::name", type_info.name),
+            )
+            .into(),
+            context
+                .i8_type()
+                .const_int(type_info.group.clone().into(), false)
                 .into(),
-                context
-                    .i8_type()
-                    .const_int(type_info.group.clone().into(), false)
-                    .into(),
-            ],
-            false,
-        );
+        ]);
         let type_info_ir = match type_info.group {
             TypeGroup::FundamentalTypes => type_info_ir,
             TypeGroup::StructTypes(s) => {
@@ -247,7 +244,9 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
                     .offset_of_element(&struct_ir, idx as u32)
                     .unwrap()
             }),
+            &format!("struct_info::<{}>::field_offsets", name),
         );
+
         let field_sizes = gen_u16_array(
             self.module,
             fields.iter().map(|field| {
@@ -258,6 +257,7 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
                     },
                 ))
             }),
+            &format!("struct_info::<{}>::field_sizes", name),
         );
 
         let alignment = self.target_data.get_abi_alignment(&struct_ir);
