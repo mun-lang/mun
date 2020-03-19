@@ -7,6 +7,8 @@ use inkwell::values::{BasicValueEnum, PointerValue};
 use crate::intrinsics::Intrinsic;
 use crate::type_info::TypeInfo;
 use hir::{Body, Expr, ExprId, InferenceResult};
+use inkwell::context::Context;
+use inkwell::targets::TargetData;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
@@ -24,6 +26,10 @@ use std::sync::Arc;
 /// functions. This basically enables all hot reloading within Mun.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct DispatchTable {
+    // The LLVM context in which all LLVM types live
+    context: Arc<Context>,
+    // The target for which to create the dispatch table
+    target: Arc<TargetData>,
     // This contains the function that map to the DispatchTable struct fields
     function_to_idx: HashMap<hir::Function, usize>,
     // Prototype to function index
@@ -84,7 +90,7 @@ impl DispatchTable {
         builder: &inkwell::builder::Builder,
         intrinsic: &impl Intrinsic,
     ) -> PointerValue {
-        let prototype = intrinsic.prototype();
+        let prototype = intrinsic.prototype(self.context.as_ref(), self.target.as_ref());
 
         // Get the index of the intrinsic
         let index = *self
@@ -129,7 +135,12 @@ impl DispatchTable {
 /// A struct that can be used to build the dispatch table from HIR.
 pub(crate) struct DispatchTableBuilder<'a, D: IrDatabase> {
     db: &'a D,
+    // The LLVM context in which all LLVM types live
+    context: Arc<Context>,
+    // The module in which all values live
     module: &'a Module,
+    // The target for which to create the dispatch table
+    target: Arc<TargetData>,
     // This contains the functions that map to the DispatchTable struct fields
     function_to_idx: HashMap<hir::Function, usize>,
     // Prototype to function index
@@ -156,7 +167,9 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
     ) -> Self {
         let mut table = DispatchTableBuilder {
             db,
+            context: db.context(),
             module,
+            target: db.target_data(),
             function_to_idx: Default::default(),
             prototype_to_idx: Default::default(),
             entries: Default::default(),
@@ -303,6 +316,8 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
         }
 
         DispatchTable {
+            context: self.context,
+            target: self.target,
             function_to_idx: self.function_to_idx,
             prototype_to_idx: self.prototype_to_idx,
             table_ref: self.table_ref,

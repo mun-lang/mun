@@ -1,6 +1,7 @@
 use crate::ir::dispatch_table::FunctionPrototype;
 use crate::type_info::TypeInfo;
 use inkwell::context::Context;
+use inkwell::targets::TargetData;
 use inkwell::types::FunctionType;
 use std::ffi;
 
@@ -11,10 +12,10 @@ mod macros;
 /// are mostly used internally.
 pub trait Intrinsic: Sync {
     /// Returns the prototype of the intrinsic
-    fn prototype(&self) -> FunctionPrototype;
+    fn prototype(&self, context: &Context, target: &TargetData) -> FunctionPrototype;
 
     /// Returns the IR type for the function
-    fn ir_type(&self, context: &Context) -> FunctionType;
+    fn ir_type(&self, context: &Context, target: &TargetData) -> FunctionType;
 }
 
 intrinsics! {

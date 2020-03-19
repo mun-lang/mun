@@ -56,11 +56,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
                 );
 
                 if !f.data(db).visibility().is_private() && !fn_sig.marshallable(db) {
-                    intrinsics::collect_wrapper_body(
-                        &llvm_module,
-                        &mut intrinsics_map,
-                        &mut needs_alloc,
-                    );
+                    intrinsics::collect_wrapper_body(db, &mut intrinsics_map, &mut needs_alloc);
 
                     // Generate wrapper function
                     let wrapper_fun = function::gen_signature(

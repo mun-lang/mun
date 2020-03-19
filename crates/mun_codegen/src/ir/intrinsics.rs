@@ -10,11 +10,17 @@ use std::sync::Arc;
 // Use a `BTreeMap` to guarantee deterministically ordered output
 pub type IntrinsicsMap = BTreeMap<FunctionPrototype, FunctionType>;
 
-fn collect_intrinsic(module: &Module, entries: &mut IntrinsicsMap, intrinsic: &impl Intrinsic) {
-    let prototype = intrinsic.prototype();
+fn collect_intrinsic<D: IrDatabase>(
+    d: &D,
+    entries: &mut IntrinsicsMap,
+    intrinsic: &impl Intrinsic,
+) {
+    let context = d.context();
+    let target = d.target_data();
+    let prototype = intrinsic.prototype(context.as_ref(), target.as_ref());
     entries
         .entry(prototype)
-        .or_insert_with(|| intrinsic.ir_type(&module.get_context()));
+        .or_insert_with(|| intrinsic.ir_type(context.as_ref(), target.as_ref()));
 }
 
 fn collect_expr<D: IrDatabase>(
@@ -32,8 +38,8 @@ fn collect_expr<D: IrDatabase>(
     if let Expr::Call { callee, .. } = expr {
         match infer[*callee].as_callable_def() {
             Some(hir::CallableDef::Struct(_)) => {
-                collect_intrinsic(module, entries, &intrinsics::new);
-                collect_intrinsic(module, entries, &intrinsics::clone);
+                collect_intrinsic(db, entries, &intrinsics::new);
+                collect_intrinsic(db, entries, &intrinsics::clone);
                 // self.collect_intrinsic(module, entries, &intrinsics::drop);
                 *needs_alloc = true;
             }
@@ -43,8 +49,8 @@ fn collect_expr<D: IrDatabase>(
     }
 
     if let Expr::RecordLit { .. } = expr {
-        collect_intrinsic(module, entries, &intrinsics::new);
-        collect_intrinsic(module, entries, &intrinsics::clone);
+        collect_intrinsic(db, entries, &intrinsics::new);
+        collect_intrinsic(db, entries, &intrinsics::clone);
         // self.collect_intrinsic(module, entries, &intrinsics::drop);
         *needs_alloc = true;
     }
@@ -57,8 +63,8 @@ fn collect_expr<D: IrDatabase>(
             .expect("unknown path");
 
         if let hir::Resolution::Def(hir::ModuleDef::Struct(_)) = resolution {
-            collect_intrinsic(module, entries, &intrinsics::new);
-            collect_intrinsic(module, entries, &intrinsics::clone);
+            collect_intrinsic(db, entries, &intrinsics::new);
+            collect_intrinsic(db, entries, &intrinsics::clone);
             // self.collect_intrinsic( module, entries, &intrinsics::drop);
             *needs_alloc = true;
         }
@@ -89,9 +95,9 @@ pub fn collect_fn_body<D: IrDatabase>(
     );
 }
 
-pub fn collect_wrapper_body(module: &Module, entries: &mut IntrinsicsMap, needs_alloc: &mut bool) {
-    collect_intrinsic(module, entries, &intrinsics::new);
-    collect_intrinsic(module, entries, &intrinsics::clone);
+pub fn collect_wrapper_body<D: IrDatabase>(db: &D, entries: &mut IntrinsicsMap, needs_alloc: &mut bool) {
+    collect_intrinsic(db, entries, &intrinsics::new);
+    collect_intrinsic(db, entries, &intrinsics::clone);
     // self.collect_intrinsic(entries, &intrinsics::drop, module);
     *needs_alloc = true;
 }
