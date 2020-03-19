@@ -1,46 +1,28 @@
-use failure::_core::ffi::c_void;
+use gc::{GCHandle, RawGCHandle};
 use parking_lot::RwLock;
 use std::alloc::Layout;
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::{pin::Pin, ptr};
 
+#[repr(transparent)]
+struct RawTypeInfo(*const abi::TypeInfo);
+
+impl gc::Type for RawTypeInfo {
+    fn size(&self) -> usize {
+        unsafe { (*self.0).size_in_bytes() as usize }
+    }
+
+    fn alignment(&self) -> usize {
+        unsafe { (*self.0).alignment() as usize }
+    }
+}
+
 #[derive(Debug)]
 #[repr(C)]
 struct ObjectInfo {
     pub ptr: *mut u8,
     pub type_info: *const abi::TypeInfo,
-}
-
-pub type RawGCHandle = *const *mut std::ffi::c_void;
-
-/// A GC handle is what you interact with outside of the allocator. It is a pointer to a piece of
-/// memory that points to the actual data stored in memory.
-///
-/// This creates an indirection that must be followed to get to the actual data of the object. Note
-/// that the indirection pointer must therefor be pinned in memory whereas the pointer stored
-/// at the indirection may change.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[repr(transparent)]
-pub struct GCHandle(RawGCHandle);
-
-impl GCHandle {
-    /// Returns a pointer to the referenced memory
-    pub unsafe fn get_ptr<T: Sized>(self) -> *mut T {
-        (*self.0).cast::<T>()
-    }
-}
-
-impl Into<RawGCHandle> for GCHandle {
-    fn into(self) -> *const *mut c_void {
-        self.0
-    }
-}
-
-impl Into<GCHandle> for RawGCHandle {
-    fn into(self) -> GCHandle {
-        GCHandle(self)
-    }
 }
 
 /// Provides allocator capabilities for a runtime.

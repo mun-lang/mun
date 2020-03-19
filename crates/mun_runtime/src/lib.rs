@@ -36,10 +36,10 @@ pub use crate::marshal::Marshal;
 pub use crate::reflection::{ArgumentReflection, ReturnTypeReflection};
 
 pub use crate::allocator::Allocator;
-use crate::allocator::RawGCHandle;
 pub use crate::assembly::Assembly;
 use crate::function::IntoFunctionInfo;
 pub use crate::r#struct::StructRef;
+use gc::RawGCHandle;
 use std::sync::Arc;
 
 impl_has_type_info_name!(

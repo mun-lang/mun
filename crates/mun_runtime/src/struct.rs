@@ -1,4 +1,3 @@
-use crate::allocator::{GCHandle, RawGCHandle};
 use crate::{
     marshal::Marshal,
     reflection::{
@@ -6,6 +5,7 @@ use crate::{
     },
     Runtime,
 };
+use gc::{GCHandle, RawGCHandle};
 use std::cell::RefCell;
 use std::ffi;
 use std::ptr::{self, NonNull};
