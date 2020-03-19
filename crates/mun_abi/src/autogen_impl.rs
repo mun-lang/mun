@@ -25,6 +25,21 @@ impl TypeInfo {
             None
         }
     }
+
+    /// Returns the size of the type in bits
+    pub fn size_in_bits(&self) -> u64 {
+        self.size_in_bits
+    }
+
+    /// Returns the size of the type in bytes
+    pub fn size_in_bytes(&self) -> u64 {
+        (self.size_in_bits + 7) / 8
+    }
+
+    /// Returns the alignment of the type in bytes
+    pub fn alignment(&self) -> u32 {
+        self.alignment
+    }
 }
 
 impl fmt::Display for TypeInfo {
@@ -138,15 +153,6 @@ impl StructInfo {
         }
     }
 
-    /// Returns the struct's field sizes.
-    pub fn field_sizes(&self) -> &[u16] {
-        if self.num_fields == 0 {
-            &[]
-        } else {
-            unsafe { slice::from_raw_parts(self.field_sizes, self.num_fields as usize) }
-        }
-    }
-
     /// Returns the index of the field matching the specified `field_name`.
     pub fn find_field_index(struct_info: &StructInfo, field_name: &str) -> Result<usize, String> {
         struct_info
@@ -161,13 +167,6 @@ impl StructInfo {
                     field_name
                 )
             })
-    }
-
-    /// Returns the size of the struct
-    pub fn size(&self) -> usize {
-        (self.field_offsets().last().cloned().unwrap_or(0)
-            + self.field_sizes().last().cloned().unwrap_or(0))
-        .into()
     }
 }
 
@@ -333,17 +332,24 @@ mod tests {
         struct_info: StructInfo,
     }
 
-    fn fake_type_info(name: &CStr, group: TypeGroup) -> TypeInfo {
+    fn fake_type_info(name: &CStr, group: TypeGroup, size: u64, alignment: u32) -> TypeInfo {
         TypeInfo {
             guid: FAKE_TYPE_GUID,
             name: name.as_ptr(),
+            size_in_bits: size,
+            alignment,
             group,
         }
     }
 
-    fn fake_struct_type_info(name: &CStr, struct_info: StructInfo) -> StructTypeInfo {
+    fn fake_struct_type_info(
+        name: &CStr,
+        struct_info: StructInfo,
+        size: u64,
+        alignment: u32,
+    ) -> StructTypeInfo {
         StructTypeInfo {
-            type_info: fake_type_info(name, TypeGroup::StructTypes),
+            type_info: fake_type_info(name, TypeGroup::StructTypes, size, alignment),
             struct_info,
         }
     }
@@ -358,16 +364,26 @@ mod tests {
     #[test]
     fn test_type_info_name() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes);
+        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
 
         assert_eq!(type_info.name(), FAKE_TYPE_NAME);
+    }
+
+    #[test]
+    fn test_type_info_size_alignment() {
+        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
+        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 24, 8);
+
+        assert_eq!(type_info.size_in_bits(), 24);
+        assert_eq!(type_info.size_in_bytes(), 3);
+        assert_eq!(type_info.alignment(), 8);
     }
 
     #[test]
     fn test_type_info_group_fundamental() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
         let type_group = TypeGroup::FundamentalTypes;
-        let type_info = fake_type_info(&type_name, type_group);
+        let type_info = fake_type_info(&type_name, type_group, 1, 1);
 
         assert_eq!(type_info.group, type_group);
         assert!(type_info.group.is_fundamental());
@@ -378,7 +394,7 @@ mod tests {
     fn test_type_info_group_struct() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
         let type_group = TypeGroup::StructTypes;
-        let type_info = fake_type_info(&type_name, type_group);
+        let type_info = fake_type_info(&type_name, type_group, 1, 1);
 
         assert_eq!(type_info.group, type_group);
         assert!(type_info.group.is_struct());
@@ -388,7 +404,7 @@ mod tests {
     #[test]
     fn test_type_info_eq() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes);
+        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
 
         assert_eq!(type_info, type_info);
     }
@@ -439,7 +455,7 @@ mod tests {
     #[test]
     fn test_fn_signature_arg_types_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes);
+        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
 
         let arg_types = &[&type_info];
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -460,7 +476,7 @@ mod tests {
     #[test]
     fn test_fn_signature_return_type_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes);
+        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -474,22 +490,17 @@ mod tests {
         field_names: &[*const c_char],
         field_types: &[&TypeInfo],
         field_offsets: &[u16],
-        field_sizes: &[u16],
-        alignment: u16,
         memory_kind: StructMemoryKind,
     ) -> StructInfo {
         assert!(field_names.len() == field_types.len());
         assert!(field_types.len() == field_offsets.len());
-        assert!(field_offsets.len() == field_sizes.len());
 
         StructInfo {
             name: name.as_ptr(),
             field_names: field_names.as_ptr(),
             field_types: field_types.as_ptr().cast::<*const TypeInfo>(),
             field_offsets: field_offsets.as_ptr(),
-            field_sizes: field_sizes.as_ptr(),
             num_fields: field_names.len() as u16,
-            alignment,
             memory_kind,
         }
     }
@@ -499,7 +510,7 @@ mod tests {
     #[test]
     fn test_struct_info_name() {
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
-        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], &[], 1, Default::default());
+        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], Default::default());
 
         assert_eq!(struct_info.name(), FAKE_STRUCT_NAME);
     }
@@ -509,44 +520,35 @@ mod tests {
         let field_names = &[];
         let field_types = &[];
         let field_offsets = &[];
-        let field_sizes = &[];
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
         let struct_info = fake_struct_info(
             &struct_name,
             field_names,
             field_types,
             field_offsets,
-            field_sizes,
-            1,
             Default::default(),
         );
 
         assert_eq!(struct_info.field_names().count(), 0);
         assert_eq!(struct_info.field_types(), field_types);
         assert_eq!(struct_info.field_offsets(), field_offsets);
-        assert_eq!(struct_info.field_sizes(), field_sizes);
-        assert_eq!(struct_info.size(), 0);
     }
 
     #[test]
     fn test_struct_info_fields_some() {
         let field_name = CString::new(FAKE_FIELD_NAME).expect("Invalid fake field name.");
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes);
+        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
 
         let field_names = &[field_name.as_ptr()];
         let field_types = &[&type_info];
         let field_offsets = &[1];
-        let field_sizes = &[2];
-        let alignment = 1;
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
         let struct_info = fake_struct_info(
             &struct_name,
             field_names,
             field_types,
             field_offsets,
-            field_sizes,
-            alignment,
             Default::default(),
         );
 
@@ -555,43 +557,13 @@ mod tests {
         }
         assert_eq!(struct_info.field_types(), field_types);
         assert_eq!(struct_info.field_offsets(), field_offsets);
-        assert_eq!(struct_info.field_sizes(), field_sizes);
-        assert_eq!(
-            struct_info.size() as u16,
-            field_offsets.last().unwrap() + field_sizes.last().unwrap()
-        )
-    }
-
-    #[test]
-    fn test_struct_info_alignment() {
-        let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
-        let struct_alignment = 4;
-        let struct_info = fake_struct_info(
-            &struct_name,
-            &[],
-            &[],
-            &[],
-            &[],
-            struct_alignment,
-            Default::default(),
-        );
-
-        assert_eq!(struct_info.alignment, struct_alignment);
     }
 
     #[test]
     fn test_struct_info_memory_kind_gc() {
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
         let struct_memory_kind = StructMemoryKind::GC;
-        let struct_info = fake_struct_info(
-            &struct_name,
-            &[],
-            &[],
-            &[],
-            &[],
-            1,
-            struct_memory_kind.clone(),
-        );
+        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], struct_memory_kind.clone());
 
         assert_eq!(struct_info.memory_kind, struct_memory_kind);
     }
@@ -600,15 +572,7 @@ mod tests {
     fn test_struct_info_memory_kind_value() {
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
         let struct_memory_kind = StructMemoryKind::Value;
-        let struct_info = fake_struct_info(
-            &struct_name,
-            &[],
-            &[],
-            &[],
-            &[],
-            1,
-            struct_memory_kind.clone(),
-        );
+        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], struct_memory_kind.clone());
 
         assert_eq!(struct_info.memory_kind, struct_memory_kind);
     }
@@ -651,7 +615,7 @@ mod tests {
     #[test]
     fn test_module_info_types_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes);
+        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -664,8 +628,8 @@ mod tests {
         let functions = &[fn_info];
 
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name");
-        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], &[], 1, Default::default());
-        let struct_type_info = fake_struct_type_info(&struct_name, struct_info);
+        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], Default::default());
+        let struct_type_info = fake_struct_type_info(&struct_name, struct_info, 1, 1);
         let types = &[unsafe { mem::transmute(&struct_type_info) }];
 
         let module_path = CString::new(FAKE_MODULE_PATH).expect("Invalid fake module path.");
@@ -722,7 +686,7 @@ mod tests {
     #[test]
     fn test_dispatch_table_iter_mut_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes);
+        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -756,7 +720,7 @@ mod tests {
     #[test]
     fn test_dispatch_table_ptrs_mut_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes);
+        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -785,7 +749,7 @@ mod tests {
     #[test]
     fn test_dispatch_table_signatures_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes);
+        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -808,7 +772,7 @@ mod tests {
     #[test]
     fn test_dispatch_table_get_ptr_unchecked() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes);
+        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -824,7 +788,7 @@ mod tests {
     #[test]
     fn test_dispatch_table_get_ptr_none() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes);
+        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -840,7 +804,7 @@ mod tests {
     #[test]
     fn test_dispatch_table_get_ptr_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes);
+        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -856,7 +820,7 @@ mod tests {
     #[test]
     fn test_dispatch_table_get_ptr_unchecked_mut() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes);
+        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -875,7 +839,7 @@ mod tests {
     #[test]
     fn test_dispatch_table_get_ptr_mut_none() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes);
+        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -891,7 +855,7 @@ mod tests {
     #[test]
     fn test_dispatch_table_get_ptr_mut_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes);
+        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");

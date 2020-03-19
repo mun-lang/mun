@@ -50,8 +50,8 @@ impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *const T {
                     guid,
                     name: name_ptr,
                     group: abi::TypeGroup::FundamentalTypes,
-                    // size: std::mem::size_of::<*const T>() as u64,
-                    // alignment: std::mem::align_of::<*const T>() as u32,
+                    size_in_bits: std::mem::size_of::<*const T>() as u64 * 8,
+                    alignment: std::mem::align_of::<*const T>() as u32,
                 },
             )
         })
@@ -84,8 +84,8 @@ impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *mut T {
                     guid,
                     name: name_ptr,
                     group: abi::TypeGroup::FundamentalTypes,
-                    // size: std::mem::size_of::<*const T>() as u64,
-                    // alignment: std::mem::align_of::<*const T>() as u32,
+                    size_in_bits: std::mem::size_of::<*const T>() as u64 * 8,
+                    alignment: std::mem::align_of::<*const T>() as u32,
                 },
             )
         })
@@ -110,8 +110,8 @@ macro_rules! impl_basic_type_info {
                             guid: abi::Guid{ b: md5::compute(&type_info_name.as_bytes()).0 },
                             name: type_info_name.as_ptr(),
                             group: abi::TypeGroup::FundamentalTypes,
-                            // size: std::mem::size_of::<$ty>() as u64,
-                            // alignment: std::mem::align_of::<$ty>() as u32,
+                            size_in_bits: std::mem::size_of::<$ty>() as u64 * 8,
+                            alignment: std::mem::align_of::<$ty>() as u32,
                         }
                     })
                 }

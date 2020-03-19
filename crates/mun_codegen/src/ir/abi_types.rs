@@ -32,9 +32,11 @@ pub(crate) fn gen_abi_types(context: ContextRef) -> AbiTypes {
     let type_info_type = context.opaque_struct_type("struct.MunTypeInfo");
     type_info_type.set_body(
         &[
-            guid_type.into(),       // guid
-            str_type.into(),        // name
-            type_group_type.into(), // group
+            guid_type.into(),          // guid
+            str_type.into(),           // name
+            context.i64_type().into(), // size_in_bits
+            context.i32_type().into(), // alignment
+            type_group_type.into(),    // group
         ],
         false,
     );
@@ -76,9 +78,7 @@ pub(crate) fn gen_abi_types(context: ContextRef) -> AbiTypes {
             str_type.ptr_type(AddressSpace::Const).into(),           // field_names
             type_info_ptr_type.ptr_type(AddressSpace::Const).into(), // field_types
             context.i16_type().ptr_type(AddressSpace::Const).into(), // field_offsets
-            context.i16_type().ptr_type(AddressSpace::Const).into(), // field_sizes
             context.i16_type().into(),                               // num_fields
-            context.i16_type().into(),                               // alignment
             context.i8_type().into(),                                // memory_kind
         ],
         false,

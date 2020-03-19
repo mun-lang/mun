@@ -3,7 +3,7 @@ use crate::code_gen::{
 };
 use crate::ir::{abi_types::AbiTypes, dispatch_table::FunctionPrototype};
 use crate::type_info::{TypeGroup, TypeInfo};
-use crate::{CodeGenParams, IrDatabase};
+use crate::IrDatabase;
 use hir::{Body, ExprId, InferenceResult};
 use inkwell::{
     module::Module,
@@ -178,6 +178,14 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
             )
             .into(),
             context
+                .i64_type()
+                .const_int(type_info.size.bit_size, false)
+                .into(),
+            context
+                .i32_type()
+                .const_int(type_info.size.alignment as u64, false)
+                .into(),
+            context
                 .i8_type()
                 .const_int(type_info.group.clone().into(), false)
                 .into(),
@@ -247,36 +255,15 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
             &format!("struct_info::<{}>::field_offsets", name),
         );
 
-        let field_sizes = gen_u16_array(
-            self.module,
-            fields.iter().map(|field| {
-                self.target_data.get_store_size(&self.db.type_ir(
-                    field.ty(self.db),
-                    CodeGenParams {
-                        make_marshallable: false,
-                    },
-                ))
-            }),
-            &format!("struct_info::<{}>::field_sizes", name),
-        );
-
-        let alignment = self.target_data.get_abi_alignment(&struct_ir);
-
         self.abi_types.struct_info_type.const_named_struct(&[
             name_str.into(),
             field_names.into(),
             field_types.into(),
             field_offsets.into(),
-            field_sizes.into(),
             self.module
                 .get_context()
                 .i16_type()
                 .const_int(fields.len() as u64, false)
-                .into(),
-            self.module
-                .get_context()
-                .i16_type()
-                .const_int(alignment.into(), false)
                 .into(),
             self.module
                 .get_context()
