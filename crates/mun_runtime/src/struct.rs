@@ -1,5 +1,4 @@
 use crate::{
-    allocator::ObjectHandle,
     marshal::Marshal,
     reflection::{
         equals_argument_type, equals_return_type, ArgumentReflection, ReturnTypeReflection,
@@ -11,17 +10,19 @@ use std::ffi;
 use std::ptr::{self, NonNull};
 use std::rc::Rc;
 use std::sync::Arc;
+use crate::allocator::GCHandle;
 
 /// Represents a Mun struct pointer.
 ///
 /// A byte pointer is used to make pointer arithmetic easier.
 #[repr(transparent)]
 #[derive(Clone)]
-pub struct RawStruct(ObjectHandle);
+pub struct RawStruct(GCHandle);
 
 impl RawStruct {
+    /// Returns a pointer to the struct memory.
     pub fn get_ptr(&self) -> *mut u8 {
-        unsafe { self.0.as_ref().unwrap() }.ptr
+        unsafe { (*self.0).cast::<u8>() }
     }
 }
 
@@ -178,24 +179,23 @@ impl Marshal<StructRef> for RawStruct {
         let alloc_handle = Arc::into_raw(runtime.borrow().get_allocator()) as *mut std::ffi::c_void;
         let object_handle = if struct_info.memory_kind == abi::StructMemoryKind::Value {
             // Create a new object using the runtime's intrinsic
-            let object_ptr: *const *mut ffi::c_void =
+            let gc_handle: GCHandle =
                 invoke_fn!(runtime.clone(), "new", type_info as *const _, alloc_handle).unwrap();
-            let handle = object_ptr as ObjectHandle;
 
             let src = ptr.cast::<u8>().as_ptr() as *const _;
-            let dest = unsafe { handle.as_ref() }.unwrap().ptr;
+            let dest = unsafe { (*gc_handle).cast::<u8>() };
             let size = type_info.size_in_bytes();
             unsafe { ptr::copy_nonoverlapping(src, dest, size as usize) };
 
-            handle
+            gc_handle
         } else {
             let ptr = unsafe { ptr.as_ref() }.0 as *const ffi::c_void;
 
             // Clone the struct using the runtime's intrinsic
-            let cloned_ptr: *const *mut ffi::c_void =
+            let cloned_ptr: GCHandle =
                 invoke_fn!(runtime.clone(), "clone", ptr, alloc_handle).unwrap();
 
-            cloned_ptr as ObjectHandle
+            cloned_ptr
         };
 
         StructRef::new(runtime, type_info, RawStruct(object_handle))

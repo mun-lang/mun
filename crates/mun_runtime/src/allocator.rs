@@ -6,17 +6,23 @@ use std::{pin::Pin, ptr};
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct ObjectInfo {
+struct ObjectInfo {
     pub ptr: *mut u8,
     pub type_info: *const abi::TypeInfo,
 }
 
-pub type ObjectHandle = *const ObjectInfo;
+/// A GC handle is what you interact with outside of the allocator. It is a pointer to a piece of
+/// memory that points to the actual data stored in memory.
+///
+/// This creates an indirection that must be followed to get to the actual data of the object. Note
+/// that the indirection pointer must therefor be pinned in memory whereas the pointer stored
+/// at the indirection may change.
+pub type GCHandle = *const *mut std::ffi::c_void;
 
 /// Provides allocator capabilities for a runtime.
 #[derive(Debug, Default)]
 pub struct Allocator {
-    objects: RwLock<HashMap<ObjectHandle, Pin<Box<ObjectInfo>>>>,
+    objects: RwLock<HashMap<GCHandle, Pin<Box<ObjectInfo>>>>,
 }
 
 impl Allocator {
@@ -36,14 +42,14 @@ impl Allocator {
     ///
     /// `type_info` must be a valid pointer and remain valid throughout the lifetime of the created
     /// object.
-    pub(crate) unsafe fn create_object(&self, type_info: *const abi::TypeInfo) -> ObjectHandle {
+    pub(crate) unsafe fn create_object(&self, type_info: *const abi::TypeInfo) -> GCHandle {
         let type_info = type_info.as_ref().unwrap();
 
         let ptr = self.alloc(type_info.size_in_bytes(), type_info.alignment());
         let object = Box::pin(ObjectInfo { ptr, type_info });
 
         // We want to return a pointer to the `ObjectInfo`, to be used as handle.
-        let handle = object.as_ref().deref() as *const _ as ObjectHandle;
+        let handle = object.as_ref().deref() as *const _ as GCHandle;
 
         let mut objects = self.objects.write();
         objects.insert(handle, object);
@@ -56,7 +62,7 @@ impl Allocator {
     /// # Safety
     ///
     /// `src` must be a valid pointer.
-    pub(crate) unsafe fn clone_object(&self, src: ObjectHandle) -> ObjectHandle {
+    pub(crate) unsafe fn clone_object(&self, src: GCHandle) -> GCHandle {
         let clone = {
             let objects = self.objects.read();
             let src = objects
@@ -76,7 +82,7 @@ impl Allocator {
         };
 
         // We want to return a pointer to the `ObjectInfo`, to be used as handle.
-        let handle = clone.as_ref().deref() as *const _ as ObjectHandle;
+        let handle = clone.as_ref().deref() as *const _ as GCHandle;
 
         let mut objects = self.objects.write();
         objects.insert(handle, clone);
