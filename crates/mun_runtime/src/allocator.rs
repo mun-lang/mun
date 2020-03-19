@@ -1,3 +1,4 @@
+use failure::_core::ffi::c_void;
 use parking_lot::RwLock;
 use std::alloc::Layout;
 use std::collections::HashMap;
@@ -11,13 +12,36 @@ struct ObjectInfo {
     pub type_info: *const abi::TypeInfo,
 }
 
+pub type RawGCHandle = *const *mut std::ffi::c_void;
+
 /// A GC handle is what you interact with outside of the allocator. It is a pointer to a piece of
 /// memory that points to the actual data stored in memory.
 ///
 /// This creates an indirection that must be followed to get to the actual data of the object. Note
 /// that the indirection pointer must therefor be pinned in memory whereas the pointer stored
 /// at the indirection may change.
-pub type GCHandle = *const *mut std::ffi::c_void;
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(transparent)]
+pub struct GCHandle(RawGCHandle);
+
+impl GCHandle {
+    /// Returns a pointer to the referenced memory
+    pub unsafe fn get_ptr<T: Sized>(self) -> *mut T {
+        (*self.0).cast::<T>()
+    }
+}
+
+impl Into<RawGCHandle> for GCHandle {
+    fn into(self) -> *const *mut c_void {
+        self.0
+    }
+}
+
+impl Into<GCHandle> for RawGCHandle {
+    fn into(self) -> GCHandle {
+        GCHandle(self)
+    }
+}
 
 /// Provides allocator capabilities for a runtime.
 #[derive(Debug, Default)]
@@ -49,7 +73,7 @@ impl Allocator {
         let object = Box::pin(ObjectInfo { ptr, type_info });
 
         // We want to return a pointer to the `ObjectInfo`, to be used as handle.
-        let handle = object.as_ref().deref() as *const _ as GCHandle;
+        let handle = (object.as_ref().deref() as *const _ as RawGCHandle).into();
 
         let mut objects = self.objects.write();
         objects.insert(handle, object);
@@ -82,7 +106,7 @@ impl Allocator {
         };
 
         // We want to return a pointer to the `ObjectInfo`, to be used as handle.
-        let handle = clone.as_ref().deref() as *const _ as GCHandle;
+        let handle = (clone.as_ref().deref() as *const _ as RawGCHandle).into();
 
         let mut objects = self.objects.write();
         objects.insert(handle, clone);

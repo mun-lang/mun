@@ -36,6 +36,7 @@ pub use crate::marshal::Marshal;
 pub use crate::reflection::{ArgumentReflection, ReturnTypeReflection};
 
 pub use crate::allocator::Allocator;
+use crate::allocator::RawGCHandle;
 pub use crate::assembly::Assembly;
 use crate::function::IntoFunctionInfo;
 pub use crate::r#struct::StructRef;
@@ -159,12 +160,12 @@ extern "C" fn new(
     alloc_handle: *mut ffi::c_void,
 ) -> *const *mut ffi::c_void {
     let allocator = unsafe { get_allocator(alloc_handle) };
-    let handle = unsafe { allocator.create_object(type_info) as *const _ };
+    let handle = unsafe { allocator.create_object(type_info) };
 
     // Prevent destruction
     mem::forget(allocator);
 
-    handle
+    handle.into()
 }
 
 extern "C" fn clone(
@@ -172,12 +173,12 @@ extern "C" fn clone(
     alloc_handle: *mut ffi::c_void,
 ) -> *const *mut ffi::c_void {
     let allocator = unsafe { get_allocator(alloc_handle) };
-    let handle = unsafe { allocator.clone_object(src as *const _) as *const _ };
+    let handle = unsafe { allocator.clone_object((src as RawGCHandle).into()) };
 
     // Prevent destruction
     mem::forget(allocator);
 
-    handle
+    handle.into()
 }
 
 impl Runtime {

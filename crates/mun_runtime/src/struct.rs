@@ -1,3 +1,4 @@
+use crate::allocator::{GCHandle, RawGCHandle};
 use crate::{
     marshal::Marshal,
     reflection::{
@@ -10,7 +11,6 @@ use std::ffi;
 use std::ptr::{self, NonNull};
 use std::rc::Rc;
 use std::sync::Arc;
-use crate::allocator::GCHandle;
 
 /// Represents a Mun struct pointer.
 ///
@@ -22,7 +22,7 @@ pub struct RawStruct(GCHandle);
 impl RawStruct {
     /// Returns a pointer to the struct memory.
     pub fn get_ptr(&self) -> *mut u8 {
-        unsafe { (*self.0).cast::<u8>() }
+        unsafe { self.0.get_ptr() }
     }
 }
 
@@ -179,23 +179,24 @@ impl Marshal<StructRef> for RawStruct {
         let alloc_handle = Arc::into_raw(runtime.borrow().get_allocator()) as *mut std::ffi::c_void;
         let object_handle = if struct_info.memory_kind == abi::StructMemoryKind::Value {
             // Create a new object using the runtime's intrinsic
-            let gc_handle: GCHandle =
+            let gc_handle: RawGCHandle =
                 invoke_fn!(runtime.clone(), "new", type_info as *const _, alloc_handle).unwrap();
+            let gc_handle: GCHandle = gc_handle.into();
 
             let src = ptr.cast::<u8>().as_ptr() as *const _;
-            let dest = unsafe { (*gc_handle).cast::<u8>() };
+            let dest = unsafe { gc_handle.get_ptr::<u8>() };
             let size = type_info.size_in_bytes();
             unsafe { ptr::copy_nonoverlapping(src, dest, size as usize) };
 
             gc_handle
         } else {
-            let ptr = unsafe { ptr.as_ref() }.0 as *const ffi::c_void;
+            let ptr = unsafe { *ptr.cast::<RawGCHandle>().as_ptr() } as *const ffi::c_void;
 
             // Clone the struct using the runtime's intrinsic
-            let cloned_ptr: GCHandle =
+            let cloned_ptr: RawGCHandle =
                 invoke_fn!(runtime.clone(), "clone", ptr, alloc_handle).unwrap();
 
-            cloned_ptr
+            cloned_ptr.into()
         };
 
         StructRef::new(runtime, type_info, RawStruct(object_handle))
