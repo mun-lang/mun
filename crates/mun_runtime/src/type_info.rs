@@ -1,4 +1,4 @@
-use generic_static::StaticTypeMap;
+use super::static_type_map::StaticTypeMap;
 use once_cell::sync::OnceCell;
 use std::ffi::{CStr, CString};
 use std::sync::Once;

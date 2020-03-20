@@ -11,6 +11,7 @@ mod macros;
 mod allocator;
 mod marshal;
 mod reflection;
+mod static_type_map;
 mod r#struct;
 
 #[macro_use]
