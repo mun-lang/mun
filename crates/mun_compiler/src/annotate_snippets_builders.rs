@@ -172,3 +172,58 @@ impl AnnotationBuilder {
         self.annotation
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn annotation_builder_snapshot() {
+        insta::assert_debug_snapshot!(AnnotationBuilder::new(AnnotationType::Note)
+            .id("1".to_string())
+            .label("test annotation".to_string())
+            .build());
+    }
+    #[test]
+    fn slice_builder_snapshot() {
+        let source_code = "fn foo():float{\n48\n}";
+        let line_index: LineIndex = LineIndex::new(source_code);
+
+        insta::assert_debug_snapshot!(SliceBuilder::new(true)
+            .origin("/tmp/usr/test.mun".to_string())
+            .source_annotation(
+                (14, 20),
+                "test source annotation".to_string(),
+                AnnotationType::Note
+            )
+            .build(source_code, source_code.len(), &line_index));
+    }
+    #[test]
+    fn snippet_builder_snapshot() {
+        let title = AnnotationBuilder::new(AnnotationType::Note)
+            .id("1".to_string())
+            .label("test annotation".to_string())
+            .build();
+        let footer = AnnotationBuilder::new(AnnotationType::Warning)
+            .id("2".to_string())
+            .label("test annotation".to_string())
+            .build();
+
+        let source_code = "fn foo():float{\n48\n}";
+        let line_index: LineIndex = LineIndex::new(source_code);
+
+        let slice = SliceBuilder::new(true)
+            .origin("/tmp/usr/test.mun".to_string())
+            .source_annotation(
+                (14, 20),
+                "test source annotation".to_string(),
+                AnnotationType::Note,
+            )
+            .build(source_code, source_code.len(), &line_index);
+
+        insta::assert_debug_snapshot!(SnippetBuilder::new()
+            .title(title)
+            .footer(footer)
+            .slice(slice)
+            .build());
+    }
+}

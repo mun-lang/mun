@@ -1,0 +1,13 @@
+---
+source: crates/mun_compiler/src/annotate_snippets_builders.rs
+expression: "AnnotationBuilder::new(AnnotationType::Note).id(\"1\".to_string()).label(\"test annotation\".to_string()).build()"
+---
+Annotation {
+    id: Some(
+        "1",
+    ),
+    label: Some(
+        "test annotation",
+    ),
+    annotation_type: Note,
+}

@@ -10,10 +10,12 @@ description = "Binary compilation functionality for Mun"
 
 [dependencies]
 failure = "0.1.7"
-
 mun_codegen = { path="../mun_codegen" }
 mun_syntax = { path="../mun_syntax" }
 mun_hir = {path="../mun_hir"}
 mun_target = {path="../mun_target"}
 annotate-snippets = "0.6.1"
 unicode-segmentation = "1.6.0"
+
+[dev-dependencies]
+insta = "0.13.1"

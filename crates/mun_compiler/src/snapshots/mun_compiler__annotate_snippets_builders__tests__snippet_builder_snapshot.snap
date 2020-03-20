@@ -1,0 +1,48 @@
+---
+source: crates/mun_compiler/src/annotate_snippets_builders.rs
+expression: "SnippetBuilder::new().title(title).footer(footer).slice(slice).build()"
+---
+Snippet {
+    title: Some(
+        Annotation {
+            id: Some(
+                "1",
+            ),
+            label: Some(
+                "test annotation",
+            ),
+            annotation_type: Note,
+        },
+    ),
+    footer: [
+        Annotation {
+            id: Some(
+                "2",
+            ),
+            label: Some(
+                "test annotation",
+            ),
+            annotation_type: Warning,
+        },
+    ],
+    slices: [
+        Slice {
+            source: "fn foo():float{\n48\n}",
+            line_start: 1,
+            origin: Some(
+                "/tmp/usr/test.mun",
+            ),
+            annotations: [
+                SourceAnnotation {
+                    range: (
+                        14,
+                        22,
+                    ),
+                    label: "test source annotation",
+                    annotation_type: Note,
+                },
+            ],
+            fold: true,
+        },
+    ],
+}
