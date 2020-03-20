@@ -8,6 +8,10 @@
 #[repr(transparent)]
 pub struct GCHandle(RawGCHandle);
 
+/// A `GCHandle` is thread safe.
+unsafe impl Send for GCHandle {}
+unsafe impl Sync for GCHandle {}
+
 /// A `RawGCHandle` is an unsafe version of a `GCHandle`. It represents the raw internal pointer
 /// semantics used by the runtime.
 pub type RawGCHandle = *const *mut std::ffi::c_void;

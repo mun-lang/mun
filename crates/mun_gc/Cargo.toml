@@ -10,3 +10,4 @@ description = "Garbage collection crate for Mun"
 
 [dependencies]
 abi = { path = "../mun_abi", package = "mun_abi" }
+parking_lot = "0.10"

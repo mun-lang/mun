@@ -39,6 +39,7 @@ pub use crate::allocator::Allocator;
 pub use crate::assembly::Assembly;
 use crate::function::IntoFunctionInfo;
 pub use crate::r#struct::StructRef;
+use gc::GCRuntime;
 use gc::RawGCHandle;
 use std::sync::Arc;
 
@@ -160,9 +161,9 @@ extern "C" fn new(
     alloc_handle: *mut ffi::c_void,
 ) -> *const *mut ffi::c_void {
     let allocator = unsafe { get_allocator(alloc_handle) };
-    let handle = unsafe { allocator.create_object(type_info) };
+    let handle = allocator.alloc_object(type_info.into());
 
-    // Prevent destruction
+    // Prevent destruction of the allocator
     mem::forget(allocator);
 
     handle.into()
@@ -175,7 +176,7 @@ extern "C" fn clone(
     let allocator = unsafe { get_allocator(alloc_handle) };
     let handle = unsafe { allocator.clone_object((src as RawGCHandle).into()) };
 
-    // Prevent destruction
+    // Prevent destruction of the allocator
     mem::forget(allocator);
 
     handle.into()
