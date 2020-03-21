@@ -134,69 +134,38 @@ impl AsFunctionReturnType for () {
     }
 }
 
-impl IsIrType for u8 {
-    type Type = IntType;
+macro_rules! impl_fundamental_ir_types {
+    ($(
+        $ty:ty => $context_fun:ident():$inkwell_ty:ty
+    ),+) => {
+        $(
+            impl IsIrType for $ty {
+                type Type = $inkwell_ty;
 
-    fn ir_type(context: &Context, _target: &TargetData) -> Self::Type {
-        context.i8_type()
+                fn ir_type(context: &Context, _target: &TargetData) -> Self::Type {
+                    context.$context_fun()
+                }
+            }
+        )+
     }
 }
 
-impl IsIrType for u16 {
-    type Type = IntType;
+impl_fundamental_ir_types!(
+    i8 => i8_type():IntType,
+    i16 => i16_type():IntType,
+    i32 => i32_type():IntType,
+    i64 => i64_type():IntType,
 
-    fn ir_type(context: &Context, _target: &TargetData) -> Self::Type {
-        context.i16_type()
-    }
-}
+    u8 => i8_type():IntType,
+    u16 => i16_type():IntType,
+    u32 => i32_type():IntType,
+    u64 => i64_type():IntType,
 
-impl IsIrType for u32 {
-    type Type = IntType;
+    bool => bool_type():IntType,
 
-    fn ir_type(context: &Context, _target: &TargetData) -> Self::Type {
-        context.i32_type()
-    }
-}
-
-impl IsIrType for u64 {
-    type Type = IntType;
-
-    fn ir_type(context: &Context, _target: &TargetData) -> Self::Type {
-        context.i64_type()
-    }
-}
-
-impl IsIrType for i8 {
-    type Type = IntType;
-
-    fn ir_type(context: &Context, _target: &TargetData) -> Self::Type {
-        context.i8_type()
-    }
-}
-
-impl IsIrType for i16 {
-    type Type = IntType;
-
-    fn ir_type(context: &Context, _target: &TargetData) -> Self::Type {
-        context.i16_type()
-    }
-}
-
-impl IsIrType for i32 {
-    type Type = IntType;
-
-    fn ir_type(context: &Context, _target: &TargetData) -> Self::Type {
-        context.i32_type()
-    }
-}
-
-impl IsIrType for i64 {
-    type Type = IntType;
-
-    fn ir_type(context: &Context, _target: &TargetData) -> Self::Type {
-        context.i64_type()
-    }
-}
+    f32 => f32_type():FloatType,
+    f64 => f64_type():FloatType
+);
 
 impl IsIrType for usize {
     type Type = IntType;
@@ -219,30 +188,6 @@ impl IsIrType for isize {
             8 => <i64 as IsIrType>::ir_type(context, target),
             _ => unimplemented!("unsupported pointer byte size"),
         }
-    }
-}
-
-impl IsIrType for f32 {
-    type Type = FloatType;
-
-    fn ir_type(context: &Context, _target: &TargetData) -> Self::Type {
-        context.f32_type()
-    }
-}
-
-impl IsIrType for f64 {
-    type Type = FloatType;
-
-    fn ir_type(context: &Context, _target: &TargetData) -> Self::Type {
-        context.f64_type()
-    }
-}
-
-impl IsIrType for bool {
-    type Type = IntType;
-
-    fn ir_type(context: &Context, _target: &TargetData) -> Self::Type {
-        context.bool_type()
     }
 }
 
