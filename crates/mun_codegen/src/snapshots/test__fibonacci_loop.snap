@@ -4,6 +4,7 @@ expression: "fn fibonacci(n:int):int {\n    let a = 0;\n    let b = 1;\n    let 
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
+target triple = "x86-64"
 
 define i64 @fibonacci(i64) {
 body:

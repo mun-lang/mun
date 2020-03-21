@@ -4,6 +4,7 @@ expression: "fn equals(a:int, b:int):bool                { a == b }\nfn not_equa
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
+target triple = "x86-64"
 
 define i1 @equals(i64, i64) {
 body:

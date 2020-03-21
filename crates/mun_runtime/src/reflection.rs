@@ -271,11 +271,71 @@ impl ArgumentReflection for *const abi::TypeInfo {
     }
 }
 
+impl ArgumentReflection for *const std::ffi::c_void {
+    type Marshalled = Self;
+
+    fn type_name(&self) -> &str {
+        "*const core::void"
+    }
+
+    fn marshal(self) -> Self::Marshalled {
+        self
+    }
+}
+
+impl ArgumentReflection for *mut std::ffi::c_void {
+    type Marshalled = Self;
+
+    fn type_name(&self) -> &str {
+        "*mut core::void"
+    }
+
+    fn marshal(self) -> Self::Marshalled {
+        self
+    }
+}
+
+impl ArgumentReflection for *const *mut std::ffi::c_void {
+    type Marshalled = Self;
+
+    fn type_name(&self) -> &str {
+        "*const *mut core::void"
+    }
+
+    fn marshal(self) -> Self::Marshalled {
+        self
+    }
+}
+
 impl ReturnTypeReflection for *const abi::TypeInfo {
-    type Marshalled = *const abi::TypeInfo;
+    type Marshalled = Self;
 
     fn type_name() -> &'static str {
         "*const TypeInfo"
+    }
+}
+
+impl ReturnTypeReflection for *const std::ffi::c_void {
+    type Marshalled = Self;
+
+    fn type_name() -> &'static str {
+        "*const core::void"
+    }
+}
+
+impl ReturnTypeReflection for *mut std::ffi::c_void {
+    type Marshalled = Self;
+
+    fn type_name() -> &'static str {
+        "*mut core::void"
+    }
+}
+
+impl ReturnTypeReflection for *const *mut std::ffi::c_void {
+    type Marshalled = Self;
+
+    fn type_name() -> &'static str {
+        "*const *mut core::void"
     }
 }
 

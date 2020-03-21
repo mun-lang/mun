@@ -1,4 +1,4 @@
-use mun_codegen::OptimizationLevel;
+pub use mun_codegen::OptimizationLevel;
 use mun_target::spec::Target;
 use std::path::PathBuf;
 

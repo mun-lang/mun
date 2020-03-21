@@ -8,6 +8,7 @@ mod assembly;
 mod function;
 #[macro_use]
 mod macros;
+mod allocator;
 mod marshal;
 mod reflection;
 mod r#struct;
@@ -16,11 +17,11 @@ mod type_info;
 #[cfg(test)]
 mod test;
 
-use std::alloc::Layout;
 use std::collections::HashMap;
+use std::ffi;
 use std::io;
+use std::mem;
 use std::path::{Path, PathBuf};
-use std::ptr;
 use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
@@ -31,9 +32,11 @@ use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 pub use crate::marshal::Marshal;
 pub use crate::reflection::{ArgumentReflection, ReturnTypeReflection};
 
+pub use crate::allocator::Allocator;
 pub use crate::assembly::Assembly;
 use crate::function::IntoFunctionInfo;
 pub use crate::r#struct::StructRef;
+use std::sync::Arc;
 
 /// Options for the construction of a [`Runtime`].
 pub struct RuntimeOptions {
@@ -61,11 +64,14 @@ impl RuntimeBuilder {
             },
         };
 
-        result.insert_fn("malloc", malloc as extern "C" fn(u64, u64) -> *mut u8);
+        result.insert_fn(
+            "new",
+            new as extern "C" fn(*const abi::TypeInfo, *mut ffi::c_void) -> *const *mut ffi::c_void,
+        );
 
         result.insert_fn(
             "clone",
-            clone as extern "C" fn(*const u8, *const abi::TypeInfo) -> *mut u8,
+            clone as extern "C" fn(*const ffi::c_void, *mut ffi::c_void) -> *const *mut ffi::c_void,
         );
 
         result
@@ -127,25 +133,44 @@ pub struct Runtime {
     dispatch_table: DispatchTable,
     watcher: RecommendedWatcher,
     watcher_rx: Receiver<DebouncedEvent>,
+    allocator: Arc<Allocator>,
     _user_functions: Vec<FunctionInfoStorage>,
 }
 
-extern "C" fn malloc(size: u64, alignment: u64) -> *mut u8 {
-    unsafe {
-        std::alloc::alloc(Layout::from_size_align(size as usize, alignment as usize).unwrap())
-    }
+/// Retrieve the allocator using the provided handle.
+///
+/// # Safety
+///
+/// The allocator must have been set using the `set_allocator_handle` call - exposed by the Mun
+/// library.
+unsafe fn get_allocator(alloc_handle: *mut ffi::c_void) -> Arc<Allocator> {
+    Arc::from_raw(alloc_handle as *const Allocator)
 }
 
-extern "C" fn clone(src: *const u8, ty: *const abi::TypeInfo) -> *mut u8 {
-    let type_info = unsafe { ty.as_ref().unwrap() };
-    let struct_info = type_info.as_struct().unwrap();
-    let size = struct_info.field_offsets().last().cloned().unwrap_or(0)
-        + struct_info.field_sizes().last().cloned().unwrap_or(0);
-    let alignment = 8;
+extern "C" fn new(
+    type_info: *const abi::TypeInfo,
+    alloc_handle: *mut ffi::c_void,
+) -> *const *mut ffi::c_void {
+    let allocator = unsafe { get_allocator(alloc_handle) };
+    let handle = unsafe { allocator.create_object(type_info) as *const _ };
 
-    let dest = malloc(size as u64, alignment);
-    unsafe { ptr::copy_nonoverlapping(src, dest, size as usize) };
-    dest
+    // Prevent destruction
+    mem::forget(allocator);
+
+    handle
+}
+
+extern "C" fn clone(
+    src: *const ffi::c_void,
+    alloc_handle: *mut ffi::c_void,
+) -> *const *mut ffi::c_void {
+    let allocator = unsafe { get_allocator(alloc_handle) };
+    let handle = unsafe { allocator.clone_object(src as *const _) as *const _ };
+
+    // Prevent destruction
+    mem::forget(allocator);
+
+    handle
 }
 
 impl Runtime {
@@ -169,6 +194,7 @@ impl Runtime {
             dispatch_table,
             watcher,
             watcher_rx: rx,
+            allocator: Arc::new(Allocator::new()),
             _user_functions: storages,
         };
 
@@ -187,7 +213,11 @@ impl Runtime {
             .into());
         }
 
-        let mut assembly = Assembly::load(&library_path, &mut self.dispatch_table)?;
+        let mut assembly = Assembly::load(
+            &library_path,
+            &mut self.dispatch_table,
+            self.allocator.clone(),
+        )?;
         for dependency in assembly.info().dependencies() {
             self.add_assembly(Path::new(dependency))?;
         }
@@ -203,6 +233,11 @@ impl Runtime {
     /// Retrieves the function information corresponding to `function_name`, if available.
     pub fn get_function_info(&self, function_name: &str) -> Option<&abi::FunctionInfo> {
         self.dispatch_table.get_fn(function_name)
+    }
+
+    /// Returns the runtime's allocator.
+    pub fn get_allocator(&self) -> Arc<Allocator> {
+        self.allocator.clone()
     }
 
     /// Updates the state of the runtime. This includes checking for file changes, and reloading

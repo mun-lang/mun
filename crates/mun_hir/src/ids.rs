@@ -90,7 +90,7 @@ pub(crate) trait AstItemDef<N: AstNode>: salsa::InternKey + Clone {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct FunctionId(salsa::InternId);
 impl_intern_key!(FunctionId);
 

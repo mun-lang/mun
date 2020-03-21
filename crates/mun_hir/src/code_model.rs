@@ -175,6 +175,16 @@ impl DefWithBody {
     }
 }
 
+impl Visibility {
+    pub fn is_public(self) -> bool {
+        self == Visibility::Public
+    }
+
+    pub fn is_private(self) -> bool {
+        self == Visibility::Private
+    }
+}
+
 /// Definitions that have a struct.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum DefWithStruct {
@@ -208,7 +218,7 @@ impl DefWithStruct {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Function {
     pub(crate) id: FunctionId,
 }

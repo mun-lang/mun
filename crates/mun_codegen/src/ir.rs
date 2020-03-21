@@ -5,13 +5,16 @@ use inkwell::types::{
 };
 use inkwell::AddressSpace;
 
+pub(crate) mod abi_types;
 pub mod adt;
 pub mod body;
 #[macro_use]
 pub(crate) mod dispatch_table;
 pub mod function;
+mod intrinsics;
 pub mod module;
 pub mod ty;
+pub(crate) mod type_table;
 
 /// Try to down cast an `AnyTypeEnum` into a `BasicTypeEnum`.
 fn try_convert_any_to_basic(ty: AnyTypeEnum) -> Option<BasicTypeEnum> {
@@ -188,6 +191,20 @@ impl<S: BasicType, T: IsIrType<Type = S>> IsPointerType for *const T {
 impl IsPointerType for *const TypeInfo {
     fn ir_type(context: &Context) -> PointerType {
         context.i8_type().ptr_type(AddressSpace::Const)
+    }
+}
+
+// HACK: Manually add `*const c_void`
+impl IsPointerType for *const std::ffi::c_void {
+    fn ir_type(context: &Context) -> PointerType {
+        context.i8_type().ptr_type(AddressSpace::Const)
+    }
+}
+
+// HACK: Manually add `*mut c_void`
+impl IsPointerType for *mut std::ffi::c_void {
+    fn ir_type(context: &Context) -> PointerType {
+        context.i8_type().ptr_type(AddressSpace::Generic)
     }
 }
 

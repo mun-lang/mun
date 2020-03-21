@@ -48,13 +48,13 @@ impl TestDriver {
             rel_path: RelativePathBuf::from("main.mun"),
             contents: text.to_owned(),
         };
-        let (driver, file_id) = Driver::with_file(config, input).unwrap();
+        let (mut driver, file_id) = Driver::with_file(config, input).unwrap();
         let mut err_stream = mun_compiler::StandardStream::stderr(ColorChoice::Auto);
         if driver.emit_diagnostics(&mut err_stream).unwrap() {
             err_stream.flush().unwrap();
             panic!("compiler errors..")
         }
-        let out_path = driver.write_assembly(file_id).unwrap().unwrap();
+        let out_path = driver.write_assembly(file_id).unwrap();
         let builder = RuntimeBuilder::new(&out_path);
         TestDriver {
             _temp_dir: temp_dir,
@@ -69,7 +69,7 @@ impl TestDriver {
     fn update(&mut self, text: &str) {
         self.runtime_mut(); // Ensures that the runtime is spawned prior to the update
         self.driver.set_file_text(self.file_id, text);
-        let out_path = self.driver.write_assembly(self.file_id).unwrap().unwrap();
+        let out_path = self.driver.write_assembly(self.file_id).unwrap();
         assert_eq!(
             &out_path, &self.out_path,
             "recompiling did not result in the same assembly"

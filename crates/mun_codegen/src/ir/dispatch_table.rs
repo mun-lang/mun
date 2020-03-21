@@ -1,4 +1,3 @@
-use crate::intrinsics;
 use crate::values::FunctionValue;
 use crate::{CodeGenParams, IrDatabase};
 use inkwell::module::Module;
@@ -8,7 +7,7 @@ use inkwell::values::{BasicValueEnum, PointerValue};
 use crate::intrinsics::Intrinsic;
 use crate::type_info::TypeInfo;
 use hir::{Body, Expr, ExprId, InferenceResult};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 /// A dispatch table in IR is a struct that contains pointers to all functions that are called from
@@ -36,7 +35,7 @@ pub struct DispatchTable {
 }
 
 /// A `FunctionPrototype` defines a unique signature that can be added to the dispatch table.
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct FunctionPrototype {
     pub name: String,
     pub arg_types: Vec<TypeInfo>,
@@ -150,8 +149,12 @@ struct TypedDispatchableFunction {
 
 impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
     /// Creates a new builder that can generate a dispatch function.
-    pub fn new(db: &'a D, module: &'a Module) -> Self {
-        DispatchTableBuilder {
+    pub fn new(
+        db: &'a D,
+        module: &'a Module,
+        intrinsics: BTreeMap<FunctionPrototype, FunctionType>,
+    ) -> Self {
+        let mut table = DispatchTableBuilder {
             db,
             module,
             function_to_idx: Default::default(),
@@ -159,7 +162,26 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
             entries: Default::default(),
             table_ref: None,
             table_type: module.get_context().opaque_struct_type("DispatchTable"),
+        };
+
+        if !intrinsics.is_empty() {
+            table.ensure_table_ref();
+
+            // Use a `BTreeMap` to guarantee deterministically ordered output
+            for (prototype, ir_type) in intrinsics.into_iter() {
+                let index = table.entries.len();
+                table.entries.push(TypedDispatchableFunction {
+                    function: DispatchableFunction {
+                        prototype: prototype.clone(),
+                        hir: None,
+                    },
+                    ir_type,
+                });
+
+                table.prototype_to_idx.insert(prototype, index);
+            }
         }
+        table
     }
 
     /// Creates the global dispatch table in the module if it does not exist.
@@ -180,43 +202,8 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
         if let Expr::Call { callee, .. } = expr {
             match infer[*callee].as_callable_def() {
                 Some(hir::CallableDef::Function(def)) => self.collect_fn_def(def),
-                Some(hir::CallableDef::Struct(s)) => {
-                    // self.collect_intrinsic(&intrinsics::new);
-                    self.collect_intrinsic(&intrinsics::clone);
-                    // self.collect_intrinsic(&intrinsics::drop);
-                    if s.data(self.db).memory_kind == hir::StructMemoryKind::GC {
-                        self.collect_intrinsic(&intrinsics::malloc)
-                    }
-                }
+                Some(hir::CallableDef::Struct(_)) => (),
                 None => panic!("expected a callable expression"),
-            }
-        }
-
-        if let Expr::RecordLit { .. } = expr {
-            let struct_ty = infer[expr_id].clone();
-            let hir_struct = struct_ty.as_struct().unwrap(); // Can only really get here if the type is a struct
-                                                             // self.collect_intrinsic(&intrinsics::new);
-            self.collect_intrinsic(&intrinsics::clone);
-            // self.collect_intrinsic(&intrinsics::drop);
-            if hir_struct.data(self.db).memory_kind == hir::StructMemoryKind::GC {
-                self.collect_intrinsic(&intrinsics::malloc)
-            }
-        }
-
-        if let Expr::Path(path) = expr {
-            let resolver = hir::resolver_for_expr(body.clone(), self.db, expr_id);
-            let resolution = resolver
-                .resolve_path_without_assoc_items(self.db, path)
-                .take_values()
-                .expect("unknown path");
-
-            if let hir::Resolution::Def(hir::ModuleDef::Struct(s)) = resolution {
-                // self.collect_intrinsic(&intrinsics::new);
-                self.collect_intrinsic(&intrinsics::clone);
-                // self.collect_intrinsic(&intrinsics::drop);
-                if s.data(self.db).memory_kind == hir::StructMemoryKind::GC {
-                    self.collect_intrinsic(&intrinsics::malloc)
-                }
             }
         }
 
@@ -272,36 +259,10 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
         }
     }
 
-    /// Collects a call to an intrinsic function.
-    #[allow(clippy::map_entry)]
-    fn collect_intrinsic(&mut self, intrinsic: &impl Intrinsic) {
-        self.ensure_table_ref();
-
-        // If the function is not yet contained in the table add it
-        let prototype = intrinsic.prototype();
-        if !self.prototype_to_idx.contains_key(&prototype) {
-            let index = self.entries.len();
-            self.entries.push(TypedDispatchableFunction {
-                function: DispatchableFunction {
-                    prototype: prototype.clone(),
-                    hir: None,
-                },
-                ir_type: intrinsic.ir_type(&self.module.get_context()),
-            });
-
-            self.prototype_to_idx.insert(prototype, index);
-        }
-    }
-
     /// Collect all the call expressions from the specified body with the given type inference
     /// result.
     pub fn collect_body(&mut self, body: &Arc<Body>, infer: &InferenceResult) {
         self.collect_expr(body.body_expr(), body, infer);
-    }
-
-    /// Collect the call expression from the body of a wrapper for the specified function.
-    pub fn collect_wrapper_body(&mut self, _function: hir::Function) {
-        self.collect_intrinsic(&intrinsics::malloc)
     }
 
     /// This creates the final DispatchTable with all *called* functions from within the module

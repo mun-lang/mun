@@ -4,6 +4,7 @@ expression: "fn main():int {\n    return 5;\n    let a = 3; // Nothing regarding
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
+target triple = "x86-64"
 
 define i64 @main() {
 body:

@@ -6,12 +6,9 @@ use crate::{
     diagnostics::{diagnostics, Emit},
     PathOrInline,
 };
-use mun_codegen::IrDatabase;
+use mun_codegen::{IrDatabase, ModuleBuilder};
 use mun_hir::{FileId, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{path::PathBuf, sync::Arc};
 
 mod config;
 
@@ -123,26 +120,9 @@ impl Driver {
 }
 
 impl Driver {
-    /// Computes the output path for the assembly of the specified file.
-    fn assembly_output_path(&self, file_id: FileId) -> PathBuf {
-        let relative_path: RelativePathBuf = self.db.file_relative_path(file_id);
-        let original_filename = Path::new(relative_path.file_name().unwrap());
-
-        // Add the `munlib` suffix to the original filename
-        let output_file_name = original_filename.with_extension("munlib");
-
-        // If there is an out dir specified, prepend the output directory
-        if let Some(ref out_dir) = self.out_dir {
-            out_dir.join(output_file_name)
-        } else {
-            output_file_name
-        }
-    }
-
     /// Generate an assembly for the given file
-    pub fn write_assembly(&self, file_id: FileId) -> Result<Option<PathBuf>, failure::Error> {
-        let output_path = self.assembly_output_path(file_id);
-        mun_codegen::write_module_shared_object(&self.db, file_id, &output_path)?;
-        Ok(Some(output_path))
+    pub fn write_assembly(&mut self, file_id: FileId) -> Result<PathBuf, failure::Error> {
+        let module_builder = ModuleBuilder::new(&mut self.db, file_id)?;
+        module_builder.finalize(self.out_dir.as_deref())
     }
 }

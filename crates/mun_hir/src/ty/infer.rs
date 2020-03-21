@@ -16,7 +16,6 @@ use crate::{
     BinaryOp, Function, HirDatabase, Name, Path, TypeCtor,
 };
 use rustc_hash::FxHashSet;
-use std::mem;
 use std::ops::Index;
 use std::sync::Arc;
 
@@ -629,7 +628,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
     fn resolve_all(mut self) -> InferenceResult {
         // FIXME resolve obligations as well (use Guidance if necessary)
         //let mut tv_stack = Vec::new();
-        let mut expr_types = mem::replace(&mut self.type_of_expr, ArenaMap::default());
+        let mut expr_types = std::mem::take(&mut self.type_of_expr);
         for (expr, ty) in expr_types.iter_mut() {
             //let resolved = self.resolve_ty_completely(&mut tv_stack, mem::replace(ty, Ty::Unknown));
             if *ty == Ty::Unknown {
@@ -637,7 +636,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             }
             //*ty = resolved;
         }
-        let mut pat_types = mem::replace(&mut self.type_of_pat, ArenaMap::default());
+        let mut pat_types = std::mem::take(&mut self.type_of_pat);
         for (pat, ty) in pat_types.iter_mut() {
             //let resolved = self.resolve_ty_completely(&mut tv_stack, mem::replace(ty, Ty::Unknown));
             if *ty == Ty::Unknown {

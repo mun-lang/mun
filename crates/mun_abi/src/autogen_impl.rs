@@ -162,6 +162,13 @@ impl StructInfo {
                 )
             })
     }
+
+    /// Returns the size of the struct
+    pub fn size(&self) -> usize {
+        (self.field_offsets().last().cloned().unwrap_or(0)
+            + self.field_sizes().last().cloned().unwrap_or(0))
+        .into()
+    }
 }
 
 impl fmt::Display for StructInfo {
@@ -468,6 +475,7 @@ mod tests {
         field_types: &[&TypeInfo],
         field_offsets: &[u16],
         field_sizes: &[u16],
+        alignment: u16,
         memory_kind: StructMemoryKind,
     ) -> StructInfo {
         assert!(field_names.len() == field_types.len());
@@ -481,6 +489,7 @@ mod tests {
             field_offsets: field_offsets.as_ptr(),
             field_sizes: field_sizes.as_ptr(),
             num_fields: field_names.len() as u16,
+            alignment,
             memory_kind,
         }
     }
@@ -490,7 +499,7 @@ mod tests {
     #[test]
     fn test_struct_info_name() {
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
-        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], &[], Default::default());
+        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], &[], 1, Default::default());
 
         assert_eq!(struct_info.name(), FAKE_STRUCT_NAME);
     }
@@ -508,6 +517,7 @@ mod tests {
             field_types,
             field_offsets,
             field_sizes,
+            1,
             Default::default(),
         );
 
@@ -515,6 +525,7 @@ mod tests {
         assert_eq!(struct_info.field_types(), field_types);
         assert_eq!(struct_info.field_offsets(), field_offsets);
         assert_eq!(struct_info.field_sizes(), field_sizes);
+        assert_eq!(struct_info.size(), 0);
     }
 
     #[test]
@@ -527,6 +538,7 @@ mod tests {
         let field_types = &[&type_info];
         let field_offsets = &[1];
         let field_sizes = &[2];
+        let alignment = 1;
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
         let struct_info = fake_struct_info(
             &struct_name,
@@ -534,6 +546,7 @@ mod tests {
             field_types,
             field_offsets,
             field_sizes,
+            alignment,
             Default::default(),
         );
 
@@ -543,6 +556,61 @@ mod tests {
         assert_eq!(struct_info.field_types(), field_types);
         assert_eq!(struct_info.field_offsets(), field_offsets);
         assert_eq!(struct_info.field_sizes(), field_sizes);
+        assert_eq!(
+            struct_info.size() as u16,
+            field_offsets.last().unwrap() + field_sizes.last().unwrap()
+        )
+    }
+
+    #[test]
+    fn test_struct_info_alignment() {
+        let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
+        let struct_alignment = 4;
+        let struct_info = fake_struct_info(
+            &struct_name,
+            &[],
+            &[],
+            &[],
+            &[],
+            struct_alignment,
+            Default::default(),
+        );
+
+        assert_eq!(struct_info.alignment, struct_alignment);
+    }
+
+    #[test]
+    fn test_struct_info_memory_kind_gc() {
+        let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
+        let struct_memory_kind = StructMemoryKind::GC;
+        let struct_info = fake_struct_info(
+            &struct_name,
+            &[],
+            &[],
+            &[],
+            &[],
+            1,
+            struct_memory_kind.clone(),
+        );
+
+        assert_eq!(struct_info.memory_kind, struct_memory_kind);
+    }
+
+    #[test]
+    fn test_struct_info_memory_kind_value() {
+        let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
+        let struct_memory_kind = StructMemoryKind::Value;
+        let struct_info = fake_struct_info(
+            &struct_name,
+            &[],
+            &[],
+            &[],
+            &[],
+            1,
+            struct_memory_kind.clone(),
+        );
+
+        assert_eq!(struct_info.memory_kind, struct_memory_kind);
     }
 
     fn fake_module_info(
@@ -557,26 +625,6 @@ mod tests {
             types: types.as_ptr().cast::<*const TypeInfo>(),
             num_types: types.len() as u32,
         }
-    }
-
-    #[test]
-    fn test_struct_info_memory_kind_gc() {
-        let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
-        let struct_memory_kind = StructMemoryKind::GC;
-        let struct_info =
-            fake_struct_info(&struct_name, &[], &[], &[], &[], struct_memory_kind.clone());
-
-        assert_eq!(struct_info.memory_kind, struct_memory_kind);
-    }
-
-    #[test]
-    fn test_struct_info_memory_kind_value() {
-        let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
-        let struct_memory_kind = StructMemoryKind::Value;
-        let struct_info =
-            fake_struct_info(&struct_name, &[], &[], &[], &[], struct_memory_kind.clone());
-
-        assert_eq!(struct_info.memory_kind, struct_memory_kind);
     }
 
     const FAKE_MODULE_PATH: &str = "path::to::module";
@@ -616,7 +664,7 @@ mod tests {
         let functions = &[fn_info];
 
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name");
-        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], &[], Default::default());
+        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], &[], 1, Default::default());
         let struct_type_info = fake_struct_type_info(&struct_name, struct_info);
         let types = &[unsafe { mem::transmute(&struct_type_info) }];
 

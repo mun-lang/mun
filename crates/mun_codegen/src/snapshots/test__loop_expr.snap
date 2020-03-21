@@ -4,6 +4,7 @@ expression: "fn foo() {\n    loop {}\n}"
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
+target triple = "x86-64"
 
 define void @foo() {
 body:

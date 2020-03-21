@@ -2,6 +2,7 @@ use crate::ir::dispatch_table::FunctionPrototype;
 use crate::type_info::TypeInfo;
 use inkwell::context::Context;
 use inkwell::types::FunctionType;
+use std::ffi;
 
 #[macro_use]
 mod macros;
@@ -17,8 +18,9 @@ pub trait Intrinsic: Sync {
 }
 
 intrinsics! {
-    /// Allocates memory from the runtime to use in code.
-    pub fn malloc(size: u64, alignment: u64) -> *mut u8;
-    /// Allocates memory for and clones the specified type located at `src` into it.
-    pub fn clone(src: *const u8, ty: *const TypeInfo) -> *mut u8;
+    /// Allocates memory for the specified `type` in the allocator referred to by `alloc_handle`.
+    pub fn new(type: *const TypeInfo, alloc_handle: *mut ffi::c_void) -> *const *mut ffi::c_void;
+    /// Allocates memory for and clones the specified type located at `src` into it. Memory is
+    /// allocated in the allocator referred to by `alloc_handle`.
+    pub fn clone(src: *const ffi::c_void, alloc_handle: *mut ffi::c_void) -> *const *mut ffi::c_void;
 }

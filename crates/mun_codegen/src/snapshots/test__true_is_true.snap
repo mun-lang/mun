@@ -4,6 +4,7 @@ expression: "fn test_true():bool {\n    true\n}\n\nfn test_false():bool {\n    f
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
+target triple = "x86-64"
 
 define i1 @test_true() {
 body:

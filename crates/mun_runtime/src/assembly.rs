@@ -1,7 +1,7 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::DispatchTable;
+use crate::{Allocator, DispatchTable};
 use abi::AssemblyInfo;
 use failure::Error;
 use libloading::Symbol;
@@ -9,12 +9,14 @@ use libloading::Symbol;
 mod temp_library;
 
 use self::temp_library::TempLibrary;
+use std::sync::Arc;
 
 /// An assembly is a hot reloadable compilation unit, consisting of one or more Mun modules.
 pub struct Assembly {
     library_path: PathBuf,
     library: Option<TempLibrary>,
     info: AssemblyInfo,
+    allocator: Arc<Allocator>,
 }
 
 impl Assembly {
@@ -22,12 +24,19 @@ impl Assembly {
     pub fn load(
         library_path: &Path,
         runtime_dispatch_table: &mut DispatchTable,
+        allocator: Arc<Allocator>,
     ) -> Result<Self, Error> {
         let library = TempLibrary::new(library_path)?;
 
         // Check whether the library has a symbols function
         let get_info: Symbol<'_, extern "C" fn() -> AssemblyInfo> =
             unsafe { library.library().get(b"get_info") }?;
+
+        let set_allocator_handle: Symbol<'_, extern "C" fn(*mut std::ffi::c_void)> =
+            unsafe { library.library().get(b"set_allocator_handle") }?;
+
+        let allocator_ptr = Arc::into_raw(allocator.clone()) as *mut std::ffi::c_void;
+        set_allocator_handle(allocator_ptr);
 
         let info = get_info();
 
@@ -39,6 +48,7 @@ impl Assembly {
             library_path: library_path.to_path_buf(),
             library: Some(library),
             info,
+            allocator,
         })
     }
 
@@ -90,7 +100,7 @@ impl Assembly {
         self.library.take();
 
         // TODO: Partial hot reload of an assembly
-        *self = Assembly::load(library_path, runtime_dispatch_table)?;
+        *self = Assembly::load(library_path, runtime_dispatch_table, self.allocator.clone())?;
         Ok(())
     }
 

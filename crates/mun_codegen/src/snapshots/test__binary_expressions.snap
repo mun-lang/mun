@@ -4,6 +4,7 @@ expression: "fn add(a:int, b:int):int {\n  a+b\n}\n\nfn subtract(a:int, b:int):i
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
+target triple = "x86-64"
 
 define i64 @add(i64, i64) {
 body:
