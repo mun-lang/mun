@@ -80,7 +80,11 @@ impl<T: Type + Clone> GCRuntime<T> for MarkSweep<T> {
         src.ty.clone()
     }
 
-    unsafe fn set_root(&self, _obj: GCHandle, _is_root: bool) {
+    unsafe fn root(&self, _obj: GCHandle) {
+        // NOOP
+    }
+
+    unsafe fn unroot(&self, _obj: GCHandle) {
         // NOOP
     }
 }

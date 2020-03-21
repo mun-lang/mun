@@ -1,7 +1,7 @@
 mod handle;
 mod mark_sweep;
 
-pub use handle::{GCHandle, RawGCHandle};
+pub use handle::{GCHandle, GCRootHandle, HasGCHandlePtr, RawGCHandle};
 pub use mark_sweep::MarkSweep;
 
 /// A trait used by the GC to identify an object.
@@ -33,10 +33,21 @@ pub trait GCRuntime<T: Type>: Send + Sync {
     unsafe fn object_type(&self, obj: GCHandle) -> T;
 
     /// Tell the runtime that the specified object should be considered a root which keeps all other
-    /// objects it references alive.
+    /// objects it references alive. Objects marked as root, must also be unrooted before they can
+    /// be collected. Internally this increments a root refcount.
     ///
     /// # Safety
     ///
     /// This method is unsafe because the passed GCHandle could point to random memory.
-    unsafe fn set_root(&self, obj: GCHandle, is_root: bool);
+    unsafe fn root(&self, obj: GCHandle);
+
+    /// Tell the runtime that the specified object should unrooted which keeps all other
+    /// objects it references alive. Objects marked as root, must also be unrooted before they can
+    /// be collected. Internally this decrements a root refcount. When the refcount reaches 0, the
+    /// object is considered non-rooted.
+    ///
+    /// # Safety
+    ///
+    /// This method is unsafe because the passed GCHandle could point to random memory.
+    unsafe fn unroot(&self, obj: GCHandle);
 }

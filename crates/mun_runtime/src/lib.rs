@@ -245,8 +245,8 @@ impl Runtime {
     }
 
     /// Returns the runtime's allocator.
-    pub fn get_allocator(&self) -> Arc<Allocator> {
-        self.allocator.clone()
+    pub fn allocator(&self) -> &Arc<Allocator> {
+        &self.allocator
     }
 
     /// Updates the state of the runtime. This includes checking for file changes, and reloading

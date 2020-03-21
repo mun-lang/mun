@@ -1,3 +1,4 @@
+use crate::allocator::{GCHandle, GCRootHandle};
 use crate::{
     marshal::Marshal,
     reflection::{
@@ -5,8 +6,8 @@ use crate::{
     },
     Runtime,
 };
-use gc::GCHandle;
 use gc::GCRuntime;
+use gc::HasGCHandlePtr;
 use std::cell::RefCell;
 use std::ptr::{self, NonNull};
 use std::rc::Rc;
@@ -29,7 +30,7 @@ impl RawStruct {
 /// TODO: Handle destruction of `struct(value)`
 pub struct StructRef {
     runtime: Rc<RefCell<Runtime>>,
-    raw: RawStruct,
+    handle: GCRootHandle,
     info: abi::StructInfo,
 }
 
@@ -40,16 +41,20 @@ impl StructRef {
     fn new(runtime: Rc<RefCell<Runtime>>, type_info: &abi::TypeInfo, raw: RawStruct) -> StructRef {
         assert!(type_info.group.is_struct());
 
+        let handle = {
+            let runtime_ref = runtime.borrow();
+            unsafe { GCRootHandle::new(runtime_ref.allocator(), raw.0) }
+        };
         Self {
             runtime,
-            raw,
+            handle,
             info: type_info.as_struct().unwrap().clone(),
         }
     }
 
     /// Consumes the `Struct`, returning a raw Mun struct.
     pub fn into_raw(self) -> RawStruct {
-        self.raw
+        RawStruct(self.handle.handle())
     }
 
     /// Retrieves its struct information.
@@ -65,7 +70,7 @@ impl StructRef {
     unsafe fn offset_unchecked<T>(&self, field_idx: usize) -> NonNull<T> {
         let offset = *self.info.field_offsets().get_unchecked(field_idx);
         // self.raw is never null
-        NonNull::new_unchecked(self.raw.get_ptr().add(offset as usize).cast::<T>())
+        NonNull::new_unchecked(self.handle.get_ptr::<u8>().add(offset as usize).cast::<T>())
     }
 
     /// Retrieves the value of the field corresponding to the specified `field_name`.
@@ -144,7 +149,7 @@ impl ArgumentReflection for StructRef {
     }
 
     fn marshal(self) -> Self::Marshalled {
-        self.raw
+        self.into_raw()
     }
 }
 
@@ -184,7 +189,10 @@ impl Marshal<StructRef> for RawStruct {
             // struct value.
 
             // Create a new object using the runtime's intrinsic
-            let gc_handle = runtime.borrow().get_allocator().alloc_object(type_info_ptr);
+            let gc_handle = {
+                let runtime_ref = runtime.borrow();
+                runtime_ref.allocator().alloc_object(type_info_ptr)
+            };
 
             // Construct
             let src = ptr.cast::<u8>().as_ptr() as *const _;
