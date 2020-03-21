@@ -26,7 +26,7 @@ impl Allocator {
     }
 
     /// Allocates a block of memory
-    fn alloc(&self, size: u64, alignment: u64) -> *mut u8 {
+    fn alloc(&self, size: usize, alignment: usize) -> *mut u8 {
         unsafe {
             std::alloc::alloc(Layout::from_size_align(size as usize, alignment as usize).unwrap())
         }
@@ -41,10 +41,7 @@ impl Allocator {
     pub(crate) unsafe fn create_object(&self, type_info: *const abi::TypeInfo) -> ObjectHandle {
         let type_info = type_info.as_ref().unwrap();
 
-        let ptr = self.alloc(
-            type_info.size_in_bytes() as u64,
-            type_info.alignment().into(),
-        );
+        let ptr = self.alloc(type_info.size_in_bytes(), type_info.alignment());
         let object = Box::pin(ObjectInfo { ptr, type_info });
 
         // We want to return a pointer to the `ObjectInfo`, to be used as handle.
@@ -71,7 +68,7 @@ impl Allocator {
             let type_info = src.type_info.as_ref().unwrap();
 
             let size = type_info.size_in_bytes();
-            let dest = self.alloc(size as u64, type_info.alignment() as u64);
+            let dest = self.alloc(size, type_info.alignment());
             ptr::copy_nonoverlapping(src.ptr, dest, size as usize);
 
             Box::pin(ObjectInfo {

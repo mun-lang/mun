@@ -27,18 +27,18 @@ impl TypeInfo {
     }
 
     /// Returns the size of the type in bits
-    pub fn size_in_bits(&self) -> u64 {
-        self.size_in_bits
+    pub fn size_in_bits(&self) -> usize {
+        self.size_in_bits as usize
     }
 
     /// Returns the size of the type in bytes
-    pub fn size_in_bytes(&self) -> u64 {
-        (self.size_in_bits + 7) / 8
+    pub fn size_in_bytes(&self) -> usize {
+        ((self.size_in_bits + 7) / 8) as usize
     }
 
     /// Returns the alignment of the type in bytes
-    pub fn alignment(&self) -> u32 {
-        self.alignment
+    pub fn alignment(&self) -> usize {
+        self.alignment as usize
     }
 }
 
@@ -332,7 +332,7 @@ mod tests {
         struct_info: StructInfo,
     }
 
-    fn fake_type_info(name: &CStr, group: TypeGroup, size: u64, alignment: u32) -> TypeInfo {
+    fn fake_type_info(name: &CStr, group: TypeGroup, size: u32, alignment: u8) -> TypeInfo {
         TypeInfo {
             guid: FAKE_TYPE_GUID,
             name: name.as_ptr(),
@@ -345,8 +345,8 @@ mod tests {
     fn fake_struct_type_info(
         name: &CStr,
         struct_info: StructInfo,
-        size: u64,
-        alignment: u32,
+        size: u32,
+        alignment: u8,
     ) -> StructTypeInfo {
         StructTypeInfo {
             type_info: fake_type_info(name, TypeGroup::StructTypes, size, alignment),

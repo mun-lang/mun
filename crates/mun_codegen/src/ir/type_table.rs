@@ -178,11 +178,11 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
             )
             .into(),
             context
-                .i64_type()
+                .i32_type()
                 .const_int(type_info.size.bit_size, false)
                 .into(),
             context
-                .i32_type()
+                .i8_type()
                 .const_int(type_info.size.alignment as u64, false)
                 .into(),
             context

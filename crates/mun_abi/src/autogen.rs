@@ -47,9 +47,9 @@ pub struct TypeInfo {
     #[doc = " Type name"]
     pub name: *const ::std::os::raw::c_char,
     #[doc = " The exact size of the type in bits without any padding"]
-    pub size_in_bits: u64,
+    pub size_in_bits: u32,
     #[doc = " The alignment of the type"]
-    pub alignment: u32,
+    pub alignment: u8,
     #[doc = " Type group"]
     pub group: TypeGroup,
 }
@@ -57,7 +57,7 @@ pub struct TypeInfo {
 fn bindgen_test_layout_TypeInfo() {
     assert_eq!(
         ::std::mem::size_of::<TypeInfo>(),
-        40usize,
+        32usize,
         concat!("Size of: ", stringify!(TypeInfo))
     );
     assert_eq!(
@@ -97,7 +97,7 @@ fn bindgen_test_layout_TypeInfo() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<TypeInfo>())).alignment as *const _ as usize },
-        32usize,
+        28usize,
         concat!(
             "Offset of field: ",
             stringify!(TypeInfo),
@@ -107,7 +107,7 @@ fn bindgen_test_layout_TypeInfo() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<TypeInfo>())).group as *const _ as usize },
-        36usize,
+        29usize,
         concat!(
             "Offset of field: ",
             stringify!(TypeInfo),

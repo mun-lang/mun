@@ -95,7 +95,11 @@ pub fn collect_fn_body<D: IrDatabase>(
     );
 }
 
-pub fn collect_wrapper_body<D: IrDatabase>(db: &D, entries: &mut IntrinsicsMap, needs_alloc: &mut bool) {
+pub fn collect_wrapper_body<D: IrDatabase>(
+    db: &D,
+    entries: &mut IntrinsicsMap,
+    needs_alloc: &mut bool,
+) {
     collect_intrinsic(db, entries, &intrinsics::new);
     collect_intrinsic(db, entries, &intrinsics::clone);
     // self.collect_intrinsic(entries, &intrinsics::drop, module);

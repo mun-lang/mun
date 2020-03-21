@@ -34,8 +34,8 @@ pub(crate) fn gen_abi_types(context: ContextRef) -> AbiTypes {
         &[
             guid_type.into(),          // guid
             str_type.into(),           // name
-            context.i64_type().into(), // size_in_bits
-            context.i32_type().into(), // alignment
+            context.i32_type().into(), // size_in_bits
+            context.i8_type().into(),  // alignment
             type_group_type.into(),    // group
         ],
         false,

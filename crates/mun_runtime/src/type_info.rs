@@ -1,5 +1,6 @@
 use super::static_type_map::StaticTypeMap;
 use once_cell::sync::OnceCell;
+use std::convert::TryInto;
 use std::ffi::{CStr, CString};
 use std::sync::Once;
 
@@ -50,8 +51,12 @@ impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *const T {
                     guid,
                     name: name_ptr,
                     group: abi::TypeGroup::FundamentalTypes,
-                    size_in_bits: std::mem::size_of::<*const T>() as u64 * 8,
-                    alignment: std::mem::align_of::<*const T>() as u32,
+                    size_in_bits: (std::mem::size_of::<*const T>() * 8)
+                        .try_into()
+                        .expect("size of T is larger than the maximum according the API size. Please file a bug."),
+                    alignment: (std::mem::align_of::<*const T>())
+                        .try_into()
+                        .expect("alignment of T is larger than the maximum according the API size. Please file a bug."),
                 },
             )
         })
@@ -84,8 +89,12 @@ impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *mut T {
                     guid,
                     name: name_ptr,
                     group: abi::TypeGroup::FundamentalTypes,
-                    size_in_bits: std::mem::size_of::<*const T>() as u64 * 8,
-                    alignment: std::mem::align_of::<*const T>() as u32,
+                    size_in_bits: (std::mem::size_of::<*const T>() * 8)
+                        .try_into()
+                        .expect("size of T is larger than the maximum according the API size. Please file a bug."),
+                    alignment: (std::mem::align_of::<*const T>())
+                        .try_into()
+                        .expect("alignment of T is larger than the maximum according the API size. Please file a bug."),
                 },
             )
         })
@@ -110,8 +119,12 @@ macro_rules! impl_basic_type_info {
                             guid: abi::Guid{ b: md5::compute(&type_info_name.as_bytes()).0 },
                             name: type_info_name.as_ptr(),
                             group: abi::TypeGroup::FundamentalTypes,
-                            size_in_bits: std::mem::size_of::<$ty>() as u64 * 8,
-                            alignment: std::mem::align_of::<$ty>() as u32,
+                            size_in_bits: (std::mem::size_of::<$ty>() * 8)
+                                .try_into()
+                                .expect("size of T is larger than the maximum according the API size. Please file a bug."),
+                            alignment: (std::mem::align_of::<$ty>())
+                                .try_into()
+                                .expect("alignment of T is larger than the maximum according the API size. Please file a bug."),
                         }
                     })
                 }
