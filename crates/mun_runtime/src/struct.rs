@@ -5,12 +5,11 @@ use crate::{
     },
     Runtime,
 };
-use gc::{GCHandle, RawGCHandle};
+use gc::GCHandle;
+use gc::GCRuntime;
 use std::cell::RefCell;
-use std::ffi;
 use std::ptr::{self, NonNull};
 use std::rc::Rc;
-use std::sync::Arc;
 
 /// Represents a Mun struct pointer.
 ///
@@ -174,15 +173,20 @@ impl Marshal<StructRef> for RawStruct {
     ) -> StructRef {
         // `type_info` is only `None` for the `()` type
         let type_info = type_info.unwrap();
-
         let struct_info = type_info.as_struct().unwrap();
-        let alloc_handle = Arc::into_raw(runtime.borrow().get_allocator()) as *mut std::ffi::c_void;
-        let object_handle = if struct_info.memory_kind == abi::StructMemoryKind::Value {
-            // Create a new object using the runtime's intrinsic
-            let gc_handle: RawGCHandle =
-                invoke_fn!(runtime.clone(), "new", type_info as *const _, alloc_handle).unwrap();
-            let gc_handle: GCHandle = gc_handle.into();
 
+        // HACK: This is very hacky since we know nothing about the lifetime of abi::TypeInfo.
+        let type_info_ptr = (type_info as *const abi::TypeInfo).into();
+
+        // Copy the contents of the struct based on what kind of pointer we are dealing with
+        let gc_handle = if struct_info.memory_kind == abi::StructMemoryKind::Value {
+            // If this case the passed in `ptr` is a pointer to a value struct so `ptr` points to a
+            // struct value.
+
+            // Create a new object using the runtime's intrinsic
+            let gc_handle = runtime.borrow().get_allocator().alloc_object(type_info_ptr);
+
+            // Construct
             let src = ptr.cast::<u8>().as_ptr() as *const _;
             let dest = unsafe { gc_handle.get_ptr::<u8>() };
             let size = type_info.size_in_bytes();
@@ -190,16 +194,13 @@ impl Marshal<StructRef> for RawStruct {
 
             gc_handle
         } else {
-            let ptr = unsafe { *ptr.cast::<RawGCHandle>().as_ptr() } as *const ffi::c_void;
+            // If this case the passed in `ptr` is a pointer to a gc struct so `ptr` points to a
+            // GCHandle.
 
-            // Clone the struct using the runtime's intrinsic
-            let cloned_ptr: RawGCHandle =
-                invoke_fn!(runtime.clone(), "clone", ptr, alloc_handle).unwrap();
-
-            cloned_ptr.into()
+            unsafe { *ptr.cast::<GCHandle>().as_ptr() }
         };
 
-        StructRef::new(runtime, type_info, RawStruct(object_handle))
+        StructRef::new(runtime, type_info, RawStruct(gc_handle))
     }
 
     fn marshal_to_ptr(value: RawStruct, mut ptr: NonNull<Self>, type_info: Option<&abi::TypeInfo>) {

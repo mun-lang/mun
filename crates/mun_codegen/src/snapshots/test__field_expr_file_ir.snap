@@ -5,14 +5,14 @@ expression: "struct(value) Bar(float, Foo);\nstruct(value) Foo { a: int };\n\nfn
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
 
-%DispatchTable = type { i8* addrspace(4)* (i8 addrspace(4)*, i8*)*, i8* addrspace(4)* (i8 addrspace(4)*, i8*)*, i64 (%Foo)*, %Foo (%Bar)* }
+%DispatchTable = type { i8* addrspace(4)* (i8 addrspace(4)*, i8*)*, i64 (%Foo)*, %Foo (%Bar)* }
 %Foo = type { i64 }
 %Bar = type { double, %Foo }
 %struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
 
 @allocatorHandle = external global i8*
 @dispatchTable = external global %DispatchTable
-@global_type_table = external global [8 x %struct.MunTypeInfo addrspace(4)*]
+@global_type_table = external global [7 x %struct.MunTypeInfo addrspace(4)*]
 
 define double @bar_0(%Bar) {
 body:
@@ -43,9 +43,9 @@ define i64 @bar_1_foo_a(%Bar) {
 body:
   %.fca.0.extract = extractvalue %Bar %0, 0
   %.fca.1.0.extract = extractvalue %Bar %0, 1, 0
-  %bar_1_ptr = load %Foo (%Bar)*, %Foo (%Bar)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 3)
+  %bar_1_ptr = load %Foo (%Bar)*, %Foo (%Bar)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 2)
   %bar_1 = call %Foo %bar_1_ptr(%Bar %0)
-  %foo_a_ptr = load i64 (%Foo)*, i64 (%Foo)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 2)
+  %foo_a_ptr = load i64 (%Foo)*, i64 (%Foo)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 1)
   %foo_a = call i64 %foo_a_ptr(%Foo %bar_1)
   ret i64 %foo_a
 }

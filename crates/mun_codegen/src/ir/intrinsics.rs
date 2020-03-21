@@ -37,8 +37,7 @@ fn collect_expr<D: IrDatabase>(
         match infer[*callee].as_callable_def() {
             Some(hir::CallableDef::Struct(_)) => {
                 collect_intrinsic(db, entries, &intrinsics::new);
-                collect_intrinsic(db, entries, &intrinsics::clone);
-                // self.collect_intrinsic(db, entries, &intrinsics::drop);
+                // self.collect_intrinsic(module, entries, &intrinsics::drop);
                 *needs_alloc = true;
             }
             Some(hir::CallableDef::Function(_)) => (),
@@ -48,8 +47,7 @@ fn collect_expr<D: IrDatabase>(
 
     if let Expr::RecordLit { .. } = expr {
         collect_intrinsic(db, entries, &intrinsics::new);
-        collect_intrinsic(db, entries, &intrinsics::clone);
-        // self.collect_intrinsic(db, entries, &intrinsics::drop);
+        // self.collect_intrinsic(module, entries, &intrinsics::drop);
         *needs_alloc = true;
     }
 
@@ -62,8 +60,7 @@ fn collect_expr<D: IrDatabase>(
 
         if let hir::Resolution::Def(hir::ModuleDef::Struct(_)) = resolution {
             collect_intrinsic(db, entries, &intrinsics::new);
-            collect_intrinsic(db, entries, &intrinsics::clone);
-            // self.collect_intrinsic(db, entries, &intrinsics::drop);
+            // self.collect_intrinsic( module, entries, &intrinsics::drop);
             *needs_alloc = true;
         }
     }
@@ -88,7 +85,6 @@ pub fn collect_wrapper_body<D: IrDatabase>(
     needs_alloc: &mut bool,
 ) {
     collect_intrinsic(db, entries, &intrinsics::new);
-    collect_intrinsic(db, entries, &intrinsics::clone);
-    // self.collect_intrinsic(db, entries, &intrinsics::drop);
+    // self.collect_intrinsic(entries, &intrinsics::drop, module);
     *needs_alloc = true;
 }
