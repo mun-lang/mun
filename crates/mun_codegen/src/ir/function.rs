@@ -42,19 +42,15 @@ pub(crate) fn gen_signature(
 /// Generates the body of a `hir::Function` for an associated `FunctionValue`.
 pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
     db: &'a D,
-    hir_function: hir::Function,
-    llvm_function: FunctionValue,
-    module: &'a Module,
+    function: (hir::Function, FunctionValue),
     llvm_functions: &'a HashMap<hir::Function, FunctionValue>,
     dispatch_table: &'b DispatchTable,
     type_table: &'b TypeTable,
     allocator_handle_global: Option<GlobalValue>,
-) -> FunctionValue {
+) {
     let mut code_gen = BodyIrGenerator::new(
         db,
-        module,
-        hir_function,
-        llvm_function,
+        function,
         llvm_functions,
         dispatch_table,
         type_table,
@@ -65,27 +61,21 @@ pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
     );
 
     code_gen.gen_fn_body();
-
-    llvm_function
 }
 
 /// Generates the body of a wrapper around `hir::Function` for its associated
 /// `FunctionValue`
 pub(crate) fn gen_wrapper_body<'a, 'b, D: IrDatabase>(
     db: &'a D,
-    hir_function: hir::Function,
-    llvm_function: FunctionValue,
-    module: &'a Module,
+    function: (hir::Function, FunctionValue),
     llvm_functions: &'a HashMap<hir::Function, FunctionValue>,
     dispatch_table: &'b DispatchTable,
     type_table: &'b TypeTable,
     allocator_handle_global: Option<GlobalValue>,
-) -> FunctionValue {
+) {
     let mut code_gen = BodyIrGenerator::new(
         db,
-        module,
-        hir_function,
-        llvm_function,
+        function,
         llvm_functions,
         dispatch_table,
         type_table,
@@ -96,6 +86,4 @@ pub(crate) fn gen_wrapper_body<'a, 'b, D: IrDatabase>(
     );
 
     code_gen.gen_fn_wrapper();
-
-    llvm_function
 }

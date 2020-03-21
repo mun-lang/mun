@@ -136,9 +136,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
     for (hir_function, llvm_function) in functions.iter() {
         function::gen_body(
             db,
-            *hir_function,
-            *llvm_function,
-            &llvm_module,
+            (*hir_function, *llvm_function),
             &functions,
             &dispatch_table,
             &type_table,
@@ -150,9 +148,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
     for (hir_function, llvm_function) in wrappers.iter() {
         function::gen_wrapper_body(
             db,
-            *hir_function,
-            *llvm_function,
-            &llvm_module,
+            (*hir_function, *llvm_function),
             &functions,
             &dispatch_table,
             &type_table,
