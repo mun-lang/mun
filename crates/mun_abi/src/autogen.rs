@@ -46,6 +46,10 @@ pub struct TypeInfo {
     pub guid: Guid,
     #[doc = " Type name"]
     pub name: *const ::std::os::raw::c_char,
+    #[doc = " The exact size of the type in bits without any padding"]
+    pub size_in_bits: u32,
+    #[doc = " The alignment of the type"]
+    pub alignment: u8,
     #[doc = " Type group"]
     pub group: TypeGroup,
 }
@@ -82,8 +86,28 @@ fn bindgen_test_layout_TypeInfo() {
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<TypeInfo>())).group as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<TypeInfo>())).size_in_bits as *const _ as usize },
         24usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(TypeInfo),
+            "::",
+            stringify!(size_in_bits)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<TypeInfo>())).alignment as *const _ as usize },
+        28usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(TypeInfo),
+            "::",
+            stringify!(alignment)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<TypeInfo>())).group as *const _ as usize },
+        29usize,
         concat!(
             "Offset of field: ",
             stringify!(TypeInfo),
@@ -232,12 +256,8 @@ pub struct StructInfo {
     pub field_types: *const *const TypeInfo,
     #[doc = " Struct fields' offsets"]
     pub field_offsets: *const u16,
-    #[doc = " Struct fields' sizes (in bytes)"]
-    pub field_sizes: *const u16,
     #[doc = " Number of fields"]
     pub num_fields: u16,
-    #[doc = " Struct memory alignment"]
-    pub alignment: u16,
     #[doc = " Struct memory kind"]
     pub memory_kind: StructMemoryKind,
 }
@@ -245,7 +265,7 @@ pub struct StructInfo {
 fn bindgen_test_layout_StructInfo() {
     assert_eq!(
         ::std::mem::size_of::<StructInfo>(),
-        48usize,
+        40usize,
         concat!("Size of: ", stringify!(StructInfo))
     );
     assert_eq!(
@@ -294,18 +314,8 @@ fn bindgen_test_layout_StructInfo() {
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<StructInfo>())).field_sizes as *const _ as usize },
-        32usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(StructInfo),
-            "::",
-            stringify!(field_sizes)
-        )
-    );
-    assert_eq!(
         unsafe { &(*(::std::ptr::null::<StructInfo>())).num_fields as *const _ as usize },
-        40usize,
+        32usize,
         concat!(
             "Offset of field: ",
             stringify!(StructInfo),
@@ -314,18 +324,8 @@ fn bindgen_test_layout_StructInfo() {
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<StructInfo>())).alignment as *const _ as usize },
-        42usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(StructInfo),
-            "::",
-            stringify!(alignment)
-        )
-    );
-    assert_eq!(
         unsafe { &(*(::std::ptr::null::<StructInfo>())).memory_kind as *const _ as usize },
-        44usize,
+        34usize,
         concat!(
             "Offset of field: ",
             stringify!(StructInfo),

@@ -228,7 +228,11 @@ pub(crate) fn gen_struct_ptr_array(
 }
 
 /// Generates a global array from the specified list of integers
-pub(crate) fn gen_u16_array(module: &Module, integers: impl Iterator<Item = u64>) -> PointerValue {
+pub(crate) fn gen_u16_array(
+    module: &Module,
+    integers: impl Iterator<Item = u64>,
+    name: &str,
+) -> PointerValue {
     let u16_type = module.get_context().i16_type();
 
     let mut integers = integers.peekable();
@@ -240,7 +244,7 @@ pub(crate) fn gen_u16_array(module: &Module, integers: impl Iterator<Item = u64>
             .collect::<Vec<IntValue>>();
 
         let array_ir = u16_type.const_array(&integers);
-        gen_global(module, &array_ir, "").as_pointer_value()
+        gen_global(module, &array_ir, name).as_pointer_value()
     }
 }
 

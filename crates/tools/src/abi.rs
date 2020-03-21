@@ -52,6 +52,7 @@ pub fn generate(mode: Mode) -> Result<()> {
         .blacklist_type("__uint8_t")
         .blacklist_type("__uint16_t")
         .blacklist_type("__uint32_t")
+        .blacklist_type("__uint64_t")
         .parse_callbacks(Box::new(RemoveVendorName))
         // FIXME: Prevent double derivation of Copy and Debug attributes on Windows
         .derive_copy(false)

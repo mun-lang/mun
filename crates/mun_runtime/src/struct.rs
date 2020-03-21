@@ -184,8 +184,8 @@ impl Marshal<StructRef> for RawStruct {
 
             let src = ptr.cast::<u8>().as_ptr() as *const _;
             let dest = unsafe { handle.as_ref() }.unwrap().ptr;
-            let size = struct_info.size();
-            unsafe { ptr::copy_nonoverlapping(src, dest, size) };
+            let size = type_info.size_in_bytes();
+            unsafe { ptr::copy_nonoverlapping(src, dest, size as usize) };
 
             handle
         } else {
@@ -208,8 +208,7 @@ impl Marshal<StructRef> for RawStruct {
         let struct_info = type_info.as_struct().unwrap();
         if struct_info.memory_kind == abi::StructMemoryKind::Value {
             let dest = ptr.cast::<u8>().as_ptr();
-            let size = struct_info.field_offsets().last().cloned().unwrap_or(0)
-                + struct_info.field_sizes().last().cloned().unwrap_or(0);
+            let size = type_info.size_in_bytes();
             unsafe { ptr::copy_nonoverlapping(value.get_ptr(), dest, size as usize) };
         } else {
             unsafe { *ptr.as_mut() = value };

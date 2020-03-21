@@ -6,17 +6,17 @@ macro_rules! intrinsics{
             }
             paste::item! {
                 impl Intrinsic for [<Intrinsic $name>] {
-                    fn prototype(&self) -> FunctionPrototype {
+                    fn prototype(&self, context: &Context, target: &TargetData) -> FunctionPrototype {
                         FunctionPrototype {
                             name: stringify!($name).to_owned(),
-                            arg_types: vec![$(<$arg as crate::type_info::HasStaticTypeInfo>::type_info()),*],
-                            ret_type: <$ret as crate::type_info::HasStaticReturnTypeInfo>::return_type_info()
+                            arg_types: vec![$(<$arg as crate::type_info::HasStaticTypeInfo>::type_info(context, target)),*],
+                            ret_type: <$ret as crate::type_info::HasStaticReturnTypeInfo>::return_type_info(context, target)
                         }
                     }
 
-                    fn ir_type(&self, context: &Context) -> FunctionType {
-                        let args = vec![$(<$arg as crate::ir::IsBasicIrType>::ir_type(context)),*];
-                        <$ret as crate::ir::IsFunctionReturnType>::fn_type(context, &args, false)
+                    fn ir_type(&self, context: &Context, target: &TargetData) -> FunctionType {
+                        let args = vec![$(<$arg as crate::ir::IsBasicIrType>::ir_type(context, target)),*];
+                        <$ret as crate::ir::IsFunctionReturnType>::fn_type(context, target, &args, false)
                     }
                 }
             }

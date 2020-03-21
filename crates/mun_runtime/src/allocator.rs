@@ -26,10 +26,8 @@ impl Allocator {
     }
 
     /// Allocates a block of memory
-    fn alloc(&self, size: u64, alignment: u64) -> *mut u8 {
-        unsafe {
-            std::alloc::alloc(Layout::from_size_align(size as usize, alignment as usize).unwrap())
-        }
+    fn alloc(&self, size: usize, alignment: usize) -> *mut u8 {
+        unsafe { std::alloc::alloc(Layout::from_size_align_unchecked(size, alignment)) }
     }
 
     /// Allocates a managed object of the specified type.
@@ -39,9 +37,9 @@ impl Allocator {
     /// `type_info` must be a valid pointer and remain valid throughout the lifetime of the created
     /// object.
     pub(crate) unsafe fn create_object(&self, type_info: *const abi::TypeInfo) -> ObjectHandle {
-        let struct_info = type_info.as_ref().unwrap().as_struct().unwrap();
+        let type_info = type_info.as_ref().unwrap();
 
-        let ptr = self.alloc(struct_info.size() as u64, struct_info.alignment.into());
+        let ptr = self.alloc(type_info.size_in_bytes(), type_info.alignment());
         let object = Box::pin(ObjectInfo { ptr, type_info });
 
         // We want to return a pointer to the `ObjectInfo`, to be used as handle.
@@ -66,11 +64,10 @@ impl Allocator {
                 .unwrap_or_else(|| panic!("Object with handle '{:?}' does not exist.", src));
 
             let type_info = src.type_info.as_ref().unwrap();
-            let struct_info = type_info.as_struct().unwrap();
 
-            let size = struct_info.size();
-            let dest = self.alloc(size as u64, struct_info.alignment.into());
-            ptr::copy_nonoverlapping(src.ptr, dest, size);
+            let size = type_info.size_in_bytes();
+            let dest = self.alloc(size, type_info.alignment());
+            ptr::copy_nonoverlapping(src.ptr, dest, size as usize);
 
             Box::pin(ObjectInfo {
                 ptr: dest,

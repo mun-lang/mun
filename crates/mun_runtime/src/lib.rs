@@ -11,7 +11,10 @@ mod macros;
 mod allocator;
 mod marshal;
 mod reflection;
+mod static_type_map;
 mod r#struct;
+
+#[macro_use]
 mod type_info;
 
 #[cfg(test)]
@@ -37,6 +40,10 @@ pub use crate::assembly::Assembly;
 use crate::function::IntoFunctionInfo;
 pub use crate::r#struct::StructRef;
 use std::sync::Arc;
+
+impl_has_type_info_name!(
+    abi::TypeInfo => "TypeInfo"
+);
 
 /// Options for the construction of a [`Runtime`].
 pub struct RuntimeOptions {

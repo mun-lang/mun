@@ -3,7 +3,7 @@ use crate::code_gen::{
 };
 use crate::ir::{abi_types::AbiTypes, dispatch_table::FunctionPrototype};
 use crate::type_info::{TypeGroup, TypeInfo};
-use crate::{CodeGenParams, IrDatabase};
+use crate::IrDatabase;
 use hir::{Body, ExprId, InferenceResult};
 use inkwell::{
     module::Module,
@@ -169,22 +169,27 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
                 .i8_type()
                 .const_int(u64::from(type_info.guid.b[i]), false)
         });
-        let type_info_ir = context.const_struct(
-            &[
-                context.i8_type().const_array(&guid_bytes_ir).into(),
-                intern_string(
-                    self.module,
-                    &type_info.name,
-                    &format!("type_info::<{}>::name", type_info.name),
-                )
+        let type_info_ir = self.abi_types.type_info_type.const_named_struct(&[
+            context.i8_type().const_array(&guid_bytes_ir).into(),
+            intern_string(
+                self.module,
+                &type_info.name,
+                &format!("type_info::<{}>::name", type_info.name),
+            )
+            .into(),
+            context
+                .i32_type()
+                .const_int(type_info.size.bit_size, false)
                 .into(),
-                context
-                    .i8_type()
-                    .const_int(type_info.group.clone().into(), false)
-                    .into(),
-            ],
-            false,
-        );
+            context
+                .i8_type()
+                .const_int(type_info.size.alignment as u64, false)
+                .into(),
+            context
+                .i8_type()
+                .const_int(type_info.group.clone().into(), false)
+                .into(),
+        ]);
         let type_info_ir = match type_info.group {
             TypeGroup::FundamentalTypes => type_info_ir,
             TypeGroup::StructTypes(s) => {
@@ -247,36 +252,18 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
                     .offset_of_element(&struct_ir, idx as u32)
                     .unwrap()
             }),
+            &format!("struct_info::<{}>::field_offsets", name),
         );
-        let field_sizes = gen_u16_array(
-            self.module,
-            fields.iter().map(|field| {
-                self.target_data.get_store_size(&self.db.type_ir(
-                    field.ty(self.db),
-                    CodeGenParams {
-                        make_marshallable: false,
-                    },
-                ))
-            }),
-        );
-
-        let alignment = self.target_data.get_abi_alignment(&struct_ir);
 
         self.abi_types.struct_info_type.const_named_struct(&[
             name_str.into(),
             field_names.into(),
             field_types.into(),
             field_offsets.into(),
-            field_sizes.into(),
             self.module
                 .get_context()
                 .i16_type()
                 .const_int(fields.len() as u64, false)
-                .into(),
-            self.module
-                .get_context()
-                .i16_type()
-                .const_int(alignment.into(), false)
                 .into(),
             self.module
                 .get_context()
