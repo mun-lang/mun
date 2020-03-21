@@ -49,11 +49,9 @@ impl TypeTable {
             .into_pointer_value()
     }
 
-    /// Retrieves the pointer to a `TypeInfo`, if it exists in the `TypeTable`.
-    pub fn get(&self, type_info: &TypeInfo) -> Option<PointerValue> {
-        self.type_info_to_index
-            .get(type_info)
-            .map(|index| unsafe { *self.entries.get_unchecked(*index) })
+    /// Retrieves the global `TypeInfo` IR value corresponding to `type_info`, if it exists.
+    pub fn get(module: &Module, type_info: &TypeInfo) -> Option<GlobalValue> {
+        module.get_global(&type_info_global_name(type_info))
     }
 
     /// Returns the number of types in the `TypeTable`.
@@ -200,7 +198,7 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
         gen_global(
             self.module,
             &type_info_ir,
-            &format!("type_info::<{}>", type_info.name),
+            &type_info_global_name(type_info),
         )
     }
 
@@ -315,4 +313,8 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
             table_ref: global_type_info_array,
         }
     }
+}
+
+fn type_info_global_name(type_info: &TypeInfo) -> String {
+    format!("type_info::<{}>", type_info.name)
 }
