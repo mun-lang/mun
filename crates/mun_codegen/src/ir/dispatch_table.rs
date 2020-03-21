@@ -76,11 +76,6 @@ impl DispatchTable {
         self.gen_function_lookup_by_index(builder, &function_name, index)
     }
 
-    /// Returns true if the specified intrinsic is present in the dispatch table
-    pub fn has_intrinsic(&self, intrinsic: &impl Intrinsic) -> bool {
-        self.prototype_to_idx.get(&intrinsic.prototype()).is_some()
-    }
-
     /// Generates a function lookup through the DispatchTable, equivalent to something along the
     /// lines of: `dispatchTable[i]`, where i is the index of the intrinsic and `dispatchTable` is a
     /// struct

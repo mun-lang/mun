@@ -21,6 +21,7 @@ fn collect_expr<D: IrDatabase>(
     db: &D,
     module: &Module,
     entries: &mut IntrinsicsMap,
+    needs_alloc: &mut bool,
     expr_id: ExprId,
     body: &Arc<Body>,
     infer: &InferenceResult,
@@ -34,6 +35,7 @@ fn collect_expr<D: IrDatabase>(
                 collect_intrinsic(module, entries, &intrinsics::new);
                 collect_intrinsic(module, entries, &intrinsics::clone);
                 // self.collect_intrinsic(module, entries, &intrinsics::drop);
+                *needs_alloc = true;
             }
             Some(hir::CallableDef::Function(_)) => (),
             None => panic!("expected a callable expression"),
@@ -44,6 +46,7 @@ fn collect_expr<D: IrDatabase>(
         collect_intrinsic(module, entries, &intrinsics::new);
         collect_intrinsic(module, entries, &intrinsics::clone);
         // self.collect_intrinsic(module, entries, &intrinsics::drop);
+        *needs_alloc = true;
     }
 
     if let Expr::Path(path) = expr {
@@ -57,25 +60,38 @@ fn collect_expr<D: IrDatabase>(
             collect_intrinsic(module, entries, &intrinsics::new);
             collect_intrinsic(module, entries, &intrinsics::clone);
             // self.collect_intrinsic( module, entries, &intrinsics::drop);
+            *needs_alloc = true;
         }
     }
 
     // Recurse further
-    expr.walk_child_exprs(|expr_id| collect_expr(db, module, entries, expr_id, body, infer))
+    expr.walk_child_exprs(|expr_id| {
+        collect_expr(db, module, entries, needs_alloc, expr_id, body, infer)
+    })
 }
 
 pub fn collect_fn_body<D: IrDatabase>(
     db: &D,
     module: &Module,
     entries: &mut IntrinsicsMap,
+    needs_alloc: &mut bool,
     body: &Arc<Body>,
     infer: &InferenceResult,
 ) {
-    collect_expr(db, module, entries, body.body_expr(), body, infer);
+    collect_expr(
+        db,
+        module,
+        entries,
+        needs_alloc,
+        body.body_expr(),
+        body,
+        infer,
+    );
 }
 
-pub fn collect_wrapper_body(module: &Module, entries: &mut IntrinsicsMap) {
+pub fn collect_wrapper_body(module: &Module, entries: &mut IntrinsicsMap, needs_alloc: &mut bool) {
     collect_intrinsic(module, entries, &intrinsics::new);
     collect_intrinsic(module, entries, &intrinsics::clone);
     // self.collect_intrinsic(entries, &intrinsics::drop, module);
+    *needs_alloc = true;
 }

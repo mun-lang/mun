@@ -38,6 +38,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
     // Use a `BTreeMap` to guarantee deterministically ordered output.
     let mut intrinsics_map = BTreeMap::new();
     let mut wrappers = BTreeMap::new();
+    let mut needs_alloc = false;
     for def in db.module_data(file_id).definitions() {
         match def {
             ModuleDef::Function(f) if !f.is_extern(db) => {
@@ -45,10 +46,21 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
                 let body = f.body(db);
                 let infer = f.infer(db);
 
-                intrinsics::collect_fn_body(db, &llvm_module, &mut intrinsics_map, &body, &infer);
+                intrinsics::collect_fn_body(
+                    db,
+                    &llvm_module,
+                    &mut intrinsics_map,
+                    &mut needs_alloc,
+                    &body,
+                    &infer,
+                );
 
                 if !f.data(db).visibility().is_private() && !fn_sig.marshallable(db) {
-                    intrinsics::collect_wrapper_body(&llvm_module, &mut intrinsics_map);
+                    intrinsics::collect_wrapper_body(
+                        &llvm_module,
+                        &mut intrinsics_map,
+                        &mut needs_alloc,
+                    );
 
                     // Generate wrapper function
                     let wrapper_fun = function::gen_signature(
@@ -120,7 +132,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<ModuleIR> {
     let fn_pass_manager = function::create_pass_manager(&llvm_module, db.optimization_lvl());
 
     // Create the allocator handle global value
-    let allocator_handle_global = if dispatch_table.has_intrinsic(&crate::intrinsics::new) {
+    let allocator_handle_global = if needs_alloc {
         let allocator_handle_global_type = db.context().i8_type().ptr_type(AddressSpace::Generic);
         let allocator_handle_global =
             llvm_module.add_global(allocator_handle_global_type, None, "allocatorHandle");
