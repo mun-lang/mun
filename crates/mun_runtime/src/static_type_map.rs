@@ -1,15 +1,16 @@
+use parking_lot::ReentrantMutex;
 use std::any::TypeId;
+use std::cell::RefCell;
 use std::collections::HashMap;
-use std::sync::RwLock;
 
 pub struct StaticTypeMap<T: 'static> {
-    map: RwLock<HashMap<TypeId, &'static T>>,
+    map: ReentrantMutex<RefCell<HashMap<TypeId, &'static T>>>,
 }
 
 impl<T: 'static> StaticTypeMap<T> {
     pub fn new() -> Self {
         Self {
-            map: RwLock::new(HashMap::new()),
+            map: ReentrantMutex::new(RefCell::new(HashMap::default())),
         }
     }
 
@@ -23,30 +24,16 @@ impl<T: 'static> StaticTypeMap<T> {
         Init: FnOnce() -> T,
     {
         // If already initialized, just return stored value
-        {
-            let reader = self.map.read().unwrap();
-            if let Some(ref reference) = reader.get(&TypeId::of::<Type>()) {
-                return &reference;
-            }
-        }
-
-        // Construct new value and put inside map allocate value on heap
-        let boxed = Box::new(f());
-
-        // Get exclusive access
-        let mut writer = self.map.write().unwrap();
-
-        // Recheck because maybe we are the second writer and the previous writer inserted the
-        // value.
-        if let Some(ref reference) = writer.get(&TypeId::of::<Type>()) {
-            return &reference;
+        let map = self.map.lock();
+        if let Some(r) = map.borrow().get(&TypeId::of::<Type>()) {
+            return r;
         }
 
         // leak it's value until program is terminated
-        let reference: &'static T = Box::leak(boxed);
+        let reference = Box::leak(Box::new(f()));
 
         // Insert the value into the map
-        let old = writer.insert(TypeId::of::<Type>(), reference);
+        let old = map.borrow_mut().insert(TypeId::of::<Type>(), reference);
         if old.is_some() {
             panic!("StaticTypeMap value was reinitialized. This is a bug.")
         }
