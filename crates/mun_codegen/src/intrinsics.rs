@@ -18,8 +18,9 @@ pub trait Intrinsic: Sync {
 }
 
 intrinsics! {
-    /// Allocates memory for the specified type.
+    /// Allocates memory for the specified `type` in the allocator referred to by `alloc_handle`.
     pub fn new(type: *const TypeInfo, alloc_handle: *mut ffi::c_void) -> *const *mut ffi::c_void;
-    /// Allocates memory for and clones the specified type located at `src` into it.
+    /// Allocates memory for and clones the specified type located at `src` into it. Memory is
+    /// allocated in the allocator referred to by `alloc_handle`.
     pub fn clone(src: *const ffi::c_void, alloc_handle: *mut ffi::c_void) -> *const *mut ffi::c_void;
 }

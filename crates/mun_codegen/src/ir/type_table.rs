@@ -14,6 +14,8 @@ use inkwell::{
 use std::collections::{BTreeSet, HashMap};
 use std::{mem, sync::Arc};
 
+/// A type table in IR is a list of pointers to unique type information that are used to generate
+/// function and struct information.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct TypeTable {
     type_info_to_index: HashMap<TypeInfo, usize>,
@@ -22,6 +24,9 @@ pub struct TypeTable {
 }
 
 impl TypeTable {
+    /// Generates a `TypeInfo` lookup through the `TypeTable`, equivalent to something along the
+    /// lines of: `type_table[i]`, where `i` is the index of the type and `type_table` is an array
+    /// of `TypeInfo` pointers.
     pub fn gen_type_info_lookup(
         &self,
         builder: &inkwell::builder::Builder,
@@ -44,6 +49,7 @@ impl TypeTable {
             .into_pointer_value()
     }
 
+    /// Retrieves the pointer to a `TypeInfo`, if it exists in the `TypeTable`.
     pub fn get(&self, type_info: &TypeInfo) -> Option<PointerValue> {
         self.type_info_to_index
             .get(type_info)

@@ -479,6 +479,8 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
 
     /// Given an expression and the type of the expression, optionally dereference the value.
     fn opt_deref_value(&mut self, ty: hir::Ty, value: BasicValueEnum) -> BasicValueEnum {
+        /// Derefs a heap-allocated value. As we introduce a layer of indirection for hot
+        /// reloading, we need to first load the pointer that points to the memory block.
         fn deref_heap_value(builder: &Builder, value: BasicValueEnum) -> BasicValueEnum {
             let mem_ptr = builder
                 .build_load(value.into_pointer_value(), "mem_ptr")
