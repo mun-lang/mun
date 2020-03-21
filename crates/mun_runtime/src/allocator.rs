@@ -27,9 +27,7 @@ impl Allocator {
 
     /// Allocates a block of memory
     fn alloc(&self, size: usize, alignment: usize) -> *mut u8 {
-        unsafe {
-            std::alloc::alloc(Layout::from_size_align(size as usize, alignment as usize).unwrap())
-        }
+        unsafe { std::alloc::alloc(Layout::from_size_align_unchecked(size, alignment)) }
     }
 
     /// Allocates a managed object of the specified type.

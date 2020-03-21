@@ -1,5 +1,6 @@
 use crate::prelude::*;
 
+use std::convert::TryInto;
 use std::ffi::{c_void, CStr};
 use std::fmt::Formatter;
 use std::marker::{Send, Sync};
@@ -28,17 +29,23 @@ impl TypeInfo {
 
     /// Returns the size of the type in bits
     pub fn size_in_bits(&self) -> usize {
-        self.size_in_bits as usize
+        self.size_in_bits
+            .try_into()
+            .expect("cannot convert size in bits to platform size")
     }
 
     /// Returns the size of the type in bytes
     pub fn size_in_bytes(&self) -> usize {
-        ((self.size_in_bits + 7) / 8) as usize
+        ((self.size_in_bits + 7) / 8)
+            .try_into()
+            .expect("cannot covert size in bytes to platform size")
     }
 
     /// Returns the alignment of the type in bytes
     pub fn alignment(&self) -> usize {
-        self.alignment as usize
+        self.alignment
+            .try_into()
+            .expect("cannot convert alignment to platform size")
     }
 }
 

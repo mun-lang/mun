@@ -53,10 +53,10 @@ impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *const T {
                     group: abi::TypeGroup::FundamentalTypes,
                     size_in_bits: (std::mem::size_of::<*const T>() * 8)
                         .try_into()
-                        .expect("size of T is larger than the maximum according the API size. Please file a bug."),
+                        .expect("size of T is larger than the maximum allowed ABI size. Please file a bug."),
                     alignment: (std::mem::align_of::<*const T>())
                         .try_into()
-                        .expect("alignment of T is larger than the maximum according the API size. Please file a bug."),
+                        .expect("alignment of T is larger than the maximum allowed ABI size. Please file a bug."),
                 },
             )
         })
@@ -91,10 +91,10 @@ impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *mut T {
                     group: abi::TypeGroup::FundamentalTypes,
                     size_in_bits: (std::mem::size_of::<*const T>() * 8)
                         .try_into()
-                        .expect("size of T is larger than the maximum according the API size. Please file a bug."),
+                        .expect("size of T is larger than the maximum allowed ABI size. Please file a bug."),
                     alignment: (std::mem::align_of::<*const T>())
                         .try_into()
-                        .expect("alignment of T is larger than the maximum according the API size. Please file a bug."),
+                        .expect("alignment of T is larger than the maximum allowed ABI size. Please file a bug."),
                 },
             )
         })
@@ -121,10 +121,10 @@ macro_rules! impl_basic_type_info {
                             group: abi::TypeGroup::FundamentalTypes,
                             size_in_bits: (std::mem::size_of::<$ty>() * 8)
                                 .try_into()
-                                .expect("size of T is larger than the maximum according the API size. Please file a bug."),
+                                .expect("size of T is larger than the maximum allowed ABI size. Please file a bug."),
                             alignment: (std::mem::align_of::<$ty>())
                                 .try_into()
-                                .expect("alignment of T is larger than the maximum according the API size. Please file a bug."),
+                                .expect("alignment of T is larger than the maximum allowed ABI size. Please file a bug."),
                         }
                     })
                 }
