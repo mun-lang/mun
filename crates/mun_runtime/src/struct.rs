@@ -21,7 +21,7 @@ pub struct RawStruct(GCHandle);
 
 impl RawStruct {
     /// Returns a pointer to the struct memory.
-    pub fn get_ptr(&self) -> *mut u8 {
+    pub fn get_ptr(&self) -> NonNull<u8> {
         unsafe { self.0.get_ptr() }
     }
 }
@@ -70,7 +70,13 @@ impl StructRef {
     unsafe fn offset_unchecked<T>(&self, field_idx: usize) -> NonNull<T> {
         let offset = *self.info.field_offsets().get_unchecked(field_idx);
         // self.raw is never null
-        NonNull::new_unchecked(self.handle.get_ptr::<u8>().add(offset as usize).cast::<T>())
+        NonNull::new_unchecked(
+            self.handle
+                .get_ptr::<u8>()
+                .as_ptr()
+                .add(offset as usize)
+                .cast::<T>(),
+        )
     }
 
     /// Retrieves the value of the field corresponding to the specified `field_name`.
@@ -196,7 +202,7 @@ impl Marshal<StructRef> for RawStruct {
 
             // Construct
             let src = ptr.cast::<u8>().as_ptr() as *const _;
-            let dest = unsafe { gc_handle.get_ptr::<u8>() };
+            let dest = unsafe { gc_handle.get_ptr::<u8>().as_ptr() };
             let size = type_info.size_in_bytes();
             unsafe { ptr::copy_nonoverlapping(src, dest, size as usize) };
 
@@ -219,7 +225,7 @@ impl Marshal<StructRef> for RawStruct {
         if struct_info.memory_kind == abi::StructMemoryKind::Value {
             let dest = ptr.cast::<u8>().as_ptr();
             let size = type_info.size_in_bytes();
-            unsafe { ptr::copy_nonoverlapping(value.get_ptr(), dest, size as usize) };
+            unsafe { ptr::copy_nonoverlapping(value.get_ptr().as_ptr(), dest, size as usize) };
         } else {
             unsafe { *ptr.as_mut() = value };
         }

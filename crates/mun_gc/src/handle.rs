@@ -1,5 +1,6 @@
 use crate::{GCRuntime, Type};
 use std::marker::PhantomData;
+use std::ptr::NonNull;
 use std::sync::{Arc, Weak};
 
 /// A `GCHandle` is what you interact with outside of the allocator. It is a pointer to a piece of
@@ -27,12 +28,14 @@ pub trait HasGCHandlePtr {
     ///
     /// This method is unsafe because casting to a generic type T may be unsafe. We don't know the
     /// type of the stored data.
-    unsafe fn get_ptr<T: Sized>(&self) -> *mut T;
+    unsafe fn get_ptr<T: Sized>(&self) -> NonNull<T>;
 }
 
 impl HasGCHandlePtr for GCHandle {
-    unsafe fn get_ptr<T: Sized>(&self) -> *mut T {
-        (*self.0).cast::<T>()
+    unsafe fn get_ptr<T: Sized>(&self) -> NonNull<T> {
+        NonNull::new(*self.0)
+            .expect("indirection pointer is null")
+            .cast::<T>()
     }
 }
 
@@ -104,7 +107,7 @@ impl<T: Type, G: GCRuntime<T>> Drop for GCRootHandle<T, G> {
 }
 
 impl<T: Type, G: GCRuntime<T>> HasGCHandlePtr for GCRootHandle<T, G> {
-    unsafe fn get_ptr<R: Sized>(&self) -> *mut R {
+    unsafe fn get_ptr<R: Sized>(&self) -> NonNull<R> {
         self.handle.get_ptr()
     }
 }

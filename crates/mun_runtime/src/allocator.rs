@@ -22,7 +22,7 @@ impl gc::Type for RawTypeInfo {
 }
 
 /// Defines an allocator used by the `Runtime`
-pub type Allocator = gc::MarkSweep<RawTypeInfo>;
+pub type Allocator = gc::MarkSweep<RawTypeInfo, gc::NoopObserver>;
 
 pub use gc::GCHandle;
 

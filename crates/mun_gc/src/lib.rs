@@ -18,13 +18,6 @@ pub trait GCRuntime<T: Type>: Send + Sync {
     /// Allocates an object of the given type returning a GCHandle
     fn alloc_object(&self, ty: T) -> GCHandle;
 
-    /// Creates a shallow copy of `obj` and returns a handle to it.
-    ///
-    /// # Safety
-    ///
-    /// This method is unsafe because the passed GCHandle could point to random memory.
-    unsafe fn clone_object(&self, obj: GCHandle) -> GCHandle;
-
     /// Returns the type of the specified `obj`.
     ///
     /// # Safety
@@ -51,3 +44,26 @@ pub trait GCRuntime<T: Type>: Send + Sync {
     /// This method is unsafe because the passed GCHandle could point to random memory.
     unsafe fn unroot(&self, obj: GCHandle);
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Event {
+    /// The GC performed an allocation
+    Allocation(GCHandle),
+
+    /// A GC cycle started
+    Start,
+
+    /// A deallocation took place
+    Deallocation(GCHandle),
+
+    /// A GC cycle ended
+    End,
+}
+
+pub trait GCObserver: Send + Sync {
+    fn event(&self, _event: Event) {}
+}
+
+#[derive(Clone, Default)]
+pub struct NoopObserver;
+impl GCObserver for NoopObserver {}

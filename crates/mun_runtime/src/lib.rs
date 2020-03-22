@@ -40,7 +40,6 @@ pub use crate::assembly::Assembly;
 use crate::function::IntoFunctionInfo;
 pub use crate::r#struct::StructRef;
 use gc::GCRuntime;
-use gc::RawGCHandle;
 use std::sync::Arc;
 
 impl_has_type_info_name!(
@@ -76,11 +75,6 @@ impl RuntimeBuilder {
         result.insert_fn(
             "new",
             new as extern "C" fn(*const abi::TypeInfo, *mut ffi::c_void) -> *const *mut ffi::c_void,
-        );
-
-        result.insert_fn(
-            "clone",
-            clone as extern "C" fn(*const ffi::c_void, *mut ffi::c_void) -> *const *mut ffi::c_void,
         );
 
         result
@@ -162,19 +156,6 @@ extern "C" fn new(
 ) -> *const *mut ffi::c_void {
     let allocator = unsafe { get_allocator(alloc_handle) };
     let handle = allocator.alloc_object(type_info.into());
-
-    // Prevent destruction of the allocator
-    mem::forget(allocator);
-
-    handle.into()
-}
-
-extern "C" fn clone(
-    src: *const ffi::c_void,
-    alloc_handle: *mut ffi::c_void,
-) -> *const *mut ffi::c_void {
-    let allocator = unsafe { get_allocator(alloc_handle) };
-    let handle = unsafe { allocator.clone_object((src as RawGCHandle).into()) };
 
     // Prevent destruction of the allocator
     mem::forget(allocator);
