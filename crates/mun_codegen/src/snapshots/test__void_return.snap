@@ -4,11 +4,10 @@ expression: "fn bar() {\n    let a = 3;\n}\nfn foo(a:int) {\n    let c = bar()\n
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
-target triple = "x86-64"
 
 %DispatchTable = type { void ()* }
 
-@dispatchTable = global %DispatchTable { void ()* @bar }
+@dispatchTable = external global %DispatchTable
 
 define void @bar() {
 body:

@@ -11,9 +11,10 @@ pub mod adt;
 pub mod body;
 #[macro_use]
 pub(crate) mod dispatch_table;
+pub mod file;
+pub(crate) mod file_group;
 pub mod function;
 mod intrinsics;
-pub mod module;
 pub mod ty;
 pub(crate) mod type_table;
 

@@ -8,11 +8,12 @@ use hir::{Body, ExprId, InferenceResult};
 use inkwell::{
     module::Module,
     targets::TargetData,
+    types::ArrayType,
     values::{GlobalValue, IntValue, PointerValue, StructValue},
     AddressSpace,
 };
 use std::collections::{BTreeSet, HashMap};
-use std::{mem, sync::Arc};
+use std::{convert::TryInto, mem, sync::Arc};
 
 /// A type table in IR is a list of pointers to unique type information that are used to generate
 /// function and struct information.
@@ -20,7 +21,7 @@ use std::{mem, sync::Arc};
 pub struct TypeTable {
     type_info_to_index: HashMap<TypeInfo, usize>,
     entries: Vec<PointerValue>,
-    table_ref: PointerValue,
+    table_type: ArrayType,
 }
 
 impl TypeTable {
@@ -31,7 +32,10 @@ impl TypeTable {
         &self,
         builder: &inkwell::builder::Builder,
         type_info: &TypeInfo,
+        table_ref: Option<GlobalValue>,
     ) -> PointerValue {
+        let table_ref = table_ref.expect("no type table defined");
+
         let index = *self
             .type_info_to_index
             .get(type_info)
@@ -39,7 +43,7 @@ impl TypeTable {
 
         let ptr_to_type_info_ptr = unsafe {
             builder.build_struct_gep(
-                self.table_ref,
+                table_ref.as_pointer_value(),
                 index as u32,
                 &format!("{}_ptr_ptr", type_info.name),
             )
@@ -59,9 +63,14 @@ impl TypeTable {
         self.entries.len()
     }
 
-    /// Returns the value that represents the type table in IR.
-    pub fn pointer_value(&self) -> PointerValue {
-        self.table_ref
+    /// Returns whether the type table is empty.
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    /// Returns the IR type of the type table's global value, if it exists.
+    pub fn ty(&self) -> ArrayType {
+        self.table_type
     }
 }
 
@@ -279,6 +288,14 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
         let mut type_info_to_ir = HashMap::with_capacity(entries.len());
         let mut type_info_to_index = HashMap::with_capacity(entries.len());
 
+        let type_info_ptr_type = self.abi_types.type_info_type.ptr_type(AddressSpace::Const);
+        let table_type = type_info_ptr_type.array_type(
+            entries
+                .len()
+                .try_into()
+                .expect("expected a maximum of u32::MAX entries"),
+        );
+
         let type_info_ptrs: Vec<PointerValue> = entries
             .into_iter()
             .enumerate()
@@ -297,20 +314,19 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
             })
             .collect();
 
-        let type_info_ptr_type = self.abi_types.type_info_type.ptr_type(AddressSpace::Const);
-        let global_type_info_array = if type_info_ptrs.is_empty() {
-            type_info_ptr_type
-                .ptr_type(AddressSpace::Const)
-                .const_null()
-        } else {
+        if !type_info_ptrs.is_empty() {
+            let global = self
+                .module
+                .add_global(table_type, None, "global_type_table");
+
             let type_info_ptrs_array = type_info_ptr_type.const_array(&type_info_ptrs);
-            gen_global(self.module, &type_info_ptrs_array, "global_type_table").as_pointer_value()
+            global.set_initializer(&type_info_ptrs_array);
         };
 
         TypeTable {
             type_info_to_index,
             entries: type_info_ptrs,
-            table_ref: global_type_info_array,
+            table_type,
         }
     }
 }

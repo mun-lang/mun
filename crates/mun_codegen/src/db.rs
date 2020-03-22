@@ -1,8 +1,11 @@
 #![allow(clippy::type_repetition_in_bounds)]
 
-use crate::{ir::module::ModuleIR, type_info::TypeInfo, CodeGenParams, Context};
+use crate::{
+    ir::{file::FileIR, file_group::FileGroupIR},
+    type_info::TypeInfo,
+    CodeGenParams, Context,
+};
 use inkwell::{
-    module::Module,
     targets::TargetData,
     types::{AnyTypeEnum, StructType},
     OptimizationLevel,
@@ -17,10 +20,6 @@ pub trait IrDatabase: hir::HirDatabase {
     /// Get the LLVM context that should be used for all generation steps.
     #[salsa::input]
     fn context(&self) -> Arc<Context>;
-
-    /// Returns the LLVM module that should be used for all generation steps.
-    #[salsa::input]
-    fn module(&self) -> Arc<Module>;
 
     /// Gets the optimization level for generation.
     #[salsa::input]
@@ -42,9 +41,15 @@ pub trait IrDatabase: hir::HirDatabase {
     #[salsa::invoke(crate::ir::ty::struct_ty_query)]
     fn struct_ty(&self, s: hir::Struct) -> StructType;
 
+    /// Given a `hir::FileId` generate code that is shared among the group of files.
+    /// TODO: Currently, a group always consists of a single file. Need to add support for multiple
+    /// files using something like `FileGroupId`.
+    #[salsa::invoke(crate::ir::file_group::ir_query)]
+    fn group_ir(&self, file: hir::FileId) -> Arc<FileGroupIR>;
+
     /// Given a `hir::FileId` generate code for the module.
-    #[salsa::invoke(crate::ir::module::ir_query)]
-    fn module_ir(&self, file: hir::FileId) -> Arc<ModuleIR>;
+    #[salsa::invoke(crate::ir::file::ir_query)]
+    fn file_ir(&self, file: hir::FileId) -> Arc<FileIR>;
 
     /// Given a type, return the runtime `TypeInfo` that can be used to reflect the type.
     #[salsa::invoke(crate::ir::ty::type_info_query)]

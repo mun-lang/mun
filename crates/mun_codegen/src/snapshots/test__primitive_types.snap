@@ -4,7 +4,6 @@ expression: "fn add(a: u8, b: u8): u8 { a+b }\n   fn less(a: u16, b: u16): bool 
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
-target triple = "x86-64"
 
 define i8 @add(i8, i8) {
 body:

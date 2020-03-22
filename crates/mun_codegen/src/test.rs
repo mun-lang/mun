@@ -515,9 +515,13 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
         let _module_builder =
             ModuleBuilder::new(&mut db, file_id).expect("Failed to initialize module builder");
 
-        // Generate IR
-        db.module_ir(file_id);
-        format!("{}", db.module().print_to_string().to_string())
+        format!(
+            "{}",
+            db.module_ir(file_id)
+                .llvm_module
+                .print_to_string()
+                .to_string()
+        )
     };
     insta::assert_snapshot!(insta::_macro_support::AutoName, name, &text);
 }

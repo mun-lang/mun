@@ -11,10 +11,10 @@ use hir::Ty;
 use inkwell::{
     attributes::Attribute,
     module::{Linkage, Module},
-    values::{FunctionValue, GlobalValue, PointerValue, StructValue},
+    values::{GlobalValue, PointerValue, StructValue},
     AddressSpace,
 };
-use std::collections::HashMap;
+use std::collections::HashSet;
 
 /// Construct a `MunFunctionSignature` struct for the specified HIR function.
 fn gen_signature_from_function<D: IrDatabase>(
@@ -160,13 +160,17 @@ fn gen_function_info_array<'a, D: IrDatabase>(
     db: &D,
     module: &Module,
     types: &AbiTypes,
-    functions: impl Iterator<Item = (&'a hir::Function, &'a FunctionValue)>,
+    functions: impl Iterator<Item = &'a hir::Function>,
 ) -> GlobalValue {
     let function_infos: Vec<StructValue> = functions
-        .map(|(f, value)| {
+        .map(|f| {
+            let name = f.name(db).to_string();
             // Get the function from the cloned module and modify the linkage of the function.
             let value = module
-                .get_function(value.get_name().to_str().unwrap())
+                // If a wrapper function exists, use that (required for struct types)
+                .get_function(&format!("{}_wrapper", name))
+                // Otherwise, use the normal function
+                .or_else(|| module.get_function(&name))
                 .unwrap();
             value.set_linkage(Linkage::Private);
 
@@ -243,15 +247,21 @@ fn gen_dispatch_table(
 pub(super) fn gen_reflection_ir(
     db: &impl IrDatabase,
     module: &Module,
-    function_map: &HashMap<hir::Function, FunctionValue>,
+    api: &HashSet<hir::Function>,
     dispatch_table: &DispatchTable,
     type_table: &TypeTable,
 ) {
     // Get all the types
-    let abi_types = gen_abi_types(module.get_context());
+    let abi_types = gen_abi_types(&module.get_context());
 
-    let num_functions = function_map.len();
-    let function_info = gen_function_info_array(db, module, &abi_types, function_map.iter());
+    let num_functions = api.len();
+    let function_info = gen_function_info_array(db, module, &abi_types, api.iter());
+
+    let type_table_ir = if let Some(type_table) = module.get_global("type_table_global") {
+        type_table.as_pointer_value()
+    } else {
+        type_table.ty().ptr_type(AddressSpace::Const).const_null()
+    };
 
     // Construct the module info struct
     let module_info = abi_types.module_info_type.const_named_struct(&[
@@ -262,7 +272,7 @@ pub(super) fn gen_reflection_ir(
             .i32_type()
             .const_int(num_functions as u64, false)
             .into(),
-        type_table.pointer_value().into(),
+        type_table_ir.into(),
         module
             .get_context()
             .i32_type()

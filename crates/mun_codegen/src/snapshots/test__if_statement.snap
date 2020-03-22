@@ -4,7 +4,6 @@ expression: "fn foo(a:int):int {\n    let b = if a > 3 {\n        let c = if a >
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
-target triple = "x86-64"
 
 define i64 @foo(i64) {
 body:

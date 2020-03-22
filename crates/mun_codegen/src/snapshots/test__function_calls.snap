@@ -4,11 +4,10 @@ expression: "fn add_impl(a:int, b:int):int {\n    a+b\n}\n\nfn add(a:int, b:int)
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
-target triple = "x86-64"
 
 %DispatchTable = type { i64 (i64, i64)*, i64 (i64, i64)* }
 
-@dispatchTable = global %DispatchTable { i64 (i64, i64)* @add_impl, i64 (i64, i64)* @add }
+@dispatchTable = external global %DispatchTable
 
 define i64 @add_impl(i64, i64) {
 body:

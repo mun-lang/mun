@@ -4,7 +4,6 @@ expression: "fn main():int {\n  0\n}"
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
-target triple = "x86-64"
 
 define i64 @main() {
 body:
