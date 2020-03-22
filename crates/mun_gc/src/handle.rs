@@ -90,6 +90,11 @@ impl<T: Type, G: GCRuntime<T>> GCRootHandle<T, G> {
     pub fn handle(&self) -> GCHandle {
         self.handle
     }
+
+    /// Unroots the handle consuming self and returning the unrooted handle
+    pub fn unroot(self) -> GCHandle {
+        self.handle
+    }
 }
 
 impl<T: Type, G: GCRuntime<T>> Into<GCHandle> for GCRootHandle<T, G> {

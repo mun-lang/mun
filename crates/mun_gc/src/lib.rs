@@ -6,11 +6,16 @@ pub use mark_sweep::MarkSweep;
 
 /// A trait used by the GC to identify an object.
 pub trait Type: Send + Sync {
+    type Trace: Iterator<Item = GCHandle>;
+
     /// Returns the size in bytes of an object of this type.
     fn size(&self) -> usize;
 
     /// Returns the alignment of a type
     fn alignment(&self) -> usize;
+
+    /// Returns an iterator to iterate over all GC objects that are referenced by the given object.
+    fn trace(&self, obj: GCHandle) -> Self::Trace;
 }
 
 /// An object that can be used to allocate and collect memory.

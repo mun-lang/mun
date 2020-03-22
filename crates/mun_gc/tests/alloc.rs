@@ -1,3 +1,4 @@
+#[macro_use]
 mod util;
 
 use mun_gc::{Event, GCRootHandle, GCRuntime, MarkSweep};
@@ -49,8 +50,7 @@ fn collect_rooted() {
     runtime.collect();
 
     // Drop the rooted handle which should become collectable now
-    let rooted_handle = rooted.handle();
-    drop(rooted);
+    let rooted_handle = rooted.unroot();
 
     // Collect unreachable objects, should now collect the rooted handle
     runtime.collect();

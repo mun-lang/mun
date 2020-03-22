@@ -1,7 +1,7 @@
 use crate::{Event, GCHandle, GCObserver, GCRuntime, RawGCHandle, Type};
 use parking_lot::RwLock;
 use std::alloc::Layout;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::ops::Deref;
 use std::pin::Pin;
 
@@ -102,12 +102,35 @@ impl<T: Type + Clone, O: GCObserver + Default> MarkSweep<T, O> {
 
         let mut writer = self.objects.write();
 
-        // Mark all reachable objects
-        for (_, obj) in writer.iter_mut() {
-            if obj.roots > 0 {
-                unsafe {
-                    obj.as_mut().get_unchecked_mut().color = Color::Black;
+        // Get all roots
+        let mut roots = writer
+            .iter()
+            .filter_map(|(_, obj)| {
+                if obj.roots > 0 {
+                    Some(obj.as_ref().get_ref() as *const _ as *mut ObjectInfo<T>)
+                } else {
+                    None
                 }
+            })
+            .collect::<VecDeque<_>>();
+
+        // Iterate over all roots
+        while let Some(next) = roots.pop_front() {
+            let handle = (next as *const _ as RawGCHandle).into();
+
+            // Trace all other objects
+            for reference in unsafe { (*next).ty.trace(handle) } {
+                let ref_ptr = writer.get_mut(&reference).expect("found invalid reference");
+                if ref_ptr.color == Color::White {
+                    let ptr = ref_ptr.as_ref().get_ref() as *const _ as *mut ObjectInfo<T>;
+                    unsafe { (*ptr).color = Color::Gray };
+                    roots.push_back(ptr);
+                }
+            }
+
+            // This object has been traced
+            unsafe {
+                (*next).color = Color::Black;
             }
         }
 
@@ -131,6 +154,7 @@ impl<T: Type + Clone, O: GCObserver + Default> MarkSweep<T, O> {
 #[derive(Debug, PartialEq, Eq)]
 enum Color {
     White,
+    Gray,
     Black,
 }
 
