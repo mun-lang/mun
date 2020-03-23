@@ -1,4 +1,4 @@
-use crate::allocator::{GCHandle, GCRootHandle};
+use crate::garbage_collector::{GCPtr, GCRootHandle};
 use crate::{
     marshal::Marshal,
     reflection::{
@@ -6,8 +6,7 @@ use crate::{
     },
     Runtime,
 };
-use gc::GCRuntime;
-use gc::HasGCHandlePtr;
+use gc::{GCRuntime, HasIndirectionPtr};
 use std::cell::RefCell;
 use std::ptr::{self, NonNull};
 use std::rc::Rc;
@@ -17,12 +16,12 @@ use std::rc::Rc;
 /// A byte pointer is used to make pointer arithmetic easier.
 #[repr(transparent)]
 #[derive(Clone)]
-pub struct RawStruct(GCHandle);
+pub struct RawStruct(GCPtr);
 
 impl RawStruct {
     /// Returns a pointer to the struct memory.
-    pub fn get_ptr(&self) -> NonNull<u8> {
-        unsafe { self.0.get_ptr() }
+    pub unsafe fn get_ptr(&self) -> *const u8 {
+        self.0.deref()
     }
 }
 
@@ -31,6 +30,7 @@ impl RawStruct {
 pub struct StructRef {
     runtime: Rc<RefCell<Runtime>>,
     handle: GCRootHandle,
+    type_info: *const abi::TypeInfo,
     info: abi::StructInfo,
 }
 
@@ -43,11 +43,12 @@ impl StructRef {
 
         let handle = {
             let runtime_ref = runtime.borrow();
-            unsafe { GCRootHandle::new(runtime_ref.allocator(), raw.0) }
+            unsafe { GCRootHandle::new(runtime_ref.gc(), raw.0) }
         };
         Self {
             runtime,
             handle,
+            type_info: type_info as *const abi::TypeInfo,
             info: type_info.as_struct().unwrap().clone(),
         }
     }
@@ -62,6 +63,11 @@ impl StructRef {
         &self.info
     }
 
+    /// Returns the type information of the struct
+    pub fn type_info(&self) -> *const abi::TypeInfo {
+        self.type_info
+    }
+
     ///
     ///
     /// # Safety
@@ -72,8 +78,7 @@ impl StructRef {
         // self.raw is never null
         NonNull::new_unchecked(
             self.handle
-                .get_ptr::<u8>()
-                .as_ptr()
+                .deref_mut::<u8>()
                 .add(offset as usize)
                 .cast::<T>(),
         )
@@ -197,21 +202,21 @@ impl Marshal<StructRef> for RawStruct {
             // Create a new object using the runtime's intrinsic
             let gc_handle = {
                 let runtime_ref = runtime.borrow();
-                runtime_ref.allocator().alloc_object(type_info_ptr)
+                runtime_ref.gc().alloc(type_info_ptr)
             };
 
             // Construct
             let src = ptr.cast::<u8>().as_ptr() as *const _;
-            let dest = unsafe { gc_handle.get_ptr::<u8>().as_ptr() };
+            let dest = unsafe { gc_handle.deref_mut::<u8>() };
             let size = type_info.size_in_bytes();
             unsafe { ptr::copy_nonoverlapping(src, dest, size as usize) };
 
             gc_handle
         } else {
             // If this case the passed in `ptr` is a pointer to a gc struct so `ptr` points to a
-            // GCHandle.
+            // GCPtr.
 
-            unsafe { *ptr.cast::<GCHandle>().as_ptr() }
+            unsafe { *ptr.cast::<GCPtr>().as_ptr() }
         };
 
         StructRef::new(runtime, type_info, RawStruct(gc_handle))
@@ -225,7 +230,7 @@ impl Marshal<StructRef> for RawStruct {
         if struct_info.memory_kind == abi::StructMemoryKind::Value {
             let dest = ptr.cast::<u8>().as_ptr();
             let size = type_info.size_in_bytes();
-            unsafe { ptr::copy_nonoverlapping(value.get_ptr().as_ptr(), dest, size as usize) };
+            unsafe { ptr::copy_nonoverlapping(value.get_ptr(), dest, size as usize) };
         } else {
             unsafe { *ptr.as_mut() = value };
         }

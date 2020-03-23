@@ -1,17 +1,17 @@
 #![allow(dead_code, unused_macros)]
 
-use mun_gc::{Event, GCHandle};
+use mun_gc::{Event, GCPtr};
 use parking_lot::Mutex;
 
 pub struct TypeInfo {
     pub size: usize,
     pub alignment: usize,
-    pub tracer: Option<&'static fn(handle: GCHandle) -> Vec<GCHandle>>,
+    pub tracer: Option<&'static fn(handle: GCPtr) -> Vec<GCPtr>>,
 }
 
 pub trait Trace {
     /// Called to collect all GC handles in the type
-    fn trace(&self, handles: &mut Vec<GCHandle>);
+    fn trace(&self, handles: &mut Vec<GCPtr>);
 }
 
 pub trait HasTypeInfo {
@@ -45,9 +45,9 @@ macro_rules! impl_struct_ty {
     ($ty:ident) => {
         paste::item! {
             #[allow(non_upper_case_globals, non_snake_case)]
-            fn [<trace_ $ty>](obj:GCHandle) -> Vec<GCHandle> {
+            fn [<trace_ $ty>](obj:GCPtr) -> Vec<GCPtr> {
                 let mut result = Vec::new();
-                let foo = unsafe { obj.get_ptr::<$ty>().as_ptr().as_ref().unwrap() };
+                let foo = unsafe { &(*obj.deref::<$ty>()) };
                 foo.trace(&mut result);
                 result
             }
@@ -56,7 +56,7 @@ macro_rules! impl_struct_ty {
             static [<TYPE_ $ty>]: TypeInfo = TypeInfo {
                 size: std::mem::size_of::<$ty>(),
                 alignment: std::mem::align_of::<$ty>(),
-                tracer: Some(&([<trace_ $ty>] as fn(handle: GCHandle) -> Vec<GCHandle>))
+                tracer: Some(&([<trace_ $ty>] as fn(handle: GCPtr) -> Vec<GCPtr>))
             };
 
             impl HasTypeInfo for $ty {
@@ -71,7 +71,7 @@ macro_rules! impl_struct_ty {
 impl_primitive_types!(i8, i16, i32, i64, u8, u16, u32, u64, f32, f64, bool);
 
 impl mun_gc::Type for &'static TypeInfo {
-    type Trace = <Vec<GCHandle> as IntoIterator>::IntoIter;
+    type Trace = <Vec<GCPtr> as IntoIterator>::IntoIter;
 
     fn size(&self) -> usize {
         self.size
@@ -81,7 +81,7 @@ impl mun_gc::Type for &'static TypeInfo {
         self.alignment
     }
 
-    fn trace(&self, obj: GCHandle) -> Self::Trace {
+    fn trace(&self, obj: GCPtr) -> Self::Trace {
         let handles = if let Some(tracer) = self.tracer {
             tracer(obj)
         } else {
@@ -102,7 +102,7 @@ impl EventAggregator {
     }
 }
 
-impl mun_gc::GCObserver for EventAggregator {
+impl mun_gc::Observer for EventAggregator {
     fn event(&self, event: Event) {
         self.events.lock().push(event)
     }

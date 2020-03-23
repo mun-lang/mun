@@ -734,3 +734,38 @@ fn test_primitive_types() {
     test_field(&mut foo, (12usize, 111usize), "l");
     test_field(&mut foo, (13f64, 112f64), "m");
 }
+
+#[test]
+fn gc_trace() {
+    let mut driver = TestDriver::new(
+        r#"
+    pub struct Foo {
+        quz: float,
+        bar: Bar,
+    }
+
+    pub struct Bar {
+        baz: int
+    }
+
+    pub fn new_foo(): Foo {
+        Foo {
+            quz: 1.0,
+            bar: Bar {
+                baz: 3
+            }
+        }
+    }
+    "#,
+    );
+
+    let value: StructRef = invoke_fn!(driver.runtime_mut(), "new_foo").unwrap();
+
+    assert_eq!(driver.runtime_mut().borrow().collect(), false);
+    assert!(driver.runtime_mut().borrow().gc_stats().allocated_memory > 0);
+
+    drop(value);
+
+    assert_eq!(driver.runtime_mut().borrow().collect(), true);
+    assert_eq!(driver.runtime_mut().borrow().gc_stats().allocated_memory, 0);
+}

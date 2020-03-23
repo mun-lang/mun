@@ -1,4 +1,4 @@
-use gc::HasGCHandlePtr;
+use gc::HasIndirectionPtr;
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
@@ -14,13 +14,13 @@ unsafe impl Send for RawTypeInfo {}
 unsafe impl Sync for RawTypeInfo {}
 
 pub struct Trace {
-    obj: GCHandle,
+    obj: GCPtr,
     ty: RawTypeInfo,
     index: usize,
 }
 
 impl Iterator for Trace {
-    type Item = GCHandle;
+    type Item = GCPtr;
 
     fn next(&mut self) -> Option<Self::Item> {
         let struct_ty = unsafe { self.ty.0.as_ref() }.unwrap().as_struct()?;
@@ -34,12 +34,7 @@ impl Iterator for Trace {
                 if field_struct_ty.memory_kind == abi::StructMemoryKind::GC {
                     let offset = struct_ty.field_offsets()[index];
                     return Some(unsafe {
-                        *self
-                            .obj
-                            .get_ptr::<u8>()
-                            .as_ptr()
-                            .add(offset as usize)
-                            .cast::<GCHandle>()
+                        *self.obj.deref::<u8>().add(offset as usize).cast::<GCPtr>()
                     });
                 }
             }
@@ -59,7 +54,7 @@ impl gc::Type for RawTypeInfo {
         unsafe { (*self.0).alignment() }
     }
 
-    fn trace(&self, obj: GCHandle) -> Self::Trace {
+    fn trace(&self, obj: GCPtr) -> Self::Trace {
         Trace {
             ty: self.clone(),
             obj,
@@ -69,8 +64,8 @@ impl gc::Type for RawTypeInfo {
 }
 
 /// Defines an allocator used by the `Runtime`
-pub type Allocator = gc::MarkSweep<RawTypeInfo, gc::NoopObserver>;
+pub type GarbageCollector = gc::MarkSweep<RawTypeInfo, gc::NoopObserver>;
 
-pub use gc::GCHandle;
+pub use gc::GCPtr;
 
-pub type GCRootHandle = gc::GCRootHandle<RawTypeInfo, Allocator>;
+pub type GCRootHandle = gc::GCRootHandle<RawTypeInfo, GarbageCollector>;

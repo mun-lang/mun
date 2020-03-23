@@ -8,10 +8,10 @@ use util::{EventAggregator, HasTypeInfo, TypeInfo};
 #[test]
 fn alloc() {
     let runtime = MarkSweep::<&'static TypeInfo, EventAggregator>::new();
-    let handle = runtime.alloc_object(i64::type_info());
+    let handle = runtime.alloc(i64::type_info());
 
     assert!(std::ptr::eq(
-        unsafe { runtime.object_type(handle) },
+        unsafe { runtime.ptr_type(handle) },
         i64::type_info()
     ));
 
@@ -23,7 +23,7 @@ fn alloc() {
 #[test]
 fn collect_simple() {
     let runtime = MarkSweep::<&'static TypeInfo, EventAggregator>::new();
-    let handle = runtime.alloc_object(i64::type_info());
+    let handle = runtime.alloc(i64::type_info());
 
     runtime.collect();
 
@@ -40,8 +40,8 @@ fn collect_rooted() {
     let runtime = Arc::new(MarkSweep::<&'static TypeInfo, EventAggregator>::new());
 
     // Allocate simple object and rooted object
-    let handle = runtime.alloc_object(i64::type_info());
-    let rooted = unsafe { GCRootHandle::new(&runtime, runtime.alloc_object(i64::type_info())) };
+    let handle = runtime.alloc(i64::type_info());
+    let rooted = unsafe { GCRootHandle::new(&runtime, runtime.alloc(i64::type_info())) };
 
     // Collect unreachable objects, should not collect the root handle
     runtime.collect();

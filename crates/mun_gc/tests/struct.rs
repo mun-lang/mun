@@ -1,16 +1,16 @@
 #[macro_use]
 mod util;
 
-use mun_gc::{Event, GCHandle, GCRootHandle, GCRuntime, HasGCHandlePtr, MarkSweep, Type};
+use mun_gc::{Event, GCPtr, GCRootHandle, GCRuntime, HasIndirectionPtr, MarkSweep, Type};
 use std::sync::Arc;
 use util::{EventAggregator, HasTypeInfo, Trace, TypeInfo};
 
 struct Foo {
-    bar: GCHandle,
+    bar: GCPtr,
 }
 
 impl Trace for Foo {
-    fn trace(&self, handles: &mut Vec<GCHandle>) {
+    fn trace(&self, handles: &mut Vec<GCPtr>) {
         handles.push(self.bar)
     }
 }
@@ -20,12 +20,12 @@ impl_struct_ty!(Foo);
 #[test]
 fn test_trace() {
     let runtime = MarkSweep::<&'static TypeInfo, EventAggregator>::new();
-    let foo_handle = runtime.alloc_object(Foo::type_info());
-    let bar_handle = runtime.alloc_object(i64::type_info());
+    let foo_handle = runtime.alloc(Foo::type_info());
+    let bar_handle = runtime.alloc(i64::type_info());
 
     // Assign bar to foo.bar
     unsafe {
-        foo_handle.get_ptr::<Foo>().as_mut().bar = bar_handle;
+        (*foo_handle.deref_mut::<Foo>()).bar = bar_handle;
     }
 
     // Trace foo to see if we get bar back
@@ -38,12 +38,12 @@ fn test_trace() {
 #[test]
 fn trace_collect() {
     let runtime = Arc::new(MarkSweep::<&'static TypeInfo, EventAggregator>::new());
-    let foo = unsafe { GCRootHandle::new(&runtime, runtime.alloc_object(Foo::type_info())) };
-    let bar = runtime.alloc_object(i64::type_info());
+    let foo = unsafe { GCRootHandle::new(&runtime, runtime.alloc(Foo::type_info())) };
+    let bar = runtime.alloc(i64::type_info());
 
     // Assign bar to foo.bar
     unsafe {
-        foo.get_ptr::<Foo>().as_mut().bar = bar;
+        (*foo.deref_mut::<Foo>()).bar = bar;
     }
 
     // Collect garbage, bar should not be collected
@@ -70,11 +70,11 @@ fn trace_collect() {
 #[test]
 fn trace_cycle() {
     let runtime = Arc::new(MarkSweep::<&'static TypeInfo, EventAggregator>::new());
-    let foo = unsafe { GCRootHandle::new(&runtime, runtime.alloc_object(Foo::type_info())) };
+    let foo = unsafe { GCRootHandle::new(&runtime, runtime.alloc(Foo::type_info())) };
 
     // Assign bar to foo.bar
     unsafe {
-        foo.get_ptr::<Foo>().as_mut().bar = foo.handle();
+        (*foo.deref_mut::<Foo>()).bar = foo.handle();
     }
 
     // Collect garbage, nothing should be collected since foo is rooted
