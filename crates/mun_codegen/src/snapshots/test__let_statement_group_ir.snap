@@ -1,0 +1,7 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn main(a:int):int {\n  let b = a+1\n  b\n}"
+---
+; ModuleID = 'group_name'
+source_filename = "group_name"
+

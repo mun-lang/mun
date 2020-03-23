@@ -509,19 +509,37 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
     drop(sink);
     let messages = messages.into_inner();
 
-    let name = if !messages.is_empty() {
+    let _module_builder =
+        ModuleBuilder::new(&mut db, file_id).expect("Failed to initialize module builder");
+
+    // The thread is named after the test case, so we can use it to name our snapshots.
+    let thread_name = std::thread::current()
+        .name()
+        .expect("The current thread does not have a name.")
+        .replace("test::", "");
+
+    let group_ir_value = if !messages.is_empty() {
         messages.join("\n")
     } else {
-        let _module_builder =
-            ModuleBuilder::new(&mut db, file_id).expect("Failed to initialize module builder");
-
         format!(
             "{}",
-            db.module_ir(file_id)
+            db.group_ir(file_id)
                 .llvm_module
                 .print_to_string()
                 .to_string()
         )
     };
-    insta::assert_snapshot!(insta::_macro_support::AutoName, name, &text);
+    insta::assert_snapshot!(format!("{}_group_ir", thread_name), group_ir_value, &text);
+    let file_ir_value = if !messages.is_empty() {
+        messages.join("\n")
+    } else {
+        format!(
+            "{}",
+            db.file_ir(file_id)
+                .llvm_module
+                .print_to_string()
+                .to_string()
+        )
+    };
+    insta::assert_snapshot!(format!("{}_file_ir", thread_name), file_ir_value, &text);
 }

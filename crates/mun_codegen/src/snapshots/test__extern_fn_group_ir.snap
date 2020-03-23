@@ -1,0 +1,11 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "extern fn add(a:int, b:int): int;\nfn main() {\n    add(3,4);\n}"
+---
+; ModuleID = 'group_name'
+source_filename = "group_name"
+
+%DispatchTable = type { i64 (i64, i64)* }
+
+@dispatchTable = global %DispatchTable zeroinitializer
+
