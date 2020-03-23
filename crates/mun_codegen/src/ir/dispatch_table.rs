@@ -1,14 +1,15 @@
-use crate::values::FunctionValue;
-use crate::{CodeGenParams, IrDatabase};
-use inkwell::module::Module;
-use inkwell::types::{BasicTypeEnum, FunctionType};
-use inkwell::values::{BasicValueEnum, PointerValue};
-
 use crate::intrinsics::Intrinsic;
+use crate::ir::function;
 use crate::type_info::TypeInfo;
+use crate::{CodeGenParams, IrDatabase};
 use hir::{Body, Expr, ExprId, InferenceResult};
-use inkwell::context::Context;
-use inkwell::targets::TargetData;
+use inkwell::{
+    context::Context,
+    module::Module,
+    targets::TargetData,
+    types::{BasicTypeEnum, FunctionType},
+    values::{BasicValueEnum, PointerValue},
+};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
@@ -38,6 +39,8 @@ pub struct DispatchTable {
     entries: Vec<DispatchableFunction>,
     // Contains a reference to the global value containing the DispatchTable
     table_ref: Option<inkwell::values::GlobalValue>,
+    //
+    table_type: Option<inkwell::types::StructType>,
 }
 
 /// A `FunctionPrototype` defines a unique signature that can be added to the dispatch table.
@@ -68,6 +71,7 @@ impl DispatchTable {
     pub fn gen_function_lookup<D: IrDatabase>(
         &self,
         db: &D,
+        table_ref: Option<inkwell::values::GlobalValue>,
         builder: &inkwell::builder::Builder,
         function: hir::Function,
     ) -> PointerValue {
@@ -79,7 +83,7 @@ impl DispatchTable {
             .get(&function)
             .expect("unknown function");
 
-        self.gen_function_lookup_by_index(builder, &function_name, index)
+        self.gen_function_lookup_by_index(table_ref, builder, &function_name, index)
     }
 
     /// Generates a function lookup through the DispatchTable, equivalent to something along the
@@ -87,6 +91,7 @@ impl DispatchTable {
     /// struct
     pub fn gen_intrinsic_lookup(
         &self,
+        table_ref: Option<inkwell::values::GlobalValue>,
         builder: &inkwell::builder::Builder,
         intrinsic: &impl Intrinsic,
     ) -> PointerValue {
@@ -98,19 +103,20 @@ impl DispatchTable {
             .get(&prototype)
             .expect("unknown function");
 
-        self.gen_function_lookup_by_index(builder, &prototype.name, index)
+        self.gen_function_lookup_by_index(table_ref, builder, &prototype.name, index)
     }
 
     /// Generates a function lookup through the DispatchTable, equivalent to something along the
     /// lines of: `dispatchTable[i]`, where i is the index and `dispatchTable` is a struct
     fn gen_function_lookup_by_index(
         &self,
+        table_ref: Option<inkwell::values::GlobalValue>,
         builder: &inkwell::builder::Builder,
         function_name: &str,
         index: usize,
     ) -> PointerValue {
         // Get the internal table reference
-        let table_ref = self.table_ref.expect("no dispatch table defined");
+        let table_ref = table_ref.expect("no dispatch table defined");
 
         // Create an expression that finds the associated field in the table and returns this as a pointer access
         let ptr_to_function_ptr = unsafe {
@@ -129,6 +135,11 @@ impl DispatchTable {
     /// generated.
     pub fn global_value(&self) -> Option<&inkwell::values::GlobalValue> {
         self.table_ref.as_ref()
+    }
+
+    /// Returns the IR type of the dispatch table's global value, if it exists.
+    pub fn ty(&self) -> Option<inkwell::types::StructType> {
+        self.table_type
     }
 }
 
@@ -278,10 +289,10 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
         self.collect_expr(body.body_expr(), body, infer);
     }
 
-    /// This creates the final DispatchTable with all *called* functions from within the module
+    /// Builds the final DispatchTable with all *called* functions from within the module
     /// # Parameters
     /// * **functions**: Mapping of *defined* Mun functions to their respective IR values.
-    pub fn finalize(self, functions: &HashMap<hir::Function, FunctionValue>) -> DispatchTable {
+    pub fn build(self) -> DispatchTable {
         // Construct the table body from all the entries in the dispatch table
         let table_body: Vec<BasicTypeEnum> = self
             .entries
@@ -302,11 +313,21 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
                 .map(|(i, entry)| {
                     let function_type = table_body[i].into_pointer_type();
                     // Find the associated IR function if it exists
-                    match entry.function.hir.and_then(|f| functions.get(&f)) {
+                    match entry.function.hir {
                         // Case external function: Convert to typed null for the given function
                         None => function_type.const_null(),
+                        Some(f) if f.is_extern(self.db) => function_type.const_null(),
                         // Case mun function: Get the function location as the initializer
-                        Some(function_value) => function_value.as_global_value().as_pointer_value(),
+                        Some(f) => function::gen_signature(
+                            self.db,
+                            f,
+                            self.module,
+                            CodeGenParams {
+                                make_marshallable: false,
+                            },
+                        )
+                        .as_global_value()
+                        .as_pointer_value(),
                     }
                     .into()
                 })
@@ -315,12 +336,15 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
             table_ref.set_initializer(&self.table_type.const_named_struct(&values));
         }
 
+        let table_type = self.table_ref.map(|_| self.table_type);
+
         DispatchTable {
             context: self.context,
             target: self.target,
             function_to_idx: self.function_to_idx,
             prototype_to_idx: self.prototype_to_idx,
             table_ref: self.table_ref,
+            table_type,
             entries: self
                 .entries
                 .into_iter()

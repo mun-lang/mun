@@ -1,0 +1,79 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn equals(a:int, b:int):bool                { a == b }\nfn not_equals(a:int, b:int):bool            { a != b }\nfn less(a:int, b:int):bool                  { a < b }\nfn less_equal(a:int, b:int):bool            { a <= b }\nfn greater(a:int, b:int):bool               { a > b }\nfn greater_equal(a:int, b:int):bool         { a >= b }\nfn equalsf(a:float, b:float):bool           { a == b }\nfn not_equalsf(a:float, b:float):bool       { a != b }\nfn lessf(a:float, b:float):bool             { a < b }\nfn less_equalf(a:float, b:float):bool       { a <= b }\nfn greaterf(a:float, b:float):bool          { a > b }\nfn greater_equalf(a:float, b:float):bool    { a >= b }"
+---
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+define i1 @equals(i64, i64) {
+body:
+  %eq = icmp eq i64 %0, %1
+  ret i1 %eq
+}
+
+define i1 @not_equals(i64, i64) {
+body:
+  %neq = icmp ne i64 %0, %1
+  ret i1 %neq
+}
+
+define i1 @less(i64, i64) {
+body:
+  %less = icmp slt i64 %0, %1
+  ret i1 %less
+}
+
+define i1 @less_equal(i64, i64) {
+body:
+  %lesseq = icmp sle i64 %0, %1
+  ret i1 %lesseq
+}
+
+define i1 @greater(i64, i64) {
+body:
+  %greater = icmp sgt i64 %0, %1
+  ret i1 %greater
+}
+
+define i1 @greater_equal(i64, i64) {
+body:
+  %greatereq = icmp sge i64 %0, %1
+  ret i1 %greatereq
+}
+
+define i1 @equalsf(double, double) {
+body:
+  %eq = fcmp oeq double %0, %1
+  ret i1 %eq
+}
+
+define i1 @not_equalsf(double, double) {
+body:
+  %neq = fcmp one double %0, %1
+  ret i1 %neq
+}
+
+define i1 @lessf(double, double) {
+body:
+  %less = fcmp olt double %0, %1
+  ret i1 %less
+}
+
+define i1 @less_equalf(double, double) {
+body:
+  %lesseq = fcmp ole double %0, %1
+  ret i1 %lesseq
+}
+
+define i1 @greaterf(double, double) {
+body:
+  %greater = fcmp ogt double %0, %1
+  ret i1 %greater
+}
+
+define i1 @greater_equalf(double, double) {
+body:
+  %greatereq = fcmp oge double %0, %1
+  ret i1 %greatereq
+}
+

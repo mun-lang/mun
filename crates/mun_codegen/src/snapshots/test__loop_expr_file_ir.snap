@@ -1,0 +1,15 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn foo() {\n    loop {}\n}"
+---
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+define void @foo() {
+body:
+  br label %loop
+
+loop:                                             ; preds = %loop, %body
+  br label %loop
+}
+

@@ -1,0 +1,7 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn main():int {\n    return 5;\n    let a = 3; // Nothing regarding this statement should be in the IR\n}"
+---
+; ModuleID = 'group_name'
+source_filename = "group_name"
+

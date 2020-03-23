@@ -25,6 +25,13 @@ struct LoopInfo {
     exit_block: BasicBlock,
 }
 
+#[derive(Clone)]
+pub(crate) struct ExternalGlobals {
+    pub alloc_handle: Option<GlobalValue>,
+    pub dispatch_table: Option<GlobalValue>,
+    pub type_table: Option<GlobalValue>,
+}
+
 pub(crate) struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
     db: &'a D,
     body: Arc<Body>,
@@ -40,7 +47,7 @@ pub(crate) struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
     active_loop: Option<LoopInfo>,
     hir_function: hir::Function,
     params: CodeGenParams,
-    allocator_handle_global: Option<GlobalValue>,
+    external_globals: ExternalGlobals,
 }
 
 impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
@@ -51,7 +58,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         dispatch_table: &'b DispatchTable,
         type_table: &'b TypeTable,
         params: CodeGenParams,
-        allocator_handle_global: Option<GlobalValue>,
+        external_globals: ExternalGlobals,
     ) -> Self {
         let (hir_function, ir_function) = function;
 
@@ -80,7 +87,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             active_loop: None,
             hir_function,
             params,
-            allocator_handle_global,
+            external_globals,
         }
     }
 
@@ -300,13 +307,17 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         struct_lit: StructValue,
     ) -> BasicValueEnum {
         let struct_ir_ty = self.db.struct_ty(hir_struct);
-        let new_fn_ptr = self
-            .dispatch_table
-            .gen_intrinsic_lookup(&self.builder, &intrinsics::new);
+        let new_fn_ptr = self.dispatch_table.gen_intrinsic_lookup(
+            self.external_globals.dispatch_table,
+            &self.builder,
+            &intrinsics::new,
+        );
 
-        let type_info_ptr = self
-            .type_table
-            .gen_type_info_lookup(&self.builder, &self.db.type_info(hir_struct.ty(self.db)));
+        let type_info_ptr = self.type_table.gen_type_info_lookup(
+            &self.builder,
+            &self.db.type_info(hir_struct.ty(self.db)),
+            self.external_globals.type_table,
+        );
 
         // HACK: We should be able to use pointers for built-in struct types like `TypeInfo` in intrinsics
         let type_info_ptr = self.builder.build_bitcast(
@@ -316,12 +327,15 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         );
 
         let allocator_handle = self.builder.build_load(
-            self.allocator_handle_global
+            self.external_globals
+                .alloc_handle
                 .expect("no allocator handle was specified, this is required for structs")
                 .as_pointer_value(),
             "allocator_handle",
         );
 
+        // An object pointer adds an extra layer of indirection to allow for hot reloading. To
+        // make it struct type agnostic, it is stored in a `*const *mut std::ffi::c_void`.
         let object_ptr = self
             .builder
             .build_call(new_fn_ptr, &[type_info_ptr, allocator_handle], "new")
@@ -329,20 +343,32 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             .left()
             .unwrap()
             .into_pointer_value();
-        let mem_ptr = self
-            .builder
-            .build_load(object_ptr, "mem_ptr")
-            .into_pointer_value();
-        let struct_ptr = self
+
+        // Cast the object pointer to the struct type
+        let struct_ptr_ptr = self
             .builder
             .build_bitcast(
-                mem_ptr,
-                struct_ir_ty.ptr_type(AddressSpace::Generic),
-                &hir_struct.name(self.db).to_string(),
+                object_ptr,
+                struct_ir_ty
+                    .ptr_type(AddressSpace::Generic)
+                    .ptr_type(AddressSpace::Const),
+                &format!("{}_ptr_ptr", hir_struct.name(self.db).to_string()),
             )
             .into_pointer_value();
-        self.builder.build_store(struct_ptr, struct_lit);
-        object_ptr.into()
+
+        // Load the actual memory location of the struct
+        let mem_ptr = self
+            .builder
+            .build_load(
+                struct_ptr_ptr,
+                &format!("{}_mem_ptr", hir_struct.name(self.db).to_string()),
+            )
+            .into_pointer_value();
+
+        // Store the struct value
+        self.builder.build_store(mem_ptr, struct_lit);
+
+        struct_ptr_ptr.into()
     }
 
     /// Generates IR for a record literal, e.g. `Foo { a: 1.23, b: 4 }`
@@ -737,9 +763,12 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     /// Generates IR for a function call.
     fn gen_call(&mut self, function: hir::Function, args: &[BasicValueEnum]) -> CallSiteValue {
         if self.should_use_dispatch_table() {
-            let ptr_value =
-                self.dispatch_table
-                    .gen_function_lookup(self.db, &self.builder, function);
+            let ptr_value = self.dispatch_table.gen_function_lookup(
+                self.db,
+                self.external_globals.dispatch_table,
+                &self.builder,
+                function,
+            );
             self.builder
                 .build_call(ptr_value, &args, &function.name(self.db).to_string())
         } else {

@@ -24,6 +24,8 @@ pub mod symbols;
 enum CodeGenerationError {
     #[fail(display = "{}", 0)]
     LinkerError(#[fail(cause)] LinkerError),
+    #[fail(display = "error linking modules: {}", 0)]
+    ModuleLinkerError(String),
     #[fail(display = "unknown target triple: {}", 0)]
     UnknownTargetTriple(String),
     #[fail(display = "error creating target machine")]
@@ -40,6 +42,7 @@ impl From<LinkerError> for CodeGenerationError {
     }
 }
 
+/// A struct that can be used to build an LLVM `Module`.
 pub struct ModuleBuilder<'a, D: IrDatabase> {
     db: &'a D,
     file_id: FileId,
@@ -79,9 +82,6 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
             )
             .ok_or(CodeGenerationError::CouldNotCreateTargetMachine)?;
 
-        // Initialize the module and target data
-        db.set_module(assembly_module.clone());
-
         Ok(Self {
             db,
             file_id,
@@ -93,17 +93,25 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
 
     /// Construct a shared object at the specified output file location.
     pub fn finalize(&self, out_dir: Option<&Path>) -> Result<PathBuf, failure::Error> {
-        // Generate IR for the module and clone it so that we can modify it without modifying the
-        // cached value.
-        let module = self.db.module_ir(self.file_id);
+        let group_ir = self.db.group_ir(self.file_id);
+        let file = self.db.file_ir(self.file_id);
+
+        // Clone the LLVM modules so that we can modify it without modifying the cached value.
+        self.assembly_module
+            .link_in_module(group_ir.llvm_module.clone())
+            .map_err(|e| CodeGenerationError::ModuleLinkerError(e.to_string()))?;
+
+        self.assembly_module
+            .link_in_module(file.llvm_module.clone())
+            .map_err(|e| CodeGenerationError::ModuleLinkerError(e.to_string()))?;
 
         // Generate the `get_info` method.
         symbols::gen_reflection_ir(
             self.db,
             &self.assembly_module,
-            &module.functions,
-            &module.dispatch_table,
-            &module.type_table,
+            &file.api,
+            &group_ir.dispatch_table,
+            &group_ir.type_table,
         );
 
         // Optimize the assembly module

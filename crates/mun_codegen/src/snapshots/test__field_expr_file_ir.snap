@@ -1,0 +1,57 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "struct(value) Bar(float, Foo);\nstruct(value) Foo { a: int };\n\nfn bar_0(bar: Bar): float {\n    bar.0\n}\n\nfn bar_1(bar: Bar): Foo {\n    bar.1\n}\n\nfn bar_1_a(bar: Bar): int {\n    bar.1.a\n}\n\nfn foo_a(foo: Foo): int {\n    foo.a\n}\n\nfn bar_1_foo_a(bar: Bar): int {\n    foo_a(bar_1(bar))\n}\n\nfn main(): int {\n    let a: Foo = Foo { a: 5 };\n    let b: Bar = Bar(1.23, a);\n    let aa_lhs = a.a + 2;\n    let aa_rhs = 2 + a.a;\n    aa_lhs + aa_rhs\n}"
+---
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+%DispatchTable = type { i8* addrspace(4)* (i8 addrspace(4)*, i8*)*, i8* addrspace(4)* (i8 addrspace(4)*, i8*)*, i64 (%Foo)*, %Foo (%Bar)* }
+%Foo = type { i64 }
+%Bar = type { double, %Foo }
+%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+
+@allocatorHandle = external global i8*
+@dispatchTable = external global %DispatchTable
+@global_type_table = external global [8 x %struct.MunTypeInfo addrspace(4)*]
+
+define double @bar_0(%Bar) {
+body:
+  %.fca.0.extract = extractvalue %Bar %0, 0
+  ret double %.fca.0.extract
+}
+
+define %Foo @bar_1(%Bar) {
+body:
+  %.fca.1.0.extract = extractvalue %Bar %0, 1, 0
+  %"1.fca.0.insert" = insertvalue %Foo undef, i64 %.fca.1.0.extract, 0
+  ret %Foo %"1.fca.0.insert"
+}
+
+define i64 @bar_1_a(%Bar) {
+body:
+  %.fca.1.0.extract = extractvalue %Bar %0, 1, 0
+  ret i64 %.fca.1.0.extract
+}
+
+define i64 @foo_a(%Foo) {
+body:
+  %.fca.0.extract = extractvalue %Foo %0, 0
+  ret i64 %.fca.0.extract
+}
+
+define i64 @bar_1_foo_a(%Bar) {
+body:
+  %.fca.0.extract = extractvalue %Bar %0, 0
+  %.fca.1.0.extract = extractvalue %Bar %0, 1, 0
+  %bar_1_ptr = load %Foo (%Bar)*, %Foo (%Bar)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 3)
+  %bar_1 = call %Foo %bar_1_ptr(%Bar %0)
+  %foo_a_ptr = load i64 (%Foo)*, i64 (%Foo)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 2)
+  %foo_a = call i64 %foo_a_ptr(%Foo %bar_1)
+  ret i64 %foo_a
+}
+
+define i64 @main() {
+body:
+  ret i64 14
+}
+

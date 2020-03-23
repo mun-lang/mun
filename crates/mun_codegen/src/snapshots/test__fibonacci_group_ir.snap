@@ -1,0 +1,13 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn fibonacci(n:int):int {\n    if n <= 1 {\n        n\n    } else {\n        fibonacci(n-1) + fibonacci(n-2)\n    }\n}"
+---
+; ModuleID = 'group_name'
+source_filename = "group_name"
+
+%DispatchTable = type { i64 (i64)* }
+
+@dispatchTable = global %DispatchTable { i64 (i64)* @fibonacci }
+
+declare i64 @fibonacci(i64)
+

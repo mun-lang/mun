@@ -1,5 +1,7 @@
 use crate::function::IntoFunctionInfo;
-use crate::{ArgumentReflection, ReturnTypeReflection, Runtime, RuntimeBuilder, StructRef};
+use crate::{
+    ArgumentReflection, RetryResultExt, ReturnTypeReflection, Runtime, RuntimeBuilder, StructRef,
+};
 use mun_compiler::{ColorChoice, Config, Driver, FileId, PathOrInline, RelativePathBuf};
 use std::cell::RefCell;
 use std::io::Write;
@@ -441,6 +443,9 @@ fn marshal_struct() {
     pub fn qux_new(bar: Bar): Qux {
         Qux(bar)
     }
+    pub fn baz_new_transitive(foo_a: int, foo_b: bool) : Baz {
+        Baz(foo_new(foo_a, foo_b))
+    }
     "#,
     );
 
@@ -507,6 +512,21 @@ fn marshal_struct() {
     let c2: StructRef =
         invoke_fn!(driver.runtime_mut(), "bar_new", int_data.1, bool_data.1).unwrap();
     test_struct(&mut qux, c1, c2);
+
+    // Verify the dispatch table works when a marshallable wrapper function exists alongside the
+    // original function.
+    let mut baz2: StructRef = invoke_fn!(
+        driver.runtime_mut(),
+        "baz_new_transitive",
+        int_data.0,
+        bool_data.0
+    )
+    .wait();
+    let c1: StructRef =
+        invoke_fn!(driver.runtime_mut(), "foo_new", int_data.0, bool_data.0).unwrap();
+    let c2: StructRef =
+        invoke_fn!(driver.runtime_mut(), "foo_new", int_data.1, bool_data.1).unwrap();
+    test_struct(&mut baz2, c1, c2);
 
     fn test_shallow_copy<
         T: Copy + std::fmt::Debug + PartialEq + ArgumentReflection + ReturnTypeReflection,

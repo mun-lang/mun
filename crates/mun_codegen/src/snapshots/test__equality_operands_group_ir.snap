@@ -1,0 +1,7 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn equals(a:int, b:int):bool                { a == b }\nfn not_equals(a:int, b:int):bool            { a != b }\nfn less(a:int, b:int):bool                  { a < b }\nfn less_equal(a:int, b:int):bool            { a <= b }\nfn greater(a:int, b:int):bool               { a > b }\nfn greater_equal(a:int, b:int):bool         { a >= b }\nfn equalsf(a:float, b:float):bool           { a == b }\nfn not_equalsf(a:float, b:float):bool       { a != b }\nfn lessf(a:float, b:float):bool             { a < b }\nfn less_equalf(a:float, b:float):bool       { a <= b }\nfn greaterf(a:float, b:float):bool          { a > b }\nfn greater_equalf(a:float, b:float):bool    { a >= b }"
+---
+; ModuleID = 'group_name'
+source_filename = "group_name"
+
