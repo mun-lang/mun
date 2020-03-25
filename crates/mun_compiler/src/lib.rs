@@ -9,6 +9,7 @@ pub use mun_hir::{FileId, RelativePath, RelativePathBuf};
 pub use mun_target::spec::Target;
 use std::path::{Path, PathBuf};
 
+pub use crate::driver::Color;
 pub use crate::driver::{Config, Driver};
 pub use annotate_snippets_builders::{AnnotationBuilder, SliceBuilder, SnippetBuilder};
 pub use mun_codegen::OptimizationLevel;

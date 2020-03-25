@@ -1,3 +1,4 @@
+use crate::driver::Color;
 pub use mun_codegen::OptimizationLevel;
 use mun_target::spec::Target;
 use std::path::PathBuf;
@@ -14,6 +15,9 @@ pub struct Config {
     /// The optional output directory to store all outputs. If no directory is specified all output
     /// is stored in a temporary directory.
     pub out_dir: Option<PathBuf>,
+
+    /// Decide use or not to use colors in terminal output
+    pub color: Color,
 }
 
 impl Default for Config {
@@ -25,6 +29,7 @@ impl Default for Config {
             target: target.unwrap(),
             optimization_lvl: OptimizationLevel::Default,
             out_dir: None,
+            color: Color::Auto,
         }
     }
 }

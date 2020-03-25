@@ -17,10 +17,89 @@ use annotate_snippets::{
 
 pub const WORKSPACE: SourceRootId = SourceRootId(0);
 
+#[derive(Debug, Clone, Copy)]
+pub enum Color {
+    Disable,
+    Auto,
+    Enable,
+}
+
+impl Into<bool> for Color {
+    fn into(self) -> bool {
+        match self {
+            Color::Disable => false,
+            Color::Auto => {
+                use std::env;
+
+                match env::var("term") {
+                    Ok(terminal) => match terminal.as_str() {
+                        "dumb" => false,
+                        _ => true,
+                    },
+                    Err(_) => {
+                        if cfg!(windows) {
+                            use std::process::Command;
+                            // Run `ver` program to find on which Windows version Mun is using on
+                            Command::new("cmd").args(&["/C", "ver"]).output().map_or(
+                                false,
+                                |output| {
+                                    String::from_utf8(output.stdout).map_or(
+                                        false,
+                                        |windows_version| {
+                                            let windows_version = windows_version
+                                                .split(' ') // split to drop "Microsoft", "Windows" and "[Version" from string
+                                                .last() // latest element contains Windows version with noisy ']' char
+                                                .and_then(|window_version| {
+                                                    let mut window_version: String =
+                                                        window_version.trim().to_string();
+
+                                                    // Remove ']' char
+                                                    window_version.pop();
+
+                                                    let window_version: Vec<&str> =
+                                                        window_version.split('.').collect();
+
+                                                    Some((
+                                                        window_version[0].parse::<usize>(),
+                                                        window_version[1].parse::<usize>(),
+                                                        window_version[2].parse::<usize>(),
+                                                    ))
+                                                });
+
+                                            if let Some((Ok(major), Ok(minor), Ok(patch))) =
+                                                windows_version
+                                            {
+                                                // From Windows 10.0.10586 version and higher ANSI escape code works in cmd
+                                                let windows_support_ansi =
+                                                    major >= 10 && (patch >= 10586 || minor > 0);
+                                                if windows_support_ansi {
+                                                    #[cfg(target_os = "windows")]
+                                                    let _ = ansi_term::enable_ansi_support();
+                                                }
+                                                windows_support_ansi
+                                            } else {
+                                                false
+                                            }
+                                        },
+                                    )
+                                },
+                            )
+                        } else {
+                            false
+                        }
+                    }
+                }
+            }
+            Color::Enable => true,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Driver {
     db: CompilerDatabase,
     out_dir: Option<PathBuf>,
+    color_option: Color,
 }
 
 impl Driver {
@@ -29,6 +108,7 @@ impl Driver {
         let mut driver = Driver {
             db: CompilerDatabase::new(),
             out_dir: None,
+            color_option: config.color,
         };
 
         // Move relevant configuration into the database
@@ -108,7 +188,7 @@ impl Driver {
         writer: &mut dyn std::io::Write,
     ) -> Result<bool, failure::Error> {
         let mut has_errors = false;
-        let dlf = DisplayListFormatter::new(true, false);
+        let dlf = DisplayListFormatter::new(self.color_option.into(), false);
         for file_id in self.db.source_root(WORKSPACE).files() {
             let diags = diagnostics(&self.db, file_id);
             for diagnostic in diags {

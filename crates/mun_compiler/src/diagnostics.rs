@@ -272,6 +272,5 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
     Module::from(file_id).diagnostics(db, &mut sink);
 
     drop(sink);
-
     result.into_inner()
 }

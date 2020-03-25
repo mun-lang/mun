@@ -6,7 +6,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-use mun_compiler::{Config, PathOrInline, Target};
+use mun_compiler::{Color, Config, PathOrInline, Target};
 use mun_runtime::{invoke_fn, ReturnTypeReflection, Runtime, RuntimeBuilder};
 
 fn main() -> Result<(), failure::Error> {
@@ -39,6 +39,12 @@ fn main() -> Result<(), failure::Error> {
                         .long("target")
                         .takes_value(true)
                         .help("target triple for which code is compiled"),
+                )
+                .arg(
+                    Arg::with_name("color")
+                        .long("color")
+                        .takes_value(true)
+                        .help("color text in terminal: enable|auto|disable"),
                 )
                 .about("Compiles a local Mun file into a module"),
         )
@@ -136,6 +142,29 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOption
         _ => return Err(format_err!("Only optimization levels 0-3 are supported")),
     };
 
+    let color = match matches.value_of("color") {
+        Some("disable") => Color::Disable,
+        Some("auto") => Color::Auto,
+        Some("enable") => Color::Enable,
+        None => {
+            use std::env;
+
+            match env::var("mun_terminal_color") {
+                Ok(option) => match option.as_str() {
+                    "disable" => Color::Disable,
+                    "enable" => Color::Enable,
+                    _ => Color::Auto,
+                },
+                Err(_) => Color::Auto,
+            }
+        }
+        _ => {
+            return Err(format_err!(
+                "Only 'enable', 'auto' or 'disable' values are available"
+            ))
+        }
+    };
+
     Ok(mun_compiler::CompilerOptions {
         input: PathOrInline::Path(matches.value_of("INPUT").unwrap().into()), // Safe because its a required arg
         config: Config {
@@ -144,6 +173,7 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOption
                 .map_or_else(Target::host_target, Target::search)?,
             optimization_lvl,
             out_dir: None,
+            color,
         },
     })
 }

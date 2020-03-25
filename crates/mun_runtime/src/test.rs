@@ -4,7 +4,6 @@ use crate::{
 };
 use mun_compiler::{Config, Driver, FileId, PathOrInline, RelativePathBuf};
 use std::cell::RefCell;
-use std::io::Write;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::thread::sleep;

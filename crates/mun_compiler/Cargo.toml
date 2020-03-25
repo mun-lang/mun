@@ -14,8 +14,9 @@ mun_codegen = { path="../mun_codegen" }
 mun_syntax = { path="../mun_syntax" }
 mun_hir = {path="../mun_hir"}
 mun_target = {path="../mun_target"}
-annotate-snippets = "0.6.1"
+annotate-snippets = { version = "0.6.1", features = ["color"] }
 unicode-segmentation = "1.6.0"
+ansi_term = "0.12.1"
 
 [dev-dependencies]
 insta = "0.13.1"
