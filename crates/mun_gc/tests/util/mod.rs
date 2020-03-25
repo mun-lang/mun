@@ -1,17 +1,18 @@
 #![allow(dead_code, unused_macros)]
 
-use mun_gc::{Event, GCPtr};
+use mun_gc::GcPtr;
 use parking_lot::Mutex;
+use std::alloc::Layout;
 
 pub struct TypeInfo {
     pub size: usize,
     pub alignment: usize,
-    pub tracer: Option<&'static fn(handle: GCPtr) -> Vec<GCPtr>>,
+    pub tracer: Option<&'static fn(handle: GcPtr) -> Vec<GcPtr>>,
 }
 
 pub trait Trace {
     /// Called to collect all GC handles in the type
-    fn trace(&self, handles: &mut Vec<GCPtr>);
+    fn trace(&self, handles: &mut Vec<GcPtr>);
 }
 
 pub trait HasTypeInfo {
@@ -45,7 +46,7 @@ macro_rules! impl_struct_ty {
     ($ty:ident) => {
         paste::item! {
             #[allow(non_upper_case_globals, non_snake_case)]
-            fn [<trace_ $ty>](obj:GCPtr) -> Vec<GCPtr> {
+            fn [<trace_ $ty>](obj:GcPtr) -> Vec<GcPtr> {
                 let mut result = Vec::new();
                 let foo = unsafe { &(*obj.deref::<$ty>()) };
                 foo.trace(&mut result);
@@ -56,7 +57,7 @@ macro_rules! impl_struct_ty {
             static [<TYPE_ $ty>]: TypeInfo = TypeInfo {
                 size: std::mem::size_of::<$ty>(),
                 alignment: std::mem::align_of::<$ty>(),
-                tracer: Some(&([<trace_ $ty>] as fn(handle: GCPtr) -> Vec<GCPtr>))
+                tracer: Some(&([<trace_ $ty>] as fn(handle: GcPtr) -> Vec<GcPtr>))
             };
 
             impl HasTypeInfo for $ty {
@@ -71,17 +72,14 @@ macro_rules! impl_struct_ty {
 impl_primitive_types!(i8, i16, i32, i64, u8, u16, u32, u64, f32, f64, bool);
 
 impl mun_gc::Type for &'static TypeInfo {
-    type Trace = <Vec<GCPtr> as IntoIterator>::IntoIter;
+    type Trace = <Vec<GcPtr> as IntoIterator>::IntoIter;
 
-    fn size(&self) -> usize {
-        self.size
+    fn layout(&self) -> Layout {
+        Layout::from_size_align(self.size as usize, self.alignment as usize)
+            .expect("invalid layout specified by TypeInfo")
     }
 
-    fn alignment(&self) -> usize {
-        self.alignment
-    }
-
-    fn trace(&self, obj: GCPtr) -> Self::Trace {
+    fn trace(&self, obj: GcPtr) -> Self::Trace {
         let handles = if let Some(tracer) = self.tracer {
             tracer(obj)
         } else {
@@ -91,19 +89,28 @@ impl mun_gc::Type for &'static TypeInfo {
     }
 }
 
-#[derive(Default)]
-pub struct EventAggregator {
-    events: Mutex<Vec<Event>>,
+pub struct EventAggregator<T: Sync + Send + Sized> {
+    events: Mutex<Vec<T>>,
 }
 
-impl EventAggregator {
-    pub fn take_all(&self) -> Vec<Event> {
+impl<T: Sync + Send + Sized> Default for EventAggregator<T> {
+    fn default() -> Self {
+        EventAggregator {
+            events: Mutex::new(Vec::new()),
+        }
+    }
+}
+
+impl<T: Sync + Send + Sized> EventAggregator<T> {
+    pub fn take_all(&self) -> Vec<T> {
         self.events.lock().drain(..).collect()
     }
 }
 
-impl mun_gc::Observer for EventAggregator {
-    fn event(&self, event: Event) {
+impl<T: Sync + Send + Sized> mun_gc::Observer for EventAggregator<T> {
+    type Event = T;
+
+    fn event(&self, event: T) {
         self.events.lock().push(event)
     }
 }

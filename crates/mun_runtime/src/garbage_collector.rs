@@ -1,4 +1,5 @@
 use gc::HasIndirectionPtr;
+use std::alloc::Layout;
 
 #[derive(Clone, Debug)]
 #[repr(transparent)]
@@ -14,13 +15,13 @@ unsafe impl Send for RawTypeInfo {}
 unsafe impl Sync for RawTypeInfo {}
 
 pub struct Trace {
-    obj: GCPtr,
+    obj: GcPtr,
     ty: RawTypeInfo,
     index: usize,
 }
 
 impl Iterator for Trace {
-    type Item = GCPtr;
+    type Item = GcPtr;
 
     fn next(&mut self) -> Option<Self::Item> {
         let struct_ty = unsafe { self.ty.0.as_ref() }.unwrap().as_struct()?;
@@ -34,7 +35,7 @@ impl Iterator for Trace {
                 if field_struct_ty.memory_kind == abi::StructMemoryKind::GC {
                     let offset = struct_ty.field_offsets()[index];
                     return Some(unsafe {
-                        *self.obj.deref::<u8>().add(offset as usize).cast::<GCPtr>()
+                        *self.obj.deref::<u8>().add(offset as usize).cast::<GcPtr>()
                     });
                 }
             }
@@ -46,15 +47,13 @@ impl Iterator for Trace {
 impl gc::Type for RawTypeInfo {
     type Trace = Trace;
 
-    fn size(&self) -> usize {
-        unsafe { (*self.0).size_in_bytes() }
+    fn layout(&self) -> Layout {
+        let ty = unsafe { &*self.0 };
+        Layout::from_size_align(ty.size_in_bytes(), ty.alignment())
+            .expect("invalid layout from Mun Type")
     }
 
-    fn alignment(&self) -> usize {
-        unsafe { (*self.0).alignment() }
-    }
-
-    fn trace(&self, obj: GCPtr) -> Self::Trace {
+    fn trace(&self, obj: GcPtr) -> Self::Trace {
         Trace {
             ty: self.clone(),
             obj,
@@ -63,9 +62,8 @@ impl gc::Type for RawTypeInfo {
     }
 }
 
-/// Defines an allocator used by the `Runtime`
-pub type GarbageCollector = gc::MarkSweep<RawTypeInfo, gc::NoopObserver>;
+/// Defines the garbage collector used by the `Runtime`.
+pub type GarbageCollector = gc::MarkSweep<RawTypeInfo, gc::NoopObserver<gc::Event>>;
 
-pub use gc::GCPtr;
-
-pub type GCRootHandle = gc::GCRootHandle<RawTypeInfo, GarbageCollector>;
+pub use gc::GcPtr;
+pub type GcRootPtr = gc::GcRootPtr<RawTypeInfo, GarbageCollector>;

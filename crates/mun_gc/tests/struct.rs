@@ -1,16 +1,16 @@
 #[macro_use]
 mod util;
 
-use mun_gc::{Event, GCPtr, GCRootHandle, GCRuntime, HasIndirectionPtr, MarkSweep, Type};
+use mun_gc::{Event, GcPtr, GcRootPtr, GcRuntime, HasIndirectionPtr, MarkSweep, Type};
 use std::sync::Arc;
 use util::{EventAggregator, HasTypeInfo, Trace, TypeInfo};
 
 struct Foo {
-    bar: GCPtr,
+    bar: GcPtr,
 }
 
 impl Trace for Foo {
-    fn trace(&self, handles: &mut Vec<GCPtr>) {
+    fn trace(&self, handles: &mut Vec<GcPtr>) {
         handles.push(self.bar)
     }
 }
@@ -19,8 +19,8 @@ impl_struct_ty!(Foo);
 
 #[test]
 fn test_trace() {
-    let runtime = MarkSweep::<&'static TypeInfo, EventAggregator>::new();
-    let foo_handle = runtime.alloc(Foo::type_info());
+    let runtime = MarkSweep::<&'static TypeInfo, EventAggregator<Event>>::default();
+    let mut foo_handle = runtime.alloc(Foo::type_info());
     let bar_handle = runtime.alloc(i64::type_info());
 
     // Assign bar to foo.bar
@@ -37,8 +37,8 @@ fn test_trace() {
 
 #[test]
 fn trace_collect() {
-    let runtime = Arc::new(MarkSweep::<&'static TypeInfo, EventAggregator>::new());
-    let foo = unsafe { GCRootHandle::new(&runtime, runtime.alloc(Foo::type_info())) };
+    let runtime = Arc::new(MarkSweep::<&'static TypeInfo, EventAggregator<Event>>::default());
+    let mut foo = GcRootPtr::new(&runtime, runtime.alloc(Foo::type_info()));
     let bar = runtime.alloc(i64::type_info());
 
     // Assign bar to foo.bar
@@ -69,8 +69,8 @@ fn trace_collect() {
 
 #[test]
 fn trace_cycle() {
-    let runtime = Arc::new(MarkSweep::<&'static TypeInfo, EventAggregator>::new());
-    let foo = unsafe { GCRootHandle::new(&runtime, runtime.alloc(Foo::type_info())) };
+    let runtime = Arc::new(MarkSweep::<&'static TypeInfo, EventAggregator<Event>>::default());
+    let mut foo = GcRootPtr::new(&runtime, runtime.alloc(Foo::type_info()));
 
     // Assign bar to foo.bar
     unsafe {

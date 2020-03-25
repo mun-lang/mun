@@ -1,19 +1,18 @@
-use crate::{Event, GCPtr, GCRuntime, Observer, RawGCPtr, Stats, Type};
+use crate::{Event, GcPtr, GcRuntime, Observer, RawGcPtr, Stats, Type};
 use parking_lot::RwLock;
-use std::alloc::Layout;
 use std::collections::{HashMap, VecDeque};
 use std::ops::Deref;
 use std::pin::Pin;
 
-/// Implements a simple mark-sweep type memory collector. Uses a HashMap of
+/// Implements a simple mark-sweep type garbage collector.
 #[derive(Debug)]
-pub struct MarkSweep<T: Type + Clone, O: Observer> {
-    objects: RwLock<HashMap<GCPtr, Pin<Box<ObjectInfo<T>>>>>,
+pub struct MarkSweep<T: Type + Clone, O: Observer<Event = Event>> {
+    objects: RwLock<HashMap<GcPtr, Pin<Box<ObjectInfo<T>>>>>,
     observer: O,
     stats: RwLock<Stats>,
 }
 
-impl<T: Type + Clone, O: Observer + Default> Default for MarkSweep<T, O> {
+impl<T: Type + Clone, O: Observer<Event = Event> + Default> Default for MarkSweep<T, O> {
     fn default() -> Self {
         MarkSweep {
             objects: RwLock::new(HashMap::new()),
@@ -23,26 +22,14 @@ impl<T: Type + Clone, O: Observer + Default> Default for MarkSweep<T, O> {
     }
 }
 
-impl<T: Type + Clone, O: Observer + Default> MarkSweep<T, O> {
-    pub fn new() -> Self {
-        Default::default()
-    }
-}
-
-impl<T: Type + Clone, O: Observer> MarkSweep<T, O> {
+impl<T: Type + Clone, O: Observer<Event = Event>> MarkSweep<T, O> {
+    /// Creates a `MarkSweep` memory collector with the specified `Observer`.
     pub fn with_observer(observer: O) -> Self {
         Self {
             objects: RwLock::new(HashMap::new()),
             observer,
             stats: RwLock::new(Stats::default()),
         }
-    }
-}
-
-impl<T: Type + Clone, O: Observer> MarkSweep<T, O> {
-    /// Allocates a block of memory
-    fn alloc_memory(&self, size: usize, alignment: usize) -> *mut u8 {
-        unsafe { std::alloc::alloc(Layout::from_size_align_unchecked(size, alignment)) }
     }
 
     /// Returns the observer
@@ -51,10 +38,10 @@ impl<T: Type + Clone, O: Observer> MarkSweep<T, O> {
     }
 }
 
-impl<T: Type + Clone, O: Observer> GCRuntime<T> for MarkSweep<T, O> {
-    fn alloc(&self, ty: T) -> GCPtr {
-        let size = ty.size();
-        let ptr = self.alloc_memory(ty.size(), ty.alignment());
+impl<T: Type + Clone, O: Observer<Event = Event>> GcRuntime<T> for MarkSweep<T, O> {
+    fn alloc(&self, ty: T) -> GcPtr {
+        let layout = ty.layout();
+        let ptr = unsafe { std::alloc::alloc(layout) };
         let object = Box::pin(ObjectInfo {
             ptr,
             ty,
@@ -63,7 +50,7 @@ impl<T: Type + Clone, O: Observer> GCRuntime<T> for MarkSweep<T, O> {
         });
 
         // We want to return a pointer to the `ObjectInfo`, to be used as handle.
-        let handle = (object.as_ref().deref() as *const _ as RawGCPtr).into();
+        let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
 
         {
             let mut objects = self.objects.write();
@@ -72,41 +59,39 @@ impl<T: Type + Clone, O: Observer> GCRuntime<T> for MarkSweep<T, O> {
 
         {
             let mut stats = self.stats.write();
-            stats.allocated_memory += size;
+            stats.allocated_memory += layout.size();
         }
 
         self.observer.event(Event::Allocation(handle));
         handle
     }
 
-    unsafe fn ptr_type(&self, handle: GCPtr) -> T {
+    fn ptr_type(&self, handle: GcPtr) -> T {
         let _ = self.objects.read();
 
         // Convert the handle to our internal representation
         let object_info: *const ObjectInfo<T> = handle.into();
 
         // Return the type of the object
-        (*object_info).ty.clone()
+        unsafe { (*object_info).ty.clone() }
     }
 
-    unsafe fn root(&self, handle: GCPtr) {
+    fn root(&self, handle: GcPtr) {
         let _ = self.objects.write();
 
         // Convert the handle to our internal representation
         let object_info: *mut ObjectInfo<T> = handle.into();
 
-        // Return the type of the object
-        (*object_info).roots += 1;
+        unsafe { (*object_info).roots += 1 };
     }
 
-    unsafe fn unroot(&self, handle: GCPtr) {
+    fn unroot(&self, handle: GcPtr) {
         let _ = self.objects.write();
 
         // Convert the handle to our internal representation
         let object_info: *mut ObjectInfo<T> = handle.into();
 
-        // Return the type of the object
-        (*object_info).roots -= 1;
+        unsafe { (*object_info).roots -= 1 };
     }
 
     fn stats(&self) -> Stats {
@@ -114,16 +99,16 @@ impl<T: Type + Clone, O: Observer> GCRuntime<T> for MarkSweep<T, O> {
     }
 }
 
-impl<T: Type + Clone, O: Observer + Default> MarkSweep<T, O> {
+impl<T: Type + Clone, O: Observer<Event = Event> + Default> MarkSweep<T, O> {
     /// Collects all memory that is no longer referenced by rooted objects. Returns `true` if memory
     /// was reclaimed, `false` otherwise.
     pub fn collect(&self) -> bool {
         self.observer.event(Event::Start);
 
-        let mut writer = self.objects.write();
+        let mut objects = self.objects.write();
 
         // Get all roots
-        let mut roots = writer
+        let mut roots = objects
             .iter()
             .filter_map(|(_, obj)| {
                 if obj.roots > 0 {
@@ -136,11 +121,13 @@ impl<T: Type + Clone, O: Observer + Default> MarkSweep<T, O> {
 
         // Iterate over all roots
         while let Some(next) = roots.pop_front() {
-            let handle = (next as *const _ as RawGCPtr).into();
+            let handle = (next as *const _ as RawGcPtr).into();
 
             // Trace all other objects
             for reference in unsafe { (*next).ty.trace(handle) } {
-                let ref_ptr = writer.get_mut(&reference).expect("found invalid reference");
+                let ref_ptr = objects
+                    .get_mut(&reference)
+                    .expect("found invalid reference");
                 if ref_ptr.color == Color::White {
                     let ptr = ref_ptr.as_ref().get_ref() as *const _ as *mut ObjectInfo<T>;
                     unsafe { (*ptr).color = Color::Gray };
@@ -155,8 +142,8 @@ impl<T: Type + Clone, O: Observer + Default> MarkSweep<T, O> {
         }
 
         // Sweep all non-reachable objects
-        let size_before = writer.len();
-        writer.retain(|h, obj| {
+        let size_before = objects.len();
+        objects.retain(|h, obj| {
             if obj.color == Color::Black {
                 unsafe {
                     obj.as_mut().get_unchecked_mut().color = Color::White;
@@ -166,12 +153,12 @@ impl<T: Type + Clone, O: Observer + Default> MarkSweep<T, O> {
                 self.observer.event(Event::Deallocation(*h));
                 {
                     let mut stats = self.stats.write();
-                    stats.allocated_memory -= obj.ty.size();
+                    stats.allocated_memory -= obj.ty.layout().size();
                 }
                 false
             }
         });
-        let size_after = writer.len();
+        let size_after = objects.len();
 
         self.observer.event(Event::End);
 
@@ -179,14 +166,21 @@ impl<T: Type + Clone, O: Observer + Default> MarkSweep<T, O> {
     }
 }
 
+/// Coloring used in the Mark Sweep phase.
 #[derive(Debug, PartialEq, Eq)]
 enum Color {
+    /// A white object has not been seen yet by the mark phase
     White,
+
+    /// A gray object has been seen by the mark phase but has not yet been visited
     Gray,
+
+    /// A black object has been visited by the mark phase
     Black,
 }
 
-/// An indirection table that stores the address to the actual memory and the type of the object
+/// An indirection table that stores the address to the actual memory, the type of the object and
+/// meta information.
 #[derive(Debug)]
 #[repr(C)]
 struct ObjectInfo<T: Type + Clone> {
@@ -200,26 +194,26 @@ struct ObjectInfo<T: Type + Clone> {
 unsafe impl<T: Type + Clone> Send for ObjectInfo<T> {}
 unsafe impl<T: Type + Clone> Sync for ObjectInfo<T> {}
 
-impl<T: Type + Clone> Into<*const ObjectInfo<T>> for GCPtr {
+impl<T: Type + Clone> Into<*const ObjectInfo<T>> for GcPtr {
     fn into(self) -> *const ObjectInfo<T> {
         self.as_ptr() as *const ObjectInfo<T>
     }
 }
 
-impl<T: Type + Clone> Into<*mut ObjectInfo<T>> for GCPtr {
+impl<T: Type + Clone> Into<*mut ObjectInfo<T>> for GcPtr {
     fn into(self) -> *mut ObjectInfo<T> {
         self.as_ptr() as *mut ObjectInfo<T>
     }
 }
 
-impl<T: Type + Clone> Into<GCPtr> for *const ObjectInfo<T> {
-    fn into(self) -> GCPtr {
-        (self as RawGCPtr).into()
+impl<T: Type + Clone> Into<GcPtr> for *const ObjectInfo<T> {
+    fn into(self) -> GcPtr {
+        (self as RawGcPtr).into()
     }
 }
 
-impl<T: Type + Clone> Into<GCPtr> for *mut ObjectInfo<T> {
-    fn into(self) -> GCPtr {
-        (self as RawGCPtr).into()
+impl<T: Type + Clone> Into<GcPtr> for *mut ObjectInfo<T> {
+    fn into(self) -> GcPtr {
+        (self as RawGcPtr).into()
     }
 }

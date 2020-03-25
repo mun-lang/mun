@@ -1,6 +1,6 @@
 [package]
 name = "mun_gc"
-version = "0.2.0"
+version = "0.1.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 homepage = "https://mun-lang.org"

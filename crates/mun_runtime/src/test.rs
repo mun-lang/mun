@@ -550,9 +550,6 @@ fn marshal_struct() {
     test_shallow_copy(&mut foo, &foo2, &bool_data, "b");
 
     let mut bar = qux.get::<StructRef>("0").unwrap();
-    // let bar2 = qux.get::<StructRef>("0").unwrap();
-    // test_shallow_copy(&mut bar, &bar2, &int_data, "0");
-    // test_shallow_copy(&mut bar, &bar2, &bool_data, "1");
 
     // Specify invalid return type
     let bar_err = bar.get::<f64>("0");
@@ -761,11 +758,11 @@ fn gc_trace() {
 
     let value: StructRef = invoke_fn!(driver.runtime_mut(), "new_foo").unwrap();
 
-    assert_eq!(driver.runtime_mut().borrow().collect(), false);
+    assert_eq!(driver.runtime_mut().borrow().gc_collect(), false);
     assert!(driver.runtime_mut().borrow().gc_stats().allocated_memory > 0);
 
     drop(value);
 
-    assert_eq!(driver.runtime_mut().borrow().collect(), true);
+    assert_eq!(driver.runtime_mut().borrow().gc_collect(), true);
     assert_eq!(driver.runtime_mut().borrow().gc_stats().allocated_memory, 0);
 }

@@ -39,7 +39,7 @@ pub use crate::assembly::Assembly;
 use crate::function::IntoFunctionInfo;
 pub use crate::r#struct::StructRef;
 use garbage_collector::GarbageCollector;
-use gc::GCRuntime;
+use gc::GcRuntime;
 use std::sync::Arc;
 
 impl_has_type_info_name!(
@@ -184,7 +184,7 @@ impl Runtime {
             dispatch_table,
             watcher,
             watcher_rx: rx,
-            gc: Arc::new(self::garbage_collector::GarbageCollector::new()),
+            gc: Arc::new(self::garbage_collector::GarbageCollector::default()),
             _user_functions: storages,
         };
 
@@ -247,14 +247,14 @@ impl Runtime {
         false
     }
 
-    /// Returns the runtime's allocator.
+    /// Returns the runtime's garbage collector.
     pub(crate) fn gc(&self) -> &Arc<GarbageCollector> {
         &self.gc
     }
 
     /// Collects all memory that is no longer referenced by rooted objects. Returns `true` if memory
-    /// was reclaimed, `false` otherwise.
-    pub fn collect(&self) -> bool {
+    /// was reclaimed, `false` otherwise. This behavior will likely change in the future.
+    pub fn gc_collect(&self) -> bool {
         self.gc.collect()
     }
 

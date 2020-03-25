@@ -1,4 +1,4 @@
-use crate::garbage_collector::{GCPtr, GCRootHandle};
+use crate::garbage_collector::{GcPtr, GcRootPtr};
 use crate::{
     marshal::Marshal,
     reflection::{
@@ -6,7 +6,7 @@ use crate::{
     },
     Runtime,
 };
-use gc::{GCRuntime, HasIndirectionPtr};
+use gc::{GcRuntime, HasIndirectionPtr};
 use std::cell::RefCell;
 use std::ptr::{self, NonNull};
 use std::rc::Rc;
@@ -16,7 +16,7 @@ use std::rc::Rc;
 /// A byte pointer is used to make pointer arithmetic easier.
 #[repr(transparent)]
 #[derive(Clone)]
-pub struct RawStruct(GCPtr);
+pub struct RawStruct(GcPtr);
 
 impl RawStruct {
     /// Returns a pointer to the struct memory.
@@ -29,7 +29,7 @@ impl RawStruct {
 /// TODO: Handle destruction of `struct(value)`
 pub struct StructRef {
     runtime: Rc<RefCell<Runtime>>,
-    handle: GCRootHandle,
+    handle: GcRootPtr,
     type_info: *const abi::TypeInfo,
     info: abi::StructInfo,
 }
@@ -43,7 +43,7 @@ impl StructRef {
 
         let handle = {
             let runtime_ref = runtime.borrow();
-            unsafe { GCRootHandle::new(runtime_ref.gc(), raw.0) }
+            GcRootPtr::new(runtime_ref.gc(), raw.0)
         };
         Self {
             runtime,
@@ -64,7 +64,11 @@ impl StructRef {
     }
 
     /// Returns the type information of the struct
-    pub fn type_info(&self) -> *const abi::TypeInfo {
+    ///
+    /// # Safety
+    ///
+    /// This method is unsafe because it returns a pointer that may point to deallocated memory.
+    pub unsafe fn type_info(&self) -> *const abi::TypeInfo {
         self.type_info
     }
 
@@ -76,12 +80,7 @@ impl StructRef {
     unsafe fn offset_unchecked<T>(&self, field_idx: usize) -> NonNull<T> {
         let offset = *self.info.field_offsets().get_unchecked(field_idx);
         // self.raw is never null
-        NonNull::new_unchecked(
-            self.handle
-                .deref_mut::<u8>()
-                .add(offset as usize)
-                .cast::<T>(),
-        )
+        NonNull::new_unchecked(self.handle.deref::<u8>().add(offset as usize).cast::<T>() as *mut _)
     }
 
     /// Retrieves the value of the field corresponding to the specified `field_name`.
@@ -196,11 +195,10 @@ impl Marshal<StructRef> for RawStruct {
 
         // Copy the contents of the struct based on what kind of pointer we are dealing with
         let gc_handle = if struct_info.memory_kind == abi::StructMemoryKind::Value {
-            // If this case the passed in `ptr` is a pointer to a value struct so `ptr` points to a
-            // struct value.
+            // For a value struct, `ptr` points to a struct value.
 
             // Create a new object using the runtime's intrinsic
-            let gc_handle = {
+            let mut gc_handle = {
                 let runtime_ref = runtime.borrow();
                 runtime_ref.gc().alloc(type_info_ptr)
             };
@@ -213,10 +211,9 @@ impl Marshal<StructRef> for RawStruct {
 
             gc_handle
         } else {
-            // If this case the passed in `ptr` is a pointer to a gc struct so `ptr` points to a
-            // GCPtr.
+            // For a gc struct, `ptr` points to a `GcPtr`.
 
-            unsafe { *ptr.cast::<GCPtr>().as_ptr() }
+            unsafe { *ptr.cast::<GcPtr>().as_ptr() }
         };
 
         StructRef::new(runtime, type_info, RawStruct(gc_handle))
