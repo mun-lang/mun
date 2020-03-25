@@ -1,5 +1,6 @@
 use crate::{IrDatabase, OptimizationLevel};
 use hir::{FileId, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
+use parking_lot::Mutex;
 use std::sync::Arc;
 
 /// A mock implementation of the IR database. It can be used to set up a simple test case.
@@ -12,11 +13,19 @@ use std::sync::Arc;
 #[derive(Default, Debug)]
 pub(crate) struct MockDatabase {
     runtime: salsa::Runtime<MockDatabase>,
+    events: Mutex<Option<Vec<salsa::Event<MockDatabase>>>>,
 }
 
 impl salsa::Database for MockDatabase {
     fn salsa_runtime(&self) -> &salsa::Runtime<MockDatabase> {
         &self.runtime
+    }
+
+    fn salsa_event(&self, event: impl Fn() -> salsa::Event<MockDatabase>) {
+        let mut events = self.events.lock();
+        if let Some(events) = &mut *events {
+            events.push(event());
+        }
     }
 }
 
@@ -42,5 +51,26 @@ impl MockDatabase {
         let context = crate::Context::create();
         db.set_context(Arc::new(context));
         (db, file_id)
+    }
+
+    pub fn log(&self, f: impl FnOnce()) -> Vec<salsa::Event<MockDatabase>> {
+        *self.events.lock() = Some(Vec::new());
+        f();
+        self.events.lock().take().unwrap()
+    }
+
+    pub fn log_executed(&self, f: impl FnOnce()) -> Vec<String> {
+        let events = self.log(f);
+        events
+            .into_iter()
+            .filter_map(|e| match e.kind {
+                // This pretty horrible, but `Debug` is the only way to inspect
+                // QueryDescriptor at the moment.
+                salsa::EventKind::WillExecute { database_key } => {
+                    Some(format!("{:?}", database_key))
+                }
+                _ => None,
+            })
+            .collect()
     }
 }

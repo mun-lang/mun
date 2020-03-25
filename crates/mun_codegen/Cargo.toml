@@ -27,6 +27,7 @@ features = ["llvm7-0"]
 
 [dev-dependencies]
 insta = "0.12.0"
+parking_lot = "0.10"
 
 [build-dependencies]
 semver = "0.9.0"
