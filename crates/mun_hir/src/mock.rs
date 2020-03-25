@@ -1,7 +1,8 @@
 use crate::db::SourceDatabase;
 use crate::input::{SourceRoot, SourceRootId};
 use crate::{FileId, RelativePathBuf};
-use std::sync::{Arc, Mutex};
+use parking_lot::Mutex;
+use std::sync::Arc;
 
 /// A mock implementation of the IR database. It can be used to set up a simple test case.
 #[salsa::database(
@@ -21,7 +22,7 @@ impl salsa::Database for MockDatabase {
     }
 
     fn salsa_event(&self, event: impl Fn() -> salsa::Event<MockDatabase>) {
-        let mut events = self.events.lock().unwrap();
+        let mut events = self.events.lock();
         if let Some(events) = &mut *events {
             events.push(event());
         }
@@ -51,9 +52,9 @@ impl MockDatabase {
 
 impl MockDatabase {
     pub fn log(&self, f: impl FnOnce()) -> Vec<salsa::Event<MockDatabase>> {
-        *self.events.lock().unwrap() = Some(Vec::new());
+        *self.events.lock() = Some(Vec::new());
         f();
-        self.events.lock().unwrap().take().unwrap()
+        self.events.lock().take().unwrap()
     }
 
     pub fn log_executed(&self, f: impl FnOnce()) -> Vec<String> {
