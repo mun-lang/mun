@@ -8,7 +8,7 @@ mod assembly;
 mod function;
 #[macro_use]
 mod macros;
-mod allocator;
+mod garbage_collector;
 mod marshal;
 mod reflection;
 mod static_type_map;
@@ -35,10 +35,11 @@ use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 pub use crate::marshal::Marshal;
 pub use crate::reflection::{ArgumentReflection, ReturnTypeReflection};
 
-pub use crate::allocator::Allocator;
 pub use crate::assembly::Assembly;
 use crate::function::IntoFunctionInfo;
 pub use crate::r#struct::StructRef;
+use garbage_collector::GarbageCollector;
+use gc::GcRuntime;
 use std::sync::Arc;
 
 impl_has_type_info_name!(
@@ -74,11 +75,6 @@ impl RuntimeBuilder {
         result.insert_fn(
             "new",
             new as extern "C" fn(*const abi::TypeInfo, *mut ffi::c_void) -> *const *mut ffi::c_void,
-        );
-
-        result.insert_fn(
-            "clone",
-            clone as extern "C" fn(*const ffi::c_void, *mut ffi::c_void) -> *const *mut ffi::c_void,
         );
 
         result
@@ -140,7 +136,7 @@ pub struct Runtime {
     dispatch_table: DispatchTable,
     watcher: RecommendedWatcher,
     watcher_rx: Receiver<DebouncedEvent>,
-    allocator: Arc<Allocator>,
+    gc: Arc<GarbageCollector>,
     _user_functions: Vec<FunctionInfoStorage>,
 }
 
@@ -150,8 +146,8 @@ pub struct Runtime {
 ///
 /// The allocator must have been set using the `set_allocator_handle` call - exposed by the Mun
 /// library.
-unsafe fn get_allocator(alloc_handle: *mut ffi::c_void) -> Arc<Allocator> {
-    Arc::from_raw(alloc_handle as *const Allocator)
+unsafe fn get_allocator(alloc_handle: *mut ffi::c_void) -> Arc<GarbageCollector> {
+    Arc::from_raw(alloc_handle as *const GarbageCollector)
 }
 
 extern "C" fn new(
@@ -159,25 +155,12 @@ extern "C" fn new(
     alloc_handle: *mut ffi::c_void,
 ) -> *const *mut ffi::c_void {
     let allocator = unsafe { get_allocator(alloc_handle) };
-    let handle = unsafe { allocator.create_object(type_info) as *const _ };
+    let handle = allocator.alloc(type_info.into());
 
-    // Prevent destruction
+    // Prevent destruction of the allocator
     mem::forget(allocator);
 
-    handle
-}
-
-extern "C" fn clone(
-    src: *const ffi::c_void,
-    alloc_handle: *mut ffi::c_void,
-) -> *const *mut ffi::c_void {
-    let allocator = unsafe { get_allocator(alloc_handle) };
-    let handle = unsafe { allocator.clone_object(src as *const _) as *const _ };
-
-    // Prevent destruction
-    mem::forget(allocator);
-
-    handle
+    handle.into()
 }
 
 impl Runtime {
@@ -201,7 +184,7 @@ impl Runtime {
             dispatch_table,
             watcher,
             watcher_rx: rx,
-            allocator: Arc::new(Allocator::new()),
+            gc: Arc::new(self::garbage_collector::GarbageCollector::default()),
             _user_functions: storages,
         };
 
@@ -220,11 +203,8 @@ impl Runtime {
             .into());
         }
 
-        let mut assembly = Assembly::load(
-            &library_path,
-            &mut self.dispatch_table,
-            self.allocator.clone(),
-        )?;
+        let mut assembly =
+            Assembly::load(&library_path, &mut self.dispatch_table, self.gc.clone())?;
         for dependency in assembly.info().dependencies() {
             self.add_assembly(Path::new(dependency))?;
         }
@@ -240,11 +220,6 @@ impl Runtime {
     /// Retrieves the function information corresponding to `function_name`, if available.
     pub fn get_function_info(&self, function_name: &str) -> Option<&abi::FunctionInfo> {
         self.dispatch_table.get_fn(function_name)
-    }
-
-    /// Returns the runtime's allocator.
-    pub fn get_allocator(&self) -> Arc<Allocator> {
-        self.allocator.clone()
     }
 
     /// Updates the state of the runtime. This includes checking for file changes, and reloading
@@ -270,6 +245,22 @@ impl Runtime {
             }
         }
         false
+    }
+
+    /// Returns the runtime's garbage collector.
+    pub(crate) fn gc(&self) -> &Arc<GarbageCollector> {
+        &self.gc
+    }
+
+    /// Collects all memory that is no longer referenced by rooted objects. Returns `true` if memory
+    /// was reclaimed, `false` otherwise. This behavior will likely change in the future.
+    pub fn gc_collect(&self) -> bool {
+        self.gc.collect()
+    }
+
+    /// Returns statistics about the garbage collector.
+    pub fn gc_stats(&self) -> gc::Stats {
+        self.gc.stats()
     }
 }
 

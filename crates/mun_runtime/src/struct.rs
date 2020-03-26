@@ -1,27 +1,27 @@
+use crate::garbage_collector::{GcPtr, GcRootPtr};
 use crate::{
-    allocator::ObjectHandle,
     marshal::Marshal,
     reflection::{
         equals_argument_type, equals_return_type, ArgumentReflection, ReturnTypeReflection,
     },
     Runtime,
 };
+use gc::{GcRuntime, HasIndirectionPtr};
 use std::cell::RefCell;
-use std::ffi;
 use std::ptr::{self, NonNull};
 use std::rc::Rc;
-use std::sync::Arc;
 
 /// Represents a Mun struct pointer.
 ///
 /// A byte pointer is used to make pointer arithmetic easier.
 #[repr(transparent)]
 #[derive(Clone)]
-pub struct RawStruct(ObjectHandle);
+pub struct RawStruct(GcPtr);
 
 impl RawStruct {
-    pub fn get_ptr(&self) -> *mut u8 {
-        unsafe { self.0.as_ref().unwrap() }.ptr
+    /// Returns a pointer to the struct memory.
+    pub unsafe fn get_ptr(&self) -> *const u8 {
+        self.0.deref()
     }
 }
 
@@ -29,7 +29,8 @@ impl RawStruct {
 /// TODO: Handle destruction of `struct(value)`
 pub struct StructRef {
     runtime: Rc<RefCell<Runtime>>,
-    raw: RawStruct,
+    handle: GcRootPtr,
+    type_info: *const abi::TypeInfo,
     info: abi::StructInfo,
 }
 
@@ -40,21 +41,35 @@ impl StructRef {
     fn new(runtime: Rc<RefCell<Runtime>>, type_info: &abi::TypeInfo, raw: RawStruct) -> StructRef {
         assert!(type_info.group.is_struct());
 
+        let handle = {
+            let runtime_ref = runtime.borrow();
+            GcRootPtr::new(runtime_ref.gc(), raw.0)
+        };
         Self {
             runtime,
-            raw,
+            handle,
+            type_info: type_info as *const abi::TypeInfo,
             info: type_info.as_struct().unwrap().clone(),
         }
     }
 
     /// Consumes the `Struct`, returning a raw Mun struct.
     pub fn into_raw(self) -> RawStruct {
-        self.raw
+        RawStruct(self.handle.handle())
     }
 
     /// Retrieves its struct information.
     pub fn info(&self) -> &abi::StructInfo {
         &self.info
+    }
+
+    /// Returns the type information of the struct
+    ///
+    /// # Safety
+    ///
+    /// This method is unsafe because it returns a pointer that may point to deallocated memory.
+    pub unsafe fn type_info(&self) -> *const abi::TypeInfo {
+        self.type_info
     }
 
     ///
@@ -65,7 +80,7 @@ impl StructRef {
     unsafe fn offset_unchecked<T>(&self, field_idx: usize) -> NonNull<T> {
         let offset = *self.info.field_offsets().get_unchecked(field_idx);
         // self.raw is never null
-        NonNull::new_unchecked(self.raw.get_ptr().add(offset as usize).cast::<T>())
+        NonNull::new_unchecked(self.handle.deref::<u8>().add(offset as usize).cast::<T>() as *mut _)
     }
 
     /// Retrieves the value of the field corresponding to the specified `field_name`.
@@ -144,7 +159,7 @@ impl ArgumentReflection for StructRef {
     }
 
     fn marshal(self) -> Self::Marshalled {
-        self.raw
+        self.into_raw()
     }
 }
 
@@ -173,32 +188,35 @@ impl Marshal<StructRef> for RawStruct {
     ) -> StructRef {
         // `type_info` is only `None` for the `()` type
         let type_info = type_info.unwrap();
-
         let struct_info = type_info.as_struct().unwrap();
-        let alloc_handle = Arc::into_raw(runtime.borrow().get_allocator()) as *mut std::ffi::c_void;
-        let object_handle = if struct_info.memory_kind == abi::StructMemoryKind::Value {
-            // Create a new object using the runtime's intrinsic
-            let object_ptr: *const *mut ffi::c_void =
-                invoke_fn!(runtime.clone(), "new", type_info as *const _, alloc_handle).unwrap();
-            let handle = object_ptr as ObjectHandle;
 
+        // HACK: This is very hacky since we know nothing about the lifetime of abi::TypeInfo.
+        let type_info_ptr = (type_info as *const abi::TypeInfo).into();
+
+        // Copy the contents of the struct based on what kind of pointer we are dealing with
+        let gc_handle = if struct_info.memory_kind == abi::StructMemoryKind::Value {
+            // For a value struct, `ptr` points to a struct value.
+
+            // Create a new object using the runtime's intrinsic
+            let mut gc_handle = {
+                let runtime_ref = runtime.borrow();
+                runtime_ref.gc().alloc(type_info_ptr)
+            };
+
+            // Construct
             let src = ptr.cast::<u8>().as_ptr() as *const _;
-            let dest = unsafe { handle.as_ref() }.unwrap().ptr;
+            let dest = unsafe { gc_handle.deref_mut::<u8>() };
             let size = type_info.size_in_bytes();
             unsafe { ptr::copy_nonoverlapping(src, dest, size as usize) };
 
-            handle
+            gc_handle
         } else {
-            let ptr = unsafe { ptr.as_ref() }.0 as *const ffi::c_void;
+            // For a gc struct, `ptr` points to a `GcPtr`.
 
-            // Clone the struct using the runtime's intrinsic
-            let cloned_ptr: *const *mut ffi::c_void =
-                invoke_fn!(runtime.clone(), "clone", ptr, alloc_handle).unwrap();
-
-            cloned_ptr as ObjectHandle
+            unsafe { *ptr.cast::<GcPtr>().as_ptr() }
         };
 
-        StructRef::new(runtime, type_info, RawStruct(object_handle))
+        StructRef::new(runtime, type_info, RawStruct(gc_handle))
     }
 
     fn marshal_to_ptr(value: RawStruct, mut ptr: NonNull<Self>, type_info: Option<&abi::TypeInfo>) {
