@@ -8,14 +8,13 @@ mod assembly;
 mod function;
 #[macro_use]
 mod macros;
+#[macro_use]
+mod type_info;
 mod garbage_collector;
 mod marshal;
 mod reflection;
 mod static_type_map;
 mod r#struct;
-
-#[macro_use]
-mod type_info;
 
 #[cfg(test)]
 mod test;

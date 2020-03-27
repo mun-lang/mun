@@ -28,5 +28,5 @@ mlua = { package ="mlua", version="0.2", default-features = false, features=["ve
 wasmer-runtime = "0.16"
 
 [[bench]]
-name = "fibonacci"
+name = "benchmarks"
 harness = false
