@@ -2,6 +2,3 @@
 members = [
     "crates/*",
 ]
-
-[profile.bench]
-debug = true
