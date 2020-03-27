@@ -1,0 +1,3 @@
+pub fn empty(n:int):int {
+    n
+}

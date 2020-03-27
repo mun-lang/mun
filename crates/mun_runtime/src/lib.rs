@@ -40,6 +40,7 @@ use crate::function::IntoFunctionInfo;
 pub use crate::r#struct::StructRef;
 use garbage_collector::GarbageCollector;
 use gc::GcRuntime;
+use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
 impl_has_type_info_name!(
@@ -103,7 +104,7 @@ impl RuntimeBuilder {
 /// A runtime dispatch table that maps full paths to function and struct information.
 #[derive(Default)]
 pub struct DispatchTable {
-    functions: HashMap<String, abi::FunctionInfo>,
+    functions: FxHashMap<String, abi::FunctionInfo>,
 }
 
 impl DispatchTable {
