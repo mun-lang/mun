@@ -1,3 +1,4 @@
+use crate::type_info::HasStaticTypeInfo;
 use crate::{marshal::Marshal, StructRef};
 use md5;
 
@@ -77,6 +78,10 @@ impl ArgumentReflection for f64 {
     fn marshal(self) -> Self::Marshalled {
         self
     }
+
+    fn type_guid(&self) -> abi::Guid {
+        <Self as ReturnTypeReflection>::type_guid()
+    }
 }
 
 impl ArgumentReflection for f32 {
@@ -88,6 +93,10 @@ impl ArgumentReflection for f32 {
 
     fn marshal(self) -> Self::Marshalled {
         self
+    }
+
+    fn type_guid(&self) -> abi::Guid {
+        <Self as ReturnTypeReflection>::type_guid()
     }
 }
 
@@ -101,6 +110,10 @@ impl ArgumentReflection for isize {
     fn marshal(self) -> Self::Marshalled {
         self
     }
+
+    fn type_guid(&self) -> abi::Guid {
+        <Self as ReturnTypeReflection>::type_guid()
+    }
 }
 
 impl ArgumentReflection for usize {
@@ -112,6 +125,10 @@ impl ArgumentReflection for usize {
 
     fn marshal(self) -> Self::Marshalled {
         self
+    }
+
+    fn type_guid(&self) -> abi::Guid {
+        <Self as ReturnTypeReflection>::type_guid()
     }
 }
 
@@ -125,6 +142,10 @@ impl ArgumentReflection for i64 {
     fn marshal(self) -> Self::Marshalled {
         self
     }
+
+    fn type_guid(&self) -> abi::Guid {
+        <Self as ReturnTypeReflection>::type_guid()
+    }
 }
 
 impl ArgumentReflection for i32 {
@@ -136,6 +157,10 @@ impl ArgumentReflection for i32 {
 
     fn marshal(self) -> Self::Marshalled {
         self
+    }
+
+    fn type_guid(&self) -> abi::Guid {
+        <Self as ReturnTypeReflection>::type_guid()
     }
 }
 
@@ -149,6 +174,10 @@ impl ArgumentReflection for i16 {
     fn marshal(self) -> Self::Marshalled {
         self
     }
+
+    fn type_guid(&self) -> abi::Guid {
+        <Self as ReturnTypeReflection>::type_guid()
+    }
 }
 
 impl ArgumentReflection for i8 {
@@ -160,6 +189,10 @@ impl ArgumentReflection for i8 {
 
     fn marshal(self) -> Self::Marshalled {
         self
+    }
+
+    fn type_guid(&self) -> abi::Guid {
+        <Self as ReturnTypeReflection>::type_guid()
     }
 }
 
@@ -173,6 +206,10 @@ impl ArgumentReflection for u64 {
     fn marshal(self) -> Self::Marshalled {
         self
     }
+
+    fn type_guid(&self) -> abi::Guid {
+        <Self as ReturnTypeReflection>::type_guid()
+    }
 }
 
 impl ArgumentReflection for u32 {
@@ -184,6 +221,10 @@ impl ArgumentReflection for u32 {
 
     fn marshal(self) -> Self::Marshalled {
         self
+    }
+
+    fn type_guid(&self) -> abi::Guid {
+        <Self as ReturnTypeReflection>::type_guid()
     }
 }
 
@@ -197,6 +238,10 @@ impl ArgumentReflection for u16 {
     fn marshal(self) -> Self::Marshalled {
         self
     }
+
+    fn type_guid(&self) -> abi::Guid {
+        <Self as ReturnTypeReflection>::type_guid()
+    }
 }
 
 impl ArgumentReflection for u8 {
@@ -209,6 +254,10 @@ impl ArgumentReflection for u8 {
     fn marshal(self) -> Self::Marshalled {
         self
     }
+
+    fn type_guid(&self) -> abi::Guid {
+        <Self as ReturnTypeReflection>::type_guid()
+    }
 }
 
 impl ArgumentReflection for bool {
@@ -220,6 +269,10 @@ impl ArgumentReflection for bool {
 
     fn marshal(self) -> Self::Marshalled {
         self
+    }
+
+    fn type_guid(&self) -> abi::Guid {
+        <Self as ReturnTypeReflection>::type_guid()
     }
 }
 
@@ -245,6 +298,10 @@ impl ArgumentReflection for *const u8 {
     fn marshal(self) -> Self::Marshalled {
         self
     }
+
+    fn type_guid(&self) -> abi::Guid {
+        <Self as ReturnTypeReflection>::type_guid()
+    }
 }
 
 impl ArgumentReflection for *mut u8 {
@@ -256,6 +313,10 @@ impl ArgumentReflection for *mut u8 {
 
     fn marshal(self) -> Self::Marshalled {
         self
+    }
+
+    fn type_guid(&self) -> abi::Guid {
+        <Self as ReturnTypeReflection>::type_guid()
     }
 }
 
@@ -269,6 +330,10 @@ impl ArgumentReflection for *const abi::TypeInfo {
     fn marshal(self) -> Self::Marshalled {
         self
     }
+
+    fn type_guid(&self) -> abi::Guid {
+        <Self as ReturnTypeReflection>::type_guid()
+    }
 }
 
 impl ArgumentReflection for *const std::ffi::c_void {
@@ -280,6 +345,10 @@ impl ArgumentReflection for *const std::ffi::c_void {
 
     fn marshal(self) -> Self::Marshalled {
         self
+    }
+
+    fn type_guid(&self) -> abi::Guid {
+        <Self as ReturnTypeReflection>::type_guid()
     }
 }
 
@@ -293,6 +362,10 @@ impl ArgumentReflection for *mut std::ffi::c_void {
     fn marshal(self) -> Self::Marshalled {
         self
     }
+
+    fn type_guid(&self) -> abi::Guid {
+        <Self as ReturnTypeReflection>::type_guid()
+    }
 }
 
 impl ArgumentReflection for *const *mut std::ffi::c_void {
@@ -305,6 +378,10 @@ impl ArgumentReflection for *const *mut std::ffi::c_void {
     fn marshal(self) -> Self::Marshalled {
         self
     }
+
+    fn type_guid(&self) -> abi::Guid {
+        <Self as ReturnTypeReflection>::type_guid()
+    }
 }
 
 impl ReturnTypeReflection for *const abi::TypeInfo {
@@ -312,6 +389,10 @@ impl ReturnTypeReflection for *const abi::TypeInfo {
 
     fn type_name() -> &'static str {
         "*const TypeInfo"
+    }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
     }
 }
 
@@ -321,6 +402,10 @@ impl ReturnTypeReflection for *const std::ffi::c_void {
     fn type_name() -> &'static str {
         "*const core::void"
     }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
+    }
 }
 
 impl ReturnTypeReflection for *mut std::ffi::c_void {
@@ -328,6 +413,10 @@ impl ReturnTypeReflection for *mut std::ffi::c_void {
 
     fn type_name() -> &'static str {
         "*mut core::void"
+    }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
     }
 }
 
@@ -337,6 +426,10 @@ impl ReturnTypeReflection for *const *mut std::ffi::c_void {
     fn type_name() -> &'static str {
         "*const *mut core::void"
     }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
+    }
 }
 
 impl ReturnTypeReflection for f64 {
@@ -344,6 +437,10 @@ impl ReturnTypeReflection for f64 {
 
     fn type_name() -> &'static str {
         "core::f64"
+    }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
     }
 }
 
@@ -353,6 +450,10 @@ impl ReturnTypeReflection for f32 {
     fn type_name() -> &'static str {
         "core::f32"
     }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
+    }
 }
 
 #[cfg(target_pointer_width = "64")]
@@ -362,6 +463,10 @@ impl ReturnTypeReflection for isize {
     fn type_name() -> &'static str {
         "core::i64"
     }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
+    }
 }
 
 #[cfg(target_pointer_width = "32")]
@@ -370,6 +475,10 @@ impl ReturnTypeReflection for isize {
 
     fn type_name() -> &'static str {
         "core::i32"
+    }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
     }
 }
 
@@ -379,6 +488,10 @@ impl ReturnTypeReflection for i64 {
     fn type_name() -> &'static str {
         "core::i64"
     }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
+    }
 }
 
 impl ReturnTypeReflection for i32 {
@@ -386,6 +499,10 @@ impl ReturnTypeReflection for i32 {
 
     fn type_name() -> &'static str {
         "core::i32"
+    }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
     }
 }
 
@@ -395,6 +512,10 @@ impl ReturnTypeReflection for i16 {
     fn type_name() -> &'static str {
         "core::i16"
     }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
+    }
 }
 
 impl ReturnTypeReflection for i8 {
@@ -402,6 +523,10 @@ impl ReturnTypeReflection for i8 {
 
     fn type_name() -> &'static str {
         "core::i8"
+    }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
     }
 }
 
@@ -412,6 +537,10 @@ impl ReturnTypeReflection for usize {
     fn type_name() -> &'static str {
         "core::u64"
     }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
+    }
 }
 
 #[cfg(target_pointer_width = "32")]
@@ -421,6 +550,10 @@ impl ReturnTypeReflection for usize {
     fn type_name() -> &'static str {
         "core::u32"
     }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
+    }
 }
 
 impl ReturnTypeReflection for u64 {
@@ -428,6 +561,10 @@ impl ReturnTypeReflection for u64 {
 
     fn type_name() -> &'static str {
         "core::u64"
+    }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
     }
 }
 
@@ -437,6 +574,10 @@ impl ReturnTypeReflection for u32 {
     fn type_name() -> &'static str {
         "core::u32"
     }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
+    }
 }
 
 impl ReturnTypeReflection for u16 {
@@ -444,6 +585,10 @@ impl ReturnTypeReflection for u16 {
 
     fn type_name() -> &'static str {
         "core::u16"
+    }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
     }
 }
 
@@ -453,6 +598,10 @@ impl ReturnTypeReflection for u8 {
     fn type_name() -> &'static str {
         "core::u8"
     }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
+    }
 }
 
 impl ReturnTypeReflection for bool {
@@ -460,6 +609,10 @@ impl ReturnTypeReflection for bool {
 
     fn type_name() -> &'static str {
         "core::bool"
+    }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
     }
 }
 
@@ -477,6 +630,10 @@ impl ReturnTypeReflection for *const u8 {
     fn type_name() -> &'static str {
         "*const core::u8"
     }
+
+    fn type_guid() -> abi::Guid {
+        <Self>::type_info().guid
+    }
 }
 
 impl ReturnTypeReflection for *mut u8 {
@@ -484,5 +641,9 @@ impl ReturnTypeReflection for *mut u8 {
 
     fn type_name() -> &'static str {
         "*mut core::u8"
+    }
+
+    fn type_guid() -> abi::Guid {
+        <*mut u8>::type_info().guid
     }
 }
