@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 teraron = "0.0.1"
 clap = "2.32.0"
-failure = "0.1.4"
+failure = "0.1.7"
 ron = "0.4.2"
 cbindgen = { git = "https://github.com/baszalmstra/cbindgen", branch = "fix_lockfile_v2" }
 bindgen = "0.51"

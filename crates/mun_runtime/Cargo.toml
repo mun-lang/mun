@@ -11,7 +11,7 @@ description = "A runtime for hot reloading and invoking Mun from Rust"
 [dependencies]
 abi = { path = "../mun_abi", package = "mun_abi" }
 gc = { path = "../mun_gc", package = "mun_gc" }
-failure = "0.1.5"
+failure = "0.1.7"
 libloading = "0.5"
 md5= "0.7.0"
 notify = "4.0.12"

@@ -10,7 +10,7 @@ license = "MIT OR Apache-2.0"
 description = "Command-line interface for compiling, monitoring and running Mun code"
 
 [dependencies]
-failure = "0.1.5"
+failure = "0.1.7"
 clap = "2.33.0"
 mun_abi = { path = "../mun_abi" }
 mun_compiler = { path = "../mun_compiler" }

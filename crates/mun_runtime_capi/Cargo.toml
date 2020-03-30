@@ -13,7 +13,7 @@ name = "mun_runtime"
 crate-type = ["cdylib"]
 
 [dependencies]
-failure = "0.1.5"
+failure = "0.1.7"
 lazy_static = "1.4.0"
 mun_abi = { path = "../mun_abi" }
 mun_runtime = { path = "../mun_runtime" }
