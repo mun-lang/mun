@@ -1,5 +1,5 @@
 use super::body::ExternalGlobals;
-use crate::ir::function;
+use crate::ir::{function, type_table::TypeTable};
 use crate::{CodeGenParams, IrDatabase};
 use hir::{FileId, ModuleDef};
 use inkwell::module::Module;
@@ -69,7 +69,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<FileIR> {
         let type_table = if group_ir.type_table.is_empty() {
             None
         } else {
-            Some(llvm_module.add_global(group_ir.type_table.ty(), None, "global_type_table"))
+            Some(llvm_module.add_global(group_ir.type_table.ty(), None, TypeTable::NAME))
         };
         ExternalGlobals {
             alloc_handle,

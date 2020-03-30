@@ -25,6 +25,9 @@ pub struct TypeTable {
 }
 
 impl TypeTable {
+    /// The name of the TypeTable's LLVM `GlobalValue`.
+    pub(crate) const NAME: &'static str = "global_type_table";
+
     /// Generates a `TypeInfo` lookup through the `TypeTable`, equivalent to something along the
     /// lines of: `type_table[i]`, where `i` is the index of the type and `type_table` is an array
     /// of `TypeInfo` pointers.
@@ -315,9 +318,7 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
             .collect();
 
         if !type_info_ptrs.is_empty() {
-            let global = self
-                .module
-                .add_global(table_type, None, "global_type_table");
+            let global = self.module.add_global(table_type, None, TypeTable::NAME);
 
             let type_info_ptrs_array = type_info_ptr_type.const_array(&type_info_ptrs);
             global.set_initializer(&type_info_ptrs_array);

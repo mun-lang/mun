@@ -257,7 +257,7 @@ pub(super) fn gen_reflection_ir(
     let num_functions = api.len();
     let function_info = gen_function_info_array(db, module, &abi_types, api.iter());
 
-    let type_table_ir = if let Some(type_table) = module.get_global("type_table_global") {
+    let type_table_ir = if let Some(type_table) = module.get_global(TypeTable::NAME) {
         type_table.as_pointer_value()
     } else {
         type_table.ty().ptr_type(AddressSpace::Const).const_null()
