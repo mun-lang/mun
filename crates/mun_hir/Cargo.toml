@@ -12,7 +12,7 @@ description = "Provides high-level intermediate representation of Mun code"
 salsa="0.12"
 superslice = "1.0"
 mun_syntax={path="../mun_syntax"}
-rustc-hash = "1.0"
+rustc-hash = "1.1"
 once_cell = "0.2"
 relative-path = "0.4.0"
 ena = "0.13"

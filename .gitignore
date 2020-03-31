@@ -1,4 +1,3 @@
-/target
 /.vscode
 **/*.rs.bk
 Cargo.lock
@@ -29,7 +28,5 @@ Cargo.lock
 .idea/**/libraries
 
 # Build artifacts
-*.dll
-*.dll.lib
-*.so
-*.dylib
+*.munlib
+**/target/*

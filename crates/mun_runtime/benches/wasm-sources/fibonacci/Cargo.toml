@@ -1,0 +1,14 @@
+[package]
+name = "fibonacci-wasm"
+version = "0.1.0"
+authors = ["The Mun Team <team@mun-lang.org>"]
+edition = "2018"
+homepage = "https://mun-lang.org"
+repository = "https://github.com/mun-lang/mun"
+license = "MIT OR Apache-2.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2"

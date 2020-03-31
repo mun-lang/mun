@@ -1,3 +1,4 @@
+use crate::type_info::HasStaticTypeInfo;
 use crate::{marshal::Marshal, StructRef};
 use md5;
 
@@ -67,161 +68,41 @@ pub trait ArgumentReflection: Sized {
     fn marshal(self) -> Self::Marshalled;
 }
 
-impl ArgumentReflection for f64 {
-    type Marshalled = Self;
+macro_rules! impl_primitive_type {
+    ($($ty:ty),+) => {
+        $(
+            impl ArgumentReflection for $ty {
+                type Marshalled = Self;
 
-    fn type_name(&self) -> &str {
-        <Self as ReturnTypeReflection>::type_name()
-    }
+                fn type_guid(&self) -> abi::Guid {
+                    Self::type_info().guid
+                }
 
-    fn marshal(self) -> Self::Marshalled {
-        self
-    }
-}
+                fn type_name(&self) -> &str {
+                    Self::type_info().name()
+                }
 
-impl ArgumentReflection for f32 {
-    type Marshalled = Self;
+                fn marshal(self) -> Self::Marshalled {
+                    self
+                }
+            }
 
-    fn type_name(&self) -> &str {
-        <Self as ReturnTypeReflection>::type_name()
-    }
+            impl ReturnTypeReflection for $ty {
+                type Marshalled = Self;
 
-    fn marshal(self) -> Self::Marshalled {
-        self
-    }
-}
+                fn type_name() -> &'static str {
+                    Self::type_info().name()
+                }
 
-impl ArgumentReflection for isize {
-    type Marshalled = Self;
-
-    fn type_name(&self) -> &str {
-        <Self as ReturnTypeReflection>::type_name()
-    }
-
-    fn marshal(self) -> Self::Marshalled {
-        self
+                fn type_guid() -> abi::Guid {
+                    Self::type_info().guid
+                }
+            }
+        )+
     }
 }
 
-impl ArgumentReflection for usize {
-    type Marshalled = Self;
-
-    fn type_name(&self) -> &str {
-        <Self as ReturnTypeReflection>::type_name()
-    }
-
-    fn marshal(self) -> Self::Marshalled {
-        self
-    }
-}
-
-impl ArgumentReflection for i64 {
-    type Marshalled = Self;
-
-    fn type_name(&self) -> &str {
-        <Self as ReturnTypeReflection>::type_name()
-    }
-
-    fn marshal(self) -> Self::Marshalled {
-        self
-    }
-}
-
-impl ArgumentReflection for i32 {
-    type Marshalled = Self;
-
-    fn type_name(&self) -> &str {
-        <Self as ReturnTypeReflection>::type_name()
-    }
-
-    fn marshal(self) -> Self::Marshalled {
-        self
-    }
-}
-
-impl ArgumentReflection for i16 {
-    type Marshalled = Self;
-
-    fn type_name(&self) -> &str {
-        <Self as ReturnTypeReflection>::type_name()
-    }
-
-    fn marshal(self) -> Self::Marshalled {
-        self
-    }
-}
-
-impl ArgumentReflection for i8 {
-    type Marshalled = Self;
-
-    fn type_name(&self) -> &str {
-        <Self as ReturnTypeReflection>::type_name()
-    }
-
-    fn marshal(self) -> Self::Marshalled {
-        self
-    }
-}
-
-impl ArgumentReflection for u64 {
-    type Marshalled = Self;
-
-    fn type_name(&self) -> &str {
-        <Self as ReturnTypeReflection>::type_name()
-    }
-
-    fn marshal(self) -> Self::Marshalled {
-        self
-    }
-}
-
-impl ArgumentReflection for u32 {
-    type Marshalled = Self;
-
-    fn type_name(&self) -> &str {
-        <Self as ReturnTypeReflection>::type_name()
-    }
-
-    fn marshal(self) -> Self::Marshalled {
-        self
-    }
-}
-
-impl ArgumentReflection for u16 {
-    type Marshalled = Self;
-
-    fn type_name(&self) -> &str {
-        <Self as ReturnTypeReflection>::type_name()
-    }
-
-    fn marshal(self) -> Self::Marshalled {
-        self
-    }
-}
-
-impl ArgumentReflection for u8 {
-    type Marshalled = Self;
-
-    fn type_name(&self) -> &str {
-        <Self as ReturnTypeReflection>::type_name()
-    }
-
-    fn marshal(self) -> Self::Marshalled {
-        self
-    }
-}
-
-impl ArgumentReflection for bool {
-    type Marshalled = Self;
-
-    fn type_name(&self) -> &str {
-        <Self as ReturnTypeReflection>::type_name()
-    }
-
-    fn marshal(self) -> Self::Marshalled {
-        self
-    }
-}
+impl_primitive_type!(i8, i16, i32, i64, isize, u8, u16, u32, u64, usize, f32, f64, bool);
 
 impl ArgumentReflection for () {
     type Marshalled = Self;
@@ -235,234 +116,6 @@ impl ArgumentReflection for () {
     }
 }
 
-impl ArgumentReflection for *const u8 {
-    type Marshalled = Self;
-
-    fn type_name(&self) -> &str {
-        <Self as ReturnTypeReflection>::type_name()
-    }
-
-    fn marshal(self) -> Self::Marshalled {
-        self
-    }
-}
-
-impl ArgumentReflection for *mut u8 {
-    type Marshalled = Self;
-
-    fn type_name(&self) -> &str {
-        <Self as ReturnTypeReflection>::type_name()
-    }
-
-    fn marshal(self) -> Self::Marshalled {
-        self
-    }
-}
-
-impl ArgumentReflection for *const abi::TypeInfo {
-    type Marshalled = Self;
-
-    fn type_name(&self) -> &str {
-        "*const TypeInfo"
-    }
-
-    fn marshal(self) -> Self::Marshalled {
-        self
-    }
-}
-
-impl ArgumentReflection for *const std::ffi::c_void {
-    type Marshalled = Self;
-
-    fn type_name(&self) -> &str {
-        "*const core::void"
-    }
-
-    fn marshal(self) -> Self::Marshalled {
-        self
-    }
-}
-
-impl ArgumentReflection for *mut std::ffi::c_void {
-    type Marshalled = Self;
-
-    fn type_name(&self) -> &str {
-        "*mut core::void"
-    }
-
-    fn marshal(self) -> Self::Marshalled {
-        self
-    }
-}
-
-impl ArgumentReflection for *const *mut std::ffi::c_void {
-    type Marshalled = Self;
-
-    fn type_name(&self) -> &str {
-        "*const *mut core::void"
-    }
-
-    fn marshal(self) -> Self::Marshalled {
-        self
-    }
-}
-
-impl ReturnTypeReflection for *const abi::TypeInfo {
-    type Marshalled = Self;
-
-    fn type_name() -> &'static str {
-        "*const TypeInfo"
-    }
-}
-
-impl ReturnTypeReflection for *const std::ffi::c_void {
-    type Marshalled = Self;
-
-    fn type_name() -> &'static str {
-        "*const core::void"
-    }
-}
-
-impl ReturnTypeReflection for *mut std::ffi::c_void {
-    type Marshalled = Self;
-
-    fn type_name() -> &'static str {
-        "*mut core::void"
-    }
-}
-
-impl ReturnTypeReflection for *const *mut std::ffi::c_void {
-    type Marshalled = Self;
-
-    fn type_name() -> &'static str {
-        "*const *mut core::void"
-    }
-}
-
-impl ReturnTypeReflection for f64 {
-    type Marshalled = f64;
-
-    fn type_name() -> &'static str {
-        "core::f64"
-    }
-}
-
-impl ReturnTypeReflection for f32 {
-    type Marshalled = f32;
-
-    fn type_name() -> &'static str {
-        "core::f32"
-    }
-}
-
-#[cfg(target_pointer_width = "64")]
-impl ReturnTypeReflection for isize {
-    type Marshalled = isize;
-
-    fn type_name() -> &'static str {
-        "core::i64"
-    }
-}
-
-#[cfg(target_pointer_width = "32")]
-impl ReturnTypeReflection for isize {
-    type Marshalled = isize;
-
-    fn type_name() -> &'static str {
-        "core::i32"
-    }
-}
-
-impl ReturnTypeReflection for i64 {
-    type Marshalled = i64;
-
-    fn type_name() -> &'static str {
-        "core::i64"
-    }
-}
-
-impl ReturnTypeReflection for i32 {
-    type Marshalled = i32;
-
-    fn type_name() -> &'static str {
-        "core::i32"
-    }
-}
-
-impl ReturnTypeReflection for i16 {
-    type Marshalled = i16;
-
-    fn type_name() -> &'static str {
-        "core::i16"
-    }
-}
-
-impl ReturnTypeReflection for i8 {
-    type Marshalled = i8;
-
-    fn type_name() -> &'static str {
-        "core::i8"
-    }
-}
-
-#[cfg(target_pointer_width = "64")]
-impl ReturnTypeReflection for usize {
-    type Marshalled = usize;
-
-    fn type_name() -> &'static str {
-        "core::u64"
-    }
-}
-
-#[cfg(target_pointer_width = "32")]
-impl ReturnTypeReflection for usize {
-    type Marshalled = usize;
-
-    fn type_name() -> &'static str {
-        "core::u32"
-    }
-}
-
-impl ReturnTypeReflection for u64 {
-    type Marshalled = u64;
-
-    fn type_name() -> &'static str {
-        "core::u64"
-    }
-}
-
-impl ReturnTypeReflection for u32 {
-    type Marshalled = u32;
-
-    fn type_name() -> &'static str {
-        "core::u32"
-    }
-}
-
-impl ReturnTypeReflection for u16 {
-    type Marshalled = u16;
-
-    fn type_name() -> &'static str {
-        "core::u16"
-    }
-}
-
-impl ReturnTypeReflection for u8 {
-    type Marshalled = u8;
-
-    fn type_name() -> &'static str {
-        "core::u8"
-    }
-}
-
-impl ReturnTypeReflection for bool {
-    type Marshalled = bool;
-
-    fn type_name() -> &'static str {
-        "core::bool"
-    }
-}
-
 impl ReturnTypeReflection for () {
     type Marshalled = ();
 
@@ -471,18 +124,70 @@ impl ReturnTypeReflection for () {
     }
 }
 
-impl ReturnTypeReflection for *const u8 {
+impl<T> ArgumentReflection for *const T
+where
+    *const T: HasStaticTypeInfo,
+{
     type Marshalled = Self;
 
-    fn type_name() -> &'static str {
-        "*const core::u8"
+    fn type_guid(&self) -> abi::Guid {
+        Self::type_info().guid
+    }
+
+    fn type_name(&self) -> &str {
+        Self::type_info().name()
+    }
+
+    fn marshal(self) -> Self::Marshalled {
+        self
     }
 }
 
-impl ReturnTypeReflection for *mut u8 {
+impl<T> ReturnTypeReflection for *const T
+where
+    *const T: HasStaticTypeInfo,
+{
     type Marshalled = Self;
 
+    fn type_guid() -> abi::Guid {
+        Self::type_info().guid
+    }
+
     fn type_name() -> &'static str {
-        "*mut core::u8"
+        Self::type_info().name()
+    }
+}
+
+impl<T> ArgumentReflection for *mut T
+where
+    *mut T: HasStaticTypeInfo,
+{
+    type Marshalled = Self;
+
+    fn type_guid(&self) -> abi::Guid {
+        Self::type_info().guid
+    }
+
+    fn type_name(&self) -> &str {
+        Self::type_info().name()
+    }
+
+    fn marshal(self) -> Self::Marshalled {
+        self
+    }
+}
+
+impl<T> ReturnTypeReflection for *mut T
+where
+    *mut T: HasStaticTypeInfo,
+{
+    type Marshalled = Self;
+
+    fn type_guid() -> abi::Guid {
+        Self::type_info().guid
+    }
+
+    fn type_name() -> &'static str {
+        Self::type_info().name()
     }
 }

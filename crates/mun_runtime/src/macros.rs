@@ -98,7 +98,7 @@ macro_rules! invoke_fn_impl {
                     match runtime
                         .borrow()
                         .get_function_info(function_name)
-                        .ok_or(format!("Failed to obtain function '{}'", function_name))
+                        .ok_or_else(|| format!("Failed to obtain function '{}'", function_name))
                         .and_then(|function_info| {
                             // Validate function signature
                             let num_args = $crate::count_args!($($T),*);
