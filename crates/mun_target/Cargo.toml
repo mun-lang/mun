@@ -10,4 +10,4 @@ description = "Describes compilation targets for Mun"
 
 [dependencies]
 log = "0.4.8"
-failure = "0.1.6"
+failure = "0.1.7"
