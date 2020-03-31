@@ -1,0 +1,2 @@
+[workspace]
+members=["fibonacci", "empty"]
