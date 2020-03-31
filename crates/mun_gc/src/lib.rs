@@ -5,7 +5,6 @@ mod root_ptr;
 pub use mark_sweep::MarkSweep;
 pub use ptr::{GcPtr, HasIndirectionPtr, RawGcPtr};
 pub use root_ptr::GcRootPtr;
-use std::alloc::Layout;
 use std::marker::PhantomData;
 
 /// Contains stats about the current state of a GC implementation
@@ -14,19 +13,16 @@ pub struct Stats {
     pub allocated_memory: usize,
 }
 
-/// A trait used by the `GcRuntime` to identify an object type.
-pub trait Type: Send + Sync {
+/// A trait used to trace an object type.
+pub trait TypeTrace: Send + Sync {
     type Trace: Iterator<Item = GcPtr>;
-
-    /// Returns the memory layout of this type.
-    fn layout(&self) -> Layout;
 
     /// Returns an iterator to iterate over all GC objects that are referenced by the given object.
     fn trace(&self, obj: GcPtr) -> Self::Trace;
 }
 
 /// An object that can be used to allocate and collect memory.
-pub trait GcRuntime<T: Type>: Send + Sync {
+pub trait GcRuntime<T: memory::TypeLayout + TypeTrace>: Send + Sync {
     /// Allocates an object of the given type returning a GcPtr
     fn alloc(&self, ty: T) -> GcPtr;
 

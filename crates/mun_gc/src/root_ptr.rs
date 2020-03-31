@@ -1,15 +1,15 @@
-use crate::{GcPtr, GcRuntime, HasIndirectionPtr, Type};
+use crate::{GcPtr, GcRuntime, HasIndirectionPtr, TypeTrace};
 use std::marker::PhantomData;
 use std::sync::{Arc, Weak};
 
 /// A `GcPtr` that automatically roots and unroots its internal `GcPtr`.
-pub struct GcRootPtr<T: Type, G: GcRuntime<T>> {
+pub struct GcRootPtr<T: memory::TypeLayout + TypeTrace, G: GcRuntime<T>> {
     handle: GcPtr,
     runtime: Weak<G>,
     ty: PhantomData<T>,
 }
 
-impl<T: Type, G: GcRuntime<T>> Clone for GcRootPtr<T, G> {
+impl<T: memory::TypeLayout + TypeTrace, G: GcRuntime<T>> Clone for GcRootPtr<T, G> {
     fn clone(&self) -> Self {
         if let Some(runtime) = self.runtime.upgrade() {
             runtime.root(self.handle)
@@ -22,7 +22,7 @@ impl<T: Type, G: GcRuntime<T>> Clone for GcRootPtr<T, G> {
     }
 }
 
-impl<T: Type, G: GcRuntime<T>> GcRootPtr<T, G> {
+impl<T: memory::TypeLayout + TypeTrace, G: GcRuntime<T>> GcRootPtr<T, G> {
     /// Constructs a new GCRootHandle from a runtime and a handle
     pub fn new(runtime: &Arc<G>, handle: GcPtr) -> Self {
         runtime.root(handle);
@@ -44,13 +44,13 @@ impl<T: Type, G: GcRuntime<T>> GcRootPtr<T, G> {
     }
 }
 
-impl<T: Type, G: GcRuntime<T>> Into<GcPtr> for GcRootPtr<T, G> {
+impl<T: memory::TypeLayout + TypeTrace, G: GcRuntime<T>> Into<GcPtr> for GcRootPtr<T, G> {
     fn into(self) -> GcPtr {
         self.handle
     }
 }
 
-impl<T: Type, G: GcRuntime<T>> Drop for GcRootPtr<T, G> {
+impl<T: memory::TypeLayout + TypeTrace, G: GcRuntime<T>> Drop for GcRootPtr<T, G> {
     fn drop(&mut self) {
         if let Some(runtime) = self.runtime.upgrade() {
             runtime.unroot(self.handle)
@@ -58,7 +58,7 @@ impl<T: Type, G: GcRuntime<T>> Drop for GcRootPtr<T, G> {
     }
 }
 
-impl<T: Type, G: GcRuntime<T>> HasIndirectionPtr for GcRootPtr<T, G> {
+impl<T: memory::TypeLayout + TypeTrace, G: GcRuntime<T>> HasIndirectionPtr for GcRootPtr<T, G> {
     unsafe fn deref<R: Sized>(&self) -> *const R {
         self.handle.deref()
     }

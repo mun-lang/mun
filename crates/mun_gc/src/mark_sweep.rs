@@ -1,4 +1,4 @@
-use crate::{Event, GcPtr, GcRuntime, Observer, RawGcPtr, Stats, Type};
+use crate::{Event, GcPtr, GcRuntime, Observer, RawGcPtr, Stats, TypeTrace};
 use parking_lot::RwLock;
 use std::collections::{HashMap, VecDeque};
 use std::ops::Deref;
@@ -6,13 +6,15 @@ use std::pin::Pin;
 
 /// Implements a simple mark-sweep type garbage collector.
 #[derive(Debug)]
-pub struct MarkSweep<T: Type + Clone, O: Observer<Event = Event>> {
+pub struct MarkSweep<T: memory::TypeLayout + TypeTrace + Clone, O: Observer<Event = Event>> {
     objects: RwLock<HashMap<GcPtr, Pin<Box<ObjectInfo<T>>>>>,
     observer: O,
     stats: RwLock<Stats>,
 }
 
-impl<T: Type + Clone, O: Observer<Event = Event> + Default> Default for MarkSweep<T, O> {
+impl<T: memory::TypeLayout + TypeTrace + Clone, O: Observer<Event = Event> + Default> Default
+    for MarkSweep<T, O>
+{
     fn default() -> Self {
         MarkSweep {
             objects: RwLock::new(HashMap::new()),
@@ -22,7 +24,7 @@ impl<T: Type + Clone, O: Observer<Event = Event> + Default> Default for MarkSwee
     }
 }
 
-impl<T: Type + Clone, O: Observer<Event = Event>> MarkSweep<T, O> {
+impl<T: memory::TypeLayout + TypeTrace + Clone, O: Observer<Event = Event>> MarkSweep<T, O> {
     /// Creates a `MarkSweep` memory collector with the specified `Observer`.
     pub fn with_observer(observer: O) -> Self {
         Self {
@@ -38,7 +40,9 @@ impl<T: Type + Clone, O: Observer<Event = Event>> MarkSweep<T, O> {
     }
 }
 
-impl<T: Type + Clone, O: Observer<Event = Event>> GcRuntime<T> for MarkSweep<T, O> {
+impl<T: memory::TypeLayout + TypeTrace + Clone, O: Observer<Event = Event>> GcRuntime<T>
+    for MarkSweep<T, O>
+{
     fn alloc(&self, ty: T) -> GcPtr {
         let layout = ty.layout();
         let ptr = unsafe { std::alloc::alloc(layout) };
@@ -99,7 +103,9 @@ impl<T: Type + Clone, O: Observer<Event = Event>> GcRuntime<T> for MarkSweep<T, 
     }
 }
 
-impl<T: Type + Clone, O: Observer<Event = Event> + Default> MarkSweep<T, O> {
+impl<T: memory::TypeLayout + TypeTrace + Clone, O: Observer<Event = Event> + Default>
+    MarkSweep<T, O>
+{
     /// Collects all memory that is no longer referenced by rooted objects. Returns `true` if memory
     /// was reclaimed, `false` otherwise.
     pub fn collect(&self) -> bool {
@@ -183,7 +189,7 @@ enum Color {
 /// meta information.
 #[derive(Debug)]
 #[repr(C)]
-struct ObjectInfo<T: Type + Clone> {
+struct ObjectInfo<T: memory::TypeLayout + TypeTrace + Clone> {
     pub ptr: *mut u8,
     pub roots: u32,
     pub color: Color,
@@ -191,28 +197,28 @@ struct ObjectInfo<T: Type + Clone> {
 }
 
 /// An `ObjectInfo` is thread-safe.
-unsafe impl<T: Type + Clone> Send for ObjectInfo<T> {}
-unsafe impl<T: Type + Clone> Sync for ObjectInfo<T> {}
+unsafe impl<T: memory::TypeLayout + TypeTrace + Clone> Send for ObjectInfo<T> {}
+unsafe impl<T: memory::TypeLayout + TypeTrace + Clone> Sync for ObjectInfo<T> {}
 
-impl<T: Type + Clone> Into<*const ObjectInfo<T>> for GcPtr {
+impl<T: memory::TypeLayout + TypeTrace + Clone> Into<*const ObjectInfo<T>> for GcPtr {
     fn into(self) -> *const ObjectInfo<T> {
         self.as_ptr() as *const ObjectInfo<T>
     }
 }
 
-impl<T: Type + Clone> Into<*mut ObjectInfo<T>> for GcPtr {
+impl<T: memory::TypeLayout + TypeTrace + Clone> Into<*mut ObjectInfo<T>> for GcPtr {
     fn into(self) -> *mut ObjectInfo<T> {
         self.as_ptr() as *mut ObjectInfo<T>
     }
 }
 
-impl<T: Type + Clone> Into<GcPtr> for *const ObjectInfo<T> {
+impl<T: memory::TypeLayout + TypeTrace + Clone> Into<GcPtr> for *const ObjectInfo<T> {
     fn into(self) -> GcPtr {
         (self as RawGcPtr).into()
     }
 }
 
-impl<T: Type + Clone> Into<GcPtr> for *mut ObjectInfo<T> {
+impl<T: memory::TypeLayout + TypeTrace + Clone> Into<GcPtr> for *mut ObjectInfo<T> {
     fn into(self) -> GcPtr {
         (self as RawGcPtr).into()
     }

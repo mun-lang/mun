@@ -71,13 +71,15 @@ macro_rules! impl_struct_ty {
 
 impl_primitive_types!(i8, i16, i32, i64, u8, u16, u32, u64, f32, f64, bool);
 
-impl mun_gc::Type for &'static TypeInfo {
-    type Trace = <Vec<GcPtr> as IntoIterator>::IntoIter;
-
+impl memory::TypeLayout for &'static TypeInfo {
     fn layout(&self) -> Layout {
         Layout::from_size_align(self.size as usize, self.alignment as usize)
             .expect("invalid layout specified by TypeInfo")
     }
+}
+
+impl mun_gc::TypeTrace for &'static TypeInfo {
+    type Trace = <Vec<GcPtr> as IntoIterator>::IntoIter;
 
     fn trace(&self, obj: GcPtr) -> Self::Trace {
         let handles = if let Some(tracer) = self.tracer {

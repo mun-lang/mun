@@ -56,14 +56,16 @@ impl Iterator for Trace {
     }
 }
 
-impl gc::Type for RawTypeInfo {
-    type Trace = Trace;
-
+impl memory::TypeLayout for RawTypeInfo {
     fn layout(&self) -> Layout {
         let ty = unsafe { &*self.0 };
         Layout::from_size_align(ty.size_in_bytes(), ty.alignment())
             .expect("invalid layout from Mun Type")
     }
+}
+
+impl gc::TypeTrace for RawTypeInfo {
+    type Trace = Trace;
 
     fn trace(&self, obj: GcPtr) -> Self::Trace {
         Trace {

@@ -14,6 +14,7 @@ gc = { path = "../mun_gc", package = "mun_gc" }
 failure = "0.1.7"
 libloading = "0.5"
 md5= "0.7.0"
+memory = { path = "../mun_memory", package = "mun_memory" }
 notify = "4.0.12"
 parking_lot = "0.10"
 tempfile = "3"
