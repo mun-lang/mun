@@ -369,8 +369,6 @@ fn compiler_valid_utf8() {
         );
 
         if let Some(s) = arg_type.as_struct() {
-            assert_eq!(unsafe { CStr::from_ptr(s.name) }.to_str().is_ok(), true);
-
             let field_names =
                 unsafe { slice::from_raw_parts(s.field_names, s.num_fields as usize) };
 

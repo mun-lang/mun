@@ -220,14 +220,9 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
         hir_struct: hir::Struct,
     ) -> StructValue {
         let struct_ir = self.db.struct_ty(hir_struct);
+        let name = hir_struct.name(self.db).to_string();
         let fields = hir_struct.fields(self.db);
 
-        let name = hir_struct.name(self.db).to_string();
-        let name_str = intern_string(
-            &self.module,
-            &name,
-            &format!("struct_info::<{}>::name", name),
-        );
         let field_names = gen_string_array(
             self.module,
             fields.iter().map(|field| field.name(self.db).to_string()),
@@ -266,7 +261,6 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
         );
 
         self.abi_types.struct_info_type.const_named_struct(&[
-            name_str.into(),
             field_names.into(),
             field_types.into(),
             field_offsets.into(),
