@@ -9,7 +9,7 @@ use std::rc::Rc;
 /// If no `TypeInfo` is provided, the type is `()`.
 pub trait Marshal<T>: Sized {
     /// Marshals itself into a `T`.
-    fn marshal_value(self, runtime: Rc<RefCell<Runtime>>, type_info: Option<&abi::TypeInfo>) -> T;
+    fn marshal_value(self, runtime: Rc<RefCell<Runtime>>) -> T;
 
     /// Marshals the value at memory location `ptr` into a `T`.
     fn marshal_from_ptr(
@@ -23,11 +23,7 @@ pub trait Marshal<T>: Sized {
 }
 
 impl<T> Marshal<T> for T {
-    fn marshal_value(
-        self,
-        _runtime: Rc<RefCell<Runtime>>,
-        _type_info: Option<&abi::TypeInfo>,
-    ) -> T {
+    fn marshal_value(self, _runtime: Rc<RefCell<Runtime>>) -> T {
         self
     }
 

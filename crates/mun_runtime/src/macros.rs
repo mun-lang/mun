@@ -150,7 +150,7 @@ macro_rules! invoke_fn_impl {
                             let result = function($($Arg.marshal()),*);
 
                             // Marshall the result
-                            return Ok(result.marshal_value(runtime.clone(), function_info.signature.return_type()))
+                            return Ok(result.marshal_value(runtime.clone()))
                         }
                         Err(e) => Err($ErrName::new(e, runtime.clone(), function_name, $($Arg),*))
                     }

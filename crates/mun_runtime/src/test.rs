@@ -478,8 +478,13 @@ fn marshal_struct() {
     test_field(&mut bar, &int_data, "0");
     test_field(&mut bar, &bool_data, "1");
 
-    fn test_struct(s: &mut StructRef, c1: StructRef, c2: StructRef) {
-        let field_names: Vec<String> = c1.info().field_names().map(|n| n.to_string()).collect();
+    fn test_struct(runtime: &Runtime, s: &mut StructRef, c1: StructRef, c2: StructRef) {
+        let field_names: Vec<String> = StructRef::type_info(&c1, runtime)
+            .as_struct()
+            .unwrap()
+            .field_names()
+            .map(|n| n.to_string())
+            .collect();
 
         let int_value = c2.get::<i64>(&field_names[0]);
         let bool_value = c2.get::<bool>(&field_names[1]);
@@ -504,14 +509,14 @@ fn marshal_struct() {
         invoke_fn!(driver.runtime_mut(), "foo_new", int_data.0, bool_data.0).unwrap();
     let c2: StructRef =
         invoke_fn!(driver.runtime_mut(), "foo_new", int_data.1, bool_data.1).unwrap();
-    test_struct(&mut baz, c1, c2);
+    test_struct(&driver.runtime_mut().borrow(), &mut baz, c1, c2);
 
     let mut qux: StructRef = invoke_fn!(driver.runtime_mut(), "qux_new", bar).unwrap();
     let c1: StructRef =
         invoke_fn!(driver.runtime_mut(), "bar_new", int_data.0, bool_data.0).unwrap();
     let c2: StructRef =
         invoke_fn!(driver.runtime_mut(), "bar_new", int_data.1, bool_data.1).unwrap();
-    test_struct(&mut qux, c1, c2);
+    test_struct(&driver.runtime_mut().borrow(), &mut qux, c1, c2);
 
     // Verify the dispatch table works when a marshallable wrapper function exists alongside the
     // original function.
@@ -526,7 +531,7 @@ fn marshal_struct() {
         invoke_fn!(driver.runtime_mut(), "foo_new", int_data.0, bool_data.0).unwrap();
     let c2: StructRef =
         invoke_fn!(driver.runtime_mut(), "foo_new", int_data.1, bool_data.1).unwrap();
-    test_struct(&mut baz2, c1, c2);
+    test_struct(&driver.runtime_mut().borrow(), &mut baz2, c1, c2);
 
     fn test_shallow_copy<
         T: Copy + std::fmt::Debug + PartialEq + ArgumentReflection + ReturnTypeReflection,

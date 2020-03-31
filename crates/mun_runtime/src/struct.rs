@@ -8,12 +8,12 @@ use crate::{
 };
 use gc::{GcRuntime, HasIndirectionPtr};
 use std::cell::RefCell;
-use std::ptr::{self, NonNull};
-use std::rc::Rc;
+use std::{
+    ptr::{self, NonNull},
+    rc::Rc,
+};
 
 /// Represents a Mun struct pointer.
-///
-/// A byte pointer is used to make pointer arithmetic easier.
 #[repr(transparent)]
 #[derive(Clone)]
 pub struct RawStruct(GcPtr);
@@ -28,48 +28,35 @@ impl RawStruct {
 /// Type-agnostic wrapper for interoperability with a Mun struct.
 /// TODO: Handle destruction of `struct(value)`
 pub struct StructRef {
-    runtime: Rc<RefCell<Runtime>>,
     handle: GcRootPtr,
-    type_info: *const abi::TypeInfo,
-    info: abi::StructInfo,
+    runtime: Rc<RefCell<Runtime>>,
 }
 
 impl StructRef {
-    /// Creates a struct that wraps a raw Mun struct.
-    ///
-    /// The provided [`TypeInfo`] must be for a struct type.
-    fn new(runtime: Rc<RefCell<Runtime>>, type_info: &abi::TypeInfo, raw: RawStruct) -> StructRef {
-        assert!(type_info.group.is_struct());
-
+    /// Creates a `StructRef` that wraps a raw Mun struct.
+    fn new(runtime: Rc<RefCell<Runtime>>, raw: RawStruct) -> Self {
         let handle = {
             let runtime_ref = runtime.borrow();
-            GcRootPtr::new(runtime_ref.gc(), raw.0)
+            assert!(unsafe { &*runtime_ref.gc().ptr_type(raw.0).inner() }
+                .group
+                .is_struct());
+
+            GcRootPtr::new(&runtime_ref.gc, raw.0)
         };
-        Self {
-            runtime,
-            handle,
-            type_info: type_info as *const abi::TypeInfo,
-            info: type_info.as_struct().unwrap().clone(),
-        }
+
+        Self { runtime, handle }
     }
 
-    /// Consumes the `Struct`, returning a raw Mun struct.
+    /// Consumes the `StructRef`, returning a raw Mun struct.
     pub fn into_raw(self) -> RawStruct {
         RawStruct(self.handle.handle())
     }
 
-    /// Retrieves its struct information.
-    pub fn info(&self) -> &abi::StructInfo {
-        &self.info
-    }
-
-    /// Returns the type information of the struct
-    ///
-    /// # Safety
-    ///
-    /// This method is unsafe because it returns a pointer that may point to deallocated memory.
-    pub unsafe fn type_info(&self) -> *const abi::TypeInfo {
-        self.type_info
+    /// Returns the type information of the struct.
+    pub fn type_info<'r>(struct_ref: &Self, runtime_ref: &'r Runtime) -> &'r abi::TypeInfo {
+        // Safety: The lifetime of `TypeInfo` is tied to the lifetime of `Runtime` and thus the
+        // underlying pointer cannot change during the lifetime of the shared reference.
+        unsafe { &*runtime_ref.gc.ptr_type(struct_ref.handle.handle()).inner() }
     }
 
     ///
@@ -77,20 +64,33 @@ impl StructRef {
     /// # Safety
     ///
     ///
-    unsafe fn offset_unchecked<T>(&self, field_idx: usize) -> NonNull<T> {
-        let offset = *self.info.field_offsets().get_unchecked(field_idx);
+    unsafe fn field_offset_unchecked<T>(
+        &self,
+        struct_info: &abi::StructInfo,
+        field_idx: usize,
+    ) -> NonNull<T> {
+        let offset = *struct_info.field_offsets().get_unchecked(field_idx);
         // self.raw is never null
         NonNull::new_unchecked(self.handle.deref::<u8>().add(offset as usize).cast::<T>() as *mut _)
     }
 
     /// Retrieves the value of the field corresponding to the specified `field_name`.
     pub fn get<T: ReturnTypeReflection>(&self, field_name: &str) -> Result<T, String> {
-        let field_idx = abi::StructInfo::find_field_index(&self.info, field_name)?;
-        let field_type = unsafe { self.info.field_types().get_unchecked(field_idx) };
-        equals_return_type::<T>(&field_type).map_err(|(expected, found)| {
+        let runtime_ref = self.runtime.borrow();
+        let type_info = Self::type_info(self, &runtime_ref);
+
+        // Safety: `as_struct` is guaranteed to return `Some` for `StructRef`s.
+        let struct_info = type_info.as_struct().unwrap();
+        let field_idx =
+            abi::StructInfo::find_field_index(type_info.name(), struct_info, field_name)?;
+
+        // Safety: If we found the `field_idx`, we are guaranteed to also have the `field_type` and
+        // `field_offset`.
+        let field_type = unsafe { struct_info.field_types().get_unchecked(field_idx) };
+        equals_return_type::<T>(field_type).map_err(|(expected, found)| {
             format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
-                self.info.name(),
+                type_info.name(),
                 field_name,
                 expected,
                 found,
@@ -98,11 +98,12 @@ impl StructRef {
         })?;
 
         // If we found the `field_idx`, we are guaranteed to also have the `field_offset`
-        let field_ptr = unsafe { self.offset_unchecked::<T::Marshalled>(field_idx) };
+        let field_ptr =
+            unsafe { self.field_offset_unchecked::<T::Marshalled>(struct_info, field_idx) };
         Ok(Marshal::marshal_from_ptr(
             field_ptr,
             self.runtime.clone(),
-            Some(*field_type),
+            Some(field_type),
         ))
     }
 
@@ -113,40 +114,60 @@ impl StructRef {
         field_name: &str,
         value: T,
     ) -> Result<T, String> {
-        let field_idx = abi::StructInfo::find_field_index(&self.info, field_name)?;
-        let field_type = unsafe { self.info.field_types().get_unchecked(field_idx) };
-        equals_argument_type(&field_type, &value).map_err(|(expected, found)| {
+        let runtime_ref = self.runtime.borrow();
+        let type_info = Self::type_info(self, &runtime_ref);
+
+        // Safety: `as_struct` is guaranteed to return `Some` for `StructRef`s.
+        let struct_info = type_info.as_struct().unwrap();
+        let field_idx =
+            abi::StructInfo::find_field_index(type_info.name(), struct_info, field_name)?;
+
+        // Safety: If we found the `field_idx`, we are guaranteed to also have the `field_type` and
+        // `field_offset`.
+        let field_type = unsafe { struct_info.field_types().get_unchecked(field_idx) };
+        equals_argument_type(field_type, &value).map_err(|(expected, found)| {
             format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
-                self.info.name(),
+                type_info.name(),
                 field_name,
                 expected,
                 found,
             )
         })?;
 
-        let field_ptr = unsafe { self.offset_unchecked::<T::Marshalled>(field_idx) };
-        let old = Marshal::marshal_from_ptr(field_ptr, self.runtime.clone(), Some(*field_type));
-        Marshal::marshal_to_ptr(value.marshal(), field_ptr, Some(*field_type));
+        let field_ptr =
+            unsafe { self.field_offset_unchecked::<T::Marshalled>(struct_info, field_idx) };
+        let old = Marshal::marshal_from_ptr(field_ptr, self.runtime.clone(), Some(field_type));
+        Marshal::marshal_to_ptr(value.marshal(), field_ptr, Some(field_type));
         Ok(old)
     }
 
     /// Sets the value of the field corresponding to the specified `field_name`.
     pub fn set<T: ArgumentReflection>(&mut self, field_name: &str, value: T) -> Result<(), String> {
-        let field_idx = abi::StructInfo::find_field_index(&self.info, field_name)?;
-        let field_type = unsafe { self.info.field_types().get_unchecked(field_idx) };
-        equals_argument_type(&field_type, &value).map_err(|(expected, found)| {
+        let runtime_ref = self.runtime.borrow();
+        let type_info = Self::type_info(self, &runtime_ref);
+
+        // Safety: `as_struct` is guaranteed to return `Some` for `StructRef`s.
+        let struct_info = type_info.as_struct().unwrap();
+        let field_idx =
+            abi::StructInfo::find_field_index(type_info.name(), struct_info, field_name)?;
+
+        // Safety: If we found the `field_idx`, we are guaranteed to also have the `field_type` and
+        // `field_offset`.
+        let field_type = unsafe { struct_info.field_types().get_unchecked(field_idx) };
+        equals_argument_type(field_type, &value).map_err(|(expected, found)| {
             format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
-                self.info.name(),
+                type_info.name(),
                 field_name,
                 expected,
                 found,
             )
         })?;
 
-        let field_ptr = unsafe { self.offset_unchecked::<T::Marshalled>(field_idx) };
-        Marshal::marshal_to_ptr(value.marshal(), field_ptr, Some(*field_type));
+        let field_ptr =
+            unsafe { self.field_offset_unchecked::<T::Marshalled>(struct_info, field_idx) };
+        Marshal::marshal_to_ptr(value.marshal(), field_ptr, Some(field_type));
         Ok(())
     }
 }
@@ -155,7 +176,9 @@ impl ArgumentReflection for StructRef {
     type Marshalled = RawStruct;
 
     fn type_name(&self) -> &str {
-        self.info.name()
+        let runtime_ref = self.runtime.borrow();
+        let type_info = unsafe { &*runtime_ref.gc().ptr_type(self.handle.handle()).inner() };
+        type_info.name()
     }
 
     fn marshal(self) -> Self::Marshalled {
@@ -172,13 +195,8 @@ impl ReturnTypeReflection for StructRef {
 }
 
 impl Marshal<StructRef> for RawStruct {
-    fn marshal_value(
-        self,
-        runtime: Rc<RefCell<Runtime>>,
-        type_info: Option<&abi::TypeInfo>,
-    ) -> StructRef {
-        // `type_info` is only `None` for the `()` type
-        StructRef::new(runtime, type_info.unwrap(), self)
+    fn marshal_value(self, runtime: Rc<RefCell<Runtime>>) -> StructRef {
+        StructRef::new(runtime, self)
     }
 
     fn marshal_from_ptr(
@@ -216,7 +234,7 @@ impl Marshal<StructRef> for RawStruct {
             unsafe { *ptr.cast::<GcPtr>().as_ptr() }
         };
 
-        StructRef::new(runtime, type_info, RawStruct(gc_handle))
+        StructRef::new(runtime, RawStruct(gc_handle))
     }
 
     fn marshal_to_ptr(value: RawStruct, mut ptr: NonNull<Self>, type_info: Option<&abi::TypeInfo>) {
