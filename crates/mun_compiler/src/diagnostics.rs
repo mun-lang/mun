@@ -183,15 +183,39 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
         );
     })
     .on::<mun_hir::diagnostics::DuplicateDefinition, _>(|d| {
-        let location = match d.definition.kind() {
+        let first_definition_location = match d.first_definition.kind() {
+            SyntaxKind::FUNCTION_DEF => {
+                ast::FunctionDef::cast(d.first_definition.to_node(&parse.tree().syntax()))
+                    .map(|f| f.signature_range())
+                    .unwrap_or_else(|| d.first_definition.range())
+            }
+            SyntaxKind::STRUCT_DEF => {
+                ast::StructDef::cast(d.first_definition.to_node(&parse.tree().syntax()))
+                    .map(|s| s.signature_range())
+                    .unwrap_or_else(|| d.first_definition.range())
+            }
+            _ => d.first_definition.range(),
+        };
+        let definition_location = match d.definition.kind() {
             SyntaxKind::FUNCTION_DEF => {
                 ast::FunctionDef::cast(d.definition.to_node(&parse.tree().syntax()))
                     .map(|f| f.signature_range())
-                    .unwrap_or_else(|| d.highlight_range())
+                    .unwrap_or_else(|| d.definition.range())
             }
-            _ => d.highlight_range(),
+            SyntaxKind::STRUCT_DEF => {
+                ast::StructDef::cast(d.definition.to_node(&parse.tree().syntax()))
+                    .map(|s| s.signature_range())
+                    .unwrap_or_else(|| d.definition.range())
+            }
+            _ => d.definition.range(),
         };
-
+        let duplication_object_type = if matches!(d.first_definition.kind(), SyntaxKind::STRUCT_DEF)
+            && matches!(d.definition.kind(), SyntaxKind::STRUCT_DEF)
+        {
+            "type"
+        } else {
+            "value"
+        };
         result.borrow_mut().push(
             SnippetBuilder::new()
                 .title(
@@ -202,12 +226,36 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                 .slice(
                     SliceBuilder::new(true)
                         .origin(relative_file_path.clone())
+                        // First definition
                         .source_annotation(
-                            (location.start().to_usize(), location.end().to_usize()),
-                            d.message(),
+                            (
+                                first_definition_location.start().to_usize(),
+                                first_definition_location.end().to_usize(),
+                            ),
+                            format!(
+                                "previous definition of the {} `{}` here",
+                                duplication_object_type, d.name
+                            ),
+                            AnnotationType::Warning,
+                        )
+                        // Second definition
+                        .source_annotation(
+                            (
+                                definition_location.start().to_usize(),
+                                definition_location.end().to_usize(),
+                            ),
+                            format!("`{}` redefined here", d.name),
                             AnnotationType::Error,
                         )
                         .build(&source_code, source_code_len, &line_index),
+                )
+                .footer(
+                    AnnotationBuilder::new(AnnotationType::Note)
+                        .label(format!(
+                            "`{}` must be defined only once in the {} namespace of this module",
+                            d.name, duplication_object_type
+                        ))
+                        .build(),
                 )
                 .build(),
         );
@@ -272,5 +320,6 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
     Module::from(file_id).diagnostics(db, &mut sink);
 
     drop(sink);
+
     result.into_inner()
 }
