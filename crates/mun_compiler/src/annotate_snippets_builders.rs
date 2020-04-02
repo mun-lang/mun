@@ -127,7 +127,10 @@ impl SliceBuilder {
                         &self.slice.source[0..(annotation.range.0 as usize - first_line_offset)],
                         true,
                     )
-                    .count(),
+                    .count()
+                        // this addend is a fix for annotate-snippets issue number 24
+                        + (line_index.line_col((annotation.range.0 as u32).into()).line
+                            - fl_lines.0) as usize,
                     annotation.range.0 as usize - first_line_offset
                         + UnicodeSegmentation::graphemes(
                             &self.slice.source[annotation.range.0 as usize - first_line_offset
@@ -135,7 +138,9 @@ impl SliceBuilder {
                             true,
                         )
                         .count()
-                        + (fl_lines.1 - fl_lines.0) as usize, // that line is a temporary fix for annotate-snippets issue number 24
+                        // this addend is a fix for annotate-snippets issue number 24
+                        + (line_index.line_col((annotation.range.1 as u32).into()).line
+                            - fl_lines.0) as usize,
                 );
             }
         }
@@ -199,31 +204,37 @@ mod tests {
     }
     #[test]
     fn snippet_builder_snapshot() {
-        let title = AnnotationBuilder::new(AnnotationType::Note)
-            .id("1".to_string())
-            .label("test annotation".to_string())
-            .build();
-        let footer = AnnotationBuilder::new(AnnotationType::Warning)
-            .id("2".to_string())
-            .label("test annotation".to_string())
-            .build();
-
-        let source_code = "fn foo():float{\n48\n}";
+        let source_code = "fn foo():float{\n48\n}\n\nfn bar():bool{\n23\n}";
         let line_index: LineIndex = LineIndex::new(source_code);
 
-        let slice = SliceBuilder::new(true)
-            .origin("/tmp/usr/test.mun".to_string())
-            .source_annotation(
-                (14, 20),
-                "test source annotation".to_string(),
-                AnnotationType::Note,
-            )
-            .build(source_code, source_code.len(), &line_index);
-
         insta::assert_debug_snapshot!(SnippetBuilder::new()
-            .title(title)
-            .footer(footer)
-            .slice(slice)
+            .title(
+                AnnotationBuilder::new(AnnotationType::Note)
+                    .id("1".to_string())
+                    .label("test annotation".to_string())
+                    .build()
+            )
+            .footer(
+                AnnotationBuilder::new(AnnotationType::Warning)
+                    .id("2".to_string())
+                    .label("test annotation".to_string())
+                    .build()
+            )
+            .slice(
+                SliceBuilder::new(true)
+                    .origin("/tmp/usr/test.mun".to_string())
+                    .source_annotation(
+                        (14, 20),
+                        "test source annotation".to_string(),
+                        AnnotationType::Note,
+                    )
+                    .source_annotation(
+                        (35, 41),
+                        "test source annotation".to_string(),
+                        AnnotationType::Error,
+                    )
+                    .build(source_code, source_code.len(), &line_index)
+            )
             .build());
     }
 }
