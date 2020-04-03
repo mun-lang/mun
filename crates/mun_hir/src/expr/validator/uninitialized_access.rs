@@ -160,6 +160,11 @@ impl<'a, 'b, 'd, D: HirDatabase> ExprValidator<'a, 'b, 'd, D> {
             Expr::Field { expr, .. } => {
                 self.validate_expr_access(initialized_patterns, *expr, ExprKind::Normal);
             }
+            Expr::Array(exprs) => {
+                for expr in exprs.iter() {
+                    self.validate_expr_access(initialized_patterns, *expr, ExprKind::Normal);
+                }
+            }
             Expr::Literal(_) => {}
             Expr::Missing => {}
         }

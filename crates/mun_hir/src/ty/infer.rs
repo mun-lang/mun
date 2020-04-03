@@ -400,6 +400,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                     }
                 }
             }
+            Expr::Array(exprs) => self.infer_array_expr(tgt_expr, exprs, expected),
             Expr::UnaryOp { .. } => Ty::Unknown,
             //            Expr::UnaryOp { expr: _, op: _ } => {}
             //            Expr::Block { statements: _, tail: _ } => {}
@@ -823,6 +824,30 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
 
         self.infer_loop_block(body, ActiveLoop::While);
         Ty::Empty
+    }
+
+    fn infer_array_expr(
+        &mut self,
+        _tgt_expr: ExprId,
+        exprs: &[ExprId],
+        expected: &Expectation,
+    ) -> Ty {
+        let mut elem_ty = match &expected.ty {
+            ty_app!(TypeCtor::Array, st) => st.as_single().clone(),
+            _ => {
+                // TODO: Use type variable instead of Ty::Unknown
+                Ty::Unknown
+            }
+        };
+
+        for expr in exprs {
+            let ty = self.infer_expr_coerce(*expr, &Expectation::has_type(elem_ty.clone()));
+            if elem_ty == Ty::Unknown {
+                elem_ty = ty;
+            }
+        }
+
+        Ty::apply_one(TypeCtor::Array, elem_ty)
     }
 
     pub fn report_pat_inference_failure(&mut self, _pat: PatId) {

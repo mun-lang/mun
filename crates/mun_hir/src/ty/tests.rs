@@ -9,6 +9,19 @@ use std::fmt::Write;
 use std::sync::Arc;
 
 #[test]
+fn infer_array_expr() {
+    infer_snapshot(
+        r"
+    fn main(): [int] {
+        let a = 3;
+        let b = 4.0;
+        [1,2,a,b,]
+    }
+    ",
+    )
+}
+
+#[test]
 fn infer_array_type() {
     infer_snapshot(
         r"

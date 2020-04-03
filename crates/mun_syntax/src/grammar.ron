@@ -290,6 +290,7 @@ Grammar(
                 "BreakExpr",
                 "BlockExpr",
                 "RecordLit",
+                "ArrayExpr",
             ]
         ),
 

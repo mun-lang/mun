@@ -236,6 +236,7 @@ pub enum Expr {
         expr: ExprId,
         name: Name,
     },
+    Array(Vec<ExprId>),
     Literal(Literal),
 }
 
@@ -343,6 +344,11 @@ impl Expr {
                 }
                 if let Some(expr) = spread {
                     f(*expr);
+                }
+            }
+            Expr::Array(exprs) => {
+                for expr in exprs {
+                    f(*expr)
                 }
             }
         }
@@ -710,6 +716,10 @@ where
                     Vec::new()
                 };
                 self.alloc_expr(Expr::Call { callee, args }, syntax_ptr)
+            }
+            ast::ExprKind::ArrayExpr(e) => {
+                let exprs = e.exprs().map(|e| self.collect_expr(e)).collect();
+                self.alloc_expr(Expr::Array(exprs), syntax_ptr)
             }
         }
     }
