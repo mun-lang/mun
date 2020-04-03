@@ -312,7 +312,7 @@ impl AstNode for Expr {
         match kind {
             LITERAL | PREFIX_EXPR | PATH_EXPR | BIN_EXPR | PAREN_EXPR | CALL_EXPR | FIELD_EXPR
             | IF_EXPR | LOOP_EXPR | WHILE_EXPR | RETURN_EXPR | BREAK_EXPR | BLOCK_EXPR
-            | RECORD_LIT | ARRAY_EXPR => true,
+            | RECORD_LIT | ARRAY_EXPR | INDEX_EXPR => true,
             _ => false,
         }
     }
@@ -344,6 +344,7 @@ pub enum ExprKind {
     BlockExpr(BlockExpr),
     RecordLit(RecordLit),
     ArrayExpr(ArrayExpr),
+    IndexExpr(IndexExpr),
 }
 impl From<Literal> for Expr {
     fn from(n: Literal) -> Expr {
@@ -420,6 +421,11 @@ impl From<ArrayExpr> for Expr {
         Expr { syntax: n.syntax }
     }
 }
+impl From<IndexExpr> for Expr {
+    fn from(n: IndexExpr) -> Expr {
+        Expr { syntax: n.syntax }
+    }
+}
 
 impl Expr {
     pub fn kind(&self) -> ExprKind {
@@ -439,6 +445,7 @@ impl Expr {
             BLOCK_EXPR => ExprKind::BlockExpr(BlockExpr::cast(self.syntax.clone()).unwrap()),
             RECORD_LIT => ExprKind::RecordLit(RecordLit::cast(self.syntax.clone()).unwrap()),
             ARRAY_EXPR => ExprKind::ArrayExpr(ArrayExpr::cast(self.syntax.clone()).unwrap()),
+            INDEX_EXPR => ExprKind::IndexExpr(IndexExpr::cast(self.syntax.clone()).unwrap()),
             _ => unreachable!(),
         }
     }
@@ -611,15 +618,7 @@ impl AstNode for IndexExpr {
         &self.syntax
     }
 }
-impl IndexExpr {
-    pub fn base(&self) -> Option<Expr> {
-        super::child_opt(self)
-    }
-
-    pub fn index(&self) -> Option<Expr> {
-        super::child_opt(self)
-    }
-}
+impl IndexExpr {}
 
 // LetStmt
 

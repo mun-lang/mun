@@ -1,0 +1,56 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "struct Foo { a: int };\nfn main() {\n    let a = [1,2,3,4];\n    let b = [Foo { a: 3 }, Foo { a: 4 }, Foo { a: 5 } ];\n\n    let c = a[0];\n    let d = b[c];\n    a[3] = 1;\n    b[c].a = a[3];\n\n    // a should not be indexable\n    let a = 3;\n    a[0];\n    let a = [3,4];\n    let b = a[Foo { a: 3 }]\n}"
+---
+[238; 242): cannot index type
+[277; 289): mismatched type
+[33; 292) '{     ...3 }] }': nothing
+[43; 44) 'a': [int]
+[47; 56) '[1,2,3,4]': [int]
+[48; 49) '1': int
+[50; 51) '2': int
+[52; 53) '3': int
+[54; 55) '4': int
+[66; 67) 'b': [Foo]
+[70; 113) '[Foo {... 5 } ]': [Foo]
+[71; 83) 'Foo { a: 3 }': Foo
+[80; 81) '3': int
+[85; 97) 'Foo { a: 4 }': Foo
+[94; 95) '4': int
+[99; 111) 'Foo { a: 5 }': Foo
+[108; 109) '5': int
+[124; 125) 'c': int
+[128; 129) 'a': [int]
+[128; 132) 'a[0]': int
+[130; 131) '0': int
+[142; 143) 'd': Foo
+[146; 147) 'b': [Foo]
+[146; 150) 'b[c]': Foo
+[148; 149) 'c': int
+[156; 157) 'a': [int]
+[156; 160) 'a[3]': int
+[156; 164) 'a[3] = 1': nothing
+[158; 159) '3': int
+[163; 164) '1': int
+[170; 171) 'b': [Foo]
+[170; 174) 'b[c]': Foo
+[170; 176) 'b[c].a': int
+[170; 183) 'b[c].a = a[3]': nothing
+[172; 173) 'c': int
+[179; 180) 'a': [int]
+[179; 183) 'a[3]': int
+[181; 182) '3': int
+[227; 228) 'a': int
+[231; 232) '3': int
+[238; 239) 'a': int
+[238; 242) 'a[0]': {unknown}
+[240; 241) '0': int
+[252; 253) 'a': [int]
+[256; 261) '[3,4]': [int]
+[257; 258) '3': int
+[259; 260) '4': int
+[271; 272) 'b': int
+[275; 276) 'a': [int]
+[275; 290) 'a[Foo { a: 3 }]': int
+[277; 289) 'Foo { a: 3 }': Foo
+[286; 287) '3': int

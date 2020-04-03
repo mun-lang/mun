@@ -401,6 +401,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                 }
             }
             Expr::Array(exprs) => self.infer_array_expr(tgt_expr, exprs, expected),
+            Expr::Index { base, index } => self.infer_index_expr(tgt_expr, *base, *index, expected),
             Expr::UnaryOp { .. } => Ty::Unknown,
             //            Expr::UnaryOp { expr: _, op: _ } => {}
             //            Expr::Block { statements: _, tail: _ } => {}
@@ -850,6 +851,32 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         Ty::apply_one(TypeCtor::Array, elem_ty)
     }
 
+    fn infer_index_expr(
+        &mut self,
+        tgt_expr: ExprId,
+        base: ExprId,
+        index: ExprId,
+        _expected: &Expectation,
+    ) -> Ty {
+        let base_ty = self.infer_expr_inner(base, &Expectation::none(), &CheckParams::default());
+        let index_ty = self.infer_expr(
+            index,
+            &Expectation::has_type(Ty::simple(TypeCtor::Int(IntTy::int()))),
+        );
+
+        match base_ty {
+            ty_app!(TypeCtor::Array, st) => st.as_single().clone(),
+            _ => {
+                self.diagnostics.push(InferenceDiagnostic::CannotIndex {
+                    id: tgt_expr,
+                    base_ty,
+                    index_ty,
+                });
+                Ty::Unknown
+            }
+        }
+    }
+
     pub fn report_pat_inference_failure(&mut self, _pat: PatId) {
         //        self.diagnostics.push(InferenceDiagnostic::PatInferenceFailed {
         //            pat
@@ -925,10 +952,11 @@ impl From<PatId> for ExprOrPatId {
 mod diagnostics {
     use crate::diagnostics::{
         AccessUnknownField, BreakOutsideLoop, BreakWithValueOutsideLoop, CannotApplyBinaryOp,
-        ExpectedFunction, FieldCountMismatch, IncompatibleBranch, InvalidLHS, MismatchedStructLit,
-        MismatchedType, MissingElseBranch, MissingFields, NoFields, NoSuchField,
-        ParameterCountMismatch, ReturnMissingExpression,
+        CannotIndexType, ExpectedFunction, FieldCountMismatch, IncompatibleBranch, InvalidLHS,
+        MismatchedStructLit, MismatchedType, MissingElseBranch, MissingFields, NoFields,
+        NoSuchField, ParameterCountMismatch, ReturnMissingExpression,
     };
+    use crate::in_file::InFile;
     use crate::{
         adt::StructKind,
         code_model::src::HasSource,
@@ -1013,6 +1041,11 @@ mod diagnostics {
         NoSuchField {
             id: ExprId,
             field: usize,
+        },
+        CannotIndex {
+            id: ExprId,
+            base_ty: Ty,
+            index_ty: Ty,
         },
     }
 
@@ -1261,6 +1294,26 @@ mod diagnostics {
                 InferenceDiagnostic::NoSuchField { id, field } => {
                     let field = owner.body_source_map(db).field_syntax(*id, *field).into();
                     sink.push(NoSuchField { file, field });
+                }
+                InferenceDiagnostic::CannotIndex {
+                    id,
+                    base_ty,
+                    index_ty,
+                } => {
+                    let expr = InFile::new(
+                        file,
+                        owner
+                            .body_source_map(db)
+                            .expr_syntax(*id)
+                            .unwrap()
+                            .value
+                            .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr()),
+                    );
+                    sink.push(CannotIndexType {
+                        expr,
+                        base_ty: base_ty.clone(),
+                        index_ty: index_ty.clone(),
+                    })
                 }
             }
         }

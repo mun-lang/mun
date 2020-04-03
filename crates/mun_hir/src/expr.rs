@@ -236,6 +236,10 @@ pub enum Expr {
         expr: ExprId,
         name: Name,
     },
+    Index {
+        base: ExprId,
+        index: ExprId,
+    },
     Array(Vec<ExprId>),
     Literal(Literal),
 }
@@ -350,6 +354,10 @@ impl Expr {
                 for expr in exprs {
                     f(*expr)
                 }
+            }
+            Expr::Index { base, index } => {
+                f(*base);
+                f(*index);
             }
         }
     }
@@ -720,6 +728,11 @@ where
             ast::ExprKind::ArrayExpr(e) => {
                 let exprs = e.exprs().map(|e| self.collect_expr(e)).collect();
                 self.alloc_expr(Expr::Array(exprs), syntax_ptr)
+            }
+            ast::ExprKind::IndexExpr(e) => {
+                let base = self.collect_expr_opt(e.base());
+                let index = self.collect_expr_opt(e.index());
+                self.alloc_expr(Expr::Index { base, index }, syntax_ptr)
             }
         }
     }

@@ -256,12 +256,7 @@ Grammar(
             traits: ["ArgListOwner"],
             options: [ "Expr" ],
         ),
-        "IndexExpr": (
-            options: [
-                 ["base", "Expr"],
-                 ["index", "Expr"],
-            ]
-        ),
+        "IndexExpr": (),
         "FieldExpr": (
             options: ["Expr", "NameRef"]
         ),
@@ -298,6 +293,7 @@ Grammar(
                 "BlockExpr",
                 "RecordLit",
                 "ArrayExpr",
+                "IndexExpr",
             ]
         ),
 

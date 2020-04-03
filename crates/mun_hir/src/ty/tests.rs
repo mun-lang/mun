@@ -9,6 +9,30 @@ use std::fmt::Write;
 use std::sync::Arc;
 
 #[test]
+fn infer_array_index() {
+    infer_snapshot(
+        r"
+    struct Foo { a: int };
+    fn main() {
+        let a = [1,2,3,4];
+        let b = [Foo { a: 3 }, Foo { a: 4 }, Foo { a: 5 } ];
+
+        let c = a[0];
+        let d = b[c];
+        a[3] = 1;
+        b[c].a = a[3];
+
+        // a should not be indexable
+        let a = 3;
+        a[0];
+        let a = [3,4];
+        let b = a[Foo { a: 3 }]
+    }
+    ",
+    )
+}
+
+#[test]
 fn infer_array_expr() {
     infer_snapshot(
         r"

@@ -201,3 +201,12 @@ impl ast::IfExpr {
         children(self)
     }
 }
+
+impl ast::IndexExpr {
+    pub fn base(&self) -> Option<ast::Expr> {
+        children(self).next()
+    }
+    pub fn index(&self) -> Option<ast::Expr> {
+        children(self).nth(1)
+    }
+}

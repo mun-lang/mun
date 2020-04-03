@@ -556,3 +556,24 @@ impl Diagnostic for ExternNonPrimitiveParam {
         self
     }
 }
+
+#[derive(Debug)]
+pub struct CannotIndexType {
+    pub expr: InFile<SyntaxNodePtr>,
+    pub base_ty: Ty,
+    pub index_ty: Ty,
+}
+
+impl Diagnostic for CannotIndexType {
+    fn message(&self) -> String {
+        "cannot index type".to_string()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        self.expr
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
