@@ -114,7 +114,10 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
             SnippetBuilder::new()
                 .title(
                     AnnotationBuilder::new(AnnotationType::Error)
-                        .label(d.message())
+                        .label(format!(
+                            "cannot find type `{}` in this scope",
+                            unresolved_type
+                        ))
                         .build(),
                 )
                 .slice(
@@ -125,7 +128,7 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                                 d.highlight_range().start().to_usize(),
                                 d.highlight_range().end().to_usize(),
                             ),
-                            format!("could not find type `{}` in this scope", unresolved_type),
+                            "not found in this scope".to_string(),
                             AnnotationType::Error,
                         )
                         .build(&source_code, source_code_len, &line_index),
