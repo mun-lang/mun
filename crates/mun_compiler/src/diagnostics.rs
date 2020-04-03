@@ -295,7 +295,11 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
             SnippetBuilder::new()
                 .title(
                     AnnotationBuilder::new(AnnotationType::Error)
-                        .label(d.message())
+                        .label(format!(
+                            "no field `{}` on type `{}`",
+                            d.name,
+                            d.receiver_ty.display(db),
+                        ))
                         .build(),
                 )
                 .slice(
@@ -303,11 +307,7 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                         .origin(relative_file_path.clone())
                         .source_annotation(
                             (location.start().to_usize(), location.end().to_usize()),
-                            format!(
-                                "no field `{}` on type `{}`",
-                                d.name,
-                                d.receiver_ty.display(db),
-                            ),
+                            "unknown field".to_string(),
                             AnnotationType::Error,
                         )
                         .build(&source_code, source_code_len, &line_index),
