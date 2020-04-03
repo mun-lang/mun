@@ -341,11 +341,12 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                 self.infer_while_expr(tgt_expr, *condition, *body, expected)
             }
             Expr::RecordLit {
-                path,
+                type_id,
                 fields,
                 spread,
             } => {
-                let (ty, def_id) = self.resolve_struct(path.as_ref());
+                let ty = self.resolve_type(*type_id);
+                let def_id = ty.as_struct();
                 self.unify(&ty, &expected.ty);
 
                 for (idx, field) in fields.iter().enumerate() {

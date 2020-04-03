@@ -323,7 +323,7 @@ Grammar(
             ],
         ),
 
-        "RecordLit": (options: ["Path", "RecordFieldList"]),
+        "RecordLit": (options: ["TypeRef", "RecordFieldList"]),
         "RecordFieldList": (
             collections: [ ("fields", "RecordField") ],
             options: [["spread", "Expr"]]

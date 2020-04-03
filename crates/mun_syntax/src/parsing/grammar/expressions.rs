@@ -298,6 +298,7 @@ fn path_expr(p: &mut Parser, r: Restrictions) -> (CompletedMarker, BlockLike) {
     paths::expr_path(p);
     match p.current() {
         T!['{'] if !r.forbid_structs => {
+            let m = m.complete(p, PATH_TYPE).precede(p);
             record_field_list(p);
             (m.complete(p, RECORD_LIT), BlockLike::NotBlock)
         }
