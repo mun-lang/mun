@@ -228,7 +228,7 @@ pub enum Expr {
         body: ExprId,
     },
     RecordLit {
-        path: Option<Path>,
+        type_id: TypeRefId,
         fields: Vec<RecordLitField>,
         spread: Option<ExprId>,
     },
@@ -620,7 +620,9 @@ where
                 self.alloc_expr(path, syntax_ptr)
             }
             ast::ExprKind::RecordLit(e) => {
-                let path = e.path().and_then(Path::from_ast);
+                let type_id = self
+                    .type_ref_builder
+                    .alloc_from_node_opt(e.type_ref().as_ref());
                 let mut field_ptrs = Vec::new();
                 let record_lit = if let Some(r) = e.record_field_list() {
                     let fields = r
@@ -645,13 +647,13 @@ where
                         .collect();
                     let spread = r.spread().map(|s| self.collect_expr(s));
                     Expr::RecordLit {
-                        path,
+                        type_id,
                         fields,
                         spread,
                     }
                 } else {
                     Expr::RecordLit {
-                        path,
+                        type_id,
                         fields: Vec::new(),
                         spread: None,
                     }

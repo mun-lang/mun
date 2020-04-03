@@ -1264,7 +1264,7 @@ impl AstNode for RecordLit {
     }
 }
 impl RecordLit {
-    pub fn path(&self) -> Option<Path> {
+    pub fn type_ref(&self) -> Option<TypeRef> {
         super::child_opt(self)
     }
 

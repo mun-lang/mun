@@ -25,10 +25,11 @@ SOURCE_FILE@[0; 129)
       WHITESPACE@[17; 22) "\n    "
       EXPR_STMT@[22; 27)
         RECORD_LIT@[22; 26)
-          PATH@[22; 23)
-            PATH_SEGMENT@[22; 23)
-              NAME_REF@[22; 23)
-                IDENT@[22; 23) "S"
+          PATH_TYPE@[22; 23)
+            PATH@[22; 23)
+              PATH_SEGMENT@[22; 23)
+                NAME_REF@[22; 23)
+                  IDENT@[22; 23) "S"
           WHITESPACE@[23; 24) " "
           RECORD_FIELD_LIST@[24; 26)
             L_CURLY@[24; 25) "{"
@@ -37,10 +38,11 @@ SOURCE_FILE@[0; 129)
       WHITESPACE@[27; 32) "\n    "
       EXPR_STMT@[32; 48)
         RECORD_LIT@[32; 47)
-          PATH@[32; 33)
-            PATH_SEGMENT@[32; 33)
-              NAME_REF@[32; 33)
-                IDENT@[32; 33) "S"
+          PATH_TYPE@[32; 33)
+            PATH@[32; 33)
+              PATH_SEGMENT@[32; 33)
+                NAME_REF@[32; 33)
+                  IDENT@[32; 33) "S"
           WHITESPACE@[33; 34) " "
           RECORD_FIELD_LIST@[34; 47)
             L_CURLY@[34; 35) "{"
@@ -64,10 +66,11 @@ SOURCE_FILE@[0; 129)
       WHITESPACE@[48; 53) "\n    "
       EXPR_STMT@[53; 72)
         RECORD_LIT@[53; 71)
-          PATH@[53; 54)
-            PATH_SEGMENT@[53; 54)
-              NAME_REF@[53; 54)
-                IDENT@[53; 54) "S"
+          PATH_TYPE@[53; 54)
+            PATH@[53; 54)
+              PATH_SEGMENT@[53; 54)
+                NAME_REF@[53; 54)
+                  IDENT@[53; 54) "S"
           WHITESPACE@[54; 55) " "
           RECORD_FIELD_LIST@[55; 71)
             L_CURLY@[55; 56) "{"
@@ -94,10 +97,11 @@ SOURCE_FILE@[0; 129)
       WHITESPACE@[72; 77) "\n    "
       EXPR_STMT@[77; 98)
         RECORD_LIT@[77; 97)
-          PATH@[77; 88)
-            PATH_SEGMENT@[77; 88)
-              NAME_REF@[77; 88)
-                IDENT@[77; 88) "TupleStruct"
+          PATH_TYPE@[77; 88)
+            PATH@[77; 88)
+              PATH_SEGMENT@[77; 88)
+                NAME_REF@[77; 88)
+                  IDENT@[77; 88) "TupleStruct"
           WHITESPACE@[88; 89) " "
           RECORD_FIELD_LIST@[89; 97)
             L_CURLY@[89; 90) "{"
