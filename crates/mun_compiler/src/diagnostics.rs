@@ -261,11 +261,13 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
         );
     })
     .on::<mun_hir::diagnostics::PossiblyUninitializedVariable, _>(|d| {
+        let variable_name = d.pat.to_node(&parse.syntax_node()).text();
+
         result.borrow_mut().push(
             SnippetBuilder::new()
                 .title(
                     AnnotationBuilder::new(AnnotationType::Error)
-                        .label(d.message())
+                        .label(format!("{}: `{}`", d.message(), variable_name))
                         .build(),
                 )
                 .slice(
@@ -276,10 +278,7 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                                 d.highlight_range().start().to_usize(),
                                 d.highlight_range().end().to_usize(),
                             ),
-                            format!(
-                                "use of possibly-uninitialized variable: `{}`",
-                                d.pat.to_node(&parse.syntax_node()).text().to_string()
-                            ),
+                            format!("use of possibly-uninitialized `{}`", variable_name),
                             AnnotationType::Error,
                         )
                         .build(&source_code, source_code_len, &line_index),
