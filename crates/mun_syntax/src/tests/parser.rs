@@ -316,3 +316,18 @@ fn array_expr() {
     ",
     )
 }
+
+#[test]
+fn index_expr() {
+    snapshot_test(
+        r"
+    fn main() {
+        let a = [1,2,3,4]
+        let b = a[0];
+        let c = a[b];
+        a[0] = c;
+        let a = { [3,4,5] }[1];
+    }
+    ",
+    )
+}

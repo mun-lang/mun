@@ -136,6 +136,7 @@ Grammar(
         "BIN_EXPR",
         "PAREN_EXPR",
         "CALL_EXPR",
+        "INDEX_EXPR",
         "FIELD_EXPR",
         "IF_EXPR",
         "BLOCK_EXPR",
@@ -254,6 +255,12 @@ Grammar(
         "CallExpr": (
             traits: ["ArgListOwner"],
             options: [ "Expr" ],
+        ),
+        "IndexExpr": (
+            options: [
+                 ["base", "Expr"],
+                 ["index", "Expr"],
+            ]
         ),
         "FieldExpr": (
             options: ["Expr", "NameRef"]

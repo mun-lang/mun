@@ -183,7 +183,7 @@ fn lhs(p: &mut Parser, r: Restrictions) -> Option<(CompletedMarker, BlockLike)> 
         }
         _ => {
             let (lhs, blocklike) = atom_expr(p, r)?;
-            return Some(postfix_expr(p, lhs, blocklike));
+            return Some(postfix_expr(p, lhs, blocklike, !blocklike.is_block()));
         }
     };
     expr_bp(p, r, 255);
@@ -193,11 +193,16 @@ fn lhs(p: &mut Parser, r: Restrictions) -> Option<(CompletedMarker, BlockLike)> 
 fn postfix_expr(
     p: &mut Parser,
     mut lhs: CompletedMarker,
-    _blocklike: BlockLike,
+    // Calls are disallowed if the type is a block and we prefer statements because the call cannot be disambiguated from a tuple
+    // E.g. `while true {break}();` is parsed as
+    // `while true {break}; ();`
+    mut blocklike: BlockLike,
+    mut allow_calls: bool,
 ) -> (CompletedMarker, BlockLike) {
     loop {
         lhs = match p.current() {
-            T!['('] => call_expr(p, lhs),
+            T!['('] if allow_calls => call_expr(p, lhs),
+            T!['['] if allow_calls => index_expr(p, lhs),
             T![.] => match postfix_dot_expr(p, lhs) {
                 Ok(it) => it,
                 Err(it) => {
@@ -207,9 +212,11 @@ fn postfix_expr(
             },
             INDEX => field_expr(p, lhs),
             _ => break,
-        }
+        };
+        allow_calls = true;
+        blocklike = BlockLike::NotBlock;
     }
-    (lhs, BlockLike::NotBlock)
+    (lhs, blocklike)
 }
 
 fn call_expr(p: &mut Parser, lhs: CompletedMarker) -> CompletedMarker {
@@ -217,6 +224,15 @@ fn call_expr(p: &mut Parser, lhs: CompletedMarker) -> CompletedMarker {
     let m = lhs.precede(p);
     arg_list(p);
     m.complete(p, CALL_EXPR)
+}
+
+fn index_expr(p: &mut Parser, lhs: CompletedMarker) -> CompletedMarker {
+    assert!(p.at(T!['[']));
+    let m = lhs.precede(p);
+    p.bump(T!['[']);
+    expr(p);
+    p.expect(T![']']);
+    m.complete(p, INDEX_EXPR)
 }
 
 fn arg_list(p: &mut Parser) {

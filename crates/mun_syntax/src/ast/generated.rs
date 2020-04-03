@@ -586,6 +586,41 @@ impl IfExpr {
     }
 }
 
+// IndexExpr
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct IndexExpr {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for IndexExpr {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            INDEX_EXPR => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(IndexExpr { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl IndexExpr {
+    pub fn base(&self) -> Option<Expr> {
+        super::child_opt(self)
+    }
+
+    pub fn index(&self) -> Option<Expr> {
+        super::child_opt(self)
+    }
+}
+
 // LetStmt
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
