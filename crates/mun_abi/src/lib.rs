@@ -66,6 +66,8 @@ pub enum TypeGroup {
     FundamentalTypes = 0,
     /// Struct types (i.e. record, tuple, or unit structs)
     StructTypes = 1,
+    /// Array types (i.e. [int], [bool])
+    ArrayTypes = 2,
 }
 
 impl TypeGroup {
@@ -81,6 +83,14 @@ impl TypeGroup {
     pub fn is_struct(self) -> bool {
         match self {
             TypeGroup::StructTypes => true,
+            _ => false,
+        }
+    }
+
+    /// Returns whether this is a array type.
+    pub fn is_array(self) -> bool {
+        match self {
+            TypeGroup::ArrayTypes => true,
             _ => false,
         }
     }

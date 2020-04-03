@@ -30,6 +30,7 @@ pub fn equals_return_type<T: ReturnTypeReflection>(
                 return Err(("struct", T::type_name()));
             }
         }
+        abi::TypeGroup::ArrayTypes => todo!("array types cannot yet be returned"),
     }
     Ok(())
 }

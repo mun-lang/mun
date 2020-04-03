@@ -27,6 +27,19 @@ impl TypeInfo {
         }
     }
 
+    /// Retrieves the type's array information, if available.
+    pub fn as_array(&self) -> Option<&ArrayInfo> {
+        if self.group.is_array() {
+            let ptr = (self as *const TypeInfo).cast::<u8>();
+            let ptr = ptr.wrapping_add(mem::size_of::<TypeInfo>());
+            let offset = ptr.align_offset(mem::align_of::<ArrayInfo>());
+            let ptr = ptr.wrapping_add(offset);
+            Some(unsafe { &*ptr.cast::<ArrayInfo>() })
+        } else {
+            None
+        }
+    }
+
     /// Returns the size of the type in bits
     pub fn size_in_bits(&self) -> usize {
         self.size_in_bits
@@ -172,6 +185,18 @@ impl StructInfo {
                     type_name, field_name
                 )
             })
+    }
+}
+
+impl ArrayInfo {
+    fn element_type(&self) -> &TypeInfo {
+        unsafe { self.element_type.as_ref() }.expect("unexpected invalid element type")
+    }
+}
+
+impl fmt::Display for ArrayInfo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "[{}]", self.element_type())
     }
 }
 
@@ -331,6 +356,13 @@ mod tests {
         struct_info: StructInfo,
     }
 
+    /// A dummy struct for initializing an array's `TypeInfo`
+    #[allow(dead_code)]
+    struct ArrayTypeInfo {
+        type_info: TypeInfo,
+        array_info: ArrayInfo,
+    }
+
     fn fake_type_info(name: &CStr, group: TypeGroup, size: u32, alignment: u8) -> TypeInfo {
         TypeInfo {
             guid: FAKE_TYPE_GUID,
@@ -350,6 +382,18 @@ mod tests {
         StructTypeInfo {
             type_info: fake_type_info(name, TypeGroup::StructTypes, size, alignment),
             struct_info,
+        }
+    }
+
+    fn fake_array_type_info(
+        name: &CStr,
+        array_info: ArrayInfo,
+        size: u32,
+        alignment: u8,
+    ) -> ArrayTypeInfo {
+        ArrayTypeInfo {
+            type_info: fake_type_info(name, TypeGroup::ArrayTypes, size, alignment),
+            array_info,
         }
     }
 
@@ -502,6 +546,14 @@ mod tests {
         }
     }
 
+    fn fake_array_info(element_type: &TypeInfo) -> ArrayInfo {
+        ArrayInfo {
+            element_type: element_type as *const TypeInfo,
+        }
+    }
+
+    const FAKE_ARRAY_NAME: &str = "array-name";
+
     #[test]
     fn test_struct_info_fields_none() {
         let field_names = &[];
@@ -548,6 +600,24 @@ mod tests {
         let struct_info = fake_struct_info(&[], &[], &[], struct_memory_kind.clone());
 
         assert_eq!(struct_info.memory_kind, struct_memory_kind);
+    }
+
+    #[test]
+    fn test_array_info_element_type() {
+        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
+        let element_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
+
+        let array_name = CString::new(FAKE_ARRAY_NAME).expect("invalid fake array name");
+        let array_info = fake_array_info(&element_info);
+
+        let array_type_info = fake_array_type_info(&array_name, array_info, 8, 8);
+        let type_info = &array_type_info.type_info;
+
+        assert!(type_info.as_array().is_some());
+        assert_eq!(
+            type_info.as_array().unwrap().element_type() as *const TypeInfo,
+            array_type_info.array_info.element_type
+        )
     }
 
     fn fake_module_info(

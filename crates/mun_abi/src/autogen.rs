@@ -322,6 +322,38 @@ fn bindgen_test_layout_StructInfo() {
         )
     );
 }
+#[doc = " Represents an array declaration."]
+#[doc = ""]
+#[doc = " <div rustbindgen derive=\"Clone\" derive=\"Debug\"></div>"]
+#[repr(C)]
+#[derive(Clone, Debug)]
+pub struct ArrayInfo {
+    #[doc = " The type of the elements the array stores, e.g.: [T] -> an array that stores T's"]
+    pub element_type: *const TypeInfo,
+}
+#[test]
+fn bindgen_test_layout_ArrayInfo() {
+    assert_eq!(
+        ::std::mem::size_of::<ArrayInfo>(),
+        8usize,
+        concat!("Size of: ", stringify!(ArrayInfo))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<ArrayInfo>(),
+        8usize,
+        concat!("Alignment of ", stringify!(ArrayInfo))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<ArrayInfo>())).element_type as *const _ as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(ArrayInfo),
+            "::",
+            stringify!(element_type)
+        )
+    );
+}
 #[doc = " Represents a module declaration."]
 #[doc = ""]
 #[doc = " <div rustbindgen derive=\"Debug\"></div>"]
