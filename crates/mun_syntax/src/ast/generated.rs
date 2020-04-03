@@ -46,6 +46,37 @@ impl ArgList {
     }
 }
 
+// ArrayExpr
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ArrayExpr {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for ArrayExpr {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            ARRAY_EXPR => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(ArrayExpr { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl ArrayExpr {
+    pub fn exprs(&self) -> impl Iterator<Item = Expr> {
+        super::children(self)
+    }
+}
+
 // ArrayType
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

@@ -9,6 +9,7 @@ const EXPR_RECOVERY_SET: TokenSet = token_set![LET_KW];
 const ATOM_EXPR_FIRST: TokenSet = LITERAL_FIRST.union(PATH_FIRST).union(token_set![
     IDENT,
     T!['('],
+    T!['['],
     T!['{'],
     T![if],
     T![loop],
@@ -275,6 +276,7 @@ fn atom_expr(p: &mut Parser, r: Restrictions) -> Option<(CompletedMarker, BlockL
     let marker = match p.current() {
         T!['('] => paren_expr(p),
         T!['{'] => block_expr(p),
+        T!['['] => array_expr(p),
         T![if] => if_expr(p),
         T![loop] => loop_expr(p),
         T![return] => ret_expr(p),
@@ -407,4 +409,21 @@ fn record_field_list(p: &mut Parser) {
     }
     p.expect(T!['}']);
     m.complete(p, RECORD_FIELD_LIST);
+}
+
+fn array_expr(p: &mut Parser) -> CompletedMarker {
+    assert!(p.at(T!['[']));
+    let m = p.start();
+
+    p.bump(T!['[']);
+    while !p.at(EOF) && !p.at(T![']']) {
+        expr(p);
+
+        if !p.at(T![']']) && !p.expect(T![,]) {
+            break;
+        }
+    }
+    p.expect(T![']']);
+
+    m.complete(p, ARRAY_EXPR)
 }

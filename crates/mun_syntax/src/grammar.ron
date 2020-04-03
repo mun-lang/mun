@@ -143,6 +143,7 @@ Grammar(
         "WHILE_EXPR",
         "LOOP_EXPR",
         "BREAK_EXPR",
+        "ARRAY_EXPR",
         "CONDITION",
 
         "BIND_PAT",
@@ -261,6 +262,12 @@ Grammar(
             options: [ "Condition" ]
         ),
         "BreakExpr": (options: ["Expr"]),
+        "ArrayExpr": (
+            collections: [
+                [ "exprs", "Expr" ]
+            ]
+        ),
+
         "ArgList": (
             collections: [
                 ["args", "Expr"]

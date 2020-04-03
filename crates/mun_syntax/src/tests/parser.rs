@@ -302,3 +302,17 @@ fn extern_fn() {
     "#,
     )
 }
+
+#[test]
+fn array_expr() {
+    snapshot_test(
+        r"
+    fn main() {
+        let a = [1,2,3,]
+        let a = []
+        let a = [call(123)]
+        let a = [Struct { }, Struct { }]
+    }
+    ",
+    )
+}
