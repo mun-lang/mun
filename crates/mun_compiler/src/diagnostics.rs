@@ -1,12 +1,16 @@
 use mun_hir::diagnostics::{Diagnostic as HirDiagnostic, DiagnosticSink};
 use mun_hir::{FileId, HirDatabase, HirDisplay, Module};
-use mun_syntax::{ast, AstNode, SyntaxKind};
+use mun_syntax::{ast, AstNode, SyntaxKind, TextRange};
 
 use std::cell::RefCell;
 
 use crate::annotate_snippets_builders::{AnnotationBuilder, SliceBuilder, SnippetBuilder};
 
 use annotate_snippets::snippet::{AnnotationType, Snippet};
+
+fn text_range_to_tuple(text_range: TextRange) -> (usize, usize) {
+    (text_range.start().to_usize(), text_range.end().to_usize())
+}
 
 /// Constructs diagnostic messages for the given file.
 pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
@@ -61,10 +65,7 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                     SliceBuilder::new(true)
                         .origin(relative_file_path.clone())
                         .source_annotation(
-                            (
-                                d.highlight_range().start().to_usize(),
-                                d.highlight_range().end().to_usize(),
-                            ),
+                            text_range_to_tuple(d.highlight_range()),
                             d.message(),
                             AnnotationType::Error,
                         )
@@ -90,10 +91,7 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                     SliceBuilder::new(true)
                         .origin(relative_file_path.clone())
                         .source_annotation(
-                            (
-                                d.highlight_range().start().to_usize(),
-                                d.highlight_range().end().to_usize(),
-                            ),
+                            text_range_to_tuple(d.highlight_range()),
                             "not found in this scope".to_string(),
                             AnnotationType::Error,
                         )
@@ -124,10 +122,7 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                     SliceBuilder::new(true)
                         .origin(relative_file_path.clone())
                         .source_annotation(
-                            (
-                                d.highlight_range().start().to_usize(),
-                                d.highlight_range().end().to_usize(),
-                            ),
+                            text_range_to_tuple(d.highlight_range()),
                             "not found in this scope".to_string(),
                             AnnotationType::Error,
                         )
@@ -148,10 +143,7 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                     SliceBuilder::new(true)
                         .origin(relative_file_path.clone())
                         .source_annotation(
-                            (
-                                d.highlight_range().start().to_usize(),
-                                d.highlight_range().end().to_usize(),
-                            ),
+                            text_range_to_tuple(d.highlight_range()),
                             format!("expected function, found `{}`", d.found.display(db)),
                             AnnotationType::Error,
                         )
@@ -172,10 +164,7 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                     SliceBuilder::new(true)
                         .origin(relative_file_path.clone())
                         .source_annotation(
-                            (
-                                d.highlight_range().start().to_usize(),
-                                d.highlight_range().end().to_usize(),
-                            ),
+                            text_range_to_tuple(d.highlight_range()),
                             format!(
                                 "expected `{}`, found `{}`",
                                 d.expected.display(db),
@@ -234,10 +223,7 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                         .origin(relative_file_path.clone())
                         // First definition
                         .source_annotation(
-                            (
-                                first_definition_location.start().to_usize(),
-                                first_definition_location.end().to_usize(),
-                            ),
+                            text_range_to_tuple(first_definition_location),
                             format!(
                                 "previous definition of the {} `{}` here",
                                 duplication_object_type, d.name
@@ -246,10 +232,7 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                         )
                         // Second definition
                         .source_annotation(
-                            (
-                                definition_location.start().to_usize(),
-                                definition_location.end().to_usize(),
-                            ),
+                            text_range_to_tuple(definition_location),
                             format!("`{}` redefined here", d.name),
                             AnnotationType::Error,
                         )
@@ -280,10 +263,7 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                     SliceBuilder::new(true)
                         .origin(relative_file_path.clone())
                         .source_annotation(
-                            (
-                                d.highlight_range().start().to_usize(),
-                                d.highlight_range().end().to_usize(),
-                            ),
+                            text_range_to_tuple(d.highlight_range()),
                             format!("use of possibly-uninitialized `{}`", variable_name),
                             AnnotationType::Error,
                         )
@@ -312,7 +292,7 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                     SliceBuilder::new(true)
                         .origin(relative_file_path.clone())
                         .source_annotation(
-                            (location.start().to_usize(), location.end().to_usize()),
+                            text_range_to_tuple(location),
                             "unknown field".to_string(),
                             AnnotationType::Error,
                         )
@@ -327,4 +307,15 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
     drop(sink);
 
     result.into_inner()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_text_range_to_tuple() {
+        let text_range = TextRange::from_to(3.into(), 5.into());
+        assert_eq!(text_range_to_tuple(text_range), (3, 5));
+    }
 }
