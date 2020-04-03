@@ -36,7 +36,7 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                             err.location().offset().to_usize(),
                             err.location().end_offset().to_usize(),
                         ),
-                        format!("syntax error: {}", err),
+                        err.to_string(),
                         AnnotationType::Error,
                     )
                     .build(&source_code, source_code_len, &line_index),
