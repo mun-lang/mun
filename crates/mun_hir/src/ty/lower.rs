@@ -67,6 +67,11 @@ impl Ty {
     ) -> Ty {
         let res = match &type_ref_map[type_ref] {
             TypeRef::Path(path) => Ty::from_hir_path(db, resolver, path),
+            TypeRef::Array(inner) => {
+                let inner_ty =
+                    Ty::from_hir_with_diagnostics(db, resolver, type_ref_map, diagnostics, *inner);
+                Some(Ty::apply_one(TypeCtor::Array, inner_ty))
+            }
             TypeRef::Error => Some(Ty::Unknown),
             TypeRef::Empty => Some(Ty::Empty),
             TypeRef::Never => Some(Ty::simple(TypeCtor::Never)),

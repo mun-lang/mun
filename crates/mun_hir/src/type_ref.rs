@@ -16,34 +16,10 @@ impl_arena_id!(TypeRefId);
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub enum TypeRef {
     Path(Path),
+    Array(TypeRefId),
     Never,
     Empty,
     Error,
-}
-
-impl TypeRef {
-    /// Converts an `ast::TypeRef` to a `hir::TypeRef`.
-    pub fn from_ast(node: ast::TypeRef) -> Self {
-        match node.kind() {
-            ast::TypeRefKind::NeverType(..) => TypeRef::Never,
-            ast::TypeRefKind::PathType(inner) => {
-                // FIXME: Use `Path::from_src`
-                inner
-                    .path()
-                    .and_then(Path::from_ast)
-                    .map(TypeRef::Path)
-                    .unwrap_or(TypeRef::Error)
-            }
-        }
-    }
-
-    pub fn from_ast_opt(node: Option<ast::TypeRef>) -> Self {
-        if let Some(node) = node {
-            TypeRef::from_ast(node)
-        } else {
-            TypeRef::Error
-        }
-    }
 }
 
 #[derive(Default, Debug, Eq, PartialEq)]
@@ -114,6 +90,7 @@ impl TypeRefBuilder {
                 .map(TypeRef::Path)
                 .unwrap_or(TypeRef::Error),
             NeverType(_) => TypeRef::Never,
+            ArrayType(inner) => TypeRef::Array(self.alloc_from_node_opt(inner.type_ref().as_ref())),
         };
         self.alloc_type_ref(type_ref, ptr)
     }

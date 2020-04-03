@@ -9,6 +9,17 @@ use std::fmt::Write;
 use std::sync::Arc;
 
 #[test]
+fn infer_array_type() {
+    infer_snapshot(
+        r"
+    fn main(a: [int]): [int] {
+        let a:[[bool]];
+    }
+    ",
+    )
+}
+
+#[test]
 fn infer_invalid_struct_type() {
     infer_snapshot(
         r"

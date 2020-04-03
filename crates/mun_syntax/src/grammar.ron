@@ -124,6 +124,7 @@ Grammar(
         "TUPLE_FIELD_DEF",
 
         "PATH_TYPE",
+        "ARRAY_TYPE",
         "NEVER_TYPE",
 
         "LET_STMT",
@@ -292,9 +293,11 @@ Grammar(
         "TypeRef": (
             enum: [
                 "PathType",
+                "ArrayType",
                 "NeverType",
             ]
         ),
+        "ArrayType": (options: ["TypeRef"]),
         "ReturnExpr": (options: ["Expr"]),
         "BlockExpr": (
             options: [ "Expr" ],

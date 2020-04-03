@@ -46,6 +46,37 @@ impl ArgList {
     }
 }
 
+// ArrayType
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ArrayType {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for ArrayType {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            ARRAY_TYPE => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(ArrayType { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl ArrayType {
+    pub fn type_ref(&self) -> Option<TypeRef> {
+        super::child_opt(self)
+    }
+}
+
 // BinExpr
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1524,7 +1555,7 @@ pub struct TypeRef {
 impl AstNode for TypeRef {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
-            PATH_TYPE | NEVER_TYPE => true,
+            PATH_TYPE | ARRAY_TYPE | NEVER_TYPE => true,
             _ => false,
         }
     }
@@ -1542,10 +1573,16 @@ impl AstNode for TypeRef {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeRefKind {
     PathType(PathType),
+    ArrayType(ArrayType),
     NeverType(NeverType),
 }
 impl From<PathType> for TypeRef {
     fn from(n: PathType) -> TypeRef {
+        TypeRef { syntax: n.syntax }
+    }
+}
+impl From<ArrayType> for TypeRef {
+    fn from(n: ArrayType) -> TypeRef {
         TypeRef { syntax: n.syntax }
     }
 }
@@ -1559,6 +1596,7 @@ impl TypeRef {
     pub fn kind(&self) -> TypeRefKind {
         match self.syntax.kind() {
             PATH_TYPE => TypeRefKind::PathType(PathType::cast(self.syntax.clone()).unwrap()),
+            ARRAY_TYPE => TypeRefKind::ArrayType(ArrayType::cast(self.syntax.clone()).unwrap()),
             NEVER_TYPE => TypeRefKind::NeverType(NeverType::cast(self.syntax.clone()).unwrap()),
             _ => unreachable!(),
         }

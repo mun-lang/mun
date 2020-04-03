@@ -77,6 +77,9 @@ pub enum TypeCtor {
     /// let bar = foo; // bar: function() -> number {foo}
     /// ```
     FnDef(CallableDef),
+
+    /// An array. Written as `[T]`
+    Array,
 }
 
 impl Ty {
@@ -84,6 +87,13 @@ impl Ty {
         Ty::Apply(ApplicationTy {
             ctor,
             parameters: Substs::empty(),
+        })
+    }
+
+    pub fn apply_one(ctor: TypeCtor, param: Ty) -> Ty {
+        Ty::Apply(ApplicationTy {
+            ctor,
+            parameters: Substs::single(param),
         })
     }
 
@@ -149,6 +159,13 @@ impl Substs {
 
     pub fn single(ty: Ty) -> Substs {
         Substs(Arc::new([ty]))
+    }
+
+    pub fn as_single(&self) -> &Ty {
+        if self.0.len() != 1 {
+            panic!("expected substs of len 1, got {:?}", self);
+        }
+        &self.0[0]
     }
 }
 
@@ -221,6 +238,10 @@ impl HirDisplay for ApplicationTy {
                 write!(f, "(")?;
                 f.write_joined(sig.params(), ", ")?;
                 write!(f, ") -> {}", sig.ret().display(f.db))
+            }
+            TypeCtor::Array => {
+                let t = self.parameters.as_single();
+                write!(f, "[{}]", t.display(f.db))
             }
         }
     }
