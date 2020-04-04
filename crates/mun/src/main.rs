@@ -149,7 +149,7 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOption
         None => {
             use std::env;
 
-            match env::var("mun_terminal_color") {
+            match env::var("MUN_TERMINAL_COLOR") {
                 Ok(option) => match option.as_str() {
                     "disable" => Color::Disable,
                     "enable" => Color::Enable,
