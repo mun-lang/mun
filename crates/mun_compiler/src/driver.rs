@@ -24,8 +24,8 @@ pub enum Color {
     Enable,
 }
 
-impl Into<bool> for Color {
-    fn into(self) -> bool {
+impl Color {
+    fn to_bool(self) -> bool {
         match self {
             Color::Disable => false,
             Color::Auto => {
@@ -188,7 +188,7 @@ impl Driver {
         writer: &mut dyn std::io::Write,
     ) -> Result<bool, failure::Error> {
         let mut has_errors = false;
-        let dlf = DisplayListFormatter::new(self.color_option.into(), false);
+        let dlf = DisplayListFormatter::new(self.color_option.to_bool(), false);
         for file_id in self.db.source_root(WORKSPACE).files() {
             let diags = diagnostics(&self.db, file_id);
             for diagnostic in diags {
