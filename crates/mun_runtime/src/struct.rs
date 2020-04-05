@@ -125,7 +125,7 @@ impl StructRef {
         // Safety: If we found the `field_idx`, we are guaranteed to also have the `field_type` and
         // `field_offset`.
         let field_type = unsafe { struct_info.field_types().get_unchecked(field_idx) };
-        equals_argument_type(field_type, &value).map_err(|(expected, found)| {
+        equals_argument_type(&runtime_ref, field_type, &value).map_err(|(expected, found)| {
             format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
                 type_info.name(),
@@ -155,7 +155,7 @@ impl StructRef {
         // Safety: If we found the `field_idx`, we are guaranteed to also have the `field_type` and
         // `field_offset`.
         let field_type = unsafe { struct_info.field_types().get_unchecked(field_idx) };
-        equals_argument_type(field_type, &value).map_err(|(expected, found)| {
+        equals_argument_type(&runtime_ref, field_type, &value).map_err(|(expected, found)| {
             format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
                 type_info.name(),
@@ -175,9 +175,14 @@ impl StructRef {
 impl ArgumentReflection for StructRef {
     type Marshalled = RawStruct;
 
-    fn type_name(&self) -> &str {
-        let runtime_ref = self.runtime.borrow();
-        let type_info = unsafe { &*runtime_ref.gc().ptr_type(self.handle.handle()).inner() };
+    fn type_guid(&self, runtime: &Runtime) -> abi::Guid {
+        abi::Guid {
+            b: md5::compute(self.type_name(runtime)).0,
+        }
+    }
+
+    fn type_name(&self, runtime: &Runtime) -> &str {
+        let type_info = unsafe { &*runtime.gc().ptr_type(self.handle.handle()).inner() };
         type_info.name()
     }
 
