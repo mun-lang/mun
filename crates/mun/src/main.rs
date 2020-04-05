@@ -44,7 +44,8 @@ fn main() -> Result<(), failure::Error> {
                     Arg::with_name("color")
                         .long("color")
                         .takes_value(true)
-                        .help("color text in terminal: enable|auto|disable"),
+                        .possible_values(&["enable", "auto", "disable"])
+                        .help("color text in terminal"),
                 )
                 .about("Compiles a local Mun file into a module"),
         )
@@ -146,7 +147,7 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOption
         Some("disable") => Color::Disable,
         Some("auto") => Color::Auto,
         Some("enable") => Color::Enable,
-        None => {
+        _ => {
             use std::env;
 
             match env::var("MUN_TERMINAL_COLOR") {
@@ -157,11 +158,6 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOption
                 },
                 Err(_) => Color::Auto,
             }
-        }
-        _ => {
-            return Err(format_err!(
-                "Only 'enable', 'auto' or 'disable' values are available"
-            ))
         }
     };
 
