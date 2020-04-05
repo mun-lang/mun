@@ -136,7 +136,7 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
     /// Collects unique `TypeInfo` from the specified function signature and body.
     pub fn collect_fn(&mut self, hir_fn: hir::Function) {
         // Collect type info for exposed function
-        if !hir_fn.data(self.db).visibility().is_private() {
+        if !hir_fn.data(self.db).visibility().is_private() || hir_fn.is_extern(self.db) {
             let fn_sig = hir_fn.ty(self.db).callable_sig(self.db).unwrap();
 
             // Collect argument types
