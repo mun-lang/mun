@@ -1,8 +1,8 @@
 ---
 source: crates/mun_hir/src/ty/tests.rs
-expression: "fn main(a: [int]): [int] {\n    let a:[[bool]];\n}"
+expression: "fn main(a: [int]) -> [int] {\n    let a:[[bool]];\n}"
 ---
-[25; 48): mismatched type
+[27; 50): mismatched type
 [8; 9) 'a': [int]
-[25; 48) '{     ...l]]; }': nothing
-[35; 36) 'a': [[bool]]
+[27; 50) '{     ...l]]; }': nothing
+[37; 38) 'a': [[bool]]

@@ -1,15 +1,15 @@
 ---
 source: crates/mun_hir/src/ty/tests.rs
-expression: "fn main(): [int] {\n    let a = 3;\n    let b = 4.0;\n    [1,2,a,b,]\n}"
+expression: "fn main() -> [int] {\n    let a = 3;\n    let b = 4.0;\n    [1,2,a,b,]\n}"
 ---
-[62; 63): mismatched type
-[17; 67) '{     ...,b,] }': [int]
-[27; 28) 'a': int
-[31; 32) '3': int
-[42; 43) 'b': float
-[46; 49) '4.0': float
-[55; 65) '[1,2,a,b,]': [int]
-[56; 57) '1': int
-[58; 59) '2': int
-[60; 61) 'a': int
-[62; 63) 'b': float
+[64; 65): mismatched type
+[19; 69) '{     ...,b,] }': [int]
+[29; 30) 'a': int
+[33; 34) '3': int
+[44; 45) 'b': float
+[48; 51) '4.0': float
+[57; 67) '[1,2,a,b,]': [int]
+[58; 59) '1': int
+[60; 61) '2': int
+[62; 63) 'a': int
+[64; 65) 'b': float

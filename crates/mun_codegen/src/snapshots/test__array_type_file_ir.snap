@@ -1,0 +1,12 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn main(a:[int]) {}"
+---
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+define void @main({ i64, [0 x i64] }) {
+body:
+  ret void
+}
+

@@ -36,7 +36,7 @@ fn infer_array_index() {
 fn infer_array_expr() {
     infer_snapshot(
         r"
-    fn main(): [int] {
+    fn main() -> [int] {
         let a = 3;
         let b = 4.0;
         [1,2,a,b,]
@@ -49,7 +49,7 @@ fn infer_array_expr() {
 fn infer_array_type() {
     infer_snapshot(
         r"
-    fn main(a: [int]): [int] {
+    fn main(a: [int]) -> [int] {
         let a:[[bool]];
     }
     ",

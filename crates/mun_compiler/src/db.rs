@@ -23,4 +23,7 @@ impl salsa::Database for CompilerDatabase {
     fn salsa_runtime(&self) -> &salsa::Runtime<CompilerDatabase> {
         &self.runtime
     }
+    fn salsa_runtime_mut(&mut self) -> &mut salsa::Runtime<CompilerDatabase> {
+        &mut self.runtime
+    }
 }

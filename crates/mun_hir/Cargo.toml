@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 description = "Provides high-level intermediate representation of Mun code"
 
 [dependencies]
-salsa="0.12"
+salsa="0.14"
 superslice = "1.0"
 mun_syntax={path="../mun_syntax"}
 rustc-hash = "1.1"

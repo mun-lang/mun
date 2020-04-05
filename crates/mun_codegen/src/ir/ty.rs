@@ -4,7 +4,9 @@ use crate::{
     type_info::{TypeGroup, TypeInfo},
     CodeGenParams, IrDatabase,
 };
-use hir::{ApplicationTy, CallableDef, FloatBitness, FloatTy, IntBitness, IntTy, Ty, TypeCtor};
+use hir::{
+    ApplicationTy, CallableDef, FloatBitness, FloatTy, HirDisplay, IntBitness, IntTy, Ty, TypeCtor,
+};
 use inkwell::types::{AnyTypeEnum, BasicType, BasicTypeEnum, FloatType, IntType, StructType};
 use inkwell::AddressSpace;
 use mun_target::spec::Target;
@@ -48,6 +50,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty, params: CodeGenParams) -> A
                     hir::StructMemoryKind::Value => struct_ty.into(),
                 }
             }
+            TypeCtor::Array => db.array_ty(ty).into(),
             _ => unreachable!(),
         },
         _ => unreachable!("unknown type can not be converted"),
@@ -77,8 +80,36 @@ fn int_ty_query(db: &impl IrDatabase, ity: IntTy) -> IntType {
     }
 }
 
+/// Builds an LLVM IR type for a array (e.g. [T]). In LLVM we represent this as a struct:
+///
+/// ```text
+/// %array = type { int, [0 x T] }
+/// ```
+///
+/// The size of the struct is the first field of the type. Followed by the elements.
+pub fn array_ty_query(db: &impl IrDatabase, s: hir::Ty) -> StructType {
+    let inner_ty = match s {
+        hir::Ty::Apply(hir::ApplicationTy {
+            ctor: TypeCtor::Array,
+            parameters: st,
+        }) => st.as_single().clone(),
+        _ => panic!(
+            "cannot get array LLVM type for non-array type: {}",
+            s.display(db)
+        ),
+    };
+
+    let usize_type = db.target_data().ptr_sized_int_type(None);
+    let inner_ir_type = try_convert_any_to_basic(db.type_ir(inner_ty, CodeGenParams::default()))
+        .expect("cannot create array of a non-basic type");
+    db.context().struct_type(
+        &[usize_type.into(), inner_ir_type.array_type(0).into()],
+        false,
+    )
+}
+
 /// Returns the LLVM IR type of the specified struct
-pub fn struct_ty_query(db: &impl IrDatabase, s: hir::Struct) -> StructType {
+pub fn struct_ty_query(db: &(impl IrDatabase + salsa::Database), s: hir::Struct) -> StructType {
     let name = s.name(db).to_string();
     for field in s.fields(db).iter() {
         // Ensure that salsa's cached value incorporates the struct fields
@@ -89,6 +120,7 @@ pub fn struct_ty_query(db: &impl IrDatabase, s: hir::Struct) -> StructType {
             },
         );
     }
+    //let query = db.salsa_runtime().active_query().unwrap();
 
     db.context().opaque_struct_type(&name)
 }

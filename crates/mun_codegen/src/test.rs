@@ -6,6 +6,17 @@ use std::cell::RefCell;
 use std::sync::Arc;
 
 #[test]
+fn array_type() {
+    test_snapshot(
+        r#"
+    struct Foo {
+        children: [Foo]
+    }
+    "#,
+    );
+}
+
+#[test]
 fn issue_128() {
     test_snapshot(
         r#"

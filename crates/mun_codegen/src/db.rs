@@ -41,6 +41,10 @@ pub trait IrDatabase: hir::HirDatabase {
     #[salsa::invoke(crate::ir::ty::struct_ty_query)]
     fn struct_ty(&self, s: hir::Struct) -> StructType;
 
+    /// Given a type, return the corresponding IR type of an array.
+    #[salsa::invoke(crate::ir::ty::array_ty_query)]
+    fn array_ty(&self, s: hir::Ty) -> StructType;
+
     /// Given a `hir::FileId` generate code that is shared among the group of files.
     /// TODO: Currently, a group always consists of a single file. Need to add support for multiple
     /// files using something like `FileGroupId`.

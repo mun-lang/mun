@@ -14,7 +14,7 @@ hir = { path = "../mun_hir", package = "mun_hir" }
 mun_target = { path = "../mun_target" }
 mun_lld = { path = "../mun_lld" }
 failure = "0.1.7"
-salsa="0.12"
+salsa="0.14"
 md5="0.6.1"
 array-init="0.1.0"
 tempfile = "3"
