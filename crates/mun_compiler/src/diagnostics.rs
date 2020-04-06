@@ -1,6 +1,6 @@
 use mun_hir::diagnostics::{Diagnostic as HirDiagnostic, DiagnosticSink};
 use mun_hir::{FileId, HirDatabase, HirDisplay, Module};
-use mun_syntax::{ast, AstNode, SyntaxKind, TextRange};
+use mun_syntax::{ast, AstNode, Parse, SourceFile, SyntaxKind, SyntaxNodePtr, TextRange};
 
 use std::cell::RefCell;
 
@@ -10,6 +10,25 @@ use annotate_snippets::snippet::{AnnotationType, Snippet};
 
 fn text_range_to_tuple(text_range: TextRange) -> (usize, usize) {
     (text_range.start().to_usize(), text_range.end().to_usize())
+}
+
+fn syntax_node_ptr_location(
+    syntax_node_ptr: SyntaxNodePtr,
+    parse: &Parse<SourceFile>,
+) -> TextRange {
+    match syntax_node_ptr.kind() {
+        SyntaxKind::FUNCTION_DEF => {
+            ast::FunctionDef::cast(syntax_node_ptr.to_node(parse.tree().syntax()))
+                .map(|f| f.signature_range())
+                .unwrap_or_else(|| syntax_node_ptr.range())
+        }
+        SyntaxKind::STRUCT_DEF => {
+            ast::StructDef::cast(syntax_node_ptr.to_node(parse.tree().syntax()))
+                .map(|s| s.signature_range())
+                .unwrap_or_else(|| syntax_node_ptr.range())
+        }
+        _ => syntax_node_ptr.range(),
+    }
 }
 
 /// Constructs diagnostic messages for the given file.
@@ -178,32 +197,9 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
         );
     })
     .on::<mun_hir::diagnostics::DuplicateDefinition, _>(|d| {
-        let first_definition_location = match d.first_definition.kind() {
-            SyntaxKind::FUNCTION_DEF => {
-                ast::FunctionDef::cast(d.first_definition.to_node(&parse.tree().syntax()))
-                    .map(|f| f.signature_range())
-                    .unwrap_or_else(|| d.first_definition.range())
-            }
-            SyntaxKind::STRUCT_DEF => {
-                ast::StructDef::cast(d.first_definition.to_node(&parse.tree().syntax()))
-                    .map(|s| s.signature_range())
-                    .unwrap_or_else(|| d.first_definition.range())
-            }
-            _ => d.first_definition.range(),
-        };
-        let definition_location = match d.definition.kind() {
-            SyntaxKind::FUNCTION_DEF => {
-                ast::FunctionDef::cast(d.definition.to_node(&parse.tree().syntax()))
-                    .map(|f| f.signature_range())
-                    .unwrap_or_else(|| d.definition.range())
-            }
-            SyntaxKind::STRUCT_DEF => {
-                ast::StructDef::cast(d.definition.to_node(&parse.tree().syntax()))
-                    .map(|s| s.signature_range())
-                    .unwrap_or_else(|| d.definition.range())
-            }
-            _ => d.definition.range(),
-        };
+        let first_definition_location = syntax_node_ptr_location(d.first_definition, &parse);
+        let definition_location = syntax_node_ptr_location(d.definition, &parse);
+
         let duplication_object_type = if matches!(d.first_definition.kind(), SyntaxKind::STRUCT_DEF)
             && matches!(d.definition.kind(), SyntaxKind::STRUCT_DEF)
         {
@@ -211,6 +207,7 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
         } else {
             "value"
         };
+
         result.borrow_mut().push(
             SnippetBuilder::new()
                 .title(
