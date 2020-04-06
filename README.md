@@ -97,13 +97,17 @@ runners](.github/actions/install-llvm/index.js):
   # Ubuntu 18.04
   sudo apt install llvm-7 llvm-7-* liblld-7*
   ```
-* **Arch Linux** As its package manager doesn't have lld7, it's easier to download all binaries
-  manually.
+* **Arch Linux** The binary version of LLVM can currently only be installed using an AUR helper, such as `yay`:
   ```bash
-  # Download binaries for Ubuntu 14.04 (works across distros)
-  wget https://github.com/llvm/llvm-project/releases/download/llvmorg-7.1.0/clang+llvm-7.1.0-x86_64-linux-gnu-ubuntu-14.04.tar.xz
-  # Unpack to /usr/ directory
-  tar -xf clang+llvm-7.1.0-x86_64-linux-gnu-ubuntu-14.04.tar.xz -C /usr/
+  yay -Syu lld7-headers lld7-libs-static
+  ```
+  It is also possible to perform a manual package installation as follows:
+  ```bash
+  # NOTE: this installs all of the lld7 packages
+  cd /tmp
+  git clone https://aur.archlinux.org/lld7.git
+  cd lld7
+  makepkg -si
   ```
   When running `llvm-config`, an error can occur signalling that `/usr/lib/libtinfo.so.5` is
   missing. If a newer version is present, create a symlink; e.g. `ln -s /usr/lib/libtinfo.so.6
