@@ -2,6 +2,7 @@
 extern crate failure;
 
 use std::cell::RefCell;
+use std::env;
 use std::rc::Rc;
 use std::time::Duration;
 
@@ -143,23 +144,16 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOption
         _ => return Err(format_err!("Only optimization levels 0-3 are supported")),
     };
 
-    let color = match matches.value_of("color") {
-        Some("disable") => Color::Disable,
-        Some("auto") => Color::Auto,
-        Some("enable") => Color::Enable,
-        _ => {
-            use std::env;
-
-            match env::var("MUN_TERMINAL_COLOR") {
-                Ok(option) => match option.as_str() {
-                    "disable" => Color::Disable,
-                    "enable" => Color::Enable,
-                    _ => Color::Auto,
-                },
-                Err(_) => Color::Auto,
-            }
-        }
-    };
+    let color = matches
+        .value_of("color")
+        .map(ToOwned::to_owned)
+        .or_else(|| env::var("MUN_TERMINAL_COLOR").ok())
+        .map(|value| match value.as_str() {
+            "disable" => Color::Disable,
+            "enable" => Color::Enable,
+            _ => Color::Auto,
+        })
+        .unwrap_or(Color::Auto);
 
     Ok(mun_compiler::CompilerOptions {
         input: PathOrInline::Path(matches.value_of("INPUT").unwrap().into()), // Safe because its a required arg
