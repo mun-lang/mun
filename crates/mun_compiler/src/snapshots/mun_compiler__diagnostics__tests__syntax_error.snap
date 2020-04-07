@@ -1,0 +1,29 @@
+---
+source: crates/mun_compiler/src/diagnostics.rs
+expression: "compilation_errors(\"\\n\\nfn main(\\n struct Foo\\n\")"
+---
+error: syntax error
+ --> main.mun:3:8
+  |
+3 | fn main(
+  |         ^ expected value parameter
+  |
+error: syntax error
+ --> main.mun:3:8
+  |
+3 | fn main(
+  |         ^ expected R_PAREN
+  |
+error: syntax error
+ --> main.mun:3:8
+  |
+3 | fn main(
+  |         ^ expected a block
+  |
+error: syntax error
+ --> main.mun:4:11
+  |
+4 |  struct Foo
+  |            ^ expected a ';', '{', or '('
+  |
+

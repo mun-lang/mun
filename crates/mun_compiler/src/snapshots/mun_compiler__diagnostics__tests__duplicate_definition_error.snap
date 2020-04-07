@@ -1,0 +1,42 @@
+---
+source: crates/mun_compiler/src/diagnostics.rs
+expression: "compilation_errors(\"\\n\\nfn foo(){}\\n\\nfn foo(){}\\n\\nstruct Bar;\\n\\nstruct Bar;\\n\\nfn BAZ(){}\\n\\nstruct BAZ;\")"
+---
+error: the name `foo` is defined multiple times
+ --> main.mun:3:0
+  |
+3 | fn foo(){}
+  | -------- previous definition of the value `foo` here
+4 | 
+5 | fn foo(){}
+  | ^^^^^^^^ `foo` redefined here
+  |
+  = note: `foo` must be defined only once in the value namespace of this module
+error: the name `Bar` is defined multiple times
+ --> main.mun:3:0
+  |
+...
+7 | struct Bar;
+  | ---------- previous definition of the type `Bar` here
+8 | 
+9 | struct Bar;
+  | ^^^^^^^^^^ `Bar` redefined here
+  |
+  = note: `Bar` must be defined only once in the type namespace of this module
+error: the name `BAZ` is defined multiple times
+  --> main.mun:8:0
+   |
+ 3 | fn foo(){}
+ 4 | 
+ 5 | fn foo(){}
+ 6 | 
+...
+10 | 
+11 | fn BAZ(){}
+   | -------- previous definition of the value `BAZ` here
+12 | 
+13 | struct BAZ;
+   | ^^^^^^^^^^ `BAZ` redefined here
+   |
+   = note: `BAZ` must be defined only once in the value namespace of this module
+
