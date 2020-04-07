@@ -16,7 +16,7 @@ pub struct Config {
     /// is stored in a temporary directory.
     pub out_dir: Option<PathBuf>,
 
-    /// Decide use or not to use colors in terminal output
+    /// Whether or not to use colors in terminal output
     pub color: Color,
 }
 
