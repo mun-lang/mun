@@ -3,6 +3,7 @@ mod annotate_snippets_builders;
 mod db;
 ///! This library contains the code required to go from source code to binaries.
 mod diagnostics;
+mod diagnostics_snippets;
 mod driver;
 
 pub use mun_hir::{FileId, RelativePath, RelativePathBuf};
