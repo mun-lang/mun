@@ -82,7 +82,7 @@ pub(crate) fn error(
     SnippetBuilder::new()
         .title(
             AnnotationBuilder::new(AnnotationType::Error)
-                .label("unexpected error".to_string())
+                .label(diagnostic.message())
                 .build(),
         )
         .slice(
