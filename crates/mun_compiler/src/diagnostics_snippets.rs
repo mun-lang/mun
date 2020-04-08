@@ -70,7 +70,7 @@ pub(crate) fn syntax_error(
     snippet
 }
 
-pub(crate) fn error(
+pub(crate) fn generic_error(
     diagnostic: &dyn HirDiagnostic,
     _: &impl HirDatabase,
     _: &Parse<SourceFile>,

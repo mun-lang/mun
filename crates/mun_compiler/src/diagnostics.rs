@@ -34,15 +34,17 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
 
     let result = RefCell::new(result);
     let mut sink = DiagnosticSink::new(|d| {
-        result.borrow_mut().push(diagnostics_snippets::error(
-            d,
-            db,
-            &parse,
-            &relative_file_path,
-            &source_code,
-            source_code_len,
-            &line_index,
-        ));
+        result
+            .borrow_mut()
+            .push(diagnostics_snippets::generic_error(
+                d,
+                db,
+                &parse,
+                &relative_file_path,
+                &source_code,
+                source_code_len,
+                &line_index,
+            ));
     })
     .on::<mun_hir::diagnostics::UnresolvedValue, _>(|d| {
         result
