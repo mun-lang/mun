@@ -119,11 +119,6 @@ unsafe impl Send for FunctionInfo {}
 unsafe impl Sync for FunctionInfo {}
 
 impl StructInfo {
-    /// Returns the struct's name.
-    pub fn name(&self) -> &str {
-        unsafe { str::from_utf8_unchecked(CStr::from_ptr(self.name).to_bytes()) }
-    }
-
     /// Returns the struct's field names.
     pub fn field_names(&self) -> impl Iterator<Item = &str> {
         let field_names = if self.num_fields == 0 {
@@ -161,7 +156,11 @@ impl StructInfo {
     }
 
     /// Returns the index of the field matching the specified `field_name`.
-    pub fn find_field_index(struct_info: &StructInfo, field_name: &str) -> Result<usize, String> {
+    pub fn find_field_index(
+        type_name: &str,
+        struct_info: &StructInfo,
+        field_name: &str,
+    ) -> Result<usize, String> {
         struct_info
             .field_names()
             .enumerate()
@@ -170,16 +169,9 @@ impl StructInfo {
             .ok_or_else(|| {
                 format!(
                     "Struct `{}` does not contain field `{}`.",
-                    struct_info.name(),
-                    field_name
+                    type_name, field_name
                 )
             })
-    }
-}
-
-impl fmt::Display for StructInfo {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name())
     }
 }
 
@@ -493,7 +485,6 @@ mod tests {
     }
 
     fn fake_struct_info(
-        name: &CStr,
         field_names: &[*const c_char],
         field_types: &[&TypeInfo],
         field_offsets: &[u16],
@@ -503,7 +494,6 @@ mod tests {
         assert!(field_types.len() == field_offsets.len());
 
         StructInfo {
-            name: name.as_ptr(),
             field_names: field_names.as_ptr(),
             field_types: field_types.as_ptr().cast::<*const TypeInfo>(),
             field_offsets: field_offsets.as_ptr(),
@@ -512,29 +502,13 @@ mod tests {
         }
     }
 
-    const FAKE_STRUCT_NAME: &str = "struct-name";
-
-    #[test]
-    fn test_struct_info_name() {
-        let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
-        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], Default::default());
-
-        assert_eq!(struct_info.name(), FAKE_STRUCT_NAME);
-    }
-
     #[test]
     fn test_struct_info_fields_none() {
         let field_names = &[];
         let field_types = &[];
         let field_offsets = &[];
-        let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
-        let struct_info = fake_struct_info(
-            &struct_name,
-            field_names,
-            field_types,
-            field_offsets,
-            Default::default(),
-        );
+        let struct_info =
+            fake_struct_info(field_names, field_types, field_offsets, Default::default());
 
         assert_eq!(struct_info.field_names().count(), 0);
         assert_eq!(struct_info.field_types(), field_types);
@@ -550,14 +524,8 @@ mod tests {
         let field_names = &[field_name.as_ptr()];
         let field_types = &[&type_info];
         let field_offsets = &[1];
-        let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
-        let struct_info = fake_struct_info(
-            &struct_name,
-            field_names,
-            field_types,
-            field_offsets,
-            Default::default(),
-        );
+        let struct_info =
+            fake_struct_info(field_names, field_types, field_offsets, Default::default());
 
         for (lhs, rhs) in struct_info.field_names().zip([FAKE_FIELD_NAME].iter()) {
             assert_eq!(lhs, *rhs)
@@ -568,18 +536,16 @@ mod tests {
 
     #[test]
     fn test_struct_info_memory_kind_gc() {
-        let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
         let struct_memory_kind = StructMemoryKind::GC;
-        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], struct_memory_kind.clone());
+        let struct_info = fake_struct_info(&[], &[], &[], struct_memory_kind.clone());
 
         assert_eq!(struct_info.memory_kind, struct_memory_kind);
     }
 
     #[test]
     fn test_struct_info_memory_kind_value() {
-        let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
         let struct_memory_kind = StructMemoryKind::Value;
-        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], struct_memory_kind.clone());
+        let struct_info = fake_struct_info(&[], &[], &[], struct_memory_kind.clone());
 
         assert_eq!(struct_info.memory_kind, struct_memory_kind);
     }
@@ -599,6 +565,7 @@ mod tests {
     }
 
     const FAKE_MODULE_PATH: &str = "path::to::module";
+    const FAKE_STRUCT_NAME: &str = "StructName";
 
     #[test]
     fn test_module_info_path() {
@@ -635,7 +602,7 @@ mod tests {
         let functions = &[fn_info];
 
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name");
-        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], Default::default());
+        let struct_info = fake_struct_info(&[], &[], &[], Default::default());
         let struct_type_info = fake_struct_type_info(&struct_name, struct_info, 1, 1);
         let types = &[unsafe { mem::transmute(&struct_type_info) }];
 
@@ -661,7 +628,6 @@ mod tests {
             if lhs.group == TypeGroup::StructTypes {
                 let lhs_struct = lhs.as_struct().unwrap();
                 let rhs_struct = rhs.as_struct().unwrap();
-                assert_eq!(lhs_struct.name(), rhs_struct.name());
                 assert_eq!(lhs_struct.field_types(), rhs_struct.field_types());
             }
         }

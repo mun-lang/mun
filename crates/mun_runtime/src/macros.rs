@@ -95,8 +95,8 @@ macro_rules! invoke_fn_impl {
                     function_name: &'s str,
                     $($Arg: $T,)*
                 ) -> core::result::Result<Output, $ErrName<'s, $($T,)* Output>> {
-                    match runtime
-                        .borrow()
+                    let runtime_ref = runtime.borrow();
+                    match runtime_ref
                         .get_function_info(function_name)
                         .ok_or_else(|| format!("Failed to obtain function '{}'", function_name))
                         .and_then(|function_info| {
@@ -115,7 +115,7 @@ macro_rules! invoke_fn_impl {
                             #[allow(unused_mut, unused_variables)]
                             let mut idx = 0;
                             $(
-                                crate::reflection::equals_argument_type(&arg_types[idx], &$Arg)
+                                crate::reflection::equals_argument_type(&runtime_ref, &arg_types[idx], &$Arg)
                                     .map_err(|(expected, found)| {
                                         format!(
                                             "Invalid argument type at index {}. Expected: {}. Found: {}.",
@@ -150,7 +150,7 @@ macro_rules! invoke_fn_impl {
                             let result = function($($Arg.marshal()),*);
 
                             // Marshall the result
-                            return Ok(result.marshal_value(runtime.clone(), function_info.signature.return_type()))
+                            return Ok(result.marshal_value(runtime.clone()))
                         }
                         Err(e) => Err($ErrName::new(e, runtime.clone(), function_name, $($Arg),*))
                     }

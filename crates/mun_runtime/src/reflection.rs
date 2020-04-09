@@ -1,14 +1,15 @@
 use crate::type_info::HasStaticTypeInfo;
-use crate::{marshal::Marshal, StructRef};
+use crate::{marshal::Marshal, Runtime, StructRef};
 use md5;
 
 /// Returns whether the specified argument type matches the `type_info`.
-pub fn equals_argument_type<'e, 'f, T: ArgumentReflection>(
+pub fn equals_argument_type<'r, 'e, 'f, T: ArgumentReflection>(
+    runtime: &'r Runtime,
     type_info: &'e abi::TypeInfo,
     arg: &'f T,
 ) -> Result<(), (&'e str, &'f str)> {
-    if type_info.guid != arg.type_guid() {
-        Err((type_info.name(), arg.type_name()))
+    if type_info.guid != arg.type_guid(runtime) {
+        Err((type_info.name(), arg.type_name(runtime)))
     } else {
         Ok(())
     }
@@ -55,14 +56,10 @@ pub trait ArgumentReflection: Sized {
     type Marshalled: Marshal<Self>;
 
     /// Retrieves the `Guid` of the value's type.
-    fn type_guid(&self) -> abi::Guid {
-        abi::Guid {
-            b: md5::compute(self.type_name()).0,
-        }
-    }
+    fn type_guid(&self, runtime: &Runtime) -> abi::Guid;
 
     /// Retrieves the name of the value's type.
-    fn type_name(&self) -> &str;
+    fn type_name(&self, runtime: &Runtime) -> &str;
 
     /// Marshals the value.
     fn marshal(self) -> Self::Marshalled;
@@ -74,11 +71,11 @@ macro_rules! impl_primitive_type {
             impl ArgumentReflection for $ty {
                 type Marshalled = Self;
 
-                fn type_guid(&self) -> abi::Guid {
+                fn type_guid(&self, _runtime: &Runtime) -> abi::Guid {
                     Self::type_info().guid
                 }
 
-                fn type_name(&self) -> &str {
+                fn type_name(&self, _runtime: &Runtime) -> &str {
                     Self::type_info().name()
                 }
 
@@ -90,12 +87,12 @@ macro_rules! impl_primitive_type {
             impl ReturnTypeReflection for $ty {
                 type Marshalled = Self;
 
-                fn type_name() -> &'static str {
-                    Self::type_info().name()
-                }
-
                 fn type_guid() -> abi::Guid {
                     Self::type_info().guid
+                }
+
+                fn type_name() -> &'static str {
+                    Self::type_info().name()
                 }
             }
         )+
@@ -103,18 +100,6 @@ macro_rules! impl_primitive_type {
 }
 
 impl_primitive_type!(i8, i16, i32, i64, isize, u8, u16, u32, u64, usize, f32, f64, bool);
-
-impl ArgumentReflection for () {
-    type Marshalled = Self;
-
-    fn type_name(&self) -> &str {
-        <Self as ReturnTypeReflection>::type_name()
-    }
-
-    fn marshal(self) -> Self::Marshalled {
-        self
-    }
-}
 
 impl ReturnTypeReflection for () {
     type Marshalled = ();
@@ -130,11 +115,11 @@ where
 {
     type Marshalled = Self;
 
-    fn type_guid(&self) -> abi::Guid {
+    fn type_guid(&self, _runtime: &Runtime) -> abi::Guid {
         Self::type_info().guid
     }
 
-    fn type_name(&self) -> &str {
+    fn type_name(&self, _runtime: &Runtime) -> &str {
         Self::type_info().name()
     }
 
@@ -164,11 +149,11 @@ where
 {
     type Marshalled = Self;
 
-    fn type_guid(&self) -> abi::Guid {
+    fn type_guid(&self, _runtime: &Runtime) -> abi::Guid {
         Self::type_info().guid
     }
 
-    fn type_name(&self) -> &str {
+    fn type_name(&self, _runtime: &Runtime) -> &str {
         Self::type_info().name()
     }
 

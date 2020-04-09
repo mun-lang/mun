@@ -248,8 +248,6 @@ fn bindgen_test_layout_FunctionInfo() {
 #[repr(C)]
 #[derive(Clone, Debug)]
 pub struct StructInfo {
-    #[doc = " Struct name"]
-    pub name: *const ::std::os::raw::c_char,
     #[doc = " Struct fields' names"]
     pub field_names: *const *const ::std::os::raw::c_char,
     #[doc = " Struct fields' information"]
@@ -265,7 +263,7 @@ pub struct StructInfo {
 fn bindgen_test_layout_StructInfo() {
     assert_eq!(
         ::std::mem::size_of::<StructInfo>(),
-        40usize,
+        32usize,
         concat!("Size of: ", stringify!(StructInfo))
     );
     assert_eq!(
@@ -274,18 +272,8 @@ fn bindgen_test_layout_StructInfo() {
         concat!("Alignment of ", stringify!(StructInfo))
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<StructInfo>())).name as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(StructInfo),
-            "::",
-            stringify!(name)
-        )
-    );
-    assert_eq!(
         unsafe { &(*(::std::ptr::null::<StructInfo>())).field_names as *const _ as usize },
-        8usize,
+        0usize,
         concat!(
             "Offset of field: ",
             stringify!(StructInfo),
@@ -295,7 +283,7 @@ fn bindgen_test_layout_StructInfo() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<StructInfo>())).field_types as *const _ as usize },
-        16usize,
+        8usize,
         concat!(
             "Offset of field: ",
             stringify!(StructInfo),
@@ -305,7 +293,7 @@ fn bindgen_test_layout_StructInfo() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<StructInfo>())).field_offsets as *const _ as usize },
-        24usize,
+        16usize,
         concat!(
             "Offset of field: ",
             stringify!(StructInfo),
@@ -315,7 +303,7 @@ fn bindgen_test_layout_StructInfo() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<StructInfo>())).num_fields as *const _ as usize },
-        32usize,
+        24usize,
         concat!(
             "Offset of field: ",
             stringify!(StructInfo),
@@ -325,7 +313,7 @@ fn bindgen_test_layout_StructInfo() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<StructInfo>())).memory_kind as *const _ as usize },
-        34usize,
+        26usize,
         concat!(
             "Offset of field: ",
             stringify!(StructInfo),

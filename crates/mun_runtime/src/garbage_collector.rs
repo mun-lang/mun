@@ -5,6 +5,18 @@ use std::alloc::Layout;
 #[repr(transparent)]
 pub struct RawTypeInfo(*const abi::TypeInfo);
 
+impl RawTypeInfo {
+    /// Returns the inner `TypeInfo` pointer.
+    ///
+    /// # Safety
+    ///
+    /// This method is unsafe because there are no guarantees about the lifetime of the inner
+    /// pointer.
+    pub unsafe fn inner(&self) -> *const abi::TypeInfo {
+        self.0
+    }
+}
+
 impl Into<RawTypeInfo> for *const abi::TypeInfo {
     fn into(self) -> RawTypeInfo {
         RawTypeInfo(self)

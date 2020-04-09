@@ -247,9 +247,12 @@ impl Runtime {
         false
     }
 
-    /// Returns the runtime's garbage collector.
-    pub(crate) fn gc(&self) -> &Arc<GarbageCollector> {
-        &self.gc
+    /// Returns a shared reference to the runtime's garbage collector.
+    ///
+    /// We cannot return an `Arc` here, because the lifetime of data contained in `GarbageCollector`
+    /// is dependent on the `Runtime`.
+    pub(crate) fn gc(&self) -> &GarbageCollector {
+        self.gc.as_ref()
     }
 
     /// Collects all memory that is no longer referenced by rooted objects. Returns `true` if memory
