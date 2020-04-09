@@ -177,6 +177,8 @@ impl Literal {
         }
     }
 
+    /// Returns a tuple containing the text part of the literal and an optional suffix. For example
+    /// `1e5f32` will result in `("1e5", Some("f32"))`
     pub fn text_and_suffix(&self) -> (SmolStr, Option<SmolStr>) {
         let token = self.token();
         let text = token.text();
@@ -195,7 +197,7 @@ impl Literal {
     }
 }
 
-/// Given a string containing an integer literal (e.g `0x123` or `1234u32`), split the string in the
+/// Given a string containing an integer literal (e.g `0x123` or `1234u32`), splits the string in the
 /// value part and the suffix part.
 fn split_int_text_and_suffix(text: &str) -> (&str, Option<&str>) {
     let base = match text.as_bytes() {
@@ -223,7 +225,7 @@ fn split_int_text_and_suffix(text: &str) -> (&str, Option<&str>) {
     }
 }
 
-/// Skip all digits in the iterator that belong to the given base
+/// Skips all digits in the iterator that belong to the given base
 fn skip_digits(base: usize, iter: &mut Peekable<CharIndices>) {
     while let Some((_, c)) = iter.peek() {
         if match c {
@@ -241,7 +243,7 @@ fn skip_digits(base: usize, iter: &mut Peekable<CharIndices>) {
     }
 }
 
-/// Given a string containing an float literal (e.g `123.4` or `1234.4f32`), split the string in the
+/// Given a string containing an float literal (e.g `123.4` or `1234.4f32`), splits the string in the
 /// value part and the suffix part.
 fn split_float_text_and_suffix(text: &str) -> (&str, Option<&str>) {
     let mut iter = text.char_indices().peekable();
