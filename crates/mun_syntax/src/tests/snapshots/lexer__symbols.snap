@@ -1,6 +1,6 @@
 ---
 source: crates/mun_syntax/src/tests/lexer.rs
-expression: "# ( ) { } [ ] ; ,\n= ==\n!=\n< <=\n> >=\n. .. ... ..=\n+ +=\n- -=\n* *=\n/ /=\n^ ^=\n% %=\n: ::"
+expression: "# ( ) { } [ ] ; ,\n= ==\n!=\n< <=\n> >=\n. .. ... ..=\n+ +=\n- -=\n* *=\n/ /=\n^ ^=\n% %=\n: ::\n->"
 ---
 HASH 1 "#"
 WHITESPACE 1 " "
@@ -85,4 +85,7 @@ COLON 1 ":"
 WHITESPACE 1 " "
 COLON 1 ":"
 COLON 1 ":"
+WHITESPACE 1 "\n"
+MINUS 1 "-"
+GT 1 ">"
 
