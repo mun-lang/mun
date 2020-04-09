@@ -1,16 +1,16 @@
 ---
 source: crates/mun_hir/src/ty/tests.rs
-expression: "extern fn foo(a:int, b:int): int;\nfn main() {\n    foo(3,4);\n}\n\nextern fn with_body() {}    // extern functions cannot have bodies\n\nstruct S;\nextern fn with_non_primitive(s:S);  // extern functions can only have primitives as parameters\nextern fn with_non_primitive_return(): S;  // extern functions can only have primitives as parameters"
+expression: "extern fn foo(a:int, b:int) -> int;\nfn main() {\n    foo(3,4);\n}\n\nextern fn with_body() {}    // extern functions cannot have bodies\n\nstruct S;\nextern fn with_non_primitive(s:S);  // extern functions can only have primitives as parameters\nextern fn with_non_primitive_return() -> S;  // extern functions can only have primitives as parameters"
 ---
-[63; 87): extern functions cannot have bodies
-[172; 173): extern functions can only have primitives as parameter- and return types
-[275; 276): extern functions can only have primitives as parameter- and return types
+[65; 89): extern functions cannot have bodies
+[174; 175): extern functions can only have primitives as parameter- and return types
+[279; 280): extern functions can only have primitives as parameter- and return types
 [14; 15) 'a': int
 [21; 22) 'b': int
-[44; 61) '{     ...,4); }': nothing
-[50; 53) 'foo': function foo(int, int) -> int
-[50; 58) 'foo(3,4)': int
-[54; 55) '3': int
-[56; 57) '4': int
-[85; 87) '{}': nothing
-[170; 171) 's': S
+[46; 63) '{     ...,4); }': nothing
+[52; 55) 'foo': function foo(int, int) -> int
+[52; 60) 'foo(3,4)': int
+[56; 57) '3': int
+[58; 59) '4': int
+[87; 89) '{}': nothing
+[172; 173) 's': S

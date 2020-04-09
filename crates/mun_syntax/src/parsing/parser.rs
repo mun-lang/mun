@@ -56,7 +56,7 @@ impl<'t> Parser<'t> {
     pub(crate) fn nth_at(&self, n: usize, kind: SyntaxKind) -> bool {
         match kind {
             T![-=] => self.at_composite2(n, T![-], T![=]),
-            //T![->] => self.at_composite2(n, T![-], T![>]),
+            T![->] => self.at_composite2(n, T![-], T![>]),
             T![::] => self.at_composite2(n, T![:], T![:]),
             T![!=] => self.at_composite2(n, T![!], T![=]),
             T![..] => self.at_composite2(n, T![.], T![.]),
@@ -185,7 +185,7 @@ impl<'t> Parser<'t> {
         }
         let n_raw_tokens = match kind {
             T![-=]
-            //| T![->]
+            | T![->]
             | T![::]
             | T![!=]
             | T![..]

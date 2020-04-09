@@ -1,9 +1,9 @@
 ---
 source: crates/mun_hir/src/ty/tests.rs
-expression: "fn test():int {\n    return; // error: mismatched type\n    return 5;\n}"
+expression: "fn test()->int {\n    return; // error: mismatched type\n    return 5;\n}"
 ---
-[20; 26): `return;` in a function whose return type is not `()`
-[14; 69) '{     ...n 5; }': never
-[20; 26) 'return': never
-[58; 66) 'return 5': never
-[65; 66) '5': int
+[21; 27): `return;` in a function whose return type is not `()`
+[15; 70) '{     ...n 5; }': never
+[21; 27) 'return': never
+[59; 67) 'return 5': never
+[66; 67) '5': int

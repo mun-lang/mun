@@ -92,9 +92,9 @@ pub(super) fn fn_def(p: &mut Parser) {
 }
 
 fn opt_fn_ret_type(p: &mut Parser) -> bool {
-    if p.at(T![:]) {
+    if p.at(T![->]) {
         let m = p.start();
-        p.bump(T![:]);
+        p.bump(T![->]);
         types::type_(p);
         m.complete(p, RET_TYPE);
         true

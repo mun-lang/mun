@@ -48,6 +48,7 @@ Grammar(
         ["%=", "PERCENTEQ"],
         ["..=", "DOTDOTEQ"],
         ["::", "COLONCOLON"],
+        ["->", "MINUSGT"],
     ],
     keywords: [
         // Original Lua keywords
