@@ -9,6 +9,36 @@ use std::fmt::Write;
 use std::sync::Arc;
 
 #[test]
+fn infer_suffix_literals() {
+    infer_snapshot(
+        r"
+    fn main(){
+        123;
+        123u8;
+        123u16;
+        123u32;
+        123u64;
+        123uint;
+        1_000_000_u32;
+        123i8;
+        123i16;
+        123i32;
+        123i64;
+        123int;
+        1_000_000_i32;
+        1_000_123.0e-2;
+        1_000_123.0e-2f32;
+        1_000_123.0e-2f64;
+        1_000_123.0e-2float;
+    }
+
+    fn add(a:u32) -> u32 {
+        a + 12u32
+    }",
+    )
+}
+
+#[test]
 fn infer_invalid_struct_type() {
     infer_snapshot(
         r"

@@ -5,9 +5,9 @@ use crate::{
     CodeGenParams, IrDatabase,
 };
 use hir::{ApplicationTy, CallableDef, FloatBitness, FloatTy, IntBitness, IntTy, Ty, TypeCtor};
+use inkwell::targets::TargetData;
 use inkwell::types::{AnyTypeEnum, BasicType, BasicTypeEnum, FloatType, IntType, StructType};
 use inkwell::AddressSpace;
-use mun_target::spec::Target;
 
 /// Given a mun type, construct an LLVM IR type
 #[rustfmt::skip]
@@ -57,7 +57,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty, params: CodeGenParams) -> A
 /// Returns the LLVM IR type of the specified float type
 fn float_ty_query(db: &impl IrDatabase, fty: FloatTy) -> FloatType {
     let context = db.context();
-    match fty.resolve(&db.target()).bitness {
+    match fty.resolve(&db.target_data()).bitness {
         FloatBitness::X64 => context.f64_type(),
         FloatBitness::X32 => context.f32_type(),
         _ => unreachable!(),
@@ -67,7 +67,7 @@ fn float_ty_query(db: &impl IrDatabase, fty: FloatTy) -> FloatType {
 /// Returns the LLVM IR type of the specified int type
 fn int_ty_query(db: &impl IrDatabase, ity: IntTy) -> IntType {
     let context = db.context();
-    match ity.resolve(&db.target()).bitness {
+    match ity.resolve(&db.target_data()).bitness {
         IntBitness::X128 => context.i128_type(),
         IntBitness::X64 => context.i64_type(),
         IntBitness::X32 => context.i32_type(),
@@ -102,7 +102,7 @@ pub fn type_info_query(db: &impl IrDatabase, ty: Ty) -> TypeInfo {
                 let ir_ty = float_ty_query(db, ty);
                 let type_size = TypeSize::from_ir_type(&ir_ty, target.as_ref());
                 TypeInfo::new(
-                    format!("core::{}", ty.resolve(&db.target())),
+                    format!("core::{}", ty.resolve(&db.target_data())),
                     TypeGroup::FundamentalTypes,
                     type_size,
                 )
@@ -111,7 +111,7 @@ pub fn type_info_query(db: &impl IrDatabase, ty: Ty) -> TypeInfo {
                 let ir_ty = int_ty_query(db, ty);
                 let type_size = TypeSize::from_ir_type(&ir_ty, target.as_ref());
                 TypeInfo::new(
-                    format!("core::{}", ty.resolve(&db.target())),
+                    format!("core::{}", ty.resolve(&db.target_data())),
                     TypeGroup::FundamentalTypes,
                     type_size,
                 )
@@ -132,12 +132,12 @@ pub fn type_info_query(db: &impl IrDatabase, ty: Ty) -> TypeInfo {
     }
 }
 
-trait ResolveBitness {
-    fn resolve(&self, _target: &Target) -> Self;
+pub(crate) trait ResolveBitness {
+    fn resolve(&self, target: &TargetData) -> Self;
 }
 
 impl ResolveBitness for FloatTy {
-    fn resolve(&self, _target: &Target) -> Self {
+    fn resolve(&self, _target: &TargetData) -> Self {
         let bitness = match self.bitness {
             FloatBitness::Undefined => FloatBitness::X64,
             bitness => bitness,
@@ -147,10 +147,18 @@ impl ResolveBitness for FloatTy {
 }
 
 impl ResolveBitness for IntTy {
-    fn resolve(&self, _target: &Target) -> Self {
+    fn resolve(&self, target: &TargetData) -> Self {
+        let ptr_bit_size = target.ptr_sized_int_type(None).get_bit_width();
+        let bitness = match ptr_bit_size {
+            16 => IntBitness::X16,
+            32 => IntBitness::X32,
+            64 => IntBitness::X64,
+            128 => IntBitness::X128,
+            _ => unreachable!("unsupported bit size for pointers"),
+        };
         let bitness = match self.bitness {
             IntBitness::Undefined => IntBitness::X64,
-            IntBitness::Xsize => IntBitness::X64,
+            IntBitness::Xsize => bitness,
             bitness => bitness,
         };
         IntTy {

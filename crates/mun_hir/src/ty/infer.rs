@@ -22,6 +22,7 @@ use std::sync::Arc;
 mod place_expr;
 mod type_variable;
 
+use crate::expr::{LiteralFloatKind, LiteralIntKind};
 use crate::ty::primitives::{FloatTy, IntTy};
 pub use type_variable::TypeVarId;
 
@@ -322,8 +323,29 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             Expr::Literal(lit) => match lit {
                 Literal::String(_) => Ty::Unknown,
                 Literal::Bool(_) => Ty::simple(TypeCtor::Bool),
-                Literal::Int(_) => Ty::simple(TypeCtor::Int(IntTy::int())),
-                Literal::Float(_) => Ty::simple(TypeCtor::Float(FloatTy::float())),
+                Literal::Int(ty) => {
+                    // TODO: Add inferencing support
+                    let ty = if let LiteralIntKind::Suffixed(suffix) = ty.kind {
+                        IntTy {
+                            bitness: suffix.bitness,
+                            signedness: suffix.signedness,
+                        }
+                    } else {
+                        IntTy::int()
+                    };
+                    Ty::simple(TypeCtor::Int(ty))
+                }
+                Literal::Float(ty) => {
+                    // TODO: Add inferencing support
+                    let ty = if let LiteralFloatKind::Suffixed(suffix) = ty.kind {
+                        FloatTy {
+                            bitness: suffix.bitness,
+                        }
+                    } else {
+                        FloatTy::float()
+                    };
+                    Ty::simple(TypeCtor::Float(ty))
+                }
             },
             Expr::Return { expr } => {
                 if let Some(expr) = expr {

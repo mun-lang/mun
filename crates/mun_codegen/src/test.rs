@@ -42,6 +42,36 @@ fn issue_133() {
 }
 
 #[test]
+fn literal_types() {
+    test_snapshot_unoptimized(
+        r"
+    pub fn main(){
+        let a = 123;
+        let a = 123u8;
+        let a = 123u16;
+        let a = 123u32;
+        let a = 123u64;
+        let a = 123uint;
+        let a = 1_000_000_u32;
+        let a = 123i8;
+        let a = 123i16;
+        let a = 123i32;
+        let a = 123i64;
+        let a = 123int;
+        let a = 1_000_000_i32;
+        let a = 1_000_123.0e-2;
+        let a = 1_000_123.0e-2f32;
+        let a = 1_000_123.0e-2f64;
+        let a = 1_000_123.0e-2float;
+    }
+
+    pub fn add(a:u32) -> u32 {
+        a + 12u32
+    }",
+    )
+}
+
+#[test]
 fn function() {
     test_snapshot(
         r#"

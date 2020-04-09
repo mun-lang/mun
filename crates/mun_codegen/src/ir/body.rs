@@ -12,8 +12,9 @@ use inkwell::{
     values::{BasicValueEnum, CallSiteValue, FloatValue, FunctionValue, IntValue, StructValue},
     AddressSpace, FloatPredicate, IntPredicate,
 };
-use std::{collections::HashMap, mem, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
+use crate::ir::ty::ResolveBitness;
 use inkwell::basic_block::BasicBlock;
 use inkwell::values::{AggregateValueEnum, GlobalValue, PointerValue};
 
@@ -200,7 +201,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 let resolver = hir::resolver_for_expr(self.body.clone(), self.db, expr);
                 Some(self.gen_path_expr(p, expr, &resolver))
             }
-            Expr::Literal(lit) => Some(self.gen_literal(lit)),
+            Expr::Literal(lit) => Some(self.gen_literal(lit, expr)),
             Expr::RecordLit { fields, .. } => Some(self.gen_record_lit(expr, fields)),
             Expr::BinaryOp { lhs, rhs, op } => {
                 self.gen_binary_op(expr, *lhs, *rhs, op.expect("missing op"))
@@ -259,16 +260,50 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     }
 
     /// Generates an IR value that represents the given `Literal`.
-    fn gen_literal(&mut self, lit: &Literal) -> BasicValueEnum {
+    fn gen_literal(&mut self, lit: &Literal, expr: ExprId) -> BasicValueEnum {
         match lit {
-            Literal::Int(v) => self
-                .db
-                .context()
-                .i64_type()
-                .const_int(unsafe { mem::transmute::<i64, u64>(*v) }, true)
-                .into(),
+            Literal::Int(v) => {
+                let ty = match &self.infer[expr] {
+                    hir::Ty::Apply(hir::ApplicationTy {
+                        ctor: hir::TypeCtor::Int(int_ty),
+                        ..
+                    }) => int_ty,
+                    _ => unreachable!(
+                        "cannot construct an IR value for anything but an integral type"
+                    ),
+                };
 
-            Literal::Float(v) => self.db.context().f64_type().const_float(*v as f64).into(),
+                let context = self.db.context();
+                let has_sign = ty.signedness == hir::Signedness::Signed;
+                let ir_ty = match ty.resolve(&self.db.target_data()).bitness {
+                    hir::IntBitness::X8 => context.i8_type().const_int(v.value as u64, has_sign),
+                    hir::IntBitness::X16 => context.i16_type().const_int(v.value as u64, has_sign),
+                    hir::IntBitness::X32 => context.i32_type().const_int(v.value as u64, has_sign),
+                    hir::IntBitness::X64 => context.i64_type().const_int(v.value as u64, has_sign),
+                    _ => unreachable!("unresolved bitness in code generation"),
+                };
+
+                ir_ty.into()
+            }
+
+            Literal::Float(v) => {
+                let ty = match &self.infer[expr] {
+                    hir::Ty::Apply(hir::ApplicationTy {
+                        ctor: hir::TypeCtor::Float(float_ty),
+                        ..
+                    }) => float_ty,
+                    _ => unreachable!("cannot construct an IR value for anything but a float type"),
+                };
+
+                let context = self.db.context();
+                let ir_ty = match ty.resolve(&self.db.target_data()).bitness {
+                    hir::FloatBitness::X32 => context.f32_type().const_float(v.value),
+                    hir::FloatBitness::X64 => context.f64_type().const_float(v.value),
+                    _ => unreachable!("unresolved bitness in code generation"),
+                };
+
+                ir_ty.into()
+            }
 
             Literal::Bool(value) => {
                 let ty = self.db.context().bool_type();
