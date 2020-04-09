@@ -1,8 +1,8 @@
-fn nth(): int {
+fn nth() -> int {
     3
 }
 
-fn fibonacci(n:int):int {
+fn fibonacci(n:int) -> int {
     if n <= 1 {
         n
     } else {

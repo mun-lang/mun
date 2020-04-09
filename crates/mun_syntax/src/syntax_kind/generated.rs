@@ -53,6 +53,7 @@ pub enum SyntaxKind {
     PERCENTEQ,
     DOTDOTEQ,
     COLONCOLON,
+    THIN_ARROW,
     AND_KW,
     BREAK_KW,
     DO_KW,
@@ -172,6 +173,7 @@ macro_rules! T {
     (%=) => { $crate::SyntaxKind::PERCENTEQ };
     (..=) => { $crate::SyntaxKind::DOTDOTEQ };
     (::) => { $crate::SyntaxKind::COLONCOLON };
+    (->) => { $crate::SyntaxKind::THIN_ARROW };
     (and) => { $crate::SyntaxKind::AND_KW };
     (break) => { $crate::SyntaxKind::BREAK_KW };
     (do) => { $crate::SyntaxKind::DO_KW };
@@ -281,6 +283,7 @@ impl SyntaxKind {
                 | PERCENTEQ
                 | DOTDOTEQ
                 | COLONCOLON
+                | THIN_ARROW
                     => true,
                 _ => false
             }
@@ -334,6 +337,7 @@ impl SyntaxKind {
                 PERCENTEQ => &SyntaxInfo { name: "PERCENTEQ" },
                 DOTDOTEQ => &SyntaxInfo { name: "DOTDOTEQ" },
                 COLONCOLON => &SyntaxInfo { name: "COLONCOLON" },
+                THIN_ARROW => &SyntaxInfo { name: "THIN_ARROW" },
                 AND_KW => &SyntaxInfo { name: "AND_KW" },
                 BREAK_KW => &SyntaxInfo { name: "BREAK_KW" },
                 DO_KW => &SyntaxInfo { name: "DO_KW" },

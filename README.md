@@ -59,7 +59,7 @@ fn main() {
 }
 
 // The order of function definitions doesn't matter
-fn add(a: int, b: int): int {
+fn add(a: int, b: int) -> int {
     a + b
 }
 ```

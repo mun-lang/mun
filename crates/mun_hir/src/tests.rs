@@ -9,7 +9,7 @@ use std::sync::Arc;
 fn check_module_data_does_not_change() {
     let (mut db, file_id) = MockDatabase::with_single_file(
         r#"
-    fn foo():int {
+    fn foo()->int {
         1+1
     }
     "#,
@@ -29,7 +29,7 @@ fn check_module_data_does_not_change() {
         file_id,
         Arc::new(
             r#"
-    fn foo():int {
+    fn foo()->int {
         90
     }
     "#

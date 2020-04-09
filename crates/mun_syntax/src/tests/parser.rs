@@ -21,8 +21,8 @@ fn function() {
     fn a() {}
     fn b(value:number) {}
     pub fn d() {}
-    pub fn c():never {}
-    fn b(value:number):number {}"#,
+    pub fn c()->never {}
+    fn b(value:number)->number {}"#,
     );
 }
 

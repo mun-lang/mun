@@ -22,14 +22,14 @@ fn infer_invalid_struct_type() {
 fn infer_conditional_return() {
     infer_snapshot(
         r#"
-    fn foo(a:int):int {
+    fn foo(a:int)->int {
         if a > 4 {
             return 4;
         }
         a
     }
 
-    fn bar(a:int):int {
+    fn bar(a:int)->int {
         if a > 4 {
             return 4;
         } else {
@@ -44,7 +44,7 @@ fn infer_conditional_return() {
 fn infer_return() {
     infer_snapshot(
         r#"
-    fn test():int {
+    fn test()->int {
         return; // error: mismatched type
         return 5;
     }
@@ -56,7 +56,7 @@ fn infer_return() {
 fn infer_basics() {
     infer_snapshot(
         r#"
-    fn test(a:int, b:float, c:never, d:bool): bool {
+    fn test(a:int, b:float, c:never, d:bool) -> bool {
         a;
         b;
         c;
@@ -142,7 +142,7 @@ fn infer_loop() {
 fn infer_break() {
     infer_snapshot(
         r#"
-    fn foo():int {
+    fn foo()->int {
         break; // error: not in a loop
         loop { break 3; break 3.0; } // error: mismatched type
         let a:int = loop { break 3.0; } // error: mismatched type
@@ -264,9 +264,9 @@ fn struct_field_index() {
 fn primitives() {
     infer_snapshot(
         r#"
-    fn unsigned_primitives(a: u8, b: u16, c: u32, d: u64, e: usize, f: uint) : u8 { a }
-    fn signed_primitives(a: i8, b: i16, c: i32, d: i64, e: isize, f: int) : i8 { a }
-    fn float_primitives(a: f32, b: f64, c: float) : f32 { a }
+    fn unsigned_primitives(a: u8, b: u16, c: u32, d: u64, e: usize, f: uint) -> u8 { a }
+    fn signed_primitives(a: i8, b: i16, c: i32, d: i64, e: isize, f: int) -> i8 { a }
+    fn float_primitives(a: f32, b: f64, c: float) -> f32 { a }
     "#,
     )
 }
@@ -275,7 +275,7 @@ fn primitives() {
 fn extern_fn() {
     infer_snapshot(
         r#"
-    extern fn foo(a:int, b:int): int;
+    extern fn foo(a:int, b:int) -> int;
     fn main() {
         foo(3,4);
     }
@@ -284,7 +284,7 @@ fn extern_fn() {
 
     struct S;
     extern fn with_non_primitive(s:S);  // extern functions can only have primitives as parameters
-    extern fn with_non_primitive_return(): S;  // extern functions can only have primitives as parameters
+    extern fn with_non_primitive_return() -> S;  // extern functions can only have primitives as parameters
     "#,
     )
 }
