@@ -264,8 +264,8 @@ fn struct_field_index() {
 fn primitives() {
     infer_snapshot(
         r#"
-    fn unsigned_primitives(a: u8, b: u16, c: u32, d: u64, e: usize, f: uint) -> u8 { a }
-    fn signed_primitives(a: i8, b: i16, c: i32, d: i64, e: isize, f: int) -> i8 { a }
+    fn unsigned_primitives(a: u8, b: u16, c: u32, d: u64, e: u128, f: usize, g: uint) -> u8 { a }
+    fn signed_primitives(a: i8, b: i16, c: i32, d: i64, e: i128, f: isize, g: int) -> i8 { a }
     fn float_primitives(a: f32, b: f64, c: float) -> f32 { a }
     "#,
     )

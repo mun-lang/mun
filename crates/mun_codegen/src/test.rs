@@ -454,6 +454,7 @@ fn primitive_types() {
    fn less(a: u16, b: u16) -> bool { a<b }
    fn greater(a: u32, b: u32) -> bool { a>b }
    fn equal(a: u64, b: u64) -> bool { a==b }
+   fn nequal(a: u128, b: u128) -> bool { a!=b }
    fn greater_equal(a: usize, b: usize) -> bool { a>=b }
    fn less_equal(a: uint, b: uint) -> bool { a<=b }
 
@@ -461,6 +462,7 @@ fn primitive_types() {
    fn iless(a: i16, b: i16) -> bool { a<b }
    fn igreater(a: i32, b: i32) -> bool { a>b }
    fn iequal(a: i64, b: i64) -> bool { a==b }
+   fn inequal(a: i128, b: i128) -> bool { a!=b }
    fn igreater_equal(a: isize, b: isize) -> bool { a>=b }
    fn iless_equal(a: int, b: int) -> bool { a<=b }
     "#,

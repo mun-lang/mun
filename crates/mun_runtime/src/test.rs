@@ -668,22 +668,24 @@ fn test_primitive_types() {
         b:u16,
         c:u32,
         d:u64,
+        e:u128,
 
-        e:i8,
-        f:i16,
-        g:i32,
-        h:i64,
+        f:i8,
+        g:i16,
+        h:i32,
+        i:i64,
+        j:i128,
 
-        i:f32,
-        j:f64,
+        k:f32,
+        l:f64,
 
-        k: int,
-        l: uint,
-        m: float
+        m: int,
+        n: uint,
+        o: float
     }
 
-    pub fn new_primitives(a:u8, b:u16, c:u32, d:u64, e:i8, f:i16, g:i32, h:i64, i:f32, j:f64, k: int, l: uint, m: float) -> Primitives {
-        Primitives { a:a, b:b, c:c, d:d, e:e, f:f, g:g, h:h, i:i, j:j, k:k, l:l, m:m }
+    pub fn new_primitives(a:u8, b:u16, c:u32, d:u64, e:u128, f:i8, g:i16, h:i32, i:i64, j:i128, k:f32, l:f64, m: int, n: uint, o: float) -> Primitives {
+        Primitives { a:a, b:b, c:c, d:d, e:e, f:f, g:g, h:h, i:i, j:j, k:k, l:l, m:m, n:n, o:o }
     }
     "#,
     );
@@ -708,15 +710,17 @@ fn test_primitive_types() {
         2u16,
         3u32,
         4u64,
-        5i8,
-        6i16,
-        7i32,
-        8i64,
-        9.0f32,
-        10.0f64,
-        11isize,
-        12usize,
-        13.0f64
+        5u128,
+        6i8,
+        7i16,
+        8i32,
+        9i64,
+        10i128,
+        11.0f32,
+        12.0f64,
+        13isize,
+        14usize,
+        15.0f64
     )
     .unwrap();
 
@@ -724,15 +728,17 @@ fn test_primitive_types() {
     test_field(&mut foo, (2u16, 101u16), "b");
     test_field(&mut foo, (3u32, 102u32), "c");
     test_field(&mut foo, (4u64, 103u64), "d");
-    test_field(&mut foo, (5i8, 104i8), "e");
-    test_field(&mut foo, (6i16, 105i16), "f");
-    test_field(&mut foo, (7i32, 106i32), "g");
-    test_field(&mut foo, (8i64, 107i64), "h");
-    test_field(&mut foo, (9f32, 108f32), "i");
-    test_field(&mut foo, (10f64, 109f64), "j");
-    test_field(&mut foo, (11isize, 110isize), "k");
-    test_field(&mut foo, (12usize, 111usize), "l");
-    test_field(&mut foo, (13f64, 112f64), "m");
+    test_field(&mut foo, (5u128, 104u128), "e");
+    test_field(&mut foo, (6i8, 105i8), "f");
+    test_field(&mut foo, (7i16, 106i16), "g");
+    test_field(&mut foo, (8i32, 107i32), "h");
+    test_field(&mut foo, (9i64, 108i64), "i");
+    test_field(&mut foo, (10i128, 109i128), "j");
+    test_field(&mut foo, (11f32, 110f32), "k");
+    test_field(&mut foo, (12f64, 111f64), "l");
+    test_field(&mut foo, (13isize, 112isize), "m");
+    test_field(&mut foo, (14usize, 113usize), "n");
+    test_field(&mut foo, (15f64, 114f64), "o");
 }
 
 #[test]
