@@ -54,7 +54,7 @@ impl BuiltinType {
         (name![i16],   BuiltinType::Int(BuiltinInt::I16)),
         (name![i32],   BuiltinType::Int(BuiltinInt::I32)),
         (name![i64],   BuiltinType::Int(BuiltinInt::I64)),
-        (name![i128], BuiltinType::Int(BuiltinInt::I128)),
+        (name![i128],  BuiltinType::Int(BuiltinInt::I128)),
 
         (name![uint],  BuiltinType::Int(BuiltinInt::UINT)),
         (name![usize], BuiltinType::Int(BuiltinInt::USIZE)),
