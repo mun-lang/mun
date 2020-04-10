@@ -1,24 +1,26 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "fn main(){\n    let a = 123;\n    let a = 123u8;\n    let a = 123u16;\n    let a = 123u32;\n    let a = 123u64;\n    let a = 123uint;\n    let a = 1_000_000_u32;\n    let a = 123i8;\n    let a = 123i16;\n    let a = 123i32;\n    let a = 123i64;\n    let a = 123int;\n    let a = 1_000_000_i32;\n    let a = 1_000_123.0e-2;\n    let a = 1_000_123.0e-2f32;\n    let a = 1_000_123.0e-2f64;\n    let a = 1_000_123.0e-2float;\n}\n\nfn add(a:u32): u32 {\n    a + 12u32\n}"
+expression: "fn main(){\n    let a = 123;\n    let a = 123u8;\n    let a = 123u16;\n    let a = 123u32;\n    let a = 123u64;\n    let a = 123u128;\n    let a = 123uint;\n    let a = 1_000_000_u32;\n    let a = 123i8;\n    let a = 123i16;\n    let a = 123i32;\n    let a = 123i64;\n    let a = 123i128;\n    let a = 123int;\n    let a = 1_000_000_i32;\n    let a = 1_000_123.0e-2;\n    let a = 1_000_123.0e-2f32;\n    let a = 1_000_123.0e-2f64;\n    let a = 1_000_123.0e-2float;\n}\n\nfn add(a:u32) -> u32 {\n    a + 12u32\n}"
 ---
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
 
 define void @main() {
 body:
-  %a16 = alloca double
+  %a18 = alloca double
+  %a17 = alloca double
+  %a16 = alloca float
   %a15 = alloca double
-  %a14 = alloca float
-  %a13 = alloca double
-  %a12 = alloca i32
+  %a14 = alloca i32
+  %a13 = alloca i64
+  %a12 = alloca i128
   %a11 = alloca i64
-  %a10 = alloca i64
-  %a9 = alloca i32
-  %a8 = alloca i16
-  %a7 = alloca i8
-  %a6 = alloca i32
-  %a5 = alloca i64
+  %a10 = alloca i32
+  %a9 = alloca i16
+  %a8 = alloca i8
+  %a7 = alloca i32
+  %a6 = alloca i64
+  %a5 = alloca i128
   %a4 = alloca i64
   %a3 = alloca i32
   %a2 = alloca i16
@@ -29,18 +31,20 @@ body:
   store i16 123, i16* %a2
   store i32 123, i32* %a3
   store i64 123, i64* %a4
-  store i64 123, i64* %a5
-  store i32 1000000, i32* %a6
-  store i8 123, i8* %a7
-  store i16 123, i16* %a8
-  store i32 123, i32* %a9
-  store i64 123, i64* %a10
+  store i128 123, i128* %a5
+  store i64 123, i64* %a6
+  store i32 1000000, i32* %a7
+  store i8 123, i8* %a8
+  store i16 123, i16* %a9
+  store i32 123, i32* %a10
   store i64 123, i64* %a11
-  store i32 1000000, i32* %a12
-  store double 0x40C3889D70A3D70A, double* %a13
-  store float 0x40C3889D80000000, float* %a14
+  store i128 123, i128* %a12
+  store i64 123, i64* %a13
+  store i32 1000000, i32* %a14
   store double 0x40C3889D70A3D70A, double* %a15
-  store double 0x40C3889D70A3D70A, double* %a16
+  store float 0x40C3889D80000000, float* %a16
+  store double 0x40C3889D70A3D70A, double* %a17
+  store double 0x40C3889D70A3D70A, double* %a18
   ret void
 }
 

@@ -51,12 +51,14 @@ fn literal_types() {
         let a = 123u16;
         let a = 123u32;
         let a = 123u64;
+        let a = 123u128;
         let a = 123uint;
         let a = 1_000_000_u32;
         let a = 123i8;
         let a = 123i16;
         let a = 123i32;
         let a = 123i64;
+        let a = 123123123123123123123123123123123i128;
         let a = 123int;
         let a = 1_000_000_i32;
         let a = 1_000_123.0e-2;

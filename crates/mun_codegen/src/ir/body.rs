@@ -274,12 +274,16 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 };
 
                 let context = self.db.context();
-                let has_sign = ty.signedness == hir::Signedness::Signed;
                 let ir_ty = match ty.resolve(&self.db.target_data()).bitness {
-                    hir::IntBitness::X8 => context.i8_type().const_int(v.value as u64, has_sign),
-                    hir::IntBitness::X16 => context.i16_type().const_int(v.value as u64, has_sign),
-                    hir::IntBitness::X32 => context.i32_type().const_int(v.value as u64, has_sign),
-                    hir::IntBitness::X64 => context.i64_type().const_int(v.value as u64, has_sign),
+                    hir::IntBitness::X8 => context.i8_type().const_int(v.value as u64, false),
+                    hir::IntBitness::X16 => context.i16_type().const_int(v.value as u64, false),
+                    hir::IntBitness::X32 => context.i32_type().const_int(v.value as u64, false),
+                    hir::IntBitness::X64 => context.i64_type().const_int(v.value as u64, false),
+                    hir::IntBitness::X128 => {
+                        context.i128_type().const_int_arbitrary_precision(&unsafe {
+                            std::mem::transmute::<u128, [u64; 2]>(v.value)
+                        })
+                    }
                     _ => unreachable!("unresolved bitness in code generation"),
                 };
 

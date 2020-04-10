@@ -1142,6 +1142,17 @@ mod test {
         );
 
         assert_eq!(
+            integer_lit("1234", Some("i128")),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Suffixed(BuiltinInt::I128),
+                    value: 1234
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
             integer_lit("1234", Some("isize")),
             (
                 Literal::Int(LiteralInt {
@@ -1201,6 +1212,17 @@ mod test {
             (
                 Literal::Int(LiteralInt {
                     kind: LiteralIntKind::Suffixed(BuiltinInt::U64),
+                    value: 1234
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            integer_lit("1234", Some("u128")),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Suffixed(BuiltinInt::U128),
                     value: 1234
                 }),
                 vec![]
