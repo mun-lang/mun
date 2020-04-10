@@ -1,4 +1,5 @@
 use super::ir::IsIrType;
+use crate::IrDatabase;
 use abi::Guid;
 use inkwell::context::Context;
 use inkwell::targets::TargetData;
@@ -79,13 +80,45 @@ impl PartialOrd for TypeInfo {
 }
 
 impl TypeInfo {
-    pub fn new<S: AsRef<str>>(name: S, group: TypeGroup, type_size: TypeSize) -> TypeInfo {
+    pub fn new_fundamental<S: AsRef<str>>(name: S, type_size: TypeSize) -> TypeInfo {
         TypeInfo {
             name: name.as_ref().to_string(),
             guid: Guid {
                 b: md5::compute(name.as_ref()).0,
             },
-            group,
+            group: TypeGroup::FundamentalTypes,
+            size: type_size,
+        }
+    }
+
+    pub fn new_struct<D: IrDatabase>(db: &D, s: hir::Struct, type_size: TypeSize) -> TypeInfo {
+        let name = s.name(db).to_string();
+        let guid_string = {
+            let fields: Vec<String> = s
+                .fields(db)
+                .into_iter()
+                .map(|f| {
+                    let ty_string = f
+                        .ty(db)
+                        .name_to_string(db)
+                        .expect("type should be convertible to a string");
+                    format!("{}: {}", f.name(db).to_string(), ty_string)
+                })
+                .collect();
+
+            // TODO: struct(value) vs struct(gc)
+            format!(
+                "struct {name}{{{fields}}}",
+                name = &name,
+                fields = fields.join(",")
+            )
+        };
+        Self {
+            guid: Guid {
+                b: md5::compute(&guid_string).0,
+            },
+            name,
+            group: TypeGroup::StructTypes(s),
             size: type_size,
         }
     }
@@ -127,9 +160,8 @@ macro_rules! impl_fundamental_static_type_info {
             impl HasStaticTypeInfo for $ty {
                 fn type_info(context: &Context, target: &TargetData) -> TypeInfo {
                     let ty = <$ty as IsIrType>::ir_type(context, target);
-                    TypeInfo::new(
+                    TypeInfo::new_fundamental(
                         format!("core::{}", stringify!($ty)),
-                        TypeGroup::FundamentalTypes,
                         TypeSize::from_ir_type(&ty, target)
                     )
                 }
@@ -145,9 +177,8 @@ impl_fundamental_static_type_info!(
 impl<T: HasStaticTypeName> HasStaticTypeInfo for *mut T {
     fn type_info(context: &Context, target: &TargetData) -> TypeInfo {
         let ty = target.ptr_sized_int_type(None);
-        TypeInfo::new(
+        TypeInfo::new_fundamental(
             format!("*mut {}", T::type_name(context, target)),
-            TypeGroup::FundamentalTypes,
             TypeSize::from_ir_type(&ty, target),
         )
     }
@@ -159,9 +190,8 @@ impl<T: HasStaticTypeName> HasStaticTypeInfo for *const T {
         target: &inkwell::targets::TargetData,
     ) -> TypeInfo {
         let ty = target.ptr_sized_int_type(None);
-        TypeInfo::new(
+        TypeInfo::new_fundamental(
             format!("*const {}", T::type_name(context, target)),
-            TypeGroup::FundamentalTypes,
             TypeSize::from_ir_type(&ty, target),
         )
     }

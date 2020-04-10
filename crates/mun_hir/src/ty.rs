@@ -138,6 +138,19 @@ impl Ty {
             _ => None,
         }
     }
+
+    /// Returns the type's name as a string, if one exists.
+    ///
+    /// This name needs to be unique as it is used to generate a type's `Guid`.
+    pub fn name_to_string(&self, db: &impl HirDatabase) -> Option<String> {
+        self.as_simple().and_then(|ty_ctor| match ty_ctor {
+            TypeCtor::Struct(s) => Some(format!("struct {}", s.name(db).to_string())),
+            TypeCtor::Bool => Some("core::bool".to_string()),
+            TypeCtor::Float(ty) => Some(format!("core::{}", ty.as_str())),
+            TypeCtor::Int(ty) => Some(format!("core::{}", ty.as_str())),
+            _ => None,
+        })
+    }
 }
 
 /// A list of substitutions for generic parameters.

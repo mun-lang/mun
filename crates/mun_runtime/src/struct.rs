@@ -176,9 +176,8 @@ impl ArgumentReflection for StructRef {
     type Marshalled = RawStruct;
 
     fn type_guid(&self, runtime: &Runtime) -> abi::Guid {
-        abi::Guid {
-            b: md5::compute(self.type_name(runtime)).0,
-        }
+        let type_info = unsafe { &*runtime.gc().ptr_type(self.handle.handle()).inner() };
+        type_info.guid
     }
 
     fn type_name(&self, runtime: &Runtime) -> &str {

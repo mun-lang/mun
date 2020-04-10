@@ -18,7 +18,7 @@ impl fmt::Debug for IntTy {
 
 impl fmt::Display for IntTy {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.ty_to_string())
+        write!(f, "{}", self.as_str())
     }
 }
 
@@ -114,7 +114,7 @@ impl IntTy {
         }
     }
 
-    pub fn ty_to_string(self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match (self.signedness, self.bitness) {
             (Signedness::Signed, IntBitness::Undefined) => "int",
             (Signedness::Signed, IntBitness::Xsize) => "isize",
@@ -181,7 +181,7 @@ impl fmt::Debug for FloatTy {
 
 impl fmt::Display for FloatTy {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.ty_to_string())
+        write!(f, "{}", self.as_str())
     }
 }
 
@@ -204,7 +204,7 @@ impl FloatTy {
         }
     }
 
-    pub fn ty_to_string(self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match self.bitness {
             FloatBitness::X32 => "f32",
             FloatBitness::X64 => "f64",
