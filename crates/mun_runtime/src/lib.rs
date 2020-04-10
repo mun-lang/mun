@@ -16,9 +16,6 @@ mod reflection;
 mod static_type_map;
 mod r#struct;
 
-#[cfg(test)]
-mod test;
-
 use std::collections::HashMap;
 use std::ffi;
 use std::io;
@@ -31,12 +28,14 @@ use failure::Error;
 use function::FunctionInfoStorage;
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
-pub use crate::marshal::Marshal;
-pub use crate::reflection::{ArgumentReflection, ReturnTypeReflection};
+pub use crate::{
+    assembly::Assembly,
+    function::IntoFunctionInfo,
+    marshal::Marshal,
+    r#struct::StructRef,
+    reflection::{ArgumentReflection, ReturnTypeReflection},
+};
 
-pub use crate::assembly::Assembly;
-use crate::function::IntoFunctionInfo;
-pub use crate::r#struct::StructRef;
 use garbage_collector::GarbageCollector;
 use gc::GcRuntime;
 use rustc_hash::FxHashMap;
