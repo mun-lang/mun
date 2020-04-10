@@ -138,7 +138,9 @@ macro_rules! impl_fundamental_static_type_info {
     }
 }
 
-impl_fundamental_static_type_info!(u8, u16, u32, u64, i8, i16, i32, i64, f32, f64, bool);
+impl_fundamental_static_type_info!(
+    u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, bool
+);
 
 impl<T: HasStaticTypeName> HasStaticTypeInfo for *mut T {
     fn type_info(context: &Context, target: &TargetData) -> TypeInfo {

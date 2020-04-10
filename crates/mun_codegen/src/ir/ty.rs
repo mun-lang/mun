@@ -68,6 +68,7 @@ fn float_ty_query(db: &impl IrDatabase, fty: FloatTy) -> FloatType {
 fn int_ty_query(db: &impl IrDatabase, ity: IntTy) -> IntType {
     let context = db.context();
     match ity.resolve(&db.target()).bitness {
+        IntBitness::X128 => context.i128_type(),
         IntBitness::X64 => context.i64_type(),
         IntBitness::X32 => context.i32_type(),
         IntBitness::X16 => context.i16_type(),

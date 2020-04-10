@@ -62,6 +62,13 @@ impl IntTy {
         }
     }
 
+    pub fn i128() -> IntTy {
+        IntTy {
+            signedness: Signedness::Signed,
+            bitness: IntBitness::X128,
+        }
+    }
+
     pub fn usize() -> IntTy {
         IntTy {
             signedness: Signedness::Unsigned,
@@ -97,6 +104,13 @@ impl IntTy {
         }
     }
 
+    pub fn u128() -> IntTy {
+        IntTy {
+            signedness: Signedness::Unsigned,
+            bitness: IntBitness::X128,
+        }
+    }
+
     pub fn ty_to_string(self) -> &'static str {
         match (self.signedness, self.bitness) {
             (Signedness::Signed, IntBitness::Undefined) => "int",
@@ -105,12 +119,14 @@ impl IntTy {
             (Signedness::Signed, IntBitness::X16) => "i16",
             (Signedness::Signed, IntBitness::X32) => "i32",
             (Signedness::Signed, IntBitness::X64) => "i64",
+            (Signedness::Signed, IntBitness::X128) => "i128",
             (Signedness::Unsigned, IntBitness::Undefined) => "uint",
             (Signedness::Unsigned, IntBitness::Xsize) => "usize",
             (Signedness::Unsigned, IntBitness::X8) => "u8",
             (Signedness::Unsigned, IntBitness::X16) => "u16",
             (Signedness::Unsigned, IntBitness::X32) => "u32",
             (Signedness::Unsigned, IntBitness::X64) => "u64",
+            (Signedness::Unsigned, IntBitness::X128) => "u128",
         }
     }
 }

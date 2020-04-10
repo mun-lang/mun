@@ -223,4 +223,9 @@ macro_rules! invoke_fn {
             &$Runtime, $FnName, $A, $B, $C, $D, $E, $F, $G, $H, $I, $J, $K, $L, $M, $N,
         )
     };
+    ($Runtime:expr, $FnName:expr, $A:expr, $B:expr, $C:expr, $D:expr, $E:expr, $F:expr, $G:expr, $H:expr, $I:expr, $J:expr, $K:expr, $L:expr, $M:expr, $N:expr, $O:expr) => {
+        $crate::Runtime::invoke_fn15(
+            &$Runtime, $FnName, $A, $B, $C, $D, $E, $F, $G, $H, $I, $J, $K, $L, $M, $N, $O,
+        )
+    };
 }

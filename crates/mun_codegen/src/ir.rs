@@ -156,11 +156,13 @@ impl_fundamental_ir_types!(
     i16 => i16_type():IntType,
     i32 => i32_type():IntType,
     i64 => i64_type():IntType,
+    i128 => i128_type():IntType,
 
     u8 => i8_type():IntType,
     u16 => i16_type():IntType,
     u32 => i32_type():IntType,
     u64 => i64_type():IntType,
+    u128 => i128_type():IntType,
 
     bool => bool_type():IntType,
 
