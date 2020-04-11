@@ -775,3 +775,19 @@ fn gc_trace() {
     assert_eq!(driver.runtime_mut().borrow().gc_collect(), true);
     assert_eq!(driver.runtime_mut().borrow().gc_stats().allocated_memory, 0);
 }
+
+#[test]
+fn can_add_external_without_return() {
+    extern "C" fn foo(a: i64) {
+        println!("{}", a);
+    }
+
+    let mut driver = TestDriver::new(
+        r#"
+    extern fn foo(a: int,);
+    pub fn main(){ foo(3); }
+    "#,
+    )
+    .insert_fn("foo", foo as extern "C" fn(i64) -> ());
+    let _: () = invoke_fn!(driver.runtime_mut(), "main").unwrap();
+}
