@@ -3,23 +3,23 @@ use std::env;
 use std::process::Command;
 
 #[derive(Debug, Clone, Copy)]
-pub enum Color {
+pub enum DisplayColor {
     Disable,
     Auto,
     Enable,
 }
 
-impl Color {
+impl DisplayColor {
     pub(crate) fn should_enable(self) -> bool {
         match self {
-            Color::Disable => false,
-            Color::Auto => terminal_support_ansi(),
-            Color::Enable => true,
+            DisplayColor::Disable => false,
+            DisplayColor::Auto => terminal_support_ansi(),
+            DisplayColor::Enable => true,
         }
     }
 }
 
-/// Decides whether the current terminal supports ANSI escape codes basing on environment variable and user system.
+/// Decides whether the current terminal supports ANSI escape codes based on the `term` environment variable and the operating system.
 fn terminal_support_ansi() -> bool {
     match env::var("term") {
         Ok(terminal) => match terminal.as_str() {
@@ -28,7 +28,7 @@ fn terminal_support_ansi() -> bool {
         },
         Err(_) => {
             #[cfg(target_os = "windows")]
-            return windows_version_support_ansi();
+            return cmd_supports_ansi();
             #[cfg(not(target_os = "windows"))]
             return false;
         }
@@ -36,8 +36,8 @@ fn terminal_support_ansi() -> bool {
 }
 
 #[cfg(target_os = "windows")]
-/// Basing on the user version of Windows determines whether the Windows standart terminal support ANSI escape codes.
-fn windows_version_support_ansi() -> bool {
+/// Determines whether the 'cmd' supports ANSI escape codes, based on the user's version of Windows.
+fn cmd_supports_ansi() -> bool {
     // Run `ver` program to find out Windows version
     Command::new("cmd")
         .args(&["/C", "ver"])
@@ -63,7 +63,7 @@ fn windows_version_support_ansi() -> bool {
                     });
 
                 if let Some((Ok(major), Ok(minor), Ok(patch))) = windows_version {
-                    // From Windows 10.0.10586 version and higher ANSI escape codes works in cmd
+                    // From Windows 10.0.10586 version and higher ANSI escape codes work in `cmd`
                     let windows_support_ansi = major >= 10 && (patch >= 10586 || minor > 0);
                     if windows_support_ansi {
                         let _ = ansi_term::enable_ansi_support();

@@ -148,20 +148,20 @@ impl ast::StructDef {
         StructKind::from_node(self)
     }
     pub fn signature_range(&self) -> TextRange {
-        let sruct_kw = self
+        let struct_kw = self
             .syntax()
             .children_with_tokens()
             .find(|p| p.kind() == T![struct])
             .map(|kw| kw.text_range());
         let name = self.name().map(|n| n.syntax.text_range());
 
-        let start = sruct_kw
+        let start = struct_kw
             .map(|kw| kw.start())
             .unwrap_or_else(|| self.syntax.text_range().start());
 
         let end = name
             .map(|name| name.end())
-            .or_else(|| sruct_kw.map(|kw| kw.end()))
+            .or_else(|| struct_kw.map(|kw| kw.end()))
             .unwrap_or_else(|| self.syntax().text_range().end());
 
         TextRange::from_to(start, end)

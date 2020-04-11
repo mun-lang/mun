@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use mun_hir::line_index::LineIndex;
 
-use crate::annotate_snippets_builders::{AnnotationBuilder, SliceBuilder, SnippetBuilder};
+use crate::annotate::{AnnotationBuilder, SliceBuilder, SnippetBuilder};
 
 use annotate_snippets::snippet::{AnnotationType, Snippet};
 
@@ -41,27 +41,26 @@ pub(crate) fn syntax_error(
     _: &Parse<SourceFile>,
     relative_file_path: &str,
     source_code: &str,
-    source_code_len: usize,
     line_index: &Arc<LineIndex>,
 ) -> Snippet {
     let mut snippet = SnippetBuilder::new()
         .title(
             AnnotationBuilder::new(AnnotationType::Error)
-                .label("syntax error".to_string())
+                .label("syntax error")
                 .build(),
         )
         .slice(
             SliceBuilder::new(true)
-                .origin(relative_file_path.to_string())
+                .origin(relative_file_path)
                 .source_annotation(
                     (
                         syntax_error.location().offset().to_usize(),
                         syntax_error.location().end_offset().to_usize(),
                     ),
-                    syntax_error.to_string(),
+                    &syntax_error.to_string(),
                     AnnotationType::Error,
                 )
-                .build(&source_code, source_code_len, &line_index),
+                .build(&source_code, &line_index),
         )
         .build();
     // Add one to right range to make highlighting range here visible on output
@@ -76,24 +75,23 @@ pub(crate) fn generic_error(
     _: &Parse<SourceFile>,
     relative_file_path: &str,
     source_code: &str,
-    source_code_len: usize,
     line_index: &Arc<LineIndex>,
 ) -> Snippet {
     SnippetBuilder::new()
         .title(
             AnnotationBuilder::new(AnnotationType::Error)
-                .label(diagnostic.message())
+                .label(&diagnostic.message())
                 .build(),
         )
         .slice(
             SliceBuilder::new(true)
-                .origin(relative_file_path.to_string())
+                .origin(relative_file_path)
                 .source_annotation(
                     text_range_to_tuple(diagnostic.highlight_range()),
-                    diagnostic.message(),
+                    &diagnostic.message(),
                     AnnotationType::Error,
                 )
-                .build(&source_code, source_code_len, &line_index),
+                .build(&source_code, &line_index),
         )
         .build()
 }
@@ -104,7 +102,6 @@ pub(crate) fn unresolved_value_error(
     parse: &Parse<SourceFile>,
     relative_file_path: &str,
     source_code: &str,
-    source_code_len: usize,
     line_index: &Arc<LineIndex>,
 ) -> Snippet {
     let unresolved_value = diagnostic
@@ -116,7 +113,7 @@ pub(crate) fn unresolved_value_error(
     SnippetBuilder::new()
         .title(
             AnnotationBuilder::new(AnnotationType::Error)
-                .label(format!(
+                .label(&format!(
                     "cannot find value `{}` in this scope",
                     unresolved_value
                 ))
@@ -124,13 +121,13 @@ pub(crate) fn unresolved_value_error(
         )
         .slice(
             SliceBuilder::new(true)
-                .origin(relative_file_path.to_string())
+                .origin(relative_file_path)
                 .source_annotation(
                     text_range_to_tuple(diagnostic.highlight_range()),
-                    "not found in this scope".to_string(),
+                    "not found in this scope",
                     AnnotationType::Error,
                 )
-                .build(&source_code, source_code_len, &line_index),
+                .build(&source_code, &line_index),
         )
         .build()
 }
@@ -141,7 +138,6 @@ pub(crate) fn unresolved_type_error(
     parse: &Parse<SourceFile>,
     relative_file_path: &str,
     source_code: &str,
-    source_code_len: usize,
     line_index: &Arc<LineIndex>,
 ) -> Snippet {
     let unresolved_type = diagnostic
@@ -154,7 +150,7 @@ pub(crate) fn unresolved_type_error(
     SnippetBuilder::new()
         .title(
             AnnotationBuilder::new(AnnotationType::Error)
-                .label(format!(
+                .label(&format!(
                     "cannot find type `{}` in this scope",
                     unresolved_type
                 ))
@@ -162,13 +158,13 @@ pub(crate) fn unresolved_type_error(
         )
         .slice(
             SliceBuilder::new(true)
-                .origin(relative_file_path.to_string())
+                .origin(relative_file_path)
                 .source_annotation(
                     text_range_to_tuple(diagnostic.highlight_range()),
-                    "not found in this scope".to_string(),
+                    "not found in this scope",
                     AnnotationType::Error,
                 )
-                .build(&source_code, source_code_len, &line_index),
+                .build(&source_code, &line_index),
         )
         .build()
 }
@@ -179,27 +175,26 @@ pub(crate) fn expected_function_error(
     _: &Parse<SourceFile>,
     relative_file_path: &str,
     source_code: &str,
-    source_code_len: usize,
     line_index: &Arc<LineIndex>,
 ) -> Snippet {
     SnippetBuilder::new()
         .title(
             AnnotationBuilder::new(AnnotationType::Error)
-                .label(diagnostic.message())
+                .label(&diagnostic.message())
                 .build(),
         )
         .slice(
             SliceBuilder::new(true)
-                .origin(relative_file_path.to_string())
+                .origin(relative_file_path)
                 .source_annotation(
                     text_range_to_tuple(diagnostic.highlight_range()),
-                    format!(
+                    &format!(
                         "expected function, found `{}`",
                         diagnostic.found.display(hir_database)
                     ),
                     AnnotationType::Error,
                 )
-                .build(&source_code, source_code_len, &line_index),
+                .build(&source_code, &line_index),
         )
         .build()
 }
@@ -210,28 +205,27 @@ pub(crate) fn mismatched_type_error(
     _: &Parse<SourceFile>,
     relative_file_path: &str,
     source_code: &str,
-    source_code_len: usize,
     line_index: &Arc<LineIndex>,
 ) -> Snippet {
     SnippetBuilder::new()
         .title(
             AnnotationBuilder::new(AnnotationType::Error)
-                .label(diagnostic.message())
+                .label(&diagnostic.message())
                 .build(),
         )
         .slice(
             SliceBuilder::new(true)
-                .origin(relative_file_path.to_string())
+                .origin(relative_file_path)
                 .source_annotation(
                     text_range_to_tuple(diagnostic.highlight_range()),
-                    format!(
+                    &format!(
                         "expected `{}`, found `{}`",
                         diagnostic.expected.display(hir_database),
                         diagnostic.found.display(hir_database)
                     ),
                     AnnotationType::Error,
                 )
-                .build(&source_code, source_code_len, &line_index),
+                .build(&source_code, &line_index),
         )
         .build()
 }
@@ -242,7 +236,6 @@ pub(crate) fn duplicate_definition_error(
     parse: &Parse<SourceFile>,
     relative_file_path: &str,
     source_code: &str,
-    source_code_len: usize,
     line_index: &Arc<LineIndex>,
 ) -> Snippet {
     let first_definition_location = syntax_node_ptr_location(diagnostic.first_definition, &parse);
@@ -260,16 +253,16 @@ pub(crate) fn duplicate_definition_error(
     SnippetBuilder::new()
         .title(
             AnnotationBuilder::new(AnnotationType::Error)
-                .label(diagnostic.message())
+                .label(&diagnostic.message())
                 .build(),
         )
         .slice(
             SliceBuilder::new(true)
-                .origin(relative_file_path.to_string())
+                .origin(relative_file_path)
                 // First definition
                 .source_annotation(
                     text_range_to_tuple(first_definition_location),
-                    format!(
+                    &format!(
                         "previous definition of the {} `{}` here",
                         duplication_object_type, diagnostic.name
                     ),
@@ -278,14 +271,14 @@ pub(crate) fn duplicate_definition_error(
                 // Second definition
                 .source_annotation(
                     text_range_to_tuple(definition_location),
-                    format!("`{}` redefined here", diagnostic.name),
+                    &format!("`{}` redefined here", diagnostic.name),
                     AnnotationType::Error,
                 )
-                .build(&source_code, source_code_len, &line_index),
+                .build(&source_code, &line_index),
         )
         .footer(
             AnnotationBuilder::new(AnnotationType::Note)
-                .label(format!(
+                .label(&format!(
                     "`{}` must be defined only once in the {} namespace of this module",
                     diagnostic.name, duplication_object_type
                 ))
@@ -300,7 +293,6 @@ pub(crate) fn possibly_uninitialized_variable_error(
     parse: &Parse<SourceFile>,
     relative_file_path: &str,
     source_code: &str,
-    source_code_len: usize,
     line_index: &Arc<LineIndex>,
 ) -> Snippet {
     let variable_name = diagnostic.pat.to_node(&parse.syntax_node()).text();
@@ -308,18 +300,18 @@ pub(crate) fn possibly_uninitialized_variable_error(
     SnippetBuilder::new()
         .title(
             AnnotationBuilder::new(AnnotationType::Error)
-                .label(format!("{}: `{}`", diagnostic.message(), variable_name))
+                .label(&format!("{}: `{}`", diagnostic.message(), variable_name))
                 .build(),
         )
         .slice(
             SliceBuilder::new(true)
-                .origin(relative_file_path.to_string())
+                .origin(relative_file_path)
                 .source_annotation(
                     text_range_to_tuple(diagnostic.highlight_range()),
-                    format!("use of possibly-uninitialized `{}`", variable_name),
+                    &format!("use of possibly-uninitialized `{}`", variable_name),
                     AnnotationType::Error,
                 )
-                .build(&source_code, source_code_len, &line_index),
+                .build(&source_code, &line_index),
         )
         .build()
 }
@@ -330,7 +322,6 @@ pub(crate) fn access_unknown_field_error(
     parse: &Parse<SourceFile>,
     relative_file_path: &str,
     source_code: &str,
-    source_code_len: usize,
     line_index: &Arc<LineIndex>,
 ) -> Snippet {
     let location = ast::FieldExpr::cast(diagnostic.expr.to_node(&parse.syntax_node()))
@@ -340,7 +331,7 @@ pub(crate) fn access_unknown_field_error(
     SnippetBuilder::new()
         .title(
             AnnotationBuilder::new(AnnotationType::Error)
-                .label(format!(
+                .label(&format!(
                     "no field `{}` on type `{}`",
                     diagnostic.name,
                     diagnostic.receiver_ty.display(hir_database),
@@ -349,13 +340,13 @@ pub(crate) fn access_unknown_field_error(
         )
         .slice(
             SliceBuilder::new(true)
-                .origin(relative_file_path.to_string())
+                .origin(relative_file_path)
                 .source_annotation(
                     text_range_to_tuple(location),
-                    "unknown field".to_string(),
+                    "unknown field",
                     AnnotationType::Error,
                 )
-                .build(&source_code, source_code_len, &line_index),
+                .build(&source_code, &line_index),
         )
         .build()
 }

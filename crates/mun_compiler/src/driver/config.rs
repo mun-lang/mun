@@ -1,4 +1,4 @@
-use crate::Color;
+use crate::DisplayColor;
 pub use mun_codegen::OptimizationLevel;
 use mun_target::spec::Target;
 use std::path::PathBuf;
@@ -17,7 +17,7 @@ pub struct Config {
     pub out_dir: Option<PathBuf>,
 
     /// Whether or not to use colors in terminal output
-    pub color: Color,
+    pub display_color: DisplayColor,
 }
 
 impl Default for Config {
@@ -29,7 +29,7 @@ impl Default for Config {
             target: target.unwrap(),
             optimization_lvl: OptimizationLevel::Default,
             out_dir: None,
-            color: Color::Auto,
+            display_color: DisplayColor::Auto,
         }
     }
 }

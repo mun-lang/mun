@@ -7,11 +7,11 @@ use mun_hir::{FileId, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId}
 
 use std::{path::PathBuf, sync::Arc};
 
-mod color;
 mod config;
+mod display_color;
 
-pub use self::color::Color;
 pub use self::config::Config;
+pub use self::display_color::DisplayColor;
 
 use annotate_snippets::{
     display_list::DisplayList,
@@ -25,7 +25,7 @@ pub const WORKSPACE: SourceRootId = SourceRootId(0);
 pub struct Driver {
     db: CompilerDatabase,
     out_dir: Option<PathBuf>,
-    color_option: Color,
+    display_color: DisplayColor,
 }
 
 impl Driver {
@@ -34,7 +34,7 @@ impl Driver {
         let mut driver = Driver {
             db: CompilerDatabase::new(),
             out_dir: None,
-            color_option: config.color,
+            display_color: config.display_color,
         };
 
         // Move relevant configuration into the database
@@ -114,19 +114,15 @@ impl Driver {
         writer: &mut dyn std::io::Write,
     ) -> Result<bool, failure::Error> {
         let mut has_errors = false;
-        let dlf = DisplayListFormatter::new(self.color_option.should_enable(), false);
+        let dlf = DisplayListFormatter::new(self.display_color.should_enable(), false);
         for file_id in self.db.source_root(WORKSPACE).files() {
             let diags = diagnostics(&self.db, file_id);
             for diagnostic in diags {
                 let dl = DisplayList::from(diagnostic.clone());
                 writeln!(writer, "{}", dlf.format(&dl)).unwrap();
                 if let Some(annotation) = diagnostic.title {
-                    #[allow(clippy::single_match)]
-                    match annotation.annotation_type {
-                        AnnotationType::Error => {
-                            has_errors = true;
-                        }
-                        _ => {}
+                    if let AnnotationType::Error = annotation.annotation_type {
+                        has_errors = true;
                     }
                 }
             }

@@ -38,7 +38,7 @@ impl LineIndex {
         }
     }
 
-    /// Get part of text between two lines
+    /// Retrieves the text between `first_line` and `last_line`, if any.
     pub fn text_part<'a>(
         &self,
         first_line: u32,
@@ -55,7 +55,7 @@ impl LineIndex {
         Some(&text[start_of_part..end_of_part])
     }
 
-    /// Get offset to specific line
+    /// Retrieves the offset to the line corresponding to `line_index`.
     #[inline]
     pub fn line_offset(&self, line_index: u32) -> usize {
         self.newlines[line_index as usize].to_usize()

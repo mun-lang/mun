@@ -1,4 +1,4 @@
-//! This file contains a helpful builders for structs from [`annotate-snippets`] crate.
+//! This module provides builders for integrating the [`annotate-snippets`] crate with Mun.
 //!
 //! [`annotate-snippets`]: https://docs.rs/annotate-snippets/0.6.1/annotate_snippets/
 
@@ -61,35 +61,30 @@ impl SliceBuilder {
         }
     }
 
-    pub fn origin(mut self, relative_file_path: String) -> SliceBuilder {
-        self.slice.origin = Some(relative_file_path);
+    pub fn origin(mut self, relative_file_path: &str) -> SliceBuilder {
+        self.slice.origin = Some(relative_file_path.to_string());
         self
     }
 
     pub fn source_annotation(
         mut self,
         range: (usize, usize),
-        label: String,
+        label: &str,
         source_annotation_type: AnnotationType,
     ) -> SliceBuilder {
         self.slice.annotations.push(SourceAnnotation {
             range,
-            label,
+            label: label.to_string(),
             annotation_type: source_annotation_type,
         });
         self
     }
 
-    pub fn build(
-        mut self,
-        source_text: &str,
-        source_text_len: usize,
-        line_index: &LineIndex,
-    ) -> Slice {
-        // Variable for storing first and last line of the needed source code part
+    pub fn build(mut self, source_text: &str, line_index: &LineIndex) -> Slice {
+        // Variable for storing the first and last line of the used source code
         let mut fl_lines: Option<(u32, u32)> = None;
 
-        // Finding borders of source code part that include all highlight ranges
+        // Find the range of lines that include all highlighted segments
         for annotation in &self.slice.annotations {
             if let Some(range) = fl_lines {
                 fl_lines = Some((
@@ -114,33 +109,26 @@ impl SliceBuilder {
             self.slice.line_start = fl_lines.0 as usize + 1;
             let first_line_offset = line_index.line_offset(fl_lines.0);
 
-            // Cutting needed part from source code
+            // Extract the required range of lines
             self.slice.source = line_index
-                .text_part(fl_lines.0, fl_lines.1, source_text, source_text_len)
+                .text_part(fl_lines.0, fl_lines.1, source_text, source_text.len())
                 .unwrap()
                 .to_string();
 
-            // Recalculating every annotation range by taking in account cutted off source text and unicode graphemes
+            // Convert annotation ranges based on the cropped region, indexable by unicode
+            // graphemes (required for aligned annotations)
+            let convertor_function = |source: &String, annotation_range_border: usize| {
+                UnicodeSegmentation::graphemes(
+                &source[0..(annotation_range_border - first_line_offset)],
+                true).count()
+                // this addend is a fix for annotate-snippets issue number 24
+                + (line_index.line_col((annotation_range_border as u32).into()).line
+                    - fl_lines.0) as usize
+            };
             for annotation in self.slice.annotations.iter_mut() {
                 annotation.range = (
-                    UnicodeSegmentation::graphemes(
-                        &self.slice.source[0..(annotation.range.0 as usize - first_line_offset)],
-                        true,
-                    )
-                    .count()
-                        // this addend is a fix for annotate-snippets issue number 24
-                        + (line_index.line_col((annotation.range.0 as u32).into()).line
-                            - fl_lines.0) as usize,
-                    annotation.range.0 as usize - first_line_offset
-                        + UnicodeSegmentation::graphemes(
-                            &self.slice.source[annotation.range.0 as usize - first_line_offset
-                                ..(annotation.range.1 as usize - first_line_offset)],
-                            true,
-                        )
-                        .count()
-                        // this addend is a fix for annotate-snippets issue number 24
-                        + (line_index.line_col((annotation.range.1 as u32).into()).line
-                            - fl_lines.0) as usize,
+                    convertor_function(&self.slice.source, annotation.range.0),
+                    convertor_function(&self.slice.source, annotation.range.1),
                 );
             }
         }
@@ -163,13 +151,13 @@ impl AnnotationBuilder {
         }
     }
 
-    pub fn id(mut self, id: String) -> AnnotationBuilder {
-        self.annotation.id = Some(id);
+    pub fn id(mut self, id: &str) -> AnnotationBuilder {
+        self.annotation.id = Some(id.to_string());
         self
     }
 
-    pub fn label(mut self, label: String) -> AnnotationBuilder {
-        self.annotation.label = Some(label);
+    pub fn label(mut self, label: &str) -> AnnotationBuilder {
+        self.annotation.label = Some(label.to_string());
         self
     }
 
@@ -184,8 +172,8 @@ mod tests {
     #[test]
     fn annotation_builder_snapshot() {
         insta::assert_debug_snapshot!(AnnotationBuilder::new(AnnotationType::Note)
-            .id("1".to_string())
-            .label("test annotation".to_string())
+            .id("1")
+            .label("test annotation")
             .build());
     }
     #[test]
@@ -194,13 +182,9 @@ mod tests {
         let line_index: LineIndex = LineIndex::new(source_code);
 
         insta::assert_debug_snapshot!(SliceBuilder::new(true)
-            .origin("/tmp/usr/test.mun".to_string())
-            .source_annotation(
-                (14, 20),
-                "test source annotation".to_string(),
-                AnnotationType::Note
-            )
-            .build(source_code, source_code.len(), &line_index));
+            .origin("/tmp/usr/test.mun")
+            .source_annotation((14, 20), "test source annotation", AnnotationType::Note)
+            .build(source_code, &line_index));
     }
     #[test]
     fn snippet_builder_snapshot() {
@@ -210,30 +194,22 @@ mod tests {
         insta::assert_debug_snapshot!(SnippetBuilder::new()
             .title(
                 AnnotationBuilder::new(AnnotationType::Note)
-                    .id("1".to_string())
-                    .label("test annotation".to_string())
+                    .id("1")
+                    .label("test annotation")
                     .build()
             )
             .footer(
                 AnnotationBuilder::new(AnnotationType::Warning)
-                    .id("2".to_string())
-                    .label("test annotation".to_string())
+                    .id("2")
+                    .label("test annotation")
                     .build()
             )
             .slice(
                 SliceBuilder::new(true)
-                    .origin("/tmp/usr/test.mun".to_string())
-                    .source_annotation(
-                        (14, 20),
-                        "test source annotation".to_string(),
-                        AnnotationType::Note,
-                    )
-                    .source_annotation(
-                        (35, 41),
-                        "test source annotation".to_string(),
-                        AnnotationType::Error,
-                    )
-                    .build(source_code, source_code.len(), &line_index)
+                    .origin("/tmp/usr/test.mun")
+                    .source_annotation((14, 20), "test source annotation", AnnotationType::Note,)
+                    .source_annotation((35, 41), "test source annotation", AnnotationType::Error,)
+                    .build(source_code, &line_index)
             )
             .build());
     }

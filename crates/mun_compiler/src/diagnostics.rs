@@ -12,9 +12,11 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
     let parse = db.parse(file_id);
 
     let mut result = Vec::new();
-
+    // Replace every `\t` symbol by one whitespace in source code because in console it is
+    // displaying like 1-4 spaces(depending on it position) and by this it breaks highlighting.
+    // In future here, instead of `replace("\t", " ")`, can be implemented algorithm that
+    // correctly replace each `\t` into 1-4 space.
     let source_code = db.file_text(file_id).to_string().replace("\t", " ");
-    let source_code_len = source_code.len();
 
     let relative_file_path = db.file_relative_path(file_id).display().to_string();
 
@@ -27,7 +29,6 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
             &parse,
             &relative_file_path,
             &source_code,
-            source_code_len,
             &line_index,
         )
     }));
@@ -42,7 +43,6 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                 &parse,
                 &relative_file_path,
                 &source_code,
-                source_code_len,
                 &line_index,
             ));
     })
@@ -55,7 +55,6 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                 &parse,
                 &relative_file_path,
                 &source_code,
-                source_code_len,
                 &line_index,
             ));
     })
@@ -68,7 +67,6 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                 &parse,
                 &relative_file_path,
                 &source_code,
-                source_code_len,
                 &line_index,
             ));
     })
@@ -81,7 +79,6 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                 &parse,
                 &relative_file_path,
                 &source_code,
-                source_code_len,
                 &line_index,
             ));
     })
@@ -94,7 +91,6 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                 &parse,
                 &relative_file_path,
                 &source_code,
-                source_code_len,
                 &line_index,
             ));
     })
@@ -107,7 +103,6 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                 &parse,
                 &relative_file_path,
                 &source_code,
-                source_code_len,
                 &line_index,
             ));
     })
@@ -120,7 +115,6 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                 &parse,
                 &relative_file_path,
                 &source_code,
-                source_code_len,
                 &line_index,
             ));
     })
@@ -133,7 +127,6 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
                 &parse,
                 &relative_file_path,
                 &source_code,
-                source_code_len,
                 &line_index,
             ));
     });
@@ -147,12 +140,12 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Color, Config, Driver, PathOrInline, RelativePathBuf};
+    use crate::{Config, DisplayColor, Driver, PathOrInline, RelativePathBuf};
 
     /// Compile passed source code and return all compilation errors
     fn compilation_errors(source_code: &str) -> String {
         let config = Config {
-            color: Color::Disable,
+            display_color: DisplayColor::Disable,
             ..Config::default()
         };
 

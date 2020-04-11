@@ -1,5 +1,5 @@
 #![allow(clippy::enum_variant_names)] // This is a HACK because we use salsa
-mod annotate_snippets_builders;
+mod annotate;
 mod db;
 ///! This library contains the code required to go from source code to binaries.
 mod diagnostics;
@@ -10,9 +10,9 @@ pub use mun_hir::{FileId, RelativePath, RelativePathBuf};
 pub use mun_target::spec::Target;
 use std::path::{Path, PathBuf};
 
-pub use crate::driver::Color;
+pub use crate::driver::DisplayColor;
 pub use crate::driver::{Config, Driver};
-pub use annotate_snippets_builders::{AnnotationBuilder, SliceBuilder, SnippetBuilder};
+pub use annotate::{AnnotationBuilder, SliceBuilder, SnippetBuilder};
 pub use mun_codegen::OptimizationLevel;
 
 use std::io::stderr;
