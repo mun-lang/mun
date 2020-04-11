@@ -72,6 +72,20 @@ macro_rules! into_function_info_impl {
                     )
                 }
             }
+
+            impl<$($T: HasStaticTypeInfo,)*> IntoFunctionInfo
+            for extern "C" fn($($T),*)
+            {
+                fn into<S: AsRef<str>>(self, name: S, privacy: abi::Privacy) -> (abi::FunctionInfo, FunctionInfoStorage) {
+                    FunctionInfoStorage::new_function(
+                        name.as_ref(),
+                        &[$($T::type_info(),)*],
+                        None,
+                        privacy,
+                        self as *const std::ffi::c_void,
+                    )
+                }
+            }
         )+
     }
 }
