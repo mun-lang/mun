@@ -6,6 +6,27 @@ use std::cell::RefCell;
 use std::sync::Arc;
 
 #[test]
+fn issue_128() {
+    test_snapshot(
+        r#"
+    // resources/script.mun
+    extern fn thing(n: int);
+    extern fn print(n: int) -> int;
+
+    pub fn main() {
+        // 1st
+        print(1);
+        thing(5);
+
+        // 2nd
+        print(2);
+        thing(78);
+    }
+    "#,
+    )
+}
+
+#[test]
 fn function() {
     test_snapshot(
         r#"

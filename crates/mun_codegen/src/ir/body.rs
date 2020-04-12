@@ -218,7 +218,20 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                             .map(|expr| self.gen_expr(*expr).expect("expected a value"))
                             .collect();
 
-                        self.gen_call(def, &args).try_as_basic_value().left()
+                        self.gen_call(def, &args)
+                            .try_as_basic_value()
+                            .left()
+                            // If the called function is a void function it doesn't return anything.
+                            // If this method (`gen_expr`) returns None we assume the return value
+                            // is `never`. We return a const unit struct here to ensure that at
+                            // least something is returned. This matches with the hir where a
+                            // `nothing` is returned instead of a `never`.
+                            //
+                            // This unit value will also be optimized out.
+                            .or_else(|| match self.infer[expr] {
+                                hir::ty_app!(hir::TypeCtor::Never) => None,
+                                _ => Some(self.db.context().const_struct(&[], false).into()),
+                            })
                     }
                     Some(hir::CallableDef::Struct(_)) => Some(self.gen_named_tuple_lit(expr, args)),
                     None => panic!("expected a callable expression"),
