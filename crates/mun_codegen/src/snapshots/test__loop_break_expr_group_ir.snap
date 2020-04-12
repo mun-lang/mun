@@ -1,7 +1,0 @@
----
-source: crates/mun_codegen/src/test.rs
-expression: "fn foo(n:int):int {\n    loop {\n        if n > 5 {\n            break n;\n        }\n        if n > 10 {\n            break 10;\n        }\n        n += 1;\n    }\n}"
----
-; ModuleID = 'group_name'
-source_filename = "group_name"
-

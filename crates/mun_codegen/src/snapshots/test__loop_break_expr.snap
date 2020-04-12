@@ -1,0 +1,35 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn foo(n:int)->int {\n    loop {\n        if n > 5 {\n            break n;\n        }\n        if n > 10 {\n            break 10;\n        }\n        n += 1;\n    }\n}"
+---
+; == FILE IR =====================================
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+define i64 @foo(i64) {
+body:
+  br label %loop
+
+loop:                                             ; preds = %if_merge6, %body
+  %n.0 = phi i64 [ %0, %body ], [ %add, %if_merge6 ]
+  %greater = icmp sgt i64 %n.0, 5
+  br i1 %greater, label %exit, label %if_merge
+
+exit:                                             ; preds = %if_merge, %loop
+  %exit8 = phi i64 [ %n.0, %loop ], [ 10, %if_merge ]
+  ret i64 %exit8
+
+if_merge:                                         ; preds = %loop
+  %greater4 = icmp sgt i64 %n.0, 10
+  br i1 %greater4, label %exit, label %if_merge6
+
+if_merge6:                                        ; preds = %if_merge
+  %add = add i64 %n.0, 1
+  br label %loop
+}
+
+
+; == GROUP IR ====================================
+; ModuleID = 'group_name'
+source_filename = "group_name"
+

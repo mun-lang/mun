@@ -1,0 +1,30 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn foo(n:int) {\n    while n<3 {\n        n += 1;\n    };\n\n    // This will be completely optimized out\n    while n<4 {\n        break;\n    };\n}"
+---
+; == FILE IR =====================================
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+define void @foo(i64) {
+body:
+  br label %whilecond
+
+whilecond:                                        ; preds = %while, %body
+  %n.0 = phi i64 [ %0, %body ], [ %add, %while ]
+  %less = icmp slt i64 %n.0, 3
+  br i1 %less, label %while, label %whilecond3
+
+while:                                            ; preds = %whilecond
+  %add = add i64 %n.0, 1
+  br label %whilecond
+
+whilecond3:                                       ; preds = %whilecond
+  ret void
+}
+
+
+; == GROUP IR ====================================
+; ModuleID = 'group_name'
+source_filename = "group_name"
+

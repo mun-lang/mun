@@ -1,0 +1,18 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn main() {\n}"
+---
+; == FILE IR =====================================
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+define void @main() {
+body:
+  ret void
+}
+
+
+; == GROUP IR ====================================
+; ModuleID = 'group_name'
+source_filename = "group_name"
+

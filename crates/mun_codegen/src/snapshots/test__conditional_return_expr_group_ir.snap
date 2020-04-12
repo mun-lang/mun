@@ -1,7 +1,0 @@
----
-source: crates/mun_codegen/src/test.rs
-expression: "fn main(a:int):int {\n    if a > 4 {\n        return a;\n    }\n    a - 1\n}"
----
-; ModuleID = 'group_name'
-source_filename = "group_name"
-

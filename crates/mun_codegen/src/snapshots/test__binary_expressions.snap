@@ -1,0 +1,31 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn add(a:int, b:int)->int {\n  a+b\n}\n\nfn subtract(a:int, b:int)->int {\n  a-b\n}\n\nfn multiply(a:int, b:int)->int {\n  a*b\n}"
+---
+; == FILE IR =====================================
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+define i64 @add(i64, i64) {
+body:
+  %add = add i64 %0, %1
+  ret i64 %add
+}
+
+define i64 @subtract(i64, i64) {
+body:
+  %sub = sub i64 %0, %1
+  ret i64 %sub
+}
+
+define i64 @multiply(i64, i64) {
+body:
+  %mul = mul i64 %0, %1
+  ret i64 %mul
+}
+
+
+; == GROUP IR ====================================
+; ModuleID = 'group_name'
+source_filename = "group_name"
+
