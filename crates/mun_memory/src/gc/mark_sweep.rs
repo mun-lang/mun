@@ -6,11 +6,10 @@ use crate::{
 };
 use once_cell::unsync::OnceCell;
 use parking_lot::RwLock;
+use pinned_slab::Slab;
 use std::{
-    collections::{HashMap, HashSet, VecDeque},
+    collections::{HashSet, VecDeque},
     hash::Hash,
-    ops::Deref,
-    pin::Pin,
 };
 
 /// Implements a simple mark-sweep type garbage collector.
@@ -20,7 +19,7 @@ where
     T: TypeLayout + TypeTrace + Clone,
     O: Observer<Event = Event>,
 {
-    objects: RwLock<HashMap<GcPtr, Pin<Box<ObjectInfo<T>>>>>,
+    objects: RwLock<Slab<ObjectInfo<T>>>,
     observer: O,
     stats: RwLock<Stats>,
 }
@@ -32,7 +31,7 @@ where
 {
     fn default() -> Self {
         MarkSweep {
-            objects: RwLock::new(HashMap::new()),
+            objects: RwLock::new(Slab::new()),
             observer: O::default(),
             stats: RwLock::new(Stats::default()),
         }
@@ -47,7 +46,7 @@ where
     /// Creates a `MarkSweep` memory collector with the specified `Observer`.
     pub fn with_observer(observer: O) -> Self {
         Self {
-            objects: RwLock::new(HashMap::new()),
+            objects: RwLock::new(Slab::new()),
             observer,
             stats: RwLock::new(Stats::default()),
         }
@@ -67,19 +66,20 @@ where
     fn alloc(&self, ty: T) -> GcPtr {
         let layout = ty.layout();
         let ptr = unsafe { std::alloc::alloc(layout) };
-        let object = Box::pin(ObjectInfo {
+        let object = ObjectInfo {
             ptr,
             ty,
             roots: 0,
             color: Color::White,
-        });
+        };
 
         // We want to return a pointer to the `ObjectInfo`, to be used as handle.
-        let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
+        let handle: GcPtr;
 
         {
             let mut objects = self.objects.write();
-            objects.insert(handle, object);
+            let (_, ptr) = objects.insert(object);
+            handle = (ptr as *const ObjectInfo<T>).into();
         }
 
         {
@@ -141,7 +141,7 @@ where
             .iter()
             .filter_map(|(_, obj)| {
                 if obj.roots > 0 {
-                    Some(obj.as_ref().get_ref() as *const _ as *mut ObjectInfo<T>)
+                    Some(obj as *const _ as *mut ObjectInfo<T>)
                 } else {
                     None
                 }
@@ -154,13 +154,10 @@ where
 
             // Trace all other objects
             for reference in unsafe { (*next).ty.trace(handle) } {
-                let ref_ptr = objects
-                    .get_mut(&reference)
-                    .expect("found invalid reference");
-                if ref_ptr.color == Color::White {
-                    let ptr = ref_ptr.as_ref().get_ref() as *const _ as *mut ObjectInfo<T>;
-                    unsafe { (*ptr).color = Color::Gray };
-                    roots.push_back(ptr);
+                let obj: *mut ObjectInfo<_> = reference.into();
+                if unsafe { (*obj).color == Color::White } {
+                    unsafe { (*obj).color = Color::Gray };
+                    roots.push_back(obj);
                 }
             }
 
@@ -171,23 +168,26 @@ where
         }
 
         // Sweep all non-reachable objects
+        let mut stats = self.stats.write();
+
         let size_before = objects.len();
-        objects.retain(|h, obj| {
-            if obj.color == Color::Black {
-                unsafe {
-                    obj.as_mut().get_unchecked_mut().color = Color::White;
-                }
-                true
-            } else {
-                unsafe { std::alloc::dealloc(obj.ptr, obj.ty.layout()) };
-                self.observer.event(Event::Deallocation(*h));
-                {
-                    let mut stats = self.stats.write();
+        // SAFETY: Each entry in the pool is either alive (and its color is set
+        // to `White`) or deallocated because nothing points to it (meaning it
+        // is safe to un-pin.)
+        unsafe {
+            objects.retain(|_, obj| {
+                if obj.color == Color::Black {
+                    obj.color = Color::White;
+                    true
+                } else {
+                    self.observer
+                        .event(Event::Deallocation((obj as *const ObjectInfo<_>).into()));
                     stats.allocated_memory -= obj.ty.layout().size();
+                    false
                 }
-                false
-            }
-        });
+            })
+        };
+        objects.free_unused();
         let size_after = objects.len();
 
         self.observer.event(Event::End);
@@ -219,9 +219,9 @@ where
         // Determine which types are still allocated with deleted types
         let deleted = objects
             .iter()
-            .filter_map(|(ptr, object_info)| {
+            .filter_map(|(_, object_info)| {
                 if deleted.contains(&object_info.ty) {
-                    Some(*ptr)
+                    Some((object_info as *const ObjectInfo<_>).into())
                 } else {
                     None
                 }
@@ -242,7 +242,7 @@ where
                     // Use `OnceCell` to lazily construct `TypeData` for `old_ty` and `new_ty`.
                     let mut type_data = OnceCell::new();
 
-                    for object_info in objects.values_mut() {
+                    for (_, object_info) in unsafe { objects.iter_mut() } {
                         if object_info.ty == *old_ty {
                             map_fields(object_info, old_ty, new_ty, diff, &mut type_data);
                         }
@@ -262,7 +262,7 @@ where
         }
 
         fn map_fields<'a, T: TypeLayout + TypeFields<T> + TypeTrace + Clone + Eq>(
-            object_info: &mut Pin<Box<ObjectInfo<T>>>,
+            object_info: &mut ObjectInfo<T>,
             old_ty: &'a T,
             new_ty: &'a T,
             diff: &[FieldDiff],
@@ -304,12 +304,12 @@ where
                     }
                 }
             }
-            object_info.set(ObjectInfo {
+            *object_info = ObjectInfo {
                 ptr,
                 roots: object_info.roots,
                 color: object_info.color,
                 ty: new_ty.clone(),
-            });
+            };
         }
     }
 }
