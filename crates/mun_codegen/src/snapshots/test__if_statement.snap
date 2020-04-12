@@ -1,0 +1,34 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn foo(a:int)->int {\n    let b = if a > 3 {\n        let c = if a > 4 {\n            a+1\n        } else {\n            a+3\n        }\n        c\n    } else {\n        a-1\n    }\n    b\n}"
+---
+; == FILE IR =====================================
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+define i64 @foo(i64) {
+body:
+  %greater = icmp sgt i64 %0, 3
+  br i1 %greater, label %then, label %else
+
+then:                                             ; preds = %body
+  %greater3 = icmp sgt i64 %0, 4
+  %add = add i64 %0, 1
+  %add9 = add i64 %0, 3
+  %iftmp = select i1 %greater3, i64 %add, i64 %add9
+  br label %if_merge
+
+else:                                             ; preds = %body
+  %sub = sub i64 %0, 1
+  br label %if_merge
+
+if_merge:                                         ; preds = %else, %then
+  %iftmp12 = phi i64 [ %iftmp, %then ], [ %sub, %else ]
+  ret i64 %iftmp12
+}
+
+
+; == GROUP IR ====================================
+; ModuleID = 'group_name'
+source_filename = "group_name"
+

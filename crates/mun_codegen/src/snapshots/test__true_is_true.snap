@@ -1,0 +1,23 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn test_true()->bool {\n    true\n}\n\nfn test_false()->bool {\n    false\n}"
+---
+; == FILE IR =====================================
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+define i1 @test_true() {
+body:
+  ret i1 true
+}
+
+define i1 @test_false() {
+body:
+  ret i1 false
+}
+
+
+; == GROUP IR ====================================
+; ModuleID = 'group_name'
+source_filename = "group_name"
+

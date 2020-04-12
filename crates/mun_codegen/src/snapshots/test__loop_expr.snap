@@ -1,0 +1,21 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn foo() {\n    loop {}\n}"
+---
+; == FILE IR =====================================
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+define void @foo() {
+body:
+  br label %loop
+
+loop:                                             ; preds = %loop, %body
+  br label %loop
+}
+
+
+; == GROUP IR ====================================
+; ModuleID = 'group_name'
+source_filename = "group_name"
+

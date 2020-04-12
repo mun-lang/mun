@@ -587,7 +587,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
         .replace("test::", "");
 
     let group_ir_value = if !messages.is_empty() {
-        messages.join("\n")
+        "".to_owned()
     } else {
         format!(
             "{}",
@@ -597,7 +597,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
                 .to_string()
         )
     };
-    insta::assert_snapshot!(format!("{}_group_ir", thread_name), group_ir_value, &text);
+
     let file_ir_value = if !messages.is_empty() {
         messages.join("\n")
     } else {
@@ -609,5 +609,14 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
                 .to_string()
         )
     };
-    insta::assert_snapshot!(format!("{}_file_ir", thread_name), file_ir_value, &text);
+
+    let value = format!(
+        r"; == FILE IR =====================================
+{}
+
+; == GROUP IR ====================================
+{}",
+        file_ir_value, group_ir_value
+    );
+    insta::assert_snapshot!(thread_name, value, &text);
 }

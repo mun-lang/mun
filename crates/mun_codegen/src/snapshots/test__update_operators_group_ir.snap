@@ -1,7 +1,0 @@
----
-source: crates/mun_codegen/src/test.rs
-expression: "fn add(a:int, b:int):int {\n  let result = a\n  result += b\n  result\n}\n\nfn subtract(a:int, b:int):int {\n  let result = a\n  result -= b\n  result\n}\n\nfn multiply(a:int, b:int):int {\n  let result = a\n  result *= b\n  result\n}\n\nfn divide(a:int, b:int):int {\n  let result = a\n  result /= b\n  result\n}"
----
-; ModuleID = 'group_name'
-source_filename = "group_name"
-

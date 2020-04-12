@@ -1,7 +1,0 @@
----
-source: crates/mun_codegen/src/test.rs
-expression: "fn add(a: u8, b: u8): u8 { a+b }\n   fn less(a: u16, b: u16): bool { a<b }\n   fn greater(a: u32, b: u32): bool { a>b }\n   fn equal(a: u64, b: u64): bool { a==b }\n   fn greater_equal(a: usize, b: usize): bool { a>=b }\n   fn less_equal(a: uint, b: uint): bool { a<=b }\n\n   fn iadd(a: i8, b: i8): i8 { a+b }\n   fn iless(a: i16, b: i16): bool { a<b }\n   fn igreater(a: i32, b: i32): bool { a>b }\n   fn iequal(a: i64, b: i64): bool { a==b }\n   fn igreater_equal(a: isize, b: isize): bool { a>=b }\n   fn iless_equal(a: int, b: int): bool { a<=b }"
----
-; ModuleID = 'group_name'
-source_filename = "group_name"
-

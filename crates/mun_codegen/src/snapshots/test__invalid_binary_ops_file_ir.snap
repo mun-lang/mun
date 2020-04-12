@@ -1,6 +1,0 @@
----
-source: crates/mun_codegen/src/test.rs
-expression: "fn main() {\n  let a = 3+3.0;\n  let b = 3.0+3;\n}"
----
-error 2:13: mismatched type
-error 3:15: mismatched type
