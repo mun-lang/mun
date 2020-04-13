@@ -1,0 +1,17 @@
+---
+source: crates/mun_compiler/src/diagnostics.rs
+expression: "compilation_errors(\"\\n\\nfn main() {\\nlet a: float = false;\\n\\nlet b: bool = 22;\\n}\")"
+---
+error: mismatched type
+ --> main.mun:4:15
+  |
+4 | let a: float = false;
+  |                ^^^^^ expected `float`, found `bool`
+  |
+error: mismatched type
+ --> main.mun:6:14
+  |
+6 | let b: bool = 22;
+  |               ^^ expected `bool`, found `int`
+  |
+

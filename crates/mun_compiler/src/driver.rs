@@ -1,20 +1,23 @@
 //! `Driver` is a stateful compiler frontend that enables incremental compilation by retaining state
 //! from previous compilation.
 
-use crate::{
-    db::CompilerDatabase,
-    diagnostics::{diagnostics, Emit},
-    PathOrInline,
-};
+use crate::{db::CompilerDatabase, diagnostics::diagnostics, PathOrInline};
 use mun_codegen::{IrDatabase, ModuleBuilder};
 use mun_hir::{FileId, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
+
 use std::{path::PathBuf, sync::Arc};
 
 mod config;
+mod display_color;
 
 pub use self::config::Config;
-use mun_errors::{Diagnostic, Level};
-use termcolor::WriteColor;
+pub use self::display_color::DisplayColor;
+
+use annotate_snippets::{
+    display_list::DisplayList,
+    formatter::DisplayListFormatter,
+    snippet::{AnnotationType, Snippet},
+};
 
 pub const WORKSPACE: SourceRootId = SourceRootId(0);
 
@@ -22,6 +25,7 @@ pub const WORKSPACE: SourceRootId = SourceRootId(0);
 pub struct Driver {
     db: CompilerDatabase,
     out_dir: Option<PathBuf>,
+    display_color: DisplayColor,
 }
 
 impl Driver {
@@ -30,6 +34,7 @@ impl Driver {
         let mut driver = Driver {
             db: CompilerDatabase::new(),
             out_dir: None,
+            display_color: config.display_color,
         };
 
         // Move relevant configuration into the database
@@ -93,7 +98,7 @@ impl Driver {
 
 impl Driver {
     /// Returns a vector containing all the diagnostic messages for the project.
-    pub fn diagnostics(&self) -> Vec<Diagnostic> {
+    pub fn diagnostics(&self) -> Vec<Snippet> {
         self.db
             .source_root(WORKSPACE)
             .files()
@@ -104,14 +109,21 @@ impl Driver {
 
     /// Emits all diagnostic messages currently in the database; returns true if errors were
     /// emitted.
-    pub fn emit_diagnostics(&self, writer: &mut impl WriteColor) -> Result<bool, failure::Error> {
+    pub fn emit_diagnostics(
+        &self,
+        writer: &mut dyn std::io::Write,
+    ) -> Result<bool, failure::Error> {
         let mut has_errors = false;
+        let dlf = DisplayListFormatter::new(self.display_color.should_enable(), false);
         for file_id in self.db.source_root(WORKSPACE).files() {
             let diags = diagnostics(&self.db, file_id);
-            for diagnostic in diags.iter() {
-                diagnostic.emit(writer, &self.db, file_id)?;
-                if diagnostic.level == Level::Error {
-                    has_errors = true;
+            for diagnostic in diags {
+                let dl = DisplayList::from(diagnostic.clone());
+                writeln!(writer, "{}", dlf.format(&dl)).unwrap();
+                if let Some(annotation) = diagnostic.title {
+                    if let AnnotationType::Error = annotation.annotation_type {
+                        has_errors = true;
+                    }
                 }
             }
         }

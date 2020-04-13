@@ -15,7 +15,6 @@ text_unit = { version = "0.1.6", features = ["serde"] }
 smol_str = { version = "0.1.12", features = ["serde"] }
 unicode-xid = "0.1.0"
 drop_bomb = "0.1.4"
-mun_errors = { path = "../mun_errors"}
 
 [dev-dependencies]
 insta = "0.12.0"

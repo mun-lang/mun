@@ -2,11 +2,12 @@
 extern crate failure;
 
 use std::cell::RefCell;
+use std::env;
 use std::rc::Rc;
 use std::time::Duration;
 
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-use mun_compiler::{Config, PathOrInline, Target};
+use mun_compiler::{Config, DisplayColor, PathOrInline, Target};
 use mun_runtime::{invoke_fn, ReturnTypeReflection, Runtime, RuntimeBuilder};
 
 fn main() -> Result<(), failure::Error> {
@@ -39,6 +40,13 @@ fn main() -> Result<(), failure::Error> {
                         .long("target")
                         .takes_value(true)
                         .help("target triple for which code is compiled"),
+                )
+                .arg(
+                    Arg::with_name("color")
+                        .long("color")
+                        .takes_value(true)
+                        .possible_values(&["enable", "auto", "disable"])
+                        .help("color text in terminal"),
                 )
                 .about("Compiles a local Mun file into a module"),
         )
@@ -136,6 +144,17 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOption
         _ => return Err(format_err!("Only optimization levels 0-3 are supported")),
     };
 
+    let display_color = matches
+        .value_of("color")
+        .map(ToOwned::to_owned)
+        .or_else(|| env::var("MUN_TERMINAL_COLOR").ok())
+        .map(|value| match value.as_str() {
+            "disable" => DisplayColor::Disable,
+            "enable" => DisplayColor::Enable,
+            _ => DisplayColor::Auto,
+        })
+        .unwrap_or(DisplayColor::Auto);
+
     Ok(mun_compiler::CompilerOptions {
         input: PathOrInline::Path(matches.value_of("INPUT").unwrap().into()), // Safe because its a required arg
         config: Config {
@@ -144,6 +163,7 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOption
                 .map_or_else(Target::host_target, Target::search)?,
             optimization_lvl,
             out_dir: None,
+            display_color,
         },
     })
 }
