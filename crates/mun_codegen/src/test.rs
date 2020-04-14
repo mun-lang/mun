@@ -135,6 +135,29 @@ fn binary_expressions() {
 }
 
 #[test]
+fn unary_expressions() {
+    test_snapshot(
+        r#"
+    pub fn negf(x: float) -> float {
+        -x
+    }
+
+    pub fn negi(x: int) -> int {
+        -x
+    }
+
+    pub fn notb(x: bool) -> bool {
+        !x
+    }
+
+    pub fn noti(x: int) -> int {
+        !x
+    }
+    "#,
+    );
+}
+
+#[test]
 fn let_statement() {
     test_snapshot(
         r#"
