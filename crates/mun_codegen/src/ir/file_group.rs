@@ -61,9 +61,28 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: hir::FileId) -> Arc<FileGr
         }
     }
 
+    // Collect all exposed functions' bodies.
+    let mut dispatch_table_builder = DispatchTableBuilder::new(db, &llvm_module, &intrinsics_map);
+    for def in db.module_data(file_id).definitions() {
+        if let ModuleDef::Function(f) = def {
+            if !f.data(db).visibility().is_private() && !f.is_extern(db) {
+                let body = f.body(db);
+                let infer = f.infer(db);
+                dispatch_table_builder.collect_body(&body, &infer);
+            }
+        }
+    }
+
+    let dispatch_table = dispatch_table_builder.build();
+
     let abi_types = gen_abi_types(&db.context());
-    let mut type_table_builder =
-        TypeTableBuilder::new(db, &llvm_module, &abi_types, intrinsics_map.keys());
+    let mut type_table_builder = TypeTableBuilder::new(
+        db,
+        &llvm_module,
+        &abi_types,
+        intrinsics_map.keys(),
+        &dispatch_table,
+    );
 
     // Collect all used types
     for def in db.module_data(file_id).definitions() {
@@ -79,20 +98,6 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: hir::FileId) -> Arc<FileGr
     }
 
     let type_table = type_table_builder.build();
-
-    // Collect all function and wrapper function signatures.
-    let mut dispatch_table_builder = DispatchTableBuilder::new(db, &llvm_module, intrinsics_map);
-    for def in db.module_data(file_id).definitions() {
-        if let ModuleDef::Function(f) = def {
-            if !f.is_extern(db) {
-                let body = f.body(db);
-                let infer = f.infer(db);
-                dispatch_table_builder.collect_body(&body, &infer);
-            }
-        }
-    }
-
-    let dispatch_table = dispatch_table_builder.build();
 
     // Create the allocator handle global value
     let allocator_handle_type = if needs_alloc {

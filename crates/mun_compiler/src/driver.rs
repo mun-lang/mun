@@ -134,7 +134,8 @@ impl Driver {
 impl Driver {
     /// Generate an assembly for the given file
     pub fn write_assembly(&mut self, file_id: FileId) -> Result<PathBuf, failure::Error> {
-        let module_builder = ModuleBuilder::new(&mut self.db, file_id)?;
-        module_builder.finalize(self.out_dir.as_deref())
+        let module_builder = ModuleBuilder::new(&self.db, file_id)?;
+        let obj_file = module_builder.build()?;
+        obj_file.into_shared_object(self.out_dir.as_deref())
     }
 }

@@ -1,10 +1,14 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "fn add(a:int, b:int)->int {\n  let result = a\n  result += b\n  result\n}\n\nfn subtract(a:int, b:int)->int {\n  let result = a\n  result -= b\n  result\n}\n\nfn multiply(a:int, b:int)->int {\n  let result = a\n  result *= b\n  result\n}\n\nfn divide(a:int, b:int)->int {\n  let result = a\n  result /= b\n  result\n}"
+expression: "pub fn add(a:int, b:int) -> int {\n  let result = a\n  result += b\n  result\n}\n\npub fn subtract(a:int, b:int) -> int {\n  let result = a\n  result -= b\n  result\n}\n\npub fn multiply(a:int, b:int) -> int {\n  let result = a\n  result *= b\n  result\n}\n\npub fn divide(a:int, b:int) -> int {\n  let result = a\n  result /= b\n  result\n}"
 ---
 ; == FILE IR =====================================
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
+
+%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+
+@global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
 
 define i64 @add(i64, i64) {
 body:
@@ -34,4 +38,10 @@ body:
 ; == GROUP IR ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
+
+%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+
+@"type_info::<core::i64>::name" = private unnamed_addr constant [10 x i8] c"core::i64\00"
+@"type_info::<core::i64>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"G\13;t\97j8\18\D7M\83`\1D\C8\19%", [10 x i8]* @"type_info::<core::i64>::name", i32 64, i8 8, i8 0 }
+@global_type_table = global [1 x %struct.MunTypeInfo addrspace(4)*] [%struct.MunTypeInfo addrspace(4)* @"type_info::<core::i64>"]
 

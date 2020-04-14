@@ -60,6 +60,11 @@ pub struct DispatchableFunction {
 }
 
 impl DispatchTable {
+    /// Returns whether the `DispatchTable` contains the specified `function`.
+    pub fn contains(&self, function: hir::Function) -> bool {
+        self.function_to_idx.contains_key(&function)
+    }
+
     /// Returns a slice containing all the functions in the dispatch table.
     pub fn entries(&self) -> &[DispatchableFunction] {
         &self.entries
@@ -174,7 +179,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
     pub fn new(
         db: &'a D,
         module: &'a Module,
-        intrinsics: BTreeMap<FunctionPrototype, FunctionType>,
+        intrinsics: &BTreeMap<FunctionPrototype, FunctionType>,
     ) -> Self {
         let mut table = DispatchTableBuilder {
             db,
@@ -192,17 +197,17 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
             table.ensure_table_ref();
 
             // Use a `BTreeMap` to guarantee deterministically ordered output
-            for (prototype, ir_type) in intrinsics.into_iter() {
+            for (prototype, ir_type) in intrinsics.iter() {
                 let index = table.entries.len();
                 table.entries.push(TypedDispatchableFunction {
                     function: DispatchableFunction {
                         prototype: prototype.clone(),
                         hir: None,
                     },
-                    ir_type,
+                    ir_type: *ir_type,
                 });
 
-                table.prototype_to_idx.insert(prototype, index);
+                table.prototype_to_idx.insert(prototype.clone(), index);
             }
         }
         table

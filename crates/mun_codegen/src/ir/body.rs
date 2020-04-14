@@ -775,7 +775,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
 
     /// Generates IR for a function call.
     fn gen_call(&mut self, function: hir::Function, args: &[BasicValueEnum]) -> CallSiteValue {
-        if self.should_use_dispatch_table() {
+        if self.dispatch_table.contains(function) && self.should_use_dispatch_table() {
             let ptr_value = self.dispatch_table.gen_function_lookup(
                 self.db,
                 self.external_globals.dispatch_table,

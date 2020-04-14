@@ -1,6 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "struct(value) Bar(float, Foo);\nstruct(value) Foo { a: int };\n\nfn bar_0(bar: Bar) -> float {\n    bar.0\n}\n\nfn bar_1(bar: Bar) -> Foo {\n    bar.1\n}\n\nfn bar_1_a(bar: Bar) -> int {\n    bar.1.a\n}\n\nfn foo_a(foo: Foo) -> int {\n    foo.a\n}\n\nfn bar_1_foo_a(bar: Bar) -> int {\n    foo_a(bar_1(bar))\n}\n\nfn main() -> int {\n    let a: Foo = Foo { a: 5 };\n    let b: Bar = Bar(1.23, a);\n    let aa_lhs = a.a + 2;\n    let aa_rhs = 2 + a.a;\n    aa_lhs + aa_rhs\n}"
+expression: "struct(value) Bar(float, Foo);\nstruct(value) Foo { a: int };\n\nfn bar_1(bar: Bar) -> Foo {\n    bar.1\n}\n\nfn foo_a(foo: Foo) -> int {\n    foo.a\n}\n\npub fn bar_1_foo_a(bar: Bar) -> int {\n    foo_a(bar_1(bar))\n}\n\npub fn main() -> int {\n    let a: Foo = Foo { a: 5 };\n    let b: Bar = Bar(1.23, a);\n    let aa_lhs = a.a + 2;\n    let aa_rhs = 2 + a.a;\n    aa_lhs + aa_rhs\n}"
 ---
 ; == FILE IR =====================================
 ; ModuleID = 'main.mun'
@@ -15,23 +15,11 @@ source_filename = "main.mun"
 @dispatchTable = external global %DispatchTable
 @global_type_table = external global [7 x %struct.MunTypeInfo addrspace(4)*]
 
-define double @bar_0(%Bar) {
-body:
-  %.fca.0.extract = extractvalue %Bar %0, 0
-  ret double %.fca.0.extract
-}
-
 define %Foo @bar_1(%Bar) {
 body:
   %.fca.1.0.extract = extractvalue %Bar %0, 1, 0
   %"1.fca.0.insert" = insertvalue %Foo undef, i64 %.fca.1.0.extract, 0
   ret %Foo %"1.fca.0.insert"
-}
-
-define i64 @bar_1_a(%Bar) {
-body:
-  %.fca.1.0.extract = extractvalue %Bar %0, 1, 0
-  ret i64 %.fca.1.0.extract
 }
 
 define i64 @foo_a(%Foo) {
@@ -51,6 +39,14 @@ body:
   ret i64 %foo_a
 }
 
+define i64 @bar_1_foo_a_wrapper(%Bar* addrspace(4)*) {
+body:
+  %mem_ptr = load %Bar*, %Bar* addrspace(4)* %0
+  %deref = load %Bar, %Bar* %mem_ptr
+  %bar_1_foo_a = call i64 @bar_1_foo_a(%Bar %deref)
+  ret i64 %bar_1_foo_a
+}
+
 define i64 @main() {
 body:
   ret i64 14
@@ -61,12 +57,13 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
-%struct.MunStructInfo = type { i8 addrspace(4)* addrspace(4)*, %struct.MunTypeInfo addrspace(4)* addrspace(4)*, i16 addrspace(4)*, i16, i8 }
 %DispatchTable = type { i8* addrspace(4)* (i8 addrspace(4)*, i8*)*, i64 (%Foo)*, %Foo (%Bar)* }
 %Foo = type { i64 }
 %Bar = type { double, %Foo }
+%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+%struct.MunStructInfo = type { i8 addrspace(4)* addrspace(4)*, %struct.MunTypeInfo addrspace(4)* addrspace(4)*, i16 addrspace(4)*, i16, i8 }
 
+@dispatchTable = global %DispatchTable { i8* addrspace(4)* (i8 addrspace(4)*, i8*)* null, i64 (%Foo)* @foo_a, %Foo (%Bar)* @bar_1 }
 @"type_info::<Foo>::name" = private unnamed_addr constant [4 x i8] c"Foo\00"
 @"struct_info::<Foo>::field_names" = private unnamed_addr constant [2 x i8] c"a\00"
 @0 = private unnamed_addr constant [1 x i8 addrspace(4)*] [i8 addrspace(4)* @"struct_info::<Foo>::field_names"]
@@ -91,7 +88,6 @@ source_filename = "group_name"
 @"type_info::<*mut core::void>::name" = private unnamed_addr constant [16 x i8] c"*mut core::void\00"
 @"type_info::<*mut core::void>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\F0Y\22\FC\95\9E\7F\CE\08T\B1\A2\CD\A7\FAz", [16 x i8]* @"type_info::<*mut core::void>::name", i32 64, i8 8, i8 0 }
 @global_type_table = global [7 x %struct.MunTypeInfo addrspace(4)*] [%struct.MunTypeInfo addrspace(4)* @"type_info::<Foo>", %struct.MunTypeInfo addrspace(4)* @"type_info::<*const TypeInfo>", %struct.MunTypeInfo addrspace(4)* @"type_info::<core::i64>", %struct.MunTypeInfo addrspace(4)* @"type_info::<core::f64>", %struct.MunTypeInfo addrspace(4)* @"type_info::<*const *mut core::void>", %struct.MunTypeInfo addrspace(4)* @"type_info::<Bar>", %struct.MunTypeInfo addrspace(4)* @"type_info::<*mut core::void>"]
-@dispatchTable = global %DispatchTable { i8* addrspace(4)* (i8 addrspace(4)*, i8*)* null, i64 (%Foo)* @foo_a, %Foo (%Bar)* @bar_1 }
 @allocatorHandle = unnamed_addr global i8* null
 
 declare i64 @foo_a(%Foo)

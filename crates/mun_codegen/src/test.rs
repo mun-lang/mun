@@ -27,10 +27,25 @@ fn issue_128() {
 }
 
 #[test]
+fn issue_133() {
+    test_snapshot(
+        r#"
+    fn do_the_things(n: int) -> int {
+        n + 7
+    }
+    
+    pub fn main() {
+        do_the_things(3);
+    }
+    "#,
+    );
+}
+
+#[test]
 fn function() {
     test_snapshot(
         r#"
-    fn main() {
+    pub fn main() {
     }
     "#,
     );
@@ -40,7 +55,7 @@ fn function() {
 fn return_type() {
     test_snapshot(
         r#"
-    fn main()->int {
+    pub fn main() -> int {
       0
     }
     "#,
@@ -51,7 +66,7 @@ fn return_type() {
 fn function_arguments() {
     test_snapshot(
         r#"
-    fn main(a:int)->int {
+    pub fn main(a:int) -> int {
       a
     }
     "#,
@@ -62,15 +77,15 @@ fn function_arguments() {
 fn binary_expressions() {
     test_snapshot(
         r#"
-    fn add(a:int, b:int)->int {
+    pub fn add(a:int, b:int) -> int {
       a+b
     }
 
-    fn subtract(a:int, b:int)->int {
+    pub fn subtract(a:int, b:int) -> int {
       a-b
     }
 
-    fn multiply(a:int, b:int)->int {
+    pub fn multiply(a:int, b:int) -> int {
       a*b
     }
     "#,
@@ -81,7 +96,7 @@ fn binary_expressions() {
 fn let_statement() {
     test_snapshot(
         r#"
-    fn main(a:int)->int {
+    pub fn main(a:int) -> int {
       let b = a+1
       b
     }
@@ -93,7 +108,7 @@ fn let_statement() {
 fn invalid_binary_ops() {
     test_snapshot(
         r#"
-    fn main() {
+    pub fn main() {
       let a = 3+3.0;
       let b = 3.0+3;
     }
@@ -105,25 +120,25 @@ fn invalid_binary_ops() {
 fn update_operators() {
     test_snapshot(
         r#"
-    fn add(a:int, b:int)->int {
+    pub fn add(a:int, b:int) -> int {
       let result = a
       result += b
       result
     }
 
-    fn subtract(a:int, b:int)->int {
+    pub fn subtract(a:int, b:int) -> int {
       let result = a
       result -= b
       result
     }
 
-    fn multiply(a:int, b:int)->int {
+    pub fn multiply(a:int, b:int) -> int {
       let result = a
       result *= b
       result
     }
 
-    fn divide(a:int, b:int)->int {
+    pub fn divide(a:int, b:int) -> int {
       let result = a
       result /= b
       result
@@ -136,7 +151,7 @@ fn update_operators() {
 fn update_parameter() {
     test_snapshot(
         r#"
-    fn add_three(a:int)->int {
+    pub fn add_three(a:int) -> int {
       a += 3;
       a
     }
@@ -148,15 +163,15 @@ fn update_parameter() {
 fn function_calls() {
     test_snapshot(
         r#"
-    fn add_impl(a:int, b:int)->int {
+    fn add_impl(a:int, b:int) -> int {
         a+b
     }
 
-    fn add(a:int, b:int)->int {
+    fn add(a:int, b:int) -> int {
       add_impl(a,b)
     }
 
-    fn test()->int {
+    pub fn test() -> int {
       add(4,5)
       add_impl(4,5)
       add(4,5)
@@ -169,18 +184,18 @@ fn function_calls() {
 fn equality_operands() {
     test_snapshot(
         r#"
-    fn equals(a:int, b:int)->bool                { a == b }
-    fn not_equals(a:int, b:int)->bool            { a != b }
-    fn less(a:int, b:int)->bool                  { a < b }
-    fn less_equal(a:int, b:int)->bool            { a <= b }
-    fn greater(a:int, b:int)->bool               { a > b }
-    fn greater_equal(a:int, b:int)->bool         { a >= b }
-    fn equalsf(a:float, b:float)->bool           { a == b }
-    fn not_equalsf(a:float, b:float)->bool       { a != b }
-    fn lessf(a:float, b:float)->bool             { a < b }
-    fn less_equalf(a:float, b:float)->bool       { a <= b }
-    fn greaterf(a:float, b:float)->bool          { a > b }
-    fn greater_equalf(a:float, b:float)->bool    { a >= b }
+    pub fn equals(a:int, b:int) -> bool                { a == b }
+    pub fn not_equals(a:int, b:int) -> bool            { a != b }
+    pub fn less(a:int, b:int) -> bool                  { a < b }
+    pub fn less_equal(a:int, b:int) -> bool            { a <= b }
+    pub fn greater(a:int, b:int) -> bool               { a > b }
+    pub fn greater_equal(a:int, b:int) -> bool         { a >= b }
+    pub fn equalsf(a:float, b:float) -> bool           { a == b }
+    pub fn not_equalsf(a:float, b:float) -> bool       { a != b }
+    pub fn lessf(a:float, b:float) -> bool             { a < b }
+    pub fn less_equalf(a:float, b:float) -> bool       { a <= b }
+    pub fn greaterf(a:float, b:float) -> bool          { a > b }
+    pub fn greater_equalf(a:float, b:float) -> bool    { a >= b }
     "#,
     );
 }
@@ -189,7 +204,7 @@ fn equality_operands() {
 fn if_statement() {
     test_snapshot(
         r#"
-    fn foo(a:int)->int {
+    pub fn foo(a:int) -> int {
         let b = if a > 3 {
             let c = if a > 4 {
                 a+1
@@ -213,7 +228,7 @@ fn void_return() {
     fn bar() {
         let a = 3;
     }
-    fn foo(a:int) {
+    pub fn foo(a:int) {
         let c = bar()
     }
     "#,
@@ -224,7 +239,7 @@ fn void_return() {
 fn fibonacci() {
     test_snapshot(
         r#"
-    fn fibonacci(n:int)->int {
+    pub fn fibonacci(n:int) -> int {
         if n <= 1 {
             n
         } else {
@@ -239,7 +254,7 @@ fn fibonacci() {
 fn fibonacci_loop() {
     test_snapshot(
         r#"
-    fn fibonacci(n:int)->int {
+    pub fn fibonacci(n:int) -> int {
         let a = 0;
         let b = 1;
         let i = 1;
@@ -261,7 +276,7 @@ fn fibonacci_loop() {
 fn shadowing() {
     test_snapshot(
         r#"
-    fn foo(a:int)->int {
+    pub fn foo(a:int) -> int {
         let a = a+1;
         {
             let a = a+2;
@@ -269,7 +284,7 @@ fn shadowing() {
         a+3
     }
 
-    fn bar(a:int)->int {
+    pub fn bar(a:int) -> int {
         let a = a+1;
         let a = {
             let a = a+2;
@@ -285,7 +300,7 @@ fn shadowing() {
 fn return_expr() {
     test_snapshot(
         r#"
-    fn main()->int {
+    pub fn main() -> int {
         return 5;
         let a = 3; // Nothing regarding this statement should be in the IR
     }
@@ -297,7 +312,7 @@ fn return_expr() {
 fn conditional_return_expr() {
     test_snapshot(
         r#"
-    fn main(a:int)->int {
+    pub fn main(a:int) -> int {
         if a > 4 {
             return a;
         }
@@ -311,7 +326,7 @@ fn conditional_return_expr() {
 fn never_conditional_return_expr() {
     test_snapshot(
         r#"
-    fn main(a:int)->int {
+    pub fn main(a:int) -> int {
         if a > 4 {
             return a;
         } else {
@@ -326,11 +341,11 @@ fn never_conditional_return_expr() {
 fn true_is_true() {
     test_snapshot(
         r#"
-    fn test_true()->bool {
+    pub fn test_true() -> bool {
         true
     }
 
-    fn test_false()->bool {
+    pub fn test_false() -> bool {
         false
     }"#,
     );
@@ -340,7 +355,7 @@ fn true_is_true() {
 fn loop_expr() {
     test_snapshot(
         r#"
-    fn foo() {
+    pub fn foo() {
         loop {}
     }
     "#,
@@ -351,7 +366,7 @@ fn loop_expr() {
 fn loop_break_expr() {
     test_snapshot(
         r#"
-    fn foo(n:int)->int {
+    pub fn foo(n:int) -> int {
         loop {
             if n > 5 {
                 break n;
@@ -370,7 +385,7 @@ fn loop_break_expr() {
 fn while_expr() {
     test_snapshot(
         r#"
-    fn foo(n:int) {
+    pub fn foo(n:int) {
         while n<3 {
             n += 1;
         };
@@ -391,7 +406,7 @@ fn struct_test() {
     struct(value) Bar(float, int, bool, Foo);
     struct(value) Foo { a: int };
     struct(value) Baz;
-    fn foo() {
+    pub fn foo() {
         let a: Foo = Foo { a: 5 };
         let b: Bar = Bar(1.23, a.a, true, a);
         let c: Baz = Baz;
@@ -407,27 +422,19 @@ fn field_expr() {
     struct(value) Bar(float, Foo);
     struct(value) Foo { a: int };
 
-    fn bar_0(bar: Bar) -> float {
-        bar.0
-    }
-
     fn bar_1(bar: Bar) -> Foo {
         bar.1
-    }
-
-    fn bar_1_a(bar: Bar) -> int {
-        bar.1.a
     }
 
     fn foo_a(foo: Foo) -> int {
         foo.a
     }
 
-    fn bar_1_foo_a(bar: Bar) -> int {
+    pub fn bar_1_foo_a(bar: Bar) -> int {
         foo_a(bar_1(bar))
     }
 
-    fn main() -> int {
+    pub fn main() -> int {
         let a: Foo = Foo { a: 5 };
         let b: Bar = Bar(1.23, a);
         let aa_lhs = a.a + 2;
@@ -444,7 +451,7 @@ fn field_crash() {
         r#"
     struct(gc) Foo { a: int };
 
-    fn main(c:int)->int {
+    pub fn main(c:int) -> int {
         let b = Foo { a: c + 5 }
         b.a
     }
@@ -458,7 +465,7 @@ fn gc_struct() {
         r#"
     struct(gc) Foo { a: int, b: int };
 
-    fn foo() {
+    pub fn foo() {
         let a = Foo { a: 3, b: 4 };
         a.b += 3;
         let b = a;
@@ -471,21 +478,21 @@ fn gc_struct() {
 fn primitive_types() {
     test_snapshot(
         r#"
-   fn add(a: u8, b: u8) -> u8 { a+b }
-   fn less(a: u16, b: u16) -> bool { a<b }
-   fn greater(a: u32, b: u32) -> bool { a>b }
-   fn equal(a: u64, b: u64) -> bool { a==b }
-   fn nequal(a: u128, b: u128) -> bool { a!=b }
-   fn greater_equal(a: usize, b: usize) -> bool { a>=b }
-   fn less_equal(a: uint, b: uint) -> bool { a<=b }
+   pub fn add(a: u8, b: u8) -> u8 { a+b }
+   pub fn less(a: u16, b: u16) -> bool { a<b }
+   pub fn greater(a: u32, b: u32) -> bool { a>b }
+   pub fn equal(a: u64, b: u64) -> bool { a==b }
+   pub fn nequal(a: u128, b: u128) -> bool { a!=b }
+   pub fn greater_equal(a: usize, b: usize) -> bool { a>=b }
+   pub fn less_equal(a: uint, b: uint) -> bool { a<=b }
 
-   fn iadd(a: i8, b: i8) -> i8 { a+b }
-   fn iless(a: i16, b: i16) -> bool { a<b }
-   fn igreater(a: i32, b: i32) -> bool { a>b }
-   fn iequal(a: i64, b: i64) -> bool { a==b }
-   fn inequal(a: i128, b: i128) -> bool { a!=b }
-   fn igreater_equal(a: isize, b: isize) -> bool { a>=b }
-   fn iless_equal(a: int, b: int) -> bool { a<=b }
+   pub fn iadd(a: i8, b: i8) -> i8 { a+b }
+   pub fn iless(a: i16, b: i16) -> bool { a<b }
+   pub fn igreater(a: i32, b: i32) -> bool { a>b }
+   pub fn iequal(a: i64, b: i64) -> bool { a==b }
+   pub fn inequal(a: i128, b: i128) -> bool { a!=b }
+   pub fn igreater_equal(a: isize, b: isize) -> bool { a>=b }
+   pub fn iless_equal(a: int, b: int) -> bool { a<=b }
     "#,
     )
 }
@@ -495,11 +502,22 @@ fn extern_fn() {
     test_snapshot(
         r#"
     extern fn add(a:int, b:int) -> int;
-    fn main() {
+    pub fn main() {
         add(3,4);
     }
     "#,
     )
+}
+
+#[test]
+fn private_fn_only() {
+    test_snapshot(
+        r#"
+    fn private_main() {
+        let a = 1;
+    }
+    "#,
+    );
 }
 
 #[test]
@@ -577,8 +595,8 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
     drop(sink);
     let messages = messages.into_inner();
 
-    let _module_builder =
-        ModuleBuilder::new(&mut db, file_id).expect("Failed to initialize module builder");
+    let module_builder =
+        ModuleBuilder::new(&db, file_id).expect("Failed to initialize module builder");
 
     // The thread is named after the test case, so we can use it to name our snapshots.
     let thread_name = std::thread::current()
@@ -609,6 +627,11 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
                 .to_string()
         )
     };
+
+    // To ensure that we test symbol generation
+    if messages.is_empty() {
+        let _obj_file = module_builder.build().expect("Failed to build object file");
+    }
 
     let value = format!(
         r"; == FILE IR =====================================
