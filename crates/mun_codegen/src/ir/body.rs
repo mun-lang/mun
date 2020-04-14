@@ -734,6 +734,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             ArithOp::Subtract => self.builder.build_int_sub(lhs, rhs, "sub"),
             ArithOp::Divide => self.builder.build_int_signed_div(lhs, rhs, "div"),
             ArithOp::Multiply => self.builder.build_int_mul(lhs, rhs, "mul"),
+            ArithOp::Remainder => self.builder.build_int_signed_rem(lhs, rhs, "rem"),
         }
     }
 
@@ -748,6 +749,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             ArithOp::Subtract => self.builder.build_float_sub(lhs, rhs, "sub"),
             ArithOp::Divide => self.builder.build_float_div(lhs, rhs, "div"),
             ArithOp::Multiply => self.builder.build_float_mul(lhs, rhs, "mul"),
+            ArithOp::Remainder => self.builder.build_float_rem(lhs, rhs, "rem"),
         }
     }
 

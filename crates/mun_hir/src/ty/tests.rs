@@ -116,10 +116,12 @@ fn update_operators() {
         a -= 3;
         a *= 3;
         a /= 3;
+        a %= 3;
         b += 3.0;
         b -= 3.0;
         b *= 3.0;
         b /= 3.0;
+        b %= 3.0;
         a *= 3.0; // mismatched type
         b *= 3; // mismatched type
     }

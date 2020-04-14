@@ -271,7 +271,7 @@ pub enum ArithOp {
     Multiply,
     Subtract,
     Divide,
-    //Remainder,
+    Remainder,
     //Power,
 }
 
@@ -549,7 +549,7 @@ where
                         | op @ BinOp::LessEqual
                         | op @ BinOp::Greater
                         | op @ BinOp::GreatEqual
-                        //| op @ BinOp::Remainder
+                        | op @ BinOp::Remainder
                         //| op @ BinOp::Power
                         => {
                             let op = match op {
@@ -563,7 +563,7 @@ where
                                 BinOp::LessEqual => BinaryOp::CmpOp(CmpOp::Ord { ordering: Ordering::Less, strict: false } ),
                                 BinOp::Greater => BinaryOp::CmpOp(CmpOp::Ord { ordering: Ordering::Greater, strict: true } ),
                                 BinOp::GreatEqual => BinaryOp::CmpOp(CmpOp::Ord { ordering: Ordering::Greater, strict: false } ),
-                                //BinOp::Remainder => BinaryOp::ArithOp(ArithOp::Remainder),
+                                BinOp::Remainder => BinaryOp::ArithOp(ArithOp::Remainder),
                                 //BinOp::Power => BinaryOp::ArithOp(ArithOp::Power),
                                 _ => unreachable!(),
                             };
@@ -582,7 +582,8 @@ where
                         | op @ BinOp::AddAssign
                         | op @ BinOp::SubtractAssign
                         | op @ BinOp::MultiplyAssign
-                        | op @ BinOp::DivideAssign => {
+                        | op @ BinOp::DivideAssign
+                        | op @ BinOp::RemainderAssign => {
 
                             let assign_op = match op {
                                 BinOp::Assign => None,
@@ -590,6 +591,7 @@ where
                                 BinOp::SubtractAssign => Some(ArithOp::Subtract),
                                 BinOp::MultiplyAssign => Some(ArithOp::Multiply),
                                 BinOp::DivideAssign => Some(ArithOp::Divide),
+                                BinOp::RemainderAssign => Some(ArithOp::Remainder),
                                 _ => unreachable!("invalid assignment operator")
                             } ;
 

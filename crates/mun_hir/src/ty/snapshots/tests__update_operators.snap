@@ -1,12 +1,12 @@
 ---
 source: crates/mun_hir/src/ty/tests.rs
-expression: "fn foo(a:int, b:float) {\n    a += 3;\n    a -= 3;\n    a *= 3;\n    a /= 3;\n    b += 3.0;\n    b -= 3.0;\n    b *= 3.0;\n    b /= 3.0;\n    a *= 3.0; // mismatched type\n    b *= 3; // mismatched type\n}"
+expression: "fn foo(a:int, b:float) {\n    a += 3;\n    a -= 3;\n    a *= 3;\n    a /= 3;\n    a %= 3;\n    b += 3.0;\n    b -= 3.0;\n    b *= 3.0;\n    b /= 3.0;\n    b %= 3.0;\n    a *= 3.0; // mismatched type\n    b *= 3; // mismatched type\n}"
 ---
-[138; 141): mismatched type
-[171; 172): mismatched type
+[164; 167): mismatched type
+[197; 198): mismatched type
 [7; 8) 'a': int
 [14; 15) 'b': float
-[23; 194) '{     ...type }': nothing
+[23; 220) '{     ...type }': nothing
 [29; 30) 'a': int
 [29; 35) 'a += 3': nothing
 [34; 35) '3': int
@@ -19,21 +19,27 @@ expression: "fn foo(a:int, b:float) {\n    a += 3;\n    a -= 3;\n    a *= 3;\n  
 [65; 66) 'a': int
 [65; 71) 'a /= 3': nothing
 [70; 71) '3': int
-[77; 78) 'b': float
-[77; 85) 'b += 3.0': nothing
-[82; 85) '3.0': float
-[91; 92) 'b': float
-[91; 99) 'b -= 3.0': nothing
-[96; 99) '3.0': float
-[105; 106) 'b': float
-[105; 113) 'b *= 3.0': nothing
-[110; 113) '3.0': float
-[119; 120) 'b': float
-[119; 127) 'b /= 3.0': nothing
-[124; 127) '3.0': float
-[133; 134) 'a': int
-[133; 141) 'a *= 3.0': nothing
-[138; 141) '3.0': float
-[166; 167) 'b': float
-[166; 172) 'b *= 3': nothing
-[171; 172) '3': int
+[77; 78) 'a': int
+[77; 83) 'a %= 3': nothing
+[82; 83) '3': int
+[89; 90) 'b': float
+[89; 97) 'b += 3.0': nothing
+[94; 97) '3.0': float
+[103; 104) 'b': float
+[103; 111) 'b -= 3.0': nothing
+[108; 111) '3.0': float
+[117; 118) 'b': float
+[117; 125) 'b *= 3.0': nothing
+[122; 125) '3.0': float
+[131; 132) 'b': float
+[131; 139) 'b /= 3.0': nothing
+[136; 139) '3.0': float
+[145; 146) 'b': float
+[145; 153) 'b %= 3.0': nothing
+[150; 153) '3.0': float
+[159; 160) 'a': int
+[159; 167) 'a *= 3.0': nothing
+[164; 167) '3.0': float
+[192; 193) 'b': float
+[192; 198) 'b *= 3': nothing
+[197; 198) '3': int
