@@ -6,16 +6,18 @@ use inkwell::targets::TargetData;
 use inkwell::{
     module::{Linkage, Module},
     passes::{PassManager, PassManagerBuilder},
-    targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target},
+    targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine},
     types::StructType,
     values::{BasicValue, GlobalValue, IntValue, PointerValue, UnnamedAddress},
     AddressSpace, OptimizationLevel,
 };
+use mun_target::spec;
 use std::io::{self, Write};
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
+use tempfile::NamedTempFile;
 
 mod linker;
 pub mod symbols;
@@ -42,6 +44,51 @@ impl From<LinkerError> for CodeGenerationError {
     }
 }
 
+pub struct ObjectFile {
+    target: spec::Target,
+    src_path: RelativePathBuf,
+    obj_file: NamedTempFile,
+}
+
+impl ObjectFile {
+    pub fn new(
+        target: &spec::Target,
+        target_machine: &TargetMachine,
+        src_path: RelativePathBuf,
+        module: Arc<inkwell::module::Module>,
+    ) -> Result<Self, failure::Error> {
+        let obj = target_machine
+            .write_to_memory_buffer(&module, FileType::Object)
+            .map_err(|e| CodeGenerationError::CodeGenerationError(e.to_string()))?;
+
+        let mut obj_file = tempfile::NamedTempFile::new()
+            .map_err(CodeGenerationError::CouldNotCreateObjectFile)?;
+        obj_file
+            .write(obj.as_slice())
+            .map_err(CodeGenerationError::CouldNotCreateObjectFile)?;
+
+        Ok(Self {
+            target: target.clone(),
+            src_path,
+            obj_file,
+        })
+    }
+
+    pub fn into_shared_object(self, out_dir: Option<&Path>) -> Result<PathBuf, failure::Error> {
+        // Construct a linker for the target
+        let mut linker = linker::create_with_target(&self.target);
+        linker.add_object(self.obj_file.path())?;
+
+        let output_path = assembly_output_path(&self.src_path, out_dir);
+
+        // Link the object
+        linker.build_shared_object(&output_path)?;
+        linker.finalize()?;
+
+        Ok(output_path)
+    }
+}
+
 /// A struct that can be used to build an LLVM `Module`.
 pub struct ModuleBuilder<'a, D: IrDatabase> {
     db: &'a D,
@@ -52,8 +99,8 @@ pub struct ModuleBuilder<'a, D: IrDatabase> {
 }
 
 impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
-    /// Construct module for the given `hir::FileId` at the specified output file location.
-    pub fn new(db: &'a mut D, file_id: FileId) -> Result<Self, failure::Error> {
+    /// Constructs module for the given `hir::FileId` at the specified output file location.
+    pub fn new(db: &'a D, file_id: FileId) -> Result<Self, failure::Error> {
         let target = db.target();
 
         // Construct a module for the assembly
@@ -91,8 +138,8 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
         })
     }
 
-    /// Construct a shared object at the specified output file location.
-    pub fn finalize(&self, out_dir: Option<&Path>) -> Result<PathBuf, failure::Error> {
+    /// Constructs an object file.
+    pub fn build(self) -> Result<ObjectFile, failure::Error> {
         let group_ir = self.db.group_ir(self.file_id);
         let file = self.db.file_ir(self.file_id);
 
@@ -120,39 +167,18 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
         // Debug print the IR
         //println!("{}", assembly_module.print_to_string().to_string());
 
-        // Generate object file
-        let obj_file = {
-            let obj = self
-                .target_machine
-                .write_to_memory_buffer(&self.assembly_module, FileType::Object)
-                .map_err(|e| CodeGenerationError::CodeGenerationError(e.to_string()))?;
-            let mut obj_file = tempfile::NamedTempFile::new()
-                .map_err(CodeGenerationError::CouldNotCreateObjectFile)?;
-            obj_file
-                .write(obj.as_slice())
-                .map_err(CodeGenerationError::CouldNotCreateObjectFile)?;
-            obj_file
-        };
-
-        let target = self.db.target();
-
-        // Construct a linker for the target
-        let mut linker = linker::create_with_target(&target);
-        linker.add_object(obj_file.path())?;
-
-        let output_path = assembly_output_path(self.db, self.file_id, out_dir);
-
-        // Link the object
-        linker.build_shared_object(&output_path)?;
-        linker.finalize()?;
-
-        Ok(output_path)
+        ObjectFile::new(
+            &self.db.target(),
+            &self.target_machine,
+            self.db.file_relative_path(self.file_id),
+            self.assembly_module,
+        )
     }
 }
+
 /// Computes the output path for the assembly of the specified file.
-fn assembly_output_path<D: IrDatabase>(db: &D, file_id: FileId, out_dir: Option<&Path>) -> PathBuf {
-    let relative_path: RelativePathBuf = db.file_relative_path(file_id);
-    let original_filename = Path::new(relative_path.file_name().unwrap());
+fn assembly_output_path(src_path: &RelativePathBuf, out_dir: Option<&Path>) -> PathBuf {
+    let original_filename = Path::new(src_path.file_name().unwrap());
 
     // Add the `munlib` suffix to the original filename
     let output_file_name = original_filename.with_extension("munlib");

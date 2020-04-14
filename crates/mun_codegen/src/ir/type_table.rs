@@ -1,7 +1,10 @@
 use crate::code_gen::{
     gen_global, gen_string_array, gen_struct_ptr_array, gen_u16_array, intern_string,
 };
-use crate::ir::{abi_types::AbiTypes, dispatch_table::FunctionPrototype};
+use crate::ir::{
+    abi_types::AbiTypes,
+    dispatch_table::{DispatchTable, FunctionPrototype},
+};
 use crate::type_info::{TypeGroup, TypeInfo};
 use crate::IrDatabase;
 use hir::{Body, ExprId, InferenceResult};
@@ -83,6 +86,7 @@ pub(crate) struct TypeTableBuilder<'a, D: IrDatabase> {
     target_data: Arc<TargetData>,
     module: &'a Module,
     abi_types: &'a AbiTypes,
+    dispatch_table: &'a DispatchTable,
     entries: BTreeSet<TypeInfo>, // Use a `BTreeSet` to guarantee deterministically ordered output
 }
 
@@ -93,12 +97,14 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
         module: &'a Module,
         abi_types: &'a AbiTypes,
         intrinsics: impl Iterator<Item = &'f FunctionPrototype>,
+        dispatch_table: &'a DispatchTable,
     ) -> Self {
         let mut builder = Self {
             db,
             target_data: db.target_data(),
             module,
             abi_types,
+            dispatch_table,
             entries: BTreeSet::new(),
         };
 
@@ -136,7 +142,7 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
     /// Collects unique `TypeInfo` from the specified function signature and body.
     pub fn collect_fn(&mut self, hir_fn: hir::Function) {
         // Collect type info for exposed function
-        if !hir_fn.data(self.db).visibility().is_private() || hir_fn.is_extern(self.db) {
+        if !hir_fn.data(self.db).visibility().is_private() || self.dispatch_table.contains(hir_fn) {
             let fn_sig = hir_fn.ty(self.db).callable_sig(self.db).unwrap();
 
             // Collect argument types

@@ -27,6 +27,21 @@ fn issue_128() {
 }
 
 #[test]
+fn issue_133() {
+    test_snapshot(
+        r#"
+    fn do_the_things(n: int) -> int {
+        n + 7
+    }
+    
+    pub fn main() {
+        do_the_things(3);
+    }
+    "#,
+    );
+}
+
+#[test]
 fn function() {
     test_snapshot(
         r#"
@@ -495,6 +510,17 @@ fn extern_fn() {
 }
 
 #[test]
+fn private_fn_only() {
+    test_snapshot(
+        r#"
+    fn private_main() {
+        let a = 1;
+    }
+    "#,
+    );
+}
+
+#[test]
 fn incremental_compilation() {
     let (mut db, file_id) = MockDatabase::with_single_file(
         r#"
@@ -569,8 +595,8 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
     drop(sink);
     let messages = messages.into_inner();
 
-    let _module_builder =
-        ModuleBuilder::new(&mut db, file_id).expect("Failed to initialize module builder");
+    let module_builder =
+        ModuleBuilder::new(&db, file_id).expect("Failed to initialize module builder");
 
     // The thread is named after the test case, so we can use it to name our snapshots.
     let thread_name = std::thread::current()
@@ -601,6 +627,11 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
                 .to_string()
         )
     };
+
+    // To ensure that we test symbol generation
+    if messages.is_empty() {
+        let _obj_file = module_builder.build().expect("Failed to build object file");
+    }
 
     let value = format!(
         r"; == FILE IR =====================================

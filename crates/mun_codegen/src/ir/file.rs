@@ -25,13 +25,15 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<FileIR> {
 
     let group_ir = db.group_ir(file_id);
 
-    // Generate all function and wrapper function signatures.
+    // Generate all exposed function and wrapper function signatures.
     // Use a `BTreeMap` to guarantee deterministically ordered output.ures
     let mut functions = HashMap::new();
     let mut wrapper_functions = BTreeMap::new();
     for def in db.module_data(file_id).definitions() {
         if let ModuleDef::Function(f) = def {
-            if !f.is_extern(db) {
+            if (!f.data(db).visibility().is_private() || group_ir.dispatch_table.contains(*f))
+                && !f.is_extern(db)
+            {
                 let fun = function::gen_signature(
                     db,
                     *f,
