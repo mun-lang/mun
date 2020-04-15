@@ -790,3 +790,21 @@ fn can_add_external_without_return() {
     .insert_fn("foo", foo as extern "C" fn(i64) -> ());
     let _: () = invoke_fn!(driver.runtime_mut(), "main").unwrap();
 }
+
+#[test]
+fn signed_and_unsigned_rem() {
+    let mut driver = TestDriver::new(
+        r#"
+    pub fn signed() -> int {
+        (0 - 2) % 5
+    }
+
+    pub fn unsigned() -> int {
+        2 % 5
+    }
+    "#,
+    );
+
+    assert_invoke_eq!(i64, -2, driver, "signed");
+    assert_invoke_eq!(i64, 2, driver, "unsigned");
+}
