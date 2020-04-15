@@ -663,7 +663,9 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             .expect("no rhs value")
             .into_int_value();
         match op {
-            BinaryOp::ArithOp(op) => Some(self.gen_arith_bin_op_int(lhs, rhs, op).into()),
+            BinaryOp::ArithOp(op) => {
+                Some(self.gen_arith_bin_op_int(lhs, rhs, op, signedness).into())
+            }
             BinaryOp::CmpOp(op) => {
                 let (name, predicate) = match op {
                     CmpOp::Eq { negated: false } => ("eq", IntPredicate::EQ),
@@ -717,7 +719,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             }
             BinaryOp::Assignment { op } => {
                 let rhs = match op {
-                    Some(op) => self.gen_arith_bin_op_int(lhs, rhs, op),
+                    Some(op) => self.gen_arith_bin_op_int(lhs, rhs, op, signedness),
                     None => rhs,
                 };
                 let place = self.gen_place_expr(lhs_expr);
@@ -728,13 +730,25 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         }
     }
 
-    fn gen_arith_bin_op_int(&mut self, lhs: IntValue, rhs: IntValue, op: ArithOp) -> IntValue {
+    fn gen_arith_bin_op_int(
+        &mut self,
+        lhs: IntValue,
+        rhs: IntValue,
+        op: ArithOp,
+        signedness: hir::Signedness,
+    ) -> IntValue {
         match op {
             ArithOp::Add => self.builder.build_int_add(lhs, rhs, "add"),
             ArithOp::Subtract => self.builder.build_int_sub(lhs, rhs, "sub"),
-            ArithOp::Divide => self.builder.build_int_signed_div(lhs, rhs, "div"),
+            ArithOp::Divide => match signedness {
+                hir::Signedness::Signed => self.builder.build_int_signed_div(lhs, rhs, "div"),
+                hir::Signedness::Unsigned => self.builder.build_int_unsigned_div(lhs, rhs, "div"),
+            },
             ArithOp::Multiply => self.builder.build_int_mul(lhs, rhs, "mul"),
-            ArithOp::Remainder => self.builder.build_int_signed_rem(lhs, rhs, "rem"),
+            ArithOp::Remainder => match signedness {
+                hir::Signedness::Signed => self.builder.build_int_signed_rem(lhs, rhs, "rem"),
+                hir::Signedness::Unsigned => self.builder.build_int_unsigned_rem(lhs, rhs, "rem"),
+            },
         }
     }
 
