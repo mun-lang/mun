@@ -64,6 +64,9 @@ impl TestDriver {
         self.runtime_mut(); // Ensures that the runtime is spawned prior to the update
         self.driver.set_file_text(self.file_id, text);
         let out_path = self.driver.write_assembly(self.file_id).unwrap();
+        if self.driver.emit_diagnostics(&mut stderr()).unwrap() {
+            panic!("compiler errors..")
+        }
         assert_eq!(
             &out_path, &self.out_path,
             "recompiling did not result in the same assembly"

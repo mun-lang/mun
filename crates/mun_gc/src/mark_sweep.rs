@@ -1,19 +1,28 @@
 use crate::{Event, GcPtr, GcRuntime, Observer, RawGcPtr, Stats, TypeTrace};
+use memory::{mapping::field_mapping, Diff, FieldDiff, FieldMappingDesc};
+use once_cell::unsync::OnceCell;
 use parking_lot::RwLock;
 use std::collections::{HashMap, VecDeque};
+use std::hash::Hash;
 use std::ops::Deref;
 use std::pin::Pin;
 
 /// Implements a simple mark-sweep type garbage collector.
 #[derive(Debug)]
-pub struct MarkSweep<T: memory::TypeLayout + TypeTrace + Clone, O: Observer<Event = Event>> {
+pub struct MarkSweep<T, O>
+where
+    T: memory::TypeLayout + TypeTrace + Clone,
+    O: Observer<Event = Event>,
+{
     objects: RwLock<HashMap<GcPtr, Pin<Box<ObjectInfo<T>>>>>,
     observer: O,
     stats: RwLock<Stats>,
 }
 
-impl<T: memory::TypeLayout + TypeTrace + Clone, O: Observer<Event = Event> + Default> Default
-    for MarkSweep<T, O>
+impl<T, O> Default for MarkSweep<T, O>
+where
+    T: memory::TypeLayout + TypeTrace + Clone,
+    O: Observer<Event = Event> + Default,
 {
     fn default() -> Self {
         MarkSweep {
@@ -24,7 +33,11 @@ impl<T: memory::TypeLayout + TypeTrace + Clone, O: Observer<Event = Event> + Def
     }
 }
 
-impl<T: memory::TypeLayout + TypeTrace + Clone, O: Observer<Event = Event>> MarkSweep<T, O> {
+impl<T, O> MarkSweep<T, O>
+where
+    T: memory::TypeLayout + TypeTrace + Clone,
+    O: Observer<Event = Event>,
+{
     /// Creates a `MarkSweep` memory collector with the specified `Observer`.
     pub fn with_observer(observer: O) -> Self {
         Self {
@@ -40,8 +53,10 @@ impl<T: memory::TypeLayout + TypeTrace + Clone, O: Observer<Event = Event>> Mark
     }
 }
 
-impl<T: memory::TypeLayout + TypeTrace + Clone, O: Observer<Event = Event>> GcRuntime<T>
-    for MarkSweep<T, O>
+impl<T, O> GcRuntime<T> for MarkSweep<T, O>
+where
+    T: memory::TypeLayout + TypeTrace + Clone,
+    O: Observer<Event = Event>,
 {
     fn alloc(&self, ty: T) -> GcPtr {
         let layout = ty.layout();
@@ -103,8 +118,10 @@ impl<T: memory::TypeLayout + TypeTrace + Clone, O: Observer<Event = Event>> GcRu
     }
 }
 
-impl<T: memory::TypeLayout + TypeTrace + Clone, O: Observer<Event = Event> + Default>
-    MarkSweep<T, O>
+impl<T, O> MarkSweep<T, O>
+where
+    T: memory::TypeLayout + TypeTrace + Clone,
+    O: Observer<Event = Event>,
 {
     /// Collects all memory that is no longer referenced by rooted objects. Returns `true` if memory
     /// was reclaimed, `false` otherwise.
@@ -173,8 +190,120 @@ impl<T: memory::TypeLayout + TypeTrace + Clone, O: Observer<Event = Event> + Def
     }
 }
 
+impl<T, O> memory::MemoryMapper<T> for MarkSweep<T, O>
+where
+    T: memory::TypeLayout + memory::TypeFields<T> + TypeTrace + Clone + Eq + Hash,
+    O: Observer<Event = Event>,
+{
+    fn map_memory(&self, old: &[T], new: &[T], diff: &[memory::Diff]) {
+        // Deletions need to stay alive, but somehow we want to release the `Assembly`'s `TypeInfo`
+        // once no `ObjectInfo` is using it anymore. Return a list of `GcPtr`'s and listen to the
+        // `Event`s?
+        let _deletions: HashMap<T, usize> = diff
+            .iter()
+            .filter_map(|diff| {
+                if let memory::Diff::Delete { index } = diff {
+                    Some((unsafe { old.get_unchecked(*index) }.clone(), 0))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let mut objects = self.objects.write();
+
+        // // Remove deleted types
+        // objects.retain(|_, object_info| !deletions.contains(&object_info.ty));
+
+        for diff in diff.iter() {
+            match diff {
+                Diff::Delete { .. } => (), // Already handled
+                Diff::Edit {
+                    diff,
+                    old_index,
+                    new_index,
+                } => {
+                    let old_ty = unsafe { old.get_unchecked(*old_index) };
+                    let new_ty = unsafe { new.get_unchecked(*new_index) };
+
+                    // Use `OnceCell` to lazily construct `TypeData` for `old_ty` and `new_ty`.
+                    let mut type_data = OnceCell::new();
+
+                    for object_info in objects.values_mut() {
+                        if object_info.ty == *old_ty {
+                            map_fields(object_info, old_ty, new_ty, diff, &mut type_data);
+                        }
+                    }
+                }
+                Diff::Insert { .. } | Diff::Move { .. } => (),
+            }
+        }
+
+        struct TypeData<'a, T> {
+            old_fields: Vec<(&'a str, T)>,
+            _new_fields: Vec<(&'a str, T)>,
+            old_offsets: &'a [u16],
+            new_offsets: &'a [u16],
+        }
+
+        fn map_fields<
+            'a,
+            T: memory::TypeLayout + memory::TypeFields<T> + TypeTrace + Clone + Eq,
+        >(
+            object_info: &mut Pin<Box<ObjectInfo<T>>>,
+            old_ty: &'a T,
+            new_ty: &'a T,
+            diff: &[FieldDiff],
+            type_data: &mut OnceCell<TypeData<'a, T>>,
+        ) {
+            let TypeData {
+                old_fields,
+                _new_fields,
+                old_offsets,
+                new_offsets,
+            } = type_data.get_or_init(|| TypeData {
+                old_fields: old_ty.fields(),
+                _new_fields: new_ty.fields(),
+                old_offsets: old_ty.offsets(),
+                new_offsets: new_ty.offsets(),
+            });
+            let ptr = unsafe { std::alloc::alloc_zeroed(new_ty.layout()) };
+
+            let mapping = field_mapping(&old_fields, &diff);
+            for (new_index, map) in mapping.into_iter().enumerate() {
+                if let Some(FieldMappingDesc { old_index, action }) = map {
+                    let src = {
+                        let mut src = object_info.ptr as usize;
+                        src += usize::from(unsafe { *old_offsets.get_unchecked(old_index) });
+                        src as *mut u8
+                    };
+                    let dest = {
+                        let mut dest = ptr as usize;
+                        dest += usize::from(unsafe { *new_offsets.get_unchecked(new_index) });
+                        dest as *mut u8
+                    };
+                    let old_field = unsafe { old_fields.get_unchecked(old_index) };
+                    if action == memory::Action::Cast {
+                        panic!("The Mun Runtime doesn't currently support casting");
+                    } else {
+                        unsafe {
+                            std::ptr::copy_nonoverlapping(src, dest, old_field.1.layout().size())
+                        }
+                    }
+                }
+            }
+            object_info.set(ObjectInfo {
+                ptr,
+                roots: object_info.roots,
+                color: object_info.color,
+                ty: new_ty.clone(),
+            });
+        }
+    }
+}
+
 /// Coloring used in the Mark Sweep phase.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Color {
     /// A white object has not been seen yet by the mark phase
     White,

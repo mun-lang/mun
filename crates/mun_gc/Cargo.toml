@@ -11,6 +11,7 @@ description = "Garbage collection crate for Mun"
 [dependencies]
 abi = { path = "../mun_abi", package = "mun_abi" }
 memory = { path = "../mun_memory", package = "mun_memory" }
+once_cell = "1.3.1"
 parking_lot = "0.10"
 
 [dev-dependencies]
