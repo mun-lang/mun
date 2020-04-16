@@ -156,6 +156,7 @@ impl<T: memory::TypeLayout + TypeTrace + Clone, O: Observer<Event = Event> + Def
                 }
                 true
             } else {
+                unsafe { std::alloc::dealloc(obj.ptr, obj.ty.layout()) };
                 self.observer.event(Event::Deallocation(*h));
                 {
                     let mut stats = self.stats.write();
