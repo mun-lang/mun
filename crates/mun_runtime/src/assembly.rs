@@ -15,7 +15,8 @@ use std::{collections::HashSet, sync::Arc};
 /// An assembly is a hot reloadable compilation unit, consisting of one or more Mun modules.
 pub struct Assembly {
     library_path: PathBuf,
-    _library: Option<TempLibrary>,
+    library: TempLibrary,
+    legacy_libs: Vec<TempLibrary>,
     info: AssemblyInfo,
     allocator: Arc<GarbageCollector>,
 }
@@ -43,11 +44,13 @@ impl Assembly {
         let info = get_info();
         let assembly = Assembly {
             library_path: library_path.to_path_buf(),
-            _library: Some(library),
+            library,
+            legacy_libs: Vec::new(),
             info,
             allocator: gc,
         };
 
+        // Ensure that any loaded `Assembly` can be linked safely.
         assembly.ensure_linkable(runtime_dispatch_table)?;
         Ok(assembly)
     }
@@ -102,8 +105,10 @@ impl Assembly {
     }
 
     /// Links the assembly using the runtime's dispatch table.
+    ///
+    /// Requires that `ensure_linkable` has been called beforehand. This happens upon creation of
+    /// an `Assembly` - in the `load` function - making this function safe.
     pub fn link(&mut self, runtime_dispatch_table: &mut DispatchTable) {
-        // Fill the runtime's `DispatchTable`
         for function in self.info.symbols.functions() {
             runtime_dispatch_table.insert_fn(function.signature.name(), function.clone());
         }
@@ -143,8 +148,9 @@ impl Assembly {
             .map(|ty| (*ty as *const abi::TypeInfo).into())
             .collect();
 
-        self.allocator
-            .map_memory(&old_types, &new_types, &diff(&old_types, &new_types));
+        let deleted_objects =
+            self.allocator
+                .map_memory(&old_types, &new_types, &diff(&old_types, &new_types));
 
         // Remove the old assembly's functions
         for function in self.info.symbols.functions() {
@@ -152,7 +158,18 @@ impl Assembly {
         }
 
         new_assembly.link(runtime_dispatch_table);
-        *self = new_assembly;
+
+        // Retain all existing legacy libs
+        new_assembly.legacy_libs.append(&mut self.legacy_libs);
+
+        std::mem::swap(self, &mut new_assembly);
+        let old_assembly = new_assembly;
+
+        if !deleted_objects.is_empty() {
+            // Retain the previous assembly
+            self.legacy_libs.push(old_assembly.into_library());
+        }
+
         Ok(())
     }
 
@@ -164,5 +181,10 @@ impl Assembly {
     /// Returns the path corresponding to the assembly's library.
     pub fn library_path(&self) -> &Path {
         self.library_path.as_path()
+    }
+
+    /// Converts the `Assembly` into a `TempLibrary`, consuming the input in the process.
+    pub fn into_library(self) -> TempLibrary {
+        self.library
     }
 }

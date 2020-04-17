@@ -201,7 +201,7 @@ where
     T: TypeLayout + TypeFields<T> + TypeTrace + Clone + Eq + Hash,
     O: Observer<Event = Event>,
 {
-    fn map_memory(&self, old: &[T], new: &[T], diff: &[Diff]) {
+    fn map_memory(&self, old: &[T], new: &[T], diff: &[Diff]) -> Vec<GcPtr> {
         // Collect all deleted types.
         let deleted: HashSet<T> = diff
             .iter()
@@ -217,7 +217,7 @@ where
         let mut objects = self.objects.write();
 
         // Determine which types are still allocated with deleted types
-        let _deleted: Vec<GcPtr> = objects
+        let deleted = objects
             .iter()
             .filter_map(|(ptr, object_info)| {
                 if deleted.contains(&object_info.ty) {
@@ -251,6 +251,8 @@ where
                 Diff::Insert { .. } | Diff::Move { .. } => (),
             }
         }
+
+        return deleted;
 
         struct TypeData<'a, T> {
             old_fields: Vec<(&'a str, T)>,

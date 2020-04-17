@@ -411,3 +411,49 @@ fn map_struct_all() {
     assert_eq!(foo.get::<i64>("d").unwrap(), a);
     assert_eq!(foo.get::<i64>("e").unwrap(), 0);
 }
+
+#[test]
+fn delete_used_struct() {
+    let mut driver = TestDriver::new(
+        r#"
+        struct Foo {
+            a: int,
+            b: float,
+            c: float,
+        }
+
+        pub fn foo_new(a: int, b: float, c: float) -> Foo {
+            Foo { a, b, c }
+        }
+    "#,
+    );
+
+    let a = 5i64;
+    let b = 1.0f64;
+    let c = 3.0f64;
+    let foo: StructRef = invoke_fn!(driver.runtime_mut(), "foo_new", a, b, c).unwrap();
+
+    driver.update(
+        r#"
+        struct Bar(int);
+
+        pub fn bar_new(a: int) -> Bar {
+            Bar(a)
+        }
+    "#,
+    );
+
+    assert!(driver
+        .runtime_mut()
+        .borrow()
+        .get_function_info("foo_new")
+        .is_none());
+    assert!(driver
+        .runtime_mut()
+        .borrow()
+        .get_function_info("bar_new")
+        .is_some());
+    assert_eq!(foo.get::<i64>("a").unwrap(), a);
+    assert_eq!(foo.get::<f64>("b").unwrap(), b);
+    assert_eq!(foo.get::<f64>("c").unwrap(), c);
+}
