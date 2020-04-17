@@ -19,6 +19,7 @@ use std::sync::Arc;
 
 pub use self::scope::ExprScopes;
 use crate::builtin_type::{BuiltinFloat, BuiltinInt};
+use crate::diagnostics::DiagnosticSink;
 use crate::in_file::InFile;
 use crate::resolve::Resolver;
 use std::borrow::Cow;
@@ -89,6 +90,18 @@ impl Body {
 
     pub fn ret_type(&self) -> TypeRefId {
         self.ret_type
+    }
+
+    /// Adds all the `InferenceDiagnostic`s of the result to the `DiagnosticSink`.
+    pub(crate) fn add_diagnostics(
+        &self,
+        db: &impl HirDatabase,
+        owner: DefWithBody,
+        sink: &mut DiagnosticSink,
+    ) {
+        self.diagnostics
+            .iter()
+            .for_each(|it| it.add_to(db, owner, sink))
     }
 }
 
@@ -992,10 +1005,12 @@ fn integer_lit(str: &str, suffix: Option<&str>) -> (Literal, Vec<LiteralError>) 
             if from_lexer {
                 (0, Some(LiteralError::LexerError))
             } else {
-                (0, Some(LiteralError::IntTooLarge))
+                (u128::max_value(), Some(LiteralError::IntTooLarge))
             }
         }
     };
+
+    // TODO: Add check here to see if literal will fit given the suffix!
 
     if let Some(err) = err {
         errors.push(err);
@@ -1352,5 +1367,61 @@ mod test {
                 vec![]
             )
         );
+    }
+}
+
+mod diagnostics {
+    use super::{ExprDiagnostic, LiteralError};
+    use crate::code_model::DefWithBody;
+    use crate::diagnostics::{
+        DiagnosticSink, IntLiteralTooLarge, InvalidFloatingPointLiteral, InvalidLiteral,
+        InvalidLiteralSuffix,
+    };
+    use crate::HirDatabase;
+
+    impl ExprDiagnostic {
+        pub(crate) fn add_to(
+            &self,
+            db: &impl HirDatabase,
+            owner: DefWithBody,
+            sink: &mut DiagnosticSink,
+        ) {
+            let source_map = owner.body_source_map(db);
+
+            match self {
+                ExprDiagnostic::LiteralError { expr, err } => {
+                    let literal = source_map
+                        .expr_syntax(*expr)
+                        .expect("could not retrieve expr from source map")
+                        .map(|expr_src| {
+                            expr_src
+                                .left()
+                                .expect("could not retrieve expr from ExprSource")
+                                .cast()
+                                .expect("could not cast expression to literal")
+                        });
+                    match err {
+                        LiteralError::IntTooLarge => sink.push(IntLiteralTooLarge { literal }),
+                        LiteralError::LexerError => sink.push(InvalidLiteral { literal }),
+                        LiteralError::InvalidIntSuffix(suffix) => sink.push(InvalidLiteralSuffix {
+                            literal,
+                            suffix: suffix.clone(),
+                        }),
+                        LiteralError::InvalidFloatSuffix(suffix) => {
+                            sink.push(InvalidLiteralSuffix {
+                                literal,
+                                suffix: suffix.clone(),
+                            })
+                        }
+                        LiteralError::NonDecimalFloat(base) => {
+                            sink.push(InvalidFloatingPointLiteral {
+                                literal,
+                                base: *base,
+                            })
+                        }
+                    }
+                }
+            }
+        }
     }
 }

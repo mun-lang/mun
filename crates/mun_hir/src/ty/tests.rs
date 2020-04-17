@@ -32,11 +32,22 @@ fn infer_suffix_literals() {
         1_000_123.0e-2f32;
         1_000_123.0e-2f64;
         1_000_123.0e-2float;
+        9999999999999999999999999999999999999999999_f64;
     }
 
     fn add(a:u32) -> u32 {
         a + 12u32
-    }",
+    }
+
+    fn errors() {
+        0b22222; // invalid literal
+        0b00010_f32; // non-10 base float
+        0o71234_f32; // non-10 base float
+        1234_foo; // invalid suffix
+        1234.0_bar; // invalid suffix
+        9999999999999999999999999999999999999999999; // too large
+    }
+    ",
     )
 }
 

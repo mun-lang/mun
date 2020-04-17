@@ -1,7 +1,7 @@
 use crate::adt::StructKind;
 use crate::in_file::InFile;
 use crate::{FileId, HirDatabase, Name, Ty};
-use mun_syntax::{ast, AstPtr, SyntaxNode, SyntaxNodePtr, TextRange};
+use mun_syntax::{ast, AstPtr, SmolStr, SyntaxNode, SyntaxNodePtr, TextRange};
 use std::{any::Any, fmt};
 
 /// Diagnostic defines hir API for errors and warnings.
@@ -550,6 +550,114 @@ impl Diagnostic for ExternNonPrimitiveParam {
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
         self.param
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+/// An error that is emitted if a literal is too large to even parse
+#[derive(Debug)]
+pub struct IntLiteralTooLarge {
+    pub literal: InFile<AstPtr<ast::Literal>>,
+}
+
+impl Diagnostic for IntLiteralTooLarge {
+    fn message(&self) -> String {
+        "int literal is too large".to_owned()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        self.literal.map(|ptr| ptr.into())
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+/// An error that is emitted if a literal is too large for its suffix
+#[derive(Debug)]
+pub struct LiteralOutOfRange {
+    pub literal: InFile<AstPtr<ast::Literal>>,
+}
+
+impl Diagnostic for LiteralOutOfRange {
+    fn message(&self) -> String {
+        "literal out of range".to_owned()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        self.literal.map(|ptr| ptr.into())
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+/// An error that is emitted for a literal with an invalid suffix (e.g. `123_foo`)
+#[derive(Debug)]
+pub struct InvalidLiteralSuffix {
+    pub literal: InFile<AstPtr<ast::Literal>>,
+    pub suffix: SmolStr,
+}
+
+impl Diagnostic for InvalidLiteralSuffix {
+    fn message(&self) -> String {
+        format!("invalid suffix `{}`", self.suffix)
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        self.literal.map(|ptr| ptr.into())
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+/// An error that is emitted for a literal with a floating point suffix with a non 10 base (e.g.
+/// `0x123_f32`)
+#[derive(Debug)]
+pub struct InvalidFloatingPointLiteral {
+    pub literal: InFile<AstPtr<ast::Literal>>,
+    pub base: u32,
+}
+
+impl Diagnostic for InvalidFloatingPointLiteral {
+    fn message(&self) -> String {
+        match self.base {
+            2 => "binary float literal is not supported".to_owned(),
+            8 => "octal float literal is not supported".to_owned(),
+            16 => "hexadecimal float literal is not supported".to_owned(),
+            _ => "unsupported base for floating pointer literal".to_owned(),
+        }
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        self.literal.map(|ptr| ptr.into())
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+/// An error that is emitted for a malformed literal (e.g. `0b22222`)
+#[derive(Debug)]
+pub struct InvalidLiteral {
+    pub literal: InFile<AstPtr<ast::Literal>>,
+}
+
+impl Diagnostic for InvalidLiteral {
+    fn message(&self) -> String {
+        "invalid literal value".to_owned()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        self.literal.map(|ptr| ptr.into())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {

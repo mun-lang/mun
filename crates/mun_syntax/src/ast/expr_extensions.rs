@@ -202,8 +202,8 @@ impl Literal {
 fn split_int_text_and_suffix(text: &str) -> (&str, Option<&str>) {
     let base = match text.as_bytes() {
         [b'0', b'x', ..] => 16,
-        [b'0', b'b', ..] => 8,
-        [b'0', b'o', ..] => 2,
+        [b'0', b'o', ..] => 8,
+        [b'0', b'b', ..] => 2,
         _ => 10,
     };
 
@@ -229,9 +229,7 @@ fn split_int_text_and_suffix(text: &str) -> (&str, Option<&str>) {
 fn skip_digits(base: usize, iter: &mut Peekable<CharIndices>) {
     while let Some((_, c)) = iter.peek() {
         if match c {
-            '0'..='1' => true,
-            '2'..='8' if base > 2 => true,
-            '9' if base > 8 => true,
+            '0'..='9' => true,
             'a'..='f' | 'A'..='F' if base > 10 => true,
             '_' => true,
             _ => false,
@@ -325,6 +323,10 @@ mod tests {
         assert_eq!(
             split_int_text_and_suffix("0xffffu32"),
             ("0xffff", Some("u32"))
+        );
+        assert_eq!(
+            split_int_text_and_suffix("0o71234u32"),
+            ("0o71234", Some("u32"))
         );
     }
 

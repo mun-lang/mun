@@ -1,8 +1,14 @@
 ---
 source: crates/mun_hir/src/ty/tests.rs
-expression: "fn main(){\n    123;\n    123u8;\n    123u16;\n    123u32;\n    123u64;\n    123u128;\n    123uint;\n    1_000_000_u32;\n    123i8;\n    123i16;\n    123i32;\n    123i64;\n    123i128;\n    123int;\n    1_000_000_i32;\n    1_000_123.0e-2;\n    1_000_123.0e-2f32;\n    1_000_123.0e-2f64;\n    1_000_123.0e-2float;\n}\n\nfn add(a:u32) -> u32 {\n    a + 12u32\n}"
+expression: "fn main(){\n    123;\n    123u8;\n    123u16;\n    123u32;\n    123u64;\n    123u128;\n    123uint;\n    1_000_000_u32;\n    123i8;\n    123i16;\n    123i32;\n    123i64;\n    123i128;\n    123int;\n    1_000_000_i32;\n    1_000_123.0e-2;\n    1_000_123.0e-2f32;\n    1_000_123.0e-2f64;\n    1_000_123.0e-2float;\n    9999999999999999999999999999999999999999999_f64;\n}\n\nfn add(a:u32) -> u32 {\n    a + 12u32\n}\n\nfn errors() {\n    0b22222; // invalid literal\n    0b00010_f32; // non-10 base float\n    0o71234_f32; // non-10 base float\n    1234_foo; // invalid suffix\n    1234.0_bar; // invalid suffix\n    9999999999999999999999999999999999999999999; // too large\n}"
 ---
-[9; 295) '{     ...oat; }': nothing
+[408; 415): invalid literal value
+[440; 451): binary float literal is not supported
+[478; 489): octal float literal is not supported
+[516; 524): invalid suffix `foo`
+[548; 558): invalid suffix `bar`
+[582; 625): int literal is too large
+[9; 348) '{     ...f64; }': nothing
 [15; 18) '123': int
 [24; 29) '123u8': u8
 [35; 41) '123u16': u16
@@ -22,8 +28,16 @@ expression: "fn main(){\n    123;\n    123u8;\n    123u16;\n    123u32;\n    123
 [227; 244) '1_000_...e-2f32': f32
 [250; 267) '1_000_...e-2f64': f64
 [273; 292) '1_000_...2float': float
-[304; 305) 'a': u32
-[318; 335) '{     ...2u32 }': u32
-[324; 325) 'a': u32
-[324; 333) 'a + 12u32': u32
-[328; 333) '12u32': u32
+[298; 345) '999999...99_f64': f64
+[357; 358) 'a': u32
+[371; 388) '{     ...2u32 }': u32
+[377; 378) 'a': u32
+[377; 386) 'a + 12u32': u32
+[381; 386) '12u32': u32
+[402; 641) '{     ...arge }': nothing
+[408; 415) '0b22222': int
+[440; 451) '0b00010_f32': f32
+[478; 489) '0o71234_f32': f32
+[516; 524) '1234_foo': int
+[548; 558) '1234.0_bar': float
+[582; 625) '999999...999999': int
