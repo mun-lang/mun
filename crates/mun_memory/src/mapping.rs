@@ -1,5 +1,14 @@
-use crate::{FieldDiff, FieldEditKind};
+use crate::diff::{Diff, FieldDiff, FieldEditKind};
 use std::collections::HashSet;
+
+/// A trait used to map allocated memory using type differences.
+pub trait MemoryMapper<T> {
+    /// Maps the values memory from `old` to `new` using `diff`.
+    ///
+    /// A `Vec<GcPtr>` is returned containing all objects of types that were deleted. The
+    /// corresponding types have to remain in-memory until the objects have been deallocated.
+    fn map_memory(&self, old: &[T], new: &[T], diff: &[Diff]);
+}
 
 /// The `Action` to take when mapping memory from A to B.
 #[derive(Eq, PartialEq)]

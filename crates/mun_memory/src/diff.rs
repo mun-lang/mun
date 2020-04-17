@@ -1,4 +1,6 @@
-use crate::{myers, TypeDesc, TypeFields};
+pub mod myers;
+
+use crate::{TypeDesc, TypeFields};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FieldEditKind {

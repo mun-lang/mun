@@ -1,13 +1,13 @@
 use std::alloc::Layout;
 
-mod diff;
+pub mod diff;
+pub mod gc;
 pub mod mapping;
-pub mod myers;
 
-pub use {
-    diff::{diff, Diff, FieldDiff, FieldEditKind},
-    mapping::{Action, FieldMappingDesc},
-};
+pub mod prelude {
+    pub use crate::diff::{diff, Diff, FieldDiff, FieldEditKind};
+    pub use crate::mapping::{Action, FieldMappingDesc};
+}
 
 /// A trait used to obtain a type's description.
 pub trait TypeDesc: Send + Sync {
@@ -31,9 +31,4 @@ pub trait TypeFields<T>: Send + Sync {
     fn fields(&self) -> Vec<(&str, T)>;
     /// Returns the type's fields' offsets.
     fn offsets(&self) -> &[u16];
-}
-
-pub trait MemoryMapper<T> {
-    /// Maps the values memory from `old` to `new` using `diff`.
-    fn map_memory(&self, old: &[T], new: &[T], diff: &[Diff]);
 }

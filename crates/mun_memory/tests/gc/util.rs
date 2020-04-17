@@ -1,6 +1,6 @@
 #![allow(dead_code, unused_macros)]
 
-use mun_gc::GcPtr;
+use mun_memory::gc::{self, GcPtr};
 use parking_lot::Mutex;
 use std::alloc::Layout;
 
@@ -42,6 +42,7 @@ macro_rules! impl_primitive_types {
     }
 }
 
+#[macro_export]
 macro_rules! impl_struct_ty {
     ($ty:ident) => {
         paste::item! {
@@ -71,14 +72,14 @@ macro_rules! impl_struct_ty {
 
 impl_primitive_types!(i8, i16, i32, i64, u8, u16, u32, u64, f32, f64, bool);
 
-impl memory::TypeLayout for &'static TypeInfo {
+impl mun_memory::TypeLayout for &'static TypeInfo {
     fn layout(&self) -> Layout {
         Layout::from_size_align(self.size as usize, self.alignment as usize)
             .expect("invalid layout specified by TypeInfo")
     }
 }
 
-impl mun_gc::TypeTrace for &'static TypeInfo {
+impl gc::TypeTrace for &'static TypeInfo {
     type Trace = <Vec<GcPtr> as IntoIterator>::IntoIter;
 
     fn trace(&self, obj: GcPtr) -> Self::Trace {
@@ -109,7 +110,7 @@ impl<T: Sync + Send + Sized> EventAggregator<T> {
     }
 }
 
-impl<T: Sync + Send + Sized> mun_gc::Observer for EventAggregator<T> {
+impl<T: Sync + Send + Sized> gc::Observer for EventAggregator<T> {
     type Event = T;
 
     fn event(&self, event: T) {
@@ -117,6 +118,7 @@ impl<T: Sync + Send + Sized> mun_gc::Observer for EventAggregator<T> {
     }
 }
 
+#[macro_export]
 macro_rules! assert_variant {
     ($value:expr, $pattern:pat) => {{
         let value = &$value;

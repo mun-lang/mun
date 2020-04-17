@@ -1,4 +1,4 @@
-use gc::HasIndirectionPtr;
+use memory::gc::{self, HasIndirectionPtr};
 use std::{alloc::Layout, hash::Hash};
 
 #[derive(Clone, Copy, Debug)]

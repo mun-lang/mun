@@ -1,7 +1,5 @@
-mod util;
-
-use mun_memory::{Diff, FieldDiff, FieldEditKind};
-use util::*;
+use super::util::*;
+use mun_memory::diff::{diff, Diff, FieldDiff, FieldEditKind};
 
 // TODO: Once we can generate `Guid`s based on the data layout, we can just directly check
 // `TypeInfo`s against each other.
@@ -33,7 +31,7 @@ fn add() {
     let old = &[&struct1];
     let new = &[&struct1, &struct2];
 
-    let diff = mun_memory::diff(old, new);
+    let diff = diff(old, new);
     assert_eq!(diff, vec![Diff::Insert { index: 1 }]);
     assert_eq_struct(
         &apply_diff(old, new, diff),
@@ -60,7 +58,7 @@ fn remove() {
     let old = &[&struct1, &struct2];
     let new = &[&struct1];
 
-    let diff = mun_memory::diff(old, new);
+    let diff = diff(old, new);
     assert_eq!(diff, vec![Diff::Delete { index: 1 },]);
     assert_eq_struct(&apply_diff(old, new, diff), &vec![struct1.clone()]);
 }
@@ -84,7 +82,7 @@ fn replace() {
     let old = &[&struct1];
     let new = &[&struct2];
 
-    let diff = mun_memory::diff(old, new);
+    let diff = diff(old, new);
     assert_eq!(
         diff,
         vec![Diff::Delete { index: 0 }, Diff::Insert { index: 0 }]
@@ -111,7 +109,7 @@ fn swap() {
     let old = &[&struct1, &struct2];
     let new = &[&struct2, &struct1];
 
-    let diff = mun_memory::diff(old, new);
+    let diff = diff(old, new);
     assert_eq!(
         diff,
         vec![Diff::Move {
@@ -144,7 +142,7 @@ fn add_field1() {
     let old = &[&struct1];
     let new = &[&struct2];
 
-    let diff = mun_memory::diff(old, new);
+    let diff = diff(old, new);
     assert_eq!(
         diff,
         vec![Diff::Edit {
@@ -175,7 +173,7 @@ fn add_field2() {
     let old = &[&struct1];
     let new = &[&struct2];
 
-    let diff = mun_memory::diff(old, new);
+    let diff = diff(old, new);
     assert_eq!(
         diff,
         vec![Diff::Edit {
@@ -206,7 +204,7 @@ fn add_field3() {
     let old = &[&struct1];
     let new = &[&struct2];
 
-    let diff = mun_memory::diff(old, new);
+    let diff = diff(old, new);
     assert_eq!(
         diff,
         vec![Diff::Edit {
@@ -233,7 +231,7 @@ fn remove_field1() {
     let old = &[&struct1];
     let new = &[&struct2];
 
-    let diff = mun_memory::diff(old, new);
+    let diff = diff(old, new);
     assert_eq!(
         diff,
         vec![Diff::Edit {
@@ -263,7 +261,7 @@ fn remove_field2() {
     let old = &[&struct1];
     let new = &[&struct2];
 
-    let diff = mun_memory::diff(old, new);
+    let diff = diff(old, new);
     assert_eq!(
         diff,
         vec![Diff::Edit {
@@ -293,7 +291,7 @@ fn remove_field3() {
     let old = &[&struct1];
     let new = &[&struct2];
 
-    let diff = mun_memory::diff(old, new);
+    let diff = diff(old, new);
     assert_eq!(
         diff,
         vec![Diff::Edit {
@@ -327,7 +325,7 @@ fn swap_fields() {
     let old = &[&struct1];
     let new = &[&struct2];
 
-    let diff = mun_memory::diff(old, new);
+    let diff = diff(old, new);
     assert_eq!(
         diff,
         vec![Diff::Edit {
@@ -362,7 +360,7 @@ fn swap_fields2() {
     let old = &[&struct1];
     let new = &[&struct2];
 
-    let diff = mun_memory::diff(old, new);
+    let diff = diff(old, new);
     assert_eq!(
         diff,
         vec![Diff::Edit {
@@ -409,7 +407,7 @@ fn rename_field1() {
     let old = &[&struct1];
     let new = &[&struct2];
 
-    let diff = mun_memory::diff(old, new);
+    let diff = diff(old, new);
     assert_eq!(
         diff,
         vec![Diff::Edit {
@@ -443,7 +441,7 @@ fn rename_field2() {
     let old = &[&struct1];
     let new = &[&struct2];
 
-    let diff = mun_memory::diff(old, new);
+    let diff = diff(old, new);
     assert_eq!(
         diff,
         vec![Diff::Edit {

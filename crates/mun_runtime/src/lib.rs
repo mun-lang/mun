@@ -18,13 +18,19 @@ mod r#struct;
 
 use failure::Error;
 use function::FunctionInfoStorage;
+use garbage_collector::GarbageCollector;
+use memory::gc::{self, GcRuntime};
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
+use rustc_hash::FxHashMap;
 use std::{
     collections::HashMap,
     ffi, io, mem,
     path::{Path, PathBuf},
     string::ToString,
-    sync::mpsc::{channel, Receiver},
+    sync::{
+        mpsc::{channel, Receiver},
+        Arc,
+    },
     time::Duration,
 };
 
@@ -35,11 +41,6 @@ pub use crate::{
     r#struct::StructRef,
     reflection::{ArgumentReflection, ReturnTypeReflection},
 };
-
-use garbage_collector::GarbageCollector;
-use gc::GcRuntime;
-use rustc_hash::FxHashMap;
-use std::sync::Arc;
 
 impl_has_type_info_name!(
     abi::TypeInfo => "TypeInfo"

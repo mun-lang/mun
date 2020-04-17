@@ -1,6 +1,5 @@
-mod util;
-
-use util::*;
+use super::util::*;
+use mun_memory::diff::{diff, Diff};
 
 #[test]
 fn add() {
@@ -10,8 +9,8 @@ fn add() {
     let old = &[&int];
     let new = &[&int, &float];
 
-    let diff = mun_memory::diff(old, new);
-    assert_eq!(diff, vec![mun_memory::Diff::Insert { index: 1 }]);
+    let diff = diff(old, new);
+    assert_eq!(diff, vec![Diff::Insert { index: 1 }]);
     assert_eq!(apply_diff(old, new, diff), vec![int.clone(), float.clone()]);
 }
 
@@ -23,8 +22,8 @@ fn remove() {
     let old = &[&int, &float];
     let new = &[&float];
 
-    let diff = mun_memory::diff(old, new);
-    assert_eq!(diff, vec![mun_memory::Diff::Delete { index: 0 },]);
+    let diff = diff(old, new);
+    assert_eq!(diff, vec![Diff::Delete { index: 0 },]);
     assert_eq!(apply_diff(old, new, diff), vec![float.clone()]);
 }
 
@@ -36,13 +35,10 @@ fn replace() {
     let old = &[&int];
     let new = &[&float];
 
-    let diff = mun_memory::diff(old, new);
+    let diff = diff(old, new);
     assert_eq!(
         diff,
-        vec![
-            mun_memory::Diff::Delete { index: 0 },
-            mun_memory::Diff::Insert { index: 0 }
-        ]
+        vec![Diff::Delete { index: 0 }, Diff::Insert { index: 0 }]
     );
     assert_eq!(apply_diff(old, new, diff), vec![float.clone()]);
 }
@@ -55,10 +51,10 @@ fn swap() {
     let old = &[&int, &float];
     let new = &[&float, &int];
 
-    let diff = mun_memory::diff(old, new);
+    let diff = diff(old, new);
     assert_eq!(
         diff,
-        vec![mun_memory::Diff::Move {
+        vec![Diff::Move {
             old_index: 0,
             new_index: 1
         },]

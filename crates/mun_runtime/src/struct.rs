@@ -6,7 +6,7 @@ use crate::{
     },
     Runtime,
 };
-use gc::{GcRuntime, HasIndirectionPtr};
+use memory::gc::{GcRuntime, HasIndirectionPtr};
 use std::cell::RefCell;
 use std::{
     ptr::{self, NonNull},

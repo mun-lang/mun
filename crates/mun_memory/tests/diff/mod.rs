@@ -1,5 +1,9 @@
+mod myers;
+mod primitives;
+mod structs;
 mod util;
 
+use mun_memory::diff::{diff, Diff};
 use util::*;
 
 #[test]
@@ -15,8 +19,8 @@ fn add() {
     let old = &[&int, &struct1];
     let new = &[&int, &struct1, &float];
 
-    let diff = mun_memory::diff(old, new);
-    assert_eq!(diff, vec![mun_memory::Diff::Insert { index: 2 }]);
+    let diff = diff(old, new);
+    assert_eq!(diff, vec![Diff::Insert { index: 2 }]);
     assert_eq!(
         apply_diff(old, new, diff),
         vec![int.clone(), struct1.clone(), float.clone()]

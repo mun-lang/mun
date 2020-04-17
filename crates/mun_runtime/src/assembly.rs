@@ -9,7 +9,7 @@ mod temp_library;
 
 use self::temp_library::TempLibrary;
 use crate::garbage_collector::{GarbageCollector, RawTypeInfo};
-use memory::MemoryMapper;
+use memory::{diff::diff, mapping::MemoryMapper};
 use std::{collections::HashSet, sync::Arc};
 
 /// An assembly is a hot reloadable compilation unit, consisting of one or more Mun modules.
@@ -143,11 +143,8 @@ impl Assembly {
             .map(|ty| (*ty as *const abi::TypeInfo).into())
             .collect();
 
-        self.allocator.map_memory(
-            &old_types,
-            &new_types,
-            &memory::diff(&old_types, &new_types),
-        );
+        self.allocator
+            .map_memory(&old_types, &new_types, &diff(&old_types, &new_types));
 
         // Remove the old assembly's functions
         for function in self.info.symbols.functions() {

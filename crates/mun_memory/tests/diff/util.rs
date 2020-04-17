@@ -1,4 +1,8 @@
 #![allow(dead_code)]
+use mun_memory::{
+    diff::{myers, Diff, FieldDiff, FieldEditKind},
+    TypeDesc, TypeFields, TypeLayout,
+};
 use std::alloc::Layout;
 
 pub const INT_NAME: &str = "int";
@@ -97,7 +101,7 @@ impl PartialEq for TypeInfo {
 
 impl Eq for TypeInfo {}
 
-impl mun_memory::TypeDesc for &TypeInfo {
+impl TypeDesc for &TypeInfo {
     fn name(&self) -> &str {
         &self.name
     }
@@ -109,13 +113,13 @@ impl mun_memory::TypeDesc for &TypeInfo {
     }
 }
 
-impl mun_memory::TypeLayout for &TypeInfo {
+impl TypeLayout for &TypeInfo {
     fn layout(&self) -> Layout {
         self.layout
     }
 }
 
-impl<'t> mun_memory::TypeFields<&'t TypeInfo> for &'t TypeInfo {
+impl<'t> TypeFields<&'t TypeInfo> for &'t TypeInfo {
     fn fields(&self) -> Vec<(&str, Self)> {
         match &self.tail {
             TypeInfoTail::Empty => Vec::new(),
@@ -133,19 +137,15 @@ impl<'t> mun_memory::TypeFields<&'t TypeInfo> for &'t TypeInfo {
     }
 }
 
-pub fn apply_myers_diff<'t, T: Copy + Eq>(
-    old: &[T],
-    new: &[T],
-    diff: Vec<mun_memory::myers::Diff>,
-) -> Vec<T> {
+pub fn apply_myers_diff<'t, T: Copy + Eq>(old: &[T], new: &[T], diff: Vec<myers::Diff>) -> Vec<T> {
     let mut combined: Vec<_> = old.iter().cloned().collect();
     for diff in diff.iter().rev() {
-        if let mun_memory::myers::Diff::Delete { index } = diff {
+        if let myers::Diff::Delete { index } = diff {
             combined.remove(*index);
         }
     }
     for diff in diff {
-        if let mun_memory::myers::Diff::Insert { index } = diff {
+        if let myers::Diff::Insert { index } = diff {
             let value = unsafe { new.get_unchecked(index) };
             combined.insert(index, *value);
         }
@@ -156,15 +156,15 @@ pub fn apply_myers_diff<'t, T: Copy + Eq>(
 pub(crate) fn apply_diff<'t>(
     old: &[&TypeInfo],
     new: &[&TypeInfo],
-    diff: Vec<mun_memory::Diff>,
+    diff: Vec<Diff>,
 ) -> Vec<TypeInfo> {
     let mut combined: Vec<TypeInfo> = old.iter().map(|ty| (*ty).clone()).collect();
     for diff in diff.iter().rev() {
         match diff {
-            mun_memory::Diff::Delete { index } => {
+            Diff::Delete { index } => {
                 combined.remove(*index);
             }
-            mun_memory::Diff::Edit {
+            Diff::Edit {
                 diff,
                 old_index,
                 new_index,
@@ -173,7 +173,7 @@ pub(crate) fn apply_diff<'t>(
                 let new_ty = unsafe { new.get_unchecked(*new_index) };
                 apply_mapping(old_ty, new_ty, diff);
             }
-            mun_memory::Diff::Move { old_index, .. } => {
+            Diff::Move { old_index, .. } => {
                 combined.remove(*old_index);
             }
             _ => (),
@@ -181,11 +181,11 @@ pub(crate) fn apply_diff<'t>(
     }
     for diff in diff {
         match diff {
-            mun_memory::Diff::Insert { index } => {
+            Diff::Insert { index } => {
                 let new_ty = unsafe { new.get_unchecked(index) };
                 combined.insert(index, (*new_ty).clone());
             }
-            mun_memory::Diff::Move {
+            Diff::Move {
                 old_index,
                 new_index,
             } => {
@@ -198,27 +198,27 @@ pub(crate) fn apply_diff<'t>(
     combined
 }
 
-fn apply_mapping<'t>(old: &mut TypeInfo, new: &TypeInfo, mapping: &[mun_memory::FieldDiff]) {
+fn apply_mapping<'t>(old: &mut TypeInfo, new: &TypeInfo, mapping: &[FieldDiff]) {
     if let TypeInfoTail::Struct(old_struct) = &mut old.tail {
         if let TypeInfoTail::Struct(new_struct) = &new.tail {
             let mut combined: Vec<_> = old_struct.fields.iter().cloned().collect();
             for diff in mapping.iter().rev() {
                 match diff {
-                    mun_memory::FieldDiff::Delete { index } => {
+                    FieldDiff::Delete { index } => {
                         combined.remove(*index);
                     }
 
-                    mun_memory::FieldDiff::Move { old_index, .. } => {
+                    FieldDiff::Move { old_index, .. } => {
                         combined.remove(*old_index);
                     }
                     _ => (),
                 }
             }
 
-            fn get_new_index(diff: &mun_memory::FieldDiff) -> usize {
+            fn get_new_index(diff: &FieldDiff) -> usize {
                 match diff {
-                    mun_memory::FieldDiff::Insert { index } => *index,
-                    mun_memory::FieldDiff::Move { new_index, .. } => *new_index,
+                    FieldDiff::Insert { index } => *index,
+                    FieldDiff::Move { new_index, .. } => *new_index,
                     _ => std::usize::MAX,
                 }
             }
@@ -227,11 +227,11 @@ fn apply_mapping<'t>(old: &mut TypeInfo, new: &TypeInfo, mapping: &[mun_memory::
             let mut additions: Vec<(usize, _)> = mapping
                 .iter()
                 .filter_map(|diff| match diff {
-                    mun_memory::FieldDiff::Insert { index } => Some((
+                    FieldDiff::Insert { index } => Some((
                         *index,
                         unsafe { new_struct.fields.get_unchecked(*index) }.clone(),
                     )),
-                    mun_memory::FieldDiff::Move {
+                    FieldDiff::Move {
                         old_index,
                         new_index,
                         ..
@@ -249,15 +249,13 @@ fn apply_mapping<'t>(old: &mut TypeInfo, new: &TypeInfo, mapping: &[mun_memory::
             }
 
             fn edit_field(
-                kind: &mun_memory::FieldEditKind,
+                kind: &FieldEditKind,
                 old_field: &mut (String, TypeInfo),
                 new_field: &(String, TypeInfo),
             ) {
                 match *kind {
-                    mun_memory::FieldEditKind::ConvertType => {
-                        panic!("Casting is currently not supported")
-                    }
-                    mun_memory::FieldEditKind::Rename => {
+                    FieldEditKind::ConvertType => panic!("Casting is currently not supported"),
+                    FieldEditKind::Rename => {
                         old_field.0 = new_field.0.clone();
                     }
                 }
@@ -266,12 +264,12 @@ fn apply_mapping<'t>(old: &mut TypeInfo, new: &TypeInfo, mapping: &[mun_memory::
             // Handle edits
             for diff in mapping.iter() {
                 match diff {
-                    mun_memory::FieldDiff::Edit { index, kind } => edit_field(
+                    FieldDiff::Edit { index, kind } => edit_field(
                         kind,
                         unsafe { combined.get_unchecked_mut(*index) },
                         unsafe { new_struct.fields.get_unchecked(*index) },
                     ),
-                    mun_memory::FieldDiff::Move {
+                    FieldDiff::Move {
                         old_index,
                         new_index,
                         edit: Some(kind),

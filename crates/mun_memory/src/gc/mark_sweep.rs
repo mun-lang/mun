@@ -1,17 +1,23 @@
-use crate::{Event, GcPtr, GcRuntime, Observer, RawGcPtr, Stats, TypeTrace};
-use memory::{mapping::field_mapping, Diff, FieldDiff, FieldMappingDesc};
+use crate::{
+    diff::{Diff, FieldDiff},
+    gc::{Event, GcPtr, GcRuntime, Observer, RawGcPtr, Stats, TypeTrace},
+    mapping::{self, field_mapping, FieldMappingDesc, MemoryMapper},
+    TypeFields, TypeLayout,
+};
 use once_cell::unsync::OnceCell;
 use parking_lot::RwLock;
-use std::collections::{HashMap, VecDeque};
-use std::hash::Hash;
-use std::ops::Deref;
-use std::pin::Pin;
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    hash::Hash,
+    ops::Deref,
+    pin::Pin,
+};
 
 /// Implements a simple mark-sweep type garbage collector.
 #[derive(Debug)]
 pub struct MarkSweep<T, O>
 where
-    T: memory::TypeLayout + TypeTrace + Clone,
+    T: TypeLayout + TypeTrace + Clone,
     O: Observer<Event = Event>,
 {
     objects: RwLock<HashMap<GcPtr, Pin<Box<ObjectInfo<T>>>>>,
@@ -21,7 +27,7 @@ where
 
 impl<T, O> Default for MarkSweep<T, O>
 where
-    T: memory::TypeLayout + TypeTrace + Clone,
+    T: TypeLayout + TypeTrace + Clone,
     O: Observer<Event = Event> + Default,
 {
     fn default() -> Self {
@@ -35,7 +41,7 @@ where
 
 impl<T, O> MarkSweep<T, O>
 where
-    T: memory::TypeLayout + TypeTrace + Clone,
+    T: TypeLayout + TypeTrace + Clone,
     O: Observer<Event = Event>,
 {
     /// Creates a `MarkSweep` memory collector with the specified `Observer`.
@@ -55,7 +61,7 @@ where
 
 impl<T, O> GcRuntime<T> for MarkSweep<T, O>
 where
-    T: memory::TypeLayout + TypeTrace + Clone,
+    T: TypeLayout + TypeTrace + Clone,
     O: Observer<Event = Event>,
 {
     fn alloc(&self, ty: T) -> GcPtr {
@@ -120,7 +126,7 @@ where
 
 impl<T, O> MarkSweep<T, O>
 where
-    T: memory::TypeLayout + TypeTrace + Clone,
+    T: TypeLayout + TypeTrace + Clone,
     O: Observer<Event = Event>,
 {
     /// Collects all memory that is no longer referenced by rooted objects. Returns `true` if memory
@@ -190,20 +196,18 @@ where
     }
 }
 
-impl<T, O> memory::MemoryMapper<T> for MarkSweep<T, O>
+impl<T, O> MemoryMapper<T> for MarkSweep<T, O>
 where
-    T: memory::TypeLayout + memory::TypeFields<T> + TypeTrace + Clone + Eq + Hash,
+    T: TypeLayout + TypeFields<T> + TypeTrace + Clone + Eq + Hash,
     O: Observer<Event = Event>,
 {
-    fn map_memory(&self, old: &[T], new: &[T], diff: &[memory::Diff]) {
-        // Deletions need to stay alive, but somehow we want to release the `Assembly`'s `TypeInfo`
-        // once no `ObjectInfo` is using it anymore. Return a list of `GcPtr`'s and listen to the
-        // `Event`s?
-        let _deletions: HashMap<T, usize> = diff
+    fn map_memory(&self, old: &[T], new: &[T], diff: &[Diff]) {
+        // Collect all deleted types.
+        let deleted: HashSet<T> = diff
             .iter()
             .filter_map(|diff| {
-                if let memory::Diff::Delete { index } = diff {
-                    Some((unsafe { old.get_unchecked(*index) }.clone(), 0))
+                if let Diff::Delete { index } = diff {
+                    Some(unsafe { old.get_unchecked(*index) }.clone())
                 } else {
                     None
                 }
@@ -212,8 +216,17 @@ where
 
         let mut objects = self.objects.write();
 
-        // // Remove deleted types
-        // objects.retain(|_, object_info| !deletions.contains(&object_info.ty));
+        // Determine which types are still allocated with deleted types
+        let _deleted: Vec<GcPtr> = objects
+            .iter()
+            .filter_map(|(ptr, object_info)| {
+                if deleted.contains(&object_info.ty) {
+                    Some(*ptr)
+                } else {
+                    None
+                }
+            })
+            .collect();
 
         for diff in diff.iter() {
             match diff {
@@ -246,10 +259,7 @@ where
             new_offsets: &'a [u16],
         }
 
-        fn map_fields<
-            'a,
-            T: memory::TypeLayout + memory::TypeFields<T> + TypeTrace + Clone + Eq,
-        >(
+        fn map_fields<'a, T: TypeLayout + TypeFields<T> + TypeTrace + Clone + Eq>(
             object_info: &mut Pin<Box<ObjectInfo<T>>>,
             old_ty: &'a T,
             new_ty: &'a T,
@@ -283,7 +293,7 @@ where
                         dest as *mut u8
                     };
                     let old_field = unsafe { old_fields.get_unchecked(old_index) };
-                    if action == memory::Action::Cast {
+                    if action == mapping::Action::Cast {
                         panic!("The Mun Runtime doesn't currently support casting");
                     } else {
                         unsafe {
@@ -319,7 +329,7 @@ enum Color {
 /// meta information.
 #[derive(Debug)]
 #[repr(C)]
-struct ObjectInfo<T: memory::TypeLayout + TypeTrace + Clone> {
+struct ObjectInfo<T: TypeLayout + TypeTrace + Clone> {
     pub ptr: *mut u8,
     pub roots: u32,
     pub color: Color,
@@ -327,28 +337,28 @@ struct ObjectInfo<T: memory::TypeLayout + TypeTrace + Clone> {
 }
 
 /// An `ObjectInfo` is thread-safe.
-unsafe impl<T: memory::TypeLayout + TypeTrace + Clone> Send for ObjectInfo<T> {}
-unsafe impl<T: memory::TypeLayout + TypeTrace + Clone> Sync for ObjectInfo<T> {}
+unsafe impl<T: TypeLayout + TypeTrace + Clone> Send for ObjectInfo<T> {}
+unsafe impl<T: TypeLayout + TypeTrace + Clone> Sync for ObjectInfo<T> {}
 
-impl<T: memory::TypeLayout + TypeTrace + Clone> Into<*const ObjectInfo<T>> for GcPtr {
+impl<T: TypeLayout + TypeTrace + Clone> Into<*const ObjectInfo<T>> for GcPtr {
     fn into(self) -> *const ObjectInfo<T> {
         self.as_ptr() as *const ObjectInfo<T>
     }
 }
 
-impl<T: memory::TypeLayout + TypeTrace + Clone> Into<*mut ObjectInfo<T>> for GcPtr {
+impl<T: TypeLayout + TypeTrace + Clone> Into<*mut ObjectInfo<T>> for GcPtr {
     fn into(self) -> *mut ObjectInfo<T> {
         self.as_ptr() as *mut ObjectInfo<T>
     }
 }
 
-impl<T: memory::TypeLayout + TypeTrace + Clone> Into<GcPtr> for *const ObjectInfo<T> {
+impl<T: TypeLayout + TypeTrace + Clone> Into<GcPtr> for *const ObjectInfo<T> {
     fn into(self) -> GcPtr {
         (self as RawGcPtr).into()
     }
 }
 
-impl<T: memory::TypeLayout + TypeTrace + Clone> Into<GcPtr> for *mut ObjectInfo<T> {
+impl<T: TypeLayout + TypeTrace + Clone> Into<GcPtr> for *mut ObjectInfo<T> {
     fn into(self) -> GcPtr {
         (self as RawGcPtr).into()
     }

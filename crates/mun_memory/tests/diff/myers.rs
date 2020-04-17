@@ -1,12 +1,11 @@
-mod util;
-
-use util::*;
+use super::util::apply_myers_diff;
+use mun_memory::diff::myers;
 
 #[test]
 fn test1() {
     let old = vec!["a", "b", "g", "d", "e", "f"];
     let new = vec!["g", "h"];
-    let diff = mun_memory::myers::diff(&old, &new);
+    let diff = myers::diff(&old, &new);
     assert_eq!(apply_myers_diff(&old, &new, diff), new);
 }
 
@@ -14,7 +13,7 @@ fn test1() {
 fn add1() {
     let old = vec!["a"];
     let new = vec!["a", "b"];
-    let diff = mun_memory::myers::diff(&old, &new);
+    let diff = myers::diff(&old, &new);
     assert_eq!(apply_myers_diff(&old, &new, diff), new);
 }
 
@@ -22,7 +21,7 @@ fn add1() {
 fn add2() {
     let old = vec!["a"];
     let new = vec!["b", "a"];
-    let diff = mun_memory::myers::diff(&old, &new);
+    let diff = myers::diff(&old, &new);
     assert_eq!(apply_myers_diff(&old, &new, diff), new);
 }
 
@@ -30,7 +29,7 @@ fn add2() {
 fn remove1() {
     let old = vec!["a", "b"];
     let new = vec!["a"];
-    let diff = mun_memory::myers::diff(&old, &new);
+    let diff = myers::diff(&old, &new);
     assert_eq!(apply_myers_diff(&old, &new, diff), new);
 }
 
@@ -38,6 +37,6 @@ fn remove1() {
 fn remove2() {
     let old = vec!["a", "b"];
     let new = vec!["b"];
-    let diff = mun_memory::myers::diff(&old, &new);
+    let diff = myers::diff(&old, &new);
     assert_eq!(apply_myers_diff(&old, &new, diff), new);
 }
