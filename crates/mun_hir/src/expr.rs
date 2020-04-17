@@ -1005,7 +1005,7 @@ fn integer_lit(str: &str, suffix: Option<&str>) -> (Literal, Vec<LiteralError>) 
             if from_lexer {
                 (0, Some(LiteralError::LexerError))
             } else {
-                (u128::max_value(), Some(LiteralError::IntTooLarge))
+                (0, Some(LiteralError::IntTooLarge))
             }
         }
     };

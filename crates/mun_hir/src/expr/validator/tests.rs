@@ -82,7 +82,7 @@ fn diagnostics(content: &str) -> String {
             let fun = Function {
                 id: ctx.to_def(&def),
             };
-            ExprValidator::new(fun, &db, &mut diag_sink).validate_body();
+            ExprValidator::new(fun, &db).validate_body(&mut diag_sink);
         }
     }
     drop(diag_sink);

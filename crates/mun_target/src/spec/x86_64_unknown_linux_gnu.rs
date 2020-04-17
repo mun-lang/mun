@@ -6,6 +6,9 @@ pub fn target() -> TargetResult {
 
     Ok(Target {
         llvm_target: "x86_64-unknown-linux-gnu".to_string(),
+        target_endian: "little".to_string(),
+        target_pointer_width: "64".to_string(),
+        target_c_int_width: "32".to_string(),
         target_os: "linux".to_string(),
         target_env: "gnu".to_string(),
         target_vendor: "unknown".to_string(),

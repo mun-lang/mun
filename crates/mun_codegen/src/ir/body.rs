@@ -14,7 +14,7 @@ use inkwell::{
 };
 use std::{collections::HashMap, sync::Arc};
 
-use crate::ir::ty::ResolveBitness;
+use hir::ResolveBitness;
 use inkwell::basic_block::BasicBlock;
 use inkwell::values::{AggregateValueEnum, GlobalValue, PointerValue};
 
@@ -274,7 +274,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 };
 
                 let context = self.db.context();
-                let ir_ty = match ty.resolve(&self.db.target_data()).bitness {
+                let ir_ty = match ty.resolve(&self.db.target_data_layout()).bitness {
                     hir::IntBitness::X8 => context.i8_type().const_int(v.value as u64, false),
                     hir::IntBitness::X16 => context.i16_type().const_int(v.value as u64, false),
                     hir::IntBitness::X32 => context.i32_type().const_int(v.value as u64, false),
@@ -300,7 +300,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 };
 
                 let context = self.db.context();
-                let ir_ty = match ty.resolve(&self.db.target_data()).bitness {
+                let ir_ty = match ty.bitness.resolve(&self.db.target_data_layout()) {
                     hir::FloatBitness::X32 => context.f32_type().const_float(v.value),
                     hir::FloatBitness::X64 => context.f64_type().const_float(v.value),
                     _ => unreachable!("unresolved bitness in code generation"),

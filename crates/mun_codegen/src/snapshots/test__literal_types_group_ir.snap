@@ -1,7 +1,0 @@
----
-source: crates/mun_codegen/src/test.rs
-expression: "fn main(){\n    123;\n    123u8;\n    123u16;\n    123u32;\n    123u64;\n    123uint;\n    1_000_000_u32;\n    123i8;\n    123i16;\n    123i32;\n    123i64;\n    123int;\n    1_000_000_i32;\n    1_000_123.0e-2;\n    1_000_123.0e-2f32;\n    1_000_123.0e-2f64;\n    1_000_123.0e-2float;\n}\n\nfn add(a:u32): u32 {\n    a + 12u32\n}"
----
-; ModuleID = 'group_name'
-source_filename = "group_name"
-

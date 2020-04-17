@@ -18,6 +18,15 @@ pub struct Target {
     /// Target triple to pass to LLVM
     pub llvm_target: String,
 
+    /// String to use as the `target_endian` `cfg` variable.
+    pub target_endian: String,
+
+    /// String to use as the `target_pointer_width` `cfg` variable.
+    pub target_pointer_width: String,
+
+    /// Width of c_int type
+    pub target_c_int_width: String,
+
     /// The name of the OS
     pub target_os: String,
 

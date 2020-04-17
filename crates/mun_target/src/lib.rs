@@ -4,6 +4,7 @@
 //! It is heavily inspired by the
 //! [librustc_target](https://github.com/rust-lang/rust/tree/master/src/librustc_target) crate.
 
+pub mod abi;
 pub mod spec;
 
 /// Returns the target triple of the host machine. This can be used as a default target.

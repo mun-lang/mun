@@ -1,6 +1,6 @@
 use crate::adt::StructKind;
 use crate::in_file::InFile;
-use crate::{FileId, HirDatabase, Name, Ty};
+use crate::{FileId, HirDatabase, IntTy, Name, Ty};
 use mun_syntax::{ast, AstPtr, SmolStr, SyntaxNode, SyntaxNodePtr, TextRange};
 use std::{any::Any, fmt};
 
@@ -581,11 +581,12 @@ impl Diagnostic for IntLiteralTooLarge {
 #[derive(Debug)]
 pub struct LiteralOutOfRange {
     pub literal: InFile<AstPtr<ast::Literal>>,
+    pub int_ty: IntTy,
 }
 
 impl Diagnostic for LiteralOutOfRange {
     fn message(&self) -> String {
-        "literal out of range".to_owned()
+        format!("literal out of range for `{}`", self.int_ty.ty_to_string())
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {

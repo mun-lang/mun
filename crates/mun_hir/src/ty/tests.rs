@@ -46,6 +46,10 @@ fn infer_suffix_literals() {
         1234_foo; // invalid suffix
         1234.0_bar; // invalid suffix
         9999999999999999999999999999999999999999999; // too large
+        256_u8; // literal out of range for `u8`
+        128_i8; // literal out of range for `i8`
+        12712371237123_u32; // literal out of range `u32`
+        9999999999999999999999999; // literal out of range `int`
     }
     ",
     )

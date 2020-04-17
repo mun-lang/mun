@@ -15,6 +15,8 @@ use crate::{
     AstIdMap, ExprScopes, FileId, RawItems, Struct,
 };
 use mun_syntax::{ast, Parse, SourceFile, SyntaxNode};
+use mun_target::abi;
+use mun_target::spec::Target;
 pub use relative_path::RelativePathBuf;
 use std::sync::Arc;
 
@@ -75,6 +77,14 @@ pub trait DefDatabase: SourceDatabase {
 
 #[salsa::query_group(HirDatabaseStorage)]
 pub trait HirDatabase: DefDatabase {
+    /// Returns the target for code generation.
+    #[salsa::input]
+    fn target(&self) -> Target;
+
+    /// Returns the `TargetDataLayout` for the current target
+    #[salsa::invoke(target_data_layout)]
+    fn target_data_layout(&self) -> Arc<abi::TargetDataLayout>;
+
     #[salsa::invoke(ExprScopes::expr_scopes_query)]
     fn expr_scopes(&self, def: DefWithBody) -> Arc<ExprScopes>;
 
@@ -118,4 +128,11 @@ fn parse_query(db: &impl SourceDatabase, file_id: FileId) -> Parse<SourceFile> {
 fn line_index_query(db: &impl SourceDatabase, file_id: FileId) -> Arc<LineIndex> {
     let text = db.file_text(file_id);
     Arc::new(LineIndex::new(text.as_ref()))
+}
+
+fn target_data_layout(db: &impl HirDatabase) -> Arc<abi::TargetDataLayout> {
+    let target = db.target();
+    let data_layout = abi::TargetDataLayout::parse(&target)
+        .expect("unable to create TargetDataLayout from target");
+    Arc::new(data_layout)
 }

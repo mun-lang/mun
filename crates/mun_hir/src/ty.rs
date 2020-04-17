@@ -2,6 +2,7 @@ mod infer;
 pub(super) mod lower;
 mod op;
 mod primitives;
+mod resolve;
 
 use crate::display::{HirDisplay, HirFormatter};
 use crate::ty::infer::TypeVarId;
@@ -11,6 +12,7 @@ pub(crate) use infer::infer_query;
 pub use infer::InferenceResult;
 pub(crate) use lower::{callable_item_sig, fn_sig_for_fn, type_for_def, CallableDef, TypableDef};
 pub use primitives::{FloatTy, IntTy};
+pub use resolve::ResolveBitness;
 use std::fmt;
 use std::sync::Arc;
 

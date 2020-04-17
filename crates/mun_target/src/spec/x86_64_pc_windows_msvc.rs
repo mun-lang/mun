@@ -6,6 +6,9 @@ pub fn target() -> TargetResult {
 
     Ok(Target {
         llvm_target: "x86_64-pc-windows-msvc".to_string(),
+        target_endian: "little".to_string(),
+        target_pointer_width: "64".to_string(),
+        target_c_int_width: "32".to_string(),
         target_os: "windows".to_string(),
         target_env: "msvc".to_string(),
         target_vendor: "pc".to_string(),

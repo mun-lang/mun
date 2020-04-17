@@ -1,6 +1,8 @@
+use crate::db::HirDatabase;
 use crate::db::SourceDatabase;
 use crate::input::{SourceRoot, SourceRootId};
 use crate::{FileId, RelativePathBuf};
+use mun_target::spec::Target;
 use parking_lot::Mutex;
 use std::sync::Arc;
 
@@ -40,6 +42,7 @@ impl MockDatabase {
         let text = Arc::new(text.to_owned());
         let rel_path = RelativePathBuf::from("main.mun");
         let file_id = FileId(0);
+        db.set_target(Target::host_target().unwrap());
         db.set_file_relative_path(file_id, rel_path.clone());
         db.set_file_text(file_id, Arc::new(text.to_string()));
         db.set_file_source_root(file_id, source_root_id);

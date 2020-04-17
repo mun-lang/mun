@@ -1,5 +1,7 @@
 use crate::{mock::MockDatabase, IrDatabase, ModuleBuilder};
-use hir::{diagnostics::DiagnosticSink, line_index::LineIndex, Module, SourceDatabase};
+use hir::{
+    diagnostics::DiagnosticSink, line_index::LineIndex, HirDatabase, Module, SourceDatabase,
+};
 use inkwell::OptimizationLevel;
 use mun_target::spec::Target;
 use std::cell::RefCell;

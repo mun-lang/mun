@@ -1,0 +1,119 @@
+---
+source: crates/mun_target/tests/data_layout.rs
+expression: layout
+---
+TargetDataLayout {
+    endian: Little,
+    i1_align: AbiAndPrefAlign {
+        abi: Align {
+            pow2: 0,
+        },
+        pref: Align {
+            pow2: 0,
+        },
+    },
+    i8_align: AbiAndPrefAlign {
+        abi: Align {
+            pow2: 0,
+        },
+        pref: Align {
+            pow2: 0,
+        },
+    },
+    i16_align: AbiAndPrefAlign {
+        abi: Align {
+            pow2: 1,
+        },
+        pref: Align {
+            pow2: 1,
+        },
+    },
+    i32_align: AbiAndPrefAlign {
+        abi: Align {
+            pow2: 2,
+        },
+        pref: Align {
+            pow2: 2,
+        },
+    },
+    i64_align: AbiAndPrefAlign {
+        abi: Align {
+            pow2: 3,
+        },
+        pref: Align {
+            pow2: 3,
+        },
+    },
+    i128_align: AbiAndPrefAlign {
+        abi: Align {
+            pow2: 3,
+        },
+        pref: Align {
+            pow2: 3,
+        },
+    },
+    f32_align: AbiAndPrefAlign {
+        abi: Align {
+            pow2: 2,
+        },
+        pref: Align {
+            pow2: 2,
+        },
+    },
+    f64_align: AbiAndPrefAlign {
+        abi: Align {
+            pow2: 3,
+        },
+        pref: Align {
+            pow2: 3,
+        },
+    },
+    pointer_size: Size {
+        raw: 8,
+    },
+    pointer_align: AbiAndPrefAlign {
+        abi: Align {
+            pow2: 3,
+        },
+        pref: Align {
+            pow2: 3,
+        },
+    },
+    aggregate_align: AbiAndPrefAlign {
+        abi: Align {
+            pow2: 0,
+        },
+        pref: Align {
+            pow2: 3,
+        },
+    },
+    vector_align: [
+        (
+            Size {
+                raw: 8,
+            },
+            AbiAndPrefAlign {
+                abi: Align {
+                    pow2: 3,
+                },
+                pref: Align {
+                    pow2: 3,
+                },
+            },
+        ),
+        (
+            Size {
+                raw: 16,
+            },
+            AbiAndPrefAlign {
+                abi: Align {
+                    pow2: 4,
+                },
+                pref: Align {
+                    pow2: 4,
+                },
+            },
+        ),
+    ],
+    instruction_address_space: 0,
+}
