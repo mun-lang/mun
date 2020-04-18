@@ -1,6 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "pub fn add(a:int, b:int) -> int {\n  a+b\n}\n\npub fn subtract(a:int, b:int) -> int {\n  a-b\n}\n\npub fn multiply(a:int, b:int) -> int {\n  a*b\n}"
+expression: "pub fn add(a:int, b:int) -> int {\n  a+b\n}\n\npub fn subtract(a:int, b:int) -> int {\n  a-b\n}\n\npub fn multiply(a:int, b:int) -> int {\n  a*b\n}\n\npub fn divide(a:int, b:int) -> int {\n  a/b\n}\n\npub fn remainder(a:int, b:int) -> int {\n  a%b\n}"
 ---
 ; == FILE IR =====================================
 ; ModuleID = 'main.mun'
@@ -26,6 +26,18 @@ define i64 @multiply(i64, i64) {
 body:
   %mul = mul i64 %0, %1
   ret i64 %mul
+}
+
+define i64 @divide(i64, i64) {
+body:
+  %div = sdiv i64 %0, %1
+  ret i64 %div
+}
+
+define i64 @remainder(i64, i64) {
+body:
+  %rem = srem i64 %0, %1
+  ret i64 %rem
 }
 
 

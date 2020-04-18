@@ -88,6 +88,14 @@ fn binary_expressions() {
     pub fn multiply(a:int, b:int) -> int {
       a*b
     }
+
+    pub fn divide(a:int, b:int) -> int {
+      a/b
+    }
+
+    pub fn remainder(a:int, b:int) -> int {
+      a%b
+    }
     "#,
     );
 }
@@ -141,6 +149,12 @@ fn update_operators() {
     pub fn divide(a:int, b:int) -> int {
       let result = a
       result /= b
+      result
+    }
+
+    pub fn remainder(a:int, b:int) -> int {
+      let result = a
+      result %= b
       result
     }
     "#,
