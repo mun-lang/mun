@@ -58,7 +58,10 @@ pub use crate::{
     path::{Path, PathKind},
     raw::RawItems,
     resolve::{Resolution, Resolver},
-    ty::{lower::CallableDef, ApplicationTy, FloatTy, InferenceResult, IntTy, Ty, TypeCtor},
+    ty::{
+        lower::CallableDef, ApplicationTy, FloatTy, InferenceResult, IntTy, ResolveBitness, Ty,
+        TypeCtor,
+    },
 };
 
 use crate::{

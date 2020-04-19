@@ -3,7 +3,7 @@
 
 use crate::{db::CompilerDatabase, diagnostics::diagnostics, PathOrInline};
 use mun_codegen::{IrDatabase, ModuleBuilder};
-use mun_hir::{FileId, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
+use mun_hir::{FileId, HirDatabase, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
 
 use std::{path::PathBuf, sync::Arc};
 

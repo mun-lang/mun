@@ -13,6 +13,9 @@ pub fn target() -> TargetResult {
     Ok(Target {
         llvm_target,
         target_os: "macos".to_string(),
+        target_endian: "little".to_string(),
+        target_pointer_width: "64".to_string(),
+        target_c_int_width: "32".to_string(),
         target_env: String::new(),
         target_vendor: "apple".to_string(),
         arch: arch.to_string(),

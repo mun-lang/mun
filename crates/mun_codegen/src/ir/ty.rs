@@ -1,13 +1,17 @@
 use super::try_convert_any_to_basic;
-use crate::type_info::TypeSize;
 use crate::{
+    type_info::TypeSize,
     type_info::{TypeGroup, TypeInfo},
     CodeGenParams, IrDatabase,
 };
-use hir::{ApplicationTy, CallableDef, FloatBitness, FloatTy, IntBitness, IntTy, Ty, TypeCtor};
-use inkwell::types::{AnyTypeEnum, BasicType, BasicTypeEnum, FloatType, IntType, StructType};
-use inkwell::AddressSpace;
-use mun_target::spec::Target;
+use hir::{
+    ApplicationTy, CallableDef, FloatBitness, FloatTy, IntBitness, IntTy, ResolveBitness, Ty,
+    TypeCtor,
+};
+use inkwell::{
+    types::{AnyTypeEnum, BasicType, BasicTypeEnum, FloatType, IntType, StructType},
+    AddressSpace,
+};
 
 /// Given a mun type, construct an LLVM IR type
 #[rustfmt::skip]
@@ -57,7 +61,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty, params: CodeGenParams) -> A
 /// Returns the LLVM IR type of the specified float type
 fn float_ty_query(db: &impl IrDatabase, fty: FloatTy) -> FloatType {
     let context = db.context();
-    match fty.resolve(&db.target()).bitness {
+    match fty.bitness.resolve(&db.target_data_layout()) {
         FloatBitness::X64 => context.f64_type(),
         FloatBitness::X32 => context.f32_type(),
         _ => unreachable!(),
@@ -67,7 +71,7 @@ fn float_ty_query(db: &impl IrDatabase, fty: FloatTy) -> FloatType {
 /// Returns the LLVM IR type of the specified int type
 fn int_ty_query(db: &impl IrDatabase, ity: IntTy) -> IntType {
     let context = db.context();
-    match ity.resolve(&db.target()).bitness {
+    match ity.bitness.resolve(&db.target_data_layout()) {
         IntBitness::X128 => context.i128_type(),
         IntBitness::X64 => context.i64_type(),
         IntBitness::X32 => context.i32_type(),
@@ -102,7 +106,7 @@ pub fn type_info_query(db: &impl IrDatabase, ty: Ty) -> TypeInfo {
                 let ir_ty = float_ty_query(db, ty);
                 let type_size = TypeSize::from_ir_type(&ir_ty, target.as_ref());
                 TypeInfo::new(
-                    format!("core::{}", ty.resolve(&db.target())),
+                    format!("core::{}", ty.resolve(&db.target_data_layout())),
                     TypeGroup::FundamentalTypes,
                     type_size,
                 )
@@ -111,7 +115,7 @@ pub fn type_info_query(db: &impl IrDatabase, ty: Ty) -> TypeInfo {
                 let ir_ty = int_ty_query(db, ty);
                 let type_size = TypeSize::from_ir_type(&ir_ty, target.as_ref());
                 TypeInfo::new(
-                    format!("core::{}", ty.resolve(&db.target())),
+                    format!("core::{}", ty.resolve(&db.target_data_layout())),
                     TypeGroup::FundamentalTypes,
                     type_size,
                 )
@@ -129,33 +133,5 @@ pub fn type_info_query(db: &impl IrDatabase, ty: Ty) -> TypeInfo {
             _ => unreachable!("{:?} unhandled", ctor),
         },
         _ => unreachable!("{:?} unhandled", ty),
-    }
-}
-
-trait ResolveBitness {
-    fn resolve(&self, _target: &Target) -> Self;
-}
-
-impl ResolveBitness for FloatTy {
-    fn resolve(&self, _target: &Target) -> Self {
-        let bitness = match self.bitness {
-            FloatBitness::Undefined => FloatBitness::X64,
-            bitness => bitness,
-        };
-        FloatTy { bitness }
-    }
-}
-
-impl ResolveBitness for IntTy {
-    fn resolve(&self, _target: &Target) -> Self {
-        let bitness = match self.bitness {
-            IntBitness::Undefined => IntBitness::X64,
-            IntBitness::Xsize => IntBitness::X64,
-            bitness => bitness,
-        };
-        IntTy {
-            bitness,
-            signedness: self.signedness,
-        }
     }
 }

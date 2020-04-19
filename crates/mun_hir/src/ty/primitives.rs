@@ -1,5 +1,8 @@
 use crate::builtin_type::{BuiltinFloat, BuiltinInt, FloatBitness, IntBitness, Signedness};
+use mun_target::abi;
+use mun_target::abi::Integer;
 use std::fmt::{self};
+use std::{i128, i16, i32, i64, i8, u128, u16, u32, u64, u8};
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct IntTy {
@@ -127,6 +130,40 @@ impl IntTy {
             (Signedness::Unsigned, IntBitness::X32) => "u32",
             (Signedness::Unsigned, IntBitness::X64) => "u64",
             (Signedness::Unsigned, IntBitness::X128) => "u128",
+        }
+    }
+
+    /// Returns the maximum positive number that this instance can contain.
+    pub fn max(self) -> u128 {
+        match self.signedness {
+            Signedness::Signed => match self.bitness {
+                IntBitness::X8 => i8::MAX as u128,
+                IntBitness::X16 => i16::MAX as u128,
+                IntBitness::X32 => i32::MAX as u128,
+                IntBitness::X64 => i64::MAX as u128,
+                IntBitness::X128 => i128::MAX as u128,
+                _ => unreachable!("cannot determine max size of variable bitness"),
+            },
+            Signedness::Unsigned => match self.bitness {
+                IntBitness::X8 => u8::MAX as u128,
+                IntBitness::X16 => u16::MAX as u128,
+                IntBitness::X32 => u32::MAX as u128,
+                IntBitness::X64 => u64::MAX as u128,
+                IntBitness::X128 => u128::MAX,
+                _ => unreachable!("cannot determine max size of variable bitness"),
+            },
+        }
+    }
+}
+
+impl From<abi::Integer> for IntBitness {
+    fn from(i: Integer) -> Self {
+        match i {
+            Integer::I8 => IntBitness::X8,
+            Integer::I16 => IntBitness::X16,
+            Integer::I32 => IntBitness::X32,
+            Integer::I64 => IntBitness::X64,
+            Integer::I128 => IntBitness::X128,
         }
     }
 }

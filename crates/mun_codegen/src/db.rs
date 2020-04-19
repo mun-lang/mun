@@ -10,7 +10,6 @@ use inkwell::{
     types::{AnyTypeEnum, StructType},
     OptimizationLevel,
 };
-use mun_target::spec::Target;
 use std::sync::Arc;
 
 /// The `IrDatabase` enables caching of intermediate in the process of LLVM IR generation. It uses
@@ -24,10 +23,6 @@ pub trait IrDatabase: hir::HirDatabase {
     /// Gets the optimization level for generation.
     #[salsa::input]
     fn optimization_lvl(&self) -> OptimizationLevel;
-
-    /// Returns the target for code generation.
-    #[salsa::input]
-    fn target(&self) -> Target;
 
     /// Returns the target machine's data layout for code generation.
     #[salsa::invoke(crate::code_gen::target_data_query)]

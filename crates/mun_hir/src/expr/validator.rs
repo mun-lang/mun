@@ -6,26 +6,25 @@ use crate::{diagnostics::DiagnosticSink, Body, Expr, Function, HirDatabase, Infe
 use mun_syntax::{AstNode, SyntaxNodePtr};
 use std::sync::Arc;
 
+mod literal_out_of_range;
 mod uninitialized_access;
 
 #[cfg(test)]
 mod tests;
 
-pub struct ExprValidator<'a, 'b: 'a, 'd, DB: HirDatabase> {
+pub struct ExprValidator<'d, DB: HirDatabase> {
     func: Function,
     infer: Arc<InferenceResult>,
     body: Arc<Body>,
     body_source_map: Arc<BodySourceMap>,
-    sink: &'a mut DiagnosticSink<'b>,
     db: &'d DB,
 }
 
-impl<'a, 'b, 'd, DB: HirDatabase> ExprValidator<'a, 'b, 'd, DB> {
-    pub fn new(func: Function, db: &'d DB, sink: &'a mut DiagnosticSink<'b>) -> Self {
+impl<'d, DB: HirDatabase> ExprValidator<'d, DB> {
+    pub fn new(func: Function, db: &'d DB) -> Self {
         let (body, body_source_map) = db.body_with_source_map(func.into());
         ExprValidator {
             func,
-            sink,
             db,
             infer: db.infer(func.into()),
             body,
@@ -33,11 +32,13 @@ impl<'a, 'b, 'd, DB: HirDatabase> ExprValidator<'a, 'b, 'd, DB> {
         }
     }
 
-    pub fn validate_body(&mut self) {
-        self.validate_uninitialized_access();
-        self.validate_extern();
+    pub fn validate_body(&self, sink: &mut DiagnosticSink) {
+        self.validate_literal_ranges(sink);
+        self.validate_uninitialized_access(sink);
+        self.validate_extern(sink);
     }
-    pub fn validate_extern(&mut self) {
+
+    pub fn validate_extern(&self, sink: &mut DiagnosticSink) {
         if !self.func.is_extern(self.db) {
             return;
         }
@@ -45,7 +46,7 @@ impl<'a, 'b, 'd, DB: HirDatabase> ExprValidator<'a, 'b, 'd, DB> {
         // Validate that there is no body
         match self.body[self.func.body(self.db).body_expr] {
             Expr::Missing => {}
-            _ => self.sink.push(ExternCannotHaveBody {
+            _ => sink.push(ExternCannotHaveBody {
                 func: self
                     .func
                     .source(self.db)
@@ -62,7 +63,7 @@ impl<'a, 'b, 'd, DB: HirDatabase> ExprValidator<'a, 'b, 'd, DB> {
                         .type_ref_syntax(*ty_ref)
                         .map(|ptr| ptr.syntax_node_ptr())
                         .unwrap();
-                    self.sink.push(ExternNonPrimitiveParam {
+                    sink.push(ExternNonPrimitiveParam {
                         param: InFile::new(self.func.source(self.db).file_id, arg_ptr),
                     })
                 }
@@ -75,7 +76,7 @@ impl<'a, 'b, 'd, DB: HirDatabase> ExprValidator<'a, 'b, 'd, DB> {
                     .type_ref_syntax(*fn_data.ret_type())
                     .map(|ptr| ptr.syntax_node_ptr())
                     .unwrap();
-                self.sink.push(ExternNonPrimitiveParam {
+                sink.push(ExternNonPrimitiveParam {
                     param: InFile::new(self.func.source(self.db).file_id, arg_ptr),
                 })
             }

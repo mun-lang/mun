@@ -125,6 +125,7 @@ impl BuiltinInt {
 
     pub fn from_suffix(suffix: &str) -> Option<BuiltinInt> {
         let res = match suffix {
+            "int"   => Self::INT,
             "isize" => Self::ISIZE,
             "i8"    => Self::I8,
             "i16"   => Self::I16,
@@ -132,6 +133,7 @@ impl BuiltinInt {
             "i64"   => Self::I64,
             "i128"  => Self::I128,
 
+            "uint"  => Self::UINT,
             "usize" => Self::USIZE,
             "u8"    => Self::U8,
             "u16"   => Self::U16,
@@ -155,6 +157,7 @@ impl BuiltinFloat {
         let res = match suffix {
             "f32" => BuiltinFloat::F32,
             "f64" => BuiltinFloat::F64,
+            "float" => BuiltinFloat::FLOAT,
             _ => return None,
         };
         Some(res)

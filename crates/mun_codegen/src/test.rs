@@ -1,5 +1,7 @@
 use crate::{mock::MockDatabase, IrDatabase, ModuleBuilder};
-use hir::{diagnostics::DiagnosticSink, line_index::LineIndex, Module, SourceDatabase};
+use hir::{
+    diagnostics::DiagnosticSink, line_index::LineIndex, HirDatabase, Module, SourceDatabase,
+};
 use inkwell::OptimizationLevel;
 use mun_target::spec::Target;
 use std::cell::RefCell;
@@ -39,6 +41,38 @@ fn issue_133() {
     }
     "#,
     );
+}
+
+#[test]
+fn literal_types() {
+    test_snapshot_unoptimized(
+        r"
+    pub fn main(){
+        let a = 123;
+        let a = 123u8;
+        let a = 123u16;
+        let a = 123u32;
+        let a = 123u64;
+        let a = 123u128;
+        let a = 123uint;
+        let a = 1_000_000_u32;
+        let a = 123i8;
+        let a = 123i16;
+        let a = 123i32;
+        let a = 123i64;
+        let a = 123123123123123123123123123123123i128;
+        let a = 123int;
+        let a = 1_000_000_i32;
+        let a = 1_000_123.0e-2;
+        let a = 1_000_123.0e-2f32;
+        let a = 1_000_123.0e-2f64;
+        let a = 1_000_123.0e-2float;
+    }
+
+    pub fn add(a:u32) -> u32 {
+        a + 12u32
+    }",
+    )
 }
 
 #[test]

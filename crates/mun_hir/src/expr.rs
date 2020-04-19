@@ -12,15 +12,19 @@ use crate::type_ref::{TypeRef, TypeRefBuilder, TypeRefId, TypeRefMap, TypeRefSou
 use either::Either;
 pub use mun_syntax::ast::PrefixOp as UnaryOp;
 use mun_syntax::ast::{ArgListOwner, BinOp, LoopBodyOwner, NameOwner, TypeAscriptionOwner};
-use mun_syntax::{ast, AstNode, AstPtr, T};
+use mun_syntax::{ast, AstNode, AstPtr, SmolStr, T};
 use rustc_hash::FxHashMap;
 use std::ops::Index;
 use std::sync::Arc;
 
 pub use self::scope::ExprScopes;
+use crate::builtin_type::{BuiltinFloat, BuiltinInt};
+use crate::diagnostics::DiagnosticSink;
 use crate::in_file::InFile;
 use crate::resolve::Resolver;
+use std::borrow::Cow;
 use std::mem;
+use std::str::FromStr;
 
 pub(crate) mod scope;
 pub(crate) mod validator;
@@ -32,6 +36,11 @@ impl_arena_id!(ExprId);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PatId(RawId);
 impl_arena_id!(PatId);
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum ExprDiagnostic {
+    LiteralError { expr: ExprId, err: LiteralError },
+}
 
 /// The body of an item (function, const etc.).
 #[derive(Debug, Eq, PartialEq)]
@@ -49,6 +58,9 @@ pub struct Body {
     /// The `ExprId` of the actual body expression.
     body_expr: ExprId,
     ret_type: TypeRefId,
+
+    /// Diagnostics encountered when parsing the ast expressions
+    diagnostics: Vec<ExprDiagnostic>,
 }
 
 impl Body {
@@ -78,6 +90,18 @@ impl Body {
 
     pub fn ret_type(&self) -> TypeRefId {
         self.ret_type
+    }
+
+    /// Adds all the `InferenceDiagnostic`s of the result to the `DiagnosticSink`.
+    pub(crate) fn add_diagnostics(
+        &self,
+        db: &impl HirDatabase,
+        owner: DefWithBody,
+        sink: &mut DiagnosticSink,
+    ) {
+        self.diagnostics
+            .iter()
+            .for_each(|it| it.add_to(db, owner, sink))
     }
 }
 
@@ -181,8 +205,50 @@ pub enum Statement {
 pub enum Literal {
     String(String),
     Bool(bool),
-    Int(i64),
-    Float(f64),
+    Int(LiteralInt),
+    Float(LiteralFloat),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum LiteralError {
+    /// We cannot parse the integer because its too large to fit in memory
+    IntTooLarge,
+
+    /// A lexer error occurred. This might happen if the literal is malformed (e.g. 0b01012)
+    LexerError,
+
+    /// Encountered an unknown suffix
+    InvalidIntSuffix(SmolStr),
+
+    /// Encountered an unknown suffix
+    InvalidFloatSuffix(SmolStr),
+
+    /// Trying to add floating point suffix to a literal that is not a floating point number
+    NonDecimalFloat(u32),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct LiteralInt {
+    pub kind: LiteralIntKind,
+    pub value: u128,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum LiteralIntKind {
+    Suffixed(BuiltinInt),
+    Unsuffixed,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct LiteralFloat {
+    pub kind: LiteralFloatKind,
+    pub value: f64,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum LiteralFloatKind {
+    Suffixed(BuiltinFloat),
+    Unsuffixed,
 }
 
 impl Eq for Literal {}
@@ -375,6 +441,7 @@ pub(crate) struct ExprCollector<DB> {
     ret_type: Option<TypeRefId>,
     type_ref_builder: TypeRefBuilder,
     current_file_id: FileId,
+    diagnostics: Vec<ExprDiagnostic>,
 }
 
 impl<'a, DB> ExprCollector<&'a DB>
@@ -393,6 +460,7 @@ where
             ret_type: None,
             type_ref_builder: TypeRefBuilder::default(),
             current_file_id: file_id,
+            diagnostics: Vec::new(),
         }
     }
 
@@ -514,19 +582,40 @@ where
             ast::ExprKind::ReturnExpr(r) => self.collect_return(r),
             ast::ExprKind::BreakExpr(r) => self.collect_break(r),
             ast::ExprKind::BlockExpr(b) => self.collect_block(b),
-            ast::ExprKind::Literal(e) => {
-                let lit = match e.kind() {
-                    ast::LiteralKind::Bool => Literal::Bool(e.token().kind() == T![true]),
-                    ast::LiteralKind::IntNumber => {
-                        Literal::Int(e.syntax().text().to_string().parse().unwrap())
+            ast::ExprKind::Literal(e) => match e.kind() {
+                ast::LiteralKind::Bool => {
+                    let lit = Literal::Bool(e.token().kind() == T![true]);
+                    self.alloc_expr(Expr::Literal(lit), syntax_ptr)
+                }
+                ast::LiteralKind::IntNumber => {
+                    let (text, suffix) = e.text_and_suffix();
+                    let (lit, errors) = integer_lit(&text, suffix.as_ref().map(SmolStr::as_str));
+                    let expr_id = self.alloc_expr(Expr::Literal(lit), syntax_ptr);
+
+                    for err in errors {
+                        self.diagnostics
+                            .push(ExprDiagnostic::LiteralError { expr: expr_id, err })
                     }
-                    ast::LiteralKind::FloatNumber => {
-                        Literal::Float(e.syntax().text().to_string().parse().unwrap())
+
+                    expr_id
+                }
+                ast::LiteralKind::FloatNumber => {
+                    let (text, suffix) = e.text_and_suffix();
+                    let (lit, errors) = float_lit(&text, suffix.as_ref().map(SmolStr::as_str));
+                    let expr_id = self.alloc_expr(Expr::Literal(lit), syntax_ptr);
+
+                    for err in errors {
+                        self.diagnostics
+                            .push(ExprDiagnostic::LiteralError { expr: expr_id, err })
                     }
-                    ast::LiteralKind::String => Literal::String(Default::default()),
-                };
-                self.alloc_expr(Expr::Literal(lit), syntax_ptr)
-            }
+
+                    expr_id
+                }
+                ast::LiteralKind::String => {
+                    let lit = Literal::String(Default::default());
+                    self.alloc_expr(Expr::Literal(lit), syntax_ptr)
+                }
+            },
             ast::ExprKind::PrefixExpr(e) => {
                 let expr = self.collect_expr_opt(e.expr());
                 if let Some(op) = e.op_kind() {
@@ -783,6 +872,7 @@ where
             ret_type: self
                 .ret_type
                 .expect("A body should have return type collected"),
+            diagnostics: self.diagnostics,
         };
         mem::replace(&mut self.source_map.type_refs, type_ref_source_map);
         (body, self.source_map)
@@ -829,4 +919,509 @@ pub(crate) fn resolver_for_scope(
         r = r.push_expr_scope(Arc::clone(&scopes), scope);
     }
     r
+}
+
+/// Removes any underscores from a string if present
+fn strip_underscores(s: &str) -> Cow<str> {
+    if s.contains('_') {
+        let mut s = s.to_string();
+        s.retain(|c| c != '_');
+        Cow::Owned(s)
+    } else {
+        Cow::Borrowed(s)
+    }
+}
+
+/// Parses the given string into a float literal
+fn float_lit(str: &str, suffix: Option<&str>) -> (Literal, Vec<LiteralError>) {
+    let str = strip_underscores(str);
+    filtered_float_lit(&str, suffix, 10)
+}
+
+/// Parses the given string into a float literal (underscores are already removed from str)
+fn filtered_float_lit(str: &str, suffix: Option<&str>, base: u32) -> (Literal, Vec<LiteralError>) {
+    let mut errors = Vec::new();
+    if base != 10 {
+        errors.push(LiteralError::NonDecimalFloat(base));
+    }
+    let kind = match suffix {
+        Some(suf) => match BuiltinFloat::from_suffix(suf) {
+            Some(suf) => LiteralFloatKind::Suffixed(suf),
+            None => {
+                errors.push(LiteralError::InvalidFloatSuffix(SmolStr::new(suf)));
+                LiteralFloatKind::Unsuffixed
+            }
+        },
+        None => LiteralFloatKind::Unsuffixed,
+    };
+
+    let value = if base == 10 {
+        f64::from_str(str).expect("could not parse floating point number, this is definitely a bug")
+    } else {
+        0.0
+    };
+    (Literal::Float(LiteralFloat { kind, value }), errors)
+}
+
+/// Parses the given string into an integer literal
+fn integer_lit(str: &str, suffix: Option<&str>) -> (Literal, Vec<LiteralError>) {
+    let str = strip_underscores(str);
+
+    let base = match str.as_bytes() {
+        [b'0', b'x', ..] => 16,
+        [b'0', b'o', ..] => 8,
+        [b'0', b'b', ..] => 2,
+        _ => 10,
+    };
+
+    let mut errors = Vec::new();
+
+    let kind = match suffix {
+        Some(suf) => match BuiltinInt::from_suffix(suf) {
+            Some(ty) => LiteralIntKind::Suffixed(ty),
+            None => {
+                // 1f32 is a valid number, but its an integer disguised as a float
+                if BuiltinFloat::from_suffix(suf).is_some() {
+                    return filtered_float_lit(&str, suffix, base);
+                }
+
+                errors.push(LiteralError::InvalidIntSuffix(SmolStr::new(suf)));
+                LiteralIntKind::Unsuffixed
+            }
+        },
+        _ => LiteralIntKind::Unsuffixed,
+    };
+
+    let str = &str[if base != 10 { 2 } else { 0 }..];
+    let (value, err) = match u128::from_str_radix(str, base) {
+        Ok(i) => (i, None),
+        Err(_) => {
+            // Small bases are lexed as if they were base 10, e.g. the string might be
+            // `0b10201`. This will cause the conversion above to fail.
+            let from_lexer = base < 10
+                && str
+                    .chars()
+                    .any(|c| c.to_digit(10).map_or(false, |d| d >= base));
+            if from_lexer {
+                (0, Some(LiteralError::LexerError))
+            } else {
+                (0, Some(LiteralError::IntTooLarge))
+            }
+        }
+    };
+
+    // TODO: Add check here to see if literal will fit given the suffix!
+
+    if let Some(err) = err {
+        errors.push(err);
+    }
+
+    (Literal::Int(LiteralInt { kind, value }), errors)
+}
+
+#[cfg(test)]
+mod test {
+    use crate::builtin_type::{BuiltinFloat, BuiltinInt};
+    use crate::expr::{float_lit, LiteralError, LiteralFloat, LiteralFloatKind};
+    use crate::expr::{integer_lit, LiteralInt, LiteralIntKind};
+    use crate::Literal;
+    use mun_syntax::SmolStr;
+
+    #[test]
+    fn test_integer_literals() {
+        assert_eq!(
+            integer_lit("12", None),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Unsuffixed,
+                    value: 12
+                }),
+                vec![]
+            )
+        );
+        assert_eq!(
+            integer_lit("0xF00BA", None),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Unsuffixed,
+                    value: 0xF00BA
+                }),
+                vec![]
+            )
+        );
+        assert_eq!(
+            integer_lit("10_000_000", None),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Unsuffixed,
+                    value: 10_000_000
+                }),
+                vec![]
+            )
+        );
+        assert_eq!(
+            integer_lit("0o765431", None),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Unsuffixed,
+                    value: 0o765431
+                }),
+                vec![]
+            )
+        );
+        assert_eq!(
+            integer_lit("0b01011100", None),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Unsuffixed,
+                    value: 0b01011100
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            integer_lit("0b02011100", None),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Unsuffixed,
+                    value: 0
+                }),
+                vec![LiteralError::LexerError]
+            )
+        );
+        assert_eq!(
+            integer_lit("0o09", None),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Unsuffixed,
+                    value: 0
+                }),
+                vec![LiteralError::LexerError]
+            )
+        );
+
+        assert_eq!(
+            integer_lit("1234", Some("foo")),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Unsuffixed,
+                    value: 1234
+                }),
+                vec![LiteralError::InvalidIntSuffix(SmolStr::new("foo"))]
+            )
+        );
+
+        assert_eq!(
+            integer_lit("123", Some("i8")),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Suffixed(BuiltinInt::I8),
+                    value: 123
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            integer_lit("1234", Some("i16")),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Suffixed(BuiltinInt::I16),
+                    value: 1234
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            integer_lit("1234", Some("i32")),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Suffixed(BuiltinInt::I32),
+                    value: 1234
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            integer_lit("1234", Some("i64")),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Suffixed(BuiltinInt::I64),
+                    value: 1234
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            integer_lit("1234", Some("i128")),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Suffixed(BuiltinInt::I128),
+                    value: 1234
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            integer_lit("1234", Some("isize")),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Suffixed(BuiltinInt::ISIZE),
+                    value: 1234
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            integer_lit("1234", Some("int")),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Suffixed(BuiltinInt::INT),
+                    value: 1234
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            integer_lit("123", Some("u8")),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Suffixed(BuiltinInt::U8),
+                    value: 123
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            integer_lit("1234", Some("u16")),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Suffixed(BuiltinInt::U16),
+                    value: 1234
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            integer_lit("1234", Some("u32")),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Suffixed(BuiltinInt::U32),
+                    value: 1234
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            integer_lit("1234", Some("u64")),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Suffixed(BuiltinInt::U64),
+                    value: 1234
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            integer_lit("1234", Some("u128")),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Suffixed(BuiltinInt::U128),
+                    value: 1234
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            integer_lit("1234", Some("usize")),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Suffixed(BuiltinInt::USIZE),
+                    value: 1234
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            integer_lit("1234", Some("uint")),
+            (
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Suffixed(BuiltinInt::UINT),
+                    value: 1234
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            integer_lit("1", Some("f32")),
+            (
+                Literal::Float(LiteralFloat {
+                    kind: LiteralFloatKind::Suffixed(BuiltinFloat::F32),
+                    value: 1.0
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            integer_lit("0x1", Some("f32")),
+            (
+                Literal::Float(LiteralFloat {
+                    kind: LiteralFloatKind::Suffixed(BuiltinFloat::F32),
+                    value: 0.0
+                }),
+                vec![LiteralError::NonDecimalFloat(16)]
+            )
+        );
+    }
+
+    #[test]
+    fn test_float_literals() {
+        assert_eq!(
+            float_lit("1234.1234", None),
+            (
+                Literal::Float(LiteralFloat {
+                    kind: LiteralFloatKind::Unsuffixed,
+                    value: 1234.1234
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            float_lit("1_234.1_234", None),
+            (
+                Literal::Float(LiteralFloat {
+                    kind: LiteralFloatKind::Unsuffixed,
+                    value: 1234.1234
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            float_lit("1234.1234e2", None),
+            (
+                Literal::Float(LiteralFloat {
+                    kind: LiteralFloatKind::Unsuffixed,
+                    value: 123412.34
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            float_lit("1234.1234e2", Some("foo")),
+            (
+                Literal::Float(LiteralFloat {
+                    kind: LiteralFloatKind::Unsuffixed,
+                    value: 123412.34
+                }),
+                vec![LiteralError::InvalidFloatSuffix(SmolStr::new("foo"))]
+            )
+        );
+
+        assert_eq!(
+            float_lit("1234.1234e2", Some("f32")),
+            (
+                Literal::Float(LiteralFloat {
+                    kind: LiteralFloatKind::Suffixed(BuiltinFloat::F32),
+                    value: 123412.34
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            float_lit("1234.1234e2", Some("f64")),
+            (
+                Literal::Float(LiteralFloat {
+                    kind: LiteralFloatKind::Suffixed(BuiltinFloat::F64),
+                    value: 123412.34
+                }),
+                vec![]
+            )
+        );
+
+        assert_eq!(
+            float_lit("1234.1234e2", Some("float")),
+            (
+                Literal::Float(LiteralFloat {
+                    kind: LiteralFloatKind::Suffixed(BuiltinFloat::FLOAT),
+                    value: 123412.34
+                }),
+                vec![]
+            )
+        );
+    }
+}
+
+mod diagnostics {
+    use super::{ExprDiagnostic, LiteralError};
+    use crate::code_model::DefWithBody;
+    use crate::diagnostics::{
+        DiagnosticSink, IntLiteralTooLarge, InvalidFloatingPointLiteral, InvalidLiteral,
+        InvalidLiteralSuffix,
+    };
+    use crate::HirDatabase;
+
+    impl ExprDiagnostic {
+        pub(crate) fn add_to(
+            &self,
+            db: &impl HirDatabase,
+            owner: DefWithBody,
+            sink: &mut DiagnosticSink,
+        ) {
+            let source_map = owner.body_source_map(db);
+
+            match self {
+                ExprDiagnostic::LiteralError { expr, err } => {
+                    let literal = source_map
+                        .expr_syntax(*expr)
+                        .expect("could not retrieve expr from source map")
+                        .map(|expr_src| {
+                            expr_src
+                                .left()
+                                .expect("could not retrieve expr from ExprSource")
+                                .cast()
+                                .expect("could not cast expression to literal")
+                        });
+                    match err {
+                        LiteralError::IntTooLarge => sink.push(IntLiteralTooLarge { literal }),
+                        LiteralError::LexerError => sink.push(InvalidLiteral { literal }),
+                        LiteralError::InvalidIntSuffix(suffix) => sink.push(InvalidLiteralSuffix {
+                            literal,
+                            suffix: suffix.clone(),
+                        }),
+                        LiteralError::InvalidFloatSuffix(suffix) => {
+                            sink.push(InvalidLiteralSuffix {
+                                literal,
+                                suffix: suffix.clone(),
+                            })
+                        }
+                        LiteralError::NonDecimalFloat(base) => {
+                            sink.push(InvalidFloatingPointLiteral {
+                                literal,
+                                base: *base,
+                            })
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

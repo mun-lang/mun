@@ -22,6 +22,7 @@ use std::sync::Arc;
 mod place_expr;
 mod type_variable;
 
+use crate::expr::{LiteralFloatKind, LiteralIntKind};
 use crate::ty::primitives::{FloatTy, IntTy};
 pub use type_variable::TypeVarId;
 
@@ -322,8 +323,30 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             Expr::Literal(lit) => match lit {
                 Literal::String(_) => Ty::Unknown,
                 Literal::Bool(_) => Ty::simple(TypeCtor::Bool),
-                Literal::Int(_) => Ty::simple(TypeCtor::Int(IntTy::int())),
-                Literal::Float(_) => Ty::simple(TypeCtor::Float(FloatTy::float())),
+                Literal::Int(ty) => {
+                    // TODO: Add inferencing support
+                    let ty = if let LiteralIntKind::Suffixed(suffix) = ty.kind {
+                        IntTy {
+                            bitness: suffix.bitness,
+                            signedness: suffix.signedness,
+                        }
+                    } else {
+                        IntTy::int()
+                    };
+
+                    Ty::simple(TypeCtor::Int(ty))
+                }
+                Literal::Float(ty) => {
+                    // TODO: Add inferencing support
+                    let ty = if let LiteralFloatKind::Suffixed(suffix) = ty.kind {
+                        FloatTy {
+                            bitness: suffix.bitness,
+                        }
+                    } else {
+                        FloatTy::float()
+                    };
+                    Ty::simple(TypeCtor::Float(ty))
+                }
             },
             Expr::Return { expr } => {
                 if let Some(expr) = expr {
@@ -900,9 +923,9 @@ impl From<PatId> for ExprOrPatId {
 mod diagnostics {
     use crate::diagnostics::{
         AccessUnknownField, BreakOutsideLoop, BreakWithValueOutsideLoop, CannotApplyBinaryOp,
-        ExpectedFunction, FieldCountMismatch, IncompatibleBranch, InvalidLHS, MismatchedStructLit,
-        MismatchedType, MissingElseBranch, MissingFields, NoFields, NoSuchField,
-        ParameterCountMismatch, ReturnMissingExpression,
+        ExpectedFunction, FieldCountMismatch, IncompatibleBranch, InvalidLHS, LiteralOutOfRange,
+        MismatchedStructLit, MismatchedType, MissingElseBranch, MissingFields, NoFields,
+        NoSuchField, ParameterCountMismatch, ReturnMissingExpression,
     };
     use crate::{
         adt::StructKind,
@@ -910,7 +933,7 @@ mod diagnostics {
         diagnostics::{DiagnosticSink, UnresolvedType, UnresolvedValue},
         ty::infer::ExprOrPatId,
         type_ref::TypeRefId,
-        ExprId, Function, HirDatabase, Name, Ty,
+        ExprId, Function, HirDatabase, IntTy, Name, Ty,
     };
 
     #[derive(Debug, PartialEq, Eq, Clone)]
@@ -988,6 +1011,10 @@ mod diagnostics {
         NoSuchField {
             id: ExprId,
             field: usize,
+        },
+        LiteralOutOfRange {
+            id: ExprId,
+            literal_ty: IntTy,
         },
     }
 
@@ -1236,6 +1263,22 @@ mod diagnostics {
                 InferenceDiagnostic::NoSuchField { id, field } => {
                     let field = owner.body_source_map(db).field_syntax(*id, *field).into();
                     sink.push(NoSuchField { file, field });
+                }
+                InferenceDiagnostic::LiteralOutOfRange { id, literal_ty } => {
+                    let literal = body
+                        .expr_syntax(*id)
+                        .expect("could not retrieve expr from source map")
+                        .map(|expr_src| {
+                            expr_src
+                                .left()
+                                .expect("could not retrieve expr from ExprSource")
+                                .cast()
+                                .expect("could not cast expression to literal")
+                        });
+                    sink.push(LiteralOutOfRange {
+                        literal,
+                        int_ty: *literal_ty,
+                    })
                 }
             }
         }

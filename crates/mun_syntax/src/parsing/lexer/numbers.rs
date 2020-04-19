@@ -14,7 +14,7 @@ pub(crate) fn scan_number(c: char, cursor: &mut Cursor) -> SyntaxKind {
                 scan_digits(cursor, true);
             }
             '0'..='9' | '_' | '.' | 'e' | 'E' => {
-                scan_digits(cursor, true);
+                scan_digits(cursor, false);
             }
             _ => return INT_NUMBER,
         }
@@ -28,15 +28,25 @@ pub(crate) fn scan_number(c: char, cursor: &mut Cursor) -> SyntaxKind {
         cursor.bump();
         scan_digits(cursor, false);
         scan_float_exponent(cursor);
+        scan_suffix(cursor);
         return FLOAT_NUMBER;
     }
 
     if cursor.matches('e') || cursor.matches('E') {
         scan_float_exponent(cursor);
+        scan_suffix(cursor);
         return FLOAT_NUMBER;
     }
 
+    scan_suffix(cursor);
     INT_NUMBER
+}
+
+fn scan_suffix(cursor: &mut Cursor) {
+    if cursor.matches_nth_if(0, is_ident_start) {
+        cursor.bump();
+        cursor.bump_while(is_ident_continue);
+    }
 }
 
 fn scan_digits(cursor: &mut Cursor, allow_hex: bool) {
