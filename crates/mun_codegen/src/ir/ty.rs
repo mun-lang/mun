@@ -1,7 +1,6 @@
 use super::try_convert_any_to_basic;
 use crate::{
-    type_info::TypeSize,
-    type_info::{TypeGroup, TypeInfo},
+    type_info::{TypeInfo, TypeSize},
     CodeGenParams, IrDatabase,
 };
 use hir::{
@@ -105,30 +104,28 @@ pub fn type_info_query(db: &impl IrDatabase, ty: Ty) -> TypeInfo {
             TypeCtor::Float(ty) => {
                 let ir_ty = float_ty_query(db, ty);
                 let type_size = TypeSize::from_ir_type(&ir_ty, target.as_ref());
-                TypeInfo::new(
+                TypeInfo::new_fundamental(
                     format!("core::{}", ty.resolve(&db.target_data_layout())),
-                    TypeGroup::FundamentalTypes,
                     type_size,
                 )
             }
             TypeCtor::Int(ty) => {
                 let ir_ty = int_ty_query(db, ty);
                 let type_size = TypeSize::from_ir_type(&ir_ty, target.as_ref());
-                TypeInfo::new(
+                TypeInfo::new_fundamental(
                     format!("core::{}", ty.resolve(&db.target_data_layout())),
-                    TypeGroup::FundamentalTypes,
                     type_size,
                 )
             }
             TypeCtor::Bool => {
                 let ir_ty = db.context().bool_type();
                 let type_size = TypeSize::from_ir_type(&ir_ty, target.as_ref());
-                TypeInfo::new("core::bool", TypeGroup::FundamentalTypes, type_size)
+                TypeInfo::new_fundamental("core::bool", type_size)
             }
             TypeCtor::Struct(s) => {
                 let ir_ty = db.struct_ty(s);
                 let type_size = TypeSize::from_ir_type(&ir_ty, target.as_ref());
-                TypeInfo::new(s.name(db).to_string(), TypeGroup::StructTypes(s), type_size)
+                TypeInfo::new_struct(db, s, type_size)
             }
             _ => unreachable!("{:?} unhandled", ctor),
         },

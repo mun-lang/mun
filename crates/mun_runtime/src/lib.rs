@@ -16,31 +16,31 @@ mod reflection;
 mod static_type_map;
 mod r#struct;
 
-#[cfg(test)]
-mod test;
-
-use std::collections::HashMap;
-use std::ffi;
-use std::io;
-use std::mem;
-use std::path::{Path, PathBuf};
-use std::sync::mpsc::{channel, Receiver};
-use std::time::Duration;
-
 use failure::Error;
 use function::FunctionInfoStorage;
-use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
-
-pub use crate::marshal::Marshal;
-pub use crate::reflection::{ArgumentReflection, ReturnTypeReflection};
-
-pub use crate::assembly::Assembly;
-use crate::function::IntoFunctionInfo;
-pub use crate::r#struct::StructRef;
 use garbage_collector::GarbageCollector;
-use gc::GcRuntime;
+use memory::gc::{self, GcRuntime};
+use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 use rustc_hash::FxHashMap;
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    ffi, io, mem,
+    path::{Path, PathBuf},
+    string::ToString,
+    sync::{
+        mpsc::{channel, Receiver},
+        Arc,
+    },
+    time::Duration,
+};
+
+pub use crate::{
+    assembly::Assembly,
+    function::IntoFunctionInfo,
+    marshal::Marshal,
+    r#struct::StructRef,
+    reflection::{ArgumentReflection, ReturnTypeReflection},
+};
 
 impl_has_type_info_name!(
     abi::TypeInfo => "TypeInfo"
@@ -100,10 +100,15 @@ impl RuntimeBuilder {
     }
 }
 
+type DependencyCounter = usize;
+type Dependency<T> = (T, DependencyCounter);
+type DependencyMap<T> = FxHashMap<String, Dependency<T>>;
+
 /// A runtime dispatch table that maps full paths to function and struct information.
 #[derive(Default)]
 pub struct DispatchTable {
     functions: FxHashMap<String, abi::FunctionInfo>,
+    fn_dependencies: FxHashMap<String, DependencyMap<abi::FunctionSignature>>,
 }
 
 impl DispatchTable {
@@ -116,17 +121,51 @@ impl DispatchTable {
     ///
     /// If the dispatch table already contained this `fn_path`, the value is updated, and the old
     /// value is returned.
-    pub fn insert_fn<T: std::string::ToString>(
+    pub fn insert_fn<S: ToString>(
         &mut self,
-        fn_path: T,
+        fn_path: S,
         fn_info: abi::FunctionInfo,
     ) -> Option<abi::FunctionInfo> {
         self.functions.insert(fn_path.to_string(), fn_info)
     }
 
     /// Removes and returns the `fn_info` corresponding to `fn_path`, if it exists.
-    pub fn remove_fn<T: AsRef<str>>(&mut self, fn_path: T) -> Option<abi::FunctionInfo> {
+    pub fn remove_fn<S: AsRef<str>>(&mut self, fn_path: S) -> Option<abi::FunctionInfo> {
         self.functions.remove(fn_path.as_ref())
+    }
+
+    /// Adds `fn_path` from `assembly_path` as a dependency; incrementing its usage counter.
+    pub fn add_fn_dependency<S: ToString, T: ToString>(
+        &mut self,
+        assembly_path: S,
+        fn_path: T,
+        fn_signature: abi::FunctionSignature,
+    ) {
+        let dependencies = self
+            .fn_dependencies
+            .entry(assembly_path.to_string())
+            .or_default();
+
+        let (_, counter) = dependencies
+            .entry(fn_path.to_string())
+            .or_insert((fn_signature, 0));
+
+        *counter += 1;
+    }
+
+    /// Removes `fn_path` from `assembly_path` as a dependency; decrementing its usage counter.
+    pub fn remove_fn_dependency<S: AsRef<str>, T: AsRef<str>>(
+        &mut self,
+        assembly_path: S,
+        fn_path: T,
+    ) {
+        if let Some(dependencies) = self.fn_dependencies.get_mut(assembly_path.as_ref()) {
+            if let Some((key, (fn_sig, counter))) = dependencies.remove_entry(fn_path.as_ref()) {
+                if counter > 1 {
+                    dependencies.insert(key, (fn_sig, counter - 1));
+                }
+            }
+        }
     }
 }
 
@@ -203,12 +242,11 @@ impl Runtime {
             .into());
         }
 
-        let mut assembly =
-            Assembly::load(&library_path, &mut self.dispatch_table, self.gc.clone())?;
+        let mut assembly = Assembly::load(&library_path, self.gc.clone(), &self.dispatch_table)?;
         for dependency in assembly.info().dependencies() {
             self.add_assembly(Path::new(dependency))?;
         }
-        assembly.link(&self.dispatch_table)?;
+        assembly.link(&mut self.dispatch_table);
 
         self.watcher
             .watch(library_path.parent().unwrap(), RecursiveMode::NonRecursive)?;

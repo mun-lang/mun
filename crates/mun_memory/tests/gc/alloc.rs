@@ -1,9 +1,6 @@
-#[macro_use]
-mod util;
-
-use mun_gc::{Event, GcRootPtr, GcRuntime, MarkSweep};
+use super::util::{EventAggregator, HasTypeInfo, TypeInfo};
+use mun_memory::gc::{Event, GcRootPtr, GcRuntime, MarkSweep};
 use std::sync::Arc;
-use util::{EventAggregator, HasTypeInfo, TypeInfo};
 
 #[test]
 fn alloc() {

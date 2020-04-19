@@ -1,116 +1,11 @@
-use crate::function::IntoFunctionInfo;
-use crate::{
-    ArgumentReflection, RetryResultExt, ReturnTypeReflection, Runtime, RuntimeBuilder, StructRef,
+use mun_runtime::{
+    invoke_fn, ArgumentReflection, RetryResultExt, ReturnTypeReflection, Runtime, StructRef,
 };
-use mun_compiler::{Config, Driver, FileId, PathOrInline, RelativePathBuf};
-use std::cell::RefCell;
-use std::path::PathBuf;
-use std::rc::Rc;
-use std::thread::sleep;
-use std::time::Duration;
 
-use std::io::stderr;
+#[macro_use]
+mod util;
 
-/// Implements a compiler and runtime in one that can invoke functions. Use of the TestDriver
-/// enables quick testing of Mun constructs in the runtime with hot-reloading support.
-struct TestDriver {
-    _temp_dir: tempfile::TempDir,
-    out_path: PathBuf,
-    file_id: FileId,
-    driver: Driver,
-    runtime: RuntimeOrBuilder,
-}
-
-enum RuntimeOrBuilder {
-    Runtime(Rc<RefCell<Runtime>>),
-    Builder(RuntimeBuilder),
-    Pending,
-}
-
-impl RuntimeOrBuilder {
-    pub fn spawn(&mut self) -> RuntimeOrBuilder {
-        let previous = std::mem::replace(self, RuntimeOrBuilder::Pending);
-        let runtime = match previous {
-            RuntimeOrBuilder::Runtime(runtime) => runtime,
-            RuntimeOrBuilder::Builder(builder) => Rc::new(RefCell::new(builder.spawn().unwrap())),
-            _ => unreachable!(),
-        };
-        std::mem::replace(self, RuntimeOrBuilder::Runtime(runtime))
-    }
-}
-
-impl TestDriver {
-    /// Construct a new TestDriver from a single Mun source
-    fn new(text: &str) -> Self {
-        let temp_dir = tempfile::TempDir::new().unwrap();
-        let config = Config {
-            out_dir: Some(temp_dir.path().to_path_buf()),
-            ..Config::default()
-        };
-        let input = PathOrInline::Inline {
-            rel_path: RelativePathBuf::from("main.mun"),
-            contents: text.to_owned(),
-        };
-        let (mut driver, file_id) = Driver::with_file(config, input).unwrap();
-        if driver.emit_diagnostics(&mut stderr()).unwrap() {
-            panic!("compiler errors..")
-        }
-        let out_path = driver.write_assembly(file_id).unwrap();
-        let builder = RuntimeBuilder::new(&out_path);
-        TestDriver {
-            _temp_dir: temp_dir,
-            driver,
-            out_path,
-            file_id,
-            runtime: RuntimeOrBuilder::Builder(builder),
-        }
-    }
-
-    /// Updates the text of the Mun source and ensures that the generated assembly has been reloaded.
-    fn update(&mut self, text: &str) {
-        self.runtime_mut(); // Ensures that the runtime is spawned prior to the update
-        self.driver.set_file_text(self.file_id, text);
-        let out_path = self.driver.write_assembly(self.file_id).unwrap();
-        assert_eq!(
-            &out_path, &self.out_path,
-            "recompiling did not result in the same assembly"
-        );
-        let start_time = std::time::Instant::now();
-        while !self.runtime_mut().borrow_mut().update() {
-            let now = std::time::Instant::now();
-            if now - start_time > std::time::Duration::from_secs(10) {
-                panic!("runtime did not update after recompilation within 10secs");
-            } else {
-                sleep(Duration::from_millis(1));
-            }
-        }
-    }
-
-    /// Adds a custom user function to the dispatch table.
-    pub fn insert_fn<S: AsRef<str>, F: IntoFunctionInfo>(mut self, name: S, func: F) -> Self {
-        match &mut self.runtime {
-            RuntimeOrBuilder::Builder(builder) => builder.insert_fn(name, func),
-            _ => unreachable!(),
-        };
-        self
-    }
-
-    /// Returns the `Runtime` used by this instance
-    fn runtime_mut(&mut self) -> &mut Rc<RefCell<Runtime>> {
-        self.runtime.spawn();
-        match &mut self.runtime {
-            RuntimeOrBuilder::Runtime(r) => r,
-            _ => unreachable!(),
-        }
-    }
-}
-
-macro_rules! assert_invoke_eq {
-    ($ExpectedType:ty, $ExpectedResult:expr, $Driver:expr, $($Arg:tt)+) => {
-        let result: $ExpectedType = invoke_fn!($Driver.runtime_mut(), $($Arg)*).unwrap();
-        assert_eq!(result, $ExpectedResult, "{} == {:?}", stringify!(invoke_fn!($Driver.runtime_mut(), $($Arg)*).unwrap()), $ExpectedResult);
-    }
-}
+use util::*;
 
 #[test]
 fn compile_and_run() {
@@ -319,22 +214,6 @@ fn true_is_true() {
     );
     assert_invoke_eq!(bool, true, driver, "test_true");
     assert_invoke_eq!(bool, false, driver, "test_false");
-}
-
-#[test]
-fn hotreloadable() {
-    let mut driver = TestDriver::new(
-        r"
-    pub fn main()->int { 5 }
-    ",
-    );
-    assert_invoke_eq!(i64, 5, driver, "main");
-    driver.update(
-        r"
-    pub fn main()->int { 10 }
-    ",
-    );
-    assert_invoke_eq!(i64, 10, driver, "main");
 }
 
 #[test]
@@ -575,42 +454,6 @@ fn marshal_struct() {
 }
 
 #[test]
-fn hotreload_struct_decl() {
-    let mut driver = TestDriver::new(
-        r#"
-    struct(gc) Args {
-        n: int,
-        foo: Bar,
-    }
-    
-    struct(gc) Bar {
-        m: float,
-    }
-
-    pub fn args() -> Args {
-        Args { n: 3, foo: Bar { m: 1.0 }, }
-    }
-    "#,
-    );
-    driver.update(
-        r#"
-    struct(gc) Args {
-        n: int,
-        foo: Bar,
-    }
-    
-    struct(gc) Bar {
-        m: int,
-    }
-
-    pub fn args() -> Args {
-        Args { n: 3, foo: Bar { m: 1 }, }
-    }
-    "#,
-    );
-}
-
-#[test]
 fn extern_fn() {
     extern "C" fn add_int(a: isize, b: isize) -> isize {
         dbg!("add_int is called!");
@@ -738,41 +581,6 @@ fn test_primitive_types() {
     test_field(&mut foo, (13isize, 112isize), "m");
     test_field(&mut foo, (14usize, 113usize), "n");
     test_field(&mut foo, (15f64, 114f64), "o");
-}
-
-#[test]
-fn gc_trace() {
-    let mut driver = TestDriver::new(
-        r#"
-    pub struct Foo {
-        quz: float,
-        bar: Bar,
-    }
-
-    pub struct Bar {
-        baz: int
-    }
-
-    pub fn new_foo() -> Foo {
-        Foo {
-            quz: 1.0,
-            bar: Bar {
-                baz: 3
-            }
-        }
-    }
-    "#,
-    );
-
-    let value: StructRef = invoke_fn!(driver.runtime_mut(), "new_foo").unwrap();
-
-    assert_eq!(driver.runtime_mut().borrow().gc_collect(), false);
-    assert!(driver.runtime_mut().borrow().gc_stats().allocated_memory > 0);
-
-    drop(value);
-
-    assert_eq!(driver.runtime_mut().borrow().gc_collect(), true);
-    assert_eq!(driver.runtime_mut().borrow().gc_stats().allocated_memory, 0);
 }
 
 #[test]

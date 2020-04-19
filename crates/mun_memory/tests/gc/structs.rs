@@ -1,9 +1,7 @@
-#[macro_use]
-mod util;
-
-use mun_gc::{Event, GcPtr, GcRootPtr, GcRuntime, HasIndirectionPtr, MarkSweep, Type};
+use super::util::{EventAggregator, HasTypeInfo, Trace, TypeInfo};
+use crate::{assert_variant, impl_struct_ty};
+use mun_memory::gc::{Event, GcPtr, GcRootPtr, GcRuntime, HasIndirectionPtr, MarkSweep, TypeTrace};
 use std::sync::Arc;
-use util::{EventAggregator, HasTypeInfo, Trace, TypeInfo};
 
 struct Foo {
     bar: GcPtr,

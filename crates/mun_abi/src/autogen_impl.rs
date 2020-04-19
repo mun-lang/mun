@@ -61,6 +61,12 @@ impl PartialEq for TypeInfo {
     }
 }
 
+impl std::hash::Hash for TypeInfo {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.guid.hash(state);
+    }
+}
+
 unsafe impl Send for TypeInfo {}
 unsafe impl Sync for TypeInfo {}
 

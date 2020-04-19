@@ -46,7 +46,9 @@ impl FunctionInfoStorage {
     }
 }
 
+/// A value-to-`FunctionInfo` conversion that consumes the input value.
 pub trait IntoFunctionInfo {
+    /// Performs the conversion.
     fn into<S: AsRef<str>>(
         self,
         name: S,

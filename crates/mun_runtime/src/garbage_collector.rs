@@ -1,7 +1,7 @@
-use gc::HasIndirectionPtr;
-use std::alloc::Layout;
+use memory::gc::{self, HasIndirectionPtr};
+use std::{alloc::Layout, hash::Hash};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 pub struct RawTypeInfo(*const abi::TypeInfo);
 
@@ -12,8 +12,66 @@ impl RawTypeInfo {
     ///
     /// This method is unsafe because there are no guarantees about the lifetime of the inner
     /// pointer.
-    pub unsafe fn inner(&self) -> *const abi::TypeInfo {
+    pub unsafe fn inner(self) -> *const abi::TypeInfo {
         self.0
+    }
+}
+
+impl PartialEq for RawTypeInfo {
+    fn eq(&self, other: &Self) -> bool {
+        let this = unsafe { &*self.0 };
+        let other = unsafe { &*other.0 };
+        *this == *other
+    }
+}
+
+impl Eq for RawTypeInfo {}
+
+impl Hash for RawTypeInfo {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let this = unsafe { &*self.0 };
+        this.hash(state);
+    }
+}
+
+impl memory::TypeDesc for RawTypeInfo {
+    fn name(&self) -> &str {
+        let this = unsafe { &*self.0 };
+        this.name()
+    }
+    fn guid(&self) -> &abi::Guid {
+        let this = unsafe { &*self.0 };
+        &this.guid
+    }
+    fn group(&self) -> abi::TypeGroup {
+        let this = unsafe { &*self.0 };
+        this.group
+    }
+}
+
+impl memory::TypeFields<RawTypeInfo> for RawTypeInfo {
+    fn fields(&self) -> Vec<(&str, Self)> {
+        let this = unsafe { &*self.0 };
+        if let Some(s) = this.as_struct() {
+            s.field_names()
+                .zip(
+                    s.field_types()
+                        .iter()
+                        .map(|ty| (*ty as *const abi::TypeInfo).into()),
+                )
+                .collect()
+        } else {
+            Vec::new()
+        }
+    }
+
+    fn offsets(&self) -> &[u16] {
+        let this = unsafe { &*self.0 };
+        if let Some(s) = this.as_struct() {
+            s.field_offsets()
+        } else {
+            &[]
+        }
     }
 }
 
@@ -56,18 +114,20 @@ impl Iterator for Trace {
     }
 }
 
-impl gc::Type for RawTypeInfo {
-    type Trace = Trace;
-
+impl memory::TypeLayout for RawTypeInfo {
     fn layout(&self) -> Layout {
         let ty = unsafe { &*self.0 };
         Layout::from_size_align(ty.size_in_bytes(), ty.alignment())
-            .expect("invalid layout from Mun Type")
+            .unwrap_or_else(|_| panic!("invalid layout from Mun Type: {:?}", ty))
     }
+}
+
+impl gc::TypeTrace for RawTypeInfo {
+    type Trace = Trace;
 
     fn trace(&self, obj: GcPtr) -> Self::Trace {
         Trace {
-            ty: self.clone(),
+            ty: *self,
             obj,
             index: 0,
         }

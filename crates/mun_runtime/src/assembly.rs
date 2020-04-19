@@ -3,30 +3,32 @@ use std::path::{Path, PathBuf};
 
 use crate::DispatchTable;
 use abi::AssemblyInfo;
-use failure::Error;
 use libloading::Symbol;
 
 mod temp_library;
 
 use self::temp_library::TempLibrary;
-use crate::garbage_collector::GarbageCollector;
-use std::sync::Arc;
+use crate::garbage_collector::{GarbageCollector, RawTypeInfo};
+use memory::{diff::diff, mapping::MemoryMapper};
+use std::{collections::HashSet, sync::Arc};
 
 /// An assembly is a hot reloadable compilation unit, consisting of one or more Mun modules.
 pub struct Assembly {
     library_path: PathBuf,
-    library: Option<TempLibrary>,
+    library: TempLibrary,
+    legacy_libs: Vec<TempLibrary>,
     info: AssemblyInfo,
     allocator: Arc<GarbageCollector>,
 }
 
 impl Assembly {
-    /// Loads an assembly and its information for the shared library at `library_path`.
+    /// Loads an assembly and its information for the shared library at `library_path`. The
+    /// resulting `Assembly` is ensured to be linkable.
     pub fn load(
         library_path: &Path,
-        runtime_dispatch_table: &mut DispatchTable,
         gc: Arc<GarbageCollector>,
-    ) -> Result<Self, Error> {
+        runtime_dispatch_table: &DispatchTable,
+    ) -> Result<Self, failure::Error> {
         let library = TempLibrary::new(library_path)?;
 
         // Check whether the library has a symbols function
@@ -40,48 +42,85 @@ impl Assembly {
         set_allocator_handle(allocator_ptr);
 
         let info = get_info();
-
-        for function in info.symbols.functions() {
-            runtime_dispatch_table.insert_fn(function.signature.name(), function.clone());
-        }
-
-        Ok(Assembly {
+        let assembly = Assembly {
             library_path: library_path.to_path_buf(),
-            library: Some(library),
+            library,
+            legacy_libs: Vec::new(),
             info,
             allocator: gc,
-        })
+        };
+
+        // Ensure that any loaded `Assembly` can be linked safely.
+        assembly.ensure_linkable(runtime_dispatch_table)?;
+        Ok(assembly)
+    }
+
+    /// Verifies that the `Assembly` resolves all dependencies in the `DispatchTable`.
+    fn ensure_linkable(&self, runtime_dispatch_table: &DispatchTable) -> Result<(), io::Error> {
+        if let Some(dependencies) = runtime_dispatch_table
+            .fn_dependencies
+            .get(self.info.symbols.path())
+        {
+            let fn_names: HashSet<&str> = self
+                .info
+                .symbols
+                .functions()
+                .iter()
+                .map(|f| f.signature.name())
+                .collect();
+
+            for fn_name in dependencies.keys() {
+                if !fn_names.contains(&fn_name.as_str()) {
+                    return Err(io::Error::new(
+                        io::ErrorKind::NotFound,
+                        format!("Failed to link: function `{}` is missing.", fn_name),
+                    ));
+                }
+            }
+
+            for fn_info in self.info.symbols.functions().iter() {
+                let (fn_sig, _) = dependencies
+                    .get(fn_info.signature.name())
+                    .expect("The dependency must exist after the previous check.");
+
+                // TODO: This is a hack
+                if fn_info.signature.return_type() != fn_sig.return_type()
+                    || fn_info.signature.arg_types().len() != fn_sig.arg_types().len()
+                    || !fn_info
+                        .signature
+                        .arg_types()
+                        .iter()
+                        .zip(fn_sig.arg_types().iter())
+                        .all(|(a, b)| PartialEq::eq(a, b))
+                {
+                    return Err(io::Error::new(
+                        io::ErrorKind::NotFound,
+                        format!("Failed to link: function '{}' is missing. A function with the same name does exist, but the signatures do not match (expected: {}, found: {}).", fn_sig.name(), fn_sig, fn_info.signature),
+                    ));
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Links the assembly using the runtime's dispatch table.
-    pub fn link(&mut self, runtime_dispatch_table: &DispatchTable) -> Result<(), Error> {
+    ///
+    /// Requires that `ensure_linkable` has been called beforehand. This happens upon creation of
+    /// an `Assembly` - in the `load` function - making this function safe.
+    pub fn link(&mut self, runtime_dispatch_table: &mut DispatchTable) {
+        for function in self.info.symbols.functions() {
+            runtime_dispatch_table.insert_fn(function.signature.name(), function.clone());
+        }
+
         for (dispatch_ptr, fn_signature) in self.info.dispatch_table.iter_mut() {
             let fn_ptr = runtime_dispatch_table
                 .get_fn(fn_signature.name())
-                .ok_or_else(|| {
-                    io::Error::new(
-                        io::ErrorKind::NotFound,
-                        format!("Failed to link: function '{}' is missing.", fn_signature),
-                    )
-                })
-                .and_then(|dispatch_func| {
-                    // TODO: This is a hack
-                    if dispatch_func.signature.return_type() != fn_signature.return_type() ||
-                        dispatch_func.signature.arg_types().len() != fn_signature.arg_types().len() ||
-                        !dispatch_func.signature.arg_types().iter().zip(fn_signature.arg_types().iter()).all(|(a,b)| PartialEq::eq(a,b)) {
-                        Err(io::Error::new(
-                            io::ErrorKind::NotFound,
-                            format!("Failed to link while looking for function '{}', a function by the same name does exists but the signatures do not match ({}).", fn_signature, dispatch_func.signature),
-                        ))
-                    } else {
-                        Ok(dispatch_func)
-                    }
-                })
-                .map(|f| f.fn_ptr)?;
+                .unwrap_or_else(|| panic!("Function '{}' is expected to exist.", fn_signature))
+                .fn_ptr;
 
             *dispatch_ptr = fn_ptr;
         }
-        Ok(())
     }
 
     /// Swaps the assembly's shared library and its information for the library at `library_path`.
@@ -89,19 +128,48 @@ impl Assembly {
         &mut self,
         library_path: &Path,
         runtime_dispatch_table: &mut DispatchTable,
-    ) -> Result<(), Error> {
-        // let library_path = library_path.canonicalize()?;
+    ) -> Result<(), failure::Error> {
+        let mut new_assembly =
+            Assembly::load(library_path, self.allocator.clone(), runtime_dispatch_table)?;
 
+        let old_types: Vec<RawTypeInfo> = self
+            .info
+            .symbols
+            .types()
+            .iter()
+            .map(|ty| (*ty as *const abi::TypeInfo).into())
+            .collect();
+
+        let new_types: Vec<RawTypeInfo> = new_assembly
+            .info
+            .symbols
+            .types()
+            .iter()
+            .map(|ty| (*ty as *const abi::TypeInfo).into())
+            .collect();
+
+        let deleted_objects =
+            self.allocator
+                .map_memory(&old_types, &new_types, &diff(&old_types, &new_types));
+
+        // Remove the old assembly's functions
         for function in self.info.symbols.functions() {
             runtime_dispatch_table.remove_fn(function.signature.name());
         }
 
-        // Drop the old library, as some operating systems don't allow editing of in-use shared
-        // libraries
-        self.library.take();
+        new_assembly.link(runtime_dispatch_table);
 
-        // TODO: Partial hot reload of an assembly
-        *self = Assembly::load(library_path, runtime_dispatch_table, self.allocator.clone())?;
+        // Retain all existing legacy libs
+        new_assembly.legacy_libs.append(&mut self.legacy_libs);
+
+        std::mem::swap(self, &mut new_assembly);
+        let old_assembly = new_assembly;
+
+        if !deleted_objects.is_empty() {
+            // Retain the previous assembly
+            self.legacy_libs.push(old_assembly.into_library());
+        }
+
         Ok(())
     }
 
@@ -113,5 +181,10 @@ impl Assembly {
     /// Returns the path corresponding to the assembly's library.
     pub fn library_path(&self) -> &Path {
         self.library_path.as_path()
+    }
+
+    /// Converts the `Assembly` into a `TempLibrary`, consuming the input in the process.
+    pub fn into_library(self) -> TempLibrary {
+        self.library
     }
 }

@@ -111,6 +111,12 @@ impl Linker for Ld64Linker {
             .to_str()
             .ok_or_else(|| LinkerError::PathError(path.to_owned()))?;
 
+        let filename_str = path
+            .file_name()
+            .expect("path must have a filename")
+            .to_str()
+            .ok_or_else(|| LinkerError::PathError(path.to_owned()))?;
+
         // Link as dynamic library
         self.args.push("-dylib".to_owned());
         self.args.push("-lsystem".to_owned());
@@ -118,6 +124,11 @@ impl Linker for Ld64Linker {
         // Specify output path
         self.args.push("-o".to_owned());
         self.args.push(path_str.to_owned());
+
+        // Ensure that the `install_name` is not a full path as it is used as a unique identifier on
+        // MacOS
+        self.args.push("-install_name".to_owned());
+        self.args.push(filename_str.to_owned());
 
         Ok(())
     }

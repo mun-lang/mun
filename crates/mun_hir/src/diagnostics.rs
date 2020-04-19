@@ -586,7 +586,7 @@ pub struct LiteralOutOfRange {
 
 impl Diagnostic for LiteralOutOfRange {
     fn message(&self) -> String {
-        format!("literal out of range for `{}`", self.int_ty.ty_to_string())
+        format!("literal out of range for `{}`", self.int_ty.as_str())
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
