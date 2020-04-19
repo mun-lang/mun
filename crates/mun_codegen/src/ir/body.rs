@@ -5,7 +5,7 @@ use crate::{
 };
 use hir::{
     ArenaId, ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDisplay, InferenceResult, Literal,
-    Name, Ordering, Pat, PatId, Path, Resolution, Resolver, Statement, TypeCtor,
+    Name, Ordering, Pat, PatId, Path, Resolution, Resolver, Statement, TypeCtor, UnaryOp,
 };
 use inkwell::{
     builder::Builder,
@@ -206,6 +206,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             Expr::BinaryOp { lhs, rhs, op } => {
                 self.gen_binary_op(expr, *lhs, *rhs, op.expect("missing op"))
             }
+            Expr::UnaryOp { expr, op } => self.gen_unary_op(*expr, *op),
             Expr::Call {
                 ref callee,
                 ref args,
@@ -621,6 +622,68 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 lhs_type.display(self.db),
                 rhs_type.display(self.db)
             ),
+        }
+    }
+
+    /// Generates IR to calculate a unary operation on an expression.
+    fn gen_unary_op(&mut self, expr: ExprId, op: UnaryOp) -> Option<BasicValueEnum> {
+        let ty = self.infer[expr].clone();
+        match ty.as_simple() {
+            Some(TypeCtor::Float(_ty)) => self.gen_unary_op_float(expr, op),
+            Some(TypeCtor::Int(ty)) => self.gen_unary_op_int(expr, op, ty.signedness),
+            Some(TypeCtor::Bool) => self.gen_unary_op_bool(expr, op),
+            _ => unimplemented!("unimplemented operation op{0}", ty.display(self.db)),
+        }
+    }
+
+    /// Generates IR to calculate a unary operation on a floating point value.
+    fn gen_unary_op_float(&mut self, expr: ExprId, op: UnaryOp) -> Option<BasicValueEnum> {
+        let value: FloatValue = self
+            .gen_expr(expr)
+            .map(|value| self.opt_deref_value(self.infer[expr].clone(), value))
+            .expect("no value")
+            .into_float_value();
+        match op {
+            UnaryOp::Neg => Some(self.builder.build_float_neg(value, "neg").into()),
+            _ => unimplemented!("Operator {:?} is not implemented for float", op),
+        }
+    }
+
+    /// Generates IR to calculate a unary operation on an integer value.
+    fn gen_unary_op_int(
+        &mut self,
+        expr: ExprId,
+        op: UnaryOp,
+        signedness: hir::Signedness,
+    ) -> Option<BasicValueEnum> {
+        let value: IntValue = self
+            .gen_expr(expr)
+            .map(|value| self.opt_deref_value(self.infer[expr].clone(), value))
+            .expect("no value")
+            .into_int_value();
+        match op {
+            UnaryOp::Neg => {
+                if signedness == hir::Signedness::Signed {
+                    Some(self.builder.build_int_neg(value, "neg").into())
+                } else {
+                    unimplemented!("Operator {:?} is not implemented for unsigned integer", op)
+                }
+            }
+            UnaryOp::Not => Some(self.builder.build_not(value, "not").into()),
+            //_ => unimplemented!("Operator {:?} is not implemented for integer", op),
+        }
+    }
+
+    /// Generates IR to calculate a unary operation on a boolean value.
+    fn gen_unary_op_bool(&mut self, expr: ExprId, op: UnaryOp) -> Option<BasicValueEnum> {
+        let value: IntValue = self
+            .gen_expr(expr)
+            .map(|value| self.opt_deref_value(self.infer[expr].clone(), value))
+            .expect("no value")
+            .into_int_value();
+        match op {
+            UnaryOp::Not => Some(self.builder.build_not(value, "not").into()),
+            _ => unimplemented!("Operator {:?} is not implemented for boolean", op),
         }
     }
 

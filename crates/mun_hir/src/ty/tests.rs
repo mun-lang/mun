@@ -177,6 +177,30 @@ fn update_operators() {
 }
 
 #[test]
+fn infer_unary_ops() {
+    infer_snapshot(
+        r#"
+    fn foo(a: int, b: bool) {
+        a = -a;
+        b = !b;
+    }
+        "#,
+    )
+}
+
+#[test]
+fn invalid_unary_ops() {
+    infer_snapshot(
+        r#"
+    fn bar(a: float, b: bool) {
+        a = !a; // mismatched type
+        b = -b; // mismatched type
+    }
+        "#,
+    )
+}
+
+#[test]
 fn infer_loop() {
     infer_snapshot(
         r#"

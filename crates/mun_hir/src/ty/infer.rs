@@ -4,7 +4,7 @@ use crate::{
     code_model::{DefWithBody, DefWithStruct, Struct},
     diagnostics::DiagnosticSink,
     expr,
-    expr::{Body, Expr, ExprId, Literal, Pat, PatId, RecordLitField, Statement},
+    expr::{Body, Expr, ExprId, Literal, Pat, PatId, RecordLitField, Statement, UnaryOp},
     name_resolution::Namespace,
     resolve::{Resolution, Resolver},
     ty::infer::diagnostics::InferenceDiagnostic,
@@ -423,9 +423,38 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                     }
                 }
             }
-            Expr::UnaryOp { .. } => Ty::Unknown,
-            //            Expr::UnaryOp { expr: _, op: _ } => {}
-            //            Expr::Block { statements: _, tail: _ } => {}
+            Expr::UnaryOp { expr, op } => {
+                let ty =
+                    self.infer_expr_inner(*expr, &Expectation::none(), &CheckParams::default());
+                if let Some(simple) = ty.as_simple() {
+                    match op {
+                        UnaryOp::Not => {
+                            match simple {
+                                TypeCtor::Bool | TypeCtor::Int(_) => ty,
+                                _ => {
+                                    self.diagnostics.push(
+                                        InferenceDiagnostic::CannotApplyUnaryOp { id: *expr, ty },
+                                    );
+                                    Ty::Unknown
+                                }
+                            }
+                        }
+                        UnaryOp::Neg => {
+                            match simple {
+                                TypeCtor::Float(_) | TypeCtor::Int(_) => ty,
+                                _ => {
+                                    self.diagnostics.push(
+                                        InferenceDiagnostic::CannotApplyUnaryOp { id: *expr, ty },
+                                    );
+                                    Ty::Unknown
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Ty::Unknown
+                }
+            } //            Expr::Block { statements: _, tail: _ } => {}
         };
 
         self.set_expr_type(tgt_expr, ty.clone());
@@ -923,9 +952,9 @@ impl From<PatId> for ExprOrPatId {
 mod diagnostics {
     use crate::diagnostics::{
         AccessUnknownField, BreakOutsideLoop, BreakWithValueOutsideLoop, CannotApplyBinaryOp,
-        ExpectedFunction, FieldCountMismatch, IncompatibleBranch, InvalidLHS, LiteralOutOfRange,
-        MismatchedStructLit, MismatchedType, MissingElseBranch, MissingFields, NoFields,
-        NoSuchField, ParameterCountMismatch, ReturnMissingExpression,
+        CannotApplyUnaryOp, ExpectedFunction, FieldCountMismatch, IncompatibleBranch, InvalidLHS,
+        LiteralOutOfRange, MismatchedStructLit, MismatchedType, MissingElseBranch, MissingFields,
+        NoFields, NoSuchField, ParameterCountMismatch, ReturnMissingExpression,
     };
     use crate::{
         adt::StructKind,
@@ -971,6 +1000,10 @@ mod diagnostics {
             id: ExprId,
             lhs: Ty,
             rhs: Ty,
+        },
+        CannotApplyUnaryOp {
+            id: ExprId,
+            ty: Ty,
         },
         InvalidLHS {
             id: ExprId,
@@ -1132,6 +1165,18 @@ mod diagnostics {
                         expr,
                         lhs: lhs.clone(),
                         rhs: rhs.clone(),
+                    });
+                }
+                InferenceDiagnostic::CannotApplyUnaryOp { id, ty } => {
+                    let expr = body
+                        .expr_syntax(*id)
+                        .unwrap()
+                        .value
+                        .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
+                    sink.push(CannotApplyUnaryOp {
+                        file,
+                        expr,
+                        ty: ty.clone(),
                     });
                 }
                 InferenceDiagnostic::InvalidLHS { id, lhs } => {

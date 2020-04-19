@@ -277,6 +277,27 @@ impl Diagnostic for CannotApplyBinaryOp {
 }
 
 #[derive(Debug)]
+pub struct CannotApplyUnaryOp {
+    pub file: FileId,
+    pub expr: SyntaxNodePtr,
+    pub ty: Ty,
+}
+
+impl Diagnostic for CannotApplyUnaryOp {
+    fn message(&self) -> String {
+        "cannot apply unary operator".to_string()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.expr)
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
 pub struct DuplicateDefinition {
     pub file: FileId,
     pub name: String,
