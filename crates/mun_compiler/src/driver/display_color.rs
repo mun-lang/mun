@@ -21,18 +21,27 @@ impl DisplayColor {
 
 /// Decides whether the current terminal supports ANSI escape codes based on the `term` environment variable and the operating system.
 fn terminal_support_ansi() -> bool {
-    match env::var("term") {
+    let supports_color = match env::var("TERM") {
         Ok(terminal) => match terminal.as_str() {
             "dumb" => false,
             _ => true,
         },
         Err(_) => {
             #[cfg(target_os = "windows")]
-            return cmd_supports_ansi();
+            let term_support = cmd_supports_ansi();
             #[cfg(not(target_os = "windows"))]
-            return false;
+            let term_support = false;
+
+            term_support
         }
+    };
+
+    // If NO_COLOR is set, definitely do not enable color (https://no-color.org/)
+    if env::var_os("NO_COLOR").is_some() {
+        return false;
     }
+
+    supports_color
 }
 
 #[cfg(target_os = "windows")]
