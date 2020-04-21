@@ -64,30 +64,27 @@ pub struct RuntimeBuilder {
 impl RuntimeBuilder {
     /// Constructs a new `RuntimeBuilder` for the shared library at `library_path`.
     pub fn new<P: Into<PathBuf>>(library_path: P) -> Self {
-        let mut result = Self {
+        Self {
             options: RuntimeOptions {
                 library_path: library_path.into(),
                 delay: Duration::from_millis(10),
                 user_functions: Default::default(),
             },
-        };
-
-        result.insert_fn(
+        }
+        .insert_fn(
             "new",
             new as extern "C" fn(*const abi::TypeInfo, *mut ffi::c_void) -> *const *mut ffi::c_void,
-        );
-
-        result
+        )
     }
 
     /// Sets the `delay`.
-    pub fn set_delay(&mut self, delay: Duration) -> &mut Self {
+    pub fn set_delay(mut self, delay: Duration) -> Self {
         self.options.delay = delay;
         self
     }
 
     /// Adds a custom user function to the dispatch table.
-    pub fn insert_fn<S: AsRef<str>, F: IntoFunctionInfo>(&mut self, name: S, func: F) -> &mut Self {
+    pub fn insert_fn<S: AsRef<str>, F: IntoFunctionInfo>(mut self, name: S, func: F) -> Self {
         self.options
             .user_functions
             .push(func.into(name, abi::Privacy::Public));

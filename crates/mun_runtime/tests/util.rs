@@ -90,8 +90,10 @@ impl TestDriver {
 
     /// Adds a custom user function to the dispatch table.
     pub fn insert_fn<S: AsRef<str>, F: IntoFunctionInfo>(mut self, name: S, func: F) -> Self {
-        match &mut self.runtime {
-            RuntimeOrBuilder::Builder(builder) => builder.insert_fn(name, func),
+        self.runtime = match self.runtime {
+            RuntimeOrBuilder::Builder(builder) => {
+                RuntimeOrBuilder::Builder(builder.insert_fn(name, func))
+            }
             _ => unreachable!(),
         };
         self
