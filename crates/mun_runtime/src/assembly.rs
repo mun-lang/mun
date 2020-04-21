@@ -57,18 +57,31 @@ impl Assembly {
 
     /// Verifies that the `Assembly` resolves all dependencies in the `DispatchTable`.
     fn ensure_linkable(&self, runtime_dispatch_table: &DispatchTable) -> Result<(), io::Error> {
+        let fn_names: HashSet<&str> = self
+            .info
+            .symbols
+            .functions()
+            .iter()
+            .map(|f| f.signature.name())
+            .collect();
+
+        for fn_sig in self.info.dispatch_table.signatures() {
+            let fn_name = fn_sig.name();
+            // ASSUMPTION: If we removed a function from the `Assembly`, we expect the compiler to
+            // have failed for any old internal references to it. Therefore it is safe to leave the
+            // `old_assembly`'s functions in the `runtime_dispatch_table` as we perform this check.
+            if !fn_names.contains(fn_name) && runtime_dispatch_table.get_fn(fn_name).is_none() {
+                return Err(io::Error::new(
+                    io::ErrorKind::NotFound,
+                    format!("Failed to link: function `{}` is missing.", fn_name),
+                ));
+            }
+        }
+
         if let Some(dependencies) = runtime_dispatch_table
             .fn_dependencies
             .get(self.info.symbols.path())
         {
-            let fn_names: HashSet<&str> = self
-                .info
-                .symbols
-                .functions()
-                .iter()
-                .map(|f| f.signature.name())
-                .collect();
-
             for fn_name in dependencies.keys() {
                 if !fn_names.contains(&fn_name.as_str()) {
                     return Err(io::Error::new(
