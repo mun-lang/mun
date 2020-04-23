@@ -389,6 +389,50 @@ fn swap_fields2() {
 }
 
 #[test]
+fn cast_field() {
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
+
+    let struct1 = TypeInfo::new_struct(
+        STRUCT1_NAME,
+        STRUCT1_GUID,
+        StructInfo::new(&[("a", &int), ("b", &float), ("c", &float)]),
+    );
+    let struct2 = TypeInfo::new_struct(
+        STRUCT1_NAME,
+        STRUCT2_GUID,
+        StructInfo::new(&[("a", &float), ("b", &int), ("c", &int)]),
+    );
+
+    let old = &[&struct1];
+    let new = &[&struct2];
+
+    let diff = diff(old, new);
+    assert_eq!(
+        diff,
+        vec![Diff::Edit {
+            diff: vec![
+                FieldDiff::Edit {
+                    index: 0,
+                    kind: FieldEditKind::ConvertType,
+                },
+                FieldDiff::Edit {
+                    index: 1,
+                    kind: FieldEditKind::ConvertType,
+                },
+                FieldDiff::Edit {
+                    index: 2,
+                    kind: FieldEditKind::ConvertType,
+                }
+            ],
+            old_index: 0,
+            new_index: 0,
+        }]
+    );
+    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+}
+
+#[test]
 fn rename_field1() {
     let int = TypeInfo::new_fundamental::<i64>();
     let float = TypeInfo::new_fundamental::<f64>();

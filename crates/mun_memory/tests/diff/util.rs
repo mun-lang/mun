@@ -247,10 +247,8 @@ fn apply_mapping<'t>(old: &mut TypeInfo, new: &TypeInfo, mapping: &[FieldDiff]) 
                 new_field: &(String, TypeInfo),
             ) {
                 match *kind {
-                    FieldEditKind::ConvertType => panic!("Casting is currently not supported"),
-                    FieldEditKind::Rename => {
-                        old_field.0 = new_field.0.clone();
-                    }
+                    FieldEditKind::ConvertType => old_field.1 = new_field.1.clone(),
+                    FieldEditKind::Rename => old_field.0 = new_field.0.clone(),
                 }
             }
 

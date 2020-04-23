@@ -233,6 +233,76 @@ fn map_struct_remove_field3() {
 }
 
 #[test]
+fn map_struct_cast_fields1() {
+    let mut driver = TestDriver::new(
+        r#"
+        struct Foo(
+            u8,
+            i16,
+            u32,
+            i64,
+            f32,
+        )
+
+        pub fn foo_new(a: u8, b: i16, c: u32, d: i64, e: f32) -> Foo {
+            Foo(a, b, c, d, e)
+        }
+    "#,
+    );
+
+    let a = 1u8;
+    let b = -2i16;
+    let c = 3u32;
+    let d = -4i64;
+    let e = 3.14f32;
+    let foo: StructRef = invoke_fn!(driver.runtime_mut(), "foo_new", a, b, c, d, e).unwrap();
+
+    driver.update(
+        r#"
+        struct Foo(
+            u16,
+            i32,
+            u64,
+            i128,
+            f64,
+        )
+    "#,
+    );
+    assert_eq!(foo.get::<u16>("0").unwrap(), a.into());
+    assert_eq!(foo.get::<i32>("1").unwrap(), b.into());
+    assert_eq!(foo.get::<u64>("2").unwrap(), c.into());
+    assert_eq!(foo.get::<i128>("3").unwrap(), d.into());
+    assert_eq!(foo.get::<f64>("4").unwrap(), e.into());
+}
+
+#[test]
+#[should_panic]
+fn map_struct_cast_fields2() {
+    let mut driver = TestDriver::new(
+        r#"
+        struct Foo(
+            i16,
+        )
+
+        pub fn foo_new(a: i16) -> Foo {
+            Foo(a)
+        }
+    "#,
+    );
+
+    let a = -2i16;
+    let _foo: StructRef = invoke_fn!(driver.runtime_mut(), "foo_new", a).unwrap();
+
+    driver.update(
+        r#"
+        struct Foo(
+            u16,    // Cannot convert from `i16` to `u16`
+        )
+    "#,
+    );
+}
+
+#[test]
 fn map_struct_swap_fields1() {
     let mut driver = TestDriver::new(
         r#"

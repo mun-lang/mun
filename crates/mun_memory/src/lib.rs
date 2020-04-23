@@ -1,5 +1,6 @@
 use std::alloc::Layout;
 
+mod cast;
 pub mod diff;
 pub mod gc;
 pub mod mapping;
