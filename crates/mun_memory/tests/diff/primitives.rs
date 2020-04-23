@@ -3,8 +3,8 @@ use mun_memory::diff::{diff, Diff};
 
 #[test]
 fn add() {
-    let int = TypeInfo::new_fundamental::<i64>(INT_NAME, INT_GUID);
-    let float = TypeInfo::new_fundamental::<f64>(FLOAT_NAME, FLOAT_GUID);
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
 
     let old = &[&int];
     let new = &[&int, &float];
@@ -16,8 +16,8 @@ fn add() {
 
 #[test]
 fn remove() {
-    let int = TypeInfo::new_fundamental::<i64>(INT_NAME, INT_GUID);
-    let float = TypeInfo::new_fundamental::<f64>(FLOAT_NAME, FLOAT_GUID);
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
 
     let old = &[&int, &float];
     let new = &[&float];
@@ -29,8 +29,8 @@ fn remove() {
 
 #[test]
 fn replace() {
-    let int = TypeInfo::new_fundamental::<i64>(INT_NAME, INT_GUID);
-    let float = TypeInfo::new_fundamental::<f64>(FLOAT_NAME, FLOAT_GUID);
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
 
     let old = &[&int];
     let new = &[&float];
@@ -45,8 +45,8 @@ fn replace() {
 
 #[test]
 fn swap() {
-    let int = TypeInfo::new_fundamental::<i64>(INT_NAME, INT_GUID);
-    let float = TypeInfo::new_fundamental::<f64>(FLOAT_NAME, FLOAT_GUID);
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
 
     let old = &[&int, &float];
     let new = &[&float, &int];

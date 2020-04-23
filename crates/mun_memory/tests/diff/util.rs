@@ -5,14 +5,6 @@ use mun_memory::{
 };
 use std::alloc::Layout;
 
-pub const INT_NAME: &str = "int";
-pub const INT_GUID: abi::Guid = abi::Guid {
-    b: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-};
-pub const FLOAT_NAME: &str = "float";
-pub const FLOAT_GUID: abi::Guid = abi::Guid {
-    b: [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
-};
 pub const STRUCT1_NAME: &str = "struct1";
 pub const STRUCT1_GUID: abi::Guid = abi::Guid {
     b: [
@@ -70,10 +62,11 @@ pub struct TypeInfo {
 }
 
 impl TypeInfo {
-    pub fn new_fundamental<T>(name: &str, guid: abi::Guid) -> Self {
+    pub fn new_fundamental<T: abi::HasStaticTypeInfo>() -> Self {
+        let type_info = T::type_info();
         Self {
-            name: name.to_string(),
-            guid,
+            name: type_info.name().to_string(),
+            guid: type_info.guid,
             group: abi::TypeGroup::FundamentalTypes,
             layout: Layout::new::<T>(),
             tail: TypeInfoTail::Empty,
