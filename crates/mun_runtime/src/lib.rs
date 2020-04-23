@@ -5,19 +5,15 @@
 #![warn(missing_docs)]
 
 mod assembly;
-mod function;
 #[macro_use]
 mod macros;
 #[macro_use]
-mod type_info;
 mod garbage_collector;
 mod marshal;
 mod reflection;
-mod static_type_map;
 mod r#struct;
 
 use failure::Error;
-use function::FunctionInfoStorage;
 use garbage_collector::GarbageCollector;
 use memory::gc::{self, GcRuntime};
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
@@ -36,15 +32,11 @@ use std::{
 
 pub use crate::{
     assembly::Assembly,
-    function::IntoFunctionInfo,
     marshal::Marshal,
     r#struct::StructRef,
     reflection::{ArgumentReflection, ReturnTypeReflection},
 };
-
-impl_has_type_info_name!(
-    abi::TypeInfo => "TypeInfo"
-);
+pub use abi::IntoFunctionInfo;
 
 /// Options for the construction of a [`Runtime`].
 pub struct RuntimeOptions {
@@ -53,7 +45,7 @@ pub struct RuntimeOptions {
     /// Delay during which filesystem events are collected, deduplicated, and after which emitted.
     pub delay: Duration,
     /// Custom user injected functions
-    pub user_functions: Vec<(abi::FunctionInfo, FunctionInfoStorage)>,
+    pub user_functions: Vec<(abi::FunctionInfo, abi::FunctionInfoStorage)>,
 }
 
 /// A builder for the [`Runtime`].
@@ -84,7 +76,7 @@ impl RuntimeBuilder {
     }
 
     /// Adds a custom user function to the dispatch table.
-    pub fn insert_fn<S: AsRef<str>, F: IntoFunctionInfo>(mut self, name: S, func: F) -> Self {
+    pub fn insert_fn<S: AsRef<str>, F: abi::IntoFunctionInfo>(mut self, name: S, func: F) -> Self {
         self.options
             .user_functions
             .push(func.into(name, abi::Privacy::Public));
@@ -173,7 +165,7 @@ pub struct Runtime {
     watcher: RecommendedWatcher,
     watcher_rx: Receiver<DebouncedEvent>,
     gc: Arc<GarbageCollector>,
-    _user_functions: Vec<FunctionInfoStorage>,
+    _user_functions: Vec<abi::FunctionInfoStorage>,
 }
 
 /// Retrieve the allocator using the provided handle.
