@@ -1,6 +1,5 @@
 use crate::type_info::HasStaticTypeInfo;
 use crate::{marshal::Marshal, Runtime, StructRef};
-use md5;
 
 /// Returns whether the specified argument type matches the `type_info`.
 pub fn equals_argument_type<'r, 'e, 'f, T: ArgumentReflection>(

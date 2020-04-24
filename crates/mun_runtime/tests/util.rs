@@ -21,14 +21,15 @@ enum RuntimeOrBuilder {
 }
 
 impl RuntimeOrBuilder {
-    pub fn spawn(&mut self) -> RuntimeOrBuilder {
+    pub fn spawn(&mut self) -> Result<(), failure::Error> {
         let previous = std::mem::replace(self, RuntimeOrBuilder::Pending);
         let runtime = match previous {
             RuntimeOrBuilder::Runtime(runtime) => runtime,
-            RuntimeOrBuilder::Builder(builder) => Rc::new(RefCell::new(builder.spawn().unwrap())),
+            RuntimeOrBuilder::Builder(builder) => Rc::new(RefCell::new(builder.spawn()?)),
             _ => unreachable!(),
         };
-        std::mem::replace(self, RuntimeOrBuilder::Runtime(runtime))
+        std::mem::replace(self, RuntimeOrBuilder::Runtime(runtime));
+        Ok(())
     }
 }
 
@@ -57,6 +58,11 @@ impl TestDriver {
             file_id,
             runtime: RuntimeOrBuilder::Builder(builder),
         }
+    }
+
+    /// Spawns a `Runtime` from the `RuntimeBuilder`, if it hadn't already been spawned.
+    pub fn spawn(&mut self) -> Result<(), failure::Error> {
+        self.runtime.spawn().map(|_| ())
     }
 
     /// Updates the text of the Mun source and ensures that the generated assembly has been reloaded.
@@ -93,7 +99,7 @@ impl TestDriver {
 
     /// Returns the `Runtime` used by this instance
     pub fn runtime_mut(&mut self) -> &mut Rc<RefCell<Runtime>> {
-        self.runtime.spawn();
+        self.runtime.spawn().unwrap();
         match &mut self.runtime {
             RuntimeOrBuilder::Runtime(r) => r,
             _ => unreachable!(),
