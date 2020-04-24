@@ -1,0 +1,79 @@
+name: release
+on:
+  push:
+    branches:
+      - master
+
+env:
+  RUSTFLAGS: -Dwarnings
+
+jobs:
+
+  artifacts:
+    name: Artifacts
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - {
+          os: "ubuntu-latest",
+          dir: linux64,
+          artifacts: "mun libmun_runtime.so"
+        }
+        - {
+          os: "windows-2016",
+          dir: win64,
+          artifacts: "mun.exe mun_runtime.dll mun_runtime.dll.lib"
+        }
+        - {
+          os: "macOS-latest",
+          dir: osx64,
+          artifacts: "mun libmun_runtime.dylib"
+        }
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Install ${{ matrix.config.toolchain }} toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Install LLVM
+        uses: ./.github/actions/install-llvm
+
+      - name: Cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+
+      - run: mkdir -p ${{ matrix.config.dir }}
+
+      - name: Move artifacts
+        env:
+          ARTIFACTS: ${{ matrix.config.artifacts }}
+          OUT_DIR: ${{ matrix.config.dir }}
+        run: |
+          import os
+          artifacts = os.environ['ARTIFACTS'].split()
+          for artifact in artifacts:
+            src = "target/release/%s" % artifact
+            dst = os.environ['OUT_DIR'] + "/" + artifact
+            os.rename(src, dst)
+        shell: python
+
+      - name: Shorten commit SHA
+        run: |
+          import os
+          print("::set-env name=COMMIT_SHA::%s" % os.environ['GITHUB_SHA'][:7])
+        shell: python
+
+      - uses: actions/upload-artifact@master
+        with:
+          name: ${{ matrix.config.dir }}-${{ env['COMMIT_SHA'] }}
+          path: ${{ matrix.config.dir }}
