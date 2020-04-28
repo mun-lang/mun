@@ -305,7 +305,7 @@ where
                             unsafe { NonNull::new_unchecked(src) },
                             unsafe { NonNull::new_unchecked(dest) },
                         ) {
-                            panic!("The Mun Runtime doesn't currently support casting from '{}' to '{}'", old_field.1.name(), new_field.1.name());
+                            // Failed to cast. Use the previously zero-initialized value instead
                         }
                     } else {
                         unsafe {

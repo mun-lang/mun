@@ -276,7 +276,6 @@ fn map_struct_cast_fields1() {
 }
 
 #[test]
-#[should_panic]
 fn map_struct_cast_fields2() {
     let mut driver = TestDriver::new(
         r#"
@@ -291,7 +290,7 @@ fn map_struct_cast_fields2() {
     );
 
     let a = -2i16;
-    let _foo: StructRef = invoke_fn!(driver.runtime_mut(), "foo_new", a).unwrap();
+    let foo: StructRef = invoke_fn!(driver.runtime_mut(), "foo_new", a).unwrap();
 
     driver.update(
         r#"
@@ -300,6 +299,8 @@ fn map_struct_cast_fields2() {
         )
     "#,
     );
+
+    assert_eq!(foo.get::<u16>("0").unwrap(), 0);
 }
 
 #[test]
