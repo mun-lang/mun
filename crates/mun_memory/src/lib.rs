@@ -7,7 +7,7 @@ pub mod mapping;
 
 pub mod prelude {
     pub use crate::diff::{diff, Diff, FieldDiff, FieldEditKind};
-    pub use crate::mapping::{Action, FieldMappingDesc};
+    pub use crate::mapping::{Action, FieldMapping};
 }
 
 /// A trait used to obtain a type's description.

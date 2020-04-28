@@ -1,14 +1,13 @@
 use crate::{
     cast,
-    diff::{Diff, FieldDiff},
     gc::{Event, GcPtr, GcRuntime, Observer, RawGcPtr, Stats, TypeTrace},
-    mapping::{self, field_mapping, FieldMappingDesc, MemoryMapper},
-    TypeDesc, TypeFields, TypeLayout,
+    mapping::{self, FieldMapping, MemoryMapper},
+    TypeLayout,
 };
-use once_cell::unsync::OnceCell;
+use mapping::{Conversion, Mapping};
 use parking_lot::RwLock;
 use std::{
-    collections::{HashMap, HashSet, VecDeque},
+    collections::{HashMap, VecDeque},
     hash::Hash,
     ops::Deref,
     pin::Pin,
@@ -200,29 +199,17 @@ where
 
 impl<T, O> MemoryMapper<T> for MarkSweep<T, O>
 where
-    T: TypeDesc + TypeLayout + TypeFields<T> + TypeTrace + Clone + Eq + Hash,
+    T: TypeLayout + TypeTrace + Clone + Eq + Hash,
     O: Observer<Event = Event>,
 {
-    fn map_memory(&self, old: &[T], new: &[T], diff: &[Diff]) -> Vec<GcPtr> {
-        // Collect all deleted types.
-        let deleted: HashSet<T> = diff
-            .iter()
-            .filter_map(|diff| {
-                if let Diff::Delete { index } = diff {
-                    Some(unsafe { old.get_unchecked(*index) }.clone())
-                } else {
-                    None
-                }
-            })
-            .collect();
-
+    fn map_memory(&self, mapping: Mapping<T, T>) -> Vec<GcPtr> {
         let mut objects = self.objects.write();
 
         // Determine which types are still allocated with deleted types
         let deleted = objects
             .iter()
             .filter_map(|(ptr, object_info)| {
-                if deleted.contains(&object_info.ty) {
+                if mapping.deletions.contains(&object_info.ty) {
                     Some(*ptr)
                 } else {
                     None
@@ -230,87 +217,53 @@ where
             })
             .collect();
 
-        for diff in diff.iter() {
-            match diff {
-                Diff::Delete { .. } => (), // Already handled
-                Diff::Edit {
-                    diff,
-                    old_index,
-                    new_index,
-                } => {
-                    let old_ty = unsafe { old.get_unchecked(*old_index) };
-                    let new_ty = unsafe { new.get_unchecked(*new_index) };
-
-                    // Use `OnceCell` to lazily construct `TypeData` for `old_ty` and `new_ty`.
-                    let mut type_data = OnceCell::new();
-
-                    for object_info in objects.values_mut() {
-                        if object_info.ty == *old_ty {
-                            map_fields(object_info, old_ty, new_ty, diff, &mut type_data);
-                        }
-                    }
+        for (old_ty, conversion) in mapping.conversions {
+            for object_info in objects.values_mut() {
+                if object_info.ty == old_ty {
+                    map_fields(object_info, &conversion);
                 }
-                Diff::Insert { .. } | Diff::Move { .. } => (),
             }
         }
 
         return deleted;
 
-        struct TypeData<'a, T> {
-            old_fields: Vec<(&'a str, T)>,
-            new_fields: Vec<(&'a str, T)>,
-            old_offsets: &'a [u16],
-            new_offsets: &'a [u16],
-        }
-
-        fn map_fields<'a, T: TypeDesc + TypeLayout + TypeFields<T> + TypeTrace + Clone + Eq>(
+        fn map_fields<T: Clone + TypeLayout + TypeTrace>(
             object_info: &mut Pin<Box<ObjectInfo<T>>>,
-            old_ty: &'a T,
-            new_ty: &'a T,
-            diff: &[FieldDiff],
-            type_data: &mut OnceCell<TypeData<'a, T>>,
+            conversion: &Conversion<T>,
         ) {
-            let TypeData {
-                old_fields,
-                new_fields,
-                old_offsets,
-                new_offsets,
-            } = type_data.get_or_init(|| TypeData {
-                old_fields: old_ty.fields(),
-                new_fields: new_ty.fields(),
-                old_offsets: old_ty.offsets(),
-                new_offsets: new_ty.offsets(),
-            });
-            let ptr = unsafe { std::alloc::alloc_zeroed(new_ty.layout()) };
+            let ptr = unsafe { std::alloc::alloc_zeroed(conversion.new_ty.layout()) };
 
-            let mapping = field_mapping(&old_fields, &diff);
-            for (new_index, map) in mapping.into_iter().enumerate() {
-                if let Some(FieldMappingDesc { old_index, action }) = map {
+            for map in conversion.field_mapping.iter() {
+                if let Some(FieldMapping {
+                    old_offset,
+                    new_offset,
+                    action,
+                }) = map
+                {
                     let src = {
                         let mut src = object_info.ptr as usize;
-                        src += usize::from(unsafe { *old_offsets.get_unchecked(old_index) });
+                        src += old_offset;
                         src as *mut u8
                     };
                     let dest = {
                         let mut dest = ptr as usize;
-                        dest += usize::from(unsafe { *new_offsets.get_unchecked(new_index) });
+                        dest += new_offset;
                         dest as *mut u8
                     };
-                    let old_field = unsafe { old_fields.get_unchecked(old_index) };
-                    if action == mapping::Action::Cast {
-                        let new_field = unsafe { new_fields.get_unchecked(new_index) };
-                        if !cast::try_cast_from_to(
-                            *old_field.1.guid(),
-                            *new_field.1.guid(),
-                            unsafe { NonNull::new_unchecked(src) },
-                            unsafe { NonNull::new_unchecked(dest) },
-                        ) {
-                            // Failed to cast. Use the previously zero-initialized value instead
+                    match action {
+                        mapping::Action::Cast { old, new } => {
+                            if !cast::try_cast_from_to(
+                                *old,
+                                *new,
+                                unsafe { NonNull::new_unchecked(src) },
+                                unsafe { NonNull::new_unchecked(dest) },
+                            ) {
+                                // Failed to cast. Use the previously zero-initialized value instead
+                            }
                         }
-                    } else {
-                        unsafe {
-                            std::ptr::copy_nonoverlapping(src, dest, old_field.1.layout().size())
-                        }
+                        mapping::Action::Copy { size } => unsafe {
+                            std::ptr::copy_nonoverlapping(src, dest, *size)
+                        },
                     }
                 }
             }
@@ -318,7 +271,7 @@ where
                 ptr,
                 roots: object_info.roots,
                 color: object_info.color,
-                ty: new_ty.clone(),
+                ty: conversion.new_ty.clone(),
             });
         }
     }
