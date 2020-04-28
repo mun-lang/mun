@@ -27,6 +27,7 @@ impl RawStruct {
 
 /// Type-agnostic wrapper for interoperability with a Mun struct.
 /// TODO: Handle destruction of `struct(value)`
+#[derive(Clone)]
 pub struct StructRef {
     handle: GcRootPtr,
     runtime: Rc<RefCell<Runtime>>,
