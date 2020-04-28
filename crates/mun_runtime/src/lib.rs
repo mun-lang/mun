@@ -14,7 +14,7 @@ mod reflection;
 mod r#struct;
 
 use failure::Error;
-use garbage_collector::GarbageCollector;
+use garbage_collector::{GarbageCollector, UnsafeTypeInfo};
 use memory::gc::{self, GcRuntime};
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 use rustc_hash::FxHashMap;
@@ -22,6 +22,7 @@ use std::{
     collections::HashMap,
     ffi, io, mem,
     path::{Path, PathBuf},
+    ptr::NonNull,
     string::ToString,
     sync::{
         mpsc::{channel, Receiver},
@@ -182,8 +183,13 @@ extern "C" fn new(
     type_info: *const abi::TypeInfo,
     alloc_handle: *mut ffi::c_void,
 ) -> *const *mut ffi::c_void {
+    // Safety: `new` is only called from within Mun assemblies' core logic, so we are guaranteed
+    // that the `Runtime` and its `GarbageCollector` still exist if this function is called, and
+    // will continue to do so for the duration of this function.
     let allocator = unsafe { get_allocator(alloc_handle) };
-    let handle = allocator.alloc(type_info.into());
+    // Safety: the Mun Compiler guarantees that `new` is never called with `ptr::null()`.
+    let type_info = UnsafeTypeInfo::new(unsafe { NonNull::new_unchecked(type_info as *mut _) });
+    let handle = allocator.alloc(type_info);
 
     // Prevent destruction of the allocator
     mem::forget(allocator);
