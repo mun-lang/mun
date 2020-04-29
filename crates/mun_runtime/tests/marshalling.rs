@@ -430,6 +430,27 @@ fn marshal_struct() {
     test_shallow_copy(&mut foo, &foo2, &int_data, "a");
     test_shallow_copy(&mut foo, &foo2, &bool_data, "b");
 
+    fn test_clone<
+        T: Copy + std::fmt::Debug + PartialEq + ArgumentReflection + ReturnTypeReflection,
+    >(
+        s1: &mut StructRef,
+        s2: &StructRef,
+        data: &TestData<T>,
+        field_name: &str,
+    ) {
+        assert_eq!(s1.get::<T>(field_name), s2.get::<T>(field_name));
+        s1.set(field_name, data.1).unwrap();
+        assert_eq!(s1.get::<T>(field_name), s2.get::<T>(field_name));
+        s1.replace(field_name, data.0).unwrap();
+        assert_eq!(s1.get::<T>(field_name), s2.get::<T>(field_name));
+    }
+
+    // Verify that StructRef::clone returns a `StructRef` to the same memory
+    let mut foo = baz.get::<StructRef>("0").unwrap();
+    let foo2 = foo.clone();
+    test_clone(&mut foo, &foo2, &int_data, "a");
+    test_clone(&mut foo, &foo2, &bool_data, "b");
+
     let mut bar = qux.get::<StructRef>("0").unwrap();
 
     // Specify invalid return type
