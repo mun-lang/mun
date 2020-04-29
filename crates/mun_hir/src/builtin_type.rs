@@ -7,6 +7,12 @@ pub enum Signedness {
     Unsigned,
 }
 
+impl Signedness {
+    pub fn is_signed(self) -> bool {
+        self == Signedness::Signed
+    }
+}
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum IntBitness {
     Xsize,

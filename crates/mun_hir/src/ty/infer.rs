@@ -293,7 +293,11 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             } => self.infer_if(tgt_expr, &expected, *condition, *then_branch, *else_branch),
             Expr::BinaryOp { lhs, rhs, op } => match op {
                 Some(op) => {
-                    let lhs_ty = self.infer_expr(*lhs, &Expectation::none());
+                    let lhs_expected = match op {
+                        BinaryOp::LogicOp(..) => Expectation::has_type(Ty::simple(TypeCtor::Bool)),
+                        _ => Expectation::none(),
+                    };
+                    let lhs_ty = self.infer_expr(*lhs, &lhs_expected);
                     if let BinaryOp::Assignment { op: _op } = op {
                         let resolver =
                             expr::resolver_for_expr(self.body.clone(), self.db, tgt_expr);

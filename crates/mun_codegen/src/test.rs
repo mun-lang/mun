@@ -108,54 +108,230 @@ fn function_arguments() {
 }
 
 #[test]
-fn binary_expressions() {
+fn assignment_op_bool() {
     test_snapshot(
         r#"
-    pub fn add(a:int, b:int) -> int {
-      a+b
+    pub fn assign(a: bool, b: bool) -> bool {
+        a = b;
+        a
     }
-
-    pub fn subtract(a:int, b:int) -> int {
-      a-b
-    }
-
-    pub fn multiply(a:int, b:int) -> int {
-      a*b
-    }
-
-    pub fn divide(a:int, b:int) -> int {
-      a/b
-    }
-
-    pub fn remainder(a:int, b:int) -> int {
-      a%b
-    }
+    // TODO: Add errors
+    // a += b;
+    // a *= b;
+    // a -= b;
+    // a /= b;
+    // a %= b;
     "#,
     );
 }
 
 #[test]
-fn unary_expressions() {
+fn logic_op_bool() {
     test_snapshot(
         r#"
-    pub fn negf(x: float) -> float {
-        -x
+    pub fn and(a: bool, b: bool) -> bool {
+        a && b
     }
-
-    pub fn negi(x: int) -> int {
-        -x
-    }
-
-    pub fn notb(x: bool) -> bool {
-        !x
-    }
-
-    pub fn noti(x: int) -> int {
-        !x
-    }
+    pub fn or(a: bool, b: bool) -> bool {
+        a || b
+    }    
     "#,
     );
 }
+
+#[test]
+fn assignment_op_struct() {
+    test_snapshot(
+        r#"
+    struct(value) Value(int, int);
+    struct(gc) Heap(float, float);
+
+    pub fn assign_value(a: Value, b: Value) -> Value {
+        a = b;
+        a
+    }
+
+    pub fn assign_heap(a: Heap, b: Heap) -> Heap {
+        a = b;
+        a
+    }
+    // TODO: Add errors
+    // a += b;
+    // a *= b;
+    // a -= b;
+    // a /= b;
+    // a %= b;
+    "#,
+    )
+}
+
+macro_rules! test_number_operator_types {
+    ($(
+        $ty:ident
+     ),+) => {
+        $(
+            paste::item! {
+                #[test]
+                fn [<assignment_op_ $ty>]() {
+                    test_snapshot(&format!(r#"
+    pub fn assign(a: {ty}, b: {ty}) -> {ty} {{
+        a = b;
+        a
+    }}
+    pub fn assign_add(a: {ty}, b: {ty}) -> {ty} {{
+        a += b;
+        a
+    }}
+    pub fn assign_subtract(a: {ty}, b: {ty}) -> {ty} {{
+        a -= b;
+        a
+    }}
+    pub fn assign_multiply(a: {ty}, b: {ty}) -> {ty} {{
+        a *= b;
+        a
+    }}
+    pub fn assign_divide(a: {ty}, b: {ty}) -> {ty} {{
+        a /= b;
+        a
+    }}
+    pub fn assign_remainder(a: {ty}, b: {ty}) -> {ty} {{
+        a %= b;
+        a
+    }}
+                        "#, ty = stringify!($ty),
+                    ));
+                }
+
+                #[test]
+                fn [<arithmetic_op_ $ty>]() {
+                    test_snapshot(&format!(r#"
+    pub fn add(a: {ty}, b: {ty}) -> {ty} {{ a + b }}
+    pub fn subtract(a: {ty}, b: {ty}) -> {ty} {{ a - b }}
+    pub fn multiply(a: {ty}, b: {ty}) -> {ty} {{ a * b }}
+    pub fn divide(a: {ty}, b: {ty}) -> {ty} {{ a / b }}
+    pub fn remainder(a: {ty}, b: {ty}) -> {ty} {{ a % b }}
+                        "#, ty = stringify!($ty),
+                    ));
+                }
+
+                #[test]
+                fn [<compare_op_ $ty>]() {
+                    test_snapshot(&format!(r#"
+    pub fn equals(a: {ty}, b: {ty}) -> bool {{ a == b }}
+    pub fn not_equal(a: {ty}, b: {ty}) -> bool {{ a != b}}
+    pub fn less(a: {ty}, b: {ty}) -> bool {{ a < b }}
+    pub fn less_equal(a: {ty}, b: {ty}) -> bool {{ a <= b }}
+    pub fn greater(a: {ty}, b: {ty}) -> bool {{ a > b }}
+    pub fn greater_equal(a: {ty}, b: {ty}) -> bool {{ a >= b }}
+                        "#, ty = stringify!($ty),
+                    ));
+                }
+            }
+        )+
+    };
+}
+
+test_number_operator_types!(
+    f32, f64, float, i8, i16, i32, i64, i128, int, u8, u16, u32, u64, u128, uint
+);
+
+macro_rules! test_negate_operator_types  {
+    ($(
+        $ty:ident
+     ),+) => {
+        $(
+            paste::item! {
+                #[test]
+                fn [<negate_op_ $ty>]() {
+                    test_snapshot(&format!(r#"
+    pub fn negate(a: {ty}) -> {ty} {{ -a }}
+                        "#, ty = stringify!($ty),
+                    ));
+                }
+            }
+        )+
+    };
+}
+
+test_negate_operator_types!(f32, f64, float, i8, i16, i32, i64, i128, int);
+
+macro_rules! test_bit_operator_types  {
+    ($(
+        $ty:ident
+     ),+) => {
+        $(
+            paste::item! {
+                #[test]
+                fn [<assign_bit_op_ $ty>]() {
+                    test_snapshot(&format!(r#"
+    pub fn assign_bitand(a: {ty}, b: {ty}) -> {ty} {{
+        a &= b;
+        a
+    }}
+    pub fn assign_bitor(a: {ty}, b: {ty}) -> {ty} {{
+        a |= b;
+        a
+    }}
+    pub fn assign_bitxor(a: {ty}, b: {ty}) -> {ty} {{
+        a ^= b;
+        a
+    }}
+                        "#, ty = stringify!($ty),
+                    ));
+                }
+
+                #[test]
+                fn [<bit_op_ $ty>]() {
+                    test_snapshot(&format!(r#"
+    pub fn not(a: {ty}) -> {ty} {{ !a }}
+    pub fn bitand(a: {ty}, b: {ty}) -> {ty} {{ a & b }}
+    pub fn bitor(a: {ty}, b: {ty}) -> {ty} {{ a | b }}
+    pub fn bitxor(a: {ty}, b: {ty}) -> {ty} {{ a ^ b }}
+                        "#, ty = stringify!($ty),
+                    ));
+                }
+            }
+        )+
+    };
+}
+
+test_bit_operator_types!(bool, i8, i16, i32, i64, i128, int, u8, u16, u32, u64, u128, uint);
+
+macro_rules! test_shift_operator_types  {
+    ($(
+        $ty:ident
+     ),+) => {
+        $(
+            paste::item! {
+                #[test]
+                fn [<assign_shift_op_ $ty>]() {
+                    test_snapshot(&format!(r#"
+    pub fn assign_leftshift(a: {ty}, b: {ty}) -> {ty} {{
+        a <<= b;
+        a
+    }}
+    pub fn assign_rightshift(a: {ty}, b: {ty}) -> {ty} {{
+        a >>= b;
+        a
+    }}
+                        "#, ty = stringify!($ty),
+                    ));
+                }
+
+                #[test]
+                fn [<shift_op_ $ty>]() {
+                    test_snapshot(&format!(r#"
+    pub fn leftshift(a: {ty}, b: {ty}) -> {ty} {{ a << b }}
+    pub fn rightshift(a: {ty}, b: {ty}) -> {ty} {{ a >> b }}
+                        "#, ty = stringify!($ty),
+                    ));
+                }
+            }
+        )+
+    };
+}
+
+test_shift_operator_types!(i8, i16, i32, i64, i128, int, u8, u16, u32, u64, u128, uint);
 
 #[test]
 fn let_statement() {
@@ -247,26 +423,6 @@ fn function_calls() {
       add_impl(4,5)
       add(4,5)
     }
-    "#,
-    );
-}
-
-#[test]
-fn equality_operands() {
-    test_snapshot(
-        r#"
-    pub fn equals(a:int, b:int) -> bool                { a == b }
-    pub fn not_equals(a:int, b:int) -> bool            { a != b }
-    pub fn less(a:int, b:int) -> bool                  { a < b }
-    pub fn less_equal(a:int, b:int) -> bool            { a <= b }
-    pub fn greater(a:int, b:int) -> bool               { a > b }
-    pub fn greater_equal(a:int, b:int) -> bool         { a >= b }
-    pub fn equalsf(a:float, b:float) -> bool           { a == b }
-    pub fn not_equalsf(a:float, b:float) -> bool       { a != b }
-    pub fn lessf(a:float, b:float) -> bool             { a < b }
-    pub fn less_equalf(a:float, b:float) -> bool       { a <= b }
-    pub fn greaterf(a:float, b:float) -> bool          { a > b }
-    pub fn greater_equalf(a:float, b:float) -> bool    { a >= b }
     "#,
     );
 }
@@ -541,29 +697,6 @@ fn gc_struct() {
         a.b += 3;
         let b = a;
     }
-    "#,
-    )
-}
-
-#[test]
-fn primitive_types() {
-    test_snapshot(
-        r#"
-   pub fn add(a: u8, b: u8) -> u8 { a+b }
-   pub fn less(a: u16, b: u16) -> bool { a<b }
-   pub fn greater(a: u32, b: u32) -> bool { a>b }
-   pub fn equal(a: u64, b: u64) -> bool { a==b }
-   pub fn nequal(a: u128, b: u128) -> bool { a!=b }
-   pub fn greater_equal(a: usize, b: usize) -> bool { a>=b }
-   pub fn less_equal(a: uint, b: uint) -> bool { a<=b }
-
-   pub fn iadd(a: i8, b: i8) -> i8 { a+b }
-   pub fn iless(a: i16, b: i16) -> bool { a<b }
-   pub fn igreater(a: i32, b: i32) -> bool { a>b }
-   pub fn iequal(a: i64, b: i64) -> bool { a==b }
-   pub fn inequal(a: i128, b: i128) -> bool { a!=b }
-   pub fn igreater_equal(a: isize, b: isize) -> bool { a>=b }
-   pub fn iless_equal(a: int, b: int) -> bool { a<=b }
     "#,
     )
 }

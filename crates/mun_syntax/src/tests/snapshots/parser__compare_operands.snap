@@ -1,9 +1,9 @@
 ---
 source: crates/mun_syntax/src/tests/parser.rs
-expression: "fn main() {\n    let _ = a==b;\n    let _ = a == b;\n    let _ = a != b;\n    let _ = a < b;\n    let _ = a > b;\n    let _ = a <= b;\n    let _ = a >= b;\n}"
+expression: "fn main() {\n    let _ = a == b;\n    let _ = a == b;\n    let _ = a != b;\n    let _ = a < b;\n    let _ = a > b;\n    let _ = a <= b;\n    let _ = a >= b;\n}"
 ---
-SOURCE_FILE@[0; 149)
-  FUNCTION_DEF@[0; 149)
+SOURCE_FILE@[0; 151)
+  FUNCTION_DEF@[0; 151)
     FN_KW@[0; 2) "fn"
     WHITESPACE@[2; 3) " "
     NAME@[3; 7)
@@ -12,10 +12,10 @@ SOURCE_FILE@[0; 149)
       L_PAREN@[7; 8) "("
       R_PAREN@[8; 9) ")"
     WHITESPACE@[9; 10) " "
-    BLOCK_EXPR@[10; 149)
+    BLOCK_EXPR@[10; 151)
       L_CURLY@[10; 11) "{"
       WHITESPACE@[11; 16) "\n    "
-      LET_STMT@[16; 29)
+      LET_STMT@[16; 31)
         LET_KW@[16; 19) "let"
         WHITESPACE@[19; 20) " "
         PLACEHOLDER_PAT@[20; 21)
@@ -23,163 +23,165 @@ SOURCE_FILE@[0; 149)
         WHITESPACE@[21; 22) " "
         EQ@[22; 23) "="
         WHITESPACE@[23; 24) " "
-        BIN_EXPR@[24; 28)
+        BIN_EXPR@[24; 30)
           PATH_EXPR@[24; 25)
             PATH@[24; 25)
               PATH_SEGMENT@[24; 25)
                 NAME_REF@[24; 25)
                   IDENT@[24; 25) "a"
-          EQEQ@[25; 27) "=="
-          PATH_EXPR@[27; 28)
-            PATH@[27; 28)
-              PATH_SEGMENT@[27; 28)
-                NAME_REF@[27; 28)
-                  IDENT@[27; 28) "b"
-        SEMI@[28; 29) ";"
-      WHITESPACE@[29; 34) "\n    "
-      LET_STMT@[34; 49)
-        LET_KW@[34; 37) "let"
-        WHITESPACE@[37; 38) " "
-        PLACEHOLDER_PAT@[38; 39)
-          UNDERSCORE@[38; 39) "_"
+          WHITESPACE@[25; 26) " "
+          EQEQ@[26; 28) "=="
+          WHITESPACE@[28; 29) " "
+          PATH_EXPR@[29; 30)
+            PATH@[29; 30)
+              PATH_SEGMENT@[29; 30)
+                NAME_REF@[29; 30)
+                  IDENT@[29; 30) "b"
+        SEMI@[30; 31) ";"
+      WHITESPACE@[31; 36) "\n    "
+      LET_STMT@[36; 51)
+        LET_KW@[36; 39) "let"
         WHITESPACE@[39; 40) " "
-        EQ@[40; 41) "="
+        PLACEHOLDER_PAT@[40; 41)
+          UNDERSCORE@[40; 41) "_"
         WHITESPACE@[41; 42) " "
-        BIN_EXPR@[42; 48)
-          PATH_EXPR@[42; 43)
-            PATH@[42; 43)
-              PATH_SEGMENT@[42; 43)
-                NAME_REF@[42; 43)
-                  IDENT@[42; 43) "a"
-          WHITESPACE@[43; 44) " "
-          EQEQ@[44; 46) "=="
-          WHITESPACE@[46; 47) " "
-          PATH_EXPR@[47; 48)
-            PATH@[47; 48)
-              PATH_SEGMENT@[47; 48)
-                NAME_REF@[47; 48)
-                  IDENT@[47; 48) "b"
-        SEMI@[48; 49) ";"
-      WHITESPACE@[49; 54) "\n    "
-      LET_STMT@[54; 69)
-        LET_KW@[54; 57) "let"
-        WHITESPACE@[57; 58) " "
-        PLACEHOLDER_PAT@[58; 59)
-          UNDERSCORE@[58; 59) "_"
+        EQ@[42; 43) "="
+        WHITESPACE@[43; 44) " "
+        BIN_EXPR@[44; 50)
+          PATH_EXPR@[44; 45)
+            PATH@[44; 45)
+              PATH_SEGMENT@[44; 45)
+                NAME_REF@[44; 45)
+                  IDENT@[44; 45) "a"
+          WHITESPACE@[45; 46) " "
+          EQEQ@[46; 48) "=="
+          WHITESPACE@[48; 49) " "
+          PATH_EXPR@[49; 50)
+            PATH@[49; 50)
+              PATH_SEGMENT@[49; 50)
+                NAME_REF@[49; 50)
+                  IDENT@[49; 50) "b"
+        SEMI@[50; 51) ";"
+      WHITESPACE@[51; 56) "\n    "
+      LET_STMT@[56; 71)
+        LET_KW@[56; 59) "let"
         WHITESPACE@[59; 60) " "
-        EQ@[60; 61) "="
+        PLACEHOLDER_PAT@[60; 61)
+          UNDERSCORE@[60; 61) "_"
         WHITESPACE@[61; 62) " "
-        BIN_EXPR@[62; 68)
-          PATH_EXPR@[62; 63)
-            PATH@[62; 63)
-              PATH_SEGMENT@[62; 63)
-                NAME_REF@[62; 63)
-                  IDENT@[62; 63) "a"
-          WHITESPACE@[63; 64) " "
-          NEQ@[64; 66) "!="
-          WHITESPACE@[66; 67) " "
-          PATH_EXPR@[67; 68)
-            PATH@[67; 68)
-              PATH_SEGMENT@[67; 68)
-                NAME_REF@[67; 68)
-                  IDENT@[67; 68) "b"
-        SEMI@[68; 69) ";"
-      WHITESPACE@[69; 74) "\n    "
-      LET_STMT@[74; 88)
-        LET_KW@[74; 77) "let"
-        WHITESPACE@[77; 78) " "
-        PLACEHOLDER_PAT@[78; 79)
-          UNDERSCORE@[78; 79) "_"
+        EQ@[62; 63) "="
+        WHITESPACE@[63; 64) " "
+        BIN_EXPR@[64; 70)
+          PATH_EXPR@[64; 65)
+            PATH@[64; 65)
+              PATH_SEGMENT@[64; 65)
+                NAME_REF@[64; 65)
+                  IDENT@[64; 65) "a"
+          WHITESPACE@[65; 66) " "
+          NEQ@[66; 68) "!="
+          WHITESPACE@[68; 69) " "
+          PATH_EXPR@[69; 70)
+            PATH@[69; 70)
+              PATH_SEGMENT@[69; 70)
+                NAME_REF@[69; 70)
+                  IDENT@[69; 70) "b"
+        SEMI@[70; 71) ";"
+      WHITESPACE@[71; 76) "\n    "
+      LET_STMT@[76; 90)
+        LET_KW@[76; 79) "let"
         WHITESPACE@[79; 80) " "
-        EQ@[80; 81) "="
+        PLACEHOLDER_PAT@[80; 81)
+          UNDERSCORE@[80; 81) "_"
         WHITESPACE@[81; 82) " "
-        BIN_EXPR@[82; 87)
-          PATH_EXPR@[82; 83)
-            PATH@[82; 83)
-              PATH_SEGMENT@[82; 83)
-                NAME_REF@[82; 83)
-                  IDENT@[82; 83) "a"
-          WHITESPACE@[83; 84) " "
-          LT@[84; 85) "<"
+        EQ@[82; 83) "="
+        WHITESPACE@[83; 84) " "
+        BIN_EXPR@[84; 89)
+          PATH_EXPR@[84; 85)
+            PATH@[84; 85)
+              PATH_SEGMENT@[84; 85)
+                NAME_REF@[84; 85)
+                  IDENT@[84; 85) "a"
           WHITESPACE@[85; 86) " "
-          PATH_EXPR@[86; 87)
-            PATH@[86; 87)
-              PATH_SEGMENT@[86; 87)
-                NAME_REF@[86; 87)
-                  IDENT@[86; 87) "b"
-        SEMI@[87; 88) ";"
-      WHITESPACE@[88; 93) "\n    "
-      LET_STMT@[93; 107)
-        LET_KW@[93; 96) "let"
-        WHITESPACE@[96; 97) " "
-        PLACEHOLDER_PAT@[97; 98)
-          UNDERSCORE@[97; 98) "_"
+          LT@[86; 87) "<"
+          WHITESPACE@[87; 88) " "
+          PATH_EXPR@[88; 89)
+            PATH@[88; 89)
+              PATH_SEGMENT@[88; 89)
+                NAME_REF@[88; 89)
+                  IDENT@[88; 89) "b"
+        SEMI@[89; 90) ";"
+      WHITESPACE@[90; 95) "\n    "
+      LET_STMT@[95; 109)
+        LET_KW@[95; 98) "let"
         WHITESPACE@[98; 99) " "
-        EQ@[99; 100) "="
+        PLACEHOLDER_PAT@[99; 100)
+          UNDERSCORE@[99; 100) "_"
         WHITESPACE@[100; 101) " "
-        BIN_EXPR@[101; 106)
-          PATH_EXPR@[101; 102)
-            PATH@[101; 102)
-              PATH_SEGMENT@[101; 102)
-                NAME_REF@[101; 102)
-                  IDENT@[101; 102) "a"
-          WHITESPACE@[102; 103) " "
-          GT@[103; 104) ">"
+        EQ@[101; 102) "="
+        WHITESPACE@[102; 103) " "
+        BIN_EXPR@[103; 108)
+          PATH_EXPR@[103; 104)
+            PATH@[103; 104)
+              PATH_SEGMENT@[103; 104)
+                NAME_REF@[103; 104)
+                  IDENT@[103; 104) "a"
           WHITESPACE@[104; 105) " "
-          PATH_EXPR@[105; 106)
-            PATH@[105; 106)
-              PATH_SEGMENT@[105; 106)
-                NAME_REF@[105; 106)
-                  IDENT@[105; 106) "b"
-        SEMI@[106; 107) ";"
-      WHITESPACE@[107; 112) "\n    "
-      LET_STMT@[112; 127)
-        LET_KW@[112; 115) "let"
-        WHITESPACE@[115; 116) " "
-        PLACEHOLDER_PAT@[116; 117)
-          UNDERSCORE@[116; 117) "_"
+          GT@[105; 106) ">"
+          WHITESPACE@[106; 107) " "
+          PATH_EXPR@[107; 108)
+            PATH@[107; 108)
+              PATH_SEGMENT@[107; 108)
+                NAME_REF@[107; 108)
+                  IDENT@[107; 108) "b"
+        SEMI@[108; 109) ";"
+      WHITESPACE@[109; 114) "\n    "
+      LET_STMT@[114; 129)
+        LET_KW@[114; 117) "let"
         WHITESPACE@[117; 118) " "
-        EQ@[118; 119) "="
+        PLACEHOLDER_PAT@[118; 119)
+          UNDERSCORE@[118; 119) "_"
         WHITESPACE@[119; 120) " "
-        BIN_EXPR@[120; 126)
-          PATH_EXPR@[120; 121)
-            PATH@[120; 121)
-              PATH_SEGMENT@[120; 121)
-                NAME_REF@[120; 121)
-                  IDENT@[120; 121) "a"
-          WHITESPACE@[121; 122) " "
-          LTEQ@[122; 124) "<="
-          WHITESPACE@[124; 125) " "
-          PATH_EXPR@[125; 126)
-            PATH@[125; 126)
-              PATH_SEGMENT@[125; 126)
-                NAME_REF@[125; 126)
-                  IDENT@[125; 126) "b"
-        SEMI@[126; 127) ";"
-      WHITESPACE@[127; 132) "\n    "
-      LET_STMT@[132; 147)
-        LET_KW@[132; 135) "let"
-        WHITESPACE@[135; 136) " "
-        PLACEHOLDER_PAT@[136; 137)
-          UNDERSCORE@[136; 137) "_"
+        EQ@[120; 121) "="
+        WHITESPACE@[121; 122) " "
+        BIN_EXPR@[122; 128)
+          PATH_EXPR@[122; 123)
+            PATH@[122; 123)
+              PATH_SEGMENT@[122; 123)
+                NAME_REF@[122; 123)
+                  IDENT@[122; 123) "a"
+          WHITESPACE@[123; 124) " "
+          LTEQ@[124; 126) "<="
+          WHITESPACE@[126; 127) " "
+          PATH_EXPR@[127; 128)
+            PATH@[127; 128)
+              PATH_SEGMENT@[127; 128)
+                NAME_REF@[127; 128)
+                  IDENT@[127; 128) "b"
+        SEMI@[128; 129) ";"
+      WHITESPACE@[129; 134) "\n    "
+      LET_STMT@[134; 149)
+        LET_KW@[134; 137) "let"
         WHITESPACE@[137; 138) " "
-        EQ@[138; 139) "="
+        PLACEHOLDER_PAT@[138; 139)
+          UNDERSCORE@[138; 139) "_"
         WHITESPACE@[139; 140) " "
-        BIN_EXPR@[140; 146)
-          PATH_EXPR@[140; 141)
-            PATH@[140; 141)
-              PATH_SEGMENT@[140; 141)
-                NAME_REF@[140; 141)
-                  IDENT@[140; 141) "a"
-          WHITESPACE@[141; 142) " "
-          GTEQ@[142; 144) ">="
-          WHITESPACE@[144; 145) " "
-          PATH_EXPR@[145; 146)
-            PATH@[145; 146)
-              PATH_SEGMENT@[145; 146)
-                NAME_REF@[145; 146)
-                  IDENT@[145; 146) "b"
-        SEMI@[146; 147) ";"
-      WHITESPACE@[147; 148) "\n"
-      R_CURLY@[148; 149) "}"
+        EQ@[140; 141) "="
+        WHITESPACE@[141; 142) " "
+        BIN_EXPR@[142; 148)
+          PATH_EXPR@[142; 143)
+            PATH@[142; 143)
+              PATH_SEGMENT@[142; 143)
+                NAME_REF@[142; 143)
+                  IDENT@[142; 143) "a"
+          WHITESPACE@[143; 144) " "
+          GTEQ@[144; 146) ">="
+          WHITESPACE@[146; 147) " "
+          PATH_EXPR@[147; 148)
+            PATH@[147; 148)
+              PATH_SEGMENT@[147; 148)
+                NAME_REF@[147; 148)
+                  IDENT@[147; 148) "b"
+        SEMI@[148; 149) ";"
+      WHITESPACE@[149; 150) "\n"
+      R_CURLY@[150; 151) "}"
 

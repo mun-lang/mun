@@ -145,17 +145,70 @@ fn patterns() {
 }
 
 #[test]
+fn arithmetic_operands() {
+    snapshot_test(
+        r#"
+    fn main() {
+        let _ = a + b;
+        let _ = a - b;
+        let _ = a * b;
+        let _ = a / b;
+        let _ = a % b;
+        let _ = a << b;
+        let _ = a >> b;
+        let _ = a & b;
+        let _ = a | b;
+        let _ = a ^ b;
+    }
+    "#,
+    )
+}
+
+#[test]
+fn assignment_operands() {
+    snapshot_test(
+        r#"
+    fn main() {
+        let a = b;
+        a += b;
+        a -= b;
+        a *= b;
+        a /= b;
+        a %= b;
+        a <<= b;
+        a >>= b;
+        a &= b;
+        a |= b;
+        a ^= b;
+    }
+    "#,
+    )
+}
+
+#[test]
 fn compare_operands() {
     snapshot_test(
         r#"
     fn main() {
-        let _ = a==b;
+        let _ = a == b;
         let _ = a == b;
         let _ = a != b;
         let _ = a < b;
         let _ = a > b;
         let _ = a <= b;
         let _ = a >= b;
+    }
+    "#,
+    )
+}
+
+#[test]
+fn logic_operands() {
+    snapshot_test(
+        r#"
+    fn main() {
+        let _ = a || b;
+        let _ = a && b;
     }
     "#,
     )

@@ -1,0 +1,41 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "pub fn assign_bitand(a: int, b: int) -> int {\n    a &= b;\n    a\n}\npub fn assign_bitor(a: int, b: int) -> int {\n    a |= b;\n    a\n}\npub fn assign_bitxor(a: int, b: int) -> int {\n    a ^= b;\n    a\n}"
+---
+; == FILE IR =====================================
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+
+@global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
+
+define i64 @assign_bitand(i64, i64) {
+body:
+  %bit_and = and i64 %0, %1
+  ret i64 %bit_and
+}
+
+define i64 @assign_bitor(i64, i64) {
+body:
+  %bit_or = or i64 %0, %1
+  ret i64 %bit_or
+}
+
+define i64 @assign_bitxor(i64, i64) {
+body:
+  %bit_xor = xor i64 %0, %1
+  ret i64 %bit_xor
+}
+
+
+; == GROUP IR ====================================
+; ModuleID = 'group_name'
+source_filename = "group_name"
+
+%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+
+@"type_info::<core::i64>::name" = private unnamed_addr constant [10 x i8] c"core::i64\00"
+@"type_info::<core::i64>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"G\13;t\97j8\18\D7M\83`\1D\C8\19%", [10 x i8]* @"type_info::<core::i64>::name", i32 64, i8 8, i8 0 }
+@global_type_table = global [1 x %struct.MunTypeInfo addrspace(4)*] [%struct.MunTypeInfo addrspace(4)* @"type_info::<core::i64>"]
+

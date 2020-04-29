@@ -62,23 +62,23 @@ impl<'t> Parser<'t> {
             T![..] => self.at_composite2(n, T![.], T![.]),
             T![*=] => self.at_composite2(n, T![*], T![=]),
             T![/=] => self.at_composite2(n, T![/], T![=]),
-            //T![&&] => self.at_composite2(n, T![&], T![&]),
-            //T![&=] => self.at_composite2(n, T![&], T![=]),
+            T![&&] => self.at_composite2(n, T![&], T![&]),
+            T![&=] => self.at_composite2(n, T![&], T![=]),
             T![%=] => self.at_composite2(n, T![%], T![=]),
-            //T![^=] => self.at_composite2(n, T![^], T![=]),
+            T![^=] => self.at_composite2(n, T![^], T![=]),
             T![+=] => self.at_composite2(n, T![+], T![=]),
-            //T![<<] => self.at_composite2(n, T![<], T![<]),
+            T![<<] => self.at_composite2(n, T![<], T![<]),
             T![<=] => self.at_composite2(n, T![<], T![=]),
             T![==] => self.at_composite2(n, T![=], T![=]),
             //T![=>] => self.at_composite2(n, T![=], T![>]),
             T![>=] => self.at_composite2(n, T![>], T![=]),
-            //T![>>] => self.at_composite2(n, T![>], T![>]),
-            //T![|=] => self.at_composite2(n, T![|], T![=]),
-            //T![||] => self.at_composite2(n, T![|], T![|]),
+            T![>>] => self.at_composite2(n, T![>], T![>]),
+            T![|=] => self.at_composite2(n, T![|], T![=]),
+            T![||] => self.at_composite2(n, T![|], T![|]),
             T![...] => self.at_composite3(n, T![.], T![.], T![.]),
             //T![..=] => self.at_composite3(n, T![.], T![.], T![=]),
-            //T![<<=] => self.at_composite3(n, T![<], T![<], T![=]),
-            //T![>>=] => self.at_composite3(n, T![>], T![>], T![=]),
+            T![<<=] => self.at_composite3(n, T![<], T![<], T![=]),
+            T![>>=] => self.at_composite3(n, T![>], T![>], T![=]),
             _ => self.token_source.lookahead_nth(n).kind == kind,
         }
     }
@@ -191,25 +191,25 @@ impl<'t> Parser<'t> {
             | T![..]
             | T![*=]
             | T![/=]
-            //| T![&&]
-            //| T![&=]
+            | T![&&]
+            | T![&=]
             | T![%=]
-            //| T![^=]
+            | T![^=]
             | T![+=]
-            //| T![<<]
+            | T![<<]
             | T![<=]
             | T![==]
             //| T![=>]
             | T![>=]
-            //| T![>>]
-            //| T![|=]
-            //| T![||]
+            | T![>>]
+            | T![|=]
+            | T![||]
             => 2,
 
             T![...]
             //| T![..=]
-            //| T![<<=]
-            //| T![>>=]
+            | T![<<=]
+            | T![>>=]
             => 3,
             _ => 1,
         };
