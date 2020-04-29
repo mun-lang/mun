@@ -14,8 +14,8 @@ fn assert_eq_struct(result: &[TypeInfo], expected: &[TypeInfo]) {
 
 #[test]
 fn add() {
-    let int = TypeInfo::new_fundamental::<i64>(INT_NAME, INT_GUID);
-    let float = TypeInfo::new_fundamental::<f64>(FLOAT_NAME, FLOAT_GUID);
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
 
     let struct1 = TypeInfo::new_struct(
         STRUCT1_NAME,
@@ -41,8 +41,8 @@ fn add() {
 
 #[test]
 fn remove() {
-    let int = TypeInfo::new_fundamental::<i64>(INT_NAME, INT_GUID);
-    let float = TypeInfo::new_fundamental::<f64>(FLOAT_NAME, FLOAT_GUID);
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
 
     let struct1 = TypeInfo::new_struct(
         STRUCT1_NAME,
@@ -65,8 +65,8 @@ fn remove() {
 
 #[test]
 fn replace() {
-    let int = TypeInfo::new_fundamental::<i64>(INT_NAME, INT_GUID);
-    let float = TypeInfo::new_fundamental::<f64>(FLOAT_NAME, FLOAT_GUID);
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
 
     let struct1 = TypeInfo::new_struct(
         STRUCT1_NAME,
@@ -92,8 +92,8 @@ fn replace() {
 
 #[test]
 fn swap() {
-    let int = TypeInfo::new_fundamental::<i64>(INT_NAME, INT_GUID);
-    let float = TypeInfo::new_fundamental::<f64>(FLOAT_NAME, FLOAT_GUID);
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
 
     let struct1 = TypeInfo::new_struct(
         STRUCT1_NAME,
@@ -125,8 +125,8 @@ fn swap() {
 
 #[test]
 fn add_field1() {
-    let int = TypeInfo::new_fundamental::<i64>(INT_NAME, INT_GUID);
-    let float = TypeInfo::new_fundamental::<f64>(FLOAT_NAME, FLOAT_GUID);
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
 
     let struct1 = TypeInfo::new_struct(
         STRUCT1_NAME,
@@ -156,8 +156,8 @@ fn add_field1() {
 
 #[test]
 fn add_field2() {
-    let int = TypeInfo::new_fundamental::<i64>(INT_NAME, INT_GUID);
-    let float = TypeInfo::new_fundamental::<f64>(FLOAT_NAME, FLOAT_GUID);
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
 
     let struct1 = TypeInfo::new_struct(
         STRUCT1_NAME,
@@ -187,8 +187,8 @@ fn add_field2() {
 
 #[test]
 fn add_field3() {
-    let int = TypeInfo::new_fundamental::<i64>(INT_NAME, INT_GUID);
-    let float = TypeInfo::new_fundamental::<f64>(FLOAT_NAME, FLOAT_GUID);
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
 
     let struct1 = TypeInfo::new_struct(
         STRUCT1_NAME,
@@ -218,8 +218,8 @@ fn add_field3() {
 
 #[test]
 fn remove_field1() {
-    let int = TypeInfo::new_fundamental::<i64>(INT_NAME, INT_GUID);
-    let float = TypeInfo::new_fundamental::<f64>(FLOAT_NAME, FLOAT_GUID);
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
 
     let struct1 = TypeInfo::new_struct(
         STRUCT1_NAME,
@@ -248,8 +248,8 @@ fn remove_field1() {
 
 #[test]
 fn remove_field2() {
-    let int = TypeInfo::new_fundamental::<i64>(INT_NAME, INT_GUID);
-    let float = TypeInfo::new_fundamental::<f64>(FLOAT_NAME, FLOAT_GUID);
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
 
     let struct1 = TypeInfo::new_struct(
         STRUCT1_NAME,
@@ -278,8 +278,8 @@ fn remove_field2() {
 
 #[test]
 fn remove_field3() {
-    let int = TypeInfo::new_fundamental::<i64>(INT_NAME, INT_GUID);
-    let float = TypeInfo::new_fundamental::<f64>(FLOAT_NAME, FLOAT_GUID);
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
 
     let struct1 = TypeInfo::new_struct(
         STRUCT1_NAME,
@@ -308,8 +308,8 @@ fn remove_field3() {
 
 #[test]
 fn swap_fields() {
-    let int = TypeInfo::new_fundamental::<i64>(INT_NAME, INT_GUID);
-    let float = TypeInfo::new_fundamental::<f64>(FLOAT_NAME, FLOAT_GUID);
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
 
     let struct1 = TypeInfo::new_struct(
         STRUCT1_NAME,
@@ -343,8 +343,8 @@ fn swap_fields() {
 
 #[test]
 fn swap_fields2() {
-    let int = TypeInfo::new_fundamental::<i64>(INT_NAME, INT_GUID);
-    let float = TypeInfo::new_fundamental::<f64>(FLOAT_NAME, FLOAT_GUID);
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
 
     let struct1 = TypeInfo::new_struct(
         STRUCT1_NAME,
@@ -389,9 +389,53 @@ fn swap_fields2() {
 }
 
 #[test]
+fn cast_field() {
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
+
+    let struct1 = TypeInfo::new_struct(
+        STRUCT1_NAME,
+        STRUCT1_GUID,
+        StructInfo::new(&[("a", &int), ("b", &float), ("c", &float)]),
+    );
+    let struct2 = TypeInfo::new_struct(
+        STRUCT1_NAME,
+        STRUCT2_GUID,
+        StructInfo::new(&[("a", &float), ("b", &int), ("c", &int)]),
+    );
+
+    let old = &[&struct1];
+    let new = &[&struct2];
+
+    let diff = diff(old, new);
+    assert_eq!(
+        diff,
+        vec![Diff::Edit {
+            diff: vec![
+                FieldDiff::Edit {
+                    index: 0,
+                    kind: FieldEditKind::ConvertType,
+                },
+                FieldDiff::Edit {
+                    index: 1,
+                    kind: FieldEditKind::ConvertType,
+                },
+                FieldDiff::Edit {
+                    index: 2,
+                    kind: FieldEditKind::ConvertType,
+                }
+            ],
+            old_index: 0,
+            new_index: 0,
+        }]
+    );
+    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+}
+
+#[test]
 fn rename_field1() {
-    let int = TypeInfo::new_fundamental::<i64>(INT_NAME, INT_GUID);
-    let float = TypeInfo::new_fundamental::<f64>(FLOAT_NAME, FLOAT_GUID);
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
 
     let struct1 = TypeInfo::new_struct(
         STRUCT1_NAME,
@@ -424,8 +468,8 @@ fn rename_field1() {
 
 #[test]
 fn rename_field2() {
-    let int = TypeInfo::new_fundamental::<i64>(INT_NAME, INT_GUID);
-    let float = TypeInfo::new_fundamental::<f64>(FLOAT_NAME, FLOAT_GUID);
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
 
     let struct1 = TypeInfo::new_struct(
         STRUCT1_NAME,

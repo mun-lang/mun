@@ -1,8 +1,9 @@
 use crate::{
+    cast,
     diff::{Diff, FieldDiff},
     gc::{Event, GcPtr, GcRuntime, Observer, RawGcPtr, Stats, TypeTrace},
     mapping::{self, field_mapping, FieldMappingDesc, MemoryMapper},
-    TypeFields, TypeLayout,
+    TypeDesc, TypeFields, TypeLayout,
 };
 use once_cell::unsync::OnceCell;
 use parking_lot::RwLock;
@@ -11,6 +12,7 @@ use std::{
     hash::Hash,
     ops::Deref,
     pin::Pin,
+    ptr::NonNull,
 };
 
 /// Implements a simple mark-sweep type garbage collector.
@@ -198,7 +200,7 @@ where
 
 impl<T, O> MemoryMapper<T> for MarkSweep<T, O>
 where
-    T: TypeLayout + TypeFields<T> + TypeTrace + Clone + Eq + Hash,
+    T: TypeDesc + TypeLayout + TypeFields<T> + TypeTrace + Clone + Eq + Hash,
     O: Observer<Event = Event>,
 {
     fn map_memory(&self, old: &[T], new: &[T], diff: &[Diff]) -> Vec<GcPtr> {
@@ -256,12 +258,12 @@ where
 
         struct TypeData<'a, T> {
             old_fields: Vec<(&'a str, T)>,
-            _new_fields: Vec<(&'a str, T)>,
+            new_fields: Vec<(&'a str, T)>,
             old_offsets: &'a [u16],
             new_offsets: &'a [u16],
         }
 
-        fn map_fields<'a, T: TypeLayout + TypeFields<T> + TypeTrace + Clone + Eq>(
+        fn map_fields<'a, T: TypeDesc + TypeLayout + TypeFields<T> + TypeTrace + Clone + Eq>(
             object_info: &mut Pin<Box<ObjectInfo<T>>>,
             old_ty: &'a T,
             new_ty: &'a T,
@@ -270,12 +272,12 @@ where
         ) {
             let TypeData {
                 old_fields,
-                _new_fields,
+                new_fields,
                 old_offsets,
                 new_offsets,
             } = type_data.get_or_init(|| TypeData {
                 old_fields: old_ty.fields(),
-                _new_fields: new_ty.fields(),
+                new_fields: new_ty.fields(),
                 old_offsets: old_ty.offsets(),
                 new_offsets: new_ty.offsets(),
             });
@@ -296,7 +298,15 @@ where
                     };
                     let old_field = unsafe { old_fields.get_unchecked(old_index) };
                     if action == mapping::Action::Cast {
-                        panic!("The Mun Runtime doesn't currently support casting");
+                        let new_field = unsafe { new_fields.get_unchecked(new_index) };
+                        if !cast::try_cast_from_to(
+                            *old_field.1.guid(),
+                            *new_field.1.guid(),
+                            unsafe { NonNull::new_unchecked(src) },
+                            unsafe { NonNull::new_unchecked(dest) },
+                        ) {
+                            // Failed to cast. Use the previously zero-initialized value instead
+                        }
                     } else {
                         unsafe {
                             std::ptr::copy_nonoverlapping(src, dest, old_field.1.layout().size())

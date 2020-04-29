@@ -1,23 +1,23 @@
-use std::ffi::CString;
-use std::ptr;
+use crate::{FunctionInfo, FunctionSignature, HasStaticTypeInfo, Privacy, TypeInfo};
+use std::{ffi::CString, ptr};
 
-use crate::type_info::HasStaticTypeInfo;
-
+/// Owned storage for C-style `FunctionInfo`.
 pub struct FunctionInfoStorage {
     _name: CString,
-    _type_infos: Vec<&'static abi::TypeInfo>,
+    _type_infos: Vec<&'static TypeInfo>,
 }
 
 impl FunctionInfoStorage {
+    /// Constructs a new `FunctionInfo`, the data of which is stored in a `FunctionInfoStorage`.
     pub fn new_function(
         name: &str,
-        args: &[&'static abi::TypeInfo],
-        ret: Option<&'static abi::TypeInfo>,
-        privacy: abi::Privacy,
+        args: &[&'static TypeInfo],
+        ret: Option<&'static TypeInfo>,
+        privacy: Privacy,
         fn_ptr: *const std::ffi::c_void,
-    ) -> (abi::FunctionInfo, FunctionInfoStorage) {
+    ) -> (FunctionInfo, FunctionInfoStorage) {
         let name = CString::new(name).unwrap();
-        let type_infos: Vec<&'static abi::TypeInfo> = args.iter().copied().collect();
+        let type_infos: Vec<&'static TypeInfo> = args.iter().copied().collect();
 
         let num_arg_types = type_infos.len() as u16;
         let return_type = if let Some(ty) = ret {
@@ -26,8 +26,8 @@ impl FunctionInfoStorage {
             ptr::null()
         };
 
-        let fn_info = abi::FunctionInfo {
-            signature: abi::FunctionSignature {
+        let fn_info = FunctionInfo {
+            signature: FunctionSignature {
                 name: name.as_ptr(),
                 arg_types: type_infos.as_ptr() as *const *const _,
                 return_type,
@@ -49,11 +49,7 @@ impl FunctionInfoStorage {
 /// A value-to-`FunctionInfo` conversion that consumes the input value.
 pub trait IntoFunctionInfo {
     /// Performs the conversion.
-    fn into<S: AsRef<str>>(
-        self,
-        name: S,
-        privacy: abi::Privacy,
-    ) -> (abi::FunctionInfo, FunctionInfoStorage);
+    fn into<S: AsRef<str>>(self, name: S, privacy: Privacy) -> (FunctionInfo, FunctionInfoStorage);
 }
 
 macro_rules! into_function_info_impl {
@@ -64,7 +60,7 @@ macro_rules! into_function_info_impl {
             impl<$R: HasStaticTypeInfo, $($T: HasStaticTypeInfo,)*> IntoFunctionInfo
             for extern "C" fn($($T),*) -> $R
             {
-                fn into<S: AsRef<str>>(self, name: S, privacy: abi::Privacy) -> (abi::FunctionInfo, FunctionInfoStorage) {
+                fn into<S: AsRef<str>>(self, name: S, privacy: Privacy) -> (FunctionInfo, FunctionInfoStorage) {
                     FunctionInfoStorage::new_function(
                         name.as_ref(),
                         &[$($T::type_info(),)*],
@@ -78,7 +74,7 @@ macro_rules! into_function_info_impl {
             impl<$($T: HasStaticTypeInfo,)*> IntoFunctionInfo
             for extern "C" fn($($T),*)
             {
-                fn into<S: AsRef<str>>(self, name: S, privacy: abi::Privacy) -> (abi::FunctionInfo, FunctionInfoStorage) {
+                fn into<S: AsRef<str>>(self, name: S, privacy: Privacy) -> (FunctionInfo, FunctionInfoStorage) {
                     FunctionInfoStorage::new_function(
                         name.as_ref(),
                         &[$($T::type_info(),)*],

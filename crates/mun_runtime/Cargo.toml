@@ -12,12 +12,11 @@ description = "A runtime for hot reloading and invoking Mun from Rust"
 abi = { path = "../mun_abi", package = "mun_abi" }
 failure = "0.1.7"
 libloading = "0.5"
-md5= "0.7.0"
+md5 = "0.7.0"
 memory = { path = "../mun_memory", package = "mun_memory" }
 notify = "4.0.12"
 parking_lot = "0.10"
 tempfile = "3"
-once_cell = "1.3.1"
 rustc-hash = "1.1"
 
 [dev-dependencies]

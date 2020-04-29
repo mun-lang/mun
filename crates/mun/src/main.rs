@@ -169,14 +169,16 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOption
 }
 
 fn runtime(matches: &ArgMatches) -> Result<Runtime, failure::Error> {
-    let mut builder = RuntimeBuilder::new(
+    let builder = RuntimeBuilder::new(
         matches.value_of("LIBRARY").unwrap(), // Safe because its a required arg
     );
 
-    if let Some(delay) = matches.value_of("delay") {
+    let builder = if let Some(delay) = matches.value_of("delay") {
         let delay: u64 = delay.parse()?;
-        builder.set_delay(Duration::from_millis(delay));
-    }
+        builder.set_delay(Duration::from_millis(delay))
+    } else {
+        builder
+    };
 
     builder.spawn()
 }

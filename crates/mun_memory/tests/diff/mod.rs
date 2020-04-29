@@ -8,8 +8,8 @@ use util::*;
 
 #[test]
 fn add() {
-    let int = TypeInfo::new_fundamental::<i64>(INT_NAME, INT_GUID);
-    let float = TypeInfo::new_fundamental::<f64>(FLOAT_NAME, FLOAT_GUID);
+    let int = TypeInfo::new_fundamental::<i64>();
+    let float = TypeInfo::new_fundamental::<f64>();
     let struct1 = TypeInfo::new_struct(
         STRUCT1_NAME,
         STRUCT1_GUID,
