@@ -2,8 +2,8 @@ use crate::{marshal::Marshal, Runtime, StructRef};
 use abi::HasStaticTypeInfo;
 
 /// Returns whether the specified argument type matches the `type_info`.
-pub fn equals_argument_type<'r, 'e, 'f, T: ArgumentReflection>(
-    runtime: &'r Runtime,
+pub fn equals_argument_type<'e, 'f, T: ArgumentReflection>(
+    runtime: &'f Runtime,
     type_info: &'e abi::TypeInfo,
     arg: &'f T,
 ) -> Result<(), (&'e str, &'f str)> {
@@ -58,7 +58,7 @@ pub trait ArgumentReflection: Sized {
     fn type_guid(&self, runtime: &Runtime) -> abi::Guid;
 
     /// Retrieves the name of the value's type.
-    fn type_name(&self, runtime: &Runtime) -> &str;
+    fn type_name<'r>(&'r self, runtime: &'r Runtime) -> &'r str;
 
     /// Marshals the value.
     fn marshal(self) -> Self::Marshalled;

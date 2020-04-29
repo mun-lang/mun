@@ -1,4 +1,4 @@
-use crate::garbage_collector::{GcPtr, GcRootPtr};
+use crate::garbage_collector::{GcPtr, GcRootPtr, UnsafeTypeInfo};
 use crate::{
     marshal::Marshal,
     reflection::{
@@ -37,9 +37,17 @@ impl StructRef {
     fn new(runtime: Rc<RefCell<Runtime>>, raw: RawStruct) -> Self {
         let handle = {
             let runtime_ref = runtime.borrow();
-            assert!(unsafe { &*runtime_ref.gc().ptr_type(raw.0).inner() }
-                .group
-                .is_struct());
+            // Safety: The type returned from `ptr_type` is guaranteed to live at least as long as
+            // `Runtime` does not change. As we hold a shared reference to `Runtime`, this is safe.
+            assert!(unsafe {
+                runtime_ref
+                    .gc()
+                    .ptr_type(raw.0)
+                    .into_inner()
+                    .as_ref()
+                    .group
+                    .is_struct()
+            });
 
             GcRootPtr::new(&runtime_ref.gc, raw.0)
         };
@@ -54,9 +62,16 @@ impl StructRef {
 
     /// Returns the type information of the struct.
     pub fn type_info<'r>(struct_ref: &Self, runtime_ref: &'r Runtime) -> &'r abi::TypeInfo {
-        // Safety: The lifetime of `TypeInfo` is tied to the lifetime of `Runtime` and thus the
-        // underlying pointer cannot change during the lifetime of the shared reference.
-        unsafe { &*runtime_ref.gc.ptr_type(struct_ref.handle.handle()).inner() }
+        // Safety: The type returned from `ptr_type` is guaranteed to live at least as long as
+        // `Runtime` does not change. As the lifetime of `TypeInfo` is tied to the lifetime of
+        // `Runtime`, this is safe.
+        unsafe {
+            &*runtime_ref
+                .gc
+                .ptr_type(struct_ref.handle.handle())
+                .into_inner()
+                .as_ptr()
+        }
     }
 
     ///
@@ -176,13 +191,29 @@ impl ArgumentReflection for StructRef {
     type Marshalled = RawStruct;
 
     fn type_guid(&self, runtime: &Runtime) -> abi::Guid {
-        let type_info = unsafe { &*runtime.gc().ptr_type(self.handle.handle()).inner() };
-        type_info.guid
+        // Safety: The type returned from `ptr_type` is guaranteed to live at least as long as
+        // `Runtime` does not change. As we hold a shared reference to `Runtime`, this is safe.
+        unsafe {
+            runtime
+                .gc()
+                .ptr_type(self.handle.handle())
+                .into_inner()
+                .as_ref()
+                .guid
+        }
     }
 
     fn type_name(&self, runtime: &Runtime) -> &str {
-        let type_info = unsafe { &*runtime.gc().ptr_type(self.handle.handle()).inner() };
-        type_info.name()
+        // Safety: The type returned from `ptr_type` is guaranteed to live at least as long as
+        // `Runtime` does not change. As we hold a shared reference to `Runtime`, this is safe.
+        unsafe {
+            (&*runtime
+                .gc()
+                .ptr_type(self.handle.handle())
+                .into_inner()
+                .as_ptr())
+                .name()
+        }
     }
 
     fn marshal(self) -> Self::Marshalled {
@@ -212,9 +243,6 @@ impl Marshal<StructRef> for RawStruct {
         let type_info = type_info.unwrap();
         let struct_info = type_info.as_struct().unwrap();
 
-        // HACK: This is very hacky since we know nothing about the lifetime of abi::TypeInfo.
-        let type_info_ptr = (type_info as *const abi::TypeInfo).into();
-
         // Copy the contents of the struct based on what kind of pointer we are dealing with
         let gc_handle = if struct_info.memory_kind == abi::StructMemoryKind::Value {
             // For a value struct, `ptr` points to a struct value.
@@ -222,7 +250,12 @@ impl Marshal<StructRef> for RawStruct {
             // Create a new object using the runtime's intrinsic
             let mut gc_handle = {
                 let runtime_ref = runtime.borrow();
-                runtime_ref.gc().alloc(type_info_ptr)
+                runtime_ref.gc().alloc(
+                    // Safety: `ty` is a shared reference, so is guaranteed to not be `ptr::null()`.
+                    UnsafeTypeInfo::new(unsafe {
+                        NonNull::new_unchecked(type_info as *const abi::TypeInfo as *mut _)
+                    }),
+                )
             };
 
             // Construct

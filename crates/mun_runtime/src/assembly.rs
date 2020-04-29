@@ -8,9 +8,9 @@ use libloading::Symbol;
 mod temp_library;
 
 use self::temp_library::TempLibrary;
-use crate::garbage_collector::{GarbageCollector, RawTypeInfo};
-use memory::{diff::diff, mapping::MemoryMapper};
-use std::{collections::HashSet, sync::Arc};
+use crate::garbage_collector::{GarbageCollector, UnsafeTypeInfo};
+use memory::mapping::{Mapping, MemoryMapper};
+use std::{collections::HashSet, ptr::NonNull, sync::Arc};
 
 /// An assembly is a hot reloadable compilation unit, consisting of one or more Mun modules.
 pub struct Assembly {
@@ -145,25 +145,34 @@ impl Assembly {
         let mut new_assembly =
             Assembly::load(library_path, self.allocator.clone(), runtime_dispatch_table)?;
 
-        let old_types: Vec<RawTypeInfo> = self
+        let old_types: Vec<UnsafeTypeInfo> = self
             .info
             .symbols
             .types()
             .iter()
-            .map(|ty| (*ty as *const abi::TypeInfo).into())
+            .map(|ty| {
+                // Safety: `ty` is a shared reference, so is guaranteed to not be `ptr::null()`.
+                UnsafeTypeInfo::new(unsafe {
+                    NonNull::new_unchecked(*ty as *const abi::TypeInfo as *mut _)
+                })
+            })
             .collect();
 
-        let new_types: Vec<RawTypeInfo> = new_assembly
+        let new_types: Vec<UnsafeTypeInfo> = new_assembly
             .info
             .symbols
             .types()
             .iter()
-            .map(|ty| (*ty as *const abi::TypeInfo).into())
+            .map(|ty| {
+                // Safety: `ty` is a shared reference, so is guaranteed to not be `ptr::null()`.
+                UnsafeTypeInfo::new(unsafe {
+                    NonNull::new_unchecked(*ty as *const abi::TypeInfo as *mut _)
+                })
+            })
             .collect();
 
-        let deleted_objects =
-            self.allocator
-                .map_memory(&old_types, &new_types, &diff(&old_types, &new_types));
+        let mapping = Mapping::new(&old_types, &new_types);
+        let deleted_objects = self.allocator.map_memory(mapping);
 
         // Remove the old assembly's functions
         for function in self.info.symbols.functions() {

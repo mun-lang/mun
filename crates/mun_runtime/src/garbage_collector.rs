@@ -1,64 +1,70 @@
 use memory::gc::{self, HasIndirectionPtr};
-use std::{alloc::Layout, hash::Hash};
+use std::{alloc::Layout, hash::Hash, ptr::NonNull};
 
+/// `UnsafeTypeInfo` is a type that wraps a `NonNull<TypeInfo>` and indicates unsafe interior
+/// operations on the wrapped `TypeInfo`. The unsafety originates from uncertainty about the
+/// lifetime of the wrapped `TypeInfo`.
+///
+/// Rust lifetime rules do not allow separate lifetimes for struct fields, but we can make `unsafe`
+/// guarantees about their lifetimes. Thus the `UnsafeTypeInfo` type is the only legal way to obtain
+/// shared references to the wrapped `TypeInfo`.
 #[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
-pub struct RawTypeInfo(*const abi::TypeInfo);
+pub struct UnsafeTypeInfo(NonNull<abi::TypeInfo>);
 
-impl RawTypeInfo {
-    /// Returns the inner `TypeInfo` pointer.
-    ///
-    /// # Safety
-    ///
-    /// This method is unsafe because there are no guarantees about the lifetime of the inner
+impl UnsafeTypeInfo {
+    /// Constructs a new instance of `UnsafeTypeInfo`, which will wrap the specified `type_info`
     /// pointer.
-    pub unsafe fn inner(self) -> *const abi::TypeInfo {
+    ///
+    /// All access to the inner value through methods is `unsafe`.
+    pub fn new(type_info: NonNull<abi::TypeInfo>) -> Self {
+        Self(type_info)
+    }
+
+    /// Unwraps the value.
+    pub fn into_inner(self) -> NonNull<abi::TypeInfo> {
         self.0
     }
 }
 
-impl PartialEq for RawTypeInfo {
+impl PartialEq for UnsafeTypeInfo {
     fn eq(&self, other: &Self) -> bool {
-        let this = unsafe { &*self.0 };
-        let other = unsafe { &*other.0 };
-        *this == *other
+        unsafe { *self.0.as_ref() == *other.0.as_ref() }
     }
 }
 
-impl Eq for RawTypeInfo {}
+impl Eq for UnsafeTypeInfo {}
 
-impl Hash for RawTypeInfo {
+impl Hash for UnsafeTypeInfo {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        let this = unsafe { &*self.0 };
-        this.hash(state);
+        unsafe { self.0.as_ref().hash(state) };
     }
 }
 
-impl memory::TypeDesc for RawTypeInfo {
+impl memory::TypeDesc for UnsafeTypeInfo {
     fn name(&self) -> &str {
-        let this = unsafe { &*self.0 };
-        this.name()
+        unsafe { self.0.as_ref().name() }
     }
+
     fn guid(&self) -> &abi::Guid {
-        let this = unsafe { &*self.0 };
-        &this.guid
+        unsafe { &self.0.as_ref().guid }
     }
+
     fn group(&self) -> abi::TypeGroup {
-        let this = unsafe { &*self.0 };
-        this.group
+        unsafe { self.0.as_ref().group }
     }
 }
 
-impl memory::TypeFields<RawTypeInfo> for RawTypeInfo {
+impl memory::TypeFields<UnsafeTypeInfo> for UnsafeTypeInfo {
     fn fields(&self) -> Vec<(&str, Self)> {
-        let this = unsafe { &*self.0 };
-        if let Some(s) = this.as_struct() {
+        if let Some(s) = unsafe { self.0.as_ref().as_struct() } {
             s.field_names()
-                .zip(
-                    s.field_types()
-                        .iter()
-                        .map(|ty| (*ty as *const abi::TypeInfo).into()),
-                )
+                .zip(s.field_types().iter().map(|ty| {
+                    // Safety: `ty` is a shared reference, so is guaranteed to not be `ptr::null()`.
+                    UnsafeTypeInfo::new(unsafe {
+                        NonNull::new_unchecked(*ty as *const abi::TypeInfo as *mut _)
+                    })
+                }))
                 .collect()
         } else {
             Vec::new()
@@ -66,8 +72,7 @@ impl memory::TypeFields<RawTypeInfo> for RawTypeInfo {
     }
 
     fn offsets(&self) -> &[u16] {
-        let this = unsafe { &*self.0 };
-        if let Some(s) = this.as_struct() {
+        if let Some(s) = unsafe { self.0.as_ref().as_struct() } {
             s.field_offsets()
         } else {
             &[]
@@ -75,18 +80,12 @@ impl memory::TypeFields<RawTypeInfo> for RawTypeInfo {
     }
 }
 
-impl Into<RawTypeInfo> for *const abi::TypeInfo {
-    fn into(self) -> RawTypeInfo {
-        RawTypeInfo(self)
-    }
-}
-
-unsafe impl Send for RawTypeInfo {}
-unsafe impl Sync for RawTypeInfo {}
+unsafe impl Send for UnsafeTypeInfo {}
+unsafe impl Sync for UnsafeTypeInfo {}
 
 pub struct Trace {
     obj: GcPtr,
-    ty: RawTypeInfo,
+    ty: UnsafeTypeInfo,
     index: usize,
 }
 
@@ -94,7 +93,7 @@ impl Iterator for Trace {
     type Item = GcPtr;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let struct_ty = unsafe { self.ty.0.as_ref() }.unwrap().as_struct()?;
+        let struct_ty = unsafe { self.ty.0.as_ref() }.as_struct()?;
         let field_count = struct_ty.field_types().len();
         while self.index < field_count {
             let index = self.index;
@@ -114,15 +113,15 @@ impl Iterator for Trace {
     }
 }
 
-impl memory::TypeLayout for RawTypeInfo {
+impl memory::TypeLayout for UnsafeTypeInfo {
     fn layout(&self) -> Layout {
-        let ty = unsafe { &*self.0 };
+        let ty = unsafe { self.0.as_ref() };
         Layout::from_size_align(ty.size_in_bytes(), ty.alignment())
             .unwrap_or_else(|_| panic!("invalid layout from Mun Type: {:?}", ty))
     }
 }
 
-impl gc::TypeTrace for RawTypeInfo {
+impl gc::TypeTrace for UnsafeTypeInfo {
     type Trace = Trace;
 
     fn trace(&self, obj: GcPtr) -> Self::Trace {
@@ -135,7 +134,7 @@ impl gc::TypeTrace for RawTypeInfo {
 }
 
 /// Defines the garbage collector used by the `Runtime`.
-pub type GarbageCollector = gc::MarkSweep<RawTypeInfo, gc::NoopObserver<gc::Event>>;
+pub type GarbageCollector = gc::MarkSweep<UnsafeTypeInfo, gc::NoopObserver<gc::Event>>;
 
 pub use gc::GcPtr;
-pub type GcRootPtr = gc::GcRootPtr<RawTypeInfo, GarbageCollector>;
+pub type GcRootPtr = gc::GcRootPtr<UnsafeTypeInfo, GarbageCollector>;
