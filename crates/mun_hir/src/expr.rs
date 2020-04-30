@@ -338,7 +338,11 @@ pub enum ArithOp {
     Subtract,
     Divide,
     Remainder,
-    //Power,
+    LeftShift,
+    RightShift,
+    BitAnd,
+    BitOr,
+    BitXor,
 }
 
 impl Expr {
@@ -630,30 +634,54 @@ where
                     match op {
                         op @ BinOp::Add
                         | op @ BinOp::Subtract
-                        | op @ BinOp::Divide
                         | op @ BinOp::Multiply
+                        | op @ BinOp::Divide
+                        | op @ BinOp::Remainder
+                        | op @ BinOp::LeftShift
+                        | op @ BinOp::RightShift
+                        | op @ BinOp::BitwiseAnd
+                        | op @ BinOp::BitwiseOr
+                        | op @ BinOp::BitwiseXor
+                        | op @ BinOp::BooleanAnd
+                        | op @ BinOp::BooleanOr
                         | op @ BinOp::Equals
-                        | op @ BinOp::NotEquals
+                        | op @ BinOp::NotEqual
                         | op @ BinOp::Less
                         | op @ BinOp::LessEqual
                         | op @ BinOp::Greater
-                        | op @ BinOp::GreatEqual
-                        | op @ BinOp::Remainder
-                        //| op @ BinOp::Power
-                        => {
+                        | op @ BinOp::GreatEqual => {
                             let op = match op {
                                 BinOp::Add => BinaryOp::ArithOp(ArithOp::Add),
                                 BinOp::Subtract => BinaryOp::ArithOp(ArithOp::Subtract),
-                                BinOp::Divide => BinaryOp::ArithOp(ArithOp::Divide),
                                 BinOp::Multiply => BinaryOp::ArithOp(ArithOp::Multiply),
-                                BinOp::Equals => BinaryOp::CmpOp(CmpOp::Eq { negated: false }),
-                                BinOp::NotEquals => BinaryOp::CmpOp(CmpOp::Eq { negated: true }),
-                                BinOp::Less => BinaryOp::CmpOp(CmpOp::Ord { ordering: Ordering::Less, strict: true } ),
-                                BinOp::LessEqual => BinaryOp::CmpOp(CmpOp::Ord { ordering: Ordering::Less, strict: false } ),
-                                BinOp::Greater => BinaryOp::CmpOp(CmpOp::Ord { ordering: Ordering::Greater, strict: true } ),
-                                BinOp::GreatEqual => BinaryOp::CmpOp(CmpOp::Ord { ordering: Ordering::Greater, strict: false } ),
+                                BinOp::Divide => BinaryOp::ArithOp(ArithOp::Divide),
                                 BinOp::Remainder => BinaryOp::ArithOp(ArithOp::Remainder),
+                                BinOp::LeftShift => BinaryOp::ArithOp(ArithOp::LeftShift),
+                                BinOp::RightShift => BinaryOp::ArithOp(ArithOp::RightShift),
+                                BinOp::BitwiseAnd => BinaryOp::ArithOp(ArithOp::BitAnd),
+                                BinOp::BitwiseOr => BinaryOp::ArithOp(ArithOp::BitOr),
+                                BinOp::BitwiseXor => BinaryOp::ArithOp(ArithOp::BitXor),
                                 //BinOp::Power => BinaryOp::ArithOp(ArithOp::Power),
+                                BinOp::BooleanAnd => BinaryOp::LogicOp(LogicOp::And),
+                                BinOp::BooleanOr => BinaryOp::LogicOp(LogicOp::Or),
+                                BinOp::Equals => BinaryOp::CmpOp(CmpOp::Eq { negated: false }),
+                                BinOp::NotEqual => BinaryOp::CmpOp(CmpOp::Eq { negated: true }),
+                                BinOp::Less => BinaryOp::CmpOp(CmpOp::Ord {
+                                    ordering: Ordering::Less,
+                                    strict: true,
+                                }),
+                                BinOp::LessEqual => BinaryOp::CmpOp(CmpOp::Ord {
+                                    ordering: Ordering::Less,
+                                    strict: false,
+                                }),
+                                BinOp::Greater => BinaryOp::CmpOp(CmpOp::Ord {
+                                    ordering: Ordering::Greater,
+                                    strict: true,
+                                }),
+                                BinOp::GreatEqual => BinaryOp::CmpOp(CmpOp::Ord {
+                                    ordering: Ordering::Greater,
+                                    strict: false,
+                                }),
                                 _ => unreachable!(),
                             };
                             let lhs = self.collect_expr_opt(e.lhs());
@@ -672,8 +700,12 @@ where
                         | op @ BinOp::SubtractAssign
                         | op @ BinOp::MultiplyAssign
                         | op @ BinOp::DivideAssign
-                        | op @ BinOp::RemainderAssign => {
-
+                        | op @ BinOp::RemainderAssign
+                        | op @ BinOp::LeftShiftAssign
+                        | op @ BinOp::RightShiftAssign
+                        | op @ BinOp::BitAndAssign
+                        | op @ BinOp::BitOrAssign
+                        | op @ BinOp::BitXorAssign => {
                             let assign_op = match op {
                                 BinOp::Assign => None,
                                 BinOp::AddAssign => Some(ArithOp::Add),
@@ -681,8 +713,13 @@ where
                                 BinOp::MultiplyAssign => Some(ArithOp::Multiply),
                                 BinOp::DivideAssign => Some(ArithOp::Divide),
                                 BinOp::RemainderAssign => Some(ArithOp::Remainder),
-                                _ => unreachable!("invalid assignment operator")
-                            } ;
+                                BinOp::LeftShiftAssign => Some(ArithOp::LeftShift),
+                                BinOp::RightShiftAssign => Some(ArithOp::RightShift),
+                                BinOp::BitAndAssign => Some(ArithOp::BitAnd),
+                                BinOp::BitOrAssign => Some(ArithOp::BitOr),
+                                BinOp::BitXorAssign => Some(ArithOp::BitXor),
+                                _ => unreachable!("invalid assignment operator"),
+                            };
 
                             let lhs = self.collect_expr_opt(e.lhs());
                             let rhs = self.collect_expr_opt(e.rhs());

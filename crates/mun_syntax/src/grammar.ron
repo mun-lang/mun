@@ -2,7 +2,8 @@
 // See `cargo gen-syntax` (defined in crates/tools/src/main.rs)
 Grammar(
     single_char_tokens: [
-        // Original Lua symbols
+        ["&", "AMP"],
+        ["|", "PIPE"],
         ["+", "PLUS"],
         ["-", "MINUS"],
         ["*", "STAR"],
@@ -44,15 +45,23 @@ Grammar(
         ["-=", "MINUSEQ"],
         ["*=", "STAREQ"],
         ["/=", "SLASHEQ"],
-        ["^=", "CARETEQ"],
         ["%=", "PERCENTEQ"],
+        ["<<=", "SHLEQ"],
+        [">>=", "SHREQ"],
+        ["&=", "AMPEQ"],
+        ["|=", "PIPEEQ"],
+        ["^=", "CARETEQ"],
         ["..=", "DOTDOTEQ"],
         ["::", "COLONCOLON"],
         ["->", "THIN_ARROW"],
+
+        ["&&", "AMPAMP"],
+        ["||", "PIPEPIPE"],
+        ["<<", "SHL"],
+        [">>", "SHR"],
     ],
     keywords: [
         // Original Lua keywords
-        "and",
         "break",
         "do",
         "else",

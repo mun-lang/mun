@@ -32,54 +32,105 @@ impl ast::PrefixExpr {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum BinOp {
+    /// The `+` operator for addition
     Add,
+    /// The `-` operator for subtraction
     Subtract,
-    Divide,
+    /// The `*` operator for multiplication
     Multiply,
+    /// The `/` operator for division
+    Divide,
+    /// The `%` operator for remainder after division
     Remainder,
-    //    Power,
+    /// The `&&` operator for boolean AND
+    BooleanAnd,
+    /// The `||` operator for boolean OR
+    BooleanOr,
+    /// The `<<` operator for left shift
+    LeftShift,
+    /// The `>>` operator for right shift
+    RightShift,
+    /// The `|` operator for bitwise OR
+    BitwiseOr,
+    /// The `&` operator for bitwise AND
+    BitwiseAnd,
+    /// The `^` operator for bitwise XOR
+    BitwiseXor,
+    /// The `=` operator for assignment
     Assign,
+    /// The `+=` operator for assignment after addition
     AddAssign,
+    /// The `-=` operator for assignment after subtraction
     SubtractAssign,
-    DivideAssign,
+    /// The `*=` operator for assignment after multiplication
     MultiplyAssign,
+    /// The `/=` operator for assignment after division
+    DivideAssign,
+    /// The `%=` operator for assignment after remainders
     RemainderAssign,
-    //    PowerAssign,
+    /// The `<<=` operator for assignment after shifting left
+    LeftShiftAssign,
+    /// The `>>=` operator for assignment after shifting right
+    RightShiftAssign,
+    /// The `&=` operator for assignment after bitwise AND
+    BitAndAssign,
+    /// The `|=` operator for assignment after bitwise OR
+    BitOrAssign,
+    /// The `^=` operator for assignment after bitwise XOR
+    BitXorAssign,
+    /// The `==` operator for equality testing
     Equals,
-    NotEquals,
+    /// The `!=` operator for inequality testing
+    NotEqual,
+    /// The `<=` operator for lesser-equal testing
     LessEqual,
+    /// The `<` operator for comparison
     Less,
+    /// The `>=` operator for greater-equal testing
     GreatEqual,
+    /// The `>` operator for comparison
     Greater,
 }
 
 impl BinExpr {
     pub fn op_details(&self) -> Option<(SyntaxToken, BinOp)> {
-        use SyntaxKind::*;
         self.syntax()
             .children_with_tokens()
             .filter_map(|it| it.into_token())
-            .find_map(|c| match c.kind() {
-                PLUS => Some((c, BinOp::Add)),
-                MINUS => Some((c, BinOp::Subtract)),
-                SLASH => Some((c, BinOp::Divide)),
-                STAR => Some((c, BinOp::Multiply)),
-                PERCENT => Some((c, BinOp::Remainder)),
-                //                CARET => Some((c, BinOp::Power)),
-                T![=] => Some((c, BinOp::Assign)),
-                PLUSEQ => Some((c, BinOp::AddAssign)),
-                MINUSEQ => Some((c, BinOp::SubtractAssign)),
-                SLASHEQ => Some((c, BinOp::DivideAssign)),
-                STAREQ => Some((c, BinOp::MultiplyAssign)),
-                PERCENTEQ => Some((c, BinOp::RemainderAssign)),
-                //                CARETEQ => Some((c, BinOp::PowerAssign)),
-                EQEQ => Some((c, BinOp::Equals)),
-                NEQ => Some((c, BinOp::NotEquals)),
-                LT => Some((c, BinOp::Less)),
-                LTEQ => Some((c, BinOp::LessEqual)),
-                GT => Some((c, BinOp::Greater)),
-                GTEQ => Some((c, BinOp::GreatEqual)),
-                _ => None,
+            .find_map(|c| {
+                let bin_op = match c.kind() {
+                    T![+] => BinOp::Add,
+                    T![-] => BinOp::Subtract,
+                    T![*] => BinOp::Multiply,
+                    T![/] => BinOp::Divide,
+                    T![%] => BinOp::Remainder,
+                    T![<<] => BinOp::LeftShift,
+                    T![>>] => BinOp::RightShift,
+                    T![^] => BinOp::BitwiseXor,
+                    T![|] => BinOp::BitwiseOr,
+                    T![&] => BinOp::BitwiseAnd,
+                    T![=] => BinOp::Assign,
+                    T![+=] => BinOp::AddAssign,
+                    T![-=] => BinOp::SubtractAssign,
+                    T![/=] => BinOp::DivideAssign,
+                    T![*=] => BinOp::MultiplyAssign,
+                    T![%=] => BinOp::RemainderAssign,
+                    T![<<=] => BinOp::LeftShiftAssign,
+                    T![>>=] => BinOp::RightShiftAssign,
+                    T![&=] => BinOp::BitAndAssign,
+                    T![|=] => BinOp::BitOrAssign,
+                    T![^=] => BinOp::BitXorAssign,
+                    T![==] => BinOp::Equals,
+                    T![!=] => BinOp::NotEqual,
+                    T![<] => BinOp::Less,
+                    T![<=] => BinOp::LessEqual,
+                    T![>] => BinOp::Greater,
+                    T![>=] => BinOp::GreatEqual,
+                    T![&&] => BinOp::BooleanAnd,
+                    T![||] => BinOp::BooleanOr,
+                    _ => return None,
+                };
+                Some((c, bin_op))
             })
     }
 

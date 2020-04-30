@@ -5,7 +5,7 @@ use crate::{
 };
 use hir::{
     ArenaId, ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDisplay, InferenceResult, Literal,
-    Name, Ordering, Pat, PatId, Path, Resolution, Resolver, Statement, TypeCtor, UnaryOp,
+    LogicOp, Name, Ordering, Pat, PatId, Path, Resolution, Resolver, Statement, TypeCtor, UnaryOp,
 };
 use inkwell::{
     builder::Builder,
@@ -613,15 +613,25 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         op: BinaryOp,
     ) -> Option<BasicValueEnum> {
         let lhs_type = self.infer[lhs].clone();
-        let rhs_type = self.infer[rhs].clone();
         match lhs_type.as_simple() {
+            Some(TypeCtor::Bool) => self.gen_binary_op_bool(lhs, rhs, op),
             Some(TypeCtor::Float(_ty)) => self.gen_binary_op_float(lhs, rhs, op),
             Some(TypeCtor::Int(ty)) => self.gen_binary_op_int(lhs, rhs, op, ty.signedness),
-            _ => unimplemented!(
-                "unimplemented operation {0}op{1}",
-                lhs_type.display(self.db),
-                rhs_type.display(self.db)
-            ),
+            Some(TypeCtor::Struct(s)) => {
+                if s.data(self.db).memory_kind == hir::StructMemoryKind::Value {
+                    self.gen_binary_op_value_struct(lhs, rhs, op)
+                } else {
+                    self.gen_binary_op_heap_struct(lhs, rhs, op)
+                }
+            }
+            _ => {
+                let rhs_type = self.infer[rhs].clone();
+                unimplemented!(
+                    "unimplemented operation {0}op{1}",
+                    lhs_type.display(self.db),
+                    rhs_type.display(self.db)
+                )
+            }
         }
     }
 
@@ -683,6 +693,39 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             .into_int_value();
         match op {
             UnaryOp::Not => Some(self.builder.build_not(value, "not").into()),
+            _ => unimplemented!("Operator {:?} is not implemented for boolean", op),
+        }
+    }
+
+    /// Generates IR to calculate a binary operation between two boolean value.
+    fn gen_binary_op_bool(
+        &mut self,
+        lhs_expr: ExprId,
+        rhs_expr: ExprId,
+        op: BinaryOp,
+    ) -> Option<BasicValueEnum> {
+        let lhs: IntValue = self
+            .gen_expr(lhs_expr)
+            .map(|value| self.opt_deref_value(self.infer[lhs_expr].clone(), value))
+            .expect("no lhs value")
+            .into_int_value();
+        let rhs: IntValue = self
+            .gen_expr(rhs_expr)
+            .map(|value| self.opt_deref_value(self.infer[rhs_expr].clone(), value))
+            .expect("no rhs value")
+            .into_int_value();
+        match op {
+            BinaryOp::ArithOp(op) => Some(self.gen_arith_bin_op_bool(lhs, rhs, op).into()),
+            BinaryOp::Assignment { op } => {
+                let rhs = match op {
+                    Some(op) => self.gen_arith_bin_op_bool(lhs, rhs, op),
+                    None => rhs,
+                };
+                let place = self.gen_place_expr(lhs_expr);
+                self.builder.build_store(place, rhs);
+                Some(self.gen_empty())
+            }
+            BinaryOp::LogicOp(op) => Some(self.gen_logic_bin_op(lhs, rhs, op).into()),
             _ => unimplemented!("Operator {:?} is not implemented for boolean", op),
         }
     }
@@ -832,6 +875,76 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         }
     }
 
+    /// Generates IR to calculate a binary operation between two heap struct values (e.g. a Mun
+    /// `struct(gc)`).
+    fn gen_binary_op_heap_struct(
+        &mut self,
+        lhs_expr: ExprId,
+        rhs_expr: ExprId,
+        op: BinaryOp,
+    ) -> Option<BasicValueEnum> {
+        let rhs = self
+            .gen_expr(rhs_expr)
+            .expect("no rhs value")
+            .into_pointer_value();
+        match op {
+            BinaryOp::Assignment { op } => {
+                let rhs = match op {
+                    Some(op) => unimplemented!(
+                        "Assignment with {:?} operator is not implemented for struct",
+                        op
+                    ),
+                    None => rhs,
+                };
+                let place = self.gen_place_expr(lhs_expr);
+                self.builder.build_store(place, rhs);
+                Some(self.gen_empty())
+            }
+            _ => unimplemented!("Operator {:?} is not implemented for struct", op),
+        }
+    }
+
+    /// Generates IR to calculate a binary operation between two value struct values, denoted in
+    /// Mun as `struct(value)`.
+    fn gen_binary_op_value_struct(
+        &mut self,
+        lhs_expr: ExprId,
+        rhs_expr: ExprId,
+        op: BinaryOp,
+    ) -> Option<BasicValueEnum> {
+        let rhs = self
+            .gen_expr(rhs_expr)
+            .expect("no rhs value")
+            .into_struct_value();
+        match op {
+            BinaryOp::Assignment { op } => {
+                let rhs = match op {
+                    Some(op) => unimplemented!(
+                        "Assignment with {:?} operator is not implemented for struct",
+                        op
+                    ),
+                    None => rhs,
+                };
+                let place = self.gen_place_expr(lhs_expr);
+                self.builder.build_store(place, rhs);
+                Some(self.gen_empty())
+            }
+            _ => unimplemented!("Operator {:?} is not implemented for struct", op),
+        }
+    }
+
+    fn gen_arith_bin_op_bool(&mut self, lhs: IntValue, rhs: IntValue, op: ArithOp) -> IntValue {
+        match op {
+            ArithOp::BitAnd => self.builder.build_and(lhs, rhs, "bit_and"),
+            ArithOp::BitOr => self.builder.build_or(lhs, rhs, "bit_or"),
+            ArithOp::BitXor => self.builder.build_xor(lhs, rhs, "bit_xor"),
+            _ => unimplemented!(
+                "Assignment with {:?} operator is not implemented for boolean",
+                op
+            ),
+        }
+    }
+
     fn gen_arith_bin_op_int(
         &mut self,
         lhs: IntValue,
@@ -851,6 +964,14 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 hir::Signedness::Signed => self.builder.build_int_signed_rem(lhs, rhs, "rem"),
                 hir::Signedness::Unsigned => self.builder.build_int_unsigned_rem(lhs, rhs, "rem"),
             },
+            ArithOp::LeftShift => self.builder.build_left_shift(lhs, rhs, "left_shift"),
+            ArithOp::RightShift => {
+                self.builder
+                    .build_right_shift(lhs, rhs, signedness.is_signed(), "right_shift")
+            }
+            ArithOp::BitAnd => self.builder.build_and(lhs, rhs, "bit_and"),
+            ArithOp::BitOr => self.builder.build_or(lhs, rhs, "bit_or"),
+            ArithOp::BitXor => self.builder.build_xor(lhs, rhs, "bit_xor"),
         }
     }
 
@@ -866,6 +987,20 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             ArithOp::Divide => self.builder.build_float_div(lhs, rhs, "div"),
             ArithOp::Multiply => self.builder.build_float_mul(lhs, rhs, "mul"),
             ArithOp::Remainder => self.builder.build_float_rem(lhs, rhs, "rem"),
+            ArithOp::LeftShift
+            | ArithOp::RightShift
+            | ArithOp::BitAnd
+            | ArithOp::BitOr
+            | ArithOp::BitXor => {
+                unreachable!(format!("Operator {:?} is not implemented for float", op))
+            }
+        }
+    }
+
+    fn gen_logic_bin_op(&mut self, lhs: IntValue, rhs: IntValue, op: LogicOp) -> IntValue {
+        match op {
+            LogicOp::And => self.builder.build_and(lhs, rhs, "and"),
+            LogicOp::Or => self.builder.build_or(lhs, rhs, "or"),
         }
     }
 

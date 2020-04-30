@@ -17,6 +17,8 @@ pub enum SyntaxKind {
     TOMBSTONE,
     #[doc(hidden)]
     EOF,
+    AMP,
+    PIPE,
     PLUS,
     MINUS,
     STAR,
@@ -49,12 +51,19 @@ pub enum SyntaxKind {
     MINUSEQ,
     STAREQ,
     SLASHEQ,
-    CARETEQ,
     PERCENTEQ,
+    SHLEQ,
+    SHREQ,
+    AMPEQ,
+    PIPEEQ,
+    CARETEQ,
     DOTDOTEQ,
     COLONCOLON,
     THIN_ARROW,
-    AND_KW,
+    AMPAMP,
+    PIPEPIPE,
+    SHL,
+    SHR,
     BREAK_KW,
     DO_KW,
     ELSE_KW,
@@ -137,6 +146,8 @@ use self::SyntaxKind::*;
 
 #[macro_export]
 macro_rules! T {
+    (&) => { $crate::SyntaxKind::AMP };
+    (|) => { $crate::SyntaxKind::PIPE };
     (+) => { $crate::SyntaxKind::PLUS };
     (-) => { $crate::SyntaxKind::MINUS };
     (*) => { $crate::SyntaxKind::STAR };
@@ -169,12 +180,19 @@ macro_rules! T {
     (-=) => { $crate::SyntaxKind::MINUSEQ };
     (*=) => { $crate::SyntaxKind::STAREQ };
     (/=) => { $crate::SyntaxKind::SLASHEQ };
-    (^=) => { $crate::SyntaxKind::CARETEQ };
     (%=) => { $crate::SyntaxKind::PERCENTEQ };
+    (<<=) => { $crate::SyntaxKind::SHLEQ };
+    (>>=) => { $crate::SyntaxKind::SHREQ };
+    (&=) => { $crate::SyntaxKind::AMPEQ };
+    (|=) => { $crate::SyntaxKind::PIPEEQ };
+    (^=) => { $crate::SyntaxKind::CARETEQ };
     (..=) => { $crate::SyntaxKind::DOTDOTEQ };
     (::) => { $crate::SyntaxKind::COLONCOLON };
     (->) => { $crate::SyntaxKind::THIN_ARROW };
-    (and) => { $crate::SyntaxKind::AND_KW };
+    (&&) => { $crate::SyntaxKind::AMPAMP };
+    (||) => { $crate::SyntaxKind::PIPEPIPE };
+    (<<) => { $crate::SyntaxKind::SHL };
+    (>>) => { $crate::SyntaxKind::SHR };
     (break) => { $crate::SyntaxKind::BREAK_KW };
     (do) => { $crate::SyntaxKind::DO_KW };
     (else) => { $crate::SyntaxKind::ELSE_KW };
@@ -216,7 +234,6 @@ impl From<SyntaxKind> for u16 {
 impl SyntaxKind {
     pub fn is_keyword(self) -> bool {
         match self {
-            | AND_KW
             | BREAK_KW
             | DO_KW
             | ELSE_KW
@@ -247,6 +264,8 @@ impl SyntaxKind {
 
     pub fn is_symbol(self) -> bool {
             match self {
+                | AMP
+                | PIPE
                 | PLUS
                 | MINUS
                 | STAR
@@ -279,11 +298,19 @@ impl SyntaxKind {
                 | MINUSEQ
                 | STAREQ
                 | SLASHEQ
-                | CARETEQ
                 | PERCENTEQ
+                | SHLEQ
+                | SHREQ
+                | AMPEQ
+                | PIPEEQ
+                | CARETEQ
                 | DOTDOTEQ
                 | COLONCOLON
                 | THIN_ARROW
+                | AMPAMP
+                | PIPEPIPE
+                | SHL
+                | SHR
                     => true,
                 _ => false
             }
@@ -301,6 +328,8 @@ impl SyntaxKind {
 
     pub(crate) fn info(self) -> &'static SyntaxInfo {
             match self {
+                AMP => &SyntaxInfo { name: "AMP" },
+                PIPE => &SyntaxInfo { name: "PIPE" },
                 PLUS => &SyntaxInfo { name: "PLUS" },
                 MINUS => &SyntaxInfo { name: "MINUS" },
                 STAR => &SyntaxInfo { name: "STAR" },
@@ -333,12 +362,19 @@ impl SyntaxKind {
                 MINUSEQ => &SyntaxInfo { name: "MINUSEQ" },
                 STAREQ => &SyntaxInfo { name: "STAREQ" },
                 SLASHEQ => &SyntaxInfo { name: "SLASHEQ" },
-                CARETEQ => &SyntaxInfo { name: "CARETEQ" },
                 PERCENTEQ => &SyntaxInfo { name: "PERCENTEQ" },
+                SHLEQ => &SyntaxInfo { name: "SHLEQ" },
+                SHREQ => &SyntaxInfo { name: "SHREQ" },
+                AMPEQ => &SyntaxInfo { name: "AMPEQ" },
+                PIPEEQ => &SyntaxInfo { name: "PIPEEQ" },
+                CARETEQ => &SyntaxInfo { name: "CARETEQ" },
                 DOTDOTEQ => &SyntaxInfo { name: "DOTDOTEQ" },
                 COLONCOLON => &SyntaxInfo { name: "COLONCOLON" },
                 THIN_ARROW => &SyntaxInfo { name: "THIN_ARROW" },
-                AND_KW => &SyntaxInfo { name: "AND_KW" },
+                AMPAMP => &SyntaxInfo { name: "AMPAMP" },
+                PIPEPIPE => &SyntaxInfo { name: "PIPEPIPE" },
+                SHL => &SyntaxInfo { name: "SHL" },
+                SHR => &SyntaxInfo { name: "SHR" },
                 BREAK_KW => &SyntaxInfo { name: "BREAK_KW" },
                 DO_KW => &SyntaxInfo { name: "DO_KW" },
                 ELSE_KW => &SyntaxInfo { name: "ELSE_KW" },
@@ -421,7 +457,6 @@ impl SyntaxKind {
 
     pub fn from_keyword(ident: &str) -> Option<SyntaxKind> {
             let kw = match ident {
-                "and" => AND_KW,
                 "break" => BREAK_KW,
                 "do" => DO_KW,
                 "else" => ELSE_KW,
@@ -452,6 +487,8 @@ impl SyntaxKind {
 
     pub fn from_char(c: char) -> Option<SyntaxKind> {
             let tok = match c {
+                '&' => AMP,
+                '|' => PIPE,
                 '+' => PLUS,
                 '-' => MINUS,
                 '*' => STAR,

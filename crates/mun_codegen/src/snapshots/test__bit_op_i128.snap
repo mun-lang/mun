@@ -1,0 +1,47 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "pub fn not(a: i128) -> i128 { !a }\npub fn bitand(a: i128, b: i128) -> i128 { a & b }\npub fn bitor(a: i128, b: i128) -> i128 { a | b }\npub fn bitxor(a: i128, b: i128) -> i128 { a ^ b }"
+---
+; == FILE IR =====================================
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+
+@global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
+
+define i128 @not(i128) {
+body:
+  %not = xor i128 %0, -1
+  ret i128 %not
+}
+
+define i128 @bitand(i128, i128) {
+body:
+  %bit_and = and i128 %0, %1
+  ret i128 %bit_and
+}
+
+define i128 @bitor(i128, i128) {
+body:
+  %bit_or = or i128 %0, %1
+  ret i128 %bit_or
+}
+
+define i128 @bitxor(i128, i128) {
+body:
+  %bit_xor = xor i128 %0, %1
+  ret i128 %bit_xor
+}
+
+
+; == GROUP IR ====================================
+; ModuleID = 'group_name'
+source_filename = "group_name"
+
+%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+
+@"type_info::<core::i128>::name" = private unnamed_addr constant [11 x i8] c"core::i128\00"
+@"type_info::<core::i128>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\BDkp\09RRM\EBc\02\A0\DB47\A7\E3", [11 x i8]* @"type_info::<core::i128>::name", i32 128, i8 8, i8 0 }
+@global_type_table = global [1 x %struct.MunTypeInfo addrspace(4)*] [%struct.MunTypeInfo addrspace(4)* @"type_info::<core::i128>"]
+

@@ -1,0 +1,61 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "pub fn equals(a: u32, b: u32) -> bool { a == b }\npub fn not_equal(a: u32, b: u32) -> bool { a != b}\npub fn less(a: u32, b: u32) -> bool { a < b }\npub fn less_equal(a: u32, b: u32) -> bool { a <= b }\npub fn greater(a: u32, b: u32) -> bool { a > b }\npub fn greater_equal(a: u32, b: u32) -> bool { a >= b }"
+---
+; == FILE IR =====================================
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+
+@global_type_table = external global [2 x %struct.MunTypeInfo addrspace(4)*]
+
+define i1 @equals(i32, i32) {
+body:
+  %eq = icmp eq i32 %0, %1
+  ret i1 %eq
+}
+
+define i1 @not_equal(i32, i32) {
+body:
+  %neq = icmp ne i32 %0, %1
+  ret i1 %neq
+}
+
+define i1 @less(i32, i32) {
+body:
+  %less = icmp ult i32 %0, %1
+  ret i1 %less
+}
+
+define i1 @less_equal(i32, i32) {
+body:
+  %lesseq = icmp ule i32 %0, %1
+  ret i1 %lesseq
+}
+
+define i1 @greater(i32, i32) {
+body:
+  %greater = icmp ugt i32 %0, %1
+  ret i1 %greater
+}
+
+define i1 @greater_equal(i32, i32) {
+body:
+  %greatereq = icmp uge i32 %0, %1
+  ret i1 %greatereq
+}
+
+
+; == GROUP IR ====================================
+; ModuleID = 'group_name'
+source_filename = "group_name"
+
+%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+
+@"type_info::<core::u32>::name" = private unnamed_addr constant [10 x i8] c"core::u32\00"
+@"type_info::<core::u32>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"daz5d\A6\BE\88\81=&Y\A1+\C6\1D", [10 x i8]* @"type_info::<core::u32>::name", i32 32, i8 4, i8 0 }
+@"type_info::<core::bool>::name" = private unnamed_addr constant [11 x i8] c"core::bool\00"
+@"type_info::<core::bool>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"x\82\81m t7\03\CB\F8k\81-;\C9\84", [11 x i8]* @"type_info::<core::bool>::name", i32 1, i8 1, i8 0 }
+@global_type_table = global [2 x %struct.MunTypeInfo addrspace(4)*] [%struct.MunTypeInfo addrspace(4)* @"type_info::<core::u32>", %struct.MunTypeInfo addrspace(4)* @"type_info::<core::bool>"]
+

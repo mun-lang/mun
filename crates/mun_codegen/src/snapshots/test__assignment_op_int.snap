@@ -1,6 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "pub fn add(a:int, b:int) -> int {\n  a+b\n}\n\npub fn subtract(a:int, b:int) -> int {\n  a-b\n}\n\npub fn multiply(a:int, b:int) -> int {\n  a*b\n}\n\npub fn divide(a:int, b:int) -> int {\n  a/b\n}\n\npub fn remainder(a:int, b:int) -> int {\n  a%b\n}"
+expression: "pub fn assign(a: int, b: int) -> int {\n    a = b;\n    a\n}\npub fn assign_add(a: int, b: int) -> int {\n    a += b;\n    a\n}\npub fn assign_subtract(a: int, b: int) -> int {\n    a -= b;\n    a\n}\npub fn assign_multiply(a: int, b: int) -> int {\n    a *= b;\n    a\n}\npub fn assign_divide(a: int, b: int) -> int {\n    a /= b;\n    a\n}\npub fn assign_remainder(a: int, b: int) -> int {\n    a %= b;\n    a\n}"
 ---
 ; == FILE IR =====================================
 ; ModuleID = 'main.mun'
@@ -10,31 +10,36 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
 
-define i64 @add(i64, i64) {
+define i64 @assign(i64, i64) {
+body:
+  ret i64 %1
+}
+
+define i64 @assign_add(i64, i64) {
 body:
   %add = add i64 %0, %1
   ret i64 %add
 }
 
-define i64 @subtract(i64, i64) {
+define i64 @assign_subtract(i64, i64) {
 body:
   %sub = sub i64 %0, %1
   ret i64 %sub
 }
 
-define i64 @multiply(i64, i64) {
+define i64 @assign_multiply(i64, i64) {
 body:
   %mul = mul i64 %0, %1
   ret i64 %mul
 }
 
-define i64 @divide(i64, i64) {
+define i64 @assign_divide(i64, i64) {
 body:
   %div = sdiv i64 %0, %1
   ret i64 %div
 }
 
-define i64 @remainder(i64, i64) {
+define i64 @assign_remainder(i64, i64) {
 body:
   %rem = srem i64 %0, %1
   ret i64 %rem

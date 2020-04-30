@@ -1,0 +1,58 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "pub fn assign(a: f32, b: f32) -> f32 {\n    a = b;\n    a\n}\npub fn assign_add(a: f32, b: f32) -> f32 {\n    a += b;\n    a\n}\npub fn assign_subtract(a: f32, b: f32) -> f32 {\n    a -= b;\n    a\n}\npub fn assign_multiply(a: f32, b: f32) -> f32 {\n    a *= b;\n    a\n}\npub fn assign_divide(a: f32, b: f32) -> f32 {\n    a /= b;\n    a\n}\npub fn assign_remainder(a: f32, b: f32) -> f32 {\n    a %= b;\n    a\n}"
+---
+; == FILE IR =====================================
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+
+@global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
+
+define float @assign(float, float) {
+body:
+  ret float %1
+}
+
+define float @assign_add(float, float) {
+body:
+  %add = fadd float %0, %1
+  ret float %add
+}
+
+define float @assign_subtract(float, float) {
+body:
+  %sub = fsub float %0, %1
+  ret float %sub
+}
+
+define float @assign_multiply(float, float) {
+body:
+  %mul = fmul float %0, %1
+  ret float %mul
+}
+
+define float @assign_divide(float, float) {
+body:
+  %div = fdiv float %0, %1
+  ret float %div
+}
+
+define float @assign_remainder(float, float) {
+body:
+  %rem = frem float %0, %1
+  ret float %rem
+}
+
+
+; == GROUP IR ====================================
+; ModuleID = 'group_name'
+source_filename = "group_name"
+
+%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+
+@"type_info::<core::f32>::name" = private unnamed_addr constant [10 x i8] c"core::f32\00"
+@"type_info::<core::f32>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"P\19b7\A8k\F2\81P\FB\83\F5P\B0\82!", [10 x i8]* @"type_info::<core::f32>::name", i32 32, i8 4, i8 0 }
+@global_type_table = global [1 x %struct.MunTypeInfo addrspace(4)*] [%struct.MunTypeInfo addrspace(4)* @"type_info::<core::f32>"]
+
