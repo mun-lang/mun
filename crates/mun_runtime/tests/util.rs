@@ -25,7 +25,7 @@ impl RuntimeOrBuilder {
         let previous = std::mem::replace(self, RuntimeOrBuilder::Pending);
         let runtime = match previous {
             RuntimeOrBuilder::Runtime(runtime) => runtime,
-            RuntimeOrBuilder::Builder(builder) => Rc::new(RefCell::new(builder.spawn()?)),
+            RuntimeOrBuilder::Builder(builder) => builder.spawn()?,
             _ => unreachable!(),
         };
         std::mem::replace(self, RuntimeOrBuilder::Runtime(runtime));
