@@ -29,6 +29,7 @@ mod resolve;
 mod source_id;
 mod ty;
 mod type_ref;
+mod utils;
 
 #[cfg(test)]
 mod mock;

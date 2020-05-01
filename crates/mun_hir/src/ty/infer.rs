@@ -13,7 +13,7 @@ use crate::{
     ty::op,
     ty::{Ty, TypableDef},
     type_ref::TypeRefId,
-    BinaryOp, Function, HirDatabase, Name, Path, TypeCtor,
+    ApplicationTy, BinaryOp, Function, HirDatabase, Name, Path, TypeCtor,
 };
 use rustc_hash::FxHashSet;
 use std::ops::Index;
@@ -21,9 +21,11 @@ use std::sync::Arc;
 
 mod place_expr;
 mod type_variable;
+mod unify;
 
-use crate::expr::{LiteralFloatKind, LiteralIntKind};
+use crate::expr::{LiteralFloat, LiteralFloatKind, LiteralInt, LiteralIntKind};
 use crate::ty::primitives::{FloatTy, IntTy};
+use std::mem;
 pub use type_variable::TypeVarId;
 
 #[macro_export]
@@ -94,6 +96,32 @@ pub fn infer_query(db: &impl HirDatabase, def: DefWithBody) -> Arc<InferenceResu
     ctx.infer_body();
 
     Arc::new(ctx.resolve_all())
+}
+
+/// Placeholders required during type inferencing. There are seperate values for `int` and `float`
+/// types and for generic type variables. The first being used to distinguish literals; e.g `100`
+/// can be represented by a lot of different integer types.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum InferTy {
+    TypeVar(type_variable::TypeVarId),
+    IntVar(type_variable::TypeVarId),
+    FloatVar(type_variable::TypeVarId),
+}
+
+impl InferTy {
+    fn to_inner(self) -> type_variable::TypeVarId {
+        match self {
+            InferTy::TypeVar(ty) | InferTy::IntVar(ty) | InferTy::FloatVar(ty) => ty,
+        }
+    }
+
+    fn fallback_value(self) -> Ty {
+        match self {
+            InferTy::TypeVar(..) => Ty::Unknown,
+            InferTy::IntVar(..) => Ty::simple(TypeCtor::Int(IntTy::int())),
+            InferTy::FloatVar(..) => Ty::simple(TypeCtor::Float(FloatTy::float())),
+        }
+    }
 }
 
 enum ActiveLoop {
@@ -177,25 +205,6 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
 }
 
 impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
-    /// Unify the specified types, returns true if successful; false otherwise.
-    fn unify(&mut self, ty1: &Ty, ty2: &Ty) -> bool {
-        if ty1 == ty2 {
-            return true;
-        }
-
-        self.unify_inner_trivial(&ty1, &ty2)
-    }
-
-    /// This function performs trivial unifications. Returns true if a unification took place;
-    fn unify_inner_trivial(&mut self, ty1: &Ty, ty2: &Ty) -> bool {
-        match (ty1, ty2) {
-            (Ty::Unknown, _) | (_, Ty::Unknown) => true,
-            _ => false,
-        }
-    }
-}
-
-impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
     /// Collect all the parameter patterns from the body. After calling this method the `return_ty`
     /// will have a valid value, also all parameters are added inferred.
     fn infer_signature(&mut self) {
@@ -235,7 +244,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
     /// Infers the type of the `tgt_expr`
     fn infer_expr(&mut self, tgt_expr: ExprId, expected: &Expectation) -> Ty {
         let ty = self.infer_expr_inner(tgt_expr, expected, &CheckParams::default());
-        if !expected.is_none() && ty != expected.ty {
+        if !self.unify(&ty, &expected.ty) {
             self.diagnostics.push(InferenceDiagnostic::MismatchedTypes {
                 expected: expected.ty.clone(),
                 found: ty.clone(),
@@ -243,7 +252,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             });
         };
 
-        ty
+        self.resolve_ty_as_far_as_possible(ty)
     }
 
     /// Infer type of expression with possibly implicit coerce to the expected type. Return the type
@@ -256,7 +265,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
     /// Performs implicit coercion of the specified `Ty` to an expected type. Returns the type after
     /// possible coercion. Adds a diagnostic message if coercion failed.
     fn coerce_expr_ty(&mut self, expr: ExprId, ty: Ty, expected: &Expectation) -> Ty {
-        if !self.coerce(&ty, &expected.ty) {
+        let ty = if !self.coerce(&ty, &expected.ty) {
             self.diagnostics.push(InferenceDiagnostic::MismatchedTypes {
                 expected: expected.ty.clone(),
                 found: ty.clone(),
@@ -267,7 +276,9 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             ty
         } else {
             expected.ty.clone()
-        }
+        };
+
+        self.resolve_ty_as_far_as_possible(ty)
     }
 
     /// Infer the type of the given expression. Returns the type of the expression.
@@ -327,30 +338,27 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
             Expr::Literal(lit) => match lit {
                 Literal::String(_) => Ty::Unknown,
                 Literal::Bool(_) => Ty::simple(TypeCtor::Bool),
-                Literal::Int(ty) => {
-                    // TODO: Add inferencing support
-                    let ty = if let LiteralIntKind::Suffixed(suffix) = ty.kind {
-                        IntTy {
-                            bitness: suffix.bitness,
-                            signedness: suffix.signedness,
-                        }
-                    } else {
-                        IntTy::int()
-                    };
-
-                    Ty::simple(TypeCtor::Int(ty))
-                }
-                Literal::Float(ty) => {
-                    // TODO: Add inferencing support
-                    let ty = if let LiteralFloatKind::Suffixed(suffix) = ty.kind {
-                        FloatTy {
-                            bitness: suffix.bitness,
-                        }
-                    } else {
-                        FloatTy::float()
-                    };
-                    Ty::simple(TypeCtor::Float(ty))
-                }
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Suffixed(suffix),
+                    ..
+                }) => Ty::simple(TypeCtor::Int(IntTy {
+                    bitness: suffix.bitness,
+                    signedness: suffix.signedness,
+                })),
+                Literal::Float(LiteralFloat {
+                    kind: LiteralFloatKind::Suffixed(suffix),
+                    ..
+                }) => Ty::simple(TypeCtor::Float(FloatTy {
+                    bitness: suffix.bitness,
+                })),
+                Literal::Int(LiteralInt {
+                    kind: LiteralIntKind::Unsuffixed,
+                    ..
+                }) => self.type_variables.new_integer_var(),
+                Literal::Float(LiteralFloat {
+                    kind: LiteralFloatKind::Unsuffixed,
+                    ..
+                }) => self.type_variables.new_float_var(),
             },
             Expr::Return { expr } => {
                 if let Some(expr) = expr {
@@ -428,39 +436,53 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                 }
             }
             Expr::UnaryOp { expr, op } => {
-                let ty =
+                let inner_ty =
                     self.infer_expr_inner(*expr, &Expectation::none(), &CheckParams::default());
-                if let Some(simple) = ty.as_simple() {
-                    match op {
-                        UnaryOp::Not => {
-                            match simple {
-                                TypeCtor::Bool | TypeCtor::Int(_) => ty,
-                                _ => {
-                                    self.diagnostics.push(
-                                        InferenceDiagnostic::CannotApplyUnaryOp { id: *expr, ty },
-                                    );
-                                    Ty::Unknown
-                                }
-                            }
+                match op {
+                    UnaryOp::Not => match &inner_ty {
+                        Ty::Apply(ApplicationTy {
+                            ctor: TypeCtor::Bool,
+                            ..
+                        })
+                        | Ty::Apply(ApplicationTy {
+                            ctor: TypeCtor::Int(_),
+                            ..
+                        })
+                        | Ty::Infer(InferTy::IntVar(..)) => inner_ty,
+                        _ => {
+                            self.diagnostics
+                                .push(InferenceDiagnostic::CannotApplyUnaryOp {
+                                    id: *expr,
+                                    ty: inner_ty,
+                                });
+                            Ty::Unknown
                         }
-                        UnaryOp::Neg => {
-                            match simple {
-                                TypeCtor::Float(_) | TypeCtor::Int(_) => ty,
-                                _ => {
-                                    self.diagnostics.push(
-                                        InferenceDiagnostic::CannotApplyUnaryOp { id: *expr, ty },
-                                    );
-                                    Ty::Unknown
-                                }
-                            }
+                    },
+                    UnaryOp::Neg => match &inner_ty {
+                        Ty::Apply(ApplicationTy {
+                            ctor: TypeCtor::Float(_),
+                            ..
+                        })
+                        | Ty::Apply(ApplicationTy {
+                            ctor: TypeCtor::Int(_),
+                            ..
+                        })
+                        | Ty::Infer(InferTy::IntVar(..))
+                        | Ty::Infer(InferTy::FloatVar(..)) => inner_ty,
+                        _ => {
+                            self.diagnostics
+                                .push(InferenceDiagnostic::CannotApplyUnaryOp {
+                                    id: *expr,
+                                    ty: inner_ty,
+                                });
+                            Ty::Unknown
                         }
-                    }
-                } else {
-                    Ty::Unknown
+                    },
                 }
             } //            Expr::Block { statements: _, tail: _ } => {}
         };
 
+        let ty = self.resolve_ty_as_far_as_possible(ty);
         self.set_expr_type(tgt_expr, ty.clone());
         ty
     }
@@ -687,19 +709,25 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         //let mut tv_stack = Vec::new();
         let mut expr_types = std::mem::take(&mut self.type_of_expr);
         for (expr, ty) in expr_types.iter_mut() {
-            //let resolved = self.resolve_ty_completely(&mut tv_stack, mem::replace(ty, Ty::Unknown));
-            if *ty == Ty::Unknown {
+            let was_unknown = ty == &mut Ty::Unknown;
+            let resolved = self
+                .type_variables
+                .resolve_ty_completely(mem::replace(ty, Ty::Unknown));
+            if !was_unknown && resolved == Ty::Unknown {
                 self.report_expr_inference_failure(expr);
             }
-            //*ty = resolved;
+            *ty = resolved;
         }
         let mut pat_types = std::mem::take(&mut self.type_of_pat);
         for (pat, ty) in pat_types.iter_mut() {
-            //let resolved = self.resolve_ty_completely(&mut tv_stack, mem::replace(ty, Ty::Unknown));
-            if *ty == Ty::Unknown {
+            let was_unknown = ty == &mut Ty::Unknown;
+            let resolved = self
+                .type_variables
+                .resolve_ty_completely(mem::replace(ty, Ty::Unknown));
+            if !was_unknown && resolved == Ty::Unknown {
                 self.report_pat_inference_failure(pat);
             }
-            //*ty = resolved;
+            *ty = resolved;
         }
         InferenceResult {
             //            method_resolutions: self.method_resolutions,
@@ -773,6 +801,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
                         decl_ty
                     };
 
+                    let ty = self.resolve_ty_as_far_as_possible(ty);
                     self.infer_pat(*pat, ty);
                 }
                 Statement::Expr(expr) => {
@@ -827,7 +856,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         };
 
         // Verify that it matches what we expected
-        let ty = if !expected.is_none() && ty != expected.ty {
+        let ty = if !self.unify(&ty, &expected.ty) {
             self.diagnostics.push(InferenceDiagnostic::MismatchedTypes {
                 expected: expected.ty.clone(),
                 found: ty,
@@ -885,12 +914,18 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         //        self.diagnostics.push(InferenceDiagnostic::PatInferenceFailed {
         //            pat
         //        });
+        // Currently this should never happen because we can only infer `int` and `float` types
+        // which always have a fallback value.
+        panic!("pattern failed inferencing");
     }
 
     pub fn report_expr_inference_failure(&mut self, _expr: ExprId) {
         //        self.diagnostics.push(InferenceDiagnostic::ExprInferenceFailed {
         //            expr
         //        });
+        // Currently this should never happen because we can only infer `int` and `float` types
+        // which always have a fallback value.
+        panic!("expression failed inferencing");
     }
 }
 

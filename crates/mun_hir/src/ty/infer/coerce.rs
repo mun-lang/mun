@@ -5,7 +5,9 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
     /// Unify two types, but may coerce the first one to the second using implicit coercion rules if
     /// needed.
     pub(super) fn coerce(&mut self, from_ty: &Ty, to_ty: &Ty) -> bool {
-        self.coerce_inner(from_ty.clone(), &to_ty)
+        let from_ty = self.replace_if_possible(from_ty).into_owned();
+        let to_ty = self.replace_if_possible(to_ty);
+        self.coerce_inner(from_ty, &to_ty)
     }
 
     /// Merge two types from different branches, with possible implicit coerce.
@@ -23,7 +25,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         match (&from_ty, to_ty) {
             (ty_app!(TypeCtor::Never), ..) => return true,
             _ => {
-                if self.unify_inner_trivial(&from_ty, &to_ty) {
+                if self.type_variables.unify_inner_trivial(&from_ty, &to_ty) {
                     return true;
                 }
             }
