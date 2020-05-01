@@ -9,6 +9,18 @@ use std::fmt::Write;
 use std::sync::Arc;
 
 #[test]
+fn comparison_not_implemented_for_struct() {
+    infer_snapshot(
+        r"
+    struct Foo;
+
+    fn main() -> bool {
+        Foo == Foo
+    }",
+    )
+}
+
+#[test]
 fn infer_suffix_literals() {
     infer_snapshot(
         r"
