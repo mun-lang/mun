@@ -5,7 +5,16 @@ use crate::{ApplicationTy, ArithOp, BinaryOp, CmpOp, Ty, TypeCtor};
 pub(super) fn binary_op_rhs_expectation(op: BinaryOp, lhs_ty: Ty) -> Ty {
     match op {
         BinaryOp::LogicOp(..) => Ty::simple(TypeCtor::Bool),
-        BinaryOp::Assignment { op: None } | BinaryOp::CmpOp(CmpOp::Eq { .. }) => match lhs_ty {
+
+        BinaryOp::CmpOp(CmpOp::Eq { .. }) => match lhs_ty {
+            Ty::Apply(ApplicationTy { ctor, .. }) => match ctor {
+                TypeCtor::Int(_) | TypeCtor::Float(_) | TypeCtor::Bool => lhs_ty,
+                _ => Ty::Unknown,
+            },
+            _ => Ty::Unknown,
+        },
+
+        BinaryOp::Assignment { op: None } => match lhs_ty {
             Ty::Apply(ApplicationTy { ctor, .. }) => match ctor {
                 TypeCtor::Int(_) | TypeCtor::Float(_) | TypeCtor::Bool | TypeCtor::Struct(_) => {
                     lhs_ty
