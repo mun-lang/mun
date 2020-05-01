@@ -1,5 +1,5 @@
 use crate::ty::infer::InferTy;
-use crate::{ApplicationTy, ArithOp, BinaryOp, CmpOp, Ty, TypeCtor};
+use crate::{ApplicationTy, ArithOp, BinaryOp, Ty, TypeCtor};
 
 /// Given a binary operation and the type on the left of that operation, returns the expected type
 /// for the right hand side of the operation or `Ty::Unknown` if such an operation is invalid.
@@ -7,11 +7,13 @@ pub(super) fn binary_op_rhs_expectation(op: BinaryOp, lhs_ty: Ty) -> Ty {
     match op {
         BinaryOp::LogicOp(..) => Ty::simple(TypeCtor::Bool),
 
-        BinaryOp::CmpOp(CmpOp::Eq { .. }) => match lhs_ty {
+        // Compare operations are allowed for all scalar types
+        BinaryOp::CmpOp(..) => match lhs_ty {
             Ty::Apply(ApplicationTy { ctor, .. }) => match ctor {
                 TypeCtor::Int(_) | TypeCtor::Float(_) | TypeCtor::Bool => lhs_ty,
                 _ => Ty::Unknown,
             },
+            Ty::Infer(InferTy::IntVar(..)) | Ty::Infer(InferTy::FloatVar(..)) => lhs_ty,
             _ => Ty::Unknown,
         },
 
@@ -52,9 +54,9 @@ pub(super) fn binary_op_rhs_expectation(op: BinaryOp, lhs_ty: Ty) -> Ty {
             Ty::Infer(InferTy::IntVar(..)) => lhs_ty,
             _ => Ty::Unknown,
         },
-        BinaryOp::CmpOp(CmpOp::Ord { .. })
-        | BinaryOp::Assignment { op: Some(_) }
-        | BinaryOp::ArithOp(_) => match lhs_ty {
+
+        // Arithmetic operations are supported only on number types
+        BinaryOp::Assignment { op: Some(_) } | BinaryOp::ArithOp(_) => match lhs_ty {
             Ty::Apply(ApplicationTy { ctor, .. }) => match ctor {
                 TypeCtor::Int(_) | TypeCtor::Float(_) => lhs_ty,
                 _ => Ty::Unknown,
