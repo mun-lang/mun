@@ -3,9 +3,7 @@ source: crates/mun_hir/src/ty/tests.rs
 expression: "fn bar(a: float, b: bool) {\n    a = !a; // mismatched type\n    b = -b; // mismatched type\n}"
 ---
 [37; 38): cannot apply unary operator
-[36; 38): mismatched type
 [68; 69): cannot apply unary operator
-[67; 69): mismatched type
 [7; 8) 'a': float
 [17; 18) 'b': bool
 [26; 91) '{     ...type }': nothing

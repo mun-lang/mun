@@ -21,6 +21,27 @@ fn comparison_not_implemented_for_struct() {
 }
 
 #[test]
+fn infer_literals() {
+    infer_snapshot(
+        r"
+        fn integer() -> i32 {
+            0
+        }
+
+        fn large_unsigned_integer() -> u128 {
+            0
+        }
+
+        fn with_let() -> u16 {
+            let b = 4;
+            let a = 4;
+            a
+        }
+    ",
+    )
+}
+
+#[test]
 fn infer_suffix_literals() {
     infer_snapshot(
         r"

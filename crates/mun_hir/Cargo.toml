@@ -16,7 +16,7 @@ mun_target={path="../mun_target"}
 rustc-hash = "1.1"
 once_cell = "0.2"
 relative-path = "0.4.0"
-ena = "0.13"
+ena = "0.14"
 drop_bomb = "0.1.4"
 either = "1.5.3"
 

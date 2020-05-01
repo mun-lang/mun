@@ -5,16 +5,18 @@ mod primitives;
 mod resolve;
 
 use crate::display::{HirDisplay, HirFormatter};
-use crate::ty::infer::TypeVarId;
+use crate::ty::infer::InferTy;
 use crate::ty::lower::fn_sig_for_struct_constructor;
+use crate::utils::make_mut_slice;
 use crate::{HirDatabase, Struct, StructMemoryKind};
 pub(crate) use infer::infer_query;
 pub use infer::InferenceResult;
 pub(crate) use lower::{callable_item_sig, fn_sig_for_fn, type_for_def, CallableDef, TypableDef};
 pub use primitives::{FloatTy, IntTy};
 pub use resolve::ResolveBitness;
-use std::fmt;
+use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
+use std::{fmt, mem};
 
 #[cfg(test)]
 mod tests;
@@ -27,7 +29,7 @@ pub enum Ty {
     Apply(ApplicationTy),
 
     /// A type variable used during type checking. Not to be confused with a type parameter.
-    Infer(TypeVarId),
+    Infer(InferTy),
 
     /// A placeholder for a type which could not be computed; this is propagated to avoid useless
     /// error messages. Doubles as a placeholder where type variables are inserted before type
@@ -167,6 +169,20 @@ impl Substs {
     }
 }
 
+impl Deref for Substs {
+    type Target = [Ty];
+
+    fn deref(&self) -> &[Ty] {
+        &self.0
+    }
+}
+
+impl DerefMut for Substs {
+    fn deref_mut(&mut self) -> &mut [Ty] {
+        make_mut_slice(&mut self.0)
+    }
+}
+
 /// A function signature as seen by type inference: Several parameter types and
 /// one return type.
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -208,7 +224,11 @@ impl HirDisplay for Ty {
             Ty::Apply(a_ty) => a_ty.hir_fmt(f),
             Ty::Unknown => write!(f, "{{unknown}}"),
             Ty::Empty => write!(f, "nothing"),
-            Ty::Infer(tv) => write!(f, "'{}", tv.0),
+            Ty::Infer(tv) => match tv {
+                InferTy::TypeVar(tv) => write!(f, "'{}", tv.0),
+                InferTy::IntVar(_) => write!(f, "{{integer}}"),
+                InferTy::FloatVar(_) => write!(f, "{{float}}"),
+            },
         }
     }
 }
@@ -244,5 +264,30 @@ impl HirDisplay for ApplicationTy {
 impl HirDisplay for &Ty {
     fn hir_fmt(&self, f: &mut HirFormatter<impl HirDatabase>) -> fmt::Result {
         HirDisplay::hir_fmt(*self, f)
+    }
+}
+
+impl Ty {
+    fn walk_mut(&mut self, f: &mut impl FnMut(&mut Ty)) {
+        match self {
+            Ty::Apply(ty) => {
+                for t in ty.parameters.iter_mut() {
+                    t.walk_mut(f);
+                }
+            }
+            Ty::Empty | Ty::Infer(_) | Ty::Unknown => {}
+        }
+        f(self)
+    }
+
+    fn fold(mut self, f: &mut impl FnMut(Ty) -> Ty) -> Self
+    where
+        Self: Sized,
+    {
+        self.walk_mut(&mut |ty_mut| {
+            let ty = mem::replace(ty_mut, Ty::Unknown);
+            *ty_mut = f(ty);
+        });
+        self
     }
 }

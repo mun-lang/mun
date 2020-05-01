@@ -1,9 +1,6 @@
-use crate::Ty;
-use drop_bomb::DropBomb;
-use ena::snapshot_vec::{SnapshotVec, SnapshotVecDelegate};
-use ena::unify::{InPlace, InPlaceUnificationTable, NoError, UnifyKey, UnifyValue};
-use std::borrow::Cow;
-use std::fmt;
+use crate::{ty::infer::InferTy, ty_app, Ty, TypeCtor};
+use ena::unify::{InPlaceUnificationTable, NoError, UnifyKey, UnifyValue};
+use std::{borrow::Cow, fmt};
 
 /// The ID of a type variable.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -78,7 +75,6 @@ impl UnifyValue for TypeVarValue {
 
 #[derive(Default)]
 pub struct TypeVariableTable {
-    values: SnapshotVec<Delegate>,
     eq_relations: InPlaceUnificationTable<TypeVarId>,
 }
 
@@ -94,23 +90,96 @@ struct Instantiate {
 struct Delegate;
 
 impl TypeVariableTable {
-    /// Creates a new generic infer type variable
-    pub fn new_type_var(&mut self) -> TypeVarId {
-        let eq_key = self.eq_relations.new_key(TypeVarValue::Unknown);
-        let index = self.values.push(TypeVariableData {});
-        assert_eq!(eq_key.0, index as u32);
-        eq_key
+    /// Constructs a new generic type variable type
+    pub fn new_type_var(&mut self) -> Ty {
+        Ty::Infer(InferTy::TypeVar(
+            self.eq_relations.new_key(TypeVarValue::Unknown),
+        ))
+    }
+
+    /// Constructs a new type variable that is used to represent *some* integer type
+    pub fn new_integer_var(&mut self) -> Ty {
+        Ty::Infer(InferTy::IntVar(
+            self.eq_relations.new_key(TypeVarValue::Unknown),
+        ))
+    }
+
+    /// Constructs a new type variable that is used to represent *some* floating-point type
+    pub fn new_float_var(&mut self) -> Ty {
+        Ty::Infer(InferTy::FloatVar(
+            self.eq_relations.new_key(TypeVarValue::Unknown),
+        ))
+    }
+
+    /// Unifies the two types. If one or more type variables are involved instantiate or equate the
+    /// variables with each other.
+    pub fn unify(&mut self, a: &Ty, b: &Ty) -> bool {
+        self.unify_inner(a, b)
+    }
+
+    /// Unifies the two types. If one or more type variables are involved instantiate or equate the
+    /// variables with each other.
+    fn unify_inner(&mut self, a: &Ty, b: &Ty) -> bool {
+        if a == b {
+            return true;
+        }
+
+        // First resolve both types as much as possible
+        let a = self.replace_if_possible(a);
+        let b = self.replace_if_possible(b);
+
+        self.unify_inner_trivial(&a, &b)
+    }
+
+    /// Handles unificiation of trivial cases.
+    pub(crate) fn unify_inner_trivial(&mut self, a: &Ty, b: &Ty) -> bool {
+        match (a, b) {
+            // Ignore unificiation if dealing with unknown types, there are no guarentees in that case.
+            (Ty::Unknown, _) | (_, Ty::Unknown) => true,
+
+            // In case of two unknowns of the same type, equate them
+            (Ty::Infer(InferTy::TypeVar(tv_a)), Ty::Infer(InferTy::TypeVar(tv_b)))
+            | (Ty::Infer(InferTy::IntVar(tv_a)), Ty::Infer(InferTy::IntVar(tv_b)))
+            | (Ty::Infer(InferTy::FloatVar(tv_a)), Ty::Infer(InferTy::FloatVar(tv_b))) => {
+                self.equate(*tv_a, *tv_b);
+                true
+            }
+
+            // Instantiate the variable if unifying with a concrete type
+            (Ty::Infer(InferTy::TypeVar(tv)), other) | (other, Ty::Infer(InferTy::TypeVar(tv))) => {
+                self.instantiate(*tv, other.clone());
+                true
+            }
+
+            // Instantiate the variable if unifying an unknown integer type with a concrete integer type
+            (Ty::Infer(InferTy::IntVar(tv)), other @ ty_app!(TypeCtor::Int(_)))
+            | (other @ ty_app!(TypeCtor::Int(_)), Ty::Infer(InferTy::IntVar(tv))) => {
+                self.instantiate(*tv, other.clone());
+                true
+            }
+
+            // Instantiate the variable if unifying an unknown float type with a concrete float type
+            (Ty::Infer(InferTy::FloatVar(tv)), other @ ty_app!(TypeCtor::Float(_)))
+            | (other @ ty_app!(TypeCtor::Float(_)), Ty::Infer(InferTy::FloatVar(tv))) => {
+                self.instantiate(*tv, other.clone());
+                true
+            }
+
+            // Was not able to unify the types
+            _ => false,
+        }
     }
 
     /// Records that `a == b`
-    pub fn equate(&mut self, a: TypeVarId, b: TypeVarId) {
+    fn equate(&mut self, a: TypeVarId, b: TypeVarId) {
         debug_assert!(self.eq_relations.probe_value(a).is_unknown());
         debug_assert!(self.eq_relations.probe_value(b).is_unknown());
         self.eq_relations.union(a, b);
     }
 
-    /// Instantiates `tv` with the type `ty`.
-    pub fn instantiate(&mut self, tv: TypeVarId, ty: Ty) {
+    /// Instantiates `tv` with the type `ty`. Instantiation is the process of associating a concrete
+    /// type with a type variable which in turn will resolve all equated type variables.
+    fn instantiate(&mut self, tv: TypeVarId, ty: Ty) {
         debug_assert!(
             self.eq_relations.probe_value(tv).is_unknown(),
             "instantiating type variable `{:?}` twice: new-value = {:?}, old-value={:?}",
@@ -121,106 +190,112 @@ impl TypeVariableTable {
         self.eq_relations.union_value(tv, TypeVarValue::Known(ty));
     }
 
-    /// If `ty` is a type-inference variable, and it has been instantiated, then return the
-    /// instantiated type; otherwise returns `ty`.
+    /// If `ty` is a type variable, and it has been instantiated, then return the instantiated type;
+    /// otherwise returns `ty`.
     pub fn replace_if_possible<'t>(&mut self, ty: &'t Ty) -> Cow<'t, Ty> {
-        let ty = Cow::Borrowed(ty);
-        match &*ty {
-            Ty::Infer(tv) => match self.eq_relations.probe_value(*tv).known() {
-                Some(known_ty) => Cow::Owned(known_ty.clone()),
-                _ => ty,
-            },
-            _ => ty,
-        }
-    }
+        let mut ty = Cow::Borrowed(ty);
 
-    /// Returns indices of all variables that are not yet instantiated.
-    pub fn unsolved_variables(&mut self) -> Vec<TypeVarId> {
-        (0..self.values.len())
-            .filter_map(|i| {
-                let tv = TypeVarId::from_index(i as u32);
-                match self.eq_relations.probe_value(tv) {
-                    TypeVarValue::Unknown { .. } => Some(tv),
-                    TypeVarValue::Known { .. } => None,
+        // The type variable could resolve to an int/float variable. Therefore try to resolve up to
+        // three times; each type of variable shouldn't occur more than once
+        for _i in 0..3 {
+            match &*ty {
+                Ty::Infer(tv) => {
+                    let inner = tv.to_inner();
+                    match self.eq_relations.inlined_probe_value(inner).known() {
+                        Some(known_ty) => ty = Cow::Owned(known_ty.clone()),
+                        _ => return ty,
+                    }
                 }
-            })
-            .collect()
+                _ => return ty,
+            }
+        }
+
+        ty
     }
 
-    /// Returns true if the table still contains unresolved type variables
-    pub fn has_unsolved_variables(&mut self) -> bool {
-        (0..self.values.len()).any(|i| {
-            let tv = TypeVarId::from_index(i as u32);
-            match self.eq_relations.probe_value(tv) {
-                TypeVarValue::Unknown { .. } => true,
-                TypeVarValue::Known { .. } => false,
+    /// Resolves the type as far as currently possible, replacing type variables by their known
+    /// types. All types returned by the `infer_*` functions should be resolved as far as possible,
+    /// i.e. contain no type variables with known type.
+    pub(crate) fn resolve_ty_as_far_as_possible(&mut self, ty: Ty) -> Ty {
+        self.resolve_ty_as_far_as_possible_inner(&mut Vec::new(), ty)
+    }
+
+    pub(crate) fn resolve_ty_as_far_as_possible_inner(
+        &mut self,
+        tv_stack: &mut Vec<TypeVarId>,
+        ty: Ty,
+    ) -> Ty {
+        ty.fold(&mut |ty| match ty {
+            Ty::Infer(tv) => {
+                let inner = tv.to_inner();
+                if tv_stack.contains(&inner) {
+                    return tv.fallback_value();
+                }
+                if let Some(known_ty) = self.eq_relations.inlined_probe_value(inner).known() {
+                    tv_stack.push(inner);
+                    let result =
+                        self.resolve_ty_as_far_as_possible_inner(tv_stack, known_ty.clone());
+                    tv_stack.pop();
+                    result
+                } else {
+                    ty
+                }
             }
+            _ => ty,
         })
     }
-}
 
-pub struct Snapshot {
-    snapshot: ena::snapshot_vec::Snapshot,
-    eq_snapshot: ena::unify::Snapshot<InPlace<TypeVarId>>,
-    bomb: DropBomb,
-}
-
-impl TypeVariableTable {
-    /// Creates a snapshot of the type variable state. This snapshot must later be committed
-    /// (`commit`) or rolled back (`rollback_to()`). Nested snapshots are permitted but must be
-    /// processed in a stack-like fashion.
-    pub fn snapshot(&mut self) -> Snapshot {
-        Snapshot {
-            snapshot: self.values.start_snapshot(),
-            eq_snapshot: self.eq_relations.snapshot(),
-            bomb: DropBomb::new("Snapshot must be committed or rolled back"),
-        }
+    /// Resolves the type completely; type variables without known type are replaced by Ty::Unknown.
+    pub(crate) fn resolve_ty_completely(&mut self, ty: Ty) -> Ty {
+        self.resolve_ty_completely_inner(&mut Vec::new(), ty)
     }
 
-    /// Undoes all changes since the snapshot was created. Any snapshot created since that point
-    /// must already have been committed or rolled back.
-    pub fn rollback_to(&mut self, s: Snapshot) {
-        let Snapshot {
-            snapshot,
-            eq_snapshot,
-            mut bomb,
-        } = s;
-        self.values.rollback_to(snapshot);
-        self.eq_relations.rollback_to(eq_snapshot);
-        bomb.defuse();
+    pub(crate) fn resolve_ty_completely_inner(
+        &mut self,
+        tv_stack: &mut Vec<TypeVarId>,
+        ty: Ty,
+    ) -> Ty {
+        ty.fold(&mut |ty| match ty {
+            Ty::Infer(tv) => {
+                let inner = tv.to_inner();
+                if tv_stack.contains(&inner) {
+                    return tv.fallback_value();
+                }
+                if let Some(known_ty) = self.eq_relations.inlined_probe_value(inner).known() {
+                    // known_ty may contain other variables that are known by now
+                    tv_stack.push(inner);
+                    let result = self.resolve_ty_completely_inner(tv_stack, known_ty.clone());
+                    tv_stack.pop();
+                    result
+                } else {
+                    tv.fallback_value()
+                }
+            }
+            _ => ty,
+        })
     }
 
-    /// Commits all changes since the snapshot was created, making them permanent (unless this
-    /// snapshot was created within another snapshot). Any snapshot created since that point
-    /// must already have been committed or rolled back.
-    pub fn commit(&mut self, s: Snapshot) {
-        let Snapshot {
-            snapshot,
-            eq_snapshot,
-            mut bomb,
-        } = s;
-        self.values.commit(snapshot);
-        self.eq_relations.commit(eq_snapshot);
-        bomb.defuse();
-    }
-}
-
-impl SnapshotVecDelegate for Delegate {
-    type Value = TypeVariableData;
-    type Undo = Instantiate;
-
-    fn reverse(_values: &mut Vec<TypeVariableData>, _action: Instantiate) {
-        // We don't actually have to *do* anything to reverse an
-        // instantiation; the value for a variable is stored in the
-        // `eq_relations` and hence its rollback code will handle
-        // it. In fact, we could *almost* just remove the
-        // `SnapshotVec` entirely, except that we would have to
-        // reproduce *some* of its logic, since we want to know which
-        // type variables have been instantiated since the snapshot
-        // was started, so we can implement `types_escaping_snapshot`.
-        //
-        // (If we extended the `UnificationTable` to let us see which
-        // values have been unified and so forth, that might also
-        // suffice.)
-    }
+    // /// Returns indices of all variables that are not yet instantiated.
+    // pub fn unsolved_variables(&mut self) -> Vec<TypeVarId> {
+    //     (0..self.values.len())
+    //         .filter_map(|i| {
+    //             let tv = TypeVarId::from_index(i as u32);
+    //             match self.eq_relations.probe_value(tv) {
+    //                 TypeVarValue::Unknown { .. } => Some(tv),
+    //                 TypeVarValue::Known { .. } => None,
+    //             }
+    //         })
+    //         .collect()
+    // }
+    //
+    // /// Returns true if the table still contains unresolved type variables
+    // pub fn has_unsolved_variables(&mut self) -> bool {
+    //     (0..self.values.len()).any(|i| {
+    //         let tv = TypeVarId::from_index(i as u32);
+    //         match self.eq_relations.probe_value(tv) {
+    //             TypeVarValue::Unknown { .. } => true,
+    //             TypeVarValue::Known { .. } => false,
+    //         }
+    //     })
+    // }
 }

@@ -1,3 +1,4 @@
+use crate::ty::infer::InferTy;
 use crate::{ApplicationTy, ArithOp, BinaryOp, CmpOp, Ty, TypeCtor};
 
 /// Given a binary operation and the type on the left of that operation, returns the expected type
@@ -21,6 +22,7 @@ pub(super) fn binary_op_rhs_expectation(op: BinaryOp, lhs_ty: Ty) -> Ty {
                 }
                 _ => Ty::Unknown,
             },
+            Ty::Infer(InferTy::IntVar(..)) | Ty::Infer(InferTy::FloatVar(..)) => lhs_ty,
             _ => Ty::Unknown,
         },
         BinaryOp::Assignment {
@@ -47,6 +49,7 @@ pub(super) fn binary_op_rhs_expectation(op: BinaryOp, lhs_ty: Ty) -> Ty {
                 TypeCtor::Bool | TypeCtor::Int(_) => lhs_ty,
                 _ => Ty::Unknown,
             },
+            Ty::Infer(InferTy::IntVar(..)) => lhs_ty,
             _ => Ty::Unknown,
         },
         BinaryOp::CmpOp(CmpOp::Ord { .. })
@@ -56,6 +59,7 @@ pub(super) fn binary_op_rhs_expectation(op: BinaryOp, lhs_ty: Ty) -> Ty {
                 TypeCtor::Int(_) | TypeCtor::Float(_) => lhs_ty,
                 _ => Ty::Unknown,
             },
+            Ty::Infer(InferTy::IntVar(..)) | Ty::Infer(InferTy::FloatVar(..)) => lhs_ty,
             _ => Ty::Unknown,
         },
     }
@@ -70,6 +74,7 @@ pub(super) fn binary_op_return_ty(op: BinaryOp, rhs_ty: Ty) -> Ty {
                 TypeCtor::Int(_) | TypeCtor::Float(_) => rhs_ty,
                 _ => Ty::Unknown,
             },
+            Ty::Infer(InferTy::IntVar(..)) | Ty::Infer(InferTy::FloatVar(..)) => rhs_ty,
             _ => Ty::Unknown,
         },
         BinaryOp::CmpOp(_) | BinaryOp::LogicOp(_) => Ty::simple(TypeCtor::Bool),
