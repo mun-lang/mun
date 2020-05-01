@@ -11,13 +11,13 @@ pub mod hub;
 mod tests;
 
 use std::ffi::{c_void, CStr, CString};
-use std::os::raw::c_char;
+use std::{os::raw::c_char, time::Duration};
 
 use crate::error::ErrorHandle;
 use crate::hub::HUB;
 use failure::err_msg;
 use mun_abi::{FunctionInfo, StructInfo, TypeInfo};
-use mun_runtime::{Runtime, RuntimeBuilder};
+use mun_runtime::{Runtime, RuntimeOptions};
 
 pub(crate) type Token = usize;
 
@@ -77,7 +77,13 @@ pub unsafe extern "C" fn mun_runtime_create(
         }
     };
 
-    let runtime = match RuntimeBuilder::new(library_path).spawn() {
+    let options = RuntimeOptions {
+        library_path: library_path.into(),
+        delay: Duration::from_millis(10),
+        user_functions: Default::default(),
+    };
+
+    let runtime = match Runtime::new(options) {
         Ok(runtime) => runtime,
         Err(e) => return HUB.errors.register(Box::new(e)),
     };

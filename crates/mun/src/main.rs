@@ -94,7 +94,7 @@ fn build(matches: &ArgMatches) -> Result<(), failure::Error> {
 
 /// Starts the runtime with the specified library and invokes function `entry`.
 fn start(matches: &ArgMatches) -> Result<(), failure::Error> {
-    let runtime = Rc::new(RefCell::new(runtime(matches)?));
+    let runtime = runtime(matches)?;
 
     let borrowed = runtime.borrow();
     let entry_point = matches.value_of("entry").unwrap_or("main");
@@ -168,7 +168,7 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOption
     })
 }
 
-fn runtime(matches: &ArgMatches) -> Result<Runtime, failure::Error> {
+fn runtime(matches: &ArgMatches) -> Result<Rc<RefCell<Runtime>>, failure::Error> {
     let builder = RuntimeBuilder::new(
         matches.value_of("LIBRARY").unwrap(), // Safe because its a required arg
     );

@@ -19,10 +19,12 @@ use memory::gc::{self, GcRuntime};
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 use rustc_hash::FxHashMap;
 use std::{
+    cell::RefCell,
     collections::HashMap,
     ffi, io, mem,
     path::{Path, PathBuf},
     ptr::NonNull,
+    rc::Rc,
     string::ToString,
     sync::{
         mpsc::{channel, Receiver},
@@ -64,10 +66,6 @@ impl RuntimeBuilder {
                 user_functions: Default::default(),
             },
         }
-        .insert_fn(
-            "new",
-            new as extern "C" fn(*const abi::TypeInfo, *mut ffi::c_void) -> *const *mut ffi::c_void,
-        )
     }
 
     /// Sets the `delay`.
@@ -85,8 +83,8 @@ impl RuntimeBuilder {
     }
 
     /// Spawns a [`Runtime`] with the builder's options.
-    pub fn spawn(self) -> Result<Runtime, Error> {
-        Runtime::new(self.options)
+    pub fn spawn(self) -> Result<Rc<RefCell<Runtime>>, Error> {
+        Runtime::new(self.options).map(|runtime| Rc::new(RefCell::new(runtime)))
     }
 }
 
@@ -201,10 +199,17 @@ impl Runtime {
     /// Constructs a new `Runtime` that loads the library at `library_path` and its
     /// dependencies. The `Runtime` contains a file watcher that is triggered with an interval
     /// of `dur`.
-    pub fn new(options: RuntimeOptions) -> Result<Runtime, Error> {
+    pub fn new(mut options: RuntimeOptions) -> Result<Runtime, Error> {
         let (tx, rx) = channel();
 
         let mut dispatch_table = DispatchTable::default();
+
+        // Add internal functions
+        options.user_functions.push(IntoFunctionInfo::into(
+            new as extern "C" fn(*const abi::TypeInfo, *mut ffi::c_void) -> *const *mut ffi::c_void,
+            "new",
+            abi::Privacy::Public,
+        ));
 
         let mut storages = Vec::with_capacity(options.user_functions.len());
         for (info, storage) in options.user_functions.into_iter() {

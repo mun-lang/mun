@@ -1,7 +1,5 @@
 use mun_runtime::{invoke_fn, RetryResultExt, RuntimeBuilder};
-use std::cell::RefCell;
 use std::env;
-use std::rc::Rc;
 
 // How to run?
 // 1. On the CLI, navigate to the `crates/mun_runtime/examples` directory.
@@ -15,7 +13,6 @@ fn main() {
         .spawn()
         .expect("Failed to spawn Runtime");
 
-    let runtime = Rc::new(RefCell::new(runtime));
     loop {
         let n: i64 = invoke_fn!(runtime, "nth").wait();
         let result: i64 = invoke_fn!(runtime, "fibonacci", n).wait();
