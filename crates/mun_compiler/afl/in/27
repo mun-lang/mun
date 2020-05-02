@@ -1,0 +1,5 @@
+pub fn add(a: uint, b: uint) -> uint { a + b }
+pub fn subtract(a: uint, b: uint) -> uint { a - b }
+pub fn multiply(a: uint, b: uint) -> uint { a * b }
+pub fn divide(a: uint, b: uint) -> uint { a / b }
+pub fn remainder(a: uint, b: uint) -> uint { a % b }

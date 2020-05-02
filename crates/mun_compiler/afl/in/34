@@ -1,0 +1,24 @@
+pub fn assign(a: i16, b: i16) -> i16 {
+    a = b;
+    a
+}
+pub fn assign_add(a: i16, b: i16) -> i16 {
+    a += b;
+    a
+}
+pub fn assign_subtract(a: i16, b: i16) -> i16 {
+    a -= b;
+    a
+}
+pub fn assign_multiply(a: i16, b: i16) -> i16 {
+    a *= b;
+    a
+}
+pub fn assign_divide(a: i16, b: i16) -> i16 {
+    a /= b;
+    a
+}
+pub fn assign_remainder(a: i16, b: i16) -> i16 {
+    a %= b;
+    a
+}

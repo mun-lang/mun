@@ -1,0 +1,29 @@
+pub fn add(a:int, b:int) -> int {
+  let result = a
+  result += b
+  result
+}
+
+pub fn subtract(a:int, b:int) -> int {
+  let result = a
+  result -= b
+  result
+}
+
+pub fn multiply(a:int, b:int) -> int {
+  let result = a
+  result *= b
+  result
+}
+
+pub fn divide(a:int, b:int) -> int {
+  let result = a
+  result /= b
+  result
+}
+
+pub fn remainder(a:int, b:int) -> int {
+  let result = a
+  result %= b
+  result
+}

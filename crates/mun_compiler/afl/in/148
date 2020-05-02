@@ -1,0 +1,4 @@
+fn bar(a: float, b: bool) {
+    a = !a; // mismatched type
+    b = -b; // mismatched type
+}

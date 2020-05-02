@@ -1,0 +1,4 @@
+fn test()->int {
+    return; // error: mismatched type
+    return 5;
+}

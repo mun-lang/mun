@@ -1,0 +1,8 @@
+fn foo()->int {
+    break; // error: not in a loop
+    loop { break 3; break 3.0; } // error: mismatched type
+    let a:int = loop { break 3.0; } // error: mismatched type
+    loop { break 3; }
+    let a:int = loop { break loop { break 3; } }
+    loop { break loop { break 3.0; } } // error: mismatched type
+}

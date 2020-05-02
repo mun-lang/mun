@@ -1,0 +1,4 @@
+pub fn add_three(a:int) -> int {
+  a += 3;
+  a
+}

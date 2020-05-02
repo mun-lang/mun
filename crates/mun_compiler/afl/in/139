@@ -1,0 +1,20 @@
+struct Foo;
+struct Bar {
+    a: float,
+}
+struct Baz(float, int);
+
+fn main() {
+    let a: Foo = Foo;
+    let b: Bar = Bar { a: 1.23, };
+    let c = Baz(1.23, 1);
+
+    let a = Foo{}; // error: mismatched struct literal kind. expected `unit struct`, found `record`
+    let a = Foo(); // error: mismatched struct literal kind. expected `unit struct`, found `tuple`
+    let b = Bar; // error: mismatched struct literal kind. expected `record`, found `unit struct`
+    let b = Bar(); // error: mismatched struct literal kind. expected `record`, found `tuple`
+    let b = Bar{}; // error: missing record fields: a
+    let c = Baz; // error: mismatched struct literal kind. expected `tuple`, found `unit struct`
+    let c = Baz{}; // error: mismatched struct literal kind. expected `tuple`, found `record`
+    let c = Baz(); // error: this tuple struct literal has 2 fields but 0 fields were supplied
+}

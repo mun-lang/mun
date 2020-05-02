@@ -1,0 +1,8 @@
+pub fn assign_leftshift(a: i64, b: i64) -> i64 {
+    a <<= b;
+    a
+}
+pub fn assign_rightshift(a: i64, b: i64) -> i64 {
+    a >>= b;
+    a
+}

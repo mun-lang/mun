@@ -1,0 +1,22 @@
+struct(value) Bar(float, Foo);
+struct(value) Foo { a: int };
+
+fn bar_1(bar: Bar) -> Foo {
+    bar.1
+}
+
+fn foo_a(foo: Foo) -> int {
+    foo.a
+}
+
+pub fn bar_1_foo_a(bar: Bar) -> int {
+    foo_a(bar_1(bar))
+}
+
+pub fn main() -> int {
+    let a: Foo = Foo { a: 5 };
+    let b: Bar = Bar(1.23, a);
+    let aa_lhs = a.a + 2;
+    let aa_rhs = 2 + a.a;
+    aa_lhs + aa_rhs
+}

@@ -1,0 +1,6 @@
+struct(gc) Foo { a: int };
+
+pub fn main(c:int) -> int {
+    let b = Foo { a: c + 5 }
+    b.a
+}

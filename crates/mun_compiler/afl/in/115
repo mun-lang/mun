@@ -1,0 +1,12 @@
+pub fn assign_bitand(a: i64, b: i64) -> i64 {
+    a &= b;
+    a
+}
+pub fn assign_bitor(a: i64, b: i64) -> i64 {
+    a |= b;
+    a
+}
+pub fn assign_bitxor(a: i64, b: i64) -> i64 {
+    a ^= b;
+    a
+}

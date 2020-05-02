@@ -1,0 +1,6 @@
+pub fn equals(a: u16, b: u16) -> bool { a == b }
+pub fn not_equal(a: u16, b: u16) -> bool { a != b}
+pub fn less(a: u16, b: u16) -> bool { a < b }
+pub fn less_equal(a: u16, b: u16) -> bool { a <= b }
+pub fn greater(a: u16, b: u16) -> bool { a > b }
+pub fn greater_equal(a: u16, b: u16) -> bool { a >= b }

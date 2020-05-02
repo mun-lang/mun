@@ -1,0 +1,5 @@
+pub fn add(a: i16, b: i16) -> i16 { a + b }
+pub fn subtract(a: i16, b: i16) -> i16 { a - b }
+pub fn multiply(a: i16, b: i16) -> i16 { a * b }
+pub fn divide(a: i16, b: i16) -> i16 { a / b }
+pub fn remainder(a: i16, b: i16) -> i16 { a % b }

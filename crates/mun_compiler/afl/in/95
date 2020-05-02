@@ -1,0 +1,7 @@
+pub fn main(a:int) -> int {
+    if a > 4 {
+        return a;
+    } else {
+        return a - 1;
+    }
+}

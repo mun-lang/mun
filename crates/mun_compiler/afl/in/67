@@ -1,0 +1,8 @@
+pub fn assign_leftshift(a: int, b: int) -> int {
+    a <<= b;
+    a
+}
+pub fn assign_rightshift(a: int, b: int) -> int {
+    a >>= b;
+    a
+}

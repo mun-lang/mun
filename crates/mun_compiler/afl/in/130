@@ -1,0 +1,6 @@
+pub fn equals(a: i64, b: i64) -> bool { a == b }
+pub fn not_equal(a: i64, b: i64) -> bool { a != b}
+pub fn less(a: i64, b: i64) -> bool { a < b }
+pub fn less_equal(a: i64, b: i64) -> bool { a <= b }
+pub fn greater(a: i64, b: i64) -> bool { a > b }
+pub fn greater_equal(a: i64, b: i64) -> bool { a >= b }

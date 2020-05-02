@@ -1,0 +1,24 @@
+pub fn assign(a: float, b: float) -> float {
+    a = b;
+    a
+}
+pub fn assign_add(a: float, b: float) -> float {
+    a += b;
+    a
+}
+pub fn assign_subtract(a: float, b: float) -> float {
+    a -= b;
+    a
+}
+pub fn assign_multiply(a: float, b: float) -> float {
+    a *= b;
+    a
+}
+pub fn assign_divide(a: float, b: float) -> float {
+    a /= b;
+    a
+}
+pub fn assign_remainder(a: float, b: float) -> float {
+    a %= b;
+    a
+}

@@ -1,0 +1,2 @@
+pub fn leftshift(a: i128, b: i128) -> i128 { a << b }
+pub fn rightshift(a: i128, b: i128) -> i128 { a >> b }

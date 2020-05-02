@@ -1,0 +1,12 @@
+pub fn assign_bitand(a: i32, b: i32) -> i32 {
+    a &= b;
+    a
+}
+pub fn assign_bitor(a: i32, b: i32) -> i32 {
+    a |= b;
+    a
+}
+pub fn assign_bitxor(a: i32, b: i32) -> i32 {
+    a ^= b;
+    a
+}

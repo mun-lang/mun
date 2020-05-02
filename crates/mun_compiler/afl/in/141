@@ -1,0 +1,39 @@
+fn main(){
+    123;
+    123u8;
+    123u16;
+    123u32;
+    123u64;
+    123u128;
+    123uint;
+    1_000_000_u32;
+    123i8;
+    123i16;
+    123i32;
+    123i64;
+    123i128;
+    123int;
+    1_000_000_i32;
+    1_000_123.0e-2;
+    1_000_123.0e-2f32;
+    1_000_123.0e-2f64;
+    1_000_123.0e-2float;
+    9999999999999999999999999999999999999999999_f64;
+}
+
+fn add(a:u32) -> u32 {
+    a + 12u32
+}
+
+fn errors() {
+    0b22222; // invalid literal
+    0b00010_f32; // non-10 base float
+    0o71234_f32; // non-10 base float
+    1234_foo; // invalid suffix
+    1234.0_bar; // invalid suffix
+    9999999999999999999999999999999999999999999; // too large
+    256_u8; // literal out of range for `u8`
+    128_i8; // literal out of range for `i8`
+    12712371237123_u32; // literal out of range `u32`
+    9999999999999999999999999; // literal out of range `int`
+}

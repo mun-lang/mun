@@ -1,0 +1,6 @@
+fn test(a:int, b:float, c:never, d:bool) -> bool {
+    a;
+    b;
+    c;
+    d
+}

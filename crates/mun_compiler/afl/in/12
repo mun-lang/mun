@@ -1,0 +1,10 @@
+pub fn foo(n:int) {
+    while n<3 {
+        n += 1;
+    };
+
+    // This will be completely optimized out
+    while n<4 {
+        break;
+    };
+}

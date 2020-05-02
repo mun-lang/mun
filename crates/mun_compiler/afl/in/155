@@ -1,0 +1,21 @@
+struct Foo {
+    a: float,
+    b: int,
+}
+struct Bar(float, int)
+struct Baz;
+
+fn main() {
+    let foo = Foo { a: 1.23, b: 4 };
+    foo.a
+    foo.b
+    foo.c // error: attempted to access a non-existent field in a struct.
+    let bar = Bar(1.23, 4);
+    bar.0
+    bar.1
+    bar.2 // error: attempted to access a non-existent field in a struct.
+    let baz = Baz;
+    baz.a // error: attempted to access a non-existent field in a struct.
+    let f = 1.0
+    f.0; // error: attempted to access a field on a primitive type.
+}

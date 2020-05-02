@@ -1,0 +1,10 @@
+pub fn assign(a: bool, b: bool) -> bool {
+    a = b;
+    a
+}
+// TODO: Add errors
+// a += b;
+// a *= b;
+// a -= b;
+// a /= b;
+// a %= b;

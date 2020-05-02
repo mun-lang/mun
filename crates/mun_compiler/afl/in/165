@@ -1,0 +1,4 @@
+fn foo() {
+    while true {};
+    while { true } {};
+}

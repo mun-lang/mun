@@ -1,0 +1,14 @@
+pub fn fibonacci(n:int) -> int {
+    let a = 0;
+    let b = 1;
+    let i = 1;
+    loop {
+        if i > n {
+            return a
+        }
+        let sum = a + b;
+        a = b;
+        b = sum;
+        i += 1;
+    }
+}

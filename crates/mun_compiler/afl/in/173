@@ -1,0 +1,4 @@
+fn foo() {
+    let a = --3;
+    let b = !!true;
+}

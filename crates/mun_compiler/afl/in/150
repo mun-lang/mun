@@ -1,0 +1,7 @@
+fn test() {
+    let a = if true { 3 } else { 4 }
+    let b = if true { 3 }               // Missing else branch
+    let c = if true { 3; }
+    let d = if true { 5 } else if false { 3 } else { 4 }
+    let e = if true { 5.0 } else { 5 }  // Mismatched branches
+}

@@ -1,0 +1,4 @@
+pub fn not(a: i8) -> i8 { !a }
+pub fn bitand(a: i8, b: i8) -> i8 { a & b }
+pub fn bitor(a: i8, b: i8) -> i8 { a | b }
+pub fn bitxor(a: i8, b: i8) -> i8 { a ^ b }

@@ -1,0 +1,5 @@
+pub fn add(a: int, b: int) -> int { a + b }
+pub fn subtract(a: int, b: int) -> int { a - b }
+pub fn multiply(a: int, b: int) -> int { a * b }
+pub fn divide(a: int, b: int) -> int { a / b }
+pub fn remainder(a: int, b: int) -> int { a % b }

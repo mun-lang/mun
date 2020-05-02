@@ -1,0 +1,16 @@
+pub fn foo(a:int) -> int {
+    let a = a+1;
+    {
+        let a = a+2;
+    }
+    a+3
+}
+
+pub fn bar(a:int) -> int {
+    let a = a+1;
+    let a = {
+        let a = a+2;
+        a
+    }
+    a+3
+}

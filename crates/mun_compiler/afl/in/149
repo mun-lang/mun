@@ -1,0 +1,5 @@
+fn foo() {
+    let b = false;
+    let n = 1;
+    let _ = b + n; // error: invalid binary operation
+}

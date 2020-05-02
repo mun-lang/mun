@@ -1,0 +1,11 @@
+pub fn foo(n:int) -> int {
+    loop {
+        if n > 5 {
+            break n;
+        }
+        if n > 10 {
+            break 10;
+        }
+        n += 1;
+    }
+}

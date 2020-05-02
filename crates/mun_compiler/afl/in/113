@@ -1,0 +1,12 @@
+pub fn assign_bitand(a: u8, b: u8) -> u8 {
+    a &= b;
+    a
+}
+pub fn assign_bitor(a: u8, b: u8) -> u8 {
+    a |= b;
+    a
+}
+pub fn assign_bitxor(a: u8, b: u8) -> u8 {
+    a ^= b;
+    a
+}

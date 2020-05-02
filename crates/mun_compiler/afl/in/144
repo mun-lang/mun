@@ -1,0 +1,14 @@
+fn foo(a:int)->int {
+    if a > 4 {
+        return 4;
+    }
+    a
+}
+
+fn bar(a:int)->int {
+    if a > 4 {
+        return 4;
+    } else {
+        return 1;
+    }
+}

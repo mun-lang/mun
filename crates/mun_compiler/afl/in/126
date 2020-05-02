@@ -1,0 +1,6 @@
+pub fn equals(a: f32, b: f32) -> bool { a == b }
+pub fn not_equal(a: f32, b: f32) -> bool { a != b}
+pub fn less(a: f32, b: f32) -> bool { a < b }
+pub fn less_equal(a: f32, b: f32) -> bool { a <= b }
+pub fn greater(a: f32, b: f32) -> bool { a > b }
+pub fn greater_equal(a: f32, b: f32) -> bool { a >= b }

@@ -1,0 +1,13 @@
+struct Foo;
+struct(gc) Bar {
+    f: float,
+    i: int,
+}
+struct(value) Baz(float, int);
+
+
+fn main() {
+    let foo: Foo;
+    let bar: Bar;
+    let baz: Baz;
+}

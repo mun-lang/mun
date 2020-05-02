@@ -1,0 +1,6 @@
+pub fn equals(a: int, b: int) -> bool { a == b }
+pub fn not_equal(a: int, b: int) -> bool { a != b}
+pub fn less(a: int, b: int) -> bool { a < b }
+pub fn less_equal(a: int, b: int) -> bool { a <= b }
+pub fn greater(a: int, b: int) -> bool { a > b }
+pub fn greater_equal(a: int, b: int) -> bool { a >= b }

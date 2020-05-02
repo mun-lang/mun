@@ -1,0 +1,29 @@
+fn foo() {
+    let a:int;
+    if true { a = 3; } else { a = 4; }
+    let b = a + 4;  // correct, `a` is initialized either way
+}
+
+fn bar() {
+    let a:int;
+    if true { a = 3; }
+    let b = a + 4;  // `a` is possibly-unitialized
+}
+
+fn baz() {
+    let a:int;
+    if true { return } else { a = 4 };
+    let b = a + 4;  // correct, `a` is initialized either way
+}
+
+fn foz() {
+    let a:int;
+    if true { a = 4 } else { return };
+    let b = a + 4;  // correct, `a` is initialized either way
+}
+
+fn boz() {
+    let a:int;
+    return;
+    let b = a + 4;  // `a` is not initialized but this is dead code anyway
+}

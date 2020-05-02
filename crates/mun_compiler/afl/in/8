@@ -1,0 +1,3 @@
+fn private_main() {
+    let a = 1;
+}

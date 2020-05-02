@@ -1,0 +1,4 @@
+pub fn not(a: i128) -> i128 { !a }
+pub fn bitand(a: i128, b: i128) -> i128 { a & b }
+pub fn bitor(a: i128, b: i128) -> i128 { a | b }
+pub fn bitxor(a: i128, b: i128) -> i128 { a ^ b }

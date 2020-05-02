@@ -1,0 +1,6 @@
+pub fn and(a: bool, b: bool) -> bool {
+    a && b
+}
+pub fn or(a: bool, b: bool) -> bool {
+    a || b
+}

@@ -1,0 +1,4 @@
+fn foo(a:int) {
+    a += 3;
+    3 = 5; // error: invalid left hand side of expression
+}

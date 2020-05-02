@@ -1,0 +1,8 @@
+struct(value) Bar(float, int, bool, Foo);
+struct(value) Foo { a: int };
+struct(value) Baz;
+pub fn foo() {
+    let a: Foo = Foo { a: 5 };
+    let b: Bar = Bar(1.23, a.a, true, a);
+    let c: Baz = Baz;
+}

@@ -1,0 +1,7 @@
+pub fn test_true() -> bool {
+    true
+}
+
+pub fn test_false() -> bool {
+    false
+}

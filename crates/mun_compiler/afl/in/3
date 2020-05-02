@@ -1,0 +1,4 @@
+pub fn not(a: int) -> int { !a }
+pub fn bitand(a: int, b: int) -> int { a & b }
+pub fn bitor(a: int, b: int) -> int { a | b }
+pub fn bitxor(a: int, b: int) -> int { a ^ b }

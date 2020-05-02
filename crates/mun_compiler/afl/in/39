@@ -1,0 +1,8 @@
+pub fn assign_leftshift(a: u8, b: u8) -> u8 {
+    a <<= b;
+    a
+}
+pub fn assign_rightshift(a: u8, b: u8) -> u8 {
+    a >>= b;
+    a
+}

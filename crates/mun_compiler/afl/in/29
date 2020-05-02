@@ -1,0 +1,7 @@
+struct(gc) Foo { a: int, b: int };
+
+pub fn foo() {
+    let a = Foo { a: 3, b: 4 };
+    a.b += 3;
+    let b = a;
+}

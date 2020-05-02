@@ -1,0 +1,13 @@
+fn integer() -> i32 {
+        0
+    }
+
+    fn large_unsigned_integer() -> u128 {
+        0
+    }
+
+    fn with_let() -> u16 {
+        let b = 4;
+        let a = 4;
+        a
+    }

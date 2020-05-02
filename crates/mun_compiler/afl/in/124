@@ -1,0 +1,1 @@
+pub fn negate(a: f32) -> f32 { -a }

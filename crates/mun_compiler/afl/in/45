@@ -1,0 +1,2 @@
+pub fn leftshift(a: uint, b: uint) -> uint { a << b }
+pub fn rightshift(a: uint, b: uint) -> uint { a >> b }

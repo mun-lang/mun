@@ -1,0 +1,6 @@
+fn bar() {
+    let a = 3;
+}
+pub fn foo(a:int) {
+    let c = bar()
+}

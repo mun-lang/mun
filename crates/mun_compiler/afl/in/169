@@ -1,0 +1,5 @@
+fn foo() {
+    break;
+    if break { 3; }
+    if break 4 { 3; }
+}

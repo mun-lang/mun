@@ -1,0 +1,4 @@
+fn foo(a: int, b: bool) {
+    a = -a;
+    b = !b;
+}

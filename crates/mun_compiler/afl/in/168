@@ -1,0 +1,4 @@
+fn main() {
+    let _ = a || b;
+    let _ = a && b;
+}

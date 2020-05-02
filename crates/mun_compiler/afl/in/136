@@ -1,0 +1,5 @@
+fn foo(b:int) {
+    let a:int;
+    while b < 4 { b += 1; a = b; a += 1; }
+    let c = a + 4;  // `a` is possibly-unitialized
+}

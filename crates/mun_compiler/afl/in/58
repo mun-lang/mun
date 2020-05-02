@@ -1,0 +1,18 @@
+struct(value) Value(int, int);
+struct(gc) Heap(float, float);
+
+pub fn assign_value(a: Value, b: Value) -> Value {
+    a = b;
+    a
+}
+
+pub fn assign_heap(a: Heap, b: Heap) -> Heap {
+    a = b;
+    a
+}
+// TODO: Add errors
+// a += b;
+// a *= b;
+// a -= b;
+// a /= b;
+// a %= b;

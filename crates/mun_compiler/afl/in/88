@@ -1,0 +1,4 @@
+pub fn main() -> int {
+    return 5;
+    let a = 3; // Nothing regarding this statement should be in the IR
+}

@@ -1,0 +1,13 @@
+fn main() {
+    let a = b;
+    a += b;
+    a -= b;
+    a *= b;
+    a /= b;
+    a %= b;
+    a <<= b;
+    a >>= b;
+    a &= b;
+    a |= b;
+    a ^= b;
+}

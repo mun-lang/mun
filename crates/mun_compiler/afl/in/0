@@ -1,0 +1,12 @@
+pub fn assign_bitand(a: u128, b: u128) -> u128 {
+    a &= b;
+    a
+}
+pub fn assign_bitor(a: u128, b: u128) -> u128 {
+    a |= b;
+    a
+}
+pub fn assign_bitxor(a: u128, b: u128) -> u128 {
+    a ^= b;
+    a
+}

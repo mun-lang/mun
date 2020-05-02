@@ -1,0 +1,13 @@
+fn add_impl(a:int, b:int) -> int {
+    a+b
+}
+
+fn add(a:int, b:int) -> int {
+  add_impl(a,b)
+}
+
+pub fn test() -> int {
+  add(4,5)
+  add_impl(4,5)
+  add(4,5)
+}

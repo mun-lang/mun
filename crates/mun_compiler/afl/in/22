@@ -1,0 +1,7 @@
+fn do_the_things(n: int) -> int {
+    n + 7
+}
+
+pub fn main() {
+    do_the_things(3);
+}

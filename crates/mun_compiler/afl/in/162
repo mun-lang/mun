@@ -1,0 +1,4 @@
+fn bar(i:number) { }
+fn foo(i:number) {
+  bar(i+1)
+}

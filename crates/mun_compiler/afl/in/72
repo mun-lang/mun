@@ -1,0 +1,24 @@
+pub fn assign(a: u32, b: u32) -> u32 {
+    a = b;
+    a
+}
+pub fn assign_add(a: u32, b: u32) -> u32 {
+    a += b;
+    a
+}
+pub fn assign_subtract(a: u32, b: u32) -> u32 {
+    a -= b;
+    a
+}
+pub fn assign_multiply(a: u32, b: u32) -> u32 {
+    a *= b;
+    a
+}
+pub fn assign_divide(a: u32, b: u32) -> u32 {
+    a /= b;
+    a
+}
+pub fn assign_remainder(a: u32, b: u32) -> u32 {
+    a %= b;
+    a
+}
