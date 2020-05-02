@@ -192,7 +192,7 @@ mod tests {
     #[test]
     fn test_mismatched_type_error() {
         insta::assert_display_snapshot!(compilation_errors(
-            "\n\nfn main() {\nlet a: float = false;\n\nlet b: bool = 22;\n}"
+            "\n\nfn main() {\nlet a: f64 = false;\n\nlet b: bool = 22;\n}"
         ));
     }
 

@@ -98,9 +98,9 @@ pub fn infer_query(db: &impl HirDatabase, def: DefWithBody) -> Arc<InferenceResu
     Arc::new(ctx.resolve_all())
 }
 
-/// Placeholders required during type inferencing. There are seperate values for `int` and `float`
-/// types and for generic type variables. The first being used to distinguish literals; e.g `100`
-/// can be represented by a lot of different integer types.
+/// Placeholders required during type inferencing. There are seperate values for integer and
+/// floating-point types and for generic type variables. The first being used to distinguish
+/// literals; e.g `100` can be represented by a lot of different integer types.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum InferTy {
     TypeVar(type_variable::TypeVarId),
@@ -118,8 +118,8 @@ impl InferTy {
     fn fallback_value(self) -> Ty {
         match self {
             InferTy::TypeVar(..) => Ty::Unknown,
-            InferTy::IntVar(..) => Ty::simple(TypeCtor::Int(IntTy::int())),
-            InferTy::FloatVar(..) => Ty::simple(TypeCtor::Float(FloatTy::float())),
+            InferTy::IntVar(..) => Ty::simple(TypeCtor::Int(IntTy::i32())),
+            InferTy::FloatVar(..) => Ty::simple(TypeCtor::Float(FloatTy::f64())),
         }
     }
 }
@@ -914,8 +914,8 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         //        self.diagnostics.push(InferenceDiagnostic::PatInferenceFailed {
         //            pat
         //        });
-        // Currently this should never happen because we can only infer `int` and `float` types
-        // which always have a fallback value.
+        // Currently this should never happen because we can only infer integer and floating-point
+        // types which always have a fallback value.
         panic!("pattern failed inferencing");
     }
 
@@ -923,8 +923,8 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         //        self.diagnostics.push(InferenceDiagnostic::ExprInferenceFailed {
         //            expr
         //        });
-        // Currently this should never happen because we can only infer `int` and `float` types
-        // which always have a fallback value.
+        // Currently this should never happen because we can only infer integer and floating-point
+        // types which always have a fallback value.
         panic!("expression failed inferencing");
     }
 }

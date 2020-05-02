@@ -32,7 +32,7 @@ pub fn runtime_from_file<P: AsRef<Path>>(p: P) -> Rc<RefCell<mun_runtime::Runtim
     }
 
     let out_path = driver.write_assembly(file_id).unwrap();
-    Rc::new(RefCell::new(RuntimeBuilder::new(out_path).spawn().unwrap()))
+    RuntimeBuilder::new(out_path).spawn().unwrap()
 }
 
 pub fn lua_from_file<P: AsRef<Path>>(p: P) -> Lua {

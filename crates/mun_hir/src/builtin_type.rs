@@ -21,14 +21,12 @@ pub enum IntBitness {
     X32,
     X64,
     X128,
-    Undefined,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum FloatBitness {
     X32,
     X64,
-    Undefined,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -54,7 +52,6 @@ impl BuiltinType {
     pub const ALL: &'static [(Name, BuiltinType)] = &[
         (name![bool],  BuiltinType::Bool),
 
-        (name![int],   BuiltinType::Int(BuiltinInt::INT)),
         (name![isize], BuiltinType::Int(BuiltinInt::ISIZE)),
         (name![i8],    BuiltinType::Int(BuiltinInt::I8)),
         (name![i16],   BuiltinType::Int(BuiltinInt::I16)),
@@ -62,7 +59,6 @@ impl BuiltinType {
         (name![i64],   BuiltinType::Int(BuiltinInt::I64)),
         (name![i128],  BuiltinType::Int(BuiltinInt::I128)),
 
-        (name![uint],  BuiltinType::Int(BuiltinInt::UINT)),
         (name![usize], BuiltinType::Int(BuiltinInt::USIZE)),
         (name![u8],    BuiltinType::Int(BuiltinInt::U8)),
         (name![u16],   BuiltinType::Int(BuiltinInt::U16)),
@@ -70,7 +66,6 @@ impl BuiltinType {
         (name![u64],   BuiltinType::Int(BuiltinInt::U64)),
         (name![u128],  BuiltinType::Int(BuiltinInt::U128)),
 
-        (name![float], BuiltinType::Float(BuiltinFloat::FLOAT)),
         (name![f32],   BuiltinType::Float(BuiltinFloat::F32)),
         (name![f64],   BuiltinType::Float(BuiltinFloat::F64)),
     ];
@@ -90,7 +85,6 @@ impl fmt::Display for BuiltinType {
                 (Signedness::Signed, IntBitness::X32) => "i32",
                 (Signedness::Signed, IntBitness::X64) => "i64",
                 (Signedness::Signed, IntBitness::X128) => "i128",
-                (Signedness::Signed, IntBitness::Undefined) => "int",
 
                 (Signedness::Unsigned, IntBitness::Xsize) => "usize",
                 (Signedness::Unsigned, IntBitness::X8) => "u8",
@@ -98,12 +92,10 @@ impl fmt::Display for BuiltinType {
                 (Signedness::Unsigned, IntBitness::X32) => "u32",
                 (Signedness::Unsigned, IntBitness::X64) => "u64",
                 (Signedness::Unsigned, IntBitness::X128) => "u128",
-                (Signedness::Unsigned, IntBitness::Undefined) => "uint",
             },
             BuiltinType::Float(BuiltinFloat { bitness }) => match bitness {
                 FloatBitness::X32 => "f32",
                 FloatBitness::X64 => "f64",
-                FloatBitness::Undefined => "float",
             },
         };
         f.write_str(type_name)
@@ -112,7 +104,6 @@ impl fmt::Display for BuiltinType {
 
 #[rustfmt::skip]
 impl BuiltinInt {
-    pub const INT  : BuiltinInt = BuiltinInt { signedness: Signedness::Signed, bitness: IntBitness::Undefined   };
     pub const ISIZE: BuiltinInt = BuiltinInt { signedness: Signedness::Signed, bitness: IntBitness::Xsize       };
     pub const I8   : BuiltinInt = BuiltinInt { signedness: Signedness::Signed, bitness: IntBitness::X8          };
     pub const I16  : BuiltinInt = BuiltinInt { signedness: Signedness::Signed, bitness: IntBitness::X16         };
@@ -120,7 +111,6 @@ impl BuiltinInt {
     pub const I64  : BuiltinInt = BuiltinInt { signedness: Signedness::Signed, bitness: IntBitness::X64         };
     pub const I128 : BuiltinInt = BuiltinInt { signedness: Signedness::Signed, bitness: IntBitness::X128        };
 
-    pub const UINT : BuiltinInt = BuiltinInt { signedness: Signedness::Unsigned, bitness: IntBitness::Undefined };
     pub const USIZE: BuiltinInt = BuiltinInt { signedness: Signedness::Unsigned, bitness: IntBitness::Xsize     };
     pub const U8   : BuiltinInt = BuiltinInt { signedness: Signedness::Unsigned, bitness: IntBitness::X8        };
     pub const U16  : BuiltinInt = BuiltinInt { signedness: Signedness::Unsigned, bitness: IntBitness::X16       };
@@ -131,7 +121,6 @@ impl BuiltinInt {
 
     pub fn from_suffix(suffix: &str) -> Option<BuiltinInt> {
         let res = match suffix {
-            "int"   => Self::INT,
             "isize" => Self::ISIZE,
             "i8"    => Self::I8,
             "i16"   => Self::I16,
@@ -139,7 +128,6 @@ impl BuiltinInt {
             "i64"   => Self::I64,
             "i128"  => Self::I128,
 
-            "uint"  => Self::UINT,
             "usize" => Self::USIZE,
             "u8"    => Self::U8,
             "u16"   => Self::U16,
@@ -157,13 +145,11 @@ impl BuiltinInt {
 impl BuiltinFloat {
     pub const F32:   BuiltinFloat = BuiltinFloat { bitness: FloatBitness::X32 };
     pub const F64:   BuiltinFloat = BuiltinFloat { bitness: FloatBitness::X64 };
-    pub const FLOAT: BuiltinFloat = BuiltinFloat { bitness: FloatBitness::Undefined };
 
     pub fn from_suffix(suffix: &str) -> Option<BuiltinFloat> {
         let res = match suffix {
             "f32" => BuiltinFloat::F32,
             "f64" => BuiltinFloat::F64,
-            "float" => BuiltinFloat::FLOAT,
             _ => return None,
         };
         Some(res)

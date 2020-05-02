@@ -12,8 +12,8 @@ fn issue_128() {
     test_snapshot(
         r#"
     // resources/script.mun
-    extern fn thing(n: int);
-    extern fn print(n: int) -> int;
+    extern fn thing(n: i32);
+    extern fn print(n: i32) -> i32;
 
     pub fn main() {
         // 1st
@@ -32,7 +32,7 @@ fn issue_128() {
 fn issue_133() {
     test_snapshot(
         r#"
-    fn do_the_things(n: int) -> int {
+    fn do_the_things(n: i32) -> i32 {
         n + 7
     }
     
@@ -54,19 +54,16 @@ fn literal_types() {
         let a = 123u32;
         let a = 123u64;
         let a = 123u128;
-        let a = 123uint;
         let a = 1_000_000_u32;
         let a = 123i8;
         let a = 123i16;
         let a = 123i32;
         let a = 123i64;
         let a = 123123123123123123123123123123123i128;
-        let a = 123int;
         let a = 1_000_000_i32;
         let a = 1_000_123.0e-2;
         let a = 1_000_123.0e-2f32;
         let a = 1_000_123.0e-2f64;
-        let a = 1_000_123.0e-2float;
     }
 
     pub fn add(a:u32) -> u32 {
@@ -89,7 +86,7 @@ fn function() {
 fn return_type() {
     test_snapshot(
         r#"
-    pub fn main() -> int {
+    pub fn main() -> i32 {
       0
     }
     "#,
@@ -100,7 +97,7 @@ fn return_type() {
 fn function_arguments() {
     test_snapshot(
         r#"
-    pub fn main(a:int) -> int {
+    pub fn main(a:i32) -> i32 {
       a
     }
     "#,
@@ -143,8 +140,8 @@ fn logic_op_bool() {
 fn assignment_op_struct() {
     test_snapshot(
         r#"
-    struct(value) Value(int, int);
-    struct(gc) Heap(float, float);
+    struct(value) Value(i32, i32);
+    struct(gc) Heap(f64, f64);
 
     pub fn assign_value(a: Value, b: Value) -> Value {
         a = b;
@@ -231,9 +228,7 @@ macro_rules! test_number_operator_types {
     };
 }
 
-test_number_operator_types!(
-    f32, f64, float, i8, i16, i32, i64, i128, int, u8, u16, u32, u64, u128, uint
-);
+test_number_operator_types!(f32, f64, i8, i16, i32, i64, i128, u8, u16, u32, u64, u128);
 
 macro_rules! test_negate_operator_types  {
     ($(
@@ -253,7 +248,7 @@ macro_rules! test_negate_operator_types  {
     };
 }
 
-test_negate_operator_types!(f32, f64, float, i8, i16, i32, i64, i128, int);
+test_negate_operator_types!(f32, f64, i8, i16, i32, i64, i128);
 
 macro_rules! test_bit_operator_types  {
     ($(
@@ -295,7 +290,7 @@ macro_rules! test_bit_operator_types  {
     };
 }
 
-test_bit_operator_types!(bool, i8, i16, i32, i64, i128, int, u8, u16, u32, u64, u128, uint);
+test_bit_operator_types!(bool, i8, i16, i32, i64, i128, u8, u16, u32, u64, u128);
 
 macro_rules! test_shift_operator_types  {
     ($(
@@ -331,13 +326,13 @@ macro_rules! test_shift_operator_types  {
     };
 }
 
-test_shift_operator_types!(i8, i16, i32, i64, i128, int, u8, u16, u32, u64, u128, uint);
+test_shift_operator_types!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128);
 
 #[test]
 fn let_statement() {
     test_snapshot(
         r#"
-    pub fn main(a:int) -> int {
+    pub fn main(a:i32) -> i32 {
       let b = a+1
       b
     }
@@ -361,31 +356,31 @@ fn invalid_binary_ops() {
 fn update_operators() {
     test_snapshot(
         r#"
-    pub fn add(a:int, b:int) -> int {
+    pub fn add(a:i32, b:i32) -> i32 {
       let result = a
       result += b
       result
     }
 
-    pub fn subtract(a:int, b:int) -> int {
+    pub fn subtract(a:i32, b:i32) -> i32 {
       let result = a
       result -= b
       result
     }
 
-    pub fn multiply(a:int, b:int) -> int {
+    pub fn multiply(a:i32, b:i32) -> i32 {
       let result = a
       result *= b
       result
     }
 
-    pub fn divide(a:int, b:int) -> int {
+    pub fn divide(a:i32, b:i32) -> i32 {
       let result = a
       result /= b
       result
     }
 
-    pub fn remainder(a:int, b:int) -> int {
+    pub fn remainder(a:i32, b:i32) -> i32 {
       let result = a
       result %= b
       result
@@ -398,7 +393,7 @@ fn update_operators() {
 fn update_parameter() {
     test_snapshot(
         r#"
-    pub fn add_three(a:int) -> int {
+    pub fn add_three(a:i32) -> i32 {
       a += 3;
       a
     }
@@ -410,15 +405,15 @@ fn update_parameter() {
 fn function_calls() {
     test_snapshot(
         r#"
-    fn add_impl(a:int, b:int) -> int {
+    fn add_impl(a:i32, b:i32) -> i32 {
         a+b
     }
 
-    fn add(a:int, b:int) -> int {
+    fn add(a:i32, b:i32) -> i32 {
       add_impl(a,b)
     }
 
-    pub fn test() -> int {
+    pub fn test() -> i32 {
       add(4,5)
       add_impl(4,5)
       add(4,5)
@@ -431,7 +426,7 @@ fn function_calls() {
 fn if_statement() {
     test_snapshot(
         r#"
-    pub fn foo(a:int) -> int {
+    pub fn foo(a:i32) -> i32 {
         let b = if a > 3 {
             let c = if a > 4 {
                 a+1
@@ -455,7 +450,7 @@ fn void_return() {
     fn bar() {
         let a = 3;
     }
-    pub fn foo(a:int) {
+    pub fn foo(a:i32) {
         let c = bar()
     }
     "#,
@@ -466,7 +461,7 @@ fn void_return() {
 fn fibonacci() {
     test_snapshot(
         r#"
-    pub fn fibonacci(n:int) -> int {
+    pub fn fibonacci(n:i32) -> i32 {
         if n <= 1 {
             n
         } else {
@@ -481,7 +476,7 @@ fn fibonacci() {
 fn fibonacci_loop() {
     test_snapshot(
         r#"
-    pub fn fibonacci(n:int) -> int {
+    pub fn fibonacci(n:i32) -> i32 {
         let a = 0;
         let b = 1;
         let i = 1;
@@ -503,7 +498,7 @@ fn fibonacci_loop() {
 fn shadowing() {
     test_snapshot(
         r#"
-    pub fn foo(a:int) -> int {
+    pub fn foo(a:i32) -> i32 {
         let a = a+1;
         {
             let a = a+2;
@@ -511,7 +506,7 @@ fn shadowing() {
         a+3
     }
 
-    pub fn bar(a:int) -> int {
+    pub fn bar(a:i32) -> i32 {
         let a = a+1;
         let a = {
             let a = a+2;
@@ -527,7 +522,7 @@ fn shadowing() {
 fn return_expr() {
     test_snapshot(
         r#"
-    pub fn main() -> int {
+    pub fn main() -> i32 {
         return 5;
         let a = 3; // Nothing regarding this statement should be in the IR
     }
@@ -539,7 +534,7 @@ fn return_expr() {
 fn conditional_return_expr() {
     test_snapshot(
         r#"
-    pub fn main(a:int) -> int {
+    pub fn main(a:i32) -> i32 {
         if a > 4 {
             return a;
         }
@@ -553,7 +548,7 @@ fn conditional_return_expr() {
 fn never_conditional_return_expr() {
     test_snapshot(
         r#"
-    pub fn main(a:int) -> int {
+    pub fn main(a:i32) -> i32 {
         if a > 4 {
             return a;
         } else {
@@ -593,7 +588,7 @@ fn loop_expr() {
 fn loop_break_expr() {
     test_snapshot(
         r#"
-    pub fn foo(n:int) -> int {
+    pub fn foo(n:i32) -> i32 {
         loop {
             if n > 5 {
                 break n;
@@ -612,7 +607,7 @@ fn loop_break_expr() {
 fn while_expr() {
     test_snapshot(
         r#"
-    pub fn foo(n:int) {
+    pub fn foo(n:i32) {
         while n<3 {
             n += 1;
         };
@@ -630,8 +625,8 @@ fn while_expr() {
 fn struct_test() {
     test_snapshot_unoptimized(
         r#"
-    struct(value) Bar(float, int, bool, Foo);
-    struct(value) Foo { a: int };
+    struct(value) Bar(f64, i32, bool, Foo);
+    struct(value) Foo { a: i32 };
     struct(value) Baz;
     pub fn foo() {
         let a: Foo = Foo { a: 5 };
@@ -646,22 +641,22 @@ fn struct_test() {
 fn field_expr() {
     test_snapshot(
         r#"
-    struct(value) Bar(float, Foo);
-    struct(value) Foo { a: int };
+    struct(value) Bar(f64, Foo);
+    struct(value) Foo { a: i32 };
 
     fn bar_1(bar: Bar) -> Foo {
         bar.1
     }
 
-    fn foo_a(foo: Foo) -> int {
+    fn foo_a(foo: Foo) -> i32 {
         foo.a
     }
 
-    pub fn bar_1_foo_a(bar: Bar) -> int {
+    pub fn bar_1_foo_a(bar: Bar) -> i32 {
         foo_a(bar_1(bar))
     }
 
-    pub fn main() -> int {
+    pub fn main() -> i32 {
         let a: Foo = Foo { a: 5 };
         let b: Bar = Bar(1.23, a);
         let aa_lhs = a.a + 2;
@@ -676,9 +671,9 @@ fn field_expr() {
 fn field_crash() {
     test_snapshot_unoptimized(
         r#"
-    struct(gc) Foo { a: int };
+    struct(gc) Foo { a: i32 };
 
-    pub fn main(c:int) -> int {
+    pub fn main(c:i32) -> i32 {
         let b = Foo { a: c + 5 }
         b.a
     }
@@ -690,7 +685,7 @@ fn field_crash() {
 fn gc_struct() {
     test_snapshot_unoptimized(
         r#"
-    struct(gc) Foo { a: int, b: int };
+    struct(gc) Foo { a: i32, b: i32 };
 
     pub fn foo() {
         let a = Foo { a: 3, b: 4 };
@@ -705,7 +700,7 @@ fn gc_struct() {
 fn extern_fn() {
     test_snapshot(
         r#"
-    extern fn add(a:int, b:int) -> int;
+    extern fn add(a:i32, b:i32) -> i32;
     pub fn main() {
         add(3,4);
     }
@@ -728,9 +723,9 @@ fn private_fn_only() {
 fn incremental_compilation() {
     let (mut db, file_id) = MockDatabase::with_single_file(
         r#"
-        struct Foo(int);
+        struct Foo(i32);
 
-        pub fn foo(foo: Foo) -> int {
+        pub fn foo(foo: Foo) -> i32 {
             foo.0
         }
         "#,

@@ -1216,17 +1216,6 @@ mod test {
         );
 
         assert_eq!(
-            integer_lit("1234", Some("int")),
-            (
-                Literal::Int(LiteralInt {
-                    kind: LiteralIntKind::Suffixed(BuiltinInt::INT),
-                    value: 1234
-                }),
-                vec![]
-            )
-        );
-
-        assert_eq!(
             integer_lit("123", Some("u8")),
             (
                 Literal::Int(LiteralInt {
@@ -1286,17 +1275,6 @@ mod test {
             (
                 Literal::Int(LiteralInt {
                     kind: LiteralIntKind::Suffixed(BuiltinInt::USIZE),
-                    value: 1234
-                }),
-                vec![]
-            )
-        );
-
-        assert_eq!(
-            integer_lit("1234", Some("uint")),
-            (
-                Literal::Int(LiteralInt {
-                    kind: LiteralIntKind::Suffixed(BuiltinInt::UINT),
                     value: 1234
                 }),
                 vec![]
@@ -1388,17 +1366,6 @@ mod test {
             (
                 Literal::Float(LiteralFloat {
                     kind: LiteralFloatKind::Suffixed(BuiltinFloat::F64),
-                    value: 123412.34
-                }),
-                vec![]
-            )
-        );
-
-        assert_eq!(
-            float_lit("1234.1234e2", Some("float")),
-            (
-                Literal::Float(LiteralFloat {
-                    kind: LiteralFloatKind::Suffixed(BuiltinFloat::FLOAT),
                     value: 123412.34
                 }),
                 vec![]

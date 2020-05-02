@@ -1,12 +1,12 @@
 ---
 source: crates/mun_compiler/src/diagnostics.rs
-expression: "compilation_errors(\"\\n\\nfn main() {\\nlet a: float = false;\\n\\nlet b: bool = 22;\\n}\")"
+expression: "compilation_errors(\"\\n\\nfn main() {\\nlet a: f64 = false;\\n\\nlet b: bool = 22;\\n}\")"
 ---
 error: mismatched type
- --> main.mun:4:15
+ --> main.mun:4:13
   |
-4 | let a: float = false;
-  |                ^^^^^ expected `float`, found `bool`
+4 | let a: f64 = false;
+  |              ^^^^^ expected `f64`, found `bool`
   |
 error: mismatched type
  --> main.mun:6:14

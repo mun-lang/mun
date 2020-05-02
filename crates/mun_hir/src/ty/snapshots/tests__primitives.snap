@@ -1,6 +1,6 @@
 ---
 source: crates/mun_hir/src/ty/tests.rs
-expression: "fn unsigned_primitives(a: u8, b: u16, c: u32, d: u64, e: u128, f: usize, g: uint) -> u8 { a }\nfn signed_primitives(a: i8, b: i16, c: i32, d: i64, e: i128, f: isize, g: int) -> i8 { a }\nfn float_primitives(a: f32, b: f64, c: float) -> f32 { a }"
+expression: "fn unsigned_primitives(a: u8, b: u16, c: u32, d: u64, e: u128, f: usize, g: u32) -> u8 { a }\nfn signed_primitives(a: i8, b: i16, c: i32, d: i64, e: i128, f: isize, g: i32) -> i8 { a }\nfn float_primitives(a: f32, b: f64, c: f64) -> f32 { a }"
 ---
 [23; 24) 'a': u8
 [30; 31) 'b': u16
@@ -8,20 +8,20 @@ expression: "fn unsigned_primitives(a: u8, b: u16, c: u32, d: u64, e: u128, f: u
 [46; 47) 'd': u64
 [54; 55) 'e': u128
 [63; 64) 'f': usize
-[73; 74) 'g': uint
-[88; 93) '{ a }': u8
-[90; 91) 'a': u8
-[115; 116) 'a': i8
-[122; 123) 'b': i16
-[130; 131) 'c': i32
-[138; 139) 'd': i64
-[146; 147) 'e': i128
-[155; 156) 'f': isize
-[165; 166) 'g': int
-[179; 184) '{ a }': i8
-[181; 182) 'a': i8
-[205; 206) 'a': f32
-[213; 214) 'b': f64
-[221; 222) 'c': float
-[238; 243) '{ a }': f32
-[240; 241) 'a': f32
+[73; 74) 'g': u32
+[87; 92) '{ a }': u8
+[89; 90) 'a': u8
+[114; 115) 'a': i8
+[121; 122) 'b': i16
+[129; 130) 'c': i32
+[137; 138) 'd': i64
+[145; 146) 'e': i128
+[154; 155) 'f': isize
+[164; 165) 'g': i32
+[178; 183) '{ a }': i8
+[180; 181) 'a': i8
+[204; 205) 'a': f32
+[212; 213) 'b': f64
+[220; 221) 'c': f64
+[235; 240) '{ a }': f32
+[237; 238) 'a': f32

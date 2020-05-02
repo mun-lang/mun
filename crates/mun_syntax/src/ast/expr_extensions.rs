@@ -292,7 +292,7 @@ fn skip_digits(base: usize, iter: &mut Peekable<CharIndices>) {
     }
 }
 
-/// Given a string containing an float literal (e.g `123.4` or `1234.4f32`), splits the string in the
+/// Given a string containing a float literal (e.g `123.4` or `1234.4f32`), splits the string in the
 /// value part and the suffix part.
 fn split_float_text_and_suffix(text: &str) -> (&str, Option<&str>) {
     let mut iter = text.char_indices().peekable();

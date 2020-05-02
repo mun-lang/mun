@@ -63,7 +63,6 @@ fn float_ty_query(db: &impl IrDatabase, fty: FloatTy) -> FloatType {
     match fty.bitness.resolve(&db.target_data_layout()) {
         FloatBitness::X64 => context.f64_type(),
         FloatBitness::X32 => context.f32_type(),
-        _ => unreachable!(),
     }
 }
 

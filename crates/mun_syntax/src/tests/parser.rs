@@ -64,18 +64,18 @@ fn struct_def() {
     struct Foo {};
     struct Foo {,}; // error: expected a field declaration
     struct Foo {
-        a: float,
+        a: f64,
     }
     struct Foo {
-        a: float,
-        b: int,
+        a: f64,
+        b: i32,
     };
     struct Foo()
     struct Foo();
     struct Foo(,);  // error: expected a type
-    struct Foo(float)
-    struct Foo(float,);
-    struct Foo(float, int)
+    struct Foo(f64)
+    struct Foo(f64,);
+    struct Foo(f64, i32)
     "#,
     )
 }

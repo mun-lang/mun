@@ -10,12 +10,12 @@ fn gc_trace() {
     let mut driver = TestDriver::new(
         r#"
     pub struct Foo {
-        quz: float,
+        quz: f64,
         bar: Bar,
     }
 
     pub struct Bar {
-        baz: int
+        baz: i64
     }
 
     pub fn new_foo() -> Foo {
@@ -45,11 +45,11 @@ fn map_struct_insert_field1() {
     let mut driver = TestDriver::new(
         r#"
         struct Foo {
-            b: int,
-            c: float,
+            b: i64,
+            c: f64,
         }
 
-        pub fn foo_new(b: int, c: float) -> Foo {
+        pub fn foo_new(b: i64, c: f64) -> Foo {
             Foo { b, c }
         }
     "#,
@@ -62,9 +62,9 @@ fn map_struct_insert_field1() {
     driver.update(
         r#"
         struct Foo {
-            a: int,
-            b: int,
-            c: float,
+            a: i64,
+            b: i64,
+            c: f64,
         }
     "#,
     );
@@ -78,11 +78,11 @@ fn map_struct_insert_field2() {
     let mut driver = TestDriver::new(
         r#"
         struct Foo {
-            a: int,
-            c: float,
+            a: i64,
+            c: f64,
         }
 
-        pub fn foo_new(a: int, c: float) -> Foo {
+        pub fn foo_new(a: i64, c: f64) -> Foo {
             Foo { a, c }
         }
     "#,
@@ -95,9 +95,9 @@ fn map_struct_insert_field2() {
     driver.update(
         r#"
         struct Foo {
-            a: int,
-            b: float,
-            c: float,
+            a: i64,
+            b: f64,
+            c: f64,
         }
     "#,
     );
@@ -111,11 +111,11 @@ fn map_struct_insert_field3() {
     let mut driver = TestDriver::new(
         r#"
         struct Foo {
-            a: int,
-            b: float,
+            a: i64,
+            b: f64,
         }
 
-        pub fn foo_new(a: int, b: float) -> Foo {
+        pub fn foo_new(a: i64, b: f64) -> Foo {
             Foo { a, b }
         }
     "#,
@@ -128,9 +128,9 @@ fn map_struct_insert_field3() {
     driver.update(
         r#"
         struct Foo {
-            a: int,
-            b: float,
-            c: float,
+            a: i64,
+            b: f64,
+            c: f64,
         }
     "#,
     );
@@ -144,12 +144,12 @@ fn map_struct_remove_field1() {
     let mut driver = TestDriver::new(
         r#"
         struct Foo {
-            a: float,
-            b: float,
-            c: int,
+            a: f64,
+            b: f64,
+            c: i64,
         }
 
-        pub fn foo_new(a: float, b: float, c: int) -> Foo {
+        pub fn foo_new(a: f64, b: f64, c: i64) -> Foo {
             Foo { a, b, c }
         }
     "#,
@@ -163,7 +163,7 @@ fn map_struct_remove_field1() {
     driver.update(
         r#"
         struct Foo {
-            c: int,
+            c: i64,
         }
     "#,
     );
@@ -175,12 +175,12 @@ fn map_struct_remove_field2() {
     let mut driver = TestDriver::new(
         r#"
         struct Foo {
-            a: float,
-            b: int,
-            c: float,
+            a: f64,
+            b: i64,
+            c: f64,
         }
 
-        pub fn foo_new(a: float, b: int, c: float) -> Foo {
+        pub fn foo_new(a: f64, b: i64, c: f64) -> Foo {
             Foo { a, b, c }
         }
     "#,
@@ -194,7 +194,7 @@ fn map_struct_remove_field2() {
     driver.update(
         r#"
         struct Foo {
-            b: int,
+            b: i64,
         }
     "#,
     );
@@ -206,12 +206,12 @@ fn map_struct_remove_field3() {
     let mut driver = TestDriver::new(
         r#"
         struct Foo {
-            a: int,
-            b: float,
-            c: float,
+            a: i64,
+            b: f64,
+            c: f64,
         }
 
-        pub fn foo_new(a: int, b: float, c: float) -> Foo {
+        pub fn foo_new(a: i64, b: f64, c: f64) -> Foo {
             Foo { a, b, c }
         }
     "#,
@@ -225,7 +225,7 @@ fn map_struct_remove_field3() {
     driver.update(
         r#"
         struct Foo {
-            a: int,
+            a: i64,
         }
     "#,
     );
@@ -308,12 +308,12 @@ fn map_struct_swap_fields1() {
     let mut driver = TestDriver::new(
         r#"
         struct Foo {
-            a: float,
-            b: int,
-            c: float,
+            a: f64,
+            b: i64,
+            c: f64,
         }
 
-        pub fn foo_new(a: float, b: int, c: float) -> Foo {
+        pub fn foo_new(a: f64, b: i64, c: f64) -> Foo {
             Foo { a, b, c }
         }
     "#,
@@ -327,9 +327,9 @@ fn map_struct_swap_fields1() {
     driver.update(
         r#"
         struct Foo {
-            c: float,
-            a: float,
-            b: int,
+            c: f64,
+            a: f64,
+            b: i64,
         }
     "#,
     );
@@ -343,13 +343,13 @@ fn map_struct_swap_fields2() {
     let mut driver = TestDriver::new(
         r#"
         struct Foo {
-            a: float,
-            b: int,
-            c: float,
-            d: int,
+            a: f64,
+            b: i64,
+            c: f64,
+            d: i64,
         }
 
-        pub fn foo_new(a: float, b: int, c: float, d: int) -> Foo {
+        pub fn foo_new(a: f64, b: i64, c: f64, d: i64) -> Foo {
             Foo { a, b, c, d }
         }
     "#,
@@ -364,10 +364,10 @@ fn map_struct_swap_fields2() {
     driver.update(
         r#"
         struct Foo {
-            d: int,
-            c: float,
-            b: int,
-            a: float,
+            d: i64,
+            c: f64,
+            b: i64,
+            a: f64,
         }
     "#,
     );
@@ -382,12 +382,12 @@ fn map_struct_rename_field1() {
     let mut driver = TestDriver::new(
         r#"
         struct Foo {
-            a: int,
-            b: float,
-            c: float,
+            a: i64,
+            b: f64,
+            c: f64,
         }
 
-        pub fn foo_new(a: int, b: float, c: float) -> Foo {
+        pub fn foo_new(a: i64, b: f64, c: f64) -> Foo {
             Foo { a, b, c }
         }
     "#,
@@ -401,9 +401,9 @@ fn map_struct_rename_field1() {
     driver.update(
         r#"
         struct Foo {
-            a: int,
-            d: float,
-            c: float,
+            a: i64,
+            d: f64,
+            c: f64,
         }
     "#,
     );
@@ -417,12 +417,12 @@ fn map_struct_rename_field2() {
     let mut driver = TestDriver::new(
         r#"
         struct Foo {
-            a: int,
-            b: float,
-            c: float,
+            a: i64,
+            b: f64,
+            c: f64,
         }
 
-        pub fn foo_new(a: int, b: float, c: float) -> Foo {
+        pub fn foo_new(a: i64, b: f64, c: f64) -> Foo {
             Foo { a, b, c }
         }
     "#,
@@ -436,9 +436,9 @@ fn map_struct_rename_field2() {
     driver.update(
         r#"
         struct Foo {
-            d: int,
-            e: float,
-            f: float,
+            d: i64,
+            e: f64,
+            f: f64,
         }
     "#,
     );
@@ -452,12 +452,12 @@ fn map_struct_all() {
     let mut driver = TestDriver::new(
         r#"
         struct Foo {
-            a: int,
-            b: float,
-            c: float,
+            a: i64,
+            b: f64,
+            c: f64,
         }
 
-        pub fn foo_new(a: int, b: float, c: float) -> Foo {
+        pub fn foo_new(a: i64, b: f64, c: f64) -> Foo {
             Foo { a, b, c }
         }
     "#,
@@ -471,10 +471,10 @@ fn map_struct_all() {
     driver.update(
         r#"
         struct Foo {
-            b: float,   // move
-            d: int,     // move + rename
-        //  c: float,   // remove    
-            e: int,     // add
+            b: f64,   // move
+            d: i64,     // move + rename
+        //  c: f64,   // remove
+            e: i64,     // add
         }
     "#,
     );
@@ -488,12 +488,12 @@ fn delete_used_struct() {
     let mut driver = TestDriver::new(
         r#"
         struct Foo {
-            a: int,
-            b: float,
-            c: float,
+            a: i64,
+            b: f64,
+            c: f64,
         }
 
-        pub fn foo_new(a: int, b: float, c: float) -> Foo {
+        pub fn foo_new(a: i64, b: f64, c: f64) -> Foo {
             Foo { a, b, c }
         }
     "#,
@@ -506,9 +506,9 @@ fn delete_used_struct() {
 
     driver.update(
         r#"
-        struct Bar(int);
+        struct Bar(i64);
 
-        pub fn bar_new(a: int) -> Bar {
+        pub fn bar_new(a: i64) -> Bar {
             Bar(a)
         }
     "#,

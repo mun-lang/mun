@@ -1,8 +1,9 @@
 #![allow(dead_code, unused_macros)]
 
-use mun_compiler::{Config, Driver, FileId, PathOrInline, RelativePathBuf};
+use mun_compiler::{Config, DisplayColor, Driver, FileId, PathOrInline, RelativePathBuf};
 use mun_runtime::{IntoFunctionInfo, Runtime, RuntimeBuilder};
-use std::{cell::RefCell, io::stderr, path::PathBuf, rc::Rc, thread::sleep, time::Duration};
+use std::io::Cursor;
+use std::{cell::RefCell, path::PathBuf, rc::Rc, thread::sleep, time::Duration};
 
 /// Implements a compiler and runtime in one that can invoke functions. Use of the TestDriver
 /// enables quick testing of Mun constructs in the runtime with hot-reloading support.
@@ -39,6 +40,7 @@ impl TestDriver {
         let temp_dir = tempfile::TempDir::new().unwrap();
         let config = Config {
             out_dir: Some(temp_dir.path().to_path_buf()),
+            display_color: DisplayColor::Disable,
             ..Config::default()
         };
         let input = PathOrInline::Inline {
@@ -46,8 +48,16 @@ impl TestDriver {
             contents: text.to_owned(),
         };
         let (mut driver, file_id) = Driver::with_file(config, input).unwrap();
-        if driver.emit_diagnostics(&mut stderr()).unwrap() {
-            panic!("compiler errors..")
+        let mut compiler_errors: Vec<u8> = Vec::new();
+        if driver
+            .emit_diagnostics(&mut Cursor::new(&mut compiler_errors))
+            .unwrap()
+        {
+            panic!(
+                "compiler errors:\n{}",
+                String::from_utf8(compiler_errors)
+                    .expect("compiler errors are not UTF-8 formatted")
+            )
         }
         let out_path = driver.write_assembly(file_id).unwrap();
         let builder = RuntimeBuilder::new(&out_path);
@@ -69,10 +79,19 @@ impl TestDriver {
     pub fn update(&mut self, text: &str) {
         self.runtime_mut(); // Ensures that the runtime is spawned prior to the update
         self.driver.set_file_text(self.file_id, text);
-        let out_path = self.driver.write_assembly(self.file_id).unwrap();
-        if self.driver.emit_diagnostics(&mut stderr()).unwrap() {
-            panic!("compiler errors..")
+        let mut compiler_errors: Vec<u8> = Vec::new();
+        if self
+            .driver
+            .emit_diagnostics(&mut Cursor::new(&mut compiler_errors))
+            .unwrap()
+        {
+            panic!(
+                "compiler errors:\n{}",
+                String::from_utf8(compiler_errors)
+                    .expect("compiler errors are not UTF-8 formatted")
+            )
         }
+        let out_path = self.driver.write_assembly(self.file_id).unwrap();
         assert_eq!(
             &out_path, &self.out_path,
             "recompiling did not result in the same assembly"

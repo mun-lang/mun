@@ -7,9 +7,9 @@ use util::*;
 fn error_assembly_not_linkable() {
     let mut driver = TestDriver::new(
         r"
-    extern fn dependency() -> int;
+    extern fn dependency() -> i32;
     
-    pub fn main() -> int { dependency() }
+    pub fn main() -> i32 { dependency() }
     ",
     );
 
