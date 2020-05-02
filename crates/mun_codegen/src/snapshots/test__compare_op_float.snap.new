@@ -1,0 +1,20 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "pub fn equals(a: float, b: float) -> bool { a == b }\npub fn not_equal(a: float, b: float) -> bool { a != b}\npub fn less(a: float, b: float) -> bool { a < b }\npub fn less_equal(a: float, b: float) -> bool { a <= b }\npub fn greater(a: float, b: float) -> bool { a > b }\npub fn greater_equal(a: float, b: float) -> bool { a >= b }"
+---
+; == FILE IR =====================================
+error 1:18: undefined type
+error 1:28: undefined type
+error 2:21: undefined type
+error 2:31: undefined type
+error 3:16: undefined type
+error 3:26: undefined type
+error 4:22: undefined type
+error 4:32: undefined type
+error 5:19: undefined type
+error 5:29: undefined type
+error 6:25: undefined type
+error 6:35: undefined type
+
+; == GROUP IR ====================================
+

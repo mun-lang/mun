@@ -1,0 +1,26 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "pub fn assign(a: int, b: int) -> int {\n    a = b;\n    a\n}\npub fn assign_add(a: int, b: int) -> int {\n    a += b;\n    a\n}\npub fn assign_subtract(a: int, b: int) -> int {\n    a -= b;\n    a\n}\npub fn assign_multiply(a: int, b: int) -> int {\n    a *= b;\n    a\n}\npub fn assign_divide(a: int, b: int) -> int {\n    a /= b;\n    a\n}\npub fn assign_remainder(a: int, b: int) -> int {\n    a %= b;\n    a\n}"
+---
+; == FILE IR =====================================
+error 1:18: undefined type
+error 1:26: undefined type
+error 1:34: undefined type
+error 5:22: undefined type
+error 5:30: undefined type
+error 5:38: undefined type
+error 9:27: undefined type
+error 9:35: undefined type
+error 9:43: undefined type
+error 13:27: undefined type
+error 13:35: undefined type
+error 13:43: undefined type
+error 17:25: undefined type
+error 17:33: undefined type
+error 17:41: undefined type
+error 21:28: undefined type
+error 21:36: undefined type
+error 21:44: undefined type
+
+; == GROUP IR ====================================
+

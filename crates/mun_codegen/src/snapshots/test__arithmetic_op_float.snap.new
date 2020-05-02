@@ -1,0 +1,23 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "pub fn add(a: float, b: float) -> float { a + b }\npub fn subtract(a: float, b: float) -> float { a - b }\npub fn multiply(a: float, b: float) -> float { a * b }\npub fn divide(a: float, b: float) -> float { a / b }\npub fn remainder(a: float, b: float) -> float { a % b }"
+---
+; == FILE IR =====================================
+error 1:15: undefined type
+error 1:25: undefined type
+error 1:35: undefined type
+error 2:20: undefined type
+error 2:30: undefined type
+error 2:40: undefined type
+error 3:20: undefined type
+error 3:30: undefined type
+error 3:40: undefined type
+error 4:18: undefined type
+error 4:28: undefined type
+error 4:38: undefined type
+error 5:21: undefined type
+error 5:31: undefined type
+error 5:41: undefined type
+
+; == GROUP IR ====================================
+

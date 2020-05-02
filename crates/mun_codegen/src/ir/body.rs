@@ -725,7 +725,10 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 Some(self.gen_empty())
             }
             BinaryOp::LogicOp(op) => Some(self.gen_logic_bin_op(lhs, rhs, op).into()),
-            _ => unimplemented!("Operator {:?} is not implemented for boolean", op),
+            BinaryOp::CmpOp(op) => Some(
+                self.gen_cmp_bin_op_int(lhs, rhs, op, hir::Signedness::Unsigned)
+                    .into(),
+            ),
         }
     }
 
@@ -810,57 +813,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             BinaryOp::ArithOp(op) => {
                 Some(self.gen_arith_bin_op_int(lhs, rhs, op, signedness).into())
             }
-            BinaryOp::CmpOp(op) => {
-                let (name, predicate) = match op {
-                    CmpOp::Eq { negated: false } => ("eq", IntPredicate::EQ),
-                    CmpOp::Eq { negated: true } => ("neq", IntPredicate::NE),
-                    CmpOp::Ord {
-                        ordering: Ordering::Less,
-                        strict: false,
-                    } => (
-                        "lesseq",
-                        match signedness {
-                            hir::Signedness::Signed => IntPredicate::SLE,
-                            hir::Signedness::Unsigned => IntPredicate::ULE,
-                        },
-                    ),
-                    CmpOp::Ord {
-                        ordering: Ordering::Less,
-                        strict: true,
-                    } => (
-                        "less",
-                        match signedness {
-                            hir::Signedness::Signed => IntPredicate::SLT,
-                            hir::Signedness::Unsigned => IntPredicate::ULT,
-                        },
-                    ),
-                    CmpOp::Ord {
-                        ordering: Ordering::Greater,
-                        strict: false,
-                    } => (
-                        "greatereq",
-                        match signedness {
-                            hir::Signedness::Signed => IntPredicate::SGE,
-                            hir::Signedness::Unsigned => IntPredicate::UGE,
-                        },
-                    ),
-                    CmpOp::Ord {
-                        ordering: Ordering::Greater,
-                        strict: true,
-                    } => (
-                        "greater",
-                        match signedness {
-                            hir::Signedness::Signed => IntPredicate::SGT,
-                            hir::Signedness::Unsigned => IntPredicate::UGT,
-                        },
-                    ),
-                };
-                Some(
-                    self.builder
-                        .build_int_compare(predicate, lhs, rhs, name)
-                        .into(),
-                )
-            }
+            BinaryOp::CmpOp(op) => Some(self.gen_cmp_bin_op_int(lhs, rhs, op, signedness).into()),
             BinaryOp::Assignment { op } => {
                 let rhs = match op {
                     Some(op) => self.gen_arith_bin_op_int(lhs, rhs, op, signedness),
@@ -942,6 +895,61 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 op
             ),
         }
+    }
+
+    fn gen_cmp_bin_op_int(
+        &mut self,
+        lhs: IntValue,
+        rhs: IntValue,
+        op: CmpOp,
+        signedness: hir::Signedness,
+    ) -> IntValue {
+        let (name, predicate) = match op {
+            CmpOp::Eq { negated: false } => ("eq", IntPredicate::EQ),
+            CmpOp::Eq { negated: true } => ("neq", IntPredicate::NE),
+            CmpOp::Ord {
+                ordering: Ordering::Less,
+                strict: false,
+            } => (
+                "lesseq",
+                match signedness {
+                    hir::Signedness::Signed => IntPredicate::SLE,
+                    hir::Signedness::Unsigned => IntPredicate::ULE,
+                },
+            ),
+            CmpOp::Ord {
+                ordering: Ordering::Less,
+                strict: true,
+            } => (
+                "less",
+                match signedness {
+                    hir::Signedness::Signed => IntPredicate::SLT,
+                    hir::Signedness::Unsigned => IntPredicate::ULT,
+                },
+            ),
+            CmpOp::Ord {
+                ordering: Ordering::Greater,
+                strict: false,
+            } => (
+                "greatereq",
+                match signedness {
+                    hir::Signedness::Signed => IntPredicate::SGE,
+                    hir::Signedness::Unsigned => IntPredicate::UGE,
+                },
+            ),
+            CmpOp::Ord {
+                ordering: Ordering::Greater,
+                strict: true,
+            } => (
+                "greater",
+                match signedness {
+                    hir::Signedness::Signed => IntPredicate::SGT,
+                    hir::Signedness::Unsigned => IntPredicate::UGT,
+                },
+            ),
+        };
+
+        self.builder.build_int_compare(predicate, lhs, rhs, name)
     }
 
     fn gen_arith_bin_op_int(
