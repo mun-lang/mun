@@ -1,5 +1,5 @@
 use crate::{error::*, *};
-use mun_compiler::{Config, Driver, PathOrInline, RelativePathBuf};
+use compiler::{Config, Driver, PathOrInline, RelativePathBuf};
 use std::{ffi::CString, mem, path::Path, ptr};
 
 use std::io::stderr;

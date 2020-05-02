@@ -15,9 +15,9 @@ use std::{os::raw::c_char, time::Duration};
 
 use crate::error::ErrorHandle;
 use crate::hub::HUB;
+use abi::{FunctionInfo, StructInfo, TypeInfo};
 use failure::err_msg;
-use mun_abi::{FunctionInfo, StructInfo, TypeInfo};
-use mun_runtime::{Runtime, RuntimeOptions};
+use runtime::{Runtime, RuntimeOptions};
 
 pub(crate) type Token = usize;
 
@@ -54,26 +54,26 @@ pub unsafe extern "C" fn mun_runtime_create(
     handle: *mut RuntimeHandle,
 ) -> ErrorHandle {
     if library_path.is_null() {
-        return HUB.errors.register(Box::new(err_msg(
-            "Invalid argument: 'library_path' is null pointer.",
-        )));
+        return HUB
+            .errors
+            .register(err_msg("Invalid argument: 'library_path' is null pointer."));
     }
 
     let library_path = match CStr::from_ptr(library_path).to_str() {
         Ok(path) => path,
         Err(_) => {
-            return HUB.errors.register(Box::new(err_msg(
+            return HUB.errors.register(err_msg(
                 "Invalid argument: 'library_path' is not UTF-8 encoded.",
-            )))
+            ))
         }
     };
 
     let handle = match handle.as_mut() {
         Some(handle) => handle,
         None => {
-            return HUB.errors.register(Box::new(err_msg(
-                "Invalid argument: 'handle' is null pointer.",
-            )))
+            return HUB
+                .errors
+                .register(err_msg("Invalid argument: 'handle' is null pointer."))
         }
     };
 
@@ -85,7 +85,7 @@ pub unsafe extern "C" fn mun_runtime_create(
 
     let runtime = match Runtime::new(options) {
         Ok(runtime) => runtime,
-        Err(e) => return HUB.errors.register(Box::new(e)),
+        Err(e) => return HUB.errors.register(e),
     };
 
     handle.0 = Box::into_raw(Box::new(runtime)) as *mut _;
@@ -120,42 +120,42 @@ pub unsafe extern "C" fn mun_runtime_get_function_info(
     let runtime = match (handle.0 as *mut Runtime).as_ref() {
         Some(runtime) => runtime,
         None => {
-            return HUB.errors.register(Box::new(err_msg(
-                "Invalid argument: 'runtime' is null pointer.",
-            )))
+            return HUB
+                .errors
+                .register(err_msg("Invalid argument: 'runtime' is null pointer."))
         }
     };
 
     if fn_name.is_null() {
-        return HUB.errors.register(Box::new(err_msg(
-            "Invalid argument: 'fn_name' is null pointer.",
-        )));
+        return HUB
+            .errors
+            .register(err_msg("Invalid argument: 'fn_name' is null pointer."));
     }
 
     let fn_name = match CStr::from_ptr(fn_name).to_str() {
         Ok(name) => name,
         Err(_) => {
-            return HUB.errors.register(Box::new(err_msg(
-                "Invalid argument: 'fn_name' is not UTF-8 encoded.",
-            )))
+            return HUB
+                .errors
+                .register(err_msg("Invalid argument: 'fn_name' is not UTF-8 encoded."))
         }
     };
 
     let has_fn_info = match has_fn_info.as_mut() {
         Some(has_info) => has_info,
         None => {
-            return HUB.errors.register(Box::new(err_msg(
-                "Invalid argument: 'has_fn_info' is null pointer.",
-            )))
+            return HUB
+                .errors
+                .register(err_msg("Invalid argument: 'has_fn_info' is null pointer."))
         }
     };
 
     let fn_info = match fn_info.as_mut() {
         Some(info) => info,
         None => {
-            return HUB.errors.register(Box::new(err_msg(
-                "Invalid argument: 'fn_info' is null pointer.",
-            )))
+            return HUB
+                .errors
+                .register(err_msg("Invalid argument: 'fn_info' is null pointer."))
         }
     };
 
@@ -188,18 +188,18 @@ pub unsafe extern "C" fn mun_runtime_update(
     let runtime = match (handle.0 as *mut Runtime).as_mut() {
         Some(runtime) => runtime,
         None => {
-            return HUB.errors.register(Box::new(err_msg(
-                "Invalid argument: 'runtime' is null pointer.",
-            )))
+            return HUB
+                .errors
+                .register(err_msg("Invalid argument: 'runtime' is null pointer."))
         }
     };
 
     let updated = match updated.as_mut() {
         Some(updated) => updated,
         None => {
-            return HUB.errors.register(Box::new(err_msg(
-                "Invalid argument: 'updated' is null pointer.",
-            )))
+            return HUB
+                .errors
+                .register(err_msg("Invalid argument: 'updated' is null pointer."))
         }
     };
 
@@ -225,28 +225,27 @@ pub unsafe extern "C" fn mun_type_info_as_struct(
     let type_info = match type_info.as_ref() {
         Some(info) => info,
         None => {
-            return HUB.errors.register(Box::new(err_msg(
-                "Invalid argument: 'type_info' is null pointer.",
-            )))
+            return HUB
+                .errors
+                .register(err_msg("Invalid argument: 'type_info' is null pointer."))
         }
     };
 
     let struct_info = match struct_info.as_mut() {
         Some(info) => info,
         None => {
-            return HUB.errors.register(Box::new(err_msg(
-                "Invalid argument: 'struct_info' is null pointer.",
-            )))
+            return HUB
+                .errors
+                .register(err_msg("Invalid argument: 'struct_info' is null pointer."))
         }
     };
 
     match type_info.as_struct() {
         Some(info) => *struct_info = info.clone(),
         None => {
-            return HUB.errors.register(Box::new(err_msg(format!(
-                "`{}` is not a struct.",
-                type_info.name()
-            ))))
+            return HUB
+                .errors
+                .register(err_msg(format!("`{}` is not a struct.", type_info.name())))
         }
     }
 

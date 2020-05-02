@@ -5,7 +5,6 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::Arc;
 
-use failure::Error;
 use lazy_static::lazy_static;
 use parking_lot::{RwLock, RwLockReadGuard};
 
@@ -73,7 +72,7 @@ where
 #[derive(Default)]
 pub struct Hub {
     /// Error registry
-    pub errors: Arc<Registry<ErrorHandle, Box<Error>>>,
+    pub errors: Arc<Registry<ErrorHandle, failure::Error>>,
 }
 
 lazy_static! {
