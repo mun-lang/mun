@@ -215,9 +215,7 @@ macro_rules! test_number_operator_types {
     };
 }
 
-test_number_operator_types!(
-    f32, f64, i8, i16, i32, i64, i128, u8, u16, u32, u64, u128
-);
+test_number_operator_types!(f32, f64, i8, i16, i32, i64, i128, u8, u16, u32, u64, u128);
 
 macro_rules! test_compare_operator_types {
     ($(
@@ -242,9 +240,7 @@ macro_rules! test_compare_operator_types {
     };
 }
 
-test_compare_operator_types!(
-    bool, f32, f64, i8, i16, i32, i64, i128, u8, u16, u32, u64, u128
-);
+test_compare_operator_types!(bool, f32, f64, i8, i16, i32, i64, i128, u8, u16, u32, u64, u128);
 
 macro_rules! test_negate_operator_types  {
     ($(
