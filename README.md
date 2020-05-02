@@ -50,16 +50,15 @@
 
 ```mun
 fn main() {
-    let sum = add(a, b);
-
-    // Comments: Mun natively supports bool, float, and int
+    // Comments: Mun natively supports bool, f32, f64, i8, u8, i16, etc.
     let is_true = true;
-    let var: float = 0.5;
-    
+    let var = 0.5;
+
+    let sum = add(30, 40);
 }
 
 // The order of function definitions doesn't matter
-fn add(a: int, b: int) -> int {
+fn add(a: i64, b: i64) -> i64 {
     a + b
 }
 ```
