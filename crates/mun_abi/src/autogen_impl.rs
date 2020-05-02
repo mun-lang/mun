@@ -241,6 +241,20 @@ impl DispatchTable {
         }
     }
 
+    /// Returns an iterator over pairs of function pointers and signatures.
+    pub fn iter(&self) -> impl Iterator<Item = (&*const c_void, &FunctionSignature)> {
+        if self.num_entries == 0 {
+            (&[]).iter().zip((&[]).iter())
+        } else {
+            let ptrs =
+                unsafe { slice::from_raw_parts_mut(self.fn_ptrs, self.num_entries as usize) };
+            let signatures =
+                unsafe { slice::from_raw_parts(self.signatures, self.num_entries as usize) };
+
+            ptrs.iter().zip(signatures.iter())
+        }
+    }
+
     /// Returns mutable functions pointers.
     pub fn ptrs_mut(&mut self) -> &mut [*const c_void] {
         if self.num_entries == 0 {

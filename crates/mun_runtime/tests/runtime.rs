@@ -24,3 +24,28 @@ fn error_assembly_not_linkable() {
         )
     );
 }
+
+#[test]
+fn arg_missing_bug() {
+    let mut driver = TestDriver::new(
+        r"
+    pub fn fibonacci_n() -> i64 {
+        let n = arg();
+        fibonacci(n)
+    }
+
+    fn arg() -> i64 {
+        5
+    }
+
+    fn fibonacci(n: i64) -> i64 {
+        if n <= 1 {
+            n
+        } else {
+            fibonacci(n - 1) + fibonacci(n - 2)
+        }
+    }",
+    );
+
+    driver.spawn().unwrap()
+}

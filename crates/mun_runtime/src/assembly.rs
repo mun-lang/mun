@@ -65,7 +65,13 @@ impl Assembly {
             .map(|f| f.signature.name())
             .collect();
 
-        for fn_sig in self.info.dispatch_table.signatures() {
+        for (fn_ptr, fn_sig) in self.info.dispatch_table.iter() {
+            // Only take signatures into account that do *not* yet have a function pointer assigned
+            // by the compiler.
+            if !fn_ptr.is_null() {
+                continue;
+            }
+
             let fn_name = fn_sig.name();
             // ASSUMPTION: If we removed a function from the `Assembly`, we expect the compiler to
             // have failed for any old internal references to it. Therefore it is safe to leave the
@@ -127,12 +133,13 @@ impl Assembly {
         }
 
         for (dispatch_ptr, fn_signature) in self.info.dispatch_table.iter_mut() {
-            let fn_ptr = runtime_dispatch_table
-                .get_fn(fn_signature.name())
-                .unwrap_or_else(|| panic!("Function '{}' is expected to exist.", fn_signature))
-                .fn_ptr;
-
-            *dispatch_ptr = fn_ptr;
+            if dispatch_ptr.is_null() {
+                let fn_ptr = runtime_dispatch_table
+                    .get_fn(fn_signature.name())
+                    .unwrap_or_else(|| panic!("Function '{}' is expected to exist.", fn_signature))
+                    .fn_ptr;
+                *dispatch_ptr = fn_ptr;
+            }
         }
     }
 
