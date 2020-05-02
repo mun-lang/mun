@@ -55,7 +55,8 @@ impl TestDriver {
         {
             panic!(
                 "compiler errors:\n{}",
-                String::from_utf8(compiler_errors).expect("comiler errors are not UTF-8 formatted")
+                String::from_utf8(compiler_errors)
+                    .expect("compiler errors are not UTF-8 formatted")
             )
         }
         let out_path = driver.write_assembly(file_id).unwrap();
@@ -86,7 +87,8 @@ impl TestDriver {
         {
             panic!(
                 "compiler errors:\n{}",
-                String::from_utf8(compiler_errors).expect("comiler errors are not UTF-8 formatted")
+                String::from_utf8(compiler_errors)
+                    .expect("compiler errors are not UTF-8 formatted")
             )
         }
         let out_path = self.driver.write_assembly(self.file_id).unwrap();
