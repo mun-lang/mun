@@ -1,9 +1,9 @@
 ---
 source: crates/mun_compiler/src/annotate.rs
-expression: "SliceBuilder::new(true).origin(\"/tmp/usr/test.mun\").source_annotation((14,\n                                                                       20),\n                                                                      \"test source annotation\",\n                                                                      AnnotationType::Note).build(source_code,\n                                                                                                  &line_index)"
+expression: "SliceBuilder::new(true).origin(\"/tmp/usr/test.mun\").source_annotation((13,\n                                                                       19),\n                                                                      \"test source annotation\",\n                                                                      AnnotationType::Note).build(source_code,\n                                                                                                  &line_index)"
 ---
 Slice {
-    source: "fn foo():float{\n48\n}",
+    source: "fn foo()->f64{\n48\n}",
     line_start: 1,
     origin: Some(
         "/tmp/usr/test.mun",
@@ -11,8 +11,8 @@ Slice {
     annotations: [
         SourceAnnotation {
             range: (
-                14,
-                22,
+                13,
+                21,
             ),
             label: "test source annotation",
             annotation_type: Note,

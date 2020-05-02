@@ -1,6 +1,6 @@
 ---
 source: crates/mun_hir/src/ty/tests.rs
-expression: "fn foo()->int {\n    break; // error: not in a loop\n    loop { break 3; break 3.0; } // error: mismatched type\n    let a:int = loop { break 3.0; } // error: mismatched type\n    loop { break 3; }\n    let a:int = loop { break loop { break 3; } }\n    loop { break loop { break 3.0; } } // error: mismatched type\n}"
+expression: "fn foo()->i32 {\n    break; // error: not in a loop\n    loop { break 3; break 3.0; } // error: mismatched type\n    let a:i32 = loop { break 3.0; } // error: mismatched type\n    loop { break 3; }\n    let a:i32 = loop { break loop { break 3; } }\n    loop { break loop { break 3.0; } } // error: mismatched type\n}"
 ---
 [20; 25): `break` outside of a loop
 [71; 80): mismatched type
@@ -8,33 +8,33 @@ expression: "fn foo()->int {\n    break; // error: not in a loop\n    loop { bre
 [267; 276): mismatched type
 [14; 309) '{     ...type }': never
 [20; 25) 'break': never
-[55; 83) 'loop {...3.0; }': int
+[55; 83) 'loop {...3.0; }': i32
 [60; 83) '{ brea...3.0; }': never
 [62; 69) 'break 3': never
-[68; 69) '3': int
+[68; 69) '3': i32
 [71; 80) 'break 3.0': never
-[77; 80) '3.0': float
-[118; 119) 'a': int
-[126; 145) 'loop {...3.0; }': int
+[77; 80) '3.0': f64
+[118; 119) 'a': i32
+[126; 145) 'loop {...3.0; }': i32
 [131; 145) '{ break 3.0; }': never
 [133; 142) 'break 3.0': never
-[139; 142) '3.0': float
-[176; 193) 'loop {...k 3; }': int
+[139; 142) '3.0': f64
+[176; 193) 'loop {...k 3; }': i32
 [181; 193) '{ break 3; }': never
 [183; 190) 'break 3': never
-[189; 190) '3': int
-[202; 203) 'a': int
-[210; 242) 'loop {...3; } }': int
+[189; 190) '3': i32
+[202; 203) 'a': i32
+[210; 242) 'loop {...3; } }': i32
 [215; 242) '{ brea...3; } }': never
 [217; 240) 'break ...k 3; }': never
-[223; 240) 'loop {...k 3; }': int
+[223; 240) 'loop {...k 3; }': i32
 [228; 240) '{ break 3; }': never
 [230; 237) 'break 3': never
-[236; 237) '3': int
-[247; 281) 'loop {...0; } }': int
+[236; 237) '3': i32
+[247; 281) 'loop {...0; } }': i32
 [252; 281) '{ brea...0; } }': never
 [254; 279) 'break ...3.0; }': never
-[260; 279) 'loop {...3.0; }': int
+[260; 279) 'loop {...3.0; }': i32
 [265; 279) '{ break 3.0; }': never
 [267; 276) 'break 3.0': never
-[273; 276) '3.0': float
+[273; 276) '3.0': f64

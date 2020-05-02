@@ -6,4 +6,4 @@ expression: "fn main(){\n    let a = Foo {b: 3};\n}"
 [9; 36) '{     ... 3}; }': nothing
 [19; 20) 'a': {unknown}
 [23; 33) 'Foo {b: 3}': {unknown}
-[31; 32) '3': int
+[31; 32) '3': i32

@@ -21,58 +21,58 @@ fn compile_and_run() {
 fn return_value() {
     let mut driver = TestDriver::new(
         r"
-        pub fn main()->int { 3 }
+        pub fn main()->i32 { 3 }
     ",
     );
-    assert_invoke_eq!(i64, 3, driver, "main");
+    assert_invoke_eq!(i32, 3, driver, "main");
 }
 
 #[test]
 fn arguments() {
     let mut driver = TestDriver::new(
         r"
-        pub fn main(a:int, b:int)->int { a+b }
+        pub fn main(a:i32, b:i32)->i32 { a+b }
     ",
     );
-    let a: i64 = 52;
-    let b: i64 = 746;
-    assert_invoke_eq!(i64, a + b, driver, "main", a, b);
+    let a: i32 = 52;
+    let b: i32 = 746;
+    assert_invoke_eq!(i32, a + b, driver, "main", a, b);
 }
 
 #[test]
 fn dispatch_table() {
     let mut driver = TestDriver::new(
         r"
-        pub fn add(a:int, b:int)->int { a+b }
-        pub fn main(a:int, b:int)->int { add(a,b) }
+        pub fn add(a:i32, b:i32)->i32 { a+b }
+        pub fn main(a:i32, b:i32)->i32 { add(a,b) }
     ",
     );
 
-    let a: i64 = 52;
-    let b: i64 = 746;
-    assert_invoke_eq!(i64, a + b, driver, "main", a, b);
+    let a: i32 = 52;
+    let b: i32 = 746;
+    assert_invoke_eq!(i32, a + b, driver, "main", a, b);
 
-    let a: i64 = 6274;
-    let b: i64 = 72;
-    assert_invoke_eq!(i64, a + b, driver, "add", a, b);
+    let a: i32 = 6274;
+    let b: i32 = 72;
+    assert_invoke_eq!(i32, a + b, driver, "add", a, b);
 }
 
 #[test]
 fn booleans() {
     let mut driver = TestDriver::new(
         r#"
-        pub fn equal(a:int, b:int)->bool                 { a==b }
-        pub fn equalf(a:float, b:float)->bool            { a==b }
-        pub fn not_equal(a:int, b:int)->bool             { a!=b }
-        pub fn not_equalf(a:float, b:float)->bool        { a!=b }
-        pub fn less(a:int, b:int)->bool                  { a<b }
-        pub fn lessf(a:float, b:float)->bool             { a<b }
-        pub fn greater(a:int, b:int)->bool               { a>b }
-        pub fn greaterf(a:float, b:float)->bool          { a>b }
-        pub fn less_equal(a:int, b:int)->bool            { a<=b }
-        pub fn less_equalf(a:float, b:float)->bool       { a<=b }
-        pub fn greater_equal(a:int, b:int)->bool         { a>=b }
-        pub fn greater_equalf(a:float, b:float)->bool    { a>=b }
+        pub fn equal(a:i64, b:i64)->bool                 { a==b }
+        pub fn equalf(a:f64, b:f64)->bool            { a==b }
+        pub fn not_equal(a:i64, b:i64)->bool             { a!=b }
+        pub fn not_equalf(a:f64, b:f64)->bool        { a!=b }
+        pub fn less(a:i64, b:i64)->bool                  { a<b }
+        pub fn lessf(a:f64, b:f64)->bool             { a<b }
+        pub fn greater(a:i64, b:i64)->bool               { a>b }
+        pub fn greaterf(a:f64, b:f64)->bool          { a>b }
+        pub fn less_equal(a:i64, b:i64)->bool            { a<=b }
+        pub fn less_equalf(a:f64, b:f64)->bool       { a<=b }
+        pub fn greater_equal(a:i64, b:i64)->bool         { a>=b }
+        pub fn greater_equalf(a:f64, b:f64)->bool    { a>=b }
     "#,
     );
     assert_invoke_eq!(bool, false, driver, "equal", 52i64, 764i64);
@@ -105,7 +105,7 @@ fn booleans() {
 fn fibonacci() {
     let mut driver = TestDriver::new(
         r#"
-    pub fn fibonacci(n:int)->int {
+    pub fn fibonacci(n:i64)->i64 {
         if n <= 1 {
             n
         } else {
@@ -124,7 +124,7 @@ fn fibonacci() {
 fn fibonacci_loop() {
     let mut driver = TestDriver::new(
         r#"
-    pub fn fibonacci(n:int)->int {
+    pub fn fibonacci(n:i64)->i64 {
         let a = 0;
         let b = 1;
         let i = 1;
@@ -151,7 +151,7 @@ fn fibonacci_loop() {
 fn fibonacci_loop_break() {
     let mut driver = TestDriver::new(
         r#"
-    pub fn fibonacci(n:int)->int {
+    pub fn fibonacci(n:i64)->i64 {
         let a = 0;
         let b = 1;
         let i = 1;
@@ -178,7 +178,7 @@ fn fibonacci_loop_break() {
 fn fibonacci_while() {
     let mut driver = TestDriver::new(
         r#"
-    pub fn fibonacci(n:int)->int {
+    pub fn fibonacci(n:i64)->i64 {
         let a = 0;
         let b = 1;
         let i = 1;
@@ -224,7 +224,7 @@ fn compiler_valid_utf8() {
     let mut driver = TestDriver::new(
         r#"
     struct Foo {
-        a: int,
+        a: i32,
     }
 
     pub fn foo(n:Foo)->bool { false }
@@ -270,8 +270,8 @@ fn compiler_valid_utf8() {
 fn fields() {
     let mut driver = TestDriver::new(
         r#"
-        struct(gc) Foo { a:int, b:int };
-        pub fn main(foo:int)->bool {
+        struct(gc) Foo { a:i32, b:i32 };
+        pub fn main(foo:i32)->bool {
             let a = Foo { a: foo, b: foo };
             a.a += a.b;
             let result = a;
@@ -280,37 +280,37 @@ fn fields() {
         }
     "#,
     );
-    assert_invoke_eq!(bool, true, driver, "main", 48isize);
+    assert_invoke_eq!(bool, true, driver, "main", 48);
 }
 
 #[test]
 fn field_crash() {
     let mut driver = TestDriver::new(
         r#"
-    struct(gc) Foo { a: int };
+    struct(gc) Foo { a: i32 };
 
-    pub fn main(c:int)->int {
+    pub fn main(c:i32)->i32 {
         let b = Foo { a: c + 5 }
         b.a
     }
     "#,
     );
-    assert_invoke_eq!(i64, 15, driver, "main", 10isize);
+    assert_invoke_eq!(i32, 15, driver, "main", 10);
 }
 
 #[test]
 fn marshal_struct() {
     let mut driver = TestDriver::new(
         r#"
-    struct(value) Foo { a: int, b: bool };
-    struct Bar(int, bool);
+    struct(value) Foo { a: i32, b: bool };
+    struct Bar(i32, bool);
     struct(value) Baz(Foo);
     struct(gc) Qux(Bar);
 
-    pub fn foo_new(a: int, b: bool) -> Foo {
+    pub fn foo_new(a: i32, b: bool) -> Foo {
         Foo { a, b, }
     }
-    pub fn bar_new(a: int, b: bool) -> Bar {
+    pub fn bar_new(a: i32, b: bool) -> Bar {
         Bar(a, b)
     }
     pub fn baz_new(foo: Foo) -> Baz {
@@ -319,7 +319,7 @@ fn marshal_struct() {
     pub fn qux_new(bar: Bar) -> Qux {
         Qux(bar)
     }
-    pub fn baz_new_transitive(foo_a: int, foo_b: bool) -> Baz {
+    pub fn baz_new_transitive(foo_a: i32, foo_b: bool) -> Baz {
         Baz(foo_new(foo_a, foo_b))
     }
     "#,
@@ -340,7 +340,7 @@ fn marshal_struct() {
         assert_eq!(Ok(data.0), s.get::<T>(field_name));
     }
 
-    let int_data = TestData(3i64, 6i64);
+    let int_data = TestData(3i32, 6i32);
     let bool_data = TestData(true, false);
 
     // Verify that struct marshalling works for fundamental types
@@ -476,21 +476,21 @@ fn marshal_struct() {
 
 #[test]
 fn extern_fn() {
-    extern "C" fn add_int(a: isize, b: isize) -> isize {
+    extern "C" fn add_int(a: i32, b: i32) -> i32 {
         dbg!("add_int is called!");
         a + b + 9
     }
 
     let mut driver = TestDriver::new(
         r#"
-    extern fn add(a: int, b: int) -> int;
-    pub fn main() -> int {
+    extern fn add(a: i32, b: i32) -> i32;
+    pub fn main() -> i32 {
         add(3,4)
     }
     "#,
     )
-    .insert_fn("add", add_int as extern "C" fn(isize, isize) -> isize);
-    assert_invoke_eq!(isize, 16, driver, "main");
+    .insert_fn("add", add_int as extern "C" fn(i32, i32) -> i32);
+    assert_invoke_eq!(i32, 16, driver, "main");
 }
 
 #[test]
@@ -498,8 +498,8 @@ fn extern_fn() {
 fn extern_fn_missing() {
     let mut driver = TestDriver::new(
         r#"
-    extern fn add(a: int, b: int) -> int;
-    pub fn main() -> int { add(3,4) }
+    extern fn add(a: i32, b: i32) -> i32;
+    pub fn main() -> i32 { add(3,4) }
     "#,
     );
     assert_invoke_eq!(isize, 16, driver, "main");
@@ -514,8 +514,8 @@ fn extern_fn_invalid_sig() {
 
     let mut driver = TestDriver::new(
         r#"
-    extern fn add(a: int, b: int) -> int;
-    pub fn main() -> int { add(3,4) }
+    extern fn add(a: i32, b: i32) -> i32;
+    pub fn main() -> i32 { add(3,4) }
     "#,
     )
     .insert_fn("add", add_int as extern "C" fn(i8, isize) -> isize);
@@ -541,14 +541,10 @@ fn test_primitive_types() {
 
         k:f32,
         l:f64,
-
-        m: int,
-        n: uint,
-        o: float
     }
 
-    pub fn new_primitives(a:u8, b:u16, c:u32, d:u64, e:u128, f:i8, g:i16, h:i32, i:i64, j:i128, k:f32, l:f64, m: int, n: uint, o: float) -> Primitives {
-        Primitives { a:a, b:b, c:c, d:d, e:e, f:f, g:g, h:h, i:i, j:j, k:k, l:l, m:m, n:n, o:o }
+    pub fn new_primitives(a:u8, b:u16, c:u32, d:u64, e:u128, f:i8, g:i16, h:i32, i:i64, j:i128, k:f32, l:f64) -> Primitives {
+        Primitives { a:a, b:b, c:c, d:d, e:e, f:f, g:g, h:h, i:i, j:j, k:k, l:l }
     }
     "#,
     );
@@ -580,10 +576,7 @@ fn test_primitive_types() {
         9i64,
         10i128,
         11.0f32,
-        12.0f64,
-        13isize,
-        14usize,
-        15.0f64
+        12.0f64
     )
     .unwrap();
 
@@ -599,9 +592,6 @@ fn test_primitive_types() {
     test_field(&mut foo, (10i128, 109i128), "j");
     test_field(&mut foo, (11f32, 110f32), "k");
     test_field(&mut foo, (12f64, 111f64), "l");
-    test_field(&mut foo, (13isize, 112isize), "m");
-    test_field(&mut foo, (14usize, 113usize), "n");
-    test_field(&mut foo, (15f64, 114f64), "o");
 }
 
 #[test]
@@ -612,7 +602,7 @@ fn can_add_external_without_return() {
 
     let mut driver = TestDriver::new(
         r#"
-    extern fn foo(a: int,);
+    extern fn foo(a: i32,);
     pub fn main(){ foo(3); }
     "#,
     )
@@ -624,16 +614,16 @@ fn can_add_external_without_return() {
 fn signed_and_unsigned_rem() {
     let mut driver = TestDriver::new(
         r#"
-    pub fn signed() -> int {
+    pub fn signed() -> i32 {
         (0 - 2) % 5
     }
 
-    pub fn unsigned() -> int {
+    pub fn unsigned() -> i32 {
         2 % 5
     }
     "#,
     );
 
-    assert_invoke_eq!(i64, -2, driver, "signed");
-    assert_invoke_eq!(i64, 2, driver, "unsigned");
+    assert_invoke_eq!(i32, -2, driver, "signed");
+    assert_invoke_eq!(i32, 2, driver, "unsigned");
 }

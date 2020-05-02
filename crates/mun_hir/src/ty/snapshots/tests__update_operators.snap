@@ -1,45 +1,45 @@
 ---
 source: crates/mun_hir/src/ty/tests.rs
-expression: "fn foo(a:int, b:float) {\n    a += 3;\n    a -= 3;\n    a *= 3;\n    a /= 3;\n    a %= 3;\n    b += 3.0;\n    b -= 3.0;\n    b *= 3.0;\n    b /= 3.0;\n    b %= 3.0;\n    a *= 3.0; // mismatched type\n    b *= 3; // mismatched type\n}"
+expression: "fn foo(a:i32, b:f64) {\n    a += 3;\n    a -= 3;\n    a *= 3;\n    a /= 3;\n    a %= 3;\n    b += 3.0;\n    b -= 3.0;\n    b *= 3.0;\n    b /= 3.0;\n    b %= 3.0;\n    a *= 3.0; // mismatched type\n    b *= 3; // mismatched type\n}"
 ---
-[164; 167): mismatched type
-[197; 198): mismatched type
-[7; 8) 'a': int
-[14; 15) 'b': float
-[23; 220) '{     ...type }': nothing
-[29; 30) 'a': int
-[29; 35) 'a += 3': nothing
-[34; 35) '3': int
-[41; 42) 'a': int
-[41; 47) 'a -= 3': nothing
-[46; 47) '3': int
-[53; 54) 'a': int
-[53; 59) 'a *= 3': nothing
-[58; 59) '3': int
-[65; 66) 'a': int
-[65; 71) 'a /= 3': nothing
-[70; 71) '3': int
-[77; 78) 'a': int
-[77; 83) 'a %= 3': nothing
-[82; 83) '3': int
-[89; 90) 'b': float
-[89; 97) 'b += 3.0': nothing
-[94; 97) '3.0': float
-[103; 104) 'b': float
-[103; 111) 'b -= 3.0': nothing
-[108; 111) '3.0': float
-[117; 118) 'b': float
-[117; 125) 'b *= 3.0': nothing
-[122; 125) '3.0': float
-[131; 132) 'b': float
-[131; 139) 'b /= 3.0': nothing
-[136; 139) '3.0': float
-[145; 146) 'b': float
-[145; 153) 'b %= 3.0': nothing
-[150; 153) '3.0': float
-[159; 160) 'a': int
-[159; 167) 'a *= 3.0': nothing
-[164; 167) '3.0': float
-[192; 193) 'b': float
-[192; 198) 'b *= 3': nothing
-[197; 198) '3': int
+[162; 165): mismatched type
+[195; 196): mismatched type
+[7; 8) 'a': i32
+[14; 15) 'b': f64
+[21; 218) '{     ...type }': nothing
+[27; 28) 'a': i32
+[27; 33) 'a += 3': nothing
+[32; 33) '3': i32
+[39; 40) 'a': i32
+[39; 45) 'a -= 3': nothing
+[44; 45) '3': i32
+[51; 52) 'a': i32
+[51; 57) 'a *= 3': nothing
+[56; 57) '3': i32
+[63; 64) 'a': i32
+[63; 69) 'a /= 3': nothing
+[68; 69) '3': i32
+[75; 76) 'a': i32
+[75; 81) 'a %= 3': nothing
+[80; 81) '3': i32
+[87; 88) 'b': f64
+[87; 95) 'b += 3.0': nothing
+[92; 95) '3.0': f64
+[101; 102) 'b': f64
+[101; 109) 'b -= 3.0': nothing
+[106; 109) '3.0': f64
+[115; 116) 'b': f64
+[115; 123) 'b *= 3.0': nothing
+[120; 123) '3.0': f64
+[129; 130) 'b': f64
+[129; 137) 'b /= 3.0': nothing
+[134; 137) '3.0': f64
+[143; 144) 'b': f64
+[143; 151) 'b %= 3.0': nothing
+[148; 151) '3.0': f64
+[157; 158) 'a': i32
+[157; 165) 'a *= 3.0': nothing
+[162; 165) '3.0': f64
+[190; 191) 'b': f64
+[190; 196) 'b *= 3': nothing
+[195; 196) '3': i32

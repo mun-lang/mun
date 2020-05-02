@@ -12,7 +12,6 @@ impl ResolveBitness for IntBitness {
     fn resolve(&self, data_layout: &abi::TargetDataLayout) -> IntBitness {
         match self {
             IntBitness::Xsize => data_layout.ptr_sized_integer().into(),
-            IntBitness::Undefined => IntBitness::X64,
             IntBitness::X8
             | IntBitness::X16
             | IntBitness::X32
@@ -26,7 +25,6 @@ impl ResolveBitness for FloatBitness {
     fn resolve(&self, _data_layout: &abi::TargetDataLayout) -> FloatBitness {
         match self {
             FloatBitness::X32 | FloatBitness::X64 => *self,
-            FloatBitness::Undefined => FloatBitness::X64,
         }
     }
 }

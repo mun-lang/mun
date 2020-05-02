@@ -304,7 +304,6 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 let ir_ty = match ty.bitness.resolve(&self.db.target_data_layout()) {
                     hir::FloatBitness::X32 => context.f32_type().const_float(v.value),
                     hir::FloatBitness::X64 => context.f64_type().const_float(v.value),
-                    _ => unreachable!("unresolved bitness in code generation"),
                 };
 
                 ir_ty.into()

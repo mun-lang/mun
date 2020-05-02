@@ -178,17 +178,17 @@ mod tests {
     }
     #[test]
     fn slice_builder_snapshot() {
-        let source_code = "fn foo():float{\n48\n}";
+        let source_code = "fn foo()->f64{\n48\n}";
         let line_index: LineIndex = LineIndex::new(source_code);
 
         insta::assert_debug_snapshot!(SliceBuilder::new(true)
             .origin("/tmp/usr/test.mun")
-            .source_annotation((14, 20), "test source annotation", AnnotationType::Note)
+            .source_annotation((13, 19), "test source annotation", AnnotationType::Note)
             .build(source_code, &line_index));
     }
     #[test]
     fn snippet_builder_snapshot() {
-        let source_code = "fn foo():float{\n48\n}\n\nfn bar():bool{\n23\n}";
+        let source_code = "fn foo()->f64{\n48\n}\n\nfn bar()->bool{\n23\n}";
         let line_index: LineIndex = LineIndex::new(source_code);
 
         insta::assert_debug_snapshot!(SnippetBuilder::new()

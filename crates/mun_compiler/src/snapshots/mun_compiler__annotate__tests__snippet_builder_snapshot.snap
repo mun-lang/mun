@@ -27,7 +27,7 @@ Snippet {
     ],
     slices: [
         Slice {
-            source: "fn foo():float{\n48\n}\n\nfn bar():bool{\n23\n}",
+            source: "fn foo()->f64{\n48\n}\n\nfn bar()->bool{\n23\n}",
             line_start: 1,
             origin: Some(
                 "/tmp/usr/test.mun",
@@ -36,7 +36,7 @@ Snippet {
                 SourceAnnotation {
                     range: (
                         14,
-                        22,
+                        23,
                     ),
                     label: "test source annotation",
                     annotation_type: Note,

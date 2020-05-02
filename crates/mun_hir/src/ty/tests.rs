@@ -52,19 +52,16 @@ fn infer_suffix_literals() {
         123u32;
         123u64;
         123u128;
-        123uint;
         1_000_000_u32;
         123i8;
         123i16;
         123i32;
         123i64;
         123i128;
-        123int;
         1_000_000_i32;
         1_000_123.0e-2;
         1_000_123.0e-2f32;
         1_000_123.0e-2f64;
-        1_000_123.0e-2float;
         9999999999999999999999999999999999999999999_f64;
     }
 
@@ -74,15 +71,15 @@ fn infer_suffix_literals() {
 
     fn errors() {
         0b22222; // invalid literal
-        0b00010_f32; // non-10 base float
-        0o71234_f32; // non-10 base float
+        0b00010_f32; // non-10 base f64
+        0o71234_f32; // non-10 base f64
         1234_foo; // invalid suffix
         1234.0_bar; // invalid suffix
         9999999999999999999999999999999999999999999; // too large
         256_u8; // literal out of range for `u8`
         128_i8; // literal out of range for `i8`
         12712371237123_u32; // literal out of range `u32`
-        9999999999999999999999999; // literal out of range `int`
+        9999999999999999999999999; // literal out of range `i32`
     }
     ",
     )
@@ -102,14 +99,14 @@ fn infer_invalid_struct_type() {
 fn infer_conditional_return() {
     infer_snapshot(
         r#"
-    fn foo(a:int)->int {
+    fn foo(a:int)->i32 {
         if a > 4 {
             return 4;
         }
         a
     }
 
-    fn bar(a:int)->int {
+    fn bar(a:i32)->i32 {
         if a > 4 {
             return 4;
         } else {
@@ -124,7 +121,7 @@ fn infer_conditional_return() {
 fn infer_return() {
     infer_snapshot(
         r#"
-    fn test()->int {
+    fn test()->i32 {
         return; // error: mismatched type
         return 5;
     }
@@ -136,7 +133,7 @@ fn infer_return() {
 fn infer_basics() {
     infer_snapshot(
         r#"
-    fn test(a:int, b:float, c:never, d:bool) -> bool {
+    fn test(a:i32, b:f64, c:never, d:bool) -> bool {
         a;
         b;
         c;
@@ -168,7 +165,7 @@ fn void_return() {
     fn bar() {
         let a = 3;
     }
-    fn foo(a:int) {
+    fn foo(a:i32) {
         let c = bar()
     }
     "#,
@@ -179,7 +176,7 @@ fn void_return() {
 fn place_expressions() {
     infer_snapshot(
         r#"
-    fn foo(a:int) {
+    fn foo(a:i32) {
         a += 3;
         3 = 5; // error: invalid left hand side of expression
     }
@@ -191,7 +188,7 @@ fn place_expressions() {
 fn update_operators() {
     infer_snapshot(
         r#"
-    fn foo(a:int, b:float) {
+    fn foo(a:i32, b:f64) {
         a += 3;
         a -= 3;
         a *= 3;
@@ -213,7 +210,7 @@ fn update_operators() {
 fn infer_unary_ops() {
     infer_snapshot(
         r#"
-    fn foo(a: int, b: bool) {
+    fn foo(a: i32, b: bool) {
         a = -a;
         b = !b;
     }
@@ -225,7 +222,7 @@ fn infer_unary_ops() {
 fn invalid_unary_ops() {
     infer_snapshot(
         r#"
-    fn bar(a: float, b: bool) {
+    fn bar(a: f64, b: bool) {
         a = !a; // mismatched type
         b = -b; // mismatched type
     }
@@ -248,12 +245,12 @@ fn infer_loop() {
 fn infer_break() {
     infer_snapshot(
         r#"
-    fn foo()->int {
+    fn foo()->i32 {
         break; // error: not in a loop
         loop { break 3; break 3.0; } // error: mismatched type
-        let a:int = loop { break 3.0; } // error: mismatched type
+        let a:i32 = loop { break 3.0; } // error: mismatched type
         loop { break 3; }
-        let a:int = loop { break loop { break 3; } }
+        let a:i32 = loop { break loop { break 3; } }
         loop { break loop { break 3.0; } } // error: mismatched type
     }
     "#,
@@ -294,10 +291,10 @@ fn struct_decl() {
         r#"
     struct Foo;
     struct(gc) Bar {
-        f: float,
-        i: int,
+        f: f64,
+        i: i32,
     }
-    struct(value) Baz(float, int);
+    struct(value) Baz(f64, i32);
 
 
     fn main() {
@@ -315,9 +312,9 @@ fn struct_lit() {
         r#"
     struct Foo;
     struct Bar {
-        a: float,
+        a: f64,
     }
-    struct Baz(float, int);
+    struct Baz(f64, i32);
 
     fn main() {
         let a: Foo = Foo;
@@ -342,10 +339,10 @@ fn struct_field_index() {
     infer_snapshot(
         r#"
     struct Foo {
-        a: float,
-        b: int,
+        a: f64,
+        b: i32,
     }
-    struct Bar(float, int)
+    struct Bar(f64, i32)
     struct Baz;
 
     fn main() {
@@ -370,9 +367,9 @@ fn struct_field_index() {
 fn primitives() {
     infer_snapshot(
         r#"
-    fn unsigned_primitives(a: u8, b: u16, c: u32, d: u64, e: u128, f: usize, g: uint) -> u8 { a }
-    fn signed_primitives(a: i8, b: i16, c: i32, d: i64, e: i128, f: isize, g: int) -> i8 { a }
-    fn float_primitives(a: f32, b: f64, c: float) -> f32 { a }
+    fn unsigned_primitives(a: u8, b: u16, c: u32, d: u64, e: u128, f: usize, g: u32) -> u8 { a }
+    fn signed_primitives(a: i8, b: i16, c: i32, d: i64, e: i128, f: isize, g: i32) -> i8 { a }
+    fn float_primitives(a: f32, b: f64, c: f64) -> f32 { a }
     "#,
     )
 }
@@ -381,7 +378,7 @@ fn primitives() {
 fn extern_fn() {
     infer_snapshot(
         r#"
-    extern fn foo(a:int, b:int) -> int;
+    extern fn foo(a:i32, b:i32) -> i32;
     fn main() {
         foo(3,4);
     }

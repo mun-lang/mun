@@ -1,17 +1,17 @@
 ---
 source: crates/mun_hir/src/ty/tests.rs
-expression: "fn bar(a: float, b: bool) {\n    a = !a; // mismatched type\n    b = -b; // mismatched type\n}"
+expression: "fn bar(a: f64, b: bool) {\n    a = !a; // mismatched type\n    b = -b; // mismatched type\n}"
 ---
-[37; 38): cannot apply unary operator
-[68; 69): cannot apply unary operator
-[7; 8) 'a': float
-[17; 18) 'b': bool
-[26; 91) '{     ...type }': nothing
-[32; 33) 'a': float
-[32; 38) 'a = !a': nothing
-[36; 38) '!a': {unknown}
-[37; 38) 'a': float
-[63; 64) 'b': bool
-[63; 69) 'b = -b': nothing
-[67; 69) '-b': {unknown}
-[68; 69) 'b': bool
+[35; 36): cannot apply unary operator
+[66; 67): cannot apply unary operator
+[7; 8) 'a': f64
+[15; 16) 'b': bool
+[24; 89) '{     ...type }': nothing
+[30; 31) 'a': f64
+[30; 36) 'a = !a': nothing
+[34; 36) '!a': {unknown}
+[35; 36) 'a': f64
+[61; 62) 'b': bool
+[61; 67) 'b = -b': nothing
+[65; 67) '-b': {unknown}
+[66; 67) 'b': bool

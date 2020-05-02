@@ -7,16 +7,16 @@ use util::*;
 fn hotreloadable() {
     let mut driver = TestDriver::new(
         r"
-    pub fn main() -> int { 5 }
+    pub fn main() -> i32 { 5 }
     ",
     );
-    assert_invoke_eq!(i64, 5, driver, "main");
+    assert_invoke_eq!(i32, 5, driver, "main");
     driver.update(
         r"
-    pub fn main() -> int { 10 }
+    pub fn main() -> i32 { 10 }
     ",
     );
-    assert_invoke_eq!(i64, 10, driver, "main");
+    assert_invoke_eq!(i32, 10, driver, "main");
 }
 
 #[test]
@@ -24,12 +24,12 @@ fn hotreload_struct_decl() {
     let mut driver = TestDriver::new(
         r#"
     struct(gc) Args {
-        n: int,
+        n: i32,
         foo: Bar,
     }
     
     struct(gc) Bar {
-        m: float,
+        m: f64,
     }
 
     pub fn args() -> Args {
@@ -40,12 +40,12 @@ fn hotreload_struct_decl() {
     driver.update(
         r#"
     struct(gc) Args {
-        n: int,
+        n: i32,
         foo: Bar,
     }
     
     struct(gc) Bar {
-        m: int,
+        m: i32,
     }
 
     pub fn args() -> Args {

@@ -23,13 +23,6 @@ impl fmt::Display for IntTy {
 }
 
 impl IntTy {
-    pub fn int() -> IntTy {
-        IntTy {
-            signedness: Signedness::Signed,
-            bitness: IntBitness::Undefined,
-        }
-    }
-
     pub fn isize() -> IntTy {
         IntTy {
             signedness: Signedness::Signed,
@@ -116,14 +109,12 @@ impl IntTy {
 
     pub fn as_str(self) -> &'static str {
         match (self.signedness, self.bitness) {
-            (Signedness::Signed, IntBitness::Undefined) => "int",
             (Signedness::Signed, IntBitness::Xsize) => "isize",
             (Signedness::Signed, IntBitness::X8) => "i8",
             (Signedness::Signed, IntBitness::X16) => "i16",
             (Signedness::Signed, IntBitness::X32) => "i32",
             (Signedness::Signed, IntBitness::X64) => "i64",
             (Signedness::Signed, IntBitness::X128) => "i128",
-            (Signedness::Unsigned, IntBitness::Undefined) => "uint",
             (Signedness::Unsigned, IntBitness::Xsize) => "usize",
             (Signedness::Unsigned, IntBitness::X8) => "u8",
             (Signedness::Unsigned, IntBitness::X16) => "u16",
@@ -186,12 +177,6 @@ impl fmt::Display for FloatTy {
 }
 
 impl FloatTy {
-    pub fn float() -> FloatTy {
-        FloatTy {
-            bitness: FloatBitness::Undefined,
-        }
-    }
-
     pub fn f32() -> FloatTy {
         FloatTy {
             bitness: FloatBitness::X32,
@@ -208,7 +193,6 @@ impl FloatTy {
         match self.bitness {
             FloatBitness::X32 => "f32",
             FloatBitness::X64 => "f64",
-            FloatBitness::Undefined => "float",
         }
     }
 }
