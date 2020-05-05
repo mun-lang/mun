@@ -10,8 +10,9 @@ line_length = 100
 tab_width = 4
 
 [export]
+include = ["StructInfo"]
 prefix = "Mun"
 
 [parse]
 parse_deps = true
-include = ["mun_abi"]
+include = ["mun_abi", "mun_memory", "mun_runtime"]

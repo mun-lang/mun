@@ -5,6 +5,7 @@
 #![warn(missing_docs)]
 
 pub mod error;
+pub mod gc;
 pub mod hub;
 
 #[cfg(test)]
@@ -15,11 +16,12 @@ use std::{os::raw::c_char, time::Duration};
 
 use crate::error::ErrorHandle;
 use crate::hub::HUB;
-use abi::{FunctionInfo, StructInfo, TypeInfo};
 use failure::err_msg;
 use runtime::{Runtime, RuntimeOptions};
 
 pub(crate) type Token = usize;
+
+pub use memory::gc::GcPtr;
 
 /// A type to uniquely index typed collections.
 pub trait TypedHandle {
@@ -115,7 +117,7 @@ pub unsafe extern "C" fn mun_runtime_get_function_info(
     handle: RuntimeHandle,
     fn_name: *const c_char,
     has_fn_info: *mut bool,
-    fn_info: *mut FunctionInfo,
+    fn_info: *mut abi::FunctionInfo,
 ) -> ErrorHandle {
     let runtime = match (handle.0 as *mut Runtime).as_ref() {
         Some(runtime) => runtime,
@@ -207,51 +209,6 @@ pub unsafe extern "C" fn mun_runtime_update(
     ErrorHandle::default()
 }
 
-/// Retrieves the [`StructInfo`] corresponding to `type_info`, if the type is a struct. If
-/// successful, `struct_info` is set, otherwise a non-zero error handle is returned.
-///
-/// If a non-zero error handle is returned, it must be manually destructed using
-/// [`mun_error_destroy`].
-///
-/// # Safety
-///
-/// This function receives raw pointers as parameters. If any of the arguments is a null pointer,
-/// an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
-#[no_mangle]
-pub unsafe extern "C" fn mun_type_info_as_struct(
-    type_info: *const TypeInfo,
-    struct_info: *mut StructInfo,
-) -> ErrorHandle {
-    let type_info = match type_info.as_ref() {
-        Some(info) => info,
-        None => {
-            return HUB
-                .errors
-                .register(err_msg("Invalid argument: 'type_info' is null pointer."))
-        }
-    };
-
-    let struct_info = match struct_info.as_mut() {
-        Some(info) => info,
-        None => {
-            return HUB
-                .errors
-                .register(err_msg("Invalid argument: 'struct_info' is null pointer."))
-        }
-    };
-
-    match type_info.as_struct() {
-        Some(info) => *struct_info = info.clone(),
-        None => {
-            return HUB
-                .errors
-                .register(err_msg(format!("`{}` is not a struct.", type_info.name())))
-        }
-    }
-
-    ErrorHandle::default()
-}
-
 /// Deallocates a string that was allocated by the runtime.
 ///
 /// # Safety
@@ -260,7 +217,7 @@ pub unsafe extern "C" fn mun_type_info_as_struct(
 /// its content will be deallocated. Passing pointers to invalid data or memory allocated by other
 /// processes, will lead to undefined behavior.
 #[no_mangle]
-pub unsafe fn mun_destroy_string(string: *const c_char) {
+pub unsafe extern "C" fn mun_destroy_string(string: *const c_char) {
     if !string.is_null() {
         // Destroy the string
         let _string = CString::from_raw(string as *mut _);

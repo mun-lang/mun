@@ -11,10 +11,10 @@ mod macros;
 mod garbage_collector;
 mod marshal;
 mod reflection;
-mod r#struct;
+mod struct_ref;
 
 use failure::Error;
-use garbage_collector::{GarbageCollector, UnsafeTypeInfo};
+use garbage_collector::GarbageCollector;
 use memory::gc::{self, GcRuntime};
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 use rustc_hash::FxHashMap;
@@ -35,9 +35,10 @@ use std::{
 
 pub use crate::{
     assembly::Assembly,
+    garbage_collector::UnsafeTypeInfo,
     marshal::Marshal,
-    r#struct::StructRef,
     reflection::{ArgumentReflection, ReturnTypeReflection},
+    struct_ref::StructRef,
 };
 pub use abi::IntoFunctionInfo;
 
@@ -289,7 +290,7 @@ impl Runtime {
     ///
     /// We cannot return an `Arc` here, because the lifetime of data contained in `GarbageCollector`
     /// is dependent on the `Runtime`.
-    pub(crate) fn gc(&self) -> &GarbageCollector {
+    pub fn gc(&self) -> &dyn GcRuntime<UnsafeTypeInfo> {
         self.gc.as_ref()
     }
 
