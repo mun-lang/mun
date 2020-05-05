@@ -11,7 +11,7 @@
 [build-badge]: https://img.shields.io/github/workflow/status/mun-lang/mun/CI
 [build]: https://github.com/mun-lang/mun/actions
 
-[crates-badge]: https://img.shields.io/crates/v/mun-runtime.svg
+[crates-badge]: https://img.shields.io/crates/v/mun.svg
 [crates]: https://crates.io/crates/mun/
 
 [coverage-badge]: https://img.shields.io/codecov/c/github/mun-lang/mun.svg
@@ -20,7 +20,7 @@
 [dosc-badge]: https://img.shields.io/badge/docs-website-blue.svg
 [docs]: https://docs.mun-lang.org/
 
-[licence-badge]: https://img.shields.io/badge/license-MIT%2FApache-blue.svg
+[licence-badge]: https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue
 [license]: COPYRIGHT
 
 [discord-badge]: https://img.shields.io/discord/602227728480993281.svg?logo=discord
