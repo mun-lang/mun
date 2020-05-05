@@ -1,6 +1,7 @@
 # Mun
 
 [![Build Status][build-badge]][build]
+[![Crates.io][crates-badge]][crates]
 [![docs page][dosc-badge]][docs] 
 [![MIT/Apache][licence-badge]][license]
 [![Join us on Discord][discord-badge]][discord]
@@ -9,6 +10,9 @@
 
 [build-badge]: https://img.shields.io/github/workflow/status/mun-lang/mun/CI
 [build]: https://github.com/mun-lang/mun/actions
+
+[crates-badge]: https://img.shields.io/crates/v/mun-runtime.svg
+[crates]: https://crates.io/crates/mun/
 
 [coverage-badge]: https://img.shields.io/codecov/c/github/mun-lang/mun.svg
 [coverage]: https://codecov.io/gh/mun-lang/mun
