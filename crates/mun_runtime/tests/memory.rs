@@ -452,35 +452,39 @@ fn map_struct_all() {
     let mut driver = TestDriver::new(
         r#"
         struct Foo {
-            a: i64,
+            a: i32,
             b: f64,
             c: f64,
+            d: i32,
         }
 
-        pub fn foo_new(a: i64, b: f64, c: f64) -> Foo {
-            Foo { a, b, c }
+        pub fn foo_new(a: i32, b: f64, c: f64, d: i32) -> Foo {
+            Foo { a, b, c, d }
         }
     "#,
     );
 
-    let a = 5i64;
+    let a = 5i32;
     let b = 1.0f64;
     let c = 3.0f64;
-    let foo: StructRef = invoke_fn!(driver.runtime_mut(), "foo_new", a, b, c).unwrap();
+    let d = -1i32;
+    let foo: StructRef = invoke_fn!(driver.runtime_mut(), "foo_new", a, b, c, d).unwrap();
 
     driver.update(
         r#"
         struct Foo {
-            b: f64,   // move
-            d: i64,     // move + rename
-        //  c: f64,   // remove
-            e: i64,     // add
+            b: f64, // move
+        //  c: f64, // remove    
+            d: i64, // move + convert
+            e: i32, // move + rename
+            f: i32, // add
         }
     "#,
     );
     assert_eq!(foo.get::<f64>("b").unwrap(), b);
-    assert_eq!(foo.get::<i64>("d").unwrap(), a);
-    assert_eq!(foo.get::<i64>("e").unwrap(), 0);
+    assert_eq!(foo.get::<i64>("d").unwrap(), d.into());
+    assert_eq!(foo.get::<i32>("e").unwrap(), a);
+    assert_eq!(foo.get::<i32>("f").unwrap(), 0);
 }
 
 #[test]
