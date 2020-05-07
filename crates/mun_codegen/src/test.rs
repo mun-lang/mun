@@ -776,6 +776,35 @@ fn incremental_compilation() {
     // TODO: Add support for multiple files in a group
 }
 
+#[test]
+fn nested_structs() {
+    test_snapshot(
+        r#"
+    struct(gc) GcStruct(f32, f32);
+    struct(value) ValueStruct(f32, f32);
+
+    struct(gc) GcWrapper(GcStruct, ValueStruct)
+    struct(value) ValueWrapper(GcStruct, ValueStruct);
+
+    pub fn new_gc_struct(a: f32, b: f32) -> GcStruct {
+        GcStruct(a, b)
+    }
+
+    pub fn new_value_struct(a: f32, b: f32) -> ValueStruct {
+        ValueStruct(a, b)
+    }
+
+    pub fn new_gc_wrapper(a: GcStruct, b: ValueStruct) -> GcWrapper {
+        GcWrapper(a, b)
+    }
+
+    pub fn new_value_wrapper(a: GcStruct, b: ValueStruct) -> ValueWrapper {
+        ValueWrapper(a, b)
+    }
+    "#,
+    );
+}
+
 fn test_snapshot(text: &str) {
     test_snapshot_with_optimization(text, OptimizationLevel::Default);
 }
