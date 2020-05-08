@@ -1,8 +1,14 @@
-use crate::{error::*, *};
-use mun_compiler::{Config, Driver, PathOrInline, RelativePathBuf};
-use std::{ffi::CString, mem, path::Path, ptr};
-
-use std::io::stderr;
+use crate::{error::*, gc::*, *};
+use compiler::{Config, Driver, PathOrInline, RelativePathBuf};
+use memory::gc::{GcPtr, HasIndirectionPtr, RawGcPtr};
+use runtime::UnsafeTypeInfo;
+use std::{
+    ffi::CString,
+    io::stderr,
+    mem::{self, MaybeUninit},
+    path::Path,
+    ptr::{self, NonNull},
+};
 
 /// Combines a compiler and runtime in one. Use of the TestDriver allows for quick testing of Mun
 /// constructs in the runtime with hot-reloading support.
@@ -52,6 +58,41 @@ fn make_runtime(lib_path: &Path) -> RuntimeHandle {
     handle
 }
 
+macro_rules! test_invalid_runtime {
+    ($(
+        $name:ident($($arg:expr),*)
+    ),+) => {
+        $(
+            paste::item! {
+                #[test]
+                fn [<test_ $name _invalid_runtime>]() {
+                    let runtime = RuntimeHandle(ptr::null_mut());
+                    let handle =
+                        unsafe { [<mun_ $name>](runtime $(, $arg)*) };
+
+                    let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+                    assert_eq!(
+                        message.to_str().unwrap(),
+                        "Invalid argument: 'runtime' is null pointer."
+                    );
+
+                    unsafe { mun_destroy_string(message.as_ptr()) };
+                }
+            }
+        )+
+    };
+}
+
+test_invalid_runtime!(
+    runtime_get_function_info(ptr::null(), ptr::null_mut(), ptr::null_mut()),
+    runtime_update(ptr::null_mut()),
+    gc_alloc(UnsafeTypeInfo::new(NonNull::dangling()), ptr::null_mut()),
+    gc_ptr_type(mem::zeroed::<GcPtr>(), ptr::null_mut()),
+    gc_root(mem::zeroed::<GcPtr>()),
+    gc_unroot(mem::zeroed::<GcPtr>()),
+    gc_collect(ptr::null_mut())
+);
+
 #[test]
 fn test_runtime_create_invalid_lib_path() {
     let handle = unsafe { mun_runtime_create(ptr::null(), ptr::null_mut()) };
@@ -94,22 +135,6 @@ fn test_runtime_create_invalid_handle() {
     assert_eq!(
         message.to_str().unwrap(),
         "Invalid argument: 'handle' is null pointer."
-    );
-
-    unsafe { mun_destroy_string(message.as_ptr()) };
-}
-
-#[test]
-fn test_runtime_get_function_info_invalid_runtime() {
-    let runtime = RuntimeHandle(ptr::null_mut());
-    let handle = unsafe {
-        mun_runtime_get_function_info(runtime, ptr::null(), ptr::null_mut(), ptr::null_mut())
-    };
-
-    let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
-    assert_eq!(
-        message.to_str().unwrap(),
-        "Invalid argument: 'runtime' is null pointer."
     );
 
     unsafe { mun_destroy_string(message.as_ptr()) };
@@ -233,30 +258,18 @@ fn test_runtime_get_function_info() {
 
     let fn_name = CString::new("main").expect("Invalid function name");
     let mut has_fn_info = false;
-    let mut fn_info = unsafe { mem::zeroed::<FunctionInfo>() };
+    let mut fn_info = MaybeUninit::uninit();
     let handle = unsafe {
         mun_runtime_get_function_info(
             driver.runtime,
             fn_name.as_ptr(),
             &mut has_fn_info as *mut _,
-            &mut fn_info as *mut _,
+            fn_info.as_mut_ptr(),
         )
     };
     assert_eq!(handle.token(), 0);
-}
-
-#[test]
-fn test_runtime_update_invalid_runtime() {
-    let runtime = RuntimeHandle(ptr::null_mut());
-    let handle = unsafe { mun_runtime_update(runtime, ptr::null_mut()) };
-
-    let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
-    assert_eq!(
-        message.to_str().unwrap(),
-        "Invalid argument: 'runtime' is null pointer."
-    );
-
-    unsafe { mun_destroy_string(message.as_ptr()) };
+    assert!(has_fn_info);
+    let _fn_info = unsafe { fn_info.assume_init() };
 }
 
 #[test]
@@ -292,8 +305,97 @@ fn test_runtime_update() {
 }
 
 #[test]
-fn test_type_info_as_struct_invalid_type_info() {
-    let handle = unsafe { mun_type_info_as_struct(ptr::null(), ptr::null_mut()) };
+fn test_gc_alloc_invalid_obj() {
+    let driver = TestDriver::new(
+        r#"
+        struct Foo;
+
+        pub fn main() -> Foo { Foo }
+    "#,
+    );
+    let fn_name = CString::new("main").expect("Invalid function name");
+    let mut has_fn_info = false;
+    let mut fn_info = MaybeUninit::uninit();
+    let handle = unsafe {
+        mun_runtime_get_function_info(
+            driver.runtime,
+            fn_name.as_ptr(),
+            &mut has_fn_info as *mut _,
+            fn_info.as_mut_ptr(),
+        )
+    };
+    assert_eq!(handle.token(), 0);
+
+    let fn_info = unsafe { fn_info.assume_init() };
+    // TODO: Simplify this once we have `mun_runtime_find_type_info`
+    let return_type = fn_info.signature.return_type().unwrap();
+    let return_type =
+        UnsafeTypeInfo::new(NonNull::new(return_type as *const abi::TypeInfo as *mut _).unwrap());
+
+    let handle = unsafe { mun_gc_alloc(driver.runtime, return_type, ptr::null_mut()) };
+    let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+    assert_eq!(
+        message.to_str().unwrap(),
+        "Invalid argument: 'obj' is null pointer."
+    );
+
+    unsafe { mun_destroy_string(message.as_ptr()) };
+}
+
+#[test]
+fn test_gc_alloc() {
+    let driver = TestDriver::new(
+        r#"
+        struct Foo;
+
+        pub fn main() -> Foo { Foo }
+    "#,
+    );
+    let fn_name = CString::new("main").expect("Invalid function name");
+    let mut has_fn_info = false;
+    let mut fn_info = MaybeUninit::uninit();
+    let handle = unsafe {
+        mun_runtime_get_function_info(
+            driver.runtime,
+            fn_name.as_ptr(),
+            &mut has_fn_info as *mut _,
+            fn_info.as_mut_ptr(),
+        )
+    };
+    assert_eq!(handle.token(), 0);
+
+    let fn_info = unsafe { fn_info.assume_init() };
+    // TODO: Simplify this once we have `mun_runtime_find_type_info`
+    let return_type = fn_info.signature.return_type().unwrap();
+    let return_type =
+        UnsafeTypeInfo::new(NonNull::new(return_type as *const abi::TypeInfo as *mut _).unwrap());
+
+    let mut obj = MaybeUninit::uninit();
+    let handle = unsafe { mun_gc_alloc(driver.runtime, return_type, obj.as_mut_ptr()) };
+    assert_eq!(handle.token(), 0);
+
+    let obj = unsafe { obj.assume_init() };
+    assert_ne!(unsafe { obj.deref::<u8>() }, ptr::null());
+
+    let mut reclaimed = false;
+    let handle = unsafe { mun_gc_collect(driver.runtime, &mut reclaimed as *mut _) };
+    assert_eq!(handle.token(), 0);
+}
+
+#[test]
+fn test_gc_ptr_type_invalid_type_info() {
+    let driver = TestDriver::new(
+        r#"
+        struct Foo;
+
+        pub fn main() -> Foo { Foo }
+    "#,
+    );
+
+    let handle = unsafe {
+        let raw_ptr: RawGcPtr = ptr::null();
+        mun_gc_ptr_type(driver.runtime, raw_ptr.into(), ptr::null_mut())
+    };
 
     let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
     assert_eq!(
@@ -305,54 +407,105 @@ fn test_type_info_as_struct_invalid_type_info() {
 }
 
 #[test]
-fn test_type_info_as_struct_invalid_struct_info() {
-    let type_info = unsafe { mem::zeroed::<TypeInfo>() };
-    let handle = unsafe { mun_type_info_as_struct(&type_info as *const _, ptr::null_mut()) };
-
-    let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
-    assert_eq!(
-        message.to_str().unwrap(),
-        "Invalid argument: 'struct_info' is null pointer."
-    );
-
-    unsafe { mun_destroy_string(message.as_ptr()) };
-}
-
-#[test]
-fn test_type_info_as_struct_not_a_struct() {
+fn test_gc_ptr_type() {
     let driver = TestDriver::new(
         r#"
-        pub fn main() -> i64 { 3 }
+        struct Foo;
+
+        pub fn main() -> Foo { Foo }
     "#,
     );
-
     let fn_name = CString::new("main").expect("Invalid function name");
     let mut has_fn_info = false;
-    let mut fn_info = unsafe { mem::zeroed::<FunctionInfo>() };
+    let mut fn_info = MaybeUninit::uninit();
     let handle = unsafe {
         mun_runtime_get_function_info(
             driver.runtime,
             fn_name.as_ptr(),
             &mut has_fn_info as *mut _,
-            &mut fn_info as *mut _,
+            fn_info.as_mut_ptr(),
         )
     };
     assert_eq!(handle.token(), 0);
-    assert!(has_fn_info);
 
-    let mut struct_info = unsafe { mem::zeroed::<StructInfo>() };
-    let handle = unsafe {
-        mun_type_info_as_struct(fn_info.signature.return_type, &mut struct_info as *mut _)
-    };
+    let fn_info = unsafe { fn_info.assume_init() };
+    // TODO: Simplify this once we have `mun_runtime_find_type_info`
+    let return_type = fn_info.signature.return_type().unwrap();
+    let return_type =
+        UnsafeTypeInfo::new(NonNull::new(return_type as *const abi::TypeInfo as *mut _).unwrap());
 
-    let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
-    assert_eq!(message.to_str().unwrap(), "`core::i64` is not a struct.");
+    let mut obj = MaybeUninit::uninit();
+    let handle = unsafe { mun_gc_alloc(driver.runtime, return_type, obj.as_mut_ptr()) };
+    assert_eq!(handle.token(), 0);
 
-    unsafe { mun_destroy_string(message.as_ptr()) };
+    let obj = unsafe { obj.assume_init() };
+    assert_ne!(unsafe { obj.deref::<u8>() }, ptr::null());
+
+    let mut ty = MaybeUninit::uninit();
+    let handle = unsafe { mun_gc_ptr_type(driver.runtime, obj, ty.as_mut_ptr()) };
+    assert_eq!(handle.token(), 0);
+
+    let _ty = unsafe { ty.assume_init() };
+
+    let mut reclaimed = false;
+    let handle = unsafe { mun_gc_collect(driver.runtime, &mut reclaimed as *mut _) };
+    assert_eq!(handle.token(), 0);
+    assert!(reclaimed);
 }
 
 #[test]
-fn test_type_info_as_struct() {
+fn test_gc_rooting() {
+    let driver = TestDriver::new(
+        r#"
+        struct Foo;
+
+        pub fn main() -> Foo { Foo }
+    "#,
+    );
+    let fn_name = CString::new("main").expect("Invalid function name");
+    let mut has_fn_info = false;
+    let mut fn_info = MaybeUninit::uninit();
+    let handle = unsafe {
+        mun_runtime_get_function_info(
+            driver.runtime,
+            fn_name.as_ptr(),
+            &mut has_fn_info as *mut _,
+            fn_info.as_mut_ptr(),
+        )
+    };
+    assert_eq!(handle.token(), 0);
+
+    let fn_info = unsafe { fn_info.assume_init() };
+    // TODO: Simplify this once we have `mun_runtime_find_type_info`
+    let return_type = fn_info.signature.return_type().unwrap();
+    let return_type =
+        UnsafeTypeInfo::new(NonNull::new(return_type as *const abi::TypeInfo as *mut _).unwrap());
+
+    let mut obj = MaybeUninit::uninit();
+    let handle = unsafe { mun_gc_alloc(driver.runtime, return_type, obj.as_mut_ptr()) };
+    assert_eq!(handle.token(), 0);
+
+    let obj = unsafe { obj.assume_init() };
+    assert_ne!(unsafe { obj.deref::<u8>() }, ptr::null());
+
+    let handle = unsafe { mun_gc_root(driver.runtime, obj) };
+    assert_eq!(handle.token(), 0);
+
+    let mut reclaimed = false;
+    let handle = unsafe { mun_gc_collect(driver.runtime, &mut reclaimed as *mut _) };
+    assert_eq!(handle.token(), 0);
+    assert!(!reclaimed);
+
+    let handle = unsafe { mun_gc_unroot(driver.runtime, obj) };
+    assert_eq!(handle.token(), 0);
+
+    let handle = unsafe { mun_gc_collect(driver.runtime, &mut reclaimed as *mut _) };
+    assert_eq!(handle.token(), 0);
+    assert!(reclaimed);
+}
+
+#[test]
+fn test_gc_ptr_collect_invalid_reclaimed() {
     let driver = TestDriver::new(
         r#"
         struct Foo;
@@ -361,23 +514,13 @@ fn test_type_info_as_struct() {
     "#,
     );
 
-    let fn_name = CString::new("main").expect("Invalid function name");
-    let mut has_fn_info = false;
-    let mut fn_info = unsafe { mem::zeroed::<FunctionInfo>() };
-    let handle = unsafe {
-        mun_runtime_get_function_info(
-            driver.runtime,
-            fn_name.as_ptr(),
-            &mut has_fn_info as *mut _,
-            &mut fn_info as *mut _,
-        )
-    };
-    assert_eq!(handle.token(), 0);
-    assert!(has_fn_info);
+    let handle = unsafe { mun_gc_collect(driver.runtime, ptr::null_mut()) };
 
-    let mut struct_info = unsafe { mem::zeroed::<StructInfo>() };
-    let handle = unsafe {
-        mun_type_info_as_struct(fn_info.signature.return_type, &mut struct_info as *mut _)
-    };
-    assert_eq!(handle.token(), 0);
+    let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+    assert_eq!(
+        message.to_str().unwrap(),
+        "Invalid argument: 'reclaimed' is null pointer."
+    );
+
+    unsafe { mun_destroy_string(message.as_ptr()) };
 }

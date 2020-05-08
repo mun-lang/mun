@@ -15,11 +15,13 @@ crate-type = ["cdylib"]
 [dependencies]
 failure = "0.1.7"
 lazy_static = "1.4.0"
-mun_abi = { path = "../mun_abi" }
-mun_runtime = { path = "../mun_runtime" }
+abi = { path = "../mun_abi", package = "mun_abi" }
+memory = { path = "../mun_memory", package = "mun_memory" }
+runtime = { path = "../mun_runtime", package = "mun_runtime" }
 parking_lot = "0.10"
 rand = "0.7.2"
 
 [dev-dependencies]
-mun_compiler = { path="../mun_compiler" }
+compiler = { path="../mun_compiler", package = "mun_compiler" }
+paste = "0.1"
 tempfile = "3"

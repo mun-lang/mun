@@ -26,7 +26,6 @@ impl RawStruct {
 }
 
 /// Type-agnostic wrapper for interoperability with a Mun struct.
-/// TODO: Handle destruction of `struct(value)`
 #[derive(Clone)]
 pub struct StructRef {
     handle: GcRootPtr,
@@ -263,12 +262,11 @@ impl Marshal<StructRef> for RawStruct {
             let src = ptr.cast::<u8>().as_ptr() as *const _;
             let dest = unsafe { gc_handle.deref_mut::<u8>() };
             let size = type_info.size_in_bytes();
-            unsafe { ptr::copy_nonoverlapping(src, dest, size as usize) };
+            unsafe { ptr::copy_nonoverlapping(src, dest, size) };
 
             gc_handle
         } else {
             // For a gc struct, `ptr` points to a `GcPtr`.
-
             unsafe { *ptr.cast::<GcPtr>().as_ptr() }
         };
 
