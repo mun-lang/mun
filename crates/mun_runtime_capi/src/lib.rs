@@ -139,7 +139,7 @@ pub unsafe extern "C" fn mun_runtime_create(
 
     let runtime_options = runtime::RuntimeOptions {
         library_path: library_path.into(),
-        delay: Duration::from_millis(delay_ms as u64),
+        delay: Duration::from_millis(delay_ms.into()),
         user_functions,
     };
 
