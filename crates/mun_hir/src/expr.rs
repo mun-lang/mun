@@ -23,7 +23,6 @@ use crate::diagnostics::DiagnosticSink;
 use crate::in_file::InFile;
 use crate::resolve::Resolver;
 use std::borrow::Cow;
-use std::mem;
 use std::str::FromStr;
 
 pub(crate) mod scope;
@@ -911,7 +910,7 @@ where
                 .expect("A body should have return type collected"),
             diagnostics: self.diagnostics,
         };
-        mem::replace(&mut self.source_map.type_refs, type_ref_source_map);
+        self.source_map.type_refs = type_ref_source_map;
         (body, self.source_map)
     }
 }
