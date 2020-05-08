@@ -54,10 +54,30 @@ where
         }
     }
 
+    /// Logs an allocation
+    fn log_alloc(&self, handle: GcPtr, ty: T) {
+        {
+            let mut stats = self.stats.write();
+            stats.allocated_memory += ty.layout().size();
+        }
+
+        self.observer.event(Event::Allocation(handle));
+    }
+
     /// Returns the observer
     pub fn observer(&self) -> &O {
         &self.observer
     }
+}
+
+fn alloc_obj<T: Clone + TypeLayout + TypeTrace>(ty: T) -> Pin<Box<ObjectInfo<T>>> {
+    let ptr = unsafe { std::alloc::alloc(ty.layout()) };
+    Box::pin(ObjectInfo {
+        ptr,
+        ty,
+        roots: 0,
+        color: Color::White,
+    })
 }
 
 impl<T, O> GcRuntime<T> for MarkSweep<T, O>
@@ -66,14 +86,7 @@ where
     O: Observer<Event = Event>,
 {
     fn alloc(&self, ty: T) -> GcPtr {
-        let layout = ty.layout();
-        let ptr = unsafe { std::alloc::alloc(layout) };
-        let object = Box::pin(ObjectInfo {
-            ptr,
-            ty,
-            roots: 0,
-            color: Color::White,
-        });
+        let object = alloc_obj(ty.clone());
 
         // We want to return a pointer to the `ObjectInfo`, to be used as handle.
         let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
@@ -83,12 +96,7 @@ where
             objects.insert(handle, object);
         }
 
-        {
-            let mut stats = self.stats.write();
-            stats.allocated_memory += layout.size();
-        }
-
-        self.observer.event(Event::Allocation(handle));
+        self.log_alloc(handle, ty);
         handle
     }
 
