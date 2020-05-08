@@ -152,7 +152,15 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             .enumerate()
             .map(|(idx, ty)| {
                 let param = self.fn_value.get_nth_param(idx as u32).unwrap();
-                self.opt_deref_value(ty.clone(), param)
+                if let Some(s) = ty.as_struct() {
+                    if s.data(self.db).memory_kind == abi::StructMemoryKind::Value {
+                        deref_heap_value(&self.builder, param)
+                    } else {
+                        param
+                    }
+                } else {
+                    param
+                }
             })
             .collect();
 
@@ -557,25 +565,12 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
 
     /// Given an expression and the type of the expression, optionally dereference the value.
     fn opt_deref_value(&mut self, ty: hir::Ty, value: BasicValueEnum) -> BasicValueEnum {
-        /// Derefs a heap-allocated value. As we introduce a layer of indirection for hot
-        /// reloading, we need to first load the pointer that points to the memory block.
-        fn deref_heap_value(builder: &Builder, value: BasicValueEnum) -> BasicValueEnum {
-            let mem_ptr = builder
-                .build_load(value.into_pointer_value(), "mem_ptr")
-                .into_pointer_value();
-
-            builder.build_load(mem_ptr, "deref")
-        }
-
         match ty {
             hir::Ty::Apply(hir::ApplicationTy {
                 ctor: hir::TypeCtor::Struct(s),
                 ..
             }) => match s.data(self.db).memory_kind {
                 hir::StructMemoryKind::GC => deref_heap_value(&self.builder, value),
-                hir::StructMemoryKind::Value if self.params.make_marshallable => {
-                    deref_heap_value(&self.builder, value)
-                }
                 hir::StructMemoryKind::Value => value,
             },
             _ => value,
@@ -1283,4 +1278,14 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             )
         }
     }
+}
+
+/// Derefs a heap-allocated value. As we introduce a layer of indirection for hot
+/// reloading, we need to first load the pointer that points to the memory block.
+fn deref_heap_value(builder: &Builder, value: BasicValueEnum) -> BasicValueEnum {
+    let mem_ptr = builder
+        .build_load(value.into_pointer_value(), "mem_ptr")
+        .into_pointer_value();
+
+    builder.build_load(mem_ptr, "deref")
 }
