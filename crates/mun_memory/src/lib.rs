@@ -24,6 +24,8 @@ pub trait TypeDesc: Send + Sync {
 pub trait TypeLayout: Send + Sync {
     /// Returns the memory layout of this type.
     fn layout(&self) -> Layout;
+    /// Returns the memory kind of this type, if it is a struct.
+    fn memory_kind(&self) -> Option<abi::StructMemoryKind>;
 }
 
 /// A trait used to obtain a type's fields.

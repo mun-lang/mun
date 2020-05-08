@@ -77,6 +77,11 @@ impl mun_memory::TypeLayout for &'static TypeInfo {
         Layout::from_size_align(self.size as usize, self.alignment as usize)
             .expect("invalid layout specified by TypeInfo")
     }
+
+    fn memory_kind(&self) -> Option<abi::StructMemoryKind> {
+        // NOTE: This contrived test does not support structs
+        None
+    }
 }
 
 impl gc::TypeTrace for &'static TypeInfo {

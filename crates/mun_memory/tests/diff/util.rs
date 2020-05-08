@@ -110,6 +110,11 @@ impl TypeLayout for &TypeInfo {
     fn layout(&self) -> Layout {
         self.layout
     }
+
+    fn memory_kind(&self) -> Option<abi::StructMemoryKind> {
+        // NOTE: This contrived test does not support structs
+        None
+    }
 }
 
 impl<'t> TypeFields<&'t TypeInfo> for &'t TypeInfo {

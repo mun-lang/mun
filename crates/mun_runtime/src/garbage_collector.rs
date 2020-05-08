@@ -119,6 +119,10 @@ impl memory::TypeLayout for UnsafeTypeInfo {
         Layout::from_size_align(ty.size_in_bytes(), ty.alignment())
             .unwrap_or_else(|_| panic!("invalid layout from Mun Type: {:?}", ty))
     }
+
+    fn memory_kind(&self) -> Option<abi::StructMemoryKind> {
+        unsafe { self.0.as_ref().as_struct().map(|s| s.memory_kind.clone()) }
+    }
 }
 
 impl gc::TypeTrace for UnsafeTypeInfo {
