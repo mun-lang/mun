@@ -1,21 +1,23 @@
-use crate::{FunctionInfo, FunctionSignature, HasStaticTypeInfo, Privacy, TypeInfo};
+use crate::{
+    FunctionDefinition, FunctionPrototype, FunctionSignature, HasStaticTypeInfo, TypeInfo,
+};
 use std::{ffi::CString, ptr};
 
-/// Owned storage for C-style `FunctionInfo`.
-pub struct FunctionInfoStorage {
+/// Owned storage for C-style `FunctionDefinition`.
+pub struct FunctionDefinitionStorage {
     _name: CString,
     _type_infos: Vec<&'static TypeInfo>,
 }
 
-impl FunctionInfoStorage {
-    /// Constructs a new `FunctionInfo`, the data of which is stored in a `FunctionInfoStorage`.
+impl FunctionDefinitionStorage {
+    /// Constructs a new `FunctionDefinition`, the data of which is stored in a
+    /// `FunctionDefinitionStorage`.
     pub fn new_function(
         name: &str,
         args: &[&'static TypeInfo],
         ret: Option<&'static TypeInfo>,
-        privacy: Privacy,
         fn_ptr: *const std::ffi::c_void,
-    ) -> (FunctionInfo, FunctionInfoStorage) {
+    ) -> (FunctionDefinition, FunctionDefinitionStorage) {
         let name = CString::new(name).unwrap();
         let type_infos: Vec<&'static TypeInfo> = args.iter().copied().collect();
 
@@ -26,18 +28,19 @@ impl FunctionInfoStorage {
             ptr::null()
         };
 
-        let fn_info = FunctionInfo {
-            signature: FunctionSignature {
+        let fn_info = FunctionDefinition {
+            prototype: FunctionPrototype {
                 name: name.as_ptr(),
-                arg_types: type_infos.as_ptr() as *const *const _,
-                return_type,
-                num_arg_types,
-                privacy,
+                signature: FunctionSignature {
+                    arg_types: type_infos.as_ptr() as *const *const _,
+                    return_type,
+                    num_arg_types,
+                },
             },
             fn_ptr,
         };
 
-        let fn_storage = FunctionInfoStorage {
+        let fn_storage = FunctionDefinitionStorage {
             _name: name,
             _type_infos: type_infos,
         };
@@ -46,10 +49,10 @@ impl FunctionInfoStorage {
     }
 }
 
-/// A value-to-`FunctionInfo` conversion that consumes the input value.
-pub trait IntoFunctionInfo {
+/// A value-to-`FunctionDefinition` conversion that consumes the input value.
+pub trait IntoFunctionDefinition {
     /// Performs the conversion.
-    fn into<S: AsRef<str>>(self, name: S, privacy: Privacy) -> (FunctionInfo, FunctionInfoStorage);
+    fn into<S: AsRef<str>>(self, name: S) -> (FunctionDefinition, FunctionDefinitionStorage);
 }
 
 macro_rules! into_function_info_impl {
@@ -57,29 +60,27 @@ macro_rules! into_function_info_impl {
         extern "C" fn($($T:ident),*) -> $R:ident;
     )+) => {
         $(
-            impl<$R: HasStaticTypeInfo, $($T: HasStaticTypeInfo,)*> IntoFunctionInfo
+            impl<$R: HasStaticTypeInfo, $($T: HasStaticTypeInfo,)*> IntoFunctionDefinition
             for extern "C" fn($($T),*) -> $R
             {
-                fn into<S: AsRef<str>>(self, name: S, privacy: Privacy) -> (FunctionInfo, FunctionInfoStorage) {
-                    FunctionInfoStorage::new_function(
+                fn into<S: AsRef<str>>(self, name: S) -> (FunctionDefinition, FunctionDefinitionStorage) {
+                    FunctionDefinitionStorage::new_function(
                         name.as_ref(),
                         &[$($T::type_info(),)*],
                         Some($R::type_info()),
-                        privacy,
                         self as *const std::ffi::c_void,
                     )
                 }
             }
 
-            impl<$($T: HasStaticTypeInfo,)*> IntoFunctionInfo
+            impl<$($T: HasStaticTypeInfo,)*> IntoFunctionDefinition
             for extern "C" fn($($T),*)
             {
-                fn into<S: AsRef<str>>(self, name: S, privacy: Privacy) -> (FunctionInfo, FunctionInfoStorage) {
-                    FunctionInfoStorage::new_function(
+                fn into<S: AsRef<str>>(self, name: S) -> (FunctionDefinition, FunctionDefinitionStorage) {
+                    FunctionDefinitionStorage::new_function(
                         name.as_ref(),
                         &[$($T::type_info(),)*],
                         None,
-                        privacy,
                         self as *const std::ffi::c_void,
                     )
                 }

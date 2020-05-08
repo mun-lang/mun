@@ -16,8 +16,8 @@ use inkwell::{
 };
 use std::collections::HashSet;
 
-/// Construct a `MunFunctionSignature` struct for the specified HIR function.
-fn gen_signature_from_function<D: IrDatabase>(
+/// Construct a `MunFunctionPrototype` struct for the specified HIR function.
+fn gen_prototype_from_function<D: IrDatabase>(
     db: &D,
     module: &Module,
     types: &AbiTypes,
@@ -52,8 +52,7 @@ fn gen_signature_from_function<D: IrDatabase>(
     );
     let num_params = fn_sig.params().len();
 
-    types.function_signature_type.const_named_struct(&[
-        name_ir.into(),
+    let signature = types.function_signature_type.const_named_struct(&[
         param_types.into(),
         ret_type_ir.into(),
         module
@@ -61,12 +60,15 @@ fn gen_signature_from_function<D: IrDatabase>(
             .i16_type()
             .const_int(num_params as u64, false)
             .into(),
-        module.get_context().i8_type().const_int(0, false).into(),
-    ])
+    ]);
+
+    types
+        .function_prototype_type
+        .const_named_struct(&[name_ir.into(), signature.into()])
 }
 
-/// Construct a `MunFunctionSignature` struct for the specified dispatch table function.
-fn gen_signature_from_dispatch_entry(
+/// Construct a `MunFunctionPrototype` struct for the specified dispatch table function.
+fn gen_prototype_from_dispatch_entry(
     module: &Module,
     types: &AbiTypes,
     function: &DispatchableFunction,
@@ -103,8 +105,7 @@ fn gen_signature_from_dispatch_entry(
     );
     let num_params = function.prototype.arg_types.len();
 
-    types.function_signature_type.const_named_struct(&[
-        name_str.into(),
+    let signature = types.function_signature_type.const_named_struct(&[
         param_types.into(),
         ret_type_ir.into(),
         module
@@ -112,8 +113,11 @@ fn gen_signature_from_dispatch_entry(
             .i16_type()
             .const_int(num_params as u64, false)
             .into(),
-        module.get_context().i8_type().const_int(0, false).into(),
-    ])
+    ]);
+
+    types
+        .function_prototype_type
+        .const_named_struct(&[name_str.into(), signature.into()])
 }
 
 /// Given a function, construct a pointer to a `MunTypeInfo` global that represents the return type
@@ -155,8 +159,8 @@ fn gen_signature_return_type_from_type_info(
 }
 
 /// Construct a global that holds a reference to all functions. e.g.:
-/// MunFunctionInfo[] info = { ... }
-fn gen_function_info_array<'a, D: IrDatabase>(
+/// MunFunctionDefinition[] definitions = { ... }
+fn get_function_definition_array<'a, D: IrDatabase>(
     db: &D,
     module: &Module,
     types: &AbiTypes,
@@ -175,16 +179,16 @@ fn gen_function_info_array<'a, D: IrDatabase>(
             value.set_linkage(Linkage::Private);
 
             // Generate the signature from the function
-            let signature = gen_signature_from_function(db, module, types, *f);
+            let prototype = gen_prototype_from_function(db, module, types, *f);
 
             // Generate the function info value
-            types.function_info_type.const_named_struct(&[
-                signature.into(),
+            types.function_definition_type.const_named_struct(&[
+                prototype.into(),
                 value.as_global_value().as_pointer_value().into(),
             ])
         })
         .collect();
-    let function_infos = types.function_info_type.const_array(&function_infos);
+    let function_infos = types.function_definition_type.const_array(&function_infos);
     gen_global(module, &function_infos, "fn.get_info.functions")
 }
 
@@ -201,7 +205,7 @@ fn gen_dispatch_table(
     let signatures: Vec<StructValue> = dispatch_table
         .entries()
         .iter()
-        .map(|entry| gen_signature_from_dispatch_entry(module, types, entry))
+        .map(|entry| gen_prototype_from_dispatch_entry(module, types, entry))
         .collect();
 
     // Construct an IR array from the signatures
@@ -255,7 +259,7 @@ pub(super) fn gen_reflection_ir(
     let abi_types = gen_abi_types(&module.get_context());
 
     let num_functions = api.len();
-    let function_info = gen_function_info_array(db, module, &abi_types, api.iter());
+    let function_info = get_function_definition_array(db, module, &abi_types, api.iter());
 
     let type_table_ir = if let Some(type_table) = module.get_global(TypeTable::NAME) {
         type_table.as_pointer_value()

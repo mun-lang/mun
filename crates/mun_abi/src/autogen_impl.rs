@@ -71,16 +71,6 @@ unsafe impl Send for TypeInfo {}
 unsafe impl Sync for TypeInfo {}
 
 impl FunctionSignature {
-    /// Returns the function's name.
-    pub fn name(&self) -> &str {
-        unsafe { str::from_utf8_unchecked(CStr::from_ptr(self.name).to_bytes()) }
-    }
-
-    /// Returns the function's privacy level.
-    pub fn privacy(&self) -> Privacy {
-        self.privacy
-    }
-
     /// Returns the function's arguments' types.
     pub fn arg_types(&self) -> &[&TypeInfo] {
         if self.num_arg_types == 0 {
@@ -103,7 +93,7 @@ impl FunctionSignature {
 
 impl fmt::Display for FunctionSignature {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "fn {}(", self.name())?;
+        write!(f, "fn(")?;
         for (i, arg) in self.arg_types().iter().enumerate() {
             if i > 0 {
                 write!(f, ", ")?;
@@ -121,8 +111,35 @@ impl fmt::Display for FunctionSignature {
 unsafe impl Send for FunctionSignature {}
 unsafe impl Sync for FunctionSignature {}
 
-unsafe impl Send for FunctionInfo {}
-unsafe impl Sync for FunctionInfo {}
+impl FunctionPrototype {
+    /// Returns the function's name.
+    pub fn name(&self) -> &str {
+        unsafe { str::from_utf8_unchecked(CStr::from_ptr(self.name).to_bytes()) }
+    }
+}
+
+impl fmt::Display for FunctionPrototype {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "fn {}(", self.name())?;
+        for (i, arg) in self.signature.arg_types().iter().enumerate() {
+            if i > 0 {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", arg)?;
+        }
+        write!(f, ")")?;
+        if let Some(ret_type) = self.signature.return_type() {
+            write!(f, ":{}", ret_type)?
+        }
+        Ok(())
+    }
+}
+
+unsafe impl Send for FunctionPrototype {}
+unsafe impl Sync for FunctionPrototype {}
+
+unsafe impl Send for FunctionDefinition {}
+unsafe impl Sync for FunctionDefinition {}
 
 impl StructInfo {
     /// Returns the struct's field names.
@@ -203,7 +220,7 @@ impl ModuleInfo {
     // }
 
     /// Returns the module's functions.
-    pub fn functions(&self) -> &[FunctionInfo] {
+    pub fn functions(&self) -> &[FunctionDefinition] {
         if self.num_functions == 0 {
             &[]
         } else {
@@ -228,28 +245,28 @@ unsafe impl Sync for ModuleInfo {}
 
 impl DispatchTable {
     /// Returns an iterator over pairs of mutable function pointers and signatures.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&mut *const c_void, &FunctionSignature)> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&mut *const c_void, &FunctionPrototype)> {
         if self.num_entries == 0 {
             (&mut []).iter_mut().zip((&[]).iter())
         } else {
             let ptrs =
                 unsafe { slice::from_raw_parts_mut(self.fn_ptrs, self.num_entries as usize) };
             let signatures =
-                unsafe { slice::from_raw_parts(self.signatures, self.num_entries as usize) };
+                unsafe { slice::from_raw_parts(self.prototypes, self.num_entries as usize) };
 
             ptrs.iter_mut().zip(signatures.iter())
         }
     }
 
     /// Returns an iterator over pairs of function pointers and signatures.
-    pub fn iter(&self) -> impl Iterator<Item = (&*const c_void, &FunctionSignature)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&*const c_void, &FunctionPrototype)> {
         if self.num_entries == 0 {
             (&[]).iter().zip((&[]).iter())
         } else {
             let ptrs =
                 unsafe { slice::from_raw_parts_mut(self.fn_ptrs, self.num_entries as usize) };
             let signatures =
-                unsafe { slice::from_raw_parts(self.signatures, self.num_entries as usize) };
+                unsafe { slice::from_raw_parts(self.prototypes, self.num_entries as usize) };
 
             ptrs.iter().zip(signatures.iter())
         }
@@ -264,12 +281,12 @@ impl DispatchTable {
         }
     }
 
-    /// Returns function signatures.
-    pub fn signatures(&self) -> &[FunctionSignature] {
+    /// Returns function prototypes.
+    pub fn prototypes(&self) -> &[FunctionPrototype] {
         if self.num_entries == 0 {
             &[]
         } else {
-            unsafe { slice::from_raw_parts(self.signatures, self.num_entries as usize) }
+            unsafe { slice::from_raw_parts(self.prototypes, self.num_entries as usize) }
         }
     }
 
@@ -429,44 +446,41 @@ mod tests {
     }
 
     fn fake_fn_signature(
-        name: &CStr,
         arg_types: &[&TypeInfo],
         return_type: Option<&TypeInfo>,
-        privacy: Privacy,
     ) -> FunctionSignature {
         FunctionSignature {
-            name: name.as_ptr(),
             arg_types: arg_types.as_ptr().cast::<*const TypeInfo>(),
             return_type: return_type.map_or(ptr::null(), |t| t as *const TypeInfo),
             num_arg_types: arg_types.len() as u16,
-            privacy,
+        }
+    }
+
+    fn fake_fn_prototype(
+        name: &CStr,
+        arg_types: &[&TypeInfo],
+        return_type: Option<&TypeInfo>,
+    ) -> FunctionPrototype {
+        FunctionPrototype {
+            name: name.as_ptr(),
+            signature: fake_fn_signature(arg_types, return_type),
         }
     }
 
     const FAKE_FN_NAME: &str = "fn-name";
 
     #[test]
-    fn test_fn_signature_name() {
+    fn test_fn_prototype_name() {
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_signature = fake_fn_signature(&fn_name, &[], None, Privacy::Public);
+        let fn_signature = fake_fn_prototype(&fn_name, &[], None);
 
         assert_eq!(fn_signature.name(), FAKE_FN_NAME);
     }
 
     #[test]
-    fn test_fn_signature_privacy() {
-        let privacy = Privacy::Private;
-        let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_signature = fake_fn_signature(&fn_name, &[], None, privacy);
-
-        assert_eq!(fn_signature.privacy(), privacy);
-    }
-
-    #[test]
     fn test_fn_signature_arg_types_none() {
         let arg_types = &[];
-        let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_signature = fake_fn_signature(&fn_name, arg_types, None, Privacy::Public);
+        let fn_signature = fake_fn_signature(arg_types, None);
 
         assert_eq!(fn_signature.arg_types(), arg_types);
     }
@@ -477,8 +491,7 @@ mod tests {
         let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
 
         let arg_types = &[&type_info];
-        let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_signature = fake_fn_signature(&fn_name, arg_types, None, Privacy::Public);
+        let fn_signature = fake_fn_signature(arg_types, None);
 
         assert_eq!(fn_signature.arg_types(), arg_types);
     }
@@ -486,8 +499,7 @@ mod tests {
     #[test]
     fn test_fn_signature_return_type_none() {
         let return_type = None;
-        let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_signature = fake_fn_signature(&fn_name, &[], return_type, Privacy::Public);
+        let fn_signature = fake_fn_signature(&[], return_type);
 
         assert_eq!(fn_signature.return_type(), return_type);
     }
@@ -498,8 +510,7 @@ mod tests {
         let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
 
         let return_type = Some(&type_info);
-        let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_signature = fake_fn_signature(&fn_name, &[], return_type, Privacy::Public);
+        let fn_signature = fake_fn_signature(&[], return_type);
 
         assert_eq!(fn_signature.return_type(), return_type);
     }
@@ -572,7 +583,7 @@ mod tests {
 
     fn fake_module_info(
         path: &CStr,
-        functions: &[FunctionInfo],
+        functions: &[FunctionDefinition],
         types: &[&TypeInfo],
     ) -> ModuleInfo {
         ModuleInfo {
@@ -613,10 +624,10 @@ mod tests {
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_signature = fake_fn_signature(&fn_name, &[], return_type, Privacy::Public);
+        let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
-        let fn_info = FunctionInfo {
-            signature: fn_signature,
+        let fn_info = FunctionDefinition {
+            prototype: fn_prototype,
             fn_ptr: ptr::null(),
         };
         let functions = &[fn_info];
@@ -633,10 +644,15 @@ mod tests {
         assert_eq!(result_functions.len(), functions.len());
         for (lhs, rhs) in result_functions.iter().zip(functions.iter()) {
             assert_eq!(lhs.fn_ptr, rhs.fn_ptr);
-            assert_eq!(lhs.signature.name(), rhs.signature.name());
-            assert_eq!(lhs.signature.arg_types(), rhs.signature.arg_types());
-            assert_eq!(lhs.signature.return_type(), rhs.signature.return_type());
-            assert_eq!(lhs.signature.privacy(), rhs.signature.privacy());
+            assert_eq!(lhs.prototype.name(), rhs.prototype.name());
+            assert_eq!(
+                lhs.prototype.signature.arg_types(),
+                rhs.prototype.signature.arg_types()
+            );
+            assert_eq!(
+                lhs.prototype.signature.return_type(),
+                rhs.prototype.signature.return_type()
+            );
         }
 
         let result_types: &[&TypeInfo] = module.types();
@@ -654,15 +670,15 @@ mod tests {
     }
 
     fn fake_dispatch_table(
-        fn_signatures: &[FunctionSignature],
+        fn_prototypes: &[FunctionPrototype],
         fn_ptrs: &mut [*const c_void],
     ) -> DispatchTable {
-        assert!(fn_signatures.len() == fn_ptrs.len());
+        assert_eq!(fn_prototypes.len(), fn_ptrs.len());
 
         DispatchTable {
-            signatures: fn_signatures.as_ptr(),
+            prototypes: fn_prototypes.as_ptr(),
             fn_ptrs: fn_ptrs.as_mut_ptr(),
-            num_entries: fn_signatures.len() as u32,
+            num_entries: fn_prototypes.len() as u32,
         }
     }
 
@@ -683,21 +699,20 @@ mod tests {
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_signature = fake_fn_signature(&fn_name, &[], return_type, Privacy::Public);
+        let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
-        let signatures = &[fn_signature];
+        let prototypes = &[fn_prototype];
         let fn_ptrs = &mut [ptr::null()];
-        let mut dispatch_table = fake_dispatch_table(signatures, fn_ptrs);
+        let mut dispatch_table = fake_dispatch_table(prototypes, fn_ptrs);
 
-        let iter = fn_ptrs.iter_mut().zip(signatures.iter());
+        let iter = fn_ptrs.iter_mut().zip(prototypes.iter());
         assert_eq!(dispatch_table.iter_mut().count(), iter.len());
 
         for (lhs, rhs) in dispatch_table.iter_mut().zip(iter) {
             assert_eq!(lhs.0, rhs.0);
             assert_eq!(lhs.1.name(), rhs.1.name());
-            assert_eq!(lhs.1.arg_types(), rhs.1.arg_types());
-            assert_eq!(lhs.1.return_type(), rhs.1.return_type());
-            assert_eq!(lhs.1.privacy(), rhs.1.privacy());
+            assert_eq!(lhs.1.signature.arg_types(), rhs.1.signature.arg_types());
+            assert_eq!(lhs.1.signature.return_type(), rhs.1.signature.return_type());
         }
     }
 
@@ -717,11 +732,11 @@ mod tests {
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_signature = fake_fn_signature(&fn_name, &[], return_type, Privacy::Public);
+        let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
-        let signatures = &[fn_signature];
+        let prototypes = &[fn_prototype];
         let fn_ptrs = &mut [ptr::null()];
-        let mut dispatch_table = fake_dispatch_table(signatures, fn_ptrs);
+        let mut dispatch_table = fake_dispatch_table(prototypes, fn_ptrs);
 
         let result = dispatch_table.ptrs_mut();
         assert_eq!(result.len(), fn_ptrs.len());
@@ -736,7 +751,7 @@ mod tests {
         let fn_ptrs = &mut [];
         let dispatch_table = fake_dispatch_table(signatures, fn_ptrs);
 
-        assert_eq!(dispatch_table.signatures().len(), 0);
+        assert_eq!(dispatch_table.prototypes().len(), 0);
     }
 
     #[test]
@@ -746,19 +761,18 @@ mod tests {
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_signature = fake_fn_signature(&fn_name, &[], return_type, Privacy::Public);
+        let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
-        let signatures = &[fn_signature];
+        let prototypes = &[fn_prototype];
         let fn_ptrs = &mut [ptr::null()];
-        let dispatch_table = fake_dispatch_table(signatures, fn_ptrs);
+        let dispatch_table = fake_dispatch_table(prototypes, fn_ptrs);
 
-        let result = dispatch_table.signatures();
-        assert_eq!(result.len(), signatures.len());
-        for (lhs, rhs) in result.iter().zip(signatures.iter()) {
+        let result = dispatch_table.prototypes();
+        assert_eq!(result.len(), prototypes.len());
+        for (lhs, rhs) in result.iter().zip(prototypes.iter()) {
             assert_eq!(lhs.name(), rhs.name());
-            assert_eq!(lhs.arg_types(), rhs.arg_types());
-            assert_eq!(lhs.return_type(), rhs.return_type());
-            assert_eq!(lhs.privacy(), rhs.privacy());
+            assert_eq!(lhs.signature.arg_types(), rhs.signature.arg_types());
+            assert_eq!(lhs.signature.return_type(), rhs.signature.return_type());
         }
     }
 
@@ -769,12 +783,12 @@ mod tests {
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_signature = fake_fn_signature(&fn_name, &[], return_type, Privacy::Public);
+        let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
-        let signatures = &[fn_signature];
+        let prototypes = &[fn_prototype];
         let fn_ptrs = &mut [ptr::null()];
 
-        let dispatch_table = fake_dispatch_table(signatures, fn_ptrs);
+        let dispatch_table = fake_dispatch_table(prototypes, fn_ptrs);
         assert_eq!(unsafe { dispatch_table.get_ptr_unchecked(0) }, fn_ptrs[0]);
     }
 
@@ -785,12 +799,12 @@ mod tests {
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_signature = fake_fn_signature(&fn_name, &[], return_type, Privacy::Public);
+        let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
-        let signatures = &[fn_signature];
+        let prototype = &[fn_prototype];
         let fn_ptrs = &mut [ptr::null()];
 
-        let dispatch_table = fake_dispatch_table(signatures, fn_ptrs);
+        let dispatch_table = fake_dispatch_table(prototype, fn_ptrs);
         assert_eq!(dispatch_table.get_ptr(1), None);
     }
 
@@ -801,12 +815,12 @@ mod tests {
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_signature = fake_fn_signature(&fn_name, &[], return_type, Privacy::Public);
+        let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
-        let signatures = &[fn_signature];
+        let prototypes = &[fn_prototype];
         let fn_ptrs = &mut [ptr::null()];
 
-        let dispatch_table = fake_dispatch_table(signatures, fn_ptrs);
+        let dispatch_table = fake_dispatch_table(prototypes, fn_ptrs);
         assert_eq!(dispatch_table.get_ptr(0), Some(fn_ptrs[0]));
     }
 
@@ -817,12 +831,12 @@ mod tests {
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_signature = fake_fn_signature(&fn_name, &[], return_type, Privacy::Public);
+        let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
-        let signatures = &[fn_signature];
+        let prototypes = &[fn_prototype];
         let fn_ptrs = &mut [ptr::null()];
 
-        let mut dispatch_table = fake_dispatch_table(signatures, fn_ptrs);
+        let mut dispatch_table = fake_dispatch_table(prototypes, fn_ptrs);
         assert_eq!(
             unsafe { dispatch_table.get_ptr_unchecked_mut(0) },
             &mut fn_ptrs[0]
@@ -836,12 +850,12 @@ mod tests {
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_signature = fake_fn_signature(&fn_name, &[], return_type, Privacy::Public);
+        let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
-        let signatures = &[fn_signature];
+        let prototypes = &[fn_prototype];
         let fn_ptrs = &mut [ptr::null()];
 
-        let mut dispatch_table = fake_dispatch_table(signatures, fn_ptrs);
+        let mut dispatch_table = fake_dispatch_table(prototypes, fn_ptrs);
         assert_eq!(dispatch_table.get_ptr_mut(1), None);
     }
 
@@ -852,12 +866,12 @@ mod tests {
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_signature = fake_fn_signature(&fn_name, &[], return_type, Privacy::Public);
+        let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
-        let signatures = &[fn_signature];
+        let prototypes = &[fn_prototype];
         let fn_ptrs = &mut [ptr::null()];
 
-        let mut dispatch_table = fake_dispatch_table(signatures, fn_ptrs);
+        let mut dispatch_table = fake_dispatch_table(prototypes, fn_ptrs);
         assert_eq!(dispatch_table.get_ptr_mut(0), Some(&mut fn_ptrs[0]));
     }
 

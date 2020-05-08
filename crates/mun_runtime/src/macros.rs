@@ -97,13 +97,13 @@ macro_rules! invoke_fn_impl {
                 ) -> core::result::Result<Output, $ErrName<'s, $($T,)* Output>> {
                     let runtime_ref = runtime.borrow();
                     match runtime_ref
-                        .get_function_info(function_name)
+                        .get_function_definition(function_name)
                         .ok_or_else(|| format!("Failed to obtain function '{}'", function_name))
                         .and_then(|function_info| {
                             // Validate function signature
                             let num_args = $crate::count_args!($($T),*);
 
-                            let arg_types = function_info.signature.arg_types();
+                            let arg_types = function_info.prototype.signature.arg_types();
                             if arg_types.len() != num_args {
                                 return Err(format!(
                                     "Invalid number of arguments. Expected: {}. Found: {}.",
@@ -127,7 +127,7 @@ macro_rules! invoke_fn_impl {
                                 idx += 1;
                             )*
 
-                            if let Some(return_type) = function_info.signature.return_type() {
+                            if let Some(return_type) = function_info.prototype.signature.return_type() {
                                 crate::reflection::equals_return_type::<Output>(return_type)
                             } else if <() as ReturnTypeReflection>::type_guid() != Output::type_guid() {
                                 Err((<() as ReturnTypeReflection>::type_name(), Output::type_name()))

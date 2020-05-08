@@ -232,15 +232,15 @@ fn compiler_valid_utf8() {
     );
 
     let borrowed = driver.runtime_mut().borrow();
-    let foo_func = borrowed.get_function_info("foo").unwrap();
+    let foo_func = borrowed.get_function_definition("foo").unwrap();
     assert_eq!(
-        unsafe { CStr::from_ptr(foo_func.signature.name) }
+        unsafe { CStr::from_ptr(foo_func.prototype.name) }
             .to_str()
             .is_ok(),
         true
     );
 
-    for arg_type in foo_func.signature.arg_types() {
+    for arg_type in foo_func.prototype.signature.arg_types() {
         assert_eq!(
             unsafe { CStr::from_ptr(arg_type.name) }.to_str().is_ok(),
             true
@@ -259,7 +259,7 @@ fn compiler_valid_utf8() {
         }
     }
     assert_eq!(
-        unsafe { CStr::from_ptr((*foo_func.signature.return_type).name) }
+        unsafe { CStr::from_ptr((*foo_func.prototype.signature.return_type).name) }
             .to_str()
             .is_ok(),
         true

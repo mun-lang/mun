@@ -9,7 +9,8 @@ pub(crate) struct AbiTypes {
     pub privacy_type: IntType,
     pub type_info_type: StructType,
     pub function_signature_type: StructType,
-    pub function_info_type: StructType,
+    pub function_prototype_type: StructType,
+    pub function_definition_type: StructType,
     pub struct_info_type: StructType,
     pub module_info_type: StructType,
     pub dispatch_table_type: StructType,
@@ -48,20 +49,28 @@ pub(crate) fn gen_abi_types(context: &Context) -> AbiTypes {
     let function_signature_type = context.opaque_struct_type("struct.MunFunctionSignature");
     function_signature_type.set_body(
         &[
-            str_type.into(),                                         // name
             type_info_ptr_type.ptr_type(AddressSpace::Const).into(), // arg_types
             type_info_ptr_type.into(),                               // return_type
             context.i16_type().into(),                               // num_arg_types
-            privacy_type.into(),                                     // privacy
         ],
         false,
     );
 
-    // Construct the `MunFunctionInfo` struct
-    let function_info_type = context.opaque_struct_type("struct.MunFunctionInfo");
-    function_info_type.set_body(
+    // Construct the `MunFunctionSignature` type
+    let function_prototype_type = context.opaque_struct_type("struct.MunFunctionPrototype");
+    function_prototype_type.set_body(
         &[
+            str_type.into(),                // name
             function_signature_type.into(), // signature
+        ],
+        false,
+    );
+
+    // Construct the `MunFunctionDefinition` struct
+    let function_definition_type = context.opaque_struct_type("struct.MunFunctionDefinition");
+    function_definition_type.set_body(
+        &[
+            function_prototype_type.into(), // prototype
             context
                 .void_type()
                 .fn_type(&[], false)
@@ -88,11 +97,13 @@ pub(crate) fn gen_abi_types(context: &Context) -> AbiTypes {
     let module_info_type = context.opaque_struct_type("struct.MunModuleInfo");
     module_info_type.set_body(
         &[
-            str_type.into(),                                         // path
-            function_info_type.ptr_type(AddressSpace::Const).into(), // functions
-            context.i32_type().into(),                               // num_functions
+            str_type.into(), // path
+            function_definition_type
+                .ptr_type(AddressSpace::Const)
+                .into(), // functions
+            context.i32_type().into(), // num_functions
             type_info_ptr_type.ptr_type(AddressSpace::Const).into(), // types
-            context.i32_type().into(),                               // num_types
+            context.i32_type().into(), // num_types
         ],
         false,
     );
@@ -131,7 +142,8 @@ pub(crate) fn gen_abi_types(context: &Context) -> AbiTypes {
         privacy_type,
         type_info_type,
         function_signature_type,
-        function_info_type,
+        function_prototype_type,
+        function_definition_type,
         struct_info_type,
         module_info_type,
         dispatch_table_type,
