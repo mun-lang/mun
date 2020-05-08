@@ -108,6 +108,20 @@ impl fmt::Display for FunctionSignature {
     }
 }
 
+impl PartialEq for FunctionSignature {
+    fn eq(&self, other: &Self) -> bool {
+        self.return_type() == other.return_type()
+            && self.arg_types().len() == other.arg_types().len()
+            && self
+                .arg_types()
+                .iter()
+                .zip(other.arg_types().iter())
+                .all(|(a, b)| PartialEq::eq(a, b))
+    }
+}
+
+impl Eq for FunctionSignature {}
+
 unsafe impl Send for FunctionSignature {}
 unsafe impl Sync for FunctionSignature {}
 
