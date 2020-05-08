@@ -521,12 +521,12 @@ fn delete_used_struct() {
     assert!(driver
         .runtime_mut()
         .borrow()
-        .get_function_info("foo_new")
+        .get_function_definition("foo_new")
         .is_none());
     assert!(driver
         .runtime_mut()
         .borrow()
-        .get_function_info("bar_new")
+        .get_function_definition("bar_new")
         .is_some());
     assert_eq!(foo.get::<i64>("a").unwrap(), a);
     assert_eq!(foo.get::<f64>("b").unwrap(), b);

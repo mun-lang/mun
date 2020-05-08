@@ -84,7 +84,7 @@ macro_rules! test_invalid_runtime {
 }
 
 test_invalid_runtime!(
-    runtime_get_function_info(ptr::null(), ptr::null_mut(), ptr::null_mut()),
+    runtime_get_function_definition(ptr::null(), ptr::null_mut(), ptr::null_mut()),
     runtime_update(ptr::null_mut()),
     gc_alloc(UnsafeTypeInfo::new(NonNull::dangling()), ptr::null_mut()),
     gc_ptr_type(mem::zeroed::<GcPtr>(), ptr::null_mut()),
@@ -149,7 +149,7 @@ fn test_runtime_get_function_info_invalid_fn_name() {
     );
 
     let handle = unsafe {
-        mun_runtime_get_function_info(
+        mun_runtime_get_function_definition(
             driver.runtime,
             ptr::null(),
             ptr::null_mut(),
@@ -176,7 +176,7 @@ fn test_runtime_get_function_info_invalid_fn_name_encoding() {
 
     let invalid_encoding = ['�', '\0'];
     let handle = unsafe {
-        mun_runtime_get_function_info(
+        mun_runtime_get_function_definition(
             driver.runtime,
             invalid_encoding.as_ptr() as *const _,
             ptr::null_mut(),
@@ -203,7 +203,7 @@ fn test_runtime_get_function_info_invalid_has_fn_info() {
 
     let fn_name = CString::new("main").expect("Invalid function name");
     let handle = unsafe {
-        mun_runtime_get_function_info(
+        mun_runtime_get_function_definition(
             driver.runtime,
             fn_name.as_ptr(),
             ptr::null_mut(),
@@ -231,7 +231,7 @@ fn test_runtime_get_function_info_invalid_fn_info() {
     let fn_name = CString::new("main").expect("Invalid function name");
     let mut has_fn_info = false;
     let handle = unsafe {
-        mun_runtime_get_function_info(
+        mun_runtime_get_function_definition(
             driver.runtime,
             fn_name.as_ptr(),
             &mut has_fn_info as *mut _,
@@ -258,18 +258,18 @@ fn test_runtime_get_function_info() {
 
     let fn_name = CString::new("main").expect("Invalid function name");
     let mut has_fn_info = false;
-    let mut fn_info = MaybeUninit::uninit();
+    let mut fn_definition = MaybeUninit::uninit();
     let handle = unsafe {
-        mun_runtime_get_function_info(
+        mun_runtime_get_function_definition(
             driver.runtime,
             fn_name.as_ptr(),
             &mut has_fn_info as *mut _,
-            fn_info.as_mut_ptr(),
+            fn_definition.as_mut_ptr(),
         )
     };
     assert_eq!(handle.token(), 0);
     assert!(has_fn_info);
-    let _fn_info = unsafe { fn_info.assume_init() };
+    let _fn_definition = unsafe { fn_definition.assume_init() };
 }
 
 #[test]
@@ -315,20 +315,20 @@ fn test_gc_alloc_invalid_obj() {
     );
     let fn_name = CString::new("main").expect("Invalid function name");
     let mut has_fn_info = false;
-    let mut fn_info = MaybeUninit::uninit();
+    let mut fn_definition = MaybeUninit::uninit();
     let handle = unsafe {
-        mun_runtime_get_function_info(
+        mun_runtime_get_function_definition(
             driver.runtime,
             fn_name.as_ptr(),
             &mut has_fn_info as *mut _,
-            fn_info.as_mut_ptr(),
+            fn_definition.as_mut_ptr(),
         )
     };
     assert_eq!(handle.token(), 0);
 
-    let fn_info = unsafe { fn_info.assume_init() };
+    let fn_definition = unsafe { fn_definition.assume_init() };
     // TODO: Simplify this once we have `mun_runtime_find_type_info`
-    let return_type = fn_info.signature.return_type().unwrap();
+    let return_type = fn_definition.prototype.signature.return_type().unwrap();
     let return_type =
         UnsafeTypeInfo::new(NonNull::new(return_type as *const abi::TypeInfo as *mut _).unwrap());
 
@@ -353,20 +353,20 @@ fn test_gc_alloc() {
     );
     let fn_name = CString::new("main").expect("Invalid function name");
     let mut has_fn_info = false;
-    let mut fn_info = MaybeUninit::uninit();
+    let mut fn_definition = MaybeUninit::uninit();
     let handle = unsafe {
-        mun_runtime_get_function_info(
+        mun_runtime_get_function_definition(
             driver.runtime,
             fn_name.as_ptr(),
             &mut has_fn_info as *mut _,
-            fn_info.as_mut_ptr(),
+            fn_definition.as_mut_ptr(),
         )
     };
     assert_eq!(handle.token(), 0);
 
-    let fn_info = unsafe { fn_info.assume_init() };
+    let fn_definition = unsafe { fn_definition.assume_init() };
     // TODO: Simplify this once we have `mun_runtime_find_type_info`
-    let return_type = fn_info.signature.return_type().unwrap();
+    let return_type = fn_definition.prototype.signature.return_type().unwrap();
     let return_type =
         UnsafeTypeInfo::new(NonNull::new(return_type as *const abi::TypeInfo as *mut _).unwrap());
 
@@ -417,20 +417,20 @@ fn test_gc_ptr_type() {
     );
     let fn_name = CString::new("main").expect("Invalid function name");
     let mut has_fn_info = false;
-    let mut fn_info = MaybeUninit::uninit();
+    let mut fn_definition = MaybeUninit::uninit();
     let handle = unsafe {
-        mun_runtime_get_function_info(
+        mun_runtime_get_function_definition(
             driver.runtime,
             fn_name.as_ptr(),
             &mut has_fn_info as *mut _,
-            fn_info.as_mut_ptr(),
+            fn_definition.as_mut_ptr(),
         )
     };
     assert_eq!(handle.token(), 0);
 
-    let fn_info = unsafe { fn_info.assume_init() };
+    let fn_definition = unsafe { fn_definition.assume_init() };
     // TODO: Simplify this once we have `mun_runtime_find_type_info`
-    let return_type = fn_info.signature.return_type().unwrap();
+    let return_type = fn_definition.prototype.signature.return_type().unwrap();
     let return_type =
         UnsafeTypeInfo::new(NonNull::new(return_type as *const abi::TypeInfo as *mut _).unwrap());
 
@@ -464,20 +464,20 @@ fn test_gc_rooting() {
     );
     let fn_name = CString::new("main").expect("Invalid function name");
     let mut has_fn_info = false;
-    let mut fn_info = MaybeUninit::uninit();
+    let mut fn_definition = MaybeUninit::uninit();
     let handle = unsafe {
-        mun_runtime_get_function_info(
+        mun_runtime_get_function_definition(
             driver.runtime,
             fn_name.as_ptr(),
             &mut has_fn_info as *mut _,
-            fn_info.as_mut_ptr(),
+            fn_definition.as_mut_ptr(),
         )
     };
     assert_eq!(handle.token(), 0);
 
-    let fn_info = unsafe { fn_info.assume_init() };
+    let fn_definition = unsafe { fn_definition.assume_init() };
     // TODO: Simplify this once we have `mun_runtime_find_type_info`
-    let return_type = fn_info.signature.return_type().unwrap();
+    let return_type = fn_definition.prototype.signature.return_type().unwrap();
     let return_type =
         UnsafeTypeInfo::new(NonNull::new(return_type as *const abi::TypeInfo as *mut _).unwrap());
 
@@ -489,6 +489,7 @@ fn test_gc_rooting() {
     assert_ne!(unsafe { obj.deref::<u8>() }, ptr::null());
 
     let handle = unsafe { mun_gc_root(driver.runtime, obj) };
+
     assert_eq!(handle.token(), 0);
 
     let mut reclaimed = false;

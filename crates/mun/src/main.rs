@@ -98,14 +98,16 @@ fn start(matches: &ArgMatches) -> Result<(), failure::Error> {
 
     let borrowed = runtime.borrow();
     let entry_point = matches.value_of("entry").unwrap_or("main");
-    let fn_info = borrowed.get_function_info(entry_point).ok_or_else(|| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            format!("Failed to obtain entry point '{}'", entry_point),
-        )
-    })?;
+    let fn_definition = borrowed
+        .get_function_definition(entry_point)
+        .ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("Failed to obtain entry point '{}'", entry_point),
+            )
+        })?;
 
-    if let Some(ret_type) = fn_info.signature.return_type() {
+    if let Some(ret_type) = fn_definition.prototype.signature.return_type() {
         let type_guid = &ret_type.guid;
         if *type_guid == bool::type_guid() {
             let result: bool =

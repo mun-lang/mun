@@ -1,7 +1,7 @@
 #![allow(dead_code, unused_macros)]
 
 use mun_compiler::{Config, DisplayColor, Driver, FileId, PathOrInline, RelativePathBuf};
-use mun_runtime::{IntoFunctionInfo, Runtime, RuntimeBuilder};
+use mun_runtime::{IntoFunctionDefinition, Runtime, RuntimeBuilder};
 use std::io::Cursor;
 use std::{cell::RefCell, path::PathBuf, rc::Rc, thread::sleep, time::Duration};
 
@@ -108,7 +108,7 @@ impl TestDriver {
     }
 
     /// Adds a custom user function to the dispatch table.
-    pub fn insert_fn<S: AsRef<str>, F: IntoFunctionInfo>(mut self, name: S, func: F) -> Self {
+    pub fn insert_fn<S: AsRef<str>, F: IntoFunctionDefinition>(mut self, name: S, func: F) -> Self {
         self.runtime = match self.runtime {
             RuntimeOrBuilder::Builder(builder) => {
                 RuntimeOrBuilder::Builder(builder.insert_fn(name, func))

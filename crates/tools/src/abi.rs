@@ -58,7 +58,7 @@ pub fn generate(mode: Mode) -> Result<()> {
         .derive_copy(false)
         .derive_debug(false)
         .raw_line("#![allow(non_snake_case, non_camel_case_types, non_upper_case_globals)]")
-        .raw_line("use crate::{Privacy, StructMemoryKind, TypeGroup};")
+        .raw_line("use crate::{StructMemoryKind, TypeGroup};")
         .generate()
         .map_err(|_| format_err!("Unable to generate bindings from 'mun_abi.h'"))?;
 

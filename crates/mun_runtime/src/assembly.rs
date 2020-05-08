@@ -62,7 +62,7 @@ impl Assembly {
             .symbols
             .functions()
             .iter()
-            .map(|f| f.signature.name())
+            .map(|f| f.prototype.name())
             .collect();
 
         for (fn_ptr, fn_sig) in self.info.dispatch_table.iter() {
@@ -97,24 +97,27 @@ impl Assembly {
                 }
             }
 
-            for fn_info in self.info.symbols.functions().iter() {
-                let (fn_sig, _) = dependencies
-                    .get(fn_info.signature.name())
+            for fn_definition in self.info.symbols.functions().iter() {
+                let (fn_prototype, _) = dependencies
+                    .get(fn_definition.prototype.name())
                     .expect("The dependency must exist after the previous check.");
 
                 // TODO: This is a hack
-                if fn_info.signature.return_type() != fn_sig.return_type()
-                    || fn_info.signature.arg_types().len() != fn_sig.arg_types().len()
-                    || !fn_info
+                if fn_definition.prototype.signature.return_type()
+                    != fn_prototype.signature.return_type()
+                    || fn_definition.prototype.signature.arg_types().len()
+                        != fn_prototype.signature.arg_types().len()
+                    || !fn_definition
+                        .prototype
                         .signature
                         .arg_types()
                         .iter()
-                        .zip(fn_sig.arg_types().iter())
+                        .zip(fn_prototype.signature.arg_types().iter())
                         .all(|(a, b)| PartialEq::eq(a, b))
                 {
                     return Err(io::Error::new(
                         io::ErrorKind::NotFound,
-                        format!("Failed to link: function '{}' is missing. A function with the same name does exist, but the signatures do not match (expected: {}, found: {}).", fn_sig.name(), fn_sig, fn_info.signature),
+                        format!("Failed to link: function '{}' is missing. A function with the same name does exist, but the signatures do not match (expected: {}, found: {}).", fn_prototype.name(), fn_prototype, fn_definition.prototype),
                     ));
                 }
             }
@@ -129,14 +132,14 @@ impl Assembly {
     /// an `Assembly` - in the `load` function - making this function safe.
     pub fn link(&mut self, runtime_dispatch_table: &mut DispatchTable) {
         for function in self.info.symbols.functions() {
-            runtime_dispatch_table.insert_fn(function.signature.name(), function.clone());
+            runtime_dispatch_table.insert_fn(function.prototype.name(), function.clone());
         }
 
-        for (dispatch_ptr, fn_signature) in self.info.dispatch_table.iter_mut() {
+        for (dispatch_ptr, fn_prototype) in self.info.dispatch_table.iter_mut() {
             if dispatch_ptr.is_null() {
                 let fn_ptr = runtime_dispatch_table
-                    .get_fn(fn_signature.name())
-                    .unwrap_or_else(|| panic!("Function '{}' is expected to exist.", fn_signature))
+                    .get_fn(fn_prototype.name())
+                    .unwrap_or_else(|| panic!("Function '{}' is expected to exist.", fn_prototype))
                     .fn_ptr;
                 *dispatch_ptr = fn_ptr;
             }
@@ -183,7 +186,7 @@ impl Assembly {
 
         // Remove the old assembly's functions
         for function in self.info.symbols.functions() {
-            runtime_dispatch_table.remove_fn(function.signature.name());
+            runtime_dispatch_table.remove_fn(function.prototype.name());
         }
 
         new_assembly.link(runtime_dispatch_table);

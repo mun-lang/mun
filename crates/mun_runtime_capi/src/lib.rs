@@ -44,8 +44,6 @@ pub struct RuntimeHandle(*mut c_void);
 ///
 /// The runtime must be manually destructed using [`mun_runtime_destroy`].
 ///
-/// TODO: expose interval at which the runtime's file watcher operates.
-///
 /// # Safety
 ///
 /// This function receives raw pointers as parameters. If any of the arguments is a null pointer,
@@ -79,13 +77,13 @@ pub unsafe extern "C" fn mun_runtime_create(
         }
     };
 
-    let options = RuntimeOptions {
+    let runtime_options = RuntimeOptions {
         library_path: library_path.into(),
         delay: Duration::from_millis(10),
         user_functions: Default::default(),
     };
 
-    let runtime = match Runtime::new(options) {
+    let runtime = match Runtime::new(runtime_options) {
         Ok(runtime) => runtime,
         Err(e) => return HUB.errors.register(e),
     };
@@ -102,8 +100,9 @@ pub extern "C" fn mun_runtime_destroy(handle: RuntimeHandle) {
     }
 }
 
-/// Retrieves the [`FunctionInfo`] for `fn_name` from the runtime corresponding to `handle`. If
-/// successful, `has_fn_info` and `fn_info` are set, otherwise a non-zero error handle is returned.
+/// Retrieves the [`FunctionDefinition`] for `fn_name` from the runtime corresponding to `handle`.
+/// If successful, `has_fn_info` and `fn_info` are set, otherwise a non-zero error handle is
+/// returned.
 ///
 /// If a non-zero error handle is returned, it must be manually destructed using
 /// [`mun_error_destroy`].
@@ -113,11 +112,11 @@ pub extern "C" fn mun_runtime_destroy(handle: RuntimeHandle) {
 /// This function receives raw pointers as parameters. If any of the arguments is a null pointer,
 /// an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
 #[no_mangle]
-pub unsafe extern "C" fn mun_runtime_get_function_info(
+pub unsafe extern "C" fn mun_runtime_get_function_definition(
     handle: RuntimeHandle,
     fn_name: *const c_char,
     has_fn_info: *mut bool,
-    fn_info: *mut abi::FunctionInfo,
+    fn_definition: *mut abi::FunctionDefinition,
 ) -> ErrorHandle {
     let runtime = match (handle.0 as *mut Runtime).as_ref() {
         Some(runtime) => runtime,
@@ -152,7 +151,7 @@ pub unsafe extern "C" fn mun_runtime_get_function_info(
         }
     };
 
-    let fn_info = match fn_info.as_mut() {
+    let fn_definition = match fn_definition.as_mut() {
         Some(info) => info,
         None => {
             return HUB
@@ -161,10 +160,10 @@ pub unsafe extern "C" fn mun_runtime_get_function_info(
         }
     };
 
-    match runtime.get_function_info(fn_name) {
+    match runtime.get_function_definition(fn_name) {
         Some(info) => {
             *has_fn_info = true;
-            *fn_info = info.clone();
+            *fn_definition = info.clone();
         }
         None => *has_fn_info = false,
     }

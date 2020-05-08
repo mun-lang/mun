@@ -40,7 +40,7 @@ pub use crate::{
     reflection::{ArgumentReflection, ReturnTypeReflection},
     struct_ref::StructRef,
 };
-pub use abi::IntoFunctionInfo;
+pub use abi::IntoFunctionDefinition;
 
 /// Options for the construction of a [`Runtime`].
 pub struct RuntimeOptions {
@@ -49,7 +49,7 @@ pub struct RuntimeOptions {
     /// Delay during which filesystem events are collected, deduplicated, and after which emitted.
     pub delay: Duration,
     /// Custom user injected functions
-    pub user_functions: Vec<(abi::FunctionInfo, abi::FunctionInfoStorage)>,
+    pub user_functions: Vec<(abi::FunctionDefinition, abi::FunctionDefinitionStorage)>,
 }
 
 /// A builder for the [`Runtime`].
@@ -76,10 +76,12 @@ impl RuntimeBuilder {
     }
 
     /// Adds a custom user function to the dispatch table.
-    pub fn insert_fn<S: AsRef<str>, F: abi::IntoFunctionInfo>(mut self, name: S, func: F) -> Self {
-        self.options
-            .user_functions
-            .push(func.into(name, abi::Privacy::Public));
+    pub fn insert_fn<S: AsRef<str>, F: abi::IntoFunctionDefinition>(
+        mut self,
+        name: S,
+        func: F,
+    ) -> Self {
+        self.options.user_functions.push(func.into(name));
         self
     }
 
@@ -96,13 +98,13 @@ type DependencyMap<T> = FxHashMap<String, Dependency<T>>;
 /// A runtime dispatch table that maps full paths to function and struct information.
 #[derive(Default)]
 pub struct DispatchTable {
-    functions: FxHashMap<String, abi::FunctionInfo>,
-    fn_dependencies: FxHashMap<String, DependencyMap<abi::FunctionSignature>>,
+    functions: FxHashMap<String, abi::FunctionDefinition>,
+    fn_dependencies: FxHashMap<String, DependencyMap<abi::FunctionPrototype>>,
 }
 
 impl DispatchTable {
-    /// Retrieves the [`abi::abi::FunctionInfo`] corresponding to `fn_path`, if it exists.
-    pub fn get_fn(&self, fn_path: &str) -> Option<&abi::FunctionInfo> {
+    /// Retrieves the [`abi::FunctionDefinition`] corresponding to `fn_path`, if it exists.
+    pub fn get_fn(&self, fn_path: &str) -> Option<&abi::FunctionDefinition> {
         self.functions.get(fn_path)
     }
 
@@ -113,13 +115,13 @@ impl DispatchTable {
     pub fn insert_fn<S: ToString>(
         &mut self,
         fn_path: S,
-        fn_info: abi::FunctionInfo,
-    ) -> Option<abi::FunctionInfo> {
+        fn_info: abi::FunctionDefinition,
+    ) -> Option<abi::FunctionDefinition> {
         self.functions.insert(fn_path.to_string(), fn_info)
     }
 
     /// Removes and returns the `fn_info` corresponding to `fn_path`, if it exists.
-    pub fn remove_fn<S: AsRef<str>>(&mut self, fn_path: S) -> Option<abi::FunctionInfo> {
+    pub fn remove_fn<S: AsRef<str>>(&mut self, fn_path: S) -> Option<abi::FunctionDefinition> {
         self.functions.remove(fn_path.as_ref())
     }
 
@@ -128,7 +130,7 @@ impl DispatchTable {
         &mut self,
         assembly_path: S,
         fn_path: T,
-        fn_signature: abi::FunctionSignature,
+        fn_prototype: abi::FunctionPrototype,
     ) {
         let dependencies = self
             .fn_dependencies
@@ -137,7 +139,7 @@ impl DispatchTable {
 
         let (_, counter) = dependencies
             .entry(fn_path.to_string())
-            .or_insert((fn_signature, 0));
+            .or_insert((fn_prototype, 0));
 
         *counter += 1;
     }
@@ -165,7 +167,7 @@ pub struct Runtime {
     watcher: RecommendedWatcher,
     watcher_rx: Receiver<DebouncedEvent>,
     gc: Arc<GarbageCollector>,
-    _user_functions: Vec<abi::FunctionInfoStorage>,
+    _user_functions: Vec<abi::FunctionDefinitionStorage>,
 }
 
 /// Retrieve the allocator using the provided handle.
@@ -206,15 +208,14 @@ impl Runtime {
         let mut dispatch_table = DispatchTable::default();
 
         // Add internal functions
-        options.user_functions.push(IntoFunctionInfo::into(
+        options.user_functions.push(IntoFunctionDefinition::into(
             new as extern "C" fn(*const abi::TypeInfo, *mut ffi::c_void) -> *const *mut ffi::c_void,
             "new",
-            abi::Privacy::Public,
         ));
 
         let mut storages = Vec::with_capacity(options.user_functions.len());
         for (info, storage) in options.user_functions.into_iter() {
-            dispatch_table.insert_fn(info.signature.name().to_string(), info);
+            dispatch_table.insert_fn(info.prototype.name().to_string(), info);
             storages.push(storage)
         }
 
@@ -256,8 +257,8 @@ impl Runtime {
         Ok(())
     }
 
-    /// Retrieves the function information corresponding to `function_name`, if available.
-    pub fn get_function_info(&self, function_name: &str) -> Option<&abi::FunctionInfo> {
+    /// Retrieves the function definition corresponding to `function_name`, if available.
+    pub fn get_function_definition(&self, function_name: &str) -> Option<&abi::FunctionDefinition> {
         self.dispatch_table.get_fn(function_name)
     }
 

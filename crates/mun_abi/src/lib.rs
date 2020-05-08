@@ -12,7 +12,7 @@ mod static_type_map;
 mod type_info;
 
 pub use autogen::*;
-pub use function_info::{FunctionInfoStorage, IntoFunctionInfo};
+pub use function_info::{FunctionDefinitionStorage, IntoFunctionDefinition};
 pub use type_info::HasStaticTypeInfo;
 
 /// The Mun ABI prelude
@@ -20,7 +20,9 @@ pub use type_info::HasStaticTypeInfo;
 /// The *prelude* contains imports that are used almost every time.
 pub mod prelude {
     pub use crate::autogen::*;
-    pub use crate::{HasStaticTypeInfo, IntoFunctionInfo, Privacy, StructMemoryKind, TypeGroup};
+    pub use crate::{
+        HasStaticTypeInfo, IntoFunctionDefinition, Privacy, StructMemoryKind, TypeGroup,
+    };
 }
 
 /// Represents the kind of memory management a struct uses.
