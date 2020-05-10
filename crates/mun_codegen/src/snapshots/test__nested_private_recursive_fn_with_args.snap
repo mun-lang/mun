@@ -7,7 +7,7 @@ expression: "extern fn other() -> i32;\n\nfn private_fn(a: i32) -> f32 {\n    pr
 source_filename = "main.mun"
 
 %DispatchTable = type { float (i32)*, i32 ()* }
-%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
 @dispatchTable = external global %DispatchTable
 @global_type_table = external global [2 x %struct.MunTypeInfo addrspace(4)*]
@@ -34,7 +34,7 @@ body:
 source_filename = "group_name"
 
 %DispatchTable = type { float (i32)*, i32 ()* }
-%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
 @dispatchTable = global %DispatchTable { float (i32)* @private_fn, i32 ()* null }
 @"type_info::<core::i32>::name" = private unnamed_addr constant [10 x i8] c"core::i32\00"

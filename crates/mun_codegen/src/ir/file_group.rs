@@ -5,6 +5,7 @@ use super::{
     intrinsics,
     type_table::{TypeTable, TypeTableBuilder},
 };
+use crate::value::{IrTypeContext, IrValueContext};
 use crate::IrDatabase;
 use hir::ModuleDef;
 use inkwell::{module::Module, types::PointerType, values::UnnamedAddress, AddressSpace};
@@ -75,11 +76,22 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: hir::FileId) -> Arc<FileGr
 
     let dispatch_table = dispatch_table_builder.build();
 
-    let abi_types = gen_abi_types(&db.context());
+    let type_context = IrTypeContext {
+        context: &db.context(),
+        target_data: &db.target_data(),
+        struct_types: Default::default(),
+    };
+    let value_context = IrValueContext {
+        type_context: &type_context,
+        context: &db.context(),
+        module: &llvm_module,
+    };
+    let abi_types = gen_abi_types(&type_context);
     let mut type_table_builder = TypeTableBuilder::new(
         db,
         &llvm_module,
         &abi_types,
+        &value_context,
         intrinsics_map.keys(),
         &dispatch_table,
     );

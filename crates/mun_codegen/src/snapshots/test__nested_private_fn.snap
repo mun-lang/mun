@@ -7,7 +7,7 @@ expression: "fn nested_private_fn() -> i32 {\n    1\n}\n\nfn private_fn() -> i32
 source_filename = "main.mun"
 
 %DispatchTable = type { i32 ()*, i32 ()* }
-%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
 @dispatchTable = external global %DispatchTable
 @global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
@@ -37,7 +37,7 @@ body:
 source_filename = "group_name"
 
 %DispatchTable = type { i32 ()*, i32 ()* }
-%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
 @dispatchTable = global %DispatchTable { i32 ()* @private_fn, i32 ()* @nested_private_fn }
 @"type_info::<core::i32>::name" = private unnamed_addr constant [10 x i8] c"core::i32\00"

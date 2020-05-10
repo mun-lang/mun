@@ -15,6 +15,7 @@ pub mod file;
 pub(crate) mod file_group;
 pub mod function;
 mod intrinsics;
+pub mod ir_types;
 pub mod ty;
 pub(crate) mod type_table;
 
@@ -173,24 +174,16 @@ impl_fundamental_ir_types!(
 impl IsIrType for usize {
     type Type = IntType;
 
-    fn ir_type(context: &Context, target: &TargetData) -> Self::Type {
-        match target.get_pointer_byte_size(None) {
-            4 => <u32 as IsIrType>::ir_type(context, target),
-            8 => <u64 as IsIrType>::ir_type(context, target),
-            _ => unimplemented!("unsupported pointer byte size"),
-        }
+    fn ir_type(_context: &Context, target: &TargetData) -> Self::Type {
+        target.ptr_sized_int_type(None)
     }
 }
 
 impl IsIrType for isize {
     type Type = IntType;
 
-    fn ir_type(context: &Context, target: &TargetData) -> Self::Type {
-        match target.get_pointer_byte_size(None) {
-            4 => <i32 as IsIrType>::ir_type(context, target),
-            8 => <i64 as IsIrType>::ir_type(context, target),
-            _ => unimplemented!("unsupported pointer byte size"),
-        }
+    fn ir_type(_context: &Context, target: &TargetData) -> Self::Type {
+        target.ptr_sized_int_type(None)
     }
 }
 

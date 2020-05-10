@@ -7,7 +7,7 @@ expression: "struct(gc) Foo { a: i32 };\n\npub fn main(c:i32) -> i32 {\n    let 
 source_filename = "main.mun"
 
 %DispatchTable = type { i8* addrspace(4)* (i8 addrspace(4)*, i8*)* }
-%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 %Foo = type { i32 }
 
 @allocatorHandle = external global i8*
@@ -44,18 +44,18 @@ body:
 source_filename = "group_name"
 
 %DispatchTable = type { i8* addrspace(4)* (i8 addrspace(4)*, i8*)* }
-%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 %struct.MunStructInfo = type { i8 addrspace(4)* addrspace(4)*, %struct.MunTypeInfo addrspace(4)* addrspace(4)*, i16 addrspace(4)*, i16, i8 }
 
 @dispatchTable = global %DispatchTable zeroinitializer
 @"type_info::<core::i32>::name" = private unnamed_addr constant [10 x i8] c"core::i32\00"
 @"type_info::<core::i32>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\17yzt\19\D62\17\D25\95C\17\88[\FA", [10 x i8]* @"type_info::<core::i32>::name", i32 32, i8 4, i8 0 }
 @"type_info::<Foo>::name" = private unnamed_addr constant [4 x i8] c"Foo\00"
-@"struct_info::<Foo>::field_names" = private unnamed_addr constant [2 x i8] c"a\00"
-@0 = private unnamed_addr constant [1 x i8 addrspace(4)*] [i8 addrspace(4)* @"struct_info::<Foo>::field_names"]
+@"struct_info::<Foo>::field_names.0" = private unnamed_addr constant [2 x i8] c"a\00"
+@"struct_info::<Foo>::field_names" = private unnamed_addr constant [1 x i8*] [i8* @"struct_info::<Foo>::field_names.0"]
 @"struct_info::<Foo>::field_types" = private unnamed_addr constant [1 x %struct.MunTypeInfo addrspace(4)*] [%struct.MunTypeInfo addrspace(4)* @"type_info::<core::i32>"]
 @"struct_info::<Foo>::field_offsets" = private unnamed_addr constant [1 x i16] zeroinitializer
-@"type_info::<Foo>" = private unnamed_addr constant { %struct.MunTypeInfo, %struct.MunStructInfo } { %struct.MunTypeInfo { [16 x i8] c"8\AD\C9\D9Y\D2\AA<ME}\CD.\A5\A0\DB", [4 x i8]* @"type_info::<Foo>::name", i32 32, i8 4, i8 1 }, %struct.MunStructInfo { [1 x i8 addrspace(4)*]* @0, [1 x %struct.MunTypeInfo addrspace(4)*]* @"struct_info::<Foo>::field_types", [1 x i16]* @"struct_info::<Foo>::field_offsets", i16 1, i8 0 } }
+@"type_info::<Foo>" = private unnamed_addr constant { %struct.MunTypeInfo, %struct.MunStructInfo } { %struct.MunTypeInfo { [16 x i8] c"8\AD\C9\D9Y\D2\AA<ME}\CD.\A5\A0\DB", [4 x i8]* @"type_info::<Foo>::name", i32 32, i8 4, i8 1 }, %struct.MunStructInfo { [1 x i8*]* @"struct_info::<Foo>::field_names", [1 x %struct.MunTypeInfo addrspace(4)*]* @"struct_info::<Foo>::field_types", [1 x i16]* @"struct_info::<Foo>::field_offsets", i16 1, i8 0 } }
 @"type_info::<*const TypeInfo>::name" = private unnamed_addr constant [16 x i8] c"*const TypeInfo\00"
 @"type_info::<*const TypeInfo>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"=\A1-\1F\C2\A7\88`d\90\F4\B5\BEE}x", [16 x i8]* @"type_info::<*const TypeInfo>::name", i32 64, i8 8, i8 0 }
 @"type_info::<*const *mut core::void>::name" = private unnamed_addr constant [23 x i8] c"*const *mut core::void\00"

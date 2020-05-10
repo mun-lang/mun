@@ -6,7 +6,7 @@ expression: "pub fn not(a: u32) -> u32 { !a }\npub fn bitand(a: u32, b: u32) -> 
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
 
-%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
 @global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
 
@@ -39,7 +39,7 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
 @"type_info::<core::u32>::name" = private unnamed_addr constant [10 x i8] c"core::u32\00"
 @"type_info::<core::u32>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"daz5d\A6\BE\88\81=&Y\A1+\C6\1D", [10 x i8]* @"type_info::<core::u32>::name", i32 32, i8 4, i8 0 }

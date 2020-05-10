@@ -6,7 +6,7 @@ expression: "pub fn assign(a: i128, b: i128) -> i128 {\n    a = b;\n    a\n}\npu
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
 
-%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
 @global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
 
@@ -50,7 +50,7 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
 @"type_info::<core::i128>::name" = private unnamed_addr constant [11 x i8] c"core::i128\00"
 @"type_info::<core::i128>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\BDkp\09RRM\EBc\02\A0\DB47\A7\E3", [11 x i8]* @"type_info::<core::i128>::name", i32 128, i8 8, i8 0 }

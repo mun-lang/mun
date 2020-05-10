@@ -1,0 +1,12 @@
+[package]
+name = "mun_codegen_macros"
+version = "0.1.0"
+authors = ["Bas Zalmstra <zalmstra.bas@gmail.com>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn="1.0"
+quote="1.0"

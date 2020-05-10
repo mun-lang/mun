@@ -7,7 +7,7 @@ expression: "fn bar() {\n    let a = 3;\n}\npub fn foo(a:i32) {\n    let c = bar
 source_filename = "main.mun"
 
 %DispatchTable = type { void ()* }
-%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
 @dispatchTable = external global %DispatchTable
 @global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
@@ -30,7 +30,7 @@ body:
 source_filename = "group_name"
 
 %DispatchTable = type { void ()* }
-%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
 @dispatchTable = global %DispatchTable { void ()* @bar }
 @"type_info::<core::i32>::name" = private unnamed_addr constant [10 x i8] c"core::i32\00"
