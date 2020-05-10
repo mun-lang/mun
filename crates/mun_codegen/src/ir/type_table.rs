@@ -6,13 +6,14 @@ use crate::ir::{
     dispatch_table::{DispatchTable, FunctionPrototype},
 };
 use crate::type_info::{TypeGroup, TypeInfo};
+use crate::value::{AsValue, IrValueContext};
 use crate::IrDatabase;
 use hir::{Body, ExprId, InferenceResult};
 use inkwell::{
     module::Module,
     targets::TargetData,
     types::ArrayType,
-    values::{GlobalValue, IntValue, PointerValue, StructValue},
+    values::{GlobalValue, PointerValue, StructValue},
     AddressSpace,
 };
 use std::collections::{BTreeSet, HashMap};
@@ -81,21 +82,23 @@ impl TypeTable {
 }
 
 /// Used to build a `TypeTable` from HIR.
-pub(crate) struct TypeTableBuilder<'a, D: IrDatabase> {
+pub(crate) struct TypeTableBuilder<'a, 'ctx, 'm, D: IrDatabase> {
     db: &'a D,
     target_data: Arc<TargetData>,
     module: &'a Module,
     abi_types: &'a AbiTypes,
+    value_context: &'a IrValueContext<'a, 'ctx, 'm>,
     dispatch_table: &'a DispatchTable,
     entries: BTreeSet<TypeInfo>, // Use a `BTreeSet` to guarantee deterministically ordered output
 }
 
-impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
+impl<'a, 'ctx, 'm, D: IrDatabase> TypeTableBuilder<'a, 'ctx, 'm, D> {
     /// Creates a new `TypeTableBuilder`.
     pub(crate) fn new<'f>(
         db: &'a D,
         module: &'a Module,
         abi_types: &'a AbiTypes,
+        value_context: &'a IrValueContext<'a, 'ctx, 'm>,
         intrinsics: impl Iterator<Item = &'f FunctionPrototype>,
         dispatch_table: &'a DispatchTable,
     ) -> Self {
@@ -104,6 +107,7 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
             target_data: db.target_data(),
             module,
             abi_types,
+            value_context,
             dispatch_table,
             entries: BTreeSet::new(),
         };
@@ -180,26 +184,19 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
         type_info: &TypeInfo,
     ) -> GlobalValue {
         let context = self.module.get_context();
-        let guid_bytes_ir: [IntValue; 16] = array_init::array_init(|i| {
-            context
-                .i8_type()
-                .const_int(u64::from(type_info.guid.b[i]), false)
-        });
         let type_info_ir = self.abi_types.type_info_type.const_named_struct(&[
-            context.i8_type().const_array(&guid_bytes_ir).into(),
+            type_info.guid.as_value(self.value_context).into(),
             intern_string(
-                self.module,
+                self.value_context,
                 &type_info.name,
                 &format!("type_info::<{}>::name", type_info.name),
             )
             .into(),
-            context
-                .i32_type()
-                .const_int(type_info.size.bit_size, false)
+            (type_info.size.bit_size as u32)
+                .as_value(self.value_context)
                 .into(),
-            context
-                .i8_type()
-                .const_int(type_info.size.alignment as u64, false)
+            (type_info.size.alignment as u8)
+                .as_value(self.value_context)
                 .into(),
             context
                 .i8_type()
@@ -230,7 +227,7 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
         let fields = hir_struct.fields(self.db);
 
         let field_names = gen_string_array(
-            self.module,
+            self.value_context,
             fields.iter().map(|field| field.name(self.db).to_string()),
             &format!("struct_info::<{}>::field_names", name),
         );
@@ -250,18 +247,18 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
             .collect();
 
         let field_types = gen_struct_ptr_array(
-            self.module,
+            self.value_context,
             self.abi_types.type_info_type,
             &field_types,
             &format!("struct_info::<{}>::field_types", name),
         );
 
         let field_offsets = gen_u16_array(
-            self.module,
+            self.value_context,
             (0..fields.len()).map(|idx| {
                 self.target_data
                     .offset_of_element(&struct_ir, idx as u32)
-                    .unwrap()
+                    .unwrap() as u16
             }),
             &format!("struct_info::<{}>::field_offsets", name),
         );
@@ -270,11 +267,7 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
             field_names.into(),
             field_types.into(),
             field_offsets.into(),
-            self.module
-                .get_context()
-                .i16_type()
-                .const_int(fields.len() as u64, false)
-                .into(),
+            (fields.len() as u16).as_value(self.value_context).into(),
             self.module
                 .get_context()
                 .i8_type()

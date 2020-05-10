@@ -4,15 +4,20 @@ mod db;
 #[macro_use]
 mod ir;
 
+#[macro_use]
+extern crate mun_codegen_macros;
+
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod test;
 
+pub mod value;
+
 pub(crate) mod intrinsics;
 pub(crate) mod type_info;
 
-pub use inkwell::{builder, context::Context, module::Module, values, OptimizationLevel};
+pub use inkwell::{builder::Builder, context::Context, module::Module, OptimizationLevel};
 
 pub use crate::{
     code_gen::ModuleBuilder,

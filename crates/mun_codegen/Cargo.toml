@@ -15,6 +15,7 @@ categories = ["Game development", "Mun"]
 [dependencies]
 abi = { version = "=0.2.0", path = "../mun_abi", package = "mun_abi" }
 hir = { version = "=0.2.0", path = "../mun_hir", package = "mun_hir" }
+mun_codegen_macros = { path="../mun_codegen_macros", package="mun_codegen_macros"}
 mun_target = { version = "=0.2.0", path = "../mun_target" }
 mun_lld = { version = "=70.2.0", path = "../mun_lld" }
 failure = "0.1.7"
@@ -23,6 +24,7 @@ md5="0.6.1"
 array-init="0.1.0"
 tempfile = "3"
 paste = "0.1.6"
+parking_lot = "0.10"
 
 [dependencies.inkwell]
 git = "https://github.com/mun-lang/inkwell"
@@ -31,7 +33,6 @@ features = ["llvm7-0"]
 
 [dev-dependencies]
 insta = "0.12.0"
-parking_lot = "0.10"
 
 [build-dependencies]
 semver = "0.9.0"

@@ -1,4 +1,7 @@
 use crate::code_gen::linker::LinkerError;
+use crate::value::{
+    AsValue, CanInternalize, Global, IrTypeContext, IrValueContext, IterAsIrValue, Value,
+};
 use crate::IrDatabase;
 use failure::Fail;
 use hir::{FileId, RelativePathBuf};
@@ -8,10 +11,11 @@ use inkwell::{
     passes::{PassManager, PassManagerBuilder},
     targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine},
     types::StructType,
-    values::{BasicValue, GlobalValue, IntValue, PointerValue, UnnamedAddress},
+    values::{BasicValue, GlobalValue, UnnamedAddress},
     AddressSpace, OptimizationLevel,
 };
 use mun_target::spec;
+use std::ffi::CString;
 use std::io::{self, Write};
 use std::{
     path::{Path, PathBuf},
@@ -152,10 +156,23 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
             .link_in_module(file.llvm_module.clone())
             .map_err(|e| CodeGenerationError::ModuleLinkerError(e.to_string()))?;
 
+        let target_data = self.db.target_data();
+        let type_context = IrTypeContext {
+            context: &self.assembly_module.get_context(),
+            target_data: target_data.as_ref(),
+            struct_types: Default::default(),
+        };
+
+        let value_context = IrValueContext {
+            type_context: &type_context,
+            context: type_context.context,
+            module: &self.assembly_module,
+        };
+
         // Generate the `get_info` method.
         symbols::gen_reflection_ir(
             self.db,
-            &self.assembly_module,
+            &value_context,
             &file.api,
             &group_ir.dispatch_table,
             &group_ir.type_table,
@@ -206,9 +223,15 @@ fn optimize_module(module: &Module, optimization_lvl: OptimizationLevel) {
 /// ```c
 /// const char[] GLOBAL_ = "str";
 /// ```
-pub(crate) fn intern_string(module: &Module, string: &str, name: &str) -> PointerValue {
-    let value = module.get_context().const_string(string, true);
-    gen_global(module, &value, name).as_pointer_value()
+pub(crate) fn intern_string(
+    context: &IrValueContext,
+    string: &str,
+    name: &str,
+) -> inkwell::values::PointerValue {
+    CString::new(string)
+        .expect("could not convert IR string to CString")
+        .intern(name, context)
+        .into()
 }
 
 /// Construct a global from the specified value
@@ -223,32 +246,37 @@ pub(crate) fn gen_global(module: &Module, value: &dyn BasicValue, name: &str) ->
 
 /// Generates a global array from the specified list of strings
 pub(crate) fn gen_string_array(
-    module: &Module,
+    context: &IrValueContext,
     strings: impl Iterator<Item = String>,
     name: &str,
-) -> PointerValue {
-    let str_type = module.get_context().i8_type().ptr_type(AddressSpace::Const);
-
+) -> Value<*const Global<[*const Global<CString>]>> {
     let mut strings = strings.peekable();
     if strings.peek().is_none() {
-        str_type.ptr_type(AddressSpace::Const).const_null()
+        Value::null(context)
     } else {
         let strings = strings
-            .map(|s| intern_string(module, &s, name))
-            .collect::<Vec<PointerValue>>();
+            .enumerate()
+            .map(|(i, s)| {
+                CString::new(s)
+                    .expect("string cannot contain 0's")
+                    .intern(format!("{}.{}", name, i), context)
+                    .as_value(context)
+            })
+            .as_value(context);
 
-        let strings_ir = str_type.const_array(&strings);
-        gen_global(module, &strings_ir, "").as_pointer_value()
+        strings
+            .into_const_private_global(name, context)
+            .as_value(context)
     }
 }
 
 /// Generates a global array from the specified list of struct pointers
 pub(crate) fn gen_struct_ptr_array(
-    module: &Module,
+    context: &IrValueContext,
     ir_type: StructType,
-    ptrs: &[PointerValue],
+    ptrs: &[inkwell::values::PointerValue],
     name: &str,
-) -> PointerValue {
+) -> inkwell::values::PointerValue {
     if ptrs.is_empty() {
         ir_type
             .ptr_type(AddressSpace::Const)
@@ -257,28 +285,24 @@ pub(crate) fn gen_struct_ptr_array(
     } else {
         let ptr_array_ir = ir_type.ptr_type(AddressSpace::Const).const_array(&ptrs);
 
-        gen_global(module, &ptr_array_ir, name).as_pointer_value()
+        gen_global(context.module, &ptr_array_ir, name).as_pointer_value()
     }
 }
 
 /// Generates a global array from the specified list of integers
 pub(crate) fn gen_u16_array(
-    module: &Module,
-    integers: impl Iterator<Item = u64>,
+    context: &IrValueContext,
+    integers: impl Iterator<Item = u16>,
     name: &str,
-) -> PointerValue {
-    let u16_type = module.get_context().i16_type();
-
+) -> Value<*const Global<[u16]>> {
     let mut integers = integers.peekable();
     if integers.peek().is_none() {
-        u16_type.ptr_type(AddressSpace::Const).const_null()
+        Value::null(context)
     } else {
-        let integers = integers
-            .map(|i| u16_type.const_int(i, false))
-            .collect::<Vec<IntValue>>();
-
-        let array_ir = u16_type.const_array(&integers);
-        gen_global(module, &array_ir, name).as_pointer_value()
+        integers
+            .as_value(context)
+            .into_const_private_global(name, context)
+            .as_value(context)
     }
 }
 
