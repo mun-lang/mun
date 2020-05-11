@@ -736,3 +736,46 @@ fn nested_structs() {
     assert_eq!(value_1.get::<f64>("0"), Ok(0.0));
     assert_eq!(value_1.get::<f64>("1"), Ok(0.0));
 }
+
+#[test]
+fn insert_struct() {
+    let mut driver = TestDriver::new(
+        r#"
+        struct Foo {
+            a: i64,
+            c: f64,
+        }
+
+        pub fn foo_new(a: i64, c: f64) -> Foo {
+            Foo { a, c }
+        }
+    "#,
+    );
+
+    let a = 5i64;
+    let c = 3.0f64;
+    let foo: StructRef = invoke_fn!(driver.runtime_mut(), "foo_new", a, c).unwrap();
+
+    driver.update(
+        r#"
+        struct Bar(i64);
+        struct(value) Baz(f64);
+
+        struct Foo {
+            a: i64,
+            b: Bar,
+            c: f64,
+            d: Baz,
+        }
+    "#,
+    );
+
+    assert_eq!(foo.get::<i64>("a").unwrap(), a);
+    assert_eq!(foo.get::<f64>("c").unwrap(), c);
+
+    let b = foo.get::<StructRef>("b").unwrap();
+    assert_eq!(b.get::<i64>("0"), Ok(0));
+
+    let d = foo.get::<StructRef>("d").unwrap();
+    assert_eq!(d.get::<f64>("0"), Ok(0.0));
+}

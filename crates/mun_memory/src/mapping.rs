@@ -15,14 +15,14 @@ pub struct Mapping<T: Eq + Hash, U: TypeDesc + TypeLayout> {
 }
 
 pub struct Conversion<T: TypeDesc + TypeLayout> {
-    pub field_mapping: Vec<Option<FieldMapping<T>>>,
+    pub field_mapping: Vec<FieldMapping<T>>,
     pub new_ty: T,
 }
 
 /// Description of the mapping of a single field. When stored together with the new index, this
 /// provides all information necessary for a mapping function.
 pub struct FieldMapping<T: TypeDesc + TypeLayout> {
-    pub old_offset: usize,
+    pub new_ty: T,
     pub new_offset: usize,
     pub action: Action<T>,
 }
@@ -30,8 +30,9 @@ pub struct FieldMapping<T: TypeDesc + TypeLayout> {
 /// The `Action` to take when mapping memory from A to B.
 #[derive(Eq, PartialEq)]
 pub enum Action<T: TypeDesc + TypeLayout> {
-    Cast { old: T, new: T },
-    Copy { size: usize },
+    Cast { old_offset: usize, old_ty: T },
+    Copy { old_offset: usize },
+    Insert,
 }
 
 impl<T> Mapping<T, T>
@@ -155,7 +156,7 @@ pub unsafe fn field_mapping<T: Clone + TypeDesc + TypeFields<T> + TypeLayout>(
         .collect();
 
     struct FieldMappingDesc {
-        old_index: usize,
+        old_index: Option<usize>,
         action: ActionDesc,
     }
 
@@ -163,36 +164,43 @@ pub unsafe fn field_mapping<T: Clone + TypeDesc + TypeFields<T> + TypeLayout>(
     enum ActionDesc {
         Cast,
         Copy,
+        Insert,
     }
 
     // Add mappings for all `old_fields`, unless they were deleted or moved.
-    let mut mapping: Vec<Option<FieldMappingDesc>> = (0..old_fields.len())
+    let mut mapping: Vec<FieldMappingDesc> = (0..old_fields.len())
         .filter_map(|idx| {
             if deletions.contains(&idx) {
                 None
             } else {
-                Some(Some(FieldMappingDesc {
-                    old_index: idx,
+                Some(FieldMappingDesc {
+                    old_index: Some(idx),
                     action: ActionDesc::Copy,
-                }))
+                })
             }
         })
         .collect();
 
     // Sort elements in ascending order of their insertion indices to guarantee that insertions
     // don't offset "later" insertions.
-    let mut additions: Vec<(usize, Option<FieldMappingDesc>)> = diff
+    let mut additions: Vec<(usize, FieldMappingDesc)> = diff
         .iter()
         .filter_map(|diff| match diff {
-            FieldDiff::Insert { index } => Some((*index, None)),
+            FieldDiff::Insert { index } => Some((
+                *index,
+                FieldMappingDesc {
+                    old_index: None,
+                    action: ActionDesc::Insert,
+                },
+            )),
             FieldDiff::Move {
                 old_index,
                 new_index,
                 edit,
             } => Some((
                 *new_index,
-                Some(FieldMappingDesc {
-                    old_index: *old_index,
+                FieldMappingDesc {
+                    old_index: Some(*old_index),
                     action: edit.as_ref().map_or(ActionDesc::Copy, |kind| {
                         if *kind == FieldEditKind::ConvertType {
                             ActionDesc::Cast
@@ -200,7 +208,7 @@ pub unsafe fn field_mapping<T: Clone + TypeDesc + TypeFields<T> + TypeLayout>(
                             ActionDesc::Copy
                         }
                     }),
-                }),
+                },
             )),
             FieldDiff::Delete { .. } | FieldDiff::Edit { .. } => None,
         })
@@ -215,13 +223,12 @@ pub unsafe fn field_mapping<T: Clone + TypeDesc + TypeFields<T> + TypeLayout>(
     // Set the action for edited fields.
     for diff in diff.iter() {
         if let FieldDiff::Edit { index, kind } = diff {
-            if let Some(map) = mapping.get_mut(*index).unwrap() {
-                map.action = if *kind == FieldEditKind::ConvertType {
-                    ActionDesc::Cast
-                } else {
-                    ActionDesc::Copy
-                };
-            }
+            let map = mapping.get_mut(*index).unwrap();
+            map.action = if *kind == FieldEditKind::ConvertType {
+                ActionDesc::Cast
+            } else {
+                ActionDesc::Copy
+            };
         }
     }
 
@@ -233,23 +240,24 @@ pub unsafe fn field_mapping<T: Clone + TypeDesc + TypeFields<T> + TypeLayout>(
             .into_iter()
             .enumerate()
             .map(|(new_index, desc)| {
-                desc.map(|desc| {
-                    let old_field = old_fields.get_unchecked(desc.old_index);
-                    FieldMapping {
-                        old_offset: usize::from(*old_offsets.get_unchecked(desc.old_index)),
-                        new_offset: usize::from(*new_offsets.get_unchecked(new_index)),
-                        action: if desc.action == ActionDesc::Cast {
-                            Action::Cast {
-                                old: old_field.1.clone(),
-                                new: new_fields.get_unchecked(new_index).1.clone(),
-                            }
-                        } else {
-                            Action::Copy {
-                                size: old_field.1.layout().size(),
-                            }
+                let old_offset = desc
+                    .old_index
+                    .map(|idx| usize::from(*old_offsets.get_unchecked(idx)));
+
+                FieldMapping {
+                    new_ty: new_fields.get_unchecked(new_index).1.clone(),
+                    new_offset: usize::from(*new_offsets.get_unchecked(new_index)),
+                    action: match desc.action {
+                        ActionDesc::Cast => Action::Cast {
+                            old_offset: old_offset.unwrap(),
+                            old_ty: old_fields.get_unchecked(desc.old_index.unwrap()).1.clone(),
                         },
-                    }
-                })
+                        ActionDesc::Copy => Action::Copy {
+                            old_offset: old_offset.unwrap(),
+                        },
+                        ActionDesc::Insert => Action::Insert,
+                    },
+                }
             })
             .collect(),
         new_ty,
