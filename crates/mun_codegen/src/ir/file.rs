@@ -31,9 +31,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<FileIR> {
     let mut wrapper_functions = BTreeMap::new();
     for def in db.module_data(file_id).definitions() {
         if let ModuleDef::Function(f) = def {
-            if (!f.data(db).visibility().is_private() || group_ir.dispatch_table.contains(*f))
-                && !f.is_extern(db)
-            {
+            if !f.is_extern(db) {
                 let fun = function::gen_signature(
                     db,
                     *f,
