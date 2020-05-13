@@ -65,22 +65,33 @@ impl Assembly {
             .map(|f| f.prototype.name())
             .collect();
 
-        for (fn_ptr, fn_sig) in self.info.dispatch_table.iter() {
+        for (fn_ptr, fn_prototype) in self.info.dispatch_table.iter() {
             // Only take signatures into account that do *not* yet have a function pointer assigned
             // by the compiler.
             if !fn_ptr.is_null() {
                 continue;
             }
 
-            let fn_name = fn_sig.name();
-            // ASSUMPTION: If we removed a function from the `Assembly`, we expect the compiler to
-            // have failed for any old internal references to it. Therefore it is safe to leave the
-            // `old_assembly`'s functions in the `runtime_dispatch_table` as we perform this check.
-            if !fn_names.contains(fn_name) && runtime_dispatch_table.get_fn(fn_name).is_none() {
-                return Err(io::Error::new(
-                    io::ErrorKind::NotFound,
-                    format!("Failed to link: function `{}` is missing.", fn_name),
-                ));
+            // Ensure that the required function is in the runtime dispatch table and that its signature
+            // is the same.
+            match runtime_dispatch_table.get_fn(fn_prototype.name()) {
+                Some(fn_definition) => {
+                    if fn_prototype.signature != fn_definition.prototype.signature {
+                        return Err(io::Error::new(
+                            io::ErrorKind::NotFound,
+                            format!("Failed to link: function '{}' is missing. A function with the same name does exist, but the signatures do not match (expected: {}, found: {}).", fn_prototype.name(), fn_prototype, fn_definition.prototype),
+                        ));
+                    }
+                }
+                None => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::NotFound,
+                        format!(
+                            "Failed to link: function `{}` is missing.",
+                            fn_prototype.name()
+                        ),
+                    ))
+                }
             }
         }
 
@@ -102,19 +113,7 @@ impl Assembly {
                     .get(fn_definition.prototype.name())
                     .expect("The dependency must exist after the previous check.");
 
-                // TODO: This is a hack
-                if fn_definition.prototype.signature.return_type()
-                    != fn_prototype.signature.return_type()
-                    || fn_definition.prototype.signature.arg_types().len()
-                        != fn_prototype.signature.arg_types().len()
-                    || !fn_definition
-                        .prototype
-                        .signature
-                        .arg_types()
-                        .iter()
-                        .zip(fn_prototype.signature.arg_types().iter())
-                        .all(|(a, b)| PartialEq::eq(a, b))
-                {
+                if fn_prototype.signature != fn_definition.prototype.signature {
                     return Err(io::Error::new(
                         io::ErrorKind::NotFound,
                         format!("Failed to link: function '{}' is missing. A function with the same name does exist, but the signatures do not match (expected: {}, found: {}).", fn_prototype.name(), fn_prototype, fn_definition.prototype),

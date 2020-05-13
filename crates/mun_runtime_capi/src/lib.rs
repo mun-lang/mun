@@ -17,7 +17,7 @@ use std::{os::raw::c_char, time::Duration};
 use crate::error::ErrorHandle;
 use crate::hub::HUB;
 use failure::err_msg;
-use runtime::{Runtime, RuntimeOptions};
+use runtime::Runtime;
 
 pub(crate) type Token = usize;
 
@@ -36,6 +36,40 @@ pub trait TypedHandle {
 #[derive(Clone, Copy)]
 pub struct RuntimeHandle(*mut c_void);
 
+/// Options required to construct a [`RuntimeHandle`] through [`mun_runtime_create`]
+///
+/// # Safety
+///
+/// This struct contains raw pointers as parameters. Passing pointers to invalid data, will lead to
+/// undefined behavior.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct RuntimeOptions {
+    /// The interval at which changes to the disk are detected. `0` will initialize this value to
+    /// default.
+    pub delay_ms: u32,
+
+    /// Function definitions that should be inserted in the runtime before a mun library is loaded.
+    /// This is useful to initialize `extern` functions used in a mun library.
+    ///
+    /// If the [`num_functions`] fields is non-zero this field must contain a pointer to an array
+    /// of [`abi::FunctionDefinition`]s.
+    pub functions: *const abi::FunctionDefinition,
+
+    /// The number of functions in the [`functions`] array.
+    pub num_functions: u32,
+}
+
+impl Default for RuntimeOptions {
+    fn default() -> Self {
+        RuntimeOptions {
+            delay_ms: 0,
+            functions: std::ptr::null(),
+            num_functions: 0,
+        }
+    }
+}
+
 /// Constructs a new runtime that loads the library at `library_path` and its dependencies. If
 /// successful, the runtime `handle` is set, otherwise a non-zero error handle is returned.
 ///
@@ -51,12 +85,19 @@ pub struct RuntimeHandle(*mut c_void);
 #[no_mangle]
 pub unsafe extern "C" fn mun_runtime_create(
     library_path: *const c_char,
+    options: RuntimeOptions,
     handle: *mut RuntimeHandle,
 ) -> ErrorHandle {
     if library_path.is_null() {
         return HUB
             .errors
             .register(err_msg("Invalid argument: 'library_path' is null pointer."));
+    }
+
+    if options.num_functions > 0 && options.functions.is_null() {
+        return HUB
+            .errors
+            .register(err_msg("Invalid argument: 'functions' is null pointer."));
     }
 
     let library_path = match CStr::from_ptr(library_path).to_str() {
@@ -77,10 +118,29 @@ pub unsafe extern "C" fn mun_runtime_create(
         }
     };
 
-    let runtime_options = RuntimeOptions {
+    let delay_ms = if options.delay_ms > 0 {
+        options.delay_ms
+    } else {
+        10
+    };
+
+    let user_functions =
+        std::slice::from_raw_parts(options.functions, options.num_functions as usize)
+            .iter()
+            .map(|def| {
+                abi::FunctionDefinitionStorage::new_function(
+                    def.prototype.name(),
+                    def.prototype.signature.arg_types(),
+                    def.prototype.signature.return_type(),
+                    def.fn_ptr,
+                )
+            })
+            .collect();
+
+    let runtime_options = runtime::RuntimeOptions {
         library_path: library_path.into(),
-        delay: Duration::from_millis(10),
-        user_functions: Default::default(),
+        delay: Duration::from_millis(delay_ms.into()),
+        user_functions,
     };
 
     let runtime = match Runtime::new(runtime_options) {
