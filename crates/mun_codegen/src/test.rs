@@ -805,6 +805,25 @@ fn nested_structs() {
     );
 }
 
+#[test]
+fn nested_private_fn() {
+    test_snapshot(
+        r#"
+    fn nested_private_fn() -> i32 {
+        1
+    }
+
+    fn private_fn() -> i32 {
+        nested_private_fn()
+    }
+
+    pub fn main() -> i32 {
+        private_fn()
+    }
+    "#,
+    );
+}
+
 fn test_snapshot(text: &str) {
     test_snapshot_with_optimization(text, OptimizationLevel::Default);
 }

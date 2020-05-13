@@ -1,0 +1,47 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn nested_private_fn() -> i32 {\n    1\n}\n\nfn private_fn() -> i32 {\n    nested_private_fn()\n}\n\npub fn main() -> i32 {\n    private_fn()\n}"
+---
+; == FILE IR =====================================
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+%DispatchTable = type { i32 ()* }
+%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+
+@dispatchTable = external global %DispatchTable
+@global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
+
+define i32 @nested_private_fn() {
+body:
+  ret i32 1
+}
+
+define i32 @private_fn() {
+body:
+  %nested_private_fn = call i32 @nested_private_fn()
+  ret i32 %nested_private_fn
+}
+
+define i32 @main() {
+body:
+  %private_fn_ptr = load i32 ()*, i32 ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
+  %private_fn = call i32 %private_fn_ptr()
+  ret i32 %private_fn
+}
+
+
+; == GROUP IR ====================================
+; ModuleID = 'group_name'
+source_filename = "group_name"
+
+%DispatchTable = type { i32 ()* }
+%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+
+@dispatchTable = global %DispatchTable { i32 ()* @private_fn }
+@"type_info::<core::i32>::name" = private unnamed_addr constant [10 x i8] c"core::i32\00"
+@"type_info::<core::i32>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\17yzt\19\D62\17\D25\95C\17\88[\FA", [10 x i8]* @"type_info::<core::i32>::name", i32 32, i8 4, i8 0 }
+@global_type_table = global [1 x %struct.MunTypeInfo addrspace(4)*] [%struct.MunTypeInfo addrspace(4)* @"type_info::<core::i32>"]
+
+declare i32 @private_fn()
+

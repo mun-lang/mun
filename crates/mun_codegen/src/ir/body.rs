@@ -1040,10 +1040,12 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             self.builder
                 .build_call(ptr_value, &args, &function.name(self.db).to_string())
         } else {
-            let llvm_function = self
-                .function_map
-                .get(&function)
-                .expect("missing function value for hir function");
+            let llvm_function = self.function_map.get(&function).unwrap_or_else(|| {
+                panic!(
+                    "missing function value for hir function: '{}'",
+                    function.name(self.db),
+                )
+            });
             self.builder
                 .build_call(*llvm_function, &args, &function.name(self.db).to_string())
         }
