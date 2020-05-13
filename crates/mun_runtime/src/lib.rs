@@ -277,6 +277,10 @@ impl Runtime {
                                 e
                             );
                         } else {
+                            println!(
+                                "Succesfully reloaded assembly: '{}'",
+                                path.to_string_lossy()
+                            );
                             return true;
                         }
                     }
