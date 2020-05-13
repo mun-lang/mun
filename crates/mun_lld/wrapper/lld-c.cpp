@@ -15,10 +15,12 @@ const char* mun_alloc_str(const std::string& str)
   return nullptr;
 }
 
-// The COFF driver seems not to be thread safe. This is terrible. We basically only allow single threaded access
-// to the driver using a mutex.
+// LLD seems not to be thread safe. This is terrible. We basically only allow single threaded access to the driver using
+// mutexes. Each type of LLD driver seems to be disconnected so we use a mutex for every type.
 std::mutex _coffMutex;
 std::mutex _elfMutex;
+std::mutex _machOMutex;
+std::mutex _wasmMutex;
 
 extern "C" {
 
@@ -57,11 +59,17 @@ LldInvokeResult mun_lld_link(LldFlavor flavor, int argc, const char *const *argv
       break;
     }
     case Wasm:
+    {
+      std::unique_lock<std::mutex> lock(_wasmMutex);
       result.success = lld::wasm::link(args, false, errorStream);
       break;
+    }
     case MachO:
+    {
+      std::unique_lock <std::mutex> lock(_machOMutex);
       result.success = lld::mach_o::link(args, false, errorStream);
       break;
+    }
     case Coff:
     {
       args.insert(args.begin(), "lld.exe");           // Issue #1: The first argument MUST be the executable name..
