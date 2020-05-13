@@ -1,27 +1,27 @@
 use crate::{
     diff::{diff, Diff, FieldDiff, FieldEditKind},
     gc::GcPtr,
-    TypeDesc, TypeFields, TypeLayout,
+    TypeDesc, TypeFields, TypeMemory,
 };
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
 };
 
-pub struct Mapping<T: Eq + Hash, U: TypeDesc + TypeLayout> {
+pub struct Mapping<T: Eq + Hash, U: TypeDesc + TypeMemory> {
     pub deletions: HashSet<T>,
     pub conversions: HashMap<T, Conversion<U>>,
     pub identical: Vec<(T, T)>,
 }
 
-pub struct Conversion<T: TypeDesc + TypeLayout> {
+pub struct Conversion<T: TypeDesc + TypeMemory> {
     pub field_mapping: Vec<FieldMapping<T>>,
     pub new_ty: T,
 }
 
 /// Description of the mapping of a single field. When stored together with the new index, this
 /// provides all information necessary for a mapping function.
-pub struct FieldMapping<T: TypeDesc + TypeLayout> {
+pub struct FieldMapping<T: TypeDesc + TypeMemory> {
     pub new_ty: T,
     pub new_offset: usize,
     pub action: Action<T>,
@@ -29,7 +29,7 @@ pub struct FieldMapping<T: TypeDesc + TypeLayout> {
 
 /// The `Action` to take when mapping memory from A to B.
 #[derive(Eq, PartialEq)]
-pub enum Action<T: TypeDesc + TypeLayout> {
+pub enum Action<T: TypeDesc + TypeMemory> {
     Cast { old_offset: usize, old_ty: T },
     Copy { old_offset: usize },
     Insert,
@@ -37,7 +37,7 @@ pub enum Action<T: TypeDesc + TypeLayout> {
 
 impl<T> Mapping<T, T>
 where
-    T: TypeDesc + TypeFields<T> + TypeLayout + Copy + Eq + Hash,
+    T: TypeDesc + TypeFields<T> + TypeMemory + Copy + Eq + Hash,
 {
     ///
     pub fn new(old: &[T], new: &[T]) -> Self {
@@ -83,7 +83,7 @@ where
         let mut new_candidates: HashSet<T> = new
             .iter()
             // Filter non-struct types
-            .filter(|ty| ty.memory_kind().is_some())
+            .filter(|ty| ty.group().is_struct())
             // Filter inserted structs
             .filter(|ty| !insertions.contains(*ty))
             .cloned()
@@ -92,7 +92,7 @@ where
         let mut old_candidates: HashSet<T> = old
             .iter()
             // Filter non-struct types
-            .filter(|ty| ty.memory_kind().is_some())
+            .filter(|ty| ty.group().is_struct())
             // Filter deleted structs
             .filter(|ty| !deletions.contains(*ty))
             // Filter edited types
@@ -139,7 +139,7 @@ where
 /// # Safety
 ///
 /// Expects the `diff` to be based on `old_ty` and `new_ty`. If not, it causes undefined behavior.
-pub unsafe fn field_mapping<T: Clone + TypeDesc + TypeFields<T> + TypeLayout>(
+pub unsafe fn field_mapping<T: Clone + TypeDesc + TypeFields<T> + TypeMemory>(
     old_ty: T,
     new_ty: T,
     diff: &[FieldDiff],
@@ -265,7 +265,7 @@ pub unsafe fn field_mapping<T: Clone + TypeDesc + TypeFields<T> + TypeLayout>(
 }
 
 /// A trait used to map allocated memory using type differences.
-pub trait MemoryMapper<T: Eq + Hash + TypeDesc + TypeLayout> {
+pub trait MemoryMapper<T: Eq + Hash + TypeDesc + TypeMemory> {
     /// Maps its allocated memory using the provided `mapping`.
     ///
     /// A `Vec<GcPtr>` is returned containing all objects of types that were deleted. The

@@ -2,7 +2,7 @@ use crate::{
     cast,
     gc::{Event, GcPtr, GcRuntime, Observer, RawGcPtr, Stats, TypeTrace},
     mapping::{self, FieldMapping, MemoryMapper},
-    TypeDesc, TypeLayout,
+    TypeDesc, TypeMemory,
 };
 use mapping::{Conversion, Mapping};
 use parking_lot::RwLock;
@@ -18,7 +18,7 @@ use std::{
 #[derive(Debug)]
 pub struct MarkSweep<T, O>
 where
-    T: TypeLayout + TypeTrace + Clone,
+    T: TypeMemory + TypeTrace + Clone,
     O: Observer<Event = Event>,
 {
     objects: RwLock<HashMap<GcPtr, Pin<Box<ObjectInfo<T>>>>>,
@@ -28,7 +28,7 @@ where
 
 impl<T, O> Default for MarkSweep<T, O>
 where
-    T: TypeLayout + TypeTrace + Clone,
+    T: TypeMemory + TypeTrace + Clone,
     O: Observer<Event = Event> + Default,
 {
     fn default() -> Self {
@@ -42,7 +42,7 @@ where
 
 impl<T, O> MarkSweep<T, O>
 where
-    T: TypeLayout + TypeTrace + Clone,
+    T: TypeMemory + TypeTrace + Clone,
     O: Observer<Event = Event>,
 {
     /// Creates a `MarkSweep` memory collector with the specified `Observer`.
@@ -70,7 +70,7 @@ where
     }
 }
 
-fn alloc_obj<T: Clone + TypeLayout + TypeTrace>(ty: T) -> Pin<Box<ObjectInfo<T>>> {
+fn alloc_obj<T: Clone + TypeMemory + TypeTrace>(ty: T) -> Pin<Box<ObjectInfo<T>>> {
     let ptr = unsafe { std::alloc::alloc(ty.layout()) };
     Box::pin(ObjectInfo {
         ptr,
@@ -82,7 +82,7 @@ fn alloc_obj<T: Clone + TypeLayout + TypeTrace>(ty: T) -> Pin<Box<ObjectInfo<T>>
 
 impl<T, O> GcRuntime<T> for MarkSweep<T, O>
 where
-    T: TypeLayout + TypeTrace + Clone,
+    T: TypeMemory + TypeTrace + Clone,
     O: Observer<Event = Event>,
 {
     fn alloc(&self, ty: T) -> GcPtr {
@@ -135,7 +135,7 @@ where
 
 impl<T, O> MarkSweep<T, O>
 where
-    T: TypeLayout + TypeTrace + Clone,
+    T: TypeMemory + TypeTrace + Clone,
     O: Observer<Event = Event>,
 {
     /// Collects all memory that is no longer referenced by rooted objects. Returns `true` if memory
@@ -207,7 +207,7 @@ where
 
 impl<T, O> MemoryMapper<T> for MarkSweep<T, O>
 where
-    T: TypeDesc + TypeLayout + TypeTrace + Clone + Eq + Hash,
+    T: TypeDesc + TypeMemory + TypeTrace + Clone + Eq + Hash,
     O: Observer<Event = Event>,
 {
     fn map_memory(&self, mapping: Mapping<T, T>) -> Vec<GcPtr> {
@@ -292,7 +292,7 @@ where
             src: NonNull<u8>,
             dest: NonNull<u8>,
         ) where
-            T: TypeDesc + TypeLayout + TypeTrace + Clone + Eq + Hash,
+            T: TypeDesc + TypeMemory + TypeTrace + Clone + Eq + Hash,
             O: Observer<Event = Event>,
         {
             for FieldMapping {
@@ -315,10 +315,8 @@ where
                             src as *mut u8
                         };
 
-                        if let Some(old_memory_kind) = old_ty.memory_kind() {
-                            let new_memory_kind = new_ty.memory_kind().expect(
-                                    "We are dealing with a struct and we do not directly compare fundamental types and struct type, so its counterpart must also be a struct.",
-                                );
+                        if old_ty.group().is_struct() {
+                            debug_assert!(new_ty.group().is_struct());
 
                             // When the name is the same, we are dealing with the same struct,
                             // but different internals
@@ -327,8 +325,8 @@ where
                             // If the same struct changed, there must also be a conversion
                             let conversion = conversions.get(old_ty);
 
-                            if old_memory_kind == abi::StructMemoryKind::Value {
-                                if new_memory_kind == abi::StructMemoryKind::Value {
+                            if old_ty.is_stack_allocated() {
+                                if new_ty.is_stack_allocated() {
                                     // struct(value) -> struct(value)
                                     if is_same_struct {
                                         // Map in-memory struct to in-memory struct
@@ -378,7 +376,7 @@ where
 
                                     new_allocations.push(object);
                                 }
-                            } else if new_memory_kind == abi::StructMemoryKind::GC {
+                            } else if !new_ty.is_stack_allocated() {
                                 // struct(gc) -> struct(gc)
                                 let field_src = field_src.cast::<GcPtr>();
                                 let field_dest = field_dest.cast::<GcPtr>();
@@ -472,7 +470,7 @@ where
                         };
                     }
                     mapping::Action::Insert => {
-                        if let Some(abi::StructMemoryKind::GC) = new_ty.memory_kind() {
+                        if !new_ty.is_stack_allocated() {
                             let object = alloc_obj(new_ty.clone());
 
                             // We want to return a pointer to the `ObjectInfo`, to be used as
@@ -516,7 +514,7 @@ enum Color {
 /// meta information.
 #[derive(Debug)]
 #[repr(C)]
-struct ObjectInfo<T: TypeLayout + TypeTrace + Clone> {
+struct ObjectInfo<T: TypeMemory + TypeTrace + Clone> {
     pub ptr: *mut u8,
     pub roots: u32,
     pub color: Color,
@@ -524,28 +522,28 @@ struct ObjectInfo<T: TypeLayout + TypeTrace + Clone> {
 }
 
 /// An `ObjectInfo` is thread-safe.
-unsafe impl<T: TypeLayout + TypeTrace + Clone> Send for ObjectInfo<T> {}
-unsafe impl<T: TypeLayout + TypeTrace + Clone> Sync for ObjectInfo<T> {}
+unsafe impl<T: TypeMemory + TypeTrace + Clone> Send for ObjectInfo<T> {}
+unsafe impl<T: TypeMemory + TypeTrace + Clone> Sync for ObjectInfo<T> {}
 
-impl<T: TypeLayout + TypeTrace + Clone> Into<*const ObjectInfo<T>> for GcPtr {
+impl<T: TypeMemory + TypeTrace + Clone> Into<*const ObjectInfo<T>> for GcPtr {
     fn into(self) -> *const ObjectInfo<T> {
         self.as_ptr() as *const ObjectInfo<T>
     }
 }
 
-impl<T: TypeLayout + TypeTrace + Clone> Into<*mut ObjectInfo<T>> for GcPtr {
+impl<T: TypeMemory + TypeTrace + Clone> Into<*mut ObjectInfo<T>> for GcPtr {
     fn into(self) -> *mut ObjectInfo<T> {
         self.as_ptr() as *mut ObjectInfo<T>
     }
 }
 
-impl<T: TypeLayout + TypeTrace + Clone> Into<GcPtr> for *const ObjectInfo<T> {
+impl<T: TypeMemory + TypeTrace + Clone> Into<GcPtr> for *const ObjectInfo<T> {
     fn into(self) -> GcPtr {
         (self as RawGcPtr).into()
     }
 }
 
-impl<T: TypeLayout + TypeTrace + Clone> Into<GcPtr> for *mut ObjectInfo<T> {
+impl<T: TypeMemory + TypeTrace + Clone> Into<GcPtr> for *mut ObjectInfo<T> {
     fn into(self) -> GcPtr {
         (self as RawGcPtr).into()
     }

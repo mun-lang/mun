@@ -72,15 +72,15 @@ macro_rules! impl_struct_ty {
 
 impl_primitive_types!(i8, i16, i32, i64, u8, u16, u32, u64, f32, f64, bool);
 
-impl mun_memory::TypeLayout for &'static TypeInfo {
+impl mun_memory::TypeMemory for &'static TypeInfo {
     fn layout(&self) -> Layout {
         Layout::from_size_align(self.size as usize, self.alignment as usize)
             .expect("invalid layout specified by TypeInfo")
     }
 
-    fn memory_kind(&self) -> Option<abi::StructMemoryKind> {
+    fn is_stack_allocated(&self) -> bool {
         // NOTE: This contrived test does not support structs
-        None
+        true
     }
 }
 
