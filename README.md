@@ -141,9 +141,17 @@ runners](.github/actions/install-llvm/index.js):
   that you can download and extract to your machine. Once downloaded and extracted, add the `<extract_dir>/bin`
   folder to the `PATH` environment variable.
 
+### Clone source
+
+```bash
+git clone https://github.com/mun-lang/mun.git
+
+git submodule update --init --recursive
+```
+
 ### Compiling
 
-```
+```bash
 cargo build --release
 ```
 
