@@ -144,9 +144,33 @@ impl Ty {
     /// Returns the type's name as a string, if one exists.
     ///
     /// This name needs to be unique as it is used to generate a type's `Guid`.
-    pub fn name_to_string(&self, db: &impl HirDatabase) -> Option<String> {
+    pub fn guid_string(&self, db: &impl HirDatabase) -> Option<String> {
         self.as_simple().and_then(|ty_ctor| match ty_ctor {
-            TypeCtor::Struct(s) => Some(format!("struct {}", s.name(db).to_string())),
+            TypeCtor::Struct(s) => {
+                let name = s.name(db).to_string();
+
+                Some(if s.data(db).memory_kind == StructMemoryKind::GC {
+                    format!("struct {}", name)
+                } else {
+                    let fields: Vec<String> = s
+                        .fields(db)
+                        .into_iter()
+                        .map(|f| {
+                            let ty_string = f
+                                .ty(db)
+                                .guid_string(db)
+                                .expect("type should be convertible to a string");
+                            format!("{}: {}", f.name(db).to_string(), ty_string)
+                        })
+                        .collect();
+
+                    format!(
+                        "struct {name}{{{fields}}}",
+                        name = name,
+                        fields = fields.join(",")
+                    )
+                })
+            }
             TypeCtor::Bool => Some("core::bool".to_string()),
             TypeCtor::Float(ty) => Some(format!("core::{}", ty.as_str())),
             TypeCtor::Int(ty) => Some(format!("core::{}", ty.as_str())),

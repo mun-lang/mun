@@ -20,10 +20,12 @@ pub trait TypeDesc: Send + Sync {
     fn group(&self) -> abi::TypeGroup;
 }
 
-/// A trait used to obtain a type's memory layout.
-pub trait TypeLayout: Send + Sync {
+/// A trait used to obtain a type's memory description.
+pub trait TypeMemory: Send + Sync {
     /// Returns the memory layout of this type.
     fn layout(&self) -> Layout;
+    /// Returns whether the memory is stack-allocated.
+    fn is_stack_allocated(&self) -> bool;
 }
 
 /// A trait used to obtain a type's fields.

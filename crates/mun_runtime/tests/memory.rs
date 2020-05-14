@@ -532,3 +532,250 @@ fn delete_used_struct() {
     assert_eq!(foo.get::<f64>("b").unwrap(), b);
     assert_eq!(foo.get::<f64>("c").unwrap(), c);
 }
+
+#[test]
+fn nested_structs() {
+    let mut driver = TestDriver::new(
+        r#"
+    struct(gc) GcStruct(f32, f32);
+    struct(value) ValueStruct(f32, f32);
+
+    struct(gc) GcWrapper(GcStruct, ValueStruct)
+    struct(value) ValueWrapper(GcStruct, ValueStruct);
+
+    pub fn new_gc_struct(a: f32, b: f32) -> GcStruct {
+        GcStruct(a, b)
+    }
+
+    pub fn new_value_struct(a: f32, b: f32) -> ValueStruct {
+        ValueStruct(a, b)
+    }
+
+    pub fn new_gc_wrapper(a: GcStruct, b: ValueStruct) -> GcWrapper {
+        GcWrapper(a, b)
+    }
+
+    pub fn new_value_wrapper(a: GcStruct, b: ValueStruct) -> ValueWrapper {
+        ValueWrapper(a, b)
+    }
+    "#,
+    );
+
+    let a = -3.14f32;
+    let b = 6.18f32;
+    let gc_struct: StructRef = invoke_fn!(driver.runtime_mut(), "new_gc_struct", a, b).unwrap();
+    let value_struct: StructRef =
+        invoke_fn!(driver.runtime_mut(), "new_value_struct", a, b).unwrap();
+
+    let gc_wrapper: StructRef = invoke_fn!(
+        driver.runtime_mut(),
+        "new_gc_wrapper",
+        gc_struct.clone(),
+        value_struct.clone()
+    )
+    .unwrap();
+
+    let value_wrapper: StructRef = invoke_fn!(
+        driver.runtime_mut(),
+        "new_value_wrapper",
+        gc_struct.clone(),
+        value_struct.clone()
+    )
+    .unwrap();
+
+    // Tests mapping of `gc -> gc`, `value -> value`
+    driver.update(
+        r#"
+    struct(gc) GcStruct(f64, f64);
+    struct(value) ValueStruct(f64, f64);
+
+    struct(gc) GcWrapper(GcStruct, ValueStruct)
+    struct(value) ValueWrapper(GcStruct, ValueStruct);
+    "#,
+    );
+
+    let gc_0 = gc_wrapper.get::<StructRef>("0").unwrap();
+    assert_eq!(gc_0.get::<f64>("0"), Ok(a.into()));
+    assert_eq!(gc_0.get::<f64>("1"), Ok(b.into()));
+
+    let gc_1 = gc_wrapper.get::<StructRef>("1").unwrap();
+    assert_eq!(gc_1.get::<f64>("0"), Ok(a.into()));
+    assert_eq!(gc_1.get::<f64>("1"), Ok(b.into()));
+
+    let value_0 = value_wrapper.get::<StructRef>("0").unwrap();
+    assert_eq!(value_0.get::<f64>("0"), Ok(a.into()));
+    assert_eq!(value_0.get::<f64>("1"), Ok(b.into()));
+
+    let value_1 = value_wrapper.get::<StructRef>("1").unwrap();
+    assert_eq!(value_1.get::<f64>("0"), Ok(a.into()));
+    assert_eq!(value_1.get::<f64>("1"), Ok(b.into()));
+
+    // Tests an identity mapping
+    driver.update(
+        r#"
+    struct(gc) GcStruct(f64, f64);
+    struct(value) ValueStruct(f64, f64);
+
+    struct(gc) GcWrapper(GcStruct, ValueStruct)
+    struct(value) ValueWrapper(GcStruct, ValueStruct);
+    "#,
+    );
+
+    let gc_0 = gc_wrapper.get::<StructRef>("0").unwrap();
+    assert_eq!(gc_0.get::<f64>("0"), Ok(a.into()));
+    assert_eq!(gc_0.get::<f64>("1"), Ok(b.into()));
+
+    let gc_1 = gc_wrapper.get::<StructRef>("1").unwrap();
+    assert_eq!(gc_1.get::<f64>("0"), Ok(a.into()));
+    assert_eq!(gc_1.get::<f64>("1"), Ok(b.into()));
+
+    let value_0 = value_wrapper.get::<StructRef>("0").unwrap();
+    assert_eq!(value_0.get::<f64>("0"), Ok(a.into()));
+    assert_eq!(value_0.get::<f64>("1"), Ok(b.into()));
+
+    let value_1 = value_wrapper.get::<StructRef>("1").unwrap();
+    assert_eq!(value_1.get::<f64>("0"), Ok(a.into()));
+    assert_eq!(value_1.get::<f64>("1"), Ok(b.into()));
+
+    // Tests mapping of `gc -> value`, `value -> gc`
+    driver.update(
+        r#"
+    struct(value) GcStruct(f64, f64);
+    struct(gc) ValueStruct(f64, f64);
+
+    struct(gc) GcWrapper(GcStruct, ValueStruct)
+    struct(value) ValueWrapper(GcStruct, ValueStruct);
+    "#,
+    );
+
+    assert_eq!(gc_0.get::<f64>("0"), Ok(a.into()));
+    assert_eq!(gc_0.get::<f64>("1"), Ok(b.into()));
+
+    assert_eq!(gc_1.get::<f64>("0"), Ok(a.into()));
+    assert_eq!(gc_1.get::<f64>("1"), Ok(b.into()));
+
+    assert_eq!(value_0.get::<f64>("0"), Ok(a.into()));
+    assert_eq!(value_0.get::<f64>("1"), Ok(b.into()));
+
+    assert_eq!(value_1.get::<f64>("0"), Ok(a.into()));
+    assert_eq!(value_1.get::<f64>("1"), Ok(b.into()));
+
+    // Tests mapping of different struct type, when `gc -> value`, `value -> gc`, and
+    // retention of an old library (due to removal of `GcStruct` and `ValueStruct`)
+    driver.update(
+        r#"
+    struct(gc) GcStruct2(f64);
+    struct(value) ValueStruct2(f64);
+
+    struct(gc) GcWrapper(GcStruct2, ValueStruct2)
+    struct(value) ValueWrapper(GcStruct2, ValueStruct2);
+    "#,
+    );
+
+    // Existing, rooted objects should remain untouched
+    assert_eq!(gc_0.get::<f64>("0"), Ok(a.into()));
+    assert_eq!(gc_0.get::<f64>("1"), Ok(b.into()));
+
+    assert_eq!(gc_1.get::<f64>("0"), Ok(a.into()));
+    assert_eq!(gc_1.get::<f64>("1"), Ok(b.into()));
+
+    assert_eq!(value_0.get::<f64>("0"), Ok(a.into()));
+    assert_eq!(value_0.get::<f64>("1"), Ok(b.into()));
+
+    assert_eq!(value_1.get::<f64>("0"), Ok(a.into()));
+    assert_eq!(value_1.get::<f64>("1"), Ok(b.into()));
+
+    // The values in the wrappers should have been updated
+    let mut gc_0 = gc_wrapper.get::<StructRef>("0").unwrap();
+    assert_eq!(gc_0.get::<f64>("0"), Ok(0.0));
+    gc_0.set::<f64>("0", a.into()).unwrap();
+
+    let mut gc_1 = gc_wrapper.get::<StructRef>("1").unwrap();
+    assert_eq!(gc_1.get::<f64>("0"), Ok(0.0));
+    gc_1.set::<f64>("0", a.into()).unwrap();
+
+    let mut value_0 = value_wrapper.get::<StructRef>("0").unwrap();
+    assert_eq!(value_0.get::<f64>("0"), Ok(0.0));
+    value_0.set::<f64>("0", a.into()).unwrap();
+
+    let mut value_1 = value_wrapper.get::<StructRef>("1").unwrap();
+    assert_eq!(value_1.get::<f64>("0"), Ok(0.0));
+    value_1.set::<f64>("0", a.into()).unwrap();
+
+    // Tests mapping of different struct type, when `gc -> gc`, `value -> value`
+    driver.update(
+        r#"
+    struct(gc) GcStruct(f64, f64);
+    struct(value) ValueStruct(f64, f64);
+
+    struct(gc) GcWrapper(GcStruct, ValueStruct)
+    struct(value) ValueWrapper(GcStruct, ValueStruct);
+    "#,
+    );
+
+    // Existing, rooted objects should remain untouched
+    assert_eq!(gc_0.get::<f64>("0"), Ok(a.into()));
+    assert_eq!(gc_1.get::<f64>("0"), Ok(a.into()));
+    assert_eq!(value_0.get::<f64>("0"), Ok(a.into()));
+    assert_eq!(value_1.get::<f64>("0"), Ok(a.into()));
+
+    // The values in the wrappers should have been updated
+    let gc_0 = gc_wrapper.get::<StructRef>("0").unwrap();
+    assert_eq!(gc_0.get::<f64>("0"), Ok(0.0));
+    assert_eq!(gc_0.get::<f64>("1"), Ok(0.0));
+
+    let gc_1 = gc_wrapper.get::<StructRef>("1").unwrap();
+    assert_eq!(gc_1.get::<f64>("0"), Ok(0.0));
+    assert_eq!(gc_1.get::<f64>("1"), Ok(0.0));
+
+    let value_0 = value_wrapper.get::<StructRef>("0").unwrap();
+    assert_eq!(value_0.get::<f64>("0"), Ok(0.0));
+    assert_eq!(value_0.get::<f64>("1"), Ok(0.0));
+
+    let value_1 = value_wrapper.get::<StructRef>("1").unwrap();
+    assert_eq!(value_1.get::<f64>("0"), Ok(0.0));
+    assert_eq!(value_1.get::<f64>("1"), Ok(0.0));
+}
+
+#[test]
+fn insert_struct() {
+    let mut driver = TestDriver::new(
+        r#"
+        struct Foo {
+            a: i64,
+            c: f64,
+        }
+
+        pub fn foo_new(a: i64, c: f64) -> Foo {
+            Foo { a, c }
+        }
+    "#,
+    );
+
+    let a = 5i64;
+    let c = 3.0f64;
+    let foo: StructRef = invoke_fn!(driver.runtime_mut(), "foo_new", a, c).unwrap();
+
+    driver.update(
+        r#"
+        struct Bar(i64);
+        struct(value) Baz(f64);
+
+        struct Foo {
+            a: i64,
+            b: Bar,
+            c: f64,
+            d: Baz,
+        }
+    "#,
+    );
+
+    assert_eq!(foo.get::<i64>("a").unwrap(), a);
+    assert_eq!(foo.get::<f64>("c").unwrap(), c);
+
+    let b = foo.get::<StructRef>("b").unwrap();
+    assert_eq!(b.get::<i64>("0"), Ok(0));
+
+    let d = foo.get::<StructRef>("d").unwrap();
+    assert_eq!(d.get::<f64>("0"), Ok(0.0));
+}
