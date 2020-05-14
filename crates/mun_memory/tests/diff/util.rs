@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use mun_memory::{
     diff::{myers, Diff, FieldDiff, FieldEditKind},
-    TypeDesc, TypeFields, TypeLayout,
+    TypeDesc, TypeFields, TypeMemory,
 };
 use std::alloc::Layout;
 
@@ -106,9 +106,14 @@ impl TypeDesc for &TypeInfo {
     }
 }
 
-impl TypeLayout for &TypeInfo {
+impl TypeMemory for &TypeInfo {
     fn layout(&self) -> Layout {
         self.layout
+    }
+
+    fn is_stack_allocated(&self) -> bool {
+        // NOTE: This contrived test does not support structs
+        true
     }
 }
 

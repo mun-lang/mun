@@ -113,11 +113,20 @@ impl Iterator for Trace {
     }
 }
 
-impl memory::TypeLayout for UnsafeTypeInfo {
+impl memory::TypeMemory for UnsafeTypeInfo {
     fn layout(&self) -> Layout {
         let ty = unsafe { self.0.as_ref() };
         Layout::from_size_align(ty.size_in_bytes(), ty.alignment())
             .unwrap_or_else(|_| panic!("invalid layout from Mun Type: {:?}", ty))
+    }
+
+    fn is_stack_allocated(&self) -> bool {
+        unsafe {
+            self.0
+                .as_ref()
+                .as_struct()
+                .map_or(true, |s| s.memory_kind == abi::StructMemoryKind::Value)
+        }
     }
 }
 

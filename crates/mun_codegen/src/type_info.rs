@@ -100,13 +100,12 @@ impl TypeInfo {
                 .map(|f| {
                     let ty_string = f
                         .ty(db)
-                        .name_to_string(db)
+                        .guid_string(db)
                         .expect("type should be convertible to a string");
                     format!("{}: {}", f.name(db).to_string(), ty_string)
                 })
                 .collect();
 
-            // TODO: struct(value) vs struct(gc)
             format!(
                 "struct {name}{{{fields}}}",
                 name = &name,

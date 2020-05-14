@@ -30,7 +30,7 @@ impl RuntimeOrBuilder {
             RuntimeOrBuilder::Builder(builder) => builder.spawn()?,
             _ => unreachable!(),
         };
-        std::mem::replace(self, RuntimeOrBuilder::Runtime(runtime));
+        *self = RuntimeOrBuilder::Runtime(runtime);
         Ok(())
     }
 }

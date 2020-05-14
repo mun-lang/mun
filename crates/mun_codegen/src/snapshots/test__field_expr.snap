@@ -76,18 +76,18 @@ source_filename = "group_name"
 @"type_info::<*const TypeInfo>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"=\A1-\1F\C2\A7\88`d\90\F4\B5\BEE}x", [16 x i8]* @"type_info::<*const TypeInfo>::name", i32 64, i8 8, i8 0 }
 @"type_info::<core::f64>::name" = private unnamed_addr constant [10 x i8] c"core::f64\00"
 @"type_info::<core::f64>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"`\DBF\9C?YJ%G\AD4\9F\D5\92%A", [10 x i8]* @"type_info::<core::f64>::name", i32 64, i8 8, i8 0 }
+@"type_info::<*const *mut core::void>::name" = private unnamed_addr constant [23 x i8] c"*const *mut core::void\00"
+@"type_info::<*const *mut core::void>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\C5fO\BD\84\DF\06\BFd+\B1\9Abv\CE\00", [23 x i8]* @"type_info::<*const *mut core::void>::name", i32 64, i8 8, i8 0 }
+@"type_info::<*mut core::void>::name" = private unnamed_addr constant [16 x i8] c"*mut core::void\00"
+@"type_info::<*mut core::void>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\F0Y\22\FC\95\9E\7F\CE\08T\B1\A2\CD\A7\FAz", [16 x i8]* @"type_info::<*mut core::void>::name", i32 64, i8 8, i8 0 }
 @"type_info::<Bar>::name" = private unnamed_addr constant [4 x i8] c"Bar\00"
 @"struct_info::<Bar>::field_names" = private unnamed_addr constant [2 x i8] c"0\00"
 @"struct_info::<Bar>::field_names.1" = private unnamed_addr constant [2 x i8] c"1\00"
 @1 = private unnamed_addr constant [2 x i8 addrspace(4)*] [i8 addrspace(4)* @"struct_info::<Bar>::field_names", i8 addrspace(4)* @"struct_info::<Bar>::field_names.1"]
 @"struct_info::<Bar>::field_types" = private unnamed_addr constant [2 x %struct.MunTypeInfo addrspace(4)*] [%struct.MunTypeInfo addrspace(4)* @"type_info::<core::f64>", %struct.MunTypeInfo addrspace(4)* @"type_info::<Foo>"]
 @"struct_info::<Bar>::field_offsets" = private unnamed_addr constant [2 x i16] [i16 0, i16 8]
-@"type_info::<Bar>" = private unnamed_addr constant { %struct.MunTypeInfo, %struct.MunStructInfo } { %struct.MunTypeInfo { [16 x i8] c"\89\18\04\82[\A4v\13u\DF\0A\C8Z9\F9\FA", [4 x i8]* @"type_info::<Bar>::name", i32 128, i8 8, i8 1 }, %struct.MunStructInfo { [2 x i8 addrspace(4)*]* @1, [2 x %struct.MunTypeInfo addrspace(4)*]* @"struct_info::<Bar>::field_types", [2 x i16]* @"struct_info::<Bar>::field_offsets", i16 2, i8 1 } }
-@"type_info::<*const *mut core::void>::name" = private unnamed_addr constant [23 x i8] c"*const *mut core::void\00"
-@"type_info::<*const *mut core::void>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\C5fO\BD\84\DF\06\BFd+\B1\9Abv\CE\00", [23 x i8]* @"type_info::<*const *mut core::void>::name", i32 64, i8 8, i8 0 }
-@"type_info::<*mut core::void>::name" = private unnamed_addr constant [16 x i8] c"*mut core::void\00"
-@"type_info::<*mut core::void>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\F0Y\22\FC\95\9E\7F\CE\08T\B1\A2\CD\A7\FAz", [16 x i8]* @"type_info::<*mut core::void>::name", i32 64, i8 8, i8 0 }
-@global_type_table = global [7 x %struct.MunTypeInfo addrspace(4)*] [%struct.MunTypeInfo addrspace(4)* @"type_info::<core::i32>", %struct.MunTypeInfo addrspace(4)* @"type_info::<Foo>", %struct.MunTypeInfo addrspace(4)* @"type_info::<*const TypeInfo>", %struct.MunTypeInfo addrspace(4)* @"type_info::<core::f64>", %struct.MunTypeInfo addrspace(4)* @"type_info::<Bar>", %struct.MunTypeInfo addrspace(4)* @"type_info::<*const *mut core::void>", %struct.MunTypeInfo addrspace(4)* @"type_info::<*mut core::void>"]
+@"type_info::<Bar>" = private unnamed_addr constant { %struct.MunTypeInfo, %struct.MunStructInfo } { %struct.MunTypeInfo { [16 x i8] c"\FC8#Lvd)F\B1Q\06\8B\02pl\10", [4 x i8]* @"type_info::<Bar>::name", i32 128, i8 8, i8 1 }, %struct.MunStructInfo { [2 x i8 addrspace(4)*]* @1, [2 x %struct.MunTypeInfo addrspace(4)*]* @"struct_info::<Bar>::field_types", [2 x i16]* @"struct_info::<Bar>::field_offsets", i16 2, i8 1 } }
+@global_type_table = global [7 x %struct.MunTypeInfo addrspace(4)*] [%struct.MunTypeInfo addrspace(4)* @"type_info::<core::i32>", %struct.MunTypeInfo addrspace(4)* @"type_info::<Foo>", %struct.MunTypeInfo addrspace(4)* @"type_info::<*const TypeInfo>", %struct.MunTypeInfo addrspace(4)* @"type_info::<core::f64>", %struct.MunTypeInfo addrspace(4)* @"type_info::<*const *mut core::void>", %struct.MunTypeInfo addrspace(4)* @"type_info::<*mut core::void>", %struct.MunTypeInfo addrspace(4)* @"type_info::<Bar>"]
 @allocatorHandle = unnamed_addr global i8* null
 
 declare i32 @foo_a(%Foo)

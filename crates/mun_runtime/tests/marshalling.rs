@@ -506,6 +506,24 @@ fn extern_fn_missing() {
 }
 
 #[test]
+fn extern_fn_invalid_signature() {
+    extern "C" fn add_int() -> i32 {
+        0
+    }
+
+    let result = TestDriver::new(
+        r#"
+    extern fn add(a: i32, b: i32) -> i32;
+    pub fn main() -> i32 { add(3,4) }
+    "#,
+    )
+    .insert_fn("add", add_int as extern "C" fn() -> i32)
+    .spawn();
+
+    assert!(result.is_err());
+}
+
+#[test]
 #[should_panic]
 fn extern_fn_invalid_sig() {
     extern "C" fn add_int(_a: i8, _b: isize) -> isize {
@@ -596,7 +614,7 @@ fn test_primitive_types() {
 
 #[test]
 fn can_add_external_without_return() {
-    extern "C" fn foo(a: i64) {
+    extern "C" fn foo(a: i32) {
         println!("{}", a);
     }
 
@@ -606,7 +624,7 @@ fn can_add_external_without_return() {
     pub fn main(){ foo(3); }
     "#,
     )
-    .insert_fn("foo", foo as extern "C" fn(i64) -> ());
+    .insert_fn("foo", foo as extern "C" fn(i32) -> ());
     let _: () = invoke_fn!(driver.runtime_mut(), "main").unwrap();
 }
 

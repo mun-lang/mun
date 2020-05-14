@@ -1,8 +1,8 @@
-fn nth() -> int {
+pub fn nth() -> i64 {
     3
 }
 
-fn fibonacci(n:int) -> int {
+pub fn fibonacci(n:i64) -> i64 {
     if n <= 1 {
         n
     } else {

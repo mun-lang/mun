@@ -220,10 +220,10 @@ fn append_struct_mapping<T>(
             break;
         }
 
-        let delete_idx = idx / num_inserted;
+        let delete_idx = idx % num_deleted;
         unsafe { *used_deletions.get_unchecked_mut(delete_idx) = true };
 
-        let insert_idx = idx % num_inserted;
+        let insert_idx = idx / num_deleted;
         unsafe { *used_insertions.get_unchecked_mut(insert_idx) = true };
 
         let old_index = unsafe { *deletions.get_unchecked(delete_idx) };
@@ -255,16 +255,14 @@ fn append_struct_mapping<T>(
         // Prevent the row corresponding to the insertion entry from being used again, by inserting
         // `std::usize::MAX`.
         for idx in 0..num_deleted {
-            let offset = insert_idx * num_deleted;
-            let idx = offset + idx;
+            let idx = insert_idx * num_deleted + idx;
             unsafe { *myers_lengths.get_unchecked_mut(idx) = std::usize::MAX };
         }
 
         // Prevent the column corresponding to the deletion entry from being used again, by
         // inserting `std::usize::MAX`.
         for idx in 0..num_inserted {
-            let offset = delete_idx;
-            let idx = idx * num_deleted + offset;
+            let idx = idx * num_deleted + delete_idx;
             unsafe { *myers_lengths.get_unchecked_mut(idx) = std::usize::MAX };
         }
     }

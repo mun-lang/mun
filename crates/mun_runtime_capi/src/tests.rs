@@ -53,7 +53,13 @@ fn make_runtime(lib_path: &Path) -> RuntimeHandle {
     let lib_path = CString::new(lib_path).unwrap();
 
     let mut handle = RuntimeHandle(ptr::null_mut());
-    let error = unsafe { mun_runtime_create(lib_path.as_ptr(), &mut handle as *mut _) };
+    let error = unsafe {
+        mun_runtime_create(
+            lib_path.as_ptr(),
+            RuntimeOptions::default(),
+            &mut handle as *mut _,
+        )
+    };
     assert_eq!(error.token(), 0, "Failed to create runtime");
     handle
 }
@@ -95,7 +101,8 @@ test_invalid_runtime!(
 
 #[test]
 fn test_runtime_create_invalid_lib_path() {
-    let handle = unsafe { mun_runtime_create(ptr::null(), ptr::null_mut()) };
+    let handle =
+        unsafe { mun_runtime_create(ptr::null(), RuntimeOptions::default(), ptr::null_mut()) };
     assert_ne!(handle.token(), 0);
 
     let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
@@ -111,8 +118,13 @@ fn test_runtime_create_invalid_lib_path() {
 fn test_runtime_create_invalid_lib_path_encoding() {
     let invalid_encoding = ['�', '\0'];
 
-    let handle =
-        unsafe { mun_runtime_create(invalid_encoding.as_ptr() as *const _, ptr::null_mut()) };
+    let handle = unsafe {
+        mun_runtime_create(
+            invalid_encoding.as_ptr() as *const _,
+            RuntimeOptions::default(),
+            ptr::null_mut(),
+        )
+    };
     assert_ne!(handle.token(), 0);
 
     let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
@@ -128,7 +140,13 @@ fn test_runtime_create_invalid_lib_path_encoding() {
 fn test_runtime_create_invalid_handle() {
     let lib_path = CString::new("some/path").expect("Invalid library path");
 
-    let handle = unsafe { mun_runtime_create(lib_path.into_raw(), ptr::null_mut()) };
+    let handle = unsafe {
+        mun_runtime_create(
+            lib_path.into_raw(),
+            RuntimeOptions::default(),
+            ptr::null_mut(),
+        )
+    };
     assert_ne!(handle.token(), 0);
 
     let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
