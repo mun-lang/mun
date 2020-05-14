@@ -48,12 +48,13 @@ fn new_water() -> Water {
 
 fn calc_submerged_ratio(s: Sphere) -> f32 {
     let bottom = s.height - s.radius;
+    let diameter = 2.0 * s.radius;
     if bottom >= 0.0 {
         0.0
-    } else if bottom <= -1.0 {
+    } else if bottom <= -diameter {
         1.0
     } else {
-        -bottom
+        -bottom / diameter
     }
 }
 
