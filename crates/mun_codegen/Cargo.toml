@@ -13,7 +13,9 @@ abi = { path = "../mun_abi", package = "mun_abi" }
 hir = { path = "../mun_hir", package = "mun_hir" }
 mun_target = { path = "../mun_target" }
 mun_lld = { path = "../mun_lld" }
-failure = "0.1.7"
+anyhow = "1.0"
+thiserror = "1.0.17"
+displaydoc = "0.1"
 salsa="0.12"
 md5="0.6.1"
 array-init="0.1.0"

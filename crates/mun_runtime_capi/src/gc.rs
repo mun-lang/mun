@@ -1,8 +1,9 @@
 //! Exposes Mun garbage collection.
 
 use crate::{ErrorHandle, RuntimeHandle, HUB};
-use failure::err_msg;
 use runtime::Runtime;
+
+use anyhow::anyhow;
 
 pub use memory::gc::GcPtr;
 pub use runtime::UnsafeTypeInfo;
@@ -28,7 +29,7 @@ pub unsafe extern "C" fn mun_gc_alloc(
         None => {
             return HUB
                 .errors
-                .register(err_msg("Invalid argument: 'runtime' is null pointer."))
+                .register(anyhow!("Invalid argument: 'runtime' is null pointer."))
         }
     };
 
@@ -37,7 +38,7 @@ pub unsafe extern "C" fn mun_gc_alloc(
         None => {
             return HUB
                 .errors
-                .register(err_msg("Invalid argument: 'obj' is null pointer."))
+                .register(anyhow!("Invalid argument: 'obj' is null pointer."))
         }
     };
 
@@ -66,7 +67,7 @@ pub unsafe extern "C" fn mun_gc_ptr_type(
         None => {
             return HUB
                 .errors
-                .register(err_msg("Invalid argument: 'runtime' is null pointer."))
+                .register(anyhow!("Invalid argument: 'runtime' is null pointer."))
         }
     };
 
@@ -75,7 +76,7 @@ pub unsafe extern "C" fn mun_gc_ptr_type(
         None => {
             return HUB
                 .errors
-                .register(err_msg("Invalid argument: 'type_info' is null pointer."))
+                .register(anyhow!("Invalid argument: 'type_info' is null pointer."))
         }
     };
 
@@ -103,7 +104,7 @@ pub unsafe extern "C" fn mun_gc_root(handle: RuntimeHandle, obj: GcPtr) -> Error
         None => {
             return HUB
                 .errors
-                .register(err_msg("Invalid argument: 'runtime' is null pointer."))
+                .register(anyhow!("Invalid argument: 'runtime' is null pointer."))
         }
     };
 
@@ -130,7 +131,7 @@ pub unsafe extern "C" fn mun_gc_unroot(handle: RuntimeHandle, obj: GcPtr) -> Err
         None => {
             return HUB
                 .errors
-                .register(err_msg("Invalid argument: 'runtime' is null pointer."))
+                .register(anyhow!("Invalid argument: 'runtime' is null pointer."))
         }
     };
 
@@ -159,7 +160,7 @@ pub unsafe extern "C" fn mun_gc_collect(
         None => {
             return HUB
                 .errors
-                .register(err_msg("Invalid argument: 'runtime' is null pointer."))
+                .register(anyhow!("Invalid argument: 'runtime' is null pointer."))
         }
     };
 
@@ -168,7 +169,7 @@ pub unsafe extern "C" fn mun_gc_collect(
         None => {
             return HUB
                 .errors
-                .register(err_msg("Invalid argument: 'reclaimed' is null pointer."))
+                .register(anyhow!("Invalid argument: 'reclaimed' is null pointer."))
         }
     };
 

@@ -1,6 +1,7 @@
 use clap::{App, SubCommand};
 
-use tools::{Overwrite, Result};
+use anyhow::Result;
+use tools::Overwrite;
 
 fn main() -> Result<()> {
     let matches = App::new("tasks")

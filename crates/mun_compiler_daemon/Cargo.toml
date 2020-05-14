@@ -9,6 +9,6 @@ license = "MIT OR Apache-2.0"
 description = "Functionality for continuously monitoring Mun source files for changes and triggering recompilation"
 
 [dependencies]
-failure = "0.1.7"
+anyhow = "1.0"
 mun_compiler = { path = "../mun_compiler" }
 notify = "4.0.12"

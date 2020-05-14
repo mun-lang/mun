@@ -72,7 +72,7 @@ where
 #[derive(Default)]
 pub struct Hub {
     /// Error registry
-    pub errors: Arc<Registry<ErrorHandle, failure::Error>>,
+    pub errors: Arc<Registry<ErrorHandle, anyhow::Error>>,
 }
 
 lazy_static! {

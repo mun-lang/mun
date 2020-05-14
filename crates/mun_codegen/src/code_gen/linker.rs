@@ -1,29 +1,16 @@
-use failure::Fail;
 use mun_target::spec;
 use mun_target::spec::LinkerFlavor;
-use std::fmt;
 use std::path::{Path, PathBuf};
 
-#[derive(Fail, Debug)]
+use displaydoc::Display;
+use thiserror::Error;
+
+#[derive(Display, Error, Debug)]
 pub enum LinkerError {
-    /// Error emitted by the linker
+    /// {0}
     LinkError(String),
-
-    /// Error in path conversion
+    /// "path contains invalid UTF-8 characters: {0:?}"
     PathError(PathBuf),
-}
-
-impl fmt::Display for LinkerError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        match self {
-            LinkerError::LinkError(e) => write!(f, "{}", e),
-            LinkerError::PathError(path) => write!(
-                f,
-                "path contains invalid UTF-8 characters: {}",
-                path.display()
-            ),
-        }
-    }
 }
 
 pub fn create_with_target(target: &spec::Target) -> Box<dyn Linker> {

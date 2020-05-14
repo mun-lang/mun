@@ -1,4 +1,6 @@
-use crate::{project_root, reformat, update, Result};
+use crate::{project_root, reformat, update};
+use anyhow::anyhow;
+use anyhow::Result;
 use std::fs;
 use std::path::Path;
 use teraron::Mode;
@@ -26,7 +28,7 @@ fn generate_from_template(template: &Path, src: &Path, mode: Mode) -> Result<()>
         let text = fs::read_to_string(src)?;
         ron::de::from_str(&text)?
     };
-    let content = teraron::render(&template, src)?;
+    let content = teraron::render(&template, src).map_err(|_| anyhow!("teraron render failed"))?;
     let content = reformat(content)?;
     update(&tgt, &content, mode)
 }

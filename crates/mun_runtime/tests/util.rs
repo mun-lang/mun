@@ -1,5 +1,6 @@
 #![allow(dead_code, unused_macros)]
 
+use anyhow::Result;
 use mun_compiler::{Config, DisplayColor, Driver, FileId, PathOrInline, RelativePathBuf};
 use mun_runtime::{IntoFunctionDefinition, Runtime, RuntimeBuilder};
 use std::io::Cursor;
@@ -22,7 +23,7 @@ enum RuntimeOrBuilder {
 }
 
 impl RuntimeOrBuilder {
-    pub fn spawn(&mut self) -> Result<(), failure::Error> {
+    pub fn spawn(&mut self) -> Result<()> {
         let previous = std::mem::replace(self, RuntimeOrBuilder::Pending);
         let runtime = match previous {
             RuntimeOrBuilder::Runtime(runtime) => runtime,
@@ -71,7 +72,7 @@ impl TestDriver {
     }
 
     /// Spawns a `Runtime` from the `RuntimeBuilder`, if it hadn't already been spawned.
-    pub fn spawn(&mut self) -> Result<(), failure::Error> {
+    pub fn spawn(&mut self) -> Result<()> {
         self.runtime.spawn().map(|_| ())
     }
 

@@ -1,6 +1,7 @@
 use crate::code_gen::linker::LinkerError;
 use crate::IrDatabase;
-use failure::Fail;
+use anyhow::Result;
+use displaydoc::Display;
 use hir::{FileId, RelativePathBuf};
 use inkwell::targets::TargetData;
 use inkwell::{
@@ -18,30 +19,25 @@ use std::{
     sync::Arc,
 };
 use tempfile::NamedTempFile;
+use thiserror::Error;
 
 mod linker;
 pub mod symbols;
 
-#[derive(Debug, Fail)]
+#[derive(Display, Error, Debug)]
 enum CodeGenerationError {
-    #[fail(display = "{}", 0)]
-    LinkerError(#[fail(cause)] LinkerError),
-    #[fail(display = "error linking modules: {}", 0)]
+    /// "{0}"
+    LinkerError(#[from] LinkerError),
+    /// error linking modules: {0}
     ModuleLinkerError(String),
-    #[fail(display = "unknown target triple: {}", 0)]
+    /// unknown target triple: {0}
     UnknownTargetTriple(String),
-    #[fail(display = "error creating target machine")]
+    /// error creating target machine
     CouldNotCreateTargetMachine,
-    #[fail(display = "error creating object file")]
+    /// error creating object file
     CouldNotCreateObjectFile(io::Error),
-    #[fail(display = "error generating machine code")]
+    /// error generating machine code
     CodeGenerationError(String),
-}
-
-impl From<LinkerError> for CodeGenerationError {
-    fn from(e: LinkerError) -> Self {
-        CodeGenerationError::LinkerError(e)
-    }
 }
 
 pub struct ObjectFile {
@@ -56,7 +52,7 @@ impl ObjectFile {
         target_machine: &TargetMachine,
         src_path: RelativePathBuf,
         module: Arc<inkwell::module::Module>,
-    ) -> Result<Self, failure::Error> {
+    ) -> Result<Self> {
         let obj = target_machine
             .write_to_memory_buffer(&module, FileType::Object)
             .map_err(|e| CodeGenerationError::CodeGenerationError(e.to_string()))?;
@@ -74,7 +70,7 @@ impl ObjectFile {
         })
     }
 
-    pub fn into_shared_object(self, out_dir: Option<&Path>) -> Result<PathBuf, failure::Error> {
+    pub fn into_shared_object(self, out_dir: Option<&Path>) -> Result<PathBuf> {
         // Construct a linker for the target
         let mut linker = linker::create_with_target(&self.target);
         linker.add_object(self.obj_file.path())?;
@@ -100,7 +96,7 @@ pub struct ModuleBuilder<'a, D: IrDatabase> {
 
 impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
     /// Constructs module for the given `hir::FileId` at the specified output file location.
-    pub fn new(db: &'a D, file_id: FileId) -> Result<Self, failure::Error> {
+    pub fn new(db: &'a D, file_id: FileId) -> Result<Self> {
         let target = db.target();
 
         // Construct a module for the assembly
@@ -139,7 +135,7 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
     }
 
     /// Constructs an object file.
-    pub fn build(self) -> Result<ObjectFile, failure::Error> {
+    pub fn build(self) -> Result<ObjectFile> {
         let group_ir = self.db.group_ir(self.file_id);
         let file = self.db.file_ir(self.file_id);
 

@@ -1,16 +1,15 @@
-#[macro_use]
-extern crate failure;
-
 use std::cell::RefCell;
 use std::env;
 use std::rc::Rc;
 use std::time::Duration;
 
+use anyhow::anyhow;
+use anyhow::Result;
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use mun_compiler::{Config, DisplayColor, PathOrInline, Target};
 use mun_runtime::{invoke_fn, ReturnTypeReflection, Runtime, RuntimeBuilder};
 
-fn main() -> Result<(), failure::Error> {
+fn main() -> Result<()> {
     let matches = App::new("mun")
         .version(env!("CARGO_PKG_VERSION"))
         .author("The Mun Project Developers")
@@ -83,7 +82,7 @@ fn main() -> Result<(), failure::Error> {
 }
 
 /// Build the source file specified
-fn build(matches: &ArgMatches) -> Result<(), failure::Error> {
+fn build(matches: &ArgMatches) -> Result<()> {
     let options = compiler_options(matches)?;
     if matches.is_present("watch") {
         mun_compiler_daemon::main(options)
@@ -93,7 +92,7 @@ fn build(matches: &ArgMatches) -> Result<(), failure::Error> {
 }
 
 /// Starts the runtime with the specified library and invokes function `entry`.
-fn start(matches: &ArgMatches) -> Result<(), failure::Error> {
+fn start(matches: &ArgMatches) -> Result<()> {
     let runtime = runtime(matches)?;
 
     let borrowed = runtime.borrow();
@@ -110,40 +109,37 @@ fn start(matches: &ArgMatches) -> Result<(), failure::Error> {
     if let Some(ret_type) = fn_definition.prototype.signature.return_type() {
         let type_guid = &ret_type.guid;
         if *type_guid == bool::type_guid() {
-            let result: bool =
-                invoke_fn!(runtime, entry_point).map_err(|e| failure::err_msg(format!("{}", e)))?;
+            let result: bool = invoke_fn!(runtime, entry_point).map_err(|e| anyhow!("{}", e))?;
 
             println!("{}", result)
         } else if *type_guid == f64::type_guid() {
-            let result: f64 =
-                invoke_fn!(runtime, entry_point).map_err(|e| failure::err_msg(format!("{}", e)))?;
+            let result: f64 = invoke_fn!(runtime, entry_point).map_err(|e| anyhow!("{}", e))?;
 
             println!("{}", result)
         } else if *type_guid == i64::type_guid() {
-            let result: i64 =
-                invoke_fn!(runtime, entry_point).map_err(|e| failure::err_msg(format!("{}", e)))?;
+            let result: i64 = invoke_fn!(runtime, entry_point).map_err(|e| anyhow!("{}", e))?;
 
             println!("{}", result)
         } else {
-            return Err(failure::err_msg(format!(
+            return Err(anyhow!(
                 "Only native Mun return types are supported for entry points. Found: {}",
                 ret_type.name()
-            )));
+            ));
         };
         Ok(())
     } else {
         #[allow(clippy::unit_arg)]
-        invoke_fn!(runtime, entry_point).map_err(|e| failure::err_msg(format!("{}", e)))
+        invoke_fn!(runtime, entry_point).map_err(|e| anyhow!(format!("{}", e)))
     }
 }
 
-fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOptions, failure::Error> {
+fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOptions> {
     let optimization_lvl = match matches.value_of("opt-level") {
         Some("0") => mun_compiler::OptimizationLevel::None,
         Some("1") => mun_compiler::OptimizationLevel::Less,
         None | Some("2") => mun_compiler::OptimizationLevel::Default,
         Some("3") => mun_compiler::OptimizationLevel::Aggressive,
-        _ => return Err(format_err!("Only optimization levels 0-3 are supported")),
+        _ => return Err(anyhow!("Only optimization levels 0-3 are supported")),
     };
 
     let display_color = matches
@@ -170,7 +166,7 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOption
     })
 }
 
-fn runtime(matches: &ArgMatches) -> Result<Rc<RefCell<Runtime>>, failure::Error> {
+fn runtime(matches: &ArgMatches) -> Result<Rc<RefCell<Runtime>>> {
     let builder = RuntimeBuilder::new(
         matches.value_of("LIBRARY").unwrap(), // Safe because its a required arg
     );

@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 description = "Binary compilation functionality for Mun"
 
 [dependencies]
-failure = "0.1.7"
+anyhow = "1.0"
 mun_codegen = { path="../mun_codegen" }
 mun_syntax = { path="../mun_syntax" }
 mun_hir = {path="../mun_hir"}

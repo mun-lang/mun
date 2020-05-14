@@ -14,9 +14,10 @@ mod tests;
 use std::ffi::{c_void, CStr, CString};
 use std::{os::raw::c_char, time::Duration};
 
+use anyhow::anyhow;
+
 use crate::error::ErrorHandle;
 use crate::hub::HUB;
-use failure::err_msg;
 use runtime::{Runtime, RuntimeOptions};
 
 pub(crate) type Token = usize;
@@ -56,13 +57,13 @@ pub unsafe extern "C" fn mun_runtime_create(
     if library_path.is_null() {
         return HUB
             .errors
-            .register(err_msg("Invalid argument: 'library_path' is null pointer."));
+            .register(anyhow!("Invalid argument: 'library_path' is null pointer."));
     }
 
     let library_path = match CStr::from_ptr(library_path).to_str() {
         Ok(path) => path,
         Err(_) => {
-            return HUB.errors.register(err_msg(
+            return HUB.errors.register(anyhow!(
                 "Invalid argument: 'library_path' is not UTF-8 encoded.",
             ))
         }
@@ -73,7 +74,7 @@ pub unsafe extern "C" fn mun_runtime_create(
         None => {
             return HUB
                 .errors
-                .register(err_msg("Invalid argument: 'handle' is null pointer."))
+                .register(anyhow!("Invalid argument: 'handle' is null pointer."))
         }
     };
 
@@ -123,14 +124,14 @@ pub unsafe extern "C" fn mun_runtime_get_function_definition(
         None => {
             return HUB
                 .errors
-                .register(err_msg("Invalid argument: 'runtime' is null pointer."))
+                .register(anyhow!("Invalid argument: 'runtime' is null pointer."))
         }
     };
 
     if fn_name.is_null() {
         return HUB
             .errors
-            .register(err_msg("Invalid argument: 'fn_name' is null pointer."));
+            .register(anyhow!("Invalid argument: 'fn_name' is null pointer."));
     }
 
     let fn_name = match CStr::from_ptr(fn_name).to_str() {
@@ -138,7 +139,7 @@ pub unsafe extern "C" fn mun_runtime_get_function_definition(
         Err(_) => {
             return HUB
                 .errors
-                .register(err_msg("Invalid argument: 'fn_name' is not UTF-8 encoded."))
+                .register(anyhow!("Invalid argument: 'fn_name' is not UTF-8 encoded."))
         }
     };
 
@@ -147,7 +148,7 @@ pub unsafe extern "C" fn mun_runtime_get_function_definition(
         None => {
             return HUB
                 .errors
-                .register(err_msg("Invalid argument: 'has_fn_info' is null pointer."))
+                .register(anyhow!("Invalid argument: 'has_fn_info' is null pointer."))
         }
     };
 
@@ -156,7 +157,7 @@ pub unsafe extern "C" fn mun_runtime_get_function_definition(
         None => {
             return HUB
                 .errors
-                .register(err_msg("Invalid argument: 'fn_info' is null pointer."))
+                .register(anyhow!("Invalid argument: 'fn_info' is null pointer."))
         }
     };
 
@@ -191,7 +192,7 @@ pub unsafe extern "C" fn mun_runtime_update(
         None => {
             return HUB
                 .errors
-                .register(err_msg("Invalid argument: 'runtime' is null pointer."))
+                .register(anyhow!("Invalid argument: 'runtime' is null pointer."))
         }
     };
 
@@ -200,7 +201,7 @@ pub unsafe extern "C" fn mun_runtime_update(
         None => {
             return HUB
                 .errors
-                .register(err_msg("Invalid argument: 'updated' is null pointer."))
+                .register(anyhow!("Invalid argument: 'updated' is null pointer."))
         }
     };
 

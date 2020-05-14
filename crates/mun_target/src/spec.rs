@@ -2,7 +2,9 @@ mod apple_base;
 mod linux_base;
 mod windows_msvc_base;
 use crate::host_triple;
-use failure::Fail;
+
+use displaydoc::Display;
+use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash)]
 pub enum LinkerFlavor {
@@ -80,12 +82,12 @@ impl Default for TargetOptions {
         }
     }
 }
-#[derive(Fail, Debug)]
+#[derive(Display, Error, Debug)]
 pub enum LoadTargetError {
-    #[fail(display = "target not found: {}", 0)]
+    /// target not found: {0}
     BuiltinTargetNotFound(String),
 
-    #[fail(display = "{}", 0)]
+    /// {0}
     Other(String),
 }
 

@@ -1,4 +1,5 @@
-use crate::{project_root, update, Result};
+use crate::{project_root, update};
+use anyhow::Result;
 use teraron::Mode;
 
 pub const RUNTIME_CAPI_DIR: &str = "crates/mun_runtime_capi";

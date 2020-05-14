@@ -10,7 +10,9 @@ license = "MIT OR Apache-2.0"
 description = "Command-line interface for compiling, monitoring and running Mun code"
 
 [dependencies]
-failure = "0.1.7"
+anyhow = "1.0"
+thiserror = "1.0.17"
+displaydoc = "0.1"
 clap = "2.33.0"
 mun_abi = { path = "../mun_abi" }
 mun_compiler = { path = "../mun_compiler" }
@@ -18,6 +20,6 @@ mun_compiler_daemon = { path = "../mun_compiler_daemon" }
 mun_runtime = { path = "../mun_runtime" }
 
 [dev-dependencies.cargo-husky]
-version = "1"
+version = "1.5"
 default-features = false # Disable features which are enabled by default
 features = ["precommit-hook", "run-cargo-test", "run-cargo-fmt", "run-cargo-clippy", "run-for-all"]
