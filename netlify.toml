@@ -1,0 +1,7 @@
+[build]
+  ignore = "git diff —quiet HEAD^ HEAD book/"
+
+[[redirects]]
+  from = "/v0.2/*"
+  to = "https://release-v0-2--docs.mun-lang.org/:splat"
+  status = 200

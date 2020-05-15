@@ -1,0 +1,1 @@
+struct Vector3(float, float, float)
