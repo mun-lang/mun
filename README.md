@@ -2,7 +2,8 @@
 
 [![Build Status][build-badge]][build]
 [![Crates.io][crates-badge]][crates]
-[![docs page][dosc-badge]][docs] 
+[![docs master][dosc-master-badge]][docs-master]
+[![docs v0.2][dosc-v0.2-badge]][docs-v0.2]
 [![MIT/Apache][licence-badge]][license]
 [![Join us on Discord][discord-badge]][discord]
 [![codecov][coverage-badge]][coverage]
@@ -16,6 +17,12 @@
 
 [coverage-badge]: https://img.shields.io/codecov/c/github/mun-lang/mun.svg
 [coverage]: https://codecov.io/gh/mun-lang/mun
+
+[dosc-master-badge]: https://img.shields.io/badge/docs-master-blue.svg
+[docs-master]: https://docs.mun-lang.org/
+
+[dosc-v0.2-badge]: https://img.shields.io/badge/docs-v0.2-blue.svg
+[docs-v0.2]: https://docs.mun-lang.org/v0.2/
 
 [dosc-badge]: https://img.shields.io/badge/docs-website-blue.svg
 [docs]: https://docs.mun-lang.org/
