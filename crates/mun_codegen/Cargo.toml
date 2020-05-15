@@ -3,16 +3,20 @@ name = "mun_codegen"
 version = "0.2.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
+description = "LLVM IR code generation for Mun"
+documentation = "https://docs.mun-lang.org/v0.2"
+readme = "README.md"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
 license = "MIT OR Apache-2.0"
-description = "LLVM IR code generation for Mun"
+keywords = ["game", "hot reloading", "language", "mun", "scripting"]
+categories = ["Game development", "Mun"]
 
 [dependencies]
-abi = { path = "../mun_abi", package = "mun_abi" }
-hir = { path = "../mun_hir", package = "mun_hir" }
-mun_target = { path = "../mun_target" }
-mun_lld = { path = "../mun_lld" }
+abi = { version = "=0.2.0", path = "../mun_abi", package = "mun_abi" }
+hir = { version = "=0.2.0", path = "../mun_hir", package = "mun_hir" }
+mun_target = { version = "=0.2.0", path = "../mun_target" }
+mun_lld = { version = "=70.2.0", path = "../mun_lld" }
 failure = "0.1.7"
 salsa="0.12"
 md5="0.6.1"

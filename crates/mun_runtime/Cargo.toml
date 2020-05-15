@@ -3,17 +3,21 @@ name = "mun_runtime"
 version = "0.2.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
+description = "A runtime for hot reloading and invoking Mun from Rust"
+documentation = "https://docs.mun-lang.org/v0.2"
+readme = "README.md"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
 license = "MIT OR Apache-2.0"
-description = "A runtime for hot reloading and invoking Mun from Rust"
+keywords = ["game", "hot reloading", "language", "mun", "runtime", "scripting"]
+categories = ["Game development", "Mun"]
 
 [dependencies]
-abi = { path = "../mun_abi", package = "mun_abi" }
+abi = { version = "=0.2.0", path = "../mun_abi", package = "mun_abi" }
 failure = "0.1.7"
 libloading = "0.5"
 md5 = "0.7.0"
-memory = { path = "../mun_memory", package = "mun_memory" }
+memory = { version = "=0.1.0", path = "../mun_memory", package = "mun_memory" }
 notify = "4.0.12"
 parking_lot = "0.10"
 tempfile = "3"

@@ -3,10 +3,14 @@ name = "mun_runtime_capi"
 version = "0.2.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
+description = "Provides a C API for the Mun runtime"
+documentation = "https://docs.mun-lang.org/v0.2"
+readme = "README.md"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
 license = "MIT OR Apache-2.0"
-description = "Provides a C api to the mun_runtime crate"
+keywords = ["ffi", "game", "hot reloading", "language", "mun", "scripting"]
+categories = ["API bindings", "Game development", "Mun"]
 
 [lib]
 name = "mun_runtime"
@@ -15,9 +19,9 @@ crate-type = ["cdylib"]
 [dependencies]
 failure = "0.1.7"
 lazy_static = "1.4.0"
-abi = { path = "../mun_abi", package = "mun_abi" }
-memory = { path = "../mun_memory", package = "mun_memory" }
-runtime = { path = "../mun_runtime", package = "mun_runtime" }
+abi = { version = "=0.2.0", path = "../mun_abi", package = "mun_abi" }
+memory = { version = "=0.1.0", path = "../mun_memory", package = "mun_memory" }
+runtime = { version = "=0.2.0", path = "../mun_runtime", package = "mun_runtime" }
 parking_lot = "0.10"
 rand = "0.7.2"
 

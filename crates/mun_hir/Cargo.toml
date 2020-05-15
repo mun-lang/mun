@@ -3,16 +3,20 @@ name = "mun_hir"
 version = "0.2.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
+description = "Provides high-level intermediate representation of Mun code"
+documentation = "https://docs.mun-lang.org/v0.2"
+readme = "README.md"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
 license = "MIT OR Apache-2.0"
-description = "Provides high-level intermediate representation of Mun code"
+keywords = ["game", "hot reloading", "language", "mun", "scripting"]
+categories = ["Game development", "Mun"]
 
 [dependencies]
 salsa="0.12"
 superslice = "1.0"
-mun_syntax={path="../mun_syntax"}
-mun_target={path="../mun_target"}
+mun_syntax = { version = "=0.2.0", path = "../mun_syntax" }
+mun_target = { version = "=0.2.0", path = "../mun_target" }
 rustc-hash = "1.1"
 once_cell = "0.2"
 relative-path = "0.4.0"

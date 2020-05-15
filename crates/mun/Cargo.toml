@@ -3,19 +3,23 @@ name = "mun"
 version = "0.2.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
-default-run = "mun"
+description = "Command-line interface for compiling, monitoring and running Mun code"
+documentation = "https://docs.mun-lang.org/v0.2"
+readme = "README.md"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
 license = "MIT OR Apache-2.0"
-description = "Command-line interface for compiling, monitoring and running Mun code"
+keywords = ["cli", "game", "hot reloading", "language", "mun", "scripting"]
+categories = ["Command-line interface", "Game development", "Mun"]
+default-run = "mun"
 
 [dependencies]
 failure = "0.1.7"
 clap = "2.33.0"
-mun_abi = { path = "../mun_abi" }
-mun_compiler = { path = "../mun_compiler" }
-mun_compiler_daemon = { path = "../mun_compiler_daemon" }
-mun_runtime = { path = "../mun_runtime" }
+mun_abi = { version = "=0.2.0", path = "../mun_abi" }
+mun_compiler = { version = "=0.2.0", path = "../mun_compiler" }
+mun_compiler_daemon = { version = "=0.2.0", path = "../mun_compiler_daemon" }
+mun_runtime = { version = "=0.2.0", path = "../mun_runtime" }
 
 [dev-dependencies.cargo-husky]
 version = "1"
