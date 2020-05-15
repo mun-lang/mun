@@ -3,10 +3,14 @@ name = "mun_lld"
 version = "70.2.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
+description = "Bindings for LLD used to link Mun binaries"
+documentation = "https://docs.mun-lang.org/v0.2"
+readme = "README.md"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
 license = "MIT OR Apache-2.0"
-description = "Bindings for LLD used to link Mun binaries"
+keywords = ["game", "hot reloading", "language", "mun", "scripting"]
+categories = ["Game development", "Mun"]
 
 [dependencies]
 libc = "0.2.65"
