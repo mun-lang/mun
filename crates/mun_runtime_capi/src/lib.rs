@@ -18,7 +18,7 @@ use anyhow::anyhow;
 
 use crate::error::ErrorHandle;
 use crate::hub::HUB;
-use runtime::{Runtime, RuntimeOptions};
+use runtime::Runtime;
 
 pub(crate) type Token = usize;
 
@@ -98,7 +98,7 @@ pub unsafe extern "C" fn mun_runtime_create(
     if options.num_functions > 0 && options.functions.is_null() {
         return HUB
             .errors
-            .register(err_msg("Invalid argument: 'functions' is null pointer."));
+            .register(anyhow!("Invalid argument: 'functions' is null pointer."));
     }
 
     let library_path = match CStr::from_ptr(library_path).to_str() {
