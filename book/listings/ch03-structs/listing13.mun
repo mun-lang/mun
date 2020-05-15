@@ -1,0 +1,11 @@
+extern fn log_f32(value: f32);
+
+struct SimContext;
+
+pub fn new_sim() -> SimContext {
+    SimContext
+}
+
+pub fn sim_update(ctx: SimContext, elapsed_secs: f32) {
+    log_f32(elapsed_secs);
+}

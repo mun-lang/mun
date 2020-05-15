@@ -1,0 +1,22 @@
+#!/bin/bash
+
+set -euo pipefail
+
+pushd ./book
+
+    # First build our custom highlight.js
+    ./ci/build-highlight-js
+
+    # Check if mdbook is installed, otherwise download the binaries
+    mdbook="mdbook"
+    if ! [ -x "$(command -v $mdbook)" ]; then 
+        echo "Installing mdbook.."
+        curl -sL https://github.com/rust-lang-nursery/mdBook/releases/download/v0.3.1/mdbook-v0.3.1-x86_64-unknown-linux-gnu.tar.gz | tar zxv
+        mdbook="./mdbook"
+    fi
+
+    # Actually build the book
+    echo 'Building book..'
+    $mdbook build
+
+popd

@@ -59,7 +59,25 @@ jobs:
       - name: Install LLVM
         uses: ./.github/actions/install-llvm
 
-      - name: Cargo check
+      - name: Cargo build
+        uses: actions-rs/cargo@v1
+        continue-on-error: ${{ matrix.config.toolchain == 'nightly' }}
+        with:
+          command: build
+
+      - name: Install mdbook
+        if: ${{ matrix.config.os == 'ubuntu-latest' && matrix.config.toolchain == 'stable' }}
+        uses: actions-rs/install@v0.1
+        with:
+          crate: mdbook
+          version: latest
+          use-tool-cache: true
+          
+      - name: mdbook test
+        if: ${{ matrix.config.os == 'ubuntu-latest' && matrix.config.toolchain == 'stable' }}
+        run: mdbook test book -L target/debug/deps
+
+      - name: Cargo test
         uses: actions-rs/cargo@v1
         continue-on-error: ${{ matrix.config.toolchain == 'nightly' }}
         with:

@@ -1,0 +1,2 @@
+# struct Vector3(float, float, float)
+let xyz = Vector3(-1.0, 0.0, 1.0);

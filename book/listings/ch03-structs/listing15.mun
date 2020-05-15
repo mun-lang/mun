@@ -1,0 +1,45 @@
+extern fn log_f32(value: f32);
+
+struct SimContext {
+    sphere: Sphere,
+    water: Water,
+    gravity: f32,
+}
+
+struct Sphere {
+    radius: f32,
+    density: f32,
+    height: f32,
+    velocity: f32,
+}
+
+struct Water {
+    density: f32,
+}
+
+pub fn new_sim() -> SimContext {
+    SimContext {
+        sphere: new_sphere(),
+        water: new_water(),
+        gravity: 9.81,
+    }
+}
+
+fn new_sphere() -> Sphere {
+    Sphere {
+        radius: 1.0,
+        density: 250.0,
+        height: 1.0,
+        velocity: 0.0,
+    }
+}
+
+fn new_water() -> Water {
+    Water {
+        density: 1000.0,
+    }
+}
+
+pub fn sim_update(ctx: SimContext, elapsed_secs: f32) {
+    log_f32(ctx.gravity);
+}
