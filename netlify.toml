@@ -1,5 +1,5 @@
 [build]
-  ignore = "git diff —quiet HEAD^ HEAD book/"
+  ignore = "git diff --quiet HEAD^ HEAD book/"
 
 [[redirects]]
   from = "/v0.2/*"

@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # First build our custom highlight.js
-./ci/build-highlight-js
+./book/ci/build-highlight-js
 
 # Check if mdbook is installed, otherwise download the binaries
 mdbook="mdbook"
