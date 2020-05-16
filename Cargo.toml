@@ -2,3 +2,9 @@
 members = [
     "crates/*",
 ]
+
+[profile.dev]
+rpath = true
+
+[profile.release]
+rpath = true
