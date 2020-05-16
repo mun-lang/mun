@@ -10,7 +10,7 @@ homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
 license = "MIT OR Apache-2.0"
 keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
-categories = ["Game development", "Mun"]
+categories = ["game-development", "mun"]
 
 [dependencies]
 log = "0.4.8"
