@@ -5,3 +5,6 @@
   from = "/v0.2/*"
   to = "https://release-v0-2.docs.mun-lang.org/:splat"
   status = 200
+
+[context."release/v0.2"]
+  environment = { BASE_URL = "/v0.2/" }
