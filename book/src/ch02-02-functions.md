@@ -39,7 +39,8 @@ fn foo() {
 pub fn bar() {
     // Because `bar` and `foo` are in the same file, this call is valid.
     foo()
-}```
+}
+```
 
 When you want to interface from your host language (C++, Rust, etc.) with Mun,
 you can only access `pub` functions. These functions are hot reloaded by the
@@ -114,7 +115,9 @@ fn foo() -> i32 {
     };
     // `bar` has a value 6
     bar + 3
-}```
+}
+```
+
 ### Returning Values from Functions
 
 Functions can return values to the code that calls them. We don't name return
