@@ -134,6 +134,8 @@ fn on_heap() -> GC {
 
 **[NOTE] We do not provide support for milestone releases**
 
+**[NOTE] None of the binaries are currently signed**
+
 Download pre-built binaries of [milestone
 releases](https://github.com/mun-lang/mun/releases) for macOS, Linux, and
 Windows (64-bit only).
