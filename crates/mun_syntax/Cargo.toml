@@ -9,7 +9,7 @@ readme = "README.md"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
 license = "MIT OR Apache-2.0"
-keywords = ["game", "hot reloading", "language", "mun", "scripting", "syntax"]
+keywords = ["game", "hot-reloading", "language", "mun", "scripting", "syntax"]
 categories = ["Game development", "Mun"]
 
 [dependencies]
