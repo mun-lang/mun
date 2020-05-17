@@ -1,33 +1,19 @@
 #!/bin/bash
 
-set -eo pipefail
+set -euo pipefail
 
 pushd ./book
-
-    # If there is a BASE_URL defined insert that into the head section of the 
-    # book
-    if [[ ! -z "$BASE_URL" ]]; then
-        echo "Inserting BASE_URL: $BASE_URL"
-        echo "<base href=\"$BASE_URL\" />" > theme/head.hbs
-    else
-        echo "not using BASE_URL"
-    fi
 
     # Check if mdbook is installed, otherwise download the binaries
     mdbook="mdbook"
     if ! [ -x "$(command -v $mdbook)" ]; then 
-        # Ensure cargo is installed
-        if ! [ -x "$(command -v cargo)" ]; then 
-            # Install rust & cargo
-            curl https://sh.rustup.rs -sSf | sh -s -- -y
-            # We have to source the installation
-            source $HOME/.cargo/env
-        fi
-
-        # Install mdBook from source
         echo "Installing mdbook.."
-        cargo install --git https://github.com/rust-lang/mdBook.git mdbook
+        curl -sL https://github.com/rust-lang-nursery/mdBook/releases/download/v0.3.7/mdbook-v0.3.7-x86_64-unknown-linux-gnu.tar.gz | tar zxv
+        mdbook="./mdbook"
     fi
+
+    # Echo mdbook version
+    $mdbook --version
 
     # First build our custom highlight.js
     ./ci/build-highlight-js
