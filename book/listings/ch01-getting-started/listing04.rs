@@ -10,7 +10,7 @@ fn main() {
 
     loop {
         let arg: i64 = invoke_fn!(runtime, "arg").wait();
-        let result: i64 = invoke_fn!(runtime, "fibonacci").wait();
+        let result: i64 = invoke_fn!(runtime, "fibonacci", arg).wait();
         println!("fibonacci({}) = {}", arg, result);
         runtime.borrow_mut().update();
     }
