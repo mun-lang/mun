@@ -116,6 +116,8 @@ pub(crate) fn ir_query(db: &impl IrDatabase, type_manager: &mut TypeManager, fil
         .cloned()
         .collect();
 
+    debug_assert_eq!(llvm_module.verify(), Ok(()));
+
     (FileIR {
         file_id,
         llvm_module,

@@ -112,6 +112,8 @@ pub(crate) fn ir_query(db: &impl IrDatabase, type_manager: &mut TypeManager, fil
         None
     };
 
+    debug_assert_eq!(llvm_module.verify(), Ok(()));
+
     FileGroupIR {
         llvm_module,
         abi_types,
