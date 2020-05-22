@@ -232,7 +232,7 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
         type_info_to_ir: &mut HashMap<TypeInfo, GlobalValue>,
         hir_struct: hir::Struct,
     ) -> StructValue {
-        let struct_ir = self.db.struct_ty(hir_struct);
+        let struct_ir = type_manager.struct_ty(self.db, hir_struct);
         let name = hir_struct.name(self.db).to_string();
         let fields = hir_struct.fields(self.db);
 

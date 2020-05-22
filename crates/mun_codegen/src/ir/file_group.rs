@@ -56,7 +56,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, type_manager: &mut TypeManager, fil
             }
             ModuleDef::Function(_) => (), // TODO: Extern types?
             ModuleDef::Struct(s) => {
-                adt::gen_struct_decl(db, *s);
+                adt::gen_struct_decl(db, type_manager, *s);
             }
             ModuleDef::BuiltinType(_) => (),
         }
@@ -74,7 +74,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, type_manager: &mut TypeManager, fil
         }
     }
 
-    let dispatch_table = dispatch_table_builder.build();
+    let dispatch_table = dispatch_table_builder.build(type_manager);
 
     let abi_types = gen_abi_types(&db.context());
     let mut type_table_builder = TypeTableBuilder::new(

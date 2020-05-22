@@ -1,11 +1,10 @@
 #![allow(clippy::type_repetition_in_bounds)]
 
 use crate::{
-    CodeGenParams, Context,
+    Context,
 };
 use inkwell::{
     targets::TargetData,
-    types::{AnyTypeEnum, StructType},
     OptimizationLevel,
 };
 use std::sync::Arc;
@@ -26,13 +25,11 @@ pub trait IrDatabase: hir::HirDatabase {
     #[salsa::invoke(crate::code_gen::target_data_query)]
     fn target_data(&self) -> Arc<TargetData>;
 
-    /// Given a type and code generation parameters, return the corresponding IR type.
-    #[salsa::invoke(crate::ir::ty::ir_query)]
-    fn type_ir(&self, ty: hir::Ty, params: CodeGenParams) -> AnyTypeEnum;
+    // #[salsa::invoke(crate::ir::ty::ir_query)]
+    // fn type_ir(&self, ty: hir::Ty, params: CodeGenParams) -> AnyTypeEnum;
 
-    /// Given a struct, return the corresponding IR type.
-    #[salsa::invoke(crate::ir::ty::struct_ty_query)]
-    fn struct_ty(&self, s: hir::Struct) -> StructType;
+    // #[salsa::invoke(crate::ir::ty::struct_ty_query)]
+    // fn struct_ty(&self, s: hir::Struct) -> StructType;
 
     // #[salsa::invoke(crate::ir::file_group::ir_query)]
     // fn group_ir(&self, file: hir::FileId) -> Arc<FileGroupIR>;

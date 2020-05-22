@@ -72,4 +72,7 @@ use crate::{
 };
 
 pub use self::adt::StructMemoryKind;
-pub use self::code_model::{FnData, Function, Module, ModuleDef, Struct, Visibility};
+pub use self::code_model::{
+    FnData, Function, Module, ModuleDef, Struct, Visibility,
+    StructField,
+};

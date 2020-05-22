@@ -346,7 +346,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         args: Vec<BasicValueEnum>,
     ) -> BasicValueEnum {
         // Construct the struct literal
-        let struct_ty = self.db.struct_ty(hir_struct);
+        let struct_ty = self.type_manager.struct_ty(self.db, hir_struct);
         let mut value: AggregateValueEnum = struct_ty.get_undef().into();
         for (i, arg) in args.into_iter().enumerate() {
             value = self
@@ -370,7 +370,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         hir_struct: hir::Struct,
         struct_lit: StructValue,
     ) -> BasicValueEnum {
-        let struct_ir_ty = self.db.struct_ty(hir_struct);
+        let struct_ir_ty = self.type_manager.struct_ty(self.db, hir_struct);
         let new_fn_ptr = self.dispatch_table.gen_intrinsic_lookup(
             self.external_globals.dispatch_table,
             &self.builder,
@@ -518,7 +518,8 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             Pat::Bind { name } => {
                 let builder = self.new_alloca_builder();
                 let pat_ty = self.infer[pat].clone();
-                let ty = try_convert_any_to_basic(self.db.type_ir(
+                let ty = try_convert_any_to_basic(self.type_manager.type_ir(
+                    self.db,
                     pat_ty.clone(),
                     CodeGenParams {
                         make_marshallable: false,

@@ -251,9 +251,9 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
             let name = function.name(self.db).to_string();
             let hir_type = function.ty(self.db);
             let sig = hir_type.callable_sig(self.db).unwrap();
-            let ir_type = self
-                .db
+            let ir_type = type_manager
                 .type_ir(
+                    self.db,
                     hir_type,
                     CodeGenParams {
                         make_marshallable: false,
@@ -298,7 +298,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
     /// Builds the final DispatchTable with all *called* functions from within the module
     /// # Parameters
     /// * **functions**: Mapping of *defined* Mun functions to their respective IR values.
-    pub fn build(self) -> DispatchTable {
+    pub fn build(self, type_manager: &mut TypeManager) -> DispatchTable {
         // Construct the table body from all the entries in the dispatch table
         let table_body: Vec<BasicTypeEnum> = self
             .entries
@@ -326,6 +326,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
                         // Case mun function: Get the function location as the initializer
                         Some(f) => function::gen_signature(
                             self.db,
+                            type_manager,
                             f,
                             self.module,
                             CodeGenParams {

@@ -35,6 +35,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, type_manager: &mut TypeManager, fil
             if !f.is_extern(db) {
                 let fun = function::gen_signature(
                     db,
+                    type_manager,
                     *f,
                     &llvm_module,
                     CodeGenParams {
@@ -47,6 +48,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, type_manager: &mut TypeManager, fil
                 if !f.data(db).visibility().is_private() && !fn_sig.marshallable(db) {
                     let wrapper_fun = function::gen_signature(
                         db,
+                        type_manager,
                         *f,
                         &llvm_module,
                         CodeGenParams {
@@ -115,6 +117,10 @@ pub(crate) fn ir_query(db: &impl IrDatabase, type_manager: &mut TypeManager, fil
         .filter(|f| f.visibility(db) != hir::Visibility::Private)
         .cloned()
         .collect();
+
+    println!("{}", llvm_module
+                .print_to_string()
+                .to_string());
 
     debug_assert_eq!(llvm_module.verify(), Ok(()));
 

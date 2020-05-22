@@ -29,6 +29,7 @@ pub(crate) fn create_pass_manager(
 /// allows bodies to reference `FunctionValue` wherever they are declared in the file.
 pub(crate) fn gen_signature(
     db: &impl IrDatabase,
+    type_manager: &mut TypeManager,
     f: hir::Function,
     module: &Module,
     params: CodeGenParams,
@@ -42,7 +43,7 @@ pub(crate) fn gen_signature(
         }
     };
 
-    if let AnyTypeEnum::FunctionType(ty) = db.type_ir(f.ty(db), params) {
+    if let AnyTypeEnum::FunctionType(ty) = type_manager.type_ir(db, f.ty(db), params) {
         module.add_function(&name, ty, None)
     } else {
         panic!("not a function type")

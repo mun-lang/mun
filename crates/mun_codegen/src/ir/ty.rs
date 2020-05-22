@@ -14,62 +14,110 @@ use inkwell::{
     types::{AnyTypeEnum, BasicType, BasicTypeEnum, FloatType, IntType, StructType},
     AddressSpace,
 };
-
-/// Given a mun type, construct an LLVM IR type
-#[rustfmt::skip]
-pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty, params: CodeGenParams) -> AnyTypeEnum {
-    let context = db.context();
-    let layout = db.target_data_layout();
-    match ty {
-        Ty::Empty => AnyTypeEnum::StructType(context.struct_type(&[], false)),
-        Ty::Apply(ApplicationTy { ctor, .. }) => match ctor {
-            TypeCtor::Float(fty) => float_ty_query(context.as_ref(), &layout, fty).into(),
-            TypeCtor::Int(ity) => int_ty_query(context.as_ref(), &layout, ity).into(),
-            TypeCtor::Bool => AnyTypeEnum::IntType(context.bool_type()),
-
-            TypeCtor::FnDef(def @ CallableDef::Function(_)) => {
-                let ty = db.callable_sig(def);
-                let param_tys: Vec<BasicTypeEnum> = ty
-                    .params()
-                    .iter()
-                    .map(|p| {
-                        try_convert_any_to_basic(db.type_ir(p.clone(), params.clone())).unwrap()
-                    })
-                    .collect();
-
-                let fn_type = match ty.ret() {
-                    Ty::Empty => context.void_type().fn_type(&param_tys, false),
-                    ty => try_convert_any_to_basic(db.type_ir(ty.clone(), params))
-                        .expect("could not convert return value")
-                        .fn_type(&param_tys, false),
-                };
-
-                AnyTypeEnum::FunctionType(fn_type)
-            }
-            TypeCtor::Struct(s) => {
-                let struct_ty = db.struct_ty(s);
-                match s.data(db).memory_kind {
-                    hir::StructMemoryKind::GC => struct_ty.ptr_type(AddressSpace::Generic).ptr_type(AddressSpace::Const).into(),
-                    hir::StructMemoryKind::Value if params.make_marshallable =>
-                            struct_ty.ptr_type(AddressSpace::Generic).ptr_type(AddressSpace::Const).into(),
-                    hir::StructMemoryKind::Value => struct_ty.into(),
-                }
-            }
-            _ => unreachable!(),
-        },
-        _ => unreachable!("unknown type can not be converted"),
-    }
-}
+use std::collections::hash_map::Entry;
 
 #[derive(Debug)]
 pub struct TypeManager {
+    structs: HashMap<hir::Struct, StructCacheState>,
     infos: HashMap<hir::Ty, TypeInfo>,
+}
+
+#[derive(Debug)]
+struct StructCacheState {
+    fields: Vec<(hir::StructField, AnyTypeEnum)>,
+    ty: StructType,
 }
 
 impl TypeManager {
     pub fn new() -> TypeManager {
         TypeManager {
+            structs: HashMap::new(),
             infos: HashMap::new(),
+        }
+    }
+
+    /// Given a mun type, construct an LLVM IR type
+    pub fn type_ir<D: IrDatabase>(&mut self, db: &D, ty: hir::Ty, params: CodeGenParams) -> AnyTypeEnum {
+        let context = db.context();
+        let layout = db.target_data_layout();
+        match ty {
+            Ty::Empty => AnyTypeEnum::StructType(context.struct_type(&[], false)),
+            Ty::Apply(ApplicationTy { ctor, .. }) => match ctor {
+                TypeCtor::Float(fty) => float_ty_query(context.as_ref(), &layout, fty).into(),
+                TypeCtor::Int(ity) => int_ty_query(context.as_ref(), &layout, ity).into(),
+                TypeCtor::Bool => AnyTypeEnum::IntType(context.bool_type()),
+
+                TypeCtor::FnDef(def @ CallableDef::Function(_)) => {
+                    let ty = db.callable_sig(def);
+                    let param_tys: Vec<BasicTypeEnum> = ty
+                        .params()
+                        .iter()
+                        .map(|p| {
+                            try_convert_any_to_basic(self.type_ir(db, p.clone(), params.clone())).unwrap()
+                        })
+                        .collect();
+
+                    let fn_type = match ty.ret() {
+                        Ty::Empty => context.void_type().fn_type(&param_tys, false),
+                        ty => try_convert_any_to_basic(self.type_ir(db, ty.clone(), params))
+                            .expect("could not convert return value")
+                            .fn_type(&param_tys, false),
+                    };
+
+                    AnyTypeEnum::FunctionType(fn_type)
+                }
+                TypeCtor::Struct(s) => {
+                    let struct_ty = self.struct_ty(db, s);
+                    match s.data(db).memory_kind {
+                        hir::StructMemoryKind::GC => struct_ty.ptr_type(AddressSpace::Generic).ptr_type(AddressSpace::Const).into(),
+                        hir::StructMemoryKind::Value if params.make_marshallable =>
+                                struct_ty.ptr_type(AddressSpace::Generic).ptr_type(AddressSpace::Const).into(),
+                        hir::StructMemoryKind::Value => struct_ty.into(),
+                    }
+                }
+                _ => unreachable!(),
+            },
+            _ => unreachable!("unknown type can not be converted"),
+        }
+    }
+
+    pub fn struct_ty<D: IrDatabase>(&mut self, db: &D, s: hir::Struct) -> StructType {
+        let context = db.context();
+        let name = s.name(db).to_string();
+        let fields = s.fields(db).into_iter()
+            .map(|field| {
+                let field_type = field.ty(db);
+                let field_type_ir = self.type_ir(
+                    db,
+                    field_type,
+                    CodeGenParams {
+                        make_marshallable: false,
+                    },
+                );
+                (field, field_type_ir)
+            })
+            .collect::<Vec<_>>();
+
+        match self.structs.entry(s) {
+            Entry::Occupied(mut entry) => {
+                let entry = entry.get_mut();
+                if entry.fields == fields {
+                    entry.ty
+                } else {
+                    let ty = context.opaque_struct_type(&name);
+                    entry.ty = ty;
+                    entry.fields = fields;
+                    ty
+                }
+            }
+            Entry::Vacant(entry) => {
+                let ty = context.opaque_struct_type(&name);
+                entry.insert(StructCacheState {
+                    ty,
+                    fields
+                });
+                ty
+            }
         }
     }
 
@@ -106,7 +154,7 @@ impl TypeManager {
                     TypeInfo::new_fundamental("core::bool", type_size)
                 }
                 TypeCtor::Struct(s) => {
-                    let ir_ty = db.struct_ty(s);
+                    let ir_ty = self.struct_ty(db, s);
                     let type_size = TypeSize::from_ir_type(&ir_ty, target.as_ref());
                     return TypeInfo::new_struct(db, s, type_size)
                 }
@@ -138,20 +186,4 @@ fn int_ty_query(context: &Context, layout: &TargetDataLayout, ity: IntTy) -> Int
         IntBitness::X8 => context.i8_type(),
         _ => unreachable!(),
     }
-}
-
-/// Returns the LLVM IR type of the specified struct
-pub fn struct_ty_query(db: &impl IrDatabase, s: hir::Struct) -> StructType {
-    let name = s.name(db).to_string();
-    for field in s.fields(db).iter() {
-        // Ensure that salsa's cached value incorporates the struct fields
-        let _field_type_ir = db.type_ir(
-            field.ty(db),
-            CodeGenParams {
-                make_marshallable: false,
-            },
-        );
-    }
-
-    db.context().opaque_struct_type(&name)
 }
