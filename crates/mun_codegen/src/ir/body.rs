@@ -1,4 +1,4 @@
-use crate::type_info::TypeManager;
+use crate::ir::ty::TypeManager;
 use crate::intrinsics;
 use crate::{
     ir::{dispatch_table::DispatchTable, try_convert_any_to_basic, type_table::TypeTable},

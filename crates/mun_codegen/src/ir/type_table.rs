@@ -1,4 +1,4 @@
-use crate::type_info::TypeManager;
+use crate::ir::ty::TypeManager;
 use crate::code_gen::{
     gen_global, gen_string_array, gen_struct_ptr_array, gen_u16_array, intern_string,
 };

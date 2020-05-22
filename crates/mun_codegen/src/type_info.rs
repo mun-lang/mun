@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use super::ir::IsIrType;
 use crate::IrDatabase;
 use abi::Guid;
@@ -6,23 +5,6 @@ use inkwell::context::Context;
 use inkwell::targets::TargetData;
 use inkwell::types::AnyType;
 use std::hash::{Hash, Hasher};
-
-#[derive(Debug)]
-pub struct TypeManager {
-    infos: HashMap<hir::Ty, TypeInfo>,
-}
-
-impl TypeManager {
-    pub fn new() -> TypeManager {
-        TypeManager {
-            infos: HashMap::new(),
-        }
-    }
-
-    pub fn type_info<D: IrDatabase>(&mut self, db: &D, ty: hir::Ty) -> TypeInfo {
-        crate::ir::ty::type_info_query(db, ty)
-    }
-}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TypeGroup {

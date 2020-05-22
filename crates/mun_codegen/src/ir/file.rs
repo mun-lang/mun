@@ -1,4 +1,4 @@
-use crate::type_info::TypeManager;
+use crate::ir::ty::TypeManager;
 use crate::ir::file_group::FileGroupIR;
 use super::body::ExternalGlobals;
 use crate::ir::{function, type_table::TypeTable};

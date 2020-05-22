@@ -1,4 +1,4 @@
-use crate::type_info::TypeManager;
+use crate::ir::ty::TypeManager;
 use crate::code_gen::{gen_global, gen_struct_ptr_array, intern_string};
 use crate::ir::{
     abi_types::{gen_abi_types, AbiTypes},

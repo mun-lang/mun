@@ -1,4 +1,4 @@
-use crate::{mock::MockDatabase, IrDatabase, ModuleBuilder, type_info::TypeManager};
+use crate::{mock::MockDatabase, IrDatabase, ModuleBuilder, ir::ty::TypeManager};
 use hir::{
     diagnostics::DiagnosticSink, line_index::LineIndex, HirDatabase, Module, SourceDatabase,
 };

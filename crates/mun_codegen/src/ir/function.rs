@@ -1,4 +1,4 @@
-use crate::type_info::TypeManager;
+use crate::ir::ty::TypeManager;
 use crate::ir::{body::BodyIrGenerator, dispatch_table::DispatchTable, type_table::TypeTable};
 use crate::values::FunctionValue;
 use crate::{CodeGenParams, IrDatabase, Module, OptimizationLevel};

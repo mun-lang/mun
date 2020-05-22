@@ -17,7 +17,7 @@ pub use inkwell::{builder, context::Context, module::Module, values, Optimizatio
 pub use crate::{
     code_gen::ModuleBuilder,
     db::{IrDatabase, IrDatabaseStorage},
-    type_info::TypeManager,
+    ir::ty::TypeManager,
 };
 
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]

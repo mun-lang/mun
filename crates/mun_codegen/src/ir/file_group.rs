@@ -1,4 +1,4 @@
-use crate::type_info::TypeManager;
+use crate::ir::ty::TypeManager;
 use super::{
     abi_types::{gen_abi_types, AbiTypes},
     adt,

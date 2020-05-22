@@ -1,4 +1,4 @@
-use crate::type_info::TypeManager;
+use crate::ir::ty::TypeManager;
 use crate::intrinsics::Intrinsic;
 use crate::ir::function;
 use crate::type_info::TypeInfo;
