@@ -21,7 +21,8 @@ mun_compiler = { version = "=0.2.0", path = "../mun_compiler" }
 mun_compiler_daemon = { version = "=0.2.0", path = "../mun_compiler_daemon" }
 mun_runtime = { version = "=0.2.0", path = "../mun_runtime" }
 
-[dev-dependencies.cargo-husky]
-version = "1"
-default-features = false # Disable features which are enabled by default
-features = ["precommit-hook", "run-cargo-test", "run-cargo-fmt", "run-cargo-clippy", "run-for-all"]
+# This was getting frustrating!
+# [dev-dependencies.cargo-husky]
+# version = "1"
+# default-features = false # Disable features which are enabled by default
+# features = ["precommit-hook", "run-cargo-test", "run-cargo-fmt", "run-cargo-clippy", "run-for-all"]
