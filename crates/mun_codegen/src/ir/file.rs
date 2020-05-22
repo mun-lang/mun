@@ -1,10 +1,10 @@
+use crate::ir::file_group::FileGroupIR;
 use super::body::ExternalGlobals;
 use crate::ir::{function, type_table::TypeTable};
 use crate::{CodeGenParams, IrDatabase};
 use hir::{FileId, ModuleDef};
 use inkwell::module::Module;
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::sync::Arc;
 
 /// The IR generated for a single source file.
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -18,12 +18,12 @@ pub struct FileIR {
 }
 
 /// Generates IR for the specified file.
-pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<FileIR> {
+pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> (FileIR, FileGroupIR) {
     let llvm_module = db
         .context()
         .create_module(db.file_relative_path(file_id).as_str());
 
-    let group_ir = db.group_ir(file_id);
+    let group_ir = crate::ir::file_group::ir_query(db, file_id);
 
     // Generate all exposed function and wrapper function signatures.
     // Use a `BTreeMap` to guarantee deterministically ordered output.ures
@@ -113,9 +113,9 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<FileIR> {
         .cloned()
         .collect();
 
-    Arc::new(FileIR {
+    (FileIR {
         file_id,
         llvm_module,
         api,
-    })
+    }, group_ir)
 }

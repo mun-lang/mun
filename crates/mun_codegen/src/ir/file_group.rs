@@ -8,7 +8,7 @@ use super::{
 use crate::IrDatabase;
 use hir::ModuleDef;
 use inkwell::{module::Module, types::PointerType, values::UnnamedAddress, AddressSpace};
-use std::{collections::BTreeMap, sync::Arc};
+use std::{collections::BTreeMap};
 
 /// The IR generated for a group of files. It is used to generate IR for all of the group's files
 /// and the resulting `Assembly`'s symbols.
@@ -29,7 +29,7 @@ pub struct FileGroupIR {
 /// Generates IR that is shared among the group's files.
 /// TODO: Currently, a group always consists of a single file. Need to add support for multiple
 /// files using something like `FileGroupId`.
-pub(crate) fn ir_query(db: &impl IrDatabase, file_id: hir::FileId) -> Arc<FileGroupIR> {
+pub(crate) fn ir_query(db: &impl IrDatabase, file_id: hir::FileId) -> FileGroupIR {
     let llvm_module = db.context().create_module("group_name");
 
     // Use a `BTreeMap` to guarantee deterministically ordered output.
@@ -110,11 +110,11 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: hir::FileId) -> Arc<FileGr
         None
     };
 
-    Arc::new(FileGroupIR {
+    FileGroupIR {
         llvm_module,
         abi_types,
         dispatch_table,
         type_table,
         allocator_handle_type,
-    })
+    }
 }

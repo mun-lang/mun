@@ -1,3 +1,5 @@
+use crate::ir::file::FileIR;
+use crate::ir::file_group::FileGroupIR;
 use crate::code_gen::linker::LinkerError;
 use crate::IrDatabase;
 use failure::Fail;
@@ -140,9 +142,12 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
 
     /// Constructs an object file.
     pub fn build(self) -> Result<ObjectFile, failure::Error> {
-        let group_ir = self.db.group_ir(self.file_id);
-        let file = crate::ir::file::ir_query(self.db, self.file_id);
+        let (file, group_ir) = crate::ir::file::ir_query(self.db, self.file_id);
 
+        self.build_with_ir(file, group_ir)
+    }
+
+    pub(crate) fn build_with_ir(self, file: FileIR, group_ir: FileGroupIR) -> Result<ObjectFile, failure::Error> {
         // Clone the LLVM modules so that we can modify it without modifying the cached value.
         self.assembly_module
             .link_in_module(group_ir.llvm_module.clone())

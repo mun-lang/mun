@@ -732,6 +732,7 @@ fn private_fn_only() {
 }
 
 #[test]
+#[ignore] // this test doesn't make much sense without salsa in codegen...?
 fn incremental_compilation() {
     let (mut db, file_id) = MockDatabase::with_single_file(
         r#"
@@ -861,34 +862,33 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
         .expect("The current thread does not have a name.")
         .replace("test::", "");
 
-    let group_ir_value = if !messages.is_empty() {
-        "".to_owned()
-    } else {
-        format!(
+
+    let (group_ir_value, file_ir_value) = if messages.is_empty() {
+        let (file, group_ir) = crate::ir::file::ir_query(&db, file_id);
+
+        let group_ir_value = format!(
             "{}",
-            db.group_ir(file_id)
+            group_ir
                 .llvm_module
                 .print_to_string()
                 .to_string()
-        )
-    };
-
-    let file_ir_value = if !messages.is_empty() {
-        messages.join("\n")
-    } else {
-        format!(
+        );
+        let file_ir_value = format!(
             "{}",
-            crate::ir::file::ir_query(&db, file_id)
+            file
                 .llvm_module
                 .print_to_string()
                 .to_string()
-        )
+        );
+
+        // To ensure that we test symbol generation
+        let _obj_file = module_builder.build_with_ir(file, group_ir).expect("Failed to build object file");
+
+        (group_ir_value, file_ir_value)
+    } else {
+        ("".to_owned(), messages.join("\n"))
     };
 
-    // To ensure that we test symbol generation
-    if messages.is_empty() {
-        let _obj_file = module_builder.build().expect("Failed to build object file");
-    }
 
     let value = format!(
         r"; == FILE IR =====================================

@@ -1,7 +1,6 @@
 #![allow(clippy::type_repetition_in_bounds)]
 
 use crate::{
-    ir::{file::FileIR, file_group::FileGroupIR},
     type_info::TypeInfo,
     CodeGenParams, Context,
 };
@@ -39,8 +38,8 @@ pub trait IrDatabase: hir::HirDatabase {
     /// Given a `hir::FileId` generate code that is shared among the group of files.
     /// TODO: Currently, a group always consists of a single file. Need to add support for multiple
     /// files using something like `FileGroupId`.
-    #[salsa::invoke(crate::ir::file_group::ir_query)]
-    fn group_ir(&self, file: hir::FileId) -> Arc<FileGroupIR>;
+    // #[salsa::invoke(crate::ir::file_group::ir_query)]
+    // fn group_ir(&self, file: hir::FileId) -> Arc<FileGroupIR>;
 
     /// Given a `hir::FileId` generate code for the module.
     // #[salsa::invoke(crate::ir::file::ir_query)]
