@@ -1,3 +1,4 @@
+use crate::type_info::TypeManager;
 use crate::intrinsics;
 use crate::{
     ir::{dispatch_table::DispatchTable, try_convert_any_to_basic, type_table::TypeTable},
@@ -35,6 +36,7 @@ pub(crate) struct ExternalGlobals {
 
 pub(crate) struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
     db: &'a D,
+    type_manager: &'a mut TypeManager,
     body: Arc<Body>,
     infer: Arc<InferenceResult>,
     builder: Builder,
@@ -54,6 +56,7 @@ pub(crate) struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
 impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     pub fn new(
         db: &'a D,
+        type_manager: &'a mut TypeManager,
         function: (hir::Function, FunctionValue),
         function_map: &'a HashMap<hir::Function, FunctionValue>,
         dispatch_table: &'b DispatchTable,
@@ -75,6 +78,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
 
         BodyIrGenerator {
             db,
+            type_manager,
             body,
             infer,
             builder,
@@ -375,7 +379,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
 
         let type_info_ptr = self.type_table.gen_type_info_lookup(
             &self.builder,
-            &self.db.type_info(hir_struct.ty(self.db)),
+            &self.type_manager.type_info(self.db, hir_struct.ty(self.db)),
             self.external_globals.type_table,
         );
 

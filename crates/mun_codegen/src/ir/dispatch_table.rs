@@ -1,3 +1,4 @@
+use crate::type_info::TypeManager;
 use crate::intrinsics::Intrinsic;
 use crate::ir::function;
 use crate::type_info::TypeInfo;
@@ -224,25 +225,25 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
     }
 
     /// Collects call expression from the given expression and sub expressions.
-    fn collect_expr(&mut self, expr_id: ExprId, body: &Arc<Body>, infer: &InferenceResult) {
+    fn collect_expr(&mut self, type_manager: &mut TypeManager, expr_id: ExprId, body: &Arc<Body>, infer: &InferenceResult) {
         let expr = &body[expr_id];
 
         // If this expression is a call, store it in the dispatch table
         if let Expr::Call { callee, .. } = expr {
             match infer[*callee].as_callable_def() {
-                Some(hir::CallableDef::Function(def)) => self.collect_fn_def(def),
+                Some(hir::CallableDef::Function(def)) => self.collect_fn_def(type_manager, def),
                 Some(hir::CallableDef::Struct(_)) => (),
                 None => panic!("expected a callable expression"),
             }
         }
 
         // Recurse further
-        expr.walk_child_exprs(|expr_id| self.collect_expr(expr_id, body, infer))
+        expr.walk_child_exprs(|expr_id| self.collect_expr(type_manager, expr_id, body, infer))
     }
 
     /// Collects function call expression from the given expression.
     #[allow(clippy::map_entry)]
-    fn collect_fn_def(&mut self, function: hir::Function) {
+    fn collect_fn_def(&mut self, type_manager: &mut TypeManager, function: hir::Function) {
         self.ensure_table_ref();
 
         // If the function is not yet contained in the table, add it
@@ -262,10 +263,10 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
             let arg_types = sig
                 .params()
                 .iter()
-                .map(|arg| self.db.type_info(arg.clone()))
+                .map(|arg| type_manager.type_info(self.db, arg.clone()))
                 .collect();
             let ret_type = if !sig.ret().is_empty() {
-                Some(self.db.type_info(sig.ret().clone()))
+                Some(type_manager.type_info(self.db, sig.ret().clone()))
             } else {
                 None
             };
@@ -290,8 +291,8 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
 
     /// Collect all the call expressions from the specified body with the given type inference
     /// result.
-    pub fn collect_body(&mut self, body: &Arc<Body>, infer: &InferenceResult) {
-        self.collect_expr(body.body_expr(), body, infer);
+    pub fn collect_body(&mut self, type_manager: &mut TypeManager, body: &Arc<Body>, infer: &InferenceResult) {
+        self.collect_expr(type_manager, body.body_expr(), body, infer);
     }
 
     /// Builds the final DispatchTable with all *called* functions from within the module

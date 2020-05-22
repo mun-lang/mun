@@ -1,3 +1,4 @@
+use crate::type_info::TypeManager;
 use crate::ir::{body::BodyIrGenerator, dispatch_table::DispatchTable, type_table::TypeTable};
 use crate::values::FunctionValue;
 use crate::{CodeGenParams, IrDatabase, Module, OptimizationLevel};
@@ -51,6 +52,7 @@ pub(crate) fn gen_signature(
 /// Generates the body of a `hir::Function` for an associated `FunctionValue`.
 pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
     db: &'a D,
+    type_manager: &'a mut TypeManager,
     function: (hir::Function, FunctionValue),
     llvm_functions: &'a HashMap<hir::Function, FunctionValue>,
     dispatch_table: &'b DispatchTable,
@@ -59,6 +61,7 @@ pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
 ) {
     let mut code_gen = BodyIrGenerator::new(
         db,
+        type_manager,
         function,
         llvm_functions,
         dispatch_table,
@@ -76,6 +79,7 @@ pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
 /// `FunctionValue`
 pub(crate) fn gen_wrapper_body<'a, 'b, D: IrDatabase>(
     db: &'a D,
+    type_manager: &mut TypeManager,
     function: (hir::Function, FunctionValue),
     llvm_functions: &'a HashMap<hir::Function, FunctionValue>,
     dispatch_table: &'b DispatchTable,
@@ -84,6 +88,7 @@ pub(crate) fn gen_wrapper_body<'a, 'b, D: IrDatabase>(
 ) {
     let mut code_gen = BodyIrGenerator::new(
         db,
+        type_manager,
         function,
         llvm_functions,
         dispatch_table,

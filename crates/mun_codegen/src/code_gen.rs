@@ -1,3 +1,4 @@
+use crate::type_info::TypeManager;
 use crate::ir::file::FileIR;
 use crate::ir::file_group::FileGroupIR;
 use crate::code_gen::linker::LinkerError;
@@ -141,13 +142,13 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
     }
 
     /// Constructs an object file.
-    pub fn build(self) -> Result<ObjectFile, failure::Error> {
-        let (file, group_ir) = crate::ir::file::ir_query(self.db, self.file_id);
+    pub fn build(self, type_manager: &mut TypeManager) -> Result<ObjectFile, failure::Error> {
+        let (file, group_ir) = crate::ir::file::ir_query(self.db, type_manager, self.file_id);
 
-        self.build_with_ir(file, group_ir)
+        self.build_with_ir(type_manager, file, group_ir)
     }
 
-    pub(crate) fn build_with_ir(self, file: FileIR, group_ir: FileGroupIR) -> Result<ObjectFile, failure::Error> {
+    pub(crate) fn build_with_ir(self, type_manager: &mut TypeManager, file: FileIR, group_ir: FileGroupIR) -> Result<ObjectFile, failure::Error> {
         // Clone the LLVM modules so that we can modify it without modifying the cached value.
         self.assembly_module
             .link_in_module(group_ir.llvm_module.clone())
@@ -160,6 +161,7 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
         // Generate the `get_info` method.
         symbols::gen_reflection_ir(
             self.db,
+            type_manager,
             &self.assembly_module,
             &file.api,
             &group_ir.dispatch_table,

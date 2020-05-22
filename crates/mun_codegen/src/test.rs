@@ -1,4 +1,4 @@
-use crate::{mock::MockDatabase, IrDatabase, ModuleBuilder};
+use crate::{mock::MockDatabase, IrDatabase, ModuleBuilder, type_info::TypeManager};
 use hir::{
     diagnostics::DiagnosticSink, line_index::LineIndex, HirDatabase, Module, SourceDatabase,
 };
@@ -743,12 +743,13 @@ fn incremental_compilation() {
         }
         "#,
     );
+    let mut type_manager = TypeManager::new();
     db.set_optimization_lvl(OptimizationLevel::Default);
     db.set_target(Target::host_target().unwrap());
 
     {
         let events = db.log_executed(|| {
-            crate::ir::file::ir_query(&db, file_id);
+            crate::ir::file::ir_query(&db, &mut type_manager, file_id);
         });
         assert!(
             format!("{:?}", events).contains("group_ir"),
@@ -761,7 +762,7 @@ fn incremental_compilation() {
 
     {
         let events = db.log_executed(|| {
-            crate::ir::file::ir_query(&db, file_id);
+            crate::ir::file::ir_query(&db, &mut type_manager, file_id);
         });
         println!("events: {:?}", events);
         assert!(
@@ -835,6 +836,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
     let text = text.trim().replace("\n    ", "\n");
 
     let (mut db, file_id) = MockDatabase::with_single_file(&text);
+    let mut type_manager = TypeManager::new();
     db.set_optimization_lvl(opt);
     db.set_target(Target::host_target().unwrap());
 
@@ -864,7 +866,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
 
 
     let (group_ir_value, file_ir_value) = if messages.is_empty() {
-        let (file, group_ir) = crate::ir::file::ir_query(&db, file_id);
+        let (file, group_ir) = crate::ir::file::ir_query(&db, &mut type_manager, file_id);
 
         let group_ir_value = format!(
             "{}",
@@ -882,7 +884,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
         );
 
         // To ensure that we test symbol generation
-        let _obj_file = module_builder.build_with_ir(file, group_ir).expect("Failed to build object file");
+        let _obj_file = module_builder.build_with_ir(&mut type_manager, file, group_ir).expect("Failed to build object file");
 
         (group_ir_value, file_ir_value)
     } else {

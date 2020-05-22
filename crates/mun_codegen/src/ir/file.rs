@@ -1,3 +1,4 @@
+use crate::type_info::TypeManager;
 use crate::ir::file_group::FileGroupIR;
 use super::body::ExternalGlobals;
 use crate::ir::{function, type_table::TypeTable};
@@ -18,12 +19,12 @@ pub struct FileIR {
 }
 
 /// Generates IR for the specified file.
-pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> (FileIR, FileGroupIR) {
+pub(crate) fn ir_query(db: &impl IrDatabase, type_manager: &mut TypeManager, file_id: FileId) -> (FileIR, FileGroupIR) {
     let llvm_module = db
         .context()
         .create_module(db.file_relative_path(file_id).as_str());
 
-    let group_ir = crate::ir::file_group::ir_query(db, file_id);
+    let group_ir = crate::ir::file_group::ir_query(db, type_manager, file_id);
 
     // Generate all exposed function and wrapper function signatures.
     // Use a `BTreeMap` to guarantee deterministically ordered output.ures
@@ -85,6 +86,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> (FileIR, FileGr
     for (hir_function, llvm_function) in functions.iter() {
         function::gen_body(
             db,
+            type_manager,
             (*hir_function, *llvm_function),
             &functions,
             &group_ir.dispatch_table,
@@ -97,6 +99,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> (FileIR, FileGr
     for (hir_function, llvm_function) in wrapper_functions.iter() {
         function::gen_wrapper_body(
             db,
+            type_manager,
             (*hir_function, *llvm_function),
             &functions,
             &group_ir.dispatch_table,

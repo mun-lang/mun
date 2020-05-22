@@ -2,7 +2,7 @@
 //! from previous compilation.
 
 use crate::{db::CompilerDatabase, diagnostics::diagnostics, PathOrInline};
-use mun_codegen::{IrDatabase, ModuleBuilder};
+use mun_codegen::{IrDatabase, ModuleBuilder, TypeManager};
 use mun_hir::{FileId, HirDatabase, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
 
 use std::{path::PathBuf, sync::Arc};
@@ -24,6 +24,7 @@ pub const WORKSPACE: SourceRootId = SourceRootId(0);
 #[derive(Debug)]
 pub struct Driver {
     db: CompilerDatabase,
+    type_manager: TypeManager,
     out_dir: Option<PathBuf>,
     display_color: DisplayColor,
 }
@@ -33,6 +34,7 @@ impl Driver {
     pub fn with_config(config: Config) -> Self {
         let mut driver = Driver {
             db: CompilerDatabase::new(),
+            type_manager: TypeManager::new(),
             out_dir: None,
             display_color: config.display_color,
         };
@@ -135,7 +137,7 @@ impl Driver {
     /// Generate an assembly for the given file
     pub fn write_assembly(&mut self, file_id: FileId) -> Result<PathBuf, failure::Error> {
         let module_builder = ModuleBuilder::new(&self.db, file_id)?;
-        let obj_file = module_builder.build()?;
+        let obj_file = module_builder.build(&mut self.type_manager)?;
         obj_file.into_shared_object(self.out_dir.as_deref())
     }
 }

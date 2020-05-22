@@ -1,3 +1,4 @@
+use crate::type_info::TypeManager;
 use super::{
     abi_types::{gen_abi_types, AbiTypes},
     adt,
@@ -29,7 +30,7 @@ pub struct FileGroupIR {
 /// Generates IR that is shared among the group's files.
 /// TODO: Currently, a group always consists of a single file. Need to add support for multiple
 /// files using something like `FileGroupId`.
-pub(crate) fn ir_query(db: &impl IrDatabase, file_id: hir::FileId) -> FileGroupIR {
+pub(crate) fn ir_query(db: &impl IrDatabase, type_manager: &mut TypeManager, file_id: hir::FileId) -> FileGroupIR {
     let llvm_module = db.context().create_module("group_name");
 
     // Use a `BTreeMap` to guarantee deterministically ordered output.
@@ -68,7 +69,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: hir::FileId) -> FileGroupI
             if !f.data(db).visibility().is_private() && !f.is_extern(db) {
                 let body = f.body(db);
                 let infer = f.infer(db);
-                dispatch_table_builder.collect_body(&body, &infer);
+                dispatch_table_builder.collect_body(type_manager, &body, &infer);
             }
         }
     }
@@ -78,6 +79,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: hir::FileId) -> FileGroupI
     let abi_types = gen_abi_types(&db.context());
     let mut type_table_builder = TypeTableBuilder::new(
         db,
+        type_manager,
         &llvm_module,
         &abi_types,
         intrinsics_map.keys(),
@@ -88,16 +90,16 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: hir::FileId) -> FileGroupI
     for def in db.module_data(file_id).definitions() {
         match def {
             ModuleDef::Struct(s) => {
-                type_table_builder.collect_struct(*s);
+                type_table_builder.collect_struct(type_manager, *s);
             }
             ModuleDef::Function(f) => {
-                type_table_builder.collect_fn(*f);
+                type_table_builder.collect_fn(type_manager, *f);
             }
             ModuleDef::BuiltinType(_) => (),
         }
     }
 
-    let type_table = type_table_builder.build();
+    let type_table = type_table_builder.build(type_manager);
 
     // Create the allocator handle global value
     let allocator_handle_type = if needs_alloc {
