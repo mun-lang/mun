@@ -141,7 +141,7 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
     /// Constructs an object file.
     pub fn build(self) -> Result<ObjectFile, failure::Error> {
         let group_ir = self.db.group_ir(self.file_id);
-        let file = self.db.file_ir(self.file_id);
+        let file = crate::ir::file::ir_query(self.db, self.file_id);
 
         // Clone the LLVM modules so that we can modify it without modifying the cached value.
         self.assembly_module

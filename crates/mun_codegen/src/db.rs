@@ -43,8 +43,8 @@ pub trait IrDatabase: hir::HirDatabase {
     fn group_ir(&self, file: hir::FileId) -> Arc<FileGroupIR>;
 
     /// Given a `hir::FileId` generate code for the module.
-    #[salsa::invoke(crate::ir::file::ir_query)]
-    fn file_ir(&self, file: hir::FileId) -> Arc<FileIR>;
+    // #[salsa::invoke(crate::ir::file::ir_query)]
+    // fn file_ir(&self, file: hir::FileId) -> Arc<FileIR>;
 
     /// Given a type, return the runtime `TypeInfo` that can be used to reflect the type.
     #[salsa::invoke(crate::ir::ty::type_info_query)]

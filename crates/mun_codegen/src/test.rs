@@ -747,21 +747,20 @@ fn incremental_compilation() {
 
     {
         let events = db.log_executed(|| {
-            db.file_ir(file_id);
+            crate::ir::file::ir_query(&db, file_id);
         });
         assert!(
             format!("{:?}", events).contains("group_ir"),
             "{:#?}",
             events
         );
-        assert!(format!("{:?}", events).contains("file_ir"), "{:#?}", events);
     }
 
     db.set_optimization_lvl(OptimizationLevel::Aggressive);
 
     {
         let events = db.log_executed(|| {
-            db.file_ir(file_id);
+            crate::ir::file::ir_query(&db, file_id);
         });
         println!("events: {:?}", events);
         assert!(
@@ -769,7 +768,6 @@ fn incremental_compilation() {
             "{:#?}",
             events
         );
-        assert!(format!("{:?}", events).contains("file_ir"), "{:#?}", events);
     }
 
     // TODO: Try to disconnect `group_ir` and `file_ir`
@@ -880,7 +878,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
     } else {
         format!(
             "{}",
-            db.file_ir(file_id)
+            crate::ir::file::ir_query(&db, file_id)
                 .llvm_module
                 .print_to_string()
                 .to_string()
