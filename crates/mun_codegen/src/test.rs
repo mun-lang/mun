@@ -1,4 +1,4 @@
-use crate::{mock::MockDatabase, IrDatabase, ModuleBuilder, ir::ty::TypeManager};
+use crate::{mock::MockDatabase, CodeGenConfig, ModuleBuilder, ir::ty::TypeManager};
 use hir::{
     diagnostics::DiagnosticSink, line_index::LineIndex, HirDatabase, Module, SourceDatabase,
 };
@@ -735,44 +735,44 @@ fn private_fn_only() {
 #[test]
 #[ignore] // this test doesn't make much sense without salsa in codegen...?
 fn incremental_compilation() {
-    let context = Context::create();
-    let (mut db, file_id) = MockDatabase::with_single_file(
-        r#"
-        struct Foo(i32);
+    // let context = Context::create();
+    // let (mut db, file_id) = MockDatabase::with_single_file(
+    //     r#"
+    //     struct Foo(i32);
 
-        pub fn foo(foo: Foo) -> i32 {
-            foo.0
-        }
-        "#,
-    );
-    let mut type_manager = TypeManager::new();
-    db.set_optimization_lvl(OptimizationLevel::Default);
-    db.set_target(Target::host_target().unwrap());
+    //     pub fn foo(foo: Foo) -> i32 {
+    //         foo.0
+    //     }
+    //     "#,
+    // );
+    // let mut type_manager = TypeManager::new();
+    // db.set_optimization_lvl(OptimizationLevel::Default);
+    // db.set_target(Target::host_target().unwrap());
 
-    {
-        let events = db.log_executed(|| {
-            crate::ir::file::ir_query(&context, &db, &mut type_manager, file_id);
-        });
-        assert!(
-            format!("{:?}", events).contains("group_ir"),
-            "{:#?}",
-            events
-        );
-    }
+    // {
+    //     let events = db.log_executed(|| {
+    //         crate::ir::file::ir_query(&context, &db, &mut type_manager, file_id);
+    //     });
+    //     assert!(
+    //         format!("{:?}", events).contains("group_ir"),
+    //         "{:#?}",
+    //         events
+    //     );
+    // }
 
-    db.set_optimization_lvl(OptimizationLevel::Aggressive);
+    // db.set_optimization_lvl(OptimizationLevel::Aggressive);
 
-    {
-        let events = db.log_executed(|| {
-            crate::ir::file::ir_query(&context, &db, &mut type_manager, file_id);
-        });
-        println!("events: {:?}", events);
-        assert!(
-            !format!("{:?}", events).contains("group_ir"),
-            "{:#?}",
-            events
-        );
-    }
+    // {
+    //     let events = db.log_executed(|| {
+    //         crate::ir::file::ir_query(&context, &db, &mut type_manager, file_id);
+    //     });
+    //     println!("events: {:?}", events);
+    //     assert!(
+    //         !format!("{:?}", events).contains("group_ir"),
+    //         "{:#?}",
+    //         events
+    //     );
+    // }
 
     // TODO: Try to disconnect `group_ir` and `file_ir`
     // TODO: Add support for multiple files in a group
@@ -840,7 +840,6 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
     let context = Context::create();
     let (mut db, file_id) = MockDatabase::with_single_file(&text);
     let mut type_manager = TypeManager::new();
-    db.set_optimization_lvl(opt);
     db.set_target(Target::host_target().unwrap());
 
     let line_index: Arc<LineIndex> = db.line_index(file_id);
@@ -858,8 +857,10 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
     drop(sink);
     let messages = messages.into_inner();
 
+    let config = CodeGenConfig::new(&db, opt);
+
     let module_builder =
-        ModuleBuilder::new(&context, &db, file_id).expect("Failed to initialize module builder");
+        ModuleBuilder::new(&context, &config, &db, file_id).expect("Failed to initialize module builder");
 
     // The thread is named after the test case, so we can use it to name our snapshots.
     let thread_name = std::thread::current()
@@ -869,7 +870,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
 
 
     let (group_ir_value, file_ir_value) = if messages.is_empty() {
-        let (file, group_ir) = crate::ir::file::ir_query(&context, &db, &mut type_manager, file_id);
+        let (file, group_ir) = crate::ir::file::ir_query(&context, &config, &db, &mut type_manager, file_id);
 
         let group_ir_value = format!(
             "{}",

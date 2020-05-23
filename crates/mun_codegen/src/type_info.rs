@@ -1,5 +1,4 @@
 use super::ir::IsIrType;
-use crate::IrDatabase;
 use abi::Guid;
 use inkwell::context::Context;
 use inkwell::targets::TargetData;
@@ -91,7 +90,7 @@ impl TypeInfo {
         }
     }
 
-    pub fn new_struct<D: IrDatabase>(db: &D, s: hir::Struct, type_size: TypeSize) -> TypeInfo {
+    pub fn new_struct<D: hir::HirDatabase>(db: &D, s: hir::Struct, type_size: TypeSize) -> TypeInfo {
         let name = s.name(db).to_string();
         let guid_string = {
             let fields: Vec<String> = s

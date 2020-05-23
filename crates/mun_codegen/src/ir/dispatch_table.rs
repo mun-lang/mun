@@ -1,8 +1,9 @@
+use crate::code_gen::CodeGenConfig;
 use crate::ir::ty::TypeManager;
 use crate::intrinsics::Intrinsic;
 use crate::ir::function;
 use crate::type_info::TypeInfo;
-use crate::{CodeGenParams, IrDatabase};
+use crate::{CodeGenParams};
 use hir::{Body, Expr, ExprId, InferenceResult};
 use inkwell::{
     context::Context,
@@ -72,7 +73,7 @@ impl DispatchTable {
     /// Generate a function lookup through the DispatchTable, equivalent to something along the
     /// lines of: `dispatchTable[i]`, where i is the index of the function and `dispatchTable` is a
     /// struct
-    pub fn gen_function_lookup<D: IrDatabase>(
+    pub fn gen_function_lookup<D: hir::HirDatabase>(
         &self,
         db: &D,
         table_ref: Option<inkwell::values::GlobalValue>,
@@ -149,14 +150,13 @@ impl DispatchTable {
 }
 
 /// A struct that can be used to build the dispatch table from HIR.
-pub(crate) struct DispatchTableBuilder<'a, D: IrDatabase> {
+pub(crate) struct DispatchTableBuilder<'a, D: hir::HirDatabase> {
     // The LLVM context in which all LLVM types live
     context: &'a Context,
+    config: &'a CodeGenConfig,
     db: &'a D,
     // The module in which all values live
     module: &'a Module,
-    // The target for which to create the dispatch table
-    target: Arc<TargetData>,
     // This contains the functions that map to the DispatchTable struct fields
     function_to_idx: HashMap<hir::Function, usize>,
     // Prototype to function index
@@ -174,19 +174,20 @@ struct TypedDispatchableFunction {
     ir_type: FunctionType,
 }
 
-impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
+impl<'a, D: hir::HirDatabase> DispatchTableBuilder<'a, D> {
     /// Creates a new builder that can generate a dispatch function.
     pub fn new(
         context: &'a Context,
+        config: &'a CodeGenConfig,
         db: &'a D,
         module: &'a Module,
         intrinsics: &BTreeMap<FunctionPrototype, FunctionType>,
     ) -> Self {
         let mut table = DispatchTableBuilder {
             context,
+            config,
             db,
             module,
-            target: db.target_data(),
             function_to_idx: Default::default(),
             prototype_to_idx: Default::default(),
             entries: Default::default(),
@@ -264,10 +265,10 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
             let arg_types = sig
                 .params()
                 .iter()
-                .map(|arg| type_manager.type_info(self.context, self.db, arg.clone()))
+                .map(|arg| type_manager.type_info(self.context, self.config, self.db, arg.clone()))
                 .collect();
             let ret_type = if !sig.ret().is_empty() {
-                Some(type_manager.type_info(self.context, self.db, sig.ret().clone()))
+                Some(type_manager.type_info(self.context, self.config, self.db, sig.ret().clone()))
             } else {
                 None
             };
@@ -348,7 +349,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
         let table_type = self.table_ref.map(|_| self.table_type);
 
         DispatchTable {
-            target: self.target,
+            target: self.config.target_data.clone(),
             function_to_idx: self.function_to_idx,
             prototype_to_idx: self.prototype_to_idx,
             table_ref: self.table_ref,

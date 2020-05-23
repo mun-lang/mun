@@ -3,7 +3,6 @@ use crate::ir::ty::TypeManager;
 use crate::ir::file::FileIR;
 use crate::ir::file_group::FileGroupIR;
 use crate::code_gen::linker::LinkerError;
-use crate::IrDatabase;
 use failure::Fail;
 use hir::{FileId, RelativePathBuf};
 use inkwell::targets::TargetData;
@@ -25,6 +24,22 @@ use tempfile::NamedTempFile;
 
 mod linker;
 pub mod symbols;
+
+#[derive(Debug)]
+pub struct CodeGenConfig {
+    pub optimization_lvl: OptimizationLevel,
+    pub target_data: Arc<TargetData>,
+}
+
+impl CodeGenConfig {
+    pub fn new(db: &impl hir::HirDatabase, optimization_lvl: OptimizationLevel) -> CodeGenConfig {
+        CodeGenConfig {
+            optimization_lvl,
+            target_data: Arc::new(TargetData::create(&db.target().data_layout))
+        }
+    }
+}
+
 
 #[derive(Debug, Fail)]
 enum CodeGenerationError {
@@ -94,8 +109,9 @@ impl ObjectFile {
 }
 
 /// A struct that can be used to build an LLVM `Module`.
-pub struct ModuleBuilder<'a, D: IrDatabase> {
+pub struct ModuleBuilder<'a, D: hir::HirDatabase> {
     context: &'a Context,
+    config: &'a CodeGenConfig,
     db: &'a D,
     file_id: FileId,
     _target: inkwell::targets::Target,
@@ -103,9 +119,9 @@ pub struct ModuleBuilder<'a, D: IrDatabase> {
     assembly_module: Arc<inkwell::module::Module>,
 }
 
-impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
+impl<'a, D: hir::HirDatabase> ModuleBuilder<'a, D> {
     /// Constructs module for the given `hir::FileId` at the specified output file location.
-    pub fn new(context: &'a Context, db: &'a D, file_id: FileId) -> Result<Self, failure::Error> {
+    pub fn new(context: &'a Context, config: &'a CodeGenConfig, db: &'a D, file_id: FileId) -> Result<Self, failure::Error> {
         let target = db.target();
 
         // Construct a module for the assembly
@@ -128,7 +144,7 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
                 &target.llvm_target,
                 &target.options.cpu,
                 &target.options.features,
-                db.optimization_lvl(),
+                config.optimization_lvl,
                 RelocMode::PIC,
                 CodeModel::Default,
             )
@@ -136,6 +152,7 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
 
         Ok(Self {
             context,
+            config,
             db,
             file_id,
             _target: llvm_target,
@@ -146,7 +163,7 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
 
     /// Constructs an object file.
     pub fn build(self, type_manager: &mut TypeManager) -> Result<ObjectFile, failure::Error> {
-        let (file, group_ir) = crate::ir::file::ir_query(self.context, self.db, type_manager, self.file_id);
+        let (file, group_ir) = crate::ir::file::ir_query(self.context, self.config, self.db, type_manager, self.file_id);
 
         self.build_with_ir(type_manager, file, group_ir)
     }
@@ -164,6 +181,7 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
         // Generate the `get_info` method.
         symbols::gen_reflection_ir(
             self.context,
+            self.config,
             self.db,
             type_manager,
             &self.assembly_module,
@@ -173,7 +191,7 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
         );
 
         // Optimize the assembly module
-        optimize_module(&self.assembly_module, self.db.optimization_lvl());
+        optimize_module(&self.assembly_module, self.config.optimization_lvl);
 
         // Debug print the IR
         //println!("{}", assembly_module.print_to_string().to_string());
@@ -291,9 +309,4 @@ pub(crate) fn gen_u16_array(
         let array_ir = u16_type.const_array(&integers);
         gen_global(module, &array_ir, name).as_pointer_value()
     }
-}
-
-/// Create an inkwell TargetData from the target in the database
-pub(crate) fn target_data_query(db: &impl IrDatabase) -> Arc<TargetData> {
-    Arc::new(TargetData::create(&db.target().data_layout))
 }

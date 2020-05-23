@@ -4,7 +4,6 @@ use mun_hir::salsa;
     mun_hir::SourceDatabaseStorage,
     mun_hir::DefDatabaseStorage,
     mun_hir::HirDatabaseStorage,
-    mun_codegen::IrDatabaseStorage
 )]
 #[derive(Debug)]
 pub(crate) struct CompilerDatabase {

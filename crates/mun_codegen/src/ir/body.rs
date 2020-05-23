@@ -1,9 +1,10 @@
+use crate::code_gen::CodeGenConfig;
 use inkwell::context::Context;
 use crate::ir::ty::TypeManager;
 use crate::intrinsics;
 use crate::{
     ir::{dispatch_table::DispatchTable, try_convert_any_to_basic, type_table::TypeTable},
-    CodeGenParams, IrDatabase,
+    CodeGenParams,
 };
 use hir::{
     ArenaId, ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDisplay, InferenceResult, Literal,
@@ -35,8 +36,9 @@ pub(crate) struct ExternalGlobals {
     pub type_table: Option<GlobalValue>,
 }
 
-pub(crate) struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
+pub(crate) struct BodyIrGenerator<'a, 'b, D: hir::HirDatabase> {
     context: &'a Context,
+    config: &'a CodeGenConfig,
     db: &'a D,
     type_manager: &'a mut TypeManager,
     body: Arc<Body>,
@@ -55,9 +57,10 @@ pub(crate) struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
     external_globals: ExternalGlobals,
 }
 
-impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
+impl<'a, 'b, D: hir::HirDatabase> BodyIrGenerator<'a, 'b, D> {
     pub fn new(
         context: &'a Context,
+        config: &'a CodeGenConfig,
         db: &'a D,
         type_manager: &'a mut TypeManager,
         function: (hir::Function, FunctionValue),
@@ -80,6 +83,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
 
         BodyIrGenerator {
             context,
+            config,
             db,
             type_manager,
             body,
@@ -384,7 +388,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
 
         let type_info_ptr = self.type_table.gen_type_info_lookup(
             &self.builder,
-            &self.type_manager.type_info(context, self.db, hir_struct.ty(self.db)),
+            &self.type_manager.type_info(context, self.config, self.db, hir_struct.ty(self.db)),
             self.external_globals.type_table,
         );
 

@@ -1,3 +1,4 @@
+use crate::code_gen::CodeGenConfig;
 use inkwell::context::Context;
 use crate::ir::ty::TypeManager;
 use crate::code_gen::{gen_global, gen_struct_ptr_array, intern_string};
@@ -8,7 +9,6 @@ use crate::ir::{
     type_table::TypeTable,
 };
 use crate::type_info::TypeInfo;
-use crate::IrDatabase;
 use hir::Ty;
 use inkwell::{
     attributes::Attribute,
@@ -19,8 +19,9 @@ use inkwell::{
 use std::collections::HashSet;
 
 /// Construct a `MunFunctionPrototype` struct for the specified HIR function.
-fn gen_prototype_from_function<D: IrDatabase>(
+fn gen_prototype_from_function<D: hir::HirDatabase>(
     context: &Context,
+    config: &CodeGenConfig,
     db: &D,
     type_manager: &mut TypeManager,
     module: &Module,
@@ -36,13 +37,13 @@ fn gen_prototype_from_function<D: IrDatabase>(
     };
 
     let fn_sig = function.ty(db).callable_sig(db).unwrap();
-    let ret_type_ir = gen_signature_return_type(context, db, type_manager, module, types, fn_sig.ret().clone());
+    let ret_type_ir = gen_signature_return_type(context, config, db, type_manager, module, types, fn_sig.ret().clone());
 
     let param_types: Vec<PointerValue> = fn_sig
         .params()
         .iter()
         .map(|ty| {
-            TypeTable::get(module, &type_manager.type_info(context, db, ty.clone()))
+            TypeTable::get(module, &type_manager.type_info(context, config, db, ty.clone()))
                 .unwrap()
                 .as_pointer_value()
         })
@@ -126,8 +127,9 @@ fn gen_prototype_from_dispatch_entry(
 
 /// Given a function, construct a pointer to a `MunTypeInfo` global that represents the return type
 /// of the function; or `null` if the return type is empty.
-fn gen_signature_return_type<D: IrDatabase>(
+fn gen_signature_return_type<D: hir::HirDatabase>(
     context: &Context,
+    config: &CodeGenConfig,
     db: &D,
     type_manager: &mut TypeManager,
     module: &Module,
@@ -140,7 +142,7 @@ fn gen_signature_return_type<D: IrDatabase>(
         if ret_type.is_empty() {
             None
         } else {
-            Some(type_manager.type_info(context, db, ret_type))
+            Some(type_manager.type_info(context, config, db, ret_type))
         },
     )
 }
@@ -166,8 +168,9 @@ fn gen_signature_return_type_from_type_info(
 
 /// Construct a global that holds a reference to all functions. e.g.:
 /// MunFunctionDefinition[] definitions = { ... }
-fn get_function_definition_array<'a, D: IrDatabase>(
+fn get_function_definition_array<'a, D: hir::HirDatabase>(
     context: &Context,
+    config: &CodeGenConfig,
     db: &D,
     type_manager: &mut TypeManager,
     module: &Module,
@@ -187,7 +190,7 @@ fn get_function_definition_array<'a, D: IrDatabase>(
             value.set_linkage(Linkage::Private);
 
             // Generate the signature from the function
-            let prototype = gen_prototype_from_function(context, db, type_manager, module, types, *f);
+            let prototype = gen_prototype_from_function(context, config, db, type_manager, module, types, *f);
 
             // Generate the function info value
             types.function_definition_type.const_named_struct(&[
@@ -258,7 +261,8 @@ fn gen_dispatch_table(
 /// for the ABI that `get_info` exposes.
 pub(super) fn gen_reflection_ir(
     context: &Context,
-    db: &impl IrDatabase,
+    config: &CodeGenConfig,
+    db: &impl hir::HirDatabase,
     type_manager: &mut TypeManager,
     module: &Module,
     api: &HashSet<hir::Function>,
@@ -269,7 +273,7 @@ pub(super) fn gen_reflection_ir(
     let abi_types = gen_abi_types(&module.get_context());
 
     let num_functions = api.len();
-    let function_info = get_function_definition_array(context, db, type_manager, module, &abi_types, api.iter());
+    let function_info = get_function_definition_array(context, config, db, type_manager, module, &abi_types, api.iter());
 
     let type_table_ir = if let Some(type_table) = module.get_global(TypeTable::NAME) {
         type_table.as_pointer_value()
@@ -298,13 +302,14 @@ pub(super) fn gen_reflection_ir(
     let dispatch_table = gen_dispatch_table(module, &abi_types, dispatch_table);
 
     // Construct the actual `get_info` function
-    gen_get_info_fn(db, module, &abi_types, module_info, dispatch_table);
+    gen_get_info_fn(config, db, module, &abi_types, module_info, dispatch_table);
     gen_set_allocator_handle_fn(context, module);
 }
 
 /// Construct the actual `get_info` function.
 fn gen_get_info_fn(
-    db: &impl IrDatabase,
+    config: &CodeGenConfig,
+    db: &impl hir::HirDatabase,
     module: &Module,
     abi_types: &AbiTypes,
     module_info: StructValue,
@@ -389,7 +394,7 @@ fn gen_get_info_fn(
     }
 
     // Run the function optimizer on the generate function
-    function::create_pass_manager(&module, db.optimization_lvl()).run_on(&get_symbols_fn);
+    function::create_pass_manager(&module, config.optimization_lvl).run_on(&get_symbols_fn);
 }
 
 fn gen_set_allocator_handle_fn(context: &Context, module: &Module) {

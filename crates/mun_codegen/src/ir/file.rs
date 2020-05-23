@@ -1,9 +1,10 @@
+use crate::code_gen::CodeGenConfig;
 use inkwell::context::Context;
 use crate::ir::ty::TypeManager;
 use crate::ir::file_group::FileGroupIR;
 use super::body::ExternalGlobals;
 use crate::ir::{function, type_table::TypeTable};
-use crate::{CodeGenParams, IrDatabase};
+use crate::{CodeGenParams};
 use hir::{FileId, ModuleDef};
 use inkwell::module::Module;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -20,11 +21,11 @@ pub struct FileIR {
 }
 
 /// Generates IR for the specified file.
-pub(crate) fn ir_query(context: &Context, db: &impl IrDatabase, type_manager: &mut TypeManager, file_id: FileId) -> (FileIR, FileGroupIR) {
+pub(crate) fn ir_query(context: &Context, config: &CodeGenConfig, db: &impl hir::HirDatabase, type_manager: &mut TypeManager, file_id: FileId) -> (FileIR, FileGroupIR) {
     let llvm_module = context
         .create_module(db.file_relative_path(file_id).as_str());
 
-    let group_ir = crate::ir::file_group::ir_query(context, db, type_manager, file_id);
+    let group_ir = crate::ir::file_group::ir_query(context, config, db, type_manager, file_id);
 
     // Generate all exposed function and wrapper function signatures.
     // Use a `BTreeMap` to guarantee deterministically ordered output.ures
@@ -84,12 +85,13 @@ pub(crate) fn ir_query(context: &Context, db: &impl IrDatabase, type_manager: &m
     };
 
     // Construct requirements for generating the bodies
-    let fn_pass_manager = function::create_pass_manager(&llvm_module, db.optimization_lvl());
+    let fn_pass_manager = function::create_pass_manager(&llvm_module, config.optimization_lvl);
 
     // Generate the function bodies
     for (hir_function, llvm_function) in functions.iter() {
         function::gen_body(
             context,
+            config,
             db,
             type_manager,
             (*hir_function, *llvm_function),
@@ -104,6 +106,7 @@ pub(crate) fn ir_query(context: &Context, db: &impl IrDatabase, type_manager: &m
     for (hir_function, llvm_function) in wrapper_functions.iter() {
         function::gen_wrapper_body(
             context,
+            config,
             db,
             type_manager,
             (*hir_function, *llvm_function),

@@ -1,8 +1,9 @@
+use crate::code_gen::CodeGenConfig;
 use inkwell::context::Context;
 use crate::ir::ty::TypeManager;
 use crate::ir::{body::BodyIrGenerator, dispatch_table::DispatchTable, type_table::TypeTable};
 use crate::values::FunctionValue;
-use crate::{CodeGenParams, IrDatabase, Module, OptimizationLevel};
+use crate::{CodeGenParams, Module, OptimizationLevel};
 use inkwell::passes::{PassManager, PassManagerBuilder};
 use inkwell::types::AnyTypeEnum;
 
@@ -30,7 +31,7 @@ pub(crate) fn create_pass_manager(
 /// allows bodies to reference `FunctionValue` wherever they are declared in the file.
 pub(crate) fn gen_signature(
     context: &Context,
-    db: &impl IrDatabase,
+    db: &impl hir::HirDatabase,
     type_manager: &mut TypeManager,
     f: hir::Function,
     module: &Module,
@@ -53,8 +54,9 @@ pub(crate) fn gen_signature(
 }
 
 /// Generates the body of a `hir::Function` for an associated `FunctionValue`.
-pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
+pub(crate) fn gen_body<'a, 'b, D: hir::HirDatabase>(
     context: &Context,
+    config: &'a CodeGenConfig,
     db: &'a D,
     type_manager: &'a mut TypeManager,
     function: (hir::Function, FunctionValue),
@@ -65,6 +67,7 @@ pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
 ) {
     let mut code_gen = BodyIrGenerator::new(
         context,
+        config,
         db,
         type_manager,
         function,
@@ -82,8 +85,9 @@ pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
 
 /// Generates the body of a wrapper around `hir::Function` for its associated
 /// `FunctionValue`
-pub(crate) fn gen_wrapper_body<'a, 'b, D: IrDatabase>(
+pub(crate) fn gen_wrapper_body<'a, 'b, D: hir::HirDatabase>(
     context: &Context,
+    config: &'a CodeGenConfig,
     db: &'a D,
     type_manager: &mut TypeManager,
     function: (hir::Function, FunctionValue),
@@ -94,6 +98,7 @@ pub(crate) fn gen_wrapper_body<'a, 'b, D: IrDatabase>(
 ) {
     let mut code_gen = BodyIrGenerator::new(
         context,
+        config,
         db,
         type_manager,
         function,

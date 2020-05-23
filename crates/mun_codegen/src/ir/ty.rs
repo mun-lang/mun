@@ -1,10 +1,11 @@
+use crate::code_gen::CodeGenConfig;
 use std::collections::HashMap;
 use mun_target::abi::TargetDataLayout;
 use inkwell::context::Context;
 use super::try_convert_any_to_basic;
 use crate::{
     type_info::{TypeInfo, TypeSize},
-    CodeGenParams, IrDatabase,
+    CodeGenParams,
 };
 use hir::{
     ApplicationTy, CallableDef, FloatBitness, FloatTy, IntBitness, IntTy, ResolveBitness, Ty,
@@ -37,7 +38,7 @@ impl TypeManager {
     }
 
     /// Given a mun type, construct an LLVM IR type
-    pub fn type_ir<D: IrDatabase>(&mut self, context: &Context, db: &D, ty: hir::Ty, params: CodeGenParams) -> AnyTypeEnum {
+    pub fn type_ir<D: hir::HirDatabase>(&mut self, context: &Context, db: &D, ty: hir::Ty, params: CodeGenParams) -> AnyTypeEnum {
         let layout = db.target_data_layout();
         match ty {
             Ty::Empty => AnyTypeEnum::StructType(context.struct_type(&[], false)),
@@ -80,7 +81,7 @@ impl TypeManager {
         }
     }
 
-    pub fn struct_ty<D: IrDatabase>(&mut self, context: &Context, db: &D, s: hir::Struct) -> StructType {
+    pub fn struct_ty<D: hir::HirDatabase>(&mut self, context: &Context, db: &D, s: hir::Struct) -> StructType {
         let name = s.name(db).to_string();
         let fields = s.fields(db).into_iter()
             .map(|field| {
@@ -120,19 +121,19 @@ impl TypeManager {
         }
     }
 
-    pub fn type_info<D: IrDatabase>(&mut self, context: &Context, db: &D, ty: hir::Ty) -> TypeInfo {
+    pub fn type_info<D: hir::HirDatabase>(&mut self, context: &Context, config: &CodeGenConfig, db: &D, ty: hir::Ty) -> TypeInfo {
         if let Some(info) = self.infos.get(&ty) {
             return info.clone();
         }
 
-        let target = db.target_data();
+        let target = config.target_data.as_ref();
         let layout = db.target_data_layout();
  
         let res = match &ty {
             Ty::Apply(ctor) => match ctor.ctor {
                 TypeCtor::Float(ty) => {
                     let ir_ty = float_ty_query(&context, &layout, ty);
-                    let type_size = TypeSize::from_ir_type(&ir_ty, target.as_ref());
+                    let type_size = TypeSize::from_ir_type(&ir_ty, target);
                     TypeInfo::new_fundamental(
                         format!("core::{}", ty.resolve(&layout)),
                         type_size,
@@ -140,7 +141,7 @@ impl TypeManager {
                 }
                 TypeCtor::Int(ty) => {
                     let ir_ty = int_ty_query(&context, &layout, ty);
-                    let type_size = TypeSize::from_ir_type(&ir_ty, target.as_ref());
+                    let type_size = TypeSize::from_ir_type(&ir_ty, target);
                     TypeInfo::new_fundamental(
                         format!("core::{}", ty.resolve(&layout)),
                         type_size,
@@ -148,12 +149,12 @@ impl TypeManager {
                 }
                 TypeCtor::Bool => {
                     let ir_ty = context.bool_type();
-                    let type_size = TypeSize::from_ir_type(&ir_ty, target.as_ref());
+                    let type_size = TypeSize::from_ir_type(&ir_ty, target);
                     TypeInfo::new_fundamental("core::bool", type_size)
                 }
                 TypeCtor::Struct(s) => {
                     let ir_ty = self.struct_ty(context, db, s);
-                    let type_size = TypeSize::from_ir_type(&ir_ty, target.as_ref());
+                    let type_size = TypeSize::from_ir_type(&ir_ty, target);
                     return TypeInfo::new_struct(db, s, type_size)
                 }
                 _ => unreachable!("{:?} unhandled", ctor),

@@ -1,3 +1,4 @@
+use crate::code_gen::CodeGenConfig;
 use inkwell::context::Context;
 use crate::ir::ty::TypeManager;
 use crate::code_gen::{
@@ -8,11 +9,9 @@ use crate::ir::{
     dispatch_table::{DispatchTable, FunctionPrototype},
 };
 use crate::type_info::{TypeGroup, TypeInfo};
-use crate::IrDatabase;
 use hir::{Body, ExprId, InferenceResult};
 use inkwell::{
     module::Module,
-    targets::TargetData,
     types::ArrayType,
     values::{GlobalValue, IntValue, PointerValue, StructValue},
     AddressSpace,
@@ -83,19 +82,20 @@ impl TypeTable {
 }
 
 /// Used to build a `TypeTable` from HIR.
-pub(crate) struct TypeTableBuilder<'a, D: IrDatabase> {
+pub(crate) struct TypeTableBuilder<'a, D: hir::HirDatabase> {
     db: &'a D,
-    target_data: Arc<TargetData>,
+    config: &'a CodeGenConfig,
     module: &'a Module,
     abi_types: &'a AbiTypes,
     dispatch_table: &'a DispatchTable,
     entries: BTreeSet<TypeInfo>, // Use a `BTreeSet` to guarantee deterministically ordered output
 }
 
-impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
+impl<'a, D: hir::HirDatabase> TypeTableBuilder<'a, D> {
     /// Creates a new `TypeTableBuilder`.
     pub(crate) fn new<'f>(
         context: &Context,
+    config: &'a CodeGenConfig,
         db: &'a D,
         type_manager: &mut TypeManager,
         module: &'a Module,
@@ -105,7 +105,7 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
     ) -> Self {
         let mut builder = Self {
             db,
-            target_data: db.target_data(),
+            config,
             module,
             abi_types,
             dispatch_table,
@@ -151,14 +151,14 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
 
             // Collect argument types
             for ty in fn_sig.params().iter() {
-                let ti = type_manager.type_info(context, self.db, ty.clone());
+                let ti = type_manager.type_info(context, self.config, self.db, ty.clone());
                 self.collect_type(context, type_manager, ti);
             }
 
             // Collect return type
             let ret_ty = fn_sig.ret();
             if !ret_ty.is_empty() {
-                let ti = type_manager.type_info(context, self.db, ret_ty.clone());
+                let ti = type_manager.type_info(context, self.config, self.db, ret_ty.clone());
                 self.collect_type(context, type_manager, ti);
             }
         }
@@ -171,12 +171,12 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
 
     /// Collects unique `TypeInfo` from the specified struct type.
     pub fn collect_struct(&mut self, context: &Context, type_manager: &mut TypeManager, hir_struct: hir::Struct) {
-        let type_info = type_manager.type_info(context, self.db, hir_struct.ty(self.db));
+        let type_info = type_manager.type_info(context, self.config, self.db, hir_struct.ty(self.db));
         self.entries.insert(type_info);
 
         let fields = hir_struct.fields(self.db);
         for field in fields.into_iter() {
-            let ti = type_manager.type_info(context, self.db, field.ty(self.db));
+            let ti = type_manager.type_info(context, self.config, self.db, field.ty(self.db));
             self.collect_type(context, type_manager, ti);
         }
     }
@@ -247,7 +247,7 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
         let field_types: Vec<PointerValue> = fields
             .iter()
             .map(|field| {
-                let field_type_info = type_manager.type_info(context, self.db, field.ty(self.db));
+                let field_type_info = type_manager.type_info(context, self.config, self.db, field.ty(self.db));
                 if let Some(ir_value) = type_info_to_ir.get(&field_type_info) {
                     *ir_value
                 } else {
@@ -269,7 +269,7 @@ impl<'a, D: IrDatabase> TypeTableBuilder<'a, D> {
         let field_offsets = gen_u16_array(
             self.module,
             (0..fields.len()).map(|idx| {
-                self.target_data
+                self.config.target_data
                     .offset_of_element(&struct_ir, idx as u32)
                     .unwrap()
             }),

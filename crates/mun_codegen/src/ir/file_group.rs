@@ -1,3 +1,4 @@
+use crate::code_gen::CodeGenConfig;
 use inkwell::context::Context;
 use crate::ir::ty::TypeManager;
 use super::{
@@ -7,7 +8,6 @@ use super::{
     intrinsics,
     type_table::{TypeTable, TypeTableBuilder},
 };
-use crate::IrDatabase;
 use hir::ModuleDef;
 use inkwell::{module::Module, types::PointerType, values::UnnamedAddress, AddressSpace};
 use std::{collections::BTreeMap};
@@ -31,7 +31,7 @@ pub struct FileGroupIR {
 /// Generates IR that is shared among the group's files.
 /// TODO: Currently, a group always consists of a single file. Need to add support for multiple
 /// files using something like `FileGroupId`.
-pub(crate) fn ir_query(context: &Context, db: &impl IrDatabase, type_manager: &mut TypeManager, file_id: hir::FileId) -> FileGroupIR {
+pub(crate) fn ir_query(context: &Context, config: &CodeGenConfig, db: &impl hir::HirDatabase, type_manager: &mut TypeManager, file_id: hir::FileId) -> FileGroupIR {
     let llvm_module = context.create_module("group_name");
 
     // Use a `BTreeMap` to guarantee deterministically ordered output.
@@ -44,6 +44,7 @@ pub(crate) fn ir_query(context: &Context, db: &impl IrDatabase, type_manager: &m
             ModuleDef::Function(f) if !f.is_extern(db) => {
                 intrinsics::collect_fn_body(
                     context,
+                    config,
                     db,
                     &mut intrinsics_map,
                     &mut needs_alloc,
@@ -53,7 +54,7 @@ pub(crate) fn ir_query(context: &Context, db: &impl IrDatabase, type_manager: &m
 
                 let fn_sig = f.ty(db).callable_sig(db).unwrap();
                 if !f.data(db).visibility().is_private() && !fn_sig.marshallable(db) {
-                    intrinsics::collect_wrapper_body(context, db, &mut intrinsics_map, &mut needs_alloc);
+                    intrinsics::collect_wrapper_body(context, config, &mut intrinsics_map, &mut needs_alloc);
                 }
             }
             ModuleDef::Function(_) => (), // TODO: Extern types?
@@ -65,7 +66,7 @@ pub(crate) fn ir_query(context: &Context, db: &impl IrDatabase, type_manager: &m
     }
 
     // Collect all exposed functions' bodies.
-    let mut dispatch_table_builder = DispatchTableBuilder::new(context, db, &llvm_module, &intrinsics_map);
+    let mut dispatch_table_builder = DispatchTableBuilder::new(context, config, db, &llvm_module, &intrinsics_map);
     for def in db.module_data(file_id).definitions() {
         if let ModuleDef::Function(f) = def {
             if !f.data(db).visibility().is_private() && !f.is_extern(db) {
@@ -81,6 +82,7 @@ pub(crate) fn ir_query(context: &Context, db: &impl IrDatabase, type_manager: &m
     let abi_types = gen_abi_types(&context);
     let mut type_table_builder = TypeTableBuilder::new(
         context,
+        config,
         db,
         type_manager,
         &llvm_module,

@@ -1,4 +1,3 @@
-use crate::{IrDatabase, OptimizationLevel};
 use hir::{FileId, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
 use parking_lot::Mutex;
 use std::sync::Arc;
@@ -7,8 +6,7 @@ use std::sync::Arc;
 #[salsa::database(
     hir::SourceDatabaseStorage,
     hir::DefDatabaseStorage,
-    hir::HirDatabaseStorage,
-    crate::IrDatabaseStorage
+    hir::HirDatabaseStorage
 )]
 #[derive(Default, Debug)]
 pub(crate) struct MockDatabase {
@@ -46,29 +44,28 @@ impl MockDatabase {
         source_root.insert_file(rel_path, file_id);
 
         db.set_source_root(source_root_id, Arc::new(source_root));
-        db.set_optimization_lvl(OptimizationLevel::None);
 
         (db, file_id)
     }
 
-    pub fn log(&self, f: impl FnOnce()) -> Vec<salsa::Event<MockDatabase>> {
-        *self.events.lock() = Some(Vec::new());
-        f();
-        self.events.lock().take().unwrap()
-    }
+    // pub fn log(&self, f: impl FnOnce()) -> Vec<salsa::Event<MockDatabase>> {
+    //     *self.events.lock() = Some(Vec::new());
+    //     f();
+    //     self.events.lock().take().unwrap()
+    // }
 
-    pub fn log_executed(&self, f: impl FnOnce()) -> Vec<String> {
-        let events = self.log(f);
-        events
-            .into_iter()
-            .filter_map(|e| match e.kind {
-                // This pretty horrible, but `Debug` is the only way to inspect
-                // QueryDescriptor at the moment.
-                salsa::EventKind::WillExecute { database_key } => {
-                    Some(format!("{:?}", database_key))
-                }
-                _ => None,
-            })
-            .collect()
-    }
+    // pub fn log_executed(&self, f: impl FnOnce()) -> Vec<String> {
+    //     let events = self.log(f);
+    //     events
+    //         .into_iter()
+    //         .filter_map(|e| match e.kind {
+    //             // This pretty horrible, but `Debug` is the only way to inspect
+    //             // QueryDescriptor at the moment.
+    //             salsa::EventKind::WillExecute { database_key } => {
+    //                 Some(format!("{:?}", database_key))
+    //             }
+    //             _ => None,
+    //         })
+    //         .collect()
+    // }
 }
