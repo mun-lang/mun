@@ -111,6 +111,9 @@ pub trait ConcreteValueType {
     type Value: ValueType;
 }
 
+/// If we take a pointer of value T, which type can it return? This trait dictates that.
+pub trait AddressableType<T: ?Sized> {}
+
 /// A trait implemented for types that can determine the IR type of a value without an instance.
 pub trait SizedValueType: ConcreteValueType + Sized {
     /// Returns the IR type of a value of this type.

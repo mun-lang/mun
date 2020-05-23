@@ -2,6 +2,7 @@ use super::{
     AsValue, ConcreteValueType, IrTypeContext, IrValueContext, PointerValueType, SizedValueType,
     Value,
 };
+use crate::value::AddressableType;
 use inkwell::{types::PointerType, AddressSpace};
 
 impl ConcreteValueType for f32 {
@@ -33,6 +34,9 @@ impl PointerValueType for f64 {
         Self::get_ir_type(context).ptr_type(address_space.unwrap_or(AddressSpace::Generic))
     }
 }
+
+impl AddressableType<f32> for f32 {}
+impl AddressableType<f64> for f64 {}
 
 impl AsValue<f32> for f32 {
     fn as_value(&self, context: &IrValueContext) -> Value<f32> {

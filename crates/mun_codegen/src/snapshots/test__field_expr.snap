@@ -61,7 +61,7 @@ source_filename = "group_name"
 %Foo = type { i32 }
 %Bar = type { double, %Foo }
 %struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
-%struct.MunStructInfo = type { i8 addrspace(4)* addrspace(4)*, %struct.MunTypeInfo addrspace(4)* addrspace(4)*, i16 addrspace(4)*, i16, i8 }
+%struct.MunStructInfo = type { i8**, %struct.MunTypeInfo**, i16*, i16, i8 }
 
 @dispatchTable = global %DispatchTable { i8* addrspace(4)* (i8 addrspace(4)*, i8*)* null, i32 (%Foo)* @foo_a, %Foo (%Bar)* @bar_1 }
 @"type_info::<core::i32>::name" = private unnamed_addr constant [10 x i8] c"core::i32\00"

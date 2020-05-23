@@ -1,7 +1,5 @@
 use crate::code_gen::linker::LinkerError;
-use crate::value::{
-    AsValue, CanInternalize, Global, IrTypeContext, IrValueContext, IterAsIrValue, Value,
-};
+use crate::value::{AsValue, CanInternalize, IrTypeContext, IrValueContext, IterAsIrValue, Value};
 use crate::IrDatabase;
 use failure::Fail;
 use hir::{FileId, RelativePathBuf};
@@ -249,7 +247,7 @@ pub(crate) fn gen_string_array(
     context: &IrValueContext,
     strings: impl Iterator<Item = String>,
     name: &str,
-) -> Value<*const Global<[*const Global<CString>]>> {
+) -> Value<*const *const u8> {
     let mut strings = strings.peekable();
     if strings.peek().is_none() {
         Value::null(context)
@@ -294,7 +292,7 @@ pub(crate) fn gen_u16_array(
     context: &IrValueContext,
     integers: impl Iterator<Item = u16>,
     name: &str,
-) -> Value<*const Global<[u16]>> {
+) -> Value<*const u16> {
     let mut integers = integers.peekable();
     if integers.peek().is_none() {
         Value::null(context)

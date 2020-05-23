@@ -40,7 +40,7 @@ source_filename = "group_name"
 
 %DispatchTable = type { i8* addrspace(4)* (i8 addrspace(4)*, i8*)* }
 %struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
-%struct.MunStructInfo = type { i8 addrspace(4)* addrspace(4)*, %struct.MunTypeInfo addrspace(4)* addrspace(4)*, i16 addrspace(4)*, i16, i8 }
+%struct.MunStructInfo = type { i8**, %struct.MunTypeInfo**, i16*, i16, i8 }
 
 @dispatchTable = global %DispatchTable zeroinitializer
 @"type_info::<core::i32>::name" = private unnamed_addr constant [10 x i8] c"core::i32\00"
@@ -54,7 +54,7 @@ source_filename = "group_name"
 @"type_info::<*const TypeInfo>::name" = private unnamed_addr constant [16 x i8] c"*const TypeInfo\00"
 @"type_info::<*const TypeInfo>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"=\A1-\1F\C2\A7\88`d\90\F4\B5\BEE}x", [16 x i8]* @"type_info::<*const TypeInfo>::name", i32 64, i8 8, i8 0 }
 @"type_info::<Baz>::name" = private unnamed_addr constant [4 x i8] c"Baz\00"
-@"type_info::<Baz>" = private unnamed_addr constant { %struct.MunTypeInfo, %struct.MunStructInfo } { %struct.MunTypeInfo { [16 x i8] c">\1A\BC\E5\C9\D3n\D8\8C?\86\22\FA\0DtV", [4 x i8]* @"type_info::<Baz>::name", i32 0, i8 1, i8 1 }, %struct.MunStructInfo { i8* null, %struct.MunTypeInfo addrspace(4)* addrspace(4)* null, i16* null, i16 0, i8 1 } }
+@"type_info::<Baz>" = private unnamed_addr constant { %struct.MunTypeInfo, %struct.MunStructInfo } { %struct.MunTypeInfo { [16 x i8] c">\1A\BC\E5\C9\D3n\D8\8C?\86\22\FA\0DtV", [4 x i8]* @"type_info::<Baz>::name", i32 0, i8 1, i8 1 }, %struct.MunStructInfo { i8** null, %struct.MunTypeInfo addrspace(4)* addrspace(4)* null, i16* null, i16 0, i8 1 } }
 @"type_info::<core::f64>::name" = private unnamed_addr constant [10 x i8] c"core::f64\00"
 @"type_info::<core::f64>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"`\DBF\9C?YJ%G\AD4\9F\D5\92%A", [10 x i8]* @"type_info::<core::f64>::name", i32 64, i8 8, i8 0 }
 @"type_info::<core::bool>::name" = private unnamed_addr constant [11 x i8] c"core::bool\00"

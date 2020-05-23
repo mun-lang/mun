@@ -1,6 +1,6 @@
 use crate::value::{
-    AsValue, ConcreteValueType, IrTypeContext, IrValueContext, PointerValueType, SizedValueType,
-    TypeValue, Value, ValueType,
+    AddressableType, AsValue, ConcreteValueType, IrTypeContext, IrValueContext, PointerValueType,
+    SizedValueType, TypeValue, Value, ValueType,
 };
 use inkwell::types::{BasicType, PointerType};
 use inkwell::AddressSpace;
@@ -14,6 +14,9 @@ impl<T: PointerValueType> PointerValueType for [T] {
         T::get_ptr_type(context, address_space)
     }
 }
+
+impl<I, T: AddressableType<I>> AddressableType<I> for [T] {}
+impl<I, T: AddressableType<I>> AddressableType<[I]> for [T] {}
 
 macro_rules! impl_array(
     ($($size:expr),+) => {

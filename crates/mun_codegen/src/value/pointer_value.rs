@@ -1,5 +1,6 @@
 use crate::value::{
-    ConcreteValueType, IrTypeContext, IrValueContext, PointerValueType, SizedValueType, Value,
+    AddressableType, ConcreteValueType, IrTypeContext, IrValueContext, PointerValueType,
+    SizedValueType, Value,
 };
 use inkwell::types::PointerType;
 use inkwell::AddressSpace;
@@ -38,3 +39,7 @@ impl<T: SizedValueType<Value = inkwell::values::PointerValue>> Value<T> {
         Value::from_raw(T::get_ir_type(context.type_context).const_null())
     }
 }
+
+impl<T> AddressableType<*const T> for *const T where *const T: ConcreteValueType {}
+
+impl<T> AddressableType<*mut T> for *mut T where *mut T: ConcreteValueType {}
