@@ -8,7 +8,7 @@ source_filename = "main.mun"
 
 %struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
-@global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
+@global_type_table = external global [1 x %struct.MunTypeInfo*]
 
 define i64 @negate(i64) {
 body:
@@ -25,5 +25,5 @@ source_filename = "group_name"
 
 @"type_info::<core::i64>::name" = private unnamed_addr constant [10 x i8] c"core::i64\00"
 @"type_info::<core::i64>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"G\13;t\97j8\18\D7M\83`\1D\C8\19%", [10 x i8]* @"type_info::<core::i64>::name", i32 64, i8 8, i8 0 }
-@global_type_table = global [1 x %struct.MunTypeInfo addrspace(4)*] [%struct.MunTypeInfo addrspace(4)* @"type_info::<core::i64>"]
+@global_type_table = constant [1 x %struct.MunTypeInfo*] [%struct.MunTypeInfo* @"type_info::<core::i64>"]
 

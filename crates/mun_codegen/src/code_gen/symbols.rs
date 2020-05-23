@@ -156,7 +156,7 @@ fn gen_signature_return_type_from_type_info(
     } else {
         types
             .type_info_type
-            .ptr_type(AddressSpace::Const)
+            .ptr_type(AddressSpace::Generic)
             .const_null()
     }
 }
@@ -234,7 +234,7 @@ fn gen_dispatch_table(
                 .get_context()
                 .void_type()
                 .fn_type(&[], false)
-                .ptr_type(AddressSpace::Const)
+                .ptr_type(AddressSpace::Generic)
                 .ptr_type(AddressSpace::Generic)
                 .const_null()
         });
@@ -271,7 +271,7 @@ pub(super) fn gen_reflection_ir(
     let type_table_ir = if let Some(type_table) = module.get_global(TypeTable::NAME) {
         type_table.as_pointer_value()
     } else {
-        type_table.ty().ptr_type(AddressSpace::Const).const_null()
+        type_table.ty().ptr_type(AddressSpace::Generic).const_null()
     };
 
     // Construct the module info struct
@@ -308,7 +308,7 @@ fn gen_get_info_fn(
     dispatch_table: StructValue,
 ) {
     let target = db.target();
-    let str_type = context.context.i8_type().ptr_type(AddressSpace::Const);
+    let str_type = context.context.i8_type().ptr_type(AddressSpace::Generic);
 
     // Construct the return type of the `get_info` method. Depending on the C ABI this is either the
     // `MunAssemblyInfo` struct or void. On windows the return argument is passed back to the caller
@@ -374,7 +374,7 @@ fn gen_get_info_fn(
     builder.build_store(dispatch_table_addr, dispatch_table);
     builder.build_store(
         dependencies_addr,
-        str_type.ptr_type(AddressSpace::Const).const_null(),
+        str_type.ptr_type(AddressSpace::Generic).const_null(),
     );
     builder.build_store(
         num_dependencies_addr,

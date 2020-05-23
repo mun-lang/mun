@@ -21,6 +21,15 @@ impl From<TypeGroup> for u64 {
     }
 }
 
+impl TypeGroup {
+    pub fn to_abi_type(&self) -> abi::TypeGroup {
+        match self {
+            TypeGroup::FundamentalTypes => abi::TypeGroup::FundamentalTypes,
+            TypeGroup::StructTypes(_) => abi::TypeGroup::StructTypes,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TypeSize {
     // The size of the type in bits

@@ -193,21 +193,21 @@ pub trait IsPointerType {
 
 impl<S: BasicType, T: IsIrType<Type = S>> IsPointerType for *const T {
     fn ir_type(context: &Context, target: &TargetData) -> PointerType {
-        T::ir_type(context, target).ptr_type(AddressSpace::Const)
+        T::ir_type(context, target).ptr_type(AddressSpace::Generic)
     }
 }
 
 // HACK: Manually add `*const TypeInfo`
 impl IsPointerType for *const TypeInfo {
     fn ir_type(context: &Context, _target: &TargetData) -> PointerType {
-        context.i8_type().ptr_type(AddressSpace::Const)
+        context.i8_type().ptr_type(AddressSpace::Generic)
     }
 }
 
 // HACK: Manually add `*const c_void`
 impl IsPointerType for *const std::ffi::c_void {
     fn ir_type(context: &Context, _target: &TargetData) -> PointerType {
-        context.i8_type().ptr_type(AddressSpace::Const)
+        context.i8_type().ptr_type(AddressSpace::Generic)
     }
 }
 

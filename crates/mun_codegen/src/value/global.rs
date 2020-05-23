@@ -23,8 +23,20 @@ pub struct Global<T: ?Sized> {
     data: PhantomData<T>,
 }
 
+impl<T: ?Sized> Clone for Global<T> {
+    fn clone(&self) -> Self {
+        Global {
+            value: self.value,
+            data: self.data,
+        }
+    }
+}
+
+impl<T: ?Sized> Copy for Global<T> {}
+
 impl<T: ?Sized> Global<T> {
-    pub(super) fn from_raw(value: inkwell::values::GlobalValue) -> Self {
+    /// Creates a `Global<T>` from an underlying value. Use with caution.
+    pub fn from_raw(value: inkwell::values::GlobalValue) -> Self {
         Global {
             value,
             data: Default::default(),
@@ -66,7 +78,7 @@ impl<T: ConcreteValueType + ?Sized> Value<T>
 where
     T::Value: Into<BasicValueEnum>,
 {
-    fn into_global<S: AsRef<str>>(
+    pub fn into_global<S: AsRef<str>>(
         self,
         name: S,
         context: &IrValueContext,

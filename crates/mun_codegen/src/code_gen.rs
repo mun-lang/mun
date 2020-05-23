@@ -1,5 +1,5 @@
 use crate::code_gen::linker::LinkerError;
-use crate::value::{AsValue, CanInternalize, IrTypeContext, IrValueContext, IterAsIrValue, Value};
+use crate::value::{CanInternalize, IrTypeContext, IrValueContext};
 use crate::IrDatabase;
 use failure::Fail;
 use hir::{FileId, RelativePathBuf};
@@ -242,32 +242,6 @@ pub(crate) fn gen_global(module: &Module, value: &dyn BasicValue, name: &str) ->
     global
 }
 
-/// Generates a global array from the specified list of strings
-pub(crate) fn gen_string_array(
-    context: &IrValueContext,
-    strings: impl Iterator<Item = String>,
-    name: &str,
-) -> Value<*const *const u8> {
-    let mut strings = strings.peekable();
-    if strings.peek().is_none() {
-        Value::null(context)
-    } else {
-        let strings = strings
-            .enumerate()
-            .map(|(i, s)| {
-                CString::new(s)
-                    .expect("string cannot contain 0's")
-                    .intern(format!("{}.{}", name, i), context)
-                    .as_value(context)
-            })
-            .as_value(context);
-
-        strings
-            .into_const_private_global(name, context)
-            .as_value(context)
-    }
-}
-
 /// Generates a global array from the specified list of struct pointers
 pub(crate) fn gen_struct_ptr_array(
     context: &IrValueContext,
@@ -277,30 +251,13 @@ pub(crate) fn gen_struct_ptr_array(
 ) -> inkwell::values::PointerValue {
     if ptrs.is_empty() {
         ir_type
-            .ptr_type(AddressSpace::Const)
-            .ptr_type(AddressSpace::Const)
+            .ptr_type(AddressSpace::Generic)
+            .ptr_type(AddressSpace::Generic)
             .const_null()
     } else {
-        let ptr_array_ir = ir_type.ptr_type(AddressSpace::Const).const_array(&ptrs);
+        let ptr_array_ir = ir_type.ptr_type(AddressSpace::Generic).const_array(&ptrs);
 
         gen_global(context.module, &ptr_array_ir, name).as_pointer_value()
-    }
-}
-
-/// Generates a global array from the specified list of integers
-pub(crate) fn gen_u16_array(
-    context: &IrValueContext,
-    integers: impl Iterator<Item = u16>,
-    name: &str,
-) -> Value<*const u16> {
-    let mut integers = integers.peekable();
-    if integers.peek().is_none() {
-        Value::null(context)
-    } else {
-        integers
-            .as_value(context)
-            .into_const_private_global(name, context)
-            .as_value(context)
     }
 }
 

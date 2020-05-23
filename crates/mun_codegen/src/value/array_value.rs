@@ -87,11 +87,51 @@ where
     }
 }
 
-pub trait IterAsIrValue<E: SizedValueType> {
+pub trait IterAsIrValue<E: SizedValueType, T: AsValue<E>>: IntoIterator<Item = T> {
+    /// Returns a `Value<[E]>` that contains all values converted to `Value<E>`.
     fn as_value(self, context: &IrValueContext) -> Value<[E]>;
+
+    /// Constructs a const private global and returns a pointer to it.
+    fn into_const_private_pointer<S: AsRef<str>>(
+        self,
+        name: S,
+        context: &IrValueContext,
+    ) -> Value<*const E>
+    where
+        *const E: ConcreteValueType<Value = inkwell::values::PointerValue>,
+        E: AddressableType<E>,
+        Self: Sized,
+    {
+        self.as_value(context)
+            .into_const_private_global(name, context)
+            .as_value(context)
+    }
+
+    /// Constructs a const private global and returns a pointer to it. If the iterator is empty a
+    /// null pointer is returned.
+    fn into_const_private_pointer_or_null<S: AsRef<str>>(
+        self,
+        name: S,
+        context: &IrValueContext,
+    ) -> Value<*const E>
+    where
+        *const E: SizedValueType<Value = inkwell::values::PointerValue>,
+        E: AddressableType<E>,
+        Self: Sized,
+        E::Value: ConstArrayValue,
+    {
+        let mut iter = self.into_iter().peekable();
+        if iter.peek().is_some() {
+            iter.as_value(context)
+                .into_const_private_global(name, context)
+                .as_value(context)
+        } else {
+            Value::null(context)
+        }
+    }
 }
 
-impl<E: SizedValueType, T: AsValue<E>, I: IntoIterator<Item = T>> IterAsIrValue<E> for I
+impl<E: SizedValueType, T: AsValue<E>, I: IntoIterator<Item = T>> IterAsIrValue<E, T> for I
 where
     E::Value: ConstArrayValue,
 {
@@ -114,6 +154,18 @@ pub trait ConstArrayType: BasicType + Sized + TypeValue {
 /// A helper trait that enables the creation of a const LLVM array for a type.
 pub trait ConstArrayValue: ValueType {
     fn const_array(values: &[Self], ir_type: &Self::Type) -> inkwell::values::ArrayValue;
+}
+
+impl<T: ConcreteValueType<Value = inkwell::values::ArrayValue> + ?Sized> Value<T> {
+    /// Returns the number of elements in the array.
+    pub fn len(self) -> usize {
+        self.value.get_type().len() as usize
+    }
+
+    /// Returns true if the value represents an empty array.
+    pub fn is_empty(self) -> bool {
+        self.value.get_type().len() == 0
+    }
 }
 
 macro_rules! impl_array_type {

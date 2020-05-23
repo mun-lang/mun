@@ -6,14 +6,14 @@ expression: "struct(value) Bar(f64, Foo);\nstruct(value) Foo { a: i32 };\n\nfn b
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
 
-%DispatchTable = type { i8* addrspace(4)* (i8 addrspace(4)*, i8*)*, i32 (%Foo)*, %Foo (%Bar)* }
+%DispatchTable = type { i8** (i8*, i8*)*, i32 (%Foo)*, %Foo (%Bar)* }
 %Foo = type { i32 }
 %Bar = type { double, %Foo }
 %struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
 @allocatorHandle = external global i8*
 @dispatchTable = external global %DispatchTable
-@global_type_table = external global [7 x %struct.MunTypeInfo addrspace(4)*]
+@global_type_table = external global [7 x %struct.MunTypeInfo*]
 
 define %Foo @bar_1(%Bar) {
 body:
@@ -39,9 +39,9 @@ body:
   ret i32 %foo_a
 }
 
-define i32 @bar_1_foo_a_wrapper(%Bar* addrspace(4)*) {
+define i32 @bar_1_foo_a_wrapper(%Bar**) {
 body:
-  %mem_ptr = load %Bar*, %Bar* addrspace(4)* %0
+  %mem_ptr = load %Bar*, %Bar** %0
   %deref = load %Bar, %Bar* %mem_ptr
   %bar_1_foo_a = call i32 @bar_1_foo_a(%Bar %deref)
   ret i32 %bar_1_foo_a
@@ -57,21 +57,21 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%DispatchTable = type { i8* addrspace(4)* (i8 addrspace(4)*, i8*)*, i32 (%Foo)*, %Foo (%Bar)* }
+%DispatchTable = type { i8** (i8*, i8*)*, i32 (%Foo)*, %Foo (%Bar)* }
 %Foo = type { i32 }
 %Bar = type { double, %Foo }
 %struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 %struct.MunStructInfo = type { i8**, %struct.MunTypeInfo**, i16*, i16, i8 }
 
-@dispatchTable = global %DispatchTable { i8* addrspace(4)* (i8 addrspace(4)*, i8*)* null, i32 (%Foo)* @foo_a, %Foo (%Bar)* @bar_1 }
+@dispatchTable = global %DispatchTable { i8** (i8*, i8*)* null, i32 (%Foo)* @foo_a, %Foo (%Bar)* @bar_1 }
 @"type_info::<core::i32>::name" = private unnamed_addr constant [10 x i8] c"core::i32\00"
 @"type_info::<core::i32>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\17yzt\19\D62\17\D25\95C\17\88[\FA", [10 x i8]* @"type_info::<core::i32>::name", i32 32, i8 4, i8 0 }
 @"type_info::<Foo>::name" = private unnamed_addr constant [4 x i8] c"Foo\00"
 @"struct_info::<Foo>::field_names.0" = private unnamed_addr constant [2 x i8] c"a\00"
 @"struct_info::<Foo>::field_names" = private unnamed_addr constant [1 x i8*] [i8* @"struct_info::<Foo>::field_names.0"]
-@"struct_info::<Foo>::field_types" = private unnamed_addr constant [1 x %struct.MunTypeInfo addrspace(4)*] [%struct.MunTypeInfo addrspace(4)* @"type_info::<core::i32>"]
+@"struct_info::<Foo>::field_types" = private unnamed_addr constant [1 x %struct.MunTypeInfo*] [%struct.MunTypeInfo* @"type_info::<core::i32>"]
 @"struct_info::<Foo>::field_offsets" = private unnamed_addr constant [1 x i16] zeroinitializer
-@"type_info::<Foo>" = private unnamed_addr constant { %struct.MunTypeInfo, %struct.MunStructInfo } { %struct.MunTypeInfo { [16 x i8] c"8\AD\C9\D9Y\D2\AA<ME}\CD.\A5\A0\DB", [4 x i8]* @"type_info::<Foo>::name", i32 32, i8 4, i8 1 }, %struct.MunStructInfo { [1 x i8*]* @"struct_info::<Foo>::field_names", [1 x %struct.MunTypeInfo addrspace(4)*]* @"struct_info::<Foo>::field_types", [1 x i16]* @"struct_info::<Foo>::field_offsets", i16 1, i8 1 } }
+@"type_info::<Foo>" = private unnamed_addr constant { %struct.MunTypeInfo, %struct.MunStructInfo } { %struct.MunTypeInfo { [16 x i8] c"8\AD\C9\D9Y\D2\AA<ME}\CD.\A5\A0\DB", [4 x i8]* @"type_info::<Foo>::name", i32 32, i8 4, i8 1 }, %struct.MunStructInfo { [1 x i8*]* @"struct_info::<Foo>::field_names", [1 x %struct.MunTypeInfo*]* @"struct_info::<Foo>::field_types", [1 x i16]* @"struct_info::<Foo>::field_offsets", i16 1, i8 1 } }
 @"type_info::<*const TypeInfo>::name" = private unnamed_addr constant [16 x i8] c"*const TypeInfo\00"
 @"type_info::<*const TypeInfo>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"=\A1-\1F\C2\A7\88`d\90\F4\B5\BEE}x", [16 x i8]* @"type_info::<*const TypeInfo>::name", i32 64, i8 8, i8 0 }
 @"type_info::<core::f64>::name" = private unnamed_addr constant [10 x i8] c"core::f64\00"
@@ -84,10 +84,10 @@ source_filename = "group_name"
 @"struct_info::<Bar>::field_names.0" = private unnamed_addr constant [2 x i8] c"0\00"
 @"struct_info::<Bar>::field_names.1" = private unnamed_addr constant [2 x i8] c"1\00"
 @"struct_info::<Bar>::field_names" = private unnamed_addr constant [2 x i8*] [i8* @"struct_info::<Bar>::field_names.0", i8* @"struct_info::<Bar>::field_names.1"]
-@"struct_info::<Bar>::field_types" = private unnamed_addr constant [2 x %struct.MunTypeInfo addrspace(4)*] [%struct.MunTypeInfo addrspace(4)* @"type_info::<core::f64>", %struct.MunTypeInfo addrspace(4)* @"type_info::<Foo>"]
+@"struct_info::<Bar>::field_types" = private unnamed_addr constant [2 x %struct.MunTypeInfo*] [%struct.MunTypeInfo* @"type_info::<core::f64>", %struct.MunTypeInfo* @"type_info::<Foo>"]
 @"struct_info::<Bar>::field_offsets" = private unnamed_addr constant [2 x i16] [i16 0, i16 8]
-@"type_info::<Bar>" = private unnamed_addr constant { %struct.MunTypeInfo, %struct.MunStructInfo } { %struct.MunTypeInfo { [16 x i8] c"\FC8#Lvd)F\B1Q\06\8B\02pl\10", [4 x i8]* @"type_info::<Bar>::name", i32 128, i8 8, i8 1 }, %struct.MunStructInfo { [2 x i8*]* @"struct_info::<Bar>::field_names", [2 x %struct.MunTypeInfo addrspace(4)*]* @"struct_info::<Bar>::field_types", [2 x i16]* @"struct_info::<Bar>::field_offsets", i16 2, i8 1 } }
-@global_type_table = global [7 x %struct.MunTypeInfo addrspace(4)*] [%struct.MunTypeInfo addrspace(4)* @"type_info::<core::i32>", %struct.MunTypeInfo addrspace(4)* @"type_info::<Foo>", %struct.MunTypeInfo addrspace(4)* @"type_info::<*const TypeInfo>", %struct.MunTypeInfo addrspace(4)* @"type_info::<core::f64>", %struct.MunTypeInfo addrspace(4)* @"type_info::<*const *mut core::void>", %struct.MunTypeInfo addrspace(4)* @"type_info::<*mut core::void>", %struct.MunTypeInfo addrspace(4)* @"type_info::<Bar>"]
+@"type_info::<Bar>" = private unnamed_addr constant { %struct.MunTypeInfo, %struct.MunStructInfo } { %struct.MunTypeInfo { [16 x i8] c"\FC8#Lvd)F\B1Q\06\8B\02pl\10", [4 x i8]* @"type_info::<Bar>::name", i32 128, i8 8, i8 1 }, %struct.MunStructInfo { [2 x i8*]* @"struct_info::<Bar>::field_names", [2 x %struct.MunTypeInfo*]* @"struct_info::<Bar>::field_types", [2 x i16]* @"struct_info::<Bar>::field_offsets", i16 2, i8 1 } }
+@global_type_table = constant [7 x %struct.MunTypeInfo*] [%struct.MunTypeInfo* @"type_info::<core::i32>", %struct.MunTypeInfo* @"type_info::<Foo>", %struct.MunTypeInfo* @"type_info::<*const TypeInfo>", %struct.MunTypeInfo* @"type_info::<core::f64>", %struct.MunTypeInfo* @"type_info::<*const *mut core::void>", %struct.MunTypeInfo* @"type_info::<*mut core::void>", %struct.MunTypeInfo* @"type_info::<Bar>"]
 @allocatorHandle = unnamed_addr global i8* null
 
 declare i32 @foo_a(%Foo)
