@@ -5,12 +5,7 @@ use crate::value::{AsValue, CanInternalize, Global, IrValueContext, IterAsIrValu
 use crate::IrDatabase;
 use hir::{Body, ExprId, InferenceResult};
 use inkwell::module::Linkage;
-use inkwell::{
-    module::Module,
-    targets::TargetData,
-    types::ArrayType,
-    values::{GlobalValue, PointerValue},
-};
+use inkwell::{module::Module, targets::TargetData, types::ArrayType, values::PointerValue};
 use std::collections::{BTreeSet, HashMap};
 use std::ffi::CString;
 use std::{mem, sync::Arc};
@@ -27,6 +22,12 @@ impl TypeTable {
     /// The name of the TypeTable's LLVM `GlobalValue`.
     pub(crate) const NAME: &'static str = "global_type_table";
 
+    /// Looks for a global symbol with the name of the TypeTable global in the specified `module`.
+    /// Returns the global value if it could be found, `None` otherwise.
+    pub fn find_global(module: &Module) -> Option<Global<[*const ir::TypeInfo]>> {
+        module.get_global(Self::NAME).map(Global::from_raw)
+    }
+
     /// Generates a `TypeInfo` lookup through the `TypeTable`, equivalent to something along the
     /// lines of: `type_table[i]`, where `i` is the index of the type and `type_table` is an array
     /// of `TypeInfo` pointers.
@@ -34,7 +35,7 @@ impl TypeTable {
         &self,
         builder: &inkwell::builder::Builder,
         type_info: &TypeInfo,
-        table_ref: Option<GlobalValue>,
+        table_ref: Option<Global<[*const ir::TypeInfo]>>,
     ) -> PointerValue {
         let table_ref = table_ref.expect("no type table defined");
 
@@ -45,7 +46,7 @@ impl TypeTable {
 
         let ptr_to_type_info_ptr = unsafe {
             builder.build_struct_gep(
-                table_ref.as_pointer_value(),
+                table_ref.into(),
                 index as u32,
                 &format!("{}_ptr_ptr", type_info.name),
             )
@@ -56,8 +57,10 @@ impl TypeTable {
     }
 
     /// Retrieves the global `TypeInfo` IR value corresponding to `type_info`, if it exists.
-    pub fn get(module: &Module, type_info: &TypeInfo) -> Option<GlobalValue> {
-        module.get_global(&type_info_global_name(type_info))
+    pub fn get(module: &Module, type_info: &TypeInfo) -> Option<Global<ir::TypeInfo>> {
+        module
+            .get_global(&type_info_global_name(type_info))
+            .map(Global::from_raw)
     }
 
     /// Returns the number of types in the `TypeTable`.

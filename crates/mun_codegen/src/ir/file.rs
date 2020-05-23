@@ -1,5 +1,6 @@
 use super::body::ExternalGlobals;
 use crate::ir::{function, type_table::TypeTable};
+use crate::value::Global;
 use crate::{CodeGenParams, IrDatabase};
 use hir::{FileId, ModuleDef};
 use inkwell::module::Module;
@@ -74,7 +75,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<FileIR> {
         ExternalGlobals {
             alloc_handle,
             dispatch_table,
-            type_table,
+            type_table: type_table.map(Global::from_raw),
         }
     };
 

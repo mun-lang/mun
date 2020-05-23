@@ -87,7 +87,7 @@ pub struct ModuleInfo {
 #[derive(AsValue)]
 #[ir_name = "struct.MunDispatchTable"]
 pub struct DispatchTable {
-    pub signatures: Value<*const FunctionSignature>,
+    pub prototypes: Value<*const FunctionPrototype>,
     pub fn_ptrs: Value<*const *mut fn()>,
     pub num_entries: u32,
 }
