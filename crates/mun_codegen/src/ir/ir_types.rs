@@ -35,68 +35,68 @@ impl TransparentValue for abi::StructMemoryKind {
 #[derive(AsValue)]
 #[ir_name = "struct.MunTypeInfo"]
 pub struct TypeInfo {
-    guid: abi::Guid,
-    name: Value<*const u8>,
-    size_in_bits: u32,
-    alignment: u8,
-    type_group: abi::TypeGroup,
+    pub guid: abi::Guid,
+    pub name: Value<*const u8>,
+    pub size_in_bits: u32,
+    pub alignment: u8,
+    pub type_group: abi::TypeGroup,
 }
 
 #[derive(AsValue)]
 #[ir_name = "struct.MunFunctionSignature"]
 pub struct FunctionSignature {
-    arg_types: Value<*const *const TypeInfo>,
-    return_type: Value<*const TypeInfo>,
-    num_arg_types: u16,
+    pub arg_types: Value<*const *const TypeInfo>,
+    pub return_type: Value<*const TypeInfo>,
+    pub num_arg_types: u16,
 }
 
 #[derive(AsValue)]
 #[ir_name = "struct.MunFunctionPrototype"]
 pub struct FunctionPrototype {
-    name: Value<*const u8>,
-    signature: FunctionSignature,
+    pub name: Value<*const u8>,
+    pub signature: FunctionSignature,
 }
 
 #[derive(AsValue)]
 #[ir_name = "struct.MunFunctionDefinition"]
 pub struct FunctionDefinition {
-    prototype: FunctionPrototype,
-    fn_ptr: Value<*const fn()>,
+    pub prototype: FunctionPrototype,
+    pub fn_ptr: Value<*const fn()>,
 }
 
 #[derive(AsValue)]
 #[ir_name = "struct.MunStructInfo"]
 pub struct StructInfo {
-    field_names: Value<*const *const u8>,
-    field_types: Value<*const *const TypeInfo>,
-    field_offsets: Value<*const u16>,
-    num_fields: u16,
-    memory_kind: abi::StructMemoryKind,
+    pub field_names: Value<*const *const u8>,
+    pub field_types: Value<*const *const TypeInfo>,
+    pub field_offsets: Value<*const u16>,
+    pub num_fields: u16,
+    pub memory_kind: abi::StructMemoryKind,
 }
 
 #[derive(AsValue)]
 #[ir_name = "struct.MunModuleInfo"]
 pub struct ModuleInfo {
-    path: Value<*const u8>,
-    functions: Value<*const FunctionDefinition>,
-    num_functions: u32,
-    types: Value<*const *const TypeInfo>,
-    num_types: u32,
+    pub path: Value<*const u8>,
+    pub functions: Value<*const FunctionDefinition>,
+    pub num_functions: u32,
+    pub types: Value<*const *const TypeInfo>,
+    pub num_types: u32,
 }
 
 #[derive(AsValue)]
 #[ir_name = "struct.MunDispatchTable"]
 pub struct DispatchTable {
-    signatures: Value<*const FunctionSignature>,
-    fn_ptrs: Value<*const *mut fn()>,
-    num_entries: u32,
+    pub signatures: Value<*const FunctionSignature>,
+    pub fn_ptrs: Value<*const *mut fn()>,
+    pub num_entries: u32,
 }
 
 #[derive(AsValue)]
 #[ir_name = "struct.MunAssemblyInfo"]
 pub struct AssemblyInfo {
-    symbols: ModuleInfo,
-    dispatch_table: DispatchTable,
-    dependencies: Value<*const *const u8>,
-    num_dependencies: u32,
+    pub symbols: ModuleInfo,
+    pub dispatch_table: DispatchTable,
+    pub dependencies: Value<*const *const u8>,
+    pub num_dependencies: u32,
 }

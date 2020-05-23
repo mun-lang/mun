@@ -96,5 +96,7 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
                 ]))
             }
         }
+
+        impl crate::value::AddressableType<#ident> for #ident {}
     }).into()
 }

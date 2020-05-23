@@ -202,10 +202,10 @@ impl_addressable_type_values!(
 );
 
 impl<T: ConcreteValueType + ?Sized> Value<T> {
-    // /// Returns the type of the value.
-    // pub fn get_type(&self) -> <T::Value as ValueType>::Type {
-    //     <T::Value as ValueType>::get_type(&self.value)
-    // }
+    /// Returns the type of the value.
+    pub fn get_type(&self) -> <T::Value as ValueType>::Type {
+        <T::Value as ValueType>::get_type(&self.value)
+    }
 
     /// Construct a `Value<T>` from an inkwell value
     pub(super) fn from_raw(value: T::Value) -> Value<T> {

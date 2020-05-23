@@ -382,7 +382,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         // HACK: We should be able to use pointers for built-in struct types like `TypeInfo` in intrinsics
         let type_info_ptr = self.builder.build_bitcast(
             type_info_ptr,
-            self.db.context().i8_type().ptr_type(AddressSpace::Const),
+            self.db.context().i8_type().ptr_type(AddressSpace::Generic),
             "type_info_ptr_to_i8_ptr",
         );
 
@@ -411,7 +411,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 object_ptr,
                 struct_ir_ty
                     .ptr_type(AddressSpace::Generic)
-                    .ptr_type(AddressSpace::Const),
+                    .ptr_type(AddressSpace::Generic),
                 &format!("{}_ptr_ptr", hir_struct.name(self.db).to_string()),
             )
             .into_pointer_value();

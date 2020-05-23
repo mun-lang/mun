@@ -87,14 +87,8 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: hir::FileId) -> Arc<FileGr
         module: &llvm_module,
     };
     let abi_types = gen_abi_types(&type_context);
-    let mut type_table_builder = TypeTableBuilder::new(
-        db,
-        &llvm_module,
-        &abi_types,
-        &value_context,
-        intrinsics_map.keys(),
-        &dispatch_table,
-    );
+    let mut type_table_builder =
+        TypeTableBuilder::new(db, &value_context, intrinsics_map.keys(), &dispatch_table);
 
     // Collect all used types
     for def in db.module_data(file_id).definitions() {
