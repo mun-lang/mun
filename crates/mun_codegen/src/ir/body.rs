@@ -14,6 +14,8 @@ use inkwell::{
 };
 use std::{collections::HashMap, sync::Arc};
 
+use crate::ir::ir_types as ir;
+use crate::value::Global;
 use hir::ResolveBitness;
 use inkwell::basic_block::BasicBlock;
 use inkwell::values::{AggregateValueEnum, GlobalValue, PointerValue};
@@ -30,7 +32,7 @@ struct LoopInfo {
 pub(crate) struct ExternalGlobals {
     pub alloc_handle: Option<GlobalValue>,
     pub dispatch_table: Option<GlobalValue>,
-    pub type_table: Option<GlobalValue>,
+    pub type_table: Option<Global<[*const ir::TypeInfo]>>,
 }
 
 pub(crate) struct BodyIrGenerator<'a, 'b, D: IrDatabase> {

@@ -1,19 +1,16 @@
 use crate::code_gen::linker::LinkerError;
-use crate::value::{CanInternalize, IrTypeContext, IrValueContext};
+use crate::value::{IrTypeContext, IrValueContext};
 use crate::IrDatabase;
 use failure::Fail;
 use hir::{FileId, RelativePathBuf};
 use inkwell::targets::TargetData;
 use inkwell::{
-    module::{Linkage, Module},
+    module::Module,
     passes::{PassManager, PassManagerBuilder},
     targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine},
-    types::StructType,
-    values::{BasicValue, GlobalValue, UnnamedAddress},
-    AddressSpace, OptimizationLevel,
+    OptimizationLevel,
 };
 use mun_target::spec;
-use std::ffi::CString;
 use std::io::{self, Write};
 use std::{
     path::{Path, PathBuf},
@@ -215,50 +212,6 @@ fn optimize_module(module: &Module, optimization_lvl: OptimizationLevel) {
     let module_pass_manager = PassManager::create(());
     pass_builder.populate_module_pass_manager(&module_pass_manager);
     module_pass_manager.run_on(module);
-}
-
-/// Intern a string by constructing a global value. Looks something like this:
-/// ```c
-/// const char[] GLOBAL_ = "str";
-/// ```
-pub(crate) fn intern_string(
-    context: &IrValueContext,
-    string: &str,
-    name: &str,
-) -> inkwell::values::PointerValue {
-    CString::new(string)
-        .expect("could not convert IR string to CString")
-        .intern(name, context)
-        .into()
-}
-
-/// Construct a global from the specified value
-pub(crate) fn gen_global(module: &Module, value: &dyn BasicValue, name: &str) -> GlobalValue {
-    let global = module.add_global(value.as_basic_value_enum().get_type(), None, name);
-    global.set_linkage(Linkage::Private);
-    global.set_constant(true);
-    global.set_unnamed_address(UnnamedAddress::Global);
-    global.set_initializer(value);
-    global
-}
-
-/// Generates a global array from the specified list of struct pointers
-pub(crate) fn gen_struct_ptr_array(
-    context: &IrValueContext,
-    ir_type: StructType,
-    ptrs: &[inkwell::values::PointerValue],
-    name: &str,
-) -> inkwell::values::PointerValue {
-    if ptrs.is_empty() {
-        ir_type
-            .ptr_type(AddressSpace::Generic)
-            .ptr_type(AddressSpace::Generic)
-            .const_null()
-    } else {
-        let ptr_array_ir = ir_type.ptr_type(AddressSpace::Generic).const_array(&ptrs);
-
-        gen_global(context.module, &ptr_array_ir, name).as_pointer_value()
-    }
 }
 
 /// Create an inkwell TargetData from the target in the database
