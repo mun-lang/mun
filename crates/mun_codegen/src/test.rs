@@ -2,6 +2,7 @@ use crate::{mock::MockDatabase, IrDatabase, ModuleBuilder, ir::ty::TypeManager};
 use hir::{
     diagnostics::DiagnosticSink, line_index::LineIndex, HirDatabase, Module, SourceDatabase,
 };
+use inkwell::context::Context;
 use inkwell::OptimizationLevel;
 use mun_target::spec::Target;
 use std::cell::RefCell;
@@ -734,6 +735,7 @@ fn private_fn_only() {
 #[test]
 #[ignore] // this test doesn't make much sense without salsa in codegen...?
 fn incremental_compilation() {
+    let context = Context::create();
     let (mut db, file_id) = MockDatabase::with_single_file(
         r#"
         struct Foo(i32);
@@ -749,7 +751,7 @@ fn incremental_compilation() {
 
     {
         let events = db.log_executed(|| {
-            crate::ir::file::ir_query(&db, &mut type_manager, file_id);
+            crate::ir::file::ir_query(&context, &db, &mut type_manager, file_id);
         });
         assert!(
             format!("{:?}", events).contains("group_ir"),
@@ -762,7 +764,7 @@ fn incremental_compilation() {
 
     {
         let events = db.log_executed(|| {
-            crate::ir::file::ir_query(&db, &mut type_manager, file_id);
+            crate::ir::file::ir_query(&context, &db, &mut type_manager, file_id);
         });
         println!("events: {:?}", events);
         assert!(
@@ -835,6 +837,7 @@ fn test_snapshot_unoptimized(text: &str) {
 fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
     let text = text.trim().replace("\n    ", "\n");
 
+    let context = Context::create();
     let (mut db, file_id) = MockDatabase::with_single_file(&text);
     let mut type_manager = TypeManager::new();
     db.set_optimization_lvl(opt);
@@ -856,7 +859,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
     let messages = messages.into_inner();
 
     let module_builder =
-        ModuleBuilder::new(&db, file_id).expect("Failed to initialize module builder");
+        ModuleBuilder::new(&context, &db, file_id).expect("Failed to initialize module builder");
 
     // The thread is named after the test case, so we can use it to name our snapshots.
     let thread_name = std::thread::current()
@@ -866,7 +869,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
 
 
     let (group_ir_value, file_ir_value) = if messages.is_empty() {
-        let (file, group_ir) = crate::ir::file::ir_query(&db, &mut type_manager, file_id);
+        let (file, group_ir) = crate::ir::file::ir_query(&context, &db, &mut type_manager, file_id);
 
         let group_ir_value = format!(
             "{}",

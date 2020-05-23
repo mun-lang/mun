@@ -1,3 +1,4 @@
+use inkwell::context::Context;
 use crate::ir::ty::TypeManager;
 use crate::ir::file::FileIR;
 use crate::ir::file_group::FileGroupIR;
@@ -94,6 +95,7 @@ impl ObjectFile {
 
 /// A struct that can be used to build an LLVM `Module`.
 pub struct ModuleBuilder<'a, D: IrDatabase> {
+    context: &'a Context,
     db: &'a D,
     file_id: FileId,
     _target: inkwell::targets::Target,
@@ -103,12 +105,12 @@ pub struct ModuleBuilder<'a, D: IrDatabase> {
 
 impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
     /// Constructs module for the given `hir::FileId` at the specified output file location.
-    pub fn new(db: &'a D, file_id: FileId) -> Result<Self, failure::Error> {
+    pub fn new(context: &'a Context, db: &'a D, file_id: FileId) -> Result<Self, failure::Error> {
         let target = db.target();
 
         // Construct a module for the assembly
         let assembly_module = Arc::new(
-            db.context()
+            context
                 .create_module(db.file_relative_path(file_id).as_str()),
         );
 
@@ -133,6 +135,7 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
             .ok_or(CodeGenerationError::CouldNotCreateTargetMachine)?;
 
         Ok(Self {
+            context,
             db,
             file_id,
             _target: llvm_target,
@@ -143,7 +146,7 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
 
     /// Constructs an object file.
     pub fn build(self, type_manager: &mut TypeManager) -> Result<ObjectFile, failure::Error> {
-        let (file, group_ir) = crate::ir::file::ir_query(self.db, type_manager, self.file_id);
+        let (file, group_ir) = crate::ir::file::ir_query(self.context, self.db, type_manager, self.file_id);
 
         self.build_with_ir(type_manager, file, group_ir)
     }
@@ -160,6 +163,7 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
 
         // Generate the `get_info` method.
         symbols::gen_reflection_ir(
+            self.context,
             self.db,
             type_manager,
             &self.assembly_module,

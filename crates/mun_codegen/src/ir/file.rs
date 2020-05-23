@@ -1,3 +1,4 @@
+use inkwell::context::Context;
 use crate::ir::ty::TypeManager;
 use crate::ir::file_group::FileGroupIR;
 use super::body::ExternalGlobals;
@@ -19,12 +20,11 @@ pub struct FileIR {
 }
 
 /// Generates IR for the specified file.
-pub(crate) fn ir_query(db: &impl IrDatabase, type_manager: &mut TypeManager, file_id: FileId) -> (FileIR, FileGroupIR) {
-    let llvm_module = db
-        .context()
+pub(crate) fn ir_query(context: &Context, db: &impl IrDatabase, type_manager: &mut TypeManager, file_id: FileId) -> (FileIR, FileGroupIR) {
+    let llvm_module = context
         .create_module(db.file_relative_path(file_id).as_str());
 
-    let group_ir = crate::ir::file_group::ir_query(db, type_manager, file_id);
+    let group_ir = crate::ir::file_group::ir_query(context, db, type_manager, file_id);
 
     // Generate all exposed function and wrapper function signatures.
     // Use a `BTreeMap` to guarantee deterministically ordered output.ures
@@ -34,6 +34,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, type_manager: &mut TypeManager, fil
         if let ModuleDef::Function(f) = def {
             if !f.is_extern(db) {
                 let fun = function::gen_signature(
+                    context,
                     db,
                     type_manager,
                     *f,
@@ -47,6 +48,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, type_manager: &mut TypeManager, fil
                 let fn_sig = f.ty(db).callable_sig(db).unwrap();
                 if !f.data(db).visibility().is_private() && !fn_sig.marshallable(db) {
                     let wrapper_fun = function::gen_signature(
+                        context,
                         db,
                         type_manager,
                         *f,
@@ -87,6 +89,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, type_manager: &mut TypeManager, fil
     // Generate the function bodies
     for (hir_function, llvm_function) in functions.iter() {
         function::gen_body(
+            context,
             db,
             type_manager,
             (*hir_function, *llvm_function),
@@ -100,6 +103,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, type_manager: &mut TypeManager, fil
 
     for (hir_function, llvm_function) in wrapper_functions.iter() {
         function::gen_wrapper_body(
+            context,
             db,
             type_manager,
             (*hir_function, *llvm_function),

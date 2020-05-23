@@ -48,8 +48,6 @@ impl MockDatabase {
         db.set_source_root(source_root_id, Arc::new(source_root));
         db.set_optimization_lvl(OptimizationLevel::None);
 
-        let context = crate::Context::create();
-        db.set_context(Arc::new(context));
         (db, file_id)
     }
 

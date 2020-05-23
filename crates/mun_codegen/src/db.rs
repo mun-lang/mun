@@ -1,8 +1,5 @@
 #![allow(clippy::type_repetition_in_bounds)]
 
-use crate::{
-    Context,
-};
 use inkwell::{
     targets::TargetData,
     OptimizationLevel,
@@ -13,10 +10,6 @@ use std::sync::Arc;
 /// [salsa](https://github.com/salsa-rs/salsa) for this purpose.
 #[salsa::query_group(IrDatabaseStorage)]
 pub trait IrDatabase: hir::HirDatabase {
-    /// Get the LLVM context that should be used for all generation steps.
-    #[salsa::input]
-    fn context(&self) -> Arc<Context>;
-
     /// Gets the optimization level for generation.
     #[salsa::input]
     fn optimization_lvl(&self) -> OptimizationLevel;

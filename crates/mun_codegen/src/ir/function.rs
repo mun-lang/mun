@@ -1,3 +1,4 @@
+use inkwell::context::Context;
 use crate::ir::ty::TypeManager;
 use crate::ir::{body::BodyIrGenerator, dispatch_table::DispatchTable, type_table::TypeTable};
 use crate::values::FunctionValue;
@@ -28,6 +29,7 @@ pub(crate) fn create_pass_manager(
 /// between two functions is that first all signatures are generated and then all bodies. This
 /// allows bodies to reference `FunctionValue` wherever they are declared in the file.
 pub(crate) fn gen_signature(
+    context: &Context,
     db: &impl IrDatabase,
     type_manager: &mut TypeManager,
     f: hir::Function,
@@ -43,7 +45,7 @@ pub(crate) fn gen_signature(
         }
     };
 
-    if let AnyTypeEnum::FunctionType(ty) = type_manager.type_ir(db, f.ty(db), params) {
+    if let AnyTypeEnum::FunctionType(ty) = type_manager.type_ir(context, db, f.ty(db), params) {
         module.add_function(&name, ty, None)
     } else {
         panic!("not a function type")
@@ -52,6 +54,7 @@ pub(crate) fn gen_signature(
 
 /// Generates the body of a `hir::Function` for an associated `FunctionValue`.
 pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
+    context: &Context,
     db: &'a D,
     type_manager: &'a mut TypeManager,
     function: (hir::Function, FunctionValue),
@@ -61,6 +64,7 @@ pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
     external_globals: ExternalGlobals,
 ) {
     let mut code_gen = BodyIrGenerator::new(
+        context,
         db,
         type_manager,
         function,
@@ -79,6 +83,7 @@ pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
 /// Generates the body of a wrapper around `hir::Function` for its associated
 /// `FunctionValue`
 pub(crate) fn gen_wrapper_body<'a, 'b, D: IrDatabase>(
+    context: &Context,
     db: &'a D,
     type_manager: &mut TypeManager,
     function: (hir::Function, FunctionValue),
@@ -88,6 +93,7 @@ pub(crate) fn gen_wrapper_body<'a, 'b, D: IrDatabase>(
     external_globals: ExternalGlobals,
 ) {
     let mut code_gen = BodyIrGenerator::new(
+        context,
         db,
         type_manager,
         function,

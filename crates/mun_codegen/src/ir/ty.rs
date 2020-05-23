@@ -37,14 +37,13 @@ impl TypeManager {
     }
 
     /// Given a mun type, construct an LLVM IR type
-    pub fn type_ir<D: IrDatabase>(&mut self, db: &D, ty: hir::Ty, params: CodeGenParams) -> AnyTypeEnum {
-        let context = db.context();
+    pub fn type_ir<D: IrDatabase>(&mut self, context: &Context, db: &D, ty: hir::Ty, params: CodeGenParams) -> AnyTypeEnum {
         let layout = db.target_data_layout();
         match ty {
             Ty::Empty => AnyTypeEnum::StructType(context.struct_type(&[], false)),
             Ty::Apply(ApplicationTy { ctor, .. }) => match ctor {
-                TypeCtor::Float(fty) => float_ty_query(context.as_ref(), &layout, fty).into(),
-                TypeCtor::Int(ity) => int_ty_query(context.as_ref(), &layout, ity).into(),
+                TypeCtor::Float(fty) => float_ty_query(context, &layout, fty).into(),
+                TypeCtor::Int(ity) => int_ty_query(context, &layout, ity).into(),
                 TypeCtor::Bool => AnyTypeEnum::IntType(context.bool_type()),
 
                 TypeCtor::FnDef(def @ CallableDef::Function(_)) => {
@@ -53,13 +52,13 @@ impl TypeManager {
                         .params()
                         .iter()
                         .map(|p| {
-                            try_convert_any_to_basic(self.type_ir(db, p.clone(), params.clone())).unwrap()
+                            try_convert_any_to_basic(self.type_ir(context, db, p.clone(), params.clone())).unwrap()
                         })
                         .collect();
 
                     let fn_type = match ty.ret() {
                         Ty::Empty => context.void_type().fn_type(&param_tys, false),
-                        ty => try_convert_any_to_basic(self.type_ir(db, ty.clone(), params))
+                        ty => try_convert_any_to_basic(self.type_ir(context, db, ty.clone(), params))
                             .expect("could not convert return value")
                             .fn_type(&param_tys, false),
                     };
@@ -67,7 +66,7 @@ impl TypeManager {
                     AnyTypeEnum::FunctionType(fn_type)
                 }
                 TypeCtor::Struct(s) => {
-                    let struct_ty = self.struct_ty(db, s);
+                    let struct_ty = self.struct_ty(context, db, s);
                     match s.data(db).memory_kind {
                         hir::StructMemoryKind::GC => struct_ty.ptr_type(AddressSpace::Generic).ptr_type(AddressSpace::Const).into(),
                         hir::StructMemoryKind::Value if params.make_marshallable =>
@@ -81,13 +80,13 @@ impl TypeManager {
         }
     }
 
-    pub fn struct_ty<D: IrDatabase>(&mut self, db: &D, s: hir::Struct) -> StructType {
-        let context = db.context();
+    pub fn struct_ty<D: IrDatabase>(&mut self, context: &Context, db: &D, s: hir::Struct) -> StructType {
         let name = s.name(db).to_string();
         let fields = s.fields(db).into_iter()
             .map(|field| {
                 let field_type = field.ty(db);
                 let field_type_ir = self.type_ir(
+                    context,
                     db,
                     field_type,
                     CodeGenParams {
@@ -121,12 +120,11 @@ impl TypeManager {
         }
     }
 
-    pub fn type_info<D: IrDatabase>(&mut self, db: &D, ty: hir::Ty) -> TypeInfo {
+    pub fn type_info<D: IrDatabase>(&mut self, context: &Context, db: &D, ty: hir::Ty) -> TypeInfo {
         if let Some(info) = self.infos.get(&ty) {
             return info.clone();
         }
 
-        let context = db.context();
         let target = db.target_data();
         let layout = db.target_data_layout();
  
@@ -154,7 +152,7 @@ impl TypeManager {
                     TypeInfo::new_fundamental("core::bool", type_size)
                 }
                 TypeCtor::Struct(s) => {
-                    let ir_ty = self.struct_ty(db, s);
+                    let ir_ty = self.struct_ty(context, db, s);
                     let type_size = TypeSize::from_ir_type(&ir_ty, target.as_ref());
                     return TypeInfo::new_struct(db, s, type_size)
                 }

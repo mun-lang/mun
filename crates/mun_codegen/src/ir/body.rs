@@ -1,3 +1,4 @@
+use inkwell::context::Context;
 use crate::ir::ty::TypeManager;
 use crate::intrinsics;
 use crate::{
@@ -35,6 +36,7 @@ pub(crate) struct ExternalGlobals {
 }
 
 pub(crate) struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
+    context: &'a Context,
     db: &'a D,
     type_manager: &'a mut TypeManager,
     body: Arc<Body>,
@@ -55,6 +57,7 @@ pub(crate) struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
 
 impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     pub fn new(
+        context: &'a Context,
         db: &'a D,
         type_manager: &'a mut TypeManager,
         function: (hir::Function, FunctionValue),
@@ -71,12 +74,12 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         let infer = hir_function.infer(db);
 
         // Construct a builder for the IR function
-        let context = db.context();
         let builder = context.create_builder();
         let body_ir = context.append_basic_block(&ir_function, "body");
         builder.position_at_end(&body_ir);
 
         BodyIrGenerator {
+            context,
             db,
             type_manager,
             body,
@@ -188,7 +191,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             } else if let Some(value) = ret_value {
                 let ret_value = if let Some(hir_struct) = fn_ret_type.as_struct() {
                     if hir_struct.data(self.db).memory_kind == hir::StructMemoryKind::Value {
-                        self.gen_struct_alloc_on_heap(hir_struct, value.into_struct_value())
+                        self.gen_struct_alloc_on_heap(self.context, hir_struct, value.into_struct_value())
                     } else {
                         value
                     }
@@ -244,7 +247,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                             // This unit value will also be optimized out.
                             .or_else(|| match self.infer[expr] {
                                 hir::ty_app!(hir::TypeCtor::Never) => None,
-                                _ => Some(self.db.context().const_struct(&[], false).into()),
+                                _ => Some(self.context.const_struct(&[], false).into()),
                             })
                     }
                     Some(hir::CallableDef::Struct(_)) => Some(self.gen_named_tuple_lit(expr, args)),
@@ -286,7 +289,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                     ),
                 };
 
-                let context = self.db.context();
+                let context = self.context;
                 let ir_ty = match ty.resolve(&self.db.target_data_layout()).bitness {
                     hir::IntBitness::X8 => context.i8_type().const_int(v.value as u64, false),
                     hir::IntBitness::X16 => context.i16_type().const_int(v.value as u64, false),
@@ -312,7 +315,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                     _ => unreachable!("cannot construct an IR value for anything but a float type"),
                 };
 
-                let context = self.db.context();
+                let context = self.context;
                 let ir_ty = match ty.bitness.resolve(&self.db.target_data_layout()) {
                     hir::FloatBitness::X32 => context.f32_type().const_float(v.value),
                     hir::FloatBitness::X64 => context.f64_type().const_float(v.value),
@@ -322,7 +325,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             }
 
             Literal::Bool(value) => {
-                let ty = self.db.context().bool_type();
+                let ty = self.context.bool_type();
                 if *value {
                     ty.const_all_ones().into()
                 } else {
@@ -336,7 +339,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
 
     /// Constructs an empty struct value e.g. `{}`
     fn gen_empty(&mut self) -> BasicValueEnum {
-        self.db.context().const_struct(&[], false).into()
+        self.context.const_struct(&[], false).into()
     }
 
     /// Allocate a struct literal either on the stack or the heap based on the type of the struct.
@@ -346,7 +349,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         args: Vec<BasicValueEnum>,
     ) -> BasicValueEnum {
         // Construct the struct literal
-        let struct_ty = self.type_manager.struct_ty(self.db, hir_struct);
+        let struct_ty = self.type_manager.struct_ty(self.context, self.db, hir_struct);
         let mut value: AggregateValueEnum = struct_ty.get_undef().into();
         for (i, arg) in args.into_iter().enumerate() {
             value = self
@@ -360,18 +363,20 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             hir::StructMemoryKind::Value => struct_lit.into(),
             hir::StructMemoryKind::GC => {
                 // TODO: Root memory in GC
-                self.gen_struct_alloc_on_heap(hir_struct, struct_lit)
+                self.gen_struct_alloc_on_heap(self.context, hir_struct, struct_lit)
             }
         }
     }
 
     fn gen_struct_alloc_on_heap(
         &mut self,
+        context: &Context,
         hir_struct: hir::Struct,
         struct_lit: StructValue,
     ) -> BasicValueEnum {
-        let struct_ir_ty = self.type_manager.struct_ty(self.db, hir_struct);
+        let struct_ir_ty = self.type_manager.struct_ty(context, self.db, hir_struct);
         let new_fn_ptr = self.dispatch_table.gen_intrinsic_lookup(
+            context,
             self.external_globals.dispatch_table,
             &self.builder,
             &intrinsics::new,
@@ -379,14 +384,14 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
 
         let type_info_ptr = self.type_table.gen_type_info_lookup(
             &self.builder,
-            &self.type_manager.type_info(self.db, hir_struct.ty(self.db)),
+            &self.type_manager.type_info(context, self.db, hir_struct.ty(self.db)),
             self.external_globals.type_table,
         );
 
         // HACK: We should be able to use pointers for built-in struct types like `TypeInfo` in intrinsics
         let type_info_ptr = self.builder.build_bitcast(
             type_info_ptr,
-            self.db.context().i8_type().ptr_type(AddressSpace::Const),
+            self.context.i8_type().ptr_type(AddressSpace::Const),
             "type_info_ptr_to_i8_ptr",
         );
 
@@ -519,6 +524,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 let builder = self.new_alloca_builder();
                 let pat_ty = self.infer[pat].clone();
                 let ty = try_convert_any_to_basic(self.type_manager.type_ir(
+                    self.context,
                     self.db,
                     pat_ty.clone(),
                     CodeGenParams {
@@ -1071,7 +1077,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             .into_int_value();
 
         // Generate the code blocks to branch to
-        let context = self.db.context();
+        let context = self.context;
         let mut then_block = context.append_basic_block(&self.fn_value, "then");
         let else_block_and_expr = match &else_branch {
             Some(else_branch) => Some((
@@ -1193,7 +1199,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         condition_expr: ExprId,
         body_expr: ExprId,
     ) -> Option<BasicValueEnum> {
-        let context = self.db.context();
+        let context = self.context;
         let cond_block = context.append_basic_block(&self.fn_value, "whilecond");
         let loop_block = context.append_basic_block(&self.fn_value, "while");
         let exit_block = context.append_basic_block(&self.fn_value, "afterwhile");
@@ -1232,7 +1238,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     }
 
     fn gen_loop(&mut self, _expr: ExprId, body_expr: ExprId) -> Option<BasicValueEnum> {
-        let context = self.db.context();
+        let context = self.context;
         let loop_block = context.append_basic_block(&self.fn_value, "loop");
         let exit_block = context.append_basic_block(&self.fn_value, "exit");
 

@@ -28,8 +28,6 @@ use std::sync::Arc;
 /// functions. This basically enables all hot reloading within Mun.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct DispatchTable {
-    // The LLVM context in which all LLVM types live
-    context: Arc<Context>,
     // The target for which to create the dispatch table
     target: Arc<TargetData>,
     // This contains the function that map to the DispatchTable struct fields
@@ -97,11 +95,12 @@ impl DispatchTable {
     /// struct
     pub fn gen_intrinsic_lookup(
         &self,
+        context: &Context,
         table_ref: Option<inkwell::values::GlobalValue>,
         builder: &inkwell::builder::Builder,
         intrinsic: &impl Intrinsic,
     ) -> PointerValue {
-        let prototype = intrinsic.prototype(self.context.as_ref(), self.target.as_ref());
+        let prototype = intrinsic.prototype(context, self.target.as_ref());
 
         // Get the index of the intrinsic
         let index = *self
@@ -151,9 +150,9 @@ impl DispatchTable {
 
 /// A struct that can be used to build the dispatch table from HIR.
 pub(crate) struct DispatchTableBuilder<'a, D: IrDatabase> {
-    db: &'a D,
     // The LLVM context in which all LLVM types live
-    context: Arc<Context>,
+    context: &'a Context,
+    db: &'a D,
     // The module in which all values live
     module: &'a Module,
     // The target for which to create the dispatch table
@@ -178,13 +177,14 @@ struct TypedDispatchableFunction {
 impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
     /// Creates a new builder that can generate a dispatch function.
     pub fn new(
+        context: &'a Context,
         db: &'a D,
         module: &'a Module,
         intrinsics: &BTreeMap<FunctionPrototype, FunctionType>,
     ) -> Self {
         let mut table = DispatchTableBuilder {
+            context,
             db,
-            context: db.context(),
             module,
             target: db.target_data(),
             function_to_idx: Default::default(),
@@ -253,6 +253,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
             let sig = hir_type.callable_sig(self.db).unwrap();
             let ir_type = type_manager
                 .type_ir(
+                    self.context,
                     self.db,
                     hir_type,
                     CodeGenParams {
@@ -263,10 +264,10 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
             let arg_types = sig
                 .params()
                 .iter()
-                .map(|arg| type_manager.type_info(self.db, arg.clone()))
+                .map(|arg| type_manager.type_info(self.context, self.db, arg.clone()))
                 .collect();
             let ret_type = if !sig.ret().is_empty() {
-                Some(type_manager.type_info(self.db, sig.ret().clone()))
+                Some(type_manager.type_info(self.context, self.db, sig.ret().clone()))
             } else {
                 None
             };
@@ -325,6 +326,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
                         Some(f) if f.is_extern(self.db) => function_type.const_null(),
                         // Case mun function: Get the function location as the initializer
                         Some(f) => function::gen_signature(
+                            self.context,
                             self.db,
                             type_manager,
                             f,
@@ -346,7 +348,6 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
         let table_type = self.table_ref.map(|_| self.table_type);
 
         DispatchTable {
-            context: self.context,
             target: self.target,
             function_to_idx: self.function_to_idx,
             prototype_to_idx: self.prototype_to_idx,

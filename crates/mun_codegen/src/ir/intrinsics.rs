@@ -1,3 +1,4 @@
+use inkwell::context::Context;
 use crate::intrinsics::{self, Intrinsic};
 use crate::ir::dispatch_table::FunctionPrototype;
 use crate::IrDatabase;
@@ -10,19 +11,20 @@ use std::sync::Arc;
 pub type IntrinsicsMap = BTreeMap<FunctionPrototype, FunctionType>;
 
 fn collect_intrinsic<D: IrDatabase>(
+    context: &Context,
     d: &D,
     entries: &mut IntrinsicsMap,
     intrinsic: &impl Intrinsic,
 ) {
-    let context = d.context();
     let target = d.target_data();
-    let prototype = intrinsic.prototype(context.as_ref(), target.as_ref());
+    let prototype = intrinsic.prototype(context, target.as_ref());
     entries
         .entry(prototype)
-        .or_insert_with(|| intrinsic.ir_type(context.as_ref(), target.as_ref()));
+        .or_insert_with(|| intrinsic.ir_type(context, target.as_ref()));
 }
 
 fn collect_expr<D: IrDatabase>(
+    context: &Context,
     db: &D,
     entries: &mut IntrinsicsMap,
     needs_alloc: &mut bool,
@@ -36,7 +38,7 @@ fn collect_expr<D: IrDatabase>(
     if let Expr::Call { callee, .. } = expr {
         match infer[*callee].as_callable_def() {
             Some(hir::CallableDef::Struct(_)) => {
-                collect_intrinsic(db, entries, &intrinsics::new);
+                collect_intrinsic(context, db, entries, &intrinsics::new);
                 // self.collect_intrinsic(module, entries, &intrinsics::drop);
                 *needs_alloc = true;
             }
@@ -46,7 +48,7 @@ fn collect_expr<D: IrDatabase>(
     }
 
     if let Expr::RecordLit { .. } = expr {
-        collect_intrinsic(db, entries, &intrinsics::new);
+        collect_intrinsic(context, db, entries, &intrinsics::new);
         // self.collect_intrinsic(module, entries, &intrinsics::drop);
         *needs_alloc = true;
     }
@@ -59,32 +61,34 @@ fn collect_expr<D: IrDatabase>(
             .expect("unknown path");
 
         if let hir::Resolution::Def(hir::ModuleDef::Struct(_)) = resolution {
-            collect_intrinsic(db, entries, &intrinsics::new);
+            collect_intrinsic(context, db, entries, &intrinsics::new);
             // self.collect_intrinsic( module, entries, &intrinsics::drop);
             *needs_alloc = true;
         }
     }
 
     // Recurse further
-    expr.walk_child_exprs(|expr_id| collect_expr(db, entries, needs_alloc, expr_id, body, infer))
+    expr.walk_child_exprs(|expr_id| collect_expr(context, db, entries, needs_alloc, expr_id, body, infer))
 }
 
 pub fn collect_fn_body<D: IrDatabase>(
+    context: &Context,
     db: &D,
     entries: &mut IntrinsicsMap,
     needs_alloc: &mut bool,
     body: &Arc<Body>,
     infer: &InferenceResult,
 ) {
-    collect_expr(db, entries, needs_alloc, body.body_expr(), body, infer);
+    collect_expr(context, db, entries, needs_alloc, body.body_expr(), body, infer);
 }
 
 pub fn collect_wrapper_body<D: IrDatabase>(
+    context: &Context,
     db: &D,
     entries: &mut IntrinsicsMap,
     needs_alloc: &mut bool,
 ) {
-    collect_intrinsic(db, entries, &intrinsics::new);
+    collect_intrinsic(context, db, entries, &intrinsics::new);
     // self.collect_intrinsic(entries, &intrinsics::drop, module);
     *needs_alloc = true;
 }

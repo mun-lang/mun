@@ -1,3 +1,4 @@
+use inkwell::context::Context;
 use crate::ir::ty::TypeManager;
 use crate::code_gen::{gen_global, gen_struct_ptr_array, intern_string};
 use crate::ir::{
@@ -19,6 +20,7 @@ use std::collections::HashSet;
 
 /// Construct a `MunFunctionPrototype` struct for the specified HIR function.
 fn gen_prototype_from_function<D: IrDatabase>(
+    context: &Context,
     db: &D,
     type_manager: &mut TypeManager,
     module: &Module,
@@ -34,13 +36,13 @@ fn gen_prototype_from_function<D: IrDatabase>(
     };
 
     let fn_sig = function.ty(db).callable_sig(db).unwrap();
-    let ret_type_ir = gen_signature_return_type(db, type_manager, module, types, fn_sig.ret().clone());
+    let ret_type_ir = gen_signature_return_type(context, db, type_manager, module, types, fn_sig.ret().clone());
 
     let param_types: Vec<PointerValue> = fn_sig
         .params()
         .iter()
         .map(|ty| {
-            TypeTable::get(module, &type_manager.type_info(db, ty.clone()))
+            TypeTable::get(module, &type_manager.type_info(context, db, ty.clone()))
                 .unwrap()
                 .as_pointer_value()
         })
@@ -125,6 +127,7 @@ fn gen_prototype_from_dispatch_entry(
 /// Given a function, construct a pointer to a `MunTypeInfo` global that represents the return type
 /// of the function; or `null` if the return type is empty.
 fn gen_signature_return_type<D: IrDatabase>(
+    context: &Context,
     db: &D,
     type_manager: &mut TypeManager,
     module: &Module,
@@ -137,7 +140,7 @@ fn gen_signature_return_type<D: IrDatabase>(
         if ret_type.is_empty() {
             None
         } else {
-            Some(type_manager.type_info(db, ret_type))
+            Some(type_manager.type_info(context, db, ret_type))
         },
     )
 }
@@ -164,6 +167,7 @@ fn gen_signature_return_type_from_type_info(
 /// Construct a global that holds a reference to all functions. e.g.:
 /// MunFunctionDefinition[] definitions = { ... }
 fn get_function_definition_array<'a, D: IrDatabase>(
+    context: &Context,
     db: &D,
     type_manager: &mut TypeManager,
     module: &Module,
@@ -183,7 +187,7 @@ fn get_function_definition_array<'a, D: IrDatabase>(
             value.set_linkage(Linkage::Private);
 
             // Generate the signature from the function
-            let prototype = gen_prototype_from_function(db, type_manager, module, types, *f);
+            let prototype = gen_prototype_from_function(context, db, type_manager, module, types, *f);
 
             // Generate the function info value
             types.function_definition_type.const_named_struct(&[
@@ -253,6 +257,7 @@ fn gen_dispatch_table(
 /// `get_info` is constructed that returns a struct `MunAssemblyInfo`. See the `mun_abi` crate
 /// for the ABI that `get_info` exposes.
 pub(super) fn gen_reflection_ir(
+    context: &Context,
     db: &impl IrDatabase,
     type_manager: &mut TypeManager,
     module: &Module,
@@ -264,7 +269,7 @@ pub(super) fn gen_reflection_ir(
     let abi_types = gen_abi_types(&module.get_context());
 
     let num_functions = api.len();
-    let function_info = get_function_definition_array(db, type_manager, module, &abi_types, api.iter());
+    let function_info = get_function_definition_array(context, db, type_manager, module, &abi_types, api.iter());
 
     let type_table_ir = if let Some(type_table) = module.get_global(TypeTable::NAME) {
         type_table.as_pointer_value()
@@ -294,7 +299,7 @@ pub(super) fn gen_reflection_ir(
 
     // Construct the actual `get_info` function
     gen_get_info_fn(db, module, &abi_types, module_info, dispatch_table);
-    gen_set_allocator_handle_fn(db, module);
+    gen_set_allocator_handle_fn(context, module);
 }
 
 /// Construct the actual `get_info` function.
@@ -342,8 +347,8 @@ fn gen_get_info_fn(
         );
     }
 
-    let builder = db.context().create_builder();
-    let body_ir = db.context().append_basic_block(&get_symbols_fn, "body");
+    let builder = context.create_builder();
+    let body_ir = context.append_basic_block(&get_symbols_fn, "body");
     builder.position_at_end(&body_ir);
 
     // Get a pointer to the IR value that will hold the return value. Again this differs depending
@@ -387,8 +392,7 @@ fn gen_get_info_fn(
     function::create_pass_manager(&module, db.optimization_lvl()).run_on(&get_symbols_fn);
 }
 
-fn gen_set_allocator_handle_fn(db: &impl IrDatabase, module: &Module) {
-    let context = module.get_context();
+fn gen_set_allocator_handle_fn(context: &Context, module: &Module) {
     let allocator_handle_type = context.i8_type().ptr_type(AddressSpace::Generic);
 
     let set_allocator_handle_fn_type = context
@@ -401,9 +405,8 @@ fn gen_set_allocator_handle_fn(db: &impl IrDatabase, module: &Module) {
         Some(Linkage::DLLExport),
     );
 
-    let builder = db.context().create_builder();
-    let body_ir = db
-        .context()
+    let builder = context.create_builder();
+    let body_ir = context
         .append_basic_block(&set_allocator_handle_fn, "body");
     builder.position_at_end(&body_ir);
 

@@ -1,6 +1,7 @@
 //! `Driver` is a stateful compiler frontend that enables incremental compilation by retaining state
 //! from previous compilation.
 
+use mun_codegen::Context;
 use crate::{db::CompilerDatabase, diagnostics::diagnostics, PathOrInline};
 use mun_codegen::{IrDatabase, ModuleBuilder, TypeManager};
 use mun_hir::{FileId, HirDatabase, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
@@ -23,6 +24,7 @@ pub const WORKSPACE: SourceRootId = SourceRootId(0);
 
 #[derive(Debug)]
 pub struct Driver {
+    context: Context,
     db: CompilerDatabase,
     type_manager: TypeManager,
     out_dir: Option<PathBuf>,
@@ -33,6 +35,7 @@ impl Driver {
     /// Constructs a driver with a specific configuration.
     pub fn with_config(config: Config) -> Self {
         let mut driver = Driver {
+            context: Context::create(),
             db: CompilerDatabase::new(),
             type_manager: TypeManager::new(),
             out_dir: None,
@@ -41,9 +44,6 @@ impl Driver {
 
         // Move relevant configuration into the database
         driver.db.set_target(config.target);
-        driver
-            .db
-            .set_context(Arc::new(mun_codegen::Context::create()));
         driver.db.set_optimization_lvl(config.optimization_lvl);
 
         driver.out_dir = config.out_dir;
@@ -136,7 +136,7 @@ impl Driver {
 impl Driver {
     /// Generate an assembly for the given file
     pub fn write_assembly(&mut self, file_id: FileId) -> Result<PathBuf, failure::Error> {
-        let module_builder = ModuleBuilder::new(&self.db, file_id)?;
+        let module_builder = ModuleBuilder::new(&self.context, &self.db, file_id)?;
         let obj_file = module_builder.build(&mut self.type_manager)?;
         obj_file.into_shared_object(self.out_dir.as_deref())
     }
