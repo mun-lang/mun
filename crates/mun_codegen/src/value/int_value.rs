@@ -1,6 +1,6 @@
 use super::{
-    AsValue, ConcreteValueType, IrTypeContext, IrValueContext, PointerValueType, SizedValueType,
-    Value,
+    AddressableType, AsValue, ConcreteValueType, IrTypeContext, IrValueContext, PointerValueType,
+    SizedValueType, Value,
 };
 use inkwell::AddressSpace;
 
@@ -22,6 +22,8 @@ macro_rules! impl_as_int_ir_value {
                     Self::get_ir_type(context).ptr_type(address_space.unwrap_or(AddressSpace::Generic))
                 }
             }
+
+            impl AddressableType<$ty> for $ty {}
         )*
     }
 }
