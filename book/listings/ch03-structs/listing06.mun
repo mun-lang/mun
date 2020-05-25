@@ -1,6 +1,6 @@
 # struct Vector2 {
-#     x: float,
-#     y: float,
+#     x: f32,
+#     y: f32,
 # }
 pub fn vector2_add(lhs: Vector2, rhs: Vector2) -> Vector2 {
     lhs.x += rhs.x;

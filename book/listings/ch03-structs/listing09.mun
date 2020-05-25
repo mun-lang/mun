@@ -1,4 +1,4 @@
 struct Vector2 {
-    x: float,
-    y: float,
+    x: f32,
+    y: f32,
 }
