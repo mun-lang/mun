@@ -1,2 +1,2 @@
-# struct Vector3(float, float, float)
+# struct Vector3(f32, f32, f32)
 let xyz = Vector3(-1.0, 0.0, 1.0);

@@ -1,1 +1,1 @@
-struct Vector3(float, float, float)
+struct Vector3(f32, f32, f32)

@@ -1,6 +1,6 @@
 # struct Vector2 {
-#     x: float,
-#     y: float,
+#     x: f32,
+#     y: f32,
 # }
 let xy = Vector2 {
     x: 1.0,
