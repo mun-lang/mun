@@ -34,7 +34,7 @@ export async function execute(cmd) {
         } else if(isMacOS) {
             await exec.exec("brew install llvm@7")
             let llvmPath = await execute("brew --prefix llvm@7");
-            core.addPath(`${llvmPath}/bin`)       
+            core.addPath(`${llvmPath}/bin`)   
         } else if(isWindows) {
             let llvmCachedPath = tc.find("llvm", "7.1.0", "windows-x64");
             if(!llvmCachedPath) {
@@ -44,6 +44,7 @@ export async function execute(cmd) {
                     .then(extractPath => tc.cacheDir(extractPath, "llvm", "7.1.0", "windows-x64"));
             }
             core.addPath(`${llvmCachedPath}/bin`)
+            core.exportVariable('LIBCLANG_PATH', `${llvmCachedPath}/bin`)
         } else {
             core.setFailed(`unsupported platform '${process.platform}'`)
         }    
