@@ -60,6 +60,7 @@ jobs:
         uses: ./.github/actions/install-llvm
 
       - name: Cargo build
+        if: ${{ matrix.config.os == 'ubuntu-latest' && matrix.config.toolchain == 'stable' }}
         uses: actions-rs/cargo@v1
         continue-on-error: ${{ matrix.config.toolchain == 'nightly' }}
         with:
