@@ -1,6 +1,5 @@
 use crate::ir::ir_types as ir;
 use crate::ir::{
-    abi_types::{gen_abi_types, AbiTypes},
     dispatch_table::{DispatchTable, DispatchableFunction},
     function,
     type_table::TypeTable,
@@ -207,9 +206,6 @@ pub(super) fn gen_reflection_ir(
 ) {
     let module = context.module;
 
-    // Get all the types
-    let abi_types = gen_abi_types(context.type_context);
-
     let num_functions = api.len() as u32;
     let functions = get_function_definition_array(db, context, api.iter());
 
@@ -234,7 +230,7 @@ pub(super) fn gen_reflection_ir(
     let dispatch_table = gen_dispatch_table(context, dispatch_table);
 
     // Construct the actual `get_info` function
-    gen_get_info_fn(db, context, &abi_types, module_info, dispatch_table);
+    gen_get_info_fn(db, context, module_info, dispatch_table);
     gen_set_allocator_handle_fn(db, context);
 }
 
@@ -242,7 +238,6 @@ pub(super) fn gen_reflection_ir(
 fn gen_get_info_fn(
     db: &impl IrDatabase,
     context: &IrValueContext,
-    abi_types: &AbiTypes,
     module_info: ir::ModuleInfo,
     dispatch_table: ir::DispatchTable,
 ) {
@@ -292,7 +287,10 @@ fn gen_get_info_fn(
             .unwrap()
             .into_pointer_value()
     } else {
-        builder.build_alloca(abi_types.assembly_info_type, "")
+        builder.build_alloca(
+            Value::<ir::AssemblyInfo>::get_ir_type(context.type_context),
+            "",
+        )
     };
 
     // Get access to the structs internals

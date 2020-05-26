@@ -1,5 +1,4 @@
 use super::{
-    abi_types::{gen_abi_types, AbiTypes},
     adt,
     dispatch_table::{DispatchTable, DispatchTableBuilder},
     intrinsics,
@@ -17,8 +16,6 @@ use std::{collections::BTreeMap, sync::Arc};
 pub struct FileGroupIR {
     /// The LLVM module that contains the IR
     pub(crate) llvm_module: Module,
-    /// Contains references to all of the ABI's IR types.
-    pub(crate) abi_types: AbiTypes,
     /// The dispatch table
     pub(crate) dispatch_table: DispatchTable,
     /// The type table
@@ -86,7 +83,6 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: hir::FileId) -> Arc<FileGr
         context: &db.context(),
         module: &llvm_module,
     };
-    let abi_types = gen_abi_types(&type_context);
     let mut type_table_builder =
         TypeTableBuilder::new(db, &value_context, intrinsics_map.keys(), &dispatch_table);
 
@@ -118,7 +114,6 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: hir::FileId) -> Arc<FileGr
 
     Arc::new(FileGroupIR {
         llvm_module,
-        abi_types,
         dispatch_table,
         type_table,
         allocator_handle_type,

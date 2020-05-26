@@ -6,7 +6,6 @@ use inkwell::types::{
 };
 use inkwell::AddressSpace;
 
-pub(crate) mod abi_types;
 pub mod adt;
 pub mod body;
 #[macro_use]
