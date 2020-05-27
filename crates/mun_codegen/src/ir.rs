@@ -14,9 +14,9 @@ pub mod file;
 pub(crate) mod file_group;
 pub mod function;
 mod intrinsics;
-pub mod ir_types;
 pub mod ty;
 pub(crate) mod type_table;
+pub mod types;
 
 /// Try to down cast an `AnyTypeEnum` into a `BasicTypeEnum`.
 fn try_convert_any_to_basic(ty: AnyTypeEnum) -> Option<BasicTypeEnum> {
