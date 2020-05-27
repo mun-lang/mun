@@ -14,7 +14,7 @@ use inkwell::{
 };
 use std::{collections::HashMap, sync::Arc};
 
-use crate::ir::ir_types as ir;
+use crate::ir::types as ir;
 use crate::value::Global;
 use hir::ResolveBitness;
 use inkwell::basic_block::BasicBlock;

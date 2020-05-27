@@ -1,4 +1,4 @@
-use super::ir_types as ir;
+use super::types as ir;
 use crate::ir::dispatch_table::{DispatchTable, FunctionPrototype};
 use crate::type_info::{TypeGroup, TypeInfo};
 use crate::value::{AsValue, CanInternalize, Global, IrValueContext, IterAsIrValue, Value};
@@ -192,7 +192,7 @@ impl<'a, 'ctx, 'm, D: IrDatabase> TypeTableBuilder<'a, 'ctx, 'm, D> {
                 .as_value(self.value_context),
             size_in_bits: type_info.size.bit_size as u32,
             alignment: type_info.size.alignment as u8,
-            type_group: type_info.group.to_abi_type(),
+            group: type_info.group.to_abi_type(),
         }
         .as_value(self.value_context);
 

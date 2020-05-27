@@ -1,4 +1,4 @@
-use crate::ir::ir_types as ir;
+use crate::ir::types as ir;
 use crate::ir::{
     dispatch_table::{DispatchTable, DispatchableFunction},
     function,
