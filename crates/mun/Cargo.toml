@@ -16,10 +16,13 @@ default-run = "mun"
 [dependencies]
 failure = "0.1.7"
 clap = "2.33.0"
+log = "0.4"
+pretty_env_logger = "0.4"
 mun_abi = { version = "=0.2.0", path = "../mun_abi" }
 mun_compiler = { version = "=0.2.0", path = "../mun_compiler" }
 mun_compiler_daemon = { version = "=0.2.0", path = "../mun_compiler_daemon" }
 mun_runtime = { version = "=0.2.0", path = "../mun_runtime" }
+mun_language_server = { version = "=0.1.0", path = "../mun_language_server" }
 
 [dev-dependencies.cargo-husky]
 version = "1"
