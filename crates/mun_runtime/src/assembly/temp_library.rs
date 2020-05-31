@@ -1,7 +1,6 @@
 use std::fs;
 use std::path::Path;
 
-use anyhow::Result;
 use libloading::Library;
 
 /// A structure that holds a `Library` instance but creates a unique file per load. This enables
@@ -16,7 +15,7 @@ pub struct TempLibrary {
 }
 
 impl TempLibrary {
-    pub fn new(path: &Path) -> Result<Self> {
+    pub fn new(path: &Path) -> Result<Self, anyhow::Error> {
         let tmp_path = tempfile::NamedTempFile::new()?.into_temp_path();
         fs::copy(path, &tmp_path)?;
         let library = Library::new(&tmp_path)?;

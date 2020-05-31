@@ -3,7 +3,6 @@ use std::path::{Path, PathBuf};
 
 use crate::DispatchTable;
 use abi::AssemblyInfo;
-use anyhow::Result;
 use libloading::Symbol;
 
 mod temp_library;
@@ -29,7 +28,7 @@ impl Assembly {
         library_path: &Path,
         gc: Arc<GarbageCollector>,
         runtime_dispatch_table: &DispatchTable,
-    ) -> Result<Self> {
+    ) -> Result<Self, anyhow::Error> {
         let library = TempLibrary::new(library_path)?;
 
         // Check whether the library has a symbols function
@@ -151,7 +150,7 @@ impl Assembly {
         &mut self,
         library_path: &Path,
         runtime_dispatch_table: &mut DispatchTable,
-    ) -> Result<()> {
+    ) -> Result<(), anyhow::Error> {
         let mut new_assembly =
             Assembly::load(library_path, self.allocator.clone(), runtime_dispatch_table)?;
 

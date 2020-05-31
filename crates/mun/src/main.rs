@@ -4,12 +4,11 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use anyhow::anyhow;
-use anyhow::Result;
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use mun_compiler::{Config, DisplayColor, PathOrInline, Target};
 use mun_runtime::{invoke_fn, ReturnTypeReflection, Runtime, RuntimeBuilder};
 
-fn main() -> Result<()> {
+fn main() -> Result<(), anyhow::Error> {
     let matches = App::new("mun")
         .version(env!("CARGO_PKG_VERSION"))
         .author("The Mun Project Developers")
@@ -82,7 +81,7 @@ fn main() -> Result<()> {
 }
 
 /// Build the source file specified
-fn build(matches: &ArgMatches) -> Result<()> {
+fn build(matches: &ArgMatches) -> Result<(), anyhow::Error> {
     let options = compiler_options(matches)?;
     if matches.is_present("watch") {
         mun_compiler_daemon::main(options)
@@ -92,7 +91,7 @@ fn build(matches: &ArgMatches) -> Result<()> {
 }
 
 /// Starts the runtime with the specified library and invokes function `entry`.
-fn start(matches: &ArgMatches) -> Result<()> {
+fn start(matches: &ArgMatches) -> Result<(), anyhow::Error> {
     let runtime = runtime(matches)?;
 
     let borrowed = runtime.borrow();
@@ -133,7 +132,7 @@ fn start(matches: &ArgMatches) -> Result<()> {
     }
 }
 
-fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOptions> {
+fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOptions, anyhow::Error> {
     let optimization_lvl = match matches.value_of("opt-level") {
         Some("0") => mun_compiler::OptimizationLevel::None,
         Some("1") => mun_compiler::OptimizationLevel::Less,
@@ -166,7 +165,7 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOption
     })
 }
 
-fn runtime(matches: &ArgMatches) -> Result<Rc<RefCell<Runtime>>> {
+fn runtime(matches: &ArgMatches) -> Result<Rc<RefCell<Runtime>>, anyhow::Error> {
     let builder = RuntimeBuilder::new(
         matches.value_of("LIBRARY").unwrap(), // Safe because its a required arg
     );

@@ -1,6 +1,5 @@
 use crate::{project_root, reformat, update};
 use anyhow::anyhow;
-use anyhow::Result;
 use std::fs;
 use std::path::Path;
 use teraron::Mode;
@@ -10,7 +9,7 @@ pub const SYNTAX_KINDS: &str = "crates/mun_syntax/src/syntax_kind/generated.rs.t
 pub const AST: &str = "crates/mun_syntax/src/ast/generated.rs.tera";
 
 /// Generates the generated.rs for AST and syntax nodes.
-pub fn generate(mode: Mode) -> Result<()> {
+pub fn generate(mode: Mode) -> Result<(), anyhow::Error> {
     let grammar = project_root().join(GRAMMAR);
     let syntax_kinds = project_root().join(SYNTAX_KINDS);
     let ast = project_root().join(AST);
@@ -20,7 +19,7 @@ pub fn generate(mode: Mode) -> Result<()> {
 }
 
 /// Generate file contents from a template
-fn generate_from_template(template: &Path, src: &Path, mode: Mode) -> Result<()> {
+fn generate_from_template(template: &Path, src: &Path, mode: Mode) -> Result<(), anyhow::Error> {
     let file_name = template.file_stem().unwrap().to_str().unwrap();
     let tgt = template.with_file_name(file_name);
     let template = fs::read_to_string(template)?;

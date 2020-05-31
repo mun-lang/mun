@@ -1,6 +1,5 @@
 use crate::{project_root, reformat, update};
 use anyhow::anyhow;
-use anyhow::Result;
 use teraron::Mode;
 
 pub const ABI_DIR: &str = "crates/mun_abi";
@@ -38,7 +37,7 @@ impl ParseCallbacks for RemoveVendorName {
 }
 
 /// Generates the FFI bindings for the Mun ABI
-pub fn generate(mode: Mode) -> Result<()> {
+pub fn generate(mode: Mode) -> Result<(), anyhow::Error> {
     let crate_dir = project_root().join(ABI_DIR);
     let output_file_path = crate_dir.join("src/autogen.rs");
     let input_file_path = crate_dir.join("c/include/mun_abi.h");

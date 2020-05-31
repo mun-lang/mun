@@ -1,9 +1,8 @@
 use clap::{App, SubCommand};
 
-use anyhow::Result;
 use tools::Overwrite;
 
-fn main() -> Result<()> {
+fn main() -> Result<(), anyhow::Error> {
     let matches = App::new("tasks")
         .setting(clap::AppSettings::SubcommandRequiredElseHelp)
         .subcommand(SubCommand::with_name("gen-syntax"))

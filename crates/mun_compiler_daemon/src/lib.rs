@@ -1,13 +1,12 @@
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
-use anyhow::Result;
 use mun_compiler::{CompilerOptions, Driver, PathOrInline};
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 
 use std::io::stderr;
 
-pub fn main(options: CompilerOptions) -> Result<()> {
+pub fn main(options: CompilerOptions) -> Result<(), anyhow::Error> {
     // Need to canonicalize path to do comparisons
     let input_path = match &options.input {
         PathOrInline::Path(path) => path.canonicalize()?,

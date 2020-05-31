@@ -1,11 +1,10 @@
 use crate::{project_root, update};
-use anyhow::Result;
 use teraron::Mode;
 
 pub const RUNTIME_CAPI_DIR: &str = "crates/mun_runtime_capi";
 
 /// Generates the FFI bindings for the Mun runtime
-pub fn generate(mode: Mode) -> Result<()> {
+pub fn generate(mode: Mode) -> Result<(), anyhow::Error> {
     let crate_dir = project_root().join(RUNTIME_CAPI_DIR);
     let file_path = crate_dir.join("ffi/include/mun/runtime_capi.h");
 

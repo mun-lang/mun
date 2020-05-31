@@ -2,7 +2,6 @@
 //! from previous compilation.
 
 use crate::{db::CompilerDatabase, diagnostics::diagnostics, PathOrInline};
-use anyhow::Result;
 use mun_codegen::{IrDatabase, ModuleBuilder};
 use mun_hir::{FileId, HirDatabase, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
 
@@ -51,7 +50,10 @@ impl Driver {
     }
 
     /// Constructs a driver with a configuration and a single file.
-    pub fn with_file(config: Config, path: PathOrInline) -> Result<(Driver, FileId)> {
+    pub fn with_file(
+        config: Config,
+        path: PathOrInline,
+    ) -> Result<(Driver, FileId), anyhow::Error> {
         let mut driver = Driver::with_config(config);
 
         // Construct a SourceRoot
@@ -107,7 +109,7 @@ impl Driver {
 
     /// Emits all diagnostic messages currently in the database; returns true if errors were
     /// emitted.
-    pub fn emit_diagnostics(&self, writer: &mut dyn std::io::Write) -> Result<bool> {
+    pub fn emit_diagnostics(&self, writer: &mut dyn std::io::Write) -> Result<bool, anyhow::Error> {
         let mut has_errors = false;
         let dlf = DisplayListFormatter::new(self.display_color.should_enable(), false);
         for file_id in self.db.source_root(WORKSPACE).files() {
@@ -128,7 +130,7 @@ impl Driver {
 
 impl Driver {
     /// Generate an assembly for the given file
-    pub fn write_assembly(&mut self, file_id: FileId) -> Result<PathBuf> {
+    pub fn write_assembly(&mut self, file_id: FileId) -> Result<PathBuf, anyhow::Error> {
         let module_builder = ModuleBuilder::new(&self.db, file_id)?;
         let obj_file = module_builder.build()?;
         obj_file.into_shared_object(self.out_dir.as_deref())

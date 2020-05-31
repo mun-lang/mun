@@ -1,6 +1,5 @@
 #![allow(dead_code, unused_macros)]
 
-use anyhow::Result;
 use mun_compiler::{Config, DisplayColor, Driver, FileId, PathOrInline, RelativePathBuf};
 use mun_runtime::{IntoFunctionDefinition, Runtime, RuntimeBuilder};
 use std::io::Cursor;

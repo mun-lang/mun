@@ -14,8 +14,7 @@ hir = { path = "../mun_hir", package = "mun_hir" }
 mun_target = { path = "../mun_target" }
 mun_lld = { path = "../mun_lld" }
 anyhow = "1.0"
-thiserror = "1.0.17"
-displaydoc = "0.1"
+thiserror = "1.0"
 salsa="0.12"
 md5="0.6.1"
 array-init="0.1.0"

@@ -3,7 +3,6 @@ mod linux_base;
 mod windows_msvc_base;
 use crate::host_triple;
 
-use displaydoc::Display;
 use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash)]
@@ -82,12 +81,12 @@ impl Default for TargetOptions {
         }
     }
 }
-#[derive(Display, Error, Debug)]
+#[derive(Error, Debug)]
 pub enum LoadTargetError {
-    /// target not found: {0}
+    #[error("target not found: {0}")]
     BuiltinTargetNotFound(String),
 
-    /// {0}
+    #[error("{0}")]
     Other(String),
 }
 

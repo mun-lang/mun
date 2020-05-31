@@ -11,8 +11,7 @@ description = "Command-line interface for compiling, monitoring and running Mun 
 
 [dependencies]
 anyhow = "1.0"
-thiserror = "1.0.17"
-displaydoc = "0.1"
+thiserror = "1.0"
 clap = "2.33.0"
 mun_abi = { path = "../mun_abi" }
 mun_compiler = { path = "../mun_compiler" }
@@ -20,6 +19,6 @@ mun_compiler_daemon = { path = "../mun_compiler_daemon" }
 mun_runtime = { path = "../mun_runtime" }
 
 [dev-dependencies.cargo-husky]
-version = "1.5"
+version = "1"
 default-features = false # Disable features which are enabled by default
 features = ["precommit-hook", "run-cargo-test", "run-cargo-fmt", "run-cargo-clippy", "run-for-all"]

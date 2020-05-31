@@ -11,8 +11,7 @@ description = "Describes compilation targets for Mun"
 [dependencies]
 log = "0.4.8"
 anyhow = "1.0"
-thiserror = "1.0.17"
-displaydoc = "0.1"
+thiserror = "1.0"
 
 [dev-dependencies]
 insta="0.16"

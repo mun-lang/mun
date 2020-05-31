@@ -2,14 +2,13 @@ use mun_target::spec;
 use mun_target::spec::LinkerFlavor;
 use std::path::{Path, PathBuf};
 
-use displaydoc::Display;
 use thiserror::Error;
 
-#[derive(Display, Error, Debug)]
+#[derive(Error, Debug)]
 pub enum LinkerError {
-    /// {0}
+    #[error("{0}")]
     LinkError(String),
-    /// "path contains invalid UTF-8 characters: {0:?}"
+    #[error("path contains invalid UTF-8 characters: {0:?}")]
     PathError(PathBuf),
 }
 

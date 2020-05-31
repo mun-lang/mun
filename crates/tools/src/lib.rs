@@ -1,5 +1,3 @@
-use anyhow::Result;
-
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -12,7 +10,7 @@ pub mod syntax;
 
 /// A helper to update file on disk if it has changed.
 /// With verify = false,
-fn update(path: &Path, contents: &str, mode: Mode) -> Result<()> {
+fn update(path: &Path, contents: &str, mode: Mode) -> Result<(), anyhow::Error> {
     let old_contents = fs::read_to_string(path)?;
     let old_contents = old_contents.replace("\r\n", "\n");
     let contents = contents.replace("\r\n", "\n");
@@ -29,7 +27,7 @@ fn update(path: &Path, contents: &str, mode: Mode) -> Result<()> {
     Ok(())
 }
 
-fn reformat(text: impl std::fmt::Display) -> Result<String> {
+fn reformat(text: impl std::fmt::Display) -> Result<String, anyhow::Error> {
     let mut rustfmt = Command::new("rustfmt")
         //.arg("--config-path")
         //.arg(project_root().join("rustfmt.toml"))

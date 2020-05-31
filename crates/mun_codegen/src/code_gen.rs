@@ -1,7 +1,5 @@
 use crate::code_gen::linker::LinkerError;
 use crate::IrDatabase;
-use anyhow::Result;
-use displaydoc::Display;
 use hir::{FileId, RelativePathBuf};
 use inkwell::targets::TargetData;
 use inkwell::{
@@ -24,19 +22,19 @@ use thiserror::Error;
 mod linker;
 pub mod symbols;
 
-#[derive(Display, Error, Debug)]
+#[derive(Error, Debug)]
 enum CodeGenerationError {
-    /// "{0}"
+    #[error("{0}")]
     LinkerError(#[from] LinkerError),
-    /// error linking modules: {0}
+    #[error("error linking modules: {0}")]
     ModuleLinkerError(String),
-    /// unknown target triple: {0}
+    #[error("unknown target triple: {0}")]
     UnknownTargetTriple(String),
-    /// error creating target machine
+    #[error("error creating target machine")]
     CouldNotCreateTargetMachine,
-    /// error creating object file
+    #[error("error creating object file")]
     CouldNotCreateObjectFile(io::Error),
-    /// error generating machine code
+    #[error("error generating machine code")]
     CodeGenerationError(String),
 }
 
@@ -52,7 +50,7 @@ impl ObjectFile {
         target_machine: &TargetMachine,
         src_path: RelativePathBuf,
         module: Arc<inkwell::module::Module>,
-    ) -> Result<Self> {
+    ) -> Result<Self, anyhow::Error> {
         let obj = target_machine
             .write_to_memory_buffer(&module, FileType::Object)
             .map_err(|e| CodeGenerationError::CodeGenerationError(e.to_string()))?;
@@ -70,7 +68,7 @@ impl ObjectFile {
         })
     }
 
-    pub fn into_shared_object(self, out_dir: Option<&Path>) -> Result<PathBuf> {
+    pub fn into_shared_object(self, out_dir: Option<&Path>) -> Result<PathBuf, anyhow::Error> {
         // Construct a linker for the target
         let mut linker = linker::create_with_target(&self.target);
         linker.add_object(self.obj_file.path())?;
@@ -96,7 +94,7 @@ pub struct ModuleBuilder<'a, D: IrDatabase> {
 
 impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
     /// Constructs module for the given `hir::FileId` at the specified output file location.
-    pub fn new(db: &'a D, file_id: FileId) -> Result<Self> {
+    pub fn new(db: &'a D, file_id: FileId) -> Result<Self, anyhow::Error> {
         let target = db.target();
 
         // Construct a module for the assembly
@@ -135,7 +133,7 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
     }
 
     /// Constructs an object file.
-    pub fn build(self) -> Result<ObjectFile> {
+    pub fn build(self) -> Result<ObjectFile, anyhow::Error> {
         let group_ir = self.db.group_ir(self.file_id);
         let file = self.db.file_ir(self.file_id);
 

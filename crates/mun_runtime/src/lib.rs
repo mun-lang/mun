@@ -13,7 +13,6 @@ mod marshal;
 mod reflection;
 mod struct_ref;
 
-pub use anyhow::Result;
 use garbage_collector::GarbageCollector;
 use memory::gc::{self, GcRuntime};
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
@@ -86,7 +85,7 @@ impl RuntimeBuilder {
     }
 
     /// Spawns a [`Runtime`] with the builder's options.
-    pub fn spawn(self) -> Result<Rc<RefCell<Runtime>>> {
+    pub fn spawn(self) -> Result<Rc<RefCell<Runtime>>, anyhow::Error> {
         Runtime::new(self.options).map(|runtime| Rc::new(RefCell::new(runtime)))
     }
 }
@@ -202,7 +201,7 @@ impl Runtime {
     /// Constructs a new `Runtime` that loads the library at `library_path` and its
     /// dependencies. The `Runtime` contains a file watcher that is triggered with an interval
     /// of `dur`.
-    pub fn new(mut options: RuntimeOptions) -> Result<Runtime> {
+    pub fn new(mut options: RuntimeOptions) -> Result<Runtime, anyhow::Error> {
         let (tx, rx) = channel();
 
         let mut dispatch_table = DispatchTable::default();
@@ -234,7 +233,7 @@ impl Runtime {
     }
 
     /// Adds an assembly corresponding to the library at `library_path`.
-    fn add_assembly(&mut self, library_path: &Path) -> Result<()> {
+    fn add_assembly(&mut self, library_path: &Path) -> Result<(), anyhow::Error> {
         let library_path = library_path.canonicalize()?;
         if self.assemblies.contains_key(&library_path) {
             return Err(io::Error::new(
