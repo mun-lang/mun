@@ -22,7 +22,7 @@ pub trait TestIsAbiCompatible<T> {
     fn test(abi_value: &T);
 }
 
-/// A trait that is implemented if a type is ABI compatible with with T.
+/// A trait that is implemented if a type is ABI compatible with `T`.
 pub trait IsAbiCompatible<T> {}
 
 /// A trait indicating that a type is *not* compatible. This is a helper trait used to determine
@@ -37,7 +37,7 @@ pub trait IsNotAbiCompatible {
 }
 impl<T> IsNotAbiCompatible for T {}
 
-/// Helper structs that enables extracting the type of a value.
+/// Helper structs that allows extracting the type of a value.
 pub struct AbiTypeHelper<T>(std::marker::PhantomData<T>);
 pub struct AbiAndIrTypeHelper<T, S>(std::marker::PhantomData<T>, std::marker::PhantomData<S>);
 

@@ -75,7 +75,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<FileIR> {
         ExternalGlobals {
             alloc_handle,
             dispatch_table,
-            type_table: type_table.map(Global::from_raw),
+            type_table: type_table.map(|g| unsafe { Global::from_raw(g) }),
         }
     };
 

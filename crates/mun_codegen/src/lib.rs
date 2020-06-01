@@ -4,9 +4,6 @@ mod db;
 #[macro_use]
 mod ir;
 
-#[macro_use]
-extern crate mun_codegen_macros;
-
 #[cfg(test)]
 mod mock;
 #[cfg(test)]

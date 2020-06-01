@@ -14,12 +14,14 @@ impl CanInternalize for str {
     type Type = String;
 
     fn intern<S: AsRef<str>>(&self, name: S, context: &IrValueContext) -> Global<Self::Type> {
-        Global::from_raw(
-            self.as_bytes()
-                .as_value(context)
-                .into_const_private_global(name, context)
-                .value,
-        )
+        unsafe {
+            Global::from_raw(
+                self.as_bytes()
+                    .as_value(context)
+                    .into_const_private_global(name, context)
+                    .value,
+            )
+        }
     }
 }
 
@@ -27,12 +29,14 @@ impl CanInternalize for CStr {
     type Type = CString;
 
     fn intern<S: AsRef<str>>(&self, name: S, context: &IrValueContext) -> Global<Self::Type> {
-        Global::from_raw(
-            self.to_bytes_with_nul()
-                .as_value(context)
-                .into_const_private_global(name, context)
-                .value,
-        )
+        unsafe {
+            Global::from_raw(
+                self.to_bytes_with_nul()
+                    .as_value(context)
+                    .into_const_private_global(name, context)
+                    .value,
+            )
+        }
     }
 }
 
