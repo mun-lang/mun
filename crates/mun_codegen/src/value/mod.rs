@@ -28,7 +28,7 @@ use std::hash::Hash;
 /// Represents a generic inkwell value. This is a wrapper around inkwell types that enforces type
 /// safety in the Rust compiler. Rust values that can be converted to inkwell types can be
 /// represented as a value. e.g. `Value<u32>`. Internally this holds an `inkwell::values::IntValue`
-/// but we maintain the information that its actually a `u32` value.
+/// but we maintain the information that it's actually a `u32` value.
 ///
 /// There are several ways to enable a type to be used as a `Value<T>` type through the `AsValue`
 /// trait.
@@ -82,8 +82,8 @@ pub trait AsValue<T: ConcreteValueType + ?Sized> {
     fn as_value(&self, context: &IrValueContext) -> Value<T>;
 }
 
-/// An `TransparentValue` is something that can be represented as a `Value<T>` but which is actually a
-/// rewritten version of another type.
+/// A `TransparentValue` is something that can be represented as a `Value<T>` but which is actually
+/// a rewritten version of another type.
 pub trait TransparentValue {
     type Target: ConcreteValueType + ?Sized;
 
@@ -131,7 +131,7 @@ pub trait PointerValueType: ConcreteValueType {
     ) -> inkwell::types::PointerType;
 }
 
-/// A trait that enables the conversion from an inkwell yype to a corresponding value type. (e.g.
+/// A trait that enables the conversion from an inkwell type to a corresponding value type. (e.g.
 /// IntType -> IntValue)
 pub trait TypeValue {
     type Value: inkwell::values::AnyValue;
@@ -207,7 +207,7 @@ impl<T: ConcreteValueType + ?Sized> Value<T> {
         <T::Value as ValueType>::get_type(&self.value)
     }
 
-    /// Construct a `Value<T>` from an inkwell value
+    /// Constructs a `Value<T>` from an inkwell value.
     pub(super) fn from_raw(value: T::Value) -> Value<T> {
         Value { value }
     }
@@ -285,12 +285,12 @@ where
     }
 }
 
-/// An `TransparentValue` can also be represented by a `Value<T>`
+// A `TransparentValue` can also be represented by a `Value<T>`.
 impl<T: TransparentValue> ConcreteValueType for T {
     type Value = <T::Target as ConcreteValueType>::Value;
 }
 
-/// An `TransparentValue` is sized if the target is also sized
+// A `TransparentValue` is sized if the target is also sized.
 impl<T: TransparentValue> SizedValueType for T
 where
     T::Target: SizedValueType,
@@ -300,7 +300,7 @@ where
     }
 }
 
-/// If the target of the impostor can statically return a pointer type, so can we.
+// If the target of the transparent value can statically return a pointer type, so can we.
 impl<T: TransparentValue> PointerValueType for T
 where
     T::Target: PointerValueType,
@@ -310,7 +310,7 @@ where
     }
 }
 
-/// Impostors can also be represented as a `Value<Self>`
+// Transparent values can also be represented as `Value<Self>`.
 impl<T> AsValue<T> for T
 where
     T: TransparentValue,

@@ -7,6 +7,7 @@ use hir::{Body, ExprId, InferenceResult};
 use inkwell::module::Linkage;
 use inkwell::{module::Module, targets::TargetData, types::ArrayType, values::PointerValue};
 use std::collections::{BTreeSet, HashMap};
+use std::convert::TryInto;
 use std::ffi::CString;
 use std::{mem, sync::Arc};
 
@@ -25,7 +26,9 @@ impl TypeTable {
     /// Looks for a global symbol with the name of the TypeTable global in the specified `module`.
     /// Returns the global value if it could be found, `None` otherwise.
     pub fn find_global(module: &Module) -> Option<Global<[*const ir::TypeInfo]>> {
-        module.get_global(Self::NAME).map(Global::from_raw)
+        module
+            .get_global(Self::NAME)
+            .map(|g| unsafe { Global::from_raw(g) })
     }
 
     /// Generates a `TypeInfo` lookup through the `TypeTable`, equivalent to something along the
@@ -60,7 +63,7 @@ impl TypeTable {
     pub fn get(module: &Module, type_info: &TypeInfo) -> Option<Global<ir::TypeInfo>> {
         module
             .get_global(&type_info_global_name(type_info))
-            .map(Global::from_raw)
+            .map(|g| unsafe { Global::from_raw(g) })
     }
 
     /// Returns the number of types in the `TypeTable`.
@@ -190,8 +193,16 @@ impl<'a, 'ctx, 'm, D: IrDatabase> TypeTableBuilder<'a, 'ctx, 'm, D> {
                     self.value_context,
                 )
                 .as_value(self.value_context),
-            size_in_bits: type_info.size.bit_size as u32,
-            alignment: type_info.size.alignment as u8,
+            size_in_bits: type_info
+                .size
+                .bit_size
+                .try_into()
+                .expect("could not convert size in bits to smaller size"),
+            alignment: type_info
+                .size
+                .alignment
+                .try_into()
+                .expect("could not convert alignment to smaller size"),
             group: type_info.group.to_abi_type(),
         }
         .as_value(self.value_context);
@@ -210,11 +221,11 @@ impl<'a, 'ctx, 'm, D: IrDatabase> TypeTableBuilder<'a, 'ctx, 'm, D> {
                 let compound_type_ir = (type_info_ir, struct_info_ir).as_value(self.value_context);
                 let compound_global =
                     compound_type_ir.into_const_private_global(&type_ir_name, self.value_context);
-                Global::from_raw(compound_global.value)
+                unsafe { Global::from_raw(compound_global.value) }
             }
         };
 
-        // Insert the value in the case so we dont recompute and generate multiple values.
+        // Insert the value in this case, so we don't recompute and generate multiple values.
         type_info_to_ir.insert(type_info.clone(), global);
 
         global
@@ -278,7 +289,10 @@ impl<'a, 'ctx, 'm, D: IrDatabase> TypeTableBuilder<'a, 'ctx, 'm, D> {
             field_names,
             field_types,
             field_offsets,
-            num_fields: fields.len() as u16,
+            num_fields: fields
+                .len()
+                .try_into()
+                .expect("could not convert num_fields to smaller bit size"),
             memory_kind: hir_struct.data(self.db).memory_kind.clone(),
         }
         .as_value(self.value_context)

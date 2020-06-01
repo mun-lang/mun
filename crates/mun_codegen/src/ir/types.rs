@@ -1,4 +1,5 @@
 use crate::value::{AsValue, IrValueContext, SizedValueType, TransparentValue, Value};
+use mun_codegen_macros::{AsValue, TestIsAbiCompatible};
 
 impl TransparentValue for abi::Guid {
     type Target = [u8; 16];
