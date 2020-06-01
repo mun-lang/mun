@@ -3,9 +3,24 @@ use mun_hir::{FileId, HirDatabase, Module};
 
 use std::cell::RefCell;
 
-use annotate_snippets::snippet::Snippet;
-
 use crate::diagnostics_snippets;
+use annotate_snippets::{
+    display_list::DisplayList, formatter::DisplayListFormatter, snippet::Snippet,
+};
+
+/// Emits all specified diagnostic messages to the given stream
+pub fn emit_diagnostics<'a>(
+    writer: &mut dyn std::io::Write,
+    diagnostics: impl IntoIterator<Item = &'a Snippet>,
+    colors: bool,
+) -> Result<(), anyhow::Error> {
+    let dlf = DisplayListFormatter::new(colors, false);
+    for diagnostic in diagnostics.into_iter() {
+        let dl = DisplayList::from(diagnostic.clone());
+        writeln!(writer, "{}", dlf.format(&dl))?;
+    }
+    Ok(())
+}
 
 /// Constructs diagnostic messages for the given file.
 pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
@@ -141,6 +156,7 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
 #[cfg(test)]
 mod tests {
     use crate::{Config, DisplayColor, Driver, PathOrInline, RelativePathBuf};
+    use std::io::Cursor;
 
     /// Compile passed source code and return all compilation errors
     fn compilation_errors(source_code: &str) -> String {
@@ -158,7 +174,9 @@ mod tests {
 
         let mut compilation_errors = Vec::<u8>::new();
 
-        let _ = driver.emit_diagnostics(&mut compilation_errors).unwrap();
+        let _ = driver
+            .emit_diagnostics(&mut Cursor::new(&mut compilation_errors))
+            .unwrap();
 
         String::from_utf8(compilation_errors).unwrap()
     }

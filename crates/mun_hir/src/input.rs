@@ -1,5 +1,4 @@
-use relative_path::{RelativePath, RelativePathBuf};
-use rustc_hash::FxHashMap;
+use std::collections::HashSet;
 
 /// `FileId` is an integer which uniquely identifies a file. File paths are messy and
 /// system-dependent, so most of the code should work directly with `FileId`, without inspecting the
@@ -21,23 +20,20 @@ pub struct SourceRootId(pub u32);
 
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct SourceRoot {
-    files: FxHashMap<RelativePathBuf, FileId>,
+    files: HashSet<FileId>,
 }
 
 impl SourceRoot {
     pub fn new() -> SourceRoot {
         Default::default()
     }
-    pub fn insert_file(&mut self, path: RelativePathBuf, file_id: FileId) {
-        self.files.insert(path, file_id);
+    pub fn insert_file(&mut self, file_id: FileId) {
+        self.files.insert(file_id);
     }
-    pub fn remove_file(&mut self, path: &RelativePath) {
-        self.files.remove(path);
+    pub fn remove_file(&mut self, file_id: FileId) {
+        self.files.remove(&file_id);
     }
     pub fn files(&self) -> impl Iterator<Item = FileId> + '_ {
-        self.files.values().copied()
-    }
-    pub fn file_by_relative_path(&self, path: &RelativePath) -> Option<FileId> {
-        self.files.get(path).copied()
+        self.files.iter().copied()
     }
 }

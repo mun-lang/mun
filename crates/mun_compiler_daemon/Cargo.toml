@@ -14,5 +14,10 @@ categories = ["game-development", "mun"]
 
 [dependencies]
 anyhow = "1.0.31"
+mun_codegen = { version = "=0.2.0", path = "../mun_codegen" }
 mun_compiler = { version = "=0.2.0", path = "../mun_compiler" }
-notify = "4.0.12"
+mun_project = { version = "=0.1.0", path = "../mun_project" }
+mun_hir = { version = "=0.2.0", path = "../mun_hir" }
+notify = "4.0"
+ctrlc = "3.1"
+log = "0.4"

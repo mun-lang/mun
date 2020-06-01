@@ -33,7 +33,8 @@ impl TestDriver {
         if driver.emit_diagnostics(&mut stderr()).unwrap() {
             panic!("compiler errors..")
         }
-        let out_path = driver.write_assembly(file_id).unwrap();
+        let out_path = driver.assembly_output_path(file_id);
+        driver.write_assembly(file_id, true).unwrap();
         let runtime = make_runtime(&out_path);
         TestDriver {
             _temp_dir: temp_dir,

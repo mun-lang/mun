@@ -31,7 +31,8 @@ pub fn runtime_from_file<P: AsRef<Path>>(p: P) -> Rc<RefCell<mun_runtime::Runtim
         panic!("compiler errors..\n{}", errors);
     }
 
-    let out_path = driver.write_assembly(file_id).unwrap();
+    let out_path = driver.assembly_output_path(file_id);
+    driver.write_assembly(file_id, true).unwrap();
     RuntimeBuilder::new(out_path).spawn().unwrap()
 }
 

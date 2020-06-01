@@ -10,7 +10,7 @@ pub enum DisplayColor {
 }
 
 impl DisplayColor {
-    pub(crate) fn should_enable(self) -> bool {
+    pub fn should_enable(self) -> bool {
         match self {
             DisplayColor::Disable => false,
             DisplayColor::Auto => terminal_support_ansi(),

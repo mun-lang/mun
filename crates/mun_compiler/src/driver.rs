@@ -1,9 +1,14 @@
 //! `Driver` is a stateful compiler frontend that enables incremental compilation by retaining state
 //! from previous compilation.
 
-use crate::{db::CompilerDatabase, diagnostics::diagnostics, PathOrInline};
-use mun_codegen::{IrDatabase, ModuleBuilder};
-use mun_hir::{FileId, HirDatabase, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
+use crate::{
+    compute_source_relative_path,
+    db::CompilerDatabase,
+    diagnostics::{diagnostics, emit_diagnostics},
+    ensure_package_output_dir, is_source_file, PathOrInline, RelativePath,
+};
+use mun_codegen::{Assembly, IrDatabase};
+use mun_hir::{FileId, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
 
 use std::{path::PathBuf, sync::Arc};
 
@@ -13,40 +18,43 @@ mod display_color;
 pub use self::config::Config;
 pub use self::display_color::DisplayColor;
 
-use annotate_snippets::{
-    display_list::DisplayList,
-    formatter::DisplayListFormatter,
-    snippet::{AnnotationType, Snippet},
-};
+use annotate_snippets::snippet::{AnnotationType, Snippet};
+use mun_project::Package;
+use std::collections::HashMap;
+use std::convert::TryInto;
+use std::path::Path;
+use walkdir::WalkDir;
 
 pub const WORKSPACE: SourceRootId = SourceRootId(0);
 
 #[derive(Debug)]
 pub struct Driver {
     db: CompilerDatabase,
-    out_dir: Option<PathBuf>,
+    out_dir: PathBuf,
+
+    source_root: SourceRoot,
+    path_to_file_id: HashMap<RelativePathBuf, FileId>,
+    file_id_to_path: HashMap<FileId, RelativePathBuf>,
+    next_file_id: usize,
+
+    file_id_to_temp_assembly_path: HashMap<FileId, PathBuf>,
+
     display_color: DisplayColor,
 }
 
 impl Driver {
     /// Constructs a driver with a specific configuration.
-    pub fn with_config(config: Config) -> Self {
-        let mut driver = Driver {
-            db: CompilerDatabase::new(),
-            out_dir: None,
+    pub fn with_config(config: Config, out_dir: PathBuf) -> Result<Self, anyhow::Error> {
+        Ok(Self {
+            db: CompilerDatabase::new(&config),
+            out_dir,
+            source_root: Default::default(),
+            path_to_file_id: Default::default(),
+            file_id_to_path: Default::default(),
+            next_file_id: 0,
+            file_id_to_temp_assembly_path: Default::default(),
             display_color: config.display_color,
-        };
-
-        // Move relevant configuration into the database
-        driver.db.set_target(config.target);
-        driver
-            .db
-            .set_context(Arc::new(mun_codegen::Context::create()));
-        driver.db.set_optimization_lvl(config.optimization_lvl);
-
-        driver.out_dir = config.out_dir;
-
-        driver
+        })
     }
 
     /// Constructs a driver with a configuration and a single file.
@@ -54,10 +62,11 @@ impl Driver {
         config: Config,
         path: PathOrInline,
     ) -> Result<(Driver, FileId), anyhow::Error> {
-        let mut driver = Driver::with_config(config);
+        let out_dir = config.out_dir.clone().unwrap_or_else(|| {
+            std::env::current_dir().expect("could not determine current working directory")
+        });
 
-        // Construct a SourceRoot
-        let mut source_root = SourceRoot::default();
+        let mut driver = Driver::with_config(config, out_dir)?;
 
         // Get the path and contents of the path
         let (rel_path, text) = match path {
@@ -77,14 +86,100 @@ impl Driver {
         };
 
         // Store the file information in the database together with the source root
-        let file_id = FileId(0);
-        driver.db.set_file_relative_path(file_id, rel_path.clone());
+        let file_id = FileId(driver.next_file_id as u32);
+        driver.next_file_id += 1;
+        driver.db.set_file_relative_path(file_id, rel_path);
         driver.db.set_file_text(file_id, Arc::new(text));
         driver.db.set_file_source_root(file_id, WORKSPACE);
-        source_root.insert_file(rel_path, file_id);
-        driver.db.set_source_root(WORKSPACE, Arc::new(source_root));
+        driver.source_root.insert_file(file_id);
+        driver
+            .db
+            .set_source_root(WORKSPACE, Arc::new(driver.source_root.clone()));
 
         Ok((driver, file_id))
+    }
+
+    /// Constructs a driver with a package manifest directory
+    pub fn with_package_path<P: AsRef<Path>>(
+        package_path: P,
+        config: Config,
+    ) -> Result<(Package, Driver), anyhow::Error> {
+        // Load the manifest file as a package
+        let package = Package::from_file(package_path)?;
+
+        // Determine output directory
+        let output_dir = ensure_package_output_dir(&package, &config)?;
+
+        // Construct the driver
+        let mut driver = Driver::with_config(config, output_dir)?;
+
+        // Iterate over all files in the source directory of the package and store their information in
+        // the database
+        let source_directory = package
+            .source_directory()
+            .ok_or_else(|| anyhow::anyhow!("the source directory does not exist"))?;
+
+        for source_file_path in iter_source_files(&source_directory) {
+            let relative_path = compute_source_relative_path(&source_directory, &source_file_path)?;
+
+            // Load the contents of the file
+            let file_contents = std::fs::read_to_string(&source_file_path).map_err(|e| {
+                anyhow::anyhow!(
+                    "could not read contents of '{}': {}",
+                    source_file_path.display(),
+                    e
+                )
+            })?;
+
+            let file_id = driver.alloc_file_id(&relative_path)?;
+            driver
+                .db
+                .set_file_relative_path(file_id, relative_path.clone());
+            driver.db.set_file_text(file_id, Arc::new(file_contents));
+            driver.db.set_file_source_root(file_id, WORKSPACE);
+            driver.source_root.insert_file(file_id);
+        }
+
+        // Store the source root in the database
+        driver
+            .db
+            .set_source_root(WORKSPACE, Arc::new(driver.source_root.clone()));
+
+        Ok((package, driver))
+    }
+}
+
+impl Driver {
+    /// Returns a file id for the file with the given `relative_path`. This function reuses FileId's
+    /// for paths to keep the cache as valid as possible.
+    ///
+    /// The allocation of an id might fail if more file IDs exist than can be allocated.
+    pub fn alloc_file_id<P: AsRef<RelativePath>>(
+        &mut self,
+        relative_path: P,
+    ) -> Result<FileId, anyhow::Error> {
+        // Re-use existing id to get better caching performance
+        if let Some(id) = self.path_to_file_id.get(relative_path.as_ref()) {
+            return Ok(*id);
+        }
+
+        // Allocate a new id
+        // TODO: See if we can figure out if the compiler cleared the cache of a certain file, at
+        //  which point we can sort of reset the `next_file_id`
+        let id = FileId(
+            self.next_file_id
+                .try_into()
+                .map_err(|_e| anyhow::anyhow!("too many active source files"))?,
+        );
+        self.next_file_id += 1;
+
+        // Update bookkeeping
+        self.path_to_file_id
+            .insert(relative_path.as_ref().to_relative_path_buf(), id);
+        self.file_id_to_path
+            .insert(id, relative_path.as_ref().to_relative_path_buf());
+
+        Ok(id)
     }
 }
 
@@ -110,29 +205,156 @@ impl Driver {
     /// Emits all diagnostic messages currently in the database; returns true if errors were
     /// emitted.
     pub fn emit_diagnostics(&self, writer: &mut dyn std::io::Write) -> Result<bool, anyhow::Error> {
-        let mut has_errors = false;
-        let dlf = DisplayListFormatter::new(self.display_color.should_enable(), false);
-        for file_id in self.db.source_root(WORKSPACE).files() {
-            let diags = diagnostics(&self.db, file_id);
-            for diagnostic in diags {
-                let dl = DisplayList::from(diagnostic.clone());
-                writeln!(writer, "{}", dlf.format(&dl)).unwrap();
-                if let Some(annotation) = diagnostic.title {
-                    if let AnnotationType::Error = annotation.annotation_type {
-                        has_errors = true;
-                    }
-                }
-            }
-        }
-        Ok(has_errors)
+        let diagnostics = self.diagnostics();
+
+        // Emit all diagnostics to the stream
+        emit_diagnostics(writer, &diagnostics, self.display_color.should_enable())?;
+
+        // Determine if one of the snippets is actually an error
+        Ok(diagnostics.iter().any(|d| {
+            d.title
+                .as_ref()
+                .map(|a| match a.annotation_type {
+                    AnnotationType::Error => true,
+                    _ => false,
+                })
+                .unwrap_or(false)
+        }))
     }
 }
 
 impl Driver {
-    /// Generate an assembly for the given file
-    pub fn write_assembly(&mut self, file_id: FileId) -> Result<PathBuf, anyhow::Error> {
-        let module_builder = ModuleBuilder::new(&self.db, file_id)?;
-        let obj_file = module_builder.build()?;
-        obj_file.into_shared_object(self.out_dir.as_deref())
+    /// Get the path where the driver will write the assembly for the specified file.
+    pub fn assembly_output_path(&self, file_id: FileId) -> PathBuf {
+        self.db
+            .file_relative_path(file_id)
+            .with_extension(Assembly::EXTENSION)
+            .to_path(&self.out_dir)
     }
+
+    /// Writes all assemblies
+    pub fn write_all_assemblies(&mut self) -> Result<(), anyhow::Error> {
+        // Create a copy of all current files
+        let files = self.source_root.files().collect::<Vec<_>>();
+        for file_id in files {
+            self.write_assembly(file_id, false)?;
+        }
+        Ok(())
+    }
+
+    /// Generates an assembly for the given file and stores it in the output location. If `force` is
+    /// false, the binary will not be written if there are no changes since last time it was
+    /// written. Returns `true` if the assembly was written, `false` if it was up to date.
+    pub fn write_assembly(&mut self, file_id: FileId, force: bool) -> Result<bool, anyhow::Error> {
+        // Determine the location of the output file
+        let assembly_path = self.assembly_output_path(file_id);
+
+        // Get the compiled assembly
+        let assembly = self.db.assembly(file_id);
+
+        // Did the assembly change since last time?
+        if !force
+            && assembly_path.is_file()
+            && self
+                .file_id_to_temp_assembly_path
+                .get(&file_id)
+                .map(AsRef::as_ref)
+                == Some(assembly.path())
+        {
+            return Ok(false);
+        }
+
+        // It did change or we are forced, so write it to disk
+        assembly.copy_to(&assembly_path)?;
+
+        // Store the information so we maybe don't have to write it next time
+        self.file_id_to_temp_assembly_path
+            .insert(file_id, assembly.path().to_path_buf());
+
+        Ok(true)
+    }
+}
+
+impl Driver {
+    /// Returns the `FileId` of the file with the given relative path
+    pub fn get_file_id_for_path<P: AsRef<RelativePath>>(&self, path: P) -> Option<FileId> {
+        self.path_to_file_id.get(path.as_ref()).copied()
+    }
+
+    /// Tells the driver that the file at the specified `path` has changed its contents. Returns the
+    /// `FileId` of the modified file.
+    pub fn update_file<P: AsRef<RelativePath>>(&mut self, path: P, contents: String) -> FileId {
+        let file_id = *self
+            .path_to_file_id
+            .get(path.as_ref())
+            .expect("writing to a file that is not part of the source root should never happen");
+        self.db.set_file_text(file_id, Arc::new(contents));
+        file_id
+    }
+
+    /// Adds a new file to the driver. Returns the `FileId` of the new file.
+    pub fn add_file<P: AsRef<RelativePath>>(&mut self, path: P, contents: String) -> FileId {
+        let file_id = self.alloc_file_id(path.as_ref()).unwrap();
+
+        // Insert the new file
+        self.db
+            .set_file_relative_path(file_id, path.as_ref().to_relative_path_buf());
+        self.db.set_file_text(file_id, Arc::new(contents));
+        self.db.set_file_source_root(file_id, WORKSPACE);
+
+        // Update the source root
+        self.source_root.insert_file(file_id);
+        self.db
+            .set_source_root(WORKSPACE, Arc::new(self.source_root.clone()));
+
+        file_id
+    }
+
+    /// Removes the specified file from the driver.
+    pub fn remove_file<P: AsRef<RelativePath>>(&mut self, path: P) -> FileId {
+        let file_id = *self
+            .path_to_file_id
+            .get(path.as_ref())
+            .expect("removing to a file that is not part of the source root should never happen");
+
+        // Update the source root
+        self.source_root.remove_file(file_id);
+        self.db
+            .set_source_root(WORKSPACE, Arc::new(self.source_root.clone()));
+
+        file_id
+    }
+
+    /// Renames the specified file to the specified path
+    pub fn rename<P1: AsRef<RelativePath>, P2: AsRef<RelativePath>>(
+        &mut self,
+        from: P1,
+        to: P2,
+    ) -> FileId {
+        let file_id = *self
+            .path_to_file_id
+            .get(from.as_ref())
+            .expect("renaming from a file that is not part of the source root should never happen");
+        if let Some(previous) = self.path_to_file_id.get(to.as_ref()) {
+            // If there was some other file with this path in the database, forget about it.
+            self.file_id_to_path.remove(previous);
+        }
+
+        self.file_id_to_path
+            .insert(file_id, to.as_ref().to_relative_path_buf());
+        self.path_to_file_id.remove(from.as_ref()); // FileId now belongs to to
+
+        self.db
+            .set_file_relative_path(file_id, to.as_ref().to_relative_path_buf());
+
+        file_id
+    }
+}
+
+pub fn iter_source_files(source_dir: &Path) -> impl Iterator<Item = PathBuf> {
+    WalkDir::new(source_dir)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| is_source_file(e.path()))
+        .map(|e| e.path().to_path_buf())
 }

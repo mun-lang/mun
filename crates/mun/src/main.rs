@@ -5,8 +5,10 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-use mun_compiler::{Config, DisplayColor, PathOrInline, Target};
+use mun_compiler::{Config, DisplayColor, Target};
+use mun_project::MANIFEST_FILENAME;
 use mun_runtime::{invoke_fn, ReturnTypeReflection, Runtime, RuntimeBuilder};
+use std::path::{Path, PathBuf};
 
 fn setup_logging() -> Result<(), anyhow::Error> {
     pretty_env_logger::try_init()?;
@@ -23,15 +25,17 @@ fn main() -> Result<(), anyhow::Error> {
         .subcommand(
             SubCommand::with_name("build")
                 .arg(
-                    Arg::with_name("INPUT")
-                        .help("Sets the input file to use")
-                        .required(true)
-                        .index(1),
+                    Arg::with_name("manifest-path")
+                        .long("manifest-path")
+                        .takes_value(true)
+                        .help(&format!("Path to {}", MANIFEST_FILENAME))
                 )
-                .arg(Arg::with_name("watch").long("watch").help(
-                    "Run the compiler in watch mode.
-                    Watch input files and trigger recompilation on changes.",
-                ))
+                .arg(
+                    Arg::with_name("watch")
+                        .long("watch")
+                        .help("Run the compiler in watch mode.\
+                        Watch input files and trigger recompilation on changes.",)
+                )
                 .arg(
                     Arg::with_name("opt-level")
                         .short("O")
@@ -80,23 +84,61 @@ fn main() -> Result<(), anyhow::Error> {
         )
         .get_matches();
 
-    match matches.subcommand() {
+    let success = match matches.subcommand() {
         ("build", Some(matches)) => build(matches)?,
-        ("start", Some(matches)) => start(matches)?,
         ("language-server", Some(matches)) => language_server(matches)?,
+        ("start", Some(matches)) => {
+            start(matches)?;
+            true
+        }
         _ => unreachable!(),
-    }
+    };
 
-    Ok(())
+    std::process::exit(if success { 0 } else { 1 });
 }
 
-/// Build the source file specified
-fn build(matches: &ArgMatches) -> Result<(), anyhow::Error> {
+/// Find a Mun manifest file in the specified directory or one of its parents.
+pub fn find_manifest(directory: &Path) -> Option<PathBuf> {
+    let mut current_dir = Some(directory);
+    while let Some(dir) = current_dir {
+        let manifest_path = dir.join(MANIFEST_FILENAME);
+        if manifest_path.exists() {
+            return Some(manifest_path);
+        }
+        current_dir = dir.parent();
+    }
+    None
+}
+
+/// This method is invoked when the executable is run with the `build` argument indicating that a
+/// user requested us to build a project in the current directory or one of its parent directories.
+///
+/// The `bool` return type for this function indicates whether the process should exit with a
+/// success or failure error code.
+fn build(matches: &ArgMatches) -> Result<bool, anyhow::Error> {
     let options = compiler_options(matches)?;
+
+    // Locate the manifest
+    let manifest_path = match matches.value_of("manifest-path") {
+        None => {
+            let current_dir =
+                std::env::current_dir().expect("could not determine currrent working directory");
+            find_manifest(&current_dir).ok_or_else(|| {
+                anyhow::anyhow!(
+                    "could not find {} in '{}' or a parent directory",
+                    MANIFEST_FILENAME,
+                    current_dir.display()
+                )
+            })?
+        }
+        Some(path) => std::fs::canonicalize(Path::new(path))
+            .map_err(|_| anyhow::anyhow!("'{}' does not refer to a valid manifest path", path))?,
+    };
+
     if matches.is_present("watch") {
-        mun_compiler_daemon::main(options)
+        mun_compiler_daemon::compile_and_watch_manifest(&manifest_path, options)
     } else {
-        mun_compiler::main(options).map(|_| {})
+        mun_compiler::compile_manifest(&manifest_path, options)
     }
 }
 
@@ -142,7 +184,7 @@ fn start(matches: &ArgMatches) -> Result<(), anyhow::Error> {
     }
 }
 
-fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOptions, anyhow::Error> {
+fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::Config, anyhow::Error> {
     let optimization_lvl = match matches.value_of("opt-level") {
         Some("0") => mun_compiler::OptimizationLevel::None,
         Some("1") => mun_compiler::OptimizationLevel::Less,
@@ -162,16 +204,13 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::CompilerOption
         })
         .unwrap_or(DisplayColor::Auto);
 
-    Ok(mun_compiler::CompilerOptions {
-        input: PathOrInline::Path(matches.value_of("INPUT").unwrap().into()), // Safe because its a required arg
-        config: Config {
-            target: matches
-                .value_of("target")
-                .map_or_else(Target::host_target, Target::search)?,
-            optimization_lvl,
-            out_dir: None,
-            display_color,
-        },
+    Ok(Config {
+        target: matches
+            .value_of("target")
+            .map_or_else(Target::host_target, Target::search)?,
+        optimization_lvl,
+        out_dir: None,
+        display_color,
     })
 }
 
@@ -190,6 +229,12 @@ fn runtime(matches: &ArgMatches) -> Result<Rc<RefCell<Runtime>>, anyhow::Error> 
     builder.spawn()
 }
 
-fn language_server(_matches: &ArgMatches) -> Result<(), anyhow::Error> {
-    mun_language_server::run_server().map_err(|e| anyhow!("{}", e))
+/// This function is invoked when the executable is invoked with the `language-server` argument. A
+/// Mun language server is started ready to serve language information about one or more projects.
+///
+/// The `bool` return type for this function indicates whether the process should exit with a
+/// success or failure error code.
+fn language_server(_matches: &ArgMatches) -> Result<bool, anyhow::Error> {
+    mun_language_server::run_server().map_err(|e| anyhow::anyhow!("{}", e))?;
+    Ok(true)
 }

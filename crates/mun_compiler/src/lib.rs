@@ -2,7 +2,7 @@
 mod annotate;
 mod db;
 ///! This library contains the code required to go from source code to binaries.
-mod diagnostics;
+pub mod diagnostics;
 mod diagnostics_snippets;
 mod driver;
 
@@ -15,6 +15,10 @@ pub use crate::driver::{Config, Driver};
 pub use annotate::{AnnotationBuilder, SliceBuilder, SnippetBuilder};
 pub use mun_codegen::OptimizationLevel;
 
+pub use crate::db::CompilerDatabase;
+pub use annotate_snippets::snippet::AnnotationType;
+use mun_project::Package;
+use std::ffi::OsStr;
 use std::io::stderr;
 
 #[derive(Debug, Clone)]
@@ -57,12 +61,55 @@ impl CompilerOptions {
     }
 }
 
-pub fn main(options: CompilerOptions) -> Result<Option<PathBuf>, anyhow::Error> {
-    let (mut driver, file_id) = Driver::with_file(options.config, options.input)?;
+/// Returns true if the given path is considered to be a Mun source file
+pub fn is_source_file<P: AsRef<Path>>(p: P) -> bool {
+    p.as_ref().extension() == Some(&OsStr::new("mun"))
+}
 
+/// Returns and creates the output dir for the specified package
+pub fn ensure_package_output_dir(
+    package: &Package,
+    config: &Config,
+) -> Result<PathBuf, anyhow::Error> {
+    let out_dir = config
+        .out_dir
+        .clone()
+        .unwrap_or_else(|| package.root().join("target"));
+    std::fs::create_dir_all(&out_dir)?;
+    Ok(out_dir)
+}
+
+pub fn compile_manifest(manifest_path: &Path, config: Config) -> Result<bool, anyhow::Error> {
+    let (_package, mut driver) = Driver::with_package_path(manifest_path, config)?;
+
+    // Emit diagnostics. If one of the snippets is an error, abort gracefully.
     if driver.emit_diagnostics(&mut stderr())? {
-        Ok(None)
-    } else {
-        driver.write_assembly(file_id).map(Some)
-    }
+        return Ok(false);
+    };
+
+    // Write out all assemblies
+    driver.write_all_assemblies()?;
+
+    Ok(true)
+}
+
+/// Determines the relative path of a file to the source directory.
+pub fn compute_source_relative_path(
+    source_dir: &Path,
+    source_path: &Path,
+) -> Result<RelativePathBuf, anyhow::Error> {
+    RelativePathBuf::from_path(source_path.strip_prefix(source_dir).map_err(|e| {
+        anyhow::anyhow!(
+            "could not determine relative source path for '{}': {}",
+            source_path.display(),
+            e
+        )
+    })?)
+    .map_err(|e| {
+        anyhow::anyhow!(
+            "could not determine source relative path for '{}': {}",
+            source_path.display(),
+            e
+        )
+    })
 }

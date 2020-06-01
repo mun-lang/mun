@@ -1,0 +1,12 @@
+[package]
+name = "mun_project"
+version = "0.1.0"
+authors = ["The Mun Team <team@mun-lang.org>"]
+edition = "2018"
+
+[dependencies]
+serde = "1.0"
+serde_derive = "1.0"
+toml = "0.5"
+semver = { version = "0.10", features = ["serde"] }
+anyhow = "1.0"
