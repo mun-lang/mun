@@ -2,7 +2,7 @@ use async_std::future::timeout;
 use async_std::task::JoinHandle;
 use futures::{SinkExt, StreamExt};
 use lsp_types::{notification::Exit, request::Shutdown};
-use mun_language_server::main_loop;
+use mun_language_server::{main_loop, Config};
 use mun_language_server::protocol::{Connection, Message, Notification, Request};
 use serde::Serialize;
 use serde_json::Value;
@@ -21,8 +21,9 @@ impl Server {
     pub fn new() -> Self {
         let (connection, client) = Connection::memory();
 
+        let config = Config::default();
         let worker = async_std::task::spawn(async move {
-            main_loop(connection).await.unwrap();
+            main_loop(connection, config).await.unwrap();
         });
 
         Self {
