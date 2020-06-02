@@ -13,10 +13,10 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["Game development", "Mun"]
 
 [dependencies]
-abi = { version = "=0.2.0", path = "../mun_abi", package = "mun_abi" }
-hir = { version = "=0.2.0", path = "../mun_hir", package = "mun_hir" }
-mun_target = { version = "=0.2.0", path = "../mun_target" }
-mun_lld = { version = "=70.2.0", path = "../mun_lld" }
+abi = { path = "../mun_abi", package = "mun_abi" }
+hir = { path = "../mun_hir", package = "mun_hir" }
+mun_target = { path = "../mun_target" }
+mun_lld = { path = "../mun_lld" }
 failure = "0.1.7"
 salsa="0.12"
 md5="0.6.1"
@@ -25,9 +25,9 @@ tempfile = "3"
 paste = "0.1.6"
 
 [dependencies.inkwell]
-git = "https://github.com/mun-lang/inkwell"
-rev = "4448bcd"
-features = ["llvm7-0"]
+git = "https://github.com//TheDan64/inkwell"
+rev = "1bfecc0a"
+features = ["llvm10-0"]
 
 [dev-dependencies]
 insta = "0.12.0"
