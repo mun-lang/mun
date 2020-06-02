@@ -5,7 +5,7 @@ use crate::ir::try_convert_any_to_basic;
 use crate::{CodeGenParams};
 use inkwell::types::{BasicTypeEnum, StructType};
 
-pub(super) fn gen_struct_decl(context: &Context, db: &impl hir::HirDatabase, type_manager: &mut TypeManager, s: hir::Struct) -> StructType {
+pub(super) fn gen_struct_decl<'ink>(context: &'ink Context, db: &impl hir::HirDatabase, type_manager: &mut TypeManager<'ink>, s: hir::Struct) -> StructType<'ink> {
     let struct_type = type_manager.struct_ty(context, db, s);
     if struct_type.is_opaque() {
         let field_types: Vec<BasicTypeEnum> = s

@@ -3,22 +3,22 @@ use inkwell::types::{ArrayType, IntType, StructType};
 use inkwell::AddressSpace;
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct AbiTypes {
-    pub guid_type: ArrayType,
-    pub type_group_type: IntType,
-    pub privacy_type: IntType,
-    pub type_info_type: StructType,
-    pub function_signature_type: StructType,
-    pub function_prototype_type: StructType,
-    pub function_definition_type: StructType,
-    pub struct_info_type: StructType,
-    pub module_info_type: StructType,
-    pub dispatch_table_type: StructType,
-    pub assembly_info_type: StructType,
+pub(crate) struct AbiTypes<'ink> {
+    pub guid_type: ArrayType<'ink>,
+    pub type_group_type: IntType<'ink>,
+    pub privacy_type: IntType<'ink>,
+    pub type_info_type: StructType<'ink>,
+    pub function_signature_type: StructType<'ink>,
+    pub function_prototype_type: StructType<'ink>,
+    pub function_definition_type: StructType<'ink>,
+    pub struct_info_type: StructType<'ink>,
+    pub module_info_type: StructType<'ink>,
+    pub dispatch_table_type: StructType<'ink>,
+    pub assembly_info_type: StructType<'ink>,
 }
 
 /// Returns an `AbiTypes` struct that contains references to all LLVM ABI types.
-pub(crate) fn gen_abi_types(context: &Context) -> AbiTypes {
+pub(crate) fn gen_abi_types<'ink>(context: &'ink Context) -> AbiTypes<'ink> {
     let str_type = context.i8_type().ptr_type(AddressSpace::Const);
 
     // Construct the `MunGuid` type

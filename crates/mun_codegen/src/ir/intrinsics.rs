@@ -8,13 +8,13 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 // Use a `BTreeMap` to guarantee deterministically ordered output
-pub type IntrinsicsMap = BTreeMap<FunctionPrototype, FunctionType>;
+pub type IntrinsicsMap<'ink> = BTreeMap<FunctionPrototype, FunctionType<'ink>>;
 
-fn collect_intrinsic(
-    context: &Context,
+fn collect_intrinsic<'ink>(
+    context: &'ink Context,
     config: &CodeGenConfig,
-    entries: &mut IntrinsicsMap,
-    intrinsic: &impl Intrinsic,
+    entries: &mut IntrinsicsMap<'ink>,
+    intrinsic: &impl Intrinsic<'ink>,
 ) {
     let prototype = intrinsic.prototype(context, &config.target_data);
     entries
@@ -22,11 +22,11 @@ fn collect_intrinsic(
         .or_insert_with(|| intrinsic.ir_type(context, &config.target_data));
 }
 
-fn collect_expr<D: hir::HirDatabase>(
-    context: &Context,
+fn collect_expr<'ink, D: hir::HirDatabase>(
+    context: &'ink Context,
     config: &CodeGenConfig,
     db: &D,
-    entries: &mut IntrinsicsMap,
+    entries: &mut IntrinsicsMap<'ink>,
     needs_alloc: &mut bool,
     expr_id: ExprId,
     body: &Arc<Body>,
@@ -71,11 +71,11 @@ fn collect_expr<D: hir::HirDatabase>(
     expr.walk_child_exprs(|expr_id| collect_expr(context, config, db, entries, needs_alloc, expr_id, body, infer))
 }
 
-pub fn collect_fn_body<D: hir::HirDatabase>(
-    context: &Context,
+pub fn collect_fn_body<'ink, D: hir::HirDatabase>(
+    context: &'ink Context,
     config: &CodeGenConfig,
     db: &D,
-    entries: &mut IntrinsicsMap,
+    entries: &mut IntrinsicsMap<'ink>,
     needs_alloc: &mut bool,
     body: &Arc<Body>,
     infer: &InferenceResult,
@@ -83,10 +83,10 @@ pub fn collect_fn_body<D: hir::HirDatabase>(
     collect_expr(context, config, db, entries, needs_alloc, body.body_expr(), body, infer);
 }
 
-pub fn collect_wrapper_body(
-    context: &Context,
+pub fn collect_wrapper_body<'ink>(
+    context: &'ink Context,
     config: &CodeGenConfig,
-    entries: &mut IntrinsicsMap,
+    entries: &mut IntrinsicsMap<'ink>,
     needs_alloc: &mut bool,
 ) {
     collect_intrinsic(context, config, entries, &intrinsics::new);

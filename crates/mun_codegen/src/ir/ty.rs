@@ -18,19 +18,19 @@ use inkwell::{
 use std::collections::hash_map::Entry;
 
 #[derive(Debug)]
-pub struct TypeManager {
-    structs: HashMap<hir::Struct, StructCacheState>,
+pub struct TypeManager<'ink> {
+    structs: HashMap<hir::Struct, StructCacheState<'ink>>,
     infos: HashMap<hir::Ty, TypeInfo>,
 }
 
 #[derive(Debug)]
-struct StructCacheState {
-    fields: Vec<(hir::StructField, AnyTypeEnum)>,
-    ty: StructType,
+struct StructCacheState<'ink> {
+    fields: Vec<(hir::StructField, AnyTypeEnum<'ink>)>,
+    ty: StructType<'ink>,
 }
 
-impl TypeManager {
-    pub fn new() -> TypeManager {
+impl<'ink> TypeManager<'ink> {
+    pub fn new() -> TypeManager<'ink> {
         TypeManager {
             structs: HashMap::new(),
             infos: HashMap::new(),
@@ -38,7 +38,7 @@ impl TypeManager {
     }
 
     /// Given a mun type, construct an LLVM IR type
-    pub fn type_ir<D: hir::HirDatabase>(&mut self, context: &Context, db: &D, ty: hir::Ty, params: CodeGenParams) -> AnyTypeEnum {
+    pub fn type_ir<D: hir::HirDatabase>(&mut self, context: &'ink Context, db: &D, ty: hir::Ty, params: CodeGenParams) -> AnyTypeEnum<'ink> {
         let layout = db.target_data_layout();
         match ty {
             Ty::Empty => AnyTypeEnum::StructType(context.struct_type(&[], false)),
@@ -81,7 +81,7 @@ impl TypeManager {
         }
     }
 
-    pub fn struct_ty<D: hir::HirDatabase>(&mut self, context: &Context, db: &D, s: hir::Struct) -> StructType {
+    pub fn struct_ty<D: hir::HirDatabase>(&mut self, context: &'ink Context, db: &D, s: hir::Struct) -> StructType<'ink> {
         let name = s.name(db).to_string();
         let fields = s.fields(db).into_iter()
             .map(|field| {
@@ -121,7 +121,7 @@ impl TypeManager {
         }
     }
 
-    pub fn type_info<D: hir::HirDatabase>(&mut self, context: &Context, config: &CodeGenConfig, db: &D, ty: hir::Ty) -> TypeInfo {
+    pub fn type_info<D: hir::HirDatabase>(&mut self, context: &'ink Context, config: &CodeGenConfig, db: &D, ty: hir::Ty) -> TypeInfo {
         if let Some(info) = self.infos.get(&ty) {
             return info.clone();
         }
@@ -168,7 +168,7 @@ impl TypeManager {
 }
 
 /// Returns the LLVM IR type of the specified float type
-fn float_ty_query(context: &Context, layout: &TargetDataLayout, fty: FloatTy) -> FloatType {
+fn float_ty_query<'ink>(context: &'ink Context, layout: &TargetDataLayout, fty: FloatTy) -> FloatType<'ink> {
     match fty.bitness.resolve(layout) {
         FloatBitness::X64 => context.f64_type(),
         FloatBitness::X32 => context.f32_type(),
@@ -176,7 +176,7 @@ fn float_ty_query(context: &Context, layout: &TargetDataLayout, fty: FloatTy) ->
 }
 
 /// Returns the LLVM IR type of the specified int type
-fn int_ty_query(context: &Context, layout: &TargetDataLayout, ity: IntTy) -> IntType {
+fn int_ty_query<'ink>(context: &'ink Context, layout: &TargetDataLayout, ity: IntTy) -> IntType<'ink> {
     match ity.bitness.resolve(layout) {
         IntBitness::X128 => context.i128_type(),
         IntBitness::X64 => context.i64_type(),

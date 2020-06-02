@@ -5,8 +5,8 @@ macro_rules! intrinsics{
                 pub struct [<Intrinsic $name>];
             }
             paste::item! {
-                impl Intrinsic for [<Intrinsic $name>] {
-                    fn prototype(&self, context: &Context, target: &TargetData) -> FunctionPrototype {
+                impl<'ink> Intrinsic<'ink> for [<Intrinsic $name>] {
+                    fn prototype(&self, context: &'ink Context, target: &TargetData) -> FunctionPrototype {
                         FunctionPrototype {
                             name: stringify!($name).to_owned(),
                             arg_types: vec![$(<$arg as crate::type_info::HasStaticTypeInfo>::type_info(context, target)),*],
@@ -14,7 +14,7 @@ macro_rules! intrinsics{
                         }
                     }
 
-                    fn ir_type(&self, context: &Context, target: &TargetData) -> FunctionType {
+                    fn ir_type(&self, context: &'ink Context, target: &TargetData) -> FunctionType<'ink> {
                         let args = vec![$(<$arg as crate::ir::IsBasicIrType>::ir_type(context, target)),*];
                         <$ret as crate::ir::IsFunctionReturnType>::fn_type(context, target, &args, false)
                     }

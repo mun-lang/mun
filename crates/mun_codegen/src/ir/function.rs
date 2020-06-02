@@ -11,10 +11,10 @@ use super::body::ExternalGlobals;
 use std::collections::HashMap;
 
 /// Constructs a PassManager to optimize functions for the given optimization level.
-pub(crate) fn create_pass_manager(
-    module: &Module,
+pub(crate) fn create_pass_manager<'ink>(
+    module: &Module<'ink>,
     optimization_lvl: OptimizationLevel,
-) -> PassManager<FunctionValue> {
+) -> PassManager<FunctionValue<'ink>> {
     let pass_builder = PassManagerBuilder::create();
     pass_builder.set_optimization_level(optimization_lvl);
 
@@ -29,14 +29,14 @@ pub(crate) fn create_pass_manager(
 /// the `hir::Function`. That task is left to the `gen_body` function. The reason this is split
 /// between two functions is that first all signatures are generated and then all bodies. This
 /// allows bodies to reference `FunctionValue` wherever they are declared in the file.
-pub(crate) fn gen_signature(
-    context: &Context,
+pub(crate) fn gen_signature<'ink>(
+    context: &'ink Context,
     db: &impl hir::HirDatabase,
-    type_manager: &mut TypeManager,
+    type_manager: &mut TypeManager<'ink>,
     f: hir::Function,
-    module: &Module,
+    module: &Module<'ink>,
     params: CodeGenParams,
-) -> FunctionValue {
+) -> FunctionValue<'ink> {
     let name = {
         let name = f.name(db).to_string();
         if params.make_marshallable {
@@ -54,16 +54,16 @@ pub(crate) fn gen_signature(
 }
 
 /// Generates the body of a `hir::Function` for an associated `FunctionValue`.
-pub(crate) fn gen_body<'a, 'b, D: hir::HirDatabase>(
-    context: &Context,
+pub(crate) fn gen_body<'ink, 'a, 'b, D: hir::HirDatabase>(
+    context: &'ink Context,
     config: &'a CodeGenConfig,
     db: &'a D,
-    type_manager: &'a mut TypeManager,
-    function: (hir::Function, FunctionValue),
-    llvm_functions: &'a HashMap<hir::Function, FunctionValue>,
-    dispatch_table: &'b DispatchTable,
-    type_table: &'b TypeTable,
-    external_globals: ExternalGlobals,
+    type_manager: &'b mut TypeManager<'ink>,
+    function: (hir::Function, FunctionValue<'ink>),
+    llvm_functions: &'a HashMap<hir::Function, FunctionValue<'ink>>,
+    dispatch_table: &'b DispatchTable<'ink>,
+    type_table: &'b TypeTable<'ink>,
+    external_globals: ExternalGlobals<'ink>,
 ) {
     let mut code_gen = BodyIrGenerator::new(
         context,
@@ -85,16 +85,16 @@ pub(crate) fn gen_body<'a, 'b, D: hir::HirDatabase>(
 
 /// Generates the body of a wrapper around `hir::Function` for its associated
 /// `FunctionValue`
-pub(crate) fn gen_wrapper_body<'a, 'b, D: hir::HirDatabase>(
-    context: &Context,
+pub(crate) fn gen_wrapper_body<'ink, 'a, 'b, D: hir::HirDatabase>(
+    context: &'ink Context,
     config: &'a CodeGenConfig,
     db: &'a D,
-    type_manager: &mut TypeManager,
-    function: (hir::Function, FunctionValue),
-    llvm_functions: &'a HashMap<hir::Function, FunctionValue>,
-    dispatch_table: &'b DispatchTable,
-    type_table: &'b TypeTable,
-    external_globals: ExternalGlobals,
+    type_manager: &'b mut TypeManager<'ink>,
+    function: (hir::Function, FunctionValue<'ink>),
+    llvm_functions: &'a HashMap<hir::Function, FunctionValue<'ink>>,
+    dispatch_table: &'b DispatchTable<'ink>,
+    type_table: &'b TypeTable<'ink>,
+    external_globals: ExternalGlobals<'ink>,
 ) {
     let mut code_gen = BodyIrGenerator::new(
         context,

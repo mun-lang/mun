@@ -9,7 +9,7 @@ use inkwell::targets::TargetData;
 use inkwell::{
     module::{Linkage, Module},
     passes::{PassManager, PassManagerBuilder},
-    targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine},
+    targets::{TargetTriple, CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine},
     types::StructType,
     values::{BasicValue, GlobalValue, IntValue, PointerValue, UnnamedAddress},
     AddressSpace, OptimizationLevel,
@@ -109,17 +109,17 @@ impl ObjectFile {
 }
 
 /// A struct that can be used to build an LLVM `Module`.
-pub struct ModuleBuilder<'a, D: hir::HirDatabase> {
+pub struct ModuleBuilder<'a, 'ink, D: hir::HirDatabase> {
     context: &'a Context,
     config: &'a CodeGenConfig,
     db: &'a D,
     file_id: FileId,
     _target: inkwell::targets::Target,
     target_machine: inkwell::targets::TargetMachine,
-    assembly_module: Arc<inkwell::module::Module>,
+    assembly_module: Arc<inkwell::module::Module<'ink>>,
 }
 
-impl<'a, D: hir::HirDatabase> ModuleBuilder<'a, D> {
+impl<'ink, 'a:'ink, D: hir::HirDatabase> ModuleBuilder<'a, 'ink, D> {
     /// Constructs module for the given `hir::FileId` at the specified output file location.
     pub fn new(context: &'a Context, config: &'a CodeGenConfig, db: &'a D, file_id: FileId) -> Result<Self, failure::Error> {
         let target = db.target();
@@ -134,14 +134,15 @@ impl<'a, D: hir::HirDatabase> ModuleBuilder<'a, D> {
         Target::initialize_x86(&InitializationConfig::default());
 
         // Retrieve the LLVM target using the specified target.
-        let llvm_target = Target::from_triple(&target.llvm_target)
+        let target_triple = TargetTriple::create(&target.llvm_target);
+        let llvm_target = Target::from_triple(&target_triple)
             .map_err(|e| CodeGenerationError::UnknownTargetTriple(e.to_string()))?;
-        assembly_module.set_target(&llvm_target);
+        assembly_module.set_triple(&target_triple);
 
         // Construct target machine for machine code generation
         let target_machine = llvm_target
             .create_target_machine(
-                &target.llvm_target,
+                &target_triple,
                 &target.options.cpu,
                 &target.options.features,
                 config.optimization_lvl,
@@ -162,13 +163,13 @@ impl<'a, D: hir::HirDatabase> ModuleBuilder<'a, D> {
     }
 
     /// Constructs an object file.
-    pub fn build(self, type_manager: &mut TypeManager) -> Result<ObjectFile, failure::Error> {
+    pub fn build(self, type_manager: &'a mut TypeManager<'ink>) -> Result<ObjectFile, failure::Error> {
         let (file, group_ir) = crate::ir::file::ir_query(self.context, self.config, self.db, type_manager, self.file_id);
 
         self.build_with_ir(type_manager, file, group_ir)
     }
 
-    pub(crate) fn build_with_ir(self, type_manager: &mut TypeManager, file: FileIR, group_ir: FileGroupIR) -> Result<ObjectFile, failure::Error> {
+    pub(crate) fn build_with_ir(self, type_manager: &'a mut TypeManager<'ink>, file: FileIR<'ink>, group_ir: FileGroupIR<'ink>) -> Result<ObjectFile, failure::Error> {
         // Clone the LLVM modules so that we can modify it without modifying the cached value.
         self.assembly_module
             .link_in_module(group_ir.llvm_module.clone())
@@ -222,7 +223,7 @@ fn assembly_output_path(src_path: &RelativePathBuf, out_dir: Option<&Path>) -> P
 
 /// Optimizes the specified LLVM `Module` using the default passes for the given
 /// `OptimizationLevel`.
-fn optimize_module(module: &Module, optimization_lvl: OptimizationLevel) {
+fn optimize_module<'ink>(module: &Module<'ink>, optimization_lvl: OptimizationLevel) {
     let pass_builder = PassManagerBuilder::create();
     pass_builder.set_optimization_level(optimization_lvl);
 
@@ -235,13 +236,13 @@ fn optimize_module(module: &Module, optimization_lvl: OptimizationLevel) {
 /// ```c
 /// const char[] GLOBAL_ = "str";
 /// ```
-pub(crate) fn intern_string(module: &Module, string: &str, name: &str) -> PointerValue {
-    let value = module.get_context().const_string(string, true);
+pub(crate) fn intern_string<'ink>(context: &'ink Context, module: &Module<'ink>, string: &str, name: &str) -> PointerValue<'ink> {
+    let value = context.const_string(string.as_bytes(), true);
     gen_global(module, &value, name).as_pointer_value()
 }
 
 /// Construct a global from the specified value
-pub(crate) fn gen_global(module: &Module, value: &dyn BasicValue, name: &str) -> GlobalValue {
+pub(crate) fn gen_global<'ink>(module: &Module<'ink>, value: &dyn BasicValue<'ink>, name: &str) -> GlobalValue<'ink> {
     let global = module.add_global(value.as_basic_value_enum().get_type(), None, name);
     global.set_linkage(Linkage::Private);
     global.set_constant(true);
@@ -251,20 +252,21 @@ pub(crate) fn gen_global(module: &Module, value: &dyn BasicValue, name: &str) ->
 }
 
 /// Generates a global array from the specified list of strings
-pub(crate) fn gen_string_array(
-    module: &Module,
+pub(crate) fn gen_string_array<'ink>(
+    context: &'ink Context,
+    module: &Module<'ink>,
     strings: impl Iterator<Item = String>,
     name: &str,
-) -> PointerValue {
-    let str_type = module.get_context().i8_type().ptr_type(AddressSpace::Const);
+) -> PointerValue<'ink> {
+    let str_type = context.i8_type().ptr_type(AddressSpace::Const);
 
     let mut strings = strings.peekable();
     if strings.peek().is_none() {
         str_type.ptr_type(AddressSpace::Const).const_null()
     } else {
         let strings = strings
-            .map(|s| intern_string(module, &s, name))
-            .collect::<Vec<PointerValue>>();
+            .map(|s| intern_string(context, module, &s, name))
+            .collect::<Vec<PointerValue<'ink>>>();
 
         let strings_ir = str_type.const_array(&strings);
         gen_global(module, &strings_ir, "").as_pointer_value()
@@ -272,12 +274,12 @@ pub(crate) fn gen_string_array(
 }
 
 /// Generates a global array from the specified list of struct pointers
-pub(crate) fn gen_struct_ptr_array(
-    module: &Module,
-    ir_type: StructType,
-    ptrs: &[PointerValue],
+pub(crate) fn gen_struct_ptr_array<'ink>(
+    module: &Module<'ink>,
+    ir_type: StructType<'ink>,
+    ptrs: &[PointerValue<'ink>],
     name: &str,
-) -> PointerValue {
+) -> PointerValue<'ink> {
     if ptrs.is_empty() {
         ir_type
             .ptr_type(AddressSpace::Const)
@@ -291,12 +293,13 @@ pub(crate) fn gen_struct_ptr_array(
 }
 
 /// Generates a global array from the specified list of integers
-pub(crate) fn gen_u16_array(
-    module: &Module,
+pub(crate) fn gen_u16_array<'ink>(
+    context: &'ink Context,
+    module: &Module<'ink>,
     integers: impl Iterator<Item = u64>,
     name: &str,
-) -> PointerValue {
-    let u16_type = module.get_context().i16_type();
+) -> PointerValue<'ink> {
+    let u16_type = context.i16_type();
 
     let mut integers = integers.peekable();
     if integers.peek().is_none() {

@@ -3,14 +3,10 @@ name = "mun_codegen"
 version = "0.2.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
-description = "LLVM IR code generation for Mun"
-documentation = "https://docs.mun-lang.org/v0.2"
-readme = "README.md"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
 license = "MIT OR Apache-2.0"
-keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
-categories = ["Game development", "Mun"]
+description = "LLVM IR code generation for Mun"
 
 [dependencies]
 abi = { path = "../mun_abi", package = "mun_abi" }

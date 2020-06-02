@@ -36,7 +36,7 @@ pub struct TypeSize {
 }
 
 impl TypeSize {
-    pub fn from_ir_type(ty: &impl AnyType, target: &TargetData) -> Self {
+    pub fn from_ir_type<'ink>(ty: &impl AnyType<'ink>, target: &TargetData) -> Self {
         Self {
             bit_size: target.get_bit_size(ty),
             store_size: target.get_store_size(ty),
@@ -123,29 +123,29 @@ impl TypeInfo {
 }
 
 /// A trait that statically defines that a type can be used as an argument.
-pub trait HasStaticTypeInfo {
+pub trait HasStaticTypeInfo<'ink> {
     fn type_info(
-        context: &inkwell::context::Context,
+        context: &'ink inkwell::context::Context,
         target: &inkwell::targets::TargetData,
     ) -> TypeInfo;
 }
 
-pub trait HasTypeInfo {
-    fn type_info(&self, context: &Context, target: &TargetData) -> TypeInfo;
+pub trait HasTypeInfo<'ink> {
+    fn type_info(&self, context: &'ink Context, target: &TargetData) -> TypeInfo;
 }
 
-impl<T: HasStaticTypeInfo> HasTypeInfo for T {
-    fn type_info(&self, context: &Context, target: &TargetData) -> TypeInfo {
+impl<'ink, T: HasStaticTypeInfo<'ink>> HasTypeInfo<'ink> for T {
+    fn type_info(&self, context: &'ink Context, target: &TargetData) -> TypeInfo {
         T::type_info(context, target)
     }
 }
 
-pub trait HasStaticTypeName {
-    fn type_name(context: &Context, target: &TargetData) -> String;
+pub trait HasStaticTypeName<'ink> {
+    fn type_name(context: &'ink Context, target: &TargetData) -> String;
 }
 
-impl<T: HasStaticTypeInfo> HasStaticTypeName for T {
-    fn type_name(context: &Context, target: &TargetData) -> String {
+impl<'ink, T: HasStaticTypeInfo<'ink>> HasStaticTypeName<'ink> for T {
+    fn type_name(context: &'ink Context, target: &TargetData) -> String {
         T::type_info(context, target).name
     }
 }
@@ -155,8 +155,8 @@ macro_rules! impl_fundamental_static_type_info {
         $ty:ty
     ),+) => {
         $(
-            impl HasStaticTypeInfo for $ty {
-                fn type_info(context: &Context, target: &TargetData) -> TypeInfo {
+            impl<'ink> HasStaticTypeInfo<'ink> for $ty {
+                fn type_info(context: &'ink Context, target: &TargetData) -> TypeInfo {
                     let ty = <$ty as IsIrType>::ir_type(context, target);
                     TypeInfo::new_fundamental(
                         format!("core::{}", stringify!($ty)),
@@ -172,9 +172,9 @@ impl_fundamental_static_type_info!(
     u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, bool
 );
 
-impl<T: HasStaticTypeName> HasStaticTypeInfo for *mut T {
-    fn type_info(context: &Context, target: &TargetData) -> TypeInfo {
-        let ty = target.ptr_sized_int_type(None);
+impl<'ink, T: HasStaticTypeName<'ink>> HasStaticTypeInfo<'ink> for *mut T {
+    fn type_info(context: &'ink Context, target: &TargetData) -> TypeInfo {
+        let ty = context.ptr_sized_int_type(target, None);
         TypeInfo::new_fundamental(
             format!("*mut {}", T::type_name(context, target)),
             TypeSize::from_ir_type(&ty, target),
@@ -182,12 +182,12 @@ impl<T: HasStaticTypeName> HasStaticTypeInfo for *mut T {
     }
 }
 
-impl<T: HasStaticTypeName> HasStaticTypeInfo for *const T {
+impl<'ink, T: HasStaticTypeName<'ink>> HasStaticTypeInfo<'ink> for *const T {
     fn type_info(
-        context: &inkwell::context::Context,
+        context: &'ink inkwell::context::Context,
         target: &inkwell::targets::TargetData,
     ) -> TypeInfo {
-        let ty = target.ptr_sized_int_type(None);
+        let ty = context.ptr_sized_int_type(target, None);
         TypeInfo::new_fundamental(
             format!("*const {}", T::type_name(context, target)),
             TypeSize::from_ir_type(&ty, target),
@@ -195,8 +195,8 @@ impl<T: HasStaticTypeName> HasStaticTypeInfo for *const T {
     }
 }
 
-impl HasStaticTypeInfo for usize {
-    fn type_info(context: &Context, target: &TargetData) -> TypeInfo {
+impl<'ink> HasStaticTypeInfo<'ink> for usize {
+    fn type_info(context: &'ink Context, target: &TargetData) -> TypeInfo {
         match target.get_pointer_byte_size(None) {
             4 => <u32 as HasStaticTypeInfo>::type_info(context, target),
             8 => <u64 as HasStaticTypeInfo>::type_info(context, target),
@@ -205,8 +205,8 @@ impl HasStaticTypeInfo for usize {
     }
 }
 
-impl HasStaticTypeInfo for isize {
-    fn type_info(context: &Context, target: &TargetData) -> TypeInfo {
+impl<'ink> HasStaticTypeInfo<'ink> for isize {
+    fn type_info(context: &'ink Context, target: &TargetData) -> TypeInfo {
         match target.get_pointer_byte_size(None) {
             4 => <i32 as HasStaticTypeInfo>::type_info(context, target),
             8 => <i64 as HasStaticTypeInfo>::type_info(context, target),
@@ -215,42 +215,42 @@ impl HasStaticTypeInfo for isize {
     }
 }
 
-impl HasStaticTypeName for TypeInfo {
-    fn type_name(_context: &Context, _target: &TargetData) -> String {
+impl<'ink> HasStaticTypeName<'ink> for TypeInfo {
+    fn type_name(_context: &'ink Context, _target: &TargetData) -> String {
         "TypeInfo".to_owned()
     }
 }
 
-impl HasStaticTypeName for std::ffi::c_void {
-    fn type_name(_context: &Context, _target: &TargetData) -> String {
+impl<'ink> HasStaticTypeName<'ink> for std::ffi::c_void {
+    fn type_name(_context: &'ink Context, _target: &TargetData) -> String {
         "core::void".to_owned()
     }
 }
 
 /// A trait that statically defines that a type can be used as a return type for a function.
-pub trait HasStaticReturnTypeInfo {
-    fn return_type_info(context: &Context, target: &TargetData) -> Option<TypeInfo>;
+pub trait HasStaticReturnTypeInfo<'ink> {
+    fn return_type_info(context: &'ink Context, target: &TargetData) -> Option<TypeInfo>;
 }
 
 /// A trait that defines that a type can be used as a return type for a function.
-pub trait HasReturnTypeInfo {
-    fn return_type_info(&self, context: &Context, target: &TargetData) -> Option<TypeInfo>;
+pub trait HasReturnTypeInfo<'ink> {
+    fn return_type_info(&self, context: &'ink Context, target: &TargetData) -> Option<TypeInfo>;
 }
 
-impl<T: HasStaticReturnTypeInfo> HasReturnTypeInfo for T {
-    fn return_type_info(&self, context: &Context, target: &TargetData) -> Option<TypeInfo> {
+impl<'ink, T: HasStaticReturnTypeInfo<'ink>> HasReturnTypeInfo<'ink> for T {
+    fn return_type_info(&self, context: &'ink Context, target: &TargetData) -> Option<TypeInfo> {
         T::return_type_info(context, target)
     }
 }
 
-impl<T: HasStaticTypeInfo> HasStaticReturnTypeInfo for T {
-    fn return_type_info(context: &Context, target: &TargetData) -> Option<TypeInfo> {
+impl<'ink, T: HasStaticTypeInfo<'ink>> HasStaticReturnTypeInfo<'ink> for T {
+    fn return_type_info(context: &'ink Context, target: &TargetData) -> Option<TypeInfo> {
         Some(T::type_info(context, target))
     }
 }
 
-impl HasStaticReturnTypeInfo for () {
-    fn return_type_info(_context: &Context, _target: &TargetData) -> Option<TypeInfo> {
+impl<'ink> HasStaticReturnTypeInfo<'ink> for () {
+    fn return_type_info(_context: &'ink Context, _target: &TargetData) -> Option<TypeInfo> {
         None
     }
 }

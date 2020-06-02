@@ -15,23 +15,30 @@ use std::{collections::BTreeMap};
 /// The IR generated for a group of files. It is used to generate IR for all of the group's files
 /// and the resulting `Assembly`'s symbols.
 #[derive(Debug, PartialEq, Eq)]
-pub struct FileGroupIR {
+pub struct FileGroupIR<'ink> {
     /// The LLVM module that contains the IR
-    pub(crate) llvm_module: Module,
+    pub(crate) llvm_module: Module<'ink>,
     /// Contains references to all of the ABI's IR types.
-    pub(crate) abi_types: AbiTypes,
+    pub(crate) abi_types: AbiTypes<'ink>,
     /// The dispatch table
-    pub(crate) dispatch_table: DispatchTable,
+    pub(crate) dispatch_table: DispatchTable<'ink>,
     /// The type table
-    pub(crate) type_table: TypeTable,
+    pub(crate) type_table: TypeTable<'ink>,
     /// The allocator handle, if it exists
-    pub(crate) allocator_handle_type: Option<PointerType>,
+    pub(crate) allocator_handle_type: Option<PointerType<'ink>>,
 }
 
 /// Generates IR that is shared among the group's files.
 /// TODO: Currently, a group always consists of a single file. Need to add support for multiple
 /// files using something like `FileGroupId`.
-pub(crate) fn ir_query(context: &Context, config: &CodeGenConfig, db: &impl hir::HirDatabase, type_manager: &mut TypeManager, file_id: hir::FileId) -> FileGroupIR {
+pub(crate) fn ir_query<'ink, 'a:'ink, 'b>(
+    context: &'ink Context,
+    config: &'a CodeGenConfig,
+    db: &'a impl hir::HirDatabase,
+    type_manager: &'b mut TypeManager<'ink>,
+    file_id: hir::FileId)
+-> FileGroupIR<'ink>
+{
     let llvm_module = context.create_module("group_name");
 
     // Use a `BTreeMap` to guarantee deterministically ordered output.
