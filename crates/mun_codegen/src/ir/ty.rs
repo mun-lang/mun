@@ -45,9 +45,9 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty, params: CodeGenParams) -> A
             TypeCtor::Struct(s) => {
                 let struct_ty = db.struct_ty(s);
                 match s.data(db).memory_kind {
-                    hir::StructMemoryKind::GC => struct_ty.ptr_type(AddressSpace::Generic).ptr_type(AddressSpace::Const).into(),
+                    hir::StructMemoryKind::GC => struct_ty.ptr_type(AddressSpace::Generic).ptr_type(AddressSpace::Generic).into(),
                     hir::StructMemoryKind::Value if params.make_marshallable =>
-                            struct_ty.ptr_type(AddressSpace::Generic).ptr_type(AddressSpace::Const).into(),
+                            struct_ty.ptr_type(AddressSpace::Generic).ptr_type(AddressSpace::Generic).into(),
                     hir::StructMemoryKind::Value => struct_ty.into(),
                 }
             }

@@ -14,6 +14,8 @@ use inkwell::{
 };
 use std::{collections::HashMap, sync::Arc};
 
+use crate::ir::types as ir;
+use crate::value::Global;
 use hir::ResolveBitness;
 use inkwell::basic_block::BasicBlock;
 use inkwell::values::{AggregateValueEnum, GlobalValue, PointerValue};
@@ -30,7 +32,7 @@ struct LoopInfo {
 pub(crate) struct ExternalGlobals {
     pub alloc_handle: Option<GlobalValue>,
     pub dispatch_table: Option<GlobalValue>,
-    pub type_table: Option<GlobalValue>,
+    pub type_table: Option<Global<[*const ir::TypeInfo]>>,
 }
 
 pub(crate) struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
@@ -382,7 +384,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         // HACK: We should be able to use pointers for built-in struct types like `TypeInfo` in intrinsics
         let type_info_ptr = self.builder.build_bitcast(
             type_info_ptr,
-            self.db.context().i8_type().ptr_type(AddressSpace::Const),
+            self.db.context().i8_type().ptr_type(AddressSpace::Generic),
             "type_info_ptr_to_i8_ptr",
         );
 
@@ -411,7 +413,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 object_ptr,
                 struct_ir_ty
                     .ptr_type(AddressSpace::Generic)
-                    .ptr_type(AddressSpace::Const),
+                    .ptr_type(AddressSpace::Generic),
                 &format!("{}_ptr_ptr", hir_struct.name(self.db).to_string()),
             )
             .into_pointer_value();

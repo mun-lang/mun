@@ -6,9 +6,9 @@ expression: "pub fn equals(a: f64, b: f64) -> bool { a == b }\npub fn not_equal(
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
 
-%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
-@global_type_table = external global [2 x %struct.MunTypeInfo addrspace(4)*]
+@global_type_table = external global [2 x %struct.MunTypeInfo*]
 
 define i1 @equals(double, double) {
 body:
@@ -51,11 +51,11 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
 @"type_info::<core::f64>::name" = private unnamed_addr constant [10 x i8] c"core::f64\00"
 @"type_info::<core::f64>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"`\DBF\9C?YJ%G\AD4\9F\D5\92%A", [10 x i8]* @"type_info::<core::f64>::name", i32 64, i8 8, i8 0 }
 @"type_info::<core::bool>::name" = private unnamed_addr constant [11 x i8] c"core::bool\00"
 @"type_info::<core::bool>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"x\82\81m t7\03\CB\F8k\81-;\C9\84", [11 x i8]* @"type_info::<core::bool>::name", i32 1, i8 1, i8 0 }
-@global_type_table = global [2 x %struct.MunTypeInfo addrspace(4)*] [%struct.MunTypeInfo addrspace(4)* @"type_info::<core::f64>", %struct.MunTypeInfo addrspace(4)* @"type_info::<core::bool>"]
+@global_type_table = constant [2 x %struct.MunTypeInfo*] [%struct.MunTypeInfo* @"type_info::<core::f64>", %struct.MunTypeInfo* @"type_info::<core::bool>"]
 

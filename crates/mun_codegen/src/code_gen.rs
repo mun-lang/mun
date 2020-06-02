@@ -1,15 +1,14 @@
 use crate::code_gen::linker::LinkerError;
+use crate::value::{IrTypeContext, IrValueContext};
 use crate::IrDatabase;
 use failure::Fail;
 use hir::{FileId, RelativePathBuf};
 use inkwell::targets::TargetData;
 use inkwell::{
-    module::{Linkage, Module},
+    module::Module,
     passes::{PassManager, PassManagerBuilder},
     targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine},
-    types::StructType,
-    values::{BasicValue, GlobalValue, IntValue, PointerValue, UnnamedAddress},
-    AddressSpace, OptimizationLevel,
+    OptimizationLevel,
 };
 use mun_target::spec;
 use std::io::{self, Write};
@@ -152,10 +151,23 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
             .link_in_module(file.llvm_module.clone())
             .map_err(|e| CodeGenerationError::ModuleLinkerError(e.to_string()))?;
 
+        let target_data = self.db.target_data();
+        let type_context = IrTypeContext {
+            context: &self.assembly_module.get_context(),
+            target_data: target_data.as_ref(),
+            struct_types: Default::default(),
+        };
+
+        let value_context = IrValueContext {
+            type_context: &type_context,
+            context: type_context.context,
+            module: &self.assembly_module,
+        };
+
         // Generate the `get_info` method.
         symbols::gen_reflection_ir(
             self.db,
-            &self.assembly_module,
+            &value_context,
             &file.api,
             &group_ir.dispatch_table,
             &group_ir.type_table,
@@ -200,86 +212,6 @@ fn optimize_module(module: &Module, optimization_lvl: OptimizationLevel) {
     let module_pass_manager = PassManager::create(());
     pass_builder.populate_module_pass_manager(&module_pass_manager);
     module_pass_manager.run_on(module);
-}
-
-/// Intern a string by constructing a global value. Looks something like this:
-/// ```c
-/// const char[] GLOBAL_ = "str";
-/// ```
-pub(crate) fn intern_string(module: &Module, string: &str, name: &str) -> PointerValue {
-    let value = module.get_context().const_string(string, true);
-    gen_global(module, &value, name).as_pointer_value()
-}
-
-/// Construct a global from the specified value
-pub(crate) fn gen_global(module: &Module, value: &dyn BasicValue, name: &str) -> GlobalValue {
-    let global = module.add_global(value.as_basic_value_enum().get_type(), None, name);
-    global.set_linkage(Linkage::Private);
-    global.set_constant(true);
-    global.set_unnamed_address(UnnamedAddress::Global);
-    global.set_initializer(value);
-    global
-}
-
-/// Generates a global array from the specified list of strings
-pub(crate) fn gen_string_array(
-    module: &Module,
-    strings: impl Iterator<Item = String>,
-    name: &str,
-) -> PointerValue {
-    let str_type = module.get_context().i8_type().ptr_type(AddressSpace::Const);
-
-    let mut strings = strings.peekable();
-    if strings.peek().is_none() {
-        str_type.ptr_type(AddressSpace::Const).const_null()
-    } else {
-        let strings = strings
-            .map(|s| intern_string(module, &s, name))
-            .collect::<Vec<PointerValue>>();
-
-        let strings_ir = str_type.const_array(&strings);
-        gen_global(module, &strings_ir, "").as_pointer_value()
-    }
-}
-
-/// Generates a global array from the specified list of struct pointers
-pub(crate) fn gen_struct_ptr_array(
-    module: &Module,
-    ir_type: StructType,
-    ptrs: &[PointerValue],
-    name: &str,
-) -> PointerValue {
-    if ptrs.is_empty() {
-        ir_type
-            .ptr_type(AddressSpace::Const)
-            .ptr_type(AddressSpace::Const)
-            .const_null()
-    } else {
-        let ptr_array_ir = ir_type.ptr_type(AddressSpace::Const).const_array(&ptrs);
-
-        gen_global(module, &ptr_array_ir, name).as_pointer_value()
-    }
-}
-
-/// Generates a global array from the specified list of integers
-pub(crate) fn gen_u16_array(
-    module: &Module,
-    integers: impl Iterator<Item = u64>,
-    name: &str,
-) -> PointerValue {
-    let u16_type = module.get_context().i16_type();
-
-    let mut integers = integers.peekable();
-    if integers.peek().is_none() {
-        u16_type.ptr_type(AddressSpace::Const).const_null()
-    } else {
-        let integers = integers
-            .map(|i| u16_type.const_int(i, false))
-            .collect::<Vec<IntValue>>();
-
-        let array_ir = u16_type.const_array(&integers);
-        gen_global(module, &array_ir, name).as_pointer_value()
-    }
 }
 
 /// Create an inkwell TargetData from the target in the database

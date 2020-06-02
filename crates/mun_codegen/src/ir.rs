@@ -6,7 +6,6 @@ use inkwell::types::{
 };
 use inkwell::AddressSpace;
 
-pub(crate) mod abi_types;
 pub mod adt;
 pub mod body;
 #[macro_use]
@@ -17,6 +16,7 @@ pub mod function;
 mod intrinsics;
 pub mod ty;
 pub(crate) mod type_table;
+pub mod types;
 
 /// Try to down cast an `AnyTypeEnum` into a `BasicTypeEnum`.
 fn try_convert_any_to_basic(ty: AnyTypeEnum) -> Option<BasicTypeEnum> {
@@ -173,24 +173,16 @@ impl_fundamental_ir_types!(
 impl IsIrType for usize {
     type Type = IntType;
 
-    fn ir_type(context: &Context, target: &TargetData) -> Self::Type {
-        match target.get_pointer_byte_size(None) {
-            4 => <u32 as IsIrType>::ir_type(context, target),
-            8 => <u64 as IsIrType>::ir_type(context, target),
-            _ => unimplemented!("unsupported pointer byte size"),
-        }
+    fn ir_type(_context: &Context, target: &TargetData) -> Self::Type {
+        target.ptr_sized_int_type(None)
     }
 }
 
 impl IsIrType for isize {
     type Type = IntType;
 
-    fn ir_type(context: &Context, target: &TargetData) -> Self::Type {
-        match target.get_pointer_byte_size(None) {
-            4 => <i32 as IsIrType>::ir_type(context, target),
-            8 => <i64 as IsIrType>::ir_type(context, target),
-            _ => unimplemented!("unsupported pointer byte size"),
-        }
+    fn ir_type(_context: &Context, target: &TargetData) -> Self::Type {
+        target.ptr_sized_int_type(None)
     }
 }
 
@@ -200,21 +192,21 @@ pub trait IsPointerType {
 
 impl<S: BasicType, T: IsIrType<Type = S>> IsPointerType for *const T {
     fn ir_type(context: &Context, target: &TargetData) -> PointerType {
-        T::ir_type(context, target).ptr_type(AddressSpace::Const)
+        T::ir_type(context, target).ptr_type(AddressSpace::Generic)
     }
 }
 
 // HACK: Manually add `*const TypeInfo`
 impl IsPointerType for *const TypeInfo {
     fn ir_type(context: &Context, _target: &TargetData) -> PointerType {
-        context.i8_type().ptr_type(AddressSpace::Const)
+        context.i8_type().ptr_type(AddressSpace::Generic)
     }
 }
 
 // HACK: Manually add `*const c_void`
 impl IsPointerType for *const std::ffi::c_void {
     fn ir_type(context: &Context, _target: &TargetData) -> PointerType {
-        context.i8_type().ptr_type(AddressSpace::Const)
+        context.i8_type().ptr_type(AddressSpace::Generic)
     }
 }
 

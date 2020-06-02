@@ -1,8 +1,8 @@
 use crate::ir::{body::BodyIrGenerator, dispatch_table::DispatchTable, type_table::TypeTable};
-use crate::values::FunctionValue;
 use crate::{CodeGenParams, IrDatabase, Module, OptimizationLevel};
 use inkwell::passes::{PassManager, PassManagerBuilder};
 use inkwell::types::AnyTypeEnum;
+use inkwell::values::FunctionValue;
 
 use super::body::ExternalGlobals;
 use std::collections::HashMap;

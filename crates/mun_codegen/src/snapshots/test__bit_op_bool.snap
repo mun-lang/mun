@@ -6,9 +6,9 @@ expression: "pub fn not(a: bool) -> bool { !a }\npub fn bitand(a: bool, b: bool)
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
 
-%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
-@global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
+@global_type_table = external global [1 x %struct.MunTypeInfo*]
 
 define i1 @not(i1) {
 body:
@@ -39,9 +39,9 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
 @"type_info::<core::bool>::name" = private unnamed_addr constant [11 x i8] c"core::bool\00"
 @"type_info::<core::bool>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"x\82\81m t7\03\CB\F8k\81-;\C9\84", [11 x i8]* @"type_info::<core::bool>::name", i32 1, i8 1, i8 0 }
-@global_type_table = global [1 x %struct.MunTypeInfo addrspace(4)*] [%struct.MunTypeInfo addrspace(4)* @"type_info::<core::bool>"]
+@global_type_table = constant [1 x %struct.MunTypeInfo*] [%struct.MunTypeInfo* @"type_info::<core::bool>"]
 

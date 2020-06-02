@@ -6,9 +6,9 @@ expression: "pub fn add(a: f32, b: f32) -> f32 { a + b }\npub fn subtract(a: f32
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
 
-%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
-@global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
+@global_type_table = external global [1 x %struct.MunTypeInfo*]
 
 define float @add(float, float) {
 body:
@@ -45,9 +45,9 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%struct.MunTypeInfo = type { [16 x i8], i8 addrspace(4)*, i32, i8, i8 }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
 @"type_info::<core::f32>::name" = private unnamed_addr constant [10 x i8] c"core::f32\00"
 @"type_info::<core::f32>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"P\19b7\A8k\F2\81P\FB\83\F5P\B0\82!", [10 x i8]* @"type_info::<core::f32>::name", i32 32, i8 4, i8 0 }
-@global_type_table = global [1 x %struct.MunTypeInfo addrspace(4)*] [%struct.MunTypeInfo addrspace(4)* @"type_info::<core::f32>"]
+@global_type_table = constant [1 x %struct.MunTypeInfo*] [%struct.MunTypeInfo* @"type_info::<core::f32>"]
 
