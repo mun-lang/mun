@@ -47,7 +47,7 @@ body:
   ret void
 }
 
-define i32 @add(i32) {
+define i32 @add(i32 %0) {
 body:
   %a = alloca i32
   store i32 %0, i32* %a

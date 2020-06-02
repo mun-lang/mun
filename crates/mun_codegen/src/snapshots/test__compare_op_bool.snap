@@ -10,37 +10,37 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
 
-define i1 @equals(i1, i1) {
+define i1 @equals(i1 %0, i1 %1) {
 body:
   %eq = icmp eq i1 %0, %1
   ret i1 %eq
 }
 
-define i1 @not_equal(i1, i1) {
+define i1 @not_equal(i1 %0, i1 %1) {
 body:
   %neq = icmp ne i1 %0, %1
   ret i1 %neq
 }
 
-define i1 @less(i1, i1) {
+define i1 @less(i1 %0, i1 %1) {
 body:
   %less = icmp ult i1 %0, %1
   ret i1 %less
 }
 
-define i1 @less_equal(i1, i1) {
+define i1 @less_equal(i1 %0, i1 %1) {
 body:
   %lesseq = icmp ule i1 %0, %1
   ret i1 %lesseq
 }
 
-define i1 @greater(i1, i1) {
+define i1 @greater(i1 %0, i1 %1) {
 body:
   %greater = icmp ugt i1 %0, %1
   ret i1 %greater
 }
 
-define i1 @greater_equal(i1, i1) {
+define i1 @greater_equal(i1 %0, i1 %1) {
 body:
   %greatereq = icmp uge i1 %0, %1
   ret i1 %greatereq

@@ -10,31 +10,31 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
 
-define float @add(float, float) {
+define float @add(float %0, float %1) {
 body:
   %add = fadd float %0, %1
   ret float %add
 }
 
-define float @subtract(float, float) {
+define float @subtract(float %0, float %1) {
 body:
   %sub = fsub float %0, %1
   ret float %sub
 }
 
-define float @multiply(float, float) {
+define float @multiply(float %0, float %1) {
 body:
   %mul = fmul float %0, %1
   ret float %mul
 }
 
-define float @divide(float, float) {
+define float @divide(float %0, float %1) {
 body:
   %div = fdiv float %0, %1
   ret float %div
 }
 
-define float @remainder(float, float) {
+define float @remainder(float %0, float %1) {
 body:
   %rem = frem float %0, %1
   ret float %rem

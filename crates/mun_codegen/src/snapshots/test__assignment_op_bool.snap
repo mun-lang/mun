@@ -10,7 +10,7 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
 
-define i1 @assign(i1, i1) {
+define i1 @assign(i1 %0, i1 %1) {
 body:
   ret i1 %1
 }

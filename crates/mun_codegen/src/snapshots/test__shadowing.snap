@@ -10,14 +10,14 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
 
-define i32 @foo(i32) {
+define i32 @foo(i32 %0) {
 body:
   %add = add i32 %0, 1
   %add7 = add i32 %add, 3
   ret i32 %add7
 }
 
-define i32 @bar(i32) {
+define i32 @bar(i32 %0) {
 body:
   %add = add i32 %0, 1
   %add4 = add i32 %add, 2

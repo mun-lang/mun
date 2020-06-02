@@ -12,7 +12,7 @@ source_filename = "main.mun"
 @dispatchTable = external global %DispatchTable
 @global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
 
-define i32 @do_the_things(i32) {
+define i32 @do_the_things(i32 %0) {
 body:
   %add = add i32 %0, 7
   ret i32 %add

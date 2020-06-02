@@ -10,7 +10,7 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
 
-define i32 @main(i32) {
+define i32 @main(i32 %0) {
 body:
   %greater = icmp sgt i32 %0, 4
   br i1 %greater, label %then, label %if_merge

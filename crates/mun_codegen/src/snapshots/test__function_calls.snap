@@ -12,13 +12,13 @@ source_filename = "main.mun"
 @dispatchTable = external global %DispatchTable
 @global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
 
-define i32 @add_impl(i32, i32) {
+define i32 @add_impl(i32 %0, i32 %1) {
 body:
   %add = add i32 %0, %1
   ret i32 %add
 }
 
-define i32 @add(i32, i32) {
+define i32 @add(i32 %0, i32 %1) {
 body:
   %add_impl_ptr = load i32 (i32, i32)*, i32 (i32, i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 1)
   %add_impl = call i32 %add_impl_ptr(i32 %0, i32 %1)

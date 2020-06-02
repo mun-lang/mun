@@ -10,31 +10,31 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
 
-define i128 @add(i128, i128) {
+define i128 @add(i128 %0, i128 %1) {
 body:
   %add = add i128 %0, %1
   ret i128 %add
 }
 
-define i128 @subtract(i128, i128) {
+define i128 @subtract(i128 %0, i128 %1) {
 body:
   %sub = sub i128 %0, %1
   ret i128 %sub
 }
 
-define i128 @multiply(i128, i128) {
+define i128 @multiply(i128 %0, i128 %1) {
 body:
   %mul = mul i128 %0, %1
   ret i128 %mul
 }
 
-define i128 @divide(i128, i128) {
+define i128 @divide(i128 %0, i128 %1) {
 body:
   %div = sdiv i128 %0, %1
   ret i128 %div
 }
 
-define i128 @remainder(i128, i128) {
+define i128 @remainder(i128 %0, i128 %1) {
 body:
   %rem = srem i128 %0, %1
   ret i128 %rem

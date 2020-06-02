@@ -10,19 +10,19 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
 
-define i32 @assign_bitand(i32, i32) {
+define i32 @assign_bitand(i32 %0, i32 %1) {
 body:
   %bit_and = and i32 %0, %1
   ret i32 %bit_and
 }
 
-define i32 @assign_bitor(i32, i32) {
+define i32 @assign_bitor(i32 %0, i32 %1) {
 body:
   %bit_or = or i32 %0, %1
   ret i32 %bit_or
 }
 
-define i32 @assign_bitxor(i32, i32) {
+define i32 @assign_bitxor(i32 %0, i32 %1) {
 body:
   %bit_xor = xor i32 %0, %1
   ret i32 %bit_xor

@@ -10,7 +10,7 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
 
-define void @foo(i32) {
+define void @foo(i32 %0) {
 body:
   br label %whilecond
 

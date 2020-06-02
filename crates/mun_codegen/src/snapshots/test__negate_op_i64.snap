@@ -10,7 +10,7 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
 
-define i64 @negate(i64) {
+define i64 @negate(i64 %0) {
 body:
   %neg = sub i64 0, %0
   ret i64 %neg

@@ -10,13 +10,13 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
 
-define i128 @assign_leftshift(i128, i128) {
+define i128 @assign_leftshift(i128 %0, i128 %1) {
 body:
   %left_shift = shl i128 %0, %1
   ret i128 %left_shift
 }
 
-define i128 @assign_rightshift(i128, i128) {
+define i128 @assign_rightshift(i128 %0, i128 %1) {
 body:
   %right_shift = lshr i128 %0, %1
   ret i128 %right_shift

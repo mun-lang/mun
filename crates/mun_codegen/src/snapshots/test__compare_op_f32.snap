@@ -10,37 +10,37 @@ source_filename = "main.mun"
 
 @global_type_table = external global [2 x %struct.MunTypeInfo addrspace(4)*]
 
-define i1 @equals(float, float) {
+define i1 @equals(float %0, float %1) {
 body:
   %eq = fcmp oeq float %0, %1
   ret i1 %eq
 }
 
-define i1 @not_equal(float, float) {
+define i1 @not_equal(float %0, float %1) {
 body:
   %neq = fcmp one float %0, %1
   ret i1 %neq
 }
 
-define i1 @less(float, float) {
+define i1 @less(float %0, float %1) {
 body:
   %less = fcmp olt float %0, %1
   ret i1 %less
 }
 
-define i1 @less_equal(float, float) {
+define i1 @less_equal(float %0, float %1) {
 body:
   %lesseq = fcmp ole float %0, %1
   ret i1 %lesseq
 }
 
-define i1 @greater(float, float) {
+define i1 @greater(float %0, float %1) {
 body:
   %greater = fcmp ogt float %0, %1
   ret i1 %greater
 }
 
-define i1 @greater_equal(float, float) {
+define i1 @greater_equal(float %0, float %1) {
 body:
   %greatereq = fcmp oge float %0, %1
   ret i1 %greatereq

@@ -10,31 +10,31 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %struct.MunTypeInfo addrspace(4)*]
 
-define i16 @add(i16, i16) {
+define i16 @add(i16 %0, i16 %1) {
 body:
   %add = add i16 %0, %1
   ret i16 %add
 }
 
-define i16 @subtract(i16, i16) {
+define i16 @subtract(i16 %0, i16 %1) {
 body:
   %sub = sub i16 %0, %1
   ret i16 %sub
 }
 
-define i16 @multiply(i16, i16) {
+define i16 @multiply(i16 %0, i16 %1) {
 body:
   %mul = mul i16 %0, %1
   ret i16 %mul
 }
 
-define i16 @divide(i16, i16) {
+define i16 @divide(i16 %0, i16 %1) {
 body:
   %div = sdiv i16 %0, %1
   ret i16 %div
 }
 
-define i16 @remainder(i16, i16) {
+define i16 @remainder(i16 %0, i16 %1) {
 body:
   %rem = srem i16 %0, %1
   ret i16 %rem
