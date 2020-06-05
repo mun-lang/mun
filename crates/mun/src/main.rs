@@ -10,7 +10,13 @@ use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use mun_compiler::{Config, DisplayColor, PathOrInline, Target};
 use mun_runtime::{invoke_fn, ReturnTypeReflection, Runtime, RuntimeBuilder};
 
+fn setup_logging() -> Result<(), failure::Error> {
+    pretty_env_logger::try_init()?;
+    Ok(())
+}
+
 fn main() -> Result<(), failure::Error> {
+    setup_logging()?;
     let matches = App::new("mun")
         .version(env!("CARGO_PKG_VERSION"))
         .author("The Mun Project Developers")
@@ -71,11 +77,15 @@ fn main() -> Result<(), failure::Error> {
                         .help("how much to delay received filesystem events (in ms). This allows bundling of identical events, e.g. when several writes to the same file are detected. A high delay will make hot reloading less responsive. (defaults to 10 ms)"),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("language-server")
+        )
         .get_matches();
 
     match matches.subcommand() {
         ("build", Some(matches)) => build(matches)?,
         ("start", Some(matches)) => start(matches)?,
+        ("language-server", Some(matches)) => language_server(matches)?,
         _ => unreachable!(),
     }
 
@@ -183,4 +193,8 @@ fn runtime(matches: &ArgMatches) -> Result<Rc<RefCell<Runtime>>, failure::Error>
     };
 
     builder.spawn()
+}
+
+fn language_server(_matches: &ArgMatches) -> Result<(), failure::Error> {
+    mun_language_server::run_server().map_err(|e| failure::format_err!("{}", e))
 }
