@@ -37,13 +37,19 @@ use self::SyntaxKind::*;
 macro_rules! T {
 {%- for t in concat(a=single_char_tokens, b=multi_char_tokens) %}
     {%- if t.0 == '{' or t.0 == '}' or t.0 == '[' or t.0 == ']' or t.0 == '(' or t.0 == ')' %}
-    ('{{t.0}}') => { $crate::SyntaxKind::{{t.1}} };
+    ('{{t.0}}') => {
+        $crate::SyntaxKind::{{t.1}}
+    };
     {%- else %}
-    ({{t.0}}) => { $crate::SyntaxKind::{{t.1}} };
+    ({{t.0}}) => {
+        $crate::SyntaxKind::{{t.1}}
+    };
     {%- endif %}
 {%- endfor -%}
 {% for kw in keywords %}
-    ({{kw}}) => { $crate::SyntaxKind::{{kw | upper}}_KW };
+    ({{kw}}) => {
+        $crate::SyntaxKind::{{kw | upper}}_KW
+    };
 {%- endfor %}
 }
 
@@ -61,6 +67,7 @@ impl From<SyntaxKind> for u16 {
 }
 
 impl SyntaxKind {
+    #[rustfmt::skip]
     pub fn is_keyword(self) -> bool {
         match self {
 {%- for kw in keywords %}
@@ -71,6 +78,7 @@ impl SyntaxKind {
         }
     }
 
+    #[rustfmt::skip]
     pub fn is_symbol(self) -> bool {
             match self {
     {%- for t in concat(a=single_char_tokens, b=multi_char_tokens) %}
@@ -81,6 +89,7 @@ impl SyntaxKind {
             }
     }
 
+    #[rustfmt::skip]
     pub fn is_literal(self) -> bool {
             match self {
     {%- for t in literals %}
@@ -91,42 +100,43 @@ impl SyntaxKind {
             }
     }
 
+    #[rustfmt::skip]
     pub(crate) fn info(self) -> &'static SyntaxInfo {
-            match self {
+        match self {
     {%- for t in concat(a=single_char_tokens, b=multi_char_tokens) %}
-                {{t.1}} => &SyntaxInfo { name: "{{t.1}}" },
+            {{t.1}} => &SyntaxInfo { name: "{{t.1}}" },
     {%- endfor -%}
     {% for kw in keywords %}
-                {{kw | upper}}_KW => &SyntaxInfo { name: "{{kw | upper}}_KW" },
+            {{kw | upper}}_KW => &SyntaxInfo { name: "{{kw | upper}}_KW" },
     {%- endfor -%}
     {% for t in concat(a=literals, b=tokens, c=nodes) %}
-                {{t}} => &SyntaxInfo { name: "{{t}}" },
+            {{t}} => &SyntaxInfo { name: "{{t}}" },
     {%- endfor %}
-                TOMBSTONE => &SyntaxInfo { name: "TOMBSTONE" },
-                EOF => &SyntaxInfo { name: "EOF" },
-                __LAST => &SyntaxInfo { name: "__LAST" },
-            }
+            TOMBSTONE => &SyntaxInfo { name: "TOMBSTONE" },
+            EOF => &SyntaxInfo { name: "EOF" },
+            __LAST => &SyntaxInfo { name: "__LAST" },
         }
+    }
 
     pub fn from_keyword(ident: &str) -> Option<SyntaxKind> {
-            let kw = match ident {
+        let kw = match ident {
     {%- for kw in keywords %}
-                "{{kw}}" => {{kw | upper}}_KW,
+            "{{kw}}" => {{kw | upper}}_KW,
     {%- endfor %}
-                _ => return None,
-            };
-            Some(kw)
+            _ => return None,
+        };
+        Some(kw)
     }
 
     pub fn from_char(c: char) -> Option<SyntaxKind> {
-            let tok = match c {
+        let tok = match c {
     {%- for t in single_char_tokens %}
-                '{{t.0}}' => {{t.1}},
+            '{{t.0}}' => {{t.1}},
     {%- endfor %}
-                _ => return None,
-            };
-            Some(tok)
-        }
+            _ => return None,
+        };
+        Some(tok)
+    }
 }
 
 
