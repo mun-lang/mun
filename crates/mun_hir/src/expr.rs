@@ -578,7 +578,7 @@ where
     }
 
     fn collect_expr(&mut self, expr: ast::Expr) -> ExprId {
-        let syntax_ptr = AstPtr::new(&expr.clone());
+        let syntax_ptr = AstPtr::new(&expr);
         match expr.kind() {
             ast::ExprKind::LoopExpr(expr) => self.collect_loop(expr),
             ast::ExprKind::WhileExpr(expr) => self.collect_while(expr),
