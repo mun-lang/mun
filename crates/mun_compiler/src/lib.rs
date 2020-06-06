@@ -57,7 +57,7 @@ impl CompilerOptions {
     }
 }
 
-pub fn main(options: CompilerOptions) -> Result<Option<PathBuf>, failure::Error> {
+pub fn main(options: CompilerOptions) -> Result<Option<PathBuf>, anyhow::Error> {
     let (mut driver, file_id) = Driver::with_file(options.config, options.input)?;
 
     if driver.emit_diagnostics(&mut stderr())? {

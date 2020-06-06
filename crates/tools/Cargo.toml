@@ -5,9 +5,9 @@ authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 
 [dependencies]
-teraron = "0.0.1"
+teraron = "0.1.0"
 clap = "2.32.0"
-failure = "0.1.7"
+anyhow = "1.0.31"
 ron = "0.4.2"
 cbindgen = "= 0.14.2"
 bindgen = "0.51"

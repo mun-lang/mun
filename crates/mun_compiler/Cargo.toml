@@ -13,7 +13,7 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-failure = "0.1.7"
+anyhow = "1.0.31"
 mun_codegen = { version = "=0.2.0", path="../mun_codegen" }
 mun_syntax = { version = "=0.2.0", path="../mun_syntax" }
 mun_hir = { version = "=0.2.0", path="../mun_hir" }

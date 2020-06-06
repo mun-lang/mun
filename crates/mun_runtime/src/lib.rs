@@ -13,7 +13,7 @@ mod marshal;
 mod reflection;
 mod struct_ref;
 
-use failure::Error;
+use anyhow::Error;
 use garbage_collector::GarbageCollector;
 use memory::gc::{self, GcRuntime};
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};

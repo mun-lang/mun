@@ -14,7 +14,7 @@ categories = ["game-development", "mun"]
 
 [dependencies]
 abi = { version = "=0.2.0", path = "../mun_abi", package = "mun_abi" }
-failure = "0.1.7"
+anyhow = "1.0.31"
 libloading = "0.5"
 md5 = "0.7.0"
 memory = { version = "=0.1.0", path = "../mun_memory", package = "mun_memory" }

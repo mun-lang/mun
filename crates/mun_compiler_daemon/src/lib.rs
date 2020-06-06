@@ -1,7 +1,7 @@
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
-use failure::Error;
+use anyhow::Error;
 use mun_compiler::{CompilerOptions, Driver, PathOrInline};
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 

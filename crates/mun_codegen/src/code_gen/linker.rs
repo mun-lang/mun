@@ -1,10 +1,10 @@
-use failure::Fail;
 use mun_target::spec;
 use mun_target::spec::LinkerFlavor;
 use std::fmt;
 use std::path::{Path, PathBuf};
+use thiserror::Error;
 
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum LinkerError {
     /// Error emitted by the linker
     LinkError(String),

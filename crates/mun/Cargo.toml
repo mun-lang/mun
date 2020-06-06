@@ -14,7 +14,7 @@ categories = ["command-line-interface", "game-development", "mun"]
 default-run = "mun"
 
 [dependencies]
-failure = "0.1.7"
+anyhow = "1.0.31"
 clap = "2.33.0"
 log = "0.4"
 pretty_env_logger = "0.4"

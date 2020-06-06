@@ -13,6 +13,6 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-failure = "0.1.7"
+anyhow = "1.0.31"
 mun_compiler = { version = "=0.2.0", path = "../mun_compiler" }
 notify = "4.0.12"

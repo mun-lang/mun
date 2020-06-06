@@ -14,7 +14,7 @@ categories = ["game-development", "mun"]
 
 [dependencies]
 log = "0.4.8"
-failure = "0.1.7"
+thiserror = "1.0.19"
 
 [dev-dependencies]
 insta="0.16"
