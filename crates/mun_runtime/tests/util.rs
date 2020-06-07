@@ -22,7 +22,7 @@ enum RuntimeOrBuilder {
 }
 
 impl RuntimeOrBuilder {
-    pub fn spawn(&mut self) -> Result<(), failure::Error> {
+    pub fn spawn(&mut self) -> Result<(), anyhow::Error> {
         let previous = std::mem::replace(self, RuntimeOrBuilder::Pending);
         let runtime = match previous {
             RuntimeOrBuilder::Runtime(runtime) => runtime,
@@ -71,7 +71,7 @@ impl TestDriver {
     }
 
     /// Spawns a `Runtime` from the `RuntimeBuilder`, if it hadn't already been spawned.
-    pub fn spawn(&mut self) -> Result<(), failure::Error> {
+    pub fn spawn(&mut self) -> Result<(), anyhow::Error> {
         self.runtime.spawn().map(|_| ())
     }
 

@@ -1,5 +1,6 @@
-pub type Result<T> = std::result::Result<T, failure::Error>;
+pub type Result<T> = std::result::Result<T, anyhow::Error>;
 
+use anyhow::bail;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -22,7 +23,7 @@ fn update(path: &Path, contents: &str, mode: Mode) -> Result<()> {
 
     if mode == Mode::Verify {
         let changes = difference::Changeset::new(&old_contents, &contents, "\n");
-        failure::bail!("`{}` is not up-to-date:\n{}", path.display(), changes);
+        bail!("`{}` is not up-to-date:\n{}", path.display(), changes,);
     }
     eprintln!("updating {}", path.display());
     fs::write(path, contents)?;

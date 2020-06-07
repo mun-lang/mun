@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use failure::Error;
+use anyhow::Error;
 use libloading::Library;
 
 /// A structure that holds a `Library` instance but creates a unique file per load. This enables

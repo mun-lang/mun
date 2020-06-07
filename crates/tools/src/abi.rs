@@ -1,5 +1,5 @@
 use crate::{project_root, reformat, update, Result};
-use failure::format_err;
+use anyhow::anyhow;
 use teraron::Mode;
 
 pub const ABI_DIR: &str = "crates/mun_abi";
@@ -44,7 +44,7 @@ pub fn generate(mode: Mode) -> Result<()> {
 
     let input_file_str = input_file_path
         .to_str()
-        .ok_or_else(|| failure::err_msg("could not create path to mun_abi.h"))?;
+        .ok_or_else(|| anyhow!("could not create path to mun_abi.h"))?;
     let bindings = bindgen::Builder::default()
         .header(input_file_str)
         .whitelist_type("Mun.*")
@@ -60,7 +60,7 @@ pub fn generate(mode: Mode) -> Result<()> {
         .raw_line("#![allow(non_snake_case, non_camel_case_types, non_upper_case_globals)]")
         .raw_line("use crate::{StructMemoryKind, TypeGroup};")
         .generate()
-        .map_err(|_| format_err!("Unable to generate bindings from 'mun_abi.h'"))?;
+        .map_err(|_| anyhow!("Unable to generate bindings from 'mun_abi.h'"))?;
 
     let file_contents = reformat(bindings.to_string())?;
     update(&output_file_path, &file_contents, mode)
