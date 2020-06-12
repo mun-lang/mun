@@ -237,7 +237,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
         }
 
         // Recurse further
-        expr.walk_child_exprs(|expr_id| self.collect_expr(expr_id, body, infer))
+        expr.walk_child_exprs(|expr_id| self.collect_expr(expr_id, body, infer));
     }
 
     /// Collects function call expression from the given expression.
@@ -285,6 +285,14 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
             });
             self.prototype_to_idx.insert(prototype, index);
             self.function_to_idx.insert(function, index);
+
+            // Recurse further
+            let fn_body = function.body(self.db);
+            self.collect_expr(
+                fn_body.body_expr(),
+                &fn_body,
+                function.infer(self.db).as_ref(),
+            );
         }
     }
 

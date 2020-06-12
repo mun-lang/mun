@@ -1,0 +1,43 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn private_fn() -> f32 {\n    private_fn()\n}\n\npub fn main() -> f32 {\n    private_fn()\n}"
+---
+; == FILE IR =====================================
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+%DispatchTable = type { float ()* }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
+
+@dispatchTable = external global %DispatchTable
+@global_type_table = external global [1 x %struct.MunTypeInfo*]
+
+define float @private_fn() {
+body:
+  %private_fn_ptr = load float ()*, float ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
+  %private_fn = call float %private_fn_ptr()
+  ret float %private_fn
+}
+
+define float @main() {
+body:
+  %private_fn_ptr = load float ()*, float ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
+  %private_fn = call float %private_fn_ptr()
+  ret float %private_fn
+}
+
+
+; == GROUP IR ====================================
+; ModuleID = 'group_name'
+source_filename = "group_name"
+
+%DispatchTable = type { float ()* }
+%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
+
+@dispatchTable = global %DispatchTable { float ()* @private_fn }
+@"type_info::<core::f32>::name" = private unnamed_addr constant [10 x i8] c"core::f32\00"
+@"type_info::<core::f32>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"P\19b7\A8k\F2\81P\FB\83\F5P\B0\82!", [10 x i8]* @"type_info::<core::f32>::name", i32 32, i8 4, i8 0 }
+@global_type_table = constant [1 x %struct.MunTypeInfo*] [%struct.MunTypeInfo* @"type_info::<core::f32>"]
+
+declare float @private_fn()
+

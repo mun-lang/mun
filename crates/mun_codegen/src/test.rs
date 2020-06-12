@@ -824,6 +824,55 @@ fn nested_private_fn() {
     );
 }
 
+#[test]
+fn nested_private_extern_fn() {
+    test_snapshot(
+        r#"
+    extern fn extern_fn() -> f32;
+
+    fn private_fn() -> f32 {
+        extern_fn()
+    }
+
+    pub fn main() -> f32 {
+        private_fn()
+    }
+    "#,
+    )
+}
+
+#[test]
+fn nested_private_recursive_fn() {
+    test_snapshot(
+        r#"
+    fn private_fn() -> f32 {
+        private_fn()
+    }
+
+    pub fn main() -> f32 {
+        private_fn()
+    }
+    "#,
+    )
+}
+
+#[test]
+fn nested_private_recursive_fn_with_args() {
+    test_snapshot(
+        r#"
+    extern fn other() -> i32;
+
+    fn private_fn(a: i32) -> f32 {
+        private_fn(a)
+    }
+
+    pub fn main() -> f32 {
+        private_fn(other())
+    }
+    "#,
+    )
+}
+
 fn test_snapshot(text: &str) {
     test_snapshot_with_optimization(text, OptimizationLevel::Default);
 }
