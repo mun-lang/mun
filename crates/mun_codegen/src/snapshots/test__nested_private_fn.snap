@@ -6,7 +6,7 @@ expression: "fn nested_private_fn() -> i32 {\n    1\n}\n\nfn private_fn() -> i32
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
 
-%DispatchTable = type { i32 ()* }
+%DispatchTable = type { i32 ()*, i32 ()* }
 %struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
 @dispatchTable = external global %DispatchTable
@@ -19,7 +19,8 @@ body:
 
 define i32 @private_fn() {
 body:
-  %nested_private_fn = call i32 @nested_private_fn()
+  %nested_private_fn_ptr = load i32 ()*, i32 ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 1)
+  %nested_private_fn = call i32 %nested_private_fn_ptr()
   ret i32 %nested_private_fn
 }
 
@@ -35,13 +36,15 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%DispatchTable = type { i32 ()* }
+%DispatchTable = type { i32 ()*, i32 ()* }
 %struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
-@dispatchTable = global %DispatchTable { i32 ()* @private_fn }
+@dispatchTable = global %DispatchTable { i32 ()* @private_fn, i32 ()* @nested_private_fn }
 @"type_info::<core::i32>::name" = private unnamed_addr constant [10 x i8] c"core::i32\00"
 @"type_info::<core::i32>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\17yzt\19\D62\17\D25\95C\17\88[\FA", [10 x i8]* @"type_info::<core::i32>::name", i32 32, i8 4, i8 0 }
 @global_type_table = constant [1 x %struct.MunTypeInfo*] [%struct.MunTypeInfo* @"type_info::<core::i32>"]
 
 declare i32 @private_fn()
+
+declare i32 @nested_private_fn()
 
