@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use mun_runtime::invoke_fn;
+use mun_runtime::{invoke_fn, StructRef};
 
 mod util;
 
@@ -98,5 +98,71 @@ pub fn empty_benchmark(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, fibonacci_benchmark, empty_benchmark);
+/// A benchmark method to measure the relative overhead of calling a function from Rust for several
+/// languages.
+pub fn struct_get_struct_benchmark(c: &mut Criterion) {
+    // Perform setup (not part of the benchmark)
+    let runtime = util::runtime_from_file("struct.mun");
+    let mun_gc_parent: StructRef = invoke_fn!(runtime, "make_gc_parent").unwrap();
+    let mun_value_parent: StructRef = invoke_fn!(runtime, "make_value_parent").unwrap();
+
+    let rust_parent = RustParent {
+        child: RustChild(-2.0, -1.0, 1.0, 2.0),
+    };
+
+    let mut group = c.benchmark_group("struct_get_struct");
+
+    // Iterate over a number of samples
+    for i in [100i64, 200i64, 500i64, 1000i64].iter() {
+        // When marshalling, both `struct(gc)` and `struct(value)` are assigned on the heap, so we
+        // only need to compare two cases:
+        // - a `struct(gc)` child
+        // - a `struct(value)` child
+
+        // Marshal Mun `struct(gc)`
+        group.bench_with_input(BenchmarkId::new("mun (gc)", i), i, |b, i| {
+            b.iter(|| {
+                for _ in 0..*i {
+                    // TODO: Optimise `RefCell::borrow` cost for sequential marshalling
+                    let _child = black_box(mun_gc_parent.get::<StructRef>("child").unwrap());
+                    // TODO: Optimise `Drop` cost for temporary structs
+                }
+            })
+        });
+
+        // Marshal Mun `struct(value)`
+        group.bench_with_input(BenchmarkId::new("mun (value)", i), i, |b, i| {
+            b.iter(|| {
+                for _ in 0..*i {
+                    // TODO: Optimise allocation of `struct(value)` by using a memory arena
+                    let _child = black_box(mun_value_parent.get::<StructRef>("child").unwrap());
+                }
+            })
+        });
+
+        // Run Rust fibonacci
+        group.bench_with_input(BenchmarkId::new("rust", i), i, |b, i| {
+            b.iter(|| {
+                for _ in 0..*i {
+                    let _child = black_box(&rust_parent.child);
+                }
+            })
+        });
+    }
+
+    group.finish();
+
+    struct RustChild(f32, f32, f32, f32);
+
+    struct RustParent {
+        child: RustChild,
+    }
+}
+
+criterion_group!(
+    benches,
+    fibonacci_benchmark,
+    empty_benchmark,
+    struct_get_struct_benchmark
+);
 criterion_main!(benches);
