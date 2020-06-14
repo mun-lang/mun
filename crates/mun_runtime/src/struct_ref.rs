@@ -7,6 +7,7 @@ use crate::{
     Runtime,
 };
 use memory::gc::{GcRuntime, HasIndirectionPtr};
+use once_cell::sync::OnceCell;
 use std::cell::RefCell;
 use std::{
     ptr::{self, NonNull},
@@ -226,6 +227,14 @@ impl ReturnTypeReflection for StructRef {
 
     fn type_name() -> &'static str {
         "struct"
+    }
+
+    fn type_guid() -> abi::Guid {
+        // TODO: Once `const_fn` lands, replace this with a const md5 hash
+        static GUID: OnceCell<abi::Guid> = OnceCell::new();
+        *GUID.get_or_init(|| abi::Guid {
+            b: md5::compute(<Self as ReturnTypeReflection>::type_name()).0,
+        })
     }
 }
 

@@ -1,5 +1,6 @@
 use crate::{marshal::Marshal, Runtime, StructRef};
 use abi::HasStaticTypeInfo;
+use once_cell::sync::OnceCell;
 
 /// Returns whether the specified argument type matches the `type_info`.
 pub fn equals_argument_type<'e, 'f, T: ArgumentReflection>(
@@ -39,11 +40,7 @@ pub trait ReturnTypeReflection: Sized {
     type Marshalled: Marshal<Self>;
 
     /// Retrieves the type's `Guid`.
-    fn type_guid() -> abi::Guid {
-        abi::Guid {
-            b: md5::compute(Self::type_name()).0,
-        }
-    }
+    fn type_guid() -> abi::Guid;
 
     /// Retrieves the type's name.
     fn type_name() -> &'static str;
@@ -107,6 +104,14 @@ impl ReturnTypeReflection for () {
 
     fn type_name() -> &'static str {
         "core::empty"
+    }
+
+    fn type_guid() -> abi::Guid {
+        // TODO: Once `const_fn` lands, replace this with a const md5 hash
+        static GUID: OnceCell<abi::Guid> = OnceCell::new();
+        *GUID.get_or_init(|| abi::Guid {
+            b: md5::compute(Self::type_name()).0,
+        })
     }
 }
 
