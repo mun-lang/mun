@@ -355,7 +355,7 @@ fn gen_set_allocator_handle_fn(db: &impl IrDatabase, context: &IrValueContext) {
 fn gen_get_version_fn(db: &impl IrDatabase, context: &IrValueContext) {
     let get_version_fn = context.module.add_function(
         abi::GET_VERSION_FN_NAME,
-        Value::<fn() -> i32>::get_ir_type(context.type_context),
+        Value::<fn() -> u32>::get_ir_type(context.type_context),
         Some(Linkage::DLLExport),
     );
 

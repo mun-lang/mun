@@ -26,7 +26,8 @@ pub mod prelude {
 }
 
 /// Defines the current abi version
-pub const ABI_VERSION: i32 = 00_20_00;
+#[allow(clippy::zero_prefixed_literal)]
+pub const ABI_VERSION: u32 = 00_02_00;
 /// Defines the name for the `get_info` function
 pub const GET_INFO_FN_NAME: &str = "get_info";
 /// Defines the name for the `get_version` function

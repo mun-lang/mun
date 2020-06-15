@@ -35,7 +35,7 @@ impl Assembly {
         let get_info: Symbol<'_, extern "C" fn() -> AssemblyInfo> =
             unsafe { library.library().get(abi::GET_INFO_FN_NAME.as_bytes()) }?;
 
-        let get_version: Symbol<'_, extern "C" fn() -> i32> =
+        let get_version: Symbol<'_, extern "C" fn() -> u32> =
             unsafe { library.library().get(abi::GET_VERSION_FN_NAME.as_bytes()) }?;
 
         let set_allocator_handle: Symbol<'_, extern "C" fn(*mut std::ffi::c_void)> = unsafe {
