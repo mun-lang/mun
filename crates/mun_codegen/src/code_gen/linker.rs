@@ -173,8 +173,11 @@ impl Linker for MsvcLinker {
 
         self.args.push("/DLL".to_owned());
         self.args.push("/NOENTRY".to_owned());
-        self.args.push("/EXPORT:get_info".to_owned());
-        self.args.push("/EXPORT:set_allocator_handle".to_owned());
+        self.args.push(format!("/EXPORT:{}", abi::GET_INFO_FN_NAME));
+        self.args
+            .push(format!("/EXPORT:{}", abi::GET_VERSION_FN_NAME));
+        self.args
+            .push(format!("/EXPORT:{}", abi::SET_ALLOCATOR_HANDLE_FN_NAME));
         self.args.push(format!("/IMPLIB:{}", dll_lib_path_str));
         self.args.push(format!("/OUT:{}", dll_path_str));
         Ok(())
