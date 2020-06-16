@@ -232,6 +232,7 @@ pub(super) fn gen_reflection_ir(
     // Construct the actual `get_info` function
     gen_get_info_fn(db, context, module_info, dispatch_table);
     gen_set_allocator_handle_fn(db, context);
+    gen_get_version_fn(db, context);
 }
 
 /// Construct the actual `get_info` function.
@@ -347,4 +348,20 @@ fn gen_set_allocator_handle_fn(db: &impl IrDatabase, context: &IrValueContext) {
     }
 
     builder.build_return(None);
+}
+
+/// Generates a `get_version` method that returns the current abi version.
+/// Specifically, it returns the abi version the function was generated in.
+fn gen_get_version_fn(db: &impl IrDatabase, context: &IrValueContext) {
+    let get_version_fn = context.module.add_function(
+        abi::GET_VERSION_FN_NAME,
+        Value::<fn() -> u32>::get_ir_type(context.type_context),
+        Some(Linkage::DLLExport),
+    );
+
+    let builder = db.context().create_builder();
+    let body_ir = db.context().append_basic_block(&get_version_fn, "body");
+    builder.position_at_end(&body_ir);
+
+    builder.build_return(Some(&abi::ABI_VERSION.as_value(context).value));
 }
