@@ -488,8 +488,12 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 }
             };
         }
-        tail.and_then(|expr| self.gen_expr(expr))
-            .or_else(|| Some(self.gen_empty()))
+
+        if let Some(tail) = tail {
+            self.gen_expr(tail)
+        } else {
+            Some(self.gen_empty())
+        }
     }
 
     /// Constructs a builder that should be used to emit an `alloca` instruction. These instructions
@@ -1105,7 +1109,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             if !self.infer[*else_branch].is_never() {
                 self.builder.build_unconditional_branch(&merge_block);
             }
-            result_ir.map(|res| (res, self.builder.get_insert_block().unwrap()))
+            Some((result_ir, self.builder.get_insert_block().unwrap()))
         } else {
             None
         };
@@ -1117,13 +1121,15 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
 
         // Construct phi block if a value was returned
         if let Some(then_block_ir) = then_block_ir {
-            if let Some((else_block_ir, else_block)) = else_ir_and_block {
+            if let Some((Some(else_block_ir), else_block)) = else_ir_and_block {
                 let phi = self.builder.build_phi(then_block_ir.get_type(), "iftmp");
                 phi.add_incoming(&[(&then_block_ir, &then_block), (&else_block_ir, &else_block)]);
                 Some(phi.as_basic_value())
             } else {
                 Some(then_block_ir)
             }
+        } else if let Some((else_block_ir, _else_block)) = else_ir_and_block {
+            else_block_ir
         } else {
             Some(self.gen_empty())
         }

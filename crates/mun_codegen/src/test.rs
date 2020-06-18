@@ -8,6 +8,29 @@ use std::cell::RefCell;
 use std::sync::Arc;
 
 #[test]
+fn issue_228_never_if() {
+    test_snapshot(
+        r#"
+    pub  fn fact(n: usize) -> usize {
+   	    if n == 0 {return 1} else {return n * (n-1)}
+   	    return 2;
+    }
+    "#,
+    )
+}
+
+#[test]
+fn issue_228() {
+    test_snapshot(
+        r#"
+    pub  fn fact(n: usize) -> usize {
+   	    if n == 0 {return 1} else {n * (n-1)}
+    }
+    "#,
+    )
+}
+
+#[test]
 fn issue_128() {
     test_snapshot(
         r#"
