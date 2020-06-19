@@ -23,6 +23,7 @@ annotate-snippets = { version = "0.6.1", features = ["color"] }
 unicode-segmentation = "1.6.0"
 ansi_term = "0.12.1"
 walkdir = "2.3"
+log = "0.4"
 
 [dev-dependencies]
 insta = "0.16"

@@ -24,10 +24,7 @@ impl Package {
     pub fn from_file<P: AsRef<Path>>(path: P) -> anyhow::Result<Self> {
         let path = path.as_ref();
         let manifest = Manifest::from_file(path)?;
-        Ok(Self {
-            manifest,
-            manifest_path: path.to_path_buf(),
-        })
+        Ok(Self::new(manifest, path))
     }
 
     /// Returns the manifest
@@ -57,7 +54,7 @@ impl Package {
 
     /// Returns the version of the package
     pub fn version(&self) -> &Version {
-        self.manifest().version()
+        self.package_id().version()
     }
 
     /// Returns the source directory of the package, or None if no such directory exists.

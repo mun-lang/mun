@@ -29,3 +29,6 @@ mun_project = { version = "=0.1.0", path = "../mun_project" }
 version = "1"
 default-features = false # Disable features which are enabled by default
 features = ["precommit-hook", "run-cargo-test", "run-cargo-fmt", "run-cargo-clippy", "run-for-all"]
+
+[dev-dependencies]
+tempdir = "0.3"

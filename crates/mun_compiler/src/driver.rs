@@ -108,7 +108,8 @@ impl Driver {
         let package = Package::from_file(package_path)?;
 
         // Determine output directory
-        let output_dir = ensure_package_output_dir(&package, &config)?;
+        let output_dir = ensure_package_output_dir(&package, &config)
+            .map_err(|e| anyhow::anyhow!("could not create package output directory: {}", e))?;
 
         // Construct the driver
         let mut driver = Driver::with_config(config, output_dir)?;
@@ -246,6 +247,8 @@ impl Driver {
     /// false, the binary will not be written if there are no changes since last time it was
     /// written. Returns `true` if the assembly was written, `false` if it was up to date.
     pub fn write_assembly(&mut self, file_id: FileId, force: bool) -> Result<bool, anyhow::Error> {
+        log::trace!("writing assembly for {:?}", file_id);
+
         // Determine the location of the output file
         let assembly_path = self.assembly_output_path(file_id);
 

@@ -113,3 +113,31 @@ pub fn compute_source_relative_path(
         )
     })
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{compute_source_relative_path, is_source_file, RelativePath};
+    use std::path::Path;
+
+    #[test]
+    fn test_is_source_file() {
+        assert_eq!(is_source_file("main.mun"), true);
+        assert_eq!(is_source_file("foo.mun"), true);
+        assert_eq!(is_source_file("foo/bar.mun"), true);
+        assert_eq!(is_source_file("foo/bar"), false);
+    }
+
+    #[test]
+    fn test_compute_source_relative_path() {
+        let source_dir = Path::new("some_path/src");
+        assert_eq!(
+            compute_source_relative_path(&source_dir, &source_dir.join("main.mun")).unwrap(),
+            RelativePath::new("main.mun")
+        );
+        assert_eq!(
+            compute_source_relative_path(&source_dir, &source_dir.join("foo/bar/main.mun"))
+                .unwrap(),
+            RelativePath::new("foo/bar/main.mun")
+        );
+    }
+}
