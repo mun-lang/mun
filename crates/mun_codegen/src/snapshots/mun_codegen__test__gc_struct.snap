@@ -16,7 +16,7 @@ source_filename = "main.mun"
 
 define void @foo() {
 body:
-  %b5 = alloca %Foo**
+  %b = alloca %Foo**
   %a = alloca %Foo**
   %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
   %Foo_ptr = load %struct.MunTypeInfo*, %struct.MunTypeInfo** getelementptr inbounds ([5 x %struct.MunTypeInfo*], [5 x %struct.MunTypeInfo*]* @global_type_table, i32 0, i32 0)
@@ -29,15 +29,15 @@ body:
   store %Foo** %Foo_ptr_ptr, %Foo*** %a
   %mem_ptr = load %Foo**, %Foo*** %a
   %deref = load %Foo*, %Foo** %mem_ptr
-  %Foo.b = getelementptr inbounds %Foo, %Foo* %deref, i32 0, i32 1
-  %b = load i32, i32* %Foo.b
-  %add = add i32 %b, 3
+  %Foo.b_ptr = getelementptr inbounds %Foo, %Foo* %deref, i32 0, i32 1
+  %Foo.b = load i32, i32* %Foo.b_ptr
+  %add = add i32 %Foo.b, 3
   %mem_ptr1 = load %Foo**, %Foo*** %a
   %deref2 = load %Foo*, %Foo** %mem_ptr1
-  %Foo.b3 = getelementptr inbounds %Foo, %Foo* %deref2, i32 0, i32 1
-  store i32 %add, i32* %Foo.b3
+  %Foo.b_ptr3 = getelementptr inbounds %Foo, %Foo* %deref2, i32 0, i32 1
+  store i32 %add, i32* %Foo.b_ptr3
   %a4 = load %Foo**, %Foo*** %a
-  store %Foo** %a4, %Foo*** %b5
+  store %Foo** %a4, %Foo*** %b
   ret void
 }
 
