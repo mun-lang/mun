@@ -261,11 +261,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             Expr::Field {
                 expr: receiver_expr,
                 name,
-            } => {
-                let ptr = self.gen_field(expr, *receiver_expr, name);
-                let value = self.builder.build_load(ptr, &name.to_string());
-                Some(value)
-            }
+            } => self.gen_field(expr, *receiver_expr, name),
             _ => unimplemented!("unimplemented expr type {:?}", &body[expr]),
         }
     }
@@ -569,18 +565,20 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         }
     }
 
-    /// Given an expression and the type of the expression, optionally dereference the value.
-    fn opt_deref_value(&mut self, ty: hir::Ty, value: BasicValueEnum) -> BasicValueEnum {
-        match ty {
-            hir::Ty::Apply(hir::ApplicationTy {
-                ctor: hir::TypeCtor::Struct(s),
-                ..
-            }) => match s.data(self.db).memory_kind {
-                hir::StructMemoryKind::GC => deref_heap_value(&self.builder, value),
-                hir::StructMemoryKind::Value => value,
-            },
-            _ => value,
+    /// Given an expression and its value optionally dereference the value to get to the actual
+    /// value. This is useful if we need to do an indirection to get to the actual value.
+    fn opt_deref_value(&mut self, expr: ExprId, value: BasicValueEnum) -> BasicValueEnum {
+        let ty = &self.infer[expr];
+        if let hir::Ty::Apply(hir::ApplicationTy {
+            ctor: hir::TypeCtor::Struct(s),
+            ..
+        }) = ty
+        {
+            if s.data(self.db).memory_kind == hir::StructMemoryKind::GC {
+                return deref_heap_value(&self.builder, value);
+            }
         }
+        value
     }
 
     /// Generates IR for looking up a certain path expression.
@@ -650,7 +648,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     fn gen_unary_op_float(&mut self, expr: ExprId, op: UnaryOp) -> Option<BasicValueEnum> {
         let value: FloatValue = self
             .gen_expr(expr)
-            .map(|value| self.opt_deref_value(self.infer[expr].clone(), value))
+            .map(|value| self.opt_deref_value(expr, value))
             .expect("no value")
             .into_float_value();
         match op {
@@ -668,7 +666,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     ) -> Option<BasicValueEnum> {
         let value: IntValue = self
             .gen_expr(expr)
-            .map(|value| self.opt_deref_value(self.infer[expr].clone(), value))
+            .map(|value| self.opt_deref_value(expr, value))
             .expect("no value")
             .into_int_value();
         match op {
@@ -688,7 +686,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     fn gen_unary_op_bool(&mut self, expr: ExprId, op: UnaryOp) -> Option<BasicValueEnum> {
         let value: IntValue = self
             .gen_expr(expr)
-            .map(|value| self.opt_deref_value(self.infer[expr].clone(), value))
+            .map(|value| self.opt_deref_value(expr, value))
             .expect("no value")
             .into_int_value();
         match op {
@@ -706,12 +704,12 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     ) -> Option<BasicValueEnum> {
         let lhs: IntValue = self
             .gen_expr(lhs_expr)
-            .map(|value| self.opt_deref_value(self.infer[lhs_expr].clone(), value))
+            .map(|value| self.opt_deref_value(lhs_expr, value))
             .expect("no lhs value")
             .into_int_value();
         let rhs: IntValue = self
             .gen_expr(rhs_expr)
-            .map(|value| self.opt_deref_value(self.infer[rhs_expr].clone(), value))
+            .map(|value| self.opt_deref_value(rhs_expr, value))
             .expect("no rhs value")
             .into_int_value();
         match op {
@@ -742,12 +740,12 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     ) -> Option<BasicValueEnum> {
         let lhs = self
             .gen_expr(lhs_expr)
-            .map(|value| self.opt_deref_value(self.infer[lhs_expr].clone(), value))
+            .map(|value| self.opt_deref_value(lhs_expr, value))
             .expect("no lhs value")
             .into_float_value();
         let rhs = self
             .gen_expr(rhs_expr)
-            .map(|value| self.opt_deref_value(self.infer[rhs_expr].clone(), value))
+            .map(|value| self.opt_deref_value(rhs_expr, value))
             .expect("no rhs value")
             .into_float_value();
         match op {
@@ -802,12 +800,12 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     ) -> Option<BasicValueEnum> {
         let lhs = self
             .gen_expr(lhs_expr)
-            .map(|value| self.opt_deref_value(self.infer[lhs_expr].clone(), value))
+            .map(|value| self.opt_deref_value(lhs_expr, value))
             .expect("no lhs value")
             .into_int_value();
         let rhs = self
             .gen_expr(rhs_expr)
-            .map(|value| self.opt_deref_value(self.infer[lhs_expr].clone(), value))
+            .map(|value| self.opt_deref_value(rhs_expr, value))
             .expect("no rhs value")
             .into_int_value();
         match op {
@@ -1024,8 +1022,19 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             Expr::Field {
                 expr: receiver_expr,
                 name,
-            } => self.gen_field(expr, *receiver_expr, name),
+            } => self.gen_place_field(expr, *receiver_expr, name),
             _ => unreachable!("invalid place expression"),
+        }
+    }
+
+    /// Returns true if the specified expression refers to an expression that results in a memory
+    /// address that can be used for other place operations.
+    fn is_place_expr(&self, expr: ExprId) -> bool {
+        let body = self.body.clone();
+        match &body[expr] {
+            Expr::Path(..) => true,
+            Expr::Field { expr, .. } => self.is_place_expr(*expr),
+            _ => false,
         }
     }
 
@@ -1068,7 +1077,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         // Generate IR for the condition
         let condition_ir = self
             .gen_expr(condition)
-            .map(|value| self.opt_deref_value(self.infer[condition].clone(), value))?
+            .map(|value| self.opt_deref_value(condition, value))?
             .into_int_value();
 
         // Generate the code blocks to branch to
@@ -1208,7 +1217,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         self.builder.position_at_end(&cond_block);
         let condition_ir = self
             .gen_expr(condition_expr)
-            .map(|value| self.opt_deref_value(self.infer[condition_expr].clone(), value));
+            .map(|value| self.opt_deref_value(condition_expr, value));
         if let Some(condition_ir) = condition_ir {
             self.builder.build_conditional_branch(
                 condition_ir.into_int_value(),
@@ -1264,10 +1273,68 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         }
     }
 
-    fn gen_field(&mut self, _expr: ExprId, receiver_expr: ExprId, name: &Name) -> PointerValue {
+    fn gen_field(
+        &mut self,
+        _expr: ExprId,
+        receiver_expr: ExprId,
+        name: &Name,
+    ) -> Option<BasicValueEnum> {
         let hir_struct = self.infer[receiver_expr]
             .as_struct()
             .expect("expected a struct");
+
+        let hir_struct_name = hir_struct.name(self.db);
+
+        let field_idx = hir_struct
+            .field(self.db, name)
+            .expect("expected a struct field")
+            .id()
+            .into_raw()
+            .into();
+
+        let field_ir_name = &format!("{}.{}", hir_struct_name, name);
+        if self.is_place_expr(receiver_expr) {
+            let receiver_ptr = self.gen_place_expr(receiver_expr);
+            let receiver_ptr = self
+                .opt_deref_value(receiver_expr, receiver_ptr.into())
+                .into_pointer_value();
+            unsafe {
+                let field_ptr = self.builder.build_struct_gep(
+                    receiver_ptr,
+                    field_idx,
+                    &format!("{}.{}_ptr", hir_struct_name, name),
+                );
+                Some(self.builder.build_load(field_ptr, &field_ir_name))
+            }
+        } else {
+            let receiver_value = self.gen_expr(receiver_expr)?;
+            let receiver_value = self.opt_deref_value(receiver_expr, receiver_value);
+            let receiver_struct = receiver_value.into_struct_value();
+            Some(
+                self.builder
+                    .build_extract_value(receiver_struct, field_idx, field_ir_name)
+                    .ok_or_else(|| {
+                        format!(
+                            "could not extract field {} (index: {}) from struct {}",
+                            name, field_idx, hir_struct_name
+                        )
+                    })
+                    .unwrap(),
+            )
+        }
+    }
+
+    fn gen_place_field(
+        &mut self,
+        _expr: ExprId,
+        receiver_expr: ExprId,
+        name: &Name,
+    ) -> PointerValue {
+        let hir_struct = self.infer[receiver_expr]
+            .as_struct()
+            .expect("expected a struct");
+
+        let hir_struct_name = hir_struct.name(self.db);
 
         let field_idx = hir_struct
             .field(self.db, name)
@@ -1278,13 +1345,13 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
 
         let receiver_ptr = self.gen_place_expr(receiver_expr);
         let receiver_ptr = self
-            .opt_deref_value(self.infer[receiver_expr].clone(), receiver_ptr.into())
+            .opt_deref_value(receiver_expr, receiver_ptr.into())
             .into_pointer_value();
         unsafe {
             self.builder.build_struct_gep(
                 receiver_ptr,
                 field_idx,
-                &format!("{}.{}", hir_struct.name(self.db), name),
+                &format!("{}.{}_ptr", hir_struct_name, name),
             )
         }
     }
