@@ -325,19 +325,19 @@ pub trait RetryResultExt: Sized {
 
 invoke_fn_impl! {
     fn invoke_fn0() -> InvokeErr0;
-    fn invoke_fn1(a: A) -> InvokeErr1;
-    fn invoke_fn2(a: A, b: B) -> InvokeErr2;
-    fn invoke_fn3(a: A, b: B, c: C) -> InvokeErr3;
-    fn invoke_fn4(a: A, b: B, c: C, d: D) -> InvokeErr4;
-    fn invoke_fn5(a: A, b: B, c: C, d: D, e: E) -> InvokeErr5;
-    fn invoke_fn6(a: A, b: B, c: C, d: D, e: E, f: F) -> InvokeErr6;
-    fn invoke_fn7(a: A, b: B, c: C, d: D, e: E, f: F, g: G) -> InvokeErr7;
-    fn invoke_fn8(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H) -> InvokeErr8;
-    fn invoke_fn9(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I) -> InvokeErr9;
-    fn invoke_fn10(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J) -> InvokeErr10;
-    fn invoke_fn11(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K) -> InvokeErr11;
-    fn invoke_fn12(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K, l: L) -> InvokeErr12;
-    fn invoke_fn13(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K, l: L, m: M) -> InvokeErr13;
-    fn invoke_fn14(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K, l: L, m: M, n: N) -> InvokeErr14;
-    fn invoke_fn15(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I, j: J, k: K, l: L, m: M, n: N, o: O) -> InvokeErr15;
+    fn invoke_fn1(arg1: A) -> InvokeErr1;
+    fn invoke_fn2(arg1: A, arg2: B) -> InvokeErr2;
+    fn invoke_fn3(arg1: A, arg2: B, arg3: C) -> InvokeErr3;
+    fn invoke_fn4(arg1: A, arg2: B, arg3: C, arg4: D) -> InvokeErr4;
+    fn invoke_fn5(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E) -> InvokeErr5;
+    fn invoke_fn6(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F) -> InvokeErr6;
+    fn invoke_fn7(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G) -> InvokeErr7;
+    fn invoke_fn8(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H) -> InvokeErr8;
+    fn invoke_fn9(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I) -> InvokeErr9;
+    fn invoke_fn10(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J) -> InvokeErr10;
+    fn invoke_fn11(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J, arg11: K) -> InvokeErr11;
+    fn invoke_fn12(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J, arg11: K, arg12: L) -> InvokeErr12;
+    fn invoke_fn13(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J, arg11: K, arg12: L, arg13: M) -> InvokeErr13;
+    fn invoke_fn14(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J, arg11: K, arg12: L, arg13: M, arg14: N) -> InvokeErr14;
+    fn invoke_fn15(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J, arg11: K, arg12: L, arg13: M, arg14: N, arg15: O) -> InvokeErr15;
 }
