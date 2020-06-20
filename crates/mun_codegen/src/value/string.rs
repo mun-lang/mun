@@ -1,5 +1,4 @@
 use super::{AsValue, Global, IrValueContext, TransparentValue, Value};
-use crate::value::AddressableType;
 use std::ffi::{CStr, CString};
 
 /// Enables internalizing certain data structures like strings.
@@ -55,6 +54,3 @@ impl TransparentValue for String {
         self.as_bytes().as_value(context)
     }
 }
-
-impl AddressableType<u8> for CString {}
-impl AddressableType<u8> for String {}

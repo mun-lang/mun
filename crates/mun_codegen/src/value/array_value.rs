@@ -3,6 +3,7 @@ use crate::value::{
     SizedValueType, TypeValue, Value, ValueType,
 };
 use inkwell::types::{BasicType, PointerType};
+use inkwell::values::PointerValue;
 use inkwell::AddressSpace;
 
 impl<T: ConcreteValueType> ConcreteValueType for [T] {
@@ -15,8 +16,17 @@ impl<T: PointerValueType> PointerValueType for [T] {
     }
 }
 
-impl<I, T: AddressableType<I>> AddressableType<I> for [T] {}
-impl<I, T: AddressableType<I>> AddressableType<[I]> for [T] {}
+impl<I, T: AddressableType<I>> AddressableType<I> for [T] {
+    fn ptr_cast(value: PointerValue, _context: &IrValueContext) -> PointerValue {
+        let ptr_type = value
+            .get_type()
+            .get_element_type()
+            .into_array_type()
+            .get_element_type()
+            .ptr_type(value.get_type().get_address_space());
+        value.const_cast(ptr_type)
+    }
+}
 
 macro_rules! impl_array(
     ($($size:expr),+) => {
@@ -100,6 +110,7 @@ pub trait IterAsIrValue<E: SizedValueType, T: AsValue<E>>: IntoIterator<Item = T
     where
         *const E: ConcreteValueType<Value = inkwell::values::PointerValue>,
         E: AddressableType<E>,
+        E: PointerValueType,
         Self: Sized,
     {
         self.as_value(context)
@@ -117,6 +128,7 @@ pub trait IterAsIrValue<E: SizedValueType, T: AsValue<E>>: IntoIterator<Item = T
     where
         *const E: SizedValueType<Value = inkwell::values::PointerValue>,
         E: AddressableType<E>,
+        E: PointerValueType,
         Self: Sized,
         E::Value: ConstArrayValue,
     {
@@ -137,11 +149,14 @@ where
 {
     fn as_value(self, context: &IrValueContext) -> Value<[E]> {
         let element_type = E::get_ir_type(context.type_context);
+        // eprintln!("constructing array of type {:?}", element_type);
         let elements: Vec<E::Value> = self
             .into_iter()
             .map(|v| v.as_value(context).value)
+            // .map(|v| { eprintln!("- type {:?}", v.get_type()); v})
             .collect();
         let value = ConstArrayValue::const_array(&elements, &element_type);
+        // eprintln!("done, {} elements", elements.len());
         Value::from_raw(value)
     }
 }

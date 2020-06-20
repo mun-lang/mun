@@ -30,6 +30,6 @@ source_filename = "group_name"
 %struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
 @"type_info::<core::i32>::name" = private unnamed_addr constant [10 x i8] c"core::i32\00"
-@"type_info::<core::i32>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\17yzt\19\D62\17\D25\95C\17\88[\FA", [10 x i8]* @"type_info::<core::i32>::name", i32 32, i8 4, i8 0 }
+@"type_info::<core::i32>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\17yzt\19\D62\17\D25\95C\17\88[\FA", i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::i32>::name", i32 0, i32 0), i32 32, i8 4, i8 0 }
 @global_type_table = constant [1 x %struct.MunTypeInfo*] [%struct.MunTypeInfo* @"type_info::<core::i32>"]
 

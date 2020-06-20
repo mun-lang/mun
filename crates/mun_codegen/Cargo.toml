@@ -26,6 +26,7 @@ array-init="0.1.0"
 tempfile = "3"
 paste = "0.1.6"
 parking_lot = "0.10"
+by_address = "1.0"
 
 [dependencies.inkwell]
 git = "https://github.com/mun-lang/inkwell"
