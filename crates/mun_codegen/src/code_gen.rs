@@ -1,4 +1,5 @@
 use crate::code_gen::linker::LinkerError;
+use crate::db::StructMapping;
 use crate::value::{IrTypeContext, IrValueContext};
 use crate::IrDatabase;
 use failure::Fail;
@@ -11,6 +12,8 @@ use inkwell::{
     OptimizationLevel,
 };
 use mun_target::spec;
+use parking_lot::RwLock;
+use std::collections::HashMap;
 use std::io::{self, Write};
 use std::{
     path::{Path, PathBuf},
@@ -152,10 +155,11 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
             .map_err(|e| CodeGenerationError::ModuleLinkerError(e.to_string()))?;
 
         let target_data = self.db.target_data();
+        let struct_types = self.db.type_to_struct_mapping();
         let type_context = IrTypeContext {
             context: &self.assembly_module.get_context(),
             target_data: target_data.as_ref(),
-            struct_types: Default::default(),
+            struct_types: struct_types.as_ref(),
         };
 
         let value_context = IrValueContext {
@@ -217,4 +221,13 @@ fn optimize_module(module: &Module, optimization_lvl: OptimizationLevel) {
 /// Create an inkwell TargetData from the target in the database
 pub(crate) fn target_data_query(db: &impl IrDatabase) -> Arc<TargetData> {
     Arc::new(TargetData::create(&db.target().data_layout))
+}
+
+/// Returns a mapping from struct type to a struct type in the context. This is a query because the
+/// value of struct type depends on the target we compile for.
+pub(crate) fn type_to_struct_mapping_query(
+    db: &impl IrDatabase,
+) -> by_address::ByAddress<Arc<StructMapping>> {
+    let _ = db.target_data();
+    by_address::ByAddress(Arc::new(RwLock::new(HashMap::default())))
 }

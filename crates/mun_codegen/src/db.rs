@@ -5,12 +5,18 @@ use crate::{
     type_info::TypeInfo,
     CodeGenParams, Context,
 };
+use by_address::ByAddress;
 use inkwell::{
     targets::TargetData,
     types::{AnyTypeEnum, StructType},
     OptimizationLevel,
 };
+use parking_lot::RwLock;
+use std::any::TypeId;
+use std::collections::HashMap;
 use std::sync::Arc;
+
+pub type StructMapping = RwLock<HashMap<(&'static str, TypeId), StructType>>;
 
 /// The `IrDatabase` enables caching of intermediate in the process of LLVM IR generation. It uses
 /// [salsa](https://github.com/salsa-rs/salsa) for this purpose.
@@ -27,6 +33,13 @@ pub trait IrDatabase: hir::HirDatabase {
     /// Returns the target machine's data layout for code generation.
     #[salsa::invoke(crate::code_gen::target_data_query)]
     fn target_data(&self) -> Arc<TargetData>;
+
+    /// Returns a mapping from type to a struct value. This is essentially a cache value which is
+    /// a bit strange to store in the database since its mutable. However, multiple queries need
+    /// to synchronize with this so that is why we store it here nonetheless. Also the mapping
+    /// should be invalidated if the `target_data` changes.
+    #[salsa::invoke(crate::code_gen::type_to_struct_mapping_query)]
+    fn type_to_struct_mapping(&self) -> ByAddress<Arc<StructMapping>>;
 
     /// Given a type and code generation parameters, return the corresponding IR type.
     #[salsa::invoke(crate::ir::ty::ir_query)]

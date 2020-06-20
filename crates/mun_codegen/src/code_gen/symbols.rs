@@ -35,9 +35,8 @@ fn gen_prototype_from_function<D: IrDatabase>(
         .params()
         .iter()
         .map(|ty| {
-            TypeTable::get(module, &db.type_info(ty.clone()))
+            TypeTable::get(module, &db.type_info(ty.clone()), context)
                 .expect("expected a TypeInfo for a prototype argument but it was not found")
-                .as_value(context)
         })
         .into_const_private_pointer_or_null(format!("fn_sig::<{}>::arg_types", &name), context);
 
@@ -76,9 +75,8 @@ fn gen_prototype_from_dispatch_entry(
         .arg_types
         .iter()
         .map(|type_info| {
-            TypeTable::get(module, type_info)
+            TypeTable::get(module, type_info, context)
                 .expect("expected a TypeInfo for a prototype argument but it was not found")
-                .as_value(context)
         })
         .into_const_private_pointer_or_null(
             format!("{}_param_types", function.prototype.name),
@@ -120,9 +118,8 @@ fn gen_signature_return_type_from_type_info(
 ) -> Value<*const ir::TypeInfo> {
     ret_type
         .map(|info| {
-            TypeTable::get(context.module, &info)
+            TypeTable::get(context.module, &info, context)
                 .expect("could not find TypeInfo that should definitely be there")
-                .as_value(context)
         })
         .unwrap_or_else(|| Value::null(context))
 }
@@ -152,7 +149,10 @@ fn get_function_definition_array<'a, D: IrDatabase>(
             let prototype = gen_prototype_from_function(db, context, *f);
             ir::FunctionDefinition {
                 prototype,
-                fn_ptr: Value::from_raw(value.as_global_value().as_pointer_value()),
+                fn_ptr: Value::<*const fn()>::with_cast(
+                    value.as_global_value().as_pointer_value(),
+                    context,
+                ),
             }
         })
         .as_value(context)
@@ -184,7 +184,7 @@ fn gen_dispatch_table(
             // dispatch table was created. Because of this we have to lookup the dispatch table
             // global again. There is however not a `GlobalValue::get_name` method so I just
             // hardcoded the name here.
-            Value::from_raw(module.get_global("dispatchTable").unwrap().as_pointer_value()))
+            Value::<*mut *const fn()>::with_cast(module.get_global("dispatchTable").unwrap().as_pointer_value(), context))
         .unwrap_or_else(|| Value::null(context));
 
     ir::DispatchTable {
@@ -271,7 +271,7 @@ fn gen_get_info_fn(
             inkwell::attributes::AttributeLoc::Param(0),
             context
                 .context
-                .create_enum_attribute(Attribute::get_named_enum_kind_id("sret"), 1),
+                .create_enum_attribute(Attribute::get_named_enum_kind_id("sret"), 0),
         );
     }
 

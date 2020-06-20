@@ -73,10 +73,12 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: hir::FileId) -> Arc<FileGr
 
     let dispatch_table = dispatch_table_builder.build();
 
+    let struct_types = db.type_to_struct_mapping();
+
     let type_context = IrTypeContext {
         context: &db.context(),
         target_data: &db.target_data(),
-        struct_types: Default::default(),
+        struct_types: struct_types.as_ref(),
     };
     let value_context = IrValueContext {
         type_context: &type_context,

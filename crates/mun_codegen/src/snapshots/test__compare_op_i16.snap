@@ -54,8 +54,8 @@ source_filename = "group_name"
 %struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
 
 @"type_info::<core::i16>::name" = private unnamed_addr constant [10 x i8] c"core::i16\00"
-@"type_info::<core::i16>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\05\CD|\F8Bv\D8\B1\E8\8B\8C\D8\8D\B5\89\B0", [10 x i8]* @"type_info::<core::i16>::name", i32 16, i8 2, i8 0 }
+@"type_info::<core::i16>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\05\CD|\F8Bv\D8\B1\E8\8B\8C\D8\8D\B5\89\B0", i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::i16>::name", i32 0, i32 0), i32 16, i8 2, i8 0 }
 @"type_info::<core::bool>::name" = private unnamed_addr constant [11 x i8] c"core::bool\00"
-@"type_info::<core::bool>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"x\82\81m t7\03\CB\F8k\81-;\C9\84", [11 x i8]* @"type_info::<core::bool>::name", i32 1, i8 1, i8 0 }
+@"type_info::<core::bool>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"x\82\81m t7\03\CB\F8k\81-;\C9\84", i8* getelementptr inbounds ([11 x i8], [11 x i8]* @"type_info::<core::bool>::name", i32 0, i32 0), i32 1, i8 1, i8 0 }
 @global_type_table = constant [2 x %struct.MunTypeInfo*] [%struct.MunTypeInfo* @"type_info::<core::i16>", %struct.MunTypeInfo* @"type_info::<core::bool>"]
 
