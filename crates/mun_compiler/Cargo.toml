@@ -23,4 +23,4 @@ unicode-segmentation = "1.6.0"
 ansi_term = "0.12.1"
 
 [dev-dependencies]
-insta = "0.13.1"
+insta = "0.16"

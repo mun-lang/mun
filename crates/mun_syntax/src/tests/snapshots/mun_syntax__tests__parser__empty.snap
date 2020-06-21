@@ -1,6 +1,6 @@
 ---
 source: crates/mun_syntax/src/tests/parser.rs
-expression: file.debug_dump()
+expression: ""
 ---
 SOURCE_FILE@[0; 0)
 

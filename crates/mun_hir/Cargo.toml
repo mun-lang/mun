@@ -25,5 +25,5 @@ drop_bomb = "0.1.4"
 either = "1.5.3"
 
 [dev-dependencies]
-insta = "0.12.0"
+insta = "0.16"
 parking_lot = "0.10"
