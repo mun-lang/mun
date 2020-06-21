@@ -1,6 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "fn main() {\n}"
+expression: "pub fn main() {\n}"
 ---
 ; == FILE IR =====================================
 ; ModuleID = 'main.mun'

@@ -33,7 +33,7 @@ rev = "4448bcd"
 features = ["llvm7-0"]
 
 [dev-dependencies]
-insta = "0.12.0"
+insta = "0.16"
 
 [build-dependencies]
 semver = "0.9.0"

@@ -1,6 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "fn foo() {\n    loop {}\n}"
+expression: "pub fn foo() {\n    loop {}\n}"
 ---
 ; == FILE IR =====================================
 ; ModuleID = 'main.mun'
