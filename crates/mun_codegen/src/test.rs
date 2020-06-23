@@ -8,6 +8,25 @@ use std::cell::RefCell;
 use std::sync::Arc;
 
 #[test]
+fn issue_225() {
+    test_snapshot(
+        r#"
+    struct Num {
+        value: i64,
+    }
+
+    pub fn foo(b: i64) {
+        Num { value: b }.value;
+    }
+
+    pub fn bar(b: i64) {
+        { let a = Num { value: b }; a}.value;
+    }
+        "#,
+    )
+}
+
+#[test]
 fn issue_228_never_if() {
     test_snapshot(
         r#"

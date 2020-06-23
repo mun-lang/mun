@@ -18,8 +18,8 @@ source_filename = "main.mun"
 define %Foo @bar_1(%Bar) {
 body:
   %.fca.1.0.extract = extractvalue %Bar %0, 1, 0
-  %"1.fca.0.insert" = insertvalue %Foo undef, i32 %.fca.1.0.extract, 0
-  ret %Foo %"1.fca.0.insert"
+  %Bar.1.fca.0.insert = insertvalue %Foo undef, i32 %.fca.1.0.extract, 0
+  ret %Foo %Bar.1.fca.0.insert
 }
 
 define i32 @foo_a(%Foo) {

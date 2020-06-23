@@ -33,9 +33,9 @@ body:
   store %Foo** %Foo_ptr_ptr, %Foo*** %b
   %mem_ptr = load %Foo**, %Foo*** %b
   %deref = load %Foo*, %Foo** %mem_ptr
-  %Foo.a = getelementptr inbounds %Foo, %Foo* %deref, i32 0, i32 0
-  %a = load i32, i32* %Foo.a
-  ret i32 %a
+  %Foo.a_ptr = getelementptr inbounds %Foo, %Foo* %deref, i32 0, i32 0
+  %Foo.a = load i32, i32* %Foo.a_ptr
+  ret i32 %Foo.a
 }
 
 
