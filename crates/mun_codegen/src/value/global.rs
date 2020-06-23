@@ -74,8 +74,8 @@ where
     *const I: ConcreteValueType<Value = inkwell::values::PointerValue>,
     T: AddressableType<I>,
 {
-    fn as_value(&self, _context: &IrValueContext) -> Value<*const I> {
-        Value::from_raw(self.value.as_pointer_value())
+    fn as_value(&self, context: &IrValueContext) -> Value<*const I> {
+        Value::from_raw(T::ptr_cast(self.value.as_pointer_value(), context))
     }
 }
 

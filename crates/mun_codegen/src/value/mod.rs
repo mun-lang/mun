@@ -16,8 +16,8 @@ pub use array_value::IterAsIrValue;
 pub use global::Global;
 pub use string::CanInternalize;
 
-use inkwell::types::{PointerType, StructType};
-use inkwell::values::BasicValueEnum;
+use inkwell::types::{BasicTypeEnum, PointerType, StructType};
+use inkwell::values::{BasicValueEnum, PointerValue};
 use inkwell::AddressSpace;
 use parking_lot::RwLock;
 use std::any::TypeId;
@@ -95,7 +95,7 @@ pub trait TransparentValue {
 pub struct IrTypeContext<'ctx> {
     pub context: &'ctx Context,
     pub target_data: &'ctx TargetData,
-    pub struct_types: RwLock<HashMap<(&'static str, TypeId), StructType>>,
+    pub struct_types: &'ctx RwLock<HashMap<(&'static str, TypeId), StructType>>,
 }
 
 /// The context in which an `IrValue` exists.
@@ -112,7 +112,12 @@ pub trait ConcreteValueType {
 }
 
 /// If we take a pointer of value T, which type can it return? This trait dictates that.
-pub trait AddressableType<T: ?Sized> {}
+pub trait AddressableType<T: ?Sized> {
+    /// Cast the pointer if required
+    fn ptr_cast(value: PointerValue, _context: &IrValueContext) -> PointerValue {
+        value
+    }
+}
 
 /// A trait implemented for types that can determine the IR type of a value without an instance.
 pub trait SizedValueType: ConcreteValueType + Sized {
@@ -201,6 +206,23 @@ impl_addressable_type_values!(
     inkwell::types::FunctionType
 );
 
+impl AddressableTypeValue for inkwell::types::BasicTypeEnum {
+    fn ptr_type(&self, address_space: AddressSpace) -> PointerType {
+        match self {
+            BasicTypeEnum::ArrayType(ty) => ty.ptr_type(address_space),
+            BasicTypeEnum::FloatType(ty) => ty.ptr_type(address_space),
+            BasicTypeEnum::IntType(ty) => ty.ptr_type(address_space),
+            BasicTypeEnum::PointerType(ty) => ty.ptr_type(address_space),
+            BasicTypeEnum::StructType(ty) => ty.ptr_type(address_space),
+            BasicTypeEnum::VectorType(ty) => ty.ptr_type(address_space),
+        }
+    }
+}
+
+impl TypeValue for inkwell::types::BasicTypeEnum {
+    type Value = inkwell::values::BasicValueEnum;
+}
+
 impl<T: ConcreteValueType + ?Sized> Value<T> {
     /// Returns the type of the value.
     pub fn get_type(&self) -> <T::Value as ValueType>::Type {
@@ -210,6 +232,42 @@ impl<T: ConcreteValueType + ?Sized> Value<T> {
     /// Constructs a `Value<T>` from an inkwell value.
     pub(super) fn from_raw(value: T::Value) -> Value<T> {
         Value { value }
+    }
+}
+
+impl<T: ConcreteValueType + ?Sized> Value<*const T>
+where
+    *const T: SizedValueType<Value = PointerValue>,
+    <*const T as ConcreteValueType>::Value: ValueType<Type = PointerType>,
+{
+    /// Constructs a value by casting the specified pointer value to this value
+    pub fn with_cast(value: PointerValue, context: &IrValueContext) -> Self {
+        let target_type = <*const T>::get_ir_type(context.type_context);
+        Value {
+            value: if value.get_type() == target_type {
+                value
+            } else {
+                value.const_cast(target_type)
+            },
+        }
+    }
+}
+
+impl<T: ConcreteValueType + ?Sized> Value<*mut T>
+where
+    *mut T: SizedValueType<Value = PointerValue>,
+    <*mut T as ConcreteValueType>::Value: ValueType<Type = PointerType>,
+{
+    /// Constructs a value by casting the specified pointer value to this value
+    pub fn with_cast(value: PointerValue, context: &IrValueContext) -> Self {
+        let target_type = <*mut T>::get_ir_type(context.type_context);
+        Value {
+            value: if value.get_type() == target_type {
+                value
+            } else {
+                value.const_cast(target_type)
+            },
+        }
     }
 }
 
@@ -307,6 +365,18 @@ where
 {
     fn get_ptr_type(context: &IrTypeContext, address_space: Option<AddressSpace>) -> PointerType {
         T::Target::get_ptr_type(context, address_space)
+    }
+}
+
+// If the target is addressable as I, the transparent value is also addressable as I.
+impl<
+        I: ?Sized,
+        U: ConcreteValueType + ?Sized + AddressableType<I>,
+        T: TransparentValue<Target = U>,
+    > AddressableType<I> for T
+{
+    fn ptr_cast(value: PointerValue, context: &IrValueContext) -> PointerValue {
+        <T::Target as AddressableType<I>>::ptr_cast(value, context)
     }
 }
 

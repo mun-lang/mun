@@ -63,7 +63,11 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
     let field_types_values = struct_data.fields.iter().enumerate().map(|(idx, f)| {
         let name = f.ident.as_ref().map(|i| quote! { #i }).unwrap_or_else(|| quote! { #idx });
         quote! {
-            crate::value::AsValueInto::<inkwell::values::BasicValueEnum>::as_value_into(&self. #name, context)
+            {
+                let value = crate::value::AsValueInto::<inkwell::values::BasicValueEnum>::as_value_into(&self. #name, context);
+                // eprintln!("- {:?}", value.get_type());
+                value
+            }
         }
     });
 
@@ -104,9 +108,12 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
         impl crate::value::AsValue<#ident> for #ident {
             fn as_value(&self, context: &crate::value::IrValueContext) -> crate::value::Value<Self> {
                 let struct_type = Self::get_ir_type(context.type_context);
-                crate::value::Value::from_raw(struct_type.const_named_struct(&[
+                // eprintln!("Constructing: {:?}", struct_type.print_to_string().to_string());
+                let value = struct_type.const_named_struct(&[
                     #(#field_types_values),*
-                ]))
+                ]);
+                // eprintln!("Done");
+                crate::value::Value::from_raw(value)
             }
         }
 

@@ -60,10 +60,14 @@ impl TypeTable {
     }
 
     /// Retrieves the global `TypeInfo` IR value corresponding to `type_info`, if it exists.
-    pub fn get(module: &Module, type_info: &TypeInfo) -> Option<Global<ir::TypeInfo>> {
+    pub fn get(
+        module: &Module,
+        type_info: &TypeInfo,
+        context: &IrValueContext,
+    ) -> Option<Value<*const ir::TypeInfo>> {
         module
             .get_global(&type_info_global_name(type_info))
-            .map(|g| unsafe { Global::from_raw(g) })
+            .map(|g| Value::<*const ir::TypeInfo>::with_cast(g.as_pointer_value(), context))
     }
 
     /// Returns the number of types in the `TypeTable`.
@@ -175,12 +179,12 @@ impl<'a, 'ctx, 'm, D: IrDatabase> TypeTableBuilder<'a, 'ctx, 'm, D> {
 
     fn gen_type_info(
         &self,
-        type_info_to_ir: &mut HashMap<TypeInfo, Global<ir::TypeInfo>>,
+        type_info_to_ir: &mut HashMap<TypeInfo, Value<*const ir::TypeInfo>>,
         type_info: &TypeInfo,
-    ) -> Global<ir::TypeInfo> {
+    ) -> Value<*const ir::TypeInfo> {
         // If there is already an entry, return that.
-        if let Some(global) = type_info_to_ir.get(type_info) {
-            return *global;
+        if let Some(value) = type_info_to_ir.get(type_info) {
+            return *value;
         }
 
         // Construct the header part of the abi::TypeInfo
@@ -209,31 +213,33 @@ impl<'a, 'ctx, 'm, D: IrDatabase> TypeTableBuilder<'a, 'ctx, 'm, D> {
 
         // Build the global value for the ir::TypeInfo
         let type_ir_name = type_info_global_name(type_info);
-        let global = match type_info.group {
-            TypeGroup::FundamentalTypes => {
-                type_info_ir.into_const_private_global(&type_ir_name, self.value_context)
-            }
+        let value = match type_info.group {
+            TypeGroup::FundamentalTypes => type_info_ir
+                .into_const_private_global(&type_ir_name, self.value_context)
+                .as_value(self.value_context),
             TypeGroup::StructTypes(s) => {
                 // In case of a struct the `Global<ir::TypeInfo>` is actually a
-                // `Global<(ir::TypeInfo, ir::StructInfo)>`. We mask this value which is unsafe
-                // but correct from an ABI perspective.
+                // `Global<(ir::TypeInfo, ir::StructInfo)>`.
                 let struct_info_ir = self.gen_struct_info(type_info_to_ir, s);
                 let compound_type_ir = (type_info_ir, struct_info_ir).as_value(self.value_context);
                 let compound_global =
                     compound_type_ir.into_const_private_global(&type_ir_name, self.value_context);
-                unsafe { Global::from_raw(compound_global.value) }
+                Value::<*const ir::TypeInfo>::with_cast(
+                    compound_global.value.as_pointer_value(),
+                    self.value_context,
+                )
             }
         };
 
         // Insert the value in this case, so we don't recompute and generate multiple values.
-        type_info_to_ir.insert(type_info.clone(), global);
+        type_info_to_ir.insert(type_info.clone(), value);
 
-        global
+        value
     }
 
     fn gen_struct_info(
         &self,
-        type_info_to_ir: &mut HashMap<TypeInfo, Global<ir::TypeInfo>>,
+        type_info_to_ir: &mut HashMap<TypeInfo, Value<*const ir::TypeInfo>>,
         hir_struct: hir::Struct,
     ) -> Value<ir::StructInfo> {
         let struct_ir = self.db.struct_ty(hir_struct);
@@ -264,7 +270,6 @@ impl<'a, 'ctx, 'm, D: IrDatabase> TypeTableBuilder<'a, 'ctx, 'm, D> {
             .map(|field| {
                 let field_type_info = self.db.type_info(field.ty(self.db));
                 self.gen_type_info(type_info_to_ir, &field_type_info)
-                    .as_value(self.value_context)
             })
             .into_const_private_pointer_or_null(
                 format!("struct_info::<{}>::field_types", name),
