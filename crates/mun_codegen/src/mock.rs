@@ -43,7 +43,7 @@ impl MockDatabase {
         db.set_file_relative_path(file_id, rel_path.clone());
         db.set_file_text(file_id, Arc::new(text.to_string()));
         db.set_file_source_root(file_id, source_root_id);
-        source_root.insert_file(rel_path, file_id);
+        source_root.insert_file(file_id);
 
         db.set_source_root(source_root_id, Arc::new(source_root));
         db.set_optimization_lvl(OptimizationLevel::None);

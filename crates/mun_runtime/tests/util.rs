@@ -59,7 +59,8 @@ impl TestDriver {
                     .expect("compiler errors are not UTF-8 formatted")
             )
         }
-        let out_path = driver.write_assembly(file_id).unwrap();
+        let out_path = driver.assembly_output_path(file_id);
+        driver.write_assembly(file_id, true).unwrap();
         let builder = RuntimeBuilder::new(&out_path);
         TestDriver {
             _temp_dir: temp_dir,
@@ -91,7 +92,8 @@ impl TestDriver {
                     .expect("compiler errors are not UTF-8 formatted")
             )
         }
-        let out_path = self.driver.write_assembly(self.file_id).unwrap();
+        let out_path = self.driver.assembly_output_path(self.file_id);
+        self.driver.write_assembly(self.file_id, true).unwrap();
         assert_eq!(
             &out_path, &self.out_path,
             "recompiling did not result in the same assembly"

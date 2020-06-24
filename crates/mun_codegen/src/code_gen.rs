@@ -2,7 +2,7 @@ use crate::code_gen::linker::LinkerError;
 use crate::db::StructMapping;
 use crate::value::{IrTypeContext, IrValueContext};
 use crate::IrDatabase;
-use hir::{FileId, RelativePathBuf};
+use hir::FileId;
 use inkwell::targets::TargetData;
 use inkwell::{
     module::Module,
@@ -14,10 +14,7 @@ use mun_target::spec;
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::io::{self, Write};
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{path::Path, sync::Arc};
 use tempfile::NamedTempFile;
 use thiserror::Error;
 
@@ -48,15 +45,14 @@ impl From<LinkerError> for CodeGenerationError {
 
 pub struct ObjectFile {
     target: spec::Target,
-    src_path: RelativePathBuf,
     obj_file: NamedTempFile,
 }
 
 impl ObjectFile {
+    /// Constructs a new object file from the specified `module` for `target`
     pub fn new(
         target: &spec::Target,
         target_machine: &TargetMachine,
-        src_path: RelativePathBuf,
         module: Arc<inkwell::module::Module>,
     ) -> Result<Self, anyhow::Error> {
         let obj = target_machine
@@ -71,23 +67,21 @@ impl ObjectFile {
 
         Ok(Self {
             target: target.clone(),
-            src_path,
             obj_file,
         })
     }
 
-    pub fn into_shared_object(self, out_dir: Option<&Path>) -> Result<PathBuf, anyhow::Error> {
+    /// Links the object file into a shared object.
+    pub fn into_shared_object(self, output_path: &Path) -> Result<(), anyhow::Error> {
         // Construct a linker for the target
         let mut linker = linker::create_with_target(&self.target);
         linker.add_object(self.obj_file.path())?;
-
-        let output_path = assembly_output_path(&self.src_path, out_dir);
 
         // Link the object
         linker.build_shared_object(&output_path)?;
         linker.finalize()?;
 
-        Ok(output_path)
+        Ok(())
     }
 }
 
@@ -186,24 +180,8 @@ impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
         ObjectFile::new(
             &self.db.target(),
             &self.target_machine,
-            self.db.file_relative_path(self.file_id),
             self.assembly_module,
         )
-    }
-}
-
-/// Computes the output path for the assembly of the specified file.
-fn assembly_output_path(src_path: &RelativePathBuf, out_dir: Option<&Path>) -> PathBuf {
-    let original_filename = Path::new(src_path.file_name().unwrap());
-
-    // Add the `munlib` suffix to the original filename
-    let output_file_name = original_filename.with_extension("munlib");
-
-    // If there is an out dir specified, prepend the output directory
-    if let Some(out_dir) = out_dir {
-        out_dir.join(output_file_name)
-    } else {
-        output_file_name
     }
 }
 
