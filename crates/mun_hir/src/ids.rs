@@ -82,11 +82,11 @@ pub(crate) trait AstItemDef<N: AstNode>: salsa::InternKey + Clone {
     fn source(self, db: &impl DefDatabase) -> InFile<N> {
         let loc = self.lookup_intern(db);
         let ast = loc.ast_id.to_node(db);
-        InFile::new(loc.ast_id.file_id(), ast)
+        InFile::new(loc.ast_id.file_id, ast)
     }
 
     fn file_id(self, db: &impl DefDatabase) -> FileId {
-        self.lookup_intern(db).ast_id.file_id()
+        self.lookup_intern(db).ast_id.file_id
     }
 }
 

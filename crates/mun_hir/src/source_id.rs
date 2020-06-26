@@ -1,5 +1,6 @@
+use crate::in_file::InFile;
 use crate::{db::DefDatabase, Arena, FileId, RawId};
-use mun_syntax::{ast, AstNode, SyntaxNode, SyntaxNodePtr};
+use mun_syntax::{ast, AstNode, AstPtr, SyntaxNode, SyntaxNodePtr};
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -7,46 +8,21 @@ use std::sync::Arc;
 /// `AstId` points to an AST node in any file.
 ///
 /// It is stable across reparses, and can be used as salsa key/value.
-#[derive(Debug)]
-pub(crate) struct AstId<N: AstNode> {
-    file_id: FileId,
-    file_ast_id: FileAstId<N>,
-}
-
-impl<N: AstNode> Clone for AstId<N> {
-    fn clone(&self) -> AstId<N> {
-        *self
-    }
-}
-impl<N: AstNode> Copy for AstId<N> {}
-
-impl<N: AstNode> PartialEq for AstId<N> {
-    fn eq(&self, other: &Self) -> bool {
-        (self.file_id, self.file_ast_id) == (other.file_id, other.file_ast_id)
-    }
-}
-impl<N: AstNode> Eq for AstId<N> {}
-impl<N: AstNode> Hash for AstId<N> {
-    fn hash<H: Hasher>(&self, hasher: &mut H) {
-        (self.file_id, self.file_ast_id).hash(hasher);
-    }
-}
+pub(crate) type AstId<N> = InFile<FileAstId<N>>;
 
 impl<N: AstNode> AstId<N> {
-    pub(crate) fn file_id(self) -> FileId {
-        self.file_id
-    }
-
-    pub(crate) fn to_node(self, db: &impl DefDatabase) -> N {
-        let syntax_node = db.ast_id_to_node(self.file_id, self.file_ast_id.raw);
-        N::cast(syntax_node).unwrap()
+    pub fn to_node(&self, db: &dyn DefDatabase) -> N {
+        let root = db.parse(self.file_id);
+        db.ast_id_map(self.file_id)
+            .get(self.value)
+            .to_node(&root.syntax_node())
     }
 }
 
 #[derive(Debug)]
 pub(crate) struct FileAstId<N: AstNode> {
     raw: ErasedFileAstId,
-    _ty: PhantomData<N>,
+    _ty: PhantomData<fn() -> N>,
 }
 
 impl<N: AstNode> Clone for FileAstId<N> {
@@ -70,10 +46,7 @@ impl<N: AstNode> Hash for FileAstId<N> {
 
 impl<N: AstNode> FileAstId<N> {
     pub(crate) fn with_file_id(self, file_id: FileId) -> AstId<N> {
-        AstId {
-            file_id,
-            file_ast_id: self,
-        }
+        AstId::new(file_id, self)
     }
 }
 
@@ -136,6 +109,11 @@ impl AstIdMap {
             }
         });
         res
+    }
+
+    /// Returns the `AstPtr` of the given id.
+    pub(crate) fn get<N: AstNode>(&self, id: FileAstId<N>) -> AstPtr<N> {
+        self.arena[id.raw].cast::<N>().unwrap()
     }
 
     /// Constructs a new `ErasedFileAstId` from a `SyntaxNode`

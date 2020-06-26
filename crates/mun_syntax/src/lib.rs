@@ -27,7 +27,7 @@ pub use crate::{
     ast::AstNode,
     parsing::{lexer::Token, tokenize},
     ptr::{AstPtr, SyntaxNodePtr},
-    syntax_error::{SyntaxError, SyntaxErrorKind},
+    syntax_error::{Location, SyntaxError, SyntaxErrorKind},
     syntax_kind::SyntaxKind,
     syntax_node::{Direction, SyntaxElement, SyntaxNode, SyntaxToken, SyntaxTreeBuilder},
 };
