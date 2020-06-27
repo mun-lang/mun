@@ -214,6 +214,39 @@ git submodule update --init --recursive
 cargo build --release
 ```
 
+## Language server
+Mun contains initial support for the lsp protocol, start the executable using:
+
+```bash
+mun language-server
+```
+
+Currently, only diagnostics are supported.
+
+### VS code
+
+To run in [Visual Studio Code](https://code.visualstudio.com/). Use the following extension:
+[VS code extension](https://github.com/mun-lang/vscode-extension).
+
+### Vim/Neovim
+Use a language server plugin (or built in lsp support of neovim), for example using [coc.nvim](https://github.com/neoclide/coc.nvim).
+
+Paste the following config into your `:CocConfig`, replace the `command`, with the correct path to the mun executable.
+
+```json
+  "languageserver": {
+      "mun": {
+          "command": "<path_to_mun>",
+          "rootPatterns": ["mun.toml"],
+          "trace.server": "verbose",
+          "args": ["language-server"],
+          "filetypes": ["mun"]
+      }
+  }
+```
+
+Note that, `"trace.server": "verbose"` is optional and helps with language server debugging.
+
 ## Building Documentation
 
 Building the book requires
