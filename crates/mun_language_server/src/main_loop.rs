@@ -180,6 +180,12 @@ pub async fn main_loop(connection: Connection, config: Config) -> Result<()> {
         register_client_file_watcher(&mut connection_state, &config).await
     }
 
+    // Create a thread pool to dispatch the async commands
+    // Use the num_cpus to get a nice thread count estimation
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(num_cpus::get())
+        .build()?;
+
     // Create the state for the language server
     let mut state = LanguageServerState::new(config);
     let (task_sender, mut task_receiver) = unbounded::<Task>();
@@ -200,7 +206,15 @@ pub async fn main_loop(connection: Connection, config: Config) -> Result<()> {
         };
 
         // Handle the event
-        match handle_event(event, &task_sender, &mut connection_state, &mut state).await? {
+        match handle_event(
+            event,
+            &task_sender,
+            &mut connection_state,
+            &pool,
+            &mut state,
+        )
+        .await?
+        {
             LoopState::Continue => {}
             LoopState::Shutdown => {
                 break;
@@ -337,6 +351,7 @@ async fn handle_event(
     event: Event,
     task_sender: &UnboundedSender<Task>,
     connection_state: &mut ConnectionState,
+    pool: &rayon::ThreadPool,
     state: &mut LanguageServerState,
 ) -> Result<LoopState> {
     log::info!("handling event: {:?}", event);
@@ -351,7 +366,12 @@ async fn handle_event(
     // Process any changes to the vfs
     let state_changed = state.process_vfs_changes().await;
     if state_changed {
-        handle_diagnostics(state.snapshot(), task_sender.clone()).await;
+        let snapshot = state.snapshot();
+        let task_sender = task_sender.clone();
+        // Spawn the diagnostics in the threadpool
+        pool.spawn(move || {
+            async_std::task::block_on(handle_diagnostics(snapshot, task_sender));
+        });
     }
 
     Ok(loop_state)
