@@ -404,7 +404,7 @@ impl<'a> InferenceResultBuilder<'a> {
                     self.infer_expr(*expr, &Expectation::has_type(ty.clone()));
                 }
                 if let Some(s) = ty.as_struct() {
-                    self.check_record_lit(tgt_expr, s, &fields);
+                    self.check_record_lit(tgt_expr, &ty, s, &fields);
                 }
                 ty
             }
@@ -631,7 +631,13 @@ impl<'a> InferenceResultBuilder<'a> {
     }
 
     // Checks whether the passed fields match the fields of a struct definition.
-    fn check_record_lit(&mut self, tgt_expr: ExprId, expected: Struct, fields: &[RecordLitField]) {
+    fn check_record_lit(
+        &mut self,
+        tgt_expr: ExprId,
+        ty: &Ty,
+        expected: Struct,
+        fields: &[RecordLitField],
+    ) {
         let struct_data = expected.data(self.db.upcast());
         if struct_data.kind != StructKind::Record {
             self.diagnostics
@@ -660,6 +666,7 @@ impl<'a> InferenceResultBuilder<'a> {
         if !missed_fields.is_empty() {
             self.diagnostics.push(InferenceDiagnostic::MissingFields {
                 id: tgt_expr,
+                struct_ty: ty.clone(),
                 names: missed_fields,
             });
         }
@@ -1069,6 +1076,7 @@ mod diagnostics {
         },
         MissingFields {
             id: ExprId,
+            struct_ty: Ty,
             names: Vec<Name>,
         },
         MismatchedStructLit {
@@ -1302,7 +1310,11 @@ mod diagnostics {
                         found: *found,
                     })
                 }
-                InferenceDiagnostic::MissingFields { id, names } => {
+                InferenceDiagnostic::MissingFields {
+                    id,
+                    struct_ty,
+                    names,
+                } => {
                     let fields = body
                         .expr_syntax(*id)
                         .unwrap()
@@ -1311,6 +1323,7 @@ mod diagnostics {
 
                     sink.push(MissingFields {
                         file,
+                        struct_ty: struct_ty.clone(),
                         fields,
                         field_names: names.to_vec(),
                     });

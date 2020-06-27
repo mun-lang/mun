@@ -47,6 +47,7 @@ pub use crate::{
         DefDatabase, DefDatabaseStorage, HirDatabase, HirDatabaseStorage, SourceDatabase,
         SourceDatabaseStorage, Upcast,
     },
+    diagnostics::{Diagnostic, DiagnosticSink},
     display::HirDisplay,
     expr::{
         resolver_for_expr, ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, ExprScopes, Literal,

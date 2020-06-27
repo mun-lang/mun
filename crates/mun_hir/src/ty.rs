@@ -177,6 +177,14 @@ impl Ty {
             _ => None,
         })
     }
+
+    /// Returns true if the specified value is a valid type or whether an error occured with it.
+    pub fn is_known(&self) -> bool {
+        match self {
+            Ty::Unknown => false,
+            _ => true,
+        }
+    }
 }
 
 /// A list of substitutions for generic parameters.
