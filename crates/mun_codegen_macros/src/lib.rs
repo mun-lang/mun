@@ -1,4 +1,4 @@
-#![cfg_attr(tarpaulin, skip)]
+#![cfg(not(tarpaulin_include))]
 
 use proc_macro::TokenStream;
 use quote::quote;
