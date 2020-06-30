@@ -26,15 +26,15 @@ pub fn start(matches: &ArgMatches) -> Result<ExitStatus, anyhow::Error> {
     if let Some(ret_type) = fn_definition.prototype.signature.return_type() {
         let type_guid = &ret_type.guid;
         if *type_guid == bool::type_guid() {
-            let result: bool = invoke_fn!(runtime, entry_point).map_err(|e| anyhow!("{}", e))?;
+            let result: bool = invoke_fn!(borrowed, entry_point).map_err(|e| anyhow!("{}", e))?;
 
             println!("{}", result)
         } else if *type_guid == f64::type_guid() {
-            let result: f64 = invoke_fn!(runtime, entry_point).map_err(|e| anyhow!("{}", e))?;
+            let result: f64 = invoke_fn!(borrowed, entry_point).map_err(|e| anyhow!("{}", e))?;
 
             println!("{}", result)
         } else if *type_guid == i64::type_guid() {
-            let result: i64 = invoke_fn!(runtime, entry_point).map_err(|e| anyhow!("{}", e))?;
+            let result: i64 = invoke_fn!(borrowed, entry_point).map_err(|e| anyhow!("{}", e))?;
 
             println!("{}", result)
         } else {
@@ -46,7 +46,7 @@ pub fn start(matches: &ArgMatches) -> Result<ExitStatus, anyhow::Error> {
         Ok(ExitStatus::Success)
     } else {
         #[allow(clippy::unit_arg)]
-        invoke_fn!(runtime, entry_point)
+        invoke_fn!(borrowed, entry_point)
             .map(|_: ()| ExitStatus::Success)
             .map_err(|e| anyhow!("{}", e))
     }

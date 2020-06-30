@@ -1,5 +1,5 @@
 # extern crate mun_runtime;
-use mun_runtime::{invoke_fn, RetryResultExt, RuntimeBuilder, StructRef};
+use mun_runtime::{invoke_fn, RuntimeBuilder, StructRef};
 use std::{env, time};
 
 extern "C" fn log_f32(value: f32) {
@@ -14,7 +14,11 @@ fn main() {
         .spawn()
         .expect("Failed to spawn Runtime");
 
-    let ctx: StructRef = invoke_fn!(runtime, "new_sim").wait();
+    let ctx = {
+        let runtime_ref = runtime.borrow();
+        let ctx: StructRef = invoke_fn!(runtime_ref, "new_sim").unwrap();
+        ctx.root(runtime.clone())
+    };
 
     let mut previous = time::Instant::now();
     const FRAME_TIME: time::Duration = time::Duration::from_millis(40);
@@ -29,7 +33,10 @@ fn main() {
             elapsed.as_secs_f32()
         };
 
-        let _: () = invoke_fn!(runtime, "sim_update", ctx.clone(), elapsed_secs).wait();
+        {
+            let runtime_ref = runtime.borrow();
+            let _: () = invoke_fn!(runtime_ref, "sim_update", unsafe { ctx.as_ref(&runtime_ref) }, elapsed_secs).unwrap();
+        }
         previous = now;
 
         runtime.borrow_mut().update();

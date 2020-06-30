@@ -1,4 +1,4 @@
-use mun_runtime::{invoke_fn, RetryResultExt, RuntimeBuilder};
+use mun_runtime::{invoke_fn, RuntimeBuilder};
 use std::{cell::RefCell, rc::Rc};
 
 fn main() {
@@ -6,6 +6,7 @@ fn main() {
         .spawn()
         .expect("Failed to spawn Runtime");
 
-    let result: bool = invoke_fn!(runtime, "random_bool").unwrap();
+    let runtime_ref = runtime.borrow();
+    let result: bool = invoke_fn!(runtime_ref, "random_bool").unwrap();
     println!("random bool: {}", result);
 }

@@ -9,9 +9,9 @@ mod assembly;
 mod macros;
 #[macro_use]
 mod garbage_collector;
+mod adt;
 mod marshal;
 mod reflection;
-mod struct_ref;
 
 use anyhow::Error;
 use garbage_collector::GarbageCollector;
@@ -34,11 +34,11 @@ use std::{
 };
 
 pub use crate::{
+    adt::{RootedStruct, StructRef},
     assembly::Assembly,
     garbage_collector::UnsafeTypeInfo,
     marshal::Marshal,
     reflection::{ArgumentReflection, ReturnTypeReflection},
-    struct_ref::StructRef,
 };
 pub use abi::IntoFunctionDefinition;
 
@@ -309,18 +309,6 @@ impl Runtime {
     pub fn gc_stats(&self) -> gc::Stats {
         self.gc.stats()
     }
-}
-
-/// Extends a result object with functions that allow retrying of an action.
-pub trait RetryResultExt: Sized {
-    /// Output type on success
-    type Output;
-
-    /// Retries an action, resulting in a potentially mutated version of itself.
-    fn retry(self) -> Self;
-
-    /// Keeps retrying the same action until it succeeds, resulting in an output.
-    fn wait(self) -> Self::Output;
 }
 
 invoke_fn_impl! {

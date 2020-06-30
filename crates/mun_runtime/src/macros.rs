@@ -16,70 +16,98 @@ macro_rules! invoke_fn_impl {
             /// An invocation error that contains the function name, a mutable reference to the
             /// runtime, passed arguments, and the output type. This allows the caller to retry
             /// the function invocation using the `Retriable` trait.
-            pub struct $ErrName<'s, $($T: ArgumentReflection,)* Output: ReturnTypeReflection> {
+            pub struct $ErrName<'i, 's, $($T: ArgumentReflection + Marshal<'i>,)*> {
                 msg: String,
-                runtime: std::rc::Rc<core::cell::RefCell<Runtime>>,
                 function_name: &'s str,
                 $($Arg: $T,)*
-                output: core::marker::PhantomData<Output>,
+                input: core::marker::PhantomData<&'i ()>,
             }
 
-            impl<'s, $($T: ArgumentReflection,)* Output: ReturnTypeReflection> core::fmt::Debug for $ErrName<'s, $($T,)* Output> {
+            impl<'i, 's, $($T: ArgumentReflection + Marshal<'i>,)*> core::fmt::Debug for $ErrName<'i, 's, $($T,)*> {
                 fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                     write!(f, "{}", &self.msg)
                 }
             }
 
-            impl<'s, $($T: ArgumentReflection,)* Output: ReturnTypeReflection> core::fmt::Display for $ErrName<'s, $($T,)* Output> {
+            impl<'i, 's, $($T: ArgumentReflection + Marshal<'i>,)*> core::fmt::Display for $ErrName<'i, 's, $($T,)*> {
                 fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                     write!(f, "{}", &self.msg)
                 }
             }
 
-            impl<'s, $($T: ArgumentReflection,)* Output: ReturnTypeReflection> std::error::Error for $ErrName<'s, $($T,)* Output> {
+            impl<'i, 's, $($T: ArgumentReflection + Marshal<'i>,)*> std::error::Error for $ErrName<'i, 's, $($T,)*> {
                 fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
                     None
                 }
             }
 
-            impl<'s, $($T: ArgumentReflection,)* Output: ReturnTypeReflection> $ErrName<'s, $($T,)* Output> {
+            impl<'i, 's, $($T: ArgumentReflection + Marshal<'i>,)*> $ErrName<'i, 's, $($T,)*> {
                 /// Constructs a new invocation error.
                 #[allow(clippy::too_many_arguments)]
-                pub fn new(err_msg: String, runtime: std::rc::Rc<core::cell::RefCell<Runtime>>, function_name: &'s str, $($Arg: $T),*) -> Self {
+                pub fn new(err_msg: String, function_name: &'s str, $($Arg: $T),*) -> Self {
                     Self {
                         msg: err_msg,
-                        runtime,
                         function_name,
                         $($Arg,)*
-                        output: core::marker::PhantomData,
-                    }
-                }
-            }
-
-            impl<'s, $($T: ArgumentReflection,)* Output: ReturnTypeReflection> $crate::RetryResultExt for core::result::Result<Output, $ErrName<'s, $($T,)* Output>> {
-                type Output = Output;
-
-                fn retry(self) -> Self {
-                    match self {
-                        Ok(output) => Ok(output),
-                        Err(err) => {
-                            eprintln!("{}", err.msg);
-                            while !err.runtime.borrow_mut().update() {
-                                // Wait until there has been an update that might fix the error
-                            }
-                            $crate::Runtime::$FnName(&err.runtime, err.function_name, $(err.$Arg,)*)
-                        }
+                        input: core::marker::PhantomData,
                     }
                 }
 
-                fn wait(mut self) -> Self::Output {
+                /// Retries a function invocation once, resulting in a potentially successful
+                /// invocation.
+                // FIXME: `unwrap_or_else` does not compile for `StructRef`, due to
+                // https://doc.rust-lang.org/nomicon/lifetime-mismatch.html#improperly-reduced-borrows
+                pub fn retry<'r, 'o, Output>(self, runtime: &'r mut Runtime) -> Result<Output, Self>
+                where
+                    Output: 'o + ReturnTypeReflection + Marshal<'o>,
+                    'r: 'o,
+                {
+                    // Safety: The output of `retry_impl` is guaranteed to only contain a shared
+                    // reference.
+                    unsafe { self.retry_impl(runtime) }
+                }
+
+                /// Retries the function invocation until it succeeds, resulting in an output.
+                // FIXME: `unwrap_or_else` does not compile for `StructRef`, due to
+                // https://doc.rust-lang.org/nomicon/lifetime-mismatch.html#improperly-reduced-borrows
+                pub fn wait<'r, 'o, Output>(mut self, runtime: &'r mut Runtime) -> Output
+                where
+                    Output: 'o + ReturnTypeReflection + Marshal<'o>,
+                    'r: 'o,
+                {
+                    // Safety: The output of `retry_impl` is guaranteed to only contain a shared
+                    // reference.
+                    let runtime = &*runtime;
+
                     loop {
-                        if let Ok(output) = self {
-                            return output;
-                        } else {
-                            self = self.retry();
-                        }
+                        self = match unsafe { self.retry_impl(runtime) } {
+                            Ok(output) => return output,
+                            Err(e) => e,
+                        };
                     }
+                }
+
+                /// Inner implementation that retries a function invocation once, resulting in a
+                /// potentially successful invocation. This is a workaround for:
+                /// https://doc.rust-lang.org/nomicon/lifetime-mismatch.html
+                ///
+                /// # Safety
+                ///
+                /// When calling this function, you have to guarantee that `runtime` is mutably
+                /// borrowed. The `Output` value can only contain a shared borrow of `runtime`.
+                unsafe fn retry_impl<'r, 'o, Output>(self, runtime: &'r Runtime) -> Result<Output, Self>
+                where
+                    Output: 'o + ReturnTypeReflection + Marshal<'o>,
+                    'r: 'o,
+                {
+                    #[allow(clippy::cast_ref_to_mut)]
+                    let runtime = &mut *(runtime as *const Runtime as *mut Runtime);
+
+                    eprintln!("{}", self.msg);
+                    while !runtime.update() {
+                        // Wait until there has been an update that might fix the error
+                    }
+                    $crate::Runtime::$FnName(runtime, self.function_name, $(self.$Arg,)*)
                 }
             }
 
@@ -90,13 +118,15 @@ macro_rules! invoke_fn_impl {
                 /// If an error occurs when invoking the method, an error message is logged. The
                 /// runtime continues looping until the cause of the error has been resolved.
                 #[allow(clippy::too_many_arguments, unused_assignments)]
-                pub fn $FnName<'s, $($T: ArgumentReflection,)* Output: ReturnTypeReflection>(
-                    runtime: &std::rc::Rc<core::cell::RefCell<Runtime>>,
+                pub fn $FnName<'i, 'o, 'r, 's, $($T: ArgumentReflection + Marshal<'i>,)* Output: 'o + ReturnTypeReflection + Marshal<'o>>(
+                    runtime: &'r Runtime,
                     function_name: &'s str,
                     $($Arg: $T,)*
-                ) -> core::result::Result<Output, $ErrName<'s, $($T,)* Output>> {
-                    let runtime_ref = runtime.borrow();
-                    match runtime_ref
+                ) -> core::result::Result<Output, $ErrName<'i, 's, $($T,)*>>
+                where
+                    'r: 'o,
+                {
+                    match runtime
                         .get_function_definition(function_name)
                         .ok_or_else(|| format!("Failed to obtain function '{}'", function_name))
                         .and_then(|function_info| {
@@ -115,7 +145,7 @@ macro_rules! invoke_fn_impl {
                             #[allow(unused_mut, unused_variables)]
                             let mut idx = 0;
                             $(
-                                crate::reflection::equals_argument_type(&runtime_ref, &arg_types[idx], &$Arg)
+                                crate::reflection::equals_argument_type(runtime, &arg_types[idx], &$Arg)
                                     .map_err(|(expected, found)| {
                                         format!(
                                             "Invalid argument type at index {}. Expected: {}. Found: {}.",
@@ -144,15 +174,15 @@ macro_rules! invoke_fn_impl {
                             Ok(function_info)
                         }) {
                         Ok(function_info) => {
-                            let function: fn($($T::Marshalled),*) -> Output::Marshalled = unsafe {
+                            let function: fn($($T::MunType),*) -> Output::MunType = unsafe {
                                 core::mem::transmute(function_info.fn_ptr)
                             };
-                            let result = function($($Arg.marshal()),*);
+                            let result = function($($Arg.marshal_into()),*);
 
                             // Marshall the result
-                            return Ok(result.marshal_value(runtime.clone()))
+                            return Ok(Marshal::marshal_from(result, runtime))
                         }
-                        Err(e) => Err($ErrName::new(e, runtime.clone(), function_name, $($Arg),*))
+                        Err(e) => Err($ErrName::new(e, function_name, $($Arg),*))
                     }
                 }
             }
@@ -160,11 +190,11 @@ macro_rules! invoke_fn_impl {
     }
 }
 
-/// Invokes a runtime function and returns a [`Result`] that implements the [`RetryResultExt`]
-/// trait.
+/// Invokes a runtime function and returns a [`Result`] that contains either the output value or
+/// an error that can be used to retry the function invocation.
 ///
-/// The first argument `invoke_fn` receives is a `Runtime` and the second argument is a function
-/// string. This must be a `&str`.
+/// The first argument `invoke_fn` receives is a `Ref<Runtime>` and the second argument is a
+/// function string. This must be a `&str`.
 ///
 /// Additional parameters passed to `invoke_fn` are the arguments of the function in the order
 /// given.
