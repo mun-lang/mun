@@ -53,7 +53,8 @@ pub fn fibonacci_benchmark(c: &mut Criterion) {
             if i > n {
                 return a;
             }
-            let sum = a + b;
+            // We care about the performance, not the validity.
+            let sum = a.wrapping_add(b);
             a = b;
             b = sum;
             i += 1;
