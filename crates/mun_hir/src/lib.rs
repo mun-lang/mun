@@ -54,6 +54,7 @@ pub use crate::{
         LogicOp, Ordering, Pat, PatId, RecordLitField, Statement, UnaryOp,
     },
     ids::ItemLoc,
+    in_file::InFile,
     input::{FileId, SourceRoot, SourceRootId},
     name::Name,
     name_resolution::PerNs,

@@ -1,20 +1,32 @@
 use super::HirDiagnostic;
 use crate::{Diagnostic, SourceAnnotation};
-use hir::HirDisplay;
+use mun_hir::HirDisplay;
 use mun_syntax::{ast, AstNode, TextRange};
 
-pub struct AccessUnknownField<'db, 'diag, DB: hir::HirDatabase> {
+/// An error that is emitted when trying to access a field that doesnt exist.
+///
+/// ```mun
+/// struct Foo {
+///     b: i32
+/// }
+///
+/// # fn main() {
+/// let a = Foo { b: 3}
+/// let b = a.c;    // no field `c`
+/// #}
+/// ```
+pub struct AccessUnknownField<'db, 'diag, DB: mun_hir::HirDatabase> {
     db: &'db DB,
-    diag: &'diag hir::diagnostics::AccessUnknownField,
+    diag: &'diag mun_hir::diagnostics::AccessUnknownField,
     location: TextRange,
 }
 
-impl<'db, 'diag, DB: hir::HirDatabase> Diagnostic for AccessUnknownField<'db, 'diag, DB> {
+impl<'db, 'diag, DB: mun_hir::HirDatabase> Diagnostic for AccessUnknownField<'db, 'diag, DB> {
     fn range(&self) -> TextRange {
         self.location
     }
 
-    fn label(&self) -> String {
+    fn title(&self) -> String {
         format!(
             "no field `{}` on type `{}`",
             self.diag.name,
@@ -30,9 +42,9 @@ impl<'db, 'diag, DB: hir::HirDatabase> Diagnostic for AccessUnknownField<'db, 'd
     }
 }
 
-impl<'db, 'diag, DB: hir::HirDatabase> AccessUnknownField<'db, 'diag, DB> {
+impl<'db, 'diag, DB: mun_hir::HirDatabase> AccessUnknownField<'db, 'diag, DB> {
     /// Constructs a new instance of `AccessUnknownField`
-    pub fn new(db: &'db DB, diag: &'diag hir::diagnostics::AccessUnknownField) -> Self {
+    pub fn new(db: &'db DB, diag: &'diag mun_hir::diagnostics::AccessUnknownField) -> Self {
         let parse = db.parse(diag.file);
 
         let location = ast::FieldExpr::cast(diag.expr.to_node(&parse.syntax_node()))

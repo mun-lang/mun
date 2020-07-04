@@ -2,20 +2,28 @@ use super::HirDiagnostic;
 use crate::{Diagnostic, SourceAnnotation};
 use mun_syntax::TextRange;
 
-pub struct PossiblyUninitializedVariable<'db, 'diag, DB: hir::HirDatabase> {
+/// An error that is emitted when trying to access a field that is potentially not yet initialized.
+///
+/// ```mun
+/// # fn main() {
+/// let a;
+/// let b = a;    // `a` is possible not yet initialized
+/// #}
+/// ```
+pub struct PossiblyUninitializedVariable<'db, 'diag, DB: mun_hir::HirDatabase> {
     _db: &'db DB,
-    diag: &'diag hir::diagnostics::PossiblyUninitializedVariable,
+    diag: &'diag mun_hir::diagnostics::PossiblyUninitializedVariable,
     value_name: String,
 }
 
-impl<'db, 'diag, DB: hir::HirDatabase> Diagnostic
+impl<'db, 'diag, DB: mun_hir::HirDatabase> Diagnostic
     for PossiblyUninitializedVariable<'db, 'diag, DB>
 {
     fn range(&self) -> TextRange {
         self.diag.highlight_range()
     }
 
-    fn label(&self) -> String {
+    fn title(&self) -> String {
         format!("use of possibly-uninitialized `{}`", self.value_name)
     }
 
@@ -24,9 +32,12 @@ impl<'db, 'diag, DB: hir::HirDatabase> Diagnostic
     }
 }
 
-impl<'db, 'diag, DB: hir::HirDatabase> PossiblyUninitializedVariable<'db, 'diag, DB> {
+impl<'db, 'diag, DB: mun_hir::HirDatabase> PossiblyUninitializedVariable<'db, 'diag, DB> {
     /// Constructs a new instance of `PossiblyUninitializedVariable`
-    pub fn new(db: &'db DB, diag: &'diag hir::diagnostics::PossiblyUninitializedVariable) -> Self {
+    pub fn new(
+        db: &'db DB,
+        diag: &'diag mun_hir::diagnostics::PossiblyUninitializedVariable,
+    ) -> Self {
         let parse = db.parse(diag.file);
 
         // Get the text of the value as a string

@@ -1,19 +1,30 @@
 use super::HirDiagnostic;
 use crate::{Diagnostic, SourceAnnotation};
-use hir::HirDisplay;
+use mun_hir::HirDisplay;
 use mun_syntax::TextRange;
 
-pub struct MismatchedType<'db, 'diag, DB: hir::HirDatabase> {
+/// An error that is emitted when a different type was found than expected.
+///
+/// ```mun
+/// fn add(a: i32, b: i32) -> i32{
+///     a+b
+/// }
+///
+/// # fn main() {
+///     add(true, false); // type mismatch, expected i32 found bool.
+/// # }
+/// ```
+pub struct MismatchedType<'db, 'diag, DB: mun_hir::HirDatabase> {
     db: &'db DB,
-    diag: &'diag hir::diagnostics::MismatchedType,
+    diag: &'diag mun_hir::diagnostics::MismatchedType,
 }
 
-impl<'db, 'diag, DB: hir::HirDatabase> Diagnostic for MismatchedType<'db, 'diag, DB> {
+impl<'db, 'diag, DB: mun_hir::HirDatabase> Diagnostic for MismatchedType<'db, 'diag, DB> {
     fn range(&self) -> TextRange {
         self.diag.highlight_range()
     }
 
-    fn label(&self) -> String {
+    fn title(&self) -> String {
         format!(
             "expected `{}`, found `{}`",
             self.diag.expected.display(self.db),
@@ -26,9 +37,9 @@ impl<'db, 'diag, DB: hir::HirDatabase> Diagnostic for MismatchedType<'db, 'diag,
     }
 }
 
-impl<'db, 'diag, DB: hir::HirDatabase> MismatchedType<'db, 'diag, DB> {
+impl<'db, 'diag, DB: mun_hir::HirDatabase> MismatchedType<'db, 'diag, DB> {
     /// Constructs a new instance of `MismatchedType`
-    pub fn new(db: &'db DB, diag: &'diag hir::diagnostics::MismatchedType) -> Self {
+    pub fn new(db: &'db DB, diag: &'diag mun_hir::diagnostics::MismatchedType) -> Self {
         MismatchedType { db, diag }
     }
 }

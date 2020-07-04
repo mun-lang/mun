@@ -2,13 +2,11 @@
 //! from previous compilation.
 
 use crate::{
-    compute_source_relative_path,
-    db::CompilerDatabase,
-    diagnostics::{diagnostics, emit_diagnostics},
-    ensure_package_output_dir, is_source_file, PathOrInline, RelativePath,
+    compute_source_relative_path, db::CompilerDatabase, ensure_package_output_dir, is_source_file,
+    PathOrInline, RelativePath,
 };
 use mun_codegen::{Assembly, IrDatabase};
-use mun_hir::{FileId, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
+use mun_hir::{DiagnosticSink, FileId, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
 
 use std::{path::PathBuf, sync::Arc};
 
@@ -18,7 +16,7 @@ mod display_color;
 pub use self::config::Config;
 pub use self::display_color::DisplayColor;
 
-use annotate_snippets::snippet::{AnnotationType, Snippet};
+use crate::diagnostics_snippets::{emit_hir_diagnostic, emit_syntax_error};
 use mun_project::Package;
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -192,34 +190,50 @@ impl Driver {
 }
 
 impl Driver {
-    /// Returns a vector containing all the diagnostic messages for the project.
-    pub fn diagnostics(&self) -> Vec<Snippet> {
-        self.db
-            .source_root(WORKSPACE)
-            .files()
-            .map(|f| diagnostics(&self.db, f))
-            .flatten()
-            .collect()
-    }
-
     /// Emits all diagnostic messages currently in the database; returns true if errors were
     /// emitted.
     pub fn emit_diagnostics(&self, writer: &mut dyn std::io::Write) -> Result<bool, anyhow::Error> {
-        let diagnostics = self.diagnostics();
+        // Iterate over all files in the workspace
+        let emit_colors = self.display_color.should_enable();
+        let mut has_error = false;
+        for file_id in self.db.source_root(WORKSPACE).files() {
+            let parse = self.db.parse(file_id);
+            let source_code = self.db.file_text(file_id);
+            let relative_file_path = self.db.file_relative_path(file_id);
+            let line_index = self.db.line_index(file_id);
 
-        // Emit all diagnostics to the stream
-        emit_diagnostics(writer, &diagnostics, self.display_color.should_enable())?;
+            // Emit all syntax diagnostics
+            for syntax_error in parse.errors().iter() {
+                emit_syntax_error(
+                    syntax_error,
+                    relative_file_path.as_str(),
+                    source_code.as_str(),
+                    &line_index,
+                    emit_colors,
+                    writer,
+                )?;
+                has_error = true;
+            }
 
-        // Determine if one of the snippets is actually an error
-        Ok(diagnostics.iter().any(|d| {
-            d.title
-                .as_ref()
-                .map(|a| match a.annotation_type {
-                    AnnotationType::Error => true,
-                    _ => false,
-                })
-                .unwrap_or(false)
-        }))
+            // Emit all HIR diagnostics
+            let mut error = None;
+            mun_hir::Module::from(file_id).diagnostics(
+                &self.db,
+                &mut DiagnosticSink::new(|d| {
+                    has_error = true;
+                    if let Err(e) = emit_hir_diagnostic(d, &self.db, file_id, emit_colors, writer) {
+                        error = Some(e)
+                    };
+                }),
+            );
+
+            // If an error occurred when emitting HIR diagnostics, return early with the error.
+            if let Some(e) = error {
+                return Err(e.into());
+            }
+        }
+
+        Ok(has_error)
     }
 }
 

@@ -2,18 +2,25 @@ use super::HirDiagnostic;
 use crate::{Diagnostic, SourceAnnotation};
 use mun_syntax::{AstNode, TextRange};
 
-pub struct UnresolvedType<'db, 'diag, DB: hir::HirDatabase> {
+/// An error that is emitted when trying to use a type that doesnt exist within the scope.
+///
+/// ```mun
+/// # fn main() {
+/// let a = DoesntExist {}; // Cannot find `DoesntExist` in this scope.
+/// #}
+/// ```
+pub struct UnresolvedType<'db, 'diag, DB: mun_hir::HirDatabase> {
     _db: &'db DB,
-    diag: &'diag hir::diagnostics::UnresolvedType,
+    diag: &'diag mun_hir::diagnostics::UnresolvedType,
     value_name: String,
 }
 
-impl<'db, 'diag, DB: hir::HirDatabase> Diagnostic for UnresolvedType<'db, 'diag, DB> {
+impl<'db, 'diag, DB: mun_hir::HirDatabase> Diagnostic for UnresolvedType<'db, 'diag, DB> {
     fn range(&self) -> TextRange {
         self.diag.highlight_range()
     }
 
-    fn label(&self) -> String {
+    fn title(&self) -> String {
         format!("cannot find type `{}` in this scope", self.value_name)
     }
 
@@ -25,9 +32,9 @@ impl<'db, 'diag, DB: hir::HirDatabase> Diagnostic for UnresolvedType<'db, 'diag,
     }
 }
 
-impl<'db, 'diag, DB: hir::HirDatabase> UnresolvedType<'db, 'diag, DB> {
+impl<'db, 'diag, DB: mun_hir::HirDatabase> UnresolvedType<'db, 'diag, DB> {
     /// Constructs a new instance of `UnresolvedType`
-    pub fn new(db: &'db DB, diag: &'diag hir::diagnostics::UnresolvedType) -> Self {
+    pub fn new(db: &'db DB, diag: &'diag mun_hir::diagnostics::UnresolvedType) -> Self {
         let parse = db.parse(diag.file);
 
         // Get the text of the value as a string

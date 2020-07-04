@@ -1,4 +1,4 @@
-use crate::analysis::{Analysis, AnalysisSnapshot};
+use crate::analysis::{Analysis, AnalysisSnapshot, Cancelable};
 use crate::change::AnalysisChange;
 use crate::config::{Config, FilesWatcher};
 use crate::conversion::{convert_range, url_from_path_with_drive_lowercasing};
@@ -13,6 +13,7 @@ use lsp_types::{PublishDiagnosticsParams, Url};
 use ra_vfs::{RootEntry, Vfs, VfsChange, VfsFile};
 use serde::{de::DeserializeOwned, Serialize};
 use std::collections::HashSet;
+use std::ops::Deref;
 use std::sync::Arc;
 
 /// A `Task` is something that is send from async tasks to the entry point for processing. This
@@ -370,7 +371,7 @@ async fn handle_event(
         let task_sender = task_sender.clone();
         // Spawn the diagnostics in the threadpool
         pool.spawn(move || {
-            async_std::task::block_on(handle_diagnostics(snapshot, task_sender));
+            let _result = async_std::task::block_on(handle_diagnostics(snapshot, task_sender));
         });
     }
 
@@ -378,40 +379,62 @@ async fn handle_event(
 }
 
 /// Send all diagnostics of all files
-async fn handle_diagnostics(state: LanguageServerSnapshot, mut sender: UnboundedSender<Task>) {
+async fn handle_diagnostics(
+    state: LanguageServerSnapshot,
+    mut sender: UnboundedSender<Task>,
+) -> Cancelable<()> {
     // Iterate over all files
     for root in state.local_source_roots.iter() {
         // Get all the files
-        let files = match state.analysis.source_root_files(*root) {
-            Ok(files) => files,
-            Err(_) => return,
-        };
+        let files = state.analysis.source_root_files(*root)?;
 
         // Publish all diagnostics
         for file in files {
-            let line_index = match state.analysis.file_line_index(file) {
-                Ok(line_index) => line_index,
-                Err(_) => return,
-            };
-            let uri = state.file_id_to_uri(file);
-            let uri = uri.await.unwrap();
-            let diagnostics = match state.analysis.diagnostics(file) {
-                Ok(line_index) => line_index,
-                Err(_) => return,
-            };
+            let line_index = state.analysis.file_line_index(file)?;
+            let uri = state.file_id_to_uri(file).await.unwrap();
+            let diagnostics = state.analysis.diagnostics(file)?;
 
-            let diagnostics = diagnostics
-                .into_iter()
-                .map(|d| lsp_types::Diagnostic {
-                    range: convert_range(d.range, &line_index),
-                    severity: Some(lsp_types::DiagnosticSeverity::Error),
-                    code: None,
-                    source: Some("mun".to_string()),
-                    message: d.message,
-                    related_information: None,
-                    tags: None,
-                })
-                .collect();
+            let diagnostics = {
+                let mut lsp_diagnostics = Vec::with_capacity(diagnostics.len());
+                for d in diagnostics {
+                    lsp_diagnostics.push(lsp_types::Diagnostic {
+                        range: convert_range(d.range, &line_index),
+                        severity: Some(lsp_types::DiagnosticSeverity::Error),
+                        code: None,
+                        source: Some("mun".to_string()),
+                        message: d.message,
+                        related_information: {
+                            let mut annotations =
+                                Vec::with_capacity(d.additional_annotations.len());
+                            for annotation in d.additional_annotations {
+                                annotations.push(lsp_types::DiagnosticRelatedInformation {
+                                    location: lsp_types::Location {
+                                        uri: state
+                                            .file_id_to_uri(annotation.range.file_id)
+                                            .await
+                                            .unwrap(),
+                                        range: convert_range(
+                                            annotation.range.value,
+                                            state
+                                                .analysis
+                                                .file_line_index(annotation.range.file_id)?
+                                                .deref(),
+                                        ),
+                                    },
+                                    message: annotation.message,
+                                });
+                            }
+                            if annotations.is_empty() {
+                                None
+                            } else {
+                                Some(annotations)
+                            }
+                        },
+                        tags: None,
+                    });
+                }
+                lsp_diagnostics
+            };
 
             sender
                 .send(Task::Notify(build_notification::<PublishDiagnostics>(
@@ -425,6 +448,8 @@ async fn handle_diagnostics(state: LanguageServerSnapshot, mut sender: Unbounded
                 .unwrap();
         }
     }
+
+    Ok(())
 }
 
 /// Handles a task send by another async task

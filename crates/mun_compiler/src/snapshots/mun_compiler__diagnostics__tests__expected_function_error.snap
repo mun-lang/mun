@@ -3,27 +3,23 @@ source: crates/mun_compiler/src/diagnostics.rs
 expression: "compilation_errors(\"\\n\\nfn main() {\\nlet a = Foo();\\n\\nlet b = Bar();\\n}\")"
 ---
 error: cannot find value `Foo` in this scope
- --> main.mun:4:8
+ --> main.mun:4:9
   |
 4 | let a = Foo();
   |         ^^^ not found in this scope
-  |
-error: expected function type
- --> main.mun:4:8
+  |error: expected function, found `{unknown}`
+ --> main.mun:4:9
   |
 4 | let a = Foo();
-  |         ^^^ expected function, found `{unknown}`
-  |
-error: cannot find value `Bar` in this scope
- --> main.mun:6:8
+  |         ^^^ not a function
+  |error: cannot find value `Bar` in this scope
+ --> main.mun:6:9
   |
 6 | let b = Bar();
   |         ^^^ not found in this scope
-  |
-error: expected function type
- --> main.mun:6:8
+  |error: expected function, found `{unknown}`
+ --> main.mun:6:9
   |
 6 | let b = Bar();
-  |         ^^^ expected function, found `{unknown}`
+  |         ^^^ not a function
   |
-
