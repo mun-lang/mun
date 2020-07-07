@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - master
+      - release/*
 
 env:
   RUSTFLAGS: -Dwarnings
