@@ -229,7 +229,7 @@ To run in [Visual Studio Code](https://code.visualstudio.com/). Use the followin
 [VS code extension](https://github.com/mun-lang/vscode-extension).
 
 ### Vim/Neovim
-Use a language server plugin (or built in lsp support of neovim), for example using [coc.nvim](https://github.com/neoclide/coc.nvim).
+Use a language server plugin (or built-in lsp support of neovim), for example using [coc.nvim](https://github.com/neoclide/coc.nvim).
 
 Paste the following config into your `:CocConfig`, replace the `command`, with the correct path to the mun executable.
 

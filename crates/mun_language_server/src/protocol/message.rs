@@ -158,6 +158,7 @@ impl Response {
     }
 
     /// Constructs a `Response` object signalling failure to handle the request with the specified
+    /// id
     pub fn new_err(id: RequestId, code: i32, message: String) -> Self {
         Self {
             id,

@@ -37,7 +37,7 @@ impl SyntaxNodePtr {
     }
 
     /// Casts this instance to a pointer of another type. Returns None if the cast is not valid.
-    pub fn cast<N: AstNode>(self) -> Option<AstPtr<N>> {
+    pub fn try_cast<N: AstNode>(self) -> Option<AstPtr<N>> {
         if !N::can_cast(self.kind()) {
             return None;
         }

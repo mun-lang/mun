@@ -24,7 +24,7 @@ impl Analysis {
         }
     }
 
-    /// Applies the given changes to the state. If there are outstanding `AnalysisSnapshot` they
+    /// Applies the given changes to the state. If there are outstanding `AnalysisSnapshot`s they
     /// will be canceled.
     pub fn apply_change(&mut self, change: AnalysisChange) {
         self.db.apply_change(change)
@@ -44,7 +44,7 @@ impl Analysis {
 ///
 /// A `AnalysisSnapshot` is created by calling `Analysis::snapshot`. When applying changes to the
 /// `Analysis` struct through the use of `Analysis::apply_changes` all snapshots are cancelled (most
-/// method return `Err(Canceled)`).
+/// methods return `Err(Canceled)`).
 pub struct AnalysisSnapshot {
     db: Snapshot<AnalysisDatabase>,
 }

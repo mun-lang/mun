@@ -6,12 +6,12 @@ use mun_target::spec::Target;
 use salsa::{Database, Runtime, Snapshot};
 use std::panic;
 
-/// The `AnalysisDatabase` provides the database for all analysis. A database is given input and
+/// The `AnalysisDatabase` provides the database for all analyses. A database is given input and
 /// produces output based on these inputs through the use of queries. These queries are memoized
 /// which enables us to not have to recompute everything if certain inputs change. `salsa` powers
 /// this.
 ///
-/// Internally this `AnalysisDatabase` is composed in the `Analysis` struct. You can apply a set of
+/// Internally this `AnalysisDatabase` is composed of the `Analysis` struct. You can apply a set of
 /// changes which will be applied to the database. You can take snapshots of the `Analysis` struct
 /// which can be used to perform analysis.
 ///
@@ -39,9 +39,11 @@ impl salsa::Database for AnalysisDatabase {
     fn salsa_runtime(&self) -> &Runtime<Self> {
         &self.runtime
     }
+
     fn salsa_runtime_mut(&mut self) -> &mut salsa::Runtime<AnalysisDatabase> {
         &mut self.runtime
     }
+
     fn salsa_event(&self, event: impl Fn() -> salsa::Event<AnalysisDatabase>) {
         match event().kind {
             salsa::EventKind::DidValidateMemoizedValue { .. }

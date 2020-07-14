@@ -20,6 +20,7 @@ impl salsa::Database for MockDatabase {
     fn salsa_runtime(&self) -> &salsa::Runtime<MockDatabase> {
         &self.runtime
     }
+
     fn salsa_runtime_mut(&mut self) -> &mut salsa::Runtime<MockDatabase> {
         &mut self.runtime
     }

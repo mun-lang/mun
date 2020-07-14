@@ -31,7 +31,7 @@ enum Event {
 
 /// State for the language server
 struct LanguageServerState {
-    /// Interface to the vfs, a virtual filesystem that supports the overlaying of files
+    /// Interface to the vfs, a virtual filesystem that supports overlaying of files
     pub vfs: Arc<RwLock<Vfs>>,
 
     /// Receiver channel to apply filesystem changes on `vfs`
@@ -46,7 +46,7 @@ struct LanguageServerState {
 
 /// A snapshot of the state of the language server
 struct LanguageServerSnapshot {
-    /// Interface to the vfs, a virtual filesystem that supports the overlaying of files
+    /// Interface to the vfs, a virtual filesystem that supports overlaying of files
     pub vfs: Arc<RwLock<Vfs>>,
 
     /// Holds the state of the analysis process
@@ -80,12 +80,12 @@ impl ConnectionState {
         self.next_request_id += 1;
         let res: RequestId = self.next_request_id.into();
         let inserted = self.pending_responses.insert(res.clone());
-        assert!(inserted);
+        debug_assert!(inserted);
         res
     }
 }
 
-/// Filter for to choose which files the ra_vfs should ignore
+/// Filter used to choose which files the ra_vfs should ignore
 struct MunFilter {}
 
 /// Implement the filter provided by ra_vfs
@@ -261,7 +261,7 @@ async fn on_notification(
                     .await
                     .add_file_overlay(&path, params.text_document.text).is_some()
                 {
-                    //loop_state.subscriptions.add_sub(FileId(file_id.0));
+                    // TODO: Keep track of opened files
                 }
                 return Ok(LoopState::Continue);
             }
@@ -283,7 +283,7 @@ async fn on_notification(
                     .remove_file_overlay(path.as_path())
                     .is_some()
                 {
-                    //loop_state.subscriptions.remove_sub(FileId(file_id.0));
+                    // TODO: Keep track of opened files
                 }
                 let params = lsp_types::PublishDiagnosticsParams {
                     uri,
@@ -474,7 +474,7 @@ where
     Request::new(id, R::METHOD.to_string(), params)
 }
 
-/// Create an new notification with the specified parameters
+/// Constructs a new notification with the specified parameters.
 fn build_notification<N>(params: N::Params) -> Notification
 where
     N: lsp_types::notification::Notification,
@@ -483,7 +483,7 @@ where
     Notification::new(N::METHOD.to_string(), params)
 }
 
-/// Cast a notification to a specific type
+/// Casts a notification to the specified type.
 fn cast_notification<N>(notification: Notification) -> std::result::Result<N::Params, Notification>
 where
     N: lsp_types::notification::Notification,
@@ -503,7 +503,7 @@ impl LanguageServerState {
     }
 
     /// Processes any and all changes that have been applied to the virtual filesystem. Generates
-    /// an AnalysisChange and applies it if there are changes. True is returned if things changed,
+    /// an `AnalysisChange` and applies it if there are changes. True is returned if things changed,
     /// otherwise false.
     pub async fn process_vfs_changes(&mut self) -> bool {
         // Get all the changes since the last time we processed

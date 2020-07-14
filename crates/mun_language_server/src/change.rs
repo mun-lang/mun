@@ -39,7 +39,7 @@ impl AnalysisChange {
         self.new_roots.push(root_id);
     }
 
-    /// Records the addition of a new file the a root
+    /// Records the addition of a new file to a root
     pub fn add_file(
         &mut self,
         root_id: hir::SourceRootId,
@@ -80,7 +80,7 @@ impl AnalysisChange {
     }
 }
 
-/// Represents the addition of a file to the source root.
+/// Represents the addition of a file to a source root.
 #[derive(Debug)]
 struct AddFile {
     file_id: hir::FileId,

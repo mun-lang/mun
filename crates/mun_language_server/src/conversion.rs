@@ -4,9 +4,9 @@ use std::path::{Component, Path, Prefix};
 use std::str::FromStr;
 
 /// Returns a `Url` object from a given path, will lowercase drive letters if present.
-/// This will only happen when processing windows paths.
+/// This will only happen when processing Windows paths.
 ///
-/// When processing non-windows path, this is essentially the same as `Url::from_file_path`.
+/// When processing non-windows path, this is essentially do the same as `Url::from_file_path`.
 pub fn url_from_path_with_drive_lowercasing(path: impl AsRef<Path>) -> anyhow::Result<Url> {
     let component_has_windows_drive = path.as_ref().components().any(|comp| {
         if let Component::Prefix(c) = comp {
@@ -18,7 +18,7 @@ pub fn url_from_path_with_drive_lowercasing(path: impl AsRef<Path>) -> anyhow::R
         false
     });
 
-    // VSCode expects drive letters to be lowercased, where rust will uppercase the drive letters.
+    // VSCode expects drive letters to be lowercased, whereas rust will uppercase the drive letters.
     if component_has_windows_drive {
         let url_original = Url::from_file_path(&path).map_err(|_| {
             anyhow::anyhow!("can't convert path to url: {}", path.as_ref().display())
