@@ -19,10 +19,10 @@ pub(super) fn declaration(p: &mut Parser) {
     m.abandon(p);
     if p.at(T!['{']) {
         error_block(p, "expected a declaration")
-    } else if p.at(T!['{']) {
+    } else if p.at(T!['}']) {
         let e = p.start();
         p.error("unmatched }");
-        p.bump(T!['{']);
+        p.bump(T!['}']);
         e.complete(p, ERROR);
     } else if !p.at(EOF) {
         p.error_and_bump("expected a declaration");
