@@ -1,5 +1,8 @@
 use std::cell::RefCell;
 use std::env;
+use std::ffi::OsString;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::Duration;
 
@@ -8,8 +11,6 @@ use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use mun_compiler::{Config, DisplayColor, Target};
 use mun_project::MANIFEST_FILENAME;
 use mun_runtime::{invoke_fn, ReturnTypeReflection, Runtime, RuntimeBuilder};
-use std::ffi::OsString;
-use std::path::{Path, PathBuf};
 
 #[derive(Copy, Debug, Clone, PartialEq, Eq)]
 pub enum ExitStatus {
@@ -95,6 +96,10 @@ where
                 ),
         )
         .subcommand(
+            SubCommand::with_name("new")
+                .arg(Arg::with_name("path").help("the path to crate a new project").required(true).index(1))
+        )
+        .subcommand(
             SubCommand::with_name("language-server")
         )
         .get_matches_from_safe(args);
@@ -104,6 +109,7 @@ where
             ("build", Some(matches)) => build(matches),
             ("language-server", Some(matches)) => language_server(matches),
             ("start", Some(matches)) => start(matches).map(|_| ExitStatus::Success),
+            ("new", Some(matches)) => new(matches),
             _ => unreachable!(),
         },
         Err(e) => {
@@ -277,4 +283,73 @@ mod test {
         std::fs::create_dir_all(&subdir_path).unwrap();
         assert_eq!(find_manifest(&subdir_path).as_ref(), Some(&manifest_path));
     }
+}
+
+/// This method is invoked when the executable is run with the `new` argument indicating that a
+/// user requested us to create a new project in a new directory.
+fn new(matches: &ArgMatches) -> Result<ExitStatus, anyhow::Error> {
+    log::trace!("Creating new project");
+    let project_name = matches.value_of("path").expect(
+        "Path argument not found: This should be unreachable as clap requires this argument.",
+    );
+
+    let create_in = std::env::current_dir()
+        .expect("could not determine current working directory")
+        .join(project_name);
+
+    if create_in.exists() {
+        eprint!(
+            "destination `{}` already exists\n\n\
+             Use `mun init` to initialize the directory",
+            create_in.display()
+        );
+        return Ok(ExitStatus::Error);
+    }
+    create_dir(&create_in)?;
+    create_project(&create_in, project_name)
+}
+
+fn create_project(create_in: &Path, project_name: &str) -> Result<ExitStatus, anyhow::Error> {
+    log::trace!("Creating new project");
+    {
+        let manifest_path = create_in.join("mun.toml");
+
+        write(
+            &manifest_path,
+            format!(
+                // TODO. Nothing is done yet to find out the author. Discuss.
+                r#"[package]
+name="{}"
+authors=[]
+version="0.1.0"
+"#,
+                project_name,
+            ),
+        )?;
+    }
+    {
+        let src_path = create_in.join("src");
+        create_dir(&src_path)?;
+
+        let main_file_path = src_path.join("main.mun");
+
+        write(
+            &main_file_path,
+            r#"pub fn main() -> f64 {
+    3.14159
+}
+"#,
+        )?;
+    }
+    println!("Created `{}` package", project_name);
+    Ok(ExitStatus::Success)
+}
+
+fn create_dir(path: impl AsRef<Path>) -> anyhow::Result<()> {
+    fs::create_dir(&path)
+        .map_err(|_| anyhow!("failed to create directory `{}`", path.as_ref().display()))
+}
+pub fn write(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> anyhow::Result<()> {
+    let path = path.as_ref();
+    fs::write(path, contents.as_ref()).map_err(|_| anyhow!("failed to write `{}`", path.display()))
 }
