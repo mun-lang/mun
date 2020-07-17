@@ -1,9 +1,8 @@
 use async_std::future::timeout;
-use async_std::task::JoinHandle;
 use futures::{SinkExt, StreamExt};
 use lsp_types::{notification::Exit, request::Shutdown};
-use mun_language_server::main_loop;
 use mun_language_server::protocol::{Connection, Message, Notification, Request};
+use mun_language_server::{main_loop, Config};
 use serde::Serialize;
 use serde_json::Value;
 use std::time::Duration;
@@ -12,7 +11,7 @@ use std::time::Duration;
 /// to and from it.
 pub struct Server {
     next_request_id: u64,
-    worker: Option<JoinHandle<()>>,
+    worker: Option<std::thread::JoinHandle<()>>,
     client: Connection,
 }
 
@@ -21,8 +20,11 @@ impl Server {
     pub fn new() -> Self {
         let (connection, client) = Connection::memory();
 
-        let worker = async_std::task::spawn(async move {
-            main_loop(connection).await.unwrap();
+        let config = Config::default();
+        let worker = std::thread::spawn(move || {
+            async_std::task::block_on(async move {
+                main_loop(connection, config).await.unwrap();
+            })
         });
 
         Self {
@@ -119,7 +121,7 @@ impl Drop for Server {
 
             // Cancel the main_loop
             if let Some(worker) = self.worker.take() {
-                worker.await;
+                worker.join().unwrap();
             }
         });
     }

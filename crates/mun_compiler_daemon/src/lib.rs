@@ -46,7 +46,7 @@ pub fn compile_and_watch_manifest(
                 Write(ref path) if is_source_file(path) => {
                     let relative_path = compute_source_relative_path(&source_directory, path)?;
                     let file_contents = std::fs::read_to_string(path)?;
-                    log::info!("Modifying {}", relative_path.display());
+                    log::info!("Modifying {}", relative_path);
                     driver.update_file(relative_path, file_contents);
                     if !driver.emit_diagnostics(&mut stderr())? {
                         driver.write_all_assemblies()?;
@@ -55,7 +55,7 @@ pub fn compile_and_watch_manifest(
                 Create(ref path) if is_source_file(path) => {
                     let relative_path = compute_source_relative_path(&source_directory, path)?;
                     let file_contents = std::fs::read_to_string(path)?;
-                    log::info!("Creating {}", relative_path.display());
+                    log::info!("Creating {}", relative_path);
                     driver.add_file(relative_path, file_contents);
                     if !driver.emit_diagnostics(&mut stderr())? {
                         driver.write_all_assemblies()?;
@@ -64,7 +64,7 @@ pub fn compile_and_watch_manifest(
                 Remove(ref path) if is_source_file(path) => {
                     // Simply remove the source file from the source root
                     let relative_path = compute_source_relative_path(&source_directory, path)?;
-                    log::info!("Removing {}", relative_path.display());
+                    log::info!("Removing {}", relative_path);
                     let assembly_path = driver.assembly_output_path(driver.get_file_id_for_path(&relative_path).expect("cannot remove a file that was not part of the compilation in the first place"));
                     if assembly_path.is_file() {
                         std::fs::remove_file(assembly_path)?;
@@ -79,11 +79,7 @@ pub fn compile_and_watch_manifest(
                     let from_relative_path = compute_source_relative_path(&source_directory, from)?;
                     let to_relative_path = compute_source_relative_path(&source_directory, to)?;
 
-                    log::info!(
-                        "Renaming {} to {}",
-                        from_relative_path.display(),
-                        to_relative_path.display(),
-                    );
+                    log::info!("Renaming {} to {}", from_relative_path, to_relative_path,);
                     driver.rename(from_relative_path, to_relative_path);
                     if !driver.emit_diagnostics(&mut stderr())? {
                         driver.write_all_assemblies()?;

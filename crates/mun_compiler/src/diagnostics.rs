@@ -33,7 +33,7 @@ pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
     // correctly replace each `\t` into 1-4 space.
     let source_code = db.file_text(file_id).to_string().replace("\t", " ");
 
-    let relative_file_path = db.file_relative_path(file_id).display().to_string();
+    let relative_file_path = db.file_relative_path(file_id).to_string();
 
     let line_index = db.line_index(file_id);
 

@@ -1,9 +1,18 @@
+mod analysis;
+mod cancelation;
 mod capabilities;
+mod change;
+mod config;
+mod conversion;
+mod db;
+mod diagnostics;
 mod main_loop;
 pub mod protocol;
 
+pub use config::Config;
 pub use main_loop::main_loop;
 
+use crate::config::FilesWatcher;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -57,7 +66,42 @@ pub async fn run_server_async() -> Result<()> {
         );
     }
 
-    main_loop(connection).await?;
+    let config = {
+        let mut config = Config::default();
+
+        let supports_file_watcher_dynamic_registration = initialize_params
+            .capabilities
+            .workspace
+            .and_then(|c| c.did_change_watched_files)
+            .map(|c| c.dynamic_registration.unwrap_or(false))
+            .unwrap_or(false);
+        if supports_file_watcher_dynamic_registration {
+            config.watcher = FilesWatcher::Client;
+        }
+
+        // Get the current working directory as fallback
+        let cwd = std::env::current_dir()?;
+        // Convert the root uri to a PathBuf
+        let root = initialize_params
+            .root_uri
+            .and_then(|it| it.to_file_path().ok())
+            .unwrap_or(cwd);
+        // Convert the workspace_roots, if these are empy use the root_uri or the cwd
+        config.workspace_roots = initialize_params
+            .workspace_folders
+            .map(|workspaces| {
+                workspaces
+                    .into_iter()
+                    .filter_map(|it| it.uri.to_file_path().ok())
+                    .collect::<Vec<_>>()
+            })
+            .filter(|workspaces| !workspaces.is_empty())
+            .unwrap_or_else(|| vec![root]);
+
+        config
+    };
+
+    main_loop(connection, config).await?;
 
     Ok(())
 }

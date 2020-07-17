@@ -10,11 +10,10 @@ use crate::{
     ids,
     line_index::LineIndex,
     name_resolution::ModuleScope,
-    source_id::ErasedFileAstId,
     ty::InferenceResult,
     AstIdMap, ExprScopes, FileId, RawItems, Struct,
 };
-use mun_syntax::{ast, Parse, SourceFile, SyntaxNode};
+use mun_syntax::{ast, Parse, SourceFile};
 use mun_target::abi;
 use mun_target::spec::Target;
 pub use relative_path::RelativePathBuf;
@@ -54,10 +53,6 @@ pub trait DefDatabase: SourceDatabase {
     /// Returns the top level AST items of a file
     #[salsa::invoke(crate::source_id::AstIdMap::ast_id_map_query)]
     fn ast_id_map(&self, file_id: FileId) -> Arc<AstIdMap>;
-
-    /// Returns the corresponding AST node of a type erased ast id
-    #[salsa::invoke(crate::source_id::AstIdMap::file_item_query)]
-    fn ast_id_to_node(&self, file_id: FileId, ast_id: ErasedFileAstId) -> SyntaxNode;
 
     /// Returns the raw items of a file
     #[salsa::invoke(RawItems::raw_file_items_query)]
