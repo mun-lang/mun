@@ -56,7 +56,7 @@ fn cmd_supports_ansi() -> bool {
                 let windows_version = windows_version
                     .split(' ') // split to drop "Microsoft", "Windows" and "[Version" from string
                     .last() // latest element contains Windows version with noisy ']' char
-                    .and_then(|window_version| {
+                    .map(|window_version| {
                         let mut window_version: String = window_version.trim().to_string();
 
                         // Remove ']' char
@@ -64,11 +64,11 @@ fn cmd_supports_ansi() -> bool {
 
                         let window_version: Vec<&str> = window_version.split('.').collect();
 
-                        Some((
+                        (
                             window_version[0].parse::<usize>(),
                             window_version[1].parse::<usize>(),
                             window_version[2].parse::<usize>(),
-                        ))
+                        )
                     });
 
                 if let Some((Ok(major), Ok(minor), Ok(patch))) = windows_version {
