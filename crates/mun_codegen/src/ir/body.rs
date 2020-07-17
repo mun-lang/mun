@@ -35,8 +35,8 @@ pub(crate) struct ExternalGlobals {
     pub type_table: Option<Global<[*const ir::TypeInfo]>>,
 }
 
-pub(crate) struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
-    db: &'a D,
+pub(crate) struct BodyIrGenerator<'a, 'b> {
+    db: &'a dyn IrDatabase,
     body: Arc<Body>,
     infer: Arc<InferenceResult>,
     builder: Builder,
@@ -53,9 +53,9 @@ pub(crate) struct BodyIrGenerator<'a, 'b, D: IrDatabase> {
     external_globals: ExternalGlobals,
 }
 
-impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
+impl<'a, 'b> BodyIrGenerator<'a, 'b> {
     pub fn new(
-        db: &'a D,
+        db: &'a dyn IrDatabase,
         function: (hir::Function, FunctionValue),
         function_map: &'a HashMap<hir::Function, FunctionValue>,
         dispatch_table: &'b DispatchTable,
@@ -66,8 +66,8 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         let (hir_function, ir_function) = function;
 
         // Get the type information from the `hir::Function`
-        let body = hir_function.body(db);
-        let infer = hir_function.infer(db);
+        let body = hir_function.body(db.upcast());
+        let infer = hir_function.infer(db.upcast());
 
         // Construct a builder for the IR function
         let context = db.context();
@@ -132,8 +132,8 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         let block_ret_type = &self.infer[self.body.body_expr()];
         let fn_ret_type = self
             .hir_function
-            .ty(self.db)
-            .callable_sig(self.db)
+            .ty(self.db.upcast())
+            .callable_sig(self.db.upcast())
             .unwrap()
             .ret()
             .clone();
@@ -147,7 +147,11 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
     }
 
     pub fn gen_fn_wrapper(&mut self) {
-        let fn_sig = self.hir_function.ty(self.db).callable_sig(self.db).unwrap();
+        let fn_sig = self
+            .hir_function
+            .ty(self.db.upcast())
+            .callable_sig(self.db.upcast())
+            .unwrap();
         let args: Vec<BasicValueEnum> = fn_sig
             .params()
             .iter()
@@ -155,7 +159,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             .map(|(idx, ty)| {
                 let param = self.fn_value.get_nth_param(idx as u32).unwrap();
                 if let Some(s) = ty.as_struct() {
-                    if s.data(self.db).memory_kind == abi::StructMemoryKind::Value {
+                    if s.data(self.db.upcast()).memory_kind == abi::StructMemoryKind::Value {
                         deref_heap_value(&self.builder, param)
                     } else {
                         param
@@ -175,8 +179,8 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         if !call_return_type.is_never() {
             let fn_ret_type = self
                 .hir_function
-                .ty(self.db)
-                .callable_sig(self.db)
+                .ty(self.db.upcast())
+                .callable_sig(self.db.upcast())
                 .unwrap()
                 .ret()
                 .clone();
@@ -185,7 +189,8 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 self.builder.build_return(None);
             } else if let Some(value) = ret_value {
                 let ret_value = if let Some(hir_struct) = fn_ret_type.as_struct() {
-                    if hir_struct.data(self.db).memory_kind == hir::StructMemoryKind::Value {
+                    if hir_struct.data(self.db.upcast()).memory_kind == hir::StructMemoryKind::Value
+                    {
                         self.gen_struct_alloc_on_heap(hir_struct, value.into_struct_value())
                     } else {
                         value
@@ -208,7 +213,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 tail,
             } => self.gen_block(expr, statements, *tail),
             Expr::Path(ref p) => {
-                let resolver = hir::resolver_for_expr(self.body.clone(), self.db, expr);
+                let resolver = hir::resolver_for_expr(self.body.clone(), self.db.upcast(), expr);
                 Some(self.gen_path_expr(p, expr, &resolver))
             }
             Expr::Literal(lit) => Some(self.gen_literal(lit, expr)),
@@ -350,7 +355,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         }
         let struct_lit = value.into_struct_value();
 
-        match hir_struct.data(self.db).memory_kind {
+        match hir_struct.data(self.db.upcast()).memory_kind {
             hir::StructMemoryKind::Value => struct_lit.into(),
             hir::StructMemoryKind::GC => {
                 // TODO: Root memory in GC
@@ -373,7 +378,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
 
         let type_info_ptr = self.type_table.gen_type_info_lookup(
             &self.builder,
-            &self.db.type_info(hir_struct.ty(self.db)),
+            &self.db.type_info(hir_struct.ty(self.db.upcast())),
             self.external_globals.type_table,
         );
 
@@ -410,7 +415,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 struct_ir_ty
                     .ptr_type(AddressSpace::Generic)
                     .ptr_type(AddressSpace::Generic),
-                &format!("{}_ptr_ptr", hir_struct.name(self.db).to_string()),
+                &format!("{}_ptr_ptr", hir_struct.name(self.db.upcast()).to_string()),
             )
             .into_pointer_value();
 
@@ -419,7 +424,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             .builder
             .build_load(
                 struct_ptr_ptr,
-                &format!("{}_mem_ptr", hir_struct.name(self.db).to_string()),
+                &format!("{}_mem_ptr", hir_struct.name(self.db.upcast()).to_string()),
             )
             .into_pointer_value();
 
@@ -545,7 +550,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         resolver: &Resolver,
     ) -> inkwell::values::BasicValueEnum {
         let resolution = resolver
-            .resolve_path_without_assoc_items(self.db, path)
+            .resolve_path_without_assoc_items(self.db.upcast(), path)
             .take_values()
             .expect("unknown path");
 
@@ -574,7 +579,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             ..
         }) = ty
         {
-            if s.data(self.db).memory_kind == hir::StructMemoryKind::GC {
+            if s.data(self.db.upcast()).memory_kind == hir::StructMemoryKind::GC {
                 return deref_heap_value(&self.builder, value);
             }
         }
@@ -589,7 +594,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         resolver: &Resolver,
     ) -> inkwell::values::PointerValue {
         let resolution = resolver
-            .resolve_path_without_assoc_items(self.db, path)
+            .resolve_path_without_assoc_items(self.db.upcast(), path)
             .take_values()
             .expect("unknown path");
 
@@ -616,7 +621,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             Some(TypeCtor::Float(_ty)) => self.gen_binary_op_float(lhs, rhs, op),
             Some(TypeCtor::Int(ty)) => self.gen_binary_op_int(lhs, rhs, op, ty.signedness),
             Some(TypeCtor::Struct(s)) => {
-                if s.data(self.db).memory_kind == hir::StructMemoryKind::Value {
+                if s.data(self.db.upcast()).memory_kind == hir::StructMemoryKind::Value {
                     self.gen_binary_op_value_struct(lhs, rhs, op)
                 } else {
                     self.gen_binary_op_heap_struct(lhs, rhs, op)
@@ -626,8 +631,8 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 let rhs_type = self.infer[rhs].clone();
                 unimplemented!(
                     "unimplemented operation {0}op{1}",
-                    lhs_type.display(self.db),
-                    rhs_type.display(self.db)
+                    lhs_type.display(self.db.upcast()),
+                    rhs_type.display(self.db.upcast())
                 )
             }
         }
@@ -640,7 +645,10 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             Some(TypeCtor::Float(_ty)) => self.gen_unary_op_float(expr, op),
             Some(TypeCtor::Int(ty)) => self.gen_unary_op_int(expr, op, ty.signedness),
             Some(TypeCtor::Bool) => self.gen_unary_op_bool(expr, op),
-            _ => unimplemented!("unimplemented operation op{0}", ty.display(self.db)),
+            _ => unimplemented!(
+                "unimplemented operation op{0}",
+                ty.display(self.db.upcast())
+            ),
         }
     }
 
@@ -1016,7 +1024,7 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
         let body = self.body.clone();
         match &body[expr] {
             Expr::Path(ref p) => {
-                let resolver = hir::resolver_for_expr(self.body.clone(), self.db, expr);
+                let resolver = hir::resolver_for_expr(self.body.clone(), self.db.upcast(), expr);
                 self.gen_path_place_expr(p, expr, &resolver)
             }
             Expr::Field {
@@ -1052,17 +1060,23 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
                 &self.builder,
                 function,
             );
-            self.builder
-                .build_call(ptr_value, &args, &function.name(self.db).to_string())
+            self.builder.build_call(
+                ptr_value,
+                &args,
+                &function.name(self.db.upcast()).to_string(),
+            )
         } else {
             let llvm_function = self.function_map.get(&function).unwrap_or_else(|| {
                 panic!(
                     "missing function value for hir function: '{}'",
-                    function.name(self.db),
+                    function.name(self.db.upcast()),
                 )
             });
-            self.builder
-                .build_call(*llvm_function, &args, &function.name(self.db).to_string())
+            self.builder.build_call(
+                *llvm_function,
+                &args,
+                &function.name(self.db.upcast()).to_string(),
+            )
         }
     }
 
@@ -1283,10 +1297,10 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             .as_struct()
             .expect("expected a struct");
 
-        let hir_struct_name = hir_struct.name(self.db);
+        let hir_struct_name = hir_struct.name(self.db.upcast());
 
         let field_idx = hir_struct
-            .field(self.db, name)
+            .field(self.db.upcast(), name)
             .expect("expected a struct field")
             .id()
             .into_raw()
@@ -1334,10 +1348,10 @@ impl<'a, 'b, D: IrDatabase> BodyIrGenerator<'a, 'b, D> {
             .as_struct()
             .expect("expected a struct");
 
-        let hir_struct_name = hir_struct.name(self.db);
+        let hir_struct_name = hir_struct.name(self.db.upcast());
 
         let field_idx = hir_struct
-            .field(self.db, name)
+            .field(self.db.upcast(), name)
             .expect("expected a struct field")
             .id()
             .into_raw()

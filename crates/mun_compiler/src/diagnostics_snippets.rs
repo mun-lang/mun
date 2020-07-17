@@ -37,7 +37,7 @@ fn syntax_node_ptr_location(
 
 pub(crate) fn syntax_error(
     syntax_error: &SyntaxError,
-    _: &impl HirDatabase,
+    _: &dyn HirDatabase,
     _: &Parse<SourceFile>,
     relative_file_path: &str,
     source_code: &str,
@@ -71,7 +71,7 @@ pub(crate) fn syntax_error(
 
 pub(crate) fn generic_error(
     diagnostic: &dyn HirDiagnostic,
-    _: &impl HirDatabase,
+    _: &dyn HirDatabase,
     _: &Parse<SourceFile>,
     relative_file_path: &str,
     source_code: &str,
@@ -98,7 +98,7 @@ pub(crate) fn generic_error(
 
 pub(crate) fn unresolved_value_error(
     diagnostic: &mun_hir::diagnostics::UnresolvedValue,
-    _: &impl HirDatabase,
+    _: &dyn HirDatabase,
     parse: &Parse<SourceFile>,
     relative_file_path: &str,
     source_code: &str,
@@ -134,7 +134,7 @@ pub(crate) fn unresolved_value_error(
 
 pub(crate) fn unresolved_type_error(
     diagnostic: &mun_hir::diagnostics::UnresolvedType,
-    _: &impl HirDatabase,
+    _: &dyn HirDatabase,
     parse: &Parse<SourceFile>,
     relative_file_path: &str,
     source_code: &str,
@@ -171,7 +171,7 @@ pub(crate) fn unresolved_type_error(
 
 pub(crate) fn expected_function_error(
     diagnostic: &mun_hir::diagnostics::ExpectedFunction,
-    hir_database: &impl HirDatabase,
+    hir_database: &dyn HirDatabase,
     _: &Parse<SourceFile>,
     relative_file_path: &str,
     source_code: &str,
@@ -201,7 +201,7 @@ pub(crate) fn expected_function_error(
 
 pub(crate) fn mismatched_type_error(
     diagnostic: &mun_hir::diagnostics::MismatchedType,
-    hir_database: &impl HirDatabase,
+    hir_database: &dyn HirDatabase,
     _: &Parse<SourceFile>,
     relative_file_path: &str,
     source_code: &str,
@@ -232,7 +232,7 @@ pub(crate) fn mismatched_type_error(
 
 pub(crate) fn duplicate_definition_error(
     diagnostic: &mun_hir::diagnostics::DuplicateDefinition,
-    _: &impl HirDatabase,
+    _: &dyn HirDatabase,
     parse: &Parse<SourceFile>,
     relative_file_path: &str,
     source_code: &str,
@@ -289,7 +289,7 @@ pub(crate) fn duplicate_definition_error(
 
 pub(crate) fn possibly_uninitialized_variable_error(
     diagnostic: &mun_hir::diagnostics::PossiblyUninitializedVariable,
-    _: &impl HirDatabase,
+    _: &dyn HirDatabase,
     parse: &Parse<SourceFile>,
     relative_file_path: &str,
     source_code: &str,
@@ -318,7 +318,7 @@ pub(crate) fn possibly_uninitialized_variable_error(
 
 pub(crate) fn access_unknown_field_error(
     diagnostic: &mun_hir::diagnostics::AccessUnknownField,
-    hir_database: &impl HirDatabase,
+    hir_database: &dyn HirDatabase,
     parse: &Parse<SourceFile>,
     relative_file_path: &str,
     source_code: &str,

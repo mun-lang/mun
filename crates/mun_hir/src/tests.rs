@@ -1,5 +1,4 @@
-use crate::db::HirDatabase;
-use crate::db::SourceDatabase;
+use crate::db::{DefDatabase, SourceDatabase};
 use crate::mock::MockDatabase;
 use std::sync::Arc;
 

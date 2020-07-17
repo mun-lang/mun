@@ -1,6 +1,6 @@
 use crate::Config;
 use mun_codegen::IrDatabase;
-use mun_hir::{salsa, HirDatabase};
+use mun_hir::{salsa, HirDatabase, Upcast};
 use std::sync::Arc;
 
 /// A compiler database is a salsa database that enables increment compilation.
@@ -10,16 +10,39 @@ use std::sync::Arc;
     mun_hir::HirDatabaseStorage,
     mun_codegen::IrDatabaseStorage
 )]
-#[derive(Debug)]
 pub struct CompilerDatabase {
-    runtime: salsa::Runtime<CompilerDatabase>,
+    storage: salsa::Storage<Self>,
+}
+
+impl Upcast<dyn mun_hir::SourceDatabase> for CompilerDatabase {
+    fn upcast(&self) -> &dyn mun_hir::SourceDatabase {
+        &*self
+    }
+}
+
+impl Upcast<dyn mun_hir::DefDatabase> for CompilerDatabase {
+    fn upcast(&self) -> &dyn mun_hir::DefDatabase {
+        &*self
+    }
+}
+
+impl Upcast<dyn mun_hir::HirDatabase> for CompilerDatabase {
+    fn upcast(&self) -> &dyn mun_hir::HirDatabase {
+        &*self
+    }
+}
+
+impl Upcast<dyn mun_codegen::IrDatabase> for CompilerDatabase {
+    fn upcast(&self) -> &dyn mun_codegen::IrDatabase {
+        &*self
+    }
 }
 
 impl CompilerDatabase {
     /// Constructs a new database
     pub fn new(config: &Config) -> Self {
         let mut db = CompilerDatabase {
-            runtime: salsa::Runtime::default(),
+            storage: Default::default(),
         };
 
         // Set the initial configuration
@@ -36,12 +59,4 @@ impl CompilerDatabase {
     }
 }
 
-impl salsa::Database for CompilerDatabase {
-    fn salsa_runtime(&self) -> &salsa::Runtime<CompilerDatabase> {
-        &self.runtime
-    }
-
-    fn salsa_runtime_mut(&mut self) -> &mut salsa::Runtime<CompilerDatabase> {
-        &mut self.runtime
-    }
-}
+impl salsa::Database for CompilerDatabase {}

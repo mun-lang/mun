@@ -72,7 +72,7 @@ impl InferenceResult {
     /// Adds all the `InferenceDiagnostic`s of the result to the `DiagnosticSink`.
     pub(crate) fn add_diagnostics(
         &self,
-        db: &impl HirDatabase,
+        db: &dyn HirDatabase,
         owner: Function,
         sink: &mut DiagnosticSink,
     ) {
@@ -84,7 +84,7 @@ impl InferenceResult {
 
 /// The entry point of type inference. This method takes a body and infers the types of all the
 /// expressions and patterns. Diagnostics are also reported and stored in the `InferenceResult`.
-pub fn infer_query(db: &impl HirDatabase, def: DefWithBody) -> Arc<InferenceResult> {
+pub fn infer_query(db: &dyn HirDatabase, def: DefWithBody) -> Arc<InferenceResult> {
     let body = def.body(db);
     let resolver = def.resolver(db);
     let mut ctx = InferenceResultBuilder::new(db, body, resolver);
@@ -131,8 +131,8 @@ enum ActiveLoop {
 }
 
 /// The inference context contains all information needed during type inference.
-struct InferenceResultBuilder<'a, D: HirDatabase> {
-    db: &'a D,
+struct InferenceResultBuilder<'a> {
+    db: &'a dyn HirDatabase,
     body: Arc<Body>,
     resolver: Resolver,
 
@@ -152,9 +152,9 @@ struct InferenceResultBuilder<'a, D: HirDatabase> {
     return_ty: Ty,
 }
 
-impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
+impl<'a> InferenceResultBuilder<'a> {
     /// Construct a new `InferenceContext` from a `Body` and a `Resolver` for that body.
-    fn new(db: &'a D, body: Arc<Body>, resolver: Resolver) -> Self {
+    fn new(db: &'a dyn HirDatabase, body: Arc<Body>, resolver: Resolver) -> Self {
         InferenceResultBuilder {
             type_of_expr: ArenaMap::default(),
             type_of_pat: ArenaMap::default(),
@@ -204,7 +204,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
     }
 }
 
-impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
+impl<'a> InferenceResultBuilder<'a> {
     /// Collect all the parameter patterns from the body. After calling this method the `return_ty`
     /// will have a valid value, also all parameters are added inferred.
     fn infer_signature(&mut self) {
@@ -549,7 +549,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
         match callee_ty {
             ty_app!(TypeCtor::Struct(s)) => {
                 // Erroneously found either a unit struct or tuple struct literal
-                let struct_data = s.data(self.db);
+                let struct_data = s.data(self.db.upcast());
                 self.diagnostics
                     .push(InferenceDiagnostic::MismatchedStructLit {
                         id: tgt_expr,
@@ -593,7 +593,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
 
     /// Checks whether the specified struct type is a unit struct.
     fn check_unit_struct_lit(&mut self, tgt_expr: ExprId, expected: Struct) {
-        let struct_data = expected.data(self.db);
+        let struct_data = expected.data(self.db.upcast());
         if struct_data.kind != StructKind::Unit {
             self.diagnostics
                 .push(InferenceDiagnostic::MismatchedStructLit {
@@ -632,7 +632,7 @@ impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
 
     // Checks whether the passed fields match the fields of a struct definition.
     fn check_record_lit(&mut self, tgt_expr: ExprId, expected: Struct, fields: &[RecordLitField]) {
-        let struct_data = expected.data(self.db);
+        let struct_data = expected.data(self.db.upcast());
         if struct_data.kind != StructKind::Record {
             self.diagnostics
                 .push(InferenceDiagnostic::MismatchedStructLit {
@@ -1093,11 +1093,11 @@ mod diagnostics {
     impl InferenceDiagnostic {
         pub(crate) fn add_to(
             &self,
-            db: &impl HirDatabase,
+            db: &dyn HirDatabase,
             owner: Function,
             sink: &mut DiagnosticSink,
         ) {
-            let file = owner.source(db).file_id;
+            let file = owner.source(db.upcast()).file_id;
             let body = owner.body_source_map(db);
             match self {
                 InferenceDiagnostic::UnresolvedValue { id } => {

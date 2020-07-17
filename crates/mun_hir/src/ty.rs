@@ -131,7 +131,7 @@ impl Ty {
         }
     }
 
-    pub fn callable_sig(&self, db: &impl HirDatabase) -> Option<FnSig> {
+    pub fn callable_sig(&self, db: &dyn HirDatabase) -> Option<FnSig> {
         match self {
             Ty::Apply(a_ty) => match a_ty.ctor {
                 TypeCtor::FnDef(def) => Some(db.callable_sig(def)),
@@ -144,12 +144,12 @@ impl Ty {
     /// Returns the type's name as a string, if one exists.
     ///
     /// This name needs to be unique as it is used to generate a type's `Guid`.
-    pub fn guid_string(&self, db: &impl HirDatabase) -> Option<String> {
+    pub fn guid_string(&self, db: &dyn HirDatabase) -> Option<String> {
         self.as_simple().and_then(|ty_ctor| match ty_ctor {
             TypeCtor::Struct(s) => {
-                let name = s.name(db).to_string();
+                let name = s.name(db.upcast()).to_string();
 
-                Some(if s.data(db).memory_kind == StructMemoryKind::GC {
+                Some(if s.data(db.upcast()).memory_kind == StructMemoryKind::GC {
                     format!("struct {}", name)
                 } else {
                     let fields: Vec<String> = s
@@ -230,10 +230,10 @@ impl FnSig {
         &self.params_and_return[self.params_and_return.len() - 1]
     }
 
-    pub fn marshallable(&self, db: &impl HirDatabase) -> bool {
+    pub fn marshallable(&self, db: &dyn HirDatabase) -> bool {
         for ty in self.params_and_return.iter() {
             if let Some(s) = ty.as_struct() {
-                if s.data(db).memory_kind == StructMemoryKind::Value {
+                if s.data(db.upcast()).memory_kind == StructMemoryKind::Value {
                     return false;
                 }
             }
@@ -243,7 +243,7 @@ impl FnSig {
 }
 
 impl HirDisplay for Ty {
-    fn hir_fmt(&self, f: &mut HirFormatter<impl HirDatabase>) -> fmt::Result {
+    fn hir_fmt(&self, f: &mut HirFormatter) -> fmt::Result {
         match self {
             Ty::Apply(a_ty) => a_ty.hir_fmt(f),
             Ty::Unknown => write!(f, "{{unknown}}"),
@@ -258,12 +258,12 @@ impl HirDisplay for Ty {
 }
 
 impl HirDisplay for ApplicationTy {
-    fn hir_fmt(&self, f: &mut HirFormatter<impl HirDatabase>) -> fmt::Result {
+    fn hir_fmt(&self, f: &mut HirFormatter) -> fmt::Result {
         match self.ctor {
             TypeCtor::Float(ty) => write!(f, "{}", ty),
             TypeCtor::Int(ty) => write!(f, "{}", ty),
             TypeCtor::Bool => write!(f, "bool"),
-            TypeCtor::Struct(def) => write!(f, "{}", def.name(f.db)),
+            TypeCtor::Struct(def) => write!(f, "{}", def.name(f.db.upcast())),
             TypeCtor::Never => write!(f, "never"),
             TypeCtor::FnDef(CallableDef::Function(def)) => {
                 let sig = fn_sig_for_fn(f.db, def);
@@ -275,7 +275,7 @@ impl HirDisplay for ApplicationTy {
             }
             TypeCtor::FnDef(CallableDef::Struct(def)) => {
                 let sig = fn_sig_for_struct_constructor(f.db, def);
-                let name = def.name(f.db);
+                let name = def.name(f.db.upcast());
                 write!(f, "ctor {}", name)?;
                 write!(f, "(")?;
                 f.write_joined(sig.params(), ", ")?;
@@ -286,7 +286,7 @@ impl HirDisplay for ApplicationTy {
 }
 
 impl HirDisplay for &Ty {
-    fn hir_fmt(&self, f: &mut HirFormatter<impl HirDatabase>) -> fmt::Result {
+    fn hir_fmt(&self, f: &mut HirFormatter) -> fmt::Result {
         HirDisplay::hir_fmt(*self, f)
     }
 }

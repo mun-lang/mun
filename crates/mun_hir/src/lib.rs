@@ -45,7 +45,7 @@ pub use crate::{
     builtin_type::{FloatBitness, IntBitness, Signedness},
     db::{
         DefDatabase, DefDatabaseStorage, HirDatabase, HirDatabaseStorage, SourceDatabase,
-        SourceDatabaseStorage,
+        SourceDatabaseStorage, Upcast,
     },
     display::HirDisplay,
     expr::{

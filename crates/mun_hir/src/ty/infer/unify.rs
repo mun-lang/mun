@@ -1,8 +1,8 @@
 use crate::ty::infer::InferenceResultBuilder;
-use crate::{HirDatabase, Ty};
+use crate::Ty;
 use std::borrow::Cow;
 
-impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
+impl<'a> InferenceResultBuilder<'a> {
     /// If `ty` is a type variable, and it has been instantiated, then return the instantiated type;
     /// otherwise returns `ty`.
     pub(crate) fn replace_if_possible<'b>(&mut self, ty: &'b Ty) -> Cow<'b, Ty> {

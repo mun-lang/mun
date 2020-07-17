@@ -19,7 +19,7 @@ pub struct FileIR {
 }
 
 /// Generates IR for the specified file.
-pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<FileIR> {
+pub(crate) fn ir_query(db: &dyn IrDatabase, file_id: FileId) -> Arc<FileIR> {
     let llvm_module = db
         .context()
         .create_module(db.file_relative_path(file_id).as_str());
@@ -32,7 +32,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<FileIR> {
     let mut wrapper_functions = BTreeMap::new();
     for def in db.module_data(file_id).definitions() {
         if let ModuleDef::Function(f) = def {
-            if !f.is_extern(db) {
+            if !f.is_extern(db.upcast()) {
                 let fun = function::gen_signature(
                     db,
                     *f,
@@ -43,8 +43,10 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<FileIR> {
                 );
                 functions.insert(*f, fun);
 
-                let fn_sig = f.ty(db).callable_sig(db).unwrap();
-                if !f.data(db).visibility().is_private() && !fn_sig.marshallable(db) {
+                let fn_sig = f.ty(db.upcast()).callable_sig(db.upcast()).unwrap();
+                if !f.data(db.upcast()).visibility().is_private()
+                    && !fn_sig.marshallable(db.upcast())
+                {
                     let wrapper_fun = function::gen_signature(
                         db,
                         *f,
@@ -110,7 +112,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: FileId) -> Arc<FileIR> {
     // Filter private methods
     let api: HashSet<hir::Function> = functions
         .keys()
-        .filter(|f| f.visibility(db) != hir::Visibility::Private)
+        .filter(|f| f.visibility(db.upcast()) != hir::Visibility::Private)
         .cloned()
         .collect();
 

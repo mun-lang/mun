@@ -27,13 +27,13 @@ pub(crate) fn create_pass_manager(
 /// between two functions is that first all signatures are generated and then all bodies. This
 /// allows bodies to reference `FunctionValue` wherever they are declared in the file.
 pub(crate) fn gen_signature(
-    db: &impl IrDatabase,
+    db: &dyn IrDatabase,
     f: hir::Function,
     module: &Module,
     params: CodeGenParams,
 ) -> FunctionValue {
     let name = {
-        let name = f.name(db).to_string();
+        let name = f.name(db.upcast()).to_string();
         if params.make_marshallable {
             format!("{}_wrapper", name)
         } else {
@@ -41,7 +41,7 @@ pub(crate) fn gen_signature(
         }
     };
 
-    if let AnyTypeEnum::FunctionType(ty) = db.type_ir(f.ty(db), params) {
+    if let AnyTypeEnum::FunctionType(ty) = db.type_ir(f.ty(db.upcast()), params) {
         module.add_function(&name, ty, None)
     } else {
         panic!("not a function type")
@@ -49,8 +49,8 @@ pub(crate) fn gen_signature(
 }
 
 /// Generates the body of a `hir::Function` for an associated `FunctionValue`.
-pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
-    db: &'a D,
+pub(crate) fn gen_body<'a, 'b>(
+    db: &'a dyn IrDatabase,
     function: (hir::Function, FunctionValue),
     llvm_functions: &'a HashMap<hir::Function, FunctionValue>,
     dispatch_table: &'b DispatchTable,
@@ -74,8 +74,8 @@ pub(crate) fn gen_body<'a, 'b, D: IrDatabase>(
 
 /// Generates the body of a wrapper around `hir::Function` for its associated
 /// `FunctionValue`
-pub(crate) fn gen_wrapper_body<'a, 'b, D: IrDatabase>(
-    db: &'a D,
+pub(crate) fn gen_wrapper_body<'a, 'b>(
+    db: &'a dyn IrDatabase,
     function: (hir::Function, FunctionValue),
     llvm_functions: &'a HashMap<hir::Function, FunctionValue>,
     dispatch_table: &'b DispatchTable,

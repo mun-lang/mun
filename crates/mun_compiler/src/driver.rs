@@ -27,7 +27,6 @@ use walkdir::WalkDir;
 
 pub const WORKSPACE: SourceRootId = SourceRootId(0);
 
-#[derive(Debug)]
 pub struct Driver {
     db: CompilerDatabase,
     out_dir: PathBuf,

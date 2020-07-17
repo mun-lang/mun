@@ -22,7 +22,7 @@ pub type StructMapping = RwLock<HashMap<(&'static str, TypeId), StructType>>;
 /// The `IrDatabase` enables caching of intermediate in the process of LLVM IR generation. It uses
 /// [salsa](https://github.com/salsa-rs/salsa) for this purpose.
 #[salsa::query_group(IrDatabaseStorage)]
-pub trait IrDatabase: hir::HirDatabase {
+pub trait IrDatabase: hir::HirDatabase + hir::Upcast<dyn hir::HirDatabase> {
     /// Get the LLVM context that should be used for all generation steps.
     #[salsa::input]
     fn context(&self) -> Arc<Context>;

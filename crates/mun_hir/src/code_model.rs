@@ -39,17 +39,17 @@ impl Module {
     }
 
     /// Returns all the definitions declared in this module.
-    pub fn declarations(self, db: &impl HirDatabase) -> Vec<ModuleDef> {
+    pub fn declarations(self, db: &dyn HirDatabase) -> Vec<ModuleDef> {
         db.module_data(self.file_id).definitions.clone()
     }
 
-    fn resolver(self, _db: &impl DefDatabase) -> Resolver {
+    fn resolver(self, _db: &dyn DefDatabase) -> Resolver {
         Resolver::default().push_module_scope(self.file_id)
     }
 
-    pub fn diagnostics(self, db: &impl HirDatabase, sink: &mut DiagnosticSink) {
+    pub fn diagnostics(self, db: &dyn HirDatabase, sink: &mut DiagnosticSink) {
         for diag in db.module_data(self.file_id).diagnostics.iter() {
-            diag.add_to(db, self, sink);
+            diag.add_to(db.upcast(), self, sink);
         }
         for decl in self.declarations(db) {
             #[allow(clippy::single_match)]
@@ -74,7 +74,7 @@ pub struct ModuleScope {
 }
 
 impl ModuleData {
-    pub(crate) fn module_data_query(db: &impl DefDatabase, file_id: FileId) -> Arc<ModuleData> {
+    pub(crate) fn module_data_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleData> {
         let items = db.raw_items(file_id);
         let mut data = ModuleData::default();
         let loc_ctx = LocationCtx::new(db, file_id);
@@ -155,20 +155,20 @@ pub enum Visibility {
 }
 
 impl DefWithBody {
-    pub fn infer(self, db: &impl HirDatabase) -> Arc<InferenceResult> {
+    pub fn infer(self, db: &dyn HirDatabase) -> Arc<InferenceResult> {
         db.infer(self)
     }
 
-    pub fn body(self, db: &impl HirDatabase) -> Arc<Body> {
+    pub fn body(self, db: &dyn HirDatabase) -> Arc<Body> {
         db.body(self)
     }
 
-    pub fn body_source_map(self, db: &impl HirDatabase) -> Arc<BodySourceMap> {
+    pub fn body_source_map(self, db: &dyn HirDatabase) -> Arc<BodySourceMap> {
         db.body_with_source_map(self).1
     }
 
     /// Builds a `Resolver` for code inside this item. A `Resolver` enables name resolution.
-    pub(crate) fn resolver(self, db: &impl HirDatabase) -> Resolver {
+    pub(crate) fn resolver(self, db: &dyn HirDatabase) -> Resolver {
         match self {
             DefWithBody::Function(f) => f.resolver(db),
         }
@@ -193,27 +193,27 @@ pub enum DefWithStruct {
 impl_froms!(DefWithStruct: Struct);
 
 impl DefWithStruct {
-    pub fn fields(self, db: &impl HirDatabase) -> Vec<StructField> {
+    pub fn fields(self, db: &dyn HirDatabase) -> Vec<StructField> {
         match self {
             DefWithStruct::Struct(s) => s.fields(db),
         }
     }
 
-    pub fn field(self, db: &impl HirDatabase, name: &Name) -> Option<StructField> {
+    pub fn field(self, db: &dyn HirDatabase, name: &Name) -> Option<StructField> {
         match self {
             DefWithStruct::Struct(s) => s.field(db, name),
         }
     }
 
-    pub fn module(self, db: &impl HirDatabase) -> Module {
+    pub fn module(self, db: &dyn HirDatabase) -> Module {
         match self {
-            DefWithStruct::Struct(s) => s.module(db),
+            DefWithStruct::Struct(s) => s.module(db.upcast()),
         }
     }
 
-    pub fn data(self, db: &impl HirDatabase) -> Arc<StructData> {
+    pub fn data(self, db: &dyn HirDatabase) -> Arc<StructData> {
         match self {
-            DefWithStruct::Struct(s) => s.data(db),
+            DefWithStruct::Struct(s) => s.data(db.upcast()),
         }
     }
 }
@@ -235,7 +235,7 @@ pub struct FnData {
 }
 
 impl FnData {
-    pub(crate) fn fn_data_query(db: &impl DefDatabase, func: Function) -> Arc<FnData> {
+    pub(crate) fn fn_data_query(db: &dyn DefDatabase, func: Function) -> Arc<FnData> {
         let src = func.source(db);
         let mut type_ref_builder = TypeRefBuilder::default();
         let name = src
@@ -305,50 +305,50 @@ impl FnData {
 }
 
 impl Function {
-    pub fn module(self, db: &impl DefDatabase) -> Module {
+    pub fn module(self, db: &dyn DefDatabase) -> Module {
         Module {
             file_id: self.id.file_id(db),
         }
     }
 
-    pub fn name(self, db: &impl HirDatabase) -> Name {
+    pub fn name(self, db: &dyn HirDatabase) -> Name {
         self.data(db).name.clone()
     }
 
-    pub fn visibility(self, db: &impl HirDatabase) -> Visibility {
+    pub fn visibility(self, db: &dyn HirDatabase) -> Visibility {
         self.data(db).visibility()
     }
 
-    pub fn data(self, db: &impl HirDatabase) -> Arc<FnData> {
+    pub fn data(self, db: &dyn HirDatabase) -> Arc<FnData> {
         db.fn_data(self)
     }
 
-    pub fn body(self, db: &impl HirDatabase) -> Arc<Body> {
+    pub fn body(self, db: &dyn HirDatabase) -> Arc<Body> {
         db.body(self.into())
     }
 
-    pub fn ty(self, db: &impl HirDatabase) -> Ty {
+    pub fn ty(self, db: &dyn HirDatabase) -> Ty {
         db.type_for_def(self.into(), Namespace::Values)
     }
 
-    pub fn infer(self, db: &impl HirDatabase) -> Arc<InferenceResult> {
+    pub fn infer(self, db: &dyn HirDatabase) -> Arc<InferenceResult> {
         db.infer(self.into())
     }
 
-    pub fn is_extern(self, db: &impl HirDatabase) -> bool {
+    pub fn is_extern(self, db: &dyn HirDatabase) -> bool {
         db.fn_data(self).is_extern
     }
 
-    pub(crate) fn body_source_map(self, db: &impl HirDatabase) -> Arc<BodySourceMap> {
+    pub(crate) fn body_source_map(self, db: &dyn HirDatabase) -> Arc<BodySourceMap> {
         db.body_with_source_map(self.into()).1
     }
 
-    pub(crate) fn resolver(self, db: &impl HirDatabase) -> Resolver {
+    pub(crate) fn resolver(self, db: &dyn HirDatabase) -> Resolver {
         // take the outer scope...
-        self.module(db).resolver(db)
+        self.module(db.upcast()).resolver(db.upcast())
     }
 
-    pub fn diagnostics(self, db: &impl HirDatabase, sink: &mut DiagnosticSink) {
+    pub fn diagnostics(self, db: &dyn HirDatabase, sink: &mut DiagnosticSink) {
         let body = self.body(db);
         body.add_diagnostics(db, self.into(), sink);
         let infer = self.infer(db);
@@ -370,15 +370,15 @@ pub struct StructField {
 }
 
 impl StructField {
-    pub fn ty(self, db: &impl HirDatabase) -> Ty {
-        let data = self.parent.data(db);
+    pub fn ty(self, db: &dyn HirDatabase) -> Ty {
+        let data = self.parent.data(db.upcast());
         let type_ref_id = data.fields[self.id].type_ref;
         let lower = self.parent.lower(db);
         lower[type_ref_id].clone()
     }
 
-    pub fn name(self, db: &impl HirDatabase) -> Name {
-        self.parent.data(db).fields[self.id].name.clone()
+    pub fn name(self, db: &dyn HirDatabase) -> Name {
+        self.parent.data(db.upcast()).fields[self.id].name.clone()
     }
 
     pub fn id(self) -> StructFieldId {
@@ -387,55 +387,55 @@ impl StructField {
 }
 
 impl Struct {
-    pub fn module(self, db: &impl DefDatabase) -> Module {
+    pub fn module(self, db: &dyn DefDatabase) -> Module {
         Module {
             file_id: self.id.file_id(db),
         }
     }
 
-    pub fn data(self, db: &impl DefDatabase) -> Arc<StructData> {
+    pub fn data(self, db: &dyn DefDatabase) -> Arc<StructData> {
         db.struct_data(self.id)
     }
 
-    pub fn name(self, db: &impl DefDatabase) -> Name {
+    pub fn name(self, db: &dyn DefDatabase) -> Name {
         self.data(db).name.clone()
     }
 
-    pub fn fields(self, db: &impl HirDatabase) -> Vec<StructField> {
-        self.data(db)
+    pub fn fields(self, db: &dyn HirDatabase) -> Vec<StructField> {
+        self.data(db.upcast())
             .fields
             .iter()
             .map(|(id, _)| StructField { parent: self, id })
             .collect()
     }
 
-    pub fn field(self, db: &impl HirDatabase, name: &Name) -> Option<StructField> {
-        self.data(db)
+    pub fn field(self, db: &dyn HirDatabase, name: &Name) -> Option<StructField> {
+        self.data(db.upcast())
             .fields
             .iter()
             .find(|(_, data)| data.name == *name)
             .map(|(id, _)| StructField { parent: self, id })
     }
 
-    pub fn ty(self, db: &impl HirDatabase) -> Ty {
+    pub fn ty(self, db: &dyn HirDatabase) -> Ty {
         db.type_for_def(self.into(), Namespace::Types)
     }
 
-    pub fn lower(self, db: &impl HirDatabase) -> Arc<LowerBatchResult> {
+    pub fn lower(self, db: &dyn HirDatabase) -> Arc<LowerBatchResult> {
         db.lower_struct(self)
     }
 
-    pub(crate) fn resolver(self, db: &impl HirDatabase) -> Resolver {
+    pub(crate) fn resolver(self, db: &dyn HirDatabase) -> Resolver {
         // take the outer scope...
-        self.module(db).resolver(db)
+        self.module(db.upcast()).resolver(db.upcast())
     }
 
-    pub fn diagnostics(self, db: &impl HirDatabase, sink: &mut DiagnosticSink) {
-        let data = self.data(db);
+    pub fn diagnostics(self, db: &dyn HirDatabase, sink: &mut DiagnosticSink) {
+        let data = self.data(db.upcast());
         let lower = self.lower(db);
         lower.add_diagnostics(
             db,
-            self.module(db).file_id,
+            self.module(db.upcast()).file_id,
             data.type_ref_source_map(),
             sink,
         );
@@ -458,7 +458,7 @@ mod diagnostics {
         },
     }
 
-    fn syntax_ptr_from_def(db: &impl DefDatabase, owner: Module, kind: DefKind) -> SyntaxNodePtr {
+    fn syntax_ptr_from_def(db: &dyn DefDatabase, owner: Module, kind: DefKind) -> SyntaxNodePtr {
         match kind {
             DefKind::Function(id) => {
                 SyntaxNodePtr::new(id.with_file_id(owner.file_id).to_node(db).syntax())
@@ -472,7 +472,7 @@ mod diagnostics {
     impl ModuleDefinitionDiagnostic {
         pub(super) fn add_to(
             &self,
-            db: &impl DefDatabase,
+            db: &dyn DefDatabase,
             owner: Module,
             sink: &mut DiagnosticSink,
         ) {

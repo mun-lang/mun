@@ -42,7 +42,7 @@ pub(crate) struct ScopeData {
 }
 
 impl ExprScopes {
-    pub(crate) fn expr_scopes_query(db: &impl HirDatabase, def: DefWithBody) -> Arc<ExprScopes> {
+    pub(crate) fn expr_scopes_query(db: &dyn HirDatabase, def: DefWithBody) -> Arc<ExprScopes> {
         let body = db.body(def);
         let res = ExprScopes::new(body);
         Arc::new(res)

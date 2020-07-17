@@ -30,7 +30,7 @@ impl<T> InFile<T> {
     pub fn as_ref(&self) -> InFile<&T> {
         self.with_value(&self.value)
     }
-    pub fn file_syntax(&self, db: &impl SourceDatabase) -> SyntaxNode {
+    pub fn file_syntax(&self, db: &dyn SourceDatabase) -> SyntaxNode {
         db.parse(self.file_id).syntax_node()
     }
 }

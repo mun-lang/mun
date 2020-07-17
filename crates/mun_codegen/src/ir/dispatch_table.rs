@@ -73,14 +73,14 @@ impl DispatchTable {
     /// Generate a function lookup through the DispatchTable, equivalent to something along the
     /// lines of: `dispatchTable[i]`, where i is the index of the function and `dispatchTable` is a
     /// struct
-    pub fn gen_function_lookup<D: IrDatabase>(
+    pub fn gen_function_lookup(
         &self,
-        db: &D,
+        db: &dyn IrDatabase,
         table_ref: Option<inkwell::values::GlobalValue>,
         builder: &inkwell::builder::Builder,
         function: hir::Function,
     ) -> PointerValue {
-        let function_name = function.name(db).to_string();
+        let function_name = function.name(db.upcast()).to_string();
 
         // Get the index of the function
         let index = *self
@@ -149,8 +149,8 @@ impl DispatchTable {
 }
 
 /// A struct that can be used to build the dispatch table from HIR.
-pub(crate) struct DispatchTableBuilder<'a, D: IrDatabase> {
-    db: &'a D,
+pub(crate) struct DispatchTableBuilder<'a> {
+    db: &'a dyn IrDatabase,
     // The LLVM context in which all LLVM types live
     context: Arc<Context>,
     // The module in which all values live
@@ -174,10 +174,10 @@ struct TypedDispatchableFunction {
     ir_type: FunctionType,
 }
 
-impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
+impl<'a> DispatchTableBuilder<'a> {
     /// Creates a new builder that can generate a dispatch function.
     pub fn new(
-        db: &'a D,
+        db: &'a dyn IrDatabase,
         module: &'a Module,
         intrinsics: &BTreeMap<FunctionPrototype, FunctionType>,
     ) -> Self {
@@ -247,9 +247,9 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
 
         // If the function is not yet contained in the table, add it
         if !self.function_to_idx.contains_key(&function) {
-            let name = function.name(self.db).to_string();
-            let hir_type = function.ty(self.db);
-            let sig = hir_type.callable_sig(self.db).unwrap();
+            let name = function.name(self.db.upcast()).to_string();
+            let hir_type = function.ty(self.db.upcast());
+            let sig = hir_type.callable_sig(self.db.upcast()).unwrap();
             let ir_type = self
                 .db
                 .type_ir(
@@ -287,11 +287,11 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
             self.function_to_idx.insert(function, index);
 
             // Recurse further
-            let fn_body = function.body(self.db);
+            let fn_body = function.body(self.db.upcast());
             self.collect_expr(
                 fn_body.body_expr(),
                 &fn_body,
-                function.infer(self.db).as_ref(),
+                function.infer(self.db.upcast()).as_ref(),
             );
         }
     }
@@ -329,7 +329,7 @@ impl<'a, D: IrDatabase> DispatchTableBuilder<'a, D> {
                     match entry.function.hir {
                         // Case external function: Convert to typed null for the given function
                         None => function_type.const_null(),
-                        Some(f) if f.is_extern(self.db) => function_type.const_null(),
+                        Some(f) if f.is_extern(self.db.upcast()) => function_type.const_null(),
                         // Case mun function: Get the function location as the initializer
                         Some(f) => function::gen_signature(
                             self.db,

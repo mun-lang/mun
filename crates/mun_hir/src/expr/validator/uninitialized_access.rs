@@ -1,6 +1,6 @@
 use super::ExprValidator;
 use crate::diagnostics::{DiagnosticSink, PossiblyUninitializedVariable};
-use crate::{BinaryOp, Expr, ExprId, HirDatabase, PatId, Path, Resolution, Resolver, Statement};
+use crate::{BinaryOp, Expr, ExprId, PatId, Path, Resolution, Resolver, Statement};
 use std::collections::HashSet;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -10,7 +10,7 @@ enum ExprKind {
     Both,
 }
 
-impl<'d, D: HirDatabase> ExprValidator<'d, D> {
+impl<'d> ExprValidator<'d> {
     /// Validates that all binding access has previously been initialized.
     pub(super) fn validate_uninitialized_access(&self, sink: &mut DiagnosticSink) {
         let mut initialized_patterns = HashSet::new();
@@ -214,7 +214,7 @@ impl<'d, D: HirDatabase> ExprValidator<'d, D> {
             if initialized_patterns.get(&pat).is_none() {
                 let (_, body_source_map) = self.db.body_with_source_map(self.func.into());
                 sink.push(PossiblyUninitializedVariable {
-                    file: self.func.module(self.db).file_id(),
+                    file: self.func.module(self.db.upcast()).file_id(),
                     pat: body_source_map
                         .expr_syntax(expr)
                         .unwrap()

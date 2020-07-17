@@ -23,7 +23,7 @@ pub fn emit_diagnostics<'a>(
 }
 
 /// Constructs diagnostic messages for the given file.
-pub fn diagnostics(db: &impl HirDatabase, file_id: FileId) -> Vec<Snippet> {
+pub fn diagnostics(db: &dyn HirDatabase, file_id: FileId) -> Vec<Snippet> {
     let parse = db.parse(file_id);
 
     let mut result = Vec::new();
