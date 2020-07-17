@@ -100,18 +100,18 @@ impl TypeInfo {
         }
     }
 
-    pub fn new_struct<D: IrDatabase>(db: &D, s: hir::Struct, type_size: TypeSize) -> TypeInfo {
-        let name = s.name(db).to_string();
+    pub fn new_struct(db: &dyn IrDatabase, s: hir::Struct, type_size: TypeSize) -> TypeInfo {
+        let name = s.name(db.upcast()).to_string();
         let guid_string = {
             let fields: Vec<String> = s
-                .fields(db)
+                .fields(db.upcast())
                 .into_iter()
                 .map(|f| {
                     let ty_string = f
-                        .ty(db)
-                        .guid_string(db)
+                        .ty(db.upcast())
+                        .guid_string(db.upcast())
                         .expect("type should be convertible to a string");
-                    format!("{}: {}", f.name(db).to_string(), ty_string)
+                    format!("{}: {}", f.name(db.upcast()).to_string(), ty_string)
                 })
                 .collect();
 

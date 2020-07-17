@@ -1,7 +1,7 @@
-use crate::db::HirDatabase;
 use crate::db::SourceDatabase;
+use crate::db::{HirDatabase, Upcast};
 use crate::input::{SourceRoot, SourceRootId};
-use crate::{FileId, RelativePathBuf};
+use crate::{DefDatabase, FileId, RelativePathBuf};
 use mun_target::spec::Target;
 use parking_lot::Mutex;
 use std::sync::Arc;
@@ -12,26 +12,30 @@ use std::sync::Arc;
     crate::DefDatabaseStorage,
     crate::HirDatabaseStorage
 )]
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub(crate) struct MockDatabase {
-    runtime: salsa::Runtime<MockDatabase>,
-    events: Mutex<Option<Vec<salsa::Event<MockDatabase>>>>,
+    storage: salsa::Storage<Self>,
+    events: Mutex<Option<Vec<salsa::Event>>>,
 }
 
 impl salsa::Database for MockDatabase {
-    fn salsa_runtime(&self) -> &salsa::Runtime<MockDatabase> {
-        &self.runtime
-    }
-
-    fn salsa_runtime_mut(&mut self) -> &mut salsa::Runtime<MockDatabase> {
-        &mut self.runtime
-    }
-
-    fn salsa_event(&self, event: impl Fn() -> salsa::Event<MockDatabase>) {
+    fn salsa_event(&self, event: salsa::Event) {
         let mut events = self.events.lock();
         if let Some(events) = &mut *events {
-            events.push(event());
+            events.push(event);
         }
+    }
+}
+
+impl Upcast<dyn DefDatabase> for MockDatabase {
+    fn upcast(&self) -> &dyn DefDatabase {
+        &*self
+    }
+}
+
+impl Upcast<dyn SourceDatabase> for MockDatabase {
+    fn upcast(&self) -> &dyn SourceDatabase {
+        &*self
     }
 }
 
@@ -58,7 +62,7 @@ impl MockDatabase {
 }
 
 impl MockDatabase {
-    pub fn log(&self, f: impl FnOnce()) -> Vec<salsa::Event<MockDatabase>> {
+    pub fn log(&self, f: impl FnOnce()) -> Vec<salsa::Event> {
         *self.events.lock() = Some(Vec::new());
         f();
         self.events.lock().take().unwrap()
@@ -72,7 +76,7 @@ impl MockDatabase {
                 // This pretty horrible, but `Debug` is the only way to inspect
                 // QueryDescriptor at the moment.
                 salsa::EventKind::WillExecute { database_key } => {
-                    Some(format!("{:?}", database_key))
+                    Some(format!("{:?}", database_key.debug(self)))
                 }
                 _ => None,
             })

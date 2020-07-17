@@ -10,26 +10,36 @@ use std::sync::Arc;
     hir::HirDatabaseStorage,
     crate::IrDatabaseStorage
 )]
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub(crate) struct MockDatabase {
-    runtime: salsa::Runtime<MockDatabase>,
-    events: Mutex<Option<Vec<salsa::Event<MockDatabase>>>>,
+    storage: salsa::Storage<Self>,
+    events: Mutex<Option<Vec<salsa::Event>>>,
 }
 
 impl salsa::Database for MockDatabase {
-    fn salsa_runtime(&self) -> &salsa::Runtime<MockDatabase> {
-        &self.runtime
-    }
-
-    fn salsa_runtime_mut(&mut self) -> &mut salsa::Runtime<MockDatabase> {
-        &mut self.runtime
-    }
-
-    fn salsa_event(&self, event: impl Fn() -> salsa::Event<MockDatabase>) {
+    fn salsa_event(&self, event: salsa::Event) {
         let mut events = self.events.lock();
         if let Some(events) = &mut *events {
-            events.push(event());
+            events.push(event);
         }
+    }
+}
+
+impl hir::Upcast<dyn hir::SourceDatabase> for MockDatabase {
+    fn upcast(&self) -> &dyn hir::SourceDatabase {
+        &*self
+    }
+}
+
+impl hir::Upcast<dyn hir::DefDatabase> for MockDatabase {
+    fn upcast(&self) -> &dyn hir::DefDatabase {
+        &*self
+    }
+}
+
+impl hir::Upcast<dyn hir::HirDatabase> for MockDatabase {
+    fn upcast(&self) -> &dyn hir::HirDatabase {
+        &*self
     }
 }
 
@@ -57,7 +67,7 @@ impl MockDatabase {
         (db, file_id)
     }
 
-    pub fn log(&self, f: impl FnOnce()) -> Vec<salsa::Event<MockDatabase>> {
+    pub fn log(&self, f: impl FnOnce()) -> Vec<salsa::Event> {
         *self.events.lock() = Some(Vec::new());
         f();
         self.events.lock().take().unwrap()
@@ -71,7 +81,7 @@ impl MockDatabase {
                 // This pretty horrible, but `Debug` is the only way to inspect
                 // QueryDescriptor at the moment.
                 salsa::EventKind::WillExecute { database_key } => {
-                    Some(format!("{:?}", database_key))
+                    Some(format!("{:?}", database_key.debug(self)))
                 }
                 _ => None,
             })

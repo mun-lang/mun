@@ -1,9 +1,7 @@
-use crate::{
-    ty::infer::InferenceResultBuilder, Expr, ExprId, HirDatabase, Path, Resolution, Resolver,
-};
+use crate::{ty::infer::InferenceResultBuilder, Expr, ExprId, Path, Resolution, Resolver};
 use std::sync::Arc;
 
-impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
+impl<'a> InferenceResultBuilder<'a> {
     /// Checks if the specified expression is a place-expression. A place expression represents a
     /// memory location.
     pub(super) fn check_place_expression(&mut self, resolver: &Resolver, expr: ExprId) -> bool {

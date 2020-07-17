@@ -94,7 +94,7 @@ impl Body {
     /// Adds all the `InferenceDiagnostic`s of the result to the `DiagnosticSink`.
     pub(crate) fn add_diagnostics(
         &self,
-        db: &impl HirDatabase,
+        db: &dyn HirDatabase,
         owner: DefWithBody,
         sink: &mut DiagnosticSink,
     ) {
@@ -433,8 +433,8 @@ impl Pat {
 
 // Queries
 
-pub(crate) struct ExprCollector<DB> {
-    db: DB,
+pub(crate) struct ExprCollector<'a> {
+    db: &'a dyn HirDatabase,
     owner: DefWithBody,
     exprs: Arena<ExprId, Expr>,
     pats: Arena<PatId, Pat>,
@@ -447,11 +447,8 @@ pub(crate) struct ExprCollector<DB> {
     diagnostics: Vec<ExprDiagnostic>,
 }
 
-impl<'a, DB> ExprCollector<&'a DB>
-where
-    DB: HirDatabase,
-{
-    pub fn new(owner: DefWithBody, file_id: FileId, db: &'a DB) -> Self {
+impl<'a> ExprCollector<'a> {
+    pub fn new(owner: DefWithBody, file_id: FileId, db: &'a dyn HirDatabase) -> Self {
         ExprCollector {
             owner,
             db,
@@ -916,14 +913,14 @@ where
 }
 
 pub(crate) fn body_with_source_map_query(
-    db: &impl HirDatabase,
+    db: &dyn HirDatabase,
     def: DefWithBody,
 ) -> (Arc<Body>, Arc<BodySourceMap>) {
     let mut collector;
 
     match def {
         DefWithBody::Function(ref f) => {
-            let src = f.source(db);
+            let src = f.source(db.upcast());
             collector = ExprCollector::new(def, src.file_id, db);
             collector.collect_fn_body(&src.value)
         }
@@ -933,19 +930,19 @@ pub(crate) fn body_with_source_map_query(
     (Arc::new(body), Arc::new(source_map))
 }
 
-pub(crate) fn body_hir_query(db: &impl HirDatabase, def: DefWithBody) -> Arc<Body> {
+pub(crate) fn body_hir_query(db: &dyn HirDatabase, def: DefWithBody) -> Arc<Body> {
     db.body_with_source_map(def).0
 }
 
 // needs arbitrary_self_types to be a method... or maybe move to the def?
-pub fn resolver_for_expr(body: Arc<Body>, db: &impl HirDatabase, expr_id: ExprId) -> Resolver {
+pub fn resolver_for_expr(body: Arc<Body>, db: &dyn HirDatabase, expr_id: ExprId) -> Resolver {
     let scopes = db.expr_scopes(body.owner);
     resolver_for_scope(body, db, scopes.scope_for(expr_id))
 }
 
 pub(crate) fn resolver_for_scope(
     body: Arc<Body>,
-    db: &impl HirDatabase,
+    db: &dyn HirDatabase,
     scope_id: Option<scope::ScopeId>,
 ) -> Resolver {
     let mut r = body.owner.resolver(db);
@@ -1385,7 +1382,7 @@ mod diagnostics {
     impl ExprDiagnostic {
         pub(crate) fn add_to(
             &self,
-            db: &impl HirDatabase,
+            db: &dyn HirDatabase,
             owner: DefWithBody,
             sink: &mut DiagnosticSink,
         ) {

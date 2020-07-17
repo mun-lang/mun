@@ -1,9 +1,9 @@
 #![allow(clippy::enum_variant_names)] // This is a HACK because we use salsa
 
 use crate::cancelation::Canceled;
-use hir::{DefDatabaseStorage, HirDatabase, HirDatabaseStorage, SourceDatabaseStorage};
+use hir::{DefDatabaseStorage, HirDatabase, HirDatabaseStorage, SourceDatabaseStorage, Upcast};
 use mun_target::spec::Target;
-use salsa::{Database, Runtime, Snapshot};
+use salsa::{Database, Snapshot};
 use std::panic;
 
 /// The `AnalysisDatabase` provides the database for all analyses. A database is given input and
@@ -18,15 +18,14 @@ use std::panic;
 /// With this struct we can reuse a lot of functionality from the compiler which should provide a
 /// better user experience.
 #[salsa::database(SourceDatabaseStorage, DefDatabaseStorage, HirDatabaseStorage)]
-#[derive(Debug)]
 pub(crate) struct AnalysisDatabase {
-    runtime: salsa::Runtime<AnalysisDatabase>,
+    storage: salsa::Storage<Self>,
 }
 
 impl AnalysisDatabase {
     pub fn new() -> Self {
         let mut db = AnalysisDatabase {
-            runtime: Default::default(),
+            storage: Default::default(),
         };
 
         db.set_target(Target::host_target().expect("could not determine host target spec"));
@@ -36,22 +35,32 @@ impl AnalysisDatabase {
 }
 
 impl salsa::Database for AnalysisDatabase {
-    fn salsa_runtime(&self) -> &Runtime<Self> {
-        &self.runtime
-    }
-
-    fn salsa_runtime_mut(&mut self) -> &mut salsa::Runtime<AnalysisDatabase> {
-        &mut self.runtime
-    }
-
-    fn salsa_event(&self, event: impl Fn() -> salsa::Event<AnalysisDatabase>) {
-        match event().kind {
+    fn salsa_event(&self, event: salsa::Event) {
+        match event.kind {
             salsa::EventKind::DidValidateMemoizedValue { .. }
             | salsa::EventKind::WillExecute { .. } => {
                 self.check_canceled();
             }
             _ => (),
         }
+    }
+}
+
+impl Upcast<dyn hir::SourceDatabase> for AnalysisDatabase {
+    fn upcast(&self) -> &dyn hir::SourceDatabase {
+        &*self
+    }
+}
+
+impl Upcast<dyn hir::DefDatabase> for AnalysisDatabase {
+    fn upcast(&self) -> &dyn hir::DefDatabase {
+        &*self
+    }
+}
+
+impl Upcast<dyn hir::HirDatabase> for AnalysisDatabase {
+    fn upcast(&self) -> &dyn hir::HirDatabase {
+        &*self
     }
 }
 
@@ -77,7 +86,7 @@ impl AnalysisDatabase {
 impl salsa::ParallelDatabase for AnalysisDatabase {
     fn snapshot(&self) -> Snapshot<Self> {
         Snapshot::new(AnalysisDatabase {
-            runtime: self.runtime.snapshot(self),
+            storage: self.storage.snapshot(),
         })
     }
 }

@@ -62,7 +62,7 @@ pub struct StructData {
 }
 
 impl StructData {
-    pub(crate) fn struct_data_query(db: &impl DefDatabase, id: StructId) -> Arc<StructData> {
+    pub(crate) fn struct_data_query(db: &dyn DefDatabase, id: StructId) -> Arc<StructData> {
         let src = id.source(db);
         let name = src
             .value

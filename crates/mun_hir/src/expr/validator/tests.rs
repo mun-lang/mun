@@ -1,4 +1,4 @@
-use crate::db::SourceDatabase;
+use crate::db::{SourceDatabase, Upcast};
 use crate::expr::validator::ExprValidator;
 use crate::{diagnostics::DiagnosticSink, ids::LocationCtx, mock::MockDatabase, Function};
 use mun_syntax::{ast, AstNode};
@@ -76,7 +76,7 @@ fn diagnostics(content: &str) -> String {
         write!(diags, "{}: {}\n", diag.highlight_range(), diag.message()).unwrap();
     });
 
-    let ctx = LocationCtx::new(&db, file_id);
+    let ctx = LocationCtx::new(db.upcast(), file_id);
     for node in source_file.syntax().descendants() {
         if let Some(def) = ast::FunctionDef::cast(node.clone()) {
             let fun = Function {

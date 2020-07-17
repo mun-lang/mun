@@ -3,14 +3,14 @@ use crate::ir::try_convert_any_to_basic;
 use crate::{CodeGenParams, IrDatabase};
 use inkwell::types::{BasicTypeEnum, StructType};
 
-pub(super) fn gen_struct_decl(db: &impl IrDatabase, s: hir::Struct) -> StructType {
+pub(super) fn gen_struct_decl(db: &dyn IrDatabase, s: hir::Struct) -> StructType {
     let struct_type = db.struct_ty(s);
     if struct_type.is_opaque() {
         let field_types: Vec<BasicTypeEnum> = s
-            .fields(db)
+            .fields(db.upcast())
             .iter()
             .map(|field| {
-                let field_type = field.ty(db);
+                let field_type = field.ty(db.upcast());
                 try_convert_any_to_basic(db.type_ir(
                     field_type,
                     CodeGenParams {

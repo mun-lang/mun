@@ -13,13 +13,13 @@ use std::collections::HashSet;
 use std::ffi::CString;
 
 /// Construct a `MunFunctionPrototype` struct for the specified HIR function.
-fn gen_prototype_from_function<D: IrDatabase>(
-    db: &D,
+fn gen_prototype_from_function(
+    db: &dyn IrDatabase,
     context: &IrValueContext,
     function: hir::Function,
 ) -> ir::FunctionPrototype {
     let module = context.module;
-    let name = function.name(db).to_string();
+    let name = function.name(db.upcast()).to_string();
 
     // Internalize the name of the function prototype
     let name_str = CString::new(name.clone())
@@ -27,7 +27,7 @@ fn gen_prototype_from_function<D: IrDatabase>(
         .intern(format!("fn_sig::<{}>::name", &name), context);
 
     // Get the `ir::TypeInfo` pointer for the return type of the function
-    let fn_sig = function.ty(db).callable_sig(db).unwrap();
+    let fn_sig = function.ty(db.upcast()).callable_sig(db.upcast()).unwrap();
     let return_type = gen_signature_return_type(db, context, fn_sig.ret().clone());
 
     // Construct an array of pointers to `ir::TypeInfo`s for the arguments of the prototype
@@ -95,8 +95,8 @@ fn gen_prototype_from_dispatch_entry(
 
 /// Given a function, construct a pointer to a `ir::TypeInfo` global that represents the return type
 /// of the function; or `null` if the return type is empty.
-fn gen_signature_return_type<D: IrDatabase>(
-    db: &D,
+fn gen_signature_return_type(
+    db: &dyn IrDatabase,
     context: &IrValueContext,
     ret_type: Ty,
 ) -> Value<*const ir::TypeInfo> {
@@ -126,15 +126,15 @@ fn gen_signature_return_type_from_type_info(
 
 /// Construct a global that holds a reference to all functions. e.g.:
 /// MunFunctionDefinition[] definitions = { ... }
-fn get_function_definition_array<'a, D: IrDatabase>(
-    db: &D,
+fn get_function_definition_array<'a>(
+    db: &dyn IrDatabase,
     context: &IrValueContext,
     functions: impl Iterator<Item = &'a hir::Function>,
 ) -> Global<[ir::FunctionDefinition]> {
     let module = context.module;
     functions
         .map(|f| {
-            let name = f.name(db).to_string();
+            let name = f.name(db.upcast()).to_string();
 
             // Get the function from the cloned module and modify the linkage of the function.
             let value = module
@@ -198,7 +198,7 @@ fn gen_dispatch_table(
 /// `get_info` is constructed that returns a struct `MunAssemblyInfo`. See the `mun_abi` crate
 /// for the ABI that `get_info` exposes.
 pub(super) fn gen_reflection_ir(
-    db: &impl IrDatabase,
+    db: &dyn IrDatabase,
     context: &IrValueContext,
     api: &HashSet<hir::Function>,
     dispatch_table: &DispatchTable,
@@ -237,7 +237,7 @@ pub(super) fn gen_reflection_ir(
 
 /// Construct the actual `get_info` function.
 fn gen_get_info_fn(
-    db: &impl IrDatabase,
+    db: &dyn IrDatabase,
     context: &IrValueContext,
     module_info: ir::ModuleInfo,
     dispatch_table: ir::DispatchTable,
@@ -327,7 +327,7 @@ fn gen_get_info_fn(
 /// Generates a method `void set_allocator_handle(void*)` that stores the argument into the global
 /// `allocatorHandle`. This global is used internally to reference the allocator used by this
 /// munlib.
-fn gen_set_allocator_handle_fn(db: &impl IrDatabase, context: &IrValueContext) {
+fn gen_set_allocator_handle_fn(db: &dyn IrDatabase, context: &IrValueContext) {
     let set_allocator_handle_fn = context.module.add_function(
         "set_allocator_handle",
         Value::<fn(*const u8)>::get_ir_type(context.type_context),
@@ -352,7 +352,7 @@ fn gen_set_allocator_handle_fn(db: &impl IrDatabase, context: &IrValueContext) {
 
 /// Generates a `get_version` method that returns the current abi version.
 /// Specifically, it returns the abi version the function was generated in.
-fn gen_get_version_fn(db: &impl IrDatabase, context: &IrValueContext) {
+fn gen_get_version_fn(db: &dyn IrDatabase, context: &IrValueContext) {
     let get_version_fn = context.module.add_function(
         abi::GET_VERSION_FN_NAME,
         Value::<fn() -> u32>::get_ir_type(context.type_context),

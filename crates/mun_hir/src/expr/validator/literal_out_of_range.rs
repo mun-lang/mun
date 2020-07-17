@@ -2,9 +2,9 @@ use super::ExprValidator;
 use crate::diagnostics::{DiagnosticSink, LiteralOutOfRange};
 use crate::ty::ResolveBitness;
 use crate::{ty_app, TypeCtor};
-use crate::{Expr, HirDatabase, HirDisplay, Literal};
+use crate::{Expr, HirDisplay, Literal};
 
-impl<'d, D: HirDatabase> ExprValidator<'d, D> {
+impl<'a> ExprValidator<'a> {
     /// Iterates over all expressions to determine if one of the literals has a value that is out of
     /// range of its type.
     pub fn validate_literal_ranges(&self, sink: &mut DiagnosticSink) {

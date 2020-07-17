@@ -43,7 +43,7 @@ impl ModuleScope {
     }
 }
 
-pub(crate) fn module_scope_query(db: &impl HirDatabase, file_id: FileId) -> Arc<ModuleScope> {
+pub(crate) fn module_scope_query(db: &dyn HirDatabase, file_id: FileId) -> Arc<ModuleScope> {
     let mut scope = ModuleScope::default();
     let defs = db.module_data(file_id);
     for def in defs.definitions() {
@@ -58,7 +58,7 @@ pub(crate) fn module_scope_query(db: &impl HirDatabase, file_id: FileId) -> Arc<
             }
             ModuleDef::Struct(s) => {
                 scope.items.insert(
-                    s.name(db),
+                    s.name(db.upcast()),
                     Resolution {
                         def: PerNs::both(*def, *def),
                     },

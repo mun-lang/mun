@@ -1,7 +1,7 @@
 use super::InferenceResultBuilder;
-use crate::{HirDatabase, Ty, TypeCtor};
+use crate::{Ty, TypeCtor};
 
-impl<'a, D: HirDatabase> InferenceResultBuilder<'a, D> {
+impl<'a> InferenceResultBuilder<'a> {
     /// Unify two types, but may coerce the first one to the second using implicit coercion rules if
     /// needed.
     pub(super) fn coerce(&mut self, from_ty: &Ty, to_ty: &Ty) -> bool {

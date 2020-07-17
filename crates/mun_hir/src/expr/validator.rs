@@ -12,16 +12,16 @@ mod uninitialized_access;
 #[cfg(test)]
 mod tests;
 
-pub struct ExprValidator<'d, DB: HirDatabase> {
+pub struct ExprValidator<'a> {
     func: Function,
     infer: Arc<InferenceResult>,
     body: Arc<Body>,
     body_source_map: Arc<BodySourceMap>,
-    db: &'d DB,
+    db: &'a dyn HirDatabase,
 }
 
-impl<'d, DB: HirDatabase> ExprValidator<'d, DB> {
-    pub fn new(func: Function, db: &'d DB) -> Self {
+impl<'a> ExprValidator<'a> {
+    pub fn new(func: Function, db: &'a dyn HirDatabase) -> Self {
         let (body, body_source_map) = db.body_with_source_map(func.into());
         ExprValidator {
             func,
@@ -49,7 +49,7 @@ impl<'d, DB: HirDatabase> ExprValidator<'d, DB> {
             _ => sink.push(ExternCannotHaveBody {
                 func: self
                     .func
-                    .source(self.db)
+                    .source(self.db.upcast())
                     .map(|f| SyntaxNodePtr::new(f.syntax())),
             }),
         }
@@ -64,7 +64,7 @@ impl<'d, DB: HirDatabase> ExprValidator<'d, DB> {
                         .map(|ptr| ptr.syntax_node_ptr())
                         .unwrap();
                     sink.push(ExternNonPrimitiveParam {
-                        param: InFile::new(self.func.source(self.db).file_id, arg_ptr),
+                        param: InFile::new(self.func.source(self.db.upcast()).file_id, arg_ptr),
                     })
                 }
             }
@@ -77,7 +77,7 @@ impl<'d, DB: HirDatabase> ExprValidator<'d, DB> {
                     .map(|ptr| ptr.syntax_node_ptr())
                     .unwrap();
                 sink.push(ExternNonPrimitiveParam {
-                    param: InFile::new(self.func.source(self.db).file_id, arg_ptr),
+                    param: InFile::new(self.func.source(self.db.upcast()).file_id, arg_ptr),
                 })
             }
         }

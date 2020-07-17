@@ -2,14 +2,14 @@ use std::fmt;
 
 use crate::db::HirDatabase;
 
-pub struct HirFormatter<'a, 'b, DB> {
-    pub db: &'a DB,
+pub struct HirFormatter<'a, 'b> {
+    pub db: &'a dyn HirDatabase,
     fmt: &'a mut fmt::Formatter<'b>,
 }
 
 pub trait HirDisplay {
-    fn hir_fmt(&self, f: &mut HirFormatter<impl HirDatabase>) -> fmt::Result;
-    fn display<'a, DB>(&'a self, db: &'a DB) -> HirDisplayWrapper<'a, DB, Self>
+    fn hir_fmt(&self, f: &mut HirFormatter) -> fmt::Result;
+    fn display<'a>(&'a self, db: &'a dyn HirDatabase) -> HirDisplayWrapper<'a, Self>
     where
         Self: Sized,
     {
@@ -17,10 +17,7 @@ pub trait HirDisplay {
     }
 }
 
-impl<'a, 'b, DB> HirFormatter<'a, 'b, DB>
-where
-    DB: HirDatabase,
-{
+impl<'a, 'b> HirFormatter<'a, 'b> {
     pub fn write_joined<T: HirDisplay>(
         &mut self,
         iter: impl IntoIterator<Item = T>,
@@ -43,11 +40,10 @@ where
     }
 }
 
-pub struct HirDisplayWrapper<'a, DB, T>(&'a DB, &'a T);
+pub struct HirDisplayWrapper<'a, T>(&'a dyn HirDatabase, &'a T);
 
-impl<'a, DB, T> fmt::Display for HirDisplayWrapper<'a, DB, T>
+impl<'a, T> fmt::Display for HirDisplayWrapper<'a, T>
 where
-    DB: HirDatabase,
     T: HirDisplay,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

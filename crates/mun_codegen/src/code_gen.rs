@@ -86,17 +86,17 @@ impl ObjectFile {
 }
 
 /// A struct that can be used to build an LLVM `Module`.
-pub struct ModuleBuilder<'a, D: IrDatabase> {
-    db: &'a D,
+pub struct ModuleBuilder<'a> {
+    db: &'a dyn IrDatabase,
     file_id: FileId,
     _target: inkwell::targets::Target,
     target_machine: inkwell::targets::TargetMachine,
     assembly_module: Arc<inkwell::module::Module>,
 }
 
-impl<'a, D: IrDatabase> ModuleBuilder<'a, D> {
+impl<'a> ModuleBuilder<'a> {
     /// Constructs module for the given `hir::FileId` at the specified output file location.
-    pub fn new(db: &'a D, file_id: FileId) -> Result<Self, anyhow::Error> {
+    pub fn new(db: &'a dyn IrDatabase, file_id: FileId) -> Result<Self, anyhow::Error> {
         let target = db.target();
 
         // Construct a module for the assembly
@@ -197,14 +197,14 @@ fn optimize_module(module: &Module, optimization_lvl: OptimizationLevel) {
 }
 
 /// Create an inkwell TargetData from the target in the database
-pub(crate) fn target_data_query(db: &impl IrDatabase) -> Arc<TargetData> {
+pub(crate) fn target_data_query(db: &dyn IrDatabase) -> Arc<TargetData> {
     Arc::new(TargetData::create(&db.target().data_layout))
 }
 
 /// Returns a mapping from struct type to a struct type in the context. This is a query because the
 /// value of struct type depends on the target we compile for.
 pub(crate) fn type_to_struct_mapping_query(
-    db: &impl IrDatabase,
+    db: &dyn IrDatabase,
 ) -> by_address::ByAddress<Arc<StructMapping>> {
     let _ = db.target_data();
     by_address::ByAddress(Arc::new(RwLock::new(HashMap::default())))

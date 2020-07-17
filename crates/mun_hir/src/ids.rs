@@ -48,8 +48,11 @@ pub(crate) struct LocationCtx<DB> {
     file_id: FileId,
 }
 
-impl<'a, DB: DefDatabase> LocationCtx<&'a DB> {
-    pub(crate) fn new(db: &'a DB, file_id: FileId) -> LocationCtx<&'a DB> {
+impl<'a> LocationCtx<&'a dyn DefDatabase> {
+    pub(crate) fn new(
+        db: &'a dyn DefDatabase,
+        file_id: FileId,
+    ) -> LocationCtx<&'a dyn DefDatabase> {
         LocationCtx { db, file_id }
     }
 
@@ -63,29 +66,29 @@ impl<'a, DB: DefDatabase> LocationCtx<&'a DB> {
 }
 
 pub(crate) trait AstItemDef<N: AstNode>: salsa::InternKey + Clone {
-    fn intern(db: &impl DefDatabase, loc: ItemLoc<N>) -> Self;
-    fn lookup_intern(self, db: &impl DefDatabase) -> ItemLoc<N>;
+    fn intern(db: &dyn DefDatabase, loc: ItemLoc<N>) -> Self;
+    fn lookup_intern(self, db: &dyn DefDatabase) -> ItemLoc<N>;
 
-    fn from_ast(ctx: LocationCtx<&impl DefDatabase>, ast: &N) -> Self {
+    fn from_ast(ctx: LocationCtx<&dyn DefDatabase>, ast: &N) -> Self {
         let items = ctx.db.ast_id_map(ctx.file_id);
         let item_id = items.ast_id(ast);
         Self::from_ast_id(ctx, item_id)
     }
 
-    fn from_ast_id(ctx: LocationCtx<&impl DefDatabase>, ast_id: FileAstId<N>) -> Self {
+    fn from_ast_id(ctx: LocationCtx<&dyn DefDatabase>, ast_id: FileAstId<N>) -> Self {
         let loc = ItemLoc {
             ast_id: ast_id.with_file_id(ctx.file_id),
         };
         Self::intern(ctx.db, loc)
     }
 
-    fn source(self, db: &impl DefDatabase) -> InFile<N> {
+    fn source(self, db: &dyn DefDatabase) -> InFile<N> {
         let loc = self.lookup_intern(db);
         let ast = loc.ast_id.to_node(db);
         InFile::new(loc.ast_id.file_id, ast)
     }
 
-    fn file_id(self, db: &impl DefDatabase) -> FileId {
+    fn file_id(self, db: &dyn DefDatabase) -> FileId {
         self.lookup_intern(db).ast_id.file_id
     }
 }
@@ -95,10 +98,10 @@ pub struct FunctionId(salsa::InternId);
 impl_intern_key!(FunctionId);
 
 impl AstItemDef<ast::FunctionDef> for FunctionId {
-    fn intern(db: &impl DefDatabase, loc: ItemLoc<ast::FunctionDef>) -> Self {
+    fn intern(db: &dyn DefDatabase, loc: ItemLoc<ast::FunctionDef>) -> Self {
         db.intern_function(loc)
     }
-    fn lookup_intern(self, db: &impl DefDatabase) -> ItemLoc<ast::FunctionDef> {
+    fn lookup_intern(self, db: &dyn DefDatabase) -> ItemLoc<ast::FunctionDef> {
         db.lookup_intern_function(self)
     }
 }
@@ -108,11 +111,11 @@ pub struct StructId(salsa::InternId);
 impl_intern_key!(StructId);
 
 impl AstItemDef<ast::StructDef> for StructId {
-    fn intern(db: &impl DefDatabase, loc: ItemLoc<ast::StructDef>) -> Self {
+    fn intern(db: &dyn DefDatabase, loc: ItemLoc<ast::StructDef>) -> Self {
         db.intern_struct(loc)
     }
 
-    fn lookup_intern(self, db: &impl DefDatabase) -> ItemLoc<ast::StructDef> {
+    fn lookup_intern(self, db: &dyn DefDatabase) -> ItemLoc<ast::StructDef> {
         db.lookup_intern_struct(self)
     }
 }

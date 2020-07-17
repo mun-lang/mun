@@ -87,18 +87,18 @@ impl TypeTable {
 }
 
 /// Used to build a `TypeTable` from HIR.
-pub(crate) struct TypeTableBuilder<'a, 'ctx, 'm, D: IrDatabase> {
-    db: &'a D,
+pub(crate) struct TypeTableBuilder<'a, 'ctx, 'm> {
+    db: &'a dyn IrDatabase,
     target_data: Arc<TargetData>,
     value_context: &'a IrValueContext<'a, 'ctx, 'm>,
     dispatch_table: &'a DispatchTable,
     entries: BTreeSet<TypeInfo>, // Use a `BTreeSet` to guarantee deterministically ordered output
 }
 
-impl<'a, 'ctx, 'm, D: IrDatabase> TypeTableBuilder<'a, 'ctx, 'm, D> {
+impl<'a, 'ctx, 'm> TypeTableBuilder<'a, 'ctx, 'm> {
     /// Creates a new `TypeTableBuilder`.
     pub(crate) fn new<'f>(
-        db: &'a D,
+        db: &'a dyn IrDatabase,
         value_context: &'a IrValueContext<'a, 'ctx, 'm>,
         intrinsics: impl Iterator<Item = &'f FunctionPrototype>,
         dispatch_table: &'a DispatchTable,
@@ -145,8 +145,13 @@ impl<'a, 'ctx, 'm, D: IrDatabase> TypeTableBuilder<'a, 'ctx, 'm, D> {
     /// Collects unique `TypeInfo` from the specified function signature and body.
     pub fn collect_fn(&mut self, hir_fn: hir::Function) {
         // Collect type info for exposed function
-        if !hir_fn.data(self.db).visibility().is_private() || self.dispatch_table.contains(hir_fn) {
-            let fn_sig = hir_fn.ty(self.db).callable_sig(self.db).unwrap();
+        if !hir_fn.data(self.db.upcast()).visibility().is_private()
+            || self.dispatch_table.contains(hir_fn)
+        {
+            let fn_sig = hir_fn
+                .ty(self.db.upcast())
+                .callable_sig(self.db.upcast())
+                .unwrap();
 
             // Collect argument types
             for ty in fn_sig.params().iter() {
@@ -161,19 +166,19 @@ impl<'a, 'ctx, 'm, D: IrDatabase> TypeTableBuilder<'a, 'ctx, 'm, D> {
         }
 
         // Collect used types from body
-        let body = hir_fn.body(self.db);
-        let infer = hir_fn.infer(self.db);
+        let body = hir_fn.body(self.db.upcast());
+        let infer = hir_fn.infer(self.db.upcast());
         self.collect_expr(body.body_expr(), &body, &infer);
     }
 
     /// Collects unique `TypeInfo` from the specified struct type.
     pub fn collect_struct(&mut self, hir_struct: hir::Struct) {
-        let type_info = self.db.type_info(hir_struct.ty(self.db));
+        let type_info = self.db.type_info(hir_struct.ty(self.db.upcast()));
         self.entries.insert(type_info);
 
-        let fields = hir_struct.fields(self.db);
+        let fields = hir_struct.fields(self.db.upcast());
         for field in fields.into_iter() {
-            self.collect_type(self.db.type_info(field.ty(self.db)));
+            self.collect_type(self.db.type_info(field.ty(self.db.upcast())));
         }
     }
 
@@ -243,15 +248,15 @@ impl<'a, 'ctx, 'm, D: IrDatabase> TypeTableBuilder<'a, 'ctx, 'm, D> {
         hir_struct: hir::Struct,
     ) -> Value<ir::StructInfo> {
         let struct_ir = self.db.struct_ty(hir_struct);
-        let name = hir_struct.name(self.db).to_string();
-        let fields = hir_struct.fields(self.db);
+        let name = hir_struct.name(self.db.upcast()).to_string();
+        let fields = hir_struct.fields(self.db.upcast());
 
         // Construct an array of field names (or null if there are no fields)
         let field_names = fields
             .iter()
             .enumerate()
             .map(|(idx, field)| {
-                CString::new(field.name(self.db).to_string())
+                CString::new(field.name(self.db.upcast()).to_string())
                     .expect("field name is not a valid CString")
                     .intern(
                         format!("struct_info::<{}>::field_names.{}", name, idx),
@@ -268,7 +273,7 @@ impl<'a, 'ctx, 'm, D: IrDatabase> TypeTableBuilder<'a, 'ctx, 'm, D> {
         let field_types = fields
             .iter()
             .map(|field| {
-                let field_type_info = self.db.type_info(field.ty(self.db));
+                let field_type_info = self.db.type_info(field.ty(self.db.upcast()));
                 self.gen_type_info(type_info_to_ir, &field_type_info)
             })
             .into_const_private_pointer_or_null(
@@ -298,7 +303,7 @@ impl<'a, 'ctx, 'm, D: IrDatabase> TypeTableBuilder<'a, 'ctx, 'm, D> {
                 .len()
                 .try_into()
                 .expect("could not convert num_fields to smaller bit size"),
-            memory_kind: hir_struct.data(self.db).memory_kind.clone(),
+            memory_kind: hir_struct.data(self.db.upcast()).memory_kind.clone(),
         }
         .as_value(self.value_context)
     }

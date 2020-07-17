@@ -24,11 +24,11 @@ pub trait Diagnostic: Any + Send + Sync + fmt::Debug + 'static {
 
 pub trait AstDiagnostic {
     type AST;
-    fn ast(&self, db: &impl HirDatabase) -> Self::AST;
+    fn ast(&self, db: &dyn HirDatabase) -> Self::AST;
 }
 
 impl dyn Diagnostic {
-    pub fn syntax_node(&self, db: &impl HirDatabase) -> SyntaxNode {
+    pub fn syntax_node(&self, db: &dyn HirDatabase) -> SyntaxNode {
         let node = db.parse(self.source().file_id).syntax_node();
         self.source().value.to_node(&node)
     }

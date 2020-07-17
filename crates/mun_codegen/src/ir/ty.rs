@@ -14,7 +14,7 @@ use inkwell::{
 
 /// Given a mun type, construct an LLVM IR type
 #[rustfmt::skip]
-pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty, params: CodeGenParams) -> AnyTypeEnum {
+pub(crate) fn ir_query(db: &dyn IrDatabase, ty: Ty, params: CodeGenParams) -> AnyTypeEnum {
     let context = db.context();
     match ty {
         Ty::Empty => AnyTypeEnum::StructType(context.struct_type(&[], false)),
@@ -44,7 +44,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty, params: CodeGenParams) -> A
             }
             TypeCtor::Struct(s) => {
                 let struct_ty = db.struct_ty(s);
-                match s.data(db).memory_kind {
+                match s.data(db.upcast()).memory_kind {
                     hir::StructMemoryKind::GC => struct_ty.ptr_type(AddressSpace::Generic).ptr_type(AddressSpace::Generic).into(),
                     hir::StructMemoryKind::Value if params.make_marshallable =>
                             struct_ty.ptr_type(AddressSpace::Generic).ptr_type(AddressSpace::Generic).into(),
@@ -58,7 +58,7 @@ pub(crate) fn ir_query(db: &impl IrDatabase, ty: Ty, params: CodeGenParams) -> A
 }
 
 /// Returns the LLVM IR type of the specified float type
-fn float_ty_query(db: &impl IrDatabase, fty: FloatTy) -> FloatType {
+fn float_ty_query(db: &dyn IrDatabase, fty: FloatTy) -> FloatType {
     let context = db.context();
     match fty.bitness.resolve(&db.target_data_layout()) {
         FloatBitness::X64 => context.f64_type(),
@@ -67,7 +67,7 @@ fn float_ty_query(db: &impl IrDatabase, fty: FloatTy) -> FloatType {
 }
 
 /// Returns the LLVM IR type of the specified int type
-fn int_ty_query(db: &impl IrDatabase, ity: IntTy) -> IntType {
+fn int_ty_query(db: &dyn IrDatabase, ity: IntTy) -> IntType {
     let context = db.context();
     match ity.bitness.resolve(&db.target_data_layout()) {
         IntBitness::X128 => context.i128_type(),
@@ -80,12 +80,12 @@ fn int_ty_query(db: &impl IrDatabase, ity: IntTy) -> IntType {
 }
 
 /// Returns the LLVM IR type of the specified struct
-pub fn struct_ty_query(db: &impl IrDatabase, s: hir::Struct) -> StructType {
-    let name = s.name(db).to_string();
-    for field in s.fields(db).iter() {
+pub fn struct_ty_query(db: &dyn IrDatabase, s: hir::Struct) -> StructType {
+    let name = s.name(db.upcast()).to_string();
+    for field in s.fields(db.upcast()).iter() {
         // Ensure that salsa's cached value incorporates the struct fields
         let _field_type_ir = db.type_ir(
-            field.ty(db),
+            field.ty(db.upcast()),
             CodeGenParams {
                 make_marshallable: false,
             },
@@ -96,7 +96,7 @@ pub fn struct_ty_query(db: &impl IrDatabase, s: hir::Struct) -> StructType {
 }
 
 /// Constructs the `TypeInfo` for the specified HIR type
-pub fn type_info_query(db: &impl IrDatabase, ty: Ty) -> TypeInfo {
+pub fn type_info_query(db: &dyn IrDatabase, ty: Ty) -> TypeInfo {
     let target = db.target_data();
     match ty {
         Ty::Apply(ctor) => match ctor.ctor {

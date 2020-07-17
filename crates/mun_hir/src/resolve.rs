@@ -60,7 +60,7 @@ pub enum Resolution {
 }
 
 impl Resolver {
-    pub fn resolve_name(&self, db: &impl HirDatabase, name: &Name) -> PerNs<Resolution> {
+    pub fn resolve_name(&self, db: &dyn HirDatabase, name: &Name) -> PerNs<Resolution> {
         let mut resolution = PerNs::none();
         for scope in self.scopes.iter().rev() {
             resolution = resolution.or(scope.resolve_name(db, name));
@@ -75,7 +75,7 @@ impl Resolver {
     /// otherwise returns `PerNs::none`
     pub fn resolve_path_without_assoc_items(
         &self,
-        db: &impl HirDatabase,
+        db: &dyn HirDatabase,
         path: &Path,
     ) -> PerNs<Resolution> {
         if let Some(name) = path.as_ident() {
@@ -87,7 +87,7 @@ impl Resolver {
 }
 
 impl Scope {
-    fn resolve_name(&self, db: &impl HirDatabase, name: &Name) -> PerNs<Resolution> {
+    fn resolve_name(&self, db: &dyn HirDatabase, name: &Name) -> PerNs<Resolution> {
         match self {
             Scope::ModuleScope(m) => db
                 .module_scope(m.file_id)
@@ -109,7 +109,7 @@ impl Scope {
         }
     }
 
-    //    fn collect_names(&self, db: &impl HirDatabase, f: &mut dyn FnMut(Name, PerNs<Resolution>)) {
+    //    fn collect_names(&self, db: &dyn HirDatabase, f: &mut dyn FnMut(Name, PerNs<Resolution>)) {
     //        match self {
     //            Scope::ModuleScope(m) => {
     //                // FIXME: should we provide `self` here?

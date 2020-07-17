@@ -27,7 +27,7 @@ pub struct FileGroupIR {
 /// Generates IR that is shared among the group's files.
 /// TODO: Currently, a group always consists of a single file. Need to add support for multiple
 /// files using something like `FileGroupId`.
-pub(crate) fn ir_query(db: &impl IrDatabase, file_id: hir::FileId) -> Arc<FileGroupIR> {
+pub(crate) fn ir_query(db: &dyn IrDatabase, file_id: hir::FileId) -> Arc<FileGroupIR> {
     let llvm_module = db.context().create_module("group_name");
 
     // Use a `BTreeMap` to guarantee deterministically ordered output.
@@ -37,17 +37,19 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: hir::FileId) -> Arc<FileGr
     // Collect all intrinsic functions, wrapper function, and generate struct declarations.
     for def in db.module_data(file_id).definitions() {
         match def {
-            ModuleDef::Function(f) if !f.is_extern(db) => {
+            ModuleDef::Function(f) if !f.is_extern(db.upcast()) => {
                 intrinsics::collect_fn_body(
                     db,
                     &mut intrinsics_map,
                     &mut needs_alloc,
-                    &f.body(db),
-                    &f.infer(db),
+                    &f.body(db.upcast()),
+                    &f.infer(db.upcast()),
                 );
 
-                let fn_sig = f.ty(db).callable_sig(db).unwrap();
-                if !f.data(db).visibility().is_private() && !fn_sig.marshallable(db) {
+                let fn_sig = f.ty(db.upcast()).callable_sig(db.upcast()).unwrap();
+                if !f.data(db.upcast()).visibility().is_private()
+                    && !fn_sig.marshallable(db.upcast())
+                {
                     intrinsics::collect_wrapper_body(db, &mut intrinsics_map, &mut needs_alloc);
                 }
             }
@@ -63,9 +65,9 @@ pub(crate) fn ir_query(db: &impl IrDatabase, file_id: hir::FileId) -> Arc<FileGr
     let mut dispatch_table_builder = DispatchTableBuilder::new(db, &llvm_module, &intrinsics_map);
     for def in db.module_data(file_id).definitions() {
         if let ModuleDef::Function(f) = def {
-            if !f.data(db).visibility().is_private() && !f.is_extern(db) {
-                let body = f.body(db);
-                let infer = f.infer(db);
+            if !f.data(db.upcast()).visibility().is_private() && !f.is_extern(db.upcast()) {
+                let body = f.body(db.upcast());
+                let infer = f.infer(db.upcast());
                 dispatch_table_builder.collect_body(&body, &infer);
             }
         }

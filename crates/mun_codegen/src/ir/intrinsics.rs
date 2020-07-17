@@ -9,11 +9,7 @@ use std::sync::Arc;
 // Use a `BTreeMap` to guarantee deterministically ordered output
 pub type IntrinsicsMap = BTreeMap<FunctionPrototype, FunctionType>;
 
-fn collect_intrinsic<D: IrDatabase>(
-    d: &D,
-    entries: &mut IntrinsicsMap,
-    intrinsic: &impl Intrinsic,
-) {
+fn collect_intrinsic(d: &dyn IrDatabase, entries: &mut IntrinsicsMap, intrinsic: &impl Intrinsic) {
     let context = d.context();
     let target = d.target_data();
     let prototype = intrinsic.prototype(context.as_ref(), target.as_ref());
@@ -22,8 +18,8 @@ fn collect_intrinsic<D: IrDatabase>(
         .or_insert_with(|| intrinsic.ir_type(context.as_ref(), target.as_ref()));
 }
 
-fn collect_expr<D: IrDatabase>(
-    db: &D,
+fn collect_expr(
+    db: &dyn IrDatabase,
     entries: &mut IntrinsicsMap,
     needs_alloc: &mut bool,
     expr_id: ExprId,
@@ -52,9 +48,9 @@ fn collect_expr<D: IrDatabase>(
     }
 
     if let Expr::Path(path) = expr {
-        let resolver = hir::resolver_for_expr(body.clone(), db, expr_id);
+        let resolver = hir::resolver_for_expr(body.clone(), db.upcast(), expr_id);
         let resolution = resolver
-            .resolve_path_without_assoc_items(db, path)
+            .resolve_path_without_assoc_items(db.upcast(), path)
             .take_values()
             .expect("unknown path");
 
@@ -69,8 +65,8 @@ fn collect_expr<D: IrDatabase>(
     expr.walk_child_exprs(|expr_id| collect_expr(db, entries, needs_alloc, expr_id, body, infer))
 }
 
-pub fn collect_fn_body<D: IrDatabase>(
-    db: &D,
+pub fn collect_fn_body(
+    db: &dyn IrDatabase,
     entries: &mut IntrinsicsMap,
     needs_alloc: &mut bool,
     body: &Arc<Body>,
@@ -79,8 +75,8 @@ pub fn collect_fn_body<D: IrDatabase>(
     collect_expr(db, entries, needs_alloc, body.body_expr(), body, infer);
 }
 
-pub fn collect_wrapper_body<D: IrDatabase>(
-    db: &D,
+pub fn collect_wrapper_body(
+    db: &dyn IrDatabase,
     entries: &mut IntrinsicsMap,
     needs_alloc: &mut bool,
 ) {

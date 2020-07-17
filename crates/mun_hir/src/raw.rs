@@ -43,7 +43,7 @@ impl Index<DefId> for RawItems {
 }
 
 impl RawItems {
-    pub(crate) fn raw_file_items_query(db: &impl DefDatabase, file_id: FileId) -> Arc<RawItems> {
+    pub(crate) fn raw_file_items_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<RawItems> {
         let mut items = RawItems::default();
 
         let source_file = db.parse(file_id).tree();

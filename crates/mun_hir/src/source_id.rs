@@ -62,13 +62,13 @@ pub struct ErasedFileAstId(RawId);
 impl_arena_id!(ErasedFileAstId);
 
 impl AstIdMap {
-    pub(crate) fn ast_id_map_query(db: &impl DefDatabase, file_id: FileId) -> Arc<AstIdMap> {
+    pub(crate) fn ast_id_map_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<AstIdMap> {
         let map = AstIdMap::from_source(&db.parse(file_id).tree().syntax());
         Arc::new(map)
     }
 
     pub(crate) fn file_item_query(
-        db: &impl DefDatabase,
+        db: &dyn DefDatabase,
         file_id: FileId,
         ast_id: ErasedFileAstId,
     ) -> SyntaxNode {

@@ -31,7 +31,7 @@ impl Assembly {
 }
 
 /// Create a new temporary file that contains the linked object
-pub fn assembly_query(db: &impl IrDatabase, file_id: hir::FileId) -> Arc<Assembly> {
+pub fn assembly_query(db: &dyn IrDatabase, file_id: hir::FileId) -> Arc<Assembly> {
     let file = NamedTempFile::new().expect("could not create temp file for shared object");
 
     let module_builder = ModuleBuilder::new(db, file_id).expect("could not create ModuleBuilder");

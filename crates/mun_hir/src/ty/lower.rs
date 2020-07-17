@@ -34,7 +34,7 @@ impl LowerBatchResult {
     /// Adds all the `LowerDiagnostic`s of the result to the `DiagnosticSink`.
     pub(crate) fn add_diagnostics(
         &self,
-        db: &impl HirDatabase,
+        db: &dyn HirDatabase,
         file_id: FileId,
         source_map: &TypeRefSourceMap,
         sink: &mut DiagnosticSink,
@@ -47,7 +47,7 @@ impl LowerBatchResult {
 
 impl Ty {
     pub(crate) fn from_hir(
-        db: &impl HirDatabase,
+        db: &dyn HirDatabase,
         resolver: &Resolver,
         type_ref_map: &TypeRefMap,
         type_ref: TypeRefId,
@@ -59,7 +59,7 @@ impl Ty {
     }
 
     fn from_hir_with_diagnostics(
-        db: &impl HirDatabase,
+        db: &dyn HirDatabase,
         resolver: &Resolver,
         type_ref_map: &TypeRefMap,
         diagnostics: &mut Vec<LowerDiagnostic>,
@@ -80,7 +80,7 @@ impl Ty {
     }
 
     pub(crate) fn from_hir_path(
-        db: &impl HirDatabase,
+        db: &dyn HirDatabase,
         resolver: &Resolver,
         path: &Path,
     ) -> Option<Self> {
@@ -108,7 +108,7 @@ impl Ty {
 }
 
 pub fn types_from_hir(
-    db: &impl HirDatabase,
+    db: &dyn HirDatabase,
     resolver: &Resolver,
     type_ref_map: &TypeRefMap,
 ) -> Arc<LowerBatchResult> {
@@ -124,8 +124,8 @@ pub fn types_from_hir(
     Arc::new(result)
 }
 
-pub fn lower_struct_query(db: &impl HirDatabase, s: Struct) -> Arc<LowerBatchResult> {
-    let data = s.data(db);
+pub fn lower_struct_query(db: &dyn HirDatabase, s: Struct) -> Arc<LowerBatchResult> {
+    let data = s.data(db.upcast());
     types_from_hir(db, &s.resolver(db), data.type_ref_map())
 }
 
@@ -191,7 +191,7 @@ impl CallableDef {
 /// `struct Foo(usize)`, we have two types: The type of the struct itself, and
 /// the constructor function `(usize) -> Foo` which lives in the values
 /// namespace.
-pub(crate) fn type_for_def(db: &impl HirDatabase, def: TypableDef, ns: Namespace) -> Ty {
+pub(crate) fn type_for_def(db: &dyn HirDatabase, def: TypableDef, ns: Namespace) -> Ty {
     match (def, ns) {
         (TypableDef::Function(f), Namespace::Values) => type_for_fn(db, f),
         (TypableDef::BuiltinType(t), Namespace::Types) => type_for_builtin(t),
@@ -215,18 +215,18 @@ fn type_for_builtin(def: BuiltinType) -> Ty {
 
 /// Build the declared type of a function. This should not need to look at the
 /// function body.
-fn type_for_fn(_db: &impl HirDatabase, def: Function) -> Ty {
+fn type_for_fn(_db: &dyn HirDatabase, def: Function) -> Ty {
     Ty::simple(TypeCtor::FnDef(def.into()))
 }
 
-pub(crate) fn callable_item_sig(db: &impl HirDatabase, def: CallableDef) -> FnSig {
+pub(crate) fn callable_item_sig(db: &dyn HirDatabase, def: CallableDef) -> FnSig {
     match def {
         CallableDef::Function(f) => fn_sig_for_fn(db, f),
         CallableDef::Struct(s) => fn_sig_for_struct_constructor(db, s),
     }
 }
 
-pub(crate) fn fn_sig_for_fn(db: &impl HirDatabase, def: Function) -> FnSig {
+pub(crate) fn fn_sig_for_fn(db: &dyn HirDatabase, def: Function) -> FnSig {
     let data = def.data(db);
     let resolver = def.resolver(db);
     let params = data
@@ -238,8 +238,8 @@ pub(crate) fn fn_sig_for_fn(db: &impl HirDatabase, def: Function) -> FnSig {
     FnSig::from_params_and_return(params, ret)
 }
 
-pub(crate) fn fn_sig_for_struct_constructor(db: &impl HirDatabase, def: Struct) -> FnSig {
-    let data = def.data(db);
+pub(crate) fn fn_sig_for_struct_constructor(db: &dyn HirDatabase, def: Struct) -> FnSig {
+    let data = def.data(db.upcast());
     let resolver = def.resolver(db);
     let params = data
         .fields
@@ -251,7 +251,7 @@ pub(crate) fn fn_sig_for_struct_constructor(db: &impl HirDatabase, def: Struct) 
 }
 
 /// Build the type of a struct constructor.
-fn type_for_struct_constructor(db: &impl HirDatabase, def: Struct) -> Ty {
+fn type_for_struct_constructor(db: &dyn HirDatabase, def: Struct) -> Ty {
     let struct_data = db.struct_data(def.id);
     if struct_data.kind == StructKind::Tuple {
         Ty::simple(TypeCtor::FnDef(def.into()))
@@ -260,7 +260,7 @@ fn type_for_struct_constructor(db: &impl HirDatabase, def: Struct) -> Ty {
     }
 }
 
-fn type_for_struct(_db: &impl HirDatabase, def: Struct) -> Ty {
+fn type_for_struct(_db: &dyn HirDatabase, def: Struct) -> Ty {
     Ty::simple(TypeCtor::Struct(def))
 }
 
@@ -280,7 +280,7 @@ pub mod diagnostics {
     impl LowerDiagnostic {
         pub(crate) fn add_to(
             &self,
-            _db: &impl HirDatabase,
+            _db: &dyn HirDatabase,
             file_id: FileId,
             source_map: &TypeRefSourceMap,
             sink: &mut DiagnosticSink,

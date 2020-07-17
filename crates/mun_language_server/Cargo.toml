@@ -25,7 +25,7 @@ futures = "0.3"
 anyhow = "1.0"
 thiserror = "1.0"
 ra_vfs = "0.6.1"
-salsa = "0.14"
+salsa = "0.15.0"
 hir = { version = "=0.2.0", path="../mun_hir", package="mun_hir" }
 rayon = "1.3"
 num_cpus = "1.13.0"
