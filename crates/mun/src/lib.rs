@@ -128,9 +128,6 @@ fn find_manifest(directory: &Path) -> Option<PathBuf> {
 
 /// This method is invoked when the executable is run with the `build` argument indicating that a
 /// user requested us to build a project in the current directory or one of its parent directories.
-///
-/// The `bool` return type for this function indicates whether the process should exit with a
-/// success or failure error code.
 fn build(matches: &ArgMatches) -> Result<ExitStatus, anyhow::Error> {
     log::trace!("starting build");
 
@@ -254,9 +251,6 @@ fn runtime(matches: &ArgMatches) -> Result<Rc<RefCell<Runtime>>, anyhow::Error> 
 
 /// This function is invoked when the executable is invoked with the `language-server` argument. A
 /// Mun language server is started ready to serve language information about one or more projects.
-///
-/// The `bool` return type for this function indicates whether the process should exit with a
-/// success or failure error code.
 fn language_server(_matches: &ArgMatches) -> Result<ExitStatus, anyhow::Error> {
     mun_language_server::run_server().map_err(|e| anyhow::anyhow!("{}", e))?;
     Ok(ExitStatus::Success)
