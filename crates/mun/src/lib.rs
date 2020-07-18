@@ -97,7 +97,10 @@ where
         )
         .subcommand(
             SubCommand::with_name("new")
-                .arg(Arg::with_name("path").help("the path to crate a new project").required(true).index(1))
+                .arg(Arg::with_name("path").help("the path to create a new project").required(true).index(1))
+        )
+        .subcommand(
+            SubCommand::with_name("init")
         )
         .subcommand(
             SubCommand::with_name("language-server")
@@ -110,6 +113,7 @@ where
             ("language-server", Some(matches)) => language_server(matches),
             ("start", Some(matches)) => start(matches).map(|_| ExitStatus::Success),
             ("new", Some(matches)) => new(matches),
+            ("init", Some(_)) => init(),
             _ => unreachable!(),
         },
         Err(e) => {
@@ -288,7 +292,6 @@ mod test {
 /// This method is invoked when the executable is run with the `new` argument indicating that a
 /// user requested us to create a new project in a new directory.
 fn new(matches: &ArgMatches) -> Result<ExitStatus, anyhow::Error> {
-    log::trace!("Creating new project");
     let project_name = matches.value_of("path").expect(
         "Path argument not found: This should be unreachable as clap requires this argument.",
     );
@@ -309,6 +312,20 @@ fn new(matches: &ArgMatches) -> Result<ExitStatus, anyhow::Error> {
     create_project(&create_in, project_name)
 }
 
+/// This method is invoked when the executable is run with the `init` argument indicating that a
+/// user requested us to create a new project in the current directory.
+fn init() -> Result<ExitStatus, anyhow::Error> {
+    let create_in = std::env::current_dir().expect("could not determine current working directory");
+    let project_name = create_in
+        .file_name()
+        .expect("Failed to fetch name of current folder.")
+        .to_str()
+        .expect("Project name must be valid UTF-8");
+
+    create_project(&create_in, project_name)
+}
+
+/// This is used by `init` and `new` arguments to create projects in different paths.
 fn create_project(create_in: &Path, project_name: &str) -> Result<ExitStatus, anyhow::Error> {
     log::trace!("Creating new project");
     {
@@ -317,7 +334,7 @@ fn create_project(create_in: &Path, project_name: &str) -> Result<ExitStatus, an
         write(
             &manifest_path,
             format!(
-                // TODO. Nothing is done yet to find out the author. Discuss.
+                // @TODO. Nothing is done yet to find out who the author is.
                 r#"[package]
 name="{}"
 authors=[]
@@ -345,10 +362,13 @@ version="0.1.0"
     Ok(ExitStatus::Success)
 }
 
+/// Shortcut function for creating new directories.
 fn create_dir(path: impl AsRef<Path>) -> anyhow::Result<()> {
     fs::create_dir(&path)
         .map_err(|_| anyhow!("failed to create directory `{}`", path.as_ref().display()))
 }
+
+/// Shortcut function for creating new files.
 pub fn write(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> anyhow::Result<()> {
     let path = path.as_ref();
     fs::write(path, contents.as_ref()).map_err(|_| anyhow!("failed to write `{}`", path.display()))
