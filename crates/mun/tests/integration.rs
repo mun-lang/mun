@@ -1,63 +1,57 @@
 use mun::run_with_args;
 use mun_runtime::{invoke_fn, RuntimeBuilder};
+use serial_test::serial;
+use std::env::set_current_dir;
 use std::ffi::OsString;
-use tempdir::TempDir;
+use std::path::Path;
 
-const TEST_VAL: i32 = 567;
+/// Creates a new project using `mun init` and then tests that it works.
+#[test]
+#[serial] // This test must be run in serial as files may conflict.
+fn mun_init() {
+    let project = tempfile::Builder::new()
+        .prefix("mun_project_example")
+        .tempdir()
+        .unwrap();
 
-/// Creates a simple test project in a temporary directory and returns the directory.
-fn create_project() -> tempdir::TempDir {
-    let project_dir = TempDir::new("mun_project_example").unwrap();
-    let project_path = project_dir.path();
+    set_current_dir(&project).unwrap();
 
-    std::fs::write(
-        project_path.join("mun.toml"),
-        r#"
-[package]
-name="test"
-authors=["Mun Team"]
-version="0.1.0"
-    "#,
-    )
-    .unwrap();
-
-    std::fs::create_dir_all(project_path.join("src")).unwrap();
-
-    std::fs::write(
-        project_path.join("src/main.mun"),
-        format!(
-            r#"
-pub fn main() -> i32 {{
-    {}
-}}"#,
-            TEST_VAL
-        ),
-    )
-    .unwrap();
-
-    project_dir
+    let args: Vec<OsString> = vec!["mun".into(), "init".into()];
+    assert_eq!(run_with_args(args).unwrap(), mun::ExitStatus::Success);
+    build_and_run(project);
 }
 
+/// Crates a new project using `mun new` and then tests that it works.
 #[test]
-fn build_and_run() {
-    pretty_env_logger::env_logger::Builder::from_default_env()
-        .is_test(true)
-        .init();
+#[serial] // This test must be run in serial as files may conflict.
+fn mun_new() {
+    let project = tempfile::Builder::new()
+        .prefix("mun_projects")
+        .tempdir()
+        .unwrap();
 
-    let project = create_project();
+    set_current_dir(&project).unwrap();
 
+    let args: Vec<OsString> = vec!["mun".into(), "new".into(), "mun_project_example".into()];
+    assert_eq!(run_with_args(args).unwrap(), mun::ExitStatus::Success);
+    dbg!(project.as_ref().join("mun_project_example").ancestors());
+    build_and_run(project.as_ref().join("mun_project_example"));
+}
+
+/// Builds and runs an newly generated mun project
+fn build_and_run(project: impl AsRef<Path>) {
     let args: Vec<OsString> = vec![
         "mun".into(),
         "build".into(),
         "--manifest-path".into(),
-        project.path().join("mun.toml").into(),
+        project.as_ref().join("mun.toml").into(),
     ];
     assert_eq!(run_with_args(args).unwrap(), mun::ExitStatus::Success);
 
-    let library_path = project.path().join("target/main.munlib");
+    let library_path = project.as_ref().join("target/main.munlib");
     assert!(library_path.is_file());
 
     let runtime = RuntimeBuilder::new(&library_path).spawn().unwrap();
-    let result: i32 = invoke_fn!(runtime, "main").unwrap();
-    assert_eq!(result, TEST_VAL);
+    let result: f64 = invoke_fn!(runtime, "main").unwrap();
+    assert_eq!(result, 3.14159);
 }

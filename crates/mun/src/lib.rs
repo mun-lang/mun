@@ -270,11 +270,13 @@ fn language_server(_matches: &ArgMatches) -> Result<ExitStatus, anyhow::Error> {
 mod test {
     use crate::find_manifest;
     use mun_project::MANIFEST_FILENAME;
-    use tempdir::TempDir;
 
     #[test]
     fn test_find_manifest() {
-        let dir = TempDir::new("test_find_manifest").unwrap();
+        let dir = tempfile::Builder::new()
+            .prefix("test_find_manifest")
+            .tempdir()
+            .unwrap();
         let path = dir.path();
         let manifest_path = path.join(MANIFEST_FILENAME);
 
