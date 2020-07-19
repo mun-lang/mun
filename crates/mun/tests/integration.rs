@@ -21,7 +21,7 @@ fn mun_init() {
     build_and_run(project);
 }
 
-/// Crates a new project using `mun new` and then tests that it works.
+/// Creates a new project using `mun new` and then tests that it works.
 #[test]
 #[serial] // This test must be run in serial as files may conflict.
 fn mun_new() {
