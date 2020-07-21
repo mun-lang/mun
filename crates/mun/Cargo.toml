@@ -31,4 +31,5 @@ default-features = false # Disable features which are enabled by default
 features = ["precommit-hook", "run-cargo-test", "run-cargo-fmt", "run-cargo-clippy", "run-for-all"]
 
 [dev-dependencies]
-tempdir = "0.3"
+tempfile = "3.1"
+serial_test = "0.4"
