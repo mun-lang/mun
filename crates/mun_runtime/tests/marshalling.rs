@@ -273,8 +273,7 @@ fn compiler_valid_utf8() {
         );
 
         if let Some(s) = arg_type.as_struct() {
-            let field_names =
-                unsafe { slice::from_raw_parts(s.field_names, s.num_fields as usize) };
+            let field_names = unsafe { slice::from_raw_parts(s.field_names, s.num_fields()) };
 
             for field_name in field_names {
                 assert_eq!(
@@ -285,9 +284,18 @@ fn compiler_valid_utf8() {
         }
     }
     assert_eq!(
-        unsafe { CStr::from_ptr((*foo_func.prototype.signature.return_type).name) }
-            .to_str()
-            .is_ok(),
+        unsafe {
+            CStr::from_ptr(
+                foo_func
+                    .prototype
+                    .signature
+                    .return_type()
+                    .expect("Missing return type")
+                    .name,
+            )
+        }
+        .to_str()
+        .is_ok(),
         true
     );
 }

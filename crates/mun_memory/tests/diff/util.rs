@@ -6,17 +6,13 @@ use mun_memory::{
 use std::alloc::Layout;
 
 pub const STRUCT1_NAME: &str = "struct1";
-pub const STRUCT1_GUID: abi::Guid = abi::Guid {
-    b: [
-        0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150,
-    ],
-};
+pub const STRUCT1_GUID: abi::Guid = abi::Guid([
+    0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150,
+]);
 pub const STRUCT2_NAME: &str = "struct2";
-pub const STRUCT2_GUID: abi::Guid = abi::Guid {
-    b: [
-        150, 140, 130, 120, 110, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0,
-    ],
-};
+pub const STRUCT2_GUID: abi::Guid = abi::Guid([
+    150, 140, 130, 120, 110, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0,
+]);
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StructInfo {
