@@ -11,7 +11,10 @@ fn hotreloadable() {
     ",
     );
     assert_invoke_eq!(i32, 5, driver, "main");
+
+    let runtime = driver.runtime();
     driver.update(
+        runtime.borrow(),
         r"
     pub fn main() -> i32 { 10 }
     ",
@@ -37,7 +40,10 @@ fn hotreload_struct_decl() {
     }
     "#,
     );
+
+    let runtime = driver.runtime();
     driver.update(
+        runtime.borrow(),
         r#"
     struct(gc) Args {
         n: i32,

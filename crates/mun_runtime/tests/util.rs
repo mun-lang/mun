@@ -2,8 +2,14 @@
 
 use mun_compiler::{Config, DisplayColor, Driver, FileId, PathOrInline, RelativePathBuf};
 use mun_runtime::{IntoFunctionDefinition, Runtime, RuntimeBuilder};
-use std::io::Cursor;
-use std::{cell::RefCell, path::PathBuf, rc::Rc, thread::sleep, time::Duration};
+use std::{
+    cell::{Ref, RefCell},
+    io::Cursor,
+    path::PathBuf,
+    rc::Rc,
+    thread::sleep,
+    time::Duration,
+};
 
 /// Implements a compiler and runtime in one that can invoke functions. Use of the TestDriver
 /// enables quick testing of Mun constructs in the runtime with hot-reloading support.
@@ -76,9 +82,13 @@ impl TestDriver {
         self.runtime.spawn().map(|_| ())
     }
 
-    /// Updates the text of the Mun source and ensures that the generated assembly has been reloaded.
-    pub fn update(&mut self, text: &str) {
-        self.runtime_mut(); // Ensures that the runtime is spawned prior to the update
+    /// Updates the text of the Mun source and ensures that the generated assembly has been
+    /// reloaded.
+    ///
+    /// A reference to the borrowed `runtime` is used as an argument to ensure that the runtime was
+    /// spawned prior to calling update AND to allow moving of the existing borrow inside the update
+    /// function. This obviates the necessity for `update` to use the `Runtime`.
+    pub fn update(&mut self, runtime: Ref<'_, Runtime>, text: &str) {
         self.driver.set_file_text(self.file_id, text);
         let mut compiler_errors: Vec<u8> = Vec::new();
         if self
@@ -99,7 +109,8 @@ impl TestDriver {
             "recompiling did not result in the same assembly"
         );
         let start_time = std::time::Instant::now();
-        while !self.runtime_mut().borrow_mut().update() {
+        drop(runtime);
+        while !self.runtime().borrow_mut().update() {
             let now = std::time::Instant::now();
             if now - start_time > std::time::Duration::from_secs(10) {
                 panic!("runtime did not update after recompilation within 10secs");
@@ -121,10 +132,10 @@ impl TestDriver {
     }
 
     /// Returns the `Runtime` used by this instance
-    pub fn runtime_mut(&mut self) -> &mut Rc<RefCell<Runtime>> {
+    pub fn runtime(&mut self) -> Rc<RefCell<Runtime>> {
         self.runtime.spawn().unwrap();
         match &mut self.runtime {
-            RuntimeOrBuilder::Runtime(r) => r,
+            RuntimeOrBuilder::Runtime(r) => r.clone(),
             _ => unreachable!(),
         }
     }
@@ -132,7 +143,15 @@ impl TestDriver {
 
 macro_rules! assert_invoke_eq {
     ($ExpectedType:ty, $ExpectedResult:expr, $Driver:expr, $($Arg:tt)+) => {
-        let result: $ExpectedType = mun_runtime::invoke_fn!($Driver.runtime_mut(), $($Arg)*).unwrap();
-        assert_eq!(result, $ExpectedResult, "{} == {:?}", stringify!(mun_runtime::invoke_fn!($Driver.runtime_mut(), $($Arg)*).unwrap()), $ExpectedResult);
+        {
+            let runtime = $Driver.runtime();
+            let runtime_ref = runtime.borrow();
+            let result: $ExpectedType = mun_runtime::invoke_fn!(runtime_ref, $($Arg)*).unwrap();
+            assert_eq!(
+                result, $ExpectedResult, "{} == {:?}",
+                stringify!(mun_runtime::invoke_fn!(runtime_ref, $($Arg)*).unwrap()),
+                $ExpectedResult
+            );
+        }
     }
 }

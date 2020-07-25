@@ -52,6 +52,7 @@ fn build_and_run(project: impl AsRef<Path>) {
     assert!(library_path.is_file());
 
     let runtime = RuntimeBuilder::new(&library_path).spawn().unwrap();
-    let result: f64 = invoke_fn!(runtime, "main").unwrap();
+    let runtime_ref = runtime.borrow();
+    let result: f64 = invoke_fn!(runtime_ref, "main").unwrap();
     assert_eq!(result, 3.14159);
 }

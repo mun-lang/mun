@@ -1,6 +1,4 @@
-use mun_runtime::{
-    invoke_fn, ArgumentReflection, RetryResultExt, ReturnTypeReflection, Runtime, StructRef,
-};
+use mun_runtime::{invoke_fn, ArgumentReflection, Marshal, ReturnTypeReflection, StructRef};
 
 #[macro_use]
 mod util;
@@ -231,8 +229,9 @@ fn compiler_valid_utf8() {
     "#,
     );
 
-    let borrowed = driver.runtime_mut().borrow();
-    let foo_func = borrowed.get_function_definition("foo").unwrap();
+    let runtime = driver.runtime();
+    let runtime_ref = runtime.borrow();
+    let foo_func = runtime_ref.get_function_definition("foo").unwrap();
     assert_eq!(
         unsafe { CStr::from_ptr(foo_func.prototype.name) }
             .to_str()
@@ -328,9 +327,16 @@ fn marshal_struct() {
     struct TestData<T>(T, T);
 
     fn test_field<
-        T: Copy + std::fmt::Debug + PartialEq + ArgumentReflection + ReturnTypeReflection,
+        't,
+        T: 't
+            + Copy
+            + std::fmt::Debug
+            + PartialEq
+            + ArgumentReflection
+            + ReturnTypeReflection
+            + Marshal<'t>,
     >(
-        s: &mut StructRef,
+        s: &mut StructRef<'t>,
         data: &TestData<T>,
         field_name: &str,
     ) {
@@ -340,22 +346,24 @@ fn marshal_struct() {
         assert_eq!(Ok(data.0), s.get::<T>(field_name));
     }
 
+    let runtime = driver.runtime();
+    let runtime_ref = runtime.borrow();
+
     let int_data = TestData(3i32, 6i32);
     let bool_data = TestData(true, false);
 
     // Verify that struct marshalling works for fundamental types
-    let mut foo: StructRef =
-        invoke_fn!(driver.runtime_mut(), "foo_new", int_data.0, bool_data.0).unwrap();
+    let mut foo: StructRef = invoke_fn!(runtime_ref, "foo_new", int_data.0, bool_data.0).unwrap();
     test_field(&mut foo, &int_data, "a");
     test_field(&mut foo, &bool_data, "b");
 
-    let mut bar: StructRef =
-        invoke_fn!(driver.runtime_mut(), "bar_new", int_data.0, bool_data.0).unwrap();
+    let mut bar: StructRef = invoke_fn!(runtime_ref, "bar_new", int_data.0, bool_data.0).unwrap();
     test_field(&mut bar, &int_data, "0");
     test_field(&mut bar, &bool_data, "1");
 
-    fn test_struct(runtime: &Runtime, s: &mut StructRef, c1: StructRef, c2: StructRef) {
-        let field_names: Vec<String> = StructRef::type_info(&c1, runtime)
+    fn test_struct<'t>(s: &mut StructRef<'t>, c1: StructRef<'t>, c2: StructRef<'t>) {
+        let field_names: Vec<String> = c1
+            .type_info()
             .as_struct()
             .unwrap()
             .field_names()
@@ -380,40 +388,40 @@ fn marshal_struct() {
     }
 
     // Verify that struct marshalling works for struct types
-    let mut baz: StructRef = invoke_fn!(driver.runtime_mut(), "baz_new", foo).unwrap();
-    let c1: StructRef =
-        invoke_fn!(driver.runtime_mut(), "foo_new", int_data.0, bool_data.0).unwrap();
-    let c2: StructRef =
-        invoke_fn!(driver.runtime_mut(), "foo_new", int_data.1, bool_data.1).unwrap();
-    test_struct(&driver.runtime_mut().borrow(), &mut baz, c1, c2);
+    let mut baz: StructRef = invoke_fn!(runtime_ref, "baz_new", foo).unwrap();
+    let c1: StructRef = invoke_fn!(runtime_ref, "foo_new", int_data.0, bool_data.0).unwrap();
+    let c2: StructRef = invoke_fn!(runtime_ref, "foo_new", int_data.1, bool_data.1).unwrap();
+    test_struct(&mut baz, c1, c2);
 
-    let mut qux: StructRef = invoke_fn!(driver.runtime_mut(), "qux_new", bar).unwrap();
-    let c1: StructRef =
-        invoke_fn!(driver.runtime_mut(), "bar_new", int_data.0, bool_data.0).unwrap();
-    let c2: StructRef =
-        invoke_fn!(driver.runtime_mut(), "bar_new", int_data.1, bool_data.1).unwrap();
-    test_struct(&driver.runtime_mut().borrow(), &mut qux, c1, c2);
+    let mut qux: StructRef = invoke_fn!(runtime_ref, "qux_new", bar).unwrap();
+    let c1: StructRef = invoke_fn!(runtime_ref, "bar_new", int_data.0, bool_data.0).unwrap();
+    let c2: StructRef = invoke_fn!(runtime_ref, "bar_new", int_data.1, bool_data.1).unwrap();
+    test_struct(&mut qux, c1, c2);
 
     // Verify the dispatch table works when a marshallable wrapper function exists alongside the
     // original function.
-    let mut baz2: StructRef = invoke_fn!(
-        driver.runtime_mut(),
-        "baz_new_transitive",
-        int_data.0,
-        bool_data.0
-    )
-    .wait();
-    let c1: StructRef =
-        invoke_fn!(driver.runtime_mut(), "foo_new", int_data.0, bool_data.0).unwrap();
-    let c2: StructRef =
-        invoke_fn!(driver.runtime_mut(), "foo_new", int_data.1, bool_data.1).unwrap();
-    test_struct(&driver.runtime_mut().borrow(), &mut baz2, c1, c2);
+    let mut baz2: StructRef =
+        invoke_fn!(runtime_ref, "baz_new_transitive", int_data.0, bool_data.0).unwrap();
+    // TODO: Find an ergonomic solution for this:
+    // .unwrap_or_else(|e| e.wait(&mut runtime_ref));
+
+    let runtime_ref = runtime.borrow();
+    let c1: StructRef = invoke_fn!(runtime_ref, "foo_new", int_data.0, bool_data.0).unwrap();
+    let c2: StructRef = invoke_fn!(runtime_ref, "foo_new", int_data.1, bool_data.1).unwrap();
+    test_struct(&mut baz2, c1, c2);
 
     fn test_shallow_copy<
-        T: Copy + std::fmt::Debug + PartialEq + ArgumentReflection + ReturnTypeReflection,
+        't,
+        T: 't
+            + Copy
+            + std::fmt::Debug
+            + PartialEq
+            + ArgumentReflection
+            + ReturnTypeReflection
+            + Marshal<'t>,
     >(
-        s1: &mut StructRef,
-        s2: &StructRef,
+        s1: &mut StructRef<'t>,
+        s2: &StructRef<'t>,
         data: &TestData<T>,
         field_name: &str,
     ) {
@@ -431,10 +439,17 @@ fn marshal_struct() {
     test_shallow_copy(&mut foo, &foo2, &bool_data, "b");
 
     fn test_clone<
-        T: Copy + std::fmt::Debug + PartialEq + ArgumentReflection + ReturnTypeReflection,
+        't,
+        T: 't
+            + Copy
+            + std::fmt::Debug
+            + PartialEq
+            + ArgumentReflection
+            + ReturnTypeReflection
+            + Marshal<'t>,
     >(
-        s1: &mut StructRef,
-        s2: &StructRef,
+        s1: &mut StructRef<'t>,
+        s2: &StructRef<'t>,
         data: &TestData<T>,
         field_name: &str,
     ) {
@@ -466,11 +481,11 @@ fn marshal_struct() {
     assert!(bar_err.is_err());
 
     // Specify invalid return type
-    let bar_err: Result<i64, _> = invoke_fn!(driver.runtime_mut(), "baz_new", foo);
+    let bar_err: Result<i64, _> = invoke_fn!(runtime_ref, "baz_new", foo);
     assert!(bar_err.is_err());
 
     // Pass invalid struct type
-    let bar_err: Result<StructRef, _> = invoke_fn!(driver.runtime_mut(), "baz_new", bar);
+    let bar_err: Result<StructRef, _> = invoke_fn!(runtime_ref, "baz_new", bar);
     assert!(bar_err.is_err());
 }
 
@@ -568,9 +583,16 @@ fn test_primitive_types() {
     );
 
     fn test_field<
-        T: Copy + std::fmt::Debug + PartialEq + ArgumentReflection + ReturnTypeReflection,
+        't,
+        T: 't
+            + Copy
+            + std::fmt::Debug
+            + PartialEq
+            + ArgumentReflection
+            + ReturnTypeReflection
+            + Marshal<'t>,
     >(
-        s: &mut StructRef,
+        s: &mut StructRef<'t>,
         data: (T, T),
         field_name: &str,
     ) {
@@ -580,8 +602,11 @@ fn test_primitive_types() {
         assert_eq!(Ok(data.0), s.get::<T>(field_name));
     }
 
+    let runtime = driver.runtime();
+    let runtime_ref = runtime.borrow();
+
     let mut foo: StructRef = invoke_fn!(
-        driver.runtime_mut(),
+        runtime_ref,
         "new_primitives",
         1u8,
         2u16,
@@ -625,7 +650,11 @@ fn can_add_external_without_return() {
     "#,
     )
     .insert_fn("foo", foo as extern "C" fn(i32) -> ());
-    let _: () = invoke_fn!(driver.runtime_mut(), "main").unwrap();
+
+    let runtime = driver.runtime();
+    let runtime_ref = runtime.borrow();
+
+    let _: () = invoke_fn!(runtime_ref, "main").unwrap();
 }
 
 #[test]

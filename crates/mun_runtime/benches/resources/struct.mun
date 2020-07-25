@@ -1,0 +1,22 @@
+struct(gc) GcParent {
+    child: GcChild
+}
+
+struct(gc) ValueParent {
+    child: ValueChild
+}
+
+struct(gc) GcChild(f32, f32, f32, f32);
+struct(value) ValueChild(f32, f32, f32, f32);
+
+pub fn make_gc_parent() -> GcParent {
+    GcParent {
+        child: GcChild(-2.0, -1.0, 1.0, 2.0),
+    }
+}
+
+pub fn make_value_parent() -> ValueParent {
+    ValueParent {
+        child: ValueChild(-2.0, -1.0, 1.0, 2.0),
+    }
+}

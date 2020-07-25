@@ -1,4 +1,4 @@
-use mun_runtime::{invoke_fn, RetryResultExt, RuntimeBuilder};
+use mun_runtime::{invoke_fn, RuntimeBuilder};
 use std::{cell::RefCell, env, rc::Rc};
 
 fn main() {
@@ -9,9 +9,12 @@ fn main() {
         .expect("Failed to spawn Runtime");
 
     loop {
-        let arg: i64 = invoke_fn!(runtime, "arg").wait();
-        let result: i64 = invoke_fn!(runtime, "fibonacci", arg).wait();
-        println!("fibonacci({}) = {}", arg, result);
+        {
+            let runtime_ref = runtime.borrow();
+            let arg: i64 = invoke_fn!(runtime_ref, "arg").unwrap();
+            let result: i64 = invoke_fn!(runtime_ref, "fibonacci", arg).unwrap();
+            println!("fibonacci({}) = {}", arg, result);
+        }
         runtime.borrow_mut().update();
     }
 }

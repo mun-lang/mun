@@ -9,7 +9,8 @@ fn main() {
         .spawn()
         .expect("Failed to spawn Runtime");
 
-    let a: StructRef = invoke_fn!(runtime, "vector2_new", -1.0f32, 1.0f32).unwrap();
-    let b: StructRef = invoke_fn!(runtime, "vector2_new", 1.0f32, -1.0f32).unwrap();
-    let added: StructRef = invoke_fn!(runtime, "vector2_add", a, b).unwrap();
+    let runtime_ref = runtime.borrow();
+    let a: StructRef = invoke_fn!(runtime_ref, "vector2_new", -1.0f32, 1.0f32).unwrap();
+    let b: StructRef = invoke_fn!(runtime_ref, "vector2_new", 1.0f32, -1.0f32).unwrap();
+    let added: StructRef = invoke_fn!(runtime_ref, "vector2_add", a, b).unwrap();
 }
