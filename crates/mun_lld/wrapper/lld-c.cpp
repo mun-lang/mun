@@ -45,8 +45,8 @@ void mun_link_free_result(LldInvokeResult* result)
 }
 
 LldInvokeResult mun_lld_link(LldFlavor flavor, int argc, const char *const *argv) {
-  std::string errorString;
-  llvm::raw_string_ostream errorStream(errorString);
+  std::string outputString, errorString;
+  llvm::raw_string_ostream outputStream(outputString);
   std::vector<const char*> args(argv, argv + argc);
   LldInvokeResult result;
   switch(flavor)
@@ -55,33 +55,34 @@ LldInvokeResult mun_lld_link(LldFlavor flavor, int argc, const char *const *argv
     {
       args.insert(args.begin(), "lld");               // Issue #1: The first argument MUST be the executable name..
       std::unique_lock<std::mutex> lock(_elfMutex);   // Issue #2: The ELF driver is not thread safe..
-      result.success = lld::elf::link(args, false, errorStream);
+      result.success = lld::elf::link(args, false, outputStream);
       break;
     }
     case Wasm:
     {
       std::unique_lock<std::mutex> lock(_wasmMutex);
-      result.success = lld::wasm::link(args, false, errorStream);
+      result.success = lld::wasm::link(args, false, outputStream);
       break;
     }
     case MachO:
     {
       std::unique_lock <std::mutex> lock(_machOMutex);
-      result.success = lld::mach_o::link(args, false, errorStream);
+      result.success = lld::mach_o::link(args, false, outputStream);
       break;
     }
     case Coff:
     {
       args.insert(args.begin(), "lld.exe");           // Issue #1: The first argument MUST be the executable name..
       std::unique_lock<std::mutex> lock(_coffMutex);  // Issue #2: The COFF driver is not thread safe..
-      result.success = lld::coff::link(args, false, errorStream);
+      result.success = lld::coff::link(args, false, outputStream);
       break;
     }
     default:
       result.success = false;
       break;
   }
-  result.messages = mun_alloc_str(errorStream.str());
+  std::string resultMessage = outputStream.str();
+  result.messages = mun_alloc_str(resultMessage);
   return result;
 }
 

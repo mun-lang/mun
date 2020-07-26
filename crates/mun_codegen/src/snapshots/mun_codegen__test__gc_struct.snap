@@ -7,20 +7,20 @@ expression: "struct(gc) Foo { a: i32, b: i32 };\n\npub fn foo() {\n    let a = F
 source_filename = "main.mun"
 
 %DispatchTable = type { i8** (i8*, i8*)* }
-%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
+%"mun_codegen::ir::types::TypeInfo" = type { [16 x i8], i8*, i32, i8, i8 }
 %Foo = type { i32, i32 }
 
 @allocatorHandle = external global i8*
 @dispatchTable = external global %DispatchTable
-@global_type_table = external global [5 x %struct.MunTypeInfo*]
+@global_type_table = external global [5 x %"mun_codegen::ir::types::TypeInfo"*]
 
 define void @foo() {
 body:
   %b = alloca %Foo**
   %a = alloca %Foo**
   %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
-  %Foo_ptr = load %struct.MunTypeInfo*, %struct.MunTypeInfo** getelementptr inbounds ([5 x %struct.MunTypeInfo*], [5 x %struct.MunTypeInfo*]* @global_type_table, i32 0, i32 0)
-  %type_info_ptr_to_i8_ptr = bitcast %struct.MunTypeInfo* %Foo_ptr to i8*
+  %Foo_ptr = load %"mun_codegen::ir::types::TypeInfo"*, %"mun_codegen::ir::types::TypeInfo"** getelementptr inbounds ([5 x %"mun_codegen::ir::types::TypeInfo"*], [5 x %"mun_codegen::ir::types::TypeInfo"*]* @global_type_table, i64 0, i64 0)
+  %type_info_ptr_to_i8_ptr = bitcast %"mun_codegen::ir::types::TypeInfo"* %Foo_ptr to i8*
   %allocator_handle = load i8*, i8** @allocatorHandle
   %new = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
   %Foo_ptr_ptr = bitcast i8** %new to %Foo**
@@ -47,8 +47,8 @@ body:
 source_filename = "group_name"
 
 %DispatchTable = type { i8** (i8*, i8*)* }
-%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
-%struct.MunStructInfo = type { i8**, %struct.MunTypeInfo**, i16*, i16, i8 }
+%"mun_codegen::ir::types::TypeInfo" = type { [16 x i8], i8*, i32, i8, i8 }
+%"mun_codegen::ir::types::StructInfo" = type { i8**, %"mun_codegen::ir::types::TypeInfo"**, i16*, i16, i8 }
 
 @dispatchTable = global %DispatchTable zeroinitializer
 @"type_info::<Foo>::name" = private unnamed_addr constant [4 x i8] c"Foo\00"
@@ -56,16 +56,16 @@ source_filename = "group_name"
 @"struct_info::<Foo>::field_names.1" = private unnamed_addr constant [2 x i8] c"b\00"
 @"struct_info::<Foo>::field_names" = private unnamed_addr constant [2 x i8*] [i8* getelementptr inbounds ([2 x i8], [2 x i8]* @"struct_info::<Foo>::field_names.0", i32 0, i32 0), i8* getelementptr inbounds ([2 x i8], [2 x i8]* @"struct_info::<Foo>::field_names.1", i32 0, i32 0)]
 @"type_info::<core::i32>::name" = private unnamed_addr constant [10 x i8] c"core::i32\00"
-@"type_info::<core::i32>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\17yzt\19\D62\17\D25\95C\17\88[\FA", i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::i32>::name", i32 0, i32 0), i32 32, i8 4, i8 0 }
-@"struct_info::<Foo>::field_types" = private unnamed_addr constant [2 x %struct.MunTypeInfo*] [%struct.MunTypeInfo* @"type_info::<core::i32>", %struct.MunTypeInfo* @"type_info::<core::i32>"]
+@"type_info::<core::i32>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" { [16 x i8] c"\17yzt\19\D62\17\D25\95C\17\88[\FA", i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::i32>::name", i32 0, i32 0), i32 32, i8 4, i8 0 }
+@"struct_info::<Foo>::field_types" = private unnamed_addr constant [2 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::i32>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::i32>"]
 @"struct_info::<Foo>::field_offsets" = private unnamed_addr constant [2 x i16] [i16 0, i16 4]
-@"type_info::<Foo>" = private unnamed_addr constant { %struct.MunTypeInfo, %struct.MunStructInfo } { %struct.MunTypeInfo { [16 x i8] c"\03\FC\D1_\DB\DB\0AJ1r,\F0m\CBQ\D0", i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"type_info::<Foo>::name", i32 0, i32 0), i32 64, i8 4, i8 1 }, %struct.MunStructInfo { i8** getelementptr inbounds ([2 x i8*], [2 x i8*]* @"struct_info::<Foo>::field_names", i32 0, i32 0), %struct.MunTypeInfo** getelementptr inbounds ([2 x %struct.MunTypeInfo*], [2 x %struct.MunTypeInfo*]* @"struct_info::<Foo>::field_types", i32 0, i32 0), i16* getelementptr inbounds ([2 x i16], [2 x i16]* @"struct_info::<Foo>::field_offsets", i32 0, i32 0), i16 2, i8 0 } }
+@"type_info::<Foo>" = private unnamed_addr constant { %"mun_codegen::ir::types::TypeInfo", %"mun_codegen::ir::types::StructInfo" } { %"mun_codegen::ir::types::TypeInfo" { [16 x i8] c"\03\FC\D1_\DB\DB\0AJ1r,\F0m\CBQ\D0", i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"type_info::<Foo>::name", i32 0, i32 0), i32 64, i8 4, i8 1 }, %"mun_codegen::ir::types::StructInfo" { i8** getelementptr inbounds ([2 x i8*], [2 x i8*]* @"struct_info::<Foo>::field_names", i32 0, i32 0), %"mun_codegen::ir::types::TypeInfo"** getelementptr inbounds ([2 x %"mun_codegen::ir::types::TypeInfo"*], [2 x %"mun_codegen::ir::types::TypeInfo"*]* @"struct_info::<Foo>::field_types", i32 0, i32 0), i16* getelementptr inbounds ([2 x i16], [2 x i16]* @"struct_info::<Foo>::field_offsets", i32 0, i32 0), i16 2, i8 0 } }
 @"type_info::<*const TypeInfo>::name" = private unnamed_addr constant [16 x i8] c"*const TypeInfo\00"
-@"type_info::<*const TypeInfo>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"=\A1-\1F\C2\A7\88`d\90\F4\B5\BEE}x", i8* getelementptr inbounds ([16 x i8], [16 x i8]* @"type_info::<*const TypeInfo>::name", i32 0, i32 0), i32 64, i8 8, i8 0 }
+@"type_info::<*const TypeInfo>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" { [16 x i8] c"=\A1-\1F\C2\A7\88`d\90\F4\B5\BEE}x", i8* getelementptr inbounds ([16 x i8], [16 x i8]* @"type_info::<*const TypeInfo>::name", i32 0, i32 0), i32 64, i8 8, i8 0 }
 @"type_info::<*const *mut core::void>::name" = private unnamed_addr constant [23 x i8] c"*const *mut core::void\00"
-@"type_info::<*const *mut core::void>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\C5fO\BD\84\DF\06\BFd+\B1\9Abv\CE\00", i8* getelementptr inbounds ([23 x i8], [23 x i8]* @"type_info::<*const *mut core::void>::name", i32 0, i32 0), i32 64, i8 8, i8 0 }
+@"type_info::<*const *mut core::void>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" { [16 x i8] c"\C5fO\BD\84\DF\06\BFd+\B1\9Abv\CE\00", i8* getelementptr inbounds ([23 x i8], [23 x i8]* @"type_info::<*const *mut core::void>::name", i32 0, i32 0), i32 64, i8 8, i8 0 }
 @"type_info::<*mut core::void>::name" = private unnamed_addr constant [16 x i8] c"*mut core::void\00"
-@"type_info::<*mut core::void>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\F0Y\22\FC\95\9E\7F\CE\08T\B1\A2\CD\A7\FAz", i8* getelementptr inbounds ([16 x i8], [16 x i8]* @"type_info::<*mut core::void>::name", i32 0, i32 0), i32 64, i8 8, i8 0 }
-@global_type_table = constant [5 x %struct.MunTypeInfo*] [%struct.MunTypeInfo* getelementptr inbounds ({ %struct.MunTypeInfo, %struct.MunStructInfo }, { %struct.MunTypeInfo, %struct.MunStructInfo }* @"type_info::<Foo>", i32 0, i32 0), %struct.MunTypeInfo* @"type_info::<core::i32>", %struct.MunTypeInfo* @"type_info::<*const TypeInfo>", %struct.MunTypeInfo* @"type_info::<*const *mut core::void>", %struct.MunTypeInfo* @"type_info::<*mut core::void>"]
+@"type_info::<*mut core::void>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" { [16 x i8] c"\F0Y\22\FC\95\9E\7F\CE\08T\B1\A2\CD\A7\FAz", i8* getelementptr inbounds ([16 x i8], [16 x i8]* @"type_info::<*mut core::void>::name", i32 0, i32 0), i32 64, i8 8, i8 0 }
+@global_type_table = constant [5 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* getelementptr inbounds ({ %"mun_codegen::ir::types::TypeInfo", %"mun_codegen::ir::types::StructInfo" }, { %"mun_codegen::ir::types::TypeInfo", %"mun_codegen::ir::types::StructInfo" }* @"type_info::<Foo>", i32 0, i32 0), %"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::i32>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<*const TypeInfo>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<*const *mut core::void>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<*mut core::void>"]
 @allocatorHandle = unnamed_addr global i8* null
 

@@ -1,26 +1,34 @@
-use crate::intrinsics::{self, Intrinsic};
-use crate::ir::dispatch_table::FunctionPrototype;
-use crate::IrDatabase;
-use hir::{Body, Expr, ExprId, InferenceResult};
-use inkwell::types::FunctionType;
-use std::collections::BTreeMap;
-use std::sync::Arc;
+use crate::{
+    intrinsics::{self, Intrinsic},
+    ir::dispatch_table::FunctionPrototype,
+};
+use hir::{Body, Expr, ExprId, HirDatabase, InferenceResult};
+use inkwell::{context::Context, targets::TargetData, types::FunctionType};
+use std::{collections::BTreeMap, sync::Arc};
 
 // Use a `BTreeMap` to guarantee deterministically ordered output
-pub type IntrinsicsMap = BTreeMap<FunctionPrototype, FunctionType>;
+pub type IntrinsicsMap<'ink> = BTreeMap<FunctionPrototype, FunctionType<'ink>>;
 
-fn collect_intrinsic(d: &dyn IrDatabase, entries: &mut IntrinsicsMap, intrinsic: &impl Intrinsic) {
-    let context = d.context();
-    let target = d.target_data();
-    let prototype = intrinsic.prototype(context.as_ref(), target.as_ref());
+/// Stores the type information from the `intrinsic` in `entries`
+fn collect_intrinsic<'ink>(
+    context: &'ink Context,
+    target: &TargetData,
+    intrinsic: &impl Intrinsic,
+    entries: &mut IntrinsicsMap<'ink>,
+) {
+    let prototype = intrinsic.prototype(context, target);
     entries
         .entry(prototype)
-        .or_insert_with(|| intrinsic.ir_type(context.as_ref(), target.as_ref()));
+        .or_insert_with(|| intrinsic.ir_type(context, target));
 }
 
-fn collect_expr(
-    db: &dyn IrDatabase,
-    entries: &mut IntrinsicsMap,
+/// Iterates over all expressions and stores information on which intrinsics they use in `entries`.
+#[allow(clippy::too_many_arguments)]
+fn collect_expr<'db, 'ink>(
+    context: &'ink Context,
+    target: &TargetData,
+    db: &'db dyn HirDatabase,
+    intrinsics: &mut IntrinsicsMap<'ink>,
     needs_alloc: &mut bool,
     expr_id: ExprId,
     body: &Arc<Body>,
@@ -32,7 +40,7 @@ fn collect_expr(
     if let Expr::Call { callee, .. } = expr {
         match infer[*callee].as_callable_def() {
             Some(hir::CallableDef::Struct(_)) => {
-                collect_intrinsic(db, entries, &intrinsics::new);
+                collect_intrinsic(context, &target, &intrinsics::new, intrinsics);
                 // self.collect_intrinsic(module, entries, &intrinsics::drop);
                 *needs_alloc = true;
             }
@@ -42,45 +50,70 @@ fn collect_expr(
     }
 
     if let Expr::RecordLit { .. } = expr {
-        collect_intrinsic(db, entries, &intrinsics::new);
+        collect_intrinsic(context, &target, &intrinsics::new, intrinsics);
         // self.collect_intrinsic(module, entries, &intrinsics::drop);
         *needs_alloc = true;
     }
 
     if let Expr::Path(path) = expr {
-        let resolver = hir::resolver_for_expr(body.clone(), db.upcast(), expr_id);
+        let resolver = hir::resolver_for_expr(body.clone(), db, expr_id);
         let resolution = resolver
-            .resolve_path_without_assoc_items(db.upcast(), path)
+            .resolve_path_without_assoc_items(db, path)
             .take_values()
             .expect("unknown path");
 
         if let hir::Resolution::Def(hir::ModuleDef::Struct(_)) = resolution {
-            collect_intrinsic(db, entries, &intrinsics::new);
+            collect_intrinsic(context, &target, &intrinsics::new, intrinsics);
             // self.collect_intrinsic( module, entries, &intrinsics::drop);
             *needs_alloc = true;
         }
     }
 
     // Recurse further
-    expr.walk_child_exprs(|expr_id| collect_expr(db, entries, needs_alloc, expr_id, body, infer))
+    expr.walk_child_exprs(|expr_id| {
+        collect_expr(
+            context,
+            target,
+            db,
+            intrinsics,
+            needs_alloc,
+            expr_id,
+            body,
+            infer,
+        )
+    })
 }
 
-pub fn collect_fn_body(
-    db: &dyn IrDatabase,
-    entries: &mut IntrinsicsMap,
+/// Collects all intrinsics from the specified `body`.
+pub fn collect_fn_body<'db, 'ink>(
+    context: &'ink Context,
+    target: TargetData,
+    db: &'db dyn HirDatabase,
+    intrinsics: &mut IntrinsicsMap<'ink>,
     needs_alloc: &mut bool,
     body: &Arc<Body>,
     infer: &InferenceResult,
 ) {
-    collect_expr(db, entries, needs_alloc, body.body_expr(), body, infer);
+    collect_expr(
+        context,
+        &target,
+        db,
+        intrinsics,
+        needs_alloc,
+        body.body_expr(),
+        body,
+        infer,
+    );
 }
 
-pub fn collect_wrapper_body(
-    db: &dyn IrDatabase,
-    entries: &mut IntrinsicsMap,
+/// Collects all intrinsics from a function wrapper body.
+pub fn collect_wrapper_body<'ink>(
+    context: &'ink Context,
+    target: TargetData,
+    intrinsics: &mut IntrinsicsMap<'ink>,
     needs_alloc: &mut bool,
 ) {
-    collect_intrinsic(db, entries, &intrinsics::new);
+    collect_intrinsic(context, &target, &intrinsics::new, intrinsics);
     // self.collect_intrinsic(entries, &intrinsics::drop, module);
     *needs_alloc = true;
 }

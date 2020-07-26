@@ -7,28 +7,28 @@ macro_rules! tuple_impls {
     ( $( $name:ident )* ) => {
         /// Every tuple that contains values that can be converted to BasicValueEnum can be
         /// represented by a tuple
-        impl<$($name: AsValueInto<inkwell::values::BasicValueEnum>),*> ConcreteValueType for ($($name,)*) {
-            type Value = inkwell::values::StructValue;
+        impl<'ink, $($name: AsValueInto<'ink, inkwell::values::BasicValueEnum<'ink>>),*> ConcreteValueType<'ink> for ($($name,)*) {
+            type Value = inkwell::values::StructValue<'ink>;
         }
 
         /// Every tuple that contains values that can be converted to BasicValueEnum and which are
         /// sized, are also sized.
-        impl<$($name: AsValueInto<inkwell::values::BasicValueEnum> + SizedValueType),*> SizedValueType for ($($name,)*)
+        impl<'ink, $($name: AsValueInto<'ink, inkwell::values::BasicValueEnum<'ink>> + SizedValueType<'ink>),*> SizedValueType<'ink> for ($($name,)*)
         where
             $(
-                <<$name as ConcreteValueType>::Value as ValueType>::Type: Into<inkwell::types::BasicTypeEnum>
+                <<$name as ConcreteValueType<'ink>>::Value as ValueType<'ink>>::Type: Into<inkwell::types::BasicTypeEnum<'ink>>
             ,)*
         {
-            fn get_ir_type(context: &IrTypeContext) -> inkwell::types::StructType {
+            fn get_ir_type(context: &IrTypeContext<'ink, '_>) -> inkwell::types::StructType<'ink> {
                 context.context.struct_type(&[
                     $($name::get_ir_type(context).into(),)*
                 ], false)
             }
         }
 
-        impl<$($name: AsValueInto<inkwell::values::BasicValueEnum>),*> AsValue<($($name,)*)> for ($($name,)*) {
+        impl<'ink, $($name: AsValueInto<'ink, inkwell::values::BasicValueEnum<'ink>>),*> AsValue<'ink, ($($name,)*)> for ($($name,)*) {
             #[allow(unused_variables)]
-            fn as_value(&self, context: &IrValueContext) -> Value<Self> {
+            fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, Self> {
                 #[allow(non_snake_case)]
                 let ($($name,)*) = self;
                 Value::from_raw(

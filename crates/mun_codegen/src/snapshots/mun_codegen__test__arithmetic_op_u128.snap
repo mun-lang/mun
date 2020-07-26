@@ -6,9 +6,9 @@ expression: "pub fn add(a: u128, b: u128) -> u128 { a + b }\npub fn subtract(a: 
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
 
-%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
+%"mun_codegen::ir::types::TypeInfo" = type { [16 x i8], i8*, i32, i8, i8 }
 
-@global_type_table = external global [1 x %struct.MunTypeInfo*]
+@global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
 
 define i128 @add(i128, i128) {
 body:
@@ -45,9 +45,9 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
+%"mun_codegen::ir::types::TypeInfo" = type { [16 x i8], i8*, i32, i8, i8 }
 
 @"type_info::<core::u128>::name" = private unnamed_addr constant [11 x i8] c"core::u128\00"
-@"type_info::<core::u128>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\E67\1BU\E9k\95\93d\14}\1C\96S\95\F0", i8* getelementptr inbounds ([11 x i8], [11 x i8]* @"type_info::<core::u128>::name", i32 0, i32 0), i32 128, i8 8, i8 0 }
-@global_type_table = constant [1 x %struct.MunTypeInfo*] [%struct.MunTypeInfo* @"type_info::<core::u128>"]
+@"type_info::<core::u128>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" { [16 x i8] c"\E67\1BU\E9k\95\93d\14}\1C\96S\95\F0", i8* getelementptr inbounds ([11 x i8], [11 x i8]* @"type_info::<core::u128>::name", i32 0, i32 0), i32 128, i8 8, i8 0 }
+@global_type_table = constant [1 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::u128>"]
 

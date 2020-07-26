@@ -1,103 +1,95 @@
 use crate::value::{AsValue, IrValueContext, SizedValueType, TransparentValue, Value};
 use mun_codegen_macros::AsValue;
 
-impl TransparentValue for abi::Guid {
+impl<'ink> TransparentValue<'ink> for abi::Guid {
     type Target = [u8; 16];
 
-    fn as_target_value(&self, context: &IrValueContext) -> Value<Self::Target> {
+    fn as_target_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, Self::Target> {
         self.0.as_value(context)
     }
 }
 
-impl TransparentValue for abi::Privacy {
+impl<'ink> TransparentValue<'ink> for abi::Privacy {
     type Target = u8;
 
-    fn as_target_value(&self, context: &IrValueContext) -> Value<Self::Target> {
+    fn as_target_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, Self::Target> {
         (*self as u8).as_value(context)
     }
 }
 
-impl TransparentValue for abi::TypeGroup {
+impl<'ink> TransparentValue<'ink> for abi::TypeGroup {
     type Target = u8;
 
-    fn as_target_value(&self, context: &IrValueContext) -> Value<Self::Target> {
+    fn as_target_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, Self::Target> {
         (*self as u8).as_value(context)
     }
 }
 
-impl TransparentValue for abi::StructMemoryKind {
+impl<'ink> TransparentValue<'ink> for abi::StructMemoryKind {
     type Target = u8;
 
-    fn as_target_value(&self, context: &IrValueContext) -> Value<Self::Target> {
+    fn as_target_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, Self::Target> {
         (self.clone() as u8).as_value(context)
     }
 }
 
 #[derive(AsValue)]
-#[ir_name = "struct.MunTypeInfo"]
-pub struct TypeInfo {
+pub struct TypeInfo<'ink> {
     pub guid: abi::Guid,
-    pub name: Value<*const u8>,
+    pub name: Value<'ink, *const u8>,
     pub size_in_bits: u32,
     pub alignment: u8,
     pub group: abi::TypeGroup,
 }
 
 #[derive(AsValue)]
-#[ir_name = "struct.MunFunctionSignature"]
-pub struct FunctionSignature {
-    pub arg_types: Value<*const *const TypeInfo>,
-    pub return_type: Value<*const TypeInfo>,
+pub struct FunctionSignature<'ink> {
+    pub arg_types: Value<'ink, *const *const TypeInfo<'ink>>,
+    pub return_type: Value<'ink, *const TypeInfo<'ink>>,
     pub num_arg_types: u16,
 }
 
 #[derive(AsValue)]
-#[ir_name = "struct.MunFunctionPrototype"]
-pub struct FunctionPrototype {
-    pub name: Value<*const u8>,
-    pub signature: FunctionSignature,
+pub struct FunctionPrototype<'ink> {
+    pub name: Value<'ink, *const u8>,
+    pub signature: FunctionSignature<'ink>,
 }
 
 #[derive(AsValue)]
-#[ir_name = "struct.MunFunctionDefinition"]
-pub struct FunctionDefinition {
-    pub prototype: FunctionPrototype,
-    pub fn_ptr: Value<*const fn()>,
+pub struct FunctionDefinition<'ink> {
+    pub prototype: FunctionPrototype<'ink>,
+    pub fn_ptr: Value<'ink, *const fn()>,
 }
 
 #[derive(AsValue)]
-#[ir_name = "struct.MunStructInfo"]
-pub struct StructInfo {
-    pub field_names: Value<*const *const u8>,
-    pub field_types: Value<*const *const TypeInfo>,
-    pub field_offsets: Value<*const u16>,
+pub struct StructInfo<'ink> {
+    pub field_names: Value<'ink, *const *const u8>,
+    pub field_types: Value<'ink, *const *const TypeInfo<'ink>>,
+    pub field_offsets: Value<'ink, *const u16>,
     pub num_fields: u16,
     pub memory_kind: abi::StructMemoryKind,
 }
 
 #[derive(AsValue)]
-#[ir_name = "struct.MunModuleInfo"]
-pub struct ModuleInfo {
-    pub path: Value<*const u8>,
-    pub functions: Value<*const FunctionDefinition>,
-    pub types: Value<*const *const TypeInfo>,
+pub struct ModuleInfo<'ink> {
+    pub path: Value<'ink, *const u8>,
+    pub functions: Value<'ink, *const FunctionDefinition<'ink>>,
+    pub types: Value<'ink, *const *const TypeInfo<'ink>>,
     pub num_functions: u32,
     pub num_types: u32,
 }
 
 #[derive(AsValue)]
-#[ir_name = "struct.MunDispatchTable"]
-pub struct DispatchTable {
-    pub prototypes: Value<*const FunctionPrototype>,
-    pub fn_ptrs: Value<*mut *const fn()>,
+pub struct DispatchTable<'ink> {
+    pub prototypes: Value<'ink, *const FunctionPrototype<'ink>>,
+    pub fn_ptrs: Value<'ink, *mut *const fn()>,
     pub num_entries: u32,
 }
 
 #[derive(AsValue)]
-#[ir_name = "struct.MunAssemblyInfo"]
-pub struct AssemblyInfo {
-    pub symbols: ModuleInfo,
-    pub dispatch_table: DispatchTable,
-    pub dependencies: Value<*const *const u8>,
+pub struct AssemblyInfo<'ink> {
+    pub symbols: ModuleInfo<'ink>,
+    pub dispatch_table: DispatchTable<'ink>,
+    pub dependencies: Value<'ink, *const *const u8>,
     pub num_dependencies: u32,
 }

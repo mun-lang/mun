@@ -1,81 +1,81 @@
-use crate::intrinsics;
 use crate::{
-    ir::{dispatch_table::DispatchTable, try_convert_any_to_basic, type_table::TypeTable},
-    CodeGenParams, IrDatabase,
+    intrinsics,
+    ir::ty::HirTypeCache,
+    ir::types as ir,
+    ir::{dispatch_table::DispatchTable, type_table::TypeTable},
+    value::Global,
 };
 use hir::{
-    ArenaId, ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDisplay, InferenceResult, Literal,
-    LogicOp, Name, Ordering, Pat, PatId, Path, Resolution, Resolver, Statement, TypeCtor, UnaryOp,
+    ArenaId, ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDatabase, HirDisplay,
+    InferenceResult, Literal, LogicOp, Name, Ordering, Pat, PatId, Path, Resolution,
+    ResolveBitness, Resolver, Statement, TypeCtor, UnaryOp,
 };
 use inkwell::{
+    basic_block::BasicBlock,
     builder::Builder,
+    context::Context,
+    values::{AggregateValueEnum, GlobalValue, PointerValue},
     values::{BasicValueEnum, CallSiteValue, FloatValue, FunctionValue, IntValue, StructValue},
     AddressSpace, FloatPredicate, IntPredicate,
 };
 use std::{collections::HashMap, sync::Arc};
 
-use crate::ir::types as ir;
-use crate::value::Global;
-use hir::ResolveBitness;
-use inkwell::basic_block::BasicBlock;
-use inkwell::values::{AggregateValueEnum, GlobalValue, PointerValue};
-
-struct LoopInfo {
-    break_values: Vec<(
-        inkwell::values::BasicValueEnum,
-        inkwell::basic_block::BasicBlock,
-    )>,
-    exit_block: BasicBlock,
+struct LoopInfo<'ink> {
+    break_values: Vec<(BasicValueEnum<'ink>, BasicBlock<'ink>)>,
+    exit_block: BasicBlock<'ink>,
 }
 
 #[derive(Clone)]
-pub(crate) struct ExternalGlobals {
-    pub alloc_handle: Option<GlobalValue>,
-    pub dispatch_table: Option<GlobalValue>,
-    pub type_table: Option<Global<[*const ir::TypeInfo]>>,
+pub(crate) struct ExternalGlobals<'ink> {
+    pub alloc_handle: Option<GlobalValue<'ink>>,
+    pub dispatch_table: Option<GlobalValue<'ink>>,
+    pub type_table: Option<Global<'ink, [*const ir::TypeInfo<'ink>]>>,
 }
 
-pub(crate) struct BodyIrGenerator<'a, 'b> {
-    db: &'a dyn IrDatabase,
+pub(crate) struct BodyIrGenerator<'db, 'ink, 't> {
+    context: &'ink Context,
+    db: &'db dyn HirDatabase,
     body: Arc<Body>,
     infer: Arc<InferenceResult>,
-    builder: Builder,
-    fn_value: FunctionValue,
-    pat_to_param: HashMap<PatId, inkwell::values::BasicValueEnum>,
-    pat_to_local: HashMap<PatId, inkwell::values::PointerValue>,
+    builder: Builder<'ink>,
+    fn_value: FunctionValue<'ink>,
+    pat_to_param: HashMap<PatId, inkwell::values::BasicValueEnum<'ink>>,
+    pat_to_local: HashMap<PatId, inkwell::values::PointerValue<'ink>>,
     pat_to_name: HashMap<PatId, String>,
-    function_map: &'a HashMap<hir::Function, FunctionValue>,
-    dispatch_table: &'b DispatchTable,
-    type_table: &'b TypeTable,
-    active_loop: Option<LoopInfo>,
+    function_map: &'t HashMap<hir::Function, FunctionValue<'ink>>,
+    dispatch_table: &'t DispatchTable<'ink>,
+    type_table: &'t TypeTable<'ink>,
+    hir_types: &'t HirTypeCache<'db, 'ink>,
+    active_loop: Option<LoopInfo<'ink>>,
     hir_function: hir::Function,
-    params: CodeGenParams,
-    external_globals: ExternalGlobals,
+    external_globals: ExternalGlobals<'ink>,
 }
 
-impl<'a, 'b> BodyIrGenerator<'a, 'b> {
+impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
-        db: &'a dyn IrDatabase,
-        function: (hir::Function, FunctionValue),
-        function_map: &'a HashMap<hir::Function, FunctionValue>,
-        dispatch_table: &'b DispatchTable,
-        type_table: &'b TypeTable,
-        params: CodeGenParams,
-        external_globals: ExternalGlobals,
+        context: &'ink Context,
+        db: &'db dyn HirDatabase,
+        function: (hir::Function, FunctionValue<'ink>),
+        function_map: &'t HashMap<hir::Function, FunctionValue<'ink>>,
+        dispatch_table: &'t DispatchTable<'ink>,
+        type_table: &'t TypeTable<'ink>,
+        external_globals: ExternalGlobals<'ink>,
+        hir_types: &'t HirTypeCache<'db, 'ink>,
     ) -> Self {
         let (hir_function, ir_function) = function;
 
         // Get the type information from the `hir::Function`
-        let body = hir_function.body(db.upcast());
-        let infer = hir_function.infer(db.upcast());
+        let body = hir_function.body(db);
+        let infer = hir_function.infer(db);
 
         // Construct a builder for the IR function
-        let context = db.context();
         let builder = context.create_builder();
-        let body_ir = context.append_basic_block(&ir_function, "body");
-        builder.position_at_end(&body_ir);
+        let body_ir = context.append_basic_block(ir_function, "body");
+        builder.position_at_end(body_ir);
 
         BodyIrGenerator {
+            context,
             db,
             body,
             infer,
@@ -89,8 +89,8 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
             type_table,
             active_loop: None,
             hir_function,
-            params,
             external_globals,
+            hir_types,
         }
     }
 
@@ -132,8 +132,8 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         let block_ret_type = &self.infer[self.body.body_expr()];
         let fn_ret_type = self
             .hir_function
-            .ty(self.db.upcast())
-            .callable_sig(self.db.upcast())
+            .ty(self.db)
+            .callable_sig(self.db)
             .unwrap()
             .ret()
             .clone();
@@ -147,11 +147,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
     }
 
     pub fn gen_fn_wrapper(&mut self) {
-        let fn_sig = self
-            .hir_function
-            .ty(self.db.upcast())
-            .callable_sig(self.db.upcast())
-            .unwrap();
+        let fn_sig = self.hir_function.ty(self.db).callable_sig(self.db).unwrap();
         let args: Vec<BasicValueEnum> = fn_sig
             .params()
             .iter()
@@ -171,7 +167,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
             .collect();
 
         let ret_value = self
-            .gen_call(self.hir_function, &args)
+            .gen_call(self.hir_function, &args, false)
             .try_as_basic_value()
             .left();
 
@@ -179,8 +175,8 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         if !call_return_type.is_never() {
             let fn_ret_type = self
                 .hir_function
-                .ty(self.db.upcast())
-                .callable_sig(self.db.upcast())
+                .ty(self.db)
+                .callable_sig(self.db)
                 .unwrap()
                 .ret()
                 .clone();
@@ -205,7 +201,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
 
     /// Generates IR for the specified expression. Dependending on the type of expression an IR
     /// value is returned.
-    fn gen_expr(&mut self, expr: ExprId) -> Option<inkwell::values::BasicValueEnum> {
+    fn gen_expr(&mut self, expr: ExprId) -> Option<inkwell::values::BasicValueEnum<'ink>> {
         let body = self.body.clone();
         match &body[expr] {
             Expr::Block {
@@ -213,7 +209,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
                 tail,
             } => self.gen_block(expr, statements, *tail),
             Expr::Path(ref p) => {
-                let resolver = hir::resolver_for_expr(self.body.clone(), self.db.upcast(), expr);
+                let resolver = hir::resolver_for_expr(self.body.clone(), self.db, expr);
                 Some(self.gen_path_expr(p, expr, &resolver))
             }
             Expr::Literal(lit) => Some(self.gen_literal(lit, expr)),
@@ -235,7 +231,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
                             .map(|expr| self.gen_expr(*expr).expect("expected a value"))
                             .collect();
 
-                        self.gen_call(def, &args)
+                        self.gen_call(def, &args, true)
                             .try_as_basic_value()
                             .left()
                             // If the called function is a void function it doesn't return anything.
@@ -247,7 +243,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
                             // This unit value will also be optimized out.
                             .or_else(|| match self.infer[expr] {
                                 hir::ty_app!(hir::TypeCtor::Never) => None,
-                                _ => Some(self.db.context().const_struct(&[], false).into()),
+                                _ => Some(self.context.const_struct(&[], false).into()),
                             })
                     }
                     Some(hir::CallableDef::Struct(_)) => Some(self.gen_named_tuple_lit(expr, args)),
@@ -272,7 +268,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
     }
 
     /// Generates an IR value that represents the given `Literal`.
-    fn gen_literal(&mut self, lit: &Literal, expr: ExprId) -> BasicValueEnum {
+    fn gen_literal(&mut self, lit: &Literal, expr: ExprId) -> BasicValueEnum<'ink> {
         match lit {
             Literal::Int(v) => {
                 let ty = match &self.infer[expr] {
@@ -285,7 +281,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
                     ),
                 };
 
-                let context = self.db.context();
+                let context = self.context;
                 let ir_ty = match ty.resolve(&self.db.target_data_layout()).bitness {
                     hir::IntBitness::X8 => context.i8_type().const_int(v.value as u64, false),
                     hir::IntBitness::X16 => context.i16_type().const_int(v.value as u64, false),
@@ -311,7 +307,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
                     _ => unreachable!("cannot construct an IR value for anything but a float type"),
                 };
 
-                let context = self.db.context();
+                let context = self.context;
                 let ir_ty = match ty.bitness.resolve(&self.db.target_data_layout()) {
                     hir::FloatBitness::X32 => context.f32_type().const_float(v.value),
                     hir::FloatBitness::X64 => context.f64_type().const_float(v.value),
@@ -321,7 +317,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
             }
 
             Literal::Bool(value) => {
-                let ty = self.db.context().bool_type();
+                let ty = self.context.bool_type();
                 if *value {
                     ty.const_all_ones().into()
                 } else {
@@ -334,18 +330,18 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
     }
 
     /// Constructs an empty struct value e.g. `{}`
-    fn gen_empty(&mut self) -> BasicValueEnum {
-        self.db.context().const_struct(&[], false).into()
+    fn gen_empty(&mut self) -> BasicValueEnum<'ink> {
+        self.context.const_struct(&[], false).into()
     }
 
     /// Allocate a struct literal either on the stack or the heap based on the type of the struct.
     fn gen_struct_alloc(
         &mut self,
         hir_struct: hir::Struct,
-        args: Vec<BasicValueEnum>,
-    ) -> BasicValueEnum {
+        args: Vec<BasicValueEnum<'ink>>,
+    ) -> BasicValueEnum<'ink> {
         // Construct the struct literal
-        let struct_ty = self.db.struct_ty(hir_struct);
+        let struct_ty = self.hir_types.get_struct_type(hir_struct);
         let mut value: AggregateValueEnum = struct_ty.get_undef().into();
         for (i, arg) in args.into_iter().enumerate() {
             value = self
@@ -368,8 +364,8 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         &mut self,
         hir_struct: hir::Struct,
         struct_lit: StructValue,
-    ) -> BasicValueEnum {
-        let struct_ir_ty = self.db.struct_ty(hir_struct);
+    ) -> BasicValueEnum<'ink> {
+        let struct_ir_ty = self.hir_types.get_struct_type(hir_struct);
         let new_fn_ptr = self.dispatch_table.gen_intrinsic_lookup(
             self.external_globals.dispatch_table,
             &self.builder,
@@ -377,15 +373,16 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         );
 
         let type_info_ptr = self.type_table.gen_type_info_lookup(
+            self.context,
             &self.builder,
-            &self.db.type_info(hir_struct.ty(self.db.upcast())),
+            &self.hir_types.type_info(&hir_struct.ty(self.db)),
             self.external_globals.type_table,
         );
 
         // HACK: We should be able to use pointers for built-in struct types like `TypeInfo` in intrinsics
         let type_info_ptr = self.builder.build_bitcast(
             type_info_ptr,
-            self.db.context().i8_type().ptr_type(AddressSpace::Generic),
+            self.context.i8_type().ptr_type(AddressSpace::Generic),
             "type_info_ptr_to_i8_ptr",
         );
 
@@ -439,7 +436,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         &mut self,
         type_expr: ExprId,
         fields: &[hir::RecordLitField],
-    ) -> BasicValueEnum {
+    ) -> BasicValueEnum<'ink> {
         let struct_ty = self.infer[type_expr].clone();
         let hir_struct = struct_ty.as_struct().unwrap(); // Can only really get here if the type is a struct
         let fields: Vec<BasicValueEnum> = fields
@@ -451,7 +448,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
     }
 
     /// Generates IR for a named tuple literal, e.g. `Foo(1.23, 4)`
-    fn gen_named_tuple_lit(&mut self, type_expr: ExprId, args: &[ExprId]) -> BasicValueEnum {
+    fn gen_named_tuple_lit(&mut self, type_expr: ExprId, args: &[ExprId]) -> BasicValueEnum<'ink> {
         let struct_ty = self.infer[type_expr].clone();
         let hir_struct = struct_ty.as_struct().unwrap(); // Can only really get here if the type is a struct
         let args: Vec<BasicValueEnum> = args
@@ -463,7 +460,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
     }
 
     /// Generates IR for a unit struct literal, e.g `Foo`
-    fn gen_unit_struct_lit(&mut self, type_expr: ExprId) -> BasicValueEnum {
+    fn gen_unit_struct_lit(&mut self, type_expr: ExprId) -> BasicValueEnum<'ink> {
         let struct_ty = self.infer[type_expr].clone();
         let hir_struct = struct_ty.as_struct().unwrap(); // Can only really get here if the type is a struct
         self.gen_struct_alloc(hir_struct, Vec::new())
@@ -475,7 +472,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         _tgt_expr: ExprId,
         statements: &[Statement],
         tail: Option<ExprId>,
-    ) -> Option<BasicValueEnum> {
+    ) -> Option<BasicValueEnum<'ink>> {
         for statement in statements.iter() {
             match statement {
                 Statement::Let {
@@ -499,8 +496,8 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
 
     /// Constructs a builder that should be used to emit an `alloca` instruction. These instructions
     /// should be at the start of the IR.
-    fn new_alloca_builder(&self) -> Builder {
-        let temp_builder = Builder::create();
+    fn new_alloca_builder(&self) -> Builder<'ink> {
+        let temp_builder = self.context.create_builder();
         let block = self
             .fn_value
             .get_first_basic_block()
@@ -508,7 +505,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         if let Some(first_instruction) = block.get_first_instruction() {
             temp_builder.position_before(&first_instruction);
         } else {
-            temp_builder.position_at_end(&block);
+            temp_builder.position_at_end(block);
         }
         temp_builder
     }
@@ -521,13 +518,10 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
             Pat::Bind { name } => {
                 let builder = self.new_alloca_builder();
                 let pat_ty = self.infer[pat].clone();
-                let ty = try_convert_any_to_basic(self.db.type_ir(
-                    pat_ty.clone(),
-                    CodeGenParams {
-                        make_marshallable: false,
-                    },
-                ))
-                .expect("expected basic type");
+                let ty = self
+                    .hir_types
+                    .get_basic_type(&pat_ty)
+                    .expect("expected basic type");
                 let ptr = builder.build_alloca(ty, &name.to_string());
                 self.pat_to_local.insert(pat, ptr);
                 self.pat_to_name.insert(pat, name.to_string());
@@ -548,9 +542,9 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         path: &Path,
         expr: ExprId,
         resolver: &Resolver,
-    ) -> inkwell::values::BasicValueEnum {
+    ) -> inkwell::values::BasicValueEnum<'ink> {
         let resolution = resolver
-            .resolve_path_without_assoc_items(self.db.upcast(), path)
+            .resolve_path_without_assoc_items(self.db, path)
             .take_values()
             .expect("unknown path");
 
@@ -572,7 +566,11 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
 
     /// Given an expression and its value optionally dereference the value to get to the actual
     /// value. This is useful if we need to do an indirection to get to the actual value.
-    fn opt_deref_value(&mut self, expr: ExprId, value: BasicValueEnum) -> BasicValueEnum {
+    fn opt_deref_value(
+        &mut self,
+        expr: ExprId,
+        value: BasicValueEnum<'ink>,
+    ) -> BasicValueEnum<'ink> {
         let ty = &self.infer[expr];
         if let hir::Ty::Apply(hir::ApplicationTy {
             ctor: hir::TypeCtor::Struct(s),
@@ -592,9 +590,9 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         path: &Path,
         _expr: ExprId,
         resolver: &Resolver,
-    ) -> inkwell::values::PointerValue {
+    ) -> inkwell::values::PointerValue<'ink> {
         let resolution = resolver
-            .resolve_path_without_assoc_items(self.db.upcast(), path)
+            .resolve_path_without_assoc_items(self.db, path)
             .take_values()
             .expect("unknown path");
 
@@ -614,7 +612,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         lhs: ExprId,
         rhs: ExprId,
         op: BinaryOp,
-    ) -> Option<BasicValueEnum> {
+    ) -> Option<BasicValueEnum<'ink>> {
         let lhs_type = self.infer[lhs].clone();
         match lhs_type.as_simple() {
             Some(TypeCtor::Bool) => self.gen_binary_op_bool(lhs, rhs, op),
@@ -631,29 +629,26 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
                 let rhs_type = self.infer[rhs].clone();
                 unimplemented!(
                     "unimplemented operation {0}op{1}",
-                    lhs_type.display(self.db.upcast()),
-                    rhs_type.display(self.db.upcast())
+                    lhs_type.display(self.db),
+                    rhs_type.display(self.db)
                 )
             }
         }
     }
 
     /// Generates IR to calculate a unary operation on an expression.
-    fn gen_unary_op(&mut self, expr: ExprId, op: UnaryOp) -> Option<BasicValueEnum> {
+    fn gen_unary_op(&mut self, expr: ExprId, op: UnaryOp) -> Option<BasicValueEnum<'ink>> {
         let ty = self.infer[expr].clone();
         match ty.as_simple() {
             Some(TypeCtor::Float(_ty)) => self.gen_unary_op_float(expr, op),
             Some(TypeCtor::Int(ty)) => self.gen_unary_op_int(expr, op, ty.signedness),
             Some(TypeCtor::Bool) => self.gen_unary_op_bool(expr, op),
-            _ => unimplemented!(
-                "unimplemented operation op{0}",
-                ty.display(self.db.upcast())
-            ),
+            _ => unimplemented!("unimplemented operation op{0}", ty.display(self.db)),
         }
     }
 
     /// Generates IR to calculate a unary operation on a floating point value.
-    fn gen_unary_op_float(&mut self, expr: ExprId, op: UnaryOp) -> Option<BasicValueEnum> {
+    fn gen_unary_op_float(&mut self, expr: ExprId, op: UnaryOp) -> Option<BasicValueEnum<'ink>> {
         let value: FloatValue = self
             .gen_expr(expr)
             .map(|value| self.opt_deref_value(expr, value))
@@ -671,7 +666,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         expr: ExprId,
         op: UnaryOp,
         signedness: hir::Signedness,
-    ) -> Option<BasicValueEnum> {
+    ) -> Option<BasicValueEnum<'ink>> {
         let value: IntValue = self
             .gen_expr(expr)
             .map(|value| self.opt_deref_value(expr, value))
@@ -691,7 +686,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
     }
 
     /// Generates IR to calculate a unary operation on a boolean value.
-    fn gen_unary_op_bool(&mut self, expr: ExprId, op: UnaryOp) -> Option<BasicValueEnum> {
+    fn gen_unary_op_bool(&mut self, expr: ExprId, op: UnaryOp) -> Option<BasicValueEnum<'ink>> {
         let value: IntValue = self
             .gen_expr(expr)
             .map(|value| self.opt_deref_value(expr, value))
@@ -709,7 +704,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         lhs_expr: ExprId,
         rhs_expr: ExprId,
         op: BinaryOp,
-    ) -> Option<BasicValueEnum> {
+    ) -> Option<BasicValueEnum<'ink>> {
         let lhs: IntValue = self
             .gen_expr(lhs_expr)
             .map(|value| self.opt_deref_value(lhs_expr, value))
@@ -745,7 +740,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         lhs_expr: ExprId,
         rhs_expr: ExprId,
         op: BinaryOp,
-    ) -> Option<BasicValueEnum> {
+    ) -> Option<BasicValueEnum<'ink>> {
         let lhs = self
             .gen_expr(lhs_expr)
             .map(|value| self.opt_deref_value(lhs_expr, value))
@@ -805,7 +800,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         rhs_expr: ExprId,
         op: BinaryOp,
         signedness: hir::Signedness,
-    ) -> Option<BasicValueEnum> {
+    ) -> Option<BasicValueEnum<'ink>> {
         let lhs = self
             .gen_expr(lhs_expr)
             .map(|value| self.opt_deref_value(lhs_expr, value))
@@ -841,7 +836,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         lhs_expr: ExprId,
         rhs_expr: ExprId,
         op: BinaryOp,
-    ) -> Option<BasicValueEnum> {
+    ) -> Option<BasicValueEnum<'ink>> {
         let rhs = self
             .gen_expr(rhs_expr)
             .expect("no rhs value")
@@ -870,7 +865,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         lhs_expr: ExprId,
         rhs_expr: ExprId,
         op: BinaryOp,
-    ) -> Option<BasicValueEnum> {
+    ) -> Option<BasicValueEnum<'ink>> {
         let rhs = self
             .gen_expr(rhs_expr)
             .expect("no rhs value")
@@ -892,7 +887,12 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         }
     }
 
-    fn gen_arith_bin_op_bool(&mut self, lhs: IntValue, rhs: IntValue, op: ArithOp) -> IntValue {
+    fn gen_arith_bin_op_bool(
+        &mut self,
+        lhs: IntValue<'ink>,
+        rhs: IntValue<'ink>,
+        op: ArithOp,
+    ) -> IntValue<'ink> {
         match op {
             ArithOp::BitAnd => self.builder.build_and(lhs, rhs, "bit_and"),
             ArithOp::BitOr => self.builder.build_or(lhs, rhs, "bit_or"),
@@ -906,11 +906,11 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
 
     fn gen_cmp_bin_op_int(
         &mut self,
-        lhs: IntValue,
-        rhs: IntValue,
+        lhs: IntValue<'ink>,
+        rhs: IntValue<'ink>,
         op: CmpOp,
         signedness: hir::Signedness,
-    ) -> IntValue {
+    ) -> IntValue<'ink> {
         let (name, predicate) = match op {
             CmpOp::Eq { negated: false } => ("eq", IntPredicate::EQ),
             CmpOp::Eq { negated: true } => ("neq", IntPredicate::NE),
@@ -961,11 +961,11 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
 
     fn gen_arith_bin_op_int(
         &mut self,
-        lhs: IntValue,
-        rhs: IntValue,
+        lhs: IntValue<'ink>,
+        rhs: IntValue<'ink>,
         op: ArithOp,
         signedness: hir::Signedness,
-    ) -> IntValue {
+    ) -> IntValue<'ink> {
         match op {
             ArithOp::Add => self.builder.build_int_add(lhs, rhs, "add"),
             ArithOp::Subtract => self.builder.build_int_sub(lhs, rhs, "sub"),
@@ -991,10 +991,10 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
 
     fn gen_arith_bin_op_float(
         &mut self,
-        lhs: FloatValue,
-        rhs: FloatValue,
+        lhs: FloatValue<'ink>,
+        rhs: FloatValue<'ink>,
         op: ArithOp,
-    ) -> FloatValue {
+    ) -> FloatValue<'ink> {
         match op {
             ArithOp::Add => self.builder.build_float_add(lhs, rhs, "add"),
             ArithOp::Subtract => self.builder.build_float_sub(lhs, rhs, "sub"),
@@ -1011,7 +1011,12 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         }
     }
 
-    fn gen_logic_bin_op(&mut self, lhs: IntValue, rhs: IntValue, op: LogicOp) -> IntValue {
+    fn gen_logic_bin_op(
+        &mut self,
+        lhs: IntValue<'ink>,
+        rhs: IntValue<'ink>,
+        op: LogicOp,
+    ) -> IntValue<'ink> {
         match op {
             LogicOp::And => self.builder.build_and(lhs, rhs, "and"),
             LogicOp::Or => self.builder.build_or(lhs, rhs, "or"),
@@ -1020,11 +1025,11 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
 
     /// Given an expression generate code that results in a memory address that can be used for
     /// other place operations.
-    fn gen_place_expr(&mut self, expr: ExprId) -> PointerValue {
+    fn gen_place_expr(&mut self, expr: ExprId) -> PointerValue<'ink> {
         let body = self.body.clone();
         match &body[expr] {
             Expr::Path(ref p) => {
-                let resolver = hir::resolver_for_expr(self.body.clone(), self.db.upcast(), expr);
+                let resolver = hir::resolver_for_expr(self.body.clone(), self.db, expr);
                 self.gen_path_place_expr(p, expr, &resolver)
             }
             Expr::Field {
@@ -1046,37 +1051,42 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         }
     }
 
-    fn should_use_dispatch_table(&self) -> bool {
-        // FIXME: When we use the dispatch table, generated wrappers have infinite recursion
-        !self.params.make_marshallable
+    /// Returns true if a call to the specified function should be looked up in the dispatch table;
+    /// if false is returned the function should be called directly.
+    fn should_use_dispatch_table(&self, _function: hir::Function) -> bool {
+        // TODO: add logic to determine when to use the dispatch table (dont use it in release for
+        //  example)
+        true
     }
 
     /// Generates IR for a function call.
-    fn gen_call(&mut self, function: hir::Function, args: &[BasicValueEnum]) -> CallSiteValue {
-        if self.dispatch_table.contains(function) && self.should_use_dispatch_table() {
+    fn gen_call(
+        &mut self,
+        function: hir::Function,
+        args: &[BasicValueEnum<'ink>],
+        allow_dispatch_table: bool,
+    ) -> CallSiteValue<'ink> {
+        if self.dispatch_table.contains(function)
+            && allow_dispatch_table
+            && self.should_use_dispatch_table(function)
+        {
             let ptr_value = self.dispatch_table.gen_function_lookup(
                 self.db,
                 self.external_globals.dispatch_table,
                 &self.builder,
                 function,
             );
-            self.builder.build_call(
-                ptr_value,
-                &args,
-                &function.name(self.db.upcast()).to_string(),
-            )
+            self.builder
+                .build_call(ptr_value, &args, &function.name(self.db).to_string())
         } else {
             let llvm_function = self.function_map.get(&function).unwrap_or_else(|| {
                 panic!(
                     "missing function value for hir function: '{}'",
-                    function.name(self.db.upcast()),
+                    function.name(self.db),
                 )
             });
-            self.builder.build_call(
-                *llvm_function,
-                &args,
-                &function.name(self.db.upcast()).to_string(),
-            )
+            self.builder
+                .build_call(*llvm_function, &args, &function.name(self.db).to_string())
         }
     }
 
@@ -1087,7 +1097,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         condition: ExprId,
         then_branch: ExprId,
         else_branch: Option<ExprId>,
-    ) -> Option<inkwell::values::BasicValueEnum> {
+    ) -> Option<inkwell::values::BasicValueEnum<'ink>> {
         // Generate IR for the condition
         let condition_ir = self
             .gen_expr(condition)
@@ -1095,42 +1105,38 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
             .into_int_value();
 
         // Generate the code blocks to branch to
-        let context = self.db.context();
-        let mut then_block = context.append_basic_block(&self.fn_value, "then");
+        let mut then_block = self.context.append_basic_block(self.fn_value, "then");
         let else_block_and_expr = match &else_branch {
             Some(else_branch) => Some((
-                context.append_basic_block(&self.fn_value, "else"),
+                self.context.append_basic_block(self.fn_value, "else"),
                 else_branch,
             )),
             None => None,
         };
-        let merge_block = context.append_basic_block(&self.fn_value, "if_merge");
+        let merge_block = self.context.append_basic_block(self.fn_value, "if_merge");
 
         // Build the actual branching IR for the if statement
-        let else_block = else_block_and_expr
-            .as_ref()
-            .map(|e| &e.0)
-            .unwrap_or(&merge_block);
+        let else_block = else_block_and_expr.map(|e| e.0).unwrap_or(merge_block);
         self.builder
-            .build_conditional_branch(condition_ir, &then_block, else_block);
+            .build_conditional_branch(condition_ir, then_block, else_block);
 
         // Fill the then block
-        self.builder.position_at_end(&then_block);
+        self.builder.position_at_end(then_block);
         let then_block_ir = self.gen_expr(then_branch);
         if !self.infer[then_branch].is_never() {
-            self.builder.build_unconditional_branch(&merge_block);
+            self.builder.build_unconditional_branch(merge_block);
         }
         then_block = self.builder.get_insert_block().unwrap();
 
         // Fill the else block, if it exists and get the result back
         let else_ir_and_block = if let Some((else_block, else_branch)) = else_block_and_expr {
             else_block
-                .move_after(&then_block)
+                .move_after(then_block)
                 .expect("programmer error, then_block is invalid");
-            self.builder.position_at_end(&else_block);
+            self.builder.position_at_end(else_block);
             let result_ir = self.gen_expr(*else_branch);
             if !self.infer[*else_branch].is_never() {
-                self.builder.build_unconditional_branch(&merge_block);
+                self.builder.build_unconditional_branch(merge_block);
             }
             Some((result_ir, self.builder.get_insert_block().unwrap()))
         } else {
@@ -1139,14 +1145,14 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
 
         // Create merge block
         let current_block = self.builder.get_insert_block().unwrap();
-        merge_block.move_after(&current_block).unwrap();
-        self.builder.position_at_end(&merge_block);
+        merge_block.move_after(current_block).unwrap();
+        self.builder.position_at_end(merge_block);
 
         // Construct phi block if a value was returned
         if let Some(then_block_ir) = then_block_ir {
             if let Some((Some(else_block_ir), else_block)) = else_ir_and_block {
                 let phi = self.builder.build_phi(then_block_ir.get_type(), "iftmp");
-                phi.add_incoming(&[(&then_block_ir, &then_block), (&else_block_ir, &else_block)]);
+                phi.add_incoming(&[(&then_block_ir, then_block), (&else_block_ir, else_block)]);
                 Some(phi.as_basic_value())
             } else {
                 Some(then_block_ir)
@@ -1158,7 +1164,11 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         }
     }
 
-    fn gen_return(&mut self, _expr: ExprId, ret_expr: Option<ExprId>) -> Option<BasicValueEnum> {
+    fn gen_return(
+        &mut self,
+        _expr: ExprId,
+        ret_expr: Option<ExprId>,
+    ) -> Option<BasicValueEnum<'ink>> {
         let ret_value = ret_expr.and_then(|expr| self.gen_expr(expr));
 
         // Construct a return statement from the returned value of the body
@@ -1171,7 +1181,11 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         None
     }
 
-    fn gen_break(&mut self, _expr: ExprId, break_expr: Option<ExprId>) -> Option<BasicValueEnum> {
+    fn gen_break(
+        &mut self,
+        _expr: ExprId,
+        break_expr: Option<ExprId>,
+    ) -> Option<BasicValueEnum<'ink>> {
         let break_value = break_expr.and_then(|expr| self.gen_expr(expr));
         let loop_info = self.active_loop.as_mut().unwrap();
         if let Some(break_value) = break_value {
@@ -1180,18 +1194,18 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
                 .push((break_value, self.builder.get_insert_block().unwrap()));
         }
         self.builder
-            .build_unconditional_branch(&loop_info.exit_block);
+            .build_unconditional_branch(loop_info.exit_block);
         None
     }
 
     fn gen_loop_block_expr(
         &mut self,
         block: ExprId,
-        exit_block: BasicBlock,
+        exit_block: BasicBlock<'ink>,
     ) -> (
-        BasicBlock,
-        Vec<(BasicValueEnum, BasicBlock)>,
-        Option<BasicValueEnum>,
+        BasicBlock<'ink>,
+        Vec<(BasicValueEnum<'ink>, BasicBlock<'ink>)>,
+        Option<BasicValueEnum<'ink>>,
     ) {
         // Build a new loop info struct
         let loop_info = LoopInfo {
@@ -1218,25 +1232,25 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         _expr: ExprId,
         condition_expr: ExprId,
         body_expr: ExprId,
-    ) -> Option<BasicValueEnum> {
-        let context = self.db.context();
-        let cond_block = context.append_basic_block(&self.fn_value, "whilecond");
-        let loop_block = context.append_basic_block(&self.fn_value, "while");
-        let exit_block = context.append_basic_block(&self.fn_value, "afterwhile");
+    ) -> Option<BasicValueEnum<'ink>> {
+        let context = self.context;
+        let cond_block = context.append_basic_block(self.fn_value, "whilecond");
+        let loop_block = context.append_basic_block(self.fn_value, "while");
+        let exit_block = context.append_basic_block(self.fn_value, "afterwhile");
 
         // Insert an explicit fall through from the current block to the condition check
-        self.builder.build_unconditional_branch(&cond_block);
+        self.builder.build_unconditional_branch(cond_block);
 
         // Generate condition block
-        self.builder.position_at_end(&cond_block);
+        self.builder.position_at_end(cond_block);
         let condition_ir = self
             .gen_expr(condition_expr)
             .map(|value| self.opt_deref_value(condition_expr, value));
         if let Some(condition_ir) = condition_ir {
             self.builder.build_conditional_branch(
                 condition_ir.into_int_value(),
-                &loop_block,
-                &exit_block,
+                loop_block,
+                exit_block,
             );
         } else {
             // If the condition doesn't return a value, we also immediately return without a value.
@@ -1245,41 +1259,41 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         }
 
         // Generate loop block
-        self.builder.position_at_end(&loop_block);
+        self.builder.position_at_end(loop_block);
         let (exit_block, _, value) = self.gen_loop_block_expr(body_expr, exit_block);
         if value.is_some() {
-            self.builder.build_unconditional_branch(&cond_block);
+            self.builder.build_unconditional_branch(cond_block);
         }
 
         // Generate exit block
-        self.builder.position_at_end(&exit_block);
+        self.builder.position_at_end(exit_block);
 
         Some(self.gen_empty())
     }
 
-    fn gen_loop(&mut self, _expr: ExprId, body_expr: ExprId) -> Option<BasicValueEnum> {
-        let context = self.db.context();
-        let loop_block = context.append_basic_block(&self.fn_value, "loop");
-        let exit_block = context.append_basic_block(&self.fn_value, "exit");
+    fn gen_loop(&mut self, _expr: ExprId, body_expr: ExprId) -> Option<BasicValueEnum<'ink>> {
+        let context = self.context;
+        let loop_block = context.append_basic_block(self.fn_value, "loop");
+        let exit_block = context.append_basic_block(self.fn_value, "exit");
 
         // Insert an explicit fall through from the current block to the loop
-        self.builder.build_unconditional_branch(&loop_block);
+        self.builder.build_unconditional_branch(loop_block);
 
         // Generate the body of the loop
-        self.builder.position_at_end(&loop_block);
+        self.builder.position_at_end(loop_block);
         let (exit_block, break_values, value) = self.gen_loop_block_expr(body_expr, exit_block);
         if value.is_some() {
-            self.builder.build_unconditional_branch(&loop_block);
+            self.builder.build_unconditional_branch(loop_block);
         }
 
         // Move the builder to the exit block
-        self.builder.position_at_end(&exit_block);
+        self.builder.position_at_end(exit_block);
 
         if !break_values.is_empty() {
             let (value, _) = break_values.first().unwrap();
             let phi = self.builder.build_phi(value.get_type(), "exit");
-            for (ref value, ref block) in break_values {
-                phi.add_incoming(&[(value, block)])
+            for (value, block) in break_values {
+                phi.add_incoming(&[(&value, block)])
             }
             Some(phi.as_basic_value())
         } else {
@@ -1292,7 +1306,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         _expr: ExprId,
         receiver_expr: ExprId,
         name: &Name,
-    ) -> Option<BasicValueEnum> {
+    ) -> Option<BasicValueEnum<'ink>> {
         let hir_struct = self.infer[receiver_expr]
             .as_struct()
             .expect("expected a struct");
@@ -1300,7 +1314,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         let hir_struct_name = hir_struct.name(self.db.upcast());
 
         let field_idx = hir_struct
-            .field(self.db.upcast(), name)
+            .field(self.db, name)
             .expect("expected a struct field")
             .id()
             .into_raw()
@@ -1312,14 +1326,14 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
             let receiver_ptr = self
                 .opt_deref_value(receiver_expr, receiver_ptr.into())
                 .into_pointer_value();
-            unsafe {
-                let field_ptr = self.builder.build_struct_gep(
+            let field_ptr = unsafe {
+                self.builder.build_struct_gep(
                     receiver_ptr,
                     field_idx,
                     &format!("{}.{}_ptr", hir_struct_name, name),
-                );
-                Some(self.builder.build_load(field_ptr, &field_ir_name))
-            }
+                )
+            };
+            Some(self.builder.build_load(field_ptr, &field_ir_name))
         } else {
             let receiver_value = self.gen_expr(receiver_expr)?;
             let receiver_value = self.opt_deref_value(receiver_expr, receiver_value);
@@ -1343,7 +1357,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         _expr: ExprId,
         receiver_expr: ExprId,
         name: &Name,
-    ) -> PointerValue {
+    ) -> PointerValue<'ink> {
         let hir_struct = self.infer[receiver_expr]
             .as_struct()
             .expect("expected a struct");
@@ -1351,7 +1365,7 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
         let hir_struct_name = hir_struct.name(self.db.upcast());
 
         let field_idx = hir_struct
-            .field(self.db.upcast(), name)
+            .field(self.db, name)
             .expect("expected a struct field")
             .id()
             .into_raw()
@@ -1373,7 +1387,10 @@ impl<'a, 'b> BodyIrGenerator<'a, 'b> {
 
 /// Derefs a heap-allocated value. As we introduce a layer of indirection for hot
 /// reloading, we need to first load the pointer that points to the memory block.
-fn deref_heap_value(builder: &Builder, value: BasicValueEnum) -> BasicValueEnum {
+fn deref_heap_value<'ink>(
+    builder: &Builder<'ink>,
+    value: BasicValueEnum<'ink>,
+) -> BasicValueEnum<'ink> {
     let mem_ptr = builder
         .build_load(value.into_pointer_value(), "mem_ptr")
         .into_pointer_value();

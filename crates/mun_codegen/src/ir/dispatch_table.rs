@@ -1,8 +1,5 @@
-use crate::intrinsics::Intrinsic;
-use crate::ir::function;
-use crate::type_info::TypeInfo;
-use crate::{CodeGenParams, IrDatabase};
-use hir::{Body, Expr, ExprId, InferenceResult};
+use crate::{intrinsics::Intrinsic, ir::function, ir::ty::HirTypeCache, type_info::TypeInfo};
+use hir::{Body, Expr, ExprId, HirDatabase, InferenceResult};
 use inkwell::{
     context::Context,
     module::Module,
@@ -10,8 +7,10 @@ use inkwell::{
     types::{BasicTypeEnum, FunctionType},
     values::{BasicValueEnum, PointerValue},
 };
-use std::collections::{BTreeMap, HashMap};
-use std::sync::Arc;
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::Arc,
+};
 
 /// A dispatch table in IR is a struct that contains pointers to all functions that are called from
 /// code. In C terms it looks something like this:
@@ -25,12 +24,12 @@ use std::sync::Arc;
 /// The dispatch table is used to add a patchable indirection when calling a function from IR. The
 /// DispatchTable is exposed to the Runtime which fills the structure with valid pointers to
 /// functions. This basically enables all hot reloading within Mun.
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct DispatchTable {
+#[derive(Debug, Eq, PartialEq)]
+pub struct DispatchTable<'ink> {
     // The LLVM context in which all LLVM types live
-    context: Arc<Context>,
+    context: &'ink Context,
     // The target for which to create the dispatch table
-    target: Arc<TargetData>,
+    target: TargetData,
     // This contains the function that map to the DispatchTable struct fields
     function_to_idx: HashMap<hir::Function, usize>,
     // Prototype to function index
@@ -38,9 +37,9 @@ pub struct DispatchTable {
     // This contains an ordered list of all the function in the dispatch table
     entries: Vec<DispatchableFunction>,
     // Contains a reference to the global value containing the DispatchTable
-    table_ref: Option<inkwell::values::GlobalValue>,
+    table_ref: Option<inkwell::values::GlobalValue<'ink>>,
     //
-    table_type: Option<inkwell::types::StructType>,
+    table_type: Option<inkwell::types::StructType<'ink>>,
 }
 
 /// A `FunctionPrototype` defines a unique signature that can be added to the dispatch table.
@@ -59,7 +58,7 @@ pub struct DispatchableFunction {
     pub hir: Option<hir::Function>,
 }
 
-impl DispatchTable {
+impl<'ink> DispatchTable<'ink> {
     /// Returns whether the `DispatchTable` contains the specified `function`.
     pub fn contains(&self, function: hir::Function) -> bool {
         self.function_to_idx.contains_key(&function)
@@ -75,12 +74,12 @@ impl DispatchTable {
     /// struct
     pub fn gen_function_lookup(
         &self,
-        db: &dyn IrDatabase,
-        table_ref: Option<inkwell::values::GlobalValue>,
-        builder: &inkwell::builder::Builder,
+        db: &dyn HirDatabase,
+        table_ref: Option<inkwell::values::GlobalValue<'ink>>,
+        builder: &inkwell::builder::Builder<'ink>,
         function: hir::Function,
-    ) -> PointerValue {
-        let function_name = function.name(db.upcast()).to_string();
+    ) -> PointerValue<'ink> {
+        let function_name = function.name(db).to_string();
 
         // Get the index of the function
         let index = *self
@@ -96,11 +95,11 @@ impl DispatchTable {
     /// struct
     pub fn gen_intrinsic_lookup(
         &self,
-        table_ref: Option<inkwell::values::GlobalValue>,
-        builder: &inkwell::builder::Builder,
+        table_ref: Option<inkwell::values::GlobalValue<'ink>>,
+        builder: &inkwell::builder::Builder<'ink>,
         intrinsic: &impl Intrinsic,
-    ) -> PointerValue {
-        let prototype = intrinsic.prototype(self.context.as_ref(), self.target.as_ref());
+    ) -> PointerValue<'ink> {
+        let prototype = intrinsic.prototype(self.context, &self.target);
 
         // Get the index of the intrinsic
         let index = *self
@@ -115,11 +114,11 @@ impl DispatchTable {
     /// lines of: `dispatchTable[i]`, where i is the index and `dispatchTable` is a struct
     fn gen_function_lookup_by_index(
         &self,
-        table_ref: Option<inkwell::values::GlobalValue>,
-        builder: &inkwell::builder::Builder,
+        table_ref: Option<inkwell::values::GlobalValue<'ink>>,
+        builder: &inkwell::builder::Builder<'ink>,
         function_name: &str,
         index: usize,
-    ) -> PointerValue {
+    ) -> PointerValue<'ink> {
         // Get the internal table reference
         let table_ref = table_ref.expect("no dispatch table defined");
 
@@ -131,6 +130,7 @@ impl DispatchTable {
                 &format!("{0}_ptr_ptr", function_name),
             )
         };
+
         builder
             .build_load(ptr_to_function_ptr, &format!("{0}_ptr", function_name))
             .into_pointer_value()
@@ -138,59 +138,65 @@ impl DispatchTable {
 
     /// Returns the value that represents the dispatch table in IR or `None` if no table was
     /// generated.
-    pub fn global_value(&self) -> Option<&inkwell::values::GlobalValue> {
+    pub fn global_value(&self) -> Option<&inkwell::values::GlobalValue<'ink>> {
         self.table_ref.as_ref()
     }
 
     /// Returns the IR type of the dispatch table's global value, if it exists.
-    pub fn ty(&self) -> Option<inkwell::types::StructType> {
+    pub fn ty(&self) -> Option<inkwell::types::StructType<'ink>> {
         self.table_type
     }
 }
 
 /// A struct that can be used to build the dispatch table from HIR.
-pub(crate) struct DispatchTableBuilder<'a> {
-    db: &'a dyn IrDatabase,
+pub(crate) struct DispatchTableBuilder<'db, 'ink, 't> {
+    db: &'db dyn HirDatabase,
     // The LLVM context in which all LLVM types live
-    context: Arc<Context>,
+    context: &'ink Context,
     // The module in which all values live
-    module: &'a Module,
+    module: &'t Module<'ink>,
     // The target for which to create the dispatch table
-    target: Arc<TargetData>,
+    target_data: TargetData,
+    // Converts HIR ty's to inkwell types
+    hir_types: &'t HirTypeCache<'db, 'ink>,
     // This contains the functions that map to the DispatchTable struct fields
     function_to_idx: HashMap<hir::Function, usize>,
     // Prototype to function index
     prototype_to_idx: HashMap<FunctionPrototype, usize>,
     // These are *all* called functions in the modules
-    entries: Vec<TypedDispatchableFunction>,
+    entries: Vec<TypedDispatchableFunction<'ink>>,
     // Contains a reference to the global value containing the DispatchTable
-    table_ref: Option<inkwell::values::GlobalValue>,
+    table_ref: Option<inkwell::values::GlobalValue<'ink>>,
     // This is the actual DispatchTable type
-    table_type: inkwell::types::StructType,
+    table_type: inkwell::types::StructType<'ink>,
 }
 
-struct TypedDispatchableFunction {
+struct TypedDispatchableFunction<'ink> {
     function: DispatchableFunction,
-    ir_type: FunctionType,
+    ir_type: FunctionType<'ink>,
 }
 
-impl<'a> DispatchTableBuilder<'a> {
+impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
     /// Creates a new builder that can generate a dispatch function.
     pub fn new(
-        db: &'a dyn IrDatabase,
-        module: &'a Module,
-        intrinsics: &BTreeMap<FunctionPrototype, FunctionType>,
+        context: &'ink Context,
+        target_data: TargetData,
+        db: &'db dyn HirDatabase,
+        module: &'t Module<'ink>,
+        intrinsics: &BTreeMap<FunctionPrototype, FunctionType<'ink>>,
+        hir_types: &'t HirTypeCache<'db, 'ink>,
     ) -> Self {
-        let mut table = DispatchTableBuilder {
+        let mut table = Self {
             db,
-            context: db.context(),
+            context,
             module,
-            target: db.target_data(),
+            target_data,
             function_to_idx: Default::default(),
             prototype_to_idx: Default::default(),
             entries: Default::default(),
             table_ref: None,
-            table_type: module.get_context().opaque_struct_type("DispatchTable"),
+            table_type: context.opaque_struct_type("DispatchTable"),
+            hir_types,
         };
 
         if !intrinsics.is_empty() {
@@ -247,25 +253,17 @@ impl<'a> DispatchTableBuilder<'a> {
 
         // If the function is not yet contained in the table, add it
         if !self.function_to_idx.contains_key(&function) {
-            let name = function.name(self.db.upcast()).to_string();
-            let hir_type = function.ty(self.db.upcast());
-            let sig = hir_type.callable_sig(self.db.upcast()).unwrap();
-            let ir_type = self
-                .db
-                .type_ir(
-                    hir_type,
-                    CodeGenParams {
-                        make_marshallable: false,
-                    },
-                )
-                .into_function_type();
+            let name = function.name(self.db).to_string();
+            let hir_type = function.ty(self.db);
+            let sig = hir_type.callable_sig(self.db).unwrap();
+            let ir_type = self.hir_types.get_function_type(function);
             let arg_types = sig
                 .params()
                 .iter()
-                .map(|arg| self.db.type_info(arg.clone()))
+                .map(|arg| self.hir_types.type_info(arg))
                 .collect();
             let ret_type = if !sig.ret().is_empty() {
-                Some(self.db.type_info(sig.ret().clone()))
+                Some(self.hir_types.type_info(sig.ret()))
             } else {
                 None
             };
@@ -287,11 +285,11 @@ impl<'a> DispatchTableBuilder<'a> {
             self.function_to_idx.insert(function, index);
 
             // Recurse further
-            let fn_body = function.body(self.db.upcast());
+            let fn_body = function.body(self.db);
             self.collect_expr(
                 fn_body.body_expr(),
                 &fn_body,
-                function.infer(self.db.upcast()).as_ref(),
+                function.infer(self.db).as_ref(),
             );
         }
     }
@@ -305,7 +303,7 @@ impl<'a> DispatchTableBuilder<'a> {
     /// Builds the final DispatchTable with all *called* functions from within the module
     /// # Parameters
     /// * **functions**: Mapping of *defined* Mun functions to their respective IR values.
-    pub fn build(self) -> DispatchTable {
+    pub fn build(self) -> DispatchTable<'ink> {
         // Construct the table body from all the entries in the dispatch table
         let table_body: Vec<BasicTypeEnum> = self
             .entries
@@ -329,18 +327,11 @@ impl<'a> DispatchTableBuilder<'a> {
                     match entry.function.hir {
                         // Case external function: Convert to typed null for the given function
                         None => function_type.const_null(),
-                        Some(f) if f.is_extern(self.db.upcast()) => function_type.const_null(),
+                        Some(f) if f.is_extern(self.db) => function_type.const_null(),
                         // Case mun function: Get the function location as the initializer
-                        Some(f) => function::gen_signature(
-                            self.db,
-                            f,
-                            self.module,
-                            CodeGenParams {
-                                make_marshallable: false,
-                            },
-                        )
-                        .as_global_value()
-                        .as_pointer_value(),
+                        Some(f) => function::gen_prototype(self.db, self.hir_types, f, self.module)
+                            .as_global_value()
+                            .as_pointer_value(),
                     }
                     .into()
                 })
@@ -353,7 +344,7 @@ impl<'a> DispatchTableBuilder<'a> {
 
         DispatchTable {
             context: self.context,
-            target: self.target,
+            target: self.target_data,
             function_to_idx: self.function_to_idx,
             prototype_to_idx: self.prototype_to_idx,
             table_ref: self.table_ref,

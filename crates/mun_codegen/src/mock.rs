@@ -1,4 +1,7 @@
-use crate::{IrDatabase, OptimizationLevel};
+use crate::{
+    db::{CodeGenDatabase, CodeGenDatabaseStorage},
+    OptimizationLevel,
+};
 use hir::{FileId, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
 use parking_lot::Mutex;
 use std::sync::Arc;
@@ -8,7 +11,7 @@ use std::sync::Arc;
     hir::SourceDatabaseStorage,
     hir::DefDatabaseStorage,
     hir::HirDatabaseStorage,
-    crate::IrDatabaseStorage
+    CodeGenDatabaseStorage
 )]
 #[derive(Default)]
 pub(crate) struct MockDatabase {
@@ -43,6 +46,12 @@ impl hir::Upcast<dyn hir::HirDatabase> for MockDatabase {
     }
 }
 
+impl hir::Upcast<dyn CodeGenDatabase> for MockDatabase {
+    fn upcast(&self) -> &dyn CodeGenDatabase {
+        &*self
+    }
+}
+
 impl MockDatabase {
     /// Creates a database from the given text.
     pub fn with_single_file(text: &str) -> (MockDatabase, FileId) {
@@ -60,10 +69,8 @@ impl MockDatabase {
         source_root.insert_file(file_id);
 
         db.set_source_root(source_root_id, Arc::new(source_root));
-        db.set_optimization_lvl(OptimizationLevel::None);
+        db.set_optimization_level(OptimizationLevel::None);
 
-        let context = crate::Context::create();
-        db.set_context(Arc::new(context));
         (db, file_id)
     }
 

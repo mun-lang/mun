@@ -17,7 +17,7 @@ abi = { version = "=0.2.0", path = "../mun_abi", package = "mun_abi" }
 hir = { version = "=0.2.0", path = "../mun_hir", package = "mun_hir" }
 mun_codegen_macros = { path = "../mun_codegen_macros", package = "mun_codegen_macros" }
 mun_target = { version = "=0.2.0", path = "../mun_target" }
-mun_lld = { version = "=70.2.0", path = "../mun_lld" }
+mun_lld = { version = "=80.0.0", path = "../mun_lld" }
 anyhow = "1.0.31"
 thiserror = "1.0.19"
 salsa = "0.15.0"
@@ -26,12 +26,8 @@ array-init="0.1.0"
 tempfile = "3"
 paste = "0.1.6"
 parking_lot = "0.10"
-by_address = "1.0"
-
-[dependencies.inkwell]
-git = "https://github.com/mun-lang/inkwell"
-rev = "4448bcd"
-features = ["llvm7-0"]
+inkwell = { version = "=0.1.0-llvm8sample", features = ["llvm8-0"]}
+by_address = "1.0.4"
 
 [dev-dependencies]
 abi = { path = "../mun_abi", package = "mun_abi" }

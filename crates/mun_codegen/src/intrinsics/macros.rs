@@ -14,7 +14,7 @@ macro_rules! intrinsics{
                         }
                     }
 
-                    fn ir_type(&self, context: &Context, target: &TargetData) -> FunctionType {
+                    fn ir_type<'ink>(&self, context: &'ink Context, target: &TargetData) -> FunctionType<'ink> {
                         let args = vec![$(<$arg as crate::ir::IsBasicIrType>::ir_type(context, target)),*];
                         <$ret as crate::ir::IsFunctionReturnType>::fn_type(context, target, &args, false)
                     }

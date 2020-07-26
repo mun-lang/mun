@@ -1,8 +1,11 @@
-use crate::{IrDatabase, ModuleBuilder};
+use crate::code_gen::{CodeGenContext, ModuleBuilder};
+use crate::db::CodeGenDatabase;
+use inkwell::context::Context;
 use std::path::Path;
 use std::sync::Arc;
 use tempfile::NamedTempFile;
 
+/// An `Assembly` is a reference to a Mun library stored on disk.
 #[derive(Debug)]
 pub struct Assembly {
     file: NamedTempFile,
@@ -30,14 +33,23 @@ impl Assembly {
     }
 }
 
-/// Create a new temporary file that contains the linked object
-pub fn assembly_query(db: &dyn IrDatabase, file_id: hir::FileId) -> Arc<Assembly> {
+/// Builds an assembly for the specified file
+pub(crate) fn build_assembly(db: &dyn CodeGenDatabase, file_id: hir::FileId) -> Arc<Assembly> {
+    // Construct a temporary file for the assembly
     let file = NamedTempFile::new().expect("could not create temp file for shared object");
 
-    let module_builder = ModuleBuilder::new(db, file_id).expect("could not create ModuleBuilder");
+    // Setup the code generation context
+    let inkwell_context = Context::create();
+    let code_gen_context = CodeGenContext::new(&inkwell_context, db);
+
+    // Construct the module
+    let module_builder =
+        ModuleBuilder::new(&code_gen_context, file_id).expect("could not create ModuleBuilder");
     let obj_file = module_builder
         .build()
         .expect("unable to create object file");
+
+    // Translate the object file into a shared object
     obj_file
         .into_shared_object(file.path())
         .expect("could not link object file");

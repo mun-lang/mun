@@ -67,6 +67,7 @@ pub struct TargetOptions {
 
     /// Whether the target toolchain is like Windows
     pub is_like_windows: bool,
+    pub is_like_msvc: bool,
 }
 
 impl Default for TargetOptions {
@@ -77,6 +78,7 @@ impl Default for TargetOptions {
             features: "".to_string(),
             dll_prefix: "lib".to_string(),
             is_like_windows: false,
+            is_like_msvc: false,
         }
     }
 }
