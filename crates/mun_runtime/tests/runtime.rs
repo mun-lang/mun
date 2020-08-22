@@ -1,20 +1,19 @@
-mod util;
-
+use mun_test::CompileAndRunTestDriver;
 use std::io;
-use util::*;
 
 #[test]
 fn error_assembly_not_linkable() {
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r"
     extern fn dependency() -> i32;
     
     pub fn main() -> i32 { dependency() }
     ",
+        |builder| builder,
     );
 
     assert_eq!(
-        format!("{}", driver.spawn().unwrap_err()),
+        format!("{}", driver.unwrap_err()),
         format!(
             "{}",
             io::Error::new(
@@ -27,7 +26,7 @@ fn error_assembly_not_linkable() {
 
 #[test]
 fn arg_missing_bug() {
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r"
     pub fn fibonacci_n() -> i64 {
         let n = arg();
@@ -45,7 +44,8 @@ fn arg_missing_bug() {
             fibonacci(n - 1) + fibonacci(n - 2)
         }
     }",
+        |builder| builder,
     );
 
-    driver.spawn().unwrap()
+    driver.unwrap();
 }

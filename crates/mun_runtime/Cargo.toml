@@ -27,6 +27,7 @@ rustc-hash = "1.1"
 compiler = { path="../mun_compiler", package = "mun_compiler" }
 criterion = "0.3"
 mlua = { package ="mlua", version="0.2", default-features = false, features=["vendored", "luajit"]  }
+mun_test = { path = "../mun_test" }
 tempfile = "3"
 termcolor = "1.1"
 wasmer-runtime = "0.16"

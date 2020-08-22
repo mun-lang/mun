@@ -1,37 +1,46 @@
 use mun_runtime::{invoke_fn, ArgumentReflection, Marshal, ReturnTypeReflection, StructRef};
 
+use mun_test::CompileAndRunTestDriver;
+
 #[macro_use]
 mod util;
 
-use util::*;
-
 #[test]
 fn compile_and_run() {
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r"
         pub fn main() {}
     ",
-    );
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
+
     assert_invoke_eq!((), (), driver, "main");
 }
 
 #[test]
 fn return_value() {
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r"
         pub fn main()->i32 { 3 }
     ",
-    );
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
+
     assert_invoke_eq!(i32, 3, driver, "main");
 }
 
 #[test]
 fn arguments() {
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r"
         pub fn main(a:i32, b:i32)->i32 { a+b }
     ",
-    );
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
+
     let a: i32 = 52;
     let b: i32 = 746;
     assert_invoke_eq!(i32, a + b, driver, "main", a, b);
@@ -39,12 +48,14 @@ fn arguments() {
 
 #[test]
 fn dispatch_table() {
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r"
         pub fn add(a:i32, b:i32)->i32 { a+b }
         pub fn main(a:i32, b:i32)->i32 { add(a,b) }
     ",
-    );
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
 
     let a: i32 = 52;
     let b: i32 = 746;
@@ -57,7 +68,7 @@ fn dispatch_table() {
 
 #[test]
 fn booleans() {
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r#"
         pub fn equal(a:i64, b:i64)->bool                 { a==b }
         pub fn equalf(a:f64, b:f64)->bool            { a==b }
@@ -72,7 +83,10 @@ fn booleans() {
         pub fn greater_equal(a:i64, b:i64)->bool         { a>=b }
         pub fn greater_equalf(a:f64, b:f64)->bool    { a>=b }
     "#,
-    );
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
+
     assert_invoke_eq!(bool, false, driver, "equal", 52i64, 764i64);
     assert_invoke_eq!(bool, true, driver, "equal", 64i64, 64i64);
     assert_invoke_eq!(bool, false, driver, "equalf", 52f64, 764f64);
@@ -101,7 +115,7 @@ fn booleans() {
 
 #[test]
 fn fibonacci() {
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r#"
     pub fn fibonacci(n:i64)->i64 {
         if n <= 1 {
@@ -111,7 +125,9 @@ fn fibonacci() {
         }
     }
     "#,
-    );
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
 
     assert_invoke_eq!(i64, 5, driver, "fibonacci", 5i64);
     assert_invoke_eq!(i64, 89, driver, "fibonacci", 11i64);
@@ -120,7 +136,7 @@ fn fibonacci() {
 
 #[test]
 fn fibonacci_loop() {
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r#"
     pub fn fibonacci(n:i64)->i64 {
         let a = 0;
@@ -137,7 +153,9 @@ fn fibonacci_loop() {
         }
     }
     "#,
-    );
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
 
     assert_invoke_eq!(i64, 5, driver, "fibonacci", 5i64);
     assert_invoke_eq!(i64, 89, driver, "fibonacci", 11i64);
@@ -147,7 +165,7 @@ fn fibonacci_loop() {
 
 #[test]
 fn fibonacci_loop_break() {
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r#"
     pub fn fibonacci(n:i64)->i64 {
         let a = 0;
@@ -164,7 +182,9 @@ fn fibonacci_loop_break() {
         }
     }
     "#,
-    );
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
 
     assert_invoke_eq!(i64, 5, driver, "fibonacci", 5i64);
     assert_invoke_eq!(i64, 89, driver, "fibonacci", 11i64);
@@ -174,7 +194,7 @@ fn fibonacci_loop_break() {
 
 #[test]
 fn fibonacci_while() {
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r#"
     pub fn fibonacci(n:i64)->i64 {
         let a = 0;
@@ -189,7 +209,9 @@ fn fibonacci_while() {
         a
     }
     "#,
-    );
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
 
     assert_invoke_eq!(i64, 5, driver, "fibonacci", 5i64);
     assert_invoke_eq!(i64, 89, driver, "fibonacci", 11i64);
@@ -199,7 +221,7 @@ fn fibonacci_while() {
 
 #[test]
 fn true_is_true() {
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r#"
     pub fn test_true()->bool {
         true
@@ -209,7 +231,10 @@ fn true_is_true() {
         false
     }
     "#,
-    );
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
+
     assert_invoke_eq!(bool, true, driver, "test_true");
     assert_invoke_eq!(bool, false, driver, "test_false");
 }
@@ -219,7 +244,7 @@ fn compiler_valid_utf8() {
     use std::ffi::CStr;
     use std::slice;
 
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r#"
     struct Foo {
         a: i32,
@@ -227,7 +252,9 @@ fn compiler_valid_utf8() {
 
     pub fn foo(n:Foo)->bool { false }
     "#,
-    );
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
 
     let runtime = driver.runtime();
     let runtime_ref = runtime.borrow();
@@ -267,7 +294,7 @@ fn compiler_valid_utf8() {
 
 #[test]
 fn fields() {
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r#"
         struct(gc) Foo { a:i32, b:i32 };
         pub fn main(foo:i32)->bool {
@@ -278,13 +305,16 @@ fn fields() {
             result.a == a.a
         }
     "#,
-    );
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
+
     assert_invoke_eq!(bool, true, driver, "main", 48);
 }
 
 #[test]
 fn field_crash() {
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r#"
     struct(gc) Foo { a: i32 };
 
@@ -293,13 +323,16 @@ fn field_crash() {
         b.a
     }
     "#,
-    );
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
+
     assert_invoke_eq!(i32, 15, driver, "main", 10);
 }
 
 #[test]
 fn marshal_struct() {
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r#"
     struct(value) Foo { a: i32, b: bool };
     struct Bar(i32, bool);
@@ -322,7 +355,9 @@ fn marshal_struct() {
         Baz(foo_new(foo_a, foo_b))
     }
     "#,
-    );
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
 
     struct TestData<T>(T, T);
 
@@ -496,27 +531,32 @@ fn extern_fn() {
         a + b + 9
     }
 
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r#"
     extern fn add(a: i32, b: i32) -> i32;
     pub fn main() -> i32 {
         add(3,4)
     }
     "#,
+        |builder| builder.insert_fn("add", add_int as extern "C" fn(i32, i32) -> i32),
     )
-    .insert_fn("add", add_int as extern "C" fn(i32, i32) -> i32);
+    .expect("Failed to build test driver");
+
     assert_invoke_eq!(i32, 16, driver, "main");
 }
 
 #[test]
 #[should_panic]
 fn extern_fn_missing() {
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r#"
     extern fn add(a: i32, b: i32) -> i32;
     pub fn main() -> i32 { add(3,4) }
     "#,
-    );
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
+
     assert_invoke_eq!(isize, 16, driver, "main");
 }
 
@@ -526,14 +566,13 @@ fn extern_fn_invalid_signature() {
         0
     }
 
-    let result = TestDriver::new(
+    let result = CompileAndRunTestDriver::new(
         r#"
     extern fn add(a: i32, b: i32) -> i32;
     pub fn main() -> i32 { add(3,4) }
     "#,
-    )
-    .insert_fn("add", add_int as extern "C" fn() -> i32)
-    .spawn();
+        |builder| builder.insert_fn("add", add_int as extern "C" fn() -> i32),
+    );
 
     assert!(result.is_err());
 }
@@ -545,19 +584,21 @@ fn extern_fn_invalid_sig() {
         3
     }
 
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r#"
     extern fn add(a: i32, b: i32) -> i32;
     pub fn main() -> i32 { add(3,4) }
     "#,
+        |builder| builder.insert_fn("add", add_int as extern "C" fn(i8, isize) -> isize),
     )
-    .insert_fn("add", add_int as extern "C" fn(i8, isize) -> isize);
+    .expect("Failed to build test driver");
+
     assert_invoke_eq!(isize, 16, driver, "main");
 }
 
 #[test]
 fn test_primitive_types() {
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r#"
     struct Primitives {
         a:u8,
@@ -580,7 +621,9 @@ fn test_primitive_types() {
         Primitives { a:a, b:b, c:c, d:d, e:e, f:f, g:g, h:h, i:i, j:j, k:k, l:l }
     }
     "#,
-    );
+    |builder| builder
+    )
+    .expect("Failed to build test driver");
 
     fn test_field<
         't,
@@ -643,13 +686,14 @@ fn can_add_external_without_return() {
         println!("{}", a);
     }
 
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r#"
     extern fn foo(a: i32,);
     pub fn main(){ foo(3); }
     "#,
+        |builder| builder.insert_fn("foo", foo as extern "C" fn(i32) -> ()),
     )
-    .insert_fn("foo", foo as extern "C" fn(i32) -> ());
+    .expect("Failed to build test driver");
 
     let runtime = driver.runtime();
     let runtime_ref = runtime.borrow();
@@ -659,7 +703,7 @@ fn can_add_external_without_return() {
 
 #[test]
 fn signed_and_unsigned_rem() {
-    let mut driver = TestDriver::new(
+    let driver = CompileAndRunTestDriver::new(
         r#"
     pub fn signed() -> i32 {
         (0 - 2) % 5
@@ -669,7 +713,9 @@ fn signed_and_unsigned_rem() {
         2 % 5
     }
     "#,
-    );
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
 
     assert_invoke_eq!(i32, -2, driver, "signed");
     assert_invoke_eq!(i32, 2, driver, "unsigned");
