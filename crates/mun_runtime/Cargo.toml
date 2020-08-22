@@ -14,21 +14,21 @@ categories = ["game-development", "mun"]
 
 [dependencies]
 abi = { version = "=0.2.0", path = "../mun_abi", package = "mun_abi" }
-anyhow = "1.0.31"
-libloading = "0.5"
+anyhow = "1.0"
+libloader = { version = "=0.1.0", path = "../mun_libloader", package = "mun_libloader" }
 md5 = "0.7.0"
 memory = { version = "=0.1.0", path = "../mun_memory", package = "mun_memory" }
 notify = "4.0.12"
 once_cell = "1.4.0"
 parking_lot = "0.10"
-tempfile = "3"
 rustc-hash = "1.1"
 
 [dev-dependencies]
-mun_compiler = { path="../mun_compiler" }
+compiler = { path="../mun_compiler", package = "mun_compiler" }
 criterion = "0.3"
-termcolor = "1.1"
 mlua = { package ="mlua", version="0.2", default-features = false, features=["vendored", "luajit"]  }
+tempfile = "3"
+termcolor = "1.1"
 wasmer-runtime = "0.16"
 
 [[bench]]
