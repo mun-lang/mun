@@ -3,10 +3,10 @@ mod hir;
 use mun_hir::InFile;
 use mun_syntax::TextRange;
 
-///! This crate provides in depth human readable diagnostic information and fixes for compiler
+///! This crate provides in-depth human-readable diagnostic information and fixes for compiler
 ///! errors that can be shared between the compiler and the language server.
 ///!
-///! The processing of diagnostics into human readable is separated from the machine readable
+///! The processing of diagnostics into human-readable is separated from the machine-readable
 ///! diagnostics in for instance the HIR crate for performance reasons. This enables lazily querying
 ///! the system for more information only when required.
 
@@ -52,12 +52,15 @@ pub trait Diagnostic {
     }
 }
 
+/// When implemented enables requesting `Diagnostic`s for the implementer.
 pub trait DiagnosticFor {
     /// Calls the specified function `f` with an instance of a [`Diagnostic`]. This can be used
     /// to perform lazy diagnostic evaluation.
     fn with_diagnostic<R, F: FnMut(&dyn Diagnostic) -> R>(&self, f: F) -> R;
 }
 
+/// Like [`DiagnosticFor`], enables requesting `Diagnostic`s for the implementer but only if passed
+/// a required object.
 pub trait DiagnosticForWith<With> {
     /// Calls the specified function `f` with an instance of a [`Diagnostic`]. This can be used
     /// to perform lazy diagnostic evaluation.

@@ -11,6 +11,7 @@ use annotate_snippets::display_list::FormatOptions;
 use annotate_snippets::snippet::{Annotation, AnnotationType, Slice, Snippet, SourceAnnotation};
 use std::collections::HashMap;
 
+/// Writes the specified syntax error to the output stream.
 pub(crate) fn emit_syntax_error(
     syntax_error: &SyntaxError,
     relative_file_path: &str,

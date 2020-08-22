@@ -178,7 +178,7 @@ impl Ty {
         })
     }
 
-    /// Returns true if the specified value is a valid type or whether an error occured with it.
+    /// Returns true if this instance represents a known type.
     pub fn is_known(&self) -> bool {
         match self {
             Ty::Unknown => false,

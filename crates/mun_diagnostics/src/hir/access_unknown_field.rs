@@ -3,7 +3,7 @@ use crate::{Diagnostic, SourceAnnotation};
 use mun_hir::HirDisplay;
 use mun_syntax::{ast, AstNode, TextRange};
 
-/// An error that is emitted when trying to access a field that doesnt exist.
+/// An error that is emitted when trying to access a field that doesn't exist.
 ///
 /// ```mun
 /// struct Foo {
