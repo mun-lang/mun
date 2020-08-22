@@ -1,15 +1,17 @@
 #[macro_use]
 mod util;
 
-use util::*;
+use mun_test::CompileAndRunTestDriver;
 
 #[test]
 fn hotreloadable() {
-    let mut driver = TestDriver::new(
+    let mut driver = CompileAndRunTestDriver::new(
         r"
     pub fn main() -> i32 { 5 }
     ",
-    );
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
     assert_invoke_eq!(i32, 5, driver, "main");
 
     let runtime = driver.runtime();
@@ -24,7 +26,7 @@ fn hotreloadable() {
 
 #[test]
 fn hotreload_struct_decl() {
-    let mut driver = TestDriver::new(
+    let mut driver = CompileAndRunTestDriver::new(
         r#"
     struct(gc) Args {
         n: i32,
@@ -39,7 +41,9 @@ fn hotreload_struct_decl() {
         Args { n: 3, foo: Bar { m: 1.0 }, }
     }
     "#,
-    );
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
 
     let runtime = driver.runtime();
     driver.update(
