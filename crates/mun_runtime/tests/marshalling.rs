@@ -242,7 +242,6 @@ fn true_is_true() {
 #[test]
 fn compiler_valid_utf8() {
     use std::ffi::CStr;
-    use std::slice;
 
     let driver = CompileAndRunTestDriver::new(
         r#"
@@ -271,17 +270,6 @@ fn compiler_valid_utf8() {
             unsafe { CStr::from_ptr(arg_type.name) }.to_str().is_ok(),
             true
         );
-
-        if let Some(s) = arg_type.as_struct() {
-            let field_names = unsafe { slice::from_raw_parts(s.field_names, s.num_fields()) };
-
-            for field_name in field_names {
-                assert_eq!(
-                    unsafe { CStr::from_ptr(*field_name) }.to_str().is_ok(),
-                    true
-                );
-            }
-        }
     }
     assert_eq!(
         unsafe {

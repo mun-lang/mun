@@ -72,9 +72,10 @@ impl PartialOrd for Diff {
 }
 
 /// Given an `old` and a `new` set of types `T`, calculates the difference.
-pub fn diff<T>(old: &[T], new: &[T]) -> Vec<Diff>
+pub fn diff<T, U>(old: &[T], new: &[T]) -> Vec<Diff>
 where
-    T: Copy + Eq + TypeDesc + TypeFields<T>,
+    T: Copy + Eq + TypeDesc + TypeFields<Item = U>,
+    U: Eq,
 {
     let diff = myers::diff(old, new);
     let mut mapping: Vec<Diff> = Vec::with_capacity(diff.len());
@@ -164,14 +165,15 @@ fn append_fundamental_mapping<T>(
 /// Given a set of indices for `deletions` from the `old` slice of types `T` and a set of indices
 /// for `insertions` into the `new` slice of types `T`, appends the corresponding `Diff` mapping
 /// for all
-fn append_struct_mapping<T>(
+fn append_struct_mapping<T, U>(
     old: &[T],
     new: &[T],
     deletions: Vec<usize>,
     insertions: Vec<usize>,
     mapping: &mut Vec<Diff>,
 ) where
-    T: Eq + TypeDesc + TypeFields<T>,
+    T: Eq + TypeDesc + TypeFields<Item = U>,
+    U: Eq,
 {
     let num_deleted = deletions.len();
     let num_inserted = insertions.len();

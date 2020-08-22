@@ -9,9 +9,10 @@ mod assembly_info;
 mod dispatch_table;
 mod function_info;
 mod module_info;
-mod static_type_map;
+//mod static_type_map;
 mod struct_info;
 mod type_info;
+mod type_ref;
 
 #[cfg(test)]
 mod test_utils;
@@ -25,6 +26,7 @@ pub use function_info::{
 pub use module_info::ModuleInfo;
 pub use struct_info::{StructInfo, StructMemoryKind};
 pub use type_info::{HasStaticTypeInfo, TypeGroup, TypeInfo};
+pub use type_ref::{HasStaticTypeRef, TypeRef, TypeRefKindData};
 
 /// The Mun ABI prelude
 ///

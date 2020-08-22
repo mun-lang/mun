@@ -29,9 +29,11 @@ pub trait TypeMemory: Send + Sync {
 }
 
 /// A trait used to obtain a type's fields.
-pub trait TypeFields<T>: Send + Sync {
+pub trait TypeFields: Send + Sync {
+    type Item;
+
     /// Returns the type's fields.
-    fn fields(&self) -> Vec<(&str, T)>;
+    fn fields(&self) -> Vec<(&str, Self::Item)>;
     /// Returns the type's fields' offsets.
     fn offsets(&self) -> &[u16];
 }

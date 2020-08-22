@@ -229,19 +229,24 @@ impl<'s> Marshal<'s> for StructRef<'s> {
     fn marshal_from_ptr<'r>(
         ptr: NonNull<Self::MunType>,
         runtime: &'r Runtime,
-        type_info: Option<&abi::TypeInfo>,
+        type_ref: Option<&abi::TypeRef>,
     ) -> StructRef<'s>
     where
         Self: 's,
         'r: 's,
     {
-        // Safety: `type_info` is only `None` for the `()` type
-        let type_info = type_info.unwrap();
-        let struct_info = type_info.as_struct().unwrap();
+        // Safety: `type_ref` is only `None` for the `()` type
+        let type_ref = type_ref.unwrap();
+        // Safety: `type_ref` must be a struct if used inside a `StructRef`
+        let (size, memory_kind) = type_ref.data.as_struct_data().unwrap();
 
         // Copy the contents of the struct based on what kind of pointer we are dealing with
-        let gc_handle = if struct_info.memory_kind == abi::StructMemoryKind::Value {
+        let gc_handle = if memory_kind == abi::StructMemoryKind::Value {
             // For a value struct, `ptr` points to a struct value.
+            let type_info = runtime
+                .type_table
+                .find_type_by_guid(&type_ref.guid)
+                .expect("Failed to retrieve type information.");
 
             // Create a new object using the runtime's intrinsic
             let mut gc_handle = {
@@ -256,7 +261,6 @@ impl<'s> Marshal<'s> for StructRef<'s> {
             // Construct
             let src = ptr.cast::<u8>().as_ptr() as *const _;
             let dest = unsafe { gc_handle.deref_mut::<u8>() };
-            let size = type_info.size_in_bytes();
             unsafe { ptr::copy_nonoverlapping(src, dest, size) };
 
             gc_handle
@@ -271,16 +275,16 @@ impl<'s> Marshal<'s> for StructRef<'s> {
     fn marshal_to_ptr(
         value: Self,
         mut ptr: NonNull<Self::MunType>,
-        type_info: Option<&abi::TypeInfo>,
+        type_ref: Option<&abi::TypeRef>,
     ) {
-        // `type_info` is only `None` for the `()` type
-        let type_info = type_info.unwrap();
+        // Safety: `type_ref` is only `None` for the `()` type
+        let type_ref = type_ref.unwrap();
+        // Safety: `type_ref` must be a struct if used inside a `StructRef`
+        let (size, memory_kind) = type_ref.data.as_struct_data().unwrap();
 
-        let struct_info = type_info.as_struct().unwrap();
-        if struct_info.memory_kind == abi::StructMemoryKind::Value {
+        if memory_kind == abi::StructMemoryKind::Value {
             let dest = ptr.cast::<u8>().as_ptr();
-            let size = type_info.size_in_bytes();
-            unsafe { ptr::copy_nonoverlapping(value.into_raw().get_ptr(), dest, size as usize) };
+            unsafe { ptr::copy_nonoverlapping(value.into_raw().get_ptr(), dest, size) };
         } else {
             unsafe { *ptr.as_mut() = value.into_raw() };
         }

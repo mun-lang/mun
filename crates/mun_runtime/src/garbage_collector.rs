@@ -27,6 +27,13 @@ impl UnsafeTypeInfo {
     }
 }
 
+impl<'t> From<&'t abi::TypeInfo> for UnsafeTypeInfo {
+    fn from(type_info: &'t abi::TypeInfo) -> Self {
+        // SAFETY: `type_info` is a reference, so is guaranteed to be non-null
+        UnsafeTypeInfo::new(unsafe { NonNull::new_unchecked(type_info as *const _ as *mut _) })
+    }
+}
+
 impl PartialEq for UnsafeTypeInfo {
     fn eq(&self, other: &Self) -> bool {
         unsafe { *self.0.as_ref() == *other.0.as_ref() }
@@ -55,16 +62,13 @@ impl memory::TypeDesc for UnsafeTypeInfo {
     }
 }
 
-impl memory::TypeFields<UnsafeTypeInfo> for UnsafeTypeInfo {
-    fn fields(&self) -> Vec<(&str, Self)> {
+impl memory::TypeFields for UnsafeTypeInfo {
+    type Item = abi::TypeRef;
+
+    fn fields(&self) -> Vec<(&str, Self::Item)> {
         if let Some(s) = unsafe { self.0.as_ref().as_struct() } {
             s.field_names()
-                .zip(s.field_types().iter().map(|ty| {
-                    // Safety: `ty` is a shared reference, so is guaranteed to not be `ptr::null()`.
-                    UnsafeTypeInfo::new(unsafe {
-                        NonNull::new_unchecked(*ty as *const abi::TypeInfo as *mut _)
-                    })
-                }))
+                .zip(s.field_types().iter().cloned())
                 .collect()
         } else {
             Vec::new()
@@ -99,14 +103,16 @@ impl Iterator for Trace {
             let index = self.index;
             self.index += 1;
 
-            let field_ty = struct_ty.field_types()[index];
-            if let Some(field_struct_ty) = field_ty.as_struct() {
-                if field_struct_ty.memory_kind == abi::StructMemoryKind::GC {
-                    let offset = struct_ty.field_offsets()[index];
-                    return Some(unsafe {
-                        *self.obj.deref::<u8>().add(offset as usize).cast::<GcPtr>()
-                    });
-                }
+            let field_ty = &struct_ty.field_types()[index];
+            if let abi::TypeRefKindData::Struct {
+                memory_kind: abi::StructMemoryKind::GC,
+                ..
+            } = &field_ty.data
+            {
+                let offset = struct_ty.field_offsets()[index];
+                return Some(unsafe {
+                    *self.obj.deref::<u8>().add(offset as usize).cast::<GcPtr>()
+                });
             }
         }
         None

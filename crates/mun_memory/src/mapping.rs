@@ -35,12 +35,17 @@ pub enum Action<T: TypeDesc + TypeMemory> {
     Insert,
 }
 
-impl<T> Mapping<T, T>
+impl<T, U> Mapping<T, T>
 where
-    T: TypeDesc + TypeFields<T> + TypeMemory + Copy + Eq + Hash,
+    T: TypeDesc + TypeFields<Item = U> + TypeMemory + Copy + Eq + Hash,
+    U: Clone + Eq,
 {
-    ///
-    pub fn new(old: &[T], new: &[T]) -> Self {
+    /// Constructs a mapping from old types to new types.
+    pub fn new<F1, F2>(old: &[T], new: &[T], convert_old: F1, convert_new: F2) -> Self
+    where
+        F1: Fn(U) -> T,
+        F2: Fn(U) -> T,
+    {
         let diff = diff(old, new);
 
         let mut conversions = HashMap::new();
@@ -61,7 +66,9 @@ where
                 } => {
                     let old_ty = unsafe { *old.get_unchecked(*old_index) };
                     let new_ty = unsafe { *new.get_unchecked(*new_index) };
-                    conversions.insert(old_ty, unsafe { field_mapping(old_ty, new_ty, diff) });
+                    conversions.insert(old_ty, unsafe {
+                        field_mapping(old_ty, new_ty, diff, &convert_old, &convert_new)
+                    });
                 }
                 Diff::Insert { index } => {
                     insertions.insert(unsafe { *new.get_unchecked(*index) });
@@ -139,12 +146,22 @@ where
 /// # Safety
 ///
 /// Expects the `diff` to be based on `old_ty` and `new_ty`. If not, it causes undefined behavior.
-pub unsafe fn field_mapping<T: Clone + TypeDesc + TypeFields<T> + TypeMemory>(
+pub unsafe fn field_mapping<T, U>(
     old_ty: T,
     new_ty: T,
     diff: &[FieldDiff],
-) -> Conversion<T> {
-    let old_fields = old_ty.fields();
+    convert_old: &dyn Fn(U) -> T,
+    convert_new: &dyn Fn(U) -> T,
+) -> Conversion<T>
+where
+    T: Clone + TypeDesc + TypeFields<Item = U> + TypeMemory,
+    U: Clone + Eq,
+{
+    let old_fields: Vec<_> = old_ty
+        .fields()
+        .iter()
+        .map(|(name, ty)| (*name, convert_old(ty.clone())))
+        .collect();
 
     let deletions: HashSet<usize> = diff
         .iter()
@@ -232,7 +249,11 @@ pub unsafe fn field_mapping<T: Clone + TypeDesc + TypeFields<T> + TypeMemory>(
         }
     }
 
-    let new_fields = new_ty.fields();
+    let new_fields: Vec<_> = new_ty
+        .fields()
+        .iter()
+        .map(|(name, ty)| (*name, convert_new(ty.clone())))
+        .collect();
     let old_offsets = old_ty.offsets();
     let new_offsets = new_ty.offsets();
     Conversion {

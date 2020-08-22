@@ -22,12 +22,12 @@ pub trait Marshal<'t>: Sized {
     fn marshal_from_ptr<'r>(
         ptr: NonNull<Self::MunType>,
         runtime: &'r Runtime,
-        type_info: Option<&abi::TypeInfo>,
+        type_info: Option<&abi::TypeRef>,
     ) -> Self
     where
         Self: 't,
         'r: 't;
 
     /// Marshals `value` to memory location `ptr` (i.e. Rust -> Mun).
-    fn marshal_to_ptr(value: Self, ptr: NonNull<Self::MunType>, type_info: Option<&abi::TypeInfo>);
+    fn marshal_to_ptr(value: Self, ptr: NonNull<Self::MunType>, type_info: Option<&abi::TypeRef>);
 }

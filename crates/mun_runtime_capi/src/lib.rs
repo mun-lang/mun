@@ -130,7 +130,7 @@ pub unsafe extern "C" fn mun_runtime_create(
             .map(|def| {
                 abi::FunctionDefinitionStorage::new_function(
                     def.prototype.name(),
-                    def.prototype.signature.arg_types(),
+                    def.prototype.signature.arg_types().iter(),
                     def.prototype.signature.return_type(),
                     def.fn_ptr,
                 )
@@ -226,6 +226,142 @@ pub unsafe extern "C" fn mun_runtime_get_function_definition(
             *fn_definition = info.clone();
         }
         None => *has_fn_info = false,
+    }
+
+    ErrorHandle::default()
+}
+
+/// Retrieves the [`TypeInfo`] for `type_guid` from the runtime corresponding to `handle`.
+/// If successful, `has_type_info` and `type_info` are set, otherwise a non-zero error handle is
+/// returned.
+///
+/// If a non-zero error handle is returned, it must be manually destructed using
+/// [`mun_error_destroy`].
+///
+/// # Safety
+///
+/// This function receives raw pointers as parameters. If any of the arguments is a null pointer,
+/// an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
+#[no_mangle]
+pub unsafe extern "C" fn mun_runtime_find_type_info_by_guid(
+    handle: RuntimeHandle,
+    type_guid: *const abi::Guid,
+    has_type_info: *mut bool,
+    type_info: *mut abi::TypeInfo,
+) -> ErrorHandle {
+    let runtime = match (handle.0 as *mut Runtime).as_ref() {
+        Some(runtime) => runtime,
+        None => {
+            return HUB
+                .errors
+                .register(anyhow!("Invalid argument: 'runtime' is null pointer."))
+        }
+    };
+
+    let type_guid = match type_guid.as_ref() {
+        Some(guid) => guid,
+        None => {
+            return HUB
+                .errors
+                .register(anyhow!("Invalid argument: 'type_guid' is null pointer."));
+        }
+    };
+
+    let has_type_info = match has_type_info.as_mut() {
+        Some(has_info) => has_info,
+        None => {
+            return HUB.errors.register(anyhow!(
+                "Invalid argument: 'has_type_info' is null pointer."
+            ))
+        }
+    };
+
+    let type_info = match type_info.as_mut() {
+        Some(info) => info,
+        None => {
+            return HUB
+                .errors
+                .register(anyhow!("Invalid argument: 'type_info' is null pointer."))
+        }
+    };
+
+    match runtime.find_type_info_by_guid(type_guid) {
+        Some(info) => {
+            *has_type_info = true;
+            *type_info = info.clone();
+        }
+        None => *has_type_info = false,
+    }
+
+    ErrorHandle::default()
+}
+
+/// Retrieves the [`TypeInfo`] for `type_name` from the runtime corresponding to `handle`.
+/// If successful, `has_type_info` and `type_info` are set, otherwise a non-zero error handle is
+/// returned.
+///
+/// If a non-zero error handle is returned, it must be manually destructed using
+/// [`mun_error_destroy`].
+///
+/// # Safety
+///
+/// This function receives raw pointers as parameters. If any of the arguments is a null pointer,
+/// an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
+#[no_mangle]
+pub unsafe extern "C" fn mun_runtime_find_type_info_by_name(
+    handle: RuntimeHandle,
+    type_name: *const c_char,
+    has_type_info: *mut bool,
+    type_info: *mut abi::TypeInfo,
+) -> ErrorHandle {
+    let runtime = match (handle.0 as *mut Runtime).as_ref() {
+        Some(runtime) => runtime,
+        None => {
+            return HUB
+                .errors
+                .register(anyhow!("Invalid argument: 'runtime' is null pointer."))
+        }
+    };
+
+    if type_name.is_null() {
+        return HUB
+            .errors
+            .register(anyhow!("Invalid argument: 'type_name' is null pointer."));
+    }
+
+    let type_name = match CStr::from_ptr(type_name).to_str() {
+        Ok(name) => name,
+        Err(_) => {
+            return HUB.errors.register(anyhow!(
+                "Invalid argument: 'type_name' is not UTF-8 encoded."
+            ))
+        }
+    };
+
+    let has_type_info = match has_type_info.as_mut() {
+        Some(has_info) => has_info,
+        None => {
+            return HUB.errors.register(anyhow!(
+                "Invalid argument: 'has_type_info' is null pointer."
+            ))
+        }
+    };
+
+    let type_info = match type_info.as_mut() {
+        Some(info) => info,
+        None => {
+            return HUB
+                .errors
+                .register(anyhow!("Invalid argument: 'type_info' is null pointer."))
+        }
+    };
+
+    match runtime.find_type_info_by_name(type_name) {
+        Some(info) => {
+            *has_type_info = true;
+            *type_info = info.clone();
+        }
+        None => *has_type_info = false,
     }
 
     ErrorHandle::default()

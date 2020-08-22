@@ -5,11 +5,11 @@ use once_cell::sync::OnceCell;
 /// Returns whether the specified argument type matches the `type_info`.
 pub fn equals_argument_type<'e, 'f, T: ArgumentReflection>(
     runtime: &'f Runtime,
-    type_info: &'e abi::TypeInfo,
+    type_ref: &'e abi::TypeRef,
     arg: &'f T,
 ) -> Result<(), (&'e str, &'f str)> {
-    if type_info.guid != arg.type_guid(runtime) {
-        Err((type_info.name(), arg.type_name(runtime)))
+    if type_ref.guid != arg.type_guid(runtime) {
+        Err((type_ref.name(), arg.type_name(runtime)))
     } else {
         Ok(())
     }
@@ -17,19 +17,14 @@ pub fn equals_argument_type<'e, 'f, T: ArgumentReflection>(
 
 /// Returns whether the specified return type matches the `type_info`.
 pub fn equals_return_type<T: ReturnTypeReflection>(
-    type_info: &abi::TypeInfo,
+    type_ref: &abi::TypeRef,
 ) -> Result<(), (&str, &str)> {
-    match type_info.group {
-        abi::TypeGroup::FundamentalTypes => {
-            if type_info.guid != T::type_guid() {
-                return Err((type_info.name(), T::type_name()));
-            }
+    if let abi::TypeRefKindData::Struct { .. } = &type_ref.data {
+        if <StructRef as ReturnTypeReflection>::type_guid() != T::type_guid() {
+            return Err(("struct", T::type_name()));
         }
-        abi::TypeGroup::StructTypes => {
-            if <StructRef as ReturnTypeReflection>::type_guid() != T::type_guid() {
-                return Err(("struct", T::type_name()));
-            }
-        }
+    } else if type_ref.guid != T::type_guid() {
+        return Err((type_ref.name(), T::type_name()));
     }
     Ok(())
 }
@@ -93,7 +88,7 @@ macro_rules! impl_primitive_type {
                 fn marshal_from_ptr<'r>(
                     ptr: std::ptr::NonNull<Self::MunType>,
                     _runtime: &'r Runtime,
-                    _type_info: Option<&abi::TypeInfo>,
+                    _type_info: Option<&abi::TypeRef>,
                 ) -> Self
                 where
                     Self: 't,
@@ -107,7 +102,7 @@ macro_rules! impl_primitive_type {
                 fn marshal_to_ptr(
                     value: Self,
                     mut ptr: std::ptr::NonNull<Self::MunType>,
-                    _type_info: Option<&abi::TypeInfo>,
+                    _type_info: Option<&abi::TypeRef>,
                 ) {
                     unsafe { *ptr.as_mut() = value };
                 }
@@ -149,7 +144,7 @@ impl<'t> Marshal<'t> for () {
     fn marshal_from_ptr<'r>(
         _ptr: std::ptr::NonNull<Self::MunType>,
         _runtime: &'r Runtime,
-        _type_info: Option<&abi::TypeInfo>,
+        _type_info: Option<&abi::TypeRef>,
     ) -> Self
     where
         Self: 't,
@@ -160,7 +155,7 @@ impl<'t> Marshal<'t> for () {
     fn marshal_to_ptr(
         _value: Self,
         mut ptr: std::ptr::NonNull<Self::MunType>,
-        _type_info: Option<&abi::TypeInfo>,
+        _type_info: Option<&abi::TypeRef>,
     ) {
         unsafe { *ptr.as_mut() = () };
     }

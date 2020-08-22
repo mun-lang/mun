@@ -1,4 +1,4 @@
-use crate::{HasStaticTypeInfo, TypeInfo};
+use crate::{HasStaticTypeRef, TypeRef};
 use std::{
     ffi::{c_void, CStr, CString},
     fmt::{self, Formatter},
@@ -35,17 +35,17 @@ pub struct FunctionPrototype {
 #[derive(Clone)]
 pub struct FunctionSignature {
     /// Argument types
-    pub(crate) arg_types: *const *const TypeInfo,
+    pub(crate) arg_types: *const TypeRef,
     /// Optional return type
-    pub(crate) return_type: *const TypeInfo,
+    pub(crate) return_type: *const TypeRef,
     /// Number of argument types
     pub num_arg_types: u16,
 }
 
 /// Owned storage for C-style `FunctionDefinition`.
-pub struct FunctionDefinitionStorage {
+pub struct FunctionDefinitionStorage<'f> {
     _name: CString,
-    _type_infos: Vec<&'static TypeInfo>,
+    _type_refs: Vec<&'f TypeRef>,
 }
 
 unsafe impl Send for FunctionDefinition {}
@@ -80,21 +80,16 @@ unsafe impl Sync for FunctionPrototype {}
 
 impl FunctionSignature {
     /// Returns the function's arguments' types.
-    pub fn arg_types(&self) -> &[&TypeInfo] {
+    pub fn arg_types(&self) -> &[TypeRef] {
         if self.num_arg_types == 0 {
             &[]
         } else {
-            unsafe {
-                slice::from_raw_parts(
-                    self.arg_types.cast::<&TypeInfo>(),
-                    self.num_arg_types as usize,
-                )
-            }
+            unsafe { slice::from_raw_parts(self.arg_types, self.num_arg_types as usize) }
         }
     }
 
     /// Returns the function's return type
-    pub fn return_type(&self) -> Option<&TypeInfo> {
+    pub fn return_type(&self) -> Option<&TypeRef> {
         unsafe { self.return_type.as_ref() }
     }
 }
@@ -133,19 +128,19 @@ impl Eq for FunctionSignature {}
 unsafe impl Send for FunctionSignature {}
 unsafe impl Sync for FunctionSignature {}
 
-impl FunctionDefinitionStorage {
+impl<'f> FunctionDefinitionStorage<'f> {
     /// Constructs a new `FunctionDefinition`, the data of which is stored in a
     /// `FunctionDefinitionStorage`.
     pub fn new_function(
         name: &str,
-        args: &[&'static TypeInfo],
-        ret: Option<&'static TypeInfo>,
+        args: impl Iterator<Item = &'f TypeRef>,
+        ret: Option<&'f TypeRef>,
         fn_ptr: *const c_void,
-    ) -> (FunctionDefinition, FunctionDefinitionStorage) {
+    ) -> (FunctionDefinition, FunctionDefinitionStorage<'f>) {
         let name = CString::new(name).unwrap();
-        let type_infos: Vec<&'static TypeInfo> = args.iter().copied().collect();
+        let type_refs: Vec<&'f TypeRef> = args.collect();
 
-        let num_arg_types = type_infos.len() as u16;
+        let num_arg_types = type_refs.len() as u16;
         let return_type = if let Some(ty) = ret {
             ty as *const _
         } else {
@@ -156,7 +151,7 @@ impl FunctionDefinitionStorage {
             prototype: FunctionPrototype {
                 name: name.as_ptr(),
                 signature: FunctionSignature {
-                    arg_types: type_infos.as_ptr() as *const *const _,
+                    arg_types: type_refs.as_ptr() as *const _,
                     return_type,
                     num_arg_types,
                 },
@@ -166,7 +161,7 @@ impl FunctionDefinitionStorage {
 
         let fn_storage = FunctionDefinitionStorage {
             _name: name,
-            _type_infos: type_infos,
+            _type_refs: type_refs,
         };
 
         (fn_info, fn_storage)
@@ -176,7 +171,10 @@ impl FunctionDefinitionStorage {
 /// A value-to-`FunctionDefinition` conversion that consumes the input value.
 pub trait IntoFunctionDefinition {
     /// Performs the conversion.
-    fn into<S: AsRef<str>>(self, name: S) -> (FunctionDefinition, FunctionDefinitionStorage);
+    fn into<S: AsRef<str>>(
+        self,
+        name: S,
+    ) -> (FunctionDefinition, FunctionDefinitionStorage<'static>);
 }
 
 macro_rules! into_function_info_impl {
@@ -184,26 +182,26 @@ macro_rules! into_function_info_impl {
         extern "C" fn($($T:ident),*) -> $R:ident;
     )+) => {
         $(
-            impl<$R: HasStaticTypeInfo, $($T: HasStaticTypeInfo,)*> IntoFunctionDefinition
+            impl<$R: HasStaticTypeRef, $($T: HasStaticTypeRef,)*> IntoFunctionDefinition
             for extern "C" fn($($T),*) -> $R
             {
-                fn into<S: AsRef<str>>(self, name: S) -> (FunctionDefinition, FunctionDefinitionStorage) {
+                fn into<S: AsRef<str>>(self, name: S) -> (FunctionDefinition, FunctionDefinitionStorage<'static>) {
                     FunctionDefinitionStorage::new_function(
                         name.as_ref(),
-                        &[$($T::type_info(),)*],
-                        Some($R::type_info()),
+                        [$($T::type_ref(),)*].iter().map(|ty| *ty),
+                        Some($R::type_ref()),
                         self as *const std::ffi::c_void,
                     )
                 }
             }
 
-            impl<$($T: HasStaticTypeInfo,)*> IntoFunctionDefinition
+            impl<$($T: HasStaticTypeRef,)*> IntoFunctionDefinition
             for extern "C" fn($($T),*)
             {
-                fn into<S: AsRef<str>>(self, name: S) -> (FunctionDefinition, FunctionDefinitionStorage) {
+                fn into<S: AsRef<str>>(self, name: S) -> (FunctionDefinition, FunctionDefinitionStorage<'static>) {
                     FunctionDefinitionStorage::new_function(
                         name.as_ref(),
-                        &[$($T::type_info(),)*],
+                        [$($T::type_ref(),)*].iter().map(|ty| *ty),
                         None,
                         self as *const std::ffi::c_void,
                     )
@@ -231,9 +229,9 @@ into_function_info_impl! {
 mod tests {
     use crate::{
         test_utils::{
-            fake_fn_prototype, fake_fn_signature, fake_type_info, FAKE_FN_NAME, FAKE_TYPE_NAME,
+            fake_fn_prototype, fake_fn_signature, fake_type_ref, FAKE_FN_NAME, FAKE_TYPE_NAME,
         },
-        TypeGroup,
+        TypeRefKindData,
     };
     use std::ffi::CString;
 
@@ -256,9 +254,9 @@ mod tests {
     #[test]
     fn test_fn_signature_arg_types_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
+        let type_ref = fake_type_ref(&type_name, TypeRefKindData::Primitive);
 
-        let arg_types = &[&type_info];
+        let arg_types = &[type_ref];
         let fn_signature = fake_fn_signature(arg_types, None);
 
         assert_eq!(fn_signature.arg_types(), arg_types);
@@ -275,7 +273,7 @@ mod tests {
     #[test]
     fn test_fn_signature_return_type_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
+        let type_info = fake_type_ref(&type_name, TypeRefKindData::Primitive);
 
         let return_type = Some(&type_info);
         let fn_signature = fake_fn_signature(&[], return_type);

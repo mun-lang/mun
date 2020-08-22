@@ -1,13 +1,17 @@
-use std::io;
-use std::path::{Path, PathBuf};
-
-use crate::DispatchTable;
+use crate::{
+    garbage_collector::{GarbageCollector, UnsafeTypeInfo},
+    DispatchTable, TypeTable,
+};
 use abi::AssemblyInfo;
 use libloader::{MunLibrary, TempLibrary};
-
-use crate::garbage_collector::{GarbageCollector, UnsafeTypeInfo};
 use memory::mapping::{Mapping, MemoryMapper};
-use std::{collections::HashSet, ptr::NonNull, sync::Arc};
+use std::{
+    collections::HashSet,
+    io,
+    path::{Path, PathBuf},
+    ptr::NonNull,
+    sync::Arc,
+};
 
 /// An assembly is a hot reloadable compilation unit, consisting of one or more Mun modules.
 pub struct Assembly {
@@ -149,13 +153,13 @@ impl Assembly {
         &mut self,
         library_path: &Path,
         runtime_dispatch_table: &mut DispatchTable,
+        runtime_type_table: &mut TypeTable,
     ) -> Result<(), anyhow::Error> {
         let mut new_assembly =
             Assembly::load(library_path, self.allocator.clone(), runtime_dispatch_table)?;
 
         let old_types: Vec<UnsafeTypeInfo> = self
             .info
-            .symbols
             .types()
             .iter()
             .map(|ty| {
@@ -168,7 +172,6 @@ impl Assembly {
 
         let new_types: Vec<UnsafeTypeInfo> = new_assembly
             .info
-            .symbols
             .types()
             .iter()
             .map(|ty| {
@@ -179,7 +182,38 @@ impl Assembly {
             })
             .collect();
 
-        let mapping = Mapping::new(&old_types, &new_types);
+        let mut new_type_table = runtime_type_table.clone();
+        for type_info in self.info.types().iter() {
+            new_type_table.remove_type(&type_info.guid);
+        }
+        for &type_info in new_assembly.info.types().iter() {
+            new_type_table.insert_type(type_info.guid, type_info.clone());
+        }
+
+        let mapping = Mapping::new(
+            &old_types,
+            &new_types,
+            |ty: abi::TypeRef| {
+                let ty = runtime_type_table
+                    .find_type_by_guid(&ty.guid)
+                    .expect("Failed to find type information.");
+
+                // Safety: `ty` is a shared reference, so is guaranteed to not be `ptr::null()`.
+                UnsafeTypeInfo::new(unsafe {
+                    NonNull::new_unchecked(ty as *const abi::TypeInfo as *mut _)
+                })
+            },
+            |ty: abi::TypeRef| {
+                let ty = new_type_table
+                    .find_type_by_guid(&ty.guid)
+                    .expect("Failed to find type information.");
+
+                // Safety: `ty` is a shared reference, so is guaranteed to not be `ptr::null()`.
+                UnsafeTypeInfo::new(unsafe {
+                    NonNull::new_unchecked(ty as *const abi::TypeInfo as *mut _)
+                })
+            },
+        );
         let deleted_objects = self.allocator.map_memory(mapping);
 
         // Remove the old assembly's functions

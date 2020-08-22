@@ -1,6 +1,6 @@
 use crate::{
     AssemblyInfo, DispatchTable, FunctionDefinition, FunctionPrototype, FunctionSignature, Guid,
-    ModuleInfo, StructInfo, StructMemoryKind, TypeGroup, TypeInfo,
+    ModuleInfo, StructInfo, StructMemoryKind, TypeGroup, TypeInfo, TypeRef, TypeRefKindData,
 };
 use std::{
     ffi::{c_void, CStr},
@@ -27,12 +27,15 @@ pub(crate) fn fake_assembly_info(
     symbols: ModuleInfo,
     dispatch_table: DispatchTable,
     dependencies: &[*const c_char],
+    types: &[&TypeInfo],
 ) -> AssemblyInfo {
     AssemblyInfo {
         symbols,
         dispatch_table,
         dependencies: dependencies.as_ptr(),
         num_dependencies: dependencies.len() as u32,
+        types: types.as_ptr().cast::<*const TypeInfo>(),
+        num_types: types.len() as u32,
     }
 }
 
@@ -50,20 +53,20 @@ pub(crate) fn fake_dispatch_table(
 }
 
 pub(crate) fn fake_fn_signature(
-    arg_types: &[&TypeInfo],
-    return_type: Option<&TypeInfo>,
+    arg_types: &[TypeRef],
+    return_type: Option<&TypeRef>,
 ) -> FunctionSignature {
     FunctionSignature {
-        arg_types: arg_types.as_ptr().cast::<*const TypeInfo>(),
-        return_type: return_type.map_or(ptr::null(), |t| t as *const TypeInfo),
+        arg_types: arg_types.as_ptr(),
+        return_type: return_type.map_or(ptr::null(), |t| t as *const TypeRef),
         num_arg_types: arg_types.len() as u16,
     }
 }
 
 pub(crate) fn fake_fn_prototype(
     name: &CStr,
-    arg_types: &[&TypeInfo],
-    return_type: Option<&TypeInfo>,
+    arg_types: &[TypeRef],
+    return_type: Option<&TypeRef>,
 ) -> FunctionPrototype {
     FunctionPrototype {
         name: name.as_ptr(),
@@ -71,23 +74,17 @@ pub(crate) fn fake_fn_prototype(
     }
 }
 
-pub(crate) fn fake_module_info(
-    path: &CStr,
-    functions: &[FunctionDefinition],
-    types: &[&TypeInfo],
-) -> ModuleInfo {
+pub(crate) fn fake_module_info(path: &CStr, functions: &[FunctionDefinition]) -> ModuleInfo {
     ModuleInfo {
         path: path.as_ptr(),
         functions: functions.as_ptr(),
         num_functions: functions.len() as u32,
-        types: types.as_ptr().cast::<*const TypeInfo>(),
-        num_types: types.len() as u32,
     }
 }
 
 pub(crate) fn fake_struct_info(
     field_names: &[*const c_char],
-    field_types: &[&TypeInfo],
+    field_types: &[TypeRef],
     field_offsets: &[u16],
     memory_kind: StructMemoryKind,
 ) -> StructInfo {
@@ -96,7 +93,7 @@ pub(crate) fn fake_struct_info(
 
     StructInfo {
         field_names: field_names.as_ptr(),
-        field_types: field_types.as_ptr().cast::<*const TypeInfo>(),
+        field_types: field_types.as_ptr(),
         field_offsets: field_offsets.as_ptr(),
         num_fields: field_names.len() as u16,
         memory_kind,
@@ -122,5 +119,13 @@ pub(crate) fn fake_type_info(name: &CStr, group: TypeGroup, size: u32, alignment
         size_in_bits: size,
         alignment,
         group,
+    }
+}
+
+pub(crate) fn fake_type_ref(name: &CStr, data: TypeRefKindData) -> TypeRef {
+    TypeRef {
+        name: name.as_ptr(),
+        guid: Guid(md5::compute(&name.to_bytes()).0),
+        data,
     }
 }

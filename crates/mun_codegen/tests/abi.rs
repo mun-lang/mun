@@ -53,7 +53,7 @@ fn test_abi_compatibility() {
 
     struct Foo(f64, f64);
     test_struct_info::<Foo, f64>(
-        &lib_info.symbols,
+        &lib_info,
         struct_name,
         &["0", "1"],
         StructMemoryKind::GC,
@@ -64,7 +64,7 @@ fn test_abi_compatibility() {
         _b: i32,
     };
     test_struct_info::<Bar, i32>(
-        &lib_info.symbols,
+        &lib_info,
         struct_name2,
         &["a", "b"],
         StructMemoryKind::Value,
@@ -127,12 +127,12 @@ fn test_abi_compatibility() {
     }
 
     fn test_struct_info<T: Sized, F: Sized + ReturnTypeReflection>(
-        module_info: &abi::ModuleInfo,
+        assembly_info: &abi::AssemblyInfo,
         struct_name: &str,
         field_names: &[&str],
         memory_kind: StructMemoryKind,
     ) {
-        let type_info = module_info
+        let type_info = assembly_info
             .types()
             .iter()
             .find(|ty| ty.name() == struct_name)

@@ -113,7 +113,9 @@ impl TypeMemory for &TypeInfo {
     }
 }
 
-impl<'t> TypeFields<&'t TypeInfo> for &'t TypeInfo {
+impl<'t> TypeFields for &'t TypeInfo {
+    type Item = &'t TypeInfo;
+
     fn fields(&self) -> Vec<(&str, Self)> {
         match &self.tail {
             TypeInfoTail::Empty => Vec::new(),

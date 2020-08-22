@@ -1,4 +1,4 @@
-use crate::TypeInfo;
+use crate::TypeRef;
 use std::{ffi::CStr, os::raw::c_char, slice, str};
 
 /// Represents a struct declaration.
@@ -7,7 +7,7 @@ pub struct StructInfo {
     /// Struct fields' names
     pub field_names: *const *const c_char,
     /// Struct fields' information
-    pub(crate) field_types: *const *const TypeInfo,
+    pub(crate) field_types: *const TypeRef,
     /// Struct fields' offsets
     pub(crate) field_offsets: *const u16,
     // TODO: Field accessibility levels
@@ -21,7 +21,7 @@ pub struct StructInfo {
 
 /// Represents the kind of memory management a struct uses.
 #[repr(u8)]
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum StructMemoryKind {
     /// A garbage collected struct is allocated on the heap and uses reference semantics when passed
     /// around.
@@ -49,16 +49,11 @@ impl StructInfo {
     }
 
     /// Returns the struct's field types.
-    pub fn field_types(&self) -> &[&TypeInfo] {
+    pub fn field_types(&self) -> &[TypeRef] {
         if self.num_fields == 0 {
             &[]
         } else {
-            unsafe {
-                slice::from_raw_parts(
-                    self.field_types.cast::<&TypeInfo>(),
-                    self.num_fields as usize,
-                )
-            }
+            unsafe { slice::from_raw_parts(self.field_types, self.num_fields as usize) }
         }
     }
 
@@ -114,11 +109,11 @@ impl From<StructMemoryKind> for u64 {
 #[cfg(test)]
 mod tests {
     use super::StructMemoryKind;
-    use crate::{
-        test_utils::{fake_struct_info, fake_type_info, FAKE_FIELD_NAME, FAKE_TYPE_NAME},
-        TypeGroup,
+    use crate::test_utils::{
+        fake_type_ref, fake_struct_info, FAKE_FIELD_NAME, FAKE_TYPE_NAME,
     };
     use std::ffi::CString;
+    use crate::TypeRefKindData;
 
     #[test]
     fn test_struct_info_fields_none() {
@@ -137,10 +132,10 @@ mod tests {
     fn test_struct_info_fields_some() {
         let field_name = CString::new(FAKE_FIELD_NAME).expect("Invalid fake field name.");
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
+        let type_ref = fake_type_ref(&type_name, TypeRefKindData::Primitive);
 
         let field_names = &[field_name.as_ptr()];
-        let field_types = &[&type_info];
+        let field_types = &[type_ref];
         let field_offsets = &[1];
         let struct_info =
             fake_struct_info(field_names, field_types, field_offsets, Default::default());

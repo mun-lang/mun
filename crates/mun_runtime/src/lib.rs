@@ -49,7 +49,10 @@ pub struct RuntimeOptions {
     /// Delay during which filesystem events are collected, deduplicated, and after which emitted.
     pub delay: Duration,
     /// Custom user injected functions
-    pub user_functions: Vec<(abi::FunctionDefinition, abi::FunctionDefinitionStorage)>,
+    pub user_functions: Vec<(
+        abi::FunctionDefinition,
+        abi::FunctionDefinitionStorage<'static>,
+    )>,
 }
 
 /// A builder for the [`Runtime`].
@@ -160,14 +163,52 @@ impl DispatchTable {
     }
 }
 
+/// A runtime type table that maps type `Guid`s to type information.
+#[derive(Clone, Default)]
+pub struct TypeTable {
+    types: FxHashMap<abi::Guid, abi::TypeInfo>,
+}
+
+impl TypeTable {
+    /// Retrieves the [`abi::TypeInfo`] corresponding to `type_guid`, if it exists.
+    pub fn find_type_by_guid(&self, type_guid: &abi::Guid) -> Option<&abi::TypeInfo> {
+        self.types.get(type_guid)
+    }
+
+    /// Retrieves the [`abi::TypeInfo`] corresponding to `type_name`, if it exists.
+    ///
+    /// This is a very slow operation, as we potentially need to iterate all types.
+    pub fn find_type_by_name(&self, type_name: &str) -> Option<&abi::TypeInfo> {
+        self.types.values().find(|ty| ty.name() == type_name)
+    }
+
+    /// Inserts the `type_info` for `type_guid` into the type table.
+    ///
+    /// If the type table already contained this `type_guid`, the value is updated, and the old
+    /// value is returned.
+    pub fn insert_type(
+        &mut self,
+        type_guid: abi::Guid,
+        type_info: abi::TypeInfo,
+    ) -> Option<abi::TypeInfo> {
+        self.types.insert(type_guid, type_info)
+    }
+
+    /// Removes and returns the `type_info` corresponding to `type_guid`, if it exists.
+    pub fn remove_type(&mut self, type_guid: &abi::Guid) -> Option<abi::TypeInfo> {
+        self.types.remove(type_guid)
+    }
+}
+
 /// A runtime for the Mun language.
 pub struct Runtime {
     assemblies: HashMap<PathBuf, Assembly>,
     dispatch_table: DispatchTable,
+    type_table: TypeTable,
     watcher: RecommendedWatcher,
     watcher_rx: Receiver<DebouncedEvent>,
     gc: Arc<GarbageCollector>,
-    _user_functions: Vec<abi::FunctionDefinitionStorage>,
+    _user_functions: Vec<abi::FunctionDefinitionStorage<'static>>,
 }
 
 /// Retrieve the allocator using the provided handle.
@@ -223,6 +264,7 @@ impl Runtime {
         let mut runtime = Runtime {
             assemblies: HashMap::new(),
             dispatch_table,
+            type_table: TypeTable::default(),
             watcher,
             watcher_rx: rx,
             gc: Arc::new(self::garbage_collector::GarbageCollector::default()),
@@ -262,17 +304,16 @@ impl Runtime {
         self.dispatch_table.get_fn(function_name)
     }
 
-    /// Retrieves the type definition corresponding to `type_name`, if available.
-    pub fn get_type_info(&self, type_name: &str) -> Option<&abi::TypeInfo> {
-        for assembly in self.assemblies.values() {
-            for type_info in assembly.info().symbols.types().iter() {
-                if type_info.name() == type_name {
-                    return Some(type_info);
-                }
-            }
-        }
+    /// Retrieves the type definition corresponding to `type_guid`, if available.
+    pub fn find_type_info_by_guid(&self, type_guid: &abi::Guid) -> Option<&abi::TypeInfo> {
+        self.type_table.find_type_by_guid(type_guid)
+    }
 
-        None
+    /// Retrieves the type definition corresponding to `type_name`, if available.
+    ///
+    /// This is a very slow operation, as we potentially need to iterate all types.
+    pub fn find_type_info_by_name(&self, type_name: &str) -> Option<&abi::TypeInfo> {
+        self.type_table.find_type_by_name(type_name)
     }
 
     /// Updates the state of the runtime. This includes checking for file changes, and reloading
@@ -283,7 +324,9 @@ impl Runtime {
             match event {
                 Write(ref path) | Rename(_, ref path) | Create(ref path) => {
                     if let Some(assembly) = self.assemblies.get_mut(path) {
-                        if let Err(e) = assembly.swap(path, &mut self.dispatch_table) {
+                        if let Err(e) =
+                            assembly.swap(path, &mut self.dispatch_table, &mut self.type_table)
+                        {
                             println!(
                                 "An error occured while reloading assembly '{}': {:?}",
                                 path.to_string_lossy(),
