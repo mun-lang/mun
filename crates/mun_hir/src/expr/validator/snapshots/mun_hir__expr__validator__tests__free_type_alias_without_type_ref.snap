@@ -1,0 +1,6 @@
+---
+source: crates/mun_hir/src/expr/validator/tests.rs
+expression: "type Foo; // `Foo` must have a target type"
+---
+[0; 9): free type alias without type ref
+

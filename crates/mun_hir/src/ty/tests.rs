@@ -3,7 +3,7 @@ use crate::diagnostics::DiagnosticSink;
 use crate::expr::BodySourceMap;
 use crate::ids::LocationCtx;
 use crate::mock::MockDatabase;
-use crate::{Function, HirDisplay, InferenceResult};
+use crate::{Function, HirDisplay, InferenceResult, TypeAlias};
 use mun_syntax::{ast, AstNode};
 use std::fmt::Write;
 use std::sync::Arc;
@@ -392,6 +392,40 @@ fn extern_fn() {
     )
 }
 
+#[test]
+fn infer_type_alias() {
+    infer_snapshot(
+        r#"
+    type Foo = i32;
+    type Bar = Foo;
+    type Baz = UnknownType;  // error: undefined type
+
+    fn main(a: Foo) {
+        let b: Bar = a;
+    }
+    "#,
+    )
+}
+
+#[test]
+fn recursive_alias() {
+    infer_snapshot(
+        r#"
+    struct Foo {}
+    type Foo = Foo;
+
+    type A = B;
+    type B = A;
+
+    fn main() {
+        let a: Foo;  // error: unknown type
+        let b: A;    // error: unknown type
+        let c: B;    // error: unknown type
+    }
+    "#,
+    )
+}
+
 fn infer_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
     insta::assert_snapshot!(insta::_macro_support::AutoName, infer(&text), &text);
@@ -465,6 +499,12 @@ fn infer(content: &str) -> String {
             fun.diagnostics(&db, &mut diag_sink);
 
             infer_def(infer_result, source_map);
+        }
+        if let Some(def) = ast::TypeAliasDef::cast(node.clone()) {
+            let type_alias = TypeAlias {
+                id: ctx.to_def(&def),
+            };
+            type_alias.diagnostics(&db, &mut diag_sink);
         }
     }
 

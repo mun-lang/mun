@@ -84,6 +84,7 @@ pub enum SyntaxKind {
     STRUCT_KW,
     NEVER_KW,
     PUB_KW,
+    TYPE_KW,
     PACKAGE_KW,
     SUPER_KW,
     SELF_KW,
@@ -106,6 +107,7 @@ pub enum SyntaxKind {
     PARAM_LIST,
     PARAM,
     STRUCT_DEF,
+    TYPE_ALIAS_DEF,
     MEMORY_TYPE_SPECIFIER,
     RECORD_FIELD_DEF_LIST,
     RECORD_FIELD_DEF,
@@ -345,6 +347,9 @@ macro_rules! T {
     (pub) => {
         $crate::SyntaxKind::PUB_KW
     };
+    (type) => {
+        $crate::SyntaxKind::TYPE_KW
+    };
     (package) => {
         $crate::SyntaxKind::PACKAGE_KW
     };
@@ -395,6 +400,7 @@ impl SyntaxKind {
             | STRUCT_KW
             | NEVER_KW
             | PUB_KW
+            | TYPE_KW
             | PACKAGE_KW
             | SUPER_KW
             | SELF_KW
@@ -539,6 +545,7 @@ impl SyntaxKind {
             STRUCT_KW => &SyntaxInfo { name: "STRUCT_KW" },
             NEVER_KW => &SyntaxInfo { name: "NEVER_KW" },
             PUB_KW => &SyntaxInfo { name: "PUB_KW" },
+            TYPE_KW => &SyntaxInfo { name: "TYPE_KW" },
             PACKAGE_KW => &SyntaxInfo { name: "PACKAGE_KW" },
             SUPER_KW => &SyntaxInfo { name: "SUPER_KW" },
             SELF_KW => &SyntaxInfo { name: "SELF_KW" },
@@ -561,6 +568,7 @@ impl SyntaxKind {
             PARAM_LIST => &SyntaxInfo { name: "PARAM_LIST" },
             PARAM => &SyntaxInfo { name: "PARAM" },
             STRUCT_DEF => &SyntaxInfo { name: "STRUCT_DEF" },
+            TYPE_ALIAS_DEF => &SyntaxInfo { name: "TYPE_ALIAS_DEF" },
             MEMORY_TYPE_SPECIFIER => &SyntaxInfo { name: "MEMORY_TYPE_SPECIFIER" },
             RECORD_FIELD_DEF_LIST => &SyntaxInfo { name: "RECORD_FIELD_DEF_LIST" },
             RECORD_FIELD_DEF => &SyntaxInfo { name: "RECORD_FIELD_DEF" },
@@ -621,6 +629,7 @@ impl SyntaxKind {
             "struct" => STRUCT_KW,
             "never" => NEVER_KW,
             "pub" => PUB_KW,
+            "type" => TYPE_KW,
             "package" => PACKAGE_KW,
             "super" => SUPER_KW,
             "self" => SELF_KW,

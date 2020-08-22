@@ -1,4 +1,4 @@
-use crate::code_model::{Function, Struct, StructField};
+use crate::code_model::{Function, Struct, StructField, TypeAlias};
 use crate::ids::AstItemDef;
 use crate::in_file::InFile;
 use crate::DefDatabase;
@@ -43,5 +43,12 @@ impl HasSource for StructField {
             .0;
 
         InFile::new(file_id, ast)
+    }
+}
+
+impl HasSource for TypeAlias {
+    type Ast = ast::TypeAliasDef;
+    fn source(self, db: &dyn DefDatabase) -> InFile<ast::TypeAliasDef> {
+        self.id.source(db)
     }
 }

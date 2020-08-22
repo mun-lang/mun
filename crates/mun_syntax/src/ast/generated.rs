@@ -645,7 +645,7 @@ pub struct ModuleItem {
 impl AstNode for ModuleItem {
     fn can_cast(kind: SyntaxKind) -> bool {
         match kind {
-            FUNCTION_DEF | STRUCT_DEF => true,
+            FUNCTION_DEF | STRUCT_DEF | TYPE_ALIAS_DEF => true,
             _ => false,
         }
     }
@@ -664,6 +664,7 @@ impl AstNode for ModuleItem {
 pub enum ModuleItemKind {
     FunctionDef(FunctionDef),
     StructDef(StructDef),
+    TypeAliasDef(TypeAliasDef),
 }
 impl From<FunctionDef> for ModuleItem {
     fn from(n: FunctionDef) -> ModuleItem {
@@ -675,6 +676,11 @@ impl From<StructDef> for ModuleItem {
         ModuleItem { syntax: n.syntax }
     }
 }
+impl From<TypeAliasDef> for ModuleItem {
+    fn from(n: TypeAliasDef) -> ModuleItem {
+        ModuleItem { syntax: n.syntax }
+    }
+}
 
 impl ModuleItem {
     pub fn kind(&self) -> ModuleItemKind {
@@ -683,6 +689,9 @@ impl ModuleItem {
                 ModuleItemKind::FunctionDef(FunctionDef::cast(self.syntax.clone()).unwrap())
             }
             STRUCT_DEF => ModuleItemKind::StructDef(StructDef::cast(self.syntax.clone()).unwrap()),
+            TYPE_ALIAS_DEF => {
+                ModuleItemKind::TypeAliasDef(TypeAliasDef::cast(self.syntax.clone()).unwrap())
+            }
             _ => unreachable!(),
         }
     }
@@ -1511,6 +1520,39 @@ impl AstNode for TupleFieldDefList {
 impl TupleFieldDefList {
     pub fn fields(&self) -> impl Iterator<Item = TupleFieldDef> {
         super::children(self)
+    }
+}
+
+// TypeAliasDef
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TypeAliasDef {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for TypeAliasDef {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        match kind {
+            TYPE_ALIAS_DEF => true,
+            _ => false,
+        }
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(TypeAliasDef { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl ast::NameOwner for TypeAliasDef {}
+impl ast::DocCommentsOwner for TypeAliasDef {}
+impl TypeAliasDef {
+    pub fn type_ref(&self) -> Option<TypeRef> {
+        super::child_opt(self)
     }
 }
 

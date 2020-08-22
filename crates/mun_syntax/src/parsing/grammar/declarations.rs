@@ -65,6 +65,9 @@ fn declarations_without_modifiers(p: &mut Parser, m: Marker) -> Result<(), Marke
         T![struct] => {
             adt::struct_def(p, m);
         }
+        T![type] => {
+            adt::type_alias_def(p, m);
+        }
         _ => return Err(m),
     };
     Ok(())

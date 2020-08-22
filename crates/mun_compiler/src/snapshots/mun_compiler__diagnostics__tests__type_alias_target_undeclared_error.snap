@@ -1,0 +1,10 @@
+---
+source: crates/mun_compiler/src/diagnostics.rs
+expression: "compilation_errors(\"\\n\\ntype Foo = UnknownType;\")"
+---
+error: cannot find type `UnknownType` in this scope
+ --> main.mun:3:12
+  |
+3 | type Foo = UnknownType;
+  |            ^^^^^^^^^^^ not found in this scope
+  |

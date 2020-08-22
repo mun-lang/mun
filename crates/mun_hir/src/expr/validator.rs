@@ -1,8 +1,12 @@
 use crate::code_model::src::HasSource;
-use crate::diagnostics::{ExternCannotHaveBody, ExternNonPrimitiveParam};
+use crate::diagnostics::{
+    ExternCannotHaveBody, ExternNonPrimitiveParam, FreeTypeAliasWithoutTypeRef,
+};
 use crate::expr::BodySourceMap;
 use crate::in_file::InFile;
-use crate::{diagnostics::DiagnosticSink, Body, Expr, Function, HirDatabase, InferenceResult};
+use crate::{
+    diagnostics::DiagnosticSink, Body, Expr, Function, HirDatabase, InferenceResult, TypeAlias,
+};
 use mun_syntax::{AstNode, SyntaxNodePtr};
 use std::sync::Arc;
 
@@ -80,6 +84,28 @@ impl<'a> ExprValidator<'a> {
                     param: InFile::new(self.func.source(self.db.upcast()).file_id, arg_ptr),
                 })
             }
+        }
+    }
+}
+
+pub struct TypeAliasValidator<'a> {
+    type_alias: TypeAlias,
+    db: &'a dyn HirDatabase,
+}
+
+impl<'a> TypeAliasValidator<'a> {
+    /// Constructs a validator for the provided `TypeAlias`.
+    pub fn new(type_alias: TypeAlias, db: &'a dyn HirDatabase) -> Self {
+        TypeAliasValidator { type_alias, db }
+    }
+
+    /// Validates that the provided `TypeAlias` has a target type of alias.
+    pub fn validate_target_type_existence(&self, sink: &mut DiagnosticSink) {
+        let src = self.type_alias.source(self.db.upcast());
+        if src.value.type_ref().is_none() {
+            sink.push(FreeTypeAliasWithoutTypeRef {
+                type_alias_def: src.map(|t| SyntaxNodePtr::new(t.syntax())),
+            })
         }
     }
 }

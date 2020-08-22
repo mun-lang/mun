@@ -79,4 +79,19 @@ mod tests {
             "\n\nstruct Foo {\ni: bool\n}\n\nfn main() {\nlet a = Foo { i: false };\nlet b = a.t;\n}"
         ));
     }
+
+    #[test]
+    fn test_free_type_alias_error() {
+        insta::assert_display_snapshot!(compilation_errors("\n\ntype Foo;"));
+    }
+
+    #[test]
+    fn test_type_alias_target_undeclared_error() {
+        insta::assert_display_snapshot!(compilation_errors("\n\ntype Foo = UnknownType;"));
+    }
+
+    #[test]
+    fn test_cyclic_type_alias_error() {
+        insta::assert_display_snapshot!(compilation_errors("\n\ntype Foo = Foo;"));
+    }
 }

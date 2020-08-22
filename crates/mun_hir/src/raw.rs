@@ -27,6 +27,7 @@ pub(super) struct DefData {
 pub(super) enum DefKind {
     Function(FileAstId<ast::FunctionDef>),
     Struct(FileAstId<ast::StructDef>),
+    TypeAlias(FileAstId<ast::TypeAliasDef>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -57,6 +58,9 @@ impl RawItems {
                 }
                 ast::ModuleItemKind::StructDef(it) => {
                     (DefKind::Struct((*ast_id_map).ast_id(&it)), it.name())
+                }
+                ast::ModuleItemKind::TypeAliasDef(it) => {
+                    (DefKind::TypeAlias((*ast_id_map).ast_id(&it)), it.name())
                 }
             };
 

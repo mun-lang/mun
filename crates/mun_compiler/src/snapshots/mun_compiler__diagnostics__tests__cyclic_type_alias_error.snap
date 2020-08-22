@@ -1,0 +1,10 @@
+---
+source: crates/mun_compiler/src/diagnostics.rs
+expression: "compilation_errors(\"\\n\\ntype Foo = Foo;\")"
+---
+error: cyclic type
+ --> main.mun:3:12
+  |
+3 | type Foo = Foo;
+  |            ^^^ cyclic type
+  |

@@ -1,11 +1,11 @@
 pub(crate) mod src;
 
 use self::src::HasSource;
-use crate::adt::{StructData, StructFieldId};
+use crate::adt::{StructData, StructFieldId, TypeAliasData};
 use crate::builtin_type::BuiltinType;
 use crate::code_model::diagnostics::ModuleDefinitionDiagnostic;
 use crate::diagnostics::DiagnosticSink;
-use crate::expr::validator::ExprValidator;
+use crate::expr::validator::{ExprValidator, TypeAliasValidator};
 use crate::expr::{Body, BodySourceMap};
 use crate::ids::AstItemDef;
 use crate::ids::LocationCtx;
@@ -15,7 +15,7 @@ use crate::resolve::{Resolution, Resolver};
 use crate::ty::{lower::LowerBatchResult, InferenceResult};
 use crate::type_ref::{TypeRefBuilder, TypeRefId, TypeRefMap, TypeRefSourceMap};
 use crate::{
-    ids::{FunctionId, StructId},
+    ids::{FunctionId, StructId, TypeAliasId},
     AsName, DefDatabase, FileId, HirDatabase, Name, Ty,
 };
 use mun_syntax::ast::{ExternOwner, NameOwner, TypeAscriptionOwner, VisibilityOwner};
@@ -52,11 +52,11 @@ impl Module {
             diag.add_to(db.upcast(), self, sink);
         }
         for decl in self.declarations(db) {
-            #[allow(clippy::single_match)]
             match decl {
                 ModuleDef::Function(f) => f.diagnostics(db, sink),
                 ModuleDef::Struct(s) => s.diagnostics(db, sink),
-                _ => (),
+                ModuleDef::TypeAlias(t) => t.diagnostics(db, sink),
+                ModuleDef::BuiltinType(_) => (),
             }
         }
     }
@@ -104,6 +104,11 @@ impl ModuleData {
                                 id: StructId::from_ast_id(loc_ctx, ast_id),
                             }))
                         }
+                        DefKind::TypeAlias(ast_id) => {
+                            data.definitions.push(ModuleDef::TypeAlias(TypeAlias {
+                                id: TypeAliasId::from_ast_id(loc_ctx, ast_id),
+                            }))
+                        }
                     }
                 }
             };
@@ -121,6 +126,7 @@ pub enum ModuleDef {
     Function(Function),
     BuiltinType(BuiltinType),
     Struct(Struct),
+    TypeAlias(TypeAlias),
 }
 
 impl From<Function> for ModuleDef {
@@ -328,7 +334,8 @@ impl Function {
     }
 
     pub fn ty(self, db: &dyn HirDatabase) -> Ty {
-        db.type_for_def(self.into(), Namespace::Values)
+        // TODO: Add detection of cyclick types
+        db.type_for_def(self.into(), Namespace::Values).0
     }
 
     pub fn infer(self, db: &dyn HirDatabase) -> Arc<InferenceResult> {
@@ -418,7 +425,8 @@ impl Struct {
     }
 
     pub fn ty(self, db: &dyn HirDatabase) -> Ty {
-        db.type_for_def(self.into(), Namespace::Types)
+        // TODO: Add detection of cyclick types
+        db.type_for_def(self.into(), Namespace::Types).0
     }
 
     pub fn lower(self, db: &dyn HirDatabase) -> Arc<LowerBatchResult> {
@@ -439,6 +447,54 @@ impl Struct {
             data.type_ref_source_map(),
             sink,
         );
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TypeAlias {
+    pub(crate) id: TypeAliasId,
+}
+
+impl TypeAlias {
+    pub fn module(self, db: &dyn DefDatabase) -> Module {
+        Module {
+            file_id: self.id.file_id(db),
+        }
+    }
+
+    pub fn data(self, db: &dyn DefDatabase) -> Arc<TypeAliasData> {
+        db.type_alias_data(self.id)
+    }
+
+    pub fn name(self, db: &dyn DefDatabase) -> Name {
+        self.data(db).name.clone()
+    }
+
+    pub fn type_ref(self, db: &dyn HirDatabase) -> TypeRefId {
+        self.data(db.upcast()).type_ref_id
+    }
+
+    pub fn lower(self, db: &dyn HirDatabase) -> Arc<LowerBatchResult> {
+        db.lower_type_alias(self)
+    }
+
+    pub(crate) fn resolver(self, db: &dyn HirDatabase) -> Resolver {
+        // take the outer scope...
+        self.module(db.upcast()).resolver(db.upcast())
+    }
+
+    pub fn diagnostics(self, db: &dyn HirDatabase, sink: &mut DiagnosticSink) {
+        let data = self.data(db.upcast());
+        let lower = self.lower(db);
+        lower.add_diagnostics(
+            db,
+            self.module(db.upcast()).file_id,
+            data.type_ref_source_map(),
+            sink,
+        );
+
+        let validator = TypeAliasValidator::new(self, db);
+        validator.validate_target_type_existence(sink);
     }
 }
 
@@ -464,6 +520,9 @@ mod diagnostics {
                 SyntaxNodePtr::new(id.with_file_id(owner.file_id).to_node(db).syntax())
             }
             DefKind::Struct(id) => {
+                SyntaxNodePtr::new(id.with_file_id(owner.file_id).to_node(db).syntax())
+            }
+            DefKind::TypeAlias(id) => {
                 SyntaxNodePtr::new(id.with_file_id(owner.file_id).to_node(db).syntax())
             }
         }

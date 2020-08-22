@@ -3,7 +3,7 @@ use std::{fmt, sync::Arc};
 use crate::type_ref::{TypeRefBuilder, TypeRefId, TypeRefMap, TypeRefSourceMap};
 use crate::{
     arena::{Arena, RawId},
-    ids::{AstItemDef, StructId},
+    ids::{AstItemDef, StructId, TypeAliasId},
     AsName, DefDatabase, Name,
 };
 use mun_syntax::ast::{self, NameOwner, TypeAscriptionOwner};
@@ -108,6 +108,45 @@ impl StructData {
             fields,
             kind,
             memory_kind,
+            type_ref_map,
+            type_ref_source_map,
+        })
+    }
+
+    pub fn type_ref_source_map(&self) -> &TypeRefSourceMap {
+        &self.type_ref_source_map
+    }
+
+    pub fn type_ref_map(&self) -> &TypeRefMap {
+        &self.type_ref_map
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct TypeAliasData {
+    pub name: Name,
+    pub type_ref_id: TypeRefId,
+    type_ref_map: TypeRefMap,
+    type_ref_source_map: TypeRefSourceMap,
+}
+impl TypeAliasData {
+    pub(crate) fn type_alias_data_query(
+        db: &dyn DefDatabase,
+        id: TypeAliasId,
+    ) -> Arc<TypeAliasData> {
+        let src = id.source(db);
+        let name = src
+            .value
+            .name()
+            .map(|n| n.as_name())
+            .unwrap_or_else(Name::missing);
+        let mut type_ref_builder = TypeRefBuilder::default();
+        let type_ref_opt = src.value.type_ref();
+        let type_ref_id = type_ref_builder.alloc_from_node_opt(type_ref_opt.as_ref());
+        let (type_ref_map, type_ref_source_map) = type_ref_builder.finish();
+        Arc::new(TypeAliasData {
+            name,
+            type_ref_id,
             type_ref_map,
             type_ref_source_map,
         })

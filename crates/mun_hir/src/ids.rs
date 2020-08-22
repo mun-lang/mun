@@ -119,3 +119,16 @@ impl AstItemDef<ast::StructDef> for StructId {
         db.lookup_intern_struct(self)
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TypeAliasId(salsa::InternId);
+impl_intern_key!(TypeAliasId);
+
+impl AstItemDef<ast::TypeAliasDef> for TypeAliasId {
+    fn intern(db: &dyn DefDatabase, loc: ItemLoc<ast::TypeAliasDef>) -> Self {
+        db.intern_type_alias(loc)
+    }
+    fn lookup_intern(self, db: &dyn DefDatabase) -> ItemLoc<ast::TypeAliasDef> {
+        db.lookup_intern_type_alias(self)
+    }
+}

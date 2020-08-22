@@ -163,6 +163,7 @@ fn api_walkthrough() {
         match item.kind() {
             ast::ModuleItemKind::FunctionDef(f) => func = Some(f),
             ast::ModuleItemKind::StructDef(_) => (),
+            ast::ModuleItemKind::TypeAliasDef(_) => (),
         }
     }
 

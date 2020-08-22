@@ -8,10 +8,12 @@ use crate::display::{HirDisplay, HirFormatter};
 use crate::ty::infer::InferTy;
 use crate::ty::lower::fn_sig_for_struct_constructor;
 use crate::utils::make_mut_slice;
-use crate::{HirDatabase, Struct, StructMemoryKind};
+use crate::{HirDatabase, Struct, StructMemoryKind, TypeAlias};
 pub(crate) use infer::infer_query;
 pub use infer::InferenceResult;
-pub(crate) use lower::{callable_item_sig, fn_sig_for_fn, type_for_def, CallableDef, TypableDef};
+pub(crate) use lower::{
+    callable_item_sig, fn_sig_for_fn, type_for_cycle_recover, type_for_def, CallableDef, TypableDef,
+};
 pub use primitives::{FloatTy, IntTy};
 pub use resolve::ResolveBitness;
 use std::ops::{Deref, DerefMut};
@@ -64,6 +66,9 @@ pub enum TypeCtor {
     /// An abstract datatype (structures, tuples, or enumerations)
     /// TODO: Add tuples and enumerations
     Struct(Struct),
+
+    /// A type alias
+    TypeAlias(TypeAlias),
 
     /// The never type `never`.
     Never,
@@ -272,6 +277,7 @@ impl HirDisplay for ApplicationTy {
             TypeCtor::Int(ty) => write!(f, "{}", ty),
             TypeCtor::Bool => write!(f, "bool"),
             TypeCtor::Struct(def) => write!(f, "{}", def.name(f.db.upcast())),
+            TypeCtor::TypeAlias(def) => write!(f, "{}", def.name(f.db.upcast())),
             TypeCtor::Never => write!(f, "never"),
             TypeCtor::FnDef(CallableDef::Function(def)) => {
                 let sig = fn_sig_for_fn(f.db, def);
