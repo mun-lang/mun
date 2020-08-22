@@ -1,6 +1,6 @@
 #![allow(dead_code, unused_macros)]
 
-use mun_compiler::{Config, DisplayColor, Driver, FileId, PathOrInline, RelativePathBuf};
+use compiler::{Config, DisplayColor, Driver, FileId, PathOrInline, RelativePathBuf};
 use mun_runtime::{IntoFunctionDefinition, Runtime, RuntimeBuilder};
 use std::{
     cell::{Ref, RefCell},

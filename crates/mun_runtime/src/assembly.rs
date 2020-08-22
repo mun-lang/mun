@@ -3,11 +3,8 @@ use std::path::{Path, PathBuf};
 
 use crate::DispatchTable;
 use abi::AssemblyInfo;
-use libloading::Symbol;
+use libloader::{MunLibrary, TempLibrary};
 
-mod temp_library;
-
-use self::temp_library::TempLibrary;
 use crate::garbage_collector::{GarbageCollector, UnsafeTypeInfo};
 use memory::mapping::{Mapping, MemoryMapper};
 use std::{collections::HashSet, ptr::NonNull, sync::Arc};
@@ -29,22 +26,9 @@ impl Assembly {
         gc: Arc<GarbageCollector>,
         runtime_dispatch_table: &DispatchTable,
     ) -> Result<Self, anyhow::Error> {
-        let library = TempLibrary::new(library_path)?;
+        let mut library = MunLibrary::new(library_path)?;
 
-        // Check whether the library has a symbols function
-        let get_info: Symbol<'_, extern "C" fn() -> AssemblyInfo> =
-            unsafe { library.library().get(abi::GET_INFO_FN_NAME.as_bytes()) }?;
-
-        let get_version: Symbol<'_, extern "C" fn() -> u32> =
-            unsafe { library.library().get(abi::GET_VERSION_FN_NAME.as_bytes()) }?;
-
-        let set_allocator_handle: Symbol<'_, extern "C" fn(*mut std::ffi::c_void)> = unsafe {
-            library
-                .library()
-                .get(abi::SET_ALLOCATOR_HANDLE_FN_NAME.as_bytes())
-        }?;
-
-        let version = get_version();
+        let version = library.get_abi_version();
         if abi::ABI_VERSION != version {
             return Err(anyhow::anyhow!(
                 "ABI version mismatch. munlib is `{}` but runtime is `{}`",
@@ -54,12 +38,12 @@ impl Assembly {
         }
 
         let allocator_ptr = Arc::into_raw(gc.clone()) as *mut std::ffi::c_void;
-        set_allocator_handle(allocator_ptr);
+        library.set_allocator_handle(allocator_ptr);
 
-        let info = get_info();
+        let info = library.get_info();
         let assembly = Assembly {
             library_path: library_path.to_path_buf(),
-            library,
+            library: library.into_inner(),
             legacy_libs: Vec::new(),
             info,
             allocator: gc,
