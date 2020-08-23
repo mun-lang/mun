@@ -1,29 +1,29 @@
 use crate::code_gen::CodeGenerationError;
 use crate::linker;
-use inkwell::targets::{FileType, TargetMachine};
 use mun_target::spec;
 use std::io::Write;
 use std::path::Path;
 use tempfile::NamedTempFile;
 
-pub struct ObjectFile {
+pub struct BitcodeFile {
     target: spec::Target,
     obj_file: NamedTempFile,
 }
 
-impl ObjectFile {
+impl BitcodeFile {
     /// Constructs a new object file from the specified `module` for `target`
     pub fn new(
         target: &spec::Target,
-        target_machine: &TargetMachine,
         module: &inkwell::module::Module,
     ) -> Result<Self, anyhow::Error> {
-        let obj = target_machine
-            .write_to_memory_buffer(&module, FileType::Object)
-            .map_err(|e| CodeGenerationError::CodeGenerationError(e.to_string()))?;
+        // Write the bitcode to a memory buffer
+        let obj = module.write_bitcode_to_memory();
 
+        // Open a temporary file
         let mut obj_file = tempfile::NamedTempFile::new()
             .map_err(CodeGenerationError::CouldNotCreateObjectFile)?;
+
+        // Write the bitcode to the temporary file
         obj_file
             .write(obj.as_slice())
             .map_err(CodeGenerationError::CouldNotCreateObjectFile)?;
