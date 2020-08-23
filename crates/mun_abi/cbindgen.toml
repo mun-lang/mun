@@ -1,0 +1,18 @@
+language = "C"
+cpp_compat = true
+
+include_guard = "MUN_ABI_H_"
+include_version = true
+sys_includes = ["stdint.h"]
+no_includes = true
+
+line_length = 100
+tab_width = 4
+
+[export]
+include = ["AssemblyInfo", "StructInfo"]
+prefix = "Mun"
+renaming_overrides_prefixing = true
+
+[export.rename]
+"ABI_VERSION" = "MUN_ABI_VERSION"

@@ -1,0 +1,59 @@
+use crate::{DispatchTable, ModuleInfo};
+use std::{ffi::CStr, os::raw::c_char, slice, str};
+
+/// Represents an assembly declaration.
+#[repr(C)]
+pub struct AssemblyInfo {
+    /// Symbols of the top-level module
+    pub symbols: ModuleInfo,
+    /// Dispatch table
+    pub dispatch_table: DispatchTable,
+    /// Paths to assembly dependencies
+    pub(crate) dependencies: *const *const c_char,
+    /// Number of dependencies
+    pub num_dependencies: u32,
+}
+
+impl AssemblyInfo {
+    /// Returns an iterator over the assembly's dependencies.
+    pub fn dependencies(&self) -> impl Iterator<Item = &str> {
+        let dependencies = if self.num_dependencies == 0 {
+            &[]
+        } else {
+            unsafe { slice::from_raw_parts(self.dependencies, self.num_dependencies as usize) }
+        };
+
+        dependencies
+            .iter()
+            .map(|d| unsafe { str::from_utf8_unchecked(CStr::from_ptr(*d).to_bytes()) })
+    }
+}
+
+unsafe impl Send for AssemblyInfo {}
+unsafe impl Sync for AssemblyInfo {}
+
+#[cfg(test)]
+mod tests {
+    use crate::test_utils::{
+        fake_assembly_info, fake_dispatch_table, fake_module_info, FAKE_DEPENDENCY,
+        FAKE_MODULE_PATH,
+    };
+    use std::ffi::CString;
+
+    #[test]
+    fn test_assembly_info_dependencies() {
+        let module_path = CString::new(FAKE_MODULE_PATH).expect("Invalid fake module path.");
+        let module = fake_module_info(&module_path, &[], &[]);
+
+        let dispatch_table = fake_dispatch_table(&[], &mut []);
+
+        let dependency = CString::new(FAKE_DEPENDENCY).expect("Invalid fake dependency.");
+        let dependencies = &[dependency.as_ptr()];
+        let assembly = fake_assembly_info(module, dispatch_table, dependencies);
+
+        assert_eq!(assembly.dependencies().count(), dependencies.len());
+        for (lhs, rhs) in assembly.dependencies().zip([FAKE_DEPENDENCY].iter()) {
+            assert_eq!(lhs, *rhs)
+        }
+    }
+}

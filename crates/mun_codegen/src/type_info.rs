@@ -66,7 +66,7 @@ pub struct TypeInfo {
 
 impl Hash for TypeInfo {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write(&self.guid.b)
+        state.write(&self.guid.0)
     }
 }
 
@@ -92,9 +92,7 @@ impl TypeInfo {
     pub fn new_fundamental<S: AsRef<str>>(name: S, type_size: TypeSize) -> TypeInfo {
         TypeInfo {
             name: name.as_ref().to_string(),
-            guid: Guid {
-                b: md5::compute(name.as_ref()).0,
-            },
+            guid: Guid(md5::compute(name.as_ref()).0),
             group: TypeGroup::FundamentalTypes,
             size: type_size,
         }
@@ -122,9 +120,7 @@ impl TypeInfo {
             )
         };
         Self {
-            guid: Guid {
-                b: md5::compute(&guid_string).0,
-            },
+            guid: Guid(md5::compute(&guid_string).0),
             name,
             group: TypeGroup::StructTypes(s),
             size: type_size,

@@ -207,9 +207,7 @@ impl<'r> ReturnTypeReflection for StructRef<'r> {
     fn type_guid() -> abi::Guid {
         // TODO: Once `const_fn` lands, replace this with a const md5 hash
         static GUID: OnceCell<abi::Guid> = OnceCell::new();
-        *GUID.get_or_init(|| abi::Guid {
-            b: md5::compute(<Self as ReturnTypeReflection>::type_name()).0,
-        })
+        *GUID.get_or_init(|| abi::Guid(md5::compute(<Self as ReturnTypeReflection>::type_name()).0))
     }
 }
 

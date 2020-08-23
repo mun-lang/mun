@@ -262,6 +262,19 @@ impl Runtime {
         self.dispatch_table.get_fn(function_name)
     }
 
+    /// Retrieves the type definition corresponding to `type_name`, if available.
+    pub fn get_type_info(&self, type_name: &str) -> Option<&abi::TypeInfo> {
+        for assembly in self.assemblies.values() {
+            for type_info in assembly.info().symbols.types().iter() {
+                if type_info.name() == type_name {
+                    return Some(type_info);
+                }
+            }
+        }
+
+        None
+    }
+
     /// Updates the state of the runtime. This includes checking for file changes, and reloading
     /// compiled assemblies.
     pub fn update(&mut self) -> bool {
