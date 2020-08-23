@@ -3,15 +3,13 @@ source: crates/mun_compiler/src/diagnostics.rs
 expression: "compilation_errors(\"\\n\\nfn main() {\\nlet b = a;\\n\\nlet d = c;\\n}\")"
 ---
 error: cannot find value `a` in this scope
- --> main.mun:4:8
+ --> main.mun:4:9
   |
 4 | let b = a;
   |         ^ not found in this scope
-  |
-error: cannot find value `c` in this scope
- --> main.mun:6:8
+  |error: cannot find value `c` in this scope
+ --> main.mun:6:9
   |
 6 | let d = c;
   |         ^ not found in this scope
   |
-

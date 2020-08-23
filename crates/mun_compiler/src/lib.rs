@@ -1,5 +1,5 @@
 #![allow(clippy::enum_variant_names)] // This is a HACK because we use salsa
-mod annotate;
+
 mod db;
 ///! This library contains the code required to go from source code to binaries.
 pub mod diagnostics;
@@ -12,7 +12,6 @@ use std::path::{Path, PathBuf};
 
 pub use crate::driver::DisplayColor;
 pub use crate::driver::{Config, Driver};
-pub use annotate::{AnnotationBuilder, SliceBuilder, SnippetBuilder};
 pub use mun_codegen::OptimizationLevel;
 
 pub use crate::db::CompilerDatabase;

@@ -1,0 +1,19 @@
+[package]
+name = "mun_diagnostics"
+version = "0.1.0"
+authors = ["The Mun Team <team@mun-lang.org>"]
+edition = "2018"
+description = "Provides in-depth diagnostic information for compiler errors"
+documentation = "https://docs.mun-lang.org/v0.2"
+readme = "README.md"
+homepage = "https://mun-lang.org"
+repository = "https://github.com/mun-lang/mun"
+license = "MIT OR Apache-2.0"
+keywords = ["game", "hot-reloading", "language", "mun", "diagnostics"]
+categories = ["game-development", "mun"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+mun_hir = { version = "=0.2.0", path="../mun_hir", package="mun_hir" }
+mun_syntax = { version = "=0.2.0", path = "../mun_syntax" }

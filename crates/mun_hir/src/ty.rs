@@ -177,6 +177,14 @@ impl Ty {
             _ => None,
         })
     }
+
+    /// Returns true if this instance represents a known type.
+    pub fn is_known(&self) -> bool {
+        match self {
+            Ty::Unknown => false,
+            _ => true,
+        }
+    }
 }
 
 /// A list of substitutions for generic parameters.

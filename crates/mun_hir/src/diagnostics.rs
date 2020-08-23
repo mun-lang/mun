@@ -433,6 +433,7 @@ impl Diagnostic for FieldCountMismatch {
 pub struct MissingFields {
     pub file: FileId,
     pub fields: SyntaxNodePtr,
+    pub struct_ty: Ty,
     pub field_names: Vec<Name>,
 }
 

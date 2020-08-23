@@ -1,363 +1,201 @@
-use mun_hir::diagnostics::Diagnostic as HirDiagnostic;
-use mun_hir::{HirDatabase, HirDisplay};
-use mun_syntax::{
-    ast, AstNode, Parse, SourceFile, SyntaxError, SyntaxKind, SyntaxNodePtr, TextRange,
-};
+use mun_diagnostics::DiagnosticForWith;
+use mun_hir::{FileId, HirDatabase, RelativePathBuf};
+use mun_syntax::SyntaxError;
 
 use std::sync::Arc;
 
 use mun_hir::line_index::LineIndex;
 
-use crate::annotate::{AnnotationBuilder, SliceBuilder, SnippetBuilder};
+use annotate_snippets::display_list::DisplayList;
+use annotate_snippets::display_list::FormatOptions;
+use annotate_snippets::snippet::{Annotation, AnnotationType, Slice, Snippet, SourceAnnotation};
+use std::collections::HashMap;
 
-use annotate_snippets::snippet::{AnnotationType, Snippet};
-
-fn text_range_to_tuple(text_range: TextRange) -> (usize, usize) {
-    (text_range.start().to_usize(), text_range.end().to_usize())
-}
-
-fn syntax_node_ptr_location(
-    syntax_node_ptr: SyntaxNodePtr,
-    parse: &Parse<SourceFile>,
-) -> TextRange {
-    match syntax_node_ptr.kind() {
-        SyntaxKind::FUNCTION_DEF => {
-            ast::FunctionDef::cast(syntax_node_ptr.to_node(parse.tree().syntax()))
-                .map(|f| f.signature_range())
-                .unwrap_or_else(|| syntax_node_ptr.range())
-        }
-        SyntaxKind::STRUCT_DEF => {
-            ast::StructDef::cast(syntax_node_ptr.to_node(parse.tree().syntax()))
-                .map(|s| s.signature_range())
-                .unwrap_or_else(|| syntax_node_ptr.range())
-        }
-        _ => syntax_node_ptr.range(),
-    }
-}
-
-pub(crate) fn syntax_error(
+/// Writes the specified syntax error to the output stream.
+pub(crate) fn emit_syntax_error(
     syntax_error: &SyntaxError,
-    _: &dyn HirDatabase,
-    _: &Parse<SourceFile>,
     relative_file_path: &str,
     source_code: &str,
-    line_index: &Arc<LineIndex>,
-) -> Snippet {
-    let mut snippet = SnippetBuilder::new()
-        .title(
-            AnnotationBuilder::new(AnnotationType::Error)
-                .label("syntax error")
-                .build(),
-        )
-        .slice(
-            SliceBuilder::new(true)
-                .origin(relative_file_path)
-                .source_annotation(
-                    (
-                        syntax_error.location().offset().to_usize(),
-                        syntax_error.location().end_offset().to_usize(),
-                    ),
-                    &syntax_error.to_string(),
-                    AnnotationType::Error,
-                )
-                .build(&source_code, &line_index),
-        )
-        .build();
-    // Add one to right range to make highlighting range here visible on output
-    snippet.slices[0].annotations[0].range.1 += 1;
+    line_index: &LineIndex,
+    display_colors: bool,
+    writer: &mut dyn std::io::Write,
+) -> std::io::Result<()> {
+    let syntax_error_text = syntax_error.to_string();
+    let location = syntax_error.location();
+    let line = line_index.line_col(location.offset()).line;
+    let line_offset = line_index.line_offset(line);
 
-    snippet
+    let snippet = Snippet {
+        title: Some(Annotation {
+            id: None,
+            label: Some("syntax error"),
+            annotation_type: AnnotationType::Error,
+        }),
+        footer: vec![],
+        slices: vec![Slice {
+            source: &source_code[line_offset..],
+            line_start: line as usize + 1,
+            origin: Some(relative_file_path),
+            annotations: vec![SourceAnnotation {
+                range: (
+                    location.offset().to_usize() - line_offset,
+                    location.end_offset().to_usize() - line_offset + 1,
+                ),
+                label: &syntax_error_text,
+                annotation_type: AnnotationType::Error,
+            }],
+            fold: true,
+        }],
+        opt: FormatOptions {
+            color: display_colors,
+            anonymized_line_numbers: false,
+            margin: None,
+        },
+    };
+    let dl = DisplayList::from(snippet);
+    write!(writer, "{}", dl)
 }
 
-pub(crate) fn generic_error(
-    diagnostic: &dyn HirDiagnostic,
-    _: &dyn HirDatabase,
-    _: &Parse<SourceFile>,
-    relative_file_path: &str,
-    source_code: &str,
-    line_index: &Arc<LineIndex>,
-) -> Snippet {
-    SnippetBuilder::new()
-        .title(
-            AnnotationBuilder::new(AnnotationType::Error)
-                .label(&diagnostic.message())
-                .build(),
-        )
-        .slice(
-            SliceBuilder::new(true)
-                .origin(relative_file_path)
-                .source_annotation(
-                    text_range_to_tuple(diagnostic.highlight_range()),
-                    &diagnostic.message(),
-                    AnnotationType::Error,
-                )
-                .build(&source_code, &line_index),
-        )
-        .build()
+/// Emits all diagnostics that are a result of HIR validation.
+pub(crate) fn emit_hir_diagnostic(
+    diagnostic: &dyn mun_hir::Diagnostic,
+    db: &impl HirDatabase,
+    file_id: FileId,
+    display_colors: bool,
+    writer: &mut dyn std::io::Write,
+) -> std::io::Result<()> {
+    diagnostic.with_diagnostic(db, |diagnostic| {
+        emit_diagnostic(diagnostic, db, file_id, display_colors, writer)
+    })
 }
 
-pub(crate) fn unresolved_value_error(
-    diagnostic: &mun_hir::diagnostics::UnresolvedValue,
-    _: &dyn HirDatabase,
-    parse: &Parse<SourceFile>,
-    relative_file_path: &str,
-    source_code: &str,
-    line_index: &Arc<LineIndex>,
-) -> Snippet {
-    let unresolved_value = diagnostic
-        .expr
-        .to_node(&parse.tree().syntax())
-        .text()
-        .to_string();
+/// Emits a diagnostic by writting a snippet to the specified `writer`.
+fn emit_diagnostic(
+    diagnostic: &dyn mun_diagnostics::Diagnostic,
+    db: &impl HirDatabase,
+    file_id: FileId,
+    display_colors: bool,
+    writer: &mut dyn std::io::Write,
+) -> std::io::Result<()> {
+    // Get the basic info from the diagnostic
+    let title = diagnostic.title();
+    let range = diagnostic.range();
 
-    SnippetBuilder::new()
-        .title(
-            AnnotationBuilder::new(AnnotationType::Error)
-                .label(&format!(
-                    "cannot find value `{}` in this scope",
-                    unresolved_value
-                ))
-                .build(),
-        )
-        .slice(
-            SliceBuilder::new(true)
-                .origin(relative_file_path)
-                .source_annotation(
-                    text_range_to_tuple(diagnostic.highlight_range()),
-                    "not found in this scope",
-                    AnnotationType::Error,
-                )
-                .build(&source_code, &line_index),
-        )
-        .build()
-}
+    /// Will hold all snippets and their relevant information
+    struct AnnotationFile {
+        relative_file_path: RelativePathBuf,
+        source_code: Arc<String>,
+        line_index: Arc<LineIndex>,
+        annotations: Vec<mun_diagnostics::SourceAnnotation>,
+    };
 
-pub(crate) fn unresolved_type_error(
-    diagnostic: &mun_hir::diagnostics::UnresolvedType,
-    _: &dyn HirDatabase,
-    parse: &Parse<SourceFile>,
-    relative_file_path: &str,
-    source_code: &str,
-    line_index: &Arc<LineIndex>,
-) -> Snippet {
-    let unresolved_type = diagnostic
-        .type_ref
-        .to_node(&parse.syntax_node())
-        .syntax()
-        .text()
-        .to_string();
+    let annotations = {
+        let mut annotations = Vec::new();
+        let mut file_to_index = HashMap::new();
 
-    SnippetBuilder::new()
-        .title(
-            AnnotationBuilder::new(AnnotationType::Error)
-                .label(&format!(
-                    "cannot find type `{}` in this scope",
-                    unresolved_type
-                ))
-                .build(),
-        )
-        .slice(
-            SliceBuilder::new(true)
-                .origin(relative_file_path)
-                .source_annotation(
-                    text_range_to_tuple(diagnostic.highlight_range()),
-                    "not found in this scope",
-                    AnnotationType::Error,
-                )
-                .build(&source_code, &line_index),
-        )
-        .build()
-}
+        // Add primary annotations
+        annotations.push(AnnotationFile {
+            relative_file_path: db.file_relative_path(file_id),
+            source_code: db.file_text(file_id),
+            line_index: db.line_index(file_id),
+            annotations: vec![match diagnostic.primary_annotation() {
+                None => mun_diagnostics::SourceAnnotation {
+                    range,
+                    message: title.clone(),
+                },
+                Some(annotation) => annotation,
+            }],
+        });
+        file_to_index.insert(file_id, 0);
 
-pub(crate) fn expected_function_error(
-    diagnostic: &mun_hir::diagnostics::ExpectedFunction,
-    hir_database: &dyn HirDatabase,
-    _: &Parse<SourceFile>,
-    relative_file_path: &str,
-    source_code: &str,
-    line_index: &Arc<LineIndex>,
-) -> Snippet {
-    SnippetBuilder::new()
-        .title(
-            AnnotationBuilder::new(AnnotationType::Error)
-                .label(&diagnostic.message())
-                .build(),
-        )
-        .slice(
-            SliceBuilder::new(true)
-                .origin(relative_file_path)
-                .source_annotation(
-                    text_range_to_tuple(diagnostic.highlight_range()),
-                    &format!(
-                        "expected function, found `{}`",
-                        diagnostic.found.display(hir_database)
-                    ),
-                    AnnotationType::Error,
-                )
-                .build(&source_code, &line_index),
-        )
-        .build()
-}
+        // Add the secondary annotations
+        for annotation in diagnostic.secondary_annotations() {
+            let file_id = annotation.range.file_id;
 
-pub(crate) fn mismatched_type_error(
-    diagnostic: &mun_hir::diagnostics::MismatchedType,
-    hir_database: &dyn HirDatabase,
-    _: &Parse<SourceFile>,
-    relative_file_path: &str,
-    source_code: &str,
-    line_index: &Arc<LineIndex>,
-) -> Snippet {
-    SnippetBuilder::new()
-        .title(
-            AnnotationBuilder::new(AnnotationType::Error)
-                .label(&diagnostic.message())
-                .build(),
-        )
-        .slice(
-            SliceBuilder::new(true)
-                .origin(relative_file_path)
-                .source_annotation(
-                    text_range_to_tuple(diagnostic.highlight_range()),
-                    &format!(
-                        "expected `{}`, found `{}`",
-                        diagnostic.expected.display(hir_database),
-                        diagnostic.found.display(hir_database)
-                    ),
-                    AnnotationType::Error,
-                )
-                .build(&source_code, &line_index),
-        )
-        .build()
-}
+            // Find an entry for this `file_id`
+            let file_idx = match file_to_index.get(&file_id) {
+                None => {
+                    // Doesn't exist yet, add it
+                    annotations.push(AnnotationFile {
+                        relative_file_path: db.file_relative_path(file_id),
+                        source_code: db.file_text(file_id),
+                        line_index: db.line_index(file_id),
+                        annotations: Vec::new(),
+                    });
+                    let idx = annotations.len() - 1;
+                    file_to_index.insert(file_id, idx);
+                    idx
+                }
+                Some(idx) => *idx,
+            };
 
-pub(crate) fn duplicate_definition_error(
-    diagnostic: &mun_hir::diagnostics::DuplicateDefinition,
-    _: &dyn HirDatabase,
-    parse: &Parse<SourceFile>,
-    relative_file_path: &str,
-    source_code: &str,
-    line_index: &Arc<LineIndex>,
-) -> Snippet {
-    let first_definition_location = syntax_node_ptr_location(diagnostic.first_definition, &parse);
-    let definition_location = syntax_node_ptr_location(diagnostic.definition, &parse);
+            // Add this annotation to the list of snippets for the file
+            annotations[file_idx].annotations.push(annotation.into());
+        }
 
-    let duplication_object_type =
-        if matches!(diagnostic.first_definition.kind(), SyntaxKind::STRUCT_DEF)
-            && matches!(diagnostic.definition.kind(), SyntaxKind::STRUCT_DEF)
-        {
-            "type"
-        } else {
-            "value"
-        };
+        annotations
+    };
 
-    SnippetBuilder::new()
-        .title(
-            AnnotationBuilder::new(AnnotationType::Error)
-                .label(&diagnostic.message())
-                .build(),
-        )
-        .slice(
-            SliceBuilder::new(true)
-                .origin(relative_file_path)
-                // First definition
-                .source_annotation(
-                    text_range_to_tuple(first_definition_location),
-                    &format!(
-                        "previous definition of the {} `{}` here",
-                        duplication_object_type, diagnostic.name
-                    ),
-                    AnnotationType::Warning,
-                )
-                // Second definition
-                .source_annotation(
-                    text_range_to_tuple(definition_location),
-                    &format!("`{}` redefined here", diagnostic.name),
-                    AnnotationType::Error,
-                )
-                .build(&source_code, &line_index),
-        )
-        .footer(
-            AnnotationBuilder::new(AnnotationType::Note)
-                .label(&format!(
-                    "`{}` must be defined only once in the {} namespace of this module",
-                    diagnostic.name, duplication_object_type
-                ))
-                .build(),
-        )
-        .build()
-}
+    let footer = diagnostic.footer();
 
-pub(crate) fn possibly_uninitialized_variable_error(
-    diagnostic: &mun_hir::diagnostics::PossiblyUninitializedVariable,
-    _: &dyn HirDatabase,
-    parse: &Parse<SourceFile>,
-    relative_file_path: &str,
-    source_code: &str,
-    line_index: &Arc<LineIndex>,
-) -> Snippet {
-    let variable_name = diagnostic.pat.to_node(&parse.syntax_node()).text();
+    // Construct an annotation snippet to be able to emit it.
+    let snippet = Snippet {
+        title: Some(Annotation {
+            id: None,
+            label: Some(&title),
+            annotation_type: AnnotationType::Error,
+        }),
+        slices: annotations
+            .iter()
+            .filter_map(|file| {
+                let first_offset = {
+                    let mut iter = file.annotations.iter();
+                    match iter.next() {
+                        Some(first) => {
+                            let first = first.range.start();
+                            iter.fold(first, |init, value| init.min(value.range.start()))
+                        }
+                        None => return None,
+                    }
+                };
+                let first_offset_line = file.line_index.line_col(first_offset);
+                let line_offset = file.line_index.line_offset(first_offset_line.line);
+                Some(Slice {
+                    source: &file.source_code[line_offset..],
+                    line_start: first_offset_line.line as usize + 1,
+                    origin: Some(file.relative_file_path.as_ref()),
+                    annotations: file
+                        .annotations
+                        .iter()
+                        .map(|annotation| SourceAnnotation {
+                            range: (
+                                annotation.range.start().to_usize() - line_offset,
+                                annotation.range.end().to_usize() - line_offset,
+                            ),
+                            label: annotation.message.as_str(),
+                            annotation_type: AnnotationType::Error,
+                        })
+                        .collect(),
+                    fold: true,
+                })
+            })
+            .collect(),
+        footer: footer
+            .iter()
+            .map(|footer| Annotation {
+                id: None,
+                label: Some(footer.as_str()),
+                annotation_type: AnnotationType::Note,
+            })
+            .collect(),
+        opt: FormatOptions {
+            color: display_colors,
+            anonymized_line_numbers: false,
+            margin: None,
+        },
+    };
 
-    SnippetBuilder::new()
-        .title(
-            AnnotationBuilder::new(AnnotationType::Error)
-                .label(&format!("{}: `{}`", diagnostic.message(), variable_name))
-                .build(),
-        )
-        .slice(
-            SliceBuilder::new(true)
-                .origin(relative_file_path)
-                .source_annotation(
-                    text_range_to_tuple(diagnostic.highlight_range()),
-                    &format!("use of possibly-uninitialized `{}`", variable_name),
-                    AnnotationType::Error,
-                )
-                .build(&source_code, &line_index),
-        )
-        .build()
-}
-
-pub(crate) fn access_unknown_field_error(
-    diagnostic: &mun_hir::diagnostics::AccessUnknownField,
-    hir_database: &dyn HirDatabase,
-    parse: &Parse<SourceFile>,
-    relative_file_path: &str,
-    source_code: &str,
-    line_index: &Arc<LineIndex>,
-) -> Snippet {
-    let location = ast::FieldExpr::cast(diagnostic.expr.to_node(&parse.syntax_node()))
-        .map(|f| f.field_range())
-        .unwrap_or_else(|| diagnostic.highlight_range());
-
-    SnippetBuilder::new()
-        .title(
-            AnnotationBuilder::new(AnnotationType::Error)
-                .label(&format!(
-                    "no field `{}` on type `{}`",
-                    diagnostic.name,
-                    diagnostic.receiver_ty.display(hir_database),
-                ))
-                .build(),
-        )
-        .slice(
-            SliceBuilder::new(true)
-                .origin(relative_file_path)
-                .source_annotation(
-                    text_range_to_tuple(location),
-                    "unknown field",
-                    AnnotationType::Error,
-                )
-                .build(&source_code, &line_index),
-        )
-        .build()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_text_range_to_tuple() {
-        let text_range = TextRange::from_to(3.into(), 5.into());
-        assert_eq!(text_range_to_tuple(text_range), (3, 5));
-    }
+    // Build a display list and emit to the writer
+    let dl = DisplayList::from(snippet);
+    write!(writer, "{}", dl)
 }

@@ -2,41 +2,31 @@
 source: crates/mun_compiler/src/diagnostics.rs
 expression: "compilation_errors(\"\\n\\nfn foo(){}\\n\\nfn foo(){}\\n\\nstruct Bar;\\n\\nstruct Bar;\\n\\nfn BAZ(){}\\n\\nstruct BAZ;\")"
 ---
-error: the name `foo` is defined multiple times
- --> main.mun:3:0
+error: a value named `foo` has already been defined in this module
+ --> main.mun:5:1
   |
 3 | fn foo(){}
-  | -------- previous definition of the value `foo` here
+  | ^^^^^^^^ first definition of the value `foo` here
 4 | 
 5 | fn foo(){}
   | ^^^^^^^^ `foo` redefined here
   |
-  = note: `foo` must be defined only once in the value namespace of this module
-error: the name `Bar` is defined multiple times
- --> main.mun:3:0
+  = note: `foo` must be defined only once in the value namespace of this moduleerror: a type named `Bar` has already been defined in this module
+ --> main.mun:9:1
   |
-...
 7 | struct Bar;
-  | ---------- previous definition of the type `Bar` here
+  | ^^^^^^^^^^ first definition of the type `Bar` here
 8 | 
 9 | struct Bar;
   | ^^^^^^^^^^ `Bar` redefined here
   |
-  = note: `Bar` must be defined only once in the type namespace of this module
-error: the name `BAZ` is defined multiple times
-  --> main.mun:8:0
+  = note: `Bar` must be defined only once in the type namespace of this moduleerror: a type named `BAZ` has already been defined in this module
+  --> main.mun:13:1
    |
- 3 | fn foo(){}
- 4 | 
- 5 | fn foo(){}
- 6 | 
-...
-10 | 
 11 | fn BAZ(){}
-   | -------- previous definition of the value `BAZ` here
+   | ^^^^^^^^ first definition of the type `BAZ` here
 12 | 
 13 | struct BAZ;
    | ^^^^^^^^^^ `BAZ` redefined here
    |
-   = note: `BAZ` must be defined only once in the value namespace of this module
-
+   = note: `BAZ` must be defined only once in the type namespace of this module
