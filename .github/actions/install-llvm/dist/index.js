@@ -1114,7 +1114,14 @@ async function execute(cmd) {
 (async () => {
     try {
         if(isLinux) {
-            await exec.exec("sudo apt install llvm-8 llvm-8-* liblld-8*");
+            let llvmCachedPath = tc.find("llvm", "8.0.1", "linux");
+            if(!llvmCachedPath) {
+                llvmCachedPath = await tc.downloadTool("https://github.com/mun-lang/build-support/releases/download/llvm-8.0.1/llvm-8.0.1-ubuntu-12.04-bionic.tar.xz")
+                    .then(downloadPath => tc.extractTar(downloadPath, null))
+                    .then(extractPath => tc.cacheDir(extractPath, "llvm", "8.0.1", "linux"));
+            }
+            core.addPath(`${llvmCachedPath}/bin`)
+            core.exportVariable('LIBCLANG_PATH', `${llvmCachedPath}/bin`)
         } else if(isMacOS) {
             await exec.exec("brew install llvm@8")
             let llvmPath = await execute("brew --prefix llvm@8");

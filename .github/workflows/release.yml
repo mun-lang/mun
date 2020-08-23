@@ -18,7 +18,7 @@ jobs:
       matrix:
         config:
         - {
-          os: "ubuntu-latest",
+          os: "ubuntu-20.04",
           dir: linux64,
           artifacts: "mun libmun_runtime.so"
         }

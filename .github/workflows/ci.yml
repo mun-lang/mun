@@ -9,7 +9,7 @@ jobs:
 
   check:
     name: Check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
         with:
@@ -38,9 +38,9 @@ jobs:
       fail-fast: false
       matrix:
         config:
-        - { os: "ubuntu-latest", toolchain: "stable"}
-        - { os: "ubuntu-latest", toolchain: "beta"}
-        - { os: "ubuntu-latest", toolchain: "nightly"}
+        - { os: "ubuntu-20.04", toolchain: "stable"}
+        - { os: "ubuntu-20.04", toolchain: "beta"}
+        - { os: "ubuntu-20.04", toolchain: "nightly"}
         - { os: "windows-2016", toolchain: "stable"}
         - { os: "macOS-latest", toolchain: "stable"}
     steps:
@@ -60,14 +60,14 @@ jobs:
         uses: ./.github/actions/install-llvm
 
       - name: Cargo build
-        if: ${{ matrix.config.os == 'ubuntu-latest' && matrix.config.toolchain == 'stable' }}
+        if: ${{ matrix.config.os == 'ubuntu-20.04' && matrix.config.toolchain == 'stable' }}
         uses: actions-rs/cargo@v1
         continue-on-error: ${{ matrix.config.toolchain == 'nightly' }}
         with:
           command: build
 
       - name: Install mdbook
-        if: ${{ matrix.config.os == 'ubuntu-latest' && matrix.config.toolchain == 'stable' }}
+        if: ${{ matrix.config.os == 'ubuntu-20.04' && matrix.config.toolchain == 'stable' }}
         uses: actions-rs/install@v0.1
         with:
           crate: mdbook
@@ -75,7 +75,7 @@ jobs:
           use-tool-cache: true
           
       - name: mdbook test
-        if: ${{ matrix.config.os == 'ubuntu-latest' && matrix.config.toolchain == 'stable' }}
+        if: ${{ matrix.config.os == 'ubuntu-20.04' && matrix.config.toolchain == 'stable' }}
         run: mdbook test book -L target/debug/deps
 
       - name: Cargo test
@@ -87,7 +87,7 @@ jobs:
 
   style:
     name: Check Style
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: check
     steps:
       - uses: actions/checkout@v2
@@ -118,7 +118,7 @@ jobs:
           args: --all-features
 
   tarpaulin:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: check
     steps:
       - uses: actions/checkout@v2
