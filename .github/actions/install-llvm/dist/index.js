@@ -1117,7 +1117,7 @@ async function execute(cmd) {
             let llvmCachedPath = tc.find("llvm", "8.0.1", "linux");
             if(!llvmCachedPath) {
                 llvmCachedPath = await tc.downloadTool("https://github.com/mun-lang/build-support/releases/download/llvm-8.0.1/llvm-8.0.1-ubuntu-12.04-bionic.tar.xz")
-                    .then(downloadPath => tc.extractTar(downloadPath, null))
+                    .then(downloadPath => tc.extractTar(downloadPath, null, "xJ"))
                     .then(extractPath => tc.cacheDir(extractPath, "llvm", "8.0.1", "linux"));
             }
             core.addPath(`${llvmCachedPath}/bin`)
