@@ -1,9 +1,10 @@
 name: release
-on:
-  push:
-    branches:
-      - master
-      - release/*
+# on:
+#   push:
+#     branches:
+#       - master
+#       - release/*
+on: [pull_request, push]
 
 env:
   RUSTFLAGS: -Dwarnings
