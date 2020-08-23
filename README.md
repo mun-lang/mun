@@ -153,7 +153,7 @@ rustup](https://www.rust-lang.org/tools/install).
 
 #### LLVM
 
-Mun targets LLVM 7.1.0. Installing LLVM is platform dependant and as such can be
+Mun targets LLVM 8.0.1. Installing LLVM is platform dependant and as such can be
 a pain. The following steps are how we install LLVM on [our CI
 runners](.github/actions/install-llvm/index.js):
 
@@ -161,7 +161,7 @@ runners](.github/actions/install-llvm/index.js):
   of LLVM, e.g.:
   ```bash
   # Ubuntu 18.04
-  sudo apt install llvm-7 llvm-7-* liblld-7*
+  sudo apt install llvm-8 llvm-8-* liblld-8*
   ```
 * **Arch Linux** The binary version of LLVM can currently only be installed
   using an AUR helper, such as `yay`:
@@ -181,21 +181,21 @@ runners](.github/actions/install-llvm/index.js):
   symlink; e.g. `ln -s /usr/lib/libtinfo.so.6 /usr/lib/libtinfo.so.5`),
   otherwise download the library.
 * **macOS**: [Brew](https://brew.sh/) contains a binary distribution of LLVM
-  7.1.0. However, as it's not the latest version, it won't be added to the path.
+  8.0.1. However, as it's not the latest version, it won't be added to the path.
   We are using [llvm-sys](https://crates.io/crates/llvm-sys) to manage version,
-  but another option is to export the `LLVM_SYS_70_PREFIX` variable, which will
+  but another option is to export the `LLVM_SYS_80_PREFIX` variable, which will
   not clutter your `PATH`. To install:
   ```bash
-  brew install llvm@7
+  brew install llvm@8
   # Export LLVM_SYS_PREFIX to not clubber PATH
-  export LLVM_SYS_PREFIX=$(brew --prefix llvm@7)
+  export LLVM_SYS_PREFIX=$(brew --prefix llvm@8)
   ```
 * **windows**: Binary distrubutions are available for Windows on the LLVM
   website, but they do not contain a number of libraries that are required by
   Mun. To avoid having to go to the trouble of compiling LLVM yourself, we
   created a [repository](https://github.com/mun-lang/llvm-package-windows) that
   automatically compiles the required binaries. It also contains a
-  [release](https://github.com/mun-lang/llvm-package-windows/releases/download/v7.1.0/llvm-7.1.0-windows-x64-msvc15.7z)
+  [release](https://github.com/mun-lang/llvm-package-windows/releases/v8.0.1)
   that you can download and extract to your machine. Once downloaded and
   extracted, add the `<extract_dir>/bin` folder to the `PATH` environment
   variable.

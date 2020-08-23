@@ -6,13 +6,21 @@ pub trait CanInternalize {
     type Type;
 
     /// Internalizes the instance into a global value.
-    fn intern<S: AsRef<str>>(&self, name: S, context: &IrValueContext) -> Global<Self::Type>;
+    fn intern<'ink, S: AsRef<str>>(
+        &self,
+        name: S,
+        context: &IrValueContext<'ink, '_, '_>,
+    ) -> Global<'ink, Self::Type>;
 }
 
 impl CanInternalize for str {
     type Type = String;
 
-    fn intern<S: AsRef<str>>(&self, name: S, context: &IrValueContext) -> Global<Self::Type> {
+    fn intern<'ink, S: AsRef<str>>(
+        &self,
+        name: S,
+        context: &IrValueContext<'ink, '_, '_>,
+    ) -> Global<'ink, Self::Type> {
         unsafe {
             Global::from_raw(
                 self.as_bytes()
@@ -27,7 +35,11 @@ impl CanInternalize for str {
 impl CanInternalize for CStr {
     type Type = CString;
 
-    fn intern<S: AsRef<str>>(&self, name: S, context: &IrValueContext) -> Global<Self::Type> {
+    fn intern<'ink, S: AsRef<str>>(
+        &self,
+        name: S,
+        context: &IrValueContext<'ink, '_, '_>,
+    ) -> Global<'ink, Self::Type> {
         unsafe {
             Global::from_raw(
                 self.to_bytes_with_nul()
@@ -39,18 +51,18 @@ impl CanInternalize for CStr {
     }
 }
 
-impl TransparentValue for CString {
+impl<'ink> TransparentValue<'ink> for CString {
     type Target = [u8];
 
-    fn as_target_value(&self, context: &IrValueContext) -> Value<Self::Target> {
+    fn as_target_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, Self::Target> {
         self.as_bytes_with_nul().as_value(context)
     }
 }
 
-impl TransparentValue for String {
+impl<'ink> TransparentValue<'ink> for String {
     type Target = [u8];
 
-    fn as_target_value(&self, context: &IrValueContext) -> Value<Self::Target> {
+    fn as_target_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, Self::Target> {
         self.as_bytes().as_value(context)
     }
 }

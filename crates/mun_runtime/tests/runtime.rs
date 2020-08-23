@@ -11,7 +11,6 @@ fn error_assembly_not_linkable() {
     ",
         |builder| builder,
     );
-
     assert_eq!(
         format!("{}", driver.unwrap_err()),
         format!(
@@ -46,6 +45,5 @@ fn arg_missing_bug() {
     }",
         |builder| builder,
     );
-
     driver.unwrap();
 }

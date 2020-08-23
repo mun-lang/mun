@@ -5,41 +5,47 @@ use crate::value::{
 use inkwell::types::PointerType;
 use inkwell::AddressSpace;
 
-impl<T: PointerValueType> ConcreteValueType for *const T {
-    type Value = inkwell::values::PointerValue;
+impl<'ink, T: PointerValueType<'ink>> ConcreteValueType<'ink> for *const T {
+    type Value = inkwell::values::PointerValue<'ink>;
 }
-impl<T: PointerValueType> ConcreteValueType for *mut T {
-    type Value = inkwell::values::PointerValue;
+impl<'ink, T: PointerValueType<'ink>> ConcreteValueType<'ink> for *mut T {
+    type Value = inkwell::values::PointerValue<'ink>;
 }
 
-impl<T: PointerValueType> SizedValueType for *const T {
-    fn get_ir_type(context: &IrTypeContext) -> inkwell::types::PointerType {
+impl<'ink, T: PointerValueType<'ink>> SizedValueType<'ink> for *const T {
+    fn get_ir_type(context: &IrTypeContext<'ink, '_>) -> inkwell::types::PointerType<'ink> {
         T::get_ptr_type(context, None)
     }
 }
-impl<T: PointerValueType> SizedValueType for *mut T {
-    fn get_ir_type(context: &IrTypeContext) -> inkwell::types::PointerType {
+impl<'ink, T: PointerValueType<'ink>> SizedValueType<'ink> for *mut T {
+    fn get_ir_type(context: &IrTypeContext<'ink, '_>) -> inkwell::types::PointerType<'ink> {
         T::get_ptr_type(context, None)
     }
 }
-impl<T: PointerValueType> PointerValueType for *mut T {
-    fn get_ptr_type(context: &IrTypeContext, address_space: Option<AddressSpace>) -> PointerType {
+impl<'ink, T: PointerValueType<'ink>> PointerValueType<'ink> for *mut T {
+    fn get_ptr_type(
+        context: &IrTypeContext<'ink, '_>,
+        address_space: Option<AddressSpace>,
+    ) -> PointerType<'ink> {
         Self::get_ir_type(context).ptr_type(address_space.unwrap_or(AddressSpace::Generic))
     }
 }
-impl<T: PointerValueType> PointerValueType for *const T {
-    fn get_ptr_type(context: &IrTypeContext, address_space: Option<AddressSpace>) -> PointerType {
+impl<'ink, T: PointerValueType<'ink>> PointerValueType<'ink> for *const T {
+    fn get_ptr_type(
+        context: &IrTypeContext<'ink, '_>,
+        address_space: Option<AddressSpace>,
+    ) -> PointerType<'ink> {
         Self::get_ir_type(context).ptr_type(address_space.unwrap_or(AddressSpace::Generic))
     }
 }
 
-impl<T: SizedValueType<Value = inkwell::values::PointerValue>> Value<T> {
+impl<'ink, T: SizedValueType<'ink, Value = inkwell::values::PointerValue<'ink>>> Value<'ink, T> {
     /// Constructs a `null` pointer of type `T`
-    pub fn null(context: &IrValueContext) -> Self {
+    pub fn null(context: &IrValueContext<'ink, '_, '_>) -> Self {
         Value::from_raw(T::get_ir_type(context.type_context).const_null())
     }
 }
 
-impl<T> AddressableType<*const T> for *const T where *const T: ConcreteValueType {}
+impl<'ink, T> AddressableType<'ink, *const T> for *const T where *const T: ConcreteValueType<'ink> {}
 
-impl<T> AddressableType<*mut T> for *mut T where *mut T: ConcreteValueType {}
+impl<'ink, T> AddressableType<'ink, *mut T> for *mut T where *mut T: ConcreteValueType<'ink> {}

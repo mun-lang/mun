@@ -30,18 +30,18 @@ export async function execute(cmd) {
 (async () => {
     try {
         if(isLinux) {
-            await exec.exec("sudo apt install llvm-7 llvm-7-* liblld-7*");
+            await exec.exec("sudo apt install llvm-8 llvm-8-* liblld-8*");
         } else if(isMacOS) {
-            await exec.exec("brew install llvm@7")
-            let llvmPath = await execute("brew --prefix llvm@7");
+            await exec.exec("brew install llvm@8")
+            let llvmPath = await execute("brew --prefix llvm@8");
             core.addPath(`${llvmPath}/bin`)   
         } else if(isWindows) {
-            let llvmCachedPath = tc.find("llvm", "7.1.0", "windows-x64");
+            let llvmCachedPath = tc.find("llvm", "8.0.1", "windows-x64");
             if(!llvmCachedPath) {
                 let _7zPath = path.join(__dirname, '..', 'externals', '7zr.exe');
-                llvmCachedPath = await tc.downloadTool("https://github.com/mun-lang/llvm-package-windows/releases/download/v7.1.0/llvm-7.1.0-windows-x64-msvc15.7z")
+                llvmCachedPath = await tc.downloadTool("https://github.com/mun-lang/llvm-package-windows/releases/download/v8.0.1/llvm-8.0.1-windows-x64-msvc15.7z")
                     .then(downloadPath => tc.extract7z(downloadPath, null, _7zPath))
-                    .then(extractPath => tc.cacheDir(extractPath, "llvm", "7.1.0", "windows-x64"));
+                    .then(extractPath => tc.cacheDir(extractPath, "llvm", "8.0.1", "windows-x64"));
             }
             core.addPath(`${llvmCachedPath}/bin`)
             core.exportVariable('LIBCLANG_PATH', `${llvmCachedPath}/bin`)

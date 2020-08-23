@@ -5,7 +5,7 @@ use crate::{
     compute_source_relative_path, db::CompilerDatabase, ensure_package_output_dir, is_source_file,
     PathOrInline, RelativePath,
 };
-use mun_codegen::{Assembly, IrDatabase};
+use mun_codegen::{Assembly, CodeGenDatabase};
 use mun_hir::{DiagnosticSink, FileId, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
 
 use std::{path::PathBuf, sync::Arc};

@@ -1,25 +1,27 @@
-use crate::ir::types as ir;
-use crate::ir::{
-    dispatch_table::{DispatchTable, DispatchableFunction},
-    function,
-    type_table::TypeTable,
+use crate::{
+    ir::ty::HirTypeCache,
+    ir::types as ir,
+    ir::{
+        dispatch_table::{DispatchTable, DispatchableFunction},
+        function,
+        type_table::TypeTable,
+    },
+    type_info::TypeInfo,
+    value::{AsValue, CanInternalize, Global, IrValueContext, IterAsIrValue, Value},
 };
-use crate::type_info::TypeInfo;
-use crate::value::{AsValue, CanInternalize, Global, IrValueContext, IterAsIrValue, Value};
-use crate::IrDatabase;
-use hir::Ty;
+use hir::{HirDatabase, Ty};
 use inkwell::{attributes::Attribute, module::Linkage, AddressSpace};
-use std::collections::HashSet;
-use std::ffi::CString;
+use std::{collections::HashSet, ffi::CString};
 
 /// Construct a `MunFunctionPrototype` struct for the specified HIR function.
-fn gen_prototype_from_function(
-    db: &dyn IrDatabase,
-    context: &IrValueContext,
+fn gen_prototype_from_function<'ink>(
+    db: &dyn HirDatabase,
+    context: &IrValueContext<'ink, '_, '_>,
     function: hir::Function,
-) -> ir::FunctionPrototype {
+    hir_types: &HirTypeCache,
+) -> ir::FunctionPrototype<'ink> {
     let module = context.module;
-    let name = function.name(db.upcast()).to_string();
+    let name = function.name(db).to_string();
 
     // Internalize the name of the function prototype
     let name_str = CString::new(name.clone())
@@ -27,15 +29,15 @@ fn gen_prototype_from_function(
         .intern(format!("fn_sig::<{}>::name", &name), context);
 
     // Get the `ir::TypeInfo` pointer for the return type of the function
-    let fn_sig = function.ty(db.upcast()).callable_sig(db.upcast()).unwrap();
-    let return_type = gen_signature_return_type(db, context, fn_sig.ret().clone());
+    let fn_sig = function.ty(db).callable_sig(db).unwrap();
+    let return_type = gen_signature_return_type(context, fn_sig.ret(), hir_types);
 
     // Construct an array of pointers to `ir::TypeInfo`s for the arguments of the prototype
     let arg_types = fn_sig
         .params()
         .iter()
         .map(|ty| {
-            TypeTable::get(module, &db.type_info(ty.clone()), context)
+            TypeTable::get(module, &hir_types.type_info(ty), context)
                 .expect("expected a TypeInfo for a prototype argument but it was not found")
         })
         .into_const_private_pointer_or_null(format!("fn_sig::<{}>::arg_types", &name), context);
@@ -51,10 +53,10 @@ fn gen_prototype_from_function(
 }
 
 /// Construct a `MunFunctionPrototype` struct for the specified dispatch table function.
-fn gen_prototype_from_dispatch_entry(
-    context: &IrValueContext,
+fn gen_prototype_from_dispatch_entry<'ink>(
+    context: &IrValueContext<'ink, '_, '_>,
     function: &DispatchableFunction,
-) -> ir::FunctionPrototype {
+) -> ir::FunctionPrototype<'ink> {
     let module = context.module;
 
     // Internalize the name of the function prototype
@@ -95,27 +97,27 @@ fn gen_prototype_from_dispatch_entry(
 
 /// Given a function, construct a pointer to a `ir::TypeInfo` global that represents the return type
 /// of the function; or `null` if the return type is empty.
-fn gen_signature_return_type(
-    db: &dyn IrDatabase,
-    context: &IrValueContext,
-    ret_type: Ty,
-) -> Value<*const ir::TypeInfo> {
+fn gen_signature_return_type<'ink>(
+    context: &IrValueContext<'ink, '_, '_>,
+    ret_type: &Ty,
+    hir_types: &HirTypeCache,
+) -> Value<'ink, *const ir::TypeInfo<'ink>> {
     gen_signature_return_type_from_type_info(
         context,
         if ret_type.is_empty() {
             None
         } else {
-            Some(db.type_info(ret_type))
+            Some(hir_types.type_info(ret_type))
         },
     )
 }
 
 /// Given a function, construct a pointer to a `ir::TypeInfo` global that represents the return type
 /// of the function; or `null` if the return type is empty.
-fn gen_signature_return_type_from_type_info(
-    context: &IrValueContext,
+fn gen_signature_return_type_from_type_info<'ink>(
+    context: &IrValueContext<'ink, '_, '_>,
     ret_type: Option<TypeInfo>,
-) -> Value<*const ir::TypeInfo> {
+) -> Value<'ink, *const ir::TypeInfo<'ink>> {
     ret_type
         .map(|info| {
             TypeTable::get(context.module, &info, context)
@@ -126,15 +128,16 @@ fn gen_signature_return_type_from_type_info(
 
 /// Construct a global that holds a reference to all functions. e.g.:
 /// MunFunctionDefinition[] definitions = { ... }
-fn get_function_definition_array<'a>(
-    db: &dyn IrDatabase,
-    context: &IrValueContext,
+fn get_function_definition_array<'ink, 'a>(
+    db: &dyn HirDatabase,
+    context: &IrValueContext<'ink, '_, '_>,
     functions: impl Iterator<Item = &'a hir::Function>,
-) -> Global<[ir::FunctionDefinition]> {
+    hir_types: &HirTypeCache,
+) -> Global<'ink, [ir::FunctionDefinition<'ink>]> {
     let module = context.module;
     functions
         .map(|f| {
-            let name = f.name(db.upcast()).to_string();
+            let name = f.name(db).to_string();
 
             // Get the function from the cloned module and modify the linkage of the function.
             let value = module
@@ -146,7 +149,7 @@ fn get_function_definition_array<'a>(
             value.set_linkage(Linkage::Private);
 
             // Generate the signature from the function
-            let prototype = gen_prototype_from_function(db, context, *f);
+            let prototype = gen_prototype_from_function(db, context, *f, hir_types);
             ir::FunctionDefinition {
                 prototype,
                 fn_ptr: Value::<*const fn()>::with_cast(
@@ -163,10 +166,10 @@ fn get_function_definition_array<'a>(
 /// ```c
 /// MunDispatchTable dispatchTable = { ... }
 /// ```
-fn gen_dispatch_table(
-    context: &IrValueContext,
-    dispatch_table: &DispatchTable,
-) -> ir::DispatchTable {
+fn gen_dispatch_table<'ink>(
+    context: &IrValueContext<'ink, '_, '_>,
+    dispatch_table: &DispatchTable<'ink>,
+) -> ir::DispatchTable<'ink> {
     let module = context.module;
 
     // Generate an internal array that holds all the function prototypes
@@ -197,17 +200,19 @@ fn gen_dispatch_table(
 /// Constructs IR that exposes the types and symbols in the specified module. A function called
 /// `get_info` is constructed that returns a struct `MunAssemblyInfo`. See the `mun_abi` crate
 /// for the ABI that `get_info` exposes.
-pub(super) fn gen_reflection_ir(
-    db: &dyn IrDatabase,
-    context: &IrValueContext,
+pub(super) fn gen_reflection_ir<'db, 'ink>(
+    db: &'db dyn HirDatabase,
+    context: &IrValueContext<'ink, '_, '_>,
     api: &HashSet<hir::Function>,
-    dispatch_table: &DispatchTable,
-    type_table: &TypeTable,
+    dispatch_table: &DispatchTable<'ink>,
+    type_table: &TypeTable<'ink>,
+    hir_types: &HirTypeCache<'db, 'ink>,
+    optimization_level: inkwell::OptimizationLevel,
 ) {
     let module = context.module;
 
     let num_functions = api.len() as u32;
-    let functions = get_function_definition_array(db, context, api.iter());
+    let functions = get_function_definition_array(db, context, api.iter(), hir_types);
 
     // Get the TypeTable global
     let types = TypeTable::find_global(module)
@@ -230,17 +235,18 @@ pub(super) fn gen_reflection_ir(
     let dispatch_table = gen_dispatch_table(context, dispatch_table);
 
     // Construct the actual `get_info` function
-    gen_get_info_fn(db, context, module_info, dispatch_table);
-    gen_set_allocator_handle_fn(db, context);
-    gen_get_version_fn(db, context);
+    gen_get_info_fn(db, context, module_info, dispatch_table, optimization_level);
+    gen_set_allocator_handle_fn(context);
+    gen_get_version_fn(context);
 }
 
 /// Construct the actual `get_info` function.
-fn gen_get_info_fn(
-    db: &dyn IrDatabase,
-    context: &IrValueContext,
-    module_info: ir::ModuleInfo,
-    dispatch_table: ir::DispatchTable,
+fn gen_get_info_fn<'ink>(
+    db: &dyn HirDatabase,
+    context: &IrValueContext<'ink, '_, '_>,
+    module_info: ir::ModuleInfo<'ink>,
+    dispatch_table: ir::DispatchTable<'ink>,
+    optimization_level: inkwell::OptimizationLevel,
 ) {
     let target = db.target();
     let str_type = context.context.i8_type().ptr_type(AddressSpace::Generic);
@@ -257,9 +263,9 @@ fn gen_get_info_fn(
     // MunModuleInfo get_info() { ... }
     // ```
     let get_symbols_type = if target.options.is_like_windows {
-        Value::<fn(*mut ir::AssemblyInfo)>::get_ir_type(context.type_context)
+        Value::<'ink, fn(*mut ir::AssemblyInfo<'ink>)>::get_ir_type(context.type_context)
     } else {
-        Value::<fn() -> ir::AssemblyInfo>::get_ir_type(context.type_context)
+        Value::<'ink, fn() -> ir::AssemblyInfo<'ink>>::get_ir_type(context.type_context)
     };
 
     let get_symbols_fn =
@@ -276,9 +282,9 @@ fn gen_get_info_fn(
         );
     }
 
-    let builder = db.context().create_builder();
-    let body_ir = db.context().append_basic_block(&get_symbols_fn, "body");
-    builder.position_at_end(&body_ir);
+    let builder = context.context.create_builder();
+    let body_ir = context.context.append_basic_block(get_symbols_fn, "body");
+    builder.position_at_end(body_ir);
 
     // Get a pointer to the IR value that will hold the return value. Again this differs depending
     // on the C ABI.
@@ -321,24 +327,24 @@ fn gen_get_info_fn(
     }
 
     // Run the function optimizer on the generate function
-    function::create_pass_manager(&context.module, db.optimization_lvl()).run_on(&get_symbols_fn);
+    function::create_pass_manager(&context.module, optimization_level).run_on(&get_symbols_fn);
 }
 
 /// Generates a method `void set_allocator_handle(void*)` that stores the argument into the global
 /// `allocatorHandle`. This global is used internally to reference the allocator used by this
 /// munlib.
-fn gen_set_allocator_handle_fn(db: &dyn IrDatabase, context: &IrValueContext) {
+fn gen_set_allocator_handle_fn(context: &IrValueContext) {
     let set_allocator_handle_fn = context.module.add_function(
         "set_allocator_handle",
         Value::<fn(*const u8)>::get_ir_type(context.type_context),
         Some(Linkage::DLLExport),
     );
 
-    let builder = db.context().create_builder();
-    let body_ir = db
-        .context()
-        .append_basic_block(&set_allocator_handle_fn, "body");
-    builder.position_at_end(&body_ir);
+    let builder = context.context.create_builder();
+    let body_ir = context
+        .context
+        .append_basic_block(set_allocator_handle_fn, "body");
+    builder.position_at_end(body_ir);
 
     if let Some(allocator_handle_global) = context.module.get_global("allocatorHandle") {
         builder.build_store(
@@ -352,16 +358,16 @@ fn gen_set_allocator_handle_fn(db: &dyn IrDatabase, context: &IrValueContext) {
 
 /// Generates a `get_version` method that returns the current abi version.
 /// Specifically, it returns the abi version the function was generated in.
-fn gen_get_version_fn(db: &dyn IrDatabase, context: &IrValueContext) {
+fn gen_get_version_fn(context: &IrValueContext) {
     let get_version_fn = context.module.add_function(
         abi::GET_VERSION_FN_NAME,
         Value::<fn() -> u32>::get_ir_type(context.type_context),
         Some(Linkage::DLLExport),
     );
 
-    let builder = db.context().create_builder();
-    let body_ir = db.context().append_basic_block(&get_version_fn, "body");
-    builder.position_at_end(&body_ir);
+    let builder = context.context.create_builder();
+    let body_ir = context.context.append_basic_block(get_version_fn, "body");
+    builder.position_at_end(body_ir);
 
     builder.build_return(Some(&abi::ABI_VERSION.as_value(context).value));
 }

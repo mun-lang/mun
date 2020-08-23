@@ -1,5 +1,5 @@
+use compiler::{Config, Driver, OptimizationLevel, PathOrInline};
 use mlua::Lua;
-use mun_compiler::{Config, Driver, OptimizationLevel, PathOrInline};
 use mun_runtime::RuntimeBuilder;
 use std::cell::RefCell;
 use std::io::Cursor;

@@ -7,23 +7,23 @@ use inkwell::AddressSpace;
 macro_rules! impl_as_int_ir_value {
     ($($ty:ty => $context_fun:ident()),*) => {
         $(
-            impl ConcreteValueType for $ty {
-                type Value = inkwell::values::IntValue;
+            impl<'ink> ConcreteValueType<'ink> for $ty {
+                type Value = inkwell::values::IntValue<'ink>;
             }
 
-            impl SizedValueType for $ty {
-                fn get_ir_type(context: &IrTypeContext) -> inkwell::types::IntType {
+            impl<'ink> SizedValueType<'ink> for $ty {
+                fn get_ir_type(context: &IrTypeContext<'ink, '_>) -> inkwell::types::IntType<'ink> {
                     context.context.$context_fun()
                 }
             }
 
-            impl PointerValueType for $ty {
-                fn get_ptr_type(context: &IrTypeContext, address_space: Option<AddressSpace>) -> inkwell::types::PointerType {
+            impl<'ink> PointerValueType<'ink> for $ty {
+                fn get_ptr_type(context: &IrTypeContext<'ink, '_>, address_space: Option<AddressSpace>) -> inkwell::types::PointerType<'ink> {
                     Self::get_ir_type(context).ptr_type(address_space.unwrap_or(AddressSpace::Generic))
                 }
             }
 
-            impl AddressableType<$ty> for $ty {}
+            impl<'ink> AddressableType<'ink, $ty> for $ty {}
         )*
     }
 }
@@ -39,8 +39,8 @@ impl_as_int_ir_value!(
     u64 => i64_type()
 );
 
-impl AsValue<u8> for u8 {
-    fn as_value(&self, context: &IrValueContext) -> Value<u8> {
+impl<'ink> AsValue<'ink, u8> for u8 {
+    fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, u8> {
         Value::from_raw(
             <Self as SizedValueType>::get_ir_type(context.type_context)
                 .const_int(*self as u64, false),
@@ -48,8 +48,8 @@ impl AsValue<u8> for u8 {
     }
 }
 
-impl AsValue<u16> for u16 {
-    fn as_value(&self, context: &IrValueContext) -> Value<u16> {
+impl<'ink> AsValue<'ink, u16> for u16 {
+    fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, u16> {
         Value::from_raw(
             <Self as SizedValueType>::get_ir_type(context.type_context)
                 .const_int(*self as u64, false),
@@ -57,8 +57,8 @@ impl AsValue<u16> for u16 {
     }
 }
 
-impl AsValue<u32> for u32 {
-    fn as_value(&self, context: &IrValueContext) -> Value<u32> {
+impl<'ink> AsValue<'ink, u32> for u32 {
+    fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, u32> {
         Value::from_raw(
             <Self as SizedValueType>::get_ir_type(context.type_context)
                 .const_int(*self as u64, false),
@@ -66,8 +66,8 @@ impl AsValue<u32> for u32 {
     }
 }
 
-impl AsValue<u64> for u64 {
-    fn as_value(&self, context: &IrValueContext) -> Value<u64> {
+impl<'ink> AsValue<'ink, u64> for u64 {
+    fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, u64> {
         Value::from_raw(
             <Self as SizedValueType>::get_ir_type(context.type_context)
                 .const_int(*self as u64, false),
@@ -75,8 +75,8 @@ impl AsValue<u64> for u64 {
     }
 }
 
-impl AsValue<i8> for i8 {
-    fn as_value(&self, context: &IrValueContext) -> Value<i8> {
+impl<'ink> AsValue<'ink, i8> for i8 {
+    fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, i8> {
         Value::from_raw(
             <Self as SizedValueType>::get_ir_type(context.type_context)
                 .const_int(*self as u64, true),
@@ -84,8 +84,8 @@ impl AsValue<i8> for i8 {
     }
 }
 
-impl AsValue<i16> for i16 {
-    fn as_value(&self, context: &IrValueContext) -> Value<i16> {
+impl<'ink> AsValue<'ink, i16> for i16 {
+    fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, i16> {
         Value::from_raw(
             <Self as SizedValueType>::get_ir_type(context.type_context)
                 .const_int(*self as u64, true),
@@ -93,8 +93,8 @@ impl AsValue<i16> for i16 {
     }
 }
 
-impl AsValue<i32> for i32 {
-    fn as_value(&self, context: &IrValueContext) -> Value<i32> {
+impl<'ink> AsValue<'ink, i32> for i32 {
+    fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, i32> {
         Value::from_raw(
             <Self as SizedValueType>::get_ir_type(context.type_context)
                 .const_int(*self as u64, true),
@@ -102,8 +102,8 @@ impl AsValue<i32> for i32 {
     }
 }
 
-impl AsValue<i64> for i64 {
-    fn as_value(&self, context: &IrValueContext) -> Value<i64> {
+impl<'ink> AsValue<'ink, i64> for i64 {
+    fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, i64> {
         Value::from_raw(
             <Self as SizedValueType>::get_ir_type(context.type_context)
                 .const_int(*self as u64, true),

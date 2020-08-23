@@ -6,20 +6,20 @@ macro_rules! into_function_info_impl {
         fn($($T:ident),*) -> $R:ident;
     )+) => {
         $(
-            impl<$R:ConcreteValueType, $($T:ConcreteValueType,)*> ConcreteValueType for fn($($T,)*) -> $R {
-                type Value = inkwell::values::FunctionValue;
+            impl<'ink, $R:ConcreteValueType<'ink>, $($T:ConcreteValueType<'ink>,)*> ConcreteValueType<'ink> for fn($($T,)*) -> $R {
+                type Value = inkwell::values::FunctionValue<'ink>;
             }
-            impl<$R:SizedValueType + 'static, $($T:SizedValueType,)*> SizedValueType for fn($($T,)*) -> $R
+            impl<'ink, $R:SizedValueType<'ink> + 'ink, $($T:SizedValueType<'ink>,)*> SizedValueType<'ink> for fn($($T,)*) -> $R
             where
-                <<R as ConcreteValueType>::Value as ValueType>::Type: inkwell::types::BasicType,
+                <<R as ConcreteValueType<'ink>>::Value as ValueType<'ink>>::Type: inkwell::types::BasicType<'ink>,
                 $(
-                    <$T::Value as ValueType>::Type: inkwell::types::BasicType
+                    <$T::Value as ValueType<'ink>>::Type: inkwell::types::BasicType<'ink>
                 ),*
             {
-                fn get_ir_type(context: &IrTypeContext) -> inkwell::types::FunctionType {
+                fn get_ir_type(context: &IrTypeContext<'ink, '_>) -> inkwell::types::FunctionType<'ink> {
                     // This is a bit of a dirty hack. The problem is that in this specific case we
                     // want the type () to be represented as void in LLVM.
-                    if std::any::TypeId::of::<$R>() == std::any::TypeId::of::<()>() {
+                    if std::any::type_name::<$R>() == std::any::type_name::<()>() {
                         context.context.void_type().fn_type(
                             &[
                                 $(
@@ -41,17 +41,17 @@ macro_rules! into_function_info_impl {
                 }
             }
 
-            impl<$R:SizedValueType + 'static, $($T:SizedValueType,)*> PointerValueType for fn($($T,)*) -> $R
+            impl<'ink, $R:SizedValueType<'ink> + 'ink, $($T:SizedValueType<'ink>,)*> PointerValueType<'ink> for fn($($T,)*) -> $R
             where
-                <<R as ConcreteValueType>::Value as ValueType>::Type: inkwell::types::BasicType,
+                <<R as ConcreteValueType<'ink>>::Value as ValueType<'ink>>::Type: inkwell::types::BasicType<'ink>,
                 $(
-                    <$T::Value as ValueType>::Type: inkwell::types::BasicType
+                    <$T::Value as ValueType<'ink>>::Type: inkwell::types::BasicType<'ink>
                 ),*
             {
                 fn get_ptr_type(
-                    context: &IrTypeContext,
+                    context: &IrTypeContext<'ink, '_>,
                     address_space: Option<inkwell::AddressSpace>,
-                ) -> inkwell::types::PointerType
+                ) -> inkwell::types::PointerType<'ink>
                 {
                     debug_assert!(
                         address_space.is_none() || address_space == Some(inkwell::AddressSpace::Generic),

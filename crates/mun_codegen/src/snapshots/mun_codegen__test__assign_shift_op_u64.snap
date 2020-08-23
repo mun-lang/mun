@@ -6,9 +6,9 @@ expression: "pub fn assign_leftshift(a: u64, b: u64) -> u64 {\n    a <<= b;\n   
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
 
-%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
+%"mun_codegen::ir::types::TypeInfo" = type { [16 x i8], i8*, i32, i8, i8 }
 
-@global_type_table = external global [1 x %struct.MunTypeInfo*]
+@global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
 
 define i64 @assign_leftshift(i64, i64) {
 body:
@@ -27,9 +27,9 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%struct.MunTypeInfo = type { [16 x i8], i8*, i32, i8, i8 }
+%"mun_codegen::ir::types::TypeInfo" = type { [16 x i8], i8*, i32, i8, i8 }
 
 @"type_info::<core::u64>::name" = private unnamed_addr constant [10 x i8] c"core::u64\00"
-@"type_info::<core::u64>" = private unnamed_addr constant %struct.MunTypeInfo { [16 x i8] c"\A6\E7g \D1\8B\1Aq`\1F\1E\07\BB5@q", i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::u64>::name", i32 0, i32 0), i32 64, i8 8, i8 0 }
-@global_type_table = constant [1 x %struct.MunTypeInfo*] [%struct.MunTypeInfo* @"type_info::<core::u64>"]
+@"type_info::<core::u64>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" { [16 x i8] c"\A6\E7g \D1\8B\1Aq`\1F\1E\07\BB5@q", i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::u64>::name", i32 0, i32 0), i32 64, i8 8, i8 0 }
+@global_type_table = constant [1 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::u64>"]
 

@@ -17,12 +17,12 @@ use std::marker::PhantomData;
 /// Globals can be used to store data inside an inkwell context which can be referenced from code.
 ///
 /// Like `Value<T>` a `Global<T>` is typed on the type of data that it stores.
-pub struct Global<T: ?Sized> {
-    pub value: inkwell::values::GlobalValue,
+pub struct Global<'ink, T: ?Sized> {
+    pub value: inkwell::values::GlobalValue<'ink>,
     data: PhantomData<T>,
 }
 
-impl<T: ?Sized> Clone for Global<T> {
+impl<'ink, T: ?Sized> Clone for Global<'ink, T> {
     fn clone(&self) -> Self {
         Global {
             value: self.value,
@@ -31,9 +31,9 @@ impl<T: ?Sized> Clone for Global<T> {
     }
 }
 
-impl<T: ?Sized> Copy for Global<T> {}
+impl<'ink, T: ?Sized> Copy for Global<'ink, T> {}
 
-impl<T: ?Sized> Global<T> {
+impl<'ink, T: ?Sized> Global<'ink, T> {
     /// Creates a `Global<T>` from an underlying value.
     ///
     /// # Safety
@@ -41,7 +41,7 @@ impl<T: ?Sized> Global<T> {
     /// There is no guarantee that the passed value actually represents the type `T`. Sometimes this
     /// can however be very useful. This method is marked as unsafe since there is also no way to
     /// check the correctness.
-    pub unsafe fn from_raw(value: inkwell::values::GlobalValue) -> Self {
+    pub unsafe fn from_raw(value: inkwell::values::GlobalValue<'ink>) -> Self {
         Global {
             value,
             data: Default::default(),
@@ -49,18 +49,21 @@ impl<T: ?Sized> Global<T> {
     }
 }
 
-impl<T: ?Sized> ConcreteValueType for *const Global<T> {
-    type Value = inkwell::values::PointerValue;
+impl<'ink, T: ?Sized> ConcreteValueType<'ink> for *const Global<'ink, T> {
+    type Value = inkwell::values::PointerValue<'ink>;
 }
 
-impl<T: PointerValueType + ?Sized> SizedValueType for *const Global<T> {
-    fn get_ir_type(context: &IrTypeContext) -> <Self::Value as ValueType>::Type {
+impl<'ink, T: PointerValueType<'ink> + ?Sized> SizedValueType<'ink> for *const Global<'ink, T> {
+    fn get_ir_type(context: &IrTypeContext<'ink, '_>) -> <Self::Value as ValueType<'ink>>::Type {
         T::get_ptr_type(context, None)
     }
 }
 
-impl<T: PointerValueType + ?Sized> PointerValueType for *const Global<T> {
-    fn get_ptr_type(context: &IrTypeContext, address_space: Option<AddressSpace>) -> PointerType {
+impl<'ink, T: PointerValueType<'ink> + ?Sized> PointerValueType<'ink> for *const Global<'ink, T> {
+    fn get_ptr_type(
+        context: &IrTypeContext<'ink, '_>,
+        address_space: Option<AddressSpace>,
+    ) -> PointerType<'ink> {
         debug_assert!(
             address_space.is_none() || address_space == Some(AddressSpace::Generic),
             "Globals can only live in generic address space"
@@ -69,28 +72,28 @@ impl<T: PointerValueType + ?Sized> PointerValueType for *const Global<T> {
     }
 }
 
-impl<T: ?Sized, I> AsValue<*const I> for Global<T>
+impl<'ink, T: ?Sized, I> AsValue<'ink, *const I> for Global<'ink, T>
 where
-    *const I: ConcreteValueType<Value = inkwell::values::PointerValue>,
-    T: AddressableType<I>,
+    *const I: ConcreteValueType<'ink, Value = inkwell::values::PointerValue<'ink>>,
+    T: AddressableType<'ink, I>,
 {
-    fn as_value(&self, context: &IrValueContext) -> Value<*const I> {
+    fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, *const I> {
         Value::from_raw(T::ptr_cast(self.value.as_pointer_value(), context))
     }
 }
 
-impl<T: ConcreteValueType + ?Sized> Value<T>
+impl<'ink, T: ConcreteValueType<'ink> + ?Sized> Value<'ink, T>
 where
-    T::Value: Into<BasicValueEnum>,
+    T::Value: Into<BasicValueEnum<'ink>>,
 {
     pub fn into_global<S: AsRef<str>>(
         self,
         name: S,
-        context: &IrValueContext,
+        context: &IrValueContext<'ink, '_, '_>,
         is_const: bool,
         linkage: Linkage,
         unnamed_addr: Option<UnnamedAddress>,
-    ) -> Global<T> {
+    ) -> Global<'ink, T> {
         // NOTE: No support for address spaces
         let address_space = None;
 
@@ -130,8 +133,8 @@ where
     pub fn into_const_private_global<S: AsRef<str>>(
         self,
         name: S,
-        context: &IrValueContext,
-    ) -> Global<T> {
+        context: &IrValueContext<'ink, '_, '_>,
+    ) -> Global<'ink, T> {
         self.into_global(
             name,
             context,
@@ -142,8 +145,8 @@ where
     }
 }
 
-impl<T: ?Sized> Into<inkwell::values::PointerValue> for Global<T> {
-    fn into(self) -> PointerValue {
+impl<'ink, T: ?Sized> Into<inkwell::values::PointerValue<'ink>> for Global<'ink, T> {
+    fn into(self) -> PointerValue<'ink> {
         self.value.as_pointer_value()
     }
 }

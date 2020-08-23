@@ -1,6 +1,6 @@
 use super::ir::IsIrType;
-use crate::IrDatabase;
 use abi::Guid;
+use hir::HirDatabase;
 use inkwell::context::Context;
 use inkwell::targets::TargetData;
 use inkwell::types::AnyType;
@@ -46,7 +46,7 @@ pub struct TypeSize {
 }
 
 impl TypeSize {
-    pub fn from_ir_type(ty: &impl AnyType, target: &TargetData) -> Self {
+    pub fn from_ir_type<'ink>(ty: &impl AnyType<'ink>, target: &TargetData) -> Self {
         Self {
             bit_size: target.get_bit_size(ty),
             store_size: target.get_store_size(ty),
@@ -98,18 +98,18 @@ impl TypeInfo {
         }
     }
 
-    pub fn new_struct(db: &dyn IrDatabase, s: hir::Struct, type_size: TypeSize) -> TypeInfo {
+    pub fn new_struct(db: &dyn HirDatabase, s: hir::Struct, type_size: TypeSize) -> TypeInfo {
         let name = s.name(db.upcast()).to_string();
         let guid_string = {
             let fields: Vec<String> = s
-                .fields(db.upcast())
+                .fields(db)
                 .into_iter()
                 .map(|f| {
                     let ty_string = f
-                        .ty(db.upcast())
-                        .guid_string(db.upcast())
+                        .ty(db)
+                        .guid_string(db)
                         .expect("type should be convertible to a string");
-                    format!("{}: {}", f.name(db.upcast()).to_string(), ty_string)
+                    format!("{}: {}", f.name(db).to_string(), ty_string)
                 })
                 .collect();
 
@@ -180,7 +180,7 @@ impl_fundamental_static_type_info!(
 
 impl<T: HasStaticTypeName> HasStaticTypeInfo for *mut T {
     fn type_info(context: &Context, target: &TargetData) -> TypeInfo {
-        let ty = target.ptr_sized_int_type(None);
+        let ty = target.ptr_sized_int_type_in_context(context, None);
         TypeInfo::new_fundamental(
             format!("*mut {}", T::type_name(context, target)),
             TypeSize::from_ir_type(&ty, target),
@@ -193,7 +193,7 @@ impl<T: HasStaticTypeName> HasStaticTypeInfo for *const T {
         context: &inkwell::context::Context,
         target: &inkwell::targets::TargetData,
     ) -> TypeInfo {
-        let ty = target.ptr_sized_int_type(None);
+        let ty = target.ptr_sized_int_type_in_context(context, None);
         TypeInfo::new_fundamental(
             format!("*const {}", T::type_name(context, target)),
             TypeSize::from_ir_type(&ty, target),
