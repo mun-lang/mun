@@ -7,6 +7,4 @@ pub enum CodeGenerationError {
     ModuleLinkerError(String),
     #[error("error creating object file")]
     CouldNotCreateObjectFile(io::Error),
-    #[error("error generating machine code")]
-    CodeGenerationError(String),
 }
