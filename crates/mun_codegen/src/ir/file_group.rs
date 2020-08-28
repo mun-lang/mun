@@ -65,6 +65,7 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
             ModuleDef::Function(_) => (), // TODO: Extern types?
             ModuleDef::Struct(_) => (),
             ModuleDef::BuiltinType(_) => (),
+            ModuleDef::TypeAlias(_) => (),
         }
     }
 
@@ -118,7 +119,7 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
             ModuleDef::Function(f) => {
                 type_table_builder.collect_fn(*f);
             }
-            ModuleDef::BuiltinType(_) => (),
+            ModuleDef::BuiltinType(_) | ModuleDef::TypeAlias(_) => (),
         }
     }
 

@@ -1,0 +1,35 @@
+---
+source: crates/mun_syntax/src/tests/parser.rs
+expression: "type Foo = i32;\ntype Bar = Foo;"
+---
+SOURCE_FILE@[0; 31)
+  TYPE_ALIAS_DEF@[0; 15)
+    TYPE_KW@[0; 4) "type"
+    WHITESPACE@[4; 5) " "
+    NAME@[5; 8)
+      IDENT@[5; 8) "Foo"
+    WHITESPACE@[8; 9) " "
+    EQ@[9; 10) "="
+    WHITESPACE@[10; 11) " "
+    PATH_TYPE@[11; 14)
+      PATH@[11; 14)
+        PATH_SEGMENT@[11; 14)
+          NAME_REF@[11; 14)
+            IDENT@[11; 14) "i32"
+    SEMI@[14; 15) ";"
+  WHITESPACE@[15; 16) "\n"
+  TYPE_ALIAS_DEF@[16; 31)
+    TYPE_KW@[16; 20) "type"
+    WHITESPACE@[20; 21) " "
+    NAME@[21; 24)
+      IDENT@[21; 24) "Bar"
+    WHITESPACE@[24; 25) " "
+    EQ@[25; 26) "="
+    WHITESPACE@[26; 27) " "
+    PATH_TYPE@[27; 30)
+      PATH@[27; 30)
+        PATH_SEGMENT@[27; 30)
+          NAME_REF@[27; 30)
+            IDENT@[27; 30) "Foo"
+    SEMI@[30; 31) ";"
+

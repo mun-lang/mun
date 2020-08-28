@@ -1,6 +1,8 @@
 use crate::db::{SourceDatabase, Upcast};
-use crate::expr::validator::ExprValidator;
-use crate::{diagnostics::DiagnosticSink, ids::LocationCtx, mock::MockDatabase, Function};
+use crate::expr::validator::{ExprValidator, TypeAliasValidator};
+use crate::{
+    diagnostics::DiagnosticSink, ids::LocationCtx, mock::MockDatabase, Function, TypeAlias,
+};
 use mun_syntax::{ast, AstNode};
 use std::fmt::Write;
 
@@ -66,6 +68,15 @@ fn test_uninitialized_access_while() {
     )
 }
 
+#[test]
+fn test_free_type_alias_without_type_ref() {
+    diagnostics_snapshot(
+        r#"
+    type Foo; // `Foo` must have a target type
+    "#,
+    )
+}
+
 fn diagnostics(content: &str) -> String {
     let (db, file_id) = MockDatabase::with_single_file(content);
     let source_file = db.parse(file_id).ok().unwrap();
@@ -83,6 +94,12 @@ fn diagnostics(content: &str) -> String {
                 id: ctx.to_def(&def),
             };
             ExprValidator::new(fun, &db).validate_body(&mut diag_sink);
+        }
+        if let Some(def) = ast::TypeAliasDef::cast(node.clone()) {
+            let type_alias = TypeAlias {
+                id: ctx.to_def(&def),
+            };
+            TypeAliasValidator::new(type_alias, &db).validate_target_type_existence(&mut diag_sink);
         }
     }
     drop(diag_sink);

@@ -355,3 +355,13 @@ fn extern_fn() {
     "#,
     )
 }
+
+#[test]
+fn type_alias_def() {
+    snapshot_test(
+        r#"
+    type Foo = i32;
+    type Bar = Foo;
+    "#,
+    )
+}

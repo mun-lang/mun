@@ -118,7 +118,7 @@ fn keywords() {
         r#"
     break do else false for fn if in nil
     return true while let mut struct class
-    never loop pub super self package
+    never loop pub super self package type
     "#,
     )
 }

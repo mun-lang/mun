@@ -64,7 +64,15 @@ pub(crate) fn module_scope_query(db: &dyn HirDatabase, file_id: FileId) -> Arc<M
                     },
                 );
             }
-            _ => {}
+            ModuleDef::TypeAlias(t) => {
+                scope.items.insert(
+                    t.name(db.upcast()),
+                    Resolution {
+                        def: PerNs::types(*def),
+                    },
+                );
+            }
+            ModuleDef::BuiltinType(_) => {}
         }
     }
     Arc::new(scope)

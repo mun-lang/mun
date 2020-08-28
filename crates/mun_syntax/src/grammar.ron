@@ -91,6 +91,7 @@ Grammar(
         "struct",
         "never",
         "pub",
+        "type",
 
         "package",
         "super",
@@ -126,6 +127,7 @@ Grammar(
         "PARAM",
 
         "STRUCT_DEF",
+        "TYPE_ALIAS_DEF",
         "MEMORY_TYPE_SPECIFIER",
         "RECORD_FIELD_DEF_LIST",
         "RECORD_FIELD_DEF",
@@ -173,7 +175,7 @@ Grammar(
             traits: [ "ModuleItemOwner", "FunctionDefOwner" ],
         ),
         "ModuleItem": (
-            enum: ["FunctionDef", "StructDef"]
+            enum: ["FunctionDef", "StructDef", "TypeAliasDef"]
         ),
         "Visibility": (),
         "FunctionDef": (
@@ -202,6 +204,13 @@ Grammar(
             traits: [
                 "NameOwner",
                 "VisibilityOwner",
+                "DocCommentsOwner",
+            ]
+        ),
+        "TypeAliasDef": (
+            options: ["TypeRef"],
+            traits: [
+                "NameOwner",
                 "DocCommentsOwner",
             ]
         ),

@@ -5,13 +5,13 @@ use crate::name_resolution::Namespace;
 use crate::ty::lower::LowerBatchResult;
 use crate::ty::{CallableDef, FnSig, Ty, TypableDef};
 use crate::{
-    adt::StructData,
+    adt::{StructData, TypeAliasData},
     code_model::{DefWithBody, FnData, Function, ModuleData},
     ids,
     line_index::LineIndex,
     name_resolution::ModuleScope,
     ty::InferenceResult,
-    AstIdMap, ExprScopes, FileId, RawItems, Struct,
+    AstIdMap, ExprScopes, FileId, RawItems, Struct, TypeAlias,
 };
 use mun_syntax::{ast, Parse, SourceFile};
 use mun_target::abi;
@@ -66,6 +66,9 @@ pub trait DefDatabase: SourceDatabase + Upcast<dyn SourceDatabase> {
     #[salsa::invoke(StructData::struct_data_query)]
     fn struct_data(&self, id: ids::StructId) -> Arc<StructData>;
 
+    #[salsa::invoke(TypeAliasData::type_alias_data_query)]
+    fn type_alias_data(&self, id: ids::TypeAliasId) -> Arc<TypeAliasData>;
+
     #[salsa::invoke(crate::FnData::fn_data_query)]
     fn fn_data(&self, func: Function) -> Arc<FnData>;
 
@@ -80,6 +83,10 @@ pub trait DefDatabase: SourceDatabase + Upcast<dyn SourceDatabase> {
     /// Interns a struct definition
     #[salsa::interned]
     fn intern_struct(&self, loc: ids::ItemLoc<ast::StructDef>) -> ids::StructId;
+
+    /// Interns a type alias definition
+    #[salsa::interned]
+    fn intern_type_alias(&self, loc: ids::ItemLoc<ast::TypeAliasDef>) -> ids::TypeAliasId;
 }
 
 #[salsa::query_group(HirDatabaseStorage)]
@@ -104,11 +111,15 @@ pub trait HirDatabase: DefDatabase + Upcast<dyn DefDatabase> {
     #[salsa::invoke(crate::ty::lower::lower_struct_query)]
     fn lower_struct(&self, def: Struct) -> Arc<LowerBatchResult>;
 
+    #[salsa::invoke(crate::ty::lower::lower_type_alias_query)]
+    fn lower_type_alias(&self, def: TypeAlias) -> Arc<LowerBatchResult>;
+
     #[salsa::invoke(crate::ty::callable_item_sig)]
     fn callable_sig(&self, def: CallableDef) -> FnSig;
 
     #[salsa::invoke(crate::ty::type_for_def)]
-    fn type_for_def(&self, def: TypableDef, ns: Namespace) -> Ty;
+    #[salsa::cycle(crate::ty::type_for_cycle_recover)]
+    fn type_for_def(&self, def: TypableDef, ns: Namespace) -> (Ty, bool);
 
     #[salsa::invoke(crate::expr::body_hir_query)]
     fn body(&self, def: DefWithBody) -> Arc<crate::expr::Body>;

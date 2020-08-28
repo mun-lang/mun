@@ -118,6 +118,26 @@ impl Diagnostic for UnresolvedType {
 }
 
 #[derive(Debug)]
+pub struct CyclicType {
+    pub file: FileId,
+    pub type_ref: AstPtr<ast::TypeRef>,
+}
+
+impl Diagnostic for CyclicType {
+    fn message(&self) -> String {
+        "cyclic type".to_string()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.type_ref.syntax_node_ptr())
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
 pub struct ExpectedFunction {
     pub file: FileId,
     pub expr: SyntaxNodePtr,
@@ -681,6 +701,25 @@ impl Diagnostic for InvalidLiteral {
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
         self.literal.map(|ptr| ptr.into())
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct FreeTypeAliasWithoutTypeRef {
+    pub type_alias_def: InFile<SyntaxNodePtr>,
+}
+
+impl Diagnostic for FreeTypeAliasWithoutTypeRef {
+    fn message(&self) -> String {
+        "free type alias without type ref".to_string()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        self.type_alias_def
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {

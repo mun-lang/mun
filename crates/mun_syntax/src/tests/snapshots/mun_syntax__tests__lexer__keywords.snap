@@ -1,6 +1,6 @@
 ---
 source: crates/mun_syntax/src/tests/lexer.rs
-expression: "break do else false for fn if in nil\nreturn true while let mut struct class\nnever loop pub super self package"
+expression: "break do else false for fn if in nil\nreturn true while let mut struct class\nnever loop pub super self package type"
 ---
 BREAK_KW 5 "break"
 WHITESPACE 1 " "
@@ -45,4 +45,6 @@ WHITESPACE 1 " "
 SELF_KW 4 "self"
 WHITESPACE 1 " "
 PACKAGE_KW 7 "package"
+WHITESPACE 1 " "
+TYPE_KW 4 "type"
 
