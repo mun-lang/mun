@@ -4,10 +4,10 @@ use inkwell::{
     OptimizationLevel,
 };
 
-mod bitcode_file;
 mod context;
 mod error;
 mod module_builder;
+mod object_file;
 pub mod symbols;
 
 pub use context::CodeGenContext;

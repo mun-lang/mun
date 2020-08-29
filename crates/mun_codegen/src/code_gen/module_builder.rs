@@ -1,4 +1,4 @@
-use crate::code_gen::bitcode_file::BitcodeFile;
+use crate::code_gen::object_file::ObjectFile;
 use crate::code_gen::{optimize_module, symbols, CodeGenContext, CodeGenerationError};
 use crate::ir::file::gen_file_ir;
 use crate::ir::file_group::gen_file_group_ir;
@@ -31,7 +31,7 @@ impl<'db, 'ink, 'ctx> ModuleBuilder<'db, 'ink, 'ctx> {
     }
 
     /// Constructs an object file.
-    pub fn build(self) -> Result<BitcodeFile, anyhow::Error> {
+    pub fn build(self) -> Result<ObjectFile, anyhow::Error> {
         let group_ir = gen_file_group_ir(self.code_gen, self.file_id);
         let file = gen_file_ir(self.code_gen, &group_ir, self.file_id);
 
@@ -84,6 +84,10 @@ impl<'db, 'ink, 'ctx> ModuleBuilder<'db, 'ink, 'ctx> {
         // Debug print the IR
         //println!("{}", assembly_module.print_to_string().to_string());
 
-        BitcodeFile::new(&self.code_gen.db.target(), &self.assembly_module)
+        ObjectFile::new(
+            &self.code_gen.db.target(),
+            &self.code_gen.target_machine,
+            &self.assembly_module,
+        )
     }
 }
