@@ -8,7 +8,7 @@ Mun uses *snake case* as the conventional style for function and variable names.
 In snake case all letters are lowercase and words are separated by underscores. 
 
 ```mun
-fn main() {
+pub fn main() {
     another_function();
 }
 
@@ -31,6 +31,9 @@ Marking a function with the `pub` keyword allows you to use it from outside of
 the module it is defined in.
 
 ```mun
+# pub fn main() {
+#   bar();
+# }
 // This function is not accessible outside of this code
 fn foo() {
     // ...
@@ -59,7 +62,7 @@ The following is a rewritten version of `another_function` that shows what an
 argument looks like:
 
 ```mun
-fn main() {
+pub fn main() {
     another_function(3);
 }
 
@@ -72,7 +75,7 @@ type. When you want a function to use multiple arguments, separate them with
 commas:
 
 ```mun
-fn main() {
+pub fn main() {
     another_function(3, 4);
 }
 
@@ -90,7 +93,7 @@ Creating a variable and assigning a value to it with the `let` keyword is a
 statement. In the following example, `let y = 6;` is a statement.
 
 ```mun
-fn main() {
+pub fn main() {
     let y = 6;
 }
 ```
@@ -108,6 +111,9 @@ evaluate to the last expression in them. Blocks can therefore also be used on
 the right hand side of a `let` statement.
 
 ```mun
+# pub fn main() {
+#   foo();
+# }
 fn foo() -> i32 {
     let bar = {
         let b = 3;
@@ -131,7 +137,7 @@ fn five() -> i32 {
     5
 }
 
-fn main() {
+pub fn main() {
     let x = five();
 }
 ```
@@ -144,7 +150,10 @@ is specified too, as `-> i32`.
 Whereas the last expression in a block implicitly becomes that blocks return
 value, explicit `return` statements always return from the entire function:
 
-```mun
+```mun,ignore
+pub fn main() {
+    let _ = foo();
+}
 fn foo() -> i32 {
     let bar = {
         let b = 3;

@@ -6,7 +6,7 @@ definitions have to be provided to the runtime when loading a Mun library.
 Failure to do so will result in a runtime link error, and loading the library
 will fail. Take this code for example:
 
-```mun
+```mun,no_run
 {{#include ../listings/ch02-basic-concepts/listing01.mun}}
 ```
 
