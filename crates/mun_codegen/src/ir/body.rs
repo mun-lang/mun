@@ -478,7 +478,10 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 Statement::Let {
                     pat, initializer, ..
                 } => {
-                    self.gen_let_statement(*pat, *initializer);
+                    // If the let statement never finishes, there is no need to generate more code
+                    if !self.gen_let_statement(*pat, *initializer) {
+                        return None;
+                    }
                 }
                 Statement::Expr(expr) => {
                     // No need to generate code after a statement that has a `never` return type.
@@ -510,9 +513,19 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         temp_builder
     }
 
-    /// Generate IR for a let statement: `let a:int = 3`
-    fn gen_let_statement(&mut self, pat: PatId, initializer: Option<ExprId>) {
-        let initializer = initializer.and_then(|expr| self.gen_expr(expr));
+    /// Generate IR for a let statement: `let a:int = 3`. Returns `false` if the initializer of the
+    /// statement never returns; `true` otherwise.
+    fn gen_let_statement(&mut self, pat: PatId, initializer: Option<ExprId>) -> bool {
+        let initializer = match initializer {
+            Some(expr) => match self.gen_expr(expr) {
+                Some(expr) => Some(expr),
+                None => {
+                    // If the initializer doesnt return a value it never returns
+                    return false;
+                }
+            },
+            None => None,
+        };
 
         match &self.body[pat] {
             Pat::Bind { name } => {
@@ -534,6 +547,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             Pat::Wild => {}
             Pat::Missing | Pat::Path(_) => unreachable!(),
         }
+        true
     }
 
     /// Generates IR for looking up a certain path expression.
