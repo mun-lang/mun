@@ -1,0 +1,18 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "fn foo() -> i32 {\n    let bar = {\n        let b = 3;\n        return b + 3;\n    };\n\n    // This code will never be executed\n    let a = 3 + 4;\n    a\n}"
+---
+; == FILE IR =====================================
+; ModuleID = 'main.mun'
+source_filename = "main.mun"
+
+define i32 @foo() {
+body:
+  ret i32 6
+}
+
+
+; == GROUP IR ====================================
+; ModuleID = 'group_name'
+source_filename = "group_name"
+

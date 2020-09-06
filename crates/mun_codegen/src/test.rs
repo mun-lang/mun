@@ -13,6 +13,23 @@ use mun_target::spec::Target;
 use std::{cell::RefCell, sync::Arc};
 
 #[test]
+fn issue_262() {
+    test_snapshot(
+        r"
+    fn foo() -> i32 {
+        let bar = {
+            let b = 3;
+            return b + 3;
+        };
+
+        // This code will never be executed
+        let a = 3 + 4;
+        a
+    }",
+    )
+}
+
+#[test]
 fn issue_225() {
     test_snapshot(
         r#"
