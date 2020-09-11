@@ -1,5 +1,5 @@
 use crate::{
-    expr::scope::ScopeId, expr::PatId, ExprScopes, FileId, HirDatabase, ModuleDef, Name, Path,
+    expr::scope::LocalScopeId, expr::PatId, ExprScopes, FileId, HirDatabase, ModuleDef, Name, Path,
     PerNs,
 };
 use std::sync::Arc;
@@ -26,7 +26,7 @@ pub(crate) struct ModuleItemMap {
 #[derive(Debug, Clone)]
 pub(crate) struct ExprScope {
     expr_scopes: Arc<ExprScopes>,
-    scope_id: ScopeId,
+    scope_id: LocalScopeId,
 }
 
 impl Resolver {
@@ -42,7 +42,7 @@ impl Resolver {
     pub(crate) fn push_expr_scope(
         self,
         expr_scopes: Arc<ExprScopes>,
-        scope_id: ScopeId,
+        scope_id: LocalScopeId,
     ) -> Resolver {
         self.push_scope(Scope::ExprScope(ExprScope {
             expr_scopes,

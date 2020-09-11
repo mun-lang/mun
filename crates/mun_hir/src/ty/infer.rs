@@ -12,7 +12,7 @@ use crate::{
     ty::lower::LowerDiagnostic,
     ty::op,
     ty::{Ty, TypableDef},
-    type_ref::TypeRefId,
+    type_ref::LocalTypeRefId,
     ApplicationTy, BinaryOp, Function, HirDatabase, Name, Path, TypeCtor,
 };
 use rustc_hash::FxHashSet;
@@ -178,9 +178,9 @@ impl<'a> InferenceResultBuilder<'a> {
         self.type_of_pat.insert(pat, ty);
     }
 
-    /// Given a `TypeRefId`, resolve the reference to an actual `Ty`. If the the type could not
+    /// Given a `LocalTypeRefId`, resolve the reference to an actual `Ty`. If the the type could not
     /// be resolved an error is emitted and `Ty::Error` is returned.
-    fn resolve_type(&mut self, type_ref: TypeRefId) -> Ty {
+    fn resolve_type(&mut self, type_ref: LocalTypeRefId) -> Ty {
         // Try to resolve the type from the Hir
         let result = Ty::from_hir(
             self.db,
@@ -1011,7 +1011,7 @@ mod diagnostics {
         code_model::src::HasSource,
         diagnostics::{CyclicType, DiagnosticSink, UnresolvedType, UnresolvedValue},
         ty::infer::ExprOrPatId,
-        type_ref::TypeRefId,
+        type_ref::LocalTypeRefId,
         ExprId, Function, HirDatabase, IntTy, Name, Ty,
     };
 
@@ -1021,10 +1021,10 @@ mod diagnostics {
             id: ExprOrPatId,
         },
         UnresolvedType {
-            id: TypeRefId,
+            id: LocalTypeRefId,
         },
         CyclicType {
-            id: TypeRefId,
+            id: LocalTypeRefId,
         },
         ExpectedFunction {
             id: ExprId,

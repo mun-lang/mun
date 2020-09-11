@@ -1,5 +1,6 @@
+use crate::arena::{Arena, Idx};
 use crate::in_file::InFile;
-use crate::{db::DefDatabase, Arena, FileId, RawId};
+use crate::{db::DefDatabase, FileId};
 use mun_syntax::{ast, AstNode, AstPtr, SyntaxNode, SyntaxNodePtr};
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
@@ -53,13 +54,10 @@ impl<N: AstNode> FileAstId<N> {
 /// Maps items' `SyntaxNode`s to `ErasedFileAstId`s and back.
 #[derive(Debug, PartialEq, Eq, Default)]
 pub struct AstIdMap {
-    arena: Arena<ErasedFileAstId, SyntaxNodePtr>,
+    arena: Arena<SyntaxNodePtr>,
 }
 
-/// An id of an AST node in a specific file.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ErasedFileAstId(RawId);
-impl_arena_id!(ErasedFileAstId);
+type ErasedFileAstId = Idx<SyntaxNodePtr>;
 
 impl AstIdMap {
     pub(crate) fn ast_id_map_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<AstIdMap> {

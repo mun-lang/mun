@@ -1,6 +1,6 @@
 use crate::{
     arena::map::ArenaMap,
-    arena::{Arena, RawId},
+    arena::{Arena, Idx},
     code_model::DefWithBody,
     FileId, HirDatabase, Name, Path,
 };
@@ -8,7 +8,7 @@ use crate::{
 //pub use mun_syntax::ast::PrefixOp as UnaryOp;
 use crate::code_model::src::HasSource;
 use crate::name::AsName;
-use crate::type_ref::{TypeRef, TypeRefBuilder, TypeRefId, TypeRefMap, TypeRefSourceMap};
+use crate::type_ref::{LocalTypeRefId, TypeRef, TypeRefBuilder, TypeRefMap, TypeRefSourceMap};
 use either::Either;
 pub use mun_syntax::ast::PrefixOp as UnaryOp;
 use mun_syntax::ast::{ArgListOwner, BinOp, LoopBodyOwner, NameOwner, TypeAscriptionOwner};
@@ -28,13 +28,8 @@ use std::str::FromStr;
 pub(crate) mod scope;
 pub(crate) mod validator;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ExprId(RawId);
-impl_arena_id!(ExprId);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct PatId(RawId);
-impl_arena_id!(PatId);
+pub type ExprId = Idx<Expr>;
+pub type PatId = Idx<Pat>;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ExprDiagnostic {
@@ -45,25 +40,25 @@ pub enum ExprDiagnostic {
 #[derive(Debug, Eq, PartialEq)]
 pub struct Body {
     owner: DefWithBody,
-    exprs: Arena<ExprId, Expr>,
-    pats: Arena<PatId, Pat>,
+    exprs: Arena<Expr>,
+    pats: Arena<Pat>,
     type_refs: TypeRefMap,
     /// The patterns for the function's parameters. While the parameter types are part of the
     /// function signature, the patterns are not (they don't change the external type of the
     /// function).
     ///
     /// If this `Body` is for the body of a constant, this will just be empty.
-    params: Vec<(PatId, TypeRefId)>,
+    params: Vec<(PatId, LocalTypeRefId)>,
     /// The `ExprId` of the actual body expression.
     body_expr: ExprId,
-    ret_type: TypeRefId,
+    ret_type: LocalTypeRefId,
 
     /// Diagnostics encountered when parsing the ast expressions
     diagnostics: Vec<ExprDiagnostic>,
 }
 
 impl Body {
-    pub fn params(&self) -> &[(PatId, TypeRefId)] {
+    pub fn params(&self) -> &[(PatId, LocalTypeRefId)] {
         &self.params
     }
 
@@ -87,7 +82,7 @@ impl Body {
         &self.type_refs
     }
 
-    pub fn ret_type(&self) -> TypeRefId {
+    pub fn ret_type(&self) -> LocalTypeRefId {
         self.ret_type
     }
 
@@ -120,10 +115,10 @@ impl Index<PatId> for Body {
     }
 }
 
-impl Index<TypeRefId> for Body {
+impl Index<LocalTypeRefId> for Body {
     type Output = TypeRef;
 
-    fn index(&self, type_ref: TypeRefId) -> &TypeRef {
+    fn index(&self, type_ref: LocalTypeRefId) -> &TypeRef {
         &self.type_refs[type_ref]
     }
 }
@@ -155,7 +150,7 @@ impl BodySourceMap {
         self.expr_map_back.get(expr).cloned()
     }
 
-    pub fn type_ref_syntax(&self, type_ref: TypeRefId) -> Option<AstPtr<ast::TypeRef>> {
+    pub fn type_ref_syntax(&self, type_ref: LocalTypeRefId) -> Option<AstPtr<ast::TypeRef>> {
         self.type_refs.type_ref_syntax(type_ref)
     }
 
@@ -194,7 +189,7 @@ pub struct RecordLitField {
 pub enum Statement {
     Let {
         pat: PatId,
-        type_ref: Option<TypeRefId>,
+        type_ref: Option<LocalTypeRefId>,
         initializer: Option<ExprId>,
     },
     Expr(ExprId),
@@ -293,7 +288,7 @@ pub enum Expr {
         body: ExprId,
     },
     RecordLit {
-        type_id: TypeRefId,
+        type_id: LocalTypeRefId,
         fields: Vec<RecordLitField>,
         spread: Option<ExprId>,
     },
@@ -436,12 +431,12 @@ impl Pat {
 pub(crate) struct ExprCollector<'a> {
     db: &'a dyn HirDatabase,
     owner: DefWithBody,
-    exprs: Arena<ExprId, Expr>,
-    pats: Arena<PatId, Pat>,
+    exprs: Arena<Expr>,
+    pats: Arena<Pat>,
     source_map: BodySourceMap,
-    params: Vec<(PatId, TypeRefId)>,
+    params: Vec<(PatId, LocalTypeRefId)>,
     body_expr: Option<ExprId>,
-    ret_type: Option<TypeRefId>,
+    ret_type: Option<LocalTypeRefId>,
     type_ref_builder: TypeRefBuilder,
     current_file_id: FileId,
     diagnostics: Vec<ExprDiagnostic>,
@@ -943,7 +938,7 @@ pub fn resolver_for_expr(body: Arc<Body>, db: &dyn HirDatabase, expr_id: ExprId)
 pub(crate) fn resolver_for_scope(
     body: Arc<Body>,
     db: &dyn HirDatabase,
-    scope_id: Option<scope::ScopeId>,
+    scope_id: Option<scope::LocalScopeId>,
 ) -> Resolver {
     let mut r = body.owner.resolver(db);
     let scopes = db.expr_scopes(body.owner);

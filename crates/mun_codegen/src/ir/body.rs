@@ -6,9 +6,9 @@ use crate::{
     value::Global,
 };
 use hir::{
-    ArenaId, ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDatabase, HirDisplay,
-    InferenceResult, Literal, LogicOp, Name, Ordering, Pat, PatId, Path, Resolution,
-    ResolveBitness, Resolver, Statement, TypeCtor, UnaryOp,
+    ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDatabase, HirDisplay, InferenceResult,
+    Literal, LogicOp, Name, Ordering, Pat, PatId, Path, Resolution, ResolveBitness, Resolver,
+    Statement, TypeCtor, UnaryOp,
 };
 use inkwell::{
     basic_block::BasicBlock,

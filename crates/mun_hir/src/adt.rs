@@ -1,8 +1,8 @@
 use std::{fmt, sync::Arc};
 
-use crate::type_ref::{TypeRefBuilder, TypeRefId, TypeRefMap, TypeRefSourceMap};
+use crate::type_ref::{LocalTypeRefId, TypeRefBuilder, TypeRefMap, TypeRefSourceMap};
 use crate::{
-    arena::{Arena, RawId},
+    arena::{Arena, Idx},
     ids::{AstItemDef, StructId, TypeAliasId},
     AsName, DefDatabase, Name,
 };
@@ -25,13 +25,8 @@ pub use mun_syntax::ast::StructMemoryKind;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StructFieldData {
     pub name: Name,
-    pub type_ref: TypeRefId,
+    pub type_ref: LocalTypeRefId,
 }
-
-/// An identifier for a struct's or tuple's field
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct StructFieldId(RawId);
-impl_arena_id!(StructFieldId);
 
 /// A struct's fields' data (record, tuple, or unit struct)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -51,10 +46,13 @@ impl fmt::Display for StructKind {
     }
 }
 
+/// An identifier for a struct's or tuple's field
+pub type LocalStructFieldId = Idx<StructFieldData>;
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct StructData {
     pub name: Name,
-    pub fields: Arena<StructFieldId, StructFieldData>,
+    pub fields: Arena<StructFieldData>,
     pub kind: StructKind,
     pub memory_kind: StructMemoryKind,
     type_ref_map: TypeRefMap,
@@ -125,7 +123,7 @@ impl StructData {
 #[derive(Debug, PartialEq, Eq)]
 pub struct TypeAliasData {
     pub name: Name,
-    pub type_ref_id: TypeRefId,
+    pub type_ref_id: LocalTypeRefId,
     type_ref_map: TypeRefMap,
     type_ref_source_map: TypeRefSourceMap,
 }

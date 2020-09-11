@@ -1,21 +1,22 @@
 use mun_syntax::ast::{self, ModuleItemOwner, NameOwner};
 
-use crate::name::AsName;
-use crate::{Arena, DefDatabase, FileAstId, FileId, Name, RawId};
+use crate::{
+    arena::{Arena, Idx},
+    name::AsName,
+    DefDatabase, FileAstId, FileId, Name,
+};
 use std::ops::Index;
 use std::sync::Arc;
 
 /// `RawItems` are top level file items. `RawItems` do not change on most edits.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct RawItems {
-    definitions: Arena<DefId, DefData>,
+    definitions: Arena<DefData>,
     items: Vec<RawFileItem>,
 }
 
-/// Id for a module definition
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(super) struct DefId(RawId);
-impl_arena_id!(DefId);
+/// Represents an id of a `DefData` in `RawItems`.
+pub(super) type LocalDefId = Idx<DefData>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub(super) struct DefData {
@@ -32,13 +33,13 @@ pub(super) enum DefKind {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub(super) enum RawFileItem {
-    Definition(DefId),
+    Definition(LocalDefId),
 }
 
-impl Index<DefId> for RawItems {
+impl Index<LocalDefId> for RawItems {
     type Output = DefData;
 
-    fn index(&self, index: DefId) -> &Self::Output {
+    fn index(&self, index: LocalDefId) -> &Self::Output {
         &self.definitions[index]
     }
 }
