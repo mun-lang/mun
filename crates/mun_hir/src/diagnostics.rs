@@ -1,4 +1,4 @@
-use crate::adt::StructKind;
+use crate::code_model::StructKind;
 use crate::in_file::InFile;
 use crate::{FileId, HirDatabase, IntTy, Name, Ty};
 use mun_syntax::{ast, AstPtr, SmolStr, SyntaxNode, SyntaxNodePtr, TextRange};
@@ -130,6 +130,26 @@ impl Diagnostic for CyclicType {
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
         InFile::new(self.file, self.type_ref.syntax_node_ptr())
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct PrivateAccess {
+    pub file: FileId,
+    pub expr: SyntaxNodePtr,
+}
+
+impl Diagnostic for PrivateAccess {
+    fn message(&self) -> String {
+        "access of private type".to_string()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.expr)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {

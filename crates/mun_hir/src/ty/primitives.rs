@@ -1,4 +1,4 @@
-use crate::builtin_type::{BuiltinFloat, BuiltinInt, FloatBitness, IntBitness, Signedness};
+use crate::primitive_type::{FloatBitness, IntBitness, PrimitiveFloat, PrimitiveInt, Signedness};
 use mun_target::abi;
 use mun_target::abi::Integer;
 use std::fmt::{self};
@@ -197,8 +197,8 @@ impl FloatTy {
     }
 }
 
-impl From<BuiltinInt> for IntTy {
-    fn from(t: BuiltinInt) -> Self {
+impl From<PrimitiveInt> for IntTy {
+    fn from(t: PrimitiveInt) -> Self {
         IntTy {
             signedness: t.signedness,
             bitness: t.bitness,
@@ -206,8 +206,8 @@ impl From<BuiltinInt> for IntTy {
     }
 }
 
-impl From<BuiltinFloat> for FloatTy {
-    fn from(t: BuiltinFloat) -> Self {
+impl From<PrimitiveFloat> for FloatTy {
+    fn from(t: PrimitiveFloat) -> Self {
         FloatTy { bitness: t.bitness }
     }
 }

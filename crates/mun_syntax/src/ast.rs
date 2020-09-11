@@ -9,7 +9,7 @@ use crate::{syntax_node::SyntaxNodeChildren, SmolStr, SyntaxKind, SyntaxNode, Sy
 
 pub use self::{
     expr_extensions::*,
-    extensions::{PathSegmentKind, StructKind},
+    extensions::{PathSegmentKind, StructKind, VisibilityKind},
     generated::*,
     tokens::*,
     traits::*,

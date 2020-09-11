@@ -809,12 +809,14 @@ fn incremental_compilation() {
     db.set_optimization_level(OptimizationLevel::Default);
     db.set_target(Target::host_target().unwrap());
 
+    let module = Module::from_file(&db, file_id).unwrap();
+
     {
         let events = db.log_executed(|| {
-            db.assembly(file_id);
+            db.assembly(module);
         });
         assert!(
-            format!("{:?}", events).contains("module_data"),
+            format!("{:?}", events).contains("package_defs"),
             "{:#?}",
             events
         );
@@ -829,11 +831,11 @@ fn incremental_compilation() {
 
     {
         let events = db.log_executed(|| {
-            db.assembly(file_id);
+            db.assembly(module);
         });
         println!("events: {:?}", events);
         assert!(
-            !format!("{:?}", events).contains("module_data"),
+            !format!("{:?}", events).contains("package_defs"),
             "{:#?}",
             events
         );
@@ -971,7 +973,8 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
             diag.message()
         ));
     });
-    Module::from(file_id).diagnostics(&db, &mut sink);
+    let module = Module::from_file(&db, file_id).unwrap();
+    module.diagnostics(&db, &mut sink);
     drop(sink);
     let messages = messages.into_inner();
 
@@ -987,8 +990,8 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
     let (group_ir_value, file_ir_value) = if !messages.is_empty() {
         ("".to_owned(), messages.join("\n"))
     } else {
-        let group_ir = gen_file_group_ir(&code_gen, file_id);
-        let file_ir = gen_file_ir(&code_gen, &group_ir, file_id);
+        let group_ir = gen_file_group_ir(&code_gen, module);
+        let file_ir = gen_file_ir(&code_gen, &group_ir, module);
 
         (
             format!("{}", group_ir.llvm_module.print_to_string().to_string(),),
@@ -999,7 +1002,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
     // To ensure that we test symbol generation
     if messages.is_empty() {
         let module_builder =
-            ModuleBuilder::new(&code_gen, file_id).expect("Failed to initialize module builder");
+            ModuleBuilder::new(&code_gen, module).expect("Failed to initialize module builder");
         let _obj_file = module_builder.build().expect("Failed to build object file");
     }
 

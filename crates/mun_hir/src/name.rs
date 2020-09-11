@@ -48,6 +48,10 @@ impl Name {
         }
     }
 
+    pub(crate) fn new(text: impl AsRef<str>) -> Name {
+        Name::new_text(SmolStr::new(text))
+    }
+
     pub(crate) fn missing() -> Name {
         Name::new_text("[missing name]".into())
     }

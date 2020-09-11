@@ -1,9 +1,178 @@
 use crate::fixture::WithFixture;
 use crate::{
-    db::DefDatabase, diagnostics::DiagnosticSink, expr::BodySourceMap, mock::MockDatabase,
-    HirDisplay, InferenceResult, ModuleDef,
+    diagnostics::DiagnosticSink, expr::BodySourceMap, mock::MockDatabase, HirDisplay,
+    InferenceResult, ModuleDef, Package,
 };
 use std::{fmt::Write, sync::Arc};
+
+#[test]
+fn private_access() {
+    infer_snapshot(
+        r#"
+    //- /foo.mun
+    struct Foo {};
+    struct Bar(i64);
+    struct Baz;
+    fn foo() {}
+    type FooBar = Foo;
+
+    pub struct PubFoo {};
+    pub struct PubBar(i64);
+    pub struct PubBaz;
+    pub fn pub_foo() {}
+    pub type PubFooBar = PubFoo;
+
+    pub(super) struct PubSupFoo {};
+    pub(super) struct PubSupBar(i64);
+    pub(super) struct PubSupBaz;
+    pub(super) fn pub_sup_foo() {}
+    pub(super) type PubSupFooBar = PubSupFoo;
+
+    pub(package) struct PubPackageFoo {};
+    pub(package) struct PubPackageBar(i64);
+    pub(package) struct PubPackageBaz;
+    pub(package) fn pub_package_foo() {}
+    pub(package) type PubPackageFooBar = PubPackageFoo;
+
+    //- /bar.mun
+    fn main() {
+        let a = package::foo::Foo {}; // private access
+        let a = package::foo::Bar(3); // private access
+        let a = package::foo::Baz; // private access
+        let a = package::foo::FooBar{}}; // private access
+
+        let a = super::foo::Foo {}; // private access
+        let a = super::foo::Bar(3); // private access
+        let a = super::foo::Baz; // private access
+        let a = super::foo::FooBar{}; // private access
+
+        package::foo::foo(); // private access
+        super::foo::foo(); // private access
+
+        let a = package::foo::PubFoo {};
+        let a = package::foo::PubBar(3);
+        let a = package::foo::PubBaz;
+        let a = package::foo::PubFooBar{};
+
+        let a = super::foo::PubFoo {};
+        let a = super::foo::PubBar(3);
+        let a = super::foo::PubBaz;
+        let a = super::foo::PubFooBar{};
+
+        package::foo::pub_foo();
+        super::foo::pub_foo();
+
+        let a = package::foo::PubSupFoo {};
+        let a = package::foo::PubSupBar(3);
+        let a = package::foo::PubSupBaz;
+        let a = package::foo::PubSupFooBar{};
+
+        let a = super::foo::PubSupFoo {};
+        let a = super::foo::PubSupBar(3);
+        let a = super::foo::PubSupBaz;
+        let a = super::foo::PubSupFooBar{};
+
+        package::foo::pub_sup_foo();
+        super::foo::pub_sup_foo();
+
+        let a = package::foo::PubPackageFoo {};
+        let a = package::foo::PubPackageBar(3);
+        let a = package::foo::PubPackageBaz;
+        let a = package::foo::PubPackageFooBar{};
+
+        let a = super::foo::PubPackageFoo {};
+        let a = super::foo::PubPackageBar(3);
+        let a = super::foo::PubPackageBaz;
+        let a = super::foo::PubPackageFooBar{};
+
+        package::foo::pub_package_foo();
+        super::foo::pub_package_foo();
+    }
+
+    //- /foo/baz.mun
+    fn main() {
+        let a = package::foo::Foo {};
+        let a = package::foo::Bar(3);
+        let a = package::foo::Baz;
+        let a = package::foo::FooBar{};
+
+        let a = super::Foo {};
+        let a = super::Bar(3);
+        let a = super::Baz;
+        let a = super::FooBar{};
+
+        package::foo::foo();
+        super::foo();
+    }
+
+    //- /mod.mun
+    fn main() {
+        let a = package::foo::Foo {}; // private access
+        let a = package::foo::Bar(3); // private access
+        let a = package::foo::Baz; // private access
+        let a = package::foo::FooBar{}; // private access
+
+        let a = foo::Foo {}; // private access
+        let a = foo::Bar(3); // private access
+        let a = foo::Baz; // private access
+        let a = foo::FooBar{}; // private access
+
+        package::foo::foo(); // private access
+        foo::foo(); // private access
+
+        let a = package::foo::PubSupFoo {};
+        let a = package::foo::PubSupBar(3);
+        let a = package::foo::PubSupBaz;
+        let a = package::foo::PubSupFooBar{};
+
+        let a = foo::PubSupFoo {};
+        let a = foo::PubSupBar(3);
+        let a = foo::PubSupBaz;
+        let a = foo::PubSupFooBar{};
+
+        package::foo::pub_sup_foo();
+        foo::pub_sup_foo();
+    }
+    "#,
+    )
+}
+
+#[test]
+fn scoped_path() {
+    infer_snapshot(
+        r"
+    //- /mod.mun
+    struct Foo;
+
+    fn main() -> self::Foo {
+        Foo
+    }
+
+    fn bar() -> Foo {
+        super::Foo  // undefined value
+    }
+
+    fn baz() -> Foo {
+        package::Foo
+    }
+
+    //- /foo.mun
+    struct Foo;
+
+    fn bar() -> Foo {
+        super::Foo  // mismatched type
+    }
+
+    fn baz() -> package::Foo {
+        super::Foo
+    }
+
+    fn nested() -> self::Foo {
+        package::foo::Foo
+    }
+    ",
+    )
+}
 
 #[test]
 fn comparison_not_implemented_for_struct() {
@@ -429,7 +598,7 @@ fn infer_snapshot(text: &str) {
 }
 
 fn infer(content: &str) -> String {
-    let (db, file_id) = MockDatabase::with_single_file(content);
+    let db = MockDatabase::with_files(content);
 
     let mut acc = String::new();
 
@@ -483,7 +652,11 @@ fn infer(content: &str) -> String {
         write!(diags, "{}: {}\n", diag.highlight_range(), diag.message()).unwrap();
     });
 
-    for item in db.module_data(file_id).definitions() {
+    for item in Package::all(&db)
+        .iter()
+        .flat_map(|pkg| pkg.modules(&db))
+        .flat_map(|module| module.declarations(&db))
+    {
         match item {
             ModuleDef::Function(fun) => {
                 let source_map = fun.body_source_map(&db);

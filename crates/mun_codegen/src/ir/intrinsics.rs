@@ -2,7 +2,7 @@ use crate::{
     intrinsics::{self, Intrinsic},
     ir::dispatch_table::FunctionPrototype,
 };
-use hir::{Body, Expr, ExprId, HirDatabase, InferenceResult};
+use hir::{Body, Expr, ExprId, HirDatabase, InferenceResult, ValueNs};
 use inkwell::{context::Context, targets::TargetData, types::FunctionType};
 use std::{collections::BTreeMap, sync::Arc};
 
@@ -56,13 +56,10 @@ fn collect_expr<'db, 'ink>(
     }
 
     if let Expr::Path(path) = expr {
-        let resolver = hir::resolver_for_expr(body.clone(), db, expr_id);
-        let resolution = resolver
-            .resolve_path_without_assoc_items(db, path)
-            .take_values()
-            .expect("unknown path");
-
-        if let hir::Resolution::Def(hir::ModuleDef::Struct(_)) = resolution {
+        let resolver = hir::resolver_for_expr(db.upcast(), body.owner(), expr_id);
+        if let Some((ValueNs::StructId(_), _)) =
+            resolver.resolve_path_as_value_fully(db.upcast(), path)
+        {
             collect_intrinsic(context, &target, &intrinsics::new, intrinsics);
             // self.collect_intrinsic( module, entries, &intrinsics::drop);
             *needs_alloc = true;

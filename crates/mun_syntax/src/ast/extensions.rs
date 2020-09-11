@@ -69,6 +69,7 @@ pub enum PathSegmentKind {
     Name(ast::NameRef),
     SelfKw,
     SuperKw,
+    PackageKw,
 }
 
 impl ast::PathSegment {
@@ -86,6 +87,7 @@ impl ast::PathSegment {
             match self.syntax().first_child_or_token()?.kind() {
                 T![self] => PathSegmentKind::SelfKw,
                 T![super] => PathSegmentKind::SuperKw,
+                T![package] => PathSegmentKind::PackageKw,
                 _ => return None,
             }
         };

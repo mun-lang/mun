@@ -72,7 +72,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
         // Opaquely construct the struct type and store it in the cache
         let ir_ty = self
             .context
-            .opaque_struct_type(&struct_ty.name(self.db.upcast()).to_string());
+            .opaque_struct_type(&struct_ty.name(self.db).to_string());
         self.types.borrow_mut().insert(ty, ir_ty);
 
         // Fill the struct members

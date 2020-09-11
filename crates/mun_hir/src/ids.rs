@@ -1,4 +1,6 @@
 use crate::item_tree::{Function, ItemTreeId, ItemTreeNode, Struct, TypeAlias};
+use crate::module_tree::LocalModuleId;
+use crate::primitive_type::PrimitiveType;
 use crate::DefDatabase;
 use std::hash::{Hash, Hasher};
 
@@ -26,6 +28,38 @@ impl<N: ItemTreeNode> Clone for ItemLoc<N> {
     }
 }
 impl<N: ItemTreeNode> Copy for ItemLoc<N> {}
+
+#[derive(Debug)]
+pub struct AssocItemLoc<N: ItemTreeNode> {
+    pub module: ModuleId,
+    pub id: ItemTreeId<N>,
+}
+
+impl<N: ItemTreeNode> Clone for AssocItemLoc<N> {
+    fn clone(&self) -> Self {
+        Self {
+            module: self.module,
+            id: self.id,
+        }
+    }
+}
+
+impl<N: ItemTreeNode> Copy for AssocItemLoc<N> {}
+
+impl<N: ItemTreeNode> PartialEq for AssocItemLoc<N> {
+    fn eq(&self, other: &Self) -> bool {
+        self.module == other.module && self.id == other.id
+    }
+}
+
+impl<N: ItemTreeNode> Eq for AssocItemLoc<N> {}
+
+impl<N: ItemTreeNode> Hash for AssocItemLoc<N> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.module.hash(state);
+        self.id.hash(state);
+    }
+}
 
 macro_rules! impl_intern_key {
     ($name:ident) => {
@@ -60,9 +94,21 @@ macro_rules! impl_intern {
     };
 }
 
+/// Represents the id of a single package, all packages have a unique id, the main package and all
+/// dependent packages.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct PackageId(pub u32);
+
+/// Represents an id of a module inside a package.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ModuleId {
+    pub package: PackageId,
+    pub local_id: LocalModuleId,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct FunctionId(salsa::InternId);
-pub(crate) type FunctionLoc = ItemLoc<Function>;
+pub(crate) type FunctionLoc = AssocItemLoc<Function>;
 impl_intern!(
     FunctionId,
     FunctionLoc,
@@ -72,12 +118,12 @@ impl_intern!(
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct StructId(salsa::InternId);
-pub(crate) type StructLoc = ItemLoc<Struct>;
+pub(crate) type StructLoc = AssocItemLoc<Struct>;
 impl_intern!(StructId, StructLoc, intern_struct, lookup_intern_struct);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TypeAliasId(salsa::InternId);
-pub(crate) type TypeAliasLoc = ItemLoc<TypeAlias>;
+pub(crate) type TypeAliasLoc = AssocItemLoc<TypeAlias>;
 impl_intern!(
     TypeAliasId,
     TypeAliasLoc,
@@ -93,4 +139,51 @@ pub trait Intern {
 pub trait Lookup {
     type Data;
     fn lookup(&self, db: &dyn DefDatabase) -> Self::Data;
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ItemDefinitionId {
+    ModuleId(ModuleId),
+    FunctionId(FunctionId),
+    StructId(StructId),
+    TypeAliasId(TypeAliasId),
+    PrimitiveType(PrimitiveType),
+}
+
+impl From<ModuleId> for ItemDefinitionId {
+    fn from(id: ModuleId) -> Self {
+        ItemDefinitionId::ModuleId(id)
+    }
+}
+impl From<FunctionId> for ItemDefinitionId {
+    fn from(id: FunctionId) -> Self {
+        ItemDefinitionId::FunctionId(id)
+    }
+}
+impl From<StructId> for ItemDefinitionId {
+    fn from(id: StructId) -> Self {
+        ItemDefinitionId::StructId(id)
+    }
+}
+impl From<TypeAliasId> for ItemDefinitionId {
+    fn from(id: TypeAliasId) -> Self {
+        ItemDefinitionId::TypeAliasId(id)
+    }
+}
+impl From<PrimitiveType> for ItemDefinitionId {
+    fn from(id: PrimitiveType) -> Self {
+        ItemDefinitionId::PrimitiveType(id)
+    }
+}
+
+/// Definitions which have a body
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum DefWithBodyId {
+    FunctionId(FunctionId),
+}
+
+impl From<FunctionId> for DefWithBodyId {
+    fn from(id: FunctionId) -> Self {
+        DefWithBodyId::FunctionId(id)
+    }
 }

@@ -9,8 +9,14 @@ impl TokenSet {
         TokenSet(0)
     }
 
-    pub(crate) const fn singleton(kind: SyntaxKind) -> TokenSet {
-        TokenSet(mask(kind))
+    pub(crate) const fn new(kinds: &[SyntaxKind]) -> TokenSet {
+        let mut res = 0u128;
+        let mut i = 0;
+        while i < kinds.len() {
+            res |= mask(kinds[i]);
+            i += 1
+        }
+        TokenSet(res)
     }
 
     pub(crate) const fn union(self, other: TokenSet) -> TokenSet {
@@ -26,16 +32,10 @@ const fn mask(kind: SyntaxKind) -> u128 {
     1u128 << (kind as usize)
 }
 
-#[macro_export]
-macro_rules! token_set {
-    ($($t:expr),*) => { TokenSet::empty()$(.union(TokenSet::singleton($t)))* };
-    ($($t:expr),* ,) => { token_set!($($t),*) };
-}
-
 #[test]
 fn token_set_works_for_tokens() {
     use crate::SyntaxKind::*;
-    let ts = token_set![EOF, EQ];
+    let ts = TokenSet::new(&[EOF, EQ]);
     assert!(ts.contains(EOF));
     assert!(ts.contains(T![=]));
     assert!(!ts.contains(PLUS));

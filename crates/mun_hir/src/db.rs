@@ -1,19 +1,20 @@
 #![allow(clippy::type_repetition_in_bounds)]
 
-use crate::ids::FunctionId;
+use crate::expr::BodySourceMap;
+use crate::ids::{DefWithBodyId, FunctionId, PackageId};
 use crate::input::{SourceRoot, SourceRootId};
 use crate::item_tree::{self, ItemTree};
+use crate::module_tree::ModuleTree;
 use crate::name_resolution::Namespace;
+use crate::package_defs::PackageDefs;
 use crate::ty::lower::LowerBatchResult;
 use crate::ty::{CallableDef, FnSig, Ty, TypableDef};
 use crate::{
-    adt::{StructData, TypeAliasData},
-    code_model::{DefWithBody, FunctionData, ModuleData},
+    code_model::{FunctionData, StructData, TypeAliasData},
     ids,
     line_index::LineIndex,
-    name_resolution::ModuleScope,
     ty::InferenceResult,
-    AstIdMap, ExprScopes, FileId, Struct, TypeAlias,
+    AstIdMap, Body, ExprScopes, FileId, Struct, TypeAlias,
 };
 use mun_syntax::{ast, Parse, SourceFile};
 use mun_target::abi;
@@ -44,6 +45,14 @@ pub trait SourceDatabase: salsa::Database {
     /// Contents of the source root
     #[salsa::input]
     fn source_root(&self, id: SourceRootId) -> Arc<SourceRoot>;
+
+    /// The source root for a specific package
+    #[salsa::input]
+    fn package_source_root(&self, package: PackageId) -> SourceRootId;
+
+    /// For a package, returns its hierarchy of modules.
+    #[salsa::invoke(ModuleTree::module_tree_query)]
+    fn module_tree(&self, package: PackageId) -> Arc<ModuleTree>;
 
     /// Returns the line index of a file
     #[salsa::invoke(line_index_query)]
@@ -77,6 +86,8 @@ pub trait InternDatabase: SourceDatabase {
 
 #[salsa::query_group(DefDatabaseStorage)]
 pub trait DefDatabase: InternDatabase + AstDatabase + Upcast<dyn AstDatabase> {
+    /// Returns the `ItemTree` for a specific file. An `ItemTree` represents all the top level
+    /// declarations within a file.
     #[salsa::invoke(item_tree::ItemTree::item_tree_query)]
     fn item_tree(&self, file_id: FileId) -> Arc<ItemTree>;
 
@@ -89,9 +100,19 @@ pub trait DefDatabase: InternDatabase + AstDatabase + Upcast<dyn AstDatabase> {
     #[salsa::invoke(crate::FunctionData::fn_data_query)]
     fn fn_data(&self, func: FunctionId) -> Arc<FunctionData>;
 
-    /// Returns the module data of the specified file
-    #[salsa::invoke(crate::code_model::ModuleData::module_data_query)]
-    fn module_data(&self, file_id: FileId) -> Arc<ModuleData>;
+    /// Returns the `PackageDefs` for the specified `PackageId`. The `PackageDefs` contains all
+    /// resolved items defined for every module in the package.
+    #[salsa::invoke(crate::package_defs::PackageDefs::package_def_map_query)]
+    fn package_defs(&self, package_id: PackageId) -> Arc<PackageDefs>;
+
+    #[salsa::invoke(Body::body_query)]
+    fn body(&self, def: DefWithBodyId) -> Arc<Body>;
+
+    #[salsa::invoke(Body::body_with_source_map_query)]
+    fn body_with_source_map(&self, def: DefWithBodyId) -> (Arc<Body>, Arc<BodySourceMap>);
+
+    #[salsa::invoke(ExprScopes::expr_scopes_query)]
+    fn expr_scopes(&self, def: DefWithBodyId) -> Arc<ExprScopes>;
 }
 
 #[salsa::query_group(HirDatabaseStorage)]
@@ -104,14 +125,8 @@ pub trait HirDatabase: DefDatabase + Upcast<dyn DefDatabase> {
     #[salsa::invoke(target_data_layout)]
     fn target_data_layout(&self) -> Arc<abi::TargetDataLayout>;
 
-    #[salsa::invoke(ExprScopes::expr_scopes_query)]
-    fn expr_scopes(&self, def: DefWithBody) -> Arc<ExprScopes>;
-
-    #[salsa::invoke(crate::name_resolution::module_scope_query)]
-    fn module_scope(&self, file_id: FileId) -> Arc<ModuleScope>;
-
     #[salsa::invoke(crate::ty::infer_query)]
-    fn infer(&self, def: DefWithBody) -> Arc<InferenceResult>;
+    fn infer(&self, def: DefWithBodyId) -> Arc<InferenceResult>;
 
     #[salsa::invoke(crate::ty::lower::lower_struct_query)]
     fn lower_struct(&self, def: Struct) -> Arc<LowerBatchResult>;
@@ -125,15 +140,6 @@ pub trait HirDatabase: DefDatabase + Upcast<dyn DefDatabase> {
     #[salsa::invoke(crate::ty::type_for_def)]
     #[salsa::cycle(crate::ty::type_for_cycle_recover)]
     fn type_for_def(&self, def: TypableDef, ns: Namespace) -> (Ty, bool);
-
-    #[salsa::invoke(crate::expr::body_hir_query)]
-    fn body(&self, def: DefWithBody) -> Arc<crate::expr::Body>;
-
-    #[salsa::invoke(crate::expr::body_with_source_map_query)]
-    fn body_with_source_map(
-        &self,
-        def: DefWithBody,
-    ) -> (Arc<crate::expr::Body>, Arc<crate::expr::BodySourceMap>);
 }
 
 fn parse_query(db: &dyn AstDatabase, file_id: FileId) -> Parse<SourceFile> {

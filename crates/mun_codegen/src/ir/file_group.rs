@@ -3,9 +3,11 @@ use super::{
     intrinsics,
     type_table::{TypeTable, TypeTableBuilder},
 };
-use crate::code_gen::CodeGenContext;
-use crate::value::{IrTypeContext, IrValueContext};
-use hir::ModuleDef;
+use crate::{
+    code_gen::CodeGenContext,
+    value::{IrTypeContext, IrValueContext},
+};
+use hir::{HasVisibility, ModuleDef};
 use inkwell::{module::Module, types::PointerType, values::UnnamedAddress, AddressSpace};
 use std::collections::BTreeMap;
 
@@ -28,7 +30,7 @@ pub struct FileGroupIR<'ink> {
 ///  files using something like `FileGroupId`.
 pub(crate) fn gen_file_group_ir<'db, 'ink>(
     code_gen: &CodeGenContext<'db, 'ink>,
-    file_id: hir::FileId,
+    module: hir::Module,
 ) -> FileGroupIR<'ink> {
     let llvm_module = code_gen.context.create_module("group_name");
 
@@ -37,7 +39,7 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
     let mut needs_alloc = false;
 
     // Collect all intrinsic functions, wrapper function, and generate struct declarations.
-    for def in code_gen.db.module_data(file_id).definitions() {
+    for def in module.declarations(code_gen.db) {
         match def {
             ModuleDef::Function(f) if !f.is_extern(code_gen.db) => {
                 intrinsics::collect_fn_body(
@@ -51,7 +53,7 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
                 );
 
                 let fn_sig = f.ty(code_gen.db).callable_sig(code_gen.db).unwrap();
-                if !f.data(code_gen.db).visibility().is_private()
+                if f.visibility(code_gen.db).is_externally_visible()
                     && !fn_sig.marshallable(code_gen.db)
                 {
                     intrinsics::collect_wrapper_body(
@@ -62,9 +64,10 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
                     );
                 }
             }
+            ModuleDef::Module(_) => (),
             ModuleDef::Function(_) => (), // TODO: Extern types?
             ModuleDef::Struct(_) => (),
-            ModuleDef::BuiltinType(_) => (),
+            ModuleDef::PrimitiveType(_) => (),
             ModuleDef::TypeAlias(_) => (),
         }
     }
@@ -78,9 +81,9 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
         &intrinsics_map,
         &code_gen.hir_types,
     );
-    for def in code_gen.db.module_data(file_id).definitions() {
+    for def in module.declarations(code_gen.db) {
         if let ModuleDef::Function(f) = def {
-            if !f.data(code_gen.db).visibility().is_private() && !f.is_extern(code_gen.db) {
+            if f.visibility(code_gen.db).is_externally_visible() && !f.is_extern(code_gen.db) {
                 let body = f.body(code_gen.db);
                 let infer = f.infer(code_gen.db);
                 dispatch_table_builder.collect_body(&body, &infer);
@@ -111,15 +114,15 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
     );
 
     // Collect all used types
-    for def in code_gen.db.module_data(file_id).definitions() {
+    for def in module.declarations(code_gen.db) {
         match def {
             ModuleDef::Struct(s) => {
-                type_table_builder.collect_struct(*s);
+                type_table_builder.collect_struct(s);
             }
             ModuleDef::Function(f) => {
-                type_table_builder.collect_fn(*f);
+                type_table_builder.collect_fn(f);
             }
-            ModuleDef::BuiltinType(_) | ModuleDef::TypeAlias(_) => (),
+            ModuleDef::PrimitiveType(_) | ModuleDef::TypeAlias(_) | ModuleDef::Module(_) => (),
         }
     }
 

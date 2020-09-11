@@ -5,7 +5,7 @@ use crate::{
     type_info::{TypeGroup, TypeInfo},
     value::{AsValue, CanInternalize, Global, IrValueContext, IterAsIrValue, Value},
 };
-use hir::{Body, ExprId, HirDatabase, InferenceResult};
+use hir::{Body, ExprId, HasVisibility, HirDatabase, InferenceResult};
 use inkwell::{
     context::Context, module::Linkage, module::Module, targets::TargetData, types::ArrayType,
     values::PointerValue,
@@ -163,7 +163,9 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
     /// Collects unique `TypeInfo` from the specified function signature and body.
     pub fn collect_fn(&mut self, hir_fn: hir::Function) {
         // Collect type info for exposed function
-        if !hir_fn.data(self.db).visibility().is_private() || self.dispatch_table.contains(hir_fn) {
+        if hir_fn.visibility(self.db).is_externally_visible()
+            || self.dispatch_table.contains(hir_fn)
+        {
             let fn_sig = hir_fn.ty(self.db).callable_sig(self.db).unwrap();
 
             // Collect argument types
@@ -261,7 +263,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
         hir_struct: hir::Struct,
     ) -> Value<'ink, ir::StructInfo<'ink>> {
         let struct_ir = self.hir_types.get_struct_type(hir_struct);
-        let name = hir_struct.name(self.db.upcast()).to_string();
+        let name = hir_struct.name(self.db).to_string();
         let fields = hir_struct.fields(self.db);
 
         // Construct an array of field names (or null if there are no fields)

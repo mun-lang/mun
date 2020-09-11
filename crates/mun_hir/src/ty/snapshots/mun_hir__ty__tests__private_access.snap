@@ -1,0 +1,107 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "//- /foo.mun\nstruct Foo {};\nstruct Bar(i64);\nstruct Baz;\nfn foo() {}\ntype FooBar = Foo;\n\npub struct PubFoo {};\npub struct PubBar(i64);\npub struct PubBaz;\npub fn pub_foo() {}\npub type PubFooBar = PubFoo;\n\npub(super) struct PubSupFoo {};\npub(super) struct PubSupBar(i64);\npub(super) struct PubSupBaz;\npub(super) fn pub_sup_foo() {}\npub(super) type PubSupFooBar = PubSupFoo;\n\npub(package) struct PubPackageFoo {};\npub(package) struct PubPackageBar(i64);\npub(package) struct PubPackageBaz;\npub(package) fn pub_package_foo() {}\npub(package) type PubPackageFooBar = PubPackageFoo;\n\n//- /bar.mun\nfn main() {\n    let a = package::foo::Foo {}; // private access\n    let a = package::foo::Bar(3); // private access\n    let a = package::foo::Baz; // private access\n    let a = package::foo::FooBar{}}; // private access\n\n    let a = super::foo::Foo {}; // private access\n    let a = super::foo::Bar(3); // private access\n    let a = super::foo::Baz; // private access\n    let a = super::foo::FooBar{}; // private access\n\n    package::foo::foo(); // private access\n    super::foo::foo(); // private access\n\n    let a = package::foo::PubFoo {};\n    let a = package::foo::PubBar(3);\n    let a = package::foo::PubBaz;\n    let a = package::foo::PubFooBar{};\n\n    let a = super::foo::PubFoo {};\n    let a = super::foo::PubBar(3);\n    let a = super::foo::PubBaz;\n    let a = super::foo::PubFooBar{};\n\n    package::foo::pub_foo();\n    super::foo::pub_foo();\n\n    let a = package::foo::PubSupFoo {};\n    let a = package::foo::PubSupBar(3);\n    let a = package::foo::PubSupBaz;\n    let a = package::foo::PubSupFooBar{};\n\n    let a = super::foo::PubSupFoo {};\n    let a = super::foo::PubSupBar(3);\n    let a = super::foo::PubSupBaz;\n    let a = super::foo::PubSupFooBar{};\n\n    package::foo::pub_sup_foo();\n    super::foo::pub_sup_foo();\n\n    let a = package::foo::PubPackageFoo {};\n    let a = package::foo::PubPackageBar(3);\n    let a = package::foo::PubPackageBaz;\n    let a = package::foo::PubPackageFooBar{};\n\n    let a = super::foo::PubPackageFoo {};\n    let a = super::foo::PubPackageBar(3);\n    let a = super::foo::PubPackageBaz;\n    let a = super::foo::PubPackageFooBar{};\n\n    package::foo::pub_package_foo();\n    super::foo::pub_package_foo();\n}\n\n//- /foo/baz.mun\nfn main() {\n    let a = package::foo::Foo {};\n    let a = package::foo::Bar(3);\n    let a = package::foo::Baz;\n    let a = package::foo::FooBar{};\n\n    let a = super::Foo {};\n    let a = super::Bar(3);\n    let a = super::Baz;\n    let a = super::FooBar{};\n\n    package::foo::foo();\n    super::foo();\n}\n\n//- /mod.mun\nfn main() {\n    let a = package::foo::Foo {}; // private access\n    let a = package::foo::Bar(3); // private access\n    let a = package::foo::Baz; // private access\n    let a = package::foo::FooBar{}; // private access\n\n    let a = foo::Foo {}; // private access\n    let a = foo::Bar(3); // private access\n    let a = foo::Baz; // private access\n    let a = foo::FooBar{}; // private access\n\n    package::foo::foo(); // private access\n    foo::foo(); // private access\n\n    let a = package::foo::PubSupFoo {};\n    let a = package::foo::PubSupBar(3);\n    let a = package::foo::PubSupBaz;\n    let a = package::foo::PubSupFooBar{};\n\n    let a = foo::PubSupFoo {};\n    let a = foo::PubSupBar(3);\n    let a = foo::PubSupBaz;\n    let a = foo::PubSupFooBar{};\n\n    package::foo::pub_sup_foo();\n    foo::pub_sup_foo();\n}"
+---
+[24; 41): access of private type
+[76; 93): access of private type
+[128; 145): access of private type
+[177; 197): access of private type
+[232; 240): access of private type
+[275; 283): access of private type
+[318; 326): access of private type
+[358; 369): access of private type
+[396; 413): access of private type
+[439; 447): access of private type
+[24; 41): access of private type
+[76; 93): access of private type
+[128; 145): access of private type
+[177; 197): access of private type
+[10; 812) '{     ...o(); }': nothing
+[20; 21) 'a': Foo
+[24; 44) 'packag...Foo {}': Foo
+[72; 73) 'a': Bar
+[76; 93) 'packag...o::Bar': ctor Bar(i64) -> Bar
+[76; 96) 'packag...Bar(3)': Bar
+[94; 95) '3': i64
+[124; 125) 'a': Baz
+[128; 145) 'packag...o::Baz': Baz
+[173; 174) 'a': Foo
+[177; 199) 'packag...oBar{}': Foo
+[228; 229) 'a': Foo
+[232; 243) 'foo::Foo {}': Foo
+[271; 272) 'a': Bar
+[275; 283) 'foo::Bar': ctor Bar(i64) -> Bar
+[275; 286) 'foo::Bar(3)': Bar
+[284; 285) '3': i64
+[314; 315) 'a': Baz
+[318; 326) 'foo::Baz': Baz
+[354; 355) 'a': Foo
+[358; 371) 'foo::FooBar{}': Foo
+[396; 413) 'packag...o::foo': function foo() -> nothing
+[396; 415) 'packag...:foo()': nothing
+[439; 447) 'foo::foo': function foo() -> nothing
+[439; 449) 'foo::foo()': nothing
+[478; 479) 'a': PubSupFoo
+[482; 508) 'packag...Foo {}': PubSupFoo
+[518; 519) 'a': PubSupBar
+[522; 545) 'packag...SupBar': ctor PubSupBar(i64) -> PubSupBar
+[522; 548) 'packag...Bar(3)': PubSupBar
+[546; 547) '3': i64
+[558; 559) 'a': PubSupBaz
+[562; 585) 'packag...SupBaz': PubSupBaz
+[595; 596) 'a': PubSupFoo
+[599; 627) 'packag...oBar{}': PubSupFoo
+[638; 639) 'a': PubSupFoo
+[642; 659) 'foo::P...Foo {}': PubSupFoo
+[669; 670) 'a': PubSupBar
+[673; 687) 'foo::PubSupBar': ctor PubSupBar(i64) -> PubSupBar
+[673; 690) 'foo::P...Bar(3)': PubSupBar
+[688; 689) '3': i64
+[700; 701) 'a': PubSupBaz
+[704; 718) 'foo::PubSupBaz': PubSupBaz
+[728; 729) 'a': PubSupFoo
+[732; 751) 'foo::P...oBar{}': PubSupFoo
+[758; 783) 'packag...up_foo': function pub_sup_foo() -> nothing
+[758; 785) 'packag..._foo()': nothing
+[791; 807) 'foo::p...up_foo': function pub_sup_foo() -> nothing
+[791; 809) 'foo::p..._foo()': nothing
+[10; 200) '{     ...Bar{}}': nothing
+[20; 21) 'a': Foo
+[24; 44) 'packag...Foo {}': Foo
+[72; 73) 'a': Bar
+[76; 93) 'packag...o::Bar': ctor Bar(i64) -> Bar
+[76; 96) 'packag...Bar(3)': Bar
+[94; 95) '3': i64
+[124; 125) 'a': Baz
+[128; 145) 'packag...o::Baz': Baz
+[173; 174) 'a': Foo
+[177; 199) 'packag...oBar{}': Foo
+[53; 55) '{}': nothing
+[158; 160) '{}': nothing
+[314; 316) '{}': nothing
+[507; 509) '{}': nothing
+[10; 300) '{     ...o(); }': nothing
+[20; 21) 'a': Foo
+[24; 44) 'packag...Foo {}': Foo
+[54; 55) 'a': Bar
+[58; 75) 'packag...o::Bar': ctor Bar(i64) -> Bar
+[58; 78) 'packag...Bar(3)': Bar
+[76; 77) '3': i64
+[88; 89) 'a': Baz
+[92; 109) 'packag...o::Baz': Baz
+[119; 120) 'a': Foo
+[123; 145) 'packag...oBar{}': Foo
+[156; 157) 'a': Foo
+[160; 173) 'super::Foo {}': Foo
+[183; 184) 'a': Bar
+[187; 197) 'super::Bar': ctor Bar(i64) -> Bar
+[187; 200) 'super::Bar(3)': Bar
+[198; 199) '3': i64
+[210; 211) 'a': Baz
+[214; 224) 'super::Baz': Baz
+[234; 235) 'a': Foo
+[238; 253) 'super::FooBar{}': Foo
+[260; 277) 'packag...o::foo': function foo() -> nothing
+[260; 279) 'packag...:foo()': nothing
+[285; 295) 'super::foo': function foo() -> nothing
+[285; 297) 'super::foo()': nothing

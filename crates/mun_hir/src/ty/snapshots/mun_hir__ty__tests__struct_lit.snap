@@ -5,7 +5,7 @@ expression: "struct Foo;\nstruct Bar {\n    a: f64,\n}\nstruct Baz(f64, i32);\n\
 [170; 175): mismatched struct literal kind. expected `unit struct`, found `record`
 [270; 275): mismatched struct literal kind. expected `unit struct`, found `tuple`
 [369; 372): mismatched struct literal kind. expected `record`, found `unit struct`
-[467; 472): mismatched struct literal kind. expected `record`, found `tuple`
+[467; 470): mismatched struct literal kind. expected `record`, found `tuple`
 [561; 566): missing record fields:
 - a
 

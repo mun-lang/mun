@@ -1,4 +1,5 @@
-use crate::{ty::infer::InferenceResultBuilder, Expr, ExprId, Path, Resolution, Resolver};
+use crate::resolve::ValueNs;
+use crate::{ty::infer::InferenceResultBuilder, Expr, ExprId, Path, Resolver};
 use std::sync::Arc;
 
 impl<'a> InferenceResultBuilder<'a> {
@@ -15,17 +16,9 @@ impl<'a> InferenceResultBuilder<'a> {
 
     /// Checks if the specified path references a memory location.
     fn check_place_path(&mut self, resolver: &Resolver, path: &Path) -> bool {
-        let resolution = match resolver
-            .resolve_path_without_assoc_items(self.db, path)
-            .take_values()
-        {
-            Some(resolution) => resolution,
-            None => return false,
-        };
-
-        match resolution {
-            Resolution::LocalBinding(_) => true,
-            Resolution::Def(_) => false,
+        match resolver.resolve_path_as_value_fully(self.db.upcast(), path) {
+            Some((ValueNs::LocalBinding(_), _)) => true,
+            Some((ValueNs::FunctionId(_), _)) | Some((ValueNs::StructId(_), _)) | None => false,
         }
     }
 }

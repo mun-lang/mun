@@ -1,7 +1,7 @@
 use crate::code_model::{Function, Struct, StructField, TypeAlias};
-use crate::ids::Lookup;
+use crate::ids::{AssocItemLoc, Lookup};
 use crate::in_file::InFile;
-use crate::item_tree::ItemTreeNode;
+use crate::item_tree::{ItemTreeId, ItemTreeNode};
 use crate::{DefDatabase, ItemLoc};
 use mun_syntax::ast;
 
@@ -10,19 +10,35 @@ pub trait HasSource {
     fn source(&self, db: &dyn DefDatabase) -> InFile<Self::Ast>;
 }
 
+impl<N: ItemTreeNode> HasSource for ItemTreeId<N> {
+    type Ast = N::Source;
+
+    fn source(&self, db: &dyn DefDatabase) -> InFile<Self::Ast> {
+        let tree = db.item_tree(self.file_id);
+        let ast_id_map = db.ast_id_map(self.file_id);
+        let root = db.parse(self.file_id);
+        let node = &tree[self.value];
+
+        InFile::new(
+            self.file_id,
+            ast_id_map.get(node.ast_id()).to_node(&root.syntax_node()),
+        )
+    }
+}
+
 impl<N: ItemTreeNode> HasSource for ItemLoc<N> {
     type Ast = N::Source;
 
     fn source(&self, db: &dyn DefDatabase) -> InFile<Self::Ast> {
-        let tree = db.item_tree(self.id.file_id);
-        let ast_id_map = db.ast_id_map(self.id.file_id);
-        let root = db.parse(self.id.file_id);
-        let node = &tree[self.id.value];
+        self.id.source(db)
+    }
+}
 
-        InFile::new(
-            self.id.file_id,
-            ast_id_map.get(node.ast_id()).to_node(&root.syntax_node()),
-        )
+impl<N: ItemTreeNode> HasSource for AssocItemLoc<N> {
+    type Ast = N::Source;
+
+    fn source(&self, db: &dyn DefDatabase) -> InFile<Self::Ast> {
+        self.id.source(db)
     }
 }
 

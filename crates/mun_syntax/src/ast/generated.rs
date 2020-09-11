@@ -1434,6 +1434,7 @@ impl AstNode for TypeAliasDef {
     }
 }
 impl ast::NameOwner for TypeAliasDef {}
+impl ast::VisibilityOwner for TypeAliasDef {}
 impl ast::DocCommentsOwner for TypeAliasDef {}
 impl TypeAliasDef {
     pub fn type_ref(&self) -> Option<TypeRef> {

@@ -1,25 +1,24 @@
-use crate::code_model::DefWithBody;
 use crate::expr::{Expr, Pat, PatId, Statement};
+use crate::ids::DefWithBodyId;
 use crate::{
     arena::{Arena, Idx},
     expr::{Body, ExprId},
-    HirDatabase, Name,
+    DefDatabase, Name,
 };
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
 /// The ID of a scope in an `ExprScopes`
-pub(crate) type LocalScopeId = Idx<ScopeData>;
+pub type LocalScopeId = Idx<ScopeData>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ExprScopes {
-    body: Arc<Body>,
     scopes: Arena<ScopeData>,
     scope_by_expr: FxHashMap<ExprId, LocalScopeId>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct ScopeEntry {
+pub struct ScopeEntry {
     name: Name,
     pat: PatId,
 }
@@ -35,26 +34,24 @@ impl ScopeEntry {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct ScopeData {
+pub struct ScopeData {
     parent: Option<LocalScopeId>,
     entries: Vec<ScopeEntry>,
 }
 
 impl ExprScopes {
-    pub(crate) fn expr_scopes_query(db: &dyn HirDatabase, def: DefWithBody) -> Arc<ExprScopes> {
+    pub(crate) fn expr_scopes_query(db: &dyn DefDatabase, def: DefWithBodyId) -> Arc<ExprScopes> {
         let body = db.body(def);
-        let res = ExprScopes::new(body);
-        Arc::new(res)
+        Arc::new(ExprScopes::new(&*body))
     }
 
-    fn new(body: Arc<Body>) -> ExprScopes {
+    fn new(body: &Body) -> ExprScopes {
         let mut scopes = ExprScopes {
-            body: body.clone(),
             scopes: Arena::default(),
             scope_by_expr: FxHashMap::default(),
         };
         let root = scopes.root_scope();
-        scopes.add_params_bindings(root, body.params().iter().map(|p| &p.0));
+        scopes.add_params_bindings(body, root, body.params().iter().map(|p| &p.0));
         compute_expr_scopes(body.body_expr(), &body, &mut scopes, root);
         scopes
     }
@@ -109,11 +106,11 @@ impl ExprScopes {
 
     fn add_params_bindings<'a>(
         &mut self,
+        body: &Body,
         scope: LocalScopeId,
         params: impl Iterator<Item = &'a PatId>,
     ) {
-        let body = Arc::clone(&self.body);
-        params.for_each(|pat| self.add_bindings(&body, scope, *pat));
+        params.for_each(|pat| self.add_bindings(body, scope, *pat));
     }
 
     fn set_scope(&mut self, node: ExprId, scope: LocalScopeId) {

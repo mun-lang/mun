@@ -7,7 +7,8 @@ use crate::{
 };
 use mun_codegen::{Assembly, CodeGenDatabase};
 use mun_hir::{
-    AstDatabase, DiagnosticSink, FileId, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId,
+    AstDatabase, DiagnosticSink, FileId, Module, PackageId, RelativePathBuf, SourceDatabase,
+    SourceRoot, SourceRootId, Upcast,
 };
 
 use std::{path::PathBuf, sync::Arc};
@@ -26,6 +27,7 @@ use std::path::Path;
 use walkdir::WalkDir;
 
 pub const WORKSPACE: SourceRootId = SourceRootId(0);
+pub const PACKAGE: PackageId = PackageId(0);
 
 pub struct Driver {
     db: CompilerDatabase,
@@ -36,7 +38,7 @@ pub struct Driver {
     file_id_to_path: HashMap<FileId, RelativePathBuf>,
     next_file_id: usize,
 
-    file_id_to_temp_assembly_path: HashMap<FileId, PathBuf>,
+    module_to_temp_assembly_path: HashMap<Module, PathBuf>,
 
     display_color: DisplayColor,
 }
@@ -51,7 +53,7 @@ impl Driver {
             path_to_file_id: Default::default(),
             file_id_to_path: Default::default(),
             next_file_id: 0,
-            file_id_to_temp_assembly_path: Default::default(),
+            module_to_temp_assembly_path: Default::default(),
             display_color: config.display_color,
         })
     }
@@ -94,6 +96,7 @@ impl Driver {
         driver
             .db
             .set_source_root(WORKSPACE, Arc::new(driver.source_root.clone()));
+        driver.db.set_package_source_root(PACKAGE, WORKSPACE);
 
         Ok((driver, file_id))
     }
@@ -144,6 +147,7 @@ impl Driver {
         driver
             .db
             .set_source_root(WORKSPACE, Arc::new(driver.source_root.clone()));
+        driver.db.set_package_source_root(PACKAGE, WORKSPACE);
 
         Ok((package, driver))
     }
@@ -195,43 +199,49 @@ impl Driver {
     /// Emits all diagnostic messages currently in the database; returns true if errors were
     /// emitted.
     pub fn emit_diagnostics(&self, writer: &mut dyn std::io::Write) -> Result<bool, anyhow::Error> {
-        // Iterate over all files in the workspace
         let emit_colors = self.display_color.should_enable();
         let mut has_error = false;
-        for file_id in self.db.source_root(WORKSPACE).files() {
-            let parse = self.db.parse(file_id);
-            let source_code = self.db.file_text(file_id);
-            let relative_file_path = self.db.file_relative_path(file_id);
-            let line_index = self.db.line_index(file_id);
 
-            // Emit all syntax diagnostics
-            for syntax_error in parse.errors().iter() {
-                emit_syntax_error(
-                    syntax_error,
-                    relative_file_path.as_str(),
-                    source_code.as_str(),
-                    &line_index,
-                    emit_colors,
-                    writer,
-                )?;
-                has_error = true;
-            }
+        for package in mun_hir::Package::all(self.db.upcast()) {
+            for module in package.modules(self.db.upcast()) {
+                if let Some(file_id) = module.file_id(self.db.upcast()) {
+                    let parse = self.db.parse(file_id);
+                    let source_code = self.db.file_text(file_id);
+                    let relative_file_path = self.db.file_relative_path(file_id);
+                    let line_index = self.db.line_index(file_id);
 
-            // Emit all HIR diagnostics
-            let mut error = None;
-            mun_hir::Module::from(file_id).diagnostics(
-                &self.db,
-                &mut DiagnosticSink::new(|d| {
-                    has_error = true;
-                    if let Err(e) = emit_hir_diagnostic(d, &self.db, file_id, emit_colors, writer) {
-                        error = Some(e)
-                    };
-                }),
-            );
+                    // Emit all syntax diagnostics
+                    for syntax_error in parse.errors().iter() {
+                        emit_syntax_error(
+                            syntax_error,
+                            relative_file_path.as_str(),
+                            source_code.as_str(),
+                            &line_index,
+                            emit_colors,
+                            writer,
+                        )?;
+                        has_error = true;
+                    }
 
-            // If an error occurred when emitting HIR diagnostics, return early with the error.
-            if let Some(e) = error {
-                return Err(e.into());
+                    // Emit all HIR diagnostics
+                    let mut error = None;
+                    module.diagnostics(
+                        self.db.upcast(),
+                        &mut DiagnosticSink::new(|d| {
+                            has_error = true;
+                            if let Err(e) =
+                                emit_hir_diagnostic(d, &self.db, file_id, emit_colors, writer)
+                            {
+                                error = Some(e)
+                            };
+                        }),
+                    );
+
+                    // If an error occurred when emitting HIR diagnostics, return early with the error.
+                    if let Some(e) = error {
+                        return Err(e.into());
+                    }
+                }
             }
         }
 
@@ -241,19 +251,29 @@ impl Driver {
 
 impl Driver {
     /// Get the path where the driver will write the assembly for the specified file.
-    pub fn assembly_output_path(&self, file_id: FileId) -> PathBuf {
+    pub fn assembly_output_path_from_file(&self, file_id: FileId) -> PathBuf {
         self.db
             .file_relative_path(file_id)
             .with_extension(Assembly::EXTENSION)
             .to_path(&self.out_dir)
     }
 
-    /// Writes all assemblies
-    pub fn write_all_assemblies(&mut self) -> Result<(), anyhow::Error> {
+    /// Get the path where the driver will write the assembly for the specified file.
+    pub fn assembly_output_path(&self, module: Module) -> PathBuf {
+        let file_id = module
+            .file_id(self.db.upcast())
+            .expect("must have a file_id");
+        self.assembly_output_path_from_file(file_id)
+    }
+
+    /// Writes all assemblies. If `force` is false, the binary will not be written if there are no
+    /// changes since last time it was written.
+    pub fn write_all_assemblies(&mut self, force: bool) -> Result<(), anyhow::Error> {
         // Create a copy of all current files
-        let files = self.source_root.files().collect::<Vec<_>>();
-        for file_id in files {
-            self.write_assembly(file_id, false)?;
+        for package in mun_hir::Package::all(self.db.upcast()) {
+            for module in package.modules(self.db.upcast()) {
+                self.write_assembly(module, force)?;
+            }
         }
         Ok(())
     }
@@ -261,21 +281,21 @@ impl Driver {
     /// Generates an assembly for the given file and stores it in the output location. If `force` is
     /// false, the binary will not be written if there are no changes since last time it was
     /// written. Returns `true` if the assembly was written, `false` if it was up to date.
-    pub fn write_assembly(&mut self, file_id: FileId, force: bool) -> Result<bool, anyhow::Error> {
-        log::trace!("writing assembly for {:?}", file_id);
+    pub fn write_assembly(&mut self, module: Module, force: bool) -> Result<bool, anyhow::Error> {
+        log::trace!("writing assembly for {:?}", module);
 
         // Determine the location of the output file
-        let assembly_path = self.assembly_output_path(file_id);
+        let assembly_path = self.assembly_output_path(module);
 
         // Get the compiled assembly
-        let assembly = self.db.assembly(file_id);
+        let assembly = self.db.assembly(module);
 
         // Did the assembly change since last time?
         if !force
             && assembly_path.is_file()
             && self
-                .file_id_to_temp_assembly_path
-                .get(&file_id)
+                .module_to_temp_assembly_path
+                .get(&module)
                 .map(AsRef::as_ref)
                 == Some(assembly.path())
         {
@@ -286,8 +306,8 @@ impl Driver {
         assembly.copy_to(&assembly_path)?;
 
         // Store the information so we maybe don't have to write it next time
-        self.file_id_to_temp_assembly_path
-            .insert(file_id, assembly.path().to_path_buf());
+        self.module_to_temp_assembly_path
+            .insert(module, assembly.path().to_path_buf());
 
         Ok(true)
     }

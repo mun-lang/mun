@@ -34,7 +34,7 @@ impl Assembly {
 }
 
 /// Builds an assembly for the specified file
-pub(crate) fn build_assembly(db: &dyn CodeGenDatabase, file_id: hir::FileId) -> Arc<Assembly> {
+pub(crate) fn build_assembly(db: &dyn CodeGenDatabase, module: hir::Module) -> Arc<Assembly> {
     // Construct a temporary file for the assembly
     let file = NamedTempFile::new().expect("could not create temp file for shared object");
 
@@ -44,7 +44,7 @@ pub(crate) fn build_assembly(db: &dyn CodeGenDatabase, file_id: hir::FileId) -> 
 
     // Construct the module
     let module_builder =
-        ModuleBuilder::new(&code_gen_context, file_id).expect("could not create ModuleBuilder");
+        ModuleBuilder::new(&code_gen_context, module).expect("could not create ModuleBuilder");
     let obj_file = module_builder
         .build()
         .expect("unable to create object file");
