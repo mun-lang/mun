@@ -1,16 +1,16 @@
-use crate::arena::map::ArenaMap;
-use crate::arena::{Arena, RawId};
-///! HIR for references to types. These paths are not yet resolved. They can be directly created
-/// from an `ast::TypeRef`, without further queries.
-use crate::Path;
-use mun_syntax::ast;
-use mun_syntax::AstPtr;
+//! HIR for references to types. These paths are not yet resolved. They can be directly created
+//! from an `ast::TypeRef`, without further queries.
+
+use crate::{
+    arena::{map::ArenaMap, Arena, Idx},
+    Path,
+};
+use mun_syntax::{ast, AstPtr};
 use rustc_hash::FxHashMap;
 use std::ops::Index;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TypeRefId(RawId);
-impl_arena_id!(TypeRefId);
+/// The ID of a `TypeRef` in a `TypeRefMap`
+pub type LocalTypeRefId = Idx<TypeRef>;
 
 /// Compare ty::Ty
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -48,36 +48,36 @@ impl TypeRef {
 
 #[derive(Default, Debug, Eq, PartialEq)]
 pub struct TypeRefSourceMap {
-    type_ref_map: FxHashMap<AstPtr<ast::TypeRef>, TypeRefId>,
-    type_ref_map_back: ArenaMap<TypeRefId, AstPtr<ast::TypeRef>>,
+    type_ref_map: FxHashMap<AstPtr<ast::TypeRef>, LocalTypeRefId>,
+    type_ref_map_back: ArenaMap<LocalTypeRefId, AstPtr<ast::TypeRef>>,
 }
 
 impl TypeRefSourceMap {
-    pub(crate) fn type_ref_syntax(&self, expr: TypeRefId) -> Option<AstPtr<ast::TypeRef>> {
+    pub(crate) fn type_ref_syntax(&self, expr: LocalTypeRefId) -> Option<AstPtr<ast::TypeRef>> {
         self.type_ref_map_back.get(expr).cloned()
     }
 
-    pub(crate) fn syntax_type_ref(&self, ptr: AstPtr<ast::TypeRef>) -> Option<TypeRefId> {
+    pub(crate) fn syntax_type_ref(&self, ptr: AstPtr<ast::TypeRef>) -> Option<LocalTypeRefId> {
         self.type_ref_map.get(&ptr).cloned()
     }
 }
 
 #[derive(Default, Debug, Eq, PartialEq)]
 pub struct TypeRefMap {
-    type_refs: Arena<TypeRefId, TypeRef>,
+    type_refs: Arena<TypeRef>,
 }
 
 impl TypeRefMap {
     /// Iterate over the elements in the map
-    pub fn iter(&self) -> impl Iterator<Item = (TypeRefId, &TypeRef)> {
+    pub fn iter(&self) -> impl Iterator<Item = (LocalTypeRefId, &TypeRef)> {
         self.type_refs.iter()
     }
 }
 
-impl Index<TypeRefId> for TypeRefMap {
+impl Index<LocalTypeRefId> for TypeRefMap {
     type Output = TypeRef;
 
-    fn index(&self, pat: TypeRefId) -> &Self::Output {
+    fn index(&self, pat: LocalTypeRefId) -> &Self::Output {
         &self.type_refs[pat]
     }
 }
@@ -89,14 +89,14 @@ pub(crate) struct TypeRefBuilder {
 }
 
 impl TypeRefBuilder {
-    fn alloc_type_ref(&mut self, type_ref: TypeRef, ptr: AstPtr<ast::TypeRef>) -> TypeRefId {
+    fn alloc_type_ref(&mut self, type_ref: TypeRef, ptr: AstPtr<ast::TypeRef>) -> LocalTypeRefId {
         let id = self.map.type_refs.alloc(type_ref);
         self.source_map.type_ref_map.insert(ptr, id);
         self.source_map.type_ref_map_back.insert(id, ptr);
         id
     }
 
-    pub fn alloc_from_node_opt(&mut self, node: Option<&ast::TypeRef>) -> TypeRefId {
+    pub fn alloc_from_node_opt(&mut self, node: Option<&ast::TypeRef>) -> LocalTypeRefId {
         if let Some(node) = node {
             self.alloc_from_node(node)
         } else {
@@ -104,7 +104,7 @@ impl TypeRefBuilder {
         }
     }
 
-    pub fn alloc_from_node(&mut self, node: &ast::TypeRef) -> TypeRefId {
+    pub fn alloc_from_node(&mut self, node: &ast::TypeRef) -> LocalTypeRefId {
         use mun_syntax::ast::TypeRefKind::*;
         let ptr = AstPtr::new(node);
         let type_ref = match node.kind() {
@@ -118,11 +118,11 @@ impl TypeRefBuilder {
         self.alloc_type_ref(type_ref, ptr)
     }
 
-    pub fn unit(&mut self) -> TypeRefId {
+    pub fn unit(&mut self) -> LocalTypeRefId {
         self.map.type_refs.alloc(TypeRef::Empty)
     }
 
-    pub fn error(&mut self) -> TypeRefId {
+    pub fn error(&mut self) -> LocalTypeRefId {
         self.map.type_refs.alloc(TypeRef::Error)
     }
 

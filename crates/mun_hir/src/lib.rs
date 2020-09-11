@@ -41,7 +41,6 @@ pub use salsa;
 pub use relative_path::{RelativePath, RelativePathBuf};
 
 pub use crate::{
-    arena::{ArenaId, RawId},
     builtin_type::{FloatBitness, IntBitness, Signedness},
     db::{
         DefDatabase, DefDatabaseStorage, HirDatabase, HirDatabaseStorage, SourceDatabase,
@@ -68,7 +67,6 @@ pub use crate::{
 };
 
 use crate::{
-    arena::Arena,
     name::AsName,
     source_id::{AstIdMap, FileAstId},
 };

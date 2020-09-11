@@ -1,7 +1,7 @@
 pub(crate) mod src;
 
 use self::src::HasSource;
-use crate::adt::{StructData, StructFieldId, TypeAliasData};
+use crate::adt::{LocalStructFieldId, StructData, TypeAliasData};
 use crate::builtin_type::BuiltinType;
 use crate::code_model::diagnostics::ModuleDefinitionDiagnostic;
 use crate::diagnostics::DiagnosticSink;
@@ -13,7 +13,7 @@ use crate::name_resolution::Namespace;
 use crate::raw::{DefKind, RawFileItem};
 use crate::resolve::{Resolution, Resolver};
 use crate::ty::{lower::LowerBatchResult, InferenceResult};
-use crate::type_ref::{TypeRefBuilder, TypeRefId, TypeRefMap, TypeRefSourceMap};
+use crate::type_ref::{LocalTypeRefId, TypeRefBuilder, TypeRefMap, TypeRefSourceMap};
 use crate::{
     ids::{FunctionId, StructId, TypeAliasId},
     AsName, DefDatabase, FileId, HirDatabase, Name, Ty,
@@ -232,9 +232,9 @@ pub struct Function {
 #[derive(Debug, PartialEq, Eq)]
 pub struct FnData {
     name: Name,
-    params: Vec<TypeRefId>,
+    params: Vec<LocalTypeRefId>,
     visibility: Visibility,
-    ret_type: TypeRefId,
+    ret_type: LocalTypeRefId,
     type_ref_map: TypeRefMap,
     type_ref_source_map: TypeRefSourceMap,
     is_extern: bool,
@@ -289,7 +289,7 @@ impl FnData {
         &self.name
     }
 
-    pub fn params(&self) -> &[TypeRefId] {
+    pub fn params(&self) -> &[LocalTypeRefId] {
         &self.params
     }
 
@@ -297,7 +297,7 @@ impl FnData {
         self.visibility
     }
 
-    pub fn ret_type(&self) -> &TypeRefId {
+    pub fn ret_type(&self) -> &LocalTypeRefId {
         &self.ret_type
     }
 
@@ -373,7 +373,7 @@ pub struct Struct {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct StructField {
     pub(crate) parent: Struct,
-    pub(crate) id: StructFieldId,
+    pub(crate) id: LocalStructFieldId,
 }
 
 impl StructField {
@@ -388,7 +388,7 @@ impl StructField {
         self.parent.data(db.upcast()).fields[self.id].name.clone()
     }
 
-    pub fn id(self) -> StructFieldId {
+    pub fn id(self) -> LocalStructFieldId {
         self.id
     }
 }
@@ -470,7 +470,7 @@ impl TypeAlias {
         self.data(db).name.clone()
     }
 
-    pub fn type_ref(self, db: &dyn HirDatabase) -> TypeRefId {
+    pub fn type_ref(self, db: &dyn HirDatabase) -> LocalTypeRefId {
         self.data(db.upcast()).type_ref_id
     }
 
@@ -501,7 +501,7 @@ impl TypeAlias {
 mod diagnostics {
     use super::Module;
     use crate::diagnostics::{DiagnosticSink, DuplicateDefinition};
-    use crate::raw::{DefId, DefKind};
+    use crate::raw::{DefKind, LocalDefId};
     use crate::{DefDatabase, Name};
     use mun_syntax::{AstNode, SyntaxNodePtr};
 
@@ -509,8 +509,8 @@ mod diagnostics {
     pub(super) enum ModuleDefinitionDiagnostic {
         DuplicateName {
             name: Name,
-            definition: DefId,
-            first_definition: DefId,
+            definition: LocalDefId,
+            first_definition: LocalDefId,
         },
     }
 

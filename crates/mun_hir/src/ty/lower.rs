@@ -6,7 +6,7 @@ use crate::diagnostics::DiagnosticSink;
 use crate::name_resolution::Namespace;
 use crate::resolve::{Resolution, Resolver};
 use crate::ty::{FnSig, Ty, TypeCtor};
-use crate::type_ref::{TypeRef, TypeRefId, TypeRefMap, TypeRefSourceMap};
+use crate::type_ref::{LocalTypeRefId, TypeRef, TypeRefMap, TypeRefSourceMap};
 use crate::{FileId, Function, HirDatabase, ModuleDef, Path, Struct, TypeAlias};
 use std::ops::Index;
 use std::sync::Arc;
@@ -19,13 +19,13 @@ pub(crate) struct LowerResult {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LowerBatchResult {
-    pub(crate) type_ref_to_type: ArenaMap<TypeRefId, Ty>,
+    pub(crate) type_ref_to_type: ArenaMap<LocalTypeRefId, Ty>,
     pub(crate) diagnostics: Vec<LowerDiagnostic>,
 }
 
-impl Index<TypeRefId> for LowerBatchResult {
+impl Index<LocalTypeRefId> for LowerBatchResult {
     type Output = Ty;
-    fn index(&self, expr: TypeRefId) -> &Ty {
+    fn index(&self, expr: LocalTypeRefId) -> &Ty {
         self.type_ref_to_type.get(expr).unwrap_or(&Ty::Unknown)
     }
 }
@@ -50,7 +50,7 @@ impl Ty {
         db: &dyn HirDatabase,
         resolver: &Resolver,
         type_ref_map: &TypeRefMap,
-        type_ref: TypeRefId,
+        type_ref: LocalTypeRefId,
     ) -> LowerResult {
         let mut diagnostics = Vec::new();
         let ty =
@@ -63,7 +63,7 @@ impl Ty {
         resolver: &Resolver,
         type_ref_map: &TypeRefMap,
         diagnostics: &mut Vec<LowerDiagnostic>,
-        type_ref: TypeRefId,
+        type_ref: LocalTypeRefId,
     ) -> Ty {
         let res = match &type_ref_map[type_ref] {
             TypeRef::Path(path) => Ty::from_hir_path(db, resolver, path),
@@ -297,14 +297,14 @@ pub mod diagnostics {
     use crate::diagnostics::{CyclicType, UnresolvedType};
     use crate::{
         diagnostics::DiagnosticSink,
-        type_ref::{TypeRefId, TypeRefSourceMap},
+        type_ref::{LocalTypeRefId, TypeRefSourceMap},
         FileId, HirDatabase,
     };
 
     #[derive(Debug, PartialEq, Eq, Clone)]
     pub(crate) enum LowerDiagnostic {
-        UnresolvedType { id: TypeRefId },
-        CyclicType { id: TypeRefId },
+        UnresolvedType { id: LocalTypeRefId },
+        CyclicType { id: LocalTypeRefId },
     }
 
     impl LowerDiagnostic {

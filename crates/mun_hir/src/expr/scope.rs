@@ -1,22 +1,21 @@
 use crate::code_model::DefWithBody;
 use crate::expr::{Expr, Pat, PatId, Statement};
 use crate::{
-    arena::{Arena, RawId},
+    arena::{Arena, Idx},
     expr::{Body, ExprId},
     HirDatabase, Name,
 };
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ScopeId(RawId);
-impl_arena_id!(ScopeId);
+/// The ID of a scope in an `ExprScopes`
+pub(crate) type LocalScopeId = Idx<ScopeData>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ExprScopes {
     body: Arc<Body>,
-    scopes: Arena<ScopeId, ScopeData>,
-    scope_by_expr: FxHashMap<ExprId, ScopeId>,
+    scopes: Arena<ScopeData>,
+    scope_by_expr: FxHashMap<ExprId, LocalScopeId>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -37,7 +36,7 @@ impl ScopeEntry {
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct ScopeData {
-    parent: Option<ScopeId>,
+    parent: Option<LocalScopeId>,
     entries: Vec<ScopeEntry>,
 }
 
@@ -60,40 +59,40 @@ impl ExprScopes {
         scopes
     }
 
-    pub(crate) fn entries(&self, scope: ScopeId) -> &[ScopeEntry] {
+    pub(crate) fn entries(&self, scope: LocalScopeId) -> &[ScopeEntry] {
         &self.scopes[scope].entries
     }
 
     pub(crate) fn scope_chain<'a>(
         &'a self,
-        scope: Option<ScopeId>,
-    ) -> impl Iterator<Item = ScopeId> + 'a {
+        scope: Option<LocalScopeId>,
+    ) -> impl Iterator<Item = LocalScopeId> + 'a {
         std::iter::successors(scope, move |&scope| self.scopes[scope].parent)
     }
 
-    pub(crate) fn scope_for(&self, expr: ExprId) -> Option<ScopeId> {
+    pub(crate) fn scope_for(&self, expr: ExprId) -> Option<LocalScopeId> {
         self.scope_by_expr.get(&expr).copied()
     }
 
-    pub(crate) fn scope_by_expr(&self) -> &FxHashMap<ExprId, ScopeId> {
+    pub(crate) fn scope_by_expr(&self) -> &FxHashMap<ExprId, LocalScopeId> {
         &self.scope_by_expr
     }
 
-    fn root_scope(&mut self) -> ScopeId {
+    fn root_scope(&mut self) -> LocalScopeId {
         self.scopes.alloc(ScopeData {
             parent: None,
             entries: vec![],
         })
     }
 
-    fn new_scope(&mut self, parent: ScopeId) -> ScopeId {
+    fn new_scope(&mut self, parent: LocalScopeId) -> LocalScopeId {
         self.scopes.alloc(ScopeData {
             parent: Some(parent),
             entries: vec![],
         })
     }
 
-    fn add_bindings(&mut self, body: &Body, scope: ScopeId, pat: PatId) {
+    fn add_bindings(&mut self, body: &Body, scope: LocalScopeId, pat: PatId) {
         match &body[pat] {
             Pat::Bind { name, .. } => {
                 // bind can have a sub pattern, but it's actually not allowed
@@ -108,12 +107,16 @@ impl ExprScopes {
         }
     }
 
-    fn add_params_bindings<'a>(&mut self, scope: ScopeId, params: impl Iterator<Item = &'a PatId>) {
+    fn add_params_bindings<'a>(
+        &mut self,
+        scope: LocalScopeId,
+        params: impl Iterator<Item = &'a PatId>,
+    ) {
         let body = Arc::clone(&self.body);
         params.for_each(|pat| self.add_bindings(&body, scope, *pat));
     }
 
-    fn set_scope(&mut self, node: ExprId, scope: ScopeId) {
+    fn set_scope(&mut self, node: ExprId, scope: LocalScopeId) {
         self.scope_by_expr.insert(node, scope);
     }
 }
@@ -123,7 +126,7 @@ fn compute_block_scopes(
     tail: Option<ExprId>,
     body: &Body,
     scopes: &mut ExprScopes,
-    mut scope: ScopeId,
+    mut scope: LocalScopeId,
 ) {
     for stmt in statements {
         match stmt {
@@ -148,7 +151,7 @@ fn compute_block_scopes(
     }
 }
 
-fn compute_expr_scopes(expr: ExprId, body: &Body, scopes: &mut ExprScopes, scope: ScopeId) {
+fn compute_expr_scopes(expr: ExprId, body: &Body, scopes: &mut ExprScopes, scope: LocalScopeId) {
     scopes.set_scope(expr, scope);
     match &body[expr] {
         Expr::Block { statements, tail } => {
