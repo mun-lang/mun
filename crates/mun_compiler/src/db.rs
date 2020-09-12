@@ -5,12 +5,20 @@ use mun_hir::{salsa, HirDatabase, Upcast};
 /// A compiler database is a salsa database that enables increment compilation.
 #[salsa::database(
     mun_hir::SourceDatabaseStorage,
+    mun_hir::InternDatabaseStorage,
+    mun_hir::AstDatabaseStorage,
     mun_hir::DefDatabaseStorage,
     mun_hir::HirDatabaseStorage,
     CodeGenDatabaseStorage
 )]
 pub struct CompilerDatabase {
     storage: salsa::Storage<Self>,
+}
+
+impl Upcast<dyn mun_hir::AstDatabase> for CompilerDatabase {
+    fn upcast(&self) -> &dyn mun_hir::AstDatabase {
+        &*self
+    }
 }
 
 impl Upcast<dyn mun_hir::SourceDatabase> for CompilerDatabase {
