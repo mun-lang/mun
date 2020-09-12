@@ -1,4 +1,4 @@
-use crate::{FileId, SourceDatabase};
+use crate::{AstDatabase, FileId};
 use mun_syntax::SyntaxNode;
 
 /// `InFile<T>` stores a value of `T` inside a particular file/syntax tree.
@@ -30,7 +30,7 @@ impl<T> InFile<T> {
     pub fn as_ref(&self) -> InFile<&T> {
         self.with_value(&self.value)
     }
-    pub fn file_syntax(&self, db: &dyn SourceDatabase) -> SyntaxNode {
+    pub fn file_syntax(&self, db: &dyn AstDatabase) -> SyntaxNode {
         db.parse(self.file_id).syntax_node()
     }
 }

@@ -24,8 +24,7 @@ pub trait Upcast<T: ?Sized> {
     fn upcast(&self) -> &T;
 }
 
-/// Database which stores all significant input facts: source code and project model. Everything
-/// else in rust-analyzer is derived from these queries.
+/// Database which stores all significant input facts: source code and project model.
 #[salsa::query_group(SourceDatabaseStorage)]
 pub trait SourceDatabase: salsa::Database {
     /// Text of the file.
@@ -35,10 +34,6 @@ pub trait SourceDatabase: salsa::Database {
     /// Path to a file, relative to the root of its source root.
     #[salsa::input]
     fn file_relative_path(&self, file_id: FileId) -> RelativePathBuf;
-
-    /// Parses the file into the syntax tree.
-    #[salsa::invoke(parse_query)]
-    fn parse(&self, file_id: FileId) -> Parse<ast::SourceFile>;
 
     /// Source root of a file
     #[salsa::input]
@@ -53,13 +48,34 @@ pub trait SourceDatabase: salsa::Database {
     fn line_index(&self, file_id: FileId) -> Arc<LineIndex>;
 }
 
-#[salsa::query_group(DefDatabaseStorage)]
-pub trait DefDatabase: SourceDatabase + Upcast<dyn SourceDatabase> {
+/// The `AstDatabase` provides queries that transform text from the `SourceDatabase` into an
+/// Abstract Syntax Tree (AST).
+#[salsa::query_group(AstDatabaseStorage)]
+pub trait AstDatabase: SourceDatabase {
+    /// Parses the file into the syntax tree.
+    #[salsa::invoke(parse_query)]
+    fn parse(&self, file_id: FileId) -> Parse<ast::SourceFile>;
+
     /// Returns the top level AST items of a file
     #[salsa::invoke(crate::source_id::AstIdMap::ast_id_map_query)]
     fn ast_id_map(&self, file_id: FileId) -> Arc<AstIdMap>;
+}
 
-    /// Returns the raw items of a file
+/// The `InternDatabase` maps certain datastructures to ids. These ids refer to instances of
+/// concepts like a `Function`, `Struct` or `TypeAlias` in a semi-stable way.
+#[salsa::query_group(InternDatabaseStorage)]
+pub trait InternDatabase: SourceDatabase {
+    #[salsa::interned]
+    fn intern_function(&self, loc: ids::ItemLoc<ast::FunctionDef>) -> ids::FunctionId;
+    #[salsa::interned]
+    fn intern_struct(&self, loc: ids::ItemLoc<ast::StructDef>) -> ids::StructId;
+    #[salsa::interned]
+    fn intern_type_alias(&self, loc: ids::ItemLoc<ast::TypeAliasDef>) -> ids::TypeAliasId;
+}
+
+#[salsa::query_group(DefDatabaseStorage)]
+pub trait DefDatabase: InternDatabase + AstDatabase + Upcast<dyn AstDatabase> {
+    /// Returns the top level items of a file.
     #[salsa::invoke(RawItems::raw_file_items_query)]
     fn raw_items(&self, file_id: FileId) -> Arc<RawItems>;
 
@@ -75,18 +91,6 @@ pub trait DefDatabase: SourceDatabase + Upcast<dyn SourceDatabase> {
     /// Returns the module data of the specified file
     #[salsa::invoke(crate::code_model::ModuleData::module_data_query)]
     fn module_data(&self, file_id: FileId) -> Arc<ModuleData>;
-
-    /// Interns a function definition
-    #[salsa::interned]
-    fn intern_function(&self, loc: ids::ItemLoc<ast::FunctionDef>) -> ids::FunctionId;
-
-    /// Interns a struct definition
-    #[salsa::interned]
-    fn intern_struct(&self, loc: ids::ItemLoc<ast::StructDef>) -> ids::StructId;
-
-    /// Interns a type alias definition
-    #[salsa::interned]
-    fn intern_type_alias(&self, loc: ids::ItemLoc<ast::TypeAliasDef>) -> ids::TypeAliasId;
 }
 
 #[salsa::query_group(HirDatabaseStorage)]
@@ -131,7 +135,7 @@ pub trait HirDatabase: DefDatabase + Upcast<dyn DefDatabase> {
     ) -> (Arc<crate::expr::Body>, Arc<crate::expr::BodySourceMap>);
 }
 
-fn parse_query(db: &dyn SourceDatabase, file_id: FileId) -> Parse<SourceFile> {
+fn parse_query(db: &dyn AstDatabase, file_id: FileId) -> Parse<SourceFile> {
     let text = db.file_text(file_id);
     SourceFile::parse(&*text)
 }

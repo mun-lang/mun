@@ -1,4 +1,4 @@
-use crate::db::SourceDatabase;
+use crate::db::{AstDatabase, SourceDatabase};
 use crate::db::{HirDatabase, Upcast};
 use crate::input::{SourceRoot, SourceRootId};
 use crate::{DefDatabase, FileId, RelativePathBuf};
@@ -9,6 +9,8 @@ use std::sync::Arc;
 /// A mock implementation of the IR database. It can be used to set up a simple test case.
 #[salsa::database(
     crate::SourceDatabaseStorage,
+    crate::AstDatabaseStorage,
+    crate::InternDatabaseStorage,
     crate::DefDatabaseStorage,
     crate::HirDatabaseStorage
 )]
@@ -24,6 +26,12 @@ impl salsa::Database for MockDatabase {
         if let Some(events) = &mut *events {
             events.push(event);
         }
+    }
+}
+
+impl Upcast<dyn AstDatabase> for MockDatabase {
+    fn upcast(&self) -> &dyn AstDatabase {
+        &*self
     }
 }
 

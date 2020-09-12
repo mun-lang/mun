@@ -43,7 +43,8 @@ pub use relative_path::{RelativePath, RelativePathBuf};
 pub use crate::{
     builtin_type::{FloatBitness, IntBitness, Signedness},
     db::{
-        DefDatabase, DefDatabaseStorage, HirDatabase, HirDatabaseStorage, SourceDatabase,
+        AstDatabase, AstDatabaseStorage, DefDatabase, DefDatabaseStorage, HirDatabase,
+        HirDatabaseStorage, InternDatabase, InternDatabaseStorage, SourceDatabase,
         SourceDatabaseStorage, Upcast,
     },
     diagnostics::{Diagnostic, DiagnosticSink},

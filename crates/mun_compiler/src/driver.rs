@@ -6,7 +6,9 @@ use crate::{
     PathOrInline, RelativePath,
 };
 use mun_codegen::{Assembly, CodeGenDatabase};
-use mun_hir::{DiagnosticSink, FileId, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
+use mun_hir::{
+    AstDatabase, DiagnosticSink, FileId, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId,
+};
 
 use std::{path::PathBuf, sync::Arc};
 

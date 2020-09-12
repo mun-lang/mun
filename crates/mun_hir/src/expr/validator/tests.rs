@@ -1,7 +1,10 @@
-use crate::db::{SourceDatabase, Upcast};
-use crate::expr::validator::{ExprValidator, TypeAliasValidator};
 use crate::{
-    diagnostics::DiagnosticSink, ids::LocationCtx, mock::MockDatabase, Function, TypeAlias,
+    db::{AstDatabase, Upcast},
+    diagnostics::DiagnosticSink,
+    expr::validator::{ExprValidator, TypeAliasValidator},
+    ids::LocationCtx,
+    mock::MockDatabase,
+    Function, TypeAlias,
 };
 use mun_syntax::{ast, AstNode};
 use std::fmt::Write;

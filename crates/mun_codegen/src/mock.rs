@@ -9,6 +9,8 @@ use std::sync::Arc;
 /// A mock implementation of the IR database. It can be used to set up a simple test case.
 #[salsa::database(
     hir::SourceDatabaseStorage,
+    hir::AstDatabaseStorage,
+    hir::InternDatabaseStorage,
     hir::DefDatabaseStorage,
     hir::HirDatabaseStorage,
     CodeGenDatabaseStorage
@@ -25,6 +27,12 @@ impl salsa::Database for MockDatabase {
         if let Some(events) = &mut *events {
             events.push(event);
         }
+    }
+}
+
+impl hir::Upcast<dyn hir::AstDatabase> for MockDatabase {
+    fn upcast(&self) -> &dyn hir::AstDatabase {
+        &*self
     }
 }
 

@@ -1,6 +1,6 @@
 use crate::db::AnalysisDatabase;
+use hir::AstDatabase;
 use hir::InFile;
-use hir::SourceDatabase;
 use mun_diagnostics::DiagnosticForWith;
 use mun_syntax::{Location, TextRange};
 use std::cell::RefCell;

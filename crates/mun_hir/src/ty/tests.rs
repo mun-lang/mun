@@ -1,12 +1,9 @@
-use crate::db::SourceDatabase;
-use crate::diagnostics::DiagnosticSink;
-use crate::expr::BodySourceMap;
-use crate::ids::LocationCtx;
-use crate::mock::MockDatabase;
-use crate::{Function, HirDisplay, InferenceResult, TypeAlias};
+use crate::{
+    db::AstDatabase, diagnostics::DiagnosticSink, expr::BodySourceMap, ids::LocationCtx,
+    mock::MockDatabase, Function, HirDisplay, InferenceResult, TypeAlias,
+};
 use mun_syntax::{ast, AstNode};
-use std::fmt::Write;
-use std::sync::Arc;
+use std::{fmt::Write, sync::Arc};
 
 #[test]
 fn comparison_not_implemented_for_struct() {
