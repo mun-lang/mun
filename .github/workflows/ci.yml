@@ -19,7 +19,6 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
           override: true
 
       - name: Install LLVM
@@ -48,7 +47,16 @@ jobs:
         with:
           submodules: true
 
+      - name: Install toolchain
+        if: ${{ matrix.config.toolchain == 'stable' }}
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          override: true
+          components: rustfmt
+
       - name: Install ${{ matrix.config.toolchain }} toolchain
+        if: ${{ matrix.config.toolchain != 'stable' }}
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -73,7 +81,7 @@ jobs:
           crate: mdbook
           version: latest
           use-tool-cache: true
-          
+
       - name: mdbook test
         if: ${{ matrix.config.os == 'ubuntu-latest' && matrix.config.toolchain == 'stable' }}
         run: mdbook test book -L target/debug/deps
@@ -98,7 +106,6 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
           override: true
           components: clippy, rustfmt
 
@@ -128,7 +135,6 @@ jobs:
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
           override: true
 
       - name: Install LLVM
