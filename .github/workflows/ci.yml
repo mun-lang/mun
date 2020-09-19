@@ -135,7 +135,9 @@ jobs:
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
+          profile: minimal
           override: true
+          components: rustfmt
 
       - name: Install LLVM
         uses: ./.github/actions/install-llvm
