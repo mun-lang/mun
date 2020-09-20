@@ -37,7 +37,7 @@ jobs:
         with:
           submodules: true
 
-      - name: Install ${{ matrix.config.toolchain }} toolchain
+      - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
