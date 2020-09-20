@@ -16,7 +16,7 @@ categories = ["game-development", "mun"]
 abi = { version = "=0.2.0", path = "../mun_abi", package = "mun_abi" }
 rowan = "0.6.1"
 text_unit = { version = "0.1.6", features = ["serde"] }
-smol_str = { version = "0.1.12", features = ["serde"] }
+smol_str = { version = "0.1.17", features = ["serde"] }
 unicode-xid = "0.1.0"
 drop_bomb = "0.1.4"
 

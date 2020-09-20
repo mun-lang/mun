@@ -34,8 +34,8 @@ impl Name {
     }
 
     /// Shortcut to create inline plain text name
-    const fn new_inline_ascii(text: &[u8]) -> Name {
-        Name::new_text(SmolStr::new_inline_from_ascii(text.len(), text))
+    const fn new_inline(text: &str) -> Name {
+        Name::new_text(SmolStr::new_inline(text))
     }
 
     /// Resolve a name from the text of token.
@@ -94,7 +94,7 @@ pub mod known {
             $(
                 #[allow(bad_style)]
                 pub const $ident: super::Name =
-                    super::Name::new_inline_ascii(stringify!($ident).as_bytes());
+                    super::Name::new_inline(stringify!($ident));
             )*
         };
     }
