@@ -19,7 +19,6 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
           override: true
 
       - name: Install LLVM
@@ -38,21 +37,18 @@ jobs:
       fail-fast: false
       matrix:
         config:
-        - { os: "ubuntu-latest", toolchain: "stable"}
-        - { os: "ubuntu-latest", toolchain: "beta"}
-        - { os: "ubuntu-latest", toolchain: "nightly"}
-        - { os: "windows-2016", toolchain: "stable"}
-        - { os: "macOS-latest", toolchain: "stable"}
+        - { os: "ubuntu-latest"}
+        - { os: "windows-2016"}
+        - { os: "macOS-latest"}
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: true
 
-      - name: Install ${{ matrix.config.toolchain }} toolchain
+      - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: ${{ matrix.config.toolchain }}
           override: true
           components: rustfmt
 
@@ -60,27 +56,25 @@ jobs:
         uses: ./.github/actions/install-llvm
 
       - name: Cargo build
-        if: ${{ matrix.config.os == 'ubuntu-latest' && matrix.config.toolchain == 'stable' }}
+        if: ${{ matrix.config.os == 'ubuntu-latest' }}
         uses: actions-rs/cargo@v1
-        continue-on-error: ${{ matrix.config.toolchain == 'nightly' }}
         with:
           command: build
 
       - name: Install mdbook
-        if: ${{ matrix.config.os == 'ubuntu-latest' && matrix.config.toolchain == 'stable' }}
+        if: ${{ matrix.config.os == 'ubuntu-latest' }}
         uses: actions-rs/install@v0.1
         with:
           crate: mdbook
           version: latest
           use-tool-cache: true
-          
+
       - name: mdbook test
-        if: ${{ matrix.config.os == 'ubuntu-latest' && matrix.config.toolchain == 'stable' }}
+        if: ${{ matrix.config.os == 'ubuntu-latest' }}
         run: mdbook test book -L target/debug/deps
 
       - name: Cargo test
         uses: actions-rs/cargo@v1
-        continue-on-error: ${{ matrix.config.toolchain == 'nightly' }}
         with:
           command: test
           args: -- --nocapture
@@ -98,7 +92,6 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
           override: true
           components: clippy, rustfmt
 
@@ -128,8 +121,9 @@ jobs:
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          profile: minimal
           override: true
+          components: rustfmt
 
       - name: Install LLVM
         uses: ./.github/actions/install-llvm
