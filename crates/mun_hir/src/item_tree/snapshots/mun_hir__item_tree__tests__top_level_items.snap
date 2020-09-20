@@ -1,0 +1,25 @@
+---
+source: crates/mun_hir/src/item_tree/tests.rs
+expression: "print_item_tree(r#\"\n    fn foo(a:i32, b:u8, c:String) -> i32 {}\n    fn bar(a:i32, b:u8, c:String) ->  {}\n    fn baz(a:i32, b:, c:String) ->  {}\n    extern fn eval(a:String) -> bool;\n\n    struct Foo {\n        a: i32,\n        b: u8,\n        c: String,\n    }\n    struct Foo2 {\n        a: i32,\n        b: ,\n        c: String,\n    }\n    struct Bar (i32, u32, String)\n    struct Baz;\n\n    type FooBar = Foo;\n    type FooBar = package::Foo;\n    \"#).unwrap()"
+---
+top-level items:
+Function { name: Name(Text("foo")), is_extern: false, params: [Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("i32")) }] }), Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("u8")) }] }), Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("String")) }] })], ret_type: Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("i32")) }] }), ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(0), _ty: PhantomData } }
+Function { name: Name(Text("bar")), is_extern: false, params: [Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("i32")) }] }), Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("u8")) }] }), Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("String")) }] })], ret_type: Empty, ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(1), _ty: PhantomData } }
+Function { name: Name(Text("baz")), is_extern: false, params: [Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("i32")) }] }), Error, Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("String")) }] })], ret_type: Empty, ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(2), _ty: PhantomData } }
+Function { name: Name(Text("eval")), is_extern: true, params: [Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("String")) }] })], ret_type: Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("bool")) }] }), ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(3), _ty: PhantomData } }
+Struct { name: Name(Text("Foo")), fields: Record(IdRange::<mun_hir::item_tree::Field>(0..3)), ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(4), _ty: PhantomData }, kind: Record }
+> Field { name: Name(Text("a")), type_ref: Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("i32")) }] }) }
+> Field { name: Name(Text("b")), type_ref: Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("u8")) }] }) }
+> Field { name: Name(Text("c")), type_ref: Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("String")) }] }) }
+Struct { name: Name(Text("Foo2")), fields: Record(IdRange::<mun_hir::item_tree::Field>(3..6)), ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(5), _ty: PhantomData }, kind: Record }
+> Field { name: Name(Text("a")), type_ref: Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("i32")) }] }) }
+> Field { name: Name(Text("b")), type_ref: Error }
+> Field { name: Name(Text("c")), type_ref: Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("String")) }] }) }
+Struct { name: Name(Text("Bar")), fields: Tuple(IdRange::<mun_hir::item_tree::Field>(6..9)), ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(6), _ty: PhantomData }, kind: Tuple }
+> Field { name: Name(TupleField(0)), type_ref: Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("i32")) }] }) }
+> Field { name: Name(TupleField(1)), type_ref: Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("u32")) }] }) }
+> Field { name: Name(TupleField(2)), type_ref: Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("String")) }] }) }
+Struct { name: Name(Text("Baz")), fields: Unit, ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(7), _ty: PhantomData }, kind: Unit }
+TypeAlias { name: Name(Text("FooBar")), type_ref: Some(Path(Path { kind: Plain, segments: [PathSegment { name: Name(Text("Foo")) }] })), ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(8), _ty: PhantomData } }
+TypeAlias { name: Name(Text("FooBar")), type_ref: None, ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(9), _ty: PhantomData } }
+

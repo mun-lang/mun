@@ -1,8 +1,7 @@
 use crate::{
-    db::AstDatabase, diagnostics::DiagnosticSink, expr::BodySourceMap, ids::LocationCtx,
-    mock::MockDatabase, Function, HirDisplay, InferenceResult, TypeAlias,
+    db::DefDatabase, diagnostics::DiagnosticSink, expr::BodySourceMap, mock::MockDatabase,
+    HirDisplay, InferenceResult, ModuleDef,
 };
-use mun_syntax::{ast, AstNode};
 use std::{fmt::Write, sync::Arc};
 
 #[test]
@@ -430,7 +429,6 @@ fn infer_snapshot(text: &str) {
 
 fn infer(content: &str) -> String {
     let (db, file_id) = MockDatabase::with_single_file(content);
-    let source_file = db.parse(file_id).ok().unwrap();
 
     let mut acc = String::new();
 
@@ -484,24 +482,20 @@ fn infer(content: &str) -> String {
         write!(diags, "{}: {}\n", diag.highlight_range(), diag.message()).unwrap();
     });
 
-    let ctx = LocationCtx::new(&db, file_id);
-    for node in source_file.syntax().descendants() {
-        if let Some(def) = ast::FunctionDef::cast(node.clone()) {
-            let fun = Function {
-                id: ctx.to_def(&def),
-            };
-            let source_map = fun.body_source_map(&db);
-            let infer_result = fun.infer(&db);
+    for item in db.module_data(file_id).definitions() {
+        match item {
+            ModuleDef::Function(fun) => {
+                let source_map = fun.body_source_map(&db);
+                let infer_result = fun.infer(&db);
 
-            fun.diagnostics(&db, &mut diag_sink);
+                fun.diagnostics(&db, &mut diag_sink);
 
-            infer_def(infer_result, source_map);
-        }
-        if let Some(def) = ast::TypeAliasDef::cast(node.clone()) {
-            let type_alias = TypeAlias {
-                id: ctx.to_def(&def),
-            };
-            type_alias.diagnostics(&db, &mut diag_sink);
+                infer_def(infer_result, source_map);
+            }
+            ModuleDef::TypeAlias(item) => {
+                item.diagnostics(&db, &mut diag_sink);
+            }
+            _ => {}
         }
     }
 

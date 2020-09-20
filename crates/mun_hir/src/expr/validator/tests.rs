@@ -1,12 +1,10 @@
 use crate::{
-    db::{AstDatabase, Upcast},
+    db::DefDatabase,
     diagnostics::DiagnosticSink,
     expr::validator::{ExprValidator, TypeAliasValidator},
-    ids::LocationCtx,
     mock::MockDatabase,
-    Function, TypeAlias,
+    ModuleDef,
 };
-use mun_syntax::{ast, AstNode};
 use std::fmt::Write;
 
 #[test]
@@ -82,7 +80,6 @@ fn test_free_type_alias_without_type_ref() {
 
 fn diagnostics(content: &str) -> String {
     let (db, file_id) = MockDatabase::with_single_file(content);
-    let source_file = db.parse(file_id).ok().unwrap();
 
     let mut diags = String::new();
 
@@ -90,21 +87,18 @@ fn diagnostics(content: &str) -> String {
         write!(diags, "{}: {}\n", diag.highlight_range(), diag.message()).unwrap();
     });
 
-    let ctx = LocationCtx::new(db.upcast(), file_id);
-    for node in source_file.syntax().descendants() {
-        if let Some(def) = ast::FunctionDef::cast(node.clone()) {
-            let fun = Function {
-                id: ctx.to_def(&def),
-            };
-            ExprValidator::new(fun, &db).validate_body(&mut diag_sink);
-        }
-        if let Some(def) = ast::TypeAliasDef::cast(node.clone()) {
-            let type_alias = TypeAlias {
-                id: ctx.to_def(&def),
-            };
-            TypeAliasValidator::new(type_alias, &db).validate_target_type_existence(&mut diag_sink);
+    for item in db.module_data(file_id).definitions() {
+        match item {
+            ModuleDef::Function(item) => {
+                ExprValidator::new(*item, &db).validate_body(&mut diag_sink);
+            }
+            ModuleDef::TypeAlias(item) => {
+                TypeAliasValidator::new(*item, &db).validate_target_type_existence(&mut diag_sink);
+            }
+            _ => {}
         }
     }
+
     drop(diag_sink);
     diags
 }

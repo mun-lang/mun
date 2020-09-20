@@ -19,12 +19,12 @@ mod expr;
 mod ids;
 mod in_file;
 mod input;
+mod item_tree;
 pub mod line_index;
 mod model;
 mod name;
 mod name_resolution;
 mod path;
-mod raw;
 mod resolve;
 mod source_id;
 mod ty;
@@ -59,7 +59,6 @@ pub use crate::{
     name::Name,
     name_resolution::PerNs,
     path::{Path, PathKind},
-    raw::RawItems,
     resolve::{Resolution, Resolver},
     ty::{
         lower::CallableDef, ApplicationTy, FloatTy, InferenceResult, IntTy, ResolveBitness, Ty,
@@ -67,10 +66,9 @@ pub use crate::{
     },
 };
 
-use crate::{
-    name::AsName,
-    source_id::{AstIdMap, FileAstId},
-};
+use crate::{name::AsName, source_id::AstIdMap};
 
 pub use self::adt::StructMemoryKind;
-pub use self::code_model::{FnData, Function, Module, ModuleDef, Struct, TypeAlias, Visibility};
+pub use self::code_model::{
+    Function, FunctionData, Module, ModuleDef, Struct, TypeAlias, Visibility,
+};

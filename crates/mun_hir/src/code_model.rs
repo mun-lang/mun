@@ -1,24 +1,22 @@
 pub(crate) mod src;
 
-use self::src::HasSource;
 use crate::adt::{LocalStructFieldId, StructData, TypeAliasData};
 use crate::builtin_type::BuiltinType;
 use crate::code_model::diagnostics::ModuleDefinitionDiagnostic;
 use crate::diagnostics::DiagnosticSink;
 use crate::expr::validator::{ExprValidator, TypeAliasValidator};
 use crate::expr::{Body, BodySourceMap};
-use crate::ids::AstItemDef;
-use crate::ids::LocationCtx;
+use crate::ids::{FunctionLoc, Intern, Lookup, StructLoc, TypeAliasLoc};
+use crate::item_tree::ModItem;
 use crate::name_resolution::Namespace;
-use crate::raw::{DefKind, RawFileItem};
 use crate::resolve::{Resolution, Resolver};
 use crate::ty::{lower::LowerBatchResult, InferenceResult};
 use crate::type_ref::{LocalTypeRefId, TypeRefBuilder, TypeRefMap, TypeRefSourceMap};
 use crate::{
     ids::{FunctionId, StructId, TypeAliasId},
-    AsName, DefDatabase, FileId, HirDatabase, Name, Ty,
+    DefDatabase, FileId, HirDatabase, InFile, Name, Ty,
 };
-use mun_syntax::ast::{ExternOwner, NameOwner, TypeAscriptionOwner, VisibilityOwner};
+use mun_syntax::ast::{TypeAscriptionOwner, VisibilityOwner};
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
@@ -75,41 +73,47 @@ pub struct ModuleScope {
 
 impl ModuleData {
     pub(crate) fn module_data_query(db: &dyn DefDatabase, file_id: FileId) -> Arc<ModuleData> {
-        let items = db.raw_items(file_id);
+        let items = db.item_tree(file_id);
         let mut data = ModuleData::default();
-        let loc_ctx = LocationCtx::new(db, file_id);
         let mut definition_by_name = FxHashMap::default();
-        for item in items.items().iter() {
+        for item in items.top_level_items() {
+            let name = match item {
+                ModItem::Function(item) => items[*item].name.clone(),
+                ModItem::Struct(item) => items[*item].name.clone(),
+                ModItem::TypeAlias(item) => items[*item].name.clone(),
+            };
+
+            if let Some(prev_definition) = definition_by_name.get(&name) {
+                data.diagnostics
+                    .push(diagnostics::ModuleDefinitionDiagnostic::DuplicateName {
+                        name,
+                        definition: *item,
+                        first_definition: *prev_definition,
+                    })
+            } else {
+                definition_by_name.insert(name, *item);
+            }
+
             match item {
-                RawFileItem::Definition(def) => {
-                    if let Some(prev_definition) = definition_by_name.get(&items[*def].name) {
-                        data.diagnostics.push(
-                            diagnostics::ModuleDefinitionDiagnostic::DuplicateName {
-                                name: items[*def].name.clone(),
-                                definition: *def,
-                                first_definition: *prev_definition,
-                            },
-                        )
-                    } else {
-                        definition_by_name.insert(items[*def].name.clone(), *def);
+                ModItem::Function(item) => data.definitions.push(ModuleDef::Function(Function {
+                    id: FunctionLoc {
+                        id: InFile::new(file_id, *item),
                     }
-                    match items[*def].kind {
-                        DefKind::Function(ast_id) => {
-                            data.definitions.push(ModuleDef::Function(Function {
-                                id: FunctionId::from_ast_id(loc_ctx, ast_id),
-                            }))
-                        }
-                        DefKind::Struct(ast_id) => {
-                            data.definitions.push(ModuleDef::Struct(Struct {
-                                id: StructId::from_ast_id(loc_ctx, ast_id),
-                            }))
-                        }
-                        DefKind::TypeAlias(ast_id) => {
-                            data.definitions.push(ModuleDef::TypeAlias(TypeAlias {
-                                id: TypeAliasId::from_ast_id(loc_ctx, ast_id),
-                            }))
-                        }
+                    .intern(db),
+                })),
+                ModItem::Struct(item) => data.definitions.push(ModuleDef::Struct(Struct {
+                    id: StructLoc {
+                        id: InFile::new(file_id, *item),
                     }
+                    .intern(db),
+                })),
+                ModItem::TypeAlias(item) => {
+                    data.definitions.push(ModuleDef::TypeAlias(TypeAlias {
+                        id: TypeAliasLoc {
+                            id: InFile::new(file_id, *item),
+                        }
+                        .intern(db),
+                    }))
                 }
             };
         }
@@ -230,7 +234,7 @@ pub struct Function {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct FnData {
+pub struct FunctionData {
     name: Name,
     params: Vec<LocalTypeRefId>,
     visibility: Visibility,
@@ -240,31 +244,29 @@ pub struct FnData {
     is_extern: bool,
 }
 
-impl FnData {
-    pub(crate) fn fn_data_query(db: &dyn DefDatabase, func: Function) -> Arc<FnData> {
-        let src = func.source(db);
+impl FunctionData {
+    pub(crate) fn fn_data_query(db: &dyn DefDatabase, func: FunctionId) -> Arc<FunctionData> {
+        let loc = func.lookup(db);
+        let item_tree = db.item_tree(loc.id.file_id);
+        let func = &item_tree[loc.id.value];
+        let src = item_tree.source(db, loc.id);
+
         let mut type_ref_builder = TypeRefBuilder::default();
-        let name = src
-            .value
-            .name()
-            .map(|n| n.as_name())
-            .unwrap_or_else(Name::missing);
 
         let visibility = src
-            .value
             .visibility()
             .map(|_v| Visibility::Public)
             .unwrap_or(Visibility::Private);
 
         let mut params = Vec::new();
-        if let Some(param_list) = src.value.param_list() {
+        if let Some(param_list) = src.param_list() {
             for param in param_list.params() {
                 let type_ref = type_ref_builder.alloc_from_node_opt(param.ascribed_type().as_ref());
                 params.push(type_ref);
             }
         }
 
-        let ret_type = if let Some(type_ref) = src.value.ret_type().and_then(|rt| rt.type_ref()) {
+        let ret_type = if let Some(type_ref) = src.ret_type().and_then(|rt| rt.type_ref()) {
             type_ref_builder.alloc_from_node(&type_ref)
         } else {
             type_ref_builder.unit()
@@ -272,16 +274,14 @@ impl FnData {
 
         let (type_ref_map, type_ref_source_map) = type_ref_builder.finish();
 
-        let is_extern = src.value.is_extern();
-
-        Arc::new(FnData {
-            name,
+        Arc::new(FunctionData {
+            name: func.name.clone(),
             params,
             visibility,
             ret_type,
             type_ref_map,
             type_ref_source_map,
-            is_extern,
+            is_extern: func.is_extern,
         })
     }
 
@@ -313,7 +313,7 @@ impl FnData {
 impl Function {
     pub fn module(self, db: &dyn DefDatabase) -> Module {
         Module {
-            file_id: self.id.file_id(db),
+            file_id: self.id.lookup(db).id.file_id,
         }
     }
 
@@ -325,8 +325,8 @@ impl Function {
         self.data(db).visibility()
     }
 
-    pub fn data(self, db: &dyn HirDatabase) -> Arc<FnData> {
-        db.fn_data(self)
+    pub fn data(self, db: &dyn HirDatabase) -> Arc<FunctionData> {
+        db.fn_data(self.id)
     }
 
     pub fn body(self, db: &dyn HirDatabase) -> Arc<Body> {
@@ -343,7 +343,7 @@ impl Function {
     }
 
     pub fn is_extern(self, db: &dyn HirDatabase) -> bool {
-        db.fn_data(self).is_extern
+        db.fn_data(self.id).is_extern
     }
 
     pub(crate) fn body_source_map(self, db: &dyn HirDatabase) -> Arc<BodySourceMap> {
@@ -396,7 +396,7 @@ impl StructField {
 impl Struct {
     pub fn module(self, db: &dyn DefDatabase) -> Module {
         Module {
-            file_id: self.id.file_id(db),
+            file_id: self.id.lookup(db).id.file_id,
         }
     }
 
@@ -458,7 +458,7 @@ pub struct TypeAlias {
 impl TypeAlias {
     pub fn module(self, db: &dyn DefDatabase) -> Module {
         Module {
-            file_id: self.id.file_id(db),
+            file_id: self.id.lookup(db).id.file_id,
         }
     }
 
@@ -501,7 +501,7 @@ impl TypeAlias {
 mod diagnostics {
     use super::Module;
     use crate::diagnostics::{DiagnosticSink, DuplicateDefinition};
-    use crate::raw::{DefKind, LocalDefId};
+    use crate::item_tree::{ItemTreeId, ModItem};
     use crate::{DefDatabase, Name};
     use mun_syntax::{AstNode, SyntaxNodePtr};
 
@@ -509,21 +509,23 @@ mod diagnostics {
     pub(super) enum ModuleDefinitionDiagnostic {
         DuplicateName {
             name: Name,
-            definition: LocalDefId,
-            first_definition: LocalDefId,
+            definition: ModItem,
+            first_definition: ModItem,
         },
     }
 
-    fn syntax_ptr_from_def(db: &dyn DefDatabase, owner: Module, kind: DefKind) -> SyntaxNodePtr {
-        match kind {
-            DefKind::Function(id) => {
-                SyntaxNodePtr::new(id.with_file_id(owner.file_id).to_node(db).syntax())
+    fn syntax_ptr_from_def(db: &dyn DefDatabase, owner: Module, item: ModItem) -> SyntaxNodePtr {
+        let file_id = owner.file_id;
+        let item_tree = db.item_tree(file_id);
+        match item {
+            ModItem::Function(id) => {
+                SyntaxNodePtr::new(item_tree.source(db, ItemTreeId::new(file_id, id)).syntax())
             }
-            DefKind::Struct(id) => {
-                SyntaxNodePtr::new(id.with_file_id(owner.file_id).to_node(db).syntax())
+            ModItem::Struct(id) => {
+                SyntaxNodePtr::new(item_tree.source(db, ItemTreeId::new(file_id, id)).syntax())
             }
-            DefKind::TypeAlias(id) => {
-                SyntaxNodePtr::new(id.with_file_id(owner.file_id).to_node(db).syntax())
+            ModItem::TypeAlias(id) => {
+                SyntaxNodePtr::new(item_tree.source(db, ItemTreeId::new(file_id, id)).syntax())
             }
         }
     }
@@ -540,19 +542,12 @@ mod diagnostics {
                     name,
                     definition,
                     first_definition,
-                } => {
-                    let raw_items = db.raw_items(owner.file_id);
-                    sink.push(DuplicateDefinition {
-                        file: owner.file_id,
-                        name: name.to_string(),
-                        definition: syntax_ptr_from_def(db, owner, raw_items[*definition].kind),
-                        first_definition: syntax_ptr_from_def(
-                            db,
-                            owner,
-                            raw_items[*first_definition].kind,
-                        ),
-                    })
-                }
+                } => sink.push(DuplicateDefinition {
+                    file: owner.file_id,
+                    name: name.to_string(),
+                    definition: syntax_ptr_from_def(db, owner, *definition),
+                    first_definition: syntax_ptr_from_def(db, owner, *first_definition),
+                }),
             }
         }
     }
