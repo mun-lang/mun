@@ -1,10 +1,12 @@
-use crate::db::{AstDatabase, SourceDatabase};
-use crate::db::{HirDatabase, Upcast};
-use crate::input::{SourceRoot, SourceRootId};
-use crate::{DefDatabase, FileId, RelativePathBuf};
+#![cfg(test)]
+
+use crate::{
+    db::{AstDatabase, SourceDatabase},
+    db::{HirDatabase, Upcast},
+    DefDatabase,
+};
 use mun_target::spec::Target;
 use parking_lot::Mutex;
-use std::sync::Arc;
 
 /// A mock implementation of the IR database. It can be used to set up a simple test case.
 #[salsa::database(
@@ -14,7 +16,6 @@ use std::sync::Arc;
     crate::DefDatabaseStorage,
     crate::HirDatabaseStorage
 )]
-#[derive(Default)]
 pub(crate) struct MockDatabase {
     storage: salsa::Storage<Self>,
     events: Mutex<Option<Vec<salsa::Event>>>,
@@ -47,25 +48,14 @@ impl Upcast<dyn SourceDatabase> for MockDatabase {
     }
 }
 
-impl MockDatabase {
-    /// Creates a database from the given text.
-    pub fn with_single_file(text: &str) -> (MockDatabase, FileId) {
-        let mut db: MockDatabase = Default::default();
-
-        let mut source_root = SourceRoot::default();
-        let source_root_id = SourceRootId(0);
-
-        let text = Arc::new(text.to_owned());
-        let rel_path = RelativePathBuf::from("main.mun");
-        let file_id = FileId(0);
+impl Default for MockDatabase {
+    fn default() -> Self {
+        let mut db: MockDatabase = MockDatabase {
+            storage: Default::default(),
+            events: Default::default(),
+        };
         db.set_target(Target::host_target().unwrap());
-        db.set_file_relative_path(file_id, rel_path.clone());
-        db.set_file_text(file_id, Arc::new(text.to_string()));
-        db.set_file_source_root(file_id, source_root_id);
-        source_root.insert_file(file_id);
-
-        db.set_source_root(source_root_id, Arc::new(source_root));
-        (db, file_id)
+        db
     }
 }
 

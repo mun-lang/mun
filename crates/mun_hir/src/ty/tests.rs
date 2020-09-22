@@ -1,3 +1,4 @@
+use crate::fixture::WithFixture;
 use crate::{
     db::DefDatabase, diagnostics::DiagnosticSink, expr::BodySourceMap, mock::MockDatabase,
     HirDisplay, InferenceResult, ModuleDef,
