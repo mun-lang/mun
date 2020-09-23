@@ -1,17 +1,19 @@
 #![allow(clippy::type_repetition_in_bounds)]
 
+use crate::ids::FunctionId;
 use crate::input::{SourceRoot, SourceRootId};
+use crate::item_tree::{self, ItemTree};
 use crate::name_resolution::Namespace;
 use crate::ty::lower::LowerBatchResult;
 use crate::ty::{CallableDef, FnSig, Ty, TypableDef};
 use crate::{
     adt::{StructData, TypeAliasData},
-    code_model::{DefWithBody, FnData, Function, ModuleData},
+    code_model::{DefWithBody, FunctionData, ModuleData},
     ids,
     line_index::LineIndex,
     name_resolution::ModuleScope,
     ty::InferenceResult,
-    AstIdMap, ExprScopes, FileId, RawItems, Struct, TypeAlias,
+    AstIdMap, ExprScopes, FileId, Struct, TypeAlias,
 };
 use mun_syntax::{ast, Parse, SourceFile};
 use mun_target::abi;
@@ -66,18 +68,17 @@ pub trait AstDatabase: SourceDatabase {
 #[salsa::query_group(InternDatabaseStorage)]
 pub trait InternDatabase: SourceDatabase {
     #[salsa::interned]
-    fn intern_function(&self, loc: ids::ItemLoc<ast::FunctionDef>) -> ids::FunctionId;
+    fn intern_function(&self, loc: ids::FunctionLoc) -> ids::FunctionId;
     #[salsa::interned]
-    fn intern_struct(&self, loc: ids::ItemLoc<ast::StructDef>) -> ids::StructId;
+    fn intern_struct(&self, loc: ids::StructLoc) -> ids::StructId;
     #[salsa::interned]
-    fn intern_type_alias(&self, loc: ids::ItemLoc<ast::TypeAliasDef>) -> ids::TypeAliasId;
+    fn intern_type_alias(&self, loc: ids::TypeAliasLoc) -> ids::TypeAliasId;
 }
 
 #[salsa::query_group(DefDatabaseStorage)]
 pub trait DefDatabase: InternDatabase + AstDatabase + Upcast<dyn AstDatabase> {
-    /// Returns the top level items of a file.
-    #[salsa::invoke(RawItems::raw_file_items_query)]
-    fn raw_items(&self, file_id: FileId) -> Arc<RawItems>;
+    #[salsa::invoke(item_tree::ItemTree::item_tree_query)]
+    fn item_tree(&self, file_id: FileId) -> Arc<ItemTree>;
 
     #[salsa::invoke(StructData::struct_data_query)]
     fn struct_data(&self, id: ids::StructId) -> Arc<StructData>;
@@ -85,8 +86,8 @@ pub trait DefDatabase: InternDatabase + AstDatabase + Upcast<dyn AstDatabase> {
     #[salsa::invoke(TypeAliasData::type_alias_data_query)]
     fn type_alias_data(&self, id: ids::TypeAliasId) -> Arc<TypeAliasData>;
 
-    #[salsa::invoke(crate::FnData::fn_data_query)]
-    fn fn_data(&self, func: Function) -> Arc<FnData>;
+    #[salsa::invoke(crate::FunctionData::fn_data_query)]
+    fn fn_data(&self, func: FunctionId) -> Arc<FunctionData>;
 
     /// Returns the module data of the specified file
     #[salsa::invoke(crate::code_model::ModuleData::module_data_query)]

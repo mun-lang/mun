@@ -27,7 +27,7 @@ impl<N: AstNode> AstId<N> {
 }
 
 #[derive(Debug)]
-pub(crate) struct FileAstId<N: AstNode> {
+pub struct FileAstId<N: AstNode> {
     raw: ErasedFileAstId,
     _ty: PhantomData<fn() -> N>,
 }

@@ -3,12 +3,14 @@ use std::{fmt, sync::Arc};
 use crate::type_ref::{LocalTypeRefId, TypeRefBuilder, TypeRefMap, TypeRefSourceMap};
 use crate::{
     arena::{Arena, Idx},
-    ids::{AstItemDef, StructId, TypeAliasId},
+    ids::{StructId, TypeAliasId},
     AsName, DefDatabase, Name,
 };
 use mun_syntax::ast::{self, NameOwner, TypeAscriptionOwner};
 
 pub use mun_syntax::ast::StructMemoryKind;
+
+use crate::ids::Lookup;
 
 /// A single field of a record
 /// ```mun
@@ -61,21 +63,18 @@ pub struct StructData {
 
 impl StructData {
     pub(crate) fn struct_data_query(db: &dyn DefDatabase, id: StructId) -> Arc<StructData> {
-        let src = id.source(db);
-        let name = src
-            .value
-            .name()
-            .map(|n| n.as_name())
-            .unwrap_or_else(Name::missing);
+        let loc = id.lookup(db);
+        let item_tree = db.item_tree(loc.id.file_id);
+        let strukt = &item_tree[loc.id.value];
+        let src = item_tree.source(db, loc.id);
 
         let memory_kind = src
-            .value
             .memory_type_specifier()
             .map(|s| s.kind())
             .unwrap_or_default();
 
         let mut type_ref_builder = TypeRefBuilder::default();
-        let (fields, kind) = match src.value.kind() {
+        let (fields, kind) = match src.kind() {
             ast::StructKind::Record(r) => {
                 let fields = r
                     .fields()
@@ -102,7 +101,7 @@ impl StructData {
 
         let (type_ref_map, type_ref_source_map) = type_ref_builder.finish();
         Arc::new(StructData {
-            name,
+            name: strukt.name.clone(),
             fields,
             kind,
             memory_kind,
@@ -132,18 +131,16 @@ impl TypeAliasData {
         db: &dyn DefDatabase,
         id: TypeAliasId,
     ) -> Arc<TypeAliasData> {
-        let src = id.source(db);
-        let name = src
-            .value
-            .name()
-            .map(|n| n.as_name())
-            .unwrap_or_else(Name::missing);
+        let loc = id.lookup(db);
+        let item_tree = db.item_tree(loc.id.file_id);
+        let alias = &item_tree[loc.id.value];
+        let src = item_tree.source(db, loc.id);
         let mut type_ref_builder = TypeRefBuilder::default();
-        let type_ref_opt = src.value.type_ref();
+        let type_ref_opt = src.type_ref();
         let type_ref_id = type_ref_builder.alloc_from_node_opt(type_ref_opt.as_ref());
         let (type_ref_map, type_ref_source_map) = type_ref_builder.finish();
         Arc::new(TypeAliasData {
-            name,
+            name: alias.name.clone(),
             type_ref_id,
             type_ref_map,
             type_ref_source_map,
