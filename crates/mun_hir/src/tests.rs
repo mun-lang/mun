@@ -1,5 +1,8 @@
-use crate::db::{DefDatabase, SourceDatabase};
-use crate::mock::MockDatabase;
+use crate::{
+    db::{DefDatabase, SourceDatabase},
+    fixture::WithFixture,
+    mock::MockDatabase,
+};
 use std::sync::Arc;
 
 /// This function tests that the ModuleData of a module does not change if the contents of a function

@@ -16,6 +16,7 @@ mod db;
 pub mod diagnostics;
 mod display;
 mod expr;
+mod fixture;
 mod ids;
 mod in_file;
 mod input;

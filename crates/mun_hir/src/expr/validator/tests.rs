@@ -2,6 +2,7 @@ use crate::{
     db::DefDatabase,
     diagnostics::DiagnosticSink,
     expr::validator::{ExprValidator, TypeAliasValidator},
+    fixture::WithFixture,
     mock::MockDatabase,
     ModuleDef,
 };

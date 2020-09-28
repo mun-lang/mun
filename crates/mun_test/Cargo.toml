@@ -17,3 +17,4 @@ anyhow = "1.0"
 compiler = { path = "../mun_compiler", package = "mun_compiler" }
 runtime = { path = "../mun_runtime", package = "mun_runtime" }
 tempfile = "3"
+itertools = "0.9.0"

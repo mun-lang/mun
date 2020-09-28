@@ -27,3 +27,4 @@ either = "1.5.3"
 [dev-dependencies]
 insta = "0.16"
 parking_lot = "0.10"
+mun_test = { version = "=0.1.0", path = "../mun_test" }
