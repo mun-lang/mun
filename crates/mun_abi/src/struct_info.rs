@@ -109,11 +109,9 @@ impl From<StructMemoryKind> for u64 {
 #[cfg(test)]
 mod tests {
     use super::StructMemoryKind;
-    use crate::test_utils::{
-        fake_type_ref, fake_struct_info, FAKE_FIELD_NAME, FAKE_TYPE_NAME,
-    };
+    use crate::test_utils::{fake_struct_info, fake_type_ref, FAKE_FIELD_NAME, FAKE_TYPE_NAME};
+    use crate::TypeRefData;
     use std::ffi::CString;
-    use crate::TypeRefKindData;
 
     #[test]
     fn test_struct_info_fields_none() {
@@ -132,7 +130,7 @@ mod tests {
     fn test_struct_info_fields_some() {
         let field_name = CString::new(FAKE_FIELD_NAME).expect("Invalid fake field name.");
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_ref = fake_type_ref(&type_name, TypeRefKindData::Primitive);
+        let type_ref = fake_type_ref(&type_name, TypeRefData::Primitive);
 
         let field_names = &[field_name.as_ptr()];
         let field_types = &[type_ref];

@@ -1,5 +1,6 @@
 use crate::value::{AsValue, IrValueContext, SizedValueType, TransparentValue, Value};
 use mun_codegen_macros::AsValue;
+use std::ptr::NonNull;
 
 impl<'ink> TransparentValue<'ink> for abi::Guid {
     type Target = [u8; 16];
@@ -40,6 +41,29 @@ pub struct TypeInfo<'ink> {
     pub size_in_bits: u32,
     pub alignment: u8,
     pub group: abi::TypeGroup,
+}
+
+#[derive(AsValue)]
+pub struct TypeRef<'ink> {
+    pub guid: abi::Guid,
+    pub name: Value<'ink, *const u8>,
+    pub data: TypeRefData<'ink>,
+}
+
+// TODO: repr(u8) support for enums in macro
+#[repr(C)]
+#[derive(AsValue)]
+pub enum TypeRefData<'ink> {
+    Primitive,
+    Struct {
+        size_in_bits: u32,
+        memory_kind: abi::StructMemoryKind,
+    },
+    Ptr {
+        is_mut: bool,
+        pointee: Value<'ink, NonNull<TypeRef<'ink>>>,
+    },
+    Unknown,
 }
 
 #[derive(AsValue)]

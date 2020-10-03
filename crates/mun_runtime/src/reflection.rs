@@ -19,7 +19,7 @@ pub fn equals_argument_type<'e, 'f, T: ArgumentReflection>(
 pub fn equals_return_type<T: ReturnTypeReflection>(
     type_ref: &abi::TypeRef,
 ) -> Result<(), (&str, &str)> {
-    if let abi::TypeRefKindData::Struct { .. } = &type_ref.data {
+    if let abi::TypeRefData::Struct { .. } = &type_ref.data {
         if <StructRef as ReturnTypeReflection>::type_guid() != T::type_guid() {
             return Err(("struct", T::type_name()));
         }

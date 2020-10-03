@@ -1,6 +1,6 @@
 use crate::{
     AssemblyInfo, DispatchTable, FunctionDefinition, FunctionPrototype, FunctionSignature, Guid,
-    ModuleInfo, StructInfo, StructMemoryKind, TypeGroup, TypeInfo, TypeRef, TypeRefKindData,
+    ModuleInfo, StructInfo, StructMemoryKind, TypeGroup, TypeInfo, TypeRef, TypeRefData,
 };
 use std::{
     ffi::{c_void, CStr},
@@ -122,7 +122,7 @@ pub(crate) fn fake_type_info(name: &CStr, group: TypeGroup, size: u32, alignment
     }
 }
 
-pub(crate) fn fake_type_ref(name: &CStr, data: TypeRefKindData) -> TypeRef {
+pub(crate) fn fake_type_ref(name: &CStr, data: TypeRefData) -> TypeRef {
     TypeRef {
         name: name.as_ptr(),
         guid: Guid(md5::compute(&name.to_bytes()).0),

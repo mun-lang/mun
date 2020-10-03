@@ -104,7 +104,7 @@ impl Iterator for Trace {
             self.index += 1;
 
             let field_ty = &struct_ty.field_types()[index];
-            if let abi::TypeRefKindData::Struct {
+            if let abi::TypeRefData::Struct {
                 memory_kind: abi::StructMemoryKind::GC,
                 ..
             } = &field_ty.data

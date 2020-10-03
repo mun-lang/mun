@@ -19,13 +19,13 @@ pub struct TypeRef {
     /// Type name
     pub name: *const c_char,
     /// Type data
-    pub data: TypeRefKindData,
+    pub data: TypeRefData,
 }
 
 /// The kind of type reference and its corresponding data.
 #[repr(u8)]
 #[derive(Clone, Debug, Eq)]
-pub enum TypeRefKindData {
+pub enum TypeRefData {
     /// A primitve type (i.e. u8, i16, f32, etc.)
     Primitive,
     /// A struct type
@@ -66,10 +66,10 @@ impl fmt::Debug for TypeRef {
 impl fmt::Display for TypeRef {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self.data {
-            TypeRefKindData::Primitive
-            | TypeRefKindData::Struct { .. }
-            | TypeRefKindData::Unknown => write!(f, "{}", self.name())?,
-            TypeRefKindData::Ptr { is_mut, pointee } => {
+            TypeRefData::Primitive | TypeRefData::Struct { .. } | TypeRefData::Unknown => {
+                write!(f, "{}", self.name())?
+            }
+            TypeRefData::Ptr { is_mut, pointee } => {
                 write!(f, "*{} {}", if is_mut { "mut" } else { "const" }, unsafe {
                     pointee.as_ref().name()
                 })?;
@@ -86,19 +86,19 @@ impl PartialEq for TypeRef {
     }
 }
 
-impl PartialEq for TypeRefKindData {
+impl PartialEq for TypeRefData {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (TypeRefKindData::Primitive, TypeRefKindData::Primitive)
-            | (TypeRefKindData::Unknown, TypeRefKindData::Unknown)
+            (TypeRefData::Primitive, TypeRefData::Primitive)
+            | (TypeRefData::Unknown, TypeRefData::Unknown)
             // The `Guid` is enough to determine a struct's uniqueness
-            | (TypeRefKindData::Struct { .. }, TypeRefKindData::Struct { .. }) => true,
+            | (TypeRefData::Struct { .. }, TypeRefData::Struct { .. }) => true,
             (
-                TypeRefKindData::Ptr {
+                TypeRefData::Ptr {
                     is_mut: lhs_is_mut,
                     pointee: lhs_pointee,
                 },
-                TypeRefKindData::Ptr {
+                TypeRefData::Ptr {
                     is_mut: rhs_is_mut,
                     pointee: rhs_pointee,
                 },
@@ -110,11 +110,11 @@ impl PartialEq for TypeRefKindData {
     }
 }
 
-impl TypeRefKindData {
+impl TypeRefData {
     /// Returns the size in bytes and memory kind of the type, if it is a struct.
     pub fn as_struct_data(&self) -> Option<(usize, StructMemoryKind)> {
         match &self {
-            TypeRefKindData::Struct {
+            TypeRefData::Struct {
                 size_in_bits,
                 memory_kind,
             } => {
@@ -149,7 +149,7 @@ impl<T: HasStaticTypeInfo> HasStaticTypeRef for T {
                 VALUE = Some(TypeRef {
                     guid: type_info.guid,
                     name: type_info.name,
-                    data: TypeRefKindData::Primitive,
+                    data: TypeRefData::Primitive,
                 });
             });
             VALUE.as_ref().unwrap()
@@ -174,7 +174,7 @@ impl<T: HasStaticTypeRef> HasStaticTypeRef for *const T {
                 VALUE = Some(TypeRef {
                     guid: Guid(md5::compute(&type_ref_name.as_bytes()).0),
                     name: type_ref_name.as_ptr(),
-                    data: TypeRefKindData::Ptr {
+                    data: TypeRefData::Ptr {
                         is_mut: false,
                         pointee: T::type_ref().into(),
                     },
@@ -202,7 +202,7 @@ impl<T: HasStaticTypeRef> HasStaticTypeRef for *mut T {
                 VALUE = Some(TypeRef {
                     guid: Guid(md5::compute(&type_ref_name.as_bytes()).0),
                     name: type_ref_name.as_ptr(),
-                    data: TypeRefKindData::Ptr {
+                    data: TypeRefData::Ptr {
                         is_mut: false,
                         pointee: T::type_ref().into(),
                     },
@@ -229,7 +229,7 @@ macro_rules! impl_unknown_type_ref {
                         TypeRef {
                             guid: Guid(md5::compute(&type_ref_name.as_bytes()).0),
                             name: type_ref_name.as_ptr(),
-                            data: TypeRefKindData::Unknown,
+                            data: TypeRefData::Unknown,
                         }
                     })
                 }
@@ -247,14 +247,14 @@ impl_unknown_type_ref!(
 mod tests {
     use crate::{
         test_utils::{fake_type_ref, FAKE_TYPE_NAME},
-        HasStaticTypeRef, TypeRefKindData,
+        HasStaticTypeRef, TypeRefData,
     };
     use std::ffi::CString;
 
     #[test]
     fn test_type_ref_type_name() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_ref = fake_type_ref(&type_name, TypeRefKindData::Primitive);
+        let type_ref = fake_type_ref(&type_name, TypeRefData::Primitive);
 
         assert_eq!(format!("{}", type_ref), FAKE_TYPE_NAME);
     }

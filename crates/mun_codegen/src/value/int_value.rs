@@ -29,6 +29,7 @@ macro_rules! impl_as_int_ir_value {
 }
 
 impl_as_int_ir_value!(
+    bool => i8_type(),
     i8 => i8_type(),
     i16 => i16_type(),
     i32 => i32_type(),

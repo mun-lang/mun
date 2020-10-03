@@ -26,7 +26,7 @@ pub use function_info::{
 pub use module_info::ModuleInfo;
 pub use struct_info::{StructInfo, StructMemoryKind};
 pub use type_info::{HasStaticTypeInfo, TypeGroup, TypeInfo};
-pub use type_ref::{HasStaticTypeRef, TypeRef, TypeRefKindData};
+pub use type_ref::{HasStaticTypeRef, TypeRef, TypeRefData};
 
 /// The Mun ABI prelude
 ///
