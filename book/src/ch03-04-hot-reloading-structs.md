@@ -13,7 +13,7 @@ our simulation does it to log the elapsed time, every frame.
 
 Filename: buoyancy.mun
 
-```mun
+```mun,no_run
 {{#include ../listings/ch03-structs/listing13.mun}}
 ```
 
@@ -59,6 +59,10 @@ Let's add this to the `SimContext` struct and update the `new_sim` function
 accordingly, as shown in Listing 3-15.
 
 ```mun
+# pub fn main() {
+#   new_sim();
+#   new_sphere();
+# }
 {{#include ../listings/ch03-structs/listing15.mun:3:41}}
 ```
 
@@ -75,7 +79,7 @@ to zero.
 
 We can verify this by replacing the `log_f32(elapsed_secs)` statement with:
 
-```mun
+```mun,ignore
 {{#include ../listings/ch03-structs/listing15.mun:44}}
 ```
 
@@ -84,13 +88,13 @@ that we can employ to still manually initialize our memory to desired values by
 using this behaviour to our advantage. Let's first add `token: u32` to the
 `SimContext`:
 
-```mun
+```mun,ignore
 {{#include ../listings/ch03-structs/listing16.mun:7}}
 ```
 
 and set it to zero in the `new_sim` function:
 
-```mun
+```mun,ignore
 {{#include ../listings/ch03-structs/listing16.mun:26}}
 ```
 
@@ -98,13 +102,14 @@ As before, the `token` value will be initialized to zero when the library has
 been hot reloaded. Next, we add a `hot_reload_token` function that returns a
 non-zero `u32` value, e.g. `1`:
 
-```mun
+```mun,ignore
 {{#include ../listings/ch03-structs/listing16.mun:45:47}}
+
 ```
 
 Finally, we add this `if` statement to the `sim_update` function:
 
-```mun
+```mun,ignore
 {{#include ../listings/ch03-structs/listing16.mun:50:56}}
 ```
 
@@ -118,7 +123,7 @@ Time to add the actual logic for simulating buoyancy. The formula for
 calculating the buoyancy force is *force = submerged volume \* water density \*
 gravity*.
 
-```mun
+```mun,ignore
 {{#include ../listings/ch03-structs/listing17.mun:51:73}}
 ```
 
@@ -128,12 +133,13 @@ sphere's volume and density: *mass = volume \* density*. Instead of doing this
 every frame, let's replace the sphere's `density` field with a `mass` field:
 
 ```mun
+# pub fn main() {}
 {{#include ../listings/ch03-structs/listing17.mun:10:15}}
 ```
 
 and pre-calculate it on construction:
 
-```mun
+```mun,ignore
 {{#include ../listings/ch03-structs/listing17.mun:30:43}}
 ```
 
@@ -141,7 +147,7 @@ To initialize the sphere's `mass` field, we can employ the same trick as before;
 this time only initializing the sphere and incrementing `hot_reload_token` to
 `2`:
 
-```mun
+```mun,ignore
 {{#include ../listings/ch03-structs/listing17.mun:80:84}}
 ```
 
@@ -182,7 +188,7 @@ acceleration from the velocity to ensure that the sphere drops into the water.
 Last but not least, let's log the sphere's height to the console, so we can
 verify that the simulation is running correctly.
 
-```mun
+```mun,ignore
 {{#include ../listings/ch03-structs/listing17.mun:86:105}}
 ```
 

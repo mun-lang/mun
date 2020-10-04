@@ -1,3 +1,7 @@
+# pub fn main() {
+#   fibonacci(arg());
+# }
+
 pub fn arg() -> i64 {
     5
 }

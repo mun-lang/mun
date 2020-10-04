@@ -18,6 +18,9 @@ forced to explicitly annotate variables in a few locations to ensure a contract
 between interdependent code.
 
 ```mun
+# pub fn main() {
+#   bar(1);
+# }
 fn bar(a: i32) -> i32 {
     let foo = 3 + a;
     foo
@@ -70,7 +73,7 @@ single-precision float of 32 bits, and the `f64` type has double precision -
 requiring 64 bits.
 
 ```mun
-fn main() {
+pub fn main() {
     let f = 3.0; // f64
 }
 ```
@@ -82,7 +85,7 @@ The `bool` (or *boolean*) type has two values, `true` and `false`, that are
 used to  evaluate conditions. It takes up one 1 byte (or 8 bits).
 
 ```mun
-fn main() {
+pub fn main() {
     let t = true;
 
     let f: bool = false; // with explicit type annotation
@@ -101,10 +104,12 @@ written as a decimal, hexadecimal, octal or binary value. These are all
 examples of valid literals:
 
 ```mun
+# pub fn main() {
 let a = 367;
 let b = 0xbeaf;
 let c = 0o76532;
 let d = 0b0101011;
+# }
 ```
 
 A floating-point literal comes in two forms:
@@ -116,9 +121,11 @@ A floating-point literal comes in two forms:
 Examples of valid floating-point literals are:
 
 ```mun
+# pub fn main() {
 let a: f64 = 3.1415;
 let b: f64 = 3.;
 let c: f64 = 314.1592654e-2;
+# }
 ```
 
 #### Separators
@@ -128,8 +135,10 @@ visually separate numbers from one another. They do not have any semantic
 significance but can be useful to the eye.
 
 ```mun
+# pub fn main() {
 let a: i64 = 1_000_000;
 let b: f64 = 1_000.12;
+# }
 ```
 
 #### Type suffix
@@ -148,16 +157,20 @@ Note that integer literals can have floating-point suffixes. This is not the
 case the other way around.
 
 ```mun
+# pub fn main() {
 let a: u8 = 128_u8;
 let b: i128 = 99999999999999999_i128;
 let c: f32 = 10_f32; // integer literal with float suffix 
+# }
 ```
 
 When providing a literal, the compiler will always check if a literal value will
 fit the type. If not, an error will be emitted:
 
-```mun
+```mun,compile_fail
+# pub fn main() {
 let a: u8 = 1123123124124_u8; // literal out of range for `u8`
+# }
 ```
 
 ### Numeric operations 
@@ -166,7 +179,7 @@ Mun supports all basic mathematical operations for number types: addition,
 subtraction, division, multiplication, and remainder.
 
 ```mun
-fn main() {
+pub fn main() {
     // addition 
     let a = 10 + 5;
 
@@ -191,7 +204,7 @@ same type.
 Unary operators are also supported:
 
 ```mun
-fn main() {
+pub fn main() {
     let a = 4;
     // negate
     let b = -a;
@@ -209,8 +222,10 @@ shadow any previous declaration in the same block. This is often useful if you
 want to change the type of a variable.
 
 ```mun
+# pub fn main() {
 let a: i32 = 3;
 let a: f64 = 5.0; 
+# }
 ```
 
 ### Use before initialization
@@ -218,12 +233,15 @@ let a: f64 = 5.0;
 All variables in Mun must be initialized before usage. Uninitialized variables
 can be declared but they must be assigned a value before they can be read.
 
-```mun
+```mun,compile_fail
+# pub fn main() {
+# let some_conditional = false;
 let a: i32;
 if some_conditional {
     a = 4;
 }
 let b = a; // invalid: a is potentially uninitialized
+# }
 ```
 
 Note that declaring a variable without a value is often a bad code smell since
@@ -232,10 +250,13 @@ the above could have better been written by *returning* a value from the
 uninitialized value.
 
 ```mun
+# pub fn main() {
+# let some_conditional = true;
 let a: i32 = if some_conditional {
     4
 } else {
     5
 }
 let b = a;
+# }
 ```

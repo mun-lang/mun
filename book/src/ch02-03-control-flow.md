@@ -9,7 +9,7 @@ constructs that allow developers to control the flow of execution. Mun provides
 An `if` expression allows you to branch your code depending on conditions.
 
 ```mun
-fn main() {
+pub fn main() {
     let number = 3;
 
     if number < 5 {
@@ -30,7 +30,7 @@ condition evaluates to false. You can also have multiple conditions by combining
 `if` and `else` in an `else if` expression. For example:
 
 ```mun
-fn main() {
+pub fn main() {
     let number = 6;
     if number > 10 {
         // The number if larger than 10
@@ -51,13 +51,14 @@ The `if` expression can be used on the right side of a `let` statement
 just like a block:
 
 ```mun
-fn main() {
+pub fn main() {
     let condition = true;
     let number = if condition {
         5
     } else {
         6
     };
+}
 ```
 
 Depending on the condition, the `number` variable will be bound to the value of
@@ -72,7 +73,7 @@ A `loop` expression can be used to create an infinite loop. Breaking out of the
 loop is done using the `break` statement.
 
 ```mun
-fn main() {
+pub fn main() {
     let i = 0;
     loop {
         if i > 5 {
@@ -88,6 +89,9 @@ Similar to `if`/`else` expressions, `loop` blocks can have a return value that
 can be returned through the use of a `break` statement.
 
 ```mun
+# pub fn main() {
+#   count(4, 4);
+# }
 fn count(i: i32, n: i32) -> i32 {
     let loop_count = 0;
     loop {
@@ -102,11 +106,13 @@ fn count(i: i32, n: i32) -> i32 {
 
 All `break` statements in a `loop` must have the same return type.
 
-```mun
+```mun,compile_fail
+# pub fn main() {
 let a = loop {
     break 3;
     break; // expected `{integer}`, found `nothing`
 };
+# }
 ```
 
 
@@ -118,7 +124,7 @@ block of code to execute upon each iteration. Just like with the `if`
 expression, no parentheses are required around the condition expression.
 
 ```mun
-fn main() {
+pub fn main() {
     let i = 0;
     while i <= 5 {
         i += 1;

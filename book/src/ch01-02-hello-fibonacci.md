@@ -27,8 +27,7 @@ Open up the new source file and enter the code in Listing 1-1.
 
 Filename: hello_fibonacci.mun
 
-<!-- HACK: Add an extension to support hiding of Mun code -->
-```mun  
+```mun
 {{#include ../listings/ch01-getting-started/listing01.mun}}
 ```
 

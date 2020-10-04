@@ -10,7 +10,7 @@ both `args` and `fibonacci`.
 Filename: hello_fibonacci.mun
 
 <!-- HACK: Add an extension to support hiding of Mun code -->
-```mun 
+```mun
 {{#include ../listings/ch01-getting-started/listing02.mun}}
 ```
 
