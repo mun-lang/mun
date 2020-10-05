@@ -10,7 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@actions/core": "^1.2.0",
+    "@actions/core": "^1.2.6",
     "@actions/exec": "^1.0.1",
     "@actions/tool-cache": "^1.1.2",
     "@zeit/ncc": "^0.20.5"
