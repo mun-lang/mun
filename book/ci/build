@@ -15,6 +15,10 @@ pushd ./book
     # Echo mdbook version
     $mdbook --version
 
+    # Comment out everything that has to do with the test plugin. We don't want to run it when 
+    # generating the book
+    sed -e '/.*mun_mdbook_test_plugin.*/ s/^#*/#/' -i ./book.toml
+
     # First build our custom highlight.js
     ./ci/build-highlight-js
 

@@ -11,4 +11,4 @@ additional-js = ["theme/trailing_slash_hack.js"]
 git-repository-url = "https://github.com/mun-lang/mun/tree/master/book"
 
 [output.mun_mdbook_test_plugin]
-command = "mun_mdbook_test_plugin"
+command = "cargo run --package mun_mdbook_test_plugin --"
