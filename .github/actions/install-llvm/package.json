@@ -11,8 +11,8 @@
   "license": "ISC",
   "dependencies": {
     "@actions/core": "^1.2.6",
-    "@actions/exec": "^1.0.1",
-    "@actions/tool-cache": "^1.1.2",
-    "@zeit/ncc": "^0.20.5"
+    "@actions/exec": "^1.0.4",
+    "@actions/tool-cache": "^1.6.0",
+    "@zeit/ncc": "^0.22.3"
   }
 }

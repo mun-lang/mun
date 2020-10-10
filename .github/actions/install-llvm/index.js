@@ -39,7 +39,7 @@ export async function execute(cmd) {
             let llvmCachedPath = tc.find("llvm", "8.0.1", "windows-x64");
             if(!llvmCachedPath) {
                 let _7zPath = path.join(__dirname, '..', 'externals', '7zr.exe');
-                llvmCachedPath = await tc.downloadTool("https://github.com/mun-lang/llvm-package-windows/releases/download/v8.0.1/llvm-8.0.1-windows-x64-msvc15.7z")
+                llvmCachedPath = await tc.downloadTool("https://github.com/mun-lang/llvm-package-windows/releases/download/v8.0.1/llvm-8.0.1-windows-x64-msvc16.7z")
                     .then(downloadPath => tc.extract7z(downloadPath, null, _7zPath))
                     .then(extractPath => tc.cacheDir(extractPath, "llvm", "8.0.1", "windows-x64"));
             }

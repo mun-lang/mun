@@ -38,7 +38,7 @@ jobs:
       matrix:
         config:
         - { os: "ubuntu-latest"}
-        - { os: "windows-2016"}
+        - { os: "windows-latest"}
         - { os: "macOS-latest"}
     steps:
       - uses: actions/checkout@v2
@@ -135,4 +135,3 @@ jobs:
         with:
           file: ${{ steps.coverage.outputs.report }}
           name: ${{ matrix.os }}
-  
