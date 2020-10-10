@@ -70,35 +70,29 @@ impl From<SyntaxKind> for u16 {
 impl SyntaxKind {
     #[rustfmt::skip]
     pub fn is_keyword(self) -> bool {
-        match self {
+        matches!(self,
 {%- for kw in keywords %}
-            | {{kw | upper}}_KW
+        {%  if loop.index > 1 %}| {% endif %}{{kw | upper}}_KW
 {%- endfor %}
-                => true,
-            _ => false
-        }
+        )
     }
 
     #[rustfmt::skip]
     pub fn is_symbol(self) -> bool {
-            match self {
+        matches!(self,
     {%- for t in concat(a=single_char_tokens, b=multi_char_tokens) %}
-                | {{t.1}}
+        {%  if loop.index > 1 %}| {% endif %}{{t.1}}
     {%- endfor %}
-                    => true,
-                _ => false
-            }
+        )
     }
 
     #[rustfmt::skip]
     pub fn is_literal(self) -> bool {
-            match self {
+        matches!(self,
     {%- for t in literals %}
-                | {{t}}
+            {%  if loop.index > 1 %}| {% endif %}{{t}}
     {%- endfor %}
-                    => true,
-                _ => false
-            }
+        )
     }
 
     #[rustfmt::skip]

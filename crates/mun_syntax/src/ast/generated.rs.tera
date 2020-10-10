@@ -24,14 +24,13 @@ pub struct {{ node }} {
 
 impl AstNode for {{ node }} {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
+        matches!(kind,
             {%- if methods.enum %}
-            {% for kind in methods.enum %} | {{ kind | SCREAM }} {%- endfor -%}
+            {% for kind in methods.enum %} {%  if loop.index > 1 %}| {% endif %}{{ kind | SCREAM }} {%- endfor -%}
             {% else %}
             {{ node | SCREAM }}
-            {%- endif %} => true,
-            _ => false,
-        }
+            {%- endif %}
+        )
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {

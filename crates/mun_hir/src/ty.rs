@@ -108,10 +108,7 @@ impl Ty {
     }
 
     pub fn is_never(&self) -> bool {
-        match self.as_simple() {
-            Some(TypeCtor::Never) => true,
-            _ => false,
-        }
+        self.as_simple() == Some(TypeCtor::Never)
     }
 
     /// Returns the callable definition for the given expression or `None` if the type does not
@@ -185,10 +182,7 @@ impl Ty {
 
     /// Returns true if this instance represents a known type.
     pub fn is_known(&self) -> bool {
-        match self {
-            Ty::Unknown => false,
-            _ => true,
-        }
+        *self == Ty::Unknown
     }
 }
 

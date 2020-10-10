@@ -24,10 +24,7 @@ pub struct ArgList {
 
 impl AstNode for ArgList {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            ARG_LIST => true,
-            _ => false,
-        }
+        matches!(kind, ARG_LIST)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -55,10 +52,7 @@ pub struct BinExpr {
 
 impl AstNode for BinExpr {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            BIN_EXPR => true,
-            _ => false,
-        }
+        matches!(kind, BIN_EXPR)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -82,10 +76,7 @@ pub struct BindPat {
 
 impl AstNode for BindPat {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            BIND_PAT => true,
-            _ => false,
-        }
+        matches!(kind, BIND_PAT)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -114,10 +105,7 @@ pub struct BlockExpr {
 
 impl AstNode for BlockExpr {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            BLOCK_EXPR => true,
-            _ => false,
-        }
+        matches!(kind, BLOCK_EXPR)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -149,10 +137,7 @@ pub struct BreakExpr {
 
 impl AstNode for BreakExpr {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            BREAK_EXPR => true,
-            _ => false,
-        }
+        matches!(kind, BREAK_EXPR)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -180,10 +165,7 @@ pub struct CallExpr {
 
 impl AstNode for CallExpr {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            CALL_EXPR => true,
-            _ => false,
-        }
+        matches!(kind, CALL_EXPR)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -212,10 +194,7 @@ pub struct Condition {
 
 impl AstNode for Condition {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            CONDITION => true,
-            _ => false,
-        }
+        matches!(kind, CONDITION)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -247,12 +226,23 @@ pub struct Expr {
 
 impl AstNode for Expr {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            LITERAL | PREFIX_EXPR | PATH_EXPR | BIN_EXPR | PAREN_EXPR | CALL_EXPR | FIELD_EXPR
-            | IF_EXPR | LOOP_EXPR | WHILE_EXPR | RETURN_EXPR | BREAK_EXPR | BLOCK_EXPR
-            | RECORD_LIT => true,
-            _ => false,
-        }
+        matches!(
+            kind,
+            LITERAL
+                | PREFIX_EXPR
+                | PATH_EXPR
+                | BIN_EXPR
+                | PAREN_EXPR
+                | CALL_EXPR
+                | FIELD_EXPR
+                | IF_EXPR
+                | LOOP_EXPR
+                | WHILE_EXPR
+                | RETURN_EXPR
+                | BREAK_EXPR
+                | BLOCK_EXPR
+                | RECORD_LIT
+        )
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -386,10 +376,7 @@ pub struct ExprStmt {
 
 impl AstNode for ExprStmt {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            EXPR_STMT => true,
-            _ => false,
-        }
+        matches!(kind, EXPR_STMT)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -417,10 +404,7 @@ pub struct FieldExpr {
 
 impl AstNode for FieldExpr {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            FIELD_EXPR => true,
-            _ => false,
-        }
+        matches!(kind, FIELD_EXPR)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -452,10 +436,7 @@ pub struct FunctionDef {
 
 impl AstNode for FunctionDef {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            FUNCTION_DEF => true,
-            _ => false,
-        }
+        matches!(kind, FUNCTION_DEF)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -495,10 +476,7 @@ pub struct IfExpr {
 
 impl AstNode for IfExpr {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            IF_EXPR => true,
-            _ => false,
-        }
+        matches!(kind, IF_EXPR)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -526,10 +504,7 @@ pub struct LetStmt {
 
 impl AstNode for LetStmt {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            LET_STMT => true,
-            _ => false,
-        }
+        matches!(kind, LET_STMT)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -562,10 +537,7 @@ pub struct Literal {
 
 impl AstNode for Literal {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            LITERAL => true,
-            _ => false,
-        }
+        matches!(kind, LITERAL)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -589,10 +561,7 @@ pub struct LoopExpr {
 
 impl AstNode for LoopExpr {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            LOOP_EXPR => true,
-            _ => false,
-        }
+        matches!(kind, LOOP_EXPR)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -617,10 +586,7 @@ pub struct MemoryTypeSpecifier {
 
 impl AstNode for MemoryTypeSpecifier {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            MEMORY_TYPE_SPECIFIER => true,
-            _ => false,
-        }
+        matches!(kind, MEMORY_TYPE_SPECIFIER)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -644,10 +610,7 @@ pub struct ModuleItem {
 
 impl AstNode for ModuleItem {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            FUNCTION_DEF | STRUCT_DEF | TYPE_ALIAS_DEF => true,
-            _ => false,
-        }
+        matches!(kind, FUNCTION_DEF | STRUCT_DEF | TYPE_ALIAS_DEF)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -708,10 +671,7 @@ pub struct Name {
 
 impl AstNode for Name {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            NAME => true,
-            _ => false,
-        }
+        matches!(kind, NAME)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -735,10 +695,7 @@ pub struct NameRef {
 
 impl AstNode for NameRef {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            NAME_REF => true,
-            _ => false,
-        }
+        matches!(kind, NAME_REF)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -762,10 +719,7 @@ pub struct NeverType {
 
 impl AstNode for NeverType {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            NEVER_TYPE => true,
-            _ => false,
-        }
+        matches!(kind, NEVER_TYPE)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -789,10 +743,7 @@ pub struct Param {
 
 impl AstNode for Param {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            PARAM => true,
-            _ => false,
-        }
+        matches!(kind, PARAM)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -821,10 +772,7 @@ pub struct ParamList {
 
 impl AstNode for ParamList {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            PARAM_LIST => true,
-            _ => false,
-        }
+        matches!(kind, PARAM_LIST)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -852,10 +800,7 @@ pub struct ParenExpr {
 
 impl AstNode for ParenExpr {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            PAREN_EXPR => true,
-            _ => false,
-        }
+        matches!(kind, PAREN_EXPR)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -883,10 +828,7 @@ pub struct Pat {
 
 impl AstNode for Pat {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            BIND_PAT | PLACEHOLDER_PAT => true,
-            _ => false,
-        }
+        matches!(kind, BIND_PAT | PLACEHOLDER_PAT)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -938,10 +880,7 @@ pub struct Path {
 
 impl AstNode for Path {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            PATH => true,
-            _ => false,
-        }
+        matches!(kind, PATH)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -973,10 +912,7 @@ pub struct PathExpr {
 
 impl AstNode for PathExpr {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            PATH_EXPR => true,
-            _ => false,
-        }
+        matches!(kind, PATH_EXPR)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1004,10 +940,7 @@ pub struct PathSegment {
 
 impl AstNode for PathSegment {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            PATH_SEGMENT => true,
-            _ => false,
-        }
+        matches!(kind, PATH_SEGMENT)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1035,10 +968,7 @@ pub struct PathType {
 
 impl AstNode for PathType {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            PATH_TYPE => true,
-            _ => false,
-        }
+        matches!(kind, PATH_TYPE)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1066,10 +996,7 @@ pub struct PlaceholderPat {
 
 impl AstNode for PlaceholderPat {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            PLACEHOLDER_PAT => true,
-            _ => false,
-        }
+        matches!(kind, PLACEHOLDER_PAT)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1093,10 +1020,7 @@ pub struct PrefixExpr {
 
 impl AstNode for PrefixExpr {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            PREFIX_EXPR => true,
-            _ => false,
-        }
+        matches!(kind, PREFIX_EXPR)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1124,10 +1048,7 @@ pub struct RecordField {
 
 impl AstNode for RecordField {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            RECORD_FIELD => true,
-            _ => false,
-        }
+        matches!(kind, RECORD_FIELD)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1159,10 +1080,7 @@ pub struct RecordFieldDef {
 
 impl AstNode for RecordFieldDef {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            RECORD_FIELD_DEF => true,
-            _ => false,
-        }
+        matches!(kind, RECORD_FIELD_DEF)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1190,10 +1108,7 @@ pub struct RecordFieldDefList {
 
 impl AstNode for RecordFieldDefList {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            RECORD_FIELD_DEF_LIST => true,
-            _ => false,
-        }
+        matches!(kind, RECORD_FIELD_DEF_LIST)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1221,10 +1136,7 @@ pub struct RecordFieldList {
 
 impl AstNode for RecordFieldList {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            RECORD_FIELD_LIST => true,
-            _ => false,
-        }
+        matches!(kind, RECORD_FIELD_LIST)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1256,10 +1168,7 @@ pub struct RecordLit {
 
 impl AstNode for RecordLit {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            RECORD_LIT => true,
-            _ => false,
-        }
+        matches!(kind, RECORD_LIT)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1291,10 +1200,7 @@ pub struct RetType {
 
 impl AstNode for RetType {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            RET_TYPE => true,
-            _ => false,
-        }
+        matches!(kind, RET_TYPE)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1322,10 +1228,7 @@ pub struct ReturnExpr {
 
 impl AstNode for ReturnExpr {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            RETURN_EXPR => true,
-            _ => false,
-        }
+        matches!(kind, RETURN_EXPR)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1353,10 +1256,7 @@ pub struct SourceFile {
 
 impl AstNode for SourceFile {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            SOURCE_FILE => true,
-            _ => false,
-        }
+        matches!(kind, SOURCE_FILE)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1382,10 +1282,7 @@ pub struct Stmt {
 
 impl AstNode for Stmt {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            LET_STMT | EXPR_STMT => true,
-            _ => false,
-        }
+        matches!(kind, LET_STMT | EXPR_STMT)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1435,10 +1332,7 @@ pub struct StructDef {
 
 impl AstNode for StructDef {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            STRUCT_DEF => true,
-            _ => false,
-        }
+        matches!(kind, STRUCT_DEF)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1469,10 +1363,7 @@ pub struct TupleFieldDef {
 
 impl AstNode for TupleFieldDef {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            TUPLE_FIELD_DEF => true,
-            _ => false,
-        }
+        matches!(kind, TUPLE_FIELD_DEF)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1501,10 +1392,7 @@ pub struct TupleFieldDefList {
 
 impl AstNode for TupleFieldDefList {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            TUPLE_FIELD_DEF_LIST => true,
-            _ => false,
-        }
+        matches!(kind, TUPLE_FIELD_DEF_LIST)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1532,10 +1420,7 @@ pub struct TypeAliasDef {
 
 impl AstNode for TypeAliasDef {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            TYPE_ALIAS_DEF => true,
-            _ => false,
-        }
+        matches!(kind, TYPE_ALIAS_DEF)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1565,10 +1450,7 @@ pub struct TypeRef {
 
 impl AstNode for TypeRef {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            PATH_TYPE | NEVER_TYPE => true,
-            _ => false,
-        }
+        matches!(kind, PATH_TYPE | NEVER_TYPE)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1618,10 +1500,7 @@ pub struct Visibility {
 
 impl AstNode for Visibility {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            VISIBILITY => true,
-            _ => false,
-        }
+        matches!(kind, VISIBILITY)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1645,10 +1524,7 @@ pub struct WhileExpr {
 
 impl AstNode for WhileExpr {
     fn can_cast(kind: SyntaxKind) -> bool {
-        match kind {
-            WHILE_EXPR => true,
-            _ => false,
-        }
+        matches!(kind, WHILE_EXPR)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {

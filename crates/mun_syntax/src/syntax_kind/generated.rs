@@ -380,100 +380,94 @@ impl From<SyntaxKind> for u16 {
 impl SyntaxKind {
     #[rustfmt::skip]
     pub fn is_keyword(self) -> bool {
-        match self {
-            | BREAK_KW
-            | DO_KW
-            | ELSE_KW
-            | FALSE_KW
-            | FOR_KW
-            | FN_KW
-            | IF_KW
-            | IN_KW
-            | NIL_KW
-            | RETURN_KW
-            | TRUE_KW
-            | WHILE_KW
-            | LOOP_KW
-            | LET_KW
-            | MUT_KW
-            | CLASS_KW
-            | STRUCT_KW
-            | NEVER_KW
-            | PUB_KW
-            | TYPE_KW
-            | PACKAGE_KW
-            | SUPER_KW
-            | SELF_KW
-            | EXTERN_KW
-                => true,
-            _ => false
-        }
+        matches!(self,
+        BREAK_KW
+        | DO_KW
+        | ELSE_KW
+        | FALSE_KW
+        | FOR_KW
+        | FN_KW
+        | IF_KW
+        | IN_KW
+        | NIL_KW
+        | RETURN_KW
+        | TRUE_KW
+        | WHILE_KW
+        | LOOP_KW
+        | LET_KW
+        | MUT_KW
+        | CLASS_KW
+        | STRUCT_KW
+        | NEVER_KW
+        | PUB_KW
+        | TYPE_KW
+        | PACKAGE_KW
+        | SUPER_KW
+        | SELF_KW
+        | EXTERN_KW
+        )
     }
 
     #[rustfmt::skip]
     pub fn is_symbol(self) -> bool {
-            match self {
-                | AMP
-                | PIPE
-                | PLUS
-                | MINUS
-                | STAR
-                | SLASH
-                | PERCENT
-                | CARET
-                | HASH
-                | DOT
-                | LT
-                | GT
-                | EQ
-                | L_PAREN
-                | R_PAREN
-                | L_CURLY
-                | R_CURLY
-                | L_BRACKET
-                | R_BRACKET
-                | SEMI
-                | COLON
-                | COMMA
-                | EXCLAMATION
-                | UNDERSCORE
-                | EQEQ
-                | NEQ
-                | LTEQ
-                | GTEQ
-                | DOTDOT
-                | DOTDOTDOT
-                | PLUSEQ
-                | MINUSEQ
-                | STAREQ
-                | SLASHEQ
-                | PERCENTEQ
-                | SHLEQ
-                | SHREQ
-                | AMPEQ
-                | PIPEEQ
-                | CARETEQ
-                | DOTDOTEQ
-                | COLONCOLON
-                | THIN_ARROW
-                | AMPAMP
-                | PIPEPIPE
-                | SHL
-                | SHR
-                    => true,
-                _ => false
-            }
+        matches!(self,
+        AMP
+        | PIPE
+        | PLUS
+        | MINUS
+        | STAR
+        | SLASH
+        | PERCENT
+        | CARET
+        | HASH
+        | DOT
+        | LT
+        | GT
+        | EQ
+        | L_PAREN
+        | R_PAREN
+        | L_CURLY
+        | R_CURLY
+        | L_BRACKET
+        | R_BRACKET
+        | SEMI
+        | COLON
+        | COMMA
+        | EXCLAMATION
+        | UNDERSCORE
+        | EQEQ
+        | NEQ
+        | LTEQ
+        | GTEQ
+        | DOTDOT
+        | DOTDOTDOT
+        | PLUSEQ
+        | MINUSEQ
+        | STAREQ
+        | SLASHEQ
+        | PERCENTEQ
+        | SHLEQ
+        | SHREQ
+        | AMPEQ
+        | PIPEEQ
+        | CARETEQ
+        | DOTDOTEQ
+        | COLONCOLON
+        | THIN_ARROW
+        | AMPAMP
+        | PIPEPIPE
+        | SHL
+        | SHR
+        )
     }
 
     #[rustfmt::skip]
     pub fn is_literal(self) -> bool {
-            match self {
-                | INT_NUMBER
-                | FLOAT_NUMBER
-                | STRING
-                    => true,
-                _ => false
-            }
+        matches!(self,
+            INT_NUMBER
+            | FLOAT_NUMBER
+            | STRING
+        )
     }
 
     #[rustfmt::skip]
