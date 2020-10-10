@@ -182,17 +182,11 @@ impl_froms!(CallableDef: Function, Struct);
 
 impl CallableDef {
     pub fn is_function(self) -> bool {
-        match self {
-            CallableDef::Function(_) => true,
-            _ => false,
-        }
+        matches!(self, CallableDef::Function(_))
     }
 
     pub fn is_struct(self) -> bool {
-        match self {
-            CallableDef::Struct(_) => true,
-            _ => false,
-        }
+        matches!(self, CallableDef::Struct(_))
     }
 }
 

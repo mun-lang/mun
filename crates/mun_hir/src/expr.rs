@@ -935,6 +935,7 @@ pub fn resolver_for_expr(body: Arc<Body>, db: &dyn HirDatabase, expr_id: ExprId)
     resolver_for_scope(body, db, scopes.scope_for(expr_id))
 }
 
+#[allow(clippy::needless_collect)] // false positive https://github.com/rust-lang/rust-clippy/issues/5991
 pub(crate) fn resolver_for_scope(
     body: Arc<Body>,
     db: &dyn HirDatabase,

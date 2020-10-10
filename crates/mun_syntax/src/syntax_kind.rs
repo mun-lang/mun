@@ -17,9 +17,6 @@ pub(crate) struct SyntaxInfo {
 
 impl SyntaxKind {
     pub fn is_trivia(self) -> bool {
-        match self {
-            SyntaxKind::WHITESPACE | SyntaxKind::COMMENT => true,
-            _ => false,
-        }
+        matches!(self, SyntaxKind::WHITESPACE | SyntaxKind::COMMENT)
     }
 }

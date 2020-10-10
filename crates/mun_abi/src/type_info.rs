@@ -104,18 +104,12 @@ unsafe impl Sync for TypeInfo {}
 impl TypeGroup {
     /// Returns whether this is a fundamental type.
     pub fn is_fundamental(self) -> bool {
-        match self {
-            TypeGroup::FundamentalTypes => true,
-            _ => false,
-        }
+        self == TypeGroup::FundamentalTypes
     }
 
     /// Returns whether this is a struct type.
     pub fn is_struct(self) -> bool {
-        match self {
-            TypeGroup::StructTypes => true,
-            _ => false,
-        }
+        self == TypeGroup::StructTypes
     }
 }
 

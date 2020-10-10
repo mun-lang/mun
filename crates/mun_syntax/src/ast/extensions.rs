@@ -93,10 +93,10 @@ impl ast::PathSegment {
     }
 
     pub fn has_colon_colon(&self) -> bool {
-        match self.syntax.first_child_or_token().map(|s| s.kind()) {
-            Some(T![::]) => true,
-            _ => false,
-        }
+        matches!(
+            self.syntax.first_child_or_token().map(|s| s.kind()),
+            Some(T![::])
+        )
     }
 }
 
