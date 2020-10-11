@@ -24,13 +24,13 @@ pub use function_info::{
 };
 pub use module_info::ModuleInfo;
 pub use struct_info::{StructInfo, StructMemoryKind};
-pub use type_info::{HasStaticTypeInfo, TypeGroup, TypeInfo};
+pub use type_info::{HasStaticTypeInfo, TypeInfo, TypeInfoData};
 
 /// The Mun ABI prelude
 ///
 /// The *prelude* contains imports that are used almost every time.
 pub mod prelude {
-    pub use crate::{HasStaticTypeInfo, IntoFunctionDefinition, StructMemoryKind, TypeGroup};
+    pub use crate::{HasStaticTypeInfo, IntoFunctionDefinition, StructMemoryKind};
 }
 
 /// Defines the current ABI version

@@ -3,6 +3,7 @@ use std::{ffi::CStr, os::raw::c_char, slice, str};
 
 /// Represents a struct declaration.
 #[repr(C)]
+#[derive(Debug)]
 pub struct StructInfo {
     /// Struct fields' names
     pub field_names: *const *const c_char,
@@ -116,7 +117,7 @@ mod tests {
     use super::StructMemoryKind;
     use crate::{
         test_utils::{fake_struct_info, fake_type_info, FAKE_FIELD_NAME, FAKE_TYPE_NAME},
-        TypeGroup,
+        TypeInfoData,
     };
     use std::ffi::CString;
 
@@ -137,7 +138,7 @@ mod tests {
     fn test_struct_info_fields_some() {
         let field_name = CString::new(FAKE_FIELD_NAME).expect("Invalid fake field name.");
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
+        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
         let field_names = &[field_name.as_ptr()];
         let field_types = &[&type_info];

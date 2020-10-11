@@ -19,13 +19,13 @@ pub fn equals_argument_type<'e, 'f, T: ArgumentReflection>(
 pub fn equals_return_type<T: ReturnTypeReflection>(
     type_info: &abi::TypeInfo,
 ) -> Result<(), (&str, &str)> {
-    match type_info.group {
-        abi::TypeGroup::FundamentalTypes => {
+    match type_info.data {
+        abi::TypeInfoData::Primitive => {
             if type_info.guid != T::type_guid() {
                 return Err((type_info.name(), T::type_name()));
             }
         }
-        abi::TypeGroup::StructTypes => {
+        abi::TypeInfoData::Struct(_) => {
             if <StructRef as ReturnTypeReflection>::type_guid() != T::type_guid() {
                 return Err(("struct", T::type_name()));
             }

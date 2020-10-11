@@ -28,18 +28,6 @@ impl<'ink> TransparentValue<'ink> for abi::Privacy {
     }
 }
 
-impl<'ink> TransparentValue<'ink> for abi::TypeGroup {
-    type Target = u8;
-
-    fn as_target_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, Self::Target> {
-        (*self as u8).as_value(context)
-    }
-
-    fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
-        vec![vec![*self as u8].into()]
-    }
-}
-
 impl<'ink> TransparentValue<'ink> for abi::StructMemoryKind {
     type Target = u8;
 
@@ -58,7 +46,14 @@ pub struct TypeInfo<'ink> {
     pub name: Value<'ink, *const u8>,
     pub size_in_bits: u32,
     pub alignment: u8,
-    pub group: abi::TypeGroup,
+    pub data: TypeInfoData<'ink>,
+}
+
+#[derive(AsValue)]
+#[repr(u8)]
+pub enum TypeInfoData<'ink> {
+    Primitive,
+    Struct(StructInfo<'ink>),
 }
 
 #[derive(AsValue)]

@@ -233,7 +233,7 @@ mod tests {
         test_utils::{
             fake_fn_prototype, fake_fn_signature, fake_type_info, FAKE_FN_NAME, FAKE_TYPE_NAME,
         },
-        TypeGroup,
+        TypeInfoData,
     };
     use std::ffi::CString;
 
@@ -256,7 +256,7 @@ mod tests {
     #[test]
     fn test_fn_signature_arg_types_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
+        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
         let arg_types = &[&type_info];
         let fn_signature = fake_fn_signature(arg_types, None);
@@ -275,7 +275,7 @@ mod tests {
     #[test]
     fn test_fn_signature_return_type_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
+        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
         let return_type = Some(&type_info);
         let fn_signature = fake_fn_signature(&[], return_type);

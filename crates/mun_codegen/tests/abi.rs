@@ -1,4 +1,4 @@
-use abi::{StructMemoryKind, TypeGroup, ABI_VERSION};
+use abi::{StructMemoryKind, TypeInfoData, ABI_VERSION};
 use libloader::MunLibrary;
 use mun_test::CompileTestDriver;
 use runtime::ReturnTypeReflection;
@@ -142,9 +142,14 @@ fn test_abi_compatibility() {
         assert_eq!(type_info.size_in_bits(), 8 * mem::size_of::<T>());
         assert_eq!(type_info.size_in_bytes(), mem::size_of::<T>());
         assert_eq!(type_info.alignment(), mem::align_of::<T>());
-        assert_eq!(type_info.group, TypeGroup::StructTypes);
+        assert!(type_info.data.is_struct());
 
-        let struct_info = type_info.as_struct().expect("Expected a struct");
+        let struct_info = if let TypeInfoData::Struct(s) = &type_info.data {
+            s
+        } else {
+            panic!("Expected a struct");
+        };
+
         assert_eq!(struct_info.num_fields(), field_names.len());
         for (lhs, rhs) in struct_info.field_names().zip(field_names) {
             assert_eq!(lhs, *rhs);

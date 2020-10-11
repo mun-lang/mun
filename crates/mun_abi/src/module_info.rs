@@ -65,12 +65,12 @@ unsafe impl Sync for ModuleInfo {}
 mod tests {
     use crate::{
         test_utils::{
-            fake_fn_prototype, fake_module_info, fake_struct_info, fake_struct_type_info,
-            fake_type_info, FAKE_FN_NAME, FAKE_MODULE_PATH, FAKE_STRUCT_NAME, FAKE_TYPE_NAME,
+            fake_fn_prototype, fake_module_info, fake_struct_info, fake_type_info, FAKE_FN_NAME,
+            FAKE_MODULE_PATH, FAKE_STRUCT_NAME, FAKE_TYPE_NAME,
         },
-        FunctionDefinition, TypeGroup, TypeInfo,
+        FunctionDefinition, TypeInfo, TypeInfoData,
     };
-    use std::{ffi::CString, mem, ptr};
+    use std::{ffi::CString, ptr};
 
     #[test]
     fn test_module_info_path() {
@@ -94,7 +94,7 @@ mod tests {
     #[test]
     fn test_module_info_types_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
+        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -108,8 +108,8 @@ mod tests {
 
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name");
         let struct_info = fake_struct_info(&[], &[], &[], Default::default());
-        let struct_type_info = fake_struct_type_info(&struct_name, struct_info, 1, 1);
-        let types = &[unsafe { mem::transmute(&struct_type_info) }];
+        let type_info = fake_type_info(&struct_name, 1, 1, TypeInfoData::Struct(struct_info));
+        let types = &[&type_info];
 
         let module_path = CString::new(FAKE_MODULE_PATH).expect("Invalid fake module path.");
         let module = fake_module_info(&module_path, functions, types);
@@ -134,11 +134,14 @@ mod tests {
         for (lhs, rhs) in result_types.iter().zip(types.iter()) {
             assert_eq!(lhs, rhs);
             assert_eq!(lhs.name(), rhs.name());
-            assert_eq!(lhs.group, rhs.group);
-            if lhs.group == TypeGroup::StructTypes {
-                let lhs_struct = lhs.as_struct().unwrap();
-                let rhs_struct = rhs.as_struct().unwrap();
-                assert_eq!(lhs_struct.field_types(), rhs_struct.field_types());
+            assert_eq!(lhs.data.is_struct(), rhs.data.is_struct());
+            assert_eq!(lhs.data.is_primitive(), rhs.data.is_primitive());
+            if let TypeInfoData::Struct(lhs) = &lhs.data {
+                if let TypeInfoData::Struct(rhs) = &rhs.data {
+                    assert_eq!(lhs.field_types(), rhs.field_types());
+                } else {
+                    assert!(false);
+                }
             }
         }
     }

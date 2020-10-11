@@ -1,6 +1,7 @@
 ---
 source: crates/mun_codegen/src/test.rs
 expression: "\n    fn do_the_things(n: i32) -> i32 {\n        n + 7\n    }\n    \n    pub fn main() {\n        do_the_things(3);\n    }\n    "
+
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'

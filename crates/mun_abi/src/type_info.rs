@@ -4,7 +4,6 @@ use std::{
     convert::TryInto,
     ffi::{CStr, CString},
     fmt::{self, Formatter},
-    mem,
     os::raw::c_char,
     str,
     sync::Once,
@@ -26,17 +25,17 @@ pub struct TypeInfo {
     /// The alignment of the type
     pub(crate) alignment: u8,
     /// Type group
-    pub group: TypeGroup,
+    pub data: TypeInfoData,
 }
 
-/// Represents a group of types that illicit the same characteristics.
+/// Contains data specific to a group of types that illicit the same characteristics.
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub enum TypeGroup {
-    /// Fundamental types (i.e. `()`, `bool`, `float`, `int`, etc.)
-    FundamentalTypes = 0,
+#[derive(Debug)]
+pub enum TypeInfoData {
+    /// Primitive types (i.e. `()`, `bool`, `float`, `int`, etc.)
+    Primitive,
     /// Struct types (i.e. record, tuple, or unit structs)
-    StructTypes = 1,
+    Struct(StructInfo),
 }
 
 impl TypeInfo {
@@ -47,12 +46,8 @@ impl TypeInfo {
 
     /// Retrieves the type's struct information, if available.
     pub fn as_struct(&self) -> Option<&StructInfo> {
-        if self.group.is_struct() {
-            let ptr = (self as *const TypeInfo).cast::<u8>();
-            let ptr = ptr.wrapping_add(mem::size_of::<TypeInfo>());
-            let offset = ptr.align_offset(mem::align_of::<StructInfo>());
-            let ptr = ptr.wrapping_add(offset);
-            Some(unsafe { &*ptr.cast::<StructInfo>() })
+        if let TypeInfoData::Struct(s) = &self.data {
+            Some(s)
         } else {
             None
         }
@@ -101,15 +96,15 @@ impl std::hash::Hash for TypeInfo {
 unsafe impl Send for TypeInfo {}
 unsafe impl Sync for TypeInfo {}
 
-impl TypeGroup {
+impl TypeInfoData {
     /// Returns whether this is a fundamental type.
-    pub fn is_fundamental(self) -> bool {
-        self == TypeGroup::FundamentalTypes
+    pub fn is_primitive(&self) -> bool {
+        matches!(self, TypeInfoData::Primitive)
     }
 
     /// Returns whether this is a struct type.
-    pub fn is_struct(self) -> bool {
-        self == TypeGroup::StructTypes
+    pub fn is_struct(&self) -> bool {
+        matches!(self, TypeInfoData::Struct(_))
     }
 }
 
@@ -157,13 +152,13 @@ impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *const T {
                 TypeInfo {
                     guid,
                     name: name_ptr,
-                    group: TypeGroup::FundamentalTypes,
                     size_in_bits: (std::mem::size_of::<*const T>() * 8)
                         .try_into()
                         .expect("size of T is larger than the maximum allowed ABI size. Please file a bug."),
                     alignment: (std::mem::align_of::<*const T>())
                         .try_into()
                         .expect("alignment of T is larger than the maximum allowed ABI size. Please file a bug."),
+                    data: TypeInfoData::Primitive,
                 },
             )
         })
@@ -193,13 +188,13 @@ impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *mut T {
                 TypeInfo {
                     guid,
                     name: name_ptr,
-                    group: TypeGroup::FundamentalTypes,
                     size_in_bits: (std::mem::size_of::<*const T>() * 8)
                         .try_into()
                         .expect("size of T is larger than the maximum allowed ABI size. Please file a bug."),
                     alignment: (std::mem::align_of::<*const T>())
                         .try_into()
                         .expect("alignment of T is larger than the maximum allowed ABI size. Please file a bug."),
+                    data: TypeInfoData::Primitive,
                 },
             )
         })
@@ -207,7 +202,7 @@ impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *mut T {
     }
 }
 
-macro_rules! impl_basic_type_info {
+macro_rules! impl_primitive_type_info {
     ($(
         $ty:ty
     ),+) => {
@@ -223,13 +218,13 @@ macro_rules! impl_basic_type_info {
                         TypeInfo {
                             guid: Guid(md5::compute(&type_info_name.as_bytes()).0),
                             name: type_info_name.as_ptr(),
-                            group: TypeGroup::FundamentalTypes,
                             size_in_bits: (std::mem::size_of::<$ty>() * 8)
                                 .try_into()
                                 .expect("size of T is larger than the maximum allowed ABI size. Please file a bug."),
                             alignment: (std::mem::align_of::<$ty>())
                                 .try_into()
                                 .expect("alignment of T is larger than the maximum allowed ABI size. Please file a bug."),
+                            data: TypeInfoData::Primitive,
                         }
                     })
                 }
@@ -255,7 +250,7 @@ macro_rules! impl_has_type_info_name {
     }
 }
 
-impl_basic_type_info!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64, bool);
+impl_primitive_type_info!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64, bool);
 
 impl_has_type_info_name!(
     std::ffi::c_void => "core::void",
@@ -292,14 +287,14 @@ impl HasStaticTypeInfo for isize {
 
 #[cfg(test)]
 mod tests {
-    use super::{HasStaticTypeInfoName, TypeGroup};
-    use crate::test_utils::{fake_type_info, FAKE_TYPE_NAME};
+    use super::{HasStaticTypeInfoName, TypeInfoData};
+    use crate::test_utils::{fake_struct_info, fake_type_info, FAKE_TYPE_NAME};
     use std::ffi::CString;
 
     #[test]
     fn test_type_info_name() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
+        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
         assert_eq!(type_info.name(), FAKE_TYPE_NAME);
     }
@@ -307,7 +302,7 @@ mod tests {
     #[test]
     fn test_type_info_size_alignment() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 24, 8);
+        let type_info = fake_type_info(&type_name, 24, 8, TypeInfoData::Primitive);
 
         assert_eq!(type_info.size_in_bits(), 24);
         assert_eq!(type_info.size_in_bytes(), 3);
@@ -317,29 +312,32 @@ mod tests {
     #[test]
     fn test_type_info_group_fundamental() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_group = TypeGroup::FundamentalTypes;
-        let type_info = fake_type_info(&type_name, type_group, 1, 1);
+        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
-        assert_eq!(type_info.group, type_group);
-        assert!(type_info.group.is_fundamental());
-        assert!(!type_info.group.is_struct());
+        assert!(type_info.data.is_primitive());
+        assert!(!type_info.data.is_struct());
     }
 
     #[test]
     fn test_type_info_group_struct() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_group = TypeGroup::StructTypes;
-        let type_info = fake_type_info(&type_name, type_group, 1, 1);
 
-        assert_eq!(type_info.group, type_group);
-        assert!(type_info.group.is_struct());
-        assert!(!type_info.group.is_fundamental());
+        let field_names = &[];
+        let field_types = &[];
+        let field_offsets = &[];
+        let struct_info =
+            fake_struct_info(field_names, field_types, field_offsets, Default::default());
+
+        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Struct(struct_info));
+
+        assert!(type_info.data.is_struct());
+        assert!(!type_info.data.is_primitive());
     }
 
     #[test]
     fn test_type_info_eq() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
+        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
         assert_eq!(type_info, type_info);
     }

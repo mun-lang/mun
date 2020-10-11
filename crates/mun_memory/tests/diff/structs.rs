@@ -6,9 +6,8 @@ use mun_memory::diff::{diff, Diff, FieldDiff, FieldEditKind};
 fn assert_eq_struct(result: &[TypeInfo], expected: &[TypeInfo]) {
     assert_eq!(result.len(), expected.len());
     for (lhs, rhs) in result.into_iter().zip(expected.into_iter()) {
-        assert_eq!(lhs.group, rhs.group);
         assert_eq!(lhs.layout, rhs.layout);
-        assert_eq!(lhs.tail, rhs.tail);
+        assert_eq!(lhs.data, rhs.data);
     }
 }
 

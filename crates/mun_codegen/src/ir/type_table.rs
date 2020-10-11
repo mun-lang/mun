@@ -2,7 +2,7 @@ use super::types as ir;
 use crate::{
     ir::dispatch_table::{DispatchTable, FunctionPrototype},
     ir::ty::HirTypeCache,
-    type_info::{TypeGroup, TypeInfo},
+    type_info::{TypeInfo, TypeInfoData},
     value::{AsValue, CanInternalize, Global, IrValueContext, IterAsIrValue, Value},
     ModuleGroup,
 };
@@ -147,7 +147,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
 
     /// Collects unique `TypeInfo` from the given `Ty`.
     fn collect_type(&mut self, type_info: TypeInfo) {
-        if let TypeGroup::StructTypes(hir_struct) = type_info.group {
+        if let TypeInfoData::Struct(hir_struct) = type_info.data {
             self.collect_struct(hir_struct);
         } else {
             self.entries.insert(type_info);
@@ -251,29 +251,15 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
                 .alignment
                 .try_into()
                 .expect("could not convert alignment to smaller size"),
-            group: type_info.group.to_abi_type(),
+            data: self.gen_type_info_data(type_info_to_ir, &type_info.data),
         }
         .as_value(self.value_context);
 
         // Build the global value for the ir::TypeInfo
         let type_ir_name = type_info_global_name(type_info);
-        let value = match type_info.group {
-            TypeGroup::FundamentalTypes => type_info_ir
-                .into_const_private_global(&type_ir_name, self.value_context)
-                .as_value(self.value_context),
-            TypeGroup::StructTypes(s) => {
-                // In case of a struct the `Global<ir::TypeInfo>` is actually a
-                // `Global<(ir::TypeInfo, ir::StructInfo)>`.
-                let struct_info_ir = self.gen_struct_info(type_info_to_ir, s);
-                let compound_type_ir = (type_info_ir, struct_info_ir).as_value(self.value_context);
-                let compound_global =
-                    compound_type_ir.into_const_private_global(&type_ir_name, self.value_context);
-                Value::<*const ir::TypeInfo>::with_cast(
-                    compound_global.value.as_pointer_value(),
-                    self.value_context,
-                )
-            }
-        };
+        let value = type_info_ir
+            .into_const_private_global(&type_ir_name, self.value_context)
+            .as_value(self.value_context);
 
         // Insert the value in this case, so we don't recompute and generate multiple values.
         type_info_to_ir.insert(type_info.clone(), value);
@@ -281,11 +267,24 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
         value
     }
 
+    fn gen_type_info_data(
+        &self,
+        type_info_to_ir: &mut HashMap<TypeInfo, Value<'ink, *const ir::TypeInfo<'ink>>>,
+        data: &TypeInfoData,
+    ) -> ir::TypeInfoData<'ink> {
+        match data {
+            TypeInfoData::Primitive => ir::TypeInfoData::Primitive,
+            TypeInfoData::Struct(s) => {
+                ir::TypeInfoData::Struct(self.gen_struct_info(type_info_to_ir, *s))
+            }
+        }
+    }
+
     fn gen_struct_info(
         &self,
         type_info_to_ir: &mut HashMap<TypeInfo, Value<'ink, *const ir::TypeInfo<'ink>>>,
         hir_struct: hir::Struct,
-    ) -> Value<'ink, ir::StructInfo<'ink>> {
+    ) -> ir::StructInfo<'ink> {
         let struct_ir = self.hir_types.get_struct_type(hir_struct);
         let name = hir_struct.full_name(self.db);
         let fields = hir_struct.fields(self.db);
@@ -344,7 +343,6 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
                 .expect("could not convert num_fields to smaller bit size"),
             memory_kind: hir_struct.data(self.db.upcast()).memory_kind.clone(),
         }
-        .as_value(self.value_context)
     }
 
     /// Constructs a `TypeTable` from all *used* types.
