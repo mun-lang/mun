@@ -6,7 +6,7 @@ expression: "pub fn equals(a: u16, b: u16) -> bool { a == b }\npub fn not_equal(
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
 
-%"mun_codegen::ir::types::TypeInfo" = type { [16 x i8], i8*, i32, i8, i8 }
+%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 
 @global_type_table = external global [2 x %"mun_codegen::ir::types::TypeInfo"*]
 
@@ -51,11 +51,11 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%"mun_codegen::ir::types::TypeInfo" = type { [16 x i8], i8*, i32, i8, i8 }
+%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 
 @"type_info::<core::u16>::name" = private unnamed_addr constant [10 x i8] c"core::u16\00"
-@"type_info::<core::u16>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" { [16 x i8] c"0\01\BC\BBK\E0\F2\7F&l\01\CD|q\F2\B3", i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::u16>::name", i32 0, i32 0), i32 16, i8 2, i8 0 }
+@"type_info::<core::u16>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" <{ [0 x i64] zeroinitializer, [16 x i8] c"0\01\BC\BBK\E0\F2\7F&l\01\CD|q\F2\B3", [0 x i64] zeroinitializer, i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::u16>::name", i32 0, i32 0), [0 x i64] zeroinitializer, i32 16, [0 x i64] zeroinitializer, i8 2, [0 x i64] zeroinitializer, i8 0, [1 x i16] zeroinitializer }>
 @"type_info::<core::bool>::name" = private unnamed_addr constant [11 x i8] c"core::bool\00"
-@"type_info::<core::bool>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" { [16 x i8] c"x\82\81m t7\03\CB\F8k\81-;\C9\84", i8* getelementptr inbounds ([11 x i8], [11 x i8]* @"type_info::<core::bool>::name", i32 0, i32 0), i32 1, i8 1, i8 0 }
+@"type_info::<core::bool>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" <{ [0 x i64] zeroinitializer, [16 x i8] c"x\82\81m t7\03\CB\F8k\81-;\C9\84", [0 x i64] zeroinitializer, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @"type_info::<core::bool>::name", i32 0, i32 0), [0 x i64] zeroinitializer, i32 1, [0 x i64] zeroinitializer, i8 1, [0 x i64] zeroinitializer, i8 0, [1 x i16] zeroinitializer }>
 @global_type_table = constant [2 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::u16>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::bool>"]
 
