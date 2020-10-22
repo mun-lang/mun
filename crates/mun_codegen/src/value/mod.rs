@@ -37,7 +37,7 @@ use std::hash::Hash;
 ///   is returned. This allows transparent composition. e.g.:
 ///
 ///   ```rust
-///   # use mun_codegen::value::{AsValue, IrValueContext, TransparentValue, Value};
+///   # use mun_codegen::value::{AsValue, BytesOrPtr, IrTypeContext, IrValueContext, TransparentValue, Value};
 ///   struct Foo {
 ///      value: u32,
 ///      bar: f32,
@@ -48,6 +48,13 @@ use std::hash::Hash;
 ///
 ///       fn as_target_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, Self::Target> {
 ///           (self.value, self.bar).as_value(context)
+///       }
+///
+///       fn as_bytes_and_ptrs(&self, context: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
+///           vec![
+///               bytemuck::cast_ref::<u32, [u8; 4]>(&self.value).to_vec().into(),
+///               bytemuck::cast_ref::<f32, [u8; 4]>(&self.bar).to_vec().into(),
+///           ]
 ///       }
 ///   }
 ///   ```
@@ -87,6 +94,44 @@ pub trait TransparentValue<'ink> {
 
     /// Converts the instance to the target value
     fn as_target_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, Self::Target>;
+
+    /// Converts the instance to bytes and pointers. All pointers remain pointer values, whereas
+    /// all other value types are converted to bytes.
+    fn as_bytes_and_ptrs(&self, context: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>>;
+}
+
+/// Contains either a value converted to bytes or a pointer to the value.
+///
+/// This is used for generating constant enum types.
+#[derive(Clone, Debug)]
+pub enum BytesOrPtr<'ink> {
+    Bytes(Vec<u8>),
+    UntypedPtr(PointerValue<'ink>),
+}
+
+impl<'ink> From<Vec<u8>> for BytesOrPtr<'ink> {
+    fn from(bytes: Vec<u8>) -> Self {
+        BytesOrPtr::Bytes(bytes)
+    }
+}
+
+impl<'ink> From<PointerValue<'ink>> for BytesOrPtr<'ink> {
+    fn from(ptr: PointerValue<'ink>) -> Self {
+        BytesOrPtr::UntypedPtr(ptr)
+    }
+}
+
+/// Converts a value to its raw byte representation, while leaving pointers intact.
+pub trait AsBytesAndPtrs<'ink> {
+    /// Converts the instance to bytes and pointers.  All pointers remain pointer values, whereas
+    /// all other value types are converted to bytes.
+    fn as_bytes_and_ptrs(&self, context: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>>;
+}
+
+/// Signals whether the instance can construct a matching LLVM constant IR value.
+pub trait HasConstValue {
+    /// Returns whether the instance can be converted into an LLVM IR value.
+    fn has_const_value() -> bool;
 }
 
 /// The context in which an `IrType` operates.
@@ -386,6 +431,15 @@ impl<
         context: &IrValueContext<'ink, '_, '_>,
     ) -> PointerValue<'ink> {
         <T::Target as AddressableType<'ink, I>>::ptr_cast(value, context)
+    }
+}
+
+impl<'ink, T> HasConstValue for T
+where
+    T: TransparentValue<'ink>,
+{
+    fn has_const_value() -> bool {
+        true
     }
 }
 

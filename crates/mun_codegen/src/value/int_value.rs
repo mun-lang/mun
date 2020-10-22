@@ -1,6 +1,6 @@
 use super::{
-    AddressableType, AsValue, ConcreteValueType, IrTypeContext, IrValueContext, PointerValueType,
-    SizedValueType, Value,
+    AddressableType, AsBytesAndPtrs, AsValue, BytesOrPtr, ConcreteValueType, HasConstValue,
+    IrTypeContext, IrValueContext, PointerValueType, SizedValueType, Value,
 };
 use inkwell::AddressSpace;
 
@@ -24,6 +24,12 @@ macro_rules! impl_as_int_ir_value {
             }
 
             impl<'ink> AddressableType<'ink, $ty> for $ty {}
+
+            impl HasConstValue for $ty {
+                fn has_const_value() -> bool {
+                    true
+                }
+            }
         )*
     }
 }
@@ -108,5 +114,53 @@ impl<'ink> AsValue<'ink, i64> for i64 {
             <Self as SizedValueType>::get_ir_type(context.type_context)
                 .const_int(*self as u64, true),
         )
+    }
+}
+
+impl<'ink> AsBytesAndPtrs<'ink> for u8 {
+    fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
+        vec![bytemuck::cast_ref::<u8, [u8; 1]>(self).to_vec().into()]
+    }
+}
+
+impl<'ink> AsBytesAndPtrs<'ink> for u16 {
+    fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
+        vec![bytemuck::cast_ref::<u16, [u8; 2]>(self).to_vec().into()]
+    }
+}
+
+impl<'ink> AsBytesAndPtrs<'ink> for u32 {
+    fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
+        vec![bytemuck::cast_ref::<u32, [u8; 4]>(self).to_vec().into()]
+    }
+}
+
+impl<'ink> AsBytesAndPtrs<'ink> for u64 {
+    fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
+        vec![bytemuck::cast_ref::<u64, [u8; 8]>(self).to_vec().into()]
+    }
+}
+
+impl<'ink> AsBytesAndPtrs<'ink> for i8 {
+    fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
+        vec![bytemuck::cast_ref::<i8, [u8; 1]>(self).to_vec().into()]
+    }
+}
+
+impl<'ink> AsBytesAndPtrs<'ink> for i16 {
+    fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
+        vec![bytemuck::cast_ref::<i16, [u8; 2]>(self).to_vec().into()]
+    }
+}
+
+impl<'ink> AsBytesAndPtrs<'ink> for i32 {
+    fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
+        vec![bytemuck::cast_ref::<i32, [u8; 4]>(self).to_vec().into()]
+    }
+}
+
+impl<'ink> AsBytesAndPtrs<'ink> for i64 {
+    fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
+        vec![bytemuck::cast_ref::<i64, [u8; 8]>(self).to_vec().into()]
     }
 }
