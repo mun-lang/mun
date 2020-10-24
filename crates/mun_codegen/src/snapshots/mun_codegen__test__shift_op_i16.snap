@@ -6,7 +6,7 @@ expression: "pub fn leftshift(a: i16, b: i16) -> i16 { a << b }\npub fn rightshi
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
 
-%"mun_codegen::ir::types::TypeInfo" = type { [16 x i8], i8*, i32, i8, i8 }
+%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 
 @global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
 
@@ -27,9 +27,9 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%"mun_codegen::ir::types::TypeInfo" = type { [16 x i8], i8*, i32, i8, i8 }
+%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 
 @"type_info::<core::i16>::name" = private unnamed_addr constant [10 x i8] c"core::i16\00"
-@"type_info::<core::i16>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" { [16 x i8] c"\05\CD|\F8Bv\D8\B1\E8\8B\8C\D8\8D\B5\89\B0", i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::i16>::name", i32 0, i32 0), i32 16, i8 2, i8 0 }
+@"type_info::<core::i16>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" <{ [0 x i64] zeroinitializer, [16 x i8] c"\05\CD|\F8Bv\D8\B1\E8\8B\8C\D8\8D\B5\89\B0", [0 x i64] zeroinitializer, i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::i16>::name", i32 0, i32 0), [0 x i64] zeroinitializer, i32 16, [0 x i64] zeroinitializer, i8 2, [0 x i64] zeroinitializer, i8 0, [1 x i16] zeroinitializer }>
 @global_type_table = constant [1 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::i16>"]
 

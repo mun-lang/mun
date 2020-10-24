@@ -1,4 +1,5 @@
 use crate::value::{AsValue, IrValueContext, SizedValueType, TransparentValue, Value};
+use itertools::Itertools;
 use mun_codegen_macros::AsValue;
 
 impl<'ink> TransparentValue<'ink> for abi::Guid {

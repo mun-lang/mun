@@ -6,7 +6,7 @@ expression: "pub fn assign_bitand(a: i8, b: i8) -> i8 {\n    a &= b;\n    a\n}\n
 ; ModuleID = 'main.mun'
 source_filename = "main.mun"
 
-%"mun_codegen::ir::types::TypeInfo" = type { [16 x i8], i8*, i32, i8, i8 }
+%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 
 @global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
 
@@ -33,9 +33,9 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%"mun_codegen::ir::types::TypeInfo" = type { [16 x i8], i8*, i32, i8, i8 }
+%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 
 @"type_info::<core::i8>::name" = private unnamed_addr constant [9 x i8] c"core::i8\00"
-@"type_info::<core::i8>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" { [16 x i8] c"\EF\C4\B1Z\E7\12\B1\91q\F1\0B\80U\FC\A6\0F", i8* getelementptr inbounds ([9 x i8], [9 x i8]* @"type_info::<core::i8>::name", i32 0, i32 0), i32 8, i8 1, i8 0 }
+@"type_info::<core::i8>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" <{ [0 x i64] zeroinitializer, [16 x i8] c"\EF\C4\B1Z\E7\12\B1\91q\F1\0B\80U\FC\A6\0F", [0 x i64] zeroinitializer, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @"type_info::<core::i8>::name", i32 0, i32 0), [0 x i64] zeroinitializer, i32 8, [0 x i64] zeroinitializer, i8 1, [0 x i64] zeroinitializer, i8 0, [1 x i16] zeroinitializer }>
 @global_type_table = constant [1 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::i8>"]
 
