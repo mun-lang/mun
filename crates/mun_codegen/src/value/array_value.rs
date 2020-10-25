@@ -1,10 +1,12 @@
-use crate::value::{
-    AddressableType, AsValue, ConcreteValueType, IrTypeContext, IrValueContext, PointerValueType,
-    SizedValueType, TypeValue, Value, ValueType,
+use super::{
+    AddressableType, AsValue, ConcreteValueType, HasConstValue, IrTypeContext, IrValueContext,
+    PointerValueType, SizedValueType, TypeValue, Value, ValueType,
 };
-use inkwell::types::{BasicType, PointerType};
-use inkwell::values::PointerValue;
-use inkwell::AddressSpace;
+use inkwell::{
+    types::{BasicType, PointerType},
+    values::PointerValue,
+    AddressSpace,
+};
 
 impl<'ink, T: ConcreteValueType<'ink>> ConcreteValueType<'ink> for [T] {
     type Value = inkwell::values::ArrayValue<'ink>;
@@ -90,6 +92,12 @@ macro_rules! impl_array(
 impl_array!(
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 20, 24, 32, 36, 0x40, 0x80, 0x100
 );
+
+impl<'ink, T: ConcreteValueType<'ink> + HasConstValue> HasConstValue for &[T] {
+    fn has_const_value() -> bool {
+        T::has_const_value()
+    }
+}
 
 impl<'ink, E: SizedValueType<'ink>, T: AsValue<'ink, E>> AsValue<'ink, [E]> for &[T]
 where

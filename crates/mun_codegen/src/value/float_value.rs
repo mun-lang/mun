@@ -1,8 +1,7 @@
 use super::{
-    AsValue, ConcreteValueType, IrTypeContext, IrValueContext, PointerValueType, SizedValueType,
-    Value,
+    AddressableType, AsBytesAndPtrs, AsValue, BytesOrPtr, ConcreteValueType, HasConstValue,
+    IrTypeContext, IrValueContext, PointerValueType, SizedValueType, Value,
 };
-use crate::value::AddressableType;
 use inkwell::{types::PointerType, AddressSpace};
 
 impl<'ink> ConcreteValueType<'ink> for f32 {
@@ -44,6 +43,18 @@ impl<'ink> PointerValueType<'ink> for f64 {
 impl<'ink> AddressableType<'ink, f32> for f32 {}
 impl<'ink> AddressableType<'ink, f64> for f64 {}
 
+impl HasConstValue for f32 {
+    fn has_const_value() -> bool {
+        true
+    }
+}
+
+impl HasConstValue for f64 {
+    fn has_const_value() -> bool {
+        true
+    }
+}
+
 impl<'ink> AsValue<'ink, f32> for f32 {
     fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, f32> {
         Value::from_raw(
@@ -51,10 +62,23 @@ impl<'ink> AsValue<'ink, f32> for f32 {
         )
     }
 }
+
 impl<'ink> AsValue<'ink, f64> for f64 {
     fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, f64> {
         Value::from_raw(
             <Self as SizedValueType>::get_ir_type(context.type_context).const_float(*self),
         )
+    }
+}
+
+impl<'ink> AsBytesAndPtrs<'ink> for f32 {
+    fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
+        vec![bytemuck::cast_ref::<f32, [u8; 4]>(self).to_vec().into()]
+    }
+}
+
+impl<'ink> AsBytesAndPtrs<'ink> for f64 {
+    fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
+        vec![bytemuck::cast_ref::<f64, [u8; 8]>(self).to_vec().into()]
     }
 }

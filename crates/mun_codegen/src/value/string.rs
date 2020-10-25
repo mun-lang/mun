@@ -1,4 +1,4 @@
-use super::{AsValue, Global, IrValueContext, TransparentValue, Value};
+use super::{AsValue, BytesOrPtr, Global, IrTypeContext, IrValueContext, TransparentValue, Value};
 use std::ffi::{CStr, CString};
 
 /// Enables internalizing certain data structures like strings.
@@ -57,6 +57,12 @@ impl<'ink> TransparentValue<'ink> for CString {
     fn as_target_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, Self::Target> {
         self.as_bytes_with_nul().as_value(context)
     }
+
+    fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
+        unreachable!(
+            "`as_bytes_and_ptrs` should never be called on a `String`, as it cannot be a member of an enum."
+        )
+    }
 }
 
 impl<'ink> TransparentValue<'ink> for String {
@@ -64,5 +70,11 @@ impl<'ink> TransparentValue<'ink> for String {
 
     fn as_target_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, Self::Target> {
         self.as_bytes().as_value(context)
+    }
+
+    fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
+        unreachable!(
+            "`as_bytes_and_ptrs` should never be called on a `String`, as it cannot be a member of an enum."
+        );
     }
 }

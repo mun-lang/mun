@@ -1,4 +1,6 @@
-use crate::value::{AsValue, IrValueContext, SizedValueType, TransparentValue, Value};
+use crate::value::{
+    AsValue, BytesOrPtr, IrTypeContext, IrValueContext, SizedValueType, TransparentValue, Value,
+};
 use itertools::Itertools;
 use mun_codegen_macros::AsValue;
 
@@ -8,6 +10,10 @@ impl<'ink> TransparentValue<'ink> for abi::Guid {
     fn as_target_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, Self::Target> {
         self.0.as_value(context)
     }
+
+    fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
+        vec![self.0.to_vec().into()]
+    }
 }
 
 impl<'ink> TransparentValue<'ink> for abi::Privacy {
@@ -15,6 +21,10 @@ impl<'ink> TransparentValue<'ink> for abi::Privacy {
 
     fn as_target_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, Self::Target> {
         (*self as u8).as_value(context)
+    }
+
+    fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
+        vec![vec![*self as u8].into()]
     }
 }
 
@@ -24,6 +34,10 @@ impl<'ink> TransparentValue<'ink> for abi::TypeGroup {
     fn as_target_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, Self::Target> {
         (*self as u8).as_value(context)
     }
+
+    fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
+        vec![vec![*self as u8].into()]
+    }
 }
 
 impl<'ink> TransparentValue<'ink> for abi::StructMemoryKind {
@@ -31,6 +45,10 @@ impl<'ink> TransparentValue<'ink> for abi::StructMemoryKind {
 
     fn as_target_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, Self::Target> {
         (self.clone() as u8).as_value(context)
+    }
+
+    fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
+        vec![vec![self.clone() as u8].into()]
     }
 }
 
