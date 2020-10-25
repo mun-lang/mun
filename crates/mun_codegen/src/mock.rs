@@ -2,7 +2,8 @@ use crate::{
     db::{CodeGenDatabase, CodeGenDatabaseStorage},
     OptimizationLevel,
 };
-use hir::{FileId, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
+use hir::{FileId, HirDatabase, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
+use mun_target::spec::Target;
 use parking_lot::Mutex;
 use std::sync::Arc;
 
@@ -15,7 +16,6 @@ use std::sync::Arc;
     hir::HirDatabaseStorage,
     CodeGenDatabaseStorage
 )]
-#[derive(Default)]
 pub(crate) struct MockDatabase {
     storage: salsa::Storage<Self>,
     events: Mutex<Option<Vec<salsa::Event>>>,
@@ -57,6 +57,18 @@ impl hir::Upcast<dyn hir::HirDatabase> for MockDatabase {
 impl hir::Upcast<dyn CodeGenDatabase> for MockDatabase {
     fn upcast(&self) -> &dyn CodeGenDatabase {
         &*self
+    }
+}
+
+impl Default for MockDatabase {
+    fn default() -> Self {
+        let mut db: MockDatabase = MockDatabase {
+            storage: Default::default(),
+            events: Default::default(),
+        };
+        db.set_optimization_level(OptimizationLevel::Default);
+        db.set_target(Target::host_target().unwrap());
+        db
     }
 }
 

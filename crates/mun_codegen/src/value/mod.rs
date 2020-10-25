@@ -103,7 +103,7 @@ pub trait TransparentValue<'ink> {
 /// Contains either a value converted to bytes or a pointer to the value.
 ///
 /// This is used for generating constant enum types.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum BytesOrPtr<'ink> {
     Bytes(Vec<u8>),
     UntypedPtr(PointerValue<'ink>),
@@ -451,4 +451,51 @@ where
     fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, T> {
         Value::from_raw(self.as_target_value(context).value)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AsBytesAndPtrs, HasConstValue};
+    use crate::{code_gen::CodeGenContext, mock::MockDatabase, value::IrTypeContext};
+    use bytemuck::from_bytes;
+    use std::mem::size_of;
+
+    macro_rules! test_as_bytes_and_ptrs_primitive {
+        ($($ty:ty),+) => {
+            $(
+                paste::item! {
+                    #[test]
+                    fn [<test_has_const_value_ $ty>]() {
+                        assert_eq!($ty::has_const_value(), true);
+                    }
+                }
+                paste::item! {
+                    #[test]
+                    fn [<test_as_bytes_and_ptrs_ $ty>]() {
+                        let bytes: Vec<u8> = (0..(size_of::<$ty>() as u8)).collect();
+                        let value = from_bytes::<$ty>(&bytes);
+
+                        let inkwell_context = inkwell::context::Context::create();
+
+                        let db = MockDatabase::default();
+                        let codegen_context = CodeGenContext::new(&inkwell_context, &db);
+
+                        let target_data = codegen_context.target_machine.get_target_data();
+                        let type_context = IrTypeContext {
+                            context: &inkwell_context,
+                            target_data: &target_data,
+                            struct_types: &codegen_context.rust_types,
+                        };
+
+                        assert_eq!(
+                            value.as_bytes_and_ptrs(&type_context),
+                            vec![bytes.into()],
+                        );
+                    }
+                }
+            )+
+        };
+    }
+
+    test_as_bytes_and_ptrs_primitive!(u8, u16, u32, u64, i8, i16, i32, i64, f32, f64);
 }
