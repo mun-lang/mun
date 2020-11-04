@@ -7,7 +7,7 @@ use std::sync::Arc;
 /// Represents an atomic change to the state of the `Analysis`
 #[derive(Default)]
 pub struct AnalysisChange {
-    new_roots: Vec<hir::SourceRootId>,
+    new_roots: Vec<(hir::SourceRootId, hir::PackageId)>,
     roots_changed: HashMap<hir::SourceRootId, RootChange>,
     files_changed: Vec<(hir::FileId, Arc<String>)>,
 }
@@ -35,8 +35,8 @@ impl AnalysisChange {
     }
 
     /// Records the addition of a new root
-    pub fn add_root(&mut self, root_id: hir::SourceRootId) {
-        self.new_roots.push(root_id);
+    pub fn add_root(&mut self, root_id: hir::SourceRootId, package_id: hir::PackageId) {
+        self.new_roots.push((root_id, package_id));
     }
 
     /// Records the addition of a new file to a root
@@ -115,9 +115,10 @@ impl AnalysisDatabase {
     /// Applies the specified change to the database
     pub(crate) fn apply_change(&mut self, change: AnalysisChange) {
         // Add new source roots
-        for root_id in change.new_roots {
+        for (root_id, package_id) in change.new_roots {
             let root = hir::SourceRoot::new();
-            self.set_source_root(root_id, Arc::new(root))
+            self.set_source_root(root_id, Arc::new(root));
+            self.set_package_source_root(package_id, root_id);
         }
 
         // Modify existing source roots

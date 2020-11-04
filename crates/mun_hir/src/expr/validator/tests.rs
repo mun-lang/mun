@@ -1,10 +1,9 @@
 use crate::{
-    db::DefDatabase,
     diagnostics::DiagnosticSink,
     expr::validator::{ExprValidator, TypeAliasValidator},
     fixture::WithFixture,
     mock::MockDatabase,
-    ModuleDef,
+    ModuleDef, Package,
 };
 use std::fmt::Write;
 
@@ -80,7 +79,7 @@ fn test_free_type_alias_without_type_ref() {
 }
 
 fn diagnostics(content: &str) -> String {
-    let (db, file_id) = MockDatabase::with_single_file(content);
+    let (db, _file_id) = MockDatabase::with_single_file(content);
 
     let mut diags = String::new();
 
@@ -88,13 +87,17 @@ fn diagnostics(content: &str) -> String {
         write!(diags, "{}: {}\n", diag.highlight_range(), diag.message()).unwrap();
     });
 
-    for item in db.module_data(file_id).definitions() {
+    for item in Package::all(&db)
+        .iter()
+        .flat_map(|pkg| pkg.modules(&db))
+        .flat_map(|module| module.declarations(&db))
+    {
         match item {
             ModuleDef::Function(item) => {
-                ExprValidator::new(*item, &db).validate_body(&mut diag_sink);
+                ExprValidator::new(item, &db).validate_body(&mut diag_sink);
             }
             ModuleDef::TypeAlias(item) => {
-                TypeAliasValidator::new(*item, &db).validate_target_type_existence(&mut diag_sink);
+                TypeAliasValidator::new(item, &db).validate_target_type_existence(&mut diag_sink);
             }
             _ => {}
         }

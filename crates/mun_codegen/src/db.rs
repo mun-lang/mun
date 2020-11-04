@@ -22,7 +22,7 @@ pub trait CodeGenDatabase: hir::HirDatabase + hir::Upcast<dyn hir::HirDatabase> 
     /// Returns a fully linked shared object for the specified group of files.
     /// TODO: Current, a group always consists of a single file. Need to add support for multiple.
     #[salsa::invoke(crate::assembly::build_assembly)]
-    fn assembly(&self, file: hir::FileId) -> Arc<Assembly>;
+    fn assembly(&self, module: hir::Module) -> Arc<Assembly>;
 }
 
 /// Constructs the primary interface to the complete machine description for the target machine. All

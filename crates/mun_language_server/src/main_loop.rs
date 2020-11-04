@@ -111,7 +111,7 @@ impl LanguageServerState {
             config
                 .workspace_roots
                 .into_iter()
-                .map(|root| RootEntry::new(root, Box::new(MunFilter {})))
+                .map(|root| RootEntry::new(root.join("src"), Box::new(MunFilter {})))
                 .collect(),
             task_sender,
             ra_vfs::Watch(config.watcher == FilesWatcher::Notify),
@@ -121,7 +121,7 @@ impl LanguageServerState {
         let mut source_roots = Vec::new();
         let mut change = AnalysisChange::new();
         for root in vfs.1.iter() {
-            change.add_root(hir::SourceRootId(root.0));
+            change.add_root(hir::SourceRootId(root.0), hir::PackageId(root.0));
             source_roots.push(hir::SourceRootId(root.0));
         }
 

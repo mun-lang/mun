@@ -211,6 +211,7 @@ Grammar(
             options: ["TypeRef"],
             traits: [
                 "NameOwner",
+                "VisibilityOwner",
                 "DocCommentsOwner",
             ]
         ),

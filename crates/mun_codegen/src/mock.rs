@@ -90,6 +90,7 @@ impl MockDatabase {
 
         db.set_source_root(source_root_id, Arc::new(source_root));
         db.set_optimization_level(OptimizationLevel::None);
+        db.set_package_source_root(hir::PackageId(0), source_root_id);
 
         (db, file_id)
     }

@@ -149,7 +149,7 @@ impl Ty {
     pub fn guid_string(&self, db: &dyn HirDatabase) -> Option<String> {
         self.as_simple().and_then(|ty_ctor| match ty_ctor {
             TypeCtor::Struct(s) => {
-                let name = s.name(db.upcast()).to_string();
+                let name = s.name(db).to_string();
 
                 Some(if s.data(db.upcast()).memory_kind == StructMemoryKind::GC {
                     format!("struct {}", name)
@@ -270,8 +270,8 @@ impl HirDisplay for ApplicationTy {
             TypeCtor::Float(ty) => write!(f, "{}", ty),
             TypeCtor::Int(ty) => write!(f, "{}", ty),
             TypeCtor::Bool => write!(f, "bool"),
-            TypeCtor::Struct(def) => write!(f, "{}", def.name(f.db.upcast())),
-            TypeCtor::TypeAlias(def) => write!(f, "{}", def.name(f.db.upcast())),
+            TypeCtor::Struct(def) => write!(f, "{}", def.name(f.db)),
+            TypeCtor::TypeAlias(def) => write!(f, "{}", def.name(f.db)),
             TypeCtor::Never => write!(f, "never"),
             TypeCtor::FnDef(CallableDef::Function(def)) => {
                 let sig = fn_sig_for_fn(f.db, def);
@@ -283,7 +283,7 @@ impl HirDisplay for ApplicationTy {
             }
             TypeCtor::FnDef(CallableDef::Struct(def)) => {
                 let sig = fn_sig_for_struct_constructor(f.db, def);
-                let name = def.name(f.db.upcast());
+                let name = def.name(f.db);
                 write!(f, "ctor {}", name)?;
                 write!(f, "(")?;
                 f.write_joined(sig.params(), ", ")?;

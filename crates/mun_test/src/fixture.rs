@@ -1,7 +1,7 @@
 use compiler::RelativePathBuf;
 use itertools::Itertools;
 
-const DEFAULT_FILE_NAME: &str = "main.mun";
+const DEFAULT_FILE_NAME: &str = "mod.mun";
 const META_LINE: &str = "//-";
 
 /// A `Fixture` describes an single file in a project workspace. `Fixture`s can be parsed from a

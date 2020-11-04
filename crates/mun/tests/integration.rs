@@ -48,7 +48,7 @@ fn build_and_run(project: impl AsRef<Path>) {
     ];
     assert_eq!(run_with_args(args).unwrap(), mun::ExitStatus::Success);
 
-    let library_path = project.as_ref().join("target/main.munlib");
+    let library_path = project.as_ref().join("target/mod.munlib");
     assert!(library_path.is_file());
 
     let runtime = RuntimeBuilder::new(&library_path).spawn().unwrap();

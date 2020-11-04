@@ -7,8 +7,8 @@ use crate::{
 };
 use hir::{
     ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDatabase, HirDisplay, InferenceResult,
-    Literal, LogicOp, Name, Ordering, Pat, PatId, Path, Resolution, ResolveBitness, Resolver,
-    Statement, TypeCtor, UnaryOp,
+    Literal, LogicOp, Name, Ordering, Pat, PatId, Path, ResolveBitness, Resolver, Statement,
+    TypeCtor, UnaryOp, ValueNs,
 };
 use inkwell::{
     basic_block::BasicBlock,
@@ -209,7 +209,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 tail,
             } => self.gen_block(expr, statements, *tail),
             Expr::Path(ref p) => {
-                let resolver = hir::resolver_for_expr(self.body.clone(), self.db, expr);
+                let resolver = hir::resolver_for_expr(self.db.upcast(), self.body.owner(), expr);
                 Some(self.gen_path_expr(p, expr, &resolver))
             }
             Expr::Literal(lit) => Some(self.gen_literal(lit, expr)),
@@ -412,7 +412,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 struct_ir_ty
                     .ptr_type(AddressSpace::Generic)
                     .ptr_type(AddressSpace::Generic),
-                &format!("{}_ptr_ptr", hir_struct.name(self.db.upcast()).to_string()),
+                &format!("{}_ptr_ptr", hir_struct.name(self.db).to_string()),
             )
             .into_pointer_value();
 
@@ -421,7 +421,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .builder
             .build_load(
                 struct_ptr_ptr,
-                &format!("{}_mem_ptr", hir_struct.name(self.db.upcast()).to_string()),
+                &format!("{}_mem_ptr", hir_struct.name(self.db).to_string()),
             )
             .into_pointer_value();
 
@@ -557,13 +557,12 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         expr: ExprId,
         resolver: &Resolver,
     ) -> inkwell::values::BasicValueEnum<'ink> {
-        let resolution = resolver
-            .resolve_path_without_assoc_items(self.db, path)
-            .take_values()
-            .expect("unknown path");
-
-        match resolution {
-            Resolution::LocalBinding(pat) => {
+        match resolver
+            .resolve_path_as_value_fully(self.db.upcast(), path)
+            .expect("unknown path")
+            .0
+        {
+            ValueNs::LocalBinding(pat) => {
                 if let Some(param) = self.pat_to_param.get(&pat) {
                     *param
                 } else if let Some(ptr) = self.pat_to_local.get(&pat) {
@@ -573,8 +572,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     unreachable!("could not find the pattern..");
                 }
             }
-            Resolution::Def(hir::ModuleDef::Struct(_)) => self.gen_unit_struct_lit(expr),
-            Resolution::Def(_) => panic!("no support for module definitions"),
+            ValueNs::StructId(_) => self.gen_unit_struct_lit(expr),
+            ValueNs::FunctionId(_) => panic!("unable to generate path expression from a function"),
         }
     }
 
@@ -605,17 +604,18 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         _expr: ExprId,
         resolver: &Resolver,
     ) -> inkwell::values::PointerValue<'ink> {
-        let resolution = resolver
-            .resolve_path_without_assoc_items(self.db, path)
-            .take_values()
-            .expect("unknown path");
-
-        match resolution {
-            Resolution::LocalBinding(pat) => *self
+        match resolver
+            .resolve_path_as_value_fully(self.db.upcast(), path)
+            .expect("unknown path")
+            .0
+        {
+            ValueNs::LocalBinding(pat) => *self
                 .pat_to_local
                 .get(&pat)
                 .expect("unresolved local binding"),
-            Resolution::Def(_) => panic!("no support for module definitions"),
+            ValueNs::FunctionId(_) | ValueNs::StructId(_) => {
+                panic!("no support for module definitions")
+            }
         }
     }
 
@@ -1043,7 +1043,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         let body = self.body.clone();
         match &body[expr] {
             Expr::Path(ref p) => {
-                let resolver = hir::resolver_for_expr(self.body.clone(), self.db, expr);
+                let resolver = hir::resolver_for_expr(self.db.upcast(), self.body.owner(), expr);
                 self.gen_path_place_expr(p, expr, &resolver)
             }
             Expr::Field {
@@ -1325,7 +1325,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .as_struct()
             .expect("expected a struct");
 
-        let hir_struct_name = hir_struct.name(self.db.upcast());
+        let hir_struct_name = hir_struct.name(self.db);
 
         let field_idx = hir_struct
             .field(self.db, name)
@@ -1376,7 +1376,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .as_struct()
             .expect("expected a struct");
 
-        let hir_struct_name = hir_struct.name(self.db.upcast());
+        let hir_struct_name = hir_struct.name(self.db);
 
         let field_idx = hir_struct
             .field(self.db, name)

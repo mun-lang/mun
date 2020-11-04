@@ -28,7 +28,7 @@ impl CompileTestDriver {
             ..Config::default()
         };
         let input = PathOrInline::Inline {
-            rel_path: RelativePathBuf::from("main.mun"),
+            rel_path: RelativePathBuf::from("mod.mun"),
             contents: text.to_owned(),
         };
         let (mut driver, file_id) = Driver::with_file(config, input).unwrap();
@@ -43,8 +43,10 @@ impl CompileTestDriver {
                     .expect("compiler errors are not UTF-8 formatted")
             )
         }
-        let out_path = driver.assembly_output_path(file_id);
-        driver.write_assembly(file_id, true).unwrap();
+
+        driver.write_all_assemblies(true).unwrap();
+        let out_path = driver.assembly_output_path_from_file(file_id);
+
         CompileTestDriver {
             _temp_dir: temp_dir,
             driver,
@@ -69,8 +71,8 @@ impl CompileTestDriver {
                     .expect("compiler errors are not UTF-8 formatted")
             )
         }
-        let out_path = self.driver.assembly_output_path(self.file_id);
-        self.driver.write_assembly(self.file_id, true).unwrap();
+        self.driver.write_all_assemblies(true).unwrap();
+        let out_path = self.driver.assembly_output_path_from_file(self.file_id);
         assert_eq!(
             &out_path, &self.out_path,
             "recompiling did not result in the same assembly"

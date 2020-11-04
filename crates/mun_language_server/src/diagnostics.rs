@@ -1,6 +1,5 @@
 use crate::db::AnalysisDatabase;
-use hir::AstDatabase;
-use hir::InFile;
+use hir::{AstDatabase, InFile, ModuleId, PackageId, SourceDatabase};
 use mun_diagnostics::DiagnosticForWith;
 use mun_syntax::{Location, TextRange};
 use std::cell::RefCell;
@@ -60,7 +59,16 @@ pub(crate) fn diagnostics(db: &AnalysisDatabase, file_id: hir::FileId) -> Vec<Di
             }
         }));
     });
-    hir::Module::from(file_id).diagnostics(db, &mut sink);
+
+    let package_id = PackageId(0);
+    let module_tree = db.module_tree(package_id);
+    if let Some(local_id) = module_tree.module_for_file(file_id) {
+        let module_id = ModuleId {
+            package: package_id,
+            local_id,
+        };
+        hir::Module::from(module_id).diagnostics(db, &mut sink);
+    }
     drop(sink);
 
     // Returns the result

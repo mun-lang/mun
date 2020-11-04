@@ -41,7 +41,7 @@ version="0.1.0"
         let src_path = create_in.join("src");
         create_dir(&src_path)?;
 
-        let main_file_path = src_path.join("main.mun");
+        let main_file_path = src_path.join("mod.mun");
 
         write(
             &main_file_path,

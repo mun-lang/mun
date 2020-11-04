@@ -58,8 +58,9 @@ fn top_level_items() {
     insta::assert_snapshot!(print_item_tree(
         r#"
     fn foo(a:i32, b:u8, c:String) -> i32 {}
-    fn bar(a:i32, b:u8, c:String) ->  {}
-    fn baz(a:i32, b:, c:String) ->  {}
+    pub fn bar(a:i32, b:u8, c:String) ->  {}
+    pub(super) fn bar(a:i32, b:u8, c:String) ->  {}
+    pub(package) fn baz(a:i32, b:, c:String) ->  {}
     extern fn eval(a:String) -> bool;
 
     struct Foo {

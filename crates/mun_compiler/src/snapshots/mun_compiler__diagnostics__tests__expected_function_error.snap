@@ -7,19 +7,9 @@ error: cannot find value `Foo` in this scope
   |
 4 | let a = Foo();
   |         ^^^ not found in this scope
-  |error: expected function, found `{unknown}`
- --> main.mun:4:9
-  |
-4 | let a = Foo();
-  |         ^^^ not a function
   |error: cannot find value `Bar` in this scope
  --> main.mun:6:9
   |
 6 | let b = Bar();
   |         ^^^ not found in this scope
-  |error: expected function, found `{unknown}`
- --> main.mun:6:9
-  |
-6 | let b = Bar();
-  |         ^^^ not a function
   |

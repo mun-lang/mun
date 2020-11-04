@@ -27,7 +27,7 @@ pub fn compile_and_watch_manifest(
 
     // Emit all current errors, and write the assemblies if no errors occured
     if !driver.emit_diagnostics(&mut stderr())? {
-        driver.write_all_assemblies()?
+        driver.write_all_assemblies(false)?
     }
 
     // Insert Ctrl+C handler so we can gracefully quit
@@ -49,7 +49,7 @@ pub fn compile_and_watch_manifest(
                     log::info!("Modifying {}", relative_path);
                     driver.update_file(relative_path, file_contents);
                     if !driver.emit_diagnostics(&mut stderr())? {
-                        driver.write_all_assemblies()?;
+                        driver.write_all_assemblies(false)?;
                     }
                 }
                 Create(ref path) if is_source_file(path) => {
@@ -58,17 +58,18 @@ pub fn compile_and_watch_manifest(
                     log::info!("Creating {}", relative_path);
                     driver.add_file(relative_path, file_contents);
                     if !driver.emit_diagnostics(&mut stderr())? {
-                        driver.write_all_assemblies()?;
+                        driver.write_all_assemblies(false)?;
                     }
                 }
                 Remove(ref path) if is_source_file(path) => {
                     // Simply remove the source file from the source root
                     let relative_path = compute_source_relative_path(&source_directory, path)?;
                     log::info!("Removing {}", relative_path);
-                    let assembly_path = driver.assembly_output_path(driver.get_file_id_for_path(&relative_path).expect("cannot remove a file that was not part of the compilation in the first place"));
-                    if assembly_path.is_file() {
-                        std::fs::remove_file(assembly_path)?;
-                    }
+                    // TODO: Remove assembly files if there are no files referencing it.
+                    // let assembly_path = driver.assembly_output_path(driver.get_file_id_for_path(&relative_path).expect("cannot remove a file that was not part of the compilation in the first place"));
+                    // if assembly_path.is_file() {
+                    //     std::fs::remove_file(assembly_path)?;
+                    // }
                     driver.remove_file(relative_path);
                     driver.emit_diagnostics(&mut stderr())?;
                 }
@@ -82,7 +83,7 @@ pub fn compile_and_watch_manifest(
                     log::info!("Renaming {} to {}", from_relative_path, to_relative_path,);
                     driver.rename(from_relative_path, to_relative_path);
                     if !driver.emit_diagnostics(&mut stderr())? {
-                        driver.write_all_assemblies()?;
+                        driver.write_all_assemblies(false)?;
                     }
                 }
                 _ => {}

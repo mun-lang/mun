@@ -1,7 +1,7 @@
 use super::*;
 use crate::T;
 
-pub(super) const DECLARATION_RECOVERY_SET: TokenSet = token_set![FN_KW, PUB_KW, STRUCT_KW];
+pub(super) const DECLARATION_RECOVERY_SET: TokenSet = TokenSet::new(&[T![fn], T![pub], T![struct]]);
 
 pub(super) fn mod_contents(p: &mut Parser) {
     while !p.at(EOF) {
@@ -77,7 +77,7 @@ pub(super) fn fn_def(p: &mut Parser) {
     assert!(p.at(T![fn]));
     p.bump(T![fn]);
 
-    name_recovery(p, DECLARATION_RECOVERY_SET.union(token_set![L_PAREN]));
+    name_recovery(p, DECLARATION_RECOVERY_SET.union(TokenSet::new(&[T![')']])));
 
     if p.at(T!['(']) {
         params::param_list(p);

@@ -1,12 +1,10 @@
 use crate::{
-    adt::StructKind,
     arena::map::ArenaMap,
-    code_model::{DefWithBody, DefWithStruct, Struct},
+    code_model::{Struct, StructKind},
     diagnostics::DiagnosticSink,
-    expr,
     expr::{Body, Expr, ExprId, Literal, Pat, PatId, RecordLitField, Statement, UnaryOp},
     name_resolution::Namespace,
-    resolve::{Resolution, Resolver},
+    resolve::{Resolver, TypeNs, ValueNs},
     ty::infer::diagnostics::InferenceDiagnostic,
     ty::infer::type_variable::TypeVariableTable,
     ty::lower::LowerDiagnostic,
@@ -24,6 +22,8 @@ mod type_variable;
 mod unify;
 
 use crate::expr::{LiteralFloat, LiteralFloatKind, LiteralInt, LiteralIntKind};
+use crate::ids::DefWithBodyId;
+use crate::resolve::{resolver_for_expr, HasResolver};
 use crate::ty::primitives::{FloatTy, IntTy};
 use std::mem;
 pub use type_variable::TypeVarId;
@@ -84,13 +84,13 @@ impl InferenceResult {
 
 /// The entry point of type inference. This method takes a body and infers the types of all the
 /// expressions and patterns. Diagnostics are also reported and stored in the `InferenceResult`.
-pub fn infer_query(db: &dyn HirDatabase, def: DefWithBody) -> Arc<InferenceResult> {
-    let body = def.body(db);
-    let resolver = def.resolver(db);
+pub fn infer_query(db: &dyn HirDatabase, def: DefWithBodyId) -> Arc<InferenceResult> {
+    let body = db.body(def);
+    let resolver = def.resolver(db.upcast());
     let mut ctx = InferenceResultBuilder::new(db, body, resolver);
 
     match def {
-        DefWithBody::Function(_) => ctx.infer_signature(),
+        DefWithBodyId::FunctionId(_) => ctx.infer_signature(),
     }
 
     ctx.infer_body();
@@ -197,6 +197,7 @@ impl<'a> InferenceResultBuilder<'a> {
                     InferenceDiagnostic::UnresolvedType { id }
                 }
                 LowerDiagnostic::CyclicType { id } => InferenceDiagnostic::CyclicType { id },
+                LowerDiagnostic::TypeIsPrivate { id } => InferenceDiagnostic::TypeIsPrivate { id },
             };
             self.diagnostics.push(diag);
         }
@@ -294,7 +295,7 @@ impl<'a> InferenceResultBuilder<'a> {
             Expr::Missing => Ty::Unknown,
             Expr::Path(p) => {
                 // FIXME this could be more efficient...
-                let resolver = expr::resolver_for_expr(self.body.clone(), self.db, tgt_expr);
+                let resolver = resolver_for_expr(self.db.upcast(), self.body.owner(), tgt_expr);
                 self.infer_path_expr(&resolver, p, tgt_expr, check_params)
                     .unwrap_or(Ty::Unknown)
             }
@@ -312,7 +313,7 @@ impl<'a> InferenceResultBuilder<'a> {
                     let lhs_ty = self.infer_expr(*lhs, &lhs_expected);
                     if let BinaryOp::Assignment { op: _op } = op {
                         let resolver =
-                            expr::resolver_for_expr(self.body.clone(), self.db, tgt_expr);
+                            resolver_for_expr(self.db.upcast(), self.body.owner(), tgt_expr);
                         if !self.check_place_expression(&resolver, *lhs) {
                             self.diagnostics.push(InferenceDiagnostic::InvalidLHS {
                                 id: tgt_expr,
@@ -549,14 +550,16 @@ impl<'a> InferenceResultBuilder<'a> {
 
         match callee_ty {
             ty_app!(TypeCtor::Struct(s)) => {
-                // Erroneously found either a unit struct or tuple struct literal
-                let struct_data = s.data(self.db.upcast());
-                self.diagnostics
-                    .push(InferenceDiagnostic::MismatchedStructLit {
-                        id: tgt_expr,
-                        expected: struct_data.kind,
-                        found: StructKind::Tuple,
-                    });
+                // Erroneously found either a unit struct or record struct literal. Record struct
+                // literals can never be used as a value so that will have already been reported.
+                if s.data(self.db.upcast()).kind == StructKind::Unit {
+                    self.diagnostics
+                        .push(InferenceDiagnostic::MismatchedStructLit {
+                            id: tgt_expr,
+                            expected: StructKind::Unit,
+                            found: StructKind::Tuple,
+                        });
+                }
 
                 // Still derive subtypes
                 for arg in args.iter() {
@@ -580,6 +583,10 @@ impl<'a> InferenceResultBuilder<'a> {
                 }
 
                 ret_ty
+            }
+            Ty::Unknown => {
+                // Error has already been emitted somewhere else
+                Ty::Unknown
             }
             _ => {
                 self.diagnostics
@@ -680,35 +687,80 @@ impl<'a> InferenceResultBuilder<'a> {
         id: ExprId,
         check_params: &CheckParams,
     ) -> Option<Ty> {
-        let resolution = match resolver
-            .resolve_path_without_assoc_items(self.db, path)
-            .take_values()
-        {
-            Some(resolution) => resolution,
-            None => {
-                self.diagnostics
-                    .push(InferenceDiagnostic::UnresolvedValue { id: id.into() });
-                return None;
-            }
-        };
+        match resolver.resolve_path_as_value_fully(self.db.upcast(), path) {
+            Some((value, vis)) => {
+                // Check visibility of this item
+                if !vis.is_visible_from(
+                    self.db,
+                    self.resolver
+                        .module()
+                        .expect("resolver must have a module to be able to resolve modules"),
+                ) {
+                    self.diagnostics
+                        .push(diagnostics::InferenceDiagnostic::PathIsPrivate { id })
+                }
 
-        match resolution {
-            Resolution::LocalBinding(pat) => {
-                let ty = self.type_of_pat.get(pat)?.clone();
-                //let ty = self.resolve_ty_as_possible(&mut vec![], ty);
-                Some(ty)
-            }
-            Resolution::Def(def) => {
-                let typable: Option<TypableDef> = def.into();
-                let typable = typable?;
-                // TODO: Add detection of cyclick types
-                let (ty, _) = self.db.type_for_def(typable, Namespace::Values);
-                if check_params.is_unit_struct {
-                    if let Some(s) = ty.as_struct() {
-                        self.check_unit_struct_lit(id, s);
+                // Match based on what type of value we found
+                match value {
+                    ValueNs::LocalBinding(pat) => Some(self.type_of_pat.get(pat)?.clone()),
+                    ValueNs::FunctionId(f) => {
+                        let (ty, _) = self
+                            .db
+                            .type_for_def(TypableDef::Function(f.into()), Namespace::Values);
+                        Some(ty)
+                    }
+                    ValueNs::StructId(s) => {
+                        if check_params.is_unit_struct {
+                            self.check_unit_struct_lit(id, s.into())
+                        }
+                        let (ty, _) = self
+                            .db
+                            .type_for_def(TypableDef::Struct(s.into()), Namespace::Values);
+                        Some(ty)
                     }
                 }
-                Some(ty)
+            }
+
+            None => {
+                // If no value was found, try to resolve the path as a type. This will always result
+                // in an error but it does provide much better diagnostics.
+                let ty = resolver.resolve_path_as_type_fully(self.db.upcast(), path);
+                if let Some((TypeNs::StructId(struct_id), _)) = ty {
+                    // We can only really get here if the struct is actually a record. Both other
+                    // types can be seen as a values because they have a constructor.
+                    debug_assert_eq!(
+                        Struct::from(struct_id).data(self.db.upcast()).kind,
+                        StructKind::Record
+                    );
+
+                    // Should it be a unit struct?
+                    if check_params.is_unit_struct {
+                        self.diagnostics
+                            .push(InferenceDiagnostic::MismatchedStructLit {
+                                id,
+                                expected: StructKind::Record,
+                                found: StructKind::Unit,
+                            });
+                    } else {
+                        self.diagnostics
+                            .push(InferenceDiagnostic::MismatchedStructLit {
+                                id,
+                                expected: StructKind::Record,
+                                found: StructKind::Tuple,
+                            });
+                    }
+
+                    let (ty, _) = self
+                        .db
+                        .type_for_def(TypableDef::Struct(struct_id.into()), Namespace::Values);
+                    return Some(ty);
+                }
+
+                // If the path also cannot be resolved as type, it must be considered an invalid
+                // value and there is nothing we can make of this path.
+                self.diagnostics
+                    .push(InferenceDiagnostic::UnresolvedValue { id: id.into() });
+                None
             }
         }
     }
@@ -746,44 +798,6 @@ impl<'a> InferenceResultBuilder<'a> {
             type_of_expr: expr_types,
             type_of_pat: pat_types,
             diagnostics: self.diagnostics,
-        }
-    }
-
-    fn resolve_struct(&mut self, path: Option<&Path>) -> (Ty, Option<DefWithStruct>) {
-        let path = match path {
-            Some(path) => path,
-            None => return (Ty::Unknown, None),
-        };
-        let resolver = &self.resolver;
-        let resolution = match resolver
-            .resolve_path_without_assoc_items(self.db, &path)
-            .take_types()
-        {
-            Some(resolution) => resolution,
-            None => return (Ty::Unknown, None),
-        };
-
-        match resolution {
-            Resolution::LocalBinding(pat) => {
-                let ty = self
-                    .type_of_pat
-                    .get(pat)
-                    .map_or(Ty::Unknown, |ty| ty.clone());
-                //let ty = self.resolve_ty_as_possible(&mut vec![], ty);
-                (ty, None)
-            }
-            Resolution::Def(def) => {
-                if let Some(typable) = def.into() {
-                    match typable {
-                        TypableDef::Struct(s) => (s.ty(self.db), Some(s.into())),
-                        TypableDef::BuiltinType(_)
-                        | TypableDef::Function(_)
-                        | TypableDef::TypeAlias(_) => (Ty::Unknown, None),
-                    }
-                } else {
-                    unreachable!();
-                }
-            }
         }
     }
 
@@ -1000,15 +1014,15 @@ impl From<PatId> for ExprOrPatId {
 }
 
 mod diagnostics {
-    use crate::diagnostics::{
-        AccessUnknownField, BreakOutsideLoop, BreakWithValueOutsideLoop, CannotApplyBinaryOp,
-        CannotApplyUnaryOp, ExpectedFunction, FieldCountMismatch, IncompatibleBranch, InvalidLHS,
-        LiteralOutOfRange, MismatchedStructLit, MismatchedType, MissingElseBranch, MissingFields,
-        NoFields, NoSuchField, ParameterCountMismatch, ReturnMissingExpression,
-    };
+    use crate::diagnostics::PrivateAccess;
     use crate::{
-        adt::StructKind,
-        code_model::src::HasSource,
+        code_model::{src::HasSource, StructKind},
+        diagnostics::{
+            AccessUnknownField, BreakOutsideLoop, BreakWithValueOutsideLoop, CannotApplyBinaryOp,
+            CannotApplyUnaryOp, ExpectedFunction, FieldCountMismatch, IncompatibleBranch,
+            InvalidLHS, LiteralOutOfRange, MismatchedStructLit, MismatchedType, MissingElseBranch,
+            MissingFields, NoFields, NoSuchField, ParameterCountMismatch, ReturnMissingExpression,
+        },
         diagnostics::{CyclicType, DiagnosticSink, UnresolvedType, UnresolvedValue},
         ty::infer::ExprOrPatId,
         type_ref::LocalTypeRefId,
@@ -1103,6 +1117,12 @@ mod diagnostics {
             id: ExprId,
             literal_ty: IntTy,
         },
+        TypeIsPrivate {
+            id: LocalTypeRefId,
+        },
+        PathIsPrivate {
+            id: ExprId,
+        },
     }
 
     impl InferenceDiagnostic {
@@ -1136,6 +1156,26 @@ mod diagnostics {
                 InferenceDiagnostic::CyclicType { id } => {
                     let type_ref = body.type_ref_syntax(*id).expect("If this is not found, it must be a type ref generated by the library which should never be unresolved.");
                     sink.push(CyclicType { file, type_ref });
+                }
+                InferenceDiagnostic::TypeIsPrivate { id } => {
+                    let type_ref = body.type_ref_syntax(*id).expect("If this is not found, it must be a type ref generated by the library which should never be unresolved.");
+                    sink.push(PrivateAccess {
+                        file,
+                        expr: type_ref.syntax_node_ptr(),
+                    });
+                }
+                InferenceDiagnostic::PathIsPrivate { id } => {
+                    let expr_syntax = body
+                        .expr_syntax(*id)
+                        .map(|ptr| {
+                            ptr.value
+                                .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr())
+                        })
+                        .expect("could not resolve expression to syntax node");
+                    sink.push(PrivateAccess {
+                        file,
+                        expr: expr_syntax,
+                    });
                 }
                 InferenceDiagnostic::ParameterCountMismatch {
                     id,

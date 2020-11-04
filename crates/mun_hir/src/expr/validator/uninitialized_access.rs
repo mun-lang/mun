@@ -1,6 +1,7 @@
 use super::ExprValidator;
 use crate::diagnostics::{DiagnosticSink, PossiblyUninitializedVariable};
-use crate::{BinaryOp, Expr, ExprId, PatId, Path, Resolution, Resolver, Statement};
+use crate::resolve::{resolver_for_expr, ValueNs};
+use crate::{BinaryOp, Expr, ExprId, PatId, Path, Resolver, Statement};
 use std::collections::HashSet;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -46,7 +47,7 @@ impl<'d> ExprValidator<'d> {
                 }
             }
             Expr::Path(p) => {
-                let resolver = crate::expr::resolver_for_expr(self.body.clone(), self.db, expr);
+                let resolver = resolver_for_expr(self.db.upcast(), self.body.owner(), expr);
                 self.validate_path_access(
                     sink,
                     initialized_patterns,
@@ -193,28 +194,17 @@ impl<'d> ExprValidator<'d> {
         expr: ExprId,
         expr_side: ExprKind,
     ) {
-        let resolution = match resolver
-            .resolve_path_without_assoc_items(self.db, path)
-            .take_values()
-        {
-            Some(resolution) => resolution,
-            None => {
-                // This has already been caught by the inferencing step
-                return;
-            }
-        };
-
-        let pat = match resolution {
-            Resolution::LocalBinding(pat) => pat,
-            Resolution::Def(_def) => return,
+        let pat = match resolver.resolve_path_as_value_fully(self.db.upcast(), path) {
+            Some((ValueNs::LocalBinding(pat), _)) => pat,
+            _ => return,
         };
 
         if expr_side == ExprKind::Normal || expr_side == ExprKind::Both {
             // Check if the binding has already been initialized
             if initialized_patterns.get(&pat).is_none() {
-                let (_, body_source_map) = self.db.body_with_source_map(self.func.into());
+                let (_, body_source_map) = self.db.body_with_source_map(self.func.id.into());
                 sink.push(PossiblyUninitializedVariable {
-                    file: self.func.module(self.db.upcast()).file_id(),
+                    file: self.func.file_id(self.db),
                     pat: body_source_map
                         .expr_syntax(expr)
                         .unwrap()

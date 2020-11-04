@@ -365,3 +365,14 @@ fn type_alias_def() {
     "#,
     )
 }
+#[test]
+fn function_return_path() {
+    snapshot_test(
+        r#"
+        fn main() -> self::Foo {}
+        fn main1() -> super::Foo {}
+        fn main2() -> package::Foo {}
+        fn main3() -> package::foo::Foo {}
+    "#,
+    );
+}

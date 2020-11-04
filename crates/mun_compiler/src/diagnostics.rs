@@ -94,4 +94,9 @@ mod tests {
     fn test_cyclic_type_alias_error() {
         insta::assert_display_snapshot!(compilation_errors("\n\ntype Foo = Foo;"));
     }
+
+    #[test]
+    fn test_expected_function() {
+        insta::assert_display_snapshot!(compilation_errors("\n\nfn foo() { let a = 3; a(); }"));
+    }
 }

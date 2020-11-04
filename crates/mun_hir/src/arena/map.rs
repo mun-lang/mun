@@ -61,8 +61,14 @@ impl<T, V> ArenaMap<Idx<T>, V> {
 
 impl<T, V> std::ops::Index<Idx<V>> for ArenaMap<Idx<V>, T> {
     type Output = T;
-    fn index(&self, id: Idx<V>) -> &T {
-        self.v[Self::idx_to_raw(id)].as_ref().unwrap()
+    fn index(&self, index: Idx<V>) -> &T {
+        self.v[Self::idx_to_raw(index)].as_ref().unwrap()
+    }
+}
+
+impl<T, V> std::ops::IndexMut<Idx<V>> for ArenaMap<Idx<V>, T> {
+    fn index_mut(&mut self, index: Idx<V>) -> &mut Self::Output {
+        self.v[Self::idx_to_raw(index)].as_mut().unwrap()
     }
 }
 

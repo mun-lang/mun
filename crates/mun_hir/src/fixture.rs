@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+use crate::ids::PackageId;
 use crate::{FileId, SourceDatabase, SourceRoot, SourceRootId};
 pub use mun_test::Fixture;
 use std::convert::TryInto;
@@ -31,6 +32,7 @@ fn with_files(db: &mut dyn SourceDatabase, fixture: &str) -> Vec<FileId> {
 
     let mut source_root = SourceRoot::default();
     let source_root_id = SourceRootId(0);
+    let package_id = PackageId(0);
     let mut files = Vec::new();
 
     for (idx, entry) in fixture.into_iter().enumerate() {
@@ -43,6 +45,7 @@ fn with_files(db: &mut dyn SourceDatabase, fixture: &str) -> Vec<FileId> {
     }
 
     db.set_source_root(source_root_id, Arc::new(source_root));
+    db.set_package_source_root(package_id, source_root_id);
 
     return files;
 }

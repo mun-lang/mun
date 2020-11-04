@@ -26,15 +26,15 @@ impl TestDriver {
             ..Config::default()
         };
         let input = PathOrInline::Inline {
-            rel_path: RelativePathBuf::from("main.mun"),
+            rel_path: RelativePathBuf::from("mod.mun"),
             contents: text.to_owned(),
         };
         let (mut driver, file_id) = Driver::with_file(config, input).unwrap();
         if driver.emit_diagnostics(&mut stderr()).unwrap() {
             panic!("compiler errors..")
         }
-        let out_path = driver.assembly_output_path(file_id);
-        driver.write_assembly(file_id, true).unwrap();
+        let out_path = driver.assembly_output_path_from_file(file_id);
+        driver.write_all_assemblies(false).unwrap();
         let runtime = make_runtime(&out_path);
         TestDriver {
             _temp_dir: temp_dir,

@@ -1,21 +1,22 @@
 //! This module implements the logic to convert an AST to an `ItemTree`.
 
 use super::{
-    Field, Fields, Function, IdRange, ItemTree, ItemTreeData, ItemTreeNode, LocalItemTreeId,
-    ModItem, Struct, StructDefKind, TypeAlias,
+    diagnostics, Field, Fields, Function, IdRange, ItemTree, ItemTreeData, ItemTreeNode,
+    LocalItemTreeId, ModItem, RawVisibilityId, Struct, StructDefKind, TypeAlias,
 };
 use crate::{
     arena::{Idx, RawId},
     name::AsName,
     source_id::AstIdMap,
     type_ref::TypeRef,
+    visibility::RawVisibility,
     DefDatabase, FileId, Name,
 };
 use mun_syntax::{
     ast,
     ast::{ExternOwner, ModuleItemOwner, NameOwner, StructKind, TypeAscriptionOwner},
 };
-use std::{convert::TryInto, marker::PhantomData, sync::Arc};
+use std::{collections::HashMap, convert::TryInto, marker::PhantomData, sync::Arc};
 
 impl<N: ItemTreeNode> From<Idx<N>> for LocalItemTreeId<N> {
     fn from(index: Idx<N>) -> Self {
@@ -30,6 +31,7 @@ pub(super) struct Context {
     file: FileId,
     source_ast_id_map: Arc<AstIdMap>,
     data: ItemTreeData,
+    diagnostics: Vec<diagnostics::ItemTreeDiagnostic>,
 }
 
 impl Context {
@@ -39,6 +41,7 @@ impl Context {
             file,
             source_ast_id_map: db.ast_id_map(file),
             data: ItemTreeData::default(),
+            diagnostics: Vec::new(),
         }
     }
 
@@ -47,10 +50,33 @@ impl Context {
         let top_level = item_owner
             .items()
             .flat_map(|item| self.lower_mod_item(&item))
-            .collect();
+            .collect::<Vec<_>>();
+
+        // Check duplicates
+        let mut set = HashMap::<Name, &ModItem>::new();
+        for item in top_level.iter() {
+            let name = match item {
+                ModItem::Function(item) => &self.data.functions[item.index].name,
+                ModItem::Struct(item) => &self.data.structs[item.index].name,
+                ModItem::TypeAlias(item) => &self.data.type_aliases[item.index].name,
+            };
+            if let Some(first_item) = set.get(&name) {
+                self.diagnostics
+                    .push(diagnostics::ItemTreeDiagnostic::DuplicateDefinition {
+                        name: name.clone(),
+                        first: **first_item,
+                        second: *item,
+                    })
+            } else {
+                set.insert(name.clone(), item);
+            }
+        }
+
         ItemTree {
+            file_id: self.file,
             top_level,
             data: self.data,
+            diagnostics: self.diagnostics,
         }
     }
 
@@ -66,6 +92,7 @@ impl Context {
     /// Lowers a function
     fn lower_function(&mut self, func: &ast::FunctionDef) -> Option<LocalItemTreeId<Function>> {
         let name = func.name()?.as_name();
+        let visibility = self.lower_visibility(func);
 
         // Lower all the params
         let mut params = Vec::new();
@@ -87,6 +114,7 @@ impl Context {
         let ast_id = self.source_ast_id_map.ast_id(func);
         let res = Function {
             name,
+            visibility,
             is_extern,
             params: params.into_boxed_slice(),
             ret_type,
@@ -99,6 +127,7 @@ impl Context {
     /// Lowers a struct
     fn lower_struct(&mut self, strukt: &ast::StructDef) -> Option<LocalItemTreeId<Struct>> {
         let name = strukt.name()?.as_name();
+        let visibility = self.lower_visibility(strukt);
         let fields = self.lower_fields(&strukt.kind());
         let ast_id = self.source_ast_id_map.ast_id(strukt);
         let kind = match strukt.kind() {
@@ -108,6 +137,7 @@ impl Context {
         };
         let res = Struct {
             name,
+            visibility,
             fields,
             ast_id,
             kind,
@@ -174,10 +204,12 @@ impl Context {
         type_alias: &ast::TypeAliasDef,
     ) -> Option<LocalItemTreeId<TypeAlias>> {
         let name = type_alias.name()?.as_name();
+        let visibility = self.lower_visibility(type_alias);
         let type_ref = type_alias.type_ref().map(|ty| self.lower_type_ref(&ty));
         let ast_id = self.source_ast_id_map.ast_id(type_alias);
         let res = TypeAlias {
             name,
+            visibility,
             type_ref,
             ast_id,
         };
@@ -194,6 +226,12 @@ impl Context {
         type_ref
             .map(|ty| self.lower_type_ref(&ty))
             .unwrap_or(TypeRef::Error)
+    }
+
+    /// Lowers an `ast::VisibilityOwner`
+    fn lower_visibility(&mut self, item: &impl ast::VisibilityOwner) -> RawVisibilityId {
+        let vis = RawVisibility::from_ast(item.visibility());
+        self.data.visibilities.alloc(vis)
     }
 
     /// Returns the `Idx` of the next `Field`

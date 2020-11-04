@@ -6,6 +6,7 @@ use crate::{
     arena::{Arena, Idx},
     source_id::FileAstId,
     type_ref::TypeRef,
+    visibility::RawVisibility,
     DefDatabase, FileId, InFile, Name,
 };
 use mun_syntax::{ast, AstNode};
@@ -19,11 +20,38 @@ use std::{
     sync::Arc,
 };
 
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub struct RawVisibilityId(u32);
+
+impl RawVisibilityId {
+    pub const PUB: Self = RawVisibilityId(u32::max_value());
+    pub const PRIV: Self = RawVisibilityId(u32::max_value() - 1);
+    pub const PUB_PACKAGE: Self = RawVisibilityId(u32::max_value() - 2);
+    pub const PUB_SUPER: Self = RawVisibilityId(u32::max_value() - 3);
+}
+
+impl fmt::Debug for RawVisibilityId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut f = f.debug_tuple("RawVisibilityId");
+        match *self {
+            Self::PUB => f.field(&"pub"),
+            Self::PRIV => f.field(&"pub(self)"),
+            Self::PUB_PACKAGE => f.field(&"pub(package)"),
+            Self::PUB_SUPER => f.field(&"pub(super)"),
+            _ => f.field(&self.0),
+        };
+        f.finish()
+    }
+}
+
 /// An `ItemTree` is a derivative of an AST that only contains the items defined in the AST.
 #[derive(Debug, Eq, PartialEq)]
 pub struct ItemTree {
+    file_id: FileId,
     top_level: Vec<ModItem>,
     data: ItemTreeData,
+
+    pub diagnostics: Vec<diagnostics::ItemTreeDiagnostic>,
 }
 
 impl ItemTree {
@@ -42,13 +70,33 @@ impl ItemTree {
 
     /// Returns the source location of the specified item. Note that the `file_id` of the item must
     /// be the same `file_id` that was used to create this `ItemTree`.
-    pub fn source<S: ItemTreeNode>(&self, db: &dyn DefDatabase, item: ItemTreeId<S>) -> S::Source {
-        let root = db.parse(item.file_id);
+    pub fn source<S: ItemTreeNode>(
+        &self,
+        db: &dyn DefDatabase,
+        item: LocalItemTreeId<S>,
+    ) -> S::Source {
+        let root = db.parse(self.file_id);
 
-        let id = self[item.value].ast_id();
-        let map = db.ast_id_map(item.file_id);
+        let id = self[item].ast_id();
+        let map = db.ast_id_map(self.file_id);
         let ptr = map.get(id);
         ptr.to_node(&root.syntax_node())
+    }
+}
+
+#[derive(Default, Debug, Eq, PartialEq)]
+struct ItemVisibilities {
+    arena: Arena<RawVisibility>,
+}
+
+impl ItemVisibilities {
+    fn alloc(&mut self, vis: RawVisibility) -> RawVisibilityId {
+        match &vis {
+            RawVisibility::Public => RawVisibilityId::PUB,
+            RawVisibility::This => RawVisibilityId::PRIV,
+            RawVisibility::Package => RawVisibilityId::PUB_PACKAGE,
+            RawVisibility::Super => RawVisibilityId::PUB_SUPER,
+        }
     }
 }
 
@@ -58,6 +106,8 @@ struct ItemTreeData {
     structs: Arena<Struct>,
     fields: Arena<Field>,
     type_aliases: Arena<TypeAlias>,
+
+    visibilities: ItemVisibilities,
 }
 
 /// Trait implemented by all item nodes in the item tree.
@@ -190,6 +240,24 @@ macro_rules! impl_index {
 
 impl_index!(fields: Field);
 
+static VIS_PUB: RawVisibility = RawVisibility::Public;
+static VIS_PRIV: RawVisibility = RawVisibility::This;
+static VIS_PUB_PACKAGE: RawVisibility = RawVisibility::Package;
+static VIS_PUB_SUPER: RawVisibility = RawVisibility::Super;
+
+impl Index<RawVisibilityId> for ItemTree {
+    type Output = RawVisibility;
+    fn index(&self, index: RawVisibilityId) -> &Self::Output {
+        match index {
+            RawVisibilityId::PRIV => &VIS_PRIV,
+            RawVisibilityId::PUB => &VIS_PUB,
+            RawVisibilityId::PUB_PACKAGE => &VIS_PUB_PACKAGE,
+            RawVisibilityId::PUB_SUPER => &VIS_PUB_SUPER,
+            _ => &self.data.visibilities.arena[Idx::from_raw(index.0.into())],
+        }
+    }
+}
+
 impl<N: ItemTreeNode> Index<LocalItemTreeId<N>> for ItemTree {
     type Output = N;
     fn index(&self, id: LocalItemTreeId<N>) -> &N {
@@ -200,6 +268,7 @@ impl<N: ItemTreeNode> Index<LocalItemTreeId<N>> for ItemTree {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Function {
     pub name: Name,
+    pub visibility: RawVisibilityId,
     pub is_extern: bool,
     pub params: Box<[TypeRef]>,
     pub ret_type: TypeRef,
@@ -209,6 +278,7 @@ pub struct Function {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Struct {
     pub name: Name,
+    pub visibility: RawVisibilityId,
     pub fields: Fields,
     pub ast_id: FileAstId<ast::StructDef>,
     pub kind: StructDefKind,
@@ -217,6 +287,7 @@ pub struct Struct {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAlias {
     pub name: Name,
+    pub visibility: RawVisibilityId,
     pub type_ref: Option<TypeRef>,
     pub ast_id: FileAstId<ast::TypeAliasDef>,
 }
@@ -292,3 +363,59 @@ impl<T> PartialEq for IdRange<T> {
 }
 
 impl<T> Eq for IdRange<T> {}
+
+mod diagnostics {
+    use super::{ItemTree, ModItem};
+    use crate::diagnostics::DuplicateDefinition;
+    use crate::{DefDatabase, DiagnosticSink, HirDatabase, Name};
+    use mun_syntax::{AstNode, SyntaxNodePtr};
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub enum ItemTreeDiagnostic {
+        DuplicateDefinition {
+            name: Name,
+            first: ModItem,
+            second: ModItem,
+        },
+    }
+
+    impl ItemTreeDiagnostic {
+        pub(crate) fn add_to(
+            &self,
+            db: &dyn HirDatabase,
+            item_tree: &ItemTree,
+            sink: &mut DiagnosticSink,
+        ) {
+            match self {
+                ItemTreeDiagnostic::DuplicateDefinition {
+                    name,
+                    first,
+                    second,
+                } => sink.push(DuplicateDefinition {
+                    file: item_tree.file_id,
+                    name: name.to_string(),
+                    first_definition: ast_ptr_from_mod(db.upcast(), item_tree, *first),
+                    definition: ast_ptr_from_mod(db.upcast(), item_tree, *second),
+                }),
+            };
+
+            fn ast_ptr_from_mod(
+                db: &dyn DefDatabase,
+                item_tree: &ItemTree,
+                item: ModItem,
+            ) -> SyntaxNodePtr {
+                match item {
+                    ModItem::Function(item) => {
+                        SyntaxNodePtr::new(item_tree.source(db, item).syntax())
+                    }
+                    ModItem::Struct(item) => {
+                        SyntaxNodePtr::new(item_tree.source(db, item).syntax())
+                    }
+                    ModItem::TypeAlias(item) => {
+                        SyntaxNodePtr::new(item_tree.source(db, item).syntax())
+                    }
+                }
+            }
+        }
+    }
+}

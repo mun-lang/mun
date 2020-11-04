@@ -87,7 +87,7 @@ pub fn compile_manifest(manifest_path: &Path, config: Config) -> Result<bool, an
     };
 
     // Write out all assemblies
-    driver.write_all_assemblies()?;
+    driver.write_all_assemblies(false)?;
 
     Ok(true)
 }
