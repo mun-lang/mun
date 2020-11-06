@@ -1191,6 +1191,30 @@ impl RecordLit {
     }
 }
 
+// Rename
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Rename {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for Rename {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, RENAME)
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(Rename { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl Rename {}
+
 // RetType
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1491,6 +1515,86 @@ impl TypeRef {
 }
 
 impl TypeRef {}
+
+// Use
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Use {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for Use {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, USE)
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(Use { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl Use {
+    pub fn use_tree(&self) -> Option<UseTree> {
+        super::child_opt(self)
+    }
+}
+
+// UseTree
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct UseTree {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for UseTree {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, USE_TREE)
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(UseTree { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl UseTree {}
+
+// UseTreeList
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct UseTreeList {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for UseTreeList {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, USE_TREE_LIST)
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(UseTreeList { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl UseTreeList {
+    pub fn use_trees(&self) -> impl Iterator<Item = UseTree> {
+        super::children(self)
+    }
+}
 
 // Visibility
 

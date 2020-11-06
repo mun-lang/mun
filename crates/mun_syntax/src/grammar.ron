@@ -72,6 +72,8 @@ Grammar(
         "fn",
         "if",
         "in",
+        "as",
+        "use",
         // "local",     // We use let
         "nil",
         // "not",        // We use !
@@ -169,6 +171,11 @@ Grammar(
         "RECORD_LIT",
         "RECORD_FIELD_LIST",
         "RECORD_FIELD",
+
+        "USE",
+        "USE_TREE",
+        "USE_TREE_LIST",
+        "RENAME"
     ],
     ast: {
         "SourceFile": (
@@ -349,5 +356,16 @@ Grammar(
             options: [["spread", "Expr"]]
         ),
         "RecordField": (options: ["NameRef", "Expr"]),
+
+        "Use": (
+            options: [["use_tree", "UseTree"]]
+        ),
+
+        "UseTree": (),
+        "UseTreeList": (
+            collections: [ ("use_trees", "UseTree") ]
+        ),
+
+        "Rename": ()
     }
 )

@@ -73,6 +73,8 @@ pub enum SyntaxKind {
     FN_KW,
     IF_KW,
     IN_KW,
+    AS_KW,
+    USE_KW,
     NIL_KW,
     RETURN_KW,
     TRUE_KW,
@@ -141,6 +143,10 @@ pub enum SyntaxKind {
     RECORD_LIT,
     RECORD_FIELD_LIST,
     RECORD_FIELD,
+    USE,
+    USE_TREE,
+    USE_TREE_LIST,
+    RENAME,
     // Technical kind so that we can cast from u16 safely
     #[doc(hidden)]
     __LAST,
@@ -314,6 +320,12 @@ macro_rules! T {
     (in) => {
         $crate::SyntaxKind::IN_KW
     };
+    (as) => {
+        $crate::SyntaxKind::AS_KW
+    };
+    (use) => {
+        $crate::SyntaxKind::USE_KW
+    };
     (nil) => {
         $crate::SyntaxKind::NIL_KW
     };
@@ -389,6 +401,8 @@ impl SyntaxKind {
         | FN_KW
         | IF_KW
         | IN_KW
+        | AS_KW
+        | USE_KW
         | NIL_KW
         | RETURN_KW
         | TRUE_KW
@@ -528,6 +542,8 @@ impl SyntaxKind {
             FN_KW => &SyntaxInfo { name: "FN_KW" },
             IF_KW => &SyntaxInfo { name: "IF_KW" },
             IN_KW => &SyntaxInfo { name: "IN_KW" },
+            AS_KW => &SyntaxInfo { name: "AS_KW" },
+            USE_KW => &SyntaxInfo { name: "USE_KW" },
             NIL_KW => &SyntaxInfo { name: "NIL_KW" },
             RETURN_KW => &SyntaxInfo { name: "RETURN_KW" },
             TRUE_KW => &SyntaxInfo { name: "TRUE_KW" },
@@ -596,6 +612,10 @@ impl SyntaxKind {
             RECORD_LIT => &SyntaxInfo { name: "RECORD_LIT" },
             RECORD_FIELD_LIST => &SyntaxInfo { name: "RECORD_FIELD_LIST" },
             RECORD_FIELD => &SyntaxInfo { name: "RECORD_FIELD" },
+            USE => &SyntaxInfo { name: "USE" },
+            USE_TREE => &SyntaxInfo { name: "USE_TREE" },
+            USE_TREE_LIST => &SyntaxInfo { name: "USE_TREE_LIST" },
+            RENAME => &SyntaxInfo { name: "RENAME" },
             TOMBSTONE => &SyntaxInfo { name: "TOMBSTONE" },
             EOF => &SyntaxInfo { name: "EOF" },
             __LAST => &SyntaxInfo { name: "__LAST" },
@@ -612,6 +632,8 @@ impl SyntaxKind {
             "fn" => FN_KW,
             "if" => IF_KW,
             "in" => IN_KW,
+            "as" => AS_KW,
+            "use" => USE_KW,
             "nil" => NIL_KW,
             "return" => RETURN_KW,
             "true" => TRUE_KW,

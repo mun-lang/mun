@@ -1,7 +1,8 @@
 use super::*;
 use crate::T;
 
-pub(super) const DECLARATION_RECOVERY_SET: TokenSet = TokenSet::new(&[T![fn], T![pub], T![struct]]);
+pub(super) const DECLARATION_RECOVERY_SET: TokenSet =
+    TokenSet::new(&[T![fn], T![pub], T![struct], T![use]]);
 
 pub(super) fn mod_contents(p: &mut Parser) {
     while !p.at(EOF) {
@@ -62,6 +63,9 @@ fn abi(p: &mut Parser) {
 
 fn declarations_without_modifiers(p: &mut Parser, m: Marker) -> Result<(), Marker> {
     match p.current() {
+        T![use] => {
+            use_(p, m);
+        }
         T![struct] => {
             adt::struct_def(p, m);
         }
@@ -103,5 +107,81 @@ fn opt_fn_ret_type(p: &mut Parser) -> bool {
         true
     } else {
         false
+    }
+}
+
+fn use_(p: &mut Parser, m: Marker) {
+    assert!(p.at(T![use]));
+    p.bump(T![use]);
+    use_tree(p, true);
+    p.expect(T![;]);
+    m.complete(p, USE);
+}
+
+/// Parses a use "tree", such as `foo::bar` in `use foo::bar;`.
+fn use_tree(p: &mut Parser, top_level: bool) {
+    let m = p.start();
+
+    match p.current() {
+        T![*] if !top_level => p.bump(T![*]),
+        _ if paths::is_path_start(p) => {
+            paths::use_path(p);
+            match p.current() {
+                T![as] => {
+                    opt_rename(p);
+                }
+                T![:] if p.at(T![::]) => {
+                    p.bump(T![::]);
+                    match p.current() {
+                        T![*] => {
+                            p.bump(T![*]);
+                        }
+                        T!['{'] => use_tree_list(p),
+                        _ => {
+                            p.error("expected `{` or `*`");
+                        }
+                    }
+                }
+                _ => (),
+            }
+        }
+        _ => {
+            m.abandon(p);
+            let msg = "expected one of `self`, `super`, `package` or an identifier";
+            if top_level {
+                p.error_recover(msg, DECLARATION_RECOVERY_SET);
+            } else {
+                // if we are parsing a nested tree, we have to eat a token to main balanced `{}`
+                p.error_and_bump(msg);
+            }
+            return;
+        }
+    }
+
+    m.complete(p, USE_TREE);
+}
+
+fn use_tree_list(p: &mut Parser) {
+    assert!(p.at(T!['{']));
+    let m = p.start();
+    p.bump(T!['{']);
+    while !p.at(EOF) && !p.at(T!['}']) {
+        use_tree(p, false);
+        if !p.at(T!['}']) {
+            p.expect(T![,]);
+        }
+    }
+    p.expect(T!['}']);
+    m.complete(p, USE_TREE_LIST);
+}
+
+fn opt_rename(p: &mut Parser) {
+    if p.at(T![as]) {
+        let m = p.start();
+        p.bump(T![as]);
+        if !p.eat(T![_]) {
+            name(p);
+        }
+        m.complete(p, RENAME);
     }
 }

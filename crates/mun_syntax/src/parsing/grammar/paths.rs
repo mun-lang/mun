@@ -13,11 +13,15 @@ pub(super) fn type_path(p: &mut Parser) {
 pub(super) fn expr_path(p: &mut Parser) {
     path(p, Mode::Expr)
 }
+pub(super) fn use_path(p: &mut Parser) {
+    path(p, Mode::Use)
+}
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 enum Mode {
     Type,
     Expr,
+    Use,
 }
 
 fn path(p: &mut Parser, mode: Mode) {
@@ -25,8 +29,8 @@ fn path(p: &mut Parser, mode: Mode) {
     path_segment(p, mode);
     let mut qualifier = path.complete(p, PATH);
     loop {
-        let import_tree = matches!(p.nth(1), T![*] | T!['{']);
-        if p.at(T![::]) && !import_tree {
+        let use_tree = matches!(p.nth(2), T![*] | T!['{']);
+        if p.at(T![::]) && !use_tree {
             let path = qualifier.precede(p);
             p.bump(T![::]);
             path_segment(p, mode);
