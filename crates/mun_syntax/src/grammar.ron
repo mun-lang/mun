@@ -182,7 +182,7 @@ Grammar(
             traits: [ "ModuleItemOwner", "FunctionDefOwner" ],
         ),
         "ModuleItem": (
-            enum: ["FunctionDef", "StructDef", "TypeAliasDef"]
+            enum: ["Use", "FunctionDef", "StructDef", "TypeAliasDef"]
         ),
         "Visibility": (),
         "FunctionDef": (
@@ -358,14 +358,23 @@ Grammar(
         "RecordField": (options: ["NameRef", "Expr"]),
 
         "Use": (
-            options: [["use_tree", "UseTree"]]
+            options: [["use_tree", "UseTree"]],
+            traits: ("VisibilityOwner")
         ),
 
-        "UseTree": (),
+        "UseTree": (
+            options: [
+                ["use_tree_list", "UseTreeList"],
+                ["path", "Path"],
+                ["rename", "Rename"]
+            ]
+        ),
         "UseTreeList": (
             collections: [ ("use_trees", "UseTree") ]
         ),
 
-        "Rename": ()
+        "Rename": (
+            traits: ("NameOwner")
+        )
     }
 )

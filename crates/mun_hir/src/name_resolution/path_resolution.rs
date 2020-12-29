@@ -8,7 +8,7 @@ use crate::{
 use std::iter::successors;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum ReachedFixedPoint {
+pub enum ReachedFixedPoint {
     Yes,
     No,
 }
@@ -16,11 +16,11 @@ pub(super) enum ReachedFixedPoint {
 /// Contains the result of resolving a path. It contains how far the path was able to be resolved
 /// as well as the resolved values or types so far.
 #[derive(Debug, Clone)]
-pub(super) struct ResolvePathResult {
-    pub(super) resolved_def: PerNs<(ItemDefinitionId, Visibility)>,
-    pub(super) segment_index: Option<usize>,
-    pub(super) reached_fixedpoint: ReachedFixedPoint,
-    pub(super) package: Option<PackageId>,
+pub(crate) struct ResolvePathResult {
+    pub(crate) resolved_def: PerNs<(ItemDefinitionId, Visibility)>,
+    pub(crate) segment_index: Option<usize>,
+    pub(crate) reached_fixedpoint: ReachedFixedPoint,
+    pub(crate) package: Option<PackageId>,
 }
 
 impl ResolvePathResult {
@@ -74,7 +74,7 @@ impl PackageDefs {
     /// Resolves the specified `path` from within the specified `module`. Also returns whether or
     /// not additions to the `PackageDef` would change the result or whether a fixed point has been
     /// reached. This is useful when resolving all imports.
-    pub(super) fn resolve_path_with_fixedpoint(
+    pub(crate) fn resolve_path_with_fixedpoint(
         &self,
         db: &dyn DefDatabase,
         original_module: LocalModuleId,

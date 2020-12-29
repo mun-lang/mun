@@ -1,23 +1,107 @@
 use super::PackageDefs;
 use crate::{
-    arena::map::ArenaMap,
-    ids::{FunctionLoc, Intern, ItemDefinitionId, ModuleId, StructLoc, TypeAliasLoc},
+    ids::ItemDefinitionId,
+    ids::{FunctionLoc, Intern, StructLoc, TypeAliasLoc},
+    item_scope::ImportType,
     item_scope::ItemScope,
     item_tree::{
-        Function, ItemTree, ItemTreeId, LocalItemTreeId, ModItem, Struct, StructDefKind, TypeAlias,
+        self, Function, ItemTree, ItemTreeId, LocalItemTreeId, ModItem, Struct, StructDefKind,
+        TypeAlias,
     },
-    module_tree::{LocalModuleId, ModuleTree},
+    module_tree::LocalModuleId,
+    name_resolution::ReachedFixedPoint,
+    path::ImportAlias,
     visibility::RawVisibility,
-    DefDatabase, FileId, Name, PackageId, PerNs, Visibility,
+    DefDatabase, FileId, InFile, ModuleId, Name, PackageId, Path, PerNs, Visibility,
 };
-use std::sync::Arc;
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+enum PartialResolvedImport {
+    /// None of any namespaces is resolved
+    Unresolved,
+    /// One of namespaces is resolved
+    Indeterminate(PerNs<(ItemDefinitionId, Visibility)>),
+    /// All namespaces are resolved, OR it is came from other crate
+    Resolved(PerNs<(ItemDefinitionId, Visibility)>),
+}
+
+/// The result of an import directive
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct ImportResolution {
+    /// The name to expose the resolution as
+    name: Option<Name>,
+
+    /// The resolution itself
+    resolution: PerNs<(ItemDefinitionId, Visibility)>,
+}
+
+impl PartialResolvedImport {
+    fn namespaces(&self) -> PerNs<(ItemDefinitionId, Visibility)> {
+        match self {
+            PartialResolvedImport::Unresolved => PerNs::none(),
+            PartialResolvedImport::Indeterminate(ns) => *ns,
+            PartialResolvedImport::Resolved(ns) => *ns,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct Import {
+    /// The path of the import (e.g. foo::Bar). Note that group imports have been desugared, each
+    /// item in the import tree is a seperate import.
+    pub path: Path,
+
+    /// The alias for this import statement
+    pub alias: Option<ImportAlias>,
+
+    /// The visibility of the import in the file the import statement resides in
+    pub visibility: RawVisibility,
+
+    /// Whether or not this is a * import.
+    pub is_glob: bool,
+
+    /// The original location of the import
+    source: ItemTreeId<item_tree::Import>,
+}
+
+impl Import {
+    /// Constructs an `Import` from a `use` statement in an `ItemTree`.
+    fn from_use(tree: &ItemTree, id: ItemTreeId<item_tree::Import>) -> Self {
+        let it = &tree[id.value];
+        let visibility = &tree[it.visibility];
+        Self {
+            path: it.path.clone(),
+            alias: it.alias.clone(),
+            visibility: visibility.clone(),
+            is_glob: it.is_glob,
+            source: id,
+        }
+    }
+}
+
+/// A struct that keeps track of the state of an import directive.
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct ImportDirective {
+    /// The module that defines the import statement
+    module_id: LocalModuleId,
+
+    /// Information about the import statement.
+    import: Import,
+
+    /// The current status of the import.
+    status: PartialResolvedImport,
+}
 
 pub(super) fn collect(db: &dyn DefDatabase, package_id: PackageId) -> PackageDefs {
     let mut collector = DefCollector {
         db,
         package_id,
-        modules: Default::default(),
-        module_tree: db.module_tree(package_id),
+        package_defs: PackageDefs {
+            modules: Default::default(),
+            module_tree: db.module_tree(package_id),
+        },
+        unresolved_imports: Default::default(),
+        resolved_imports: Default::default(),
     };
     collector.collect();
     collector.finish()
@@ -27,15 +111,64 @@ pub(super) fn collect(db: &dyn DefDatabase, package_id: PackageId) -> PackageDef
 struct DefCollector<'db> {
     db: &'db dyn DefDatabase,
     package_id: PackageId,
-    modules: ArenaMap<LocalModuleId, ItemScope>,
-    module_tree: Arc<ModuleTree>,
+    package_defs: PackageDefs,
+    // modules: ArenaMap<LocalModuleId, ItemScope>,
+    // module_tree: Arc<ModuleTree>,
+    unresolved_imports: Vec<ImportDirective>,
+    resolved_imports: Vec<ImportDirective>,
 }
 
 impl<'db> DefCollector<'db> {
     /// Collects all information and stores it in the instance
     fn collect(&mut self) {
         // Collect all definitions in each module
-        let module_tree = self.module_tree.clone();
+        let module_tree = self.package_defs.module_tree.clone();
+
+        // Start by collecting the definitions from all modules. This ensures that very every module
+        // all local definitions are accessible. This is the starting point for the import
+        // resolution.
+        collect_modules_recursive(self, module_tree.root, None);
+
+        // Now, as long as we have unresolved imports, try to resolve them, or part of them.
+        while !self.unresolved_imports.is_empty() {
+            // Keep track of whether we were able to resolve anything
+            let mut resolved_something = false;
+
+            // Get all the current unresolved import directives
+            let imports = std::mem::replace(&mut self.unresolved_imports, Vec::new());
+
+            // For each import, try to resolve it with the current state.
+            for mut directive in imports {
+                // Resolve the import
+                directive.status = self.resolve_import(directive.module_id, &directive.import);
+
+                // Check the status of the import, if the import is still considered unresolved, try
+                // again in the next round.
+                match directive.status {
+                    PartialResolvedImport::Indeterminate(_) => {
+                        self.record_resolved_import(&directive);
+                        // FIXME: For avoid performance regression,
+                        // we consider an imported resolved if it is indeterminate (i.e not all namespace resolved)
+                        self.resolved_imports.push(directive);
+                        resolved_something = true;
+                    }
+                    PartialResolvedImport::Resolved(_) => {
+                        self.record_resolved_import(&directive);
+                        self.resolved_imports.push(directive);
+                        resolved_something = true;
+                    }
+                    PartialResolvedImport::Unresolved => {
+                        self.unresolved_imports.push(directive);
+                    }
+                }
+            }
+
+            if !resolved_something {
+                break;
+            }
+        }
+
+        // TODO: Error out if something cannot be resolved
 
         fn collect_modules_recursive(
             collector: &mut DefCollector,
@@ -43,10 +176,13 @@ impl<'db> DefCollector<'db> {
             parent: Option<(Name, LocalModuleId)>,
         ) {
             // Insert an empty item scope for this module, this will be filled in.
-            collector.modules.insert(module_id, ItemScope::default());
+            collector
+                .package_defs
+                .modules
+                .insert(module_id, ItemScope::default());
 
             // If there is a file associated with the module, collect all definitions from it
-            let module_data = &collector.module_tree[module_id];
+            let module_data = &collector.package_defs.module_tree[module_id];
             if let Some(file_id) = module_data.file {
                 let item_tree = collector.db.item_tree(file_id);
                 let mut mod_collector = ModCollectorContext {
@@ -61,7 +197,7 @@ impl<'db> DefCollector<'db> {
 
             // Insert this module into the scope of the parent
             if let Some((name, parent)) = parent {
-                collector.modules[parent].add_resolution(
+                collector.package_defs.modules[parent].add_resolution(
                     name,
                     PerNs::from_definition(
                         ModuleId {
@@ -76,7 +212,7 @@ impl<'db> DefCollector<'db> {
             }
 
             // Iterate over all children
-            let child_module_ids = collector.module_tree[module_id]
+            let child_module_ids = collector.package_defs.module_tree[module_id]
                 .children
                 .iter()
                 .map(|(name, local_id)| (name.clone(), *local_id))
@@ -85,16 +221,114 @@ impl<'db> DefCollector<'db> {
                 collect_modules_recursive(collector, child_module_id, Some((name, module_id)));
             }
         };
+    }
 
-        collect_modules_recursive(self, module_tree.root, None);
+    fn resolve_import(&self, module_id: LocalModuleId, import: &Import) -> PartialResolvedImport {
+        let res = self
+            .package_defs
+            .resolve_path_with_fixedpoint(self.db, module_id, &import.path);
+
+        let def = res.resolved_def;
+        if res.reached_fixedpoint == ReachedFixedPoint::No || def.is_none() {
+            return PartialResolvedImport::Unresolved;
+        }
+
+        if let Some(package) = res.package {
+            if package != self.package_defs.module_tree.package {
+                return PartialResolvedImport::Resolved(def);
+            }
+        }
+
+        // Check whether all namespace is resolved
+        if def.take_types().is_some() && def.take_values().is_some() {
+            PartialResolvedImport::Resolved(def)
+        } else {
+            PartialResolvedImport::Indeterminate(def)
+        }
+    }
+
+    /// Records ands propagates the resolution of an import directive.
+    fn record_resolved_import(&mut self, directive: &ImportDirective) {
+        let import_module_id = directive.module_id;
+        let import = &directive.import;
+
+        // Get the resolved definition of the use statement
+        let resolution = directive.status.namespaces();
+
+        // Get the visibility of the import statement
+        let import_visibility = self.package_defs.module_tree.resolve_visibility(
+            self.db,
+            import_module_id,
+            &directive.import.visibility,
+        );
+
+        if import.is_glob {
+            // TODO: wildcard imports
+        } else {
+            match import.path.segments.last() {
+                Some(last_segment) => {
+                    let name = match &import.alias {
+                        Some(ImportAlias::Alias(name)) => Some(name.clone()),
+                        Some(ImportAlias::Underscore) => None,
+                        None => Some(last_segment.clone()),
+                    };
+
+                    self.update(
+                        import_module_id,
+                        import_visibility,
+                        ImportType::Named,
+                        &[ImportResolution { name, resolution }],
+                    );
+                }
+                None => unreachable!(),
+            }
+        }
+    }
+
+    /// Updates the current state with the resolutions of an import statement.
+    fn update(
+        &mut self,
+        import_module_id: LocalModuleId,
+        _import_visibility: Visibility,
+        _import_type: ImportType,
+        resolutions: &[ImportResolution],
+    ) {
+        let scope = &mut self.package_defs.modules[import_module_id];
+
+        // TODO: Handle wildcard imports
+
+        for ImportResolution { name, resolution } in resolutions {
+            // TODO: Add an error if the visibility of the item does not allow exposing with the
+            // import visibility. e.g.:
+            // ```mun
+            // //- foo.mun
+            // pub(package) struct Foo;
+            //
+            // //- main.mun
+            // pub foo::Foo; // This is not allowed because Foo is only public for the package.
+            // ```
+
+            match name {
+                Some(name) => {
+                    // TODO: Error if a resolution with the same name already exists
+
+                    scope.add_resolution(name.clone(), *resolution);
+                }
+                None => {
+                    // This is not yet implemented (bringing in types into scope without a name).
+                    // This might be useful for traits. e.g.:
+                    // ```mun
+                    // use foo::SomeTrait as _; // Should be able to call methods added by SomeTrait.
+                    // ```
+                    continue;
+                }
+            }
+        }
     }
 
     /// Create the `PackageDefs` struct that holds all the items
     fn finish(self) -> PackageDefs {
-        PackageDefs {
-            modules: self.modules,
-            module_tree: self.module_tree,
-        }
+        self.package_defs
     }
 }
 
@@ -113,6 +347,7 @@ impl<'a> ModCollectorContext<'a, '_> {
                 ModItem::Function(id) => self.collect_function(id),
                 ModItem::Struct(id) => self.collect_struct(id),
                 ModItem::TypeAlias(id) => self.collect_type_alias(id),
+                ModItem::Import(id) => self.collect_import(id),
             };
 
             if let Some(DefData {
@@ -122,18 +357,28 @@ impl<'a> ModCollectorContext<'a, '_> {
                 has_constructor,
             }) = definition
             {
-                self.def_collector.modules[self.module_id].add_definition(id);
-                let visibility = self.def_collector.module_tree.resolve_visibility(
-                    self.def_collector.db,
-                    self.module_id,
-                    visibility,
-                );
-                self.def_collector.modules[self.module_id].add_resolution(
+                self.def_collector.package_defs.modules[self.module_id].add_definition(id);
+                let visibility = self
+                    .def_collector
+                    .package_defs
+                    .module_tree
+                    .resolve_visibility(self.def_collector.db, self.module_id, visibility);
+                self.def_collector.package_defs.modules[self.module_id].add_resolution(
                     name.clone(),
                     PerNs::from_definition(id, visibility, has_constructor),
-                )
+                );
             }
         }
+    }
+
+    /// Collects the definition data from an import statement.
+    fn collect_import(&mut self, id: LocalItemTreeId<item_tree::Import>) -> Option<DefData<'a>> {
+        self.def_collector.unresolved_imports.push(ImportDirective {
+            module_id: self.module_id,
+            import: Import::from_use(&self.item_tree, InFile::new(self.file_id, id)),
+            status: PartialResolvedImport::Unresolved,
+        });
+        None
     }
 
     /// Collects the definition data from a `Function`

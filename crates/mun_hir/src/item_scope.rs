@@ -3,6 +3,17 @@ use crate::{ids::ItemDefinitionId, visibility::Visibility, Name, PerNs};
 use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap;
 
+/// Defines the type of import. An import can either be a named import (e.g. `use foo::Bar`) or a
+/// wildcard import (e.g. `use foo::*`)
+#[derive(Copy, Clone)]
+pub(crate) enum ImportType {
+    /// A wildcard import statement (`use foo::*`)
+    Glob,
+
+    /// A named import statement (`use foo::Bar`)
+    Named,
+}
+
 /// Holds all items that are visible from an item as well as by which name and under which
 /// visibility they are accessible.
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -41,18 +52,28 @@ impl ItemScope {
         self.defs.push(def)
     }
 
-    /// Adds a named item resolution into the scope
+    /// Adds a named item resolution into the scope. Returns true if adding the resolution changes
+    /// the scope or not.
     pub(crate) fn add_resolution(
         &mut self,
         name: Name,
         def: PerNs<(ItemDefinitionId, Visibility)>,
-    ) {
+    ) -> bool {
+        let mut changed = false;
         if let Some((types, visibility)) = def.types {
-            self.types.insert(name.clone(), (types, visibility));
+            self.types.entry(name.clone()).or_insert_with(|| {
+                changed = true;
+                (types, visibility)
+            });
         }
         if let Some((values, visibility)) = def.values {
-            self.values.insert(name, (values, visibility));
+            self.values.entry(name).or_insert_with(|| {
+                changed = true;
+                (values, visibility)
+            });
         }
+
+        changed
     }
 
     /// Gets a name from the current module scope

@@ -1,5 +1,5 @@
 use super::*;
-use crate::T;
+use crate::{parsing::grammar::paths::is_use_path_start, T};
 
 pub(super) const DECLARATION_RECOVERY_SET: TokenSet =
     TokenSet::new(&[T![fn], T![pub], T![struct], T![use]]);
@@ -124,8 +124,8 @@ fn use_tree(p: &mut Parser, top_level: bool) {
 
     match p.current() {
         T![*] if !top_level => p.bump(T![*]),
-        _ if paths::is_path_start(p) => {
-            paths::use_path(p);
+        _ if is_use_path_start(p, top_level) => {
+            paths::use_path(p, top_level);
             match p.current() {
                 T![as] => {
                     opt_rename(p);

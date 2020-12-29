@@ -189,6 +189,7 @@ fn api_walkthrough() {
             ast::ModuleItemKind::FunctionDef(f) => func = Some(f),
             ast::ModuleItemKind::StructDef(_) => (),
             ast::ModuleItemKind::TypeAliasDef(_) => (),
+            ast::ModuleItemKind::Use(_) => (),
         }
     }
 

@@ -610,7 +610,7 @@ pub struct ModuleItem {
 
 impl AstNode for ModuleItem {
     fn can_cast(kind: SyntaxKind) -> bool {
-        matches!(kind, FUNCTION_DEF | STRUCT_DEF | TYPE_ALIAS_DEF)
+        matches!(kind, USE | FUNCTION_DEF | STRUCT_DEF | TYPE_ALIAS_DEF)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -625,9 +625,15 @@ impl AstNode for ModuleItem {
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModuleItemKind {
+    Use(Use),
     FunctionDef(FunctionDef),
     StructDef(StructDef),
     TypeAliasDef(TypeAliasDef),
+}
+impl From<Use> for ModuleItem {
+    fn from(n: Use) -> ModuleItem {
+        ModuleItem { syntax: n.syntax }
+    }
 }
 impl From<FunctionDef> for ModuleItem {
     fn from(n: FunctionDef) -> ModuleItem {
@@ -648,6 +654,7 @@ impl From<TypeAliasDef> for ModuleItem {
 impl ModuleItem {
     pub fn kind(&self) -> ModuleItemKind {
         match self.syntax.kind() {
+            USE => ModuleItemKind::Use(Use::cast(self.syntax.clone()).unwrap()),
             FUNCTION_DEF => {
                 ModuleItemKind::FunctionDef(FunctionDef::cast(self.syntax.clone()).unwrap())
             }
@@ -1213,6 +1220,7 @@ impl AstNode for Rename {
         &self.syntax
     }
 }
+impl ast::NameOwner for Rename {}
 impl Rename {}
 
 // RetType
@@ -1538,6 +1546,7 @@ impl AstNode for Use {
         &self.syntax
     }
 }
+impl ast::VisibilityOwner for Use {}
 impl Use {
     pub fn use_tree(&self) -> Option<UseTree> {
         super::child_opt(self)
@@ -1566,7 +1575,19 @@ impl AstNode for UseTree {
         &self.syntax
     }
 }
-impl UseTree {}
+impl UseTree {
+    pub fn use_tree_list(&self) -> Option<UseTreeList> {
+        super::child_opt(self)
+    }
+
+    pub fn path(&self) -> Option<Path> {
+        super::child_opt(self)
+    }
+
+    pub fn rename(&self) -> Option<Rename> {
+        super::child_opt(self)
+    }
+}
 
 // UseTreeList
 

@@ -6,6 +6,33 @@ use crate::{
 use std::{fmt::Write, sync::Arc};
 
 #[test]
+fn use_() {
+    infer_snapshot(
+        r#"
+    //- /bar.mun
+    use package::Foo;
+    pub struct Bar(Foo);
+
+    //- /mod.mun
+    pub use foo::Foo; // Re-export a child's definition
+
+    struct Baz;
+
+    //- /foo.mun
+    use package::{bar::Bar, Baz};
+
+    pub struct Foo {
+        baz: Baz, // Can use private definitions from any of its ancestors
+    }
+
+    pub fn foo_from_bar(bar: Bar) -> Foo {
+        bar.0
+    }
+    "#,
+    )
+}
+
+#[test]
 fn private_access() {
     infer_snapshot(
         r#"
