@@ -63,7 +63,7 @@ impl Fixture {
                 result.push(meta);
             } else if let Some(entry) = result.last_mut() {
                 entry.text.push_str(line);
-                entry.text.push_str("\n");
+                entry.text.push('\n');
             }
         }
 

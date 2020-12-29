@@ -547,7 +547,7 @@ impl LanguageServerState {
                             hir::SourceRootId(root.0),
                             hir::FileId(file.0),
                             path,
-                            text,
+                            Arc::from(text.to_string()),
                         );
                     }
                 }
@@ -561,7 +561,7 @@ impl LanguageServerState {
                         hir::SourceRootId(root.0),
                         hir::FileId(file.0),
                         path,
-                        text,
+                        Arc::from(text.to_string()),
                     );
                 }
                 VfsChange::RemoveFile { root, file, path } => analysis_change.remove_file(
@@ -570,7 +570,7 @@ impl LanguageServerState {
                     path,
                 ),
                 VfsChange::ChangeFile { file, text } => {
-                    analysis_change.change_file(hir::FileId(file.0), text);
+                    analysis_change.change_file(hir::FileId(file.0), Arc::from(text.to_string()));
                 }
             }
         }

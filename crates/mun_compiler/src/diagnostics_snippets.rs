@@ -84,7 +84,7 @@ fn emit_diagnostic(
     /// Will hold all snippets and their relevant information
     struct AnnotationFile {
         relative_file_path: RelativePathBuf,
-        source_code: Arc<String>,
+        source_code: Arc<str>,
         line_index: Arc<LineIndex>,
         annotations: Vec<mun_diagnostics::SourceAnnotation>,
     };

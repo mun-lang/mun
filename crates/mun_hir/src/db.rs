@@ -32,7 +32,7 @@ pub trait Upcast<T: ?Sized> {
 pub trait SourceDatabase: salsa::Database {
     /// Text of the file.
     #[salsa::input]
-    fn file_text(&self, file_id: FileId) -> Arc<String>;
+    fn file_text(&self, file_id: FileId) -> Arc<str>;
 
     /// Path to a file, relative to the root of its source root.
     #[salsa::input]

@@ -80,11 +80,11 @@ impl MockDatabase {
         let mut source_root = SourceRoot::default();
         let source_root_id = SourceRootId(0);
 
-        let text = Arc::new(text.to_owned());
+        let text = Arc::from(text.to_owned());
         let rel_path = RelativePathBuf::from("main.mun");
         let file_id = FileId(0);
         db.set_file_relative_path(file_id, rel_path.clone());
-        db.set_file_text(file_id, Arc::new(text.to_string()));
+        db.set_file_text(file_id, text);
         db.set_file_source_root(file_id, source_root_id);
         source_root.insert_file(file_id);
 

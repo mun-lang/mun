@@ -9,7 +9,7 @@ use std::sync::Arc;
 pub struct AnalysisChange {
     new_roots: Vec<(hir::SourceRootId, hir::PackageId)>,
     roots_changed: HashMap<hir::SourceRootId, RootChange>,
-    files_changed: Vec<(hir::FileId, Arc<String>)>,
+    files_changed: Vec<(hir::FileId, Arc<str>)>,
 }
 
 impl fmt::Debug for AnalysisChange {
@@ -45,7 +45,7 @@ impl AnalysisChange {
         root_id: hir::SourceRootId,
         file_id: hir::FileId,
         path: hir::RelativePathBuf,
-        text: Arc<String>,
+        text: Arc<str>,
     ) {
         let file = AddFile {
             file_id,
@@ -60,7 +60,7 @@ impl AnalysisChange {
     }
 
     /// Records the change of content of a specific file
-    pub fn change_file(&mut self, file_id: hir::FileId, new_text: Arc<String>) {
+    pub fn change_file(&mut self, file_id: hir::FileId, new_text: Arc<str>) {
         self.files_changed.push((file_id, new_text))
     }
 
@@ -85,7 +85,7 @@ impl AnalysisChange {
 struct AddFile {
     file_id: hir::FileId,
     path: hir::RelativePathBuf,
-    text: Arc<String>,
+    text: Arc<str>,
 }
 
 /// Represents the removal of a file from a source root.
@@ -130,7 +130,7 @@ impl AnalysisDatabase {
                 source_root.insert_file(add_file.file_id)
             }
             for remove_file in root_change.removed {
-                self.set_file_text(remove_file.file_id, Default::default());
+                self.set_file_text(remove_file.file_id, Arc::from(""));
                 source_root.remove_file(remove_file.file_id);
             }
             self.set_source_root(root_id, Arc::new(source_root));
