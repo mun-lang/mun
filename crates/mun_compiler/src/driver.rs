@@ -90,7 +90,7 @@ impl Driver {
         let file_id = FileId(driver.next_file_id as u32);
         driver.next_file_id += 1;
         driver.db.set_file_relative_path(file_id, rel_path);
-        driver.db.set_file_text(file_id, Arc::new(text));
+        driver.db.set_file_text(file_id, Arc::from(text));
         driver.db.set_file_source_root(file_id, WORKSPACE);
         driver.source_root.insert_file(file_id);
         driver
@@ -138,7 +138,7 @@ impl Driver {
             driver
                 .db
                 .set_file_relative_path(file_id, relative_path.clone());
-            driver.db.set_file_text(file_id, Arc::new(file_contents));
+            driver.db.set_file_text(file_id, Arc::from(file_contents));
             driver.db.set_file_source_root(file_id, WORKSPACE);
             driver.source_root.insert_file(file_id);
         }
@@ -191,7 +191,7 @@ impl Driver {
     /// Sets the contents of a specific file.
     pub fn set_file_text<T: AsRef<str>>(&mut self, file_id: FileId, text: T) {
         self.db
-            .set_file_text(file_id, Arc::new(text.as_ref().to_owned()));
+            .set_file_text(file_id, Arc::from(text.as_ref().to_owned()));
     }
 }
 
@@ -215,7 +215,7 @@ impl Driver {
                         emit_syntax_error(
                             syntax_error,
                             relative_file_path.as_str(),
-                            source_code.as_str(),
+                            &source_code,
                             &line_index,
                             emit_colors,
                             writer,
@@ -326,7 +326,7 @@ impl Driver {
             .path_to_file_id
             .get(path.as_ref())
             .expect("writing to a file that is not part of the source root should never happen");
-        self.db.set_file_text(file_id, Arc::new(contents));
+        self.db.set_file_text(file_id, Arc::from(contents));
         file_id
     }
 
@@ -337,7 +337,7 @@ impl Driver {
         // Insert the new file
         self.db
             .set_file_relative_path(file_id, path.as_ref().to_relative_path_buf());
-        self.db.set_file_text(file_id, Arc::new(contents));
+        self.db.set_file_text(file_id, Arc::from(contents));
         self.db.set_file_source_root(file_id, WORKSPACE);
 
         // Update the source root

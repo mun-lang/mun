@@ -38,7 +38,7 @@ fn with_files(db: &mut dyn SourceDatabase, fixture: &str) -> Vec<FileId> {
     for (idx, entry) in fixture.into_iter().enumerate() {
         let file_id = FileId(idx.try_into().expect("too many files"));
         db.set_file_relative_path(file_id, entry.relative_path);
-        db.set_file_text(file_id, Arc::new(entry.text));
+        db.set_file_text(file_id, Arc::from(entry.text));
         db.set_file_source_root(file_id, source_root_id);
         source_root.insert_file(file_id);
         files.push(file_id);

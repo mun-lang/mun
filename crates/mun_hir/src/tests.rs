@@ -30,7 +30,7 @@ fn check_package_defs_does_not_change() {
     }
     db.set_file_text(
         file_id,
-        Arc::new(
+        Arc::from(
             r#"
     fn foo()->i32 {
         90

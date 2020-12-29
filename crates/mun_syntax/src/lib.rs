@@ -41,7 +41,7 @@ use rowan::GreenNode;
 #[derive(Debug, PartialEq, Eq)]
 pub struct Parse<T> {
     green: GreenNode,
-    errors: Arc<Vec<SyntaxError>>,
+    errors: Arc<[SyntaxError]>,
     _ty: PhantomData<fn() -> T>,
 }
 
@@ -59,7 +59,7 @@ impl<T> Parse<T> {
     fn new(green: GreenNode, errors: Vec<SyntaxError>) -> Parse<T> {
         Parse {
             green,
-            errors: Arc::new(errors),
+            errors: Arc::from(errors),
             _ty: PhantomData,
         }
     }
@@ -86,7 +86,7 @@ impl<T: AstNode> Parse<T> {
         &*self.errors
     }
 
-    pub fn ok(self) -> Result<T, Arc<Vec<SyntaxError>>> {
+    pub fn ok(self) -> Result<T, Arc<[SyntaxError]>> {
         if self.errors.is_empty() {
             Ok(self.tree())
         } else {
@@ -128,7 +128,7 @@ impl SourceFile {
         //errors.extend(validation::validate(&SourceFile::new(green.clone())));
         Parse {
             green,
-            errors: Arc::new(errors),
+            errors: Arc::from(errors),
             _ty: PhantomData,
         }
     }
