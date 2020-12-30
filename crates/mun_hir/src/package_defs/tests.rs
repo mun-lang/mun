@@ -7,6 +7,38 @@ use itertools::Itertools;
 use rustc_hash::FxHashSet;
 
 #[test]
+fn use_cyclic_wildcard() {
+    resolve_snapshot(
+        r#"
+    //- /foo.mun
+    pub use super::baz::*;
+
+    pub struct Ok;
+
+    //- /baz.mun
+    pub use super::foo::{self, *};
+    "#,
+    )
+}
+
+#[test]
+fn use_wildcard() {
+    resolve_snapshot(
+        r#"
+    //- /foo.mun
+    pub struct Foo;
+
+    //- /foo/bar.mun
+    pub use super::Foo;
+    pub struct FooBar;
+
+    //- /bar.mun
+    use package::foo::bar::*;   // Should reference two structs (Foo and FooBar)
+    "#,
+    )
+}
+
+#[test]
 fn use_self() {
     resolve_snapshot(
         r#"

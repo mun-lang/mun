@@ -1,4 +1,5 @@
 use super::PackageDefs;
+use crate::item_scope::PerNsGlobImports;
 use crate::{
     ids::ItemDefinitionId,
     ids::{FunctionLoc, Intern, StructLoc, TypeAliasLoc},
@@ -15,6 +16,7 @@ use crate::{
     visibility::RawVisibility,
     DefDatabase, FileId, InFile, ModuleId, Name, PackageId, Path, PerNs, Visibility,
 };
+use rustc_hash::FxHashMap;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum PartialResolvedImport {
@@ -104,6 +106,8 @@ pub(super) fn collect(db: &dyn DefDatabase, package_id: PackageId) -> PackageDef
         },
         unresolved_imports: Default::default(),
         resolved_imports: Default::default(),
+        glob_imports: Default::default(),
+        from_glob_import: Default::default(),
     };
     collector.collect();
     collector.finish()
@@ -118,6 +122,10 @@ struct DefCollector<'db> {
     // module_tree: Arc<ModuleTree>,
     unresolved_imports: Vec<ImportDirective>,
     resolved_imports: Vec<ImportDirective>,
+
+    /// A mapping from local module to wildcard imports to other modules
+    glob_imports: FxHashMap<LocalModuleId, Vec<(LocalModuleId, Visibility)>>,
+    from_glob_import: PerNsGlobImports,
 }
 
 impl<'db> DefCollector<'db> {
@@ -264,7 +272,49 @@ impl<'db> DefCollector<'db> {
         );
 
         if import.is_glob {
-            // TODO: wildcard imports
+            match resolution.take_types() {
+                Some((ItemDefinitionId::ModuleId(m), _)) => {
+                    let scope = &self.package_defs[m.local_id];
+
+                    // Get all the items that are visible from this module
+                    let resolutions = scope
+                        .entries()
+                        .map(|(n, res)| ImportResolution {
+                            name: Some(n.clone()),
+                            resolution: res.and_then(|(item, vis)| {
+                                if vis.is_visible_from_module_tree(
+                                    &self.package_defs.module_tree,
+                                    import_module_id,
+                                ) {
+                                    Some((item, vis))
+                                } else {
+                                    None
+                                }
+                            }),
+                        })
+                        .filter(|res| !res.resolution.is_none())
+                        .collect::<Vec<_>>();
+
+                    self.update(
+                        import_module_id,
+                        import_visibility,
+                        ImportType::Glob,
+                        &resolutions,
+                    );
+
+                    // Record the wildcard import in case new items are added to the module we are importing
+                    let glob = self.glob_imports.entry(m.local_id).or_default();
+                    if !glob.iter().any(|(m, _)| *m == import_module_id) {
+                        glob.push((import_module_id, import_visibility));
+                    }
+                }
+                Some((_, _)) => {
+                    // Happens when wildcard importing something other than a module. I guess its ok to do nothing here?
+                }
+                None => {
+                    // Happens if a wildcard import refers to something other than a type?
+                }
+            }
         } else {
             match import.path.segments.last() {
                 Some(last_segment) => {
@@ -290,14 +340,37 @@ impl<'db> DefCollector<'db> {
     fn update(
         &mut self,
         import_module_id: LocalModuleId,
-        _import_visibility: Visibility,
-        _import_type: ImportType,
+        import_visibility: Visibility,
+        import_type: ImportType,
         resolutions: &[ImportResolution],
     ) {
+        self.update_recursive(
+            import_module_id,
+            import_visibility,
+            import_type,
+            resolutions,
+            0,
+        );
+    }
+
+    /// Updates the current state with the resolutions of an import statement. Also recursively
+    /// updates any wildcard imports.
+    fn update_recursive(
+        &mut self,
+        import_module_id: LocalModuleId,
+        import_visibility: Visibility,
+        import_type: ImportType,
+        resolutions: &[ImportResolution],
+        depth: usize,
+    ) {
+        if depth > 100 {
+            // prevent stack overflows (but this shouldn't be possible)
+            panic!("infinite recursion in glob imports!");
+        }
+
         let scope = &mut self.package_defs.modules[import_module_id];
 
-        // TODO: Handle wildcard imports
-
+        let mut changed = false;
         for ImportResolution { name, resolution } in resolutions {
             // TODO: Add an error if the visibility of the item does not allow exposing with the
             // import visibility. e.g.:
@@ -311,9 +384,12 @@ impl<'db> DefCollector<'db> {
 
             match name {
                 Some(name) => {
-                    // TODO: Error if a resolution with the same name already exists
-
-                    scope.add_resolution(name.clone(), *resolution);
+                    changed |= scope.add_resolution_from_import(
+                        &mut self.from_glob_import,
+                        (import_module_id, name.clone()),
+                        resolution.map(|(item, _)| (item, import_visibility)),
+                        import_type,
+                    );
                 }
                 None => {
                     // This is not yet implemented (bringing in types into scope without a name).
@@ -324,6 +400,35 @@ impl<'db> DefCollector<'db> {
                     continue;
                 }
             }
+        }
+
+        // If nothing changed, there is also no point in updating the wildcard imports
+        if !changed {
+            return;
+        }
+
+        let glob_imports = self
+            .glob_imports
+            .get(&import_module_id)
+            .into_iter()
+            .flat_map(|v| v.iter())
+            .filter(|(glob_importing_module, _)| {
+                import_visibility.is_visible_from_module_tree(
+                    &self.package_defs.module_tree,
+                    *glob_importing_module,
+                )
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+
+        for (glob_importing_module, glob_import_vis) in glob_imports {
+            self.update_recursive(
+                glob_importing_module,
+                glob_import_vis,
+                ImportType::Glob,
+                resolutions,
+                depth + 1,
+            )
         }
     }
 

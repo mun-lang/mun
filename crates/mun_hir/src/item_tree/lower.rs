@@ -73,7 +73,7 @@ impl Context {
                 ModItem::Function(item) => Some(&self.data.functions[item.index].name),
                 ModItem::Struct(item) => Some(&self.data.structs[item.index].name),
                 ModItem::TypeAlias(item) => Some(&self.data.type_aliases[item.index].name),
-                ModItem::Import(item) => self.data.imports[item.index].path.segments.last(),
+                ModItem::Import(_) => None,
             };
             if let Some(name) = name {
                 if let Some(first_item) = set.get(&name) {

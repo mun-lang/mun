@@ -1,0 +1,13 @@
+---
+source: crates/mun_hir/src/package_defs/tests.rs
+expression: "//- /foo.mun\npub struct Foo;\n\n//- /foo/bar.mun\npub use super::Foo;\npub struct FooBar;\n\n//- /bar.mun\nuse package::foo::bar::*;   // Should reference two structs (Foo and FooBar)"
+---
+mod mod
++-- mod bar
+|   +-- use struct package::foo::Foo
+|   '-- use struct package::foo::bar::FooBar
+'-- mod foo
+    +-- struct Foo
+    '-- mod bar
+        +-- struct FooBar
+        '-- use struct package::foo::Foo

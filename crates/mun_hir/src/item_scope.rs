@@ -1,7 +1,9 @@
+use crate::module_tree::LocalModuleId;
 use crate::primitive_type::PrimitiveType;
 use crate::{ids::ItemDefinitionId, visibility::Visibility, Name, PerNs};
 use once_cell::sync::Lazy;
 use rustc_hash::{FxHashMap, FxHashSet};
+use std::collections::hash_map::Entry;
 
 /// Defines the type of import. An import can either be a named import (e.g. `use foo::Bar`) or a
 /// wildcard import (e.g. `use foo::*`)
@@ -12,6 +14,18 @@ pub(crate) enum ImportType {
 
     /// A named import statement (`use foo::Bar`)
     Named,
+}
+
+/// A struct that holds information on which name was imported via a glob import. This information
+/// is used by the `PackageDef` collector to keep track of duplicates so that this doesnt result in
+/// a duplicate name error:
+/// ```mun
+/// use foo::{Foo, *};
+/// ```
+#[derive(Debug, Default)]
+pub struct PerNsGlobImports {
+    types: FxHashSet<(LocalModuleId, Name)>,
+    values: FxHashSet<(LocalModuleId, Name)>,
 }
 
 /// Holds all items that are visible from an item as well as by which name and under which
@@ -80,6 +94,72 @@ impl ItemScope {
                 (values, visibility)
             });
         }
+
+        changed
+    }
+
+    /// Adds a named item resolution into the scope which is the result of a `use` statement.
+    /// Returns true if adding the resolution changes the scope or not.
+    pub(crate) fn add_resolution_from_import(
+        &mut self,
+        glob_imports: &mut PerNsGlobImports,
+        lookup: (LocalModuleId, Name),
+        def: PerNs<(ItemDefinitionId, Visibility)>,
+        def_import_type: ImportType,
+    ) -> bool {
+        let mut changed = false;
+
+        macro_rules! check_changed {
+            (
+                $changed:ident,
+                ( $this:ident / $def:ident ) . $field:ident,
+                $glob_imports:ident [ $lookup:ident ],
+                $def_import_type:ident
+            ) => {{
+                let existing = $this.$field.entry($lookup.1.clone());
+                match (existing, $def.$field) {
+                    (Entry::Vacant(entry), Some(_)) => {
+                        match $def_import_type {
+                            ImportType::Glob => {
+                                $glob_imports.$field.insert($lookup.clone());
+                            }
+                            ImportType::Named => {
+                                $glob_imports.$field.remove(&$lookup);
+                            }
+                        }
+
+                        if let Some(fld) = $def.$field {
+                            entry.insert(fld);
+                        }
+                        $changed = true;
+                    }
+                    (Entry::Occupied(mut entry), Some(_))
+                        if $glob_imports.$field.contains(&$lookup)
+                            && matches!($def_import_type, ImportType::Named) =>
+                    {
+                        $glob_imports.$field.remove(&$lookup);
+                        if let Some(fld) = $def.$field {
+                            entry.insert(fld);
+                        }
+                        $changed = true;
+                    }
+                    _ => {}
+                }
+            }};
+        }
+
+        check_changed!(
+            changed,
+            (self / def).types,
+            glob_imports[lookup],
+            def_import_type
+        );
+        check_changed!(
+            changed,
+            (self / def).values,
+            glob_imports[lookup],
+            def_import_type
+        );
 
         changed
     }
