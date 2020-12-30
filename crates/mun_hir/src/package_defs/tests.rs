@@ -7,6 +7,38 @@ use itertools::Itertools;
 use rustc_hash::FxHashSet;
 
 #[test]
+fn use_self() {
+    resolve_snapshot(
+        r#"
+    //- /foo.mun
+    pub struct Ok;
+
+    //- /bar.mun
+    use super::foo::{self};
+    use foo::Ok;
+    "#,
+    )
+}
+
+#[test]
+fn use_cyclic() {
+    resolve_snapshot(
+        r#"
+    //- /foo.mun
+    use super::baz::Cyclic;
+
+    pub struct Ok;
+
+    //- /bar.mun
+    use super::foo::{Cyclic, Ok};
+
+    //- /baz.mun
+    use super::bar::{Cyclic, Ok};
+    "#,
+    )
+}
+
+#[test]
 fn use_unresolved() {
     resolve_snapshot(
         r#"

@@ -1,0 +1,10 @@
+---
+source: crates/mun_hir/src/package_defs/tests.rs
+expression: "//- /foo.mun\npub struct Ok;\n\n//- /bar.mun\nuse super::foo::{self};\nuse foo::Ok;"
+---
+mod mod
++-- mod bar
+|   +-- use struct package::foo::Ok
+|   '-- use mod package::foo
+'-- mod foo
+    '-- struct Ok
