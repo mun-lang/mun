@@ -2,6 +2,7 @@
 source: crates/mun_hir/src/ty/tests.rs
 expression: "struct Foo {}\ntype Foo = Foo;\n\ntype A = B;\ntype B = A;\n\nfn main() {\n    let a: Foo;  // error: unknown type\n    let b: A;    // error: unknown type\n    let c: B;    // error: unknown type\n}"
 ---
+[14; 29): the name `Foo` is defined multiple times
 [40; 41): cyclic type
 [52; 53): cyclic type
 [119; 120): cyclic type

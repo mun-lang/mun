@@ -1,7 +1,6 @@
 use crate::{
     arena::{Arena, Idx},
     db::AstDatabase,
-    db::DefDatabase,
     in_file::InFile,
     FileId,
 };
@@ -18,7 +17,7 @@ use std::{
 pub(crate) type AstId<N> = InFile<FileAstId<N>>;
 
 impl<N: AstNode> AstId<N> {
-    pub fn to_node(&self, db: &dyn DefDatabase) -> N {
+    pub fn to_node(&self, db: &dyn AstDatabase) -> N {
         let root = db.parse(self.file_id);
         db.ast_id_map(self.file_id)
             .get(self.value)

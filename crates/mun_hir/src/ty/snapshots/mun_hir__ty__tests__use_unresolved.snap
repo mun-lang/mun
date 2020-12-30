@@ -1,0 +1,6 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "//- /foo.mun\npub struct Foo;\n\n//- /mod.mun\nuse foo::Foo;   // works\nuse foo::Bar;   // doesnt work (Bar does not exist)\nuse baz::Baz;   // doesnt work (baz does not exist)"
+---
+[29; 37): unresolved import
+[81; 89): unresolved import

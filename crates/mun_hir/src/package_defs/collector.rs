@@ -10,6 +10,7 @@ use crate::{
     },
     module_tree::LocalModuleId,
     name_resolution::ReachedFixedPoint,
+    package_defs::diagnostics::DefDiagnostic,
     path::ImportAlias,
     visibility::RawVisibility,
     DefDatabase, FileId, InFile, ModuleId, Name, PackageId, Path, PerNs, Visibility,
@@ -99,6 +100,7 @@ pub(super) fn collect(db: &dyn DefDatabase, package_id: PackageId) -> PackageDef
         package_defs: PackageDefs {
             modules: Default::default(),
             module_tree: db.module_tree(package_id),
+            diagnostics: Default::default(),
         },
         unresolved_imports: Default::default(),
         resolved_imports: Default::default(),
@@ -168,8 +170,6 @@ impl<'db> DefCollector<'db> {
             }
         }
 
-        // TODO: Error out if something cannot be resolved
-
         fn collect_modules_recursive(
             collector: &mut DefCollector,
             module_id: LocalModuleId,
@@ -223,6 +223,7 @@ impl<'db> DefCollector<'db> {
         };
     }
 
+    /// Given an import, try to resolve it.
     fn resolve_import(&self, module_id: LocalModuleId, import: &Import) -> PartialResolvedImport {
         let res = self
             .package_defs
@@ -328,7 +329,24 @@ impl<'db> DefCollector<'db> {
 
     /// Create the `PackageDefs` struct that holds all the items
     fn finish(self) -> PackageDefs {
-        self.package_defs
+        let mut package_defs = self.package_defs;
+
+        // Create diagnostics for all unresolved imports
+        for directive in self.unresolved_imports.iter() {
+            let import = &directive.import;
+            let item_tree = self.db.item_tree(import.source.file_id);
+            let import_data = &item_tree[import.source.value];
+
+            package_defs
+                .diagnostics
+                .push(DefDiagnostic::unresolved_import(
+                    directive.module_id,
+                    InFile::new(import.source.file_id, import_data.ast_id),
+                    import_data.index,
+                ))
+        }
+
+        package_defs
     }
 }
 

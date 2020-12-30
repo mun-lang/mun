@@ -6,6 +6,21 @@ use crate::{
 use std::{fmt::Write, sync::Arc};
 
 #[test]
+fn use_unresolved() {
+    infer_snapshot(
+        r#"
+    //- /foo.mun
+    pub struct Foo;
+
+    //- /mod.mun
+    use foo::Foo;   // works
+    use foo::Bar;   // doesnt work (Bar does not exist)
+    use baz::Baz;   // doesnt work (baz does not exist)
+    "#,
+    )
+}
+
+#[test]
 fn use_() {
     infer_snapshot(
         r#"
@@ -679,6 +694,12 @@ fn infer(content: &str) -> String {
         write!(diags, "{}: {}\n", diag.highlight_range(), diag.message()).unwrap();
     });
 
+    for package in Package::all(&db).iter() {
+        for module in package.modules(&db).iter() {
+            module.diagnostics(&db, &mut diag_sink);
+        }
+    }
+
     for item in Package::all(&db)
         .iter()
         .flat_map(|pkg| pkg.modules(&db))
@@ -689,12 +710,7 @@ fn infer(content: &str) -> String {
                 let source_map = fun.body_source_map(&db);
                 let infer_result = fun.infer(&db);
 
-                fun.diagnostics(&db, &mut diag_sink);
-
                 infer_def(infer_result, source_map);
-            }
-            ModuleDef::TypeAlias(item) => {
-                item.diagnostics(&db, &mut diag_sink);
             }
             _ => {}
         }

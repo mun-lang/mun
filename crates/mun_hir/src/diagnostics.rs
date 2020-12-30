@@ -746,3 +746,22 @@ impl Diagnostic for FreeTypeAliasWithoutTypeRef {
         self
     }
 }
+
+#[derive(Debug)]
+pub struct UnresolvedImport {
+    pub use_tree: InFile<AstPtr<ast::UseTree>>,
+}
+
+impl Diagnostic for UnresolvedImport {
+    fn message(&self) -> String {
+        "unresolved import".to_string()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        self.use_tree.map(Into::into)
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send) {
+        self
+    }
+}

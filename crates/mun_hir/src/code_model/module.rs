@@ -39,12 +39,19 @@ impl Module {
 
     /// Iterate over all diagnostics from this `Module` by placing them in the `sink`
     pub fn diagnostics(self, db: &dyn HirDatabase, sink: &mut DiagnosticSink) {
+        // Add diagnostics from the package definitions
+        let package_defs = db.package_defs(self.id.package);
+        package_defs.add_diagnostics(db.upcast(), self.id.local_id, sink);
+
+        // Add diagnostics from the item tree
         if let Some(file_id) = self.file_id(db) {
             let item_tree = db.item_tree(file_id);
             for diagnostics in item_tree.diagnostics.iter() {
                 diagnostics.add_to(db, &*item_tree, sink);
             }
         }
+
+        // Add diagnostics from the items
         for decl in self.declarations(db) {
             match decl {
                 ModuleDef::Function(f) => f.diagnostics(db, sink),
