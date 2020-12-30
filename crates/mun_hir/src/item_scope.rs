@@ -1,7 +1,7 @@
 use crate::primitive_type::PrimitiveType;
 use crate::{ids::ItemDefinitionId, visibility::Visibility, Name, PerNs};
 use once_cell::sync::Lazy;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Defines the type of import. An import can either be a named import (e.g. `use foo::Bar`) or a
 /// wildcard import (e.g. `use foo::*`)
@@ -42,6 +42,14 @@ pub(crate) static BUILTIN_SCOPE: Lazy<FxHashMap<Name, PerNs<(ItemDefinitionId, V
     });
 
 impl ItemScope {
+    /// Returns all the entries in the scope
+    pub fn entries<'a>(
+        &'a self,
+    ) -> impl Iterator<Item = (&'a Name, PerNs<(ItemDefinitionId, Visibility)>)> + 'a {
+        let keys: FxHashSet<_> = self.types.keys().chain(self.values.keys()).collect();
+        keys.into_iter().map(move |name| (name, self.get(name)))
+    }
+
     /// Returns an iterator over all declarations with this scope
     pub fn declarations(&self) -> impl Iterator<Item = ItemDefinitionId> + '_ {
         self.defs.iter().copied()

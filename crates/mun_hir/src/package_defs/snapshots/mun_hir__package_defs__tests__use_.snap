@@ -1,8 +1,15 @@
 ---
-source: crates/mun_hir/src/ty/tests.rs
+source: crates/mun_hir/src/package_defs/tests.rs
 expression: "//- /bar.mun\nuse package::Foo;\npub struct Bar(Foo);\n\n//- /mod.mun\npub use foo::Foo; // Re-export a child's definition\n\nstruct Baz;\n\n//- /foo.mun\nuse package::{bar::Bar, Baz};\n\npub struct Foo {\n    baz: Baz, // Can use private definitions from any of its ancestors\n}\n\npub fn foo_from_bar(bar: Bar) -> Foo {\n    bar.0\n}"
 ---
-[142; 145) 'bar': Bar
-[159; 172) '{     bar.0 }': Foo
-[165; 168) 'bar': Bar
-[165; 170) 'bar.0': Foo
+mod mod
++-- struct Baz
++-- use struct package::foo::Foo
++-- mod bar
+|   +-- struct Bar
+|   '-- use struct package::foo::Foo
+'-- mod foo
+    +-- fn foo_from_bar
+    +-- struct Foo
+    +-- use struct package::Baz
+    '-- use struct package::bar::Bar

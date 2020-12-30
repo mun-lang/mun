@@ -1,4 +1,6 @@
 mod collector;
+#[cfg(test)]
+mod tests;
 
 use crate::{
     arena::map::ArenaMap, item_scope::ItemScope, module_tree::LocalModuleId,

@@ -1,7 +1,7 @@
 use super::{Function, Package, Struct, TypeAlias};
 use crate::ids::{ItemDefinitionId, ModuleId};
 use crate::primitive_type::PrimitiveType;
-use crate::{DiagnosticSink, FileId, HirDatabase};
+use crate::{DiagnosticSink, FileId, HirDatabase, Name};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Module {
@@ -21,6 +21,49 @@ impl Module {
             .iter()
             .flat_map(|package| package.modules(db))
             .find(|m| m.file_id(db) == Some(file))
+    }
+
+    /// Returns the parent module of this module.
+    pub fn parent(self, db: &dyn HirDatabase) -> Option<Module> {
+        let module_tree = db.module_tree(self.id.package);
+        let parent_id = module_tree[self.id.local_id].parent?;
+        Some(Module {
+            id: ModuleId {
+                package: self.id.package,
+                local_id: parent_id,
+            },
+        })
+    }
+
+    /// Returns the name of this module or None if this is the root module
+    pub fn name(self, db: &dyn HirDatabase) -> Option<Name> {
+        let module_tree = db.module_tree(self.id.package);
+        let parent = module_tree[self.id.local_id].parent?;
+        module_tree[parent]
+            .children
+            .iter()
+            .find_map(|(name, module_id)| {
+                if *module_id == self.id.local_id {
+                    Some(name.clone())
+                } else {
+                    None
+                }
+            })
+    }
+
+    /// Iterates over all child modules
+    pub fn children(self, db: &dyn HirDatabase) -> Vec<Module> {
+        let module_tree = db.module_tree(self.id.package);
+        module_tree[self.id.local_id]
+            .children
+            .iter()
+            .map(|(_, local_id)| Module {
+                id: ModuleId {
+                    package: self.id.package,
+                    local_id: *local_id,
+                },
+            })
+            .collect()
     }
 
     /// Returns the file that defines the module
@@ -60,6 +103,17 @@ impl Module {
                 _ => (),
             }
         }
+    }
+
+    /// Returns the path from this module to the root module
+    pub fn path_to_root(self, db: &dyn HirDatabase) -> Vec<Module> {
+        let mut res = vec![self];
+        let mut curr = self;
+        while let Some(next) = curr.parent(db) {
+            res.push(next);
+            curr = next
+        }
+        res
     }
 }
 
