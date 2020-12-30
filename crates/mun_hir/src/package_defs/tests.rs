@@ -7,6 +7,39 @@ use itertools::Itertools;
 use rustc_hash::FxHashSet;
 
 #[test]
+fn use_alias() {
+    resolve_snapshot(
+        r#"
+    //- /foo.mun
+    pub struct Ok;
+
+    //- /bar.mun
+    pub use package::foo::Ok as ReallyOk;
+
+    pub struct Ok;
+
+    //- /baz.mun
+    use package::bar::ReallyOk;
+    "#,
+    )
+}
+
+#[test]
+fn use_duplicate_name() {
+    resolve_snapshot(
+        r#"
+    //- /foo.mun
+    pub struct Ok;
+
+    //- /bar.mun
+    use package::foo::Ok;
+
+    pub struct Ok;
+    "#,
+    )
+}
+
+#[test]
 fn use_cyclic_wildcard() {
     resolve_snapshot(
         r#"

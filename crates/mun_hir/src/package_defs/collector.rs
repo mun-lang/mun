@@ -124,7 +124,8 @@ struct DefCollector<'db> {
     resolved_imports: Vec<ImportDirective>,
 
     /// A mapping from local module to wildcard imports to other modules
-    glob_imports: FxHashMap<LocalModuleId, Vec<(LocalModuleId, Visibility)>>,
+    glob_imports:
+        FxHashMap<LocalModuleId, Vec<(LocalModuleId, Visibility, ItemTreeId<item_tree::Import>)>>,
     from_glob_import: PerNsGlobImports,
 }
 
@@ -299,13 +300,14 @@ impl<'db> DefCollector<'db> {
                         import_module_id,
                         import_visibility,
                         ImportType::Glob,
+                        import.source,
                         &resolutions,
                     );
 
                     // Record the wildcard import in case new items are added to the module we are importing
                     let glob = self.glob_imports.entry(m.local_id).or_default();
-                    if !glob.iter().any(|(m, _)| *m == import_module_id) {
-                        glob.push((import_module_id, import_visibility));
+                    if !glob.iter().any(|(m, _, _)| *m == import_module_id) {
+                        glob.push((import_module_id, import_visibility, import.source));
                     }
                 }
                 Some((_, _)) => {
@@ -328,6 +330,7 @@ impl<'db> DefCollector<'db> {
                         import_module_id,
                         import_visibility,
                         ImportType::Named,
+                        import.source,
                         &[ImportResolution { name, resolution }],
                     );
                 }
@@ -342,12 +345,14 @@ impl<'db> DefCollector<'db> {
         import_module_id: LocalModuleId,
         import_visibility: Visibility,
         import_type: ImportType,
+        import_source: ItemTreeId<item_tree::Import>,
         resolutions: &[ImportResolution],
     ) {
         self.update_recursive(
             import_module_id,
             import_visibility,
             import_type,
+            import_source,
             resolutions,
             0,
         );
@@ -360,6 +365,7 @@ impl<'db> DefCollector<'db> {
         import_module_id: LocalModuleId,
         import_visibility: Visibility,
         import_type: ImportType,
+        import_source: ItemTreeId<item_tree::Import>,
         resolutions: &[ImportResolution],
         depth: usize,
     ) {
@@ -384,12 +390,27 @@ impl<'db> DefCollector<'db> {
 
             match name {
                 Some(name) => {
-                    changed |= scope.add_resolution_from_import(
+                    let add_result = scope.add_resolution_from_import(
                         &mut self.from_glob_import,
                         (import_module_id, name.clone()),
                         resolution.map(|(item, _)| (item, import_visibility)),
                         import_type,
                     );
+
+                    if add_result.changed {
+                        changed = true;
+                    }
+                    if add_result.duplicate {
+                        let item_tree = self.db.item_tree(import_source.file_id);
+                        let import_data = &item_tree[import_source.value];
+                        self.package_defs
+                            .diagnostics
+                            .push(DefDiagnostic::duplicate_import(
+                                import_module_id,
+                                InFile::new(import_source.file_id, import_data.ast_id),
+                                import_data.index,
+                            ))
+                    }
                 }
                 None => {
                     // This is not yet implemented (bringing in types into scope without a name).
@@ -412,7 +433,7 @@ impl<'db> DefCollector<'db> {
             .get(&import_module_id)
             .into_iter()
             .flat_map(|v| v.iter())
-            .filter(|(glob_importing_module, _)| {
+            .filter(|(glob_importing_module, _, _)| {
                 import_visibility.is_visible_from_module_tree(
                     &self.package_defs.module_tree,
                     *glob_importing_module,
@@ -421,11 +442,12 @@ impl<'db> DefCollector<'db> {
             .cloned()
             .collect::<Vec<_>>();
 
-        for (glob_importing_module, glob_import_vis) in glob_imports {
+        for (glob_importing_module, glob_import_vis, glob_import_source) in glob_imports {
             self.update_recursive(
                 glob_importing_module,
                 glob_import_vis,
                 ImportType::Glob,
+                glob_import_source,
                 resolutions,
                 depth + 1,
             )

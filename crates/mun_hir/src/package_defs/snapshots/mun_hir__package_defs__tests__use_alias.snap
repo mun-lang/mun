@@ -1,0 +1,12 @@
+---
+source: crates/mun_hir/src/package_defs/tests.rs
+expression: "//- /foo.mun\npub struct Ok;\n\n//- /bar.mun\npub use package::foo::Ok as ReallyOk;\n\npub struct Ok;\n\n//- /baz.mun\nuse package::bar::ReallyOk;"
+---
+mod mod
++-- mod bar
+|   +-- struct Ok
+|   '-- use struct package::foo::Ok
++-- mod baz
+|   '-- use struct package::foo::Ok
+'-- mod foo
+    '-- struct Ok

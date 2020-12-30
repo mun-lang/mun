@@ -47,15 +47,18 @@ impl Index<LocalModuleId> for PackageDefs {
 }
 
 mod diagnostics {
-    use crate::diagnostics::UnresolvedImport;
+    use crate::diagnostics::{ImportDuplicateDefinition, UnresolvedImport};
     use crate::{
-        module_tree::LocalModuleId, source_id::AstId, DefDatabase, DiagnosticSink, InFile, Path,
+        module_tree::LocalModuleId, source_id::AstId, AstDatabase, DefDatabase, DiagnosticSink,
+        InFile, Path,
     };
+    use mun_syntax::ast::Use;
     use mun_syntax::{ast, AstPtr};
 
     #[derive(Debug, PartialEq, Eq)]
     enum DiagnosticKind {
         UnresolvedImport { ast: AstId<ast::Use>, index: usize },
+        DuplicateImport { ast: AstId<ast::Use>, index: usize },
     }
 
     #[derive(Debug, PartialEq, Eq)]
@@ -80,6 +83,18 @@ mod diagnostics {
             }
         }
 
+        /// Constructs a new `DefDiagnostic` which indicates that an import names a duplication.
+        pub(super) fn duplicate_import(
+            container: LocalModuleId,
+            ast: AstId<ast::Use>,
+            index: usize,
+        ) -> Self {
+            Self {
+                in_module: container,
+                kind: DiagnosticKind::DuplicateImport { ast, index },
+            }
+        }
+
         pub(super) fn add_to(
             &self,
             db: &dyn DefDatabase,
@@ -92,25 +107,35 @@ mod diagnostics {
 
             match &self.kind {
                 DiagnosticKind::UnresolvedImport { ast, index } => {
-                    let use_item = ast.to_node(db.upcast());
-                    let mut cur = 0;
-                    let mut tree = None;
-                    Path::expand_use_item(
-                        InFile::new(ast.file_id, use_item),
-                        |_path, use_tree, _is_glob, _alias| {
-                            if cur == *index {
-                                tree = Some(use_tree.clone())
-                            }
-                            cur += 1;
-                        },
-                    );
-
-                    if let Some(use_tree) = tree {
-                        sink.push(UnresolvedImport {
-                            use_tree: InFile::new(ast.file_id, AstPtr::new(&use_tree)),
-                        });
+                    if let Some(use_tree) = use_tree_ptr_from_ast(db.upcast(), ast, *index) {
+                        sink.push(UnresolvedImport { use_tree });
                     }
                 }
+                DiagnosticKind::DuplicateImport { ast, index } => {
+                    if let Some(use_tree) = use_tree_ptr_from_ast(db.upcast(), ast, *index) {
+                        sink.push(ImportDuplicateDefinition { use_tree });
+                    }
+                }
+            }
+
+            fn use_tree_ptr_from_ast(
+                db: &dyn AstDatabase,
+                ast: &AstId<Use>,
+                index: usize,
+            ) -> Option<InFile<AstPtr<ast::UseTree>>> {
+                let use_item = ast.to_node(db);
+                let mut cur = 0;
+                let mut tree = None;
+                Path::expand_use_item(
+                    InFile::new(ast.file_id, use_item),
+                    |_path, use_tree, _is_glob, _alias| {
+                        if cur == index {
+                            tree = Some(use_tree.clone())
+                        }
+                        cur += 1;
+                    },
+                );
+                tree.map(|t| InFile::new(ast.file_id, AstPtr::new(&t)))
             }
         }
     }

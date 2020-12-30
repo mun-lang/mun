@@ -42,6 +42,16 @@ pub struct ItemScope {
     defs: Vec<ItemDefinitionId>,
 }
 
+/// A struct that is returned from `add_resolution_from_import`.
+#[derive(Debug)]
+pub(crate) struct AddResolutionFromImportResult {
+    /// Whether or not adding the resolution changed the item scope
+    pub changed: bool,
+
+    /// Whether or not adding the resolution will overwrite and existing entry
+    pub duplicate: bool,
+}
+
 pub(crate) static BUILTIN_SCOPE: Lazy<FxHashMap<Name, PerNs<(ItemDefinitionId, Visibility)>>> =
     Lazy::new(|| {
         PrimitiveType::ALL
@@ -106,8 +116,9 @@ impl ItemScope {
         lookup: (LocalModuleId, Name),
         def: PerNs<(ItemDefinitionId, Visibility)>,
         def_import_type: ImportType,
-    ) -> bool {
+    ) -> AddResolutionFromImportResult {
         let mut changed = false;
+        let mut duplicate = false;
 
         macro_rules! check_changed {
             (
@@ -133,6 +144,8 @@ impl ItemScope {
                         }
                         $changed = true;
                     }
+                    // If there is already an entry for this resolution, but it came from a glob
+                    // pattern, overwrite it and mark it as not included from the glob pattern.
                     (Entry::Occupied(mut entry), Some(_))
                         if $glob_imports.$field.contains(&$lookup)
                             && matches!($def_import_type, ImportType::Named) =>
@@ -142,6 +155,13 @@ impl ItemScope {
                             entry.insert(fld);
                         }
                         $changed = true;
+                    }
+                    (Entry::Occupied(_), Some(_)) => {
+                        let is_previous_from_glob = $glob_imports.$field.contains(&$lookup);
+                        let is_explicit_import = matches!($def_import_type, ImportType::Named);
+                        if is_explicit_import && !is_previous_from_glob {
+                            duplicate = true;
+                        }
                     }
                     _ => {}
                 }
@@ -161,7 +181,7 @@ impl ItemScope {
             def_import_type
         );
 
-        changed
+        AddResolutionFromImportResult { changed, duplicate }
     }
 
     /// Gets a name from the current module scope

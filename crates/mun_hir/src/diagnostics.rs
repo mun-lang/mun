@@ -765,3 +765,22 @@ impl Diagnostic for UnresolvedImport {
         self
     }
 }
+
+#[derive(Debug)]
+pub struct ImportDuplicateDefinition {
+    pub use_tree: InFile<AstPtr<ast::UseTree>>,
+}
+
+impl Diagnostic for ImportDuplicateDefinition {
+    fn message(&self) -> String {
+        "a second item with the same name imported. Try to use an alias.".to_string()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        self.use_tree.map(Into::into)
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send) {
+        self
+    }
+}
