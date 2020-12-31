@@ -10,7 +10,16 @@ use paths::RelativePath;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
-/// Represents the tree of modules in a package.
+/// Represents the tree of modules of a package.
+///
+/// The `ModuleTree` is build by looking at all the source files of the source root of a package and
+/// creating a tree based on their relative paths. See the [`ModuleTree::module_tree_query`] method.
+/// When constructing the `ModuleTree` extra empty modules may be added for missing files. For
+/// instance for the relative path `foo/bar/baz.mun`, besides the module `foo::bar::baz` the modules
+/// `foo`, `foo::bar` get created along the way.
+///
+/// A `ModuleTree` represent the inner connections between files. It can be used to query the
+/// shortest path for use declarations
 #[derive(Debug, PartialEq, Eq)]
 pub struct ModuleTree {
     pub root: LocalModuleId,
@@ -108,8 +117,8 @@ impl ModuleTree {
         })
     }
 
-    /// Given a `RawVisibility` which describes the visibility of an item relative to a module into
-    /// a `Visibility` which describes the absolute visibility within the module tree.
+    /// Converts a `RawVisibility` which describes the visibility of an item relative to a module
+    /// into a `Visibility` which describes the absolute visibility within the module tree.
     pub(crate) fn resolve_visibility(
         &self,
         _db: &dyn DefDatabase,

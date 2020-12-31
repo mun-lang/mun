@@ -22,7 +22,7 @@ use rustc_hash::FxHashMap;
 enum PartialResolvedImport {
     /// None of any namespaces is resolved
     Unresolved,
-    /// One of namespaces is resolved
+    /// One of namespaces is resolved.
     Indeterminate(PerNs<(ItemDefinitionId, Visibility)>),
     /// All namespaces are resolved, OR it is came from other crate
     Resolved(PerNs<(ItemDefinitionId, Visibility)>),
@@ -118,14 +118,14 @@ struct DefCollector<'db> {
     db: &'db dyn DefDatabase,
     package_id: PackageId,
     package_defs: PackageDefs,
-    // modules: ArenaMap<LocalModuleId, ItemScope>,
-    // module_tree: Arc<ModuleTree>,
     unresolved_imports: Vec<ImportDirective>,
     resolved_imports: Vec<ImportDirective>,
 
     /// A mapping from local module to wildcard imports to other modules
     glob_imports:
         FxHashMap<LocalModuleId, Vec<(LocalModuleId, Visibility, ItemTreeId<item_tree::Import>)>>,
+
+    /// A list of all items that have been imported via a wildcard
     from_glob_import: PerNsGlobImports,
 }
 
@@ -158,8 +158,10 @@ impl<'db> DefCollector<'db> {
                 match directive.status {
                     PartialResolvedImport::Indeterminate(_) => {
                         self.record_resolved_import(&directive);
-                        // FIXME: For avoid performance regression,
-                        // we consider an imported resolved if it is indeterminate (i.e not all namespace resolved)
+                        // FIXME: To avoid performance regression, we consider an imported resolved
+                        // if it is indeterminate (i.e not all namespace resolved). This might not
+                        // completely resolve correctly in the future if we can have values and
+                        // types with the same name.
                         self.resolved_imports.push(directive);
                         resolved_something = true;
                     }
@@ -174,11 +176,14 @@ impl<'db> DefCollector<'db> {
                 }
             }
 
+            // If nothing actually changed up to this point, stop resolving.
             if !resolved_something {
                 break;
             }
         }
 
+        /// Recursively iterate over all modules in the `ModuleTree` and add them and their
+        /// definitions to their corresponding `ItemScope`.
         fn collect_modules_recursive(
             collector: &mut DefCollector,
             module_id: LocalModuleId,

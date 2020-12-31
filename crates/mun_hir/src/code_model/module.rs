@@ -51,7 +51,7 @@ impl Module {
             })
     }
 
-    /// Iterates over all child modules
+    /// Returns all the child modules of this module
     pub fn children(self, db: &dyn HirDatabase) -> Vec<Module> {
         let module_tree = db.module_tree(self.id.package);
         module_tree[self.id.local_id]

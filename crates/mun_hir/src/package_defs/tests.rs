@@ -272,6 +272,7 @@ fn tree_for_module(
     node
 }
 
+/// Returns a fully qualified path of a module e.g. `package::foo::bar::baz`
 fn fully_qualified_module_path(db: &dyn HirDatabase, module: Module) -> String {
     module
         .path_to_root(db)

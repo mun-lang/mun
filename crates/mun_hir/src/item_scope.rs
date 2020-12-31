@@ -67,9 +67,9 @@ pub(crate) static BUILTIN_SCOPE: Lazy<FxHashMap<Name, PerNs<(ItemDefinitionId, V
 
 impl ItemScope {
     /// Returns all the entries in the scope
-    pub fn entries<'a>(
-        &'a self,
-    ) -> impl Iterator<Item = (&'a Name, PerNs<(ItemDefinitionId, Visibility)>)> + 'a {
+    pub fn entries(
+        &self,
+    ) -> impl Iterator<Item = (&'_ Name, PerNs<(ItemDefinitionId, Visibility)>)> + '_ {
         let keys: FxHashSet<_> = self.types.keys().chain(self.values.keys()).collect();
         keys.into_iter().map(move |name| (name, self.get(name)))
     }
@@ -129,11 +129,17 @@ impl ItemScope {
             ) => {{
                 let existing = $this.$field.entry($lookup.1.clone());
                 match (existing, $def.$field) {
+                    // The name doesnt exist yet in the scope
                     (Entry::Vacant(entry), Some(_)) => {
                         match $def_import_type {
+                            // If this is a wildcard import, add it to the list of items we imported
+                            // via a glob. This information is stored so if we later explicitly
+                            // import this type or value, it doesnt cause a conflict.
                             ImportType::Glob => {
                                 $glob_imports.$field.insert($lookup.clone());
                             }
+                            // If this is *not* a wildcard import, remove it from the list of items
+                            // imported via a glob.
                             ImportType::Named => {
                                 $glob_imports.$field.remove(&$lookup);
                             }
