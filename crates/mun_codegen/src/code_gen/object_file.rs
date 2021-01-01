@@ -2,8 +2,7 @@ use crate::code_gen::CodeGenerationError;
 use crate::linker;
 use inkwell::targets::{FileType, TargetMachine};
 use mun_target::spec;
-use std::io::Write;
-use std::path::Path;
+use std::{io::Write, path::Path};
 use tempfile::NamedTempFile;
 
 pub struct ObjectFile {

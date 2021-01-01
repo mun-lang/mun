@@ -18,6 +18,9 @@ pub struct Config {
 
     /// Whether or not to use colors in terminal output
     pub display_color: DisplayColor,
+
+    /// Whether or not to emit an IR file instead of a munlib.
+    pub emit_ir: bool,
 }
 
 impl Default for Config {
@@ -30,6 +33,7 @@ impl Default for Config {
             optimization_lvl: OptimizationLevel::Default,
             out_dir: None,
             display_color: DisplayColor::Auto,
+            emit_ir: false,
         }
     }
 }

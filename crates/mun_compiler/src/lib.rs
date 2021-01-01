@@ -6,7 +6,7 @@ pub mod diagnostics;
 mod diagnostics_snippets;
 mod driver;
 
-pub use mun_hir::{FileId, RelativePath, RelativePathBuf};
+pub use hir::{FileId, RelativePath, RelativePathBuf};
 pub use mun_target::spec::Target;
 use std::path::{Path, PathBuf};
 

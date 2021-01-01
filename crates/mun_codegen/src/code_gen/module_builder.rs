@@ -1,8 +1,9 @@
-use crate::code_gen::object_file::ObjectFile;
-use crate::code_gen::{optimize_module, symbols, CodeGenContext, CodeGenerationError};
-use crate::ir::file::gen_file_ir;
-use crate::ir::file_group::gen_file_group_ir;
-use crate::value::{IrTypeContext, IrValueContext};
+use crate::{
+    assembly::Assembly,
+    code_gen::{optimize_module, symbols, CodeGenContext, CodeGenerationError},
+    ir::{file::gen_file_ir, file_group::gen_file_group_ir},
+    value::{IrTypeContext, IrValueContext},
+};
 use inkwell::module::{Linkage, Module};
 
 /// A struct that can be used to build an LLVM `Module`.
@@ -33,7 +34,7 @@ impl<'db, 'ink, 'ctx> ModuleBuilder<'db, 'ink, 'ctx> {
     }
 
     /// Constructs an object file.
-    pub fn build(self) -> Result<ObjectFile, anyhow::Error> {
+    pub fn build(self) -> Result<Assembly<'db, 'ink, 'ctx>, anyhow::Error> {
         let group_ir = gen_file_group_ir(self.code_gen, self.module);
         let file = gen_file_ir(self.code_gen, &group_ir, self.module);
 
@@ -86,10 +87,6 @@ impl<'db, 'ink, 'ctx> ModuleBuilder<'db, 'ink, 'ctx> {
         // Debug print the IR
         //println!("{}", assembly_module.print_to_string().to_string());
 
-        ObjectFile::new(
-            &self.code_gen.db.target(),
-            &self.code_gen.target_machine,
-            &self.assembly_module,
-        )
+        Ok(Assembly::new(self.code_gen, self.assembly_module))
     }
 }

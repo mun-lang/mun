@@ -1,54 +1,76 @@
 use mun::run_with_args;
 use mun_runtime::{invoke_fn, RuntimeBuilder};
-use serial_test::serial;
-use std::env::set_current_dir;
 use std::ffi::OsString;
 use std::path::Path;
 
+const PROJECT_DIR: &str = "mun_projects";
+const PROJECT_NAME: &str = "mun_example_project";
+
 /// Creates a new project using `mun init` and then tests that it works.
 #[test]
-#[serial] // This test must be run in serial as files may conflict.
 fn mun_init() {
     let project = tempfile::Builder::new()
-        .prefix("mun_project_example")
+        .prefix(PROJECT_NAME)
         .tempdir()
         .unwrap();
 
-    set_current_dir(&project).unwrap();
-
-    let args: Vec<OsString> = vec!["mun".into(), "init".into()];
+    let args: Vec<OsString> = vec!["mun".into(), "init".into(), project.path().into()];
     assert_eq!(run_with_args(args).unwrap(), mun::ExitStatus::Success);
-    build_and_run(project);
+    build_and_run(project.path());
 }
 
 /// Creates a new project using `mun new` and then tests that it works.
 #[test]
-#[serial] // This test must be run in serial as files may conflict.
 fn mun_new() {
     let project = tempfile::Builder::new()
-        .prefix("mun_projects")
+        .prefix(PROJECT_DIR)
         .tempdir()
         .unwrap();
 
-    set_current_dir(&project).unwrap();
-
-    let args: Vec<OsString> = vec!["mun".into(), "new".into(), "mun_project_example".into()];
+    let project_path = project.as_ref().join(PROJECT_NAME);
+    let args: Vec<OsString> = vec!["mun".into(), "new".into(), project_path.as_path().into()];
     assert_eq!(run_with_args(args).unwrap(), mun::ExitStatus::Success);
-    dbg!(project.as_ref().join("mun_project_example").ancestors());
-    build_and_run(project.as_ref().join("mun_project_example"));
+    build_and_run(&project_path);
+}
+
+/// Verifies that a newly created project can be used to emit IR.
+#[test]
+fn mun_emit_ir() {
+    let project_dir = tempfile::Builder::new()
+        .prefix(PROJECT_DIR)
+        .tempdir()
+        .unwrap();
+
+    let project_path = project_dir.path().join(PROJECT_NAME);
+
+    let args: Vec<OsString> = vec!["mun".into(), "new".into(), project_path.as_path().into()];
+    assert_eq!(run_with_args(args).unwrap(), mun::ExitStatus::Success);
+    assert!(project_path.exists());
+
+    build(&project_path, &["--emit-ir"]);
+
+    let ir_path = project_path.join("target/mod.ll");
+    assert!(ir_path.is_file());
+}
+
+fn build(project: &Path, args: &[&str]) {
+    let args: Vec<OsString> = vec![
+        OsString::from("mun"),
+        OsString::from("build"),
+        OsString::from("--manifest-path"),
+        OsString::from(project.join("mun.toml")),
+    ]
+    .into_iter()
+    .chain(args.into_iter().map(|&arg| arg.into()))
+    .collect();
+    assert_eq!(run_with_args(args).unwrap(), mun::ExitStatus::Success);
 }
 
 /// Builds and runs an newly generated mun project
-fn build_and_run(project: impl AsRef<Path>) {
-    let args: Vec<OsString> = vec![
-        "mun".into(),
-        "build".into(),
-        "--manifest-path".into(),
-        project.as_ref().join("mun.toml").into(),
-    ];
-    assert_eq!(run_with_args(args).unwrap(), mun::ExitStatus::Success);
+fn build_and_run(project: &Path) {
+    build(project.as_ref(), &[]);
 
-    let library_path = project.as_ref().join("target/mod.munlib");
+    let library_path = project.join("target/mod.munlib");
     assert!(library_path.is_file());
 
     let runtime = RuntimeBuilder::new(&library_path).spawn().unwrap();

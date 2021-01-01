@@ -813,7 +813,7 @@ fn incremental_compilation() {
 
     {
         let events = db.log_executed(|| {
-            db.assembly(module);
+            db.target_assembly(module);
         });
         assert!(
             format!("{:?}", events).contains("package_defs"),
@@ -831,7 +831,7 @@ fn incremental_compilation() {
 
     {
         let events = db.log_executed(|| {
-            db.assembly(module);
+            db.target_assembly(module);
         });
         println!("events: {:?}", events);
         assert!(

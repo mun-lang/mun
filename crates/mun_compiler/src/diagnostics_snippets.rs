@@ -1,10 +1,8 @@
+use hir::{line_index::LineIndex, FileId, HirDatabase, RelativePathBuf};
 use mun_diagnostics::DiagnosticForWith;
-use mun_hir::{FileId, HirDatabase, RelativePathBuf};
 use mun_syntax::SyntaxError;
 
 use std::sync::Arc;
-
-use mun_hir::line_index::LineIndex;
 
 use annotate_snippets::display_list::DisplayList;
 use annotate_snippets::display_list::FormatOptions;
@@ -58,7 +56,7 @@ pub(crate) fn emit_syntax_error(
 
 /// Emits all diagnostics that are a result of HIR validation.
 pub(crate) fn emit_hir_diagnostic(
-    diagnostic: &dyn mun_hir::Diagnostic,
+    diagnostic: &dyn hir::Diagnostic,
     db: &impl HirDatabase,
     file_id: FileId,
     display_colors: bool,
