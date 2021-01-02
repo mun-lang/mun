@@ -68,10 +68,7 @@ jobs:
         shell: python
 
       - name: Shorten commit SHA
-        run: |
-          import os
-          print("::set-env name=COMMIT_SHA::%s" % os.environ['GITHUB_SHA'][:7])
-        shell: python
+        run: echo "COMMIT_SHA=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
 
       - uses: actions/upload-artifact@master
         with:
