@@ -1,7 +1,6 @@
 use std::ffi::CStr;
 use std::{
     ffi::CString,
-    iter::FromIterator,
     os::raw::{c_char, c_int},
 };
 
@@ -50,7 +49,7 @@ pub fn link(target: LldFlavor, args: &[String]) -> LldResult {
         .iter()
         .map(|arg| CString::new(arg.as_bytes()).unwrap())
         .collect::<Vec<CString>>();
-    let args: Vec<*const c_char> = Vec::from_iter(c_args.iter().map(|arg| arg.as_ptr()));
+    let args: Vec<*const c_char> = c_args.iter().map(|arg| arg.as_ptr()).collect();
 
     // Invoke LLD
     let mut lld_result = unsafe { mun_lld_link(target, args.len() as c_int, args.as_ptr()) };

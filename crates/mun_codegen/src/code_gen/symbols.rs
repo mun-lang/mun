@@ -316,7 +316,7 @@ fn gen_get_info_fn<'ink>(
     );
     builder.build_store(
         num_dependencies_addr,
-        context.context.i32_type().const_int(0 as u64, false),
+        context.context.i32_type().const_int(0u64, false),
     );
 
     // Construct the return statement of the function.
