@@ -6,6 +6,7 @@ use lsp_types::{
 pub fn server_capabilities(_client_caps: &ClientCapabilities) -> ServerCapabilities {
     ServerCapabilities {
         text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::Full)),
+        document_symbol_provider: Some(true),
         ..Default::default()
     }
 }

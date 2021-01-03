@@ -1,3 +1,4 @@
+use crate::SymbolKind;
 use lsp_types::Url;
 use mun_syntax::{TextRange, TextUnit};
 use std::path::{Component, Path, Prefix};
@@ -61,5 +62,14 @@ pub fn convert_unit(
     lsp_types::Position {
         line: line_col.line.into(),
         character: line_col.col.into(),
+    }
+}
+
+/// Converts a symbol kind from this crate to one for the LSP protocol.
+pub(crate) fn convert_symbol_kind(symbol_kind: SymbolKind) -> lsp_types::SymbolKind {
+    match symbol_kind {
+        SymbolKind::Function => lsp_types::SymbolKind::Function,
+        SymbolKind::Struct => lsp_types::SymbolKind::Struct,
+        SymbolKind::TypeAlias => lsp_types::SymbolKind::TypeParameter,
     }
 }

@@ -6,8 +6,10 @@ mod config;
 mod conversion;
 mod db;
 mod diagnostics;
+mod file_structure;
 mod main_loop;
 pub mod protocol;
+mod symbol_kind;
 
 pub use config::Config;
 pub use main_loop::main_loop;
@@ -15,6 +17,8 @@ pub use main_loop::main_loop;
 use crate::config::FilesWatcher;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use std::fmt;
+use symbol_kind::SymbolKind;
 
 pub type Result<T> = anyhow::Result<T>;
 
@@ -109,4 +113,20 @@ pub async fn run_server_async() -> Result<()> {
 /// Main entry point for the language server
 pub fn run_server() -> Result<()> {
     async_std::task::block_on(run_server_async())
+}
+
+#[derive(Debug)]
+struct LspError {
+    code: i32,
+    message: String,
+}
+
+impl fmt::Display for LspError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "language Server request failed with {}. ({})",
+            self.code, self.message
+        )
+    }
 }

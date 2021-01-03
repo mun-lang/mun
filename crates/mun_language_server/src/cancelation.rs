@@ -1,3 +1,5 @@
+use std::error::Error;
+
 /// An error signifying a cancelled operation.
 pub struct Canceled {
     // This is here so that you cannot construct a Canceled
@@ -29,3 +31,8 @@ impl std::fmt::Debug for Canceled {
 }
 
 impl std::error::Error for Canceled {}
+
+/// Returns true if the specified error refers to a cancellation event.
+pub(crate) fn is_canceled(e: &(dyn Error + 'static)) -> bool {
+    e.downcast_ref::<Canceled>().is_some()
+}

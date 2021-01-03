@@ -1,15 +1,16 @@
 use crate::analysis::{Analysis, AnalysisSnapshot, Cancelable};
+use crate::cancelation::is_canceled;
 use crate::change::AnalysisChange;
 use crate::config::{Config, FilesWatcher};
-use crate::conversion::{convert_range, url_from_path_with_drive_lowercasing};
-use crate::protocol::{Connection, Message, Notification, Request, RequestId};
-use crate::Result;
+use crate::conversion::{convert_range, convert_symbol_kind, url_from_path_with_drive_lowercasing};
+use crate::protocol::{Connection, ErrorCode, Message, Notification, Request, RequestId, Response};
+use crate::{LspError, Result};
 use anyhow::anyhow;
 use async_std::sync::RwLock;
 use futures::channel::mpsc::{unbounded, Sender, UnboundedReceiver, UnboundedSender};
 use futures::{SinkExt, StreamExt};
 use lsp_types::notification::PublishDiagnostics;
-use lsp_types::{PublishDiagnosticsParams, Url};
+use lsp_types::{DocumentSymbol, PublishDiagnosticsParams, Url};
 use ra_vfs::{RootEntry, Vfs, VfsChange, VfsFile};
 use serde::{de::DeserializeOwned, Serialize};
 use std::collections::HashSet;
@@ -233,11 +234,81 @@ enum LoopState {
 }
 
 /// Handles a received request
-async fn handle_request(request: Request, connection: &mut ConnectionState) -> Result<LoopState> {
+async fn handle_request(
+    request: Request,
+    connection: &mut ConnectionState,
+    pool: &rayon::ThreadPool,
+    state: &LanguageServerState,
+) -> Result<LoopState> {
     if connection.connection.handle_shutdown(&request).await? {
         return Ok(LoopState::Shutdown);
     };
+
+    let _request = match cast_request::<lsp_types::request::DocumentSymbolRequest>(request) {
+        Ok((request_id, params)) => {
+            let snapshot = state.snapshot();
+            let mut task_sender = connection.connection.sender.clone();
+            pool.spawn(move || {
+                async_std::task::block_on(async move {
+                    let result = handle_document_symbol(snapshot, params).await;
+                    task_sender.send(
+                        convert_result_to_response::<lsp_types::request::DocumentSymbolRequest>(
+                            request_id, result,
+                        )
+                        .into(),
+                    ).await.unwrap();
+                });
+            });
+            return Ok(LoopState::Continue);
+        }
+        Err(r) => r,
+    };
+
     Ok(LoopState::Continue)
+}
+
+async fn handle_document_symbol(
+    snapshot: LanguageServerSnapshot,
+    params: lsp_types::DocumentSymbolParams,
+) -> Result<Option<lsp_types::DocumentSymbolResponse>> {
+    let file_id = snapshot.uri_to_file_id(&params.text_document.uri).await?;
+    let line_index = snapshot.analysis.file_line_index(file_id)?;
+
+    let mut parents: Vec<(DocumentSymbol, Option<usize>)> = Vec::new();
+
+    for symbol in snapshot.analysis.file_structure(file_id)? {
+        #[allow(deprecated)]
+        let doc_symbol = DocumentSymbol {
+            name: symbol.label,
+            detail: symbol.detail,
+            kind: convert_symbol_kind(symbol.kind),
+            deprecated: None,
+            range: convert_range(symbol.node_range, &line_index),
+            selection_range: convert_range(symbol.navigation_range, &line_index),
+            children: None,
+        };
+        parents.push((doc_symbol, symbol.parent));
+    }
+
+    // Builds hierarchy from a flat list, in reverse order (so that indices
+    // makes sense)
+    let document_symbols = {
+        let mut acc = Vec::new();
+        while let Some((mut node, parent_idx)) = parents.pop() {
+            if let Some(children) = &mut node.children {
+                children.reverse();
+            }
+            let parent = match parent_idx {
+                None => &mut acc,
+                Some(i) => parents[i].0.children.get_or_insert_with(Vec::new),
+            };
+            parent.push(node);
+        }
+        acc.reverse();
+        acc
+    };
+
+    Ok(Some(document_symbols.into()))
 }
 
 /// Handles a received notification
@@ -360,7 +431,7 @@ async fn handle_event(
     // Process the incoming event
     let loop_state = match event {
         Event::Task(task) => handle_task(task, &mut connection_state.connection.sender).await?,
-        Event::Msg(msg) => handle_lsp_message(msg, connection_state, state).await?,
+        Event::Msg(msg) => handle_lsp_message(msg, connection_state, pool, state).await?,
         Event::Vfs(task) => handle_vfs_task(task, state).await?,
     };
 
@@ -472,10 +543,11 @@ async fn handle_vfs_task(task: ra_vfs::VfsTask, state: &LanguageServerState) -> 
 async fn handle_lsp_message(
     msg: Message,
     connection_state: &mut ConnectionState,
+    pool: &rayon::ThreadPool,
     state: &LanguageServerState,
 ) -> Result<LoopState> {
     match msg {
-        Message::Request(req) => handle_request(req, connection_state).await,
+        Message::Request(req) => handle_request(req, connection_state, pool, state).await,
         Message::Response(response) => {
             let removed = connection_state.pending_responses.remove(&response.id);
             if !removed {
@@ -515,6 +587,15 @@ where
     N::Params: DeserializeOwned,
 {
     notification.try_extract(N::METHOD)
+}
+
+/// Casts a request to the specified type.
+fn cast_request<R>(request: Request) -> std::result::Result<(RequestId, R::Params), Request>
+where
+    R: lsp_types::request::Request,
+    R::Params: DeserializeOwned,
+{
+    request.try_extract(R::METHOD)
 }
 
 impl LanguageServerState {
@@ -586,7 +667,46 @@ impl LanguageServerSnapshot {
     pub async fn file_id_to_uri(&self, id: hir::FileId) -> Result<Url> {
         let path = self.vfs.read().await.file2path(VfsFile(id.0));
         let url = url_from_path_with_drive_lowercasing(path)?;
-
         Ok(url)
+    }
+
+    /// Converts a `Url` to a `FileId`
+    pub async fn uri_to_file_id(&self, url: &Url) -> Result<hir::FileId> {
+        let path = url
+            .to_file_path()
+            .map_err(|()| anyhow!("invalid uri: {}", url))?;
+        Ok(hir::FileId(
+            self.vfs
+                .read()
+                .await
+                .path2file(&path)
+                .ok_or_else(|| anyhow::anyhow!("url is not a file"))?
+                .0,
+        ))
+    }
+}
+
+fn convert_result_to_response<R>(id: RequestId, result: Result<R::Result>) -> Response
+where
+    R: lsp_types::request::Request + 'static,
+    R::Params: DeserializeOwned + 'static,
+    R::Result: Serialize + 'static,
+{
+    match result {
+        Ok(resp) => Response::new_ok(id, resp),
+        Err(e) => match e.downcast::<LspError>() {
+            Ok(lsp_error) => Response::new_err(id, lsp_error.code, lsp_error.message),
+            Err(e) => {
+                if is_canceled(&*e) {
+                    Response::new_err(
+                        id,
+                        ErrorCode::ContentModified as i32,
+                        "content modified".to_string(),
+                    )
+                } else {
+                    Response::new_err(id, ErrorCode::InternalError as i32, e.to_string())
+                }
+            }
+        },
     }
 }

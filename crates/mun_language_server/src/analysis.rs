@@ -1,9 +1,11 @@
 use crate::cancelation::Canceled;
 use crate::change::AnalysisChange;
 use crate::db::AnalysisDatabase;
-use crate::diagnostics;
 use crate::diagnostics::Diagnostic;
+use crate::file_structure::StructureNode;
+use crate::{diagnostics, file_structure};
 use hir::line_index::LineIndex;
+use hir::AstDatabase;
 use hir::SourceDatabase;
 use salsa::{ParallelDatabase, Snapshot};
 use std::sync::Arc;
@@ -69,6 +71,11 @@ impl AnalysisSnapshot {
     /// Returns the line index for the specified file
     pub fn file_line_index(&self, file_id: hir::FileId) -> Cancelable<Arc<LineIndex>> {
         self.with_db(|db| db.line_index(file_id))
+    }
+
+    /// Returns a tree structure of the symbols of a file.
+    pub fn file_structure(&self, file_id: hir::FileId) -> Cancelable<Vec<StructureNode>> {
+        self.with_db(|db| file_structure::file_structure(&db.parse(file_id).tree()))
     }
 
     /// Performs an operation on that may be Canceled.
