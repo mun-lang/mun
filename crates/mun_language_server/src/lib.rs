@@ -11,10 +11,9 @@ mod main_loop;
 pub mod protocol;
 mod symbol_kind;
 
-pub use config::Config;
+pub use config::{Config, FilesWatcher};
 pub use main_loop::main_loop;
 
-use crate::config::FilesWatcher;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::fmt;

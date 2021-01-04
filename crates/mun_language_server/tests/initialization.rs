@@ -1,6 +1,6 @@
 mod support;
 
-#[test]
-fn test_server() {
-    let _server = support::Server::new();
+#[async_std::test]
+async fn test_server() {
+    let _server = support::Project::with_fixture("").server();
 }

@@ -1,21 +1,22 @@
-use crate::analysis::{Analysis, AnalysisSnapshot, Cancelable};
-use crate::cancelation::is_canceled;
-use crate::change::AnalysisChange;
-use crate::config::{Config, FilesWatcher};
-use crate::conversion::{convert_range, convert_symbol_kind, url_from_path_with_drive_lowercasing};
-use crate::protocol::{Connection, ErrorCode, Message, Notification, Request, RequestId, Response};
-use crate::{LspError, Result};
+use crate::{
+    analysis::{Analysis, AnalysisSnapshot, Cancelable},
+    cancelation::is_canceled,
+    change::AnalysisChange,
+    config::{Config, FilesWatcher},
+    conversion::{convert_range, convert_symbol_kind, url_from_path_with_drive_lowercasing},
+    protocol::{Connection, ErrorCode, Message, Notification, Request, RequestId, Response},
+    LspError, Result,
+};
 use anyhow::anyhow;
 use async_std::sync::RwLock;
-use futures::channel::mpsc::{unbounded, Sender, UnboundedReceiver, UnboundedSender};
-use futures::{SinkExt, StreamExt};
-use lsp_types::notification::PublishDiagnostics;
-use lsp_types::{DocumentSymbol, PublishDiagnosticsParams, Url};
+use futures::{
+    channel::mpsc::{unbounded, Sender, UnboundedReceiver, UnboundedSender},
+    SinkExt, StreamExt,
+};
+use lsp_types::{notification::PublishDiagnostics, DocumentSymbol, PublishDiagnosticsParams, Url};
 use ra_vfs::{RootEntry, Vfs, VfsChange, VfsFile};
 use serde::{de::DeserializeOwned, Serialize};
-use std::collections::HashSet;
-use std::ops::Deref;
-use std::sync::Arc;
+use std::{collections::HashSet, ops::Deref, sync::Arc};
 
 /// A `Task` is something that is send from async tasks to the entry point for processing. This
 /// enables synchronizing resources like the connection with the client.
@@ -507,7 +508,7 @@ async fn handle_diagnostics(
                 lsp_diagnostics
             };
 
-            sender
+            match sender
                 .send(Task::Notify(build_notification::<PublishDiagnostics>(
                     PublishDiagnosticsParams {
                         uri,
@@ -516,7 +517,13 @@ async fn handle_diagnostics(
                     },
                 )))
                 .await
-                .unwrap();
+            {
+                Ok(_) => {}
+                Err(err) if err.is_disconnected() => return Ok(()),
+                Err(err) => {
+                    panic!("unable to send diagnostic notification: {}", err);
+                }
+            }
         }
     }
 

@@ -21,8 +21,8 @@ impl Connection {
     /// Creates a pair of connected connections. This enables in-process communication, especially
     /// useful for testing.
     pub fn memory() -> (Connection, Connection) {
-        let (s1, r1) = mpsc::channel(0);
-        let (s2, r2) = mpsc::channel(0);
+        let (s1, r1) = mpsc::channel(1);
+        let (s2, r2) = mpsc::channel(1);
         (
             Connection {
                 sender: s1,
