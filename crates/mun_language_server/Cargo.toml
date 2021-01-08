@@ -15,6 +15,7 @@ categories = ["game-development", "mun"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+rustc-hash="1.1.0"
 lsp-types = "0.74"
 log = "0.4"
 serde = "1.0"
@@ -24,11 +25,17 @@ async-std = "1.6"
 futures = "0.3"
 anyhow = "1.0"
 thiserror = "1.0"
-ra_vfs = "0.6.1"
 salsa = "0.15.0"
 hir = { version = "=0.2.0", path="../mun_hir", package="mun_hir" }
 rayon = "1.3"
 num_cpus = "1.13.0"
+vfs = { path = "../mun_vfs", package="mun_vfs" }
+project = { path = "../mun_project", package="mun_project" }
 mun_target = { version = "=0.2.0", path = "../mun_target" }
 mun_syntax = { version = "=0.2.0", path = "../mun_syntax" }
 mun_diagnostics = { version = "=0.1.0", path = "../mun_diagnostics" }
+crossbeam-channel = "0.5.0"
+paths = {path="../mun_paths", package="mun_paths"}
+
+[dev-dependencies]
+tempdir = "0.3.7"

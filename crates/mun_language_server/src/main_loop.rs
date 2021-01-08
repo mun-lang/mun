@@ -1,20 +1,22 @@
-use crate::analysis::{Analysis, AnalysisSnapshot, Cancelable};
-use crate::change::AnalysisChange;
-use crate::config::{Config, FilesWatcher};
-use crate::conversion::{convert_range, url_from_path_with_drive_lowercasing};
-use crate::protocol::{Connection, Message, Notification, Request, RequestId};
-use crate::Result;
-use anyhow::anyhow;
+use crate::{
+    analysis::{Analysis, AnalysisSnapshot, Cancelable},
+    change::AnalysisChange,
+    config::Config,
+    conversion::{convert_range, convert_uri, url_from_path_with_drive_lowercasing},
+    protocol::{Connection, Message, Notification, Request, RequestId},
+    Result,
+};
 use async_std::sync::RwLock;
-use futures::channel::mpsc::{unbounded, Sender, UnboundedReceiver, UnboundedSender};
-use futures::{SinkExt, StreamExt};
-use lsp_types::notification::PublishDiagnostics;
-use lsp_types::{PublishDiagnosticsParams, Url};
-use ra_vfs::{RootEntry, Vfs, VfsChange, VfsFile};
+use futures::{
+    channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
+    SinkExt, StreamExt,
+};
+use lsp_types::{notification::PublishDiagnostics, PublishDiagnosticsParams, Url};
+use paths::AbsPathBuf;
+use rustc_hash::FxHashSet;
 use serde::{de::DeserializeOwned, Serialize};
-use std::collections::HashSet;
-use std::ops::Deref;
-use std::sync::Arc;
+use std::{cell::RefCell, collections::HashSet, ops::Deref, sync::Arc};
+use vfs::VirtualFileSystem;
 
 /// A `Task` is something that is send from async tasks to the entry point for processing. This
 /// enables synchronizing resources like the connection with the client.
@@ -26,41 +28,56 @@ enum Task {
 #[derive(Debug)]
 enum Event {
     Msg(Message),
-    Vfs(ra_vfs::VfsTask),
+    Vfs(vfs::MonitorMessage),
     Task(Task),
 }
 
 /// State for the language server
-struct LanguageServerState {
-    /// Interface to the vfs, a virtual filesystem that supports overlaying of files
-    pub vfs: Arc<RwLock<Vfs>>,
+pub(crate) struct LanguageServerState {
+    /// The connection with the client
+    pub connection: ConnectionState,
 
-    /// Receiver channel to apply filesystem changes on `vfs`
-    pub vfs_task_receiver: UnboundedReceiver<ra_vfs::VfsTask>,
+    /// The configuration passed by the client
+    pub config: Config,
+
+    /// Thread pool for async execution
+    pub thread_pool: rayon::ThreadPool,
+
+    /// The virtual filesystem that holds all the file contents
+    pub vfs: Arc<RwLock<VirtualFileSystem>>,
+
+    /// The vfs monitor
+    pub vfs_monitor: Box<dyn vfs::Monitor>,
+
+    /// The receiver of vfs monitor messages
+    pub vfs_monitor_receiver: UnboundedReceiver<vfs::MonitorMessage>,
+
+    /// Documents that are currently kept in memory from the client
+    pub open_docs: FxHashSet<AbsPathBuf>,
 
     /// Holds the state of the analysis process
     pub analysis: Analysis,
 
-    /// All the roots in the workspace
-    pub local_source_roots: Vec<hir::SourceRootId>,
+    /// All the packages known to the server
+    pub packages: Arc<Vec<project::Package>>,
 }
 
 /// A snapshot of the state of the language server
-struct LanguageServerSnapshot {
-    /// Interface to the vfs, a virtual filesystem that supports overlaying of files
-    pub vfs: Arc<RwLock<Vfs>>,
+pub(crate) struct LanguageServerSnapshot {
+    /// The virtual filesystem that holds all the file contents
+    pub vfs: Arc<RwLock<VirtualFileSystem>>,
 
     /// Holds the state of the analysis process
     pub analysis: AnalysisSnapshot,
 
-    /// All the roots in the workspace
-    pub local_source_roots: Vec<hir::SourceRootId>,
+    /// All the packages known to the server
+    pub packages: Arc<Vec<project::Package>>,
 }
 
 /// State maintained for the connection. This includes everything that is required to be able to
 /// properly communicate with the client but has nothing to do with any Mun related state.
-struct ConnectionState {
-    connection: Connection,
+pub(crate) struct ConnectionState {
+    pub(crate) connection: Connection,
 
     next_request_id: u64,
     pending_responses: HashSet<RequestId>,
@@ -86,144 +103,86 @@ impl ConnectionState {
     }
 }
 
-/// Filter used to choose which files the ra_vfs should ignore
-struct MunFilter {}
-
-/// Implement the filter provided by ra_vfs
-impl ra_vfs::Filter for MunFilter {
-    fn include_dir(&self, _dir_path: &ra_vfs::RelativePath) -> bool {
-        true
-    }
-
-    fn include_file(&self, file_path: &ra_vfs::RelativePath) -> bool {
-        file_path.extension() == Some("mun")
-    }
-}
-
 impl LanguageServerState {
-    pub fn new(config: Config) -> Self {
-        // Create a channel for use by the vfs
-        let (task_sender, task_receiver) = futures::channel::mpsc::unbounded();
+    pub fn new(connection: Connection, config: Config) -> Self {
+        // Construct the virtual filesystem monitor
+        let (vfs_monitor_sender, vfs_monitor_receiver) = unbounded::<vfs::MonitorMessage>();
+        let vfs_monitor_sender = RefCell::new(vfs_monitor_sender);
+        let vfs_monitor: vfs::NotifyMonitor = vfs::Monitor::new(Box::new(move |msg| {
+            async_std::task::block_on(vfs_monitor_sender.borrow_mut().send(msg))
+                .expect("error sending vfs monitor message to foreground")
+        }));
+        let vfs_monitor = Box::new(vfs_monitor) as Box<dyn vfs::Monitor>;
 
-        // Create the vfs
-        let task_sender = Box::new(move |t| task_sender.unbounded_send(t).unwrap());
-        let vfs = Vfs::new(
-            config
-                .workspace_roots
-                .into_iter()
-                .map(|root| RootEntry::new(root.join("src"), Box::new(MunFilter {})))
-                .collect(),
-            task_sender,
-            ra_vfs::Watch(config.watcher == FilesWatcher::Notify),
-        );
+        // Create a thread pool to dispatch the async commands
+        // Use the num_cpus to get a nice thread count estimation
+        let thread_pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(num_cpus::get())
+            .build()
+            .expect("unable to spin up thread pool");
 
         // Apply the initial changes
-        let mut source_roots = Vec::new();
         let mut change = AnalysisChange::new();
-        for root in vfs.1.iter() {
-            change.add_root(hir::SourceRootId(root.0), hir::PackageId(root.0));
-            source_roots.push(hir::SourceRootId(root.0));
-        }
+        change.set_packages(Default::default());
+        change.set_roots(Default::default());
 
         // Construct the state that will hold all the analysis
         let mut analysis = Analysis::new();
         analysis.apply_change(change);
 
         LanguageServerState {
-            vfs: Arc::new(RwLock::new(vfs.0)),
-            vfs_task_receiver: task_receiver,
+            connection: ConnectionState::new(connection),
+            config,
+            vfs: Arc::new(RwLock::new(Default::default())),
+            vfs_monitor,
+            vfs_monitor_receiver,
+            open_docs: FxHashSet::default(),
+            thread_pool,
             analysis,
-            local_source_roots: source_roots,
+            packages: Arc::new(Vec::new()),
         }
     }
-}
 
-/// Registers file watchers with the client to monitor all mun files in the workspaces
-async fn register_client_file_watcher(connection_state: &mut ConnectionState, config: &Config) {
-    let registration_options = lsp_types::DidChangeWatchedFilesRegistrationOptions {
-        watchers: config
-            .workspace_roots
-            .iter()
-            .map(|root| format!("{}/**/*.mun", root.display()))
-            .map(|glob_pattern| lsp_types::FileSystemWatcher {
-                glob_pattern,
-                kind: None,
-            })
-            .collect(),
-    };
-    let registration = lsp_types::Registration {
-        id: "file-watcher".to_string(),
-        method: "workspace/didChangeWatchedFiles".to_string(),
-        register_options: Some(serde_json::to_value(registration_options).unwrap()),
-    };
-    let params = lsp_types::RegistrationParams {
-        registrations: vec![registration],
-    };
-    let request = build_request::<lsp_types::request::RegisterCapability>(
-        connection_state.next_request_id(),
-        params,
-    );
-    connection_state
-        .connection
-        .sender
-        .send(request.into())
-        .await
-        .unwrap();
+    /// Runs the language server to completion
+    pub async fn run(mut self) -> Result<()> {
+        // Start by updating the current workspace
+        self.fetch_workspaces();
+
+        // Process events as the pass
+        let (task_sender, mut task_receiver) = futures::channel::mpsc::unbounded::<Task>();
+        loop {
+            // Determine what to do next. This selects from different channels, the first message to
+            // arrive is returned. If an error occurs on one of the channel the main loop is shutdown
+            // with an error.
+            let event = futures::select! {
+                msg = self.connection.connection.receiver.next() => match msg {
+                    Some(msg) => Event::Msg(msg),
+                    None => return Err(anyhow::anyhow!("client exited without shutdown")),
+                },
+                msg = self.vfs_monitor_receiver.next() => match msg {
+                    Some(msg) => Event::Vfs(msg),
+                    None => return Err(anyhow::anyhow!("client exited without shutdown")),
+                },
+                task = task_receiver.next() => Event::Task(task.unwrap()),
+            };
+
+            // Handle the event
+            match handle_event(event, &task_sender, &mut self).await? {
+                LoopState::Continue => {}
+                LoopState::Shutdown => {
+                    break;
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 /// Runs the main loop of the language server. This will receive requests and handle them.
 pub async fn main_loop(connection: Connection, config: Config) -> Result<()> {
     log::info!("initial config: {:#?}", config);
-
-    // Subscribe with file watchers of the client if enabled
-    let mut connection_state = ConnectionState::new(connection);
-    if config.watcher == FilesWatcher::Client {
-        register_client_file_watcher(&mut connection_state, &config).await
-    }
-
-    // Create a thread pool to dispatch the async commands
-    // Use the num_cpus to get a nice thread count estimation
-    let pool = rayon::ThreadPoolBuilder::new()
-        .num_threads(num_cpus::get())
-        .build()?;
-
-    // Create the state for the language server
-    let mut state = LanguageServerState::new(config);
-    let (task_sender, mut task_receiver) = unbounded::<Task>();
-    loop {
-        // Determine what to do next. This selects from different channels, the first message to
-        // arrive is returned. If an error occurs on one of the channel the main loop is shutdown
-        // with an error.
-        let event = futures::select! {
-            msg = connection_state.connection.receiver.next() => match msg {
-                Some(msg) => Event::Msg(msg),
-                None => return Err(anyhow::anyhow!("client exited without shutdown")),
-            },
-            task = state.vfs_task_receiver.next() => match task {
-                Some(task) => Event::Vfs(task),
-                None => return Err(anyhow::anyhow!("vfs has died")),
-            },
-            task = task_receiver.next() => Event::Task(task.unwrap())
-        };
-
-        // Handle the event
-        match handle_event(
-            event,
-            &task_sender,
-            &mut connection_state,
-            &pool,
-            &mut state,
-        )
-        .await?
-        {
-            LoopState::Continue => {}
-            LoopState::Shutdown => {
-                break;
-            }
-        }
-    }
-
-    Ok(())
+    LanguageServerState::new(connection, config).run().await
 }
 
 /// A `LoopState` enumerator determines the state of the main loop
@@ -233,8 +192,13 @@ enum LoopState {
 }
 
 /// Handles a received request
-async fn handle_request(request: Request, connection: &mut ConnectionState) -> Result<LoopState> {
-    if connection.connection.handle_shutdown(&request).await? {
+async fn handle_request(request: Request, state: &mut LanguageServerState) -> Result<LoopState> {
+    if state
+        .connection
+        .connection
+        .handle_shutdown(&request)
+        .await?
+    {
         return Ok(LoopState::Shutdown);
     };
     Ok(LoopState::Continue)
@@ -243,26 +207,15 @@ async fn handle_request(request: Request, connection: &mut ConnectionState) -> R
 /// Handles a received notification
 async fn on_notification(
     notification: Notification,
-    connection: &mut ConnectionState,
-    state: &LanguageServerState,
+    state: &mut LanguageServerState,
 ) -> Result<LoopState> {
     let notification =
         // When a a text document is opened
         match cast_notification::<lsp_types::notification::DidOpenTextDocument>(notification) {
             Ok(params) => {
-                // Get the uri
-                let uri = params.text_document.uri;
-                // And convert into a file path
-                let path = uri
-                    .to_file_path()
-                    .map_err(|()| anyhow!("invalid uri: {}", uri))?;
-                if state
-                    .vfs
-                    .write()
-                    .await
-                    .add_file_overlay(&path, params.text_document.text).is_some()
-                {
-                    // TODO: Keep track of opened files
+                if let Ok(path) = convert_uri(&params.text_document.uri) {
+                    state.open_docs.insert(path.clone());
+                    state.vfs.write().await.set_file_contents(&path, Some(params.text_document.text.into_bytes()));
                 }
                 return Ok(LoopState::Continue);
             }
@@ -273,26 +226,22 @@ async fn on_notification(
     let notification =
         match cast_notification::<lsp_types::notification::DidCloseTextDocument>(notification) {
             Ok(params) => {
-                let uri = params.text_document.uri;
-                let path = uri
-                    .to_file_path()
-                    .map_err(|()| anyhow!("invalid uri: {}", uri))?;
-                if state
-                    .vfs
-                    .write()
-                    .await
-                    .remove_file_overlay(path.as_path())
-                    .is_some()
-                {
-                    // TODO: Keep track of opened files
+                if let Ok(path) = convert_uri(&params.text_document.uri) {
+                    state.open_docs.remove(&path);
+                    state.vfs_monitor.reload(&path);
                 }
                 let params = lsp_types::PublishDiagnosticsParams {
-                    uri,
+                    uri: params.text_document.uri,
                     diagnostics: Vec::new(),
                     version: None,
                 };
                 let not = build_notification::<lsp_types::notification::PublishDiagnostics>(params);
-                connection.connection.sender.try_send(not.into()).unwrap();
+                state
+                    .connection
+                    .connection
+                    .sender
+                    .try_send(not.into())
+                    .unwrap();
                 return Ok(LoopState::Continue);
             }
             Err(not) => not,
@@ -305,23 +254,14 @@ async fn on_notification(
                     text_document,
                     content_changes,
                 } = params;
-                //let world = state.snapshot();
-                //let file_id = from_proto::file_id(&world, &text_document.uri)?;
-                //let line_index = world.analysis().file_line_index(file_id)?;
-                let uri = text_document.uri;
-                let path = uri
-                    .to_file_path()
-                    .map_err(|()| anyhow!("invalid uri: {}", uri))?;
-                // TODO: I assume that since we are using *FULL* as the support change mode, that get
-                // the text as a single change
-                state
-                    .vfs
-                    .write()
-                    .await
-                    .change_file_overlay(&path, |old_text| {
-                        // TODO: Change this to incremental later
-                        *old_text = content_changes.get(0).unwrap().text.clone();
-                    });
+                if let Ok(path) = convert_uri(&text_document.uri) {
+                    let new_content = content_changes.get(0).unwrap().text.clone();
+                    state
+                        .vfs
+                        .write()
+                        .await
+                        .set_file_contents(&path, Some(new_content.into_bytes()));
+                }
                 return Ok(LoopState::Continue);
             }
             Err(not) => not,
@@ -330,13 +270,10 @@ async fn on_notification(
     let _notification =
         match cast_notification::<lsp_types::notification::DidChangeWatchedFiles>(notification) {
             Ok(params) => {
-                let mut vfs = state.vfs.write().await;
                 for change in params.changes {
-                    let uri = change.uri;
-                    let path = uri
-                        .to_file_path()
-                        .map_err(|()| anyhow::anyhow!("invalid uri: {}", uri))?;
-                    vfs.notify_changed(path)
+                    if let Ok(path) = convert_uri(&change.uri) {
+                        state.vfs_monitor.reload(&path);
+                    }
                 }
                 return Ok(LoopState::Continue);
             }
@@ -351,26 +288,25 @@ async fn on_notification(
 async fn handle_event(
     event: Event,
     task_sender: &UnboundedSender<Task>,
-    connection_state: &mut ConnectionState,
-    pool: &rayon::ThreadPool,
     state: &mut LanguageServerState,
 ) -> Result<LoopState> {
     log::info!("handling event: {:?}", event);
 
     // Process the incoming event
     let loop_state = match event {
-        Event::Task(task) => handle_task(task, &mut connection_state.connection.sender).await?,
-        Event::Msg(msg) => handle_lsp_message(msg, connection_state, state).await?,
+        Event::Task(task) => handle_task(task, state).await?,
+        Event::Msg(msg) => handle_lsp_message(msg, state).await?,
         Event::Vfs(task) => handle_vfs_task(task, state).await?,
     };
 
     // Process any changes to the vfs
     let state_changed = state.process_vfs_changes().await;
+    dbg!(state_changed);
     if state_changed {
         let snapshot = state.snapshot();
         let task_sender = task_sender.clone();
         // Spawn the diagnostics in the threadpool
-        pool.spawn(move || {
+        state.thread_pool.spawn(move || {
             let _result = async_std::task::block_on(handle_diagnostics(snapshot, task_sender));
         });
     }
@@ -383,10 +319,14 @@ async fn handle_diagnostics(
     state: LanguageServerSnapshot,
     mut sender: UnboundedSender<Task>,
 ) -> Cancelable<()> {
+    dbg!(&state.packages);
+
     // Iterate over all files
-    for root in state.local_source_roots.iter() {
+    for (idx, _package) in state.packages.iter().enumerate() {
+        let package_id = hir::PackageId(idx as u32);
+
         // Get all the files
-        let files = state.analysis.source_root_files(*root)?;
+        let files = state.analysis.package_source_files(package_id)?;
 
         // Publish all diagnostics
         for file in files {
@@ -448,55 +388,64 @@ async fn handle_diagnostics(
                 .unwrap();
         }
     }
-
     Ok(())
 }
 
 /// Handles a task send by another async task
-async fn handle_task(task: Task, sender: &mut Sender<Message>) -> Result<LoopState> {
+async fn handle_task(task: Task, state: &mut LanguageServerState) -> Result<LoopState> {
     match task {
-        Task::Notify(notification) => sender.send(notification.into()).await?,
+        Task::Notify(notification) => {
+            state
+                .connection
+                .connection
+                .sender
+                .send(notification.into())
+                .await?
+        }
     }
 
     Ok(LoopState::Continue)
 }
 
 /// Handles a change to the underlying virtual file system.
-async fn handle_vfs_task(task: ra_vfs::VfsTask, state: &LanguageServerState) -> Result<LoopState> {
-    let mut vfs = state.vfs.write().await;
-    vfs.handle_task(task);
+async fn handle_vfs_task(
+    mut task: vfs::MonitorMessage,
+    state: &mut LanguageServerState,
+) -> Result<LoopState> {
+    loop {
+        match task {
+            vfs::MonitorMessage::Progress { .. } => {}
+            vfs::MonitorMessage::Loaded { files } => {
+                let vfs = &mut *state.vfs.write().await;
+                for (path, contents) in files {
+                    vfs.set_file_contents(&path, contents);
+                }
+            }
+        }
+
+        // Coalesce many VFS events into a single loop turn
+        task = match state.vfs_monitor_receiver.try_next() {
+            Ok(Some(task)) => task,
+            _ => break,
+        }
+    }
     Ok(LoopState::Continue)
 }
 
 /// Handles an incoming message via the language server protocol.
-async fn handle_lsp_message(
-    msg: Message,
-    connection_state: &mut ConnectionState,
-    state: &LanguageServerState,
-) -> Result<LoopState> {
+async fn handle_lsp_message(msg: Message, state: &mut LanguageServerState) -> Result<LoopState> {
     match msg {
-        Message::Request(req) => handle_request(req, connection_state).await,
+        Message::Request(req) => handle_request(req, state).await,
         Message::Response(response) => {
-            let removed = connection_state.pending_responses.remove(&response.id);
+            let removed = state.connection.pending_responses.remove(&response.id);
             if !removed {
                 log::error!("unexpected response: {:?}", response)
             }
 
             Ok(LoopState::Continue)
         }
-        Message::Notification(notification) => {
-            on_notification(notification, connection_state, state).await
-        }
+        Message::Notification(notification) => on_notification(notification, state).await,
     }
-}
-
-/// Constructs a new request with the generic type R and the given parameters.
-fn build_request<R>(id: RequestId, params: R::Params) -> Request
-where
-    R: lsp_types::request::Request,
-    R::Params: Serialize,
-{
-    Request::new(id, R::METHOD.to_string(), params)
 }
 
 /// Constructs a new notification with the specified parameters.
@@ -518,12 +467,24 @@ where
 }
 
 impl LanguageServerState {
+    /// Sends a new request to the client
+    pub fn send_request<R: lsp_types::request::Request>(&mut self, params: R::Params) {
+        let request = Request::new(
+            self.connection.next_request_id(),
+            R::METHOD.to_string(),
+            params,
+        );
+        async_std::task::block_on(self.connection.connection.sender.send(request.into())).unwrap();
+    }
+}
+
+impl LanguageServerState {
     /// Creates a snapshot of the state
     pub fn snapshot(&self) -> LanguageServerSnapshot {
         LanguageServerSnapshot {
-            analysis: self.analysis.snapshot(),
-            local_source_roots: self.local_source_roots.clone(),
             vfs: self.vfs.clone(),
+            analysis: self.analysis.snapshot(),
+            packages: self.packages.clone(),
         }
     }
 
@@ -532,47 +493,42 @@ impl LanguageServerState {
     /// otherwise false.
     pub async fn process_vfs_changes(&mut self) -> bool {
         // Get all the changes since the last time we processed
-        let changes = self.vfs.write().await.commit_changes();
-        if changes.is_empty() {
+        let changed_files = {
+            let mut vfs = self.vfs.write().await;
+            vfs.take_changes()
+        };
+        if changed_files.is_empty() {
             return false;
         }
 
-        // Construct an AnalysisChange to apply
+        // Construct an AnalysisChange to apply to the analysis
+        let vfs = self.vfs.read().await;
         let mut analysis_change = AnalysisChange::new();
-        for change in changes {
-            match change {
-                VfsChange::AddRoot { root, files } => {
-                    for (file, path, text) in files {
-                        analysis_change.add_file(
-                            hir::SourceRootId(root.0),
-                            hir::FileId(file.0),
-                            path,
-                            Arc::from(text.to_string()),
-                        );
-                    }
-                }
-                VfsChange::AddFile {
-                    root,
-                    file,
-                    path,
-                    text,
-                } => {
-                    analysis_change.add_file(
-                        hir::SourceRootId(root.0),
-                        hir::FileId(file.0),
-                        path,
-                        Arc::from(text.to_string()),
-                    );
-                }
-                VfsChange::RemoveFile { root, file, path } => analysis_change.remove_file(
-                    hir::SourceRootId(root.0),
-                    hir::FileId(file.0),
-                    path,
-                ),
-                VfsChange::ChangeFile { file, text } => {
-                    analysis_change.change_file(hir::FileId(file.0), Arc::from(text.to_string()));
-                }
+        let mut has_created_or_deleted_entries = false;
+        for file in changed_files {
+            // If the file was deleted or created we have to remember that so that we update the
+            // source roots as well.
+            if file.is_created_or_deleted() {
+                has_created_or_deleted_entries = true;
             }
+
+            // Convert the contents of the file to a string
+            let bytes = vfs
+                .file_contents(file.file_id)
+                .map(Vec::from)
+                .unwrap_or_default();
+            let text = match String::from_utf8(bytes).ok() {
+                Some(text) => Some(Arc::from(text)),
+                None => None,
+            };
+
+            // Notify the database about this change
+            analysis_change.change_file(hir::FileId(file.file_id.0), text);
+        }
+
+        // If an entry was created or deleted we have to recreate all source roots
+        if has_created_or_deleted_entries {
+            analysis_change.set_roots(self.recompute_source_roots());
         }
 
         // Apply the change
@@ -582,9 +538,10 @@ impl LanguageServerState {
 }
 
 impl LanguageServerSnapshot {
-    /// Converts the specified `FileId` to a `Url`
+    /// Converts the specified `hir::FileId` to a `Url`
     pub async fn file_id_to_uri(&self, id: hir::FileId) -> Result<Url> {
-        let path = self.vfs.read().await.file2path(VfsFile(id.0));
+        let vfs = self.vfs.read().await;
+        let path = vfs.file_path(vfs::FileId(id.0));
         let url = url_from_path_with_drive_lowercasing(path)?;
 
         Ok(url)

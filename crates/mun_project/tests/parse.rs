@@ -23,8 +23,6 @@ fn package_from_file() {
     assert_eq!(&package.root(), &manifest_path.parent().unwrap());
     assert_eq!(format!("{}", &package), "test v0.2.0");
 
-    let source_dir = package
-        .source_directory()
-        .expect("could not locate source directory");
+    let source_dir = package.source_directory();
     assert_eq!(source_dir, manifest_path.parent().unwrap().join("src"));
 }

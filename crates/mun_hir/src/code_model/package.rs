@@ -1,6 +1,5 @@
 use super::Module;
-use crate::ids::PackageId;
-use crate::{HirDatabase, ModuleId};
+use crate::{HirDatabase, ModuleId, PackageId};
 
 /// A `Package` describes a single package.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -10,10 +9,8 @@ pub struct Package {
 
 impl Package {
     /// Returns all the packages defined in the database
-    pub fn all(_db: &dyn HirDatabase) -> Vec<Package> {
-        // TODO: Currently we assume there is only a single package with ID 0. This has to be
-        // implemented when have multiple packages. See CrateGraph in rust-analyzer.
-        vec![Package { id: PackageId(0) }]
+    pub fn all(db: &dyn HirDatabase) -> Vec<Package> {
+        db.packages().iter().map(|id| Package { id }).collect()
     }
 
     /// Returns the root module of the package (represented by the `mod.rs` in the source root)

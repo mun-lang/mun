@@ -1,7 +1,9 @@
-use crate::item_tree::{Function, ItemTreeId, ItemTreeNode, Struct, TypeAlias};
-use crate::module_tree::LocalModuleId;
-use crate::primitive_type::PrimitiveType;
-use crate::DefDatabase;
+use crate::{
+    item_tree::{Function, ItemTreeId, ItemTreeNode, Struct, TypeAlias},
+    module_tree::LocalModuleId,
+    primitive_type::PrimitiveType,
+    DefDatabase, PackageId,
+};
 use std::hash::{Hash, Hasher};
 
 #[derive(Debug)]
@@ -93,11 +95,6 @@ macro_rules! impl_intern {
         }
     };
 }
-
-/// Represents the id of a single package, all packages have a unique id, the main package and all
-/// dependent packages.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct PackageId(pub u32);
 
 /// Represents an id of a module inside a package.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

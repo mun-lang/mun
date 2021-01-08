@@ -16,7 +16,8 @@ categories = ["game-development", "mun"]
 anyhow = "1.0.31"
 mun_codegen = { version = "=0.2.0", path="../mun_codegen" }
 mun_syntax = { version = "=0.2.0", path="../mun_syntax" }
-hir = { version = "=0.2.0", path = "../mun_hir", package = "mun_hir" }
+hir = { version="=0.2.0", path="../mun_hir", package="mun_hir" }
+paths = {path="../mun_paths", package="mun_paths"}
 mun_target = { version = "=0.2.0", path="../mun_target" }
 mun_project = { version = "=0.1.0", path = "../mun_project" }
 mun_diagnostics = { version = "=0.1.0", path = "../mun_diagnostics" }

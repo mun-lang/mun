@@ -1,7 +1,11 @@
 use lsp_types::Url;
 use mun_syntax::{TextRange, TextUnit};
-use std::path::{Component, Path, Prefix};
-use std::str::FromStr;
+use paths::AbsPathBuf;
+use std::{
+    convert::TryFrom,
+    path::{Component, Path, Prefix},
+    str::FromStr,
+};
 
 /// Returns a `Url` object from a given path, will lowercase drive letters if present.
 /// This will only happen when processing Windows paths.
@@ -62,4 +66,11 @@ pub fn convert_unit(
         line: line_col.line.into(),
         character: line_col.col.into(),
     }
+}
+
+pub fn convert_uri(uri: &Url) -> anyhow::Result<AbsPathBuf> {
+    uri.to_file_path()
+        .ok()
+        .and_then(|path| AbsPathBuf::try_from(path).ok())
+        .ok_or_else(|| anyhow::anyhow!("invalid uri: {}", uri))
 }

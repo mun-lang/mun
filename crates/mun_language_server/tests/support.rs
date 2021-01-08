@@ -3,8 +3,10 @@ use futures::{SinkExt, StreamExt};
 use lsp_types::{notification::Exit, request::Shutdown};
 use mun_language_server::protocol::{Connection, Message, Notification, Request};
 use mun_language_server::{main_loop, Config};
+use paths::AbsPathBuf;
 use serde::Serialize;
 use serde_json::Value;
+use std::convert::TryFrom;
 use std::time::Duration;
 
 /// An object that runs the language server main loop and enables sending and receiving messages
@@ -13,6 +15,7 @@ pub struct Server {
     next_request_id: u64,
     worker: Option<std::thread::JoinHandle<()>>,
     client: Connection,
+    _temp_path: tempdir::TempDir,
 }
 
 impl Server {
@@ -20,7 +23,13 @@ impl Server {
     pub fn new() -> Self {
         let (connection, client) = Connection::memory();
 
-        let config = Config::default();
+        let temp_path = tempdir::TempDir::new("mun_language_server")
+            .expect("unable to create temporary directory");
+
+        let config = Config::new(
+            AbsPathBuf::try_from(temp_path.path().to_path_buf())
+                .expect("temp_path is not an absolute path"),
+        );
         let worker = std::thread::spawn(move || {
             async_std::task::block_on(async move {
                 main_loop(connection, config).await.unwrap();
@@ -31,6 +40,7 @@ impl Server {
             next_request_id: Default::default(),
             worker: Some(worker),
             client,
+            _temp_path: temp_path,
         }
     }
 

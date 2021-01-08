@@ -55,13 +55,11 @@ impl AnalysisSnapshot {
         self.with_db(|db| diagnostics::diagnostics(db, file_id))
     }
 
-    /// Returns all the files in the given source root
-    pub fn source_root_files(
-        &self,
-        source_root: hir::SourceRootId,
-    ) -> Cancelable<Vec<hir::FileId>> {
+    /// Returns all the source files of the given package
+    pub fn package_source_files(&self, package_id: hir::PackageId) -> Cancelable<Vec<hir::FileId>> {
         self.with_db(|db| {
-            let source_root = db.source_root(source_root);
+            let packages = db.packages();
+            let source_root = db.source_root(packages[package_id].source_root);
             source_root.files().collect()
         })
     }

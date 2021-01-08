@@ -1,9 +1,11 @@
-use crate::ids::{ItemDefinitionId, ModuleId, PackageId};
-use crate::item_scope::BUILTIN_SCOPE;
-use crate::module_tree::LocalModuleId;
-use crate::package_defs::PackageDefs;
-use crate::{DefDatabase, Name, Path, PathKind, PerNs, Visibility};
-use itertools::__std_iter::successors;
+use crate::{
+    ids::{ItemDefinitionId, ModuleId},
+    item_scope::BUILTIN_SCOPE,
+    module_tree::LocalModuleId,
+    package_defs::PackageDefs,
+    DefDatabase, Name, PackageId, Path, PathKind, PerNs, Visibility,
+};
+use std::iter::successors;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum ReachedFixedPoint {

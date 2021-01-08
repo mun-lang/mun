@@ -1,12 +1,12 @@
 use crate::{
     arena::{Arena, Idx},
-    ids::{ModuleId, PackageId},
+    ids::ModuleId,
     module_tree::diagnostics::ModuleTreeDiagnostic,
     visibility::RawVisibility,
-    DefDatabase, FileId, Name, SourceDatabase, Visibility,
+    DefDatabase, FileId, Name, PackageId, SourceDatabase, Visibility,
 };
 use itertools::Itertools;
-use relative_path::RelativePath;
+use paths::RelativePath;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
@@ -50,7 +50,7 @@ impl ModuleTree {
         let mut diagnostics = Vec::new();
 
         // Get the sources for the package
-        let source_root_id = db.package_source_root(package);
+        let source_root_id = db.packages().as_ref()[package].source_root;
         let source_root = db.source_root(source_root_id);
 
         let mut modules = Arena::default();
@@ -59,7 +59,7 @@ impl ModuleTree {
         // Iterate over all files and add them to the module tree
         for (file_id, relative_path) in source_root
             .files()
-            .map(|file_id| (file_id, db.file_relative_path(file_id)))
+            .map(|file_id| (file_id, source_root.relative_path(file_id)))
             .sorted_by(|(_, a), (_, b)| a.cmp(b))
         {
             // Iterate over all segments of the relative path and construct modules on the way

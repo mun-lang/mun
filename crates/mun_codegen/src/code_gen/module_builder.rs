@@ -23,8 +23,8 @@ impl<'db, 'ink, 'ctx> ModuleBuilder<'db, 'ink, 'ctx> {
         let file_id = module
             .file_id(code_gen.db)
             .expect("module must have a file");
-        let assembly_name = code_gen.db.file_relative_path(file_id);
-        let assembly_module = code_gen.create_module(assembly_name);
+        let assembly_module =
+            code_gen.create_module(code_gen.db.file_relative_path(file_id).as_str());
 
         Ok(Self {
             code_gen,

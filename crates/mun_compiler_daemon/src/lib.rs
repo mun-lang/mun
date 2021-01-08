@@ -19,9 +19,8 @@ pub fn compile_and_watch_manifest(
     // Start watching the source directory
     let (watcher_tx, watcher_rx) = channel();
     let mut watcher: RecommendedWatcher = Watcher::new(watcher_tx, Duration::from_millis(10))?;
-    let source_directory = package
-        .source_directory()
-        .expect("missing source directory");
+    let source_directory = package.source_directory();
+
     watcher.watch(&source_directory, RecursiveMode::Recursive)?;
     println!("Watching: {}", source_directory.display());
 
