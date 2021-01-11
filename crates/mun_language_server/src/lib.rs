@@ -6,9 +6,9 @@ mod config;
 mod conversion;
 mod db;
 mod diagnostics;
+mod dispatcher;
 mod main_loop;
 mod project_manifest;
-pub mod protocol;
 mod workspace;
 
 pub use config::Config;
@@ -33,14 +33,14 @@ pub fn to_json<T: Serialize>(value: T) -> Result<serde_json::Value> {
 }
 
 /// Main entry point for the language server
-pub async fn run_server_async() -> Result<()> {
+pub fn run_server() -> Result<()> {
     log::info!("language server started");
 
     // Setup IO connections
-    let mut connection = protocol::Connection::stdio();
+    let (connection, io_threads) = lsp_server::Connection::stdio();
 
     // Wait for a client to connect
-    let (initialize_id, initialize_params) = connection.initialize_start().await?;
+    let (initialize_id, initialize_params) = connection.initialize_start()?;
 
     let initialize_params =
         from_json::<lsp_types::InitializeParams>("InitializeParams", initialize_params)?;
@@ -57,9 +57,7 @@ pub async fn run_server_async() -> Result<()> {
 
     let initialize_result = serde_json::to_value(initialize_result).unwrap();
 
-    connection
-        .initialize_finish(initialize_id, initialize_result)
-        .await?;
+    connection.initialize_finish(initialize_id, initialize_result)?;
 
     if let Some(client_info) = initialize_params.client_info {
         log::info!(
@@ -122,12 +120,8 @@ pub async fn run_server_async() -> Result<()> {
         config
     };
 
-    main_loop(connection, config).await?;
+    main_loop(connection, config)?;
 
+    io_threads.join()?;
     Ok(())
-}
-
-/// Main entry point for the language server
-pub fn run_server() -> Result<()> {
-    async_std::task::block_on(run_server_async())
 }

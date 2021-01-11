@@ -1,7 +1,6 @@
-use async_std::future::timeout;
-use futures::{SinkExt, StreamExt};
+use crossbeam_channel::{after, select};
+use lsp_server::{Connection, Message, Notification, Request};
 use lsp_types::{notification::Exit, request::Shutdown};
-use mun_language_server::protocol::{Connection, Message, Notification, Request};
 use mun_language_server::{main_loop, Config};
 use paths::AbsPathBuf;
 use serde::Serialize;
@@ -12,7 +11,7 @@ use std::time::Duration;
 /// An object that runs the language server main loop and enables sending and receiving messages
 /// to and from it.
 pub struct Server {
-    next_request_id: u64,
+    next_request_id: i32,
     worker: Option<std::thread::JoinHandle<()>>,
     client: Connection,
     _temp_path: tempdir::TempDir,
@@ -31,9 +30,7 @@ impl Server {
                 .expect("temp_path is not an absolute path"),
         );
         let worker = std::thread::spawn(move || {
-            async_std::task::block_on(async move {
-                main_loop(connection, config).await.unwrap();
-            })
+            main_loop(connection, config).unwrap();
         });
 
         Self {
@@ -45,19 +42,19 @@ impl Server {
     }
 
     /// Sends a request to the main loop and expects the specified value to be returned
-    async fn assert_request<R: lsp_types::request::Request>(
+    fn assert_request<R: lsp_types::request::Request>(
         &mut self,
         params: R::Params,
         expected_response: Value,
     ) where
         R::Params: Serialize,
     {
-        let result = self.send_request::<R>(params).await;
+        let result = self.send_request::<R>(params);
         assert_eq!(result, expected_response);
     }
 
     /// Sends a request to main loop, returning the response
-    async fn send_request<R: lsp_types::request::Request>(&mut self, params: R::Params) -> Value
+    fn send_request<R: lsp_types::request::Request>(&mut self, params: R::Params) -> Value
     where
         R::Params: Serialize,
     {
@@ -65,32 +62,28 @@ impl Server {
         self.next_request_id += 1;
 
         let r = Request::new(id.into(), R::METHOD.to_string(), params);
-        self.send_and_receive(r).await
+        self.send_and_receive(r)
     }
 
     /// Sends an LSP notification to the main loop.
-    async fn notification<N: lsp_types::notification::Notification>(&mut self, params: N::Params)
+    fn notification<N: lsp_types::notification::Notification>(&mut self, params: N::Params)
     where
         N::Params: Serialize,
     {
         let r = Notification::new(N::METHOD.to_string(), params);
-        self.send_notification(r).await
+        self.send_notification(r)
     }
 
     /// Sends a server notification to the main loop
-    async fn send_notification(&mut self, not: Notification) {
-        self.client
-            .sender
-            .send(Message::Notification(not))
-            .await
-            .unwrap();
+    fn send_notification(&mut self, not: Notification) {
+        self.client.sender.send(Message::Notification(not)).unwrap();
     }
 
     /// Sends a request to the main loop and receives its response
-    async fn send_and_receive(&mut self, r: Request) -> Value {
+    fn send_and_receive(&mut self, r: Request) -> Value {
         let id = r.id.clone();
-        self.client.sender.send(r.into()).await.unwrap();
-        while let Some(msg) = self.recv().await {
+        self.client.sender.send(r.into()).unwrap();
+        while let Some(msg) = self.recv() {
             match msg {
                 Message::Request(req) => panic!(
                     "did not expect a request as a response to a request: {:?}",
@@ -113,26 +106,24 @@ impl Server {
     }
 
     /// Receives a message from the message or timeout.
-    async fn recv(&mut self) -> Option<Message> {
-        let duration = Duration::from_secs(60);
-        timeout(duration, self.client.receiver.next())
-            .await
-            .unwrap()
+    fn recv(&mut self) -> Option<Message> {
+        let timeout = Duration::from_secs(120);
+        select! {
+            recv(self.client.receiver) -> msg => msg.ok(),
+            recv(after(timeout)) -> _ => panic!("timed out"),
+        }
     }
 }
 
 impl Drop for Server {
     fn drop(&mut self) {
-        // Send a shutdown request
-        async_std::task::block_on(async {
-            // Send the proper shutdown sequence to ensure the main loop terminates properly
-            self.assert_request::<Shutdown>((), Value::Null).await;
-            self.notification::<Exit>(()).await;
+        // Send the proper shutdown sequence to ensure the main loop terminates properly
+        self.assert_request::<Shutdown>((), Value::Null);
+        self.notification::<Exit>(());
 
-            // Cancel the main_loop
-            if let Some(worker) = self.worker.take() {
-                worker.join().unwrap();
-            }
-        });
+        // Cancel the main_loop
+        if let Some(worker) = self.worker.take() {
+            worker.join().unwrap();
+        }
     }
 }

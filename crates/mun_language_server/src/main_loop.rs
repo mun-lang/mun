@@ -1,47 +1,57 @@
+use crate::dispatcher::{NotificationDispatcher, RequestDispatcher};
 use crate::{
     analysis::{Analysis, AnalysisSnapshot, Cancelable},
     change::AnalysisChange,
     config::Config,
     conversion::{convert_range, convert_uri, url_from_path_with_drive_lowercasing},
-    protocol::{Connection, Message, Notification, Request, RequestId},
-    Result,
+    to_json, Result,
 };
-use async_std::sync::RwLock;
-use futures::{
-    channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
-    SinkExt, StreamExt,
-};
+use crossbeam_channel::{select, unbounded, Receiver, Sender};
+use lsp_server::{Connection, ReqQueue};
+use lsp_types::notification::Notification;
 use lsp_types::{notification::PublishDiagnostics, PublishDiagnosticsParams, Url};
+use parking_lot::RwLock;
 use paths::AbsPathBuf;
 use rustc_hash::FxHashSet;
-use serde::{de::DeserializeOwned, Serialize};
-use std::{cell::RefCell, collections::HashSet, ops::Deref, sync::Arc};
+use std::time::Instant;
+use std::{ops::Deref, sync::Arc};
 use vfs::VirtualFileSystem;
 
 /// A `Task` is something that is send from async tasks to the entry point for processing. This
 /// enables synchronizing resources like the connection with the client.
 #[derive(Debug)]
-enum Task {
-    Notify(Notification),
+pub(crate) enum Task {
+    Notify(lsp_server::Notification),
 }
 
 #[derive(Debug)]
-enum Event {
-    Msg(Message),
+pub(crate) enum Event {
     Vfs(vfs::MonitorMessage),
     Task(Task),
+    Lsp(lsp_server::Message),
 }
+
+pub(crate) type RequestHandler = fn(&mut LanguageServerState, lsp_server::Response);
 
 /// State for the language server
 pub(crate) struct LanguageServerState {
-    /// The connection with the client
-    pub connection: ConnectionState,
+    /// Channel to send language server messages to the client
+    sender: Sender<lsp_server::Message>,
+
+    /// The request queue keeps track of all incoming and outgoing requests.
+    request_queue: lsp_server::ReqQueue<(String, Instant), RequestHandler>,
 
     /// The configuration passed by the client
     pub config: Config,
 
     /// Thread pool for async execution
     pub thread_pool: rayon::ThreadPool,
+
+    /// Channel to send tasks to from background operations
+    pub task_sender: Sender<Task>,
+
+    /// Channel to receive tasks on from background operations
+    pub task_receiver: Receiver<Task>,
 
     /// The virtual filesystem that holds all the file contents
     pub vfs: Arc<RwLock<VirtualFileSystem>>,
@@ -50,7 +60,7 @@ pub(crate) struct LanguageServerState {
     pub vfs_monitor: Box<dyn vfs::Monitor>,
 
     /// The receiver of vfs monitor messages
-    pub vfs_monitor_receiver: UnboundedReceiver<vfs::MonitorMessage>,
+    pub vfs_monitor_receiver: Receiver<vfs::MonitorMessage>,
 
     /// Documents that are currently kept in memory from the client
     pub open_docs: FxHashSet<AbsPathBuf>,
@@ -60,6 +70,9 @@ pub(crate) struct LanguageServerState {
 
     /// All the packages known to the server
     pub packages: Arc<Vec<project::Package>>,
+
+    /// True if the client requested that we shut down
+    pub shutdown_requested: bool,
 }
 
 /// A snapshot of the state of the language server
@@ -74,42 +87,13 @@ pub(crate) struct LanguageServerSnapshot {
     pub packages: Arc<Vec<project::Package>>,
 }
 
-/// State maintained for the connection. This includes everything that is required to be able to
-/// properly communicate with the client but has nothing to do with any Mun related state.
-pub(crate) struct ConnectionState {
-    pub(crate) connection: Connection,
-
-    next_request_id: u64,
-    pending_responses: HashSet<RequestId>,
-}
-
-impl ConnectionState {
-    /// Constructs a new `ConnectionState`
-    fn new(connection: Connection) -> Self {
-        Self {
-            connection,
-            next_request_id: 0,
-            pending_responses: Default::default(),
-        }
-    }
-
-    /// Constructs a new request ID and stores that we are still awaiting a response.
-    fn next_request_id(&mut self) -> RequestId {
-        self.next_request_id += 1;
-        let res: RequestId = self.next_request_id.into();
-        let inserted = self.pending_responses.insert(res.clone());
-        debug_assert!(inserted);
-        res
-    }
-}
-
 impl LanguageServerState {
-    pub fn new(connection: Connection, config: Config) -> Self {
+    pub fn new(sender: Sender<lsp_server::Message>, config: Config) -> Self {
         // Construct the virtual filesystem monitor
         let (vfs_monitor_sender, vfs_monitor_receiver) = unbounded::<vfs::MonitorMessage>();
-        let vfs_monitor_sender = RefCell::new(vfs_monitor_sender);
         let vfs_monitor: vfs::NotifyMonitor = vfs::Monitor::new(Box::new(move |msg| {
-            async_std::task::block_on(vfs_monitor_sender.borrow_mut().send(msg))
+            vfs_monitor_sender
+                .send(msg)
                 .expect("error sending vfs monitor message to foreground")
         }));
         let vfs_monitor = Box::new(vfs_monitor) as Box<dyn vfs::Monitor>;
@@ -121,135 +105,133 @@ impl LanguageServerState {
             .build()
             .expect("unable to spin up thread pool");
 
-        // Apply the initial changes
+        // Construct a task channel
+        let (task_sender, task_receiver) = unbounded();
+
+        // Construct the state that will hold all the analysis and apply the initial state
+        let mut analysis = Analysis::new();
         let mut change = AnalysisChange::new();
         change.set_packages(Default::default());
         change.set_roots(Default::default());
-
-        // Construct the state that will hold all the analysis
-        let mut analysis = Analysis::new();
         analysis.apply_change(change);
 
         LanguageServerState {
-            connection: ConnectionState::new(connection),
+            sender,
+            request_queue: ReqQueue::default(),
             config,
             vfs: Arc::new(RwLock::new(Default::default())),
             vfs_monitor,
             vfs_monitor_receiver,
             open_docs: FxHashSet::default(),
             thread_pool,
+            task_sender,
+            task_receiver,
             analysis,
             packages: Arc::new(Vec::new()),
+            shutdown_requested: false,
+        }
+    }
+
+    /// Blocks until a new event is received from on of the many channels the language server
+    /// listens to. Returns the first event that is received.
+    fn next_event(&self, receiver: &Receiver<lsp_server::Message>) -> Option<Event> {
+        select! {
+            recv(receiver) -> msg => msg.ok().map(Event::Lsp),
+            recv(self.vfs_monitor_receiver) -> task => Some(Event::Vfs(task.unwrap())),
+            recv(self.task_receiver) -> task => Some(Event::Task(task.unwrap()))
         }
     }
 
     /// Runs the language server to completion
-    pub async fn run(mut self) -> Result<()> {
+    pub fn run(mut self, receiver: Receiver<lsp_server::Message>) -> Result<()> {
         // Start by updating the current workspace
         self.fetch_workspaces();
 
-        // Process events as the pass
-        let (task_sender, mut task_receiver) = futures::channel::mpsc::unbounded::<Task>();
-        loop {
-            // Determine what to do next. This selects from different channels, the first message to
-            // arrive is returned. If an error occurs on one of the channel the main loop is shutdown
-            // with an error.
-            let event = futures::select! {
-                msg = self.connection.connection.receiver.next() => match msg {
-                    Some(msg) => Event::Msg(msg),
-                    None => return Err(anyhow::anyhow!("client exited without shutdown")),
-                },
-                msg = self.vfs_monitor_receiver.next() => match msg {
-                    Some(msg) => Event::Vfs(msg),
-                    None => return Err(anyhow::anyhow!("client exited without shutdown")),
-                },
-                task = task_receiver.next() => Event::Task(task.unwrap()),
-            };
-
-            // Handle the event
-            match handle_event(event, &task_sender, &mut self).await? {
-                LoopState::Continue => {}
-                LoopState::Shutdown => {
-                    break;
+        while let Some(event) = self.next_event(&receiver) {
+            if let Event::Lsp(lsp_server::Message::Notification(notification)) = &event {
+                if notification.method == lsp_types::notification::Exit::METHOD {
+                    return Ok(());
                 }
             }
+            self.handle_event(event)?;
         }
 
         Ok(())
     }
-}
 
-/// Runs the main loop of the language server. This will receive requests and handle them.
-pub async fn main_loop(connection: Connection, config: Config) -> Result<()> {
-    log::info!("initial config: {:#?}", config);
-    LanguageServerState::new(connection, config).run().await
-}
+    /// Handles an event from one of the many sources that the language server subscribes to.
+    fn handle_event(&mut self, event: Event) -> Result<()> {
+        let start_time = Instant::now();
+        log::info!("handling event: {:?}", event);
 
-/// A `LoopState` enumerator determines the state of the main loop
-enum LoopState {
-    Continue,
-    Shutdown,
-}
+        // Process the incoming event
+        match event {
+            Event::Task(task) => handle_task(task, self)?,
+            Event::Lsp(msg) => match msg {
+                lsp_server::Message::Request(req) => self.on_request(req, start_time)?,
+                lsp_server::Message::Response(resp) => self.complete_request(resp),
+                lsp_server::Message::Notification(not) => self.on_notification(not)?,
+            },
+            Event::Vfs(task) => handle_vfs_task(task, self)?,
+        };
 
-/// Handles a received request
-async fn handle_request(request: Request, state: &mut LanguageServerState) -> Result<LoopState> {
-    if state
-        .connection
-        .connection
-        .handle_shutdown(&request)
-        .await?
-    {
-        return Ok(LoopState::Shutdown);
-    };
-    Ok(LoopState::Continue)
-}
+        // Process any changes to the vfs
+        let state_changed = self.process_vfs_changes();
+        if state_changed {
+            let snapshot = self.snapshot();
+            let task_sender = self.task_sender.clone();
+            // Spawn the diagnostics in the threadpool
+            self.thread_pool.spawn(move || {
+                handle_diagnostics(snapshot, task_sender).unwrap();
+            });
+        }
 
-/// Handles a received notification
-async fn on_notification(
-    notification: Notification,
-    state: &mut LanguageServerState,
-) -> Result<LoopState> {
-    let notification =
-        // When a a text document is opened
-        match cast_notification::<lsp_types::notification::DidOpenTextDocument>(notification) {
-            Ok(params) => {
+        Ok(())
+    }
+
+    /// Handles a language server protocol request
+    fn on_request(
+        &mut self,
+        request: lsp_server::Request,
+        request_received: Instant,
+    ) -> Result<()> {
+        self.register_request(&request, request_received);
+
+        // If a shutdown was requested earlier, immediately respond with an error
+        if self.shutdown_requested {
+            self.respond(lsp_server::Response::new_err(
+                request.id,
+                lsp_server::ErrorCode::InvalidRequest as i32,
+                "shutdown was requested".to_owned(),
+            ));
+            return Ok(());
+        }
+
+        // Dispatch the event based on the type of event
+        RequestDispatcher::new(self, request)
+            .on::<lsp_types::request::Shutdown>(|state, _request| {
+                state.shutdown_requested = true;
+                Ok(())
+            })?
+            .finish();
+
+        Ok(())
+    }
+
+    /// Handles a notification from the language server client
+    fn on_notification(&mut self, notification: lsp_server::Notification) -> Result<()> {
+        NotificationDispatcher::new(self, notification)
+            .on::<lsp_types::notification::DidOpenTextDocument>(|state, params| {
                 if let Ok(path) = convert_uri(&params.text_document.uri) {
                     state.open_docs.insert(path.clone());
-                    state.vfs.write().await.set_file_contents(&path, Some(params.text_document.text.into_bytes()));
+                    state
+                        .vfs
+                        .write()
+                        .set_file_contents(&path, Some(params.text_document.text.into_bytes()));
                 }
-                return Ok(LoopState::Continue);
-            }
-            Err(not) => not,
-        };
-
-    // When a text document is closed
-    let notification =
-        match cast_notification::<lsp_types::notification::DidCloseTextDocument>(notification) {
-            Ok(params) => {
-                if let Ok(path) = convert_uri(&params.text_document.uri) {
-                    state.open_docs.remove(&path);
-                    state.vfs_monitor.reload(&path);
-                }
-                let params = lsp_types::PublishDiagnosticsParams {
-                    uri: params.text_document.uri,
-                    diagnostics: Vec::new(),
-                    version: None,
-                };
-                let not = build_notification::<lsp_types::notification::PublishDiagnostics>(params);
-                state
-                    .connection
-                    .connection
-                    .sender
-                    .try_send(not.into())
-                    .unwrap();
-                return Ok(LoopState::Continue);
-            }
-            Err(not) => not,
-        };
-
-    let notification =
-        match cast_notification::<lsp_types::notification::DidChangeTextDocument>(notification) {
-            Ok(params) => {
+                Ok(())
+            })?
+            .on::<lsp_types::notification::DidChangeTextDocument>(|state, params| {
                 let lsp_types::DidChangeTextDocumentParams {
                     text_document,
                     content_changes,
@@ -259,68 +241,102 @@ async fn on_notification(
                     state
                         .vfs
                         .write()
-                        .await
                         .set_file_contents(&path, Some(new_content.into_bytes()));
                 }
-                return Ok(LoopState::Continue);
-            }
-            Err(not) => not,
-        };
-
-    let _notification =
-        match cast_notification::<lsp_types::notification::DidChangeWatchedFiles>(notification) {
-            Ok(params) => {
+                Ok(())
+            })?
+            .on::<lsp_types::notification::DidCloseTextDocument>(|state, params| {
+                if let Ok(path) = convert_uri(&params.text_document.uri) {
+                    state.open_docs.remove(&path);
+                    state.vfs_monitor.reload(&path);
+                }
+                // Clear any diagnostics that we may have send
+                state.send_notification::<lsp_types::notification::PublishDiagnostics>(
+                    lsp_types::PublishDiagnosticsParams {
+                        uri: params.text_document.uri,
+                        diagnostics: Vec::new(),
+                        version: None,
+                    },
+                );
+                Ok(())
+            })?
+            .on::<lsp_types::notification::DidChangeWatchedFiles>(|state, params| {
                 for change in params.changes {
                     if let Ok(path) = convert_uri(&change.uri) {
                         state.vfs_monitor.reload(&path);
                     }
                 }
-                return Ok(LoopState::Continue);
-            }
-            Err(not) => not,
-        };
-
-    Ok(LoopState::Continue)
-}
-
-/// Handles an incoming event. Returns a `LoopState` state which determines whether processing
-/// should continue.
-async fn handle_event(
-    event: Event,
-    task_sender: &UnboundedSender<Task>,
-    state: &mut LanguageServerState,
-) -> Result<LoopState> {
-    log::info!("handling event: {:?}", event);
-
-    // Process the incoming event
-    let loop_state = match event {
-        Event::Task(task) => handle_task(task, state).await?,
-        Event::Msg(msg) => handle_lsp_message(msg, state).await?,
-        Event::Vfs(task) => handle_vfs_task(task, state).await?,
-    };
-
-    // Process any changes to the vfs
-    let state_changed = state.process_vfs_changes().await;
-    dbg!(state_changed);
-    if state_changed {
-        let snapshot = state.snapshot();
-        let task_sender = task_sender.clone();
-        // Spawn the diagnostics in the threadpool
-        state.thread_pool.spawn(move || {
-            let _result = async_std::task::block_on(handle_diagnostics(snapshot, task_sender));
-        });
+                Ok(())
+            })?
+            .finish();
+        Ok(())
     }
 
-    Ok(loop_state)
+    /// Registers a request with the server. We register all these request to make sure they all get
+    /// handled and so we can measure the time it takes for them to complete from the point of view
+    /// of the client.
+    fn register_request(&mut self, request: &lsp_server::Request, request_received: Instant) {
+        self.request_queue.incoming.register(
+            request.id.clone(),
+            (request.method.clone(), request_received),
+        )
+    }
+
+    /// Sends a request to the client and registers the request so that we can handle the response.
+    pub(crate) fn send_request<R: lsp_types::request::Request>(
+        &mut self,
+        params: R::Params,
+        handler: RequestHandler,
+    ) {
+        let request = self
+            .request_queue
+            .outgoing
+            .register(R::METHOD.to_string(), params, handler);
+        self.send(request.into());
+    }
+
+    /// Sends a notification to the client
+    pub(crate) fn send_notification<N: lsp_types::notification::Notification>(
+        &mut self,
+        params: N::Params,
+    ) {
+        let not = lsp_server::Notification::new(N::METHOD.to_string(), params);
+        self.send(not.into());
+    }
+
+    /// Handles a response to a request we made. The response gets forwarded to where we made the
+    /// request from.
+    fn complete_request(&mut self, response: lsp_server::Response) {
+        let handler = self.request_queue.outgoing.complete(response.id.clone());
+        handler(self, response)
+    }
+
+    /// Sends a response to a request to the client. This method logs the time it took us to reply
+    /// to a request from the client.
+    pub(crate) fn respond(&mut self, response: lsp_server::Response) {
+        if let Some((_method, start)) = self.request_queue.incoming.complete(response.id.clone()) {
+            let duration = start.elapsed();
+            log::info!("handled req#{} in {:?}", response.id, duration);
+            self.send(response.into());
+        }
+    }
+
+    /// Sends a message to the client
+    fn send(&mut self, message: lsp_server::Message) {
+        self.sender
+            .send(message)
+            .expect("error sending lsp message to the outgoing channel")
+    }
+}
+
+/// Runs the main loop of the language server. This will receive requests and handle them.
+pub fn main_loop(connection: Connection, config: Config) -> Result<()> {
+    log::info!("initial config: {:#?}", config);
+    LanguageServerState::new(connection.sender, config).run(connection.receiver)
 }
 
 /// Send all diagnostics of all files
-async fn handle_diagnostics(
-    state: LanguageServerSnapshot,
-    mut sender: UnboundedSender<Task>,
-) -> Cancelable<()> {
-    dbg!(&state.packages);
-
+fn handle_diagnostics(state: LanguageServerSnapshot, sender: Sender<Task>) -> Cancelable<()> {
     // Iterate over all files
     for (idx, _package) in state.packages.iter().enumerate() {
         let package_id = hir::PackageId(idx as u32);
@@ -331,7 +347,7 @@ async fn handle_diagnostics(
         // Publish all diagnostics
         for file in files {
             let line_index = state.analysis.file_line_index(file)?;
-            let uri = state.file_id_to_uri(file).await.unwrap();
+            let uri = state.file_id_to_uri(file).unwrap();
             let diagnostics = state.analysis.diagnostics(file)?;
 
             let diagnostics = {
@@ -341,6 +357,7 @@ async fn handle_diagnostics(
                         range: convert_range(d.range, &line_index),
                         severity: Some(lsp_types::DiagnosticSeverity::Error),
                         code: None,
+                        code_description: None,
                         source: Some("mun".to_string()),
                         message: d.message,
                         related_information: {
@@ -351,7 +368,6 @@ async fn handle_diagnostics(
                                     location: lsp_types::Location {
                                         uri: state
                                             .file_id_to_uri(annotation.range.file_id)
-                                            .await
                                             .unwrap(),
                                         range: convert_range(
                                             annotation.range.value,
@@ -371,52 +387,45 @@ async fn handle_diagnostics(
                             }
                         },
                         tags: None,
+                        data: None,
                     });
                 }
                 lsp_diagnostics
             };
 
             sender
-                .send(Task::Notify(build_notification::<PublishDiagnostics>(
-                    PublishDiagnosticsParams {
+                .send(Task::Notify(lsp_server::Notification {
+                    method: PublishDiagnostics::METHOD.to_owned(),
+                    params: to_json(PublishDiagnosticsParams {
                         uri,
                         diagnostics,
                         version: None,
-                    },
-                )))
-                .await
-                .unwrap();
+                    })
+                    .unwrap(),
+                }))
+                .unwrap()
         }
     }
     Ok(())
 }
 
 /// Handles a task send by another async task
-async fn handle_task(task: Task, state: &mut LanguageServerState) -> Result<LoopState> {
+fn handle_task(task: Task, state: &mut LanguageServerState) -> Result<()> {
     match task {
         Task::Notify(notification) => {
-            state
-                .connection
-                .connection
-                .sender
-                .send(notification.into())
-                .await?
+            state.send(notification.into());
         }
     }
-
-    Ok(LoopState::Continue)
+    Ok(())
 }
 
 /// Handles a change to the underlying virtual file system.
-async fn handle_vfs_task(
-    mut task: vfs::MonitorMessage,
-    state: &mut LanguageServerState,
-) -> Result<LoopState> {
+fn handle_vfs_task(mut task: vfs::MonitorMessage, state: &mut LanguageServerState) -> Result<()> {
     loop {
         match task {
             vfs::MonitorMessage::Progress { .. } => {}
             vfs::MonitorMessage::Loaded { files } => {
-                let vfs = &mut *state.vfs.write().await;
+                let vfs = &mut *state.vfs.write();
                 for (path, contents) in files {
                     vfs.set_file_contents(&path, contents);
                 }
@@ -424,58 +433,12 @@ async fn handle_vfs_task(
         }
 
         // Coalesce many VFS events into a single loop turn
-        task = match state.vfs_monitor_receiver.try_next() {
-            Ok(Some(task)) => task,
+        task = match state.vfs_monitor_receiver.try_recv() {
+            Ok(task) => task,
             _ => break,
         }
     }
-    Ok(LoopState::Continue)
-}
-
-/// Handles an incoming message via the language server protocol.
-async fn handle_lsp_message(msg: Message, state: &mut LanguageServerState) -> Result<LoopState> {
-    match msg {
-        Message::Request(req) => handle_request(req, state).await,
-        Message::Response(response) => {
-            let removed = state.connection.pending_responses.remove(&response.id);
-            if !removed {
-                log::error!("unexpected response: {:?}", response)
-            }
-
-            Ok(LoopState::Continue)
-        }
-        Message::Notification(notification) => on_notification(notification, state).await,
-    }
-}
-
-/// Constructs a new notification with the specified parameters.
-fn build_notification<N>(params: N::Params) -> Notification
-where
-    N: lsp_types::notification::Notification,
-    N::Params: Serialize,
-{
-    Notification::new(N::METHOD.to_string(), params)
-}
-
-/// Casts a notification to the specified type.
-fn cast_notification<N>(notification: Notification) -> std::result::Result<N::Params, Notification>
-where
-    N: lsp_types::notification::Notification,
-    N::Params: DeserializeOwned,
-{
-    notification.try_extract(N::METHOD)
-}
-
-impl LanguageServerState {
-    /// Sends a new request to the client
-    pub fn send_request<R: lsp_types::request::Request>(&mut self, params: R::Params) {
-        let request = Request::new(
-            self.connection.next_request_id(),
-            R::METHOD.to_string(),
-            params,
-        );
-        async_std::task::block_on(self.connection.connection.sender.send(request.into())).unwrap();
-    }
+    Ok(())
 }
 
 impl LanguageServerState {
@@ -491,10 +454,10 @@ impl LanguageServerState {
     /// Processes any and all changes that have been applied to the virtual filesystem. Generates
     /// an `AnalysisChange` and applies it if there are changes. True is returned if things changed,
     /// otherwise false.
-    pub async fn process_vfs_changes(&mut self) -> bool {
+    pub fn process_vfs_changes(&mut self) -> bool {
         // Get all the changes since the last time we processed
         let changed_files = {
-            let mut vfs = self.vfs.write().await;
+            let mut vfs = self.vfs.write();
             vfs.take_changes()
         };
         if changed_files.is_empty() {
@@ -502,7 +465,7 @@ impl LanguageServerState {
         }
 
         // Construct an AnalysisChange to apply to the analysis
-        let vfs = self.vfs.read().await;
+        let vfs = self.vfs.read();
         let mut analysis_change = AnalysisChange::new();
         let mut has_created_or_deleted_entries = false;
         for file in changed_files {
@@ -539,8 +502,8 @@ impl LanguageServerState {
 
 impl LanguageServerSnapshot {
     /// Converts the specified `hir::FileId` to a `Url`
-    pub async fn file_id_to_uri(&self, id: hir::FileId) -> Result<Url> {
-        let vfs = self.vfs.read().await;
+    pub fn file_id_to_uri(&self, id: hir::FileId) -> Result<Url> {
+        let vfs = self.vfs.read();
         let path = vfs.file_path(vfs::FileId(id.0));
         let url = url_from_path_with_drive_lowercasing(path)?;
 

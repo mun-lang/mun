@@ -63,8 +63,8 @@ pub fn convert_unit(
 ) -> lsp_types::Position {
     let line_col = line_index.line_col(range);
     lsp_types::Position {
-        line: line_col.line.into(),
-        character: line_col.col.into(),
+        line: line_col.line,
+        character: line_col.col,
     }
 }
 

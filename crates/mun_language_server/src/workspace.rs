@@ -51,6 +51,7 @@ impl LanguageServerState {
                 lsp_types::RegistrationParams {
                     registrations: vec![registration],
                 },
+                |_, _| {},
             );
         }
 
@@ -114,7 +115,7 @@ impl LanguageServerState {
 
         // Iterate over all files and find to which source directory they belong, including their
         // relative path
-        let vfs = &*async_std::task::block_on(self.vfs.read());
+        let vfs = &*self.vfs.read();
         for (file_id, path) in vfs.iter() {
             if let Some((idx, relative_path)) =
                 source_dirs
