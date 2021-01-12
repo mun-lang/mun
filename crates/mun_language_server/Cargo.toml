@@ -26,8 +26,7 @@ anyhow = "1.0"
 thiserror = "1.0"
 salsa = "0.15.0"
 hir = { version = "=0.2.0", path="../mun_hir", package="mun_hir" }
-rayon = "1.3"
-num_cpus = "1.13.0"
+threadpool="1.8.1"
 vfs = { path = "../mun_vfs", package="mun_vfs" }
 project = { path = "../mun_project", package="mun_project" }
 mun_target = { version = "=0.2.0", path = "../mun_target" }
@@ -39,3 +38,4 @@ paths = {path="../mun_paths", package="mun_paths"}
 
 [dev-dependencies]
 tempdir = "0.3.7"
+mun_test = { path = "../mun_test"}

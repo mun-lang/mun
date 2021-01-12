@@ -1,9 +1,8 @@
+use crate::MANIFEST_FILENAME;
 use anyhow::bail;
 use paths::{AbsPath, AbsPathBuf};
 use rustc_hash::FxHashSet;
-use std::convert::TryFrom;
-use std::fs::read_dir;
-use std::io;
+use std::{convert::TryFrom, fs::read_dir, io};
 
 /// A wrapper around a path to a mun project
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
@@ -15,14 +14,14 @@ impl ProjectManifest {
     /// Constructs a new [`ProjectManifest`] from a path
     pub fn from_manifest_path(path: impl AsRef<AbsPath>) -> anyhow::Result<Self> {
         let path = path.as_ref();
-        if path.ends_with(project::MANIFEST_FILENAME) {
+        if path.ends_with(MANIFEST_FILENAME) {
             Ok(Self {
                 path: path.to_path_buf(),
             })
         } else {
             bail!(
                 "project root must point to {}: {}",
-                project::MANIFEST_FILENAME,
+                MANIFEST_FILENAME,
                 path.display()
             );
         }
@@ -37,7 +36,7 @@ impl ProjectManifest {
                 path.is_file()
                     && path
                         .file_name()
-                        .map(|file_name| file_name == project::MANIFEST_FILENAME)
+                        .map(|file_name| file_name == MANIFEST_FILENAME)
                         .unwrap_or(false)
             })
             .map(|path| ProjectManifest {

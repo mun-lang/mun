@@ -1,4 +1,5 @@
-use crate::{change::AnalysisChange, config::FilesWatcher, main_loop::LanguageServerState};
+use super::LanguageServerState;
+use crate::{change::AnalysisChange, config::FilesWatcher};
 use paths::{AbsPathBuf, RelativePath};
 use std::{
     convert::{TryFrom, TryInto},
@@ -12,13 +13,16 @@ impl LanguageServerState {
         let packages = self
             .config
             .discovered_projects
-            .as_ref()
+            .clone()
             .into_iter()
             .flatten()
             .filter_map(|project| match project::Package::from_file(&project.path) {
                 Ok(package) => Some(package),
-                Err(_) => {
-                    // TODO: Show error
+                Err(err) => {
+                    self.show_message(
+                        lsp_types::MessageType::Error,
+                        format!("mun failed to load package: {:#}", err),
+                    );
                     None
                 }
             })

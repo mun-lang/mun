@@ -1,5 +1,5 @@
-use crate::project_manifest::ProjectManifest;
 use paths::AbsPathBuf;
+use project::ProjectManifest;
 
 /// The configuration used by the language server.
 #[derive(Debug, Clone)]

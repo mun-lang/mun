@@ -1,6 +1,6 @@
+use super::LanguageServerState;
 use crate::cancelation::is_canceled;
 use crate::from_json;
-use crate::main_loop::LanguageServerState;
 use anyhow::Result;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -69,7 +69,7 @@ impl<'a> RequestDispatcher<'a> {
         }
     }
 
-    /// Wraps-up the dispatcher. If the the request was not handled, report back that this is an
+    /// Wraps-up the dispatcher. If the request was not handled, report back that this is an
     /// unknown request.
     pub fn finish(&mut self) {
         if let Some(req) = self.request.take() {
