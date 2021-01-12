@@ -5,11 +5,11 @@ use crate::{
     compute_source_relative_path, db::CompilerDatabase, ensure_package_output_dir, is_source_file,
     PathOrInline, RelativePath,
 };
-use mun_codegen::{Assembly, CodeGenDatabase};
-use mun_hir::{
+use hir::{
     AstDatabase, DiagnosticSink, FileId, Module, PackageId, RelativePathBuf, SourceDatabase,
     SourceRoot, SourceRootId, Upcast,
 };
+use mun_codegen::{AssemblyIR, CodeGenDatabase, TargetAssembly};
 
 use std::{path::PathBuf, sync::Arc};
 
@@ -41,6 +41,7 @@ pub struct Driver {
     module_to_temp_assembly_path: HashMap<Module, PathBuf>,
 
     display_color: DisplayColor,
+    emit_ir: bool,
 }
 
 impl Driver {
@@ -55,6 +56,7 @@ impl Driver {
             next_file_id: 0,
             module_to_temp_assembly_path: Default::default(),
             display_color: config.display_color,
+            emit_ir: config.emit_ir,
         })
     }
 
@@ -202,7 +204,7 @@ impl Driver {
         let emit_colors = self.display_color.should_enable();
         let mut has_error = false;
 
-        for package in mun_hir::Package::all(self.db.upcast()) {
+        for package in hir::Package::all(self.db.upcast()) {
             for module in package.modules(self.db.upcast()) {
                 if let Some(file_id) = module.file_id(self.db.upcast()) {
                     let parse = self.db.parse(file_id);
@@ -254,11 +256,19 @@ impl Driver {
     pub fn assembly_output_path_from_file(&self, file_id: FileId) -> PathBuf {
         self.db
             .file_relative_path(file_id)
-            .with_extension(Assembly::EXTENSION)
+            .with_extension(TargetAssembly::EXTENSION)
             .to_path(&self.out_dir)
     }
 
-    /// Get the path where the driver will write the assembly for the specified file.
+    /// Get the path where the driver will write the IR for the specified file.
+    pub fn ir_output_path_from_file(&self, file_id: FileId) -> PathBuf {
+        self.db
+            .file_relative_path(file_id)
+            .with_extension(AssemblyIR::EXTENSION)
+            .to_path(&self.out_dir)
+    }
+
+    /// Get the path where the driver will write the assembly for the specified module.
     pub fn assembly_output_path(&self, module: Module) -> PathBuf {
         let file_id = module
             .file_id(self.db.upcast())
@@ -266,29 +276,46 @@ impl Driver {
         self.assembly_output_path_from_file(file_id)
     }
 
+    /// Get the path where the driver will write the IR for the specified module.
+    pub fn ir_output_path(&self, module: Module) -> PathBuf {
+        let file_id = module
+            .file_id(self.db.upcast())
+            .expect("must have a file_id");
+        self.ir_output_path_from_file(file_id)
+    }
+
     /// Writes all assemblies. If `force` is false, the binary will not be written if there are no
     /// changes since last time it was written.
     pub fn write_all_assemblies(&mut self, force: bool) -> Result<(), anyhow::Error> {
         // Create a copy of all current files
-        for package in mun_hir::Package::all(self.db.upcast()) {
+        for package in hir::Package::all(self.db.upcast()) {
             for module in package.modules(self.db.upcast()) {
-                self.write_assembly(module, force)?;
+                if self.emit_ir {
+                    self.write_assembly_ir(module)?;
+                } else {
+                    self.write_target_assembly(module, force)?;
+                }
             }
         }
         Ok(())
     }
 
-    /// Generates an assembly for the given file and stores it in the output location. If `force` is
-    /// false, the binary will not be written if there are no changes since last time it was
-    /// written. Returns `true` if the assembly was written, `false` if it was up to date.
-    pub fn write_assembly(&mut self, module: Module, force: bool) -> Result<bool, anyhow::Error> {
-        log::trace!("writing assembly for {:?}", module);
+    /// Generates an assembly for the target machine and specified module and stores it in the
+    /// output location. If `force` is false, the binary will not be written if there are no
+    /// changes since last time it was written. Returns `true` if the assembly was written, `false`
+    /// if it was up to date.
+    pub fn write_target_assembly(
+        &mut self,
+        module: Module,
+        force: bool,
+    ) -> Result<bool, anyhow::Error> {
+        log::trace!("writing target assembly for {:?}", module);
 
         // Determine the location of the output file
         let assembly_path = self.assembly_output_path(module);
 
         // Get the compiled assembly
-        let assembly = self.db.assembly(module);
+        let assembly = self.db.target_assembly(module);
 
         // Did the assembly change since last time?
         if !force
@@ -310,6 +337,22 @@ impl Driver {
             .insert(module, assembly.path().to_path_buf());
 
         Ok(true)
+    }
+
+    /// Generates IR for the specified module and stores it in the output location.
+    pub fn write_assembly_ir(&mut self, module: hir::Module) -> Result<(), anyhow::Error> {
+        log::trace!("writing assembly IR for {:?}", module);
+
+        // Determine the location of the output file
+        let ir_path = self.ir_output_path(module);
+
+        // Get the assembly's IR
+        let assembly_ir = self.db.assembly_ir(module);
+
+        // Write to disk
+        assembly_ir.copy_to(&ir_path)?;
+
+        Ok(())
     }
 }
 

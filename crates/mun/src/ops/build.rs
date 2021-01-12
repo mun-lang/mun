@@ -75,6 +75,8 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::Config, anyhow
         })
         .unwrap_or(DisplayColor::Auto);
 
+    let emit_ir = matches.is_present("emit-ir");
+
     Ok(Config {
         target: matches
             .value_of("target")
@@ -82,6 +84,7 @@ fn compiler_options(matches: &ArgMatches) -> Result<mun_compiler::Config, anyhow
         optimization_lvl,
         out_dir: None,
         display_color,
+        emit_ir,
     })
 }
 

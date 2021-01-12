@@ -32,4 +32,3 @@ features = ["precommit-hook", "run-cargo-test", "run-cargo-fmt", "run-cargo-clip
 
 [dev-dependencies]
 tempfile = "3.1"
-serial_test = "0.4"

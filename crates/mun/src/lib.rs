@@ -68,6 +68,11 @@ where
                         .possible_values(&["enable", "auto", "disable"])
                         .help("color text in terminal"),
                 )
+                .arg(
+                    Arg::with_name("emit-ir")
+                        .long("emit-ir")
+                        .help("emits IR instead of a *.munlib")
+                )
                 .about("Compiles a local Mun file into a module"),
         )
         .subcommand(
@@ -97,6 +102,7 @@ where
         )
         .subcommand(
             SubCommand::with_name("init")
+            .arg(Arg::with_name("path").help("the path to create a new project [default: .]").index(1))
         )
         .subcommand(
             SubCommand::with_name("language-server")
@@ -109,7 +115,7 @@ where
             ("language-server", Some(matches)) => language_server(matches),
             ("start", Some(matches)) => start(matches).map(|_| ExitStatus::Success),
             ("new", Some(matches)) => new(matches),
-            ("init", Some(_)) => init(),
+            ("init", Some(matches)) => init(matches),
             _ => unreachable!(),
         },
         Err(e) => {

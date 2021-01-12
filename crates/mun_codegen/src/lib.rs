@@ -19,7 +19,7 @@ pub(crate) mod type_info;
 pub use inkwell::{builder::Builder, context::Context, module::Module, OptimizationLevel};
 
 pub use crate::{
-    assembly::Assembly,
+    assembly::{AssemblyIR, TargetAssembly},
     code_gen::ModuleBuilder,
     db::{CodeGenDatabase, CodeGenDatabaseStorage},
 };
