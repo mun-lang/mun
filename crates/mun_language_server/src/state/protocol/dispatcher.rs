@@ -1,7 +1,7 @@
 use super::LanguageServerState;
 use crate::cancelation::is_canceled;
 use crate::from_json;
-use anyhow::Result;
+use crate::state::{LanguageServerSnapshot, Task};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -20,11 +20,11 @@ impl<'a> RequestDispatcher<'a> {
         }
     }
 
-    /// Try to dispatch the event as the given Request type.
-    pub fn on<R>(
+    /// Try to dispatch the event as the given Request type on the current thread.
+    pub fn on_sync<R>(
         &mut self,
-        f: fn(&mut LanguageServerState, R::Params) -> Result<R::Result>,
-    ) -> Result<&mut Self>
+        f: fn(&mut LanguageServerState, R::Params) -> anyhow::Result<R::Result>,
+    ) -> anyhow::Result<&mut Self>
     where
         R: lsp_types::request::Request + 'static,
         R::Params: DeserializeOwned + 'static,
@@ -38,6 +38,36 @@ impl<'a> RequestDispatcher<'a> {
         let result = f(self.state, params);
         let response = result_to_response::<R>(id, result);
         self.state.respond(response);
+        Ok(self)
+    }
+
+    /// Try to dispatch the event as the given Request type on the thread pool.
+    pub fn on<R>(
+        &mut self,
+        f: fn(LanguageServerSnapshot, R::Params) -> anyhow::Result<R::Result>,
+    ) -> anyhow::Result<&mut Self>
+    where
+        R: lsp_types::request::Request + 'static,
+        R::Params: DeserializeOwned + 'static + Send,
+        R::Result: Serialize + 'static,
+    {
+        let (id, params) = match self.parse::<R>() {
+            Some(it) => it,
+            None => return Ok(self),
+        };
+
+        self.state.thread_pool.execute({
+            let snapshot = self.state.snapshot();
+            let sender = self.state.task_sender.clone();
+
+            move || {
+                let result = f(snapshot, params);
+                sender
+                    .send(Task::Response(result_to_response::<R>(id, result)))
+                    .unwrap();
+            }
+        });
+
         Ok(self)
     }
 
@@ -101,8 +131,8 @@ impl<'a> NotificationDispatcher<'a> {
     /// Try to dispatch the event as the given Notification type.
     pub fn on<N>(
         &mut self,
-        f: fn(&mut LanguageServerState, N::Params) -> Result<()>,
-    ) -> Result<&mut Self>
+        f: fn(&mut LanguageServerState, N::Params) -> anyhow::Result<()>,
+    ) -> anyhow::Result<&mut Self>
     where
         N: lsp_types::notification::Notification + 'static,
         N::Params: DeserializeOwned + Send + 'static,
@@ -136,7 +166,7 @@ impl<'a> NotificationDispatcher<'a> {
 /// may have occurred.
 fn result_to_response<R>(
     id: lsp_server::RequestId,
-    result: Result<R::Result>,
+    result: anyhow::Result<R::Result>,
 ) -> lsp_server::Response
 where
     R: lsp_types::request::Request + 'static,

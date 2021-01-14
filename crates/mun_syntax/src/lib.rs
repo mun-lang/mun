@@ -31,7 +31,7 @@ pub use crate::{
     syntax_kind::SyntaxKind,
     syntax_node::{Direction, SyntaxElement, SyntaxNode, SyntaxToken, SyntaxTreeBuilder},
 };
-pub use rowan::{SmolStr, TextRange, TextUnit};
+pub use rowan::{SmolStr, TextRange, TextUnit, WalkEvent};
 
 use rowan::GreenNode;
 
@@ -132,6 +132,31 @@ impl SourceFile {
             _ty: PhantomData,
         }
     }
+}
+
+/// Matches a `SyntaxNode` against an `ast` type.
+///
+/// # Example:
+///
+/// ```ignore
+/// match_ast! {
+///     match node {
+///         ast::CallExpr(it) => { ... },
+///         _ => None,
+///     }
+/// }
+/// ```
+#[macro_export]
+macro_rules! match_ast {
+    (match $node:ident { $($tt:tt)* }) => { match_ast!(match ($node) { $($tt)* }) };
+
+    (match ($node:expr) {
+        $( ast::$ast:ident($it:ident) => $res:expr, )*
+        _ => $catch_all:expr $(,)?
+    }) => {{
+        $( if let Some($it) = ast::$ast::cast($node.clone()) { $res } else )*
+        { $catch_all }
+    }};
 }
 
 /// This tests does not assert anything and instead just shows off the crate's API.

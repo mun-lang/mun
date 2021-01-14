@@ -7,6 +7,7 @@ pub use main_loop::main_loop;
 use paths::AbsPathBuf;
 use project::ProjectManifest;
 pub(crate) use state::LanguageServerState;
+pub(crate) use symbol_kind::SymbolKind;
 
 mod analysis;
 mod cancelation;
@@ -16,8 +17,11 @@ mod config;
 mod conversion;
 mod db;
 mod diagnostics;
+mod file_structure;
+mod handlers;
 mod main_loop;
 mod state;
+mod symbol_kind;
 
 /// Deserializes a `T` from a json value.
 pub fn from_json<T: DeserializeOwned>(

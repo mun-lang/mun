@@ -1,7 +1,8 @@
 use crossbeam_channel::{after, select};
 use lsp_server::{Connection, Message, Notification, Request};
 use lsp_types::{
-    notification::Exit, request::Shutdown, ProgressParams, ProgressParamsValue, WorkDoneProgress,
+    notification::Exit, request::Shutdown, ProgressParams, ProgressParamsValue, Url,
+    WorkDoneProgress,
 };
 use mun_language_server::{main_loop, Config, FilesWatcher};
 use mun_test::Fixture;
@@ -75,7 +76,7 @@ pub struct Server {
     messages: RefCell<Vec<Message>>,
     worker: Option<std::thread::JoinHandle<()>>,
     client: Connection,
-    _tmp_dir: tempdir::TempDir,
+    tmp_dir: tempdir::TempDir,
 }
 
 impl Server {
@@ -92,7 +93,15 @@ impl Server {
             messages: RefCell::new(Vec::new()),
             worker: Some(worker),
             client,
-            _tmp_dir: tmp_dir,
+            tmp_dir,
+        }
+    }
+
+    /// Returns the LSP TextDocumentIdentifier for the given path
+    pub fn doc_id(&self, rel_path: &str) -> lsp_types::TextDocumentIdentifier {
+        let path = self.tmp_dir.path().join(rel_path);
+        lsp_types::TextDocumentIdentifier {
+            uri: Url::from_file_path(path).unwrap(),
         }
     }
 
@@ -130,19 +139,25 @@ impl Server {
     }
 
     /// Sends a request to the main loop and expects the specified value to be returned
-    fn assert_request<R: lsp_types::request::Request>(
-        &mut self,
+    fn assert_request_returns_value<R: lsp_types::request::Request>(
+        &self,
         params: R::Params,
         expected_response: Value,
     ) where
         R::Params: Serialize,
     {
-        let result = self.send_request::<R>(params);
+        let result = self.send_request_for_value::<R>(params);
         assert_eq!(result, expected_response);
     }
 
+    /// Sends a request to the language server, returning the response
+    pub fn send_request<R: lsp_types::request::Request>(&self, params: R::Params) -> R::Result {
+        let value = self.send_request_for_value::<R>(params);
+        serde_json::from_value(value).unwrap()
+    }
+
     /// Sends a request to main loop, returning the response
-    fn send_request<R: lsp_types::request::Request>(&self, params: R::Params) -> Value
+    fn send_request_for_value<R: lsp_types::request::Request>(&self, params: R::Params) -> Value
     where
         R::Params: Serialize,
     {
@@ -210,7 +225,7 @@ impl Server {
 impl Drop for Server {
     fn drop(&mut self) {
         // Send the proper shutdown sequence to ensure the main loop terminates properly
-        self.assert_request::<Shutdown>((), Value::Null);
+        self.assert_request_returns_value::<Shutdown>((), Value::Null);
         self.notification::<Exit>(());
 
         // Cancel the main_loop
