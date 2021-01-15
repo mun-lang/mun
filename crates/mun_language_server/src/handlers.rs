@@ -1,7 +1,4 @@
-use crate::{
-    conversion::{convert_range, convert_symbol_kind},
-    state::LanguageServerSnapshot,
-};
+use crate::{from_lsp, state::LanguageServerSnapshot, to_lsp};
 use lsp_types::DocumentSymbol;
 
 /// Computes the document symbols for a specific document. Converts the LSP types to internal
@@ -11,7 +8,7 @@ pub(crate) fn handle_document_symbol(
     snapshot: LanguageServerSnapshot,
     params: lsp_types::DocumentSymbolParams,
 ) -> anyhow::Result<Option<lsp_types::DocumentSymbolResponse>> {
-    let file_id = snapshot.uri_to_file_id(&params.text_document.uri)?;
+    let file_id = from_lsp::file_id(&snapshot, &params.text_document.uri)?;
     let line_index = snapshot.analysis.file_line_index(file_id)?;
 
     let mut parents: Vec<(DocumentSymbol, Option<usize>)> = Vec::new();
@@ -21,11 +18,11 @@ pub(crate) fn handle_document_symbol(
         let doc_symbol = DocumentSymbol {
             name: symbol.label,
             detail: symbol.detail,
-            kind: convert_symbol_kind(symbol.kind),
+            kind: to_lsp::symbol_kind(symbol.kind),
             tags: None,
             deprecated: None,
-            range: convert_range(symbol.node_range, &line_index),
-            selection_range: convert_range(symbol.navigation_range, &line_index),
+            range: to_lsp::range(symbol.node_range, &line_index),
+            selection_range: to_lsp::range(symbol.navigation_range, &line_index),
             children: None,
         };
 

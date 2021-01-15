@@ -2,81 +2,81 @@
 source: crates/mun_syntax/src/tests/parser.rs
 expression: "struct Foo {};\nstruct(gc) Baz {};\nstruct(value) Baz {};\nstruct() Err1 {};    // error: expected memory type specifier\nstruct(foo) Err2 {}; // error: expected memory type specifier"
 ---
-SOURCE_FILE@[0; 179)
-  STRUCT_DEF@[0; 14)
-    STRUCT_KW@[0; 6) "struct"
-    WHITESPACE@[6; 7) " "
-    NAME@[7; 10)
-      IDENT@[7; 10) "Foo"
-    WHITESPACE@[10; 11) " "
-    RECORD_FIELD_DEF_LIST@[11; 14)
-      L_CURLY@[11; 12) "{"
-      R_CURLY@[12; 13) "}"
-      SEMI@[13; 14) ";"
-  WHITESPACE@[14; 15) "\n"
-  STRUCT_DEF@[15; 33)
-    STRUCT_KW@[15; 21) "struct"
-    MEMORY_TYPE_SPECIFIER@[21; 25)
-      L_PAREN@[21; 22) "("
-      GC_KW@[22; 24) "gc"
-      R_PAREN@[24; 25) ")"
-    WHITESPACE@[25; 26) " "
-    NAME@[26; 29)
-      IDENT@[26; 29) "Baz"
-    WHITESPACE@[29; 30) " "
-    RECORD_FIELD_DEF_LIST@[30; 33)
-      L_CURLY@[30; 31) "{"
-      R_CURLY@[31; 32) "}"
-      SEMI@[32; 33) ";"
-  WHITESPACE@[33; 34) "\n"
-  STRUCT_DEF@[34; 55)
-    STRUCT_KW@[34; 40) "struct"
-    MEMORY_TYPE_SPECIFIER@[40; 47)
-      L_PAREN@[40; 41) "("
-      VALUE_KW@[41; 46) "value"
-      R_PAREN@[46; 47) ")"
-    WHITESPACE@[47; 48) " "
-    NAME@[48; 51)
-      IDENT@[48; 51) "Baz"
-    WHITESPACE@[51; 52) " "
-    RECORD_FIELD_DEF_LIST@[52; 55)
-      L_CURLY@[52; 53) "{"
-      R_CURLY@[53; 54) "}"
-      SEMI@[54; 55) ";"
-  WHITESPACE@[55; 56) "\n"
-  STRUCT_DEF@[56; 73)
-    STRUCT_KW@[56; 62) "struct"
-    MEMORY_TYPE_SPECIFIER@[62; 64)
-      L_PAREN@[62; 63) "("
-      R_PAREN@[63; 64) ")"
-    WHITESPACE@[64; 65) " "
-    NAME@[65; 69)
-      IDENT@[65; 69) "Err1"
-    WHITESPACE@[69; 70) " "
-    RECORD_FIELD_DEF_LIST@[70; 73)
-      L_CURLY@[70; 71) "{"
-      R_CURLY@[71; 72) "}"
-      SEMI@[72; 73) ";"
-  WHITESPACE@[73; 77) "    "
-  COMMENT@[77; 117) "// error: expected me ..."
-  WHITESPACE@[117; 118) "\n"
-  STRUCT_DEF@[118; 138)
-    STRUCT_KW@[118; 124) "struct"
-    MEMORY_TYPE_SPECIFIER@[124; 129)
-      L_PAREN@[124; 125) "("
-      ERROR@[125; 128)
-        IDENT@[125; 128) "foo"
-      R_PAREN@[128; 129) ")"
-    WHITESPACE@[129; 130) " "
-    NAME@[130; 134)
-      IDENT@[130; 134) "Err2"
-    WHITESPACE@[134; 135) " "
-    RECORD_FIELD_DEF_LIST@[135; 138)
-      L_CURLY@[135; 136) "{"
-      R_CURLY@[136; 137) "}"
-      SEMI@[137; 138) ";"
-  WHITESPACE@[138; 139) " "
-  COMMENT@[139; 179) "// error: expected me ..."
+SOURCE_FILE@0..179
+  STRUCT_DEF@0..14
+    STRUCT_KW@0..6 "struct"
+    WHITESPACE@6..7 " "
+    NAME@7..10
+      IDENT@7..10 "Foo"
+    WHITESPACE@10..11 " "
+    RECORD_FIELD_DEF_LIST@11..14
+      L_CURLY@11..12 "{"
+      R_CURLY@12..13 "}"
+      SEMI@13..14 ";"
+  WHITESPACE@14..15 "\n"
+  STRUCT_DEF@15..33
+    STRUCT_KW@15..21 "struct"
+    MEMORY_TYPE_SPECIFIER@21..25
+      L_PAREN@21..22 "("
+      GC_KW@22..24 "gc"
+      R_PAREN@24..25 ")"
+    WHITESPACE@25..26 " "
+    NAME@26..29
+      IDENT@26..29 "Baz"
+    WHITESPACE@29..30 " "
+    RECORD_FIELD_DEF_LIST@30..33
+      L_CURLY@30..31 "{"
+      R_CURLY@31..32 "}"
+      SEMI@32..33 ";"
+  WHITESPACE@33..34 "\n"
+  STRUCT_DEF@34..55
+    STRUCT_KW@34..40 "struct"
+    MEMORY_TYPE_SPECIFIER@40..47
+      L_PAREN@40..41 "("
+      VALUE_KW@41..46 "value"
+      R_PAREN@46..47 ")"
+    WHITESPACE@47..48 " "
+    NAME@48..51
+      IDENT@48..51 "Baz"
+    WHITESPACE@51..52 " "
+    RECORD_FIELD_DEF_LIST@52..55
+      L_CURLY@52..53 "{"
+      R_CURLY@53..54 "}"
+      SEMI@54..55 ";"
+  WHITESPACE@55..56 "\n"
+  STRUCT_DEF@56..73
+    STRUCT_KW@56..62 "struct"
+    MEMORY_TYPE_SPECIFIER@62..64
+      L_PAREN@62..63 "("
+      R_PAREN@63..64 ")"
+    WHITESPACE@64..65 " "
+    NAME@65..69
+      IDENT@65..69 "Err1"
+    WHITESPACE@69..70 " "
+    RECORD_FIELD_DEF_LIST@70..73
+      L_CURLY@70..71 "{"
+      R_CURLY@71..72 "}"
+      SEMI@72..73 ";"
+  WHITESPACE@73..77 "    "
+  COMMENT@77..117 "// error: expected me ..."
+  WHITESPACE@117..118 "\n"
+  STRUCT_DEF@118..138
+    STRUCT_KW@118..124 "struct"
+    MEMORY_TYPE_SPECIFIER@124..129
+      L_PAREN@124..125 "("
+      ERROR@125..128
+        IDENT@125..128 "foo"
+      R_PAREN@128..129 ")"
+    WHITESPACE@129..130 " "
+    NAME@130..134
+      IDENT@130..134 "Err2"
+    WHITESPACE@134..135 " "
+    RECORD_FIELD_DEF_LIST@135..138
+      L_CURLY@135..136 "{"
+      R_CURLY@136..137 "}"
+      SEMI@137..138 ";"
+  WHITESPACE@138..139 " "
+  COMMENT@139..179 "// error: expected me ..."
 error Offset(63): expected memory type specifier
 error Offset(125): expected memory type specifier
 

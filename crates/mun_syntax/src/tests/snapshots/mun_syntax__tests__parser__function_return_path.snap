@@ -2,113 +2,113 @@
 source: crates/mun_syntax/src/tests/parser.rs
 expression: "fn main() -> self::Foo {}\n    fn main1() -> super::Foo {}\n    fn main2() -> package::Foo {}\n    fn main3() -> package::foo::Foo {}"
 ---
-SOURCE_FILE@[0; 130)
-  FUNCTION_DEF@[0; 25)
-    FN_KW@[0; 2) "fn"
-    WHITESPACE@[2; 3) " "
-    NAME@[3; 7)
-      IDENT@[3; 7) "main"
-    PARAM_LIST@[7; 9)
-      L_PAREN@[7; 8) "("
-      R_PAREN@[8; 9) ")"
-    WHITESPACE@[9; 10) " "
-    RET_TYPE@[10; 22)
-      THIN_ARROW@[10; 12) "->"
-      WHITESPACE@[12; 13) " "
-      PATH_TYPE@[13; 22)
-        PATH@[13; 22)
-          PATH@[13; 17)
-            PATH_SEGMENT@[13; 17)
-              SELF_KW@[13; 17) "self"
-          COLONCOLON@[17; 19) "::"
-          PATH_SEGMENT@[19; 22)
-            NAME_REF@[19; 22)
-              IDENT@[19; 22) "Foo"
-    WHITESPACE@[22; 23) " "
-    BLOCK_EXPR@[23; 25)
-      L_CURLY@[23; 24) "{"
-      R_CURLY@[24; 25) "}"
-  FUNCTION_DEF@[25; 57)
-    WHITESPACE@[25; 30) "\n    "
-    FN_KW@[30; 32) "fn"
-    WHITESPACE@[32; 33) " "
-    NAME@[33; 38)
-      IDENT@[33; 38) "main1"
-    PARAM_LIST@[38; 40)
-      L_PAREN@[38; 39) "("
-      R_PAREN@[39; 40) ")"
-    WHITESPACE@[40; 41) " "
-    RET_TYPE@[41; 54)
-      THIN_ARROW@[41; 43) "->"
-      WHITESPACE@[43; 44) " "
-      PATH_TYPE@[44; 54)
-        PATH@[44; 54)
-          PATH@[44; 49)
-            PATH_SEGMENT@[44; 49)
-              SUPER_KW@[44; 49) "super"
-          COLONCOLON@[49; 51) "::"
-          PATH_SEGMENT@[51; 54)
-            NAME_REF@[51; 54)
-              IDENT@[51; 54) "Foo"
-    WHITESPACE@[54; 55) " "
-    BLOCK_EXPR@[55; 57)
-      L_CURLY@[55; 56) "{"
-      R_CURLY@[56; 57) "}"
-  FUNCTION_DEF@[57; 91)
-    WHITESPACE@[57; 62) "\n    "
-    FN_KW@[62; 64) "fn"
-    WHITESPACE@[64; 65) " "
-    NAME@[65; 70)
-      IDENT@[65; 70) "main2"
-    PARAM_LIST@[70; 72)
-      L_PAREN@[70; 71) "("
-      R_PAREN@[71; 72) ")"
-    WHITESPACE@[72; 73) " "
-    RET_TYPE@[73; 88)
-      THIN_ARROW@[73; 75) "->"
-      WHITESPACE@[75; 76) " "
-      PATH_TYPE@[76; 88)
-        PATH@[76; 88)
-          PATH@[76; 83)
-            PATH_SEGMENT@[76; 83)
-              PACKAGE_KW@[76; 83) "package"
-          COLONCOLON@[83; 85) "::"
-          PATH_SEGMENT@[85; 88)
-            NAME_REF@[85; 88)
-              IDENT@[85; 88) "Foo"
-    WHITESPACE@[88; 89) " "
-    BLOCK_EXPR@[89; 91)
-      L_CURLY@[89; 90) "{"
-      R_CURLY@[90; 91) "}"
-  FUNCTION_DEF@[91; 130)
-    WHITESPACE@[91; 96) "\n    "
-    FN_KW@[96; 98) "fn"
-    WHITESPACE@[98; 99) " "
-    NAME@[99; 104)
-      IDENT@[99; 104) "main3"
-    PARAM_LIST@[104; 106)
-      L_PAREN@[104; 105) "("
-      R_PAREN@[105; 106) ")"
-    WHITESPACE@[106; 107) " "
-    RET_TYPE@[107; 127)
-      THIN_ARROW@[107; 109) "->"
-      WHITESPACE@[109; 110) " "
-      PATH_TYPE@[110; 127)
-        PATH@[110; 127)
-          PATH@[110; 122)
-            PATH@[110; 117)
-              PATH_SEGMENT@[110; 117)
-                PACKAGE_KW@[110; 117) "package"
-            COLONCOLON@[117; 119) "::"
-            PATH_SEGMENT@[119; 122)
-              NAME_REF@[119; 122)
-                IDENT@[119; 122) "foo"
-          COLONCOLON@[122; 124) "::"
-          PATH_SEGMENT@[124; 127)
-            NAME_REF@[124; 127)
-              IDENT@[124; 127) "Foo"
-    WHITESPACE@[127; 128) " "
-    BLOCK_EXPR@[128; 130)
-      L_CURLY@[128; 129) "{"
-      R_CURLY@[129; 130) "}"
+SOURCE_FILE@0..130
+  FUNCTION_DEF@0..25
+    FN_KW@0..2 "fn"
+    WHITESPACE@2..3 " "
+    NAME@3..7
+      IDENT@3..7 "main"
+    PARAM_LIST@7..9
+      L_PAREN@7..8 "("
+      R_PAREN@8..9 ")"
+    WHITESPACE@9..10 " "
+    RET_TYPE@10..22
+      THIN_ARROW@10..12 "->"
+      WHITESPACE@12..13 " "
+      PATH_TYPE@13..22
+        PATH@13..22
+          PATH@13..17
+            PATH_SEGMENT@13..17
+              SELF_KW@13..17 "self"
+          COLONCOLON@17..19 "::"
+          PATH_SEGMENT@19..22
+            NAME_REF@19..22
+              IDENT@19..22 "Foo"
+    WHITESPACE@22..23 " "
+    BLOCK_EXPR@23..25
+      L_CURLY@23..24 "{"
+      R_CURLY@24..25 "}"
+  FUNCTION_DEF@25..57
+    WHITESPACE@25..30 "\n    "
+    FN_KW@30..32 "fn"
+    WHITESPACE@32..33 " "
+    NAME@33..38
+      IDENT@33..38 "main1"
+    PARAM_LIST@38..40
+      L_PAREN@38..39 "("
+      R_PAREN@39..40 ")"
+    WHITESPACE@40..41 " "
+    RET_TYPE@41..54
+      THIN_ARROW@41..43 "->"
+      WHITESPACE@43..44 " "
+      PATH_TYPE@44..54
+        PATH@44..54
+          PATH@44..49
+            PATH_SEGMENT@44..49
+              SUPER_KW@44..49 "super"
+          COLONCOLON@49..51 "::"
+          PATH_SEGMENT@51..54
+            NAME_REF@51..54
+              IDENT@51..54 "Foo"
+    WHITESPACE@54..55 " "
+    BLOCK_EXPR@55..57
+      L_CURLY@55..56 "{"
+      R_CURLY@56..57 "}"
+  FUNCTION_DEF@57..91
+    WHITESPACE@57..62 "\n    "
+    FN_KW@62..64 "fn"
+    WHITESPACE@64..65 " "
+    NAME@65..70
+      IDENT@65..70 "main2"
+    PARAM_LIST@70..72
+      L_PAREN@70..71 "("
+      R_PAREN@71..72 ")"
+    WHITESPACE@72..73 " "
+    RET_TYPE@73..88
+      THIN_ARROW@73..75 "->"
+      WHITESPACE@75..76 " "
+      PATH_TYPE@76..88
+        PATH@76..88
+          PATH@76..83
+            PATH_SEGMENT@76..83
+              PACKAGE_KW@76..83 "package"
+          COLONCOLON@83..85 "::"
+          PATH_SEGMENT@85..88
+            NAME_REF@85..88
+              IDENT@85..88 "Foo"
+    WHITESPACE@88..89 " "
+    BLOCK_EXPR@89..91
+      L_CURLY@89..90 "{"
+      R_CURLY@90..91 "}"
+  FUNCTION_DEF@91..130
+    WHITESPACE@91..96 "\n    "
+    FN_KW@96..98 "fn"
+    WHITESPACE@98..99 " "
+    NAME@99..104
+      IDENT@99..104 "main3"
+    PARAM_LIST@104..106
+      L_PAREN@104..105 "("
+      R_PAREN@105..106 ")"
+    WHITESPACE@106..107 " "
+    RET_TYPE@107..127
+      THIN_ARROW@107..109 "->"
+      WHITESPACE@109..110 " "
+      PATH_TYPE@110..127
+        PATH@110..127
+          PATH@110..122
+            PATH@110..117
+              PATH_SEGMENT@110..117
+                PACKAGE_KW@110..117 "package"
+            COLONCOLON@117..119 "::"
+            PATH_SEGMENT@119..122
+              NAME_REF@119..122
+                IDENT@119..122 "foo"
+          COLONCOLON@122..124 "::"
+          PATH_SEGMENT@124..127
+            NAME_REF@124..127
+              IDENT@124..127 "Foo"
+    WHITESPACE@127..128 " "
+    BLOCK_EXPR@128..130
+      L_CURLY@128..129 "{"
+      R_CURLY@129..130 "}"
 

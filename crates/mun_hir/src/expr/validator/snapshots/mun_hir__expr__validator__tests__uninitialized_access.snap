@@ -2,5 +2,5 @@
 source: crates/mun_hir/src/expr/validator/tests.rs
 expression: "fn foo() {\n    let a:int;\n    let b = a + 3;\n}"
 ---
-[38; 39): use of possibly-uninitialized variable
+38..39: use of possibly-uninitialized variable
 

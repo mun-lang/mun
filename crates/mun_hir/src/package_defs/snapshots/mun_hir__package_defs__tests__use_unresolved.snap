@@ -3,8 +3,8 @@ source: crates/mun_hir/src/package_defs/tests.rs
 expression: "//- /foo.mun\npub struct Foo;\n\n//- /mod.mun\nuse foo::Foo;   // works\nuse foo::Bar;   // doesnt work (Bar does not exist)\nuse baz::Baz;   // doesnt work (baz does not exist)"
 ---
 mod mod
-+-- ERROR: [29; 37): unresolved import
-+-- ERROR: [81; 89): unresolved import
++-- ERROR: 29..37: unresolved import
++-- ERROR: 81..89: unresolved import
 +-- use struct package::foo::Foo
 '-- mod foo
     '-- struct Foo

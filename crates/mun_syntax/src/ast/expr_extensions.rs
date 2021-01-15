@@ -3,9 +3,10 @@ use crate::ast::{child_opt, AstChildren, Literal};
 use crate::{
     ast, AstNode, SmolStr,
     SyntaxKind::{self, *},
-    SyntaxToken, TextRange, TextUnit,
+    SyntaxToken, TextRange, TextSize,
 };
 use std::iter::Peekable;
+use std::ops::Add;
 use std::str::CharIndices;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -189,7 +190,7 @@ impl ast::FieldExpr {
 
         let start = field_name
             .map(|f| f.start())
-            .or_else(|| field_index.map(|i| TextUnit::from_usize(i.start().to_usize() + 1)))
+            .or_else(|| field_index.map(|i| i.start().add(TextSize::from(1u32))))
             .unwrap_or_else(|| self.syntax().text_range().start());
 
         let end = field_name
@@ -197,7 +198,7 @@ impl ast::FieldExpr {
             .or_else(|| field_index.map(|f| f.end()))
             .unwrap_or_else(|| self.syntax().text_range().end());
 
-        TextRange::from_to(start, end)
+        TextRange::new(start, end)
     }
 }
 

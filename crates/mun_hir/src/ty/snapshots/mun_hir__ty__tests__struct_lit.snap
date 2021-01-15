@@ -2,43 +2,43 @@
 source: crates/mun_hir/src/ty/tests.rs
 expression: "struct Foo;\nstruct Bar {\n    a: f64,\n}\nstruct Baz(f64, i32);\n\nfn main() {\n    let a: Foo = Foo;\n    let b: Bar = Bar { a: 1.23, };\n    let c = Baz(1.23, 1);\n\n    let a = Foo{}; // error: mismatched struct literal kind. expected `unit struct`, found `record`\n    let a = Foo(); // error: mismatched struct literal kind. expected `unit struct`, found `tuple`\n    let b = Bar; // error: mismatched struct literal kind. expected `record`, found `unit struct`\n    let b = Bar(); // error: mismatched struct literal kind. expected `record`, found `tuple`\n    let b = Bar{}; // error: missing record fields: a\n    let c = Baz; // error: mismatched struct literal kind. expected `tuple`, found `unit struct`\n    let c = Baz{}; // error: mismatched struct literal kind. expected `tuple`, found `record`\n    let c = Baz(); // error: this tuple struct literal has 2 fields but 0 fields were supplied\n}"
 ---
-[170; 175): mismatched struct literal kind. expected `unit struct`, found `record`
-[270; 275): mismatched struct literal kind. expected `unit struct`, found `tuple`
-[369; 372): mismatched struct literal kind. expected `record`, found `unit struct`
-[467; 470): mismatched struct literal kind. expected `record`, found `tuple`
-[561; 566): missing record fields:
+170..175: mismatched struct literal kind. expected `unit struct`, found `record`
+270..275: mismatched struct literal kind. expected `unit struct`, found `tuple`
+369..372: mismatched struct literal kind. expected `record`, found `unit struct`
+467..470: mismatched struct literal kind. expected `record`, found `tuple`
+561..566: missing record fields:
 - a
 
-[615; 618): mismatched struct literal kind. expected `tuple`, found `unit struct`
-[712; 717): mismatched struct literal kind. expected `tuple`, found `record`
-[806; 811): this tuple struct literal has 2 fields but 0 fields were supplied
-[72; 890) '{     ...lied }': nothing
-[82; 83) 'a': Foo
-[91; 94) 'Foo': Foo
-[104; 105) 'b': Bar
-[113; 129) 'Bar { ....23, }': Bar
-[122; 126) '1.23': f64
-[139; 140) 'c': Baz
-[143; 146) 'Baz': ctor Baz(f64, i32) -> Baz
-[143; 155) 'Baz(1.23, 1)': Baz
-[147; 151) '1.23': f64
-[153; 154) '1': i32
-[166; 167) 'a': Foo
-[170; 175) 'Foo{}': Foo
-[266; 267) 'a': Foo
-[270; 273) 'Foo': Foo
-[270; 275) 'Foo()': Foo
-[365; 366) 'b': Bar
-[369; 372) 'Bar': Bar
-[463; 464) 'b': Bar
-[467; 470) 'Bar': Bar
-[467; 472) 'Bar()': Bar
-[557; 558) 'b': Bar
-[561; 566) 'Bar{}': Bar
-[611; 612) 'c': ctor Baz(f64, i32) -> Baz
-[615; 618) 'Baz': ctor Baz(f64, i32) -> Baz
-[708; 709) 'c': Baz
-[712; 717) 'Baz{}': Baz
-[802; 803) 'c': Baz
-[806; 809) 'Baz': ctor Baz(f64, i32) -> Baz
-[806; 811) 'Baz()': Baz
+615..618: mismatched struct literal kind. expected `tuple`, found `unit struct`
+712..717: mismatched struct literal kind. expected `tuple`, found `record`
+806..811: this tuple struct literal has 2 fields but 0 fields were supplied
+72..890 '{     ...lied }': nothing
+82..83 'a': Foo
+91..94 'Foo': Foo
+104..105 'b': Bar
+113..129 'Bar { ....23, }': Bar
+122..126 '1.23': f64
+139..140 'c': Baz
+143..146 'Baz': ctor Baz(f64, i32) -> Baz
+143..155 'Baz(1.23, 1)': Baz
+147..151 '1.23': f64
+153..154 '1': i32
+166..167 'a': Foo
+170..175 'Foo{}': Foo
+266..267 'a': Foo
+270..273 'Foo': Foo
+270..275 'Foo()': Foo
+365..366 'b': Bar
+369..372 'Bar': Bar
+463..464 'b': Bar
+467..470 'Bar': Bar
+467..472 'Bar()': Bar
+557..558 'b': Bar
+561..566 'Bar{}': Bar
+611..612 'c': ctor Baz(f64, i32) -> Baz
+615..618 'Baz': ctor Baz(f64, i32) -> Baz
+708..709 'c': Baz
+712..717 'Baz{}': Baz
+802..803 'c': Baz
+806..809 'Baz': ctor Baz(f64, i32) -> Baz
+806..811 'Baz()': Baz

@@ -1,9 +1,8 @@
 use crate::{
     parsing::{lexer::Token, Token as PToken, TokenSource},
     SyntaxKind::*,
-    TextUnit,
+    TextRange, TextSize,
 };
-use text_unit::TextRange;
 
 /// An implementation of `TokenSource` for text.
 pub(crate) struct TextTokenSource<'t> {
@@ -16,7 +15,7 @@ pub(crate) struct TextTokenSource<'t> {
     /// 0      7  10
     /// ```
     /// (token, start_offset): `[(struct, 0), (Foo, 7), (;, 10)]`
-    start_offsets: Vec<TextUnit>,
+    start_offsets: Vec<TextSize>,
     /// non-whitespace/comment tokens
     /// ```non-rust
     /// struct Foo {}
@@ -52,12 +51,12 @@ impl<'t> TokenSource for TextTokenSource<'t> {
         if pos >= self.tokens.len() {
             return false;
         }
-        let range = TextRange::offset_len(self.start_offsets[pos], self.tokens[pos].len);
+        let range = TextRange::at(self.start_offsets[pos], self.tokens[pos].len);
         self.text[range] == *kw
     }
 }
 
-fn mk_token(pos: usize, start_offsets: &[TextUnit], tokens: &[Token]) -> PToken {
+fn mk_token(pos: usize, start_offsets: &[TextSize], tokens: &[Token]) -> PToken {
     let kind = tokens.get(pos).map(|t| t.kind).unwrap_or(EOF);
     let is_jointed_to_next = if pos + 1 < start_offsets.len() {
         start_offsets[pos] + tokens[pos].len == start_offsets[pos + 1]

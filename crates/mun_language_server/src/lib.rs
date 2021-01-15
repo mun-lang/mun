@@ -14,14 +14,16 @@ mod cancelation;
 mod capabilities;
 mod change;
 mod config;
-mod conversion;
 mod db;
 mod diagnostics;
 mod file_structure;
+mod from_lsp;
 mod handlers;
+mod lsp_utils;
 mod main_loop;
 mod state;
 mod symbol_kind;
+mod to_lsp;
 
 /// Deserializes a `T` from a json value.
 pub fn from_json<T: DeserializeOwned>(

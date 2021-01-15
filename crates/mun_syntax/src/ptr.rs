@@ -22,7 +22,7 @@ impl SyntaxNodePtr {
         assert!(root.parent().is_none());
         successors(Some(root.clone()), |node| {
             node.children()
-                .find(|it| self.range.is_subrange(&it.text_range()))
+                .find(|it| it.text_range().contains_range(self.range))
         })
         .find(|it| it.text_range() == self.range && it.kind() == self.kind)
         .unwrap_or_else(|| panic!("can't resolve local ptr to SyntaxNode: {:?}", self))

@@ -2,93 +2,93 @@
 source: crates/mun_syntax/src/tests/parser.rs
 expression: "pub struct Foo {};\npub(package) struct(gc) Baz {};\npub(super) fn foo() {}\npub(package) fn bar() {}\npub fn baz() {}"
 ---
-SOURCE_FILE@[0; 114)
-  STRUCT_DEF@[0; 18)
-    VISIBILITY@[0; 3)
-      PUB_KW@[0; 3) "pub"
-    WHITESPACE@[3; 4) " "
-    STRUCT_KW@[4; 10) "struct"
-    WHITESPACE@[10; 11) " "
-    NAME@[11; 14)
-      IDENT@[11; 14) "Foo"
-    WHITESPACE@[14; 15) " "
-    RECORD_FIELD_DEF_LIST@[15; 18)
-      L_CURLY@[15; 16) "{"
-      R_CURLY@[16; 17) "}"
-      SEMI@[17; 18) ";"
-  WHITESPACE@[18; 19) "\n"
-  STRUCT_DEF@[19; 50)
-    VISIBILITY@[19; 31)
-      PUB_KW@[19; 22) "pub"
-      L_PAREN@[22; 23) "("
-      PACKAGE_KW@[23; 30) "package"
-      R_PAREN@[30; 31) ")"
-    WHITESPACE@[31; 32) " "
-    STRUCT_KW@[32; 38) "struct"
-    MEMORY_TYPE_SPECIFIER@[38; 42)
-      L_PAREN@[38; 39) "("
-      GC_KW@[39; 41) "gc"
-      R_PAREN@[41; 42) ")"
-    WHITESPACE@[42; 43) " "
-    NAME@[43; 46)
-      IDENT@[43; 46) "Baz"
-    WHITESPACE@[46; 47) " "
-    RECORD_FIELD_DEF_LIST@[47; 50)
-      L_CURLY@[47; 48) "{"
-      R_CURLY@[48; 49) "}"
-      SEMI@[49; 50) ";"
-  FUNCTION_DEF@[50; 73)
-    WHITESPACE@[50; 51) "\n"
-    VISIBILITY@[51; 61)
-      PUB_KW@[51; 54) "pub"
-      L_PAREN@[54; 55) "("
-      SUPER_KW@[55; 60) "super"
-      R_PAREN@[60; 61) ")"
-    WHITESPACE@[61; 62) " "
-    FN_KW@[62; 64) "fn"
-    WHITESPACE@[64; 65) " "
-    NAME@[65; 68)
-      IDENT@[65; 68) "foo"
-    PARAM_LIST@[68; 70)
-      L_PAREN@[68; 69) "("
-      R_PAREN@[69; 70) ")"
-    WHITESPACE@[70; 71) " "
-    BLOCK_EXPR@[71; 73)
-      L_CURLY@[71; 72) "{"
-      R_CURLY@[72; 73) "}"
-  FUNCTION_DEF@[73; 98)
-    WHITESPACE@[73; 74) "\n"
-    VISIBILITY@[74; 86)
-      PUB_KW@[74; 77) "pub"
-      L_PAREN@[77; 78) "("
-      PACKAGE_KW@[78; 85) "package"
-      R_PAREN@[85; 86) ")"
-    WHITESPACE@[86; 87) " "
-    FN_KW@[87; 89) "fn"
-    WHITESPACE@[89; 90) " "
-    NAME@[90; 93)
-      IDENT@[90; 93) "bar"
-    PARAM_LIST@[93; 95)
-      L_PAREN@[93; 94) "("
-      R_PAREN@[94; 95) ")"
-    WHITESPACE@[95; 96) " "
-    BLOCK_EXPR@[96; 98)
-      L_CURLY@[96; 97) "{"
-      R_CURLY@[97; 98) "}"
-  FUNCTION_DEF@[98; 114)
-    WHITESPACE@[98; 99) "\n"
-    VISIBILITY@[99; 102)
-      PUB_KW@[99; 102) "pub"
-    WHITESPACE@[102; 103) " "
-    FN_KW@[103; 105) "fn"
-    WHITESPACE@[105; 106) " "
-    NAME@[106; 109)
-      IDENT@[106; 109) "baz"
-    PARAM_LIST@[109; 111)
-      L_PAREN@[109; 110) "("
-      R_PAREN@[110; 111) ")"
-    WHITESPACE@[111; 112) " "
-    BLOCK_EXPR@[112; 114)
-      L_CURLY@[112; 113) "{"
-      R_CURLY@[113; 114) "}"
+SOURCE_FILE@0..114
+  STRUCT_DEF@0..18
+    VISIBILITY@0..3
+      PUB_KW@0..3 "pub"
+    WHITESPACE@3..4 " "
+    STRUCT_KW@4..10 "struct"
+    WHITESPACE@10..11 " "
+    NAME@11..14
+      IDENT@11..14 "Foo"
+    WHITESPACE@14..15 " "
+    RECORD_FIELD_DEF_LIST@15..18
+      L_CURLY@15..16 "{"
+      R_CURLY@16..17 "}"
+      SEMI@17..18 ";"
+  WHITESPACE@18..19 "\n"
+  STRUCT_DEF@19..50
+    VISIBILITY@19..31
+      PUB_KW@19..22 "pub"
+      L_PAREN@22..23 "("
+      PACKAGE_KW@23..30 "package"
+      R_PAREN@30..31 ")"
+    WHITESPACE@31..32 " "
+    STRUCT_KW@32..38 "struct"
+    MEMORY_TYPE_SPECIFIER@38..42
+      L_PAREN@38..39 "("
+      GC_KW@39..41 "gc"
+      R_PAREN@41..42 ")"
+    WHITESPACE@42..43 " "
+    NAME@43..46
+      IDENT@43..46 "Baz"
+    WHITESPACE@46..47 " "
+    RECORD_FIELD_DEF_LIST@47..50
+      L_CURLY@47..48 "{"
+      R_CURLY@48..49 "}"
+      SEMI@49..50 ";"
+  FUNCTION_DEF@50..73
+    WHITESPACE@50..51 "\n"
+    VISIBILITY@51..61
+      PUB_KW@51..54 "pub"
+      L_PAREN@54..55 "("
+      SUPER_KW@55..60 "super"
+      R_PAREN@60..61 ")"
+    WHITESPACE@61..62 " "
+    FN_KW@62..64 "fn"
+    WHITESPACE@64..65 " "
+    NAME@65..68
+      IDENT@65..68 "foo"
+    PARAM_LIST@68..70
+      L_PAREN@68..69 "("
+      R_PAREN@69..70 ")"
+    WHITESPACE@70..71 " "
+    BLOCK_EXPR@71..73
+      L_CURLY@71..72 "{"
+      R_CURLY@72..73 "}"
+  FUNCTION_DEF@73..98
+    WHITESPACE@73..74 "\n"
+    VISIBILITY@74..86
+      PUB_KW@74..77 "pub"
+      L_PAREN@77..78 "("
+      PACKAGE_KW@78..85 "package"
+      R_PAREN@85..86 ")"
+    WHITESPACE@86..87 " "
+    FN_KW@87..89 "fn"
+    WHITESPACE@89..90 " "
+    NAME@90..93
+      IDENT@90..93 "bar"
+    PARAM_LIST@93..95
+      L_PAREN@93..94 "("
+      R_PAREN@94..95 ")"
+    WHITESPACE@95..96 " "
+    BLOCK_EXPR@96..98
+      L_CURLY@96..97 "{"
+      R_CURLY@97..98 "}"
+  FUNCTION_DEF@98..114
+    WHITESPACE@98..99 "\n"
+    VISIBILITY@99..102
+      PUB_KW@99..102 "pub"
+    WHITESPACE@102..103 " "
+    FN_KW@103..105 "fn"
+    WHITESPACE@105..106 " "
+    NAME@106..109
+      IDENT@106..109 "baz"
+    PARAM_LIST@109..111
+      L_PAREN@109..110 "("
+      R_PAREN@110..111 ")"
+    WHITESPACE@111..112 " "
+    BLOCK_EXPR@112..114
+      L_CURLY@112..113 "{"
+      R_CURLY@113..114 "}"
 

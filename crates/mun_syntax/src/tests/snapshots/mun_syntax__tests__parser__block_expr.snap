@@ -2,24 +2,24 @@
 source: crates/mun_syntax/src/tests/parser.rs
 expression: "fn bar() {\n    {3}\n}"
 ---
-SOURCE_FILE@[0; 20)
-  FUNCTION_DEF@[0; 20)
-    FN_KW@[0; 2) "fn"
-    WHITESPACE@[2; 3) " "
-    NAME@[3; 6)
-      IDENT@[3; 6) "bar"
-    PARAM_LIST@[6; 8)
-      L_PAREN@[6; 7) "("
-      R_PAREN@[7; 8) ")"
-    WHITESPACE@[8; 9) " "
-    BLOCK_EXPR@[9; 20)
-      L_CURLY@[9; 10) "{"
-      WHITESPACE@[10; 15) "\n    "
-      BLOCK_EXPR@[15; 18)
-        L_CURLY@[15; 16) "{"
-        LITERAL@[16; 17)
-          INT_NUMBER@[16; 17) "3"
-        R_CURLY@[17; 18) "}"
-      WHITESPACE@[18; 19) "\n"
-      R_CURLY@[19; 20) "}"
+SOURCE_FILE@0..20
+  FUNCTION_DEF@0..20
+    FN_KW@0..2 "fn"
+    WHITESPACE@2..3 " "
+    NAME@3..6
+      IDENT@3..6 "bar"
+    PARAM_LIST@6..8
+      L_PAREN@6..7 "("
+      R_PAREN@7..8 ")"
+    WHITESPACE@8..9 " "
+    BLOCK_EXPR@9..20
+      L_CURLY@9..10 "{"
+      WHITESPACE@10..15 "\n    "
+      BLOCK_EXPR@15..18
+        L_CURLY@15..16 "{"
+        LITERAL@16..17
+          INT_NUMBER@16..17 "3"
+        R_CURLY@17..18 "}"
+      WHITESPACE@18..19 "\n"
+      R_CURLY@19..20 "}"
 

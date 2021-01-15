@@ -8,7 +8,7 @@ fn dump_tokens(tokens: &[crate::Token], text: &str) -> String {
         let len = len as usize;
         let token_text = &text[offset..offset + len];
         offset += len;
-        write!(acc, "{:?} {} {:?}\n", token.kind, token.len, token_text).unwrap()
+        write!(acc, "{:?} {} {:?}\n", token.kind, len, token_text).unwrap()
     }
     acc
 }

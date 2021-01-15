@@ -2,8 +2,8 @@
 source: crates/mun_hir/src/ty/tests.rs
 expression: "struct Foo;\n\nfn main() -> bool {\n    Foo == Foo\n}"
 ---
-[37; 47): cannot apply binary operator
-[31; 49) '{     ... Foo }': bool
-[37; 40) 'Foo': Foo
-[37; 47) 'Foo == Foo': bool
-[44; 47) 'Foo': Foo
+37..47: cannot apply binary operator
+31..49 '{     ... Foo }': bool
+37..40 'Foo': Foo
+37..47 'Foo == Foo': bool
+44..47 'Foo': Foo

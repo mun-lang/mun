@@ -2,19 +2,18 @@ use crate::{
     analysis::{Analysis, AnalysisSnapshot},
     change::AnalysisChange,
     config::Config,
-    conversion::{convert_range, url_from_path_with_drive_lowercasing},
     state::utils::Progress,
-    to_json,
+    to_json, to_lsp,
 };
 use crossbeam_channel::{select, unbounded, Receiver, Sender};
 use lsp_server::{ReqQueue, Response};
 use lsp_types::{
-    notification::Notification, notification::PublishDiagnostics, PublishDiagnosticsParams, Url,
+    notification::Notification, notification::PublishDiagnostics, PublishDiagnosticsParams,
 };
 use parking_lot::RwLock;
 use paths::AbsPathBuf;
 use rustc_hash::FxHashSet;
-use std::{convert::TryFrom, ops::Deref, sync::Arc, time::Instant};
+use std::{ops::Deref, sync::Arc, time::Instant};
 use vfs::VirtualFileSystem;
 
 mod protocol;
@@ -247,14 +246,14 @@ fn handle_diagnostics(state: LanguageServerSnapshot, sender: Sender<Task>) -> an
         // Publish all diagnostics
         for file in files {
             let line_index = state.analysis.file_line_index(file)?;
-            let uri = state.file_id_to_uri(file).unwrap();
+            let uri = to_lsp::url(&state, file)?;
             let diagnostics = state.analysis.diagnostics(file)?;
 
             let diagnostics = {
                 let mut lsp_diagnostics = Vec::with_capacity(diagnostics.len());
                 for d in diagnostics {
                     lsp_diagnostics.push(lsp_types::Diagnostic {
-                        range: convert_range(d.range, &line_index),
+                        range: to_lsp::range(d.range, &line_index),
                         severity: Some(lsp_types::DiagnosticSeverity::Error),
                         code: None,
                         code_description: None,
@@ -266,10 +265,8 @@ fn handle_diagnostics(state: LanguageServerSnapshot, sender: Sender<Task>) -> an
                             for annotation in d.additional_annotations {
                                 annotations.push(lsp_types::DiagnosticRelatedInformation {
                                     location: lsp_types::Location {
-                                        uri: state
-                                            .file_id_to_uri(annotation.range.file_id)
-                                            .unwrap(),
-                                        range: convert_range(
+                                        uri: to_lsp::url(&state, annotation.range.file_id)?,
+                                        range: to_lsp::range(
                                             annotation.range.value,
                                             state
                                                 .analysis
@@ -365,34 +362,6 @@ impl LanguageServerState {
         // Apply the change
         self.analysis.apply_change(analysis_change);
         true
-    }
-}
-
-impl LanguageServerSnapshot {
-    /// Converts the specified `hir::FileId` to a `Url`
-    pub fn file_id_to_uri(&self, id: hir::FileId) -> anyhow::Result<Url> {
-        let vfs = self.vfs.read();
-        let path = vfs.file_path(vfs::FileId(id.0));
-        let url = url_from_path_with_drive_lowercasing(path)?;
-
-        Ok(url)
-    }
-
-    /// Converts the specified `Url` to a `hir::FileId`
-    pub fn uri_to_file_id(&self, url: &Url) -> anyhow::Result<hir::FileId> {
-        url.to_file_path()
-            .map_err(|_| anyhow::anyhow!("invalid uri: {}", url))
-            .and_then(|path| {
-                AbsPathBuf::try_from(path)
-                    .map_err(|_| anyhow::anyhow!("url does not refer to absolute path: {}", url))
-            })
-            .and_then(|path| {
-                self.vfs
-                    .read()
-                    .file_id(&path)
-                    .ok_or_else(|| anyhow::anyhow!("url does not refer to a file: {}", url))
-                    .map(|id| hir::FileId(id.0))
-            })
     }
 }
 

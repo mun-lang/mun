@@ -2,215 +2,215 @@
 source: crates/mun_syntax/src/tests/parser.rs
 expression: "struct Foo      // error: expected a ';', or a '{'\nstruct Foo;\nstruct Foo;;    // error: expected a declaration\nstruct Foo {}\nstruct Foo {};\nstruct Foo {,}; // error: expected a field declaration\nstruct Foo {\n    a: f64,\n}\nstruct Foo {\n    a: f64,\n    b: i32,\n};\nstruct Foo()\nstruct Foo();\nstruct Foo(,);  // error: expected a type\nstruct Foo(f64)\nstruct Foo(f64,);\nstruct Foo(f64, i32)"
 ---
-SOURCE_FILE@[0; 386)
-  STRUCT_DEF@[0; 10)
-    STRUCT_KW@[0; 6) "struct"
-    WHITESPACE@[6; 7) " "
-    NAME@[7; 10)
-      IDENT@[7; 10) "Foo"
-  WHITESPACE@[10; 16) "      "
-  COMMENT@[16; 50) "// error: expected a  ..."
-  WHITESPACE@[50; 51) "\n"
-  STRUCT_DEF@[51; 62)
-    STRUCT_KW@[51; 57) "struct"
-    WHITESPACE@[57; 58) " "
-    NAME@[58; 61)
-      IDENT@[58; 61) "Foo"
-    SEMI@[61; 62) ";"
-  WHITESPACE@[62; 63) "\n"
-  STRUCT_DEF@[63; 74)
-    STRUCT_KW@[63; 69) "struct"
-    WHITESPACE@[69; 70) " "
-    NAME@[70; 73)
-      IDENT@[70; 73) "Foo"
-    SEMI@[73; 74) ";"
-  ERROR@[74; 75)
-    SEMI@[74; 75) ";"
-  WHITESPACE@[75; 79) "    "
-  COMMENT@[79; 111) "// error: expected a  ..."
-  WHITESPACE@[111; 112) "\n"
-  STRUCT_DEF@[112; 125)
-    STRUCT_KW@[112; 118) "struct"
-    WHITESPACE@[118; 119) " "
-    NAME@[119; 122)
-      IDENT@[119; 122) "Foo"
-    WHITESPACE@[122; 123) " "
-    RECORD_FIELD_DEF_LIST@[123; 125)
-      L_CURLY@[123; 124) "{"
-      R_CURLY@[124; 125) "}"
-  WHITESPACE@[125; 126) "\n"
-  STRUCT_DEF@[126; 140)
-    STRUCT_KW@[126; 132) "struct"
-    WHITESPACE@[132; 133) " "
-    NAME@[133; 136)
-      IDENT@[133; 136) "Foo"
-    WHITESPACE@[136; 137) " "
-    RECORD_FIELD_DEF_LIST@[137; 140)
-      L_CURLY@[137; 138) "{"
-      R_CURLY@[138; 139) "}"
-      SEMI@[139; 140) ";"
-  WHITESPACE@[140; 141) "\n"
-  STRUCT_DEF@[141; 156)
-    STRUCT_KW@[141; 147) "struct"
-    WHITESPACE@[147; 148) " "
-    NAME@[148; 151)
-      IDENT@[148; 151) "Foo"
-    WHITESPACE@[151; 152) " "
-    RECORD_FIELD_DEF_LIST@[152; 156)
-      L_CURLY@[152; 153) "{"
-      ERROR@[153; 154)
-        COMMA@[153; 154) ","
-      R_CURLY@[154; 155) "}"
-      SEMI@[155; 156) ";"
-  WHITESPACE@[156; 157) " "
-  COMMENT@[157; 195) "// error: expected a  ..."
-  WHITESPACE@[195; 196) "\n"
-  STRUCT_DEF@[196; 222)
-    STRUCT_KW@[196; 202) "struct"
-    WHITESPACE@[202; 203) " "
-    NAME@[203; 206)
-      IDENT@[203; 206) "Foo"
-    WHITESPACE@[206; 207) " "
-    RECORD_FIELD_DEF_LIST@[207; 222)
-      L_CURLY@[207; 208) "{"
-      WHITESPACE@[208; 213) "\n    "
-      RECORD_FIELD_DEF@[213; 219)
-        NAME@[213; 214)
-          IDENT@[213; 214) "a"
-        COLON@[214; 215) ":"
-        WHITESPACE@[215; 216) " "
-        PATH_TYPE@[216; 219)
-          PATH@[216; 219)
-            PATH_SEGMENT@[216; 219)
-              NAME_REF@[216; 219)
-                IDENT@[216; 219) "f64"
-      COMMA@[219; 220) ","
-      WHITESPACE@[220; 221) "\n"
-      R_CURLY@[221; 222) "}"
-  WHITESPACE@[222; 223) "\n"
-  STRUCT_DEF@[223; 262)
-    STRUCT_KW@[223; 229) "struct"
-    WHITESPACE@[229; 230) " "
-    NAME@[230; 233)
-      IDENT@[230; 233) "Foo"
-    WHITESPACE@[233; 234) " "
-    RECORD_FIELD_DEF_LIST@[234; 262)
-      L_CURLY@[234; 235) "{"
-      WHITESPACE@[235; 240) "\n    "
-      RECORD_FIELD_DEF@[240; 246)
-        NAME@[240; 241)
-          IDENT@[240; 241) "a"
-        COLON@[241; 242) ":"
-        WHITESPACE@[242; 243) " "
-        PATH_TYPE@[243; 246)
-          PATH@[243; 246)
-            PATH_SEGMENT@[243; 246)
-              NAME_REF@[243; 246)
-                IDENT@[243; 246) "f64"
-      COMMA@[246; 247) ","
-      WHITESPACE@[247; 252) "\n    "
-      RECORD_FIELD_DEF@[252; 258)
-        NAME@[252; 253)
-          IDENT@[252; 253) "b"
-        COLON@[253; 254) ":"
-        WHITESPACE@[254; 255) " "
-        PATH_TYPE@[255; 258)
-          PATH@[255; 258)
-            PATH_SEGMENT@[255; 258)
-              NAME_REF@[255; 258)
-                IDENT@[255; 258) "i32"
-      COMMA@[258; 259) ","
-      WHITESPACE@[259; 260) "\n"
-      R_CURLY@[260; 261) "}"
-      SEMI@[261; 262) ";"
-  WHITESPACE@[262; 263) "\n"
-  STRUCT_DEF@[263; 275)
-    STRUCT_KW@[263; 269) "struct"
-    WHITESPACE@[269; 270) " "
-    NAME@[270; 273)
-      IDENT@[270; 273) "Foo"
-    TUPLE_FIELD_DEF_LIST@[273; 275)
-      L_PAREN@[273; 274) "("
-      R_PAREN@[274; 275) ")"
-  WHITESPACE@[275; 276) "\n"
-  STRUCT_DEF@[276; 289)
-    STRUCT_KW@[276; 282) "struct"
-    WHITESPACE@[282; 283) " "
-    NAME@[283; 286)
-      IDENT@[283; 286) "Foo"
-    TUPLE_FIELD_DEF_LIST@[286; 289)
-      L_PAREN@[286; 287) "("
-      R_PAREN@[287; 288) ")"
-      SEMI@[288; 289) ";"
-  WHITESPACE@[289; 290) "\n"
-  STRUCT_DEF@[290; 304)
-    STRUCT_KW@[290; 296) "struct"
-    WHITESPACE@[296; 297) " "
-    NAME@[297; 300)
-      IDENT@[297; 300) "Foo"
-    TUPLE_FIELD_DEF_LIST@[300; 304)
-      L_PAREN@[300; 301) "("
-      ERROR@[301; 302)
-        COMMA@[301; 302) ","
-      R_PAREN@[302; 303) ")"
-      SEMI@[303; 304) ";"
-  WHITESPACE@[304; 306) "  "
-  COMMENT@[306; 331) "// error: expected a  ..."
-  WHITESPACE@[331; 332) "\n"
-  STRUCT_DEF@[332; 347)
-    STRUCT_KW@[332; 338) "struct"
-    WHITESPACE@[338; 339) " "
-    NAME@[339; 342)
-      IDENT@[339; 342) "Foo"
-    TUPLE_FIELD_DEF_LIST@[342; 347)
-      L_PAREN@[342; 343) "("
-      TUPLE_FIELD_DEF@[343; 346)
-        PATH_TYPE@[343; 346)
-          PATH@[343; 346)
-            PATH_SEGMENT@[343; 346)
-              NAME_REF@[343; 346)
-                IDENT@[343; 346) "f64"
-      R_PAREN@[346; 347) ")"
-  WHITESPACE@[347; 348) "\n"
-  STRUCT_DEF@[348; 365)
-    STRUCT_KW@[348; 354) "struct"
-    WHITESPACE@[354; 355) " "
-    NAME@[355; 358)
-      IDENT@[355; 358) "Foo"
-    TUPLE_FIELD_DEF_LIST@[358; 365)
-      L_PAREN@[358; 359) "("
-      TUPLE_FIELD_DEF@[359; 362)
-        PATH_TYPE@[359; 362)
-          PATH@[359; 362)
-            PATH_SEGMENT@[359; 362)
-              NAME_REF@[359; 362)
-                IDENT@[359; 362) "f64"
-      COMMA@[362; 363) ","
-      R_PAREN@[363; 364) ")"
-      SEMI@[364; 365) ";"
-  WHITESPACE@[365; 366) "\n"
-  STRUCT_DEF@[366; 386)
-    STRUCT_KW@[366; 372) "struct"
-    WHITESPACE@[372; 373) " "
-    NAME@[373; 376)
-      IDENT@[373; 376) "Foo"
-    TUPLE_FIELD_DEF_LIST@[376; 386)
-      L_PAREN@[376; 377) "("
-      TUPLE_FIELD_DEF@[377; 380)
-        PATH_TYPE@[377; 380)
-          PATH@[377; 380)
-            PATH_SEGMENT@[377; 380)
-              NAME_REF@[377; 380)
-                IDENT@[377; 380) "f64"
-      COMMA@[380; 381) ","
-      WHITESPACE@[381; 382) " "
-      TUPLE_FIELD_DEF@[382; 385)
-        PATH_TYPE@[382; 385)
-          PATH@[382; 385)
-            PATH_SEGMENT@[382; 385)
-              NAME_REF@[382; 385)
-                IDENT@[382; 385) "i32"
-      R_PAREN@[385; 386) ")"
+SOURCE_FILE@0..386
+  STRUCT_DEF@0..10
+    STRUCT_KW@0..6 "struct"
+    WHITESPACE@6..7 " "
+    NAME@7..10
+      IDENT@7..10 "Foo"
+  WHITESPACE@10..16 "      "
+  COMMENT@16..50 "// error: expected a  ..."
+  WHITESPACE@50..51 "\n"
+  STRUCT_DEF@51..62
+    STRUCT_KW@51..57 "struct"
+    WHITESPACE@57..58 " "
+    NAME@58..61
+      IDENT@58..61 "Foo"
+    SEMI@61..62 ";"
+  WHITESPACE@62..63 "\n"
+  STRUCT_DEF@63..74
+    STRUCT_KW@63..69 "struct"
+    WHITESPACE@69..70 " "
+    NAME@70..73
+      IDENT@70..73 "Foo"
+    SEMI@73..74 ";"
+  ERROR@74..75
+    SEMI@74..75 ";"
+  WHITESPACE@75..79 "    "
+  COMMENT@79..111 "// error: expected a  ..."
+  WHITESPACE@111..112 "\n"
+  STRUCT_DEF@112..125
+    STRUCT_KW@112..118 "struct"
+    WHITESPACE@118..119 " "
+    NAME@119..122
+      IDENT@119..122 "Foo"
+    WHITESPACE@122..123 " "
+    RECORD_FIELD_DEF_LIST@123..125
+      L_CURLY@123..124 "{"
+      R_CURLY@124..125 "}"
+  WHITESPACE@125..126 "\n"
+  STRUCT_DEF@126..140
+    STRUCT_KW@126..132 "struct"
+    WHITESPACE@132..133 " "
+    NAME@133..136
+      IDENT@133..136 "Foo"
+    WHITESPACE@136..137 " "
+    RECORD_FIELD_DEF_LIST@137..140
+      L_CURLY@137..138 "{"
+      R_CURLY@138..139 "}"
+      SEMI@139..140 ";"
+  WHITESPACE@140..141 "\n"
+  STRUCT_DEF@141..156
+    STRUCT_KW@141..147 "struct"
+    WHITESPACE@147..148 " "
+    NAME@148..151
+      IDENT@148..151 "Foo"
+    WHITESPACE@151..152 " "
+    RECORD_FIELD_DEF_LIST@152..156
+      L_CURLY@152..153 "{"
+      ERROR@153..154
+        COMMA@153..154 ","
+      R_CURLY@154..155 "}"
+      SEMI@155..156 ";"
+  WHITESPACE@156..157 " "
+  COMMENT@157..195 "// error: expected a  ..."
+  WHITESPACE@195..196 "\n"
+  STRUCT_DEF@196..222
+    STRUCT_KW@196..202 "struct"
+    WHITESPACE@202..203 " "
+    NAME@203..206
+      IDENT@203..206 "Foo"
+    WHITESPACE@206..207 " "
+    RECORD_FIELD_DEF_LIST@207..222
+      L_CURLY@207..208 "{"
+      WHITESPACE@208..213 "\n    "
+      RECORD_FIELD_DEF@213..219
+        NAME@213..214
+          IDENT@213..214 "a"
+        COLON@214..215 ":"
+        WHITESPACE@215..216 " "
+        PATH_TYPE@216..219
+          PATH@216..219
+            PATH_SEGMENT@216..219
+              NAME_REF@216..219
+                IDENT@216..219 "f64"
+      COMMA@219..220 ","
+      WHITESPACE@220..221 "\n"
+      R_CURLY@221..222 "}"
+  WHITESPACE@222..223 "\n"
+  STRUCT_DEF@223..262
+    STRUCT_KW@223..229 "struct"
+    WHITESPACE@229..230 " "
+    NAME@230..233
+      IDENT@230..233 "Foo"
+    WHITESPACE@233..234 " "
+    RECORD_FIELD_DEF_LIST@234..262
+      L_CURLY@234..235 "{"
+      WHITESPACE@235..240 "\n    "
+      RECORD_FIELD_DEF@240..246
+        NAME@240..241
+          IDENT@240..241 "a"
+        COLON@241..242 ":"
+        WHITESPACE@242..243 " "
+        PATH_TYPE@243..246
+          PATH@243..246
+            PATH_SEGMENT@243..246
+              NAME_REF@243..246
+                IDENT@243..246 "f64"
+      COMMA@246..247 ","
+      WHITESPACE@247..252 "\n    "
+      RECORD_FIELD_DEF@252..258
+        NAME@252..253
+          IDENT@252..253 "b"
+        COLON@253..254 ":"
+        WHITESPACE@254..255 " "
+        PATH_TYPE@255..258
+          PATH@255..258
+            PATH_SEGMENT@255..258
+              NAME_REF@255..258
+                IDENT@255..258 "i32"
+      COMMA@258..259 ","
+      WHITESPACE@259..260 "\n"
+      R_CURLY@260..261 "}"
+      SEMI@261..262 ";"
+  WHITESPACE@262..263 "\n"
+  STRUCT_DEF@263..275
+    STRUCT_KW@263..269 "struct"
+    WHITESPACE@269..270 " "
+    NAME@270..273
+      IDENT@270..273 "Foo"
+    TUPLE_FIELD_DEF_LIST@273..275
+      L_PAREN@273..274 "("
+      R_PAREN@274..275 ")"
+  WHITESPACE@275..276 "\n"
+  STRUCT_DEF@276..289
+    STRUCT_KW@276..282 "struct"
+    WHITESPACE@282..283 " "
+    NAME@283..286
+      IDENT@283..286 "Foo"
+    TUPLE_FIELD_DEF_LIST@286..289
+      L_PAREN@286..287 "("
+      R_PAREN@287..288 ")"
+      SEMI@288..289 ";"
+  WHITESPACE@289..290 "\n"
+  STRUCT_DEF@290..304
+    STRUCT_KW@290..296 "struct"
+    WHITESPACE@296..297 " "
+    NAME@297..300
+      IDENT@297..300 "Foo"
+    TUPLE_FIELD_DEF_LIST@300..304
+      L_PAREN@300..301 "("
+      ERROR@301..302
+        COMMA@301..302 ","
+      R_PAREN@302..303 ")"
+      SEMI@303..304 ";"
+  WHITESPACE@304..306 "  "
+  COMMENT@306..331 "// error: expected a  ..."
+  WHITESPACE@331..332 "\n"
+  STRUCT_DEF@332..347
+    STRUCT_KW@332..338 "struct"
+    WHITESPACE@338..339 " "
+    NAME@339..342
+      IDENT@339..342 "Foo"
+    TUPLE_FIELD_DEF_LIST@342..347
+      L_PAREN@342..343 "("
+      TUPLE_FIELD_DEF@343..346
+        PATH_TYPE@343..346
+          PATH@343..346
+            PATH_SEGMENT@343..346
+              NAME_REF@343..346
+                IDENT@343..346 "f64"
+      R_PAREN@346..347 ")"
+  WHITESPACE@347..348 "\n"
+  STRUCT_DEF@348..365
+    STRUCT_KW@348..354 "struct"
+    WHITESPACE@354..355 " "
+    NAME@355..358
+      IDENT@355..358 "Foo"
+    TUPLE_FIELD_DEF_LIST@358..365
+      L_PAREN@358..359 "("
+      TUPLE_FIELD_DEF@359..362
+        PATH_TYPE@359..362
+          PATH@359..362
+            PATH_SEGMENT@359..362
+              NAME_REF@359..362
+                IDENT@359..362 "f64"
+      COMMA@362..363 ","
+      R_PAREN@363..364 ")"
+      SEMI@364..365 ";"
+  WHITESPACE@365..366 "\n"
+  STRUCT_DEF@366..386
+    STRUCT_KW@366..372 "struct"
+    WHITESPACE@372..373 " "
+    NAME@373..376
+      IDENT@373..376 "Foo"
+    TUPLE_FIELD_DEF_LIST@376..386
+      L_PAREN@376..377 "("
+      TUPLE_FIELD_DEF@377..380
+        PATH_TYPE@377..380
+          PATH@377..380
+            PATH_SEGMENT@377..380
+              NAME_REF@377..380
+                IDENT@377..380 "f64"
+      COMMA@380..381 ","
+      WHITESPACE@381..382 " "
+      TUPLE_FIELD_DEF@382..385
+        PATH_TYPE@382..385
+          PATH@382..385
+            PATH_SEGMENT@382..385
+              NAME_REF@382..385
+                IDENT@382..385 "i32"
+      R_PAREN@385..386 ")"
 error Offset(10): expected a ';', '{', or '('
 error Offset(74): expected a declaration
 error Offset(153): expected a field declaration

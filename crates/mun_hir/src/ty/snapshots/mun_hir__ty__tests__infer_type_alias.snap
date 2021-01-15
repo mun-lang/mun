@@ -2,8 +2,8 @@
 source: crates/mun_hir/src/ty/tests.rs
 expression: "type Foo = i32;\ntype Bar = Foo;\ntype Baz = UnknownType;  // error: undefined type\n\nfn main(a: Foo) {\n    let b: Bar = a;\n}"
 ---
-[43; 54): undefined type
-[91; 92) 'a': i32
-[99; 122) '{     ...= a; }': nothing
-[109; 110) 'b': i32
-[118; 119) 'a': i32
+43..54: undefined type
+91..92 'a': i32
+99..122 '{     ...= a; }': nothing
+109..110 'b': i32
+118..119 'a': i32

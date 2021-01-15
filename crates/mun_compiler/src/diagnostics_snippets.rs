@@ -36,8 +36,8 @@ pub(crate) fn emit_syntax_error(
             origin: Some(relative_file_path),
             annotations: vec![SourceAnnotation {
                 range: (
-                    location.offset().to_usize() - line_offset,
-                    location.end_offset().to_usize() - line_offset + 1,
+                    usize::from(location.offset()) - line_offset,
+                    usize::from(location.end_offset()) - line_offset + 1,
                 ),
                 label: &syntax_error_text,
                 annotation_type: AnnotationType::Error,
@@ -167,8 +167,8 @@ fn emit_diagnostic(
                         .iter()
                         .map(|annotation| SourceAnnotation {
                             range: (
-                                annotation.range.start().to_usize() - line_offset,
-                                annotation.range.end().to_usize() - line_offset,
+                                usize::from(annotation.range.start()) - line_offset,
+                                usize::from(annotation.range.end()) - line_offset,
                             ),
                             label: annotation.message.as_str(),
                             annotation_type: AnnotationType::Error,

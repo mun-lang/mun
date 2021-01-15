@@ -181,7 +181,7 @@ fn tree_for_module(
     // Add module level diagnostics
     let mut diag_sink = DiagnosticSink::new(|diag| {
         node.push(format!(
-            "ERROR: {}: {}",
+            "ERROR: {:?}: {}",
             diag.highlight_range(),
             diag.message()
         ));

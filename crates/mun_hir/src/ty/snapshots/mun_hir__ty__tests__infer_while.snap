@@ -2,39 +2,39 @@
 source: crates/mun_hir/src/ty/tests.rs
 expression: "fn foo() {\n    let n = 0;\n    while n < 3 { n += 1; };\n    while n < 3 { n += 1; break; };\n    while n < 3 { break 3; };   // error: break with value can only appear in a loop\n    while n < 3 { loop { break 3; }; };\n}"
 ---
-[109; 116): `break` with value can only appear in a `loop`
-[9; 217) '{     ...; }; }': nothing
-[19; 20) 'n': i32
-[23; 24) '0': i32
-[30; 53) 'while ...= 1; }': nothing
-[36; 37) 'n': i32
-[36; 41) 'n < 3': bool
-[40; 41) '3': i32
-[42; 53) '{ n += 1; }': nothing
-[44; 45) 'n': i32
-[44; 50) 'n += 1': nothing
-[49; 50) '1': i32
-[59; 89) 'while ...eak; }': nothing
-[65; 66) 'n': i32
-[65; 70) 'n < 3': bool
-[69; 70) '3': i32
-[71; 89) '{ n +=...eak; }': never
-[73; 74) 'n': i32
-[73; 79) 'n += 1': nothing
-[78; 79) '1': i32
-[81; 86) 'break': never
-[95; 119) 'while ...k 3; }': nothing
-[101; 102) 'n': i32
-[101; 106) 'n < 3': bool
-[105; 106) '3': i32
-[107; 119) '{ break 3; }': never
-[109; 116) 'break 3': never
-[180; 214) 'while ...; }; }': nothing
-[186; 187) 'n': i32
-[186; 191) 'n < 3': bool
-[190; 191) '3': i32
-[192; 214) '{ loop...; }; }': nothing
-[194; 211) 'loop {...k 3; }': i32
-[199; 211) '{ break 3; }': never
-[201; 208) 'break 3': never
-[207; 208) '3': i32
+109..116: `break` with value can only appear in a `loop`
+9..217 '{     ...; }; }': nothing
+19..20 'n': i32
+23..24 '0': i32
+30..53 'while ...= 1; }': nothing
+36..37 'n': i32
+36..41 'n < 3': bool
+40..41 '3': i32
+42..53 '{ n += 1; }': nothing
+44..45 'n': i32
+44..50 'n += 1': nothing
+49..50 '1': i32
+59..89 'while ...eak; }': nothing
+65..66 'n': i32
+65..70 'n < 3': bool
+69..70 '3': i32
+71..89 '{ n +=...eak; }': never
+73..74 'n': i32
+73..79 'n += 1': nothing
+78..79 '1': i32
+81..86 'break': never
+95..119 'while ...k 3; }': nothing
+101..102 'n': i32
+101..106 'n < 3': bool
+105..106 '3': i32
+107..119 '{ break 3; }': never
+109..116 'break 3': never
+180..214 'while ...; }; }': nothing
+186..187 'n': i32
+186..191 'n < 3': bool
+190..191 '3': i32
+192..214 '{ loop...; }; }': nothing
+194..211 'loop {...k 3; }': i32
+199..211 '{ break 3; }': never
+201..208 'break 3': never
+207..208 '3': i32

@@ -9,7 +9,7 @@
 use crate::{
     parsing::ParseError,
     syntax_error::{SyntaxError, SyntaxErrorKind},
-    Parse, SmolStr, SyntaxKind, TextUnit,
+    Parse, SmolStr, SyntaxKind, TextSize,
 };
 use rowan::{GreenNodeBuilder, Language};
 
@@ -20,12 +20,12 @@ pub enum MunLanguage {}
 impl Language for MunLanguage {
     type Kind = SyntaxKind;
 
-    fn kind_from_raw(raw: rowan::cursor::SyntaxKind) -> SyntaxKind {
+    fn kind_from_raw(raw: rowan::SyntaxKind) -> SyntaxKind {
         SyntaxKind::from(raw.0)
     }
 
-    fn kind_to_raw(kind: SyntaxKind) -> rowan::cursor::SyntaxKind {
-        rowan::cursor::SyntaxKind(kind.into())
+    fn kind_to_raw(kind: SyntaxKind) -> rowan::SyntaxKind {
+        rowan::SyntaxKind(kind.into())
     }
 }
 
@@ -39,7 +39,7 @@ pub use rowan::{Direction, NodeOrToken};
 
 pub struct SyntaxTreeBuilder {
     errors: Vec<SyntaxError>,
-    inner: GreenNodeBuilder,
+    inner: GreenNodeBuilder<'static>,
 }
 
 impl Default for SyntaxTreeBuilder {
@@ -80,7 +80,7 @@ impl SyntaxTreeBuilder {
         self.inner.finish_node()
     }
 
-    pub fn error(&mut self, error: ParseError, text_pos: TextUnit) {
+    pub fn error(&mut self, error: ParseError, text_pos: TextSize) {
         let error = SyntaxError::new(SyntaxErrorKind::ParseError(error), text_pos);
         self.errors.push(error)
     }
