@@ -7,14 +7,17 @@ mod conversion;
 mod db;
 mod diagnostics;
 mod main_loop;
+mod project_manifest;
 pub mod protocol;
+mod workspace;
 
 pub use config::Config;
 pub use main_loop::main_loop;
 
-use crate::config::FilesWatcher;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
+use crate::{config::FilesWatcher, project_manifest::ProjectManifest};
+use paths::AbsPathBuf;
+use serde::{de::DeserializeOwned, Serialize};
+use std::convert::TryFrom;
 
 pub type Result<T> = anyhow::Result<T>;
 
@@ -67,8 +70,24 @@ pub async fn run_server_async() -> Result<()> {
     }
 
     let config = {
-        let mut config = Config::default();
+        // Convert the root uri to a PathBuf
+        let root_dir = match initialize_params
+            .root_uri
+            .and_then(|it| it.to_file_path().ok())
+            .and_then(|path| AbsPathBuf::try_from(path).ok())
+        {
+            Some(path) => path,
+            None => {
+                // Get the current working directory as fallback
+                let cwd = std::env::current_dir()?;
+                AbsPathBuf::try_from(cwd)
+                    .expect("could not convert current directory to an absolute path")
+            }
+        };
 
+        let mut config = Config::new(root_dir);
+
+        // Determine type of watcher to use
         let supports_file_watcher_dynamic_registration = initialize_params
             .capabilities
             .workspace
@@ -79,24 +98,26 @@ pub async fn run_server_async() -> Result<()> {
             config.watcher = FilesWatcher::Client;
         }
 
-        // Get the current working directory as fallback
-        let cwd = std::env::current_dir()?;
-        // Convert the root uri to a PathBuf
-        let root = initialize_params
-            .root_uri
-            .and_then(|it| it.to_file_path().ok())
-            .unwrap_or(cwd);
         // Convert the workspace_roots, if these are empy use the root_uri or the cwd
-        config.workspace_roots = initialize_params
+        let workspace_roots = initialize_params
             .workspace_folders
             .map(|workspaces| {
                 workspaces
                     .into_iter()
                     .filter_map(|it| it.uri.to_file_path().ok())
+                    .filter_map(|path| AbsPathBuf::try_from(path).ok())
                     .collect::<Vec<_>>()
             })
             .filter(|workspaces| !workspaces.is_empty())
-            .unwrap_or_else(|| vec![root]);
+            .unwrap_or_else(|| vec![config.root_dir.clone()]);
+
+        // Find all the projects in the workspace
+        let discovered = ProjectManifest::discover_all(workspace_roots.iter().cloned());
+        log::info!("discovered projects: {:?}", discovered);
+        if discovered.is_empty() {
+            log::error!("failed to find any projects in {:?}", workspace_roots);
+        }
+        config.discovered_projects = Some(discovered);
 
         config
     };

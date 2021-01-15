@@ -35,13 +35,12 @@ mod item_scope;
 #[cfg(test)]
 mod mock;
 mod package_defs;
+mod package_set;
 #[cfg(test)]
 mod tests;
 mod visibility;
 
 pub use salsa;
-
-pub use relative_path::{RelativePath, RelativePathBuf};
 
 pub use crate::{
     db::{
@@ -55,11 +54,12 @@ pub use crate::{
         ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, ExprScopes, Literal, LogicOp, Ordering, Pat,
         PatId, RecordLitField, Statement, UnaryOp,
     },
-    ids::{ItemLoc, ModuleId, PackageId},
+    ids::{ItemLoc, ModuleId},
     in_file::InFile,
     input::{FileId, SourceRoot, SourceRootId},
     name::Name,
     name_resolution::PerNs,
+    package_set::{PackageId, PackageSet},
     path::{Path, PathKind},
     primitive_type::{FloatBitness, IntBitness, Signedness},
     resolve::{resolver_for_expr, resolver_for_scope, Resolver, TypeNs, ValueNs},

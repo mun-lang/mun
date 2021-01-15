@@ -1,14 +1,14 @@
 use super::PackageDefs;
 use crate::{
     arena::map::ArenaMap,
-    ids::{FunctionLoc, Intern, ItemDefinitionId, ModuleId, PackageId, StructLoc, TypeAliasLoc},
+    ids::{FunctionLoc, Intern, ItemDefinitionId, ModuleId, StructLoc, TypeAliasLoc},
     item_scope::ItemScope,
     item_tree::{
         Function, ItemTree, ItemTreeId, LocalItemTreeId, ModItem, Struct, StructDefKind, TypeAlias,
     },
     module_tree::{LocalModuleId, ModuleTree},
     visibility::RawVisibility,
-    DefDatabase, FileId, Name, PerNs, Visibility,
+    DefDatabase, FileId, Name, PackageId, PerNs, Visibility,
 };
 use std::sync::Arc;
 

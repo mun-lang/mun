@@ -1,13 +1,13 @@
-use hir::{line_index::LineIndex, FileId, HirDatabase, RelativePathBuf};
+use annotate_snippets::{
+    display_list::DisplayList,
+    display_list::FormatOptions,
+    snippet::{Annotation, AnnotationType, Slice, Snippet, SourceAnnotation},
+};
+use hir::{line_index::LineIndex, FileId, HirDatabase};
 use mun_diagnostics::DiagnosticForWith;
 use mun_syntax::SyntaxError;
-
-use std::sync::Arc;
-
-use annotate_snippets::display_list::DisplayList;
-use annotate_snippets::display_list::FormatOptions;
-use annotate_snippets::snippet::{Annotation, AnnotationType, Slice, Snippet, SourceAnnotation};
-use std::collections::HashMap;
+use paths::RelativePathBuf;
+use std::{collections::HashMap, sync::Arc};
 
 /// Writes the specified syntax error to the output stream.
 pub(crate) fn emit_syntax_error(
@@ -93,7 +93,7 @@ fn emit_diagnostic(
 
         // Add primary annotations
         annotations.push(AnnotationFile {
-            relative_file_path: db.file_relative_path(file_id),
+            relative_file_path: db.file_relative_path(file_id).to_relative_path_buf(),
             source_code: db.file_text(file_id),
             line_index: db.line_index(file_id),
             annotations: vec![match diagnostic.primary_annotation() {

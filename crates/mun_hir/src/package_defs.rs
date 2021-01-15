@@ -1,8 +1,8 @@
 mod collector;
 
 use crate::{
-    arena::map::ArenaMap, ids::PackageId, item_scope::ItemScope, module_tree::LocalModuleId,
-    module_tree::ModuleTree, DefDatabase,
+    arena::map::ArenaMap, item_scope::ItemScope, module_tree::LocalModuleId,
+    module_tree::ModuleTree, DefDatabase, PackageId,
 };
 use std::{ops::Index, sync::Arc};
 

@@ -6,10 +6,11 @@ use crate::{
     PathOrInline, RelativePath,
 };
 use hir::{
-    AstDatabase, DiagnosticSink, FileId, Module, PackageId, RelativePathBuf, SourceDatabase,
-    SourceRoot, SourceRootId, Upcast,
+    AstDatabase, DiagnosticSink, FileId, Module, PackageSet, SourceDatabase, SourceRoot,
+    SourceRootId, Upcast,
 };
 use mun_codegen::{AssemblyIR, CodeGenDatabase, TargetAssembly};
+use paths::RelativePathBuf;
 
 use std::{path::PathBuf, sync::Arc};
 
@@ -27,7 +28,6 @@ use std::path::Path;
 use walkdir::WalkDir;
 
 pub const WORKSPACE: SourceRootId = SourceRootId(0);
-pub const PACKAGE: PackageId = PackageId(0);
 
 pub struct Driver {
     db: CompilerDatabase,
@@ -91,14 +91,16 @@ impl Driver {
         // Store the file information in the database together with the source root
         let file_id = FileId(driver.next_file_id as u32);
         driver.next_file_id += 1;
-        driver.db.set_file_relative_path(file_id, rel_path);
         driver.db.set_file_text(file_id, Arc::from(text));
         driver.db.set_file_source_root(file_id, WORKSPACE);
-        driver.source_root.insert_file(file_id);
+        driver.source_root.insert_file(file_id, rel_path);
         driver
             .db
             .set_source_root(WORKSPACE, Arc::new(driver.source_root.clone()));
-        driver.db.set_package_source_root(PACKAGE, WORKSPACE);
+
+        let mut package_set = PackageSet::default();
+        package_set.add_package(WORKSPACE);
+        driver.db.set_packages(Arc::new(package_set));
 
         Ok((driver, file_id))
     }
@@ -120,9 +122,10 @@ impl Driver {
 
         // Iterate over all files in the source directory of the package and store their information in
         // the database
-        let source_directory = package
-            .source_directory()
-            .ok_or_else(|| anyhow::anyhow!("the source directory does not exist"))?;
+        let source_directory = package.source_directory();
+        if !source_directory.is_dir() {
+            anyhow::bail!("the source directory does not exist")
+        }
 
         for source_file_path in iter_source_files(&source_directory) {
             let relative_path = compute_source_relative_path(&source_directory, &source_file_path)?;
@@ -137,19 +140,21 @@ impl Driver {
             })?;
 
             let file_id = driver.alloc_file_id(&relative_path)?;
-            driver
-                .db
-                .set_file_relative_path(file_id, relative_path.clone());
             driver.db.set_file_text(file_id, Arc::from(file_contents));
             driver.db.set_file_source_root(file_id, WORKSPACE);
-            driver.source_root.insert_file(file_id);
+            driver
+                .source_root
+                .insert_file(file_id, relative_path.clone());
         }
 
         // Store the source root in the database
         driver
             .db
             .set_source_root(WORKSPACE, Arc::new(driver.source_root.clone()));
-        driver.db.set_package_source_root(PACKAGE, WORKSPACE);
+
+        let mut package_set = PackageSet::default();
+        package_set.add_package(WORKSPACE);
+        driver.db.set_packages(Arc::new(package_set));
 
         Ok((package, driver))
     }
@@ -378,13 +383,12 @@ impl Driver {
         let file_id = self.alloc_file_id(path.as_ref()).unwrap();
 
         // Insert the new file
-        self.db
-            .set_file_relative_path(file_id, path.as_ref().to_relative_path_buf());
         self.db.set_file_text(file_id, Arc::from(contents));
         self.db.set_file_source_root(file_id, WORKSPACE);
 
         // Update the source root
-        self.source_root.insert_file(file_id);
+        self.source_root
+            .insert_file(file_id, path.as_ref().to_relative_path_buf());
         self.db
             .set_source_root(WORKSPACE, Arc::new(self.source_root.clone()));
 
@@ -425,8 +429,11 @@ impl Driver {
             .insert(file_id, to.as_ref().to_relative_path_buf());
         self.path_to_file_id.remove(from.as_ref()); // FileId now belongs to to
 
+        self.source_root.remove_file(file_id);
+        self.source_root
+            .insert_file(file_id, to.as_ref().to_relative_path_buf());
         self.db
-            .set_file_relative_path(file_id, to.as_ref().to_relative_path_buf());
+            .set_source_root(WORKSPACE, Arc::new(self.source_root.clone()));
 
         file_id
     }

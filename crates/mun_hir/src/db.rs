@@ -1,7 +1,7 @@
 #![allow(clippy::type_repetition_in_bounds)]
 
 use crate::expr::BodySourceMap;
-use crate::ids::{DefWithBodyId, FunctionId, PackageId};
+use crate::ids::{DefWithBodyId, FunctionId};
 use crate::input::{SourceRoot, SourceRootId};
 use crate::item_tree::{self, ItemTree};
 use crate::module_tree::ModuleTree;
@@ -14,12 +14,12 @@ use crate::{
     ids,
     line_index::LineIndex,
     ty::InferenceResult,
-    AstIdMap, Body, ExprScopes, FileId, Struct, TypeAlias,
+    AstIdMap, Body, ExprScopes, FileId, PackageId, PackageSet, Struct, TypeAlias,
 };
 use mun_syntax::{ast, Parse, SourceFile};
 use mun_target::abi;
 use mun_target::spec::Target;
-pub use relative_path::RelativePathBuf;
+use paths::RelativePathBuf;
 use std::sync::Arc;
 
 // TODO(bas): In the future maybe move this to a seperate crate (mun_db?)
@@ -34,21 +34,16 @@ pub trait SourceDatabase: salsa::Database {
     #[salsa::input]
     fn file_text(&self, file_id: FileId) -> Arc<str>;
 
-    /// Path to a file, relative to the root of its source root.
-    #[salsa::input]
-    fn file_relative_path(&self, file_id: FileId) -> RelativePathBuf;
-
     /// Source root of a file
     #[salsa::input]
     fn file_source_root(&self, file_id: FileId) -> SourceRootId;
 
+    /// Returns the relative path of a file
+    fn file_relative_path(&self, file_id: FileId) -> RelativePathBuf;
+
     /// Contents of the source root
     #[salsa::input]
     fn source_root(&self, id: SourceRootId) -> Arc<SourceRoot>;
-
-    /// The source root for a specific package
-    #[salsa::input]
-    fn package_source_root(&self, package: PackageId) -> SourceRootId;
 
     /// For a package, returns its hierarchy of modules.
     #[salsa::invoke(ModuleTree::module_tree_query)]
@@ -57,6 +52,10 @@ pub trait SourceDatabase: salsa::Database {
     /// Returns the line index of a file
     #[salsa::invoke(line_index_query)]
     fn line_index(&self, file_id: FileId) -> Arc<LineIndex>;
+
+    /// Returns the set of packages
+    #[salsa::input]
+    fn packages(&self) -> Arc<PackageSet>;
 }
 
 /// The `AstDatabase` provides queries that transform text from the `SourceDatabase` into an
@@ -157,4 +156,10 @@ fn target_data_layout(db: &dyn HirDatabase) -> Arc<abi::TargetDataLayout> {
     let data_layout = abi::TargetDataLayout::parse(&target)
         .expect("unable to create TargetDataLayout from target");
     Arc::new(data_layout)
+}
+
+fn file_relative_path(db: &dyn SourceDatabase, file_id: FileId) -> RelativePathBuf {
+    let source_root_id = db.file_source_root(file_id);
+    let source_root = db.source_root(source_root_id);
+    source_root.relative_path(file_id).to_relative_path_buf()
 }

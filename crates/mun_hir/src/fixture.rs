@@ -1,10 +1,8 @@
 #![cfg(test)]
 
-use crate::ids::PackageId;
-use crate::{FileId, SourceDatabase, SourceRoot, SourceRootId};
+use crate::{FileId, PackageSet, SourceDatabase, SourceRoot, SourceRootId};
 pub use mun_test::Fixture;
-use std::convert::TryInto;
-use std::sync::Arc;
+use std::{convert::TryInto, sync::Arc};
 
 impl<DB: SourceDatabase + Default + 'static> WithFixture for DB {}
 
@@ -32,20 +30,21 @@ fn with_files(db: &mut dyn SourceDatabase, fixture: &str) -> Vec<FileId> {
 
     let mut source_root = SourceRoot::default();
     let source_root_id = SourceRootId(0);
-    let package_id = PackageId(0);
     let mut files = Vec::new();
 
     for (idx, entry) in fixture.into_iter().enumerate() {
         let file_id = FileId(idx.try_into().expect("too many files"));
-        db.set_file_relative_path(file_id, entry.relative_path);
         db.set_file_text(file_id, Arc::from(entry.text));
         db.set_file_source_root(file_id, source_root_id);
-        source_root.insert_file(file_id);
+        source_root.insert_file(file_id, entry.relative_path);
         files.push(file_id);
     }
 
     db.set_source_root(source_root_id, Arc::new(source_root));
-    db.set_package_source_root(package_id, source_root_id);
+
+    let mut packages = PackageSet::default();
+    packages.add_package(source_root_id);
+    db.set_packages(Arc::new(packages));
 
     return files;
 }

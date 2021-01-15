@@ -57,14 +57,9 @@ impl Package {
         self.package_id().version()
     }
 
-    /// Returns the source directory of the package, or None if no such directory exists.
-    pub fn source_directory(&self) -> Option<PathBuf> {
-        let source_dir = self.root().join("src");
-        if source_dir.is_dir() {
-            Some(source_dir)
-        } else {
-            None
-        }
+    /// Returns the path to the source directory of the package
+    pub fn source_directory(&self) -> PathBuf {
+        self.root().join("src")
     }
 }
 

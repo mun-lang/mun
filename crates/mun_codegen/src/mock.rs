@@ -2,9 +2,10 @@ use crate::{
     db::{CodeGenDatabase, CodeGenDatabaseStorage},
     OptimizationLevel,
 };
-use hir::{FileId, HirDatabase, RelativePathBuf, SourceDatabase, SourceRoot, SourceRootId};
+use hir::{FileId, HirDatabase, SourceDatabase, SourceRoot, SourceRootId};
 use mun_target::spec::Target;
 use parking_lot::Mutex;
+use paths::RelativePathBuf;
 use std::sync::Arc;
 
 /// A mock implementation of the IR database. It can be used to set up a simple test case.
@@ -83,15 +84,17 @@ impl MockDatabase {
         let text = Arc::from(text.to_owned());
         let rel_path = RelativePathBuf::from("main.mun");
         let file_id = FileId(0);
-        db.set_file_relative_path(file_id, rel_path.clone());
         db.set_file_text(file_id, text);
         db.set_file_source_root(file_id, source_root_id);
-        source_root.insert_file(file_id);
+        source_root.insert_file(file_id, rel_path);
 
         db.set_source_root(source_root_id, Arc::new(source_root));
-        db.set_optimization_level(OptimizationLevel::None);
-        db.set_package_source_root(hir::PackageId(0), source_root_id);
 
+        let mut packages = hir::PackageSet::default();
+        packages.add_package(source_root_id);
+        db.set_packages(Arc::new(packages));
+
+        db.set_optimization_level(OptimizationLevel::None);
         (db, file_id)
     }
 
