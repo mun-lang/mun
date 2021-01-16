@@ -259,34 +259,47 @@ impl Driver {
 impl Driver {
     /// Get the path where the driver will write the assembly for the specified file.
     pub fn assembly_output_path_from_file(&self, file_id: FileId) -> PathBuf {
-        self.db
-            .file_relative_path(file_id)
+        let module_partition = self.db.module_partition();
+        let module_group_id = module_partition
+            .group_for_file(file_id)
+            .expect("could not find file in module parition");
+        self.path_for_module_group(&module_partition[module_group_id])
             .with_extension(TargetAssembly::EXTENSION)
-            .to_path(&self.out_dir)
     }
 
     /// Get the path where the driver will write the IR for the specified file.
     pub fn ir_output_path_from_file(&self, file_id: FileId) -> PathBuf {
-        self.db
-            .file_relative_path(file_id)
+        let module_partition = self.db.module_partition();
+        let module_group_id = module_partition
+            .group_for_file(file_id)
+            .expect("could not find file in module parition");
+        self.path_for_module_group(&module_partition[module_group_id])
             .with_extension(AssemblyIR::EXTENSION)
-            .to_path(&self.out_dir)
     }
 
     /// Get the path where the driver will write the assembly for the specified module.
     pub fn assembly_output_path(&self, module: Module) -> PathBuf {
-        let file_id = module
-            .file_id(self.db.upcast())
-            .expect("must have a file_id");
-        self.assembly_output_path_from_file(file_id)
+        let module_partition = self.db.module_partition();
+        let module_group_id = module_partition
+            .group_for_module(module)
+            .expect("could not find file in module parition");
+        self.path_for_module_group(&module_partition[module_group_id])
+            .with_extension(TargetAssembly::EXTENSION)
     }
 
     /// Get the path where the driver will write the IR for the specified module.
     pub fn ir_output_path(&self, module: Module) -> PathBuf {
-        let file_id = module
-            .file_id(self.db.upcast())
-            .expect("must have a file_id");
-        self.ir_output_path_from_file(file_id)
+        let module_partition = self.db.module_partition();
+        let module_group_id = module_partition
+            .group_for_module(module)
+            .expect("could not find file in module parition");
+        self.path_for_module_group(&module_partition[module_group_id])
+            .with_extension(AssemblyIR::EXTENSION)
+    }
+
+    /// Returns the output path for the specified module group without an extension
+    fn path_for_module_group(&self, module_group: &ModuleGroup) -> PathBuf {
+        module_group.relative_file_path().to_path(&self.out_dir)
     }
 
     /// Writes all assemblies. If `force` is false, the binary will not be written if there are no
@@ -316,13 +329,20 @@ impl Driver {
     ) -> Result<bool, anyhow::Error> {
         log::trace!("writing target assembly for {:?}", module);
 
-        // Determine the location of the output file
-        let assembly_path = self.assembly_output_path(module);
+        // Find the module group to which the module belongs
+        let module_partition = self.db.module_partition();
+        let module_group_id = module_partition
+            .group_for_module(module)
+            .expect("could not find the module in the module partition");
+        let module_group = &module_partition[module_group_id];
 
         // Get the compiled assembly
-        let assembly = self
-            .db
-            .target_assembly(ModuleGroup::from_single_module(self.db.upcast(), module));
+        let assembly = self.db.target_assembly(module_group_id);
+
+        // Determine the filename of the group
+        let assembly_path = self
+            .path_for_module_group(module_group)
+            .with_extension(TargetAssembly::EXTENSION);
 
         // Did the assembly change since last time?
         if !force
@@ -350,16 +370,23 @@ impl Driver {
     pub fn write_assembly_ir(&mut self, module: hir::Module) -> Result<(), anyhow::Error> {
         log::trace!("writing assembly IR for {:?}", module);
 
-        // Determine the location of the output file
-        let ir_path = self.ir_output_path(module);
+        // Find the module group to which the module belongs
+        let module_partition = self.db.module_partition();
+        let module_group_id = module_partition
+            .group_for_module(module)
+            .expect("could not find the module in the module partition");
+        let module_group = &module_partition[module_group_id];
 
-        // Get the assembly's IR
-        let assembly_ir = self
-            .db
-            .assembly_ir(ModuleGroup::from_single_module(self.db.upcast(), module));
+        // Get the compiled assembly
+        let assembly_ir = self.db.assembly_ir(module_group_id);
+
+        // Determine the filename of the group
+        let assembly_path = self
+            .path_for_module_group(module_group)
+            .with_extension(AssemblyIR::EXTENSION);
 
         // Write to disk
-        assembly_ir.copy_to(&ir_path)?;
+        assembly_ir.copy_to(&assembly_path)?;
 
         Ok(())
     }

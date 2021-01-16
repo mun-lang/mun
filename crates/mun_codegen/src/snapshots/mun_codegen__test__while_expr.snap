@@ -3,6 +3,8 @@ source: crates/mun_codegen/src/test.rs
 expression: "pub fn foo(n:i32) {\n    while n<3 {\n        n += 1;\n    };\n\n    // This will be completely optimized out\n    while n<4 {\n        break;\n    };\n}"
 ---
 ; == FILE IR =====================================
+; ModuleID = 'mod'
+source_filename = "mod"
 
 %"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 

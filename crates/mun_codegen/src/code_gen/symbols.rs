@@ -10,7 +10,8 @@ use crate::{
     value::{AsValue, CanInternalize, Global, IrValueContext, IterAsIrValue, Value},
 };
 use hir::{HirDatabase, Ty};
-use inkwell::{attributes::Attribute, module::Linkage, AddressSpace};
+use inkwell::{attributes::Attribute, module::Linkage};
+use std::convert::TryFrom;
 use std::{collections::HashSet, ffi::CString};
 
 /// Construct a `MunFunctionPrototype` struct for the specified HIR function.
@@ -204,6 +205,7 @@ fn gen_dispatch_table<'ink>(
 /// Constructs IR that exposes the types and symbols in the specified module. A function called
 /// `get_info` is constructed that returns a struct `MunAssemblyInfo`. See the `mun_abi` crate
 /// for the ABI that `get_info` exposes.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn gen_reflection_ir<'db, 'ink>(
     db: &'db dyn HirDatabase,
     context: &IrValueContext<'ink, '_, '_>,
@@ -212,6 +214,7 @@ pub(super) fn gen_reflection_ir<'db, 'ink>(
     type_table: &TypeTable<'ink>,
     hir_types: &HirTypeCache<'db, 'ink>,
     optimization_level: inkwell::OptimizationLevel,
+    dependencies: Vec<String>,
 ) {
     let module = context.module;
 
@@ -239,7 +242,14 @@ pub(super) fn gen_reflection_ir<'db, 'ink>(
     let dispatch_table = gen_dispatch_table(context, dispatch_table);
 
     // Construct the actual `get_info` function
-    gen_get_info_fn(db, context, module_info, dispatch_table, optimization_level);
+    gen_get_info_fn(
+        db,
+        context,
+        module_info,
+        dispatch_table,
+        optimization_level,
+        dependencies,
+    );
     gen_set_allocator_handle_fn(context);
     gen_get_version_fn(context);
 }
@@ -251,9 +261,9 @@ fn gen_get_info_fn<'ink>(
     module_info: ir::ModuleInfo<'ink>,
     dispatch_table: ir::DispatchTable<'ink>,
     optimization_level: inkwell::OptimizationLevel,
+    dependencies: Vec<String>,
 ) {
     let target = db.target();
-    let str_type = context.context.i8_type().ptr_type(AddressSpace::Generic);
 
     // Construct the return type of the `get_info` method. Depending on the C ABI this is either the
     // `MunAssemblyInfo` struct or void. On windows the return argument is passed back to the caller
@@ -323,11 +333,24 @@ fn gen_get_info_fn<'ink>(
     builder.build_store(dispatch_table_addr, dispatch_table.as_value(context).value);
     builder.build_store(
         dependencies_addr,
-        str_type.ptr_type(AddressSpace::Generic).const_null(),
+        dependencies
+            .iter()
+            .enumerate()
+            .map(|(idx, name)| {
+                CString::new(name.as_str())
+                    .expect("could not convert dependency name to string")
+                    .intern(format!("dependency{}", idx), context)
+                    .as_value(context)
+            })
+            .into_const_private_pointer_or_null("dependencies", context)
+            .value,
     );
     builder.build_store(
         num_dependencies_addr,
-        context.context.i32_type().const_int(0u64, false),
+        context.context.i32_type().const_int(
+            u32::try_from(dependencies.len()).expect("too many dependencies") as u64,
+            false,
+        ),
     );
 
     // Construct the return statement of the function.

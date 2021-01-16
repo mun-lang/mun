@@ -3,7 +3,7 @@ use crate::{
     ir::file::gen_file_ir,
     ir::file_group::gen_file_group_ir,
     mock::MockDatabase,
-    CodeGenDatabase, ModuleGroup,
+    CodeGenDatabase,
 };
 use hir::{
     diagnostics::DiagnosticSink, line_index::LineIndex, HirDatabase, Module, SourceDatabase, Upcast,
@@ -809,11 +809,14 @@ fn incremental_compilation() {
     db.set_optimization_level(OptimizationLevel::Default);
     db.set_target(Target::host_target().unwrap());
 
-    let module = Module::from_file(&db, file_id).unwrap();
+    let module_group_id = db
+        .module_partition()
+        .group_for_file(file_id)
+        .expect("could not find ModuleGroupId for file");
 
     {
         let events = db.log_executed(|| {
-            db.target_assembly(ModuleGroup::from_single_module(db.upcast(), module));
+            db.target_assembly(module_group_id);
         });
         assert!(
             format!("{:?}", events).contains("package_defs"),
@@ -831,7 +834,7 @@ fn incremental_compilation() {
 
     {
         let events = db.log_executed(|| {
-            db.target_assembly(ModuleGroup::from_single_module(db.upcast(), module));
+            db.target_assembly(module_group_id);
         });
         println!("events: {:?}", events);
         assert!(
@@ -980,7 +983,11 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
 
     let llvm_context = Context::create();
     let code_gen = CodeGenContext::new(&llvm_context, db.upcast());
-    let module_group = ModuleGroup::from_single_module(db.upcast(), module);
+    let module_parition = db.module_partition();
+    let module_group_id = module_parition
+        .group_for_file(file_id)
+        .expect("could not find ModuleGroupId for file");
+    let module_group = &module_parition[module_group_id];
 
     // The thread is named after the test case, so we can use it to name our snapshots.
     let thread_name = std::thread::current()
@@ -992,7 +999,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
         ("".to_owned(), messages.join("\n"))
     } else {
         let group_ir = gen_file_group_ir(&code_gen, &module_group);
-        let file_ir = gen_file_ir(&code_gen, &group_ir, module_group.clone());
+        let file_ir = gen_file_ir(&code_gen, &group_ir, &module_group);
 
         (
             format!("{}", group_ir.llvm_module.print_to_string().to_string(),),
@@ -1002,7 +1009,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
 
     // To ensure that we test symbol generation
     if messages.is_empty() {
-        let module_builder = AssemblyBuilder::new(&code_gen, module_group)
+        let module_builder = AssemblyBuilder::new(&code_gen, &module_parition, module_group_id)
             .expect("Failed to initialize module builder");
         let _obj_file = module_builder.build().expect("Failed to build object file");
     }

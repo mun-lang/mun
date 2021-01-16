@@ -1,10 +1,11 @@
-use crate::type_info::TypeInfo;
 use inkwell::context::Context;
 use inkwell::targets::TargetData;
 use inkwell::types::{
     AnyType, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType, PointerType,
 };
 use inkwell::AddressSpace;
+
+use crate::type_info::TypeInfo;
 
 pub mod body;
 #[macro_use]

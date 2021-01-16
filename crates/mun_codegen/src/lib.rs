@@ -5,6 +5,7 @@ pub use crate::{
     code_gen::AssemblyBuilder,
     db::{CodeGenDatabase, CodeGenDatabaseStorage},
     module_group::ModuleGroup,
+    module_partition::{ModuleGroupId, ModulePartition},
 };
 
 /// This library generates machine code from HIR using inkwell which is a safe wrapper around LLVM.
@@ -24,4 +25,5 @@ pub mod value;
 pub(crate) mod intrinsics;
 mod linker;
 mod module_group;
+mod module_partition;
 pub(crate) mod type_info;

@@ -14,8 +14,6 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 /// The IR generated for a single source file.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct FileIR<'ink> {
-    /// The original source file
-    pub module_group: ModuleGroup,
     /// The LLVM module that contains the IR
     pub llvm_module: Module<'ink>,
     /// The `hir::Function`s that constitute the file's API.
@@ -26,7 +24,7 @@ pub struct FileIR<'ink> {
 pub(crate) fn gen_file_ir<'db, 'ink>(
     code_gen: &CodeGenContext<'db, 'ink>,
     group_ir: &FileGroupIR<'ink>,
-    module_group: ModuleGroup,
+    module_group: &ModuleGroup,
 ) -> FileIR<'ink> {
     let llvm_module = code_gen.context.create_module(&module_group.name);
 
@@ -126,9 +124,5 @@ pub(crate) fn gen_file_ir<'db, 'ink>(
         .filter(|&f| module_group.should_export_fn(code_gen.db, f))
         .collect();
 
-    FileIR {
-        module_group,
-        llvm_module,
-        api,
-    }
+    FileIR { llvm_module, api }
 }

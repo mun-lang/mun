@@ -317,7 +317,7 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
     /// Builds the final DispatchTable with all *called* functions from within the module
     /// # Parameters
     /// * **functions**: Mapping of *defined* Mun functions to their respective IR values.
-    pub fn build(self) -> DispatchTable<'ink> {
+    pub fn build(self) -> (DispatchTable<'ink>, FxHashSet<hir::Module>) {
         // Construct the table body from all the entries in the dispatch table
         let table_body: Vec<BasicTypeEnum> = self
             .entries
@@ -366,18 +366,21 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
 
         let table_type = self.table_ref.map(|_| self.table_type);
 
-        DispatchTable {
-            context: self.context,
-            target: self.target_data,
-            function_to_idx: self.function_to_idx,
-            prototype_to_idx: self.prototype_to_idx,
-            table_ref: self.table_ref,
-            table_type,
-            entries: self
-                .entries
-                .into_iter()
-                .map(|entry| entry.function)
-                .collect(),
-        }
+        (
+            DispatchTable {
+                context: self.context,
+                target: self.target_data,
+                function_to_idx: self.function_to_idx,
+                prototype_to_idx: self.prototype_to_idx,
+                table_ref: self.table_ref,
+                table_type,
+                entries: self
+                    .entries
+                    .into_iter()
+                    .map(|entry| entry.function)
+                    .collect(),
+            },
+            self.referenced_modules,
+        )
     }
 }

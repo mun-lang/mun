@@ -1,7 +1,7 @@
-use crate::module_group::ModuleGroup;
 use crate::{
     code_gen::{AssemblyBuilder, CodeGenContext, ObjectFile},
     db::CodeGenDatabase,
+    ModuleGroupId,
 };
 use anyhow::anyhow;
 use inkwell::context::Context;
@@ -42,10 +42,14 @@ impl<'db, 'ink, 'ctx> Assembly<'db, 'ink, 'ctx> {
 
 /// Builds an assembly for the specified file
 fn build_assembly<'db, 'ink, 'ctx>(
-    code_gen_context: &'ctx CodeGenContext<'db, 'ink>,
-    module_group: ModuleGroup,
+    db: &'db dyn CodeGenDatabase,
+    code_gen: &'ctx CodeGenContext<'db, 'ink>,
+    module_group_id: ModuleGroupId,
 ) -> Assembly<'db, 'ink, 'ctx> {
-    let module_builder = AssemblyBuilder::new(code_gen_context, module_group)
+    // Setup the code generation context
+    let module_partition = db.module_partition();
+
+    let module_builder = AssemblyBuilder::new(&code_gen, &module_partition, module_group_id)
         .expect("could not create ModuleBuilder");
 
     module_builder.build().expect("unable to create assembly")
@@ -82,14 +86,12 @@ impl TargetAssembly {
 /// Builds an assembly for the specified module.
 pub(crate) fn build_target_assembly(
     db: &dyn CodeGenDatabase,
-    module_group: ModuleGroup,
+    module_group: ModuleGroupId,
 ) -> Arc<TargetAssembly> {
-    // Setup the code generation context
+    // Build an assembly for the module
     let inkwell_context = Context::create();
     let code_gen_context = CodeGenContext::new(&inkwell_context, db);
-
-    // Build an assembly for the module
-    let assembly = build_assembly(&code_gen_context, module_group);
+    let assembly = build_assembly(db, &code_gen_context, module_group);
 
     // Convert the assembly into an object file
     let obj_file = assembly
@@ -138,14 +140,12 @@ impl AssemblyIR {
 /// Builds an IR file for the specified module.
 pub(crate) fn build_assembly_ir(
     db: &dyn CodeGenDatabase,
-    module_group: ModuleGroup,
+    module_group: ModuleGroupId,
 ) -> Arc<AssemblyIR> {
-    // Setup the code generation context
+    // Build an assembly for the file
     let inkwell_context = Context::create();
     let code_gen_context = CodeGenContext::new(&inkwell_context, db);
-
-    // Build an assembly for the file
-    let assembly = build_assembly(&code_gen_context, module_group);
+    let assembly = build_assembly(db, &code_gen_context, module_group);
 
     // Construct a temporary file for the assembly
     let file = NamedTempFile::new().expect("could not create temp file for shared object");

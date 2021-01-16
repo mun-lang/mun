@@ -3,6 +3,8 @@ source: crates/mun_codegen/src/test.rs
 expression: "pub fn not(a: i8) -> i8 { !a }\npub fn bitand(a: i8, b: i8) -> i8 { a & b }\npub fn bitor(a: i8, b: i8) -> i8 { a | b }\npub fn bitxor(a: i8, b: i8) -> i8 { a ^ b }"
 ---
 ; == FILE IR =====================================
+; ModuleID = 'mod'
+source_filename = "mod"
 
 %"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 

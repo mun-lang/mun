@@ -28,7 +28,7 @@ impl PartialEq for ModuleGroup {
 }
 
 impl ModuleGroup {
-    /// Constructs
+    /// Constructs a new `ModuleGroup` from a collection of modules and a name.
     pub fn new(
         db: &dyn HirDatabase,
         name: String,
@@ -113,5 +113,10 @@ impl ModuleGroup {
         self.ordered_modules
             .iter()
             .filter_map(move |module| module.file_id(db))
+    }
+
+    /// Returns the filename for this module group
+    pub fn relative_file_path(&self) -> paths::RelativePathBuf {
+        paths::RelativePathBuf::from(self.name.replace("::", "_"))
     }
 }

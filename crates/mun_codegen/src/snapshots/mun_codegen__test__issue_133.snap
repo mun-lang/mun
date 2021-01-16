@@ -4,6 +4,8 @@ expression: "fn do_the_things(n: i32) -> i32 {\n    n + 7\n}\n\npub fn main() {\
 
 ---
 ; == FILE IR =====================================
+; ModuleID = 'mod'
+source_filename = "mod"
 
 define i32 @do_the_things(i32 %0) {
 body:

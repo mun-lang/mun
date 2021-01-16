@@ -3,6 +3,8 @@ source: crates/mun_codegen/src/test.rs
 expression: "pub fn foo() {\n    loop {}\n}"
 ---
 ; == FILE IR =====================================
+; ModuleID = 'mod'
+source_filename = "mod"
 
 define void @foo() {
 body:

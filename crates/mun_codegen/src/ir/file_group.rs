@@ -10,6 +10,7 @@ use crate::{
 };
 use hir::{HasVisibility, ModuleDef};
 use inkwell::{module::Module, types::PointerType, values::UnnamedAddress, AddressSpace};
+use rustc_hash::FxHashSet;
 use std::collections::BTreeMap;
 
 /// The IR generated for a group of files. It is used to generate IR for all of the group's files
@@ -24,6 +25,8 @@ pub struct FileGroupIR<'ink> {
     pub(crate) type_table: TypeTable<'ink>,
     /// The allocator handle, if it exists
     pub(crate) allocator_handle_type: Option<PointerType<'ink>>,
+    /// The modules that contain code that was referenced from this group of modules
+    pub(crate) referenced_modules: FxHashSet<hir::Module>,
 }
 
 /// Generates IR that is shared among the group's files.
@@ -100,7 +103,7 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
         }
     }
 
-    let dispatch_table = dispatch_table_builder.build();
+    let (dispatch_table, referenced_modules) = dispatch_table_builder.build();
 
     let target_data = code_gen.target_machine.get_target_data();
     let type_context = IrTypeContext {
@@ -156,5 +159,6 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
         dispatch_table,
         type_table,
         allocator_handle_type,
+        referenced_modules,
     }
 }
