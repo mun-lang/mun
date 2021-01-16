@@ -5,6 +5,7 @@ mod notify_monitor;
 pub use notify_monitor::NotifyMonitor;
 
 use crate::{AbsPath, AbsPathBuf};
+use std::fmt;
 
 /// Describes something to be monitored by a `Monitor`.
 #[derive(Debug, Clone)]
@@ -46,7 +47,6 @@ pub struct MonitorConfig {
 }
 
 /// A message that might be communicated from a [`Monitor`]
-#[derive(Debug)]
 pub enum MonitorMessage {
     /// A message that indicates the progress status of the monitor
     Progress { total: usize, done: usize },
@@ -149,6 +149,22 @@ impl MonitorEntry {
         match self {
             MonitorEntry::Files(_) => false,
             MonitorEntry::Directories(dirs) => dirs.contains_dir(path),
+        }
+    }
+}
+
+impl fmt::Debug for MonitorMessage {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MonitorMessage::Loaded { files } => f
+                .debug_struct("Loaded")
+                .field("files", &files.len())
+                .finish(),
+            MonitorMessage::Progress { total, done } => f
+                .debug_struct("Progress")
+                .field("total", total)
+                .field("done", done)
+                .finish(),
         }
     }
 }

@@ -37,6 +37,11 @@ impl Analysis {
             db: self.db.snapshot(),
         }
     }
+
+    /// Requests any outstanding snapshot to cancel computations.
+    pub fn request_cancelation(&mut self) {
+        self.db.request_cancelation();
+    }
 }
 
 /// The `AnalysisSnapshot` is a snapshot of the state of the source, it enables querying for

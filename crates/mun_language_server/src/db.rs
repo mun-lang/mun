@@ -3,7 +3,7 @@
 use crate::cancelation::Canceled;
 use hir::{HirDatabase, Upcast};
 use mun_target::spec::Target;
-use salsa::{Database, Snapshot};
+use salsa::{Database, Durability, Snapshot};
 use std::panic;
 
 /// The `AnalysisDatabase` provides the database for all analyses. A database is given input and
@@ -37,6 +37,11 @@ impl AnalysisDatabase {
         db.set_target(Target::host_target().expect("could not determine host target spec"));
 
         db
+    }
+
+    /// Triggers a simple write on the database which will cancell all outstanding snapshots.
+    pub fn request_cancelation(&mut self) {
+        self.salsa_runtime_mut().synthetic_write(Durability::LOW);
     }
 }
 
