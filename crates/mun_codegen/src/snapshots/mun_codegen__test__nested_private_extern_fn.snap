@@ -1,12 +1,11 @@
 ---
 source: crates/mun_codegen/src/test.rs
 expression: "extern fn extern_fn() -> f32;\n\nfn private_fn() -> f32 {\n    extern_fn()\n}\n\npub fn main() -> f32 {\n    private_fn()\n}"
+
 ---
 ; == FILE IR =====================================
-; ModuleID = 'main.mun'
-source_filename = "main.mun"
 
-%DispatchTable = type { float ()*, float ()* }
+%DispatchTable = type { float ()* }
 %"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 
 @dispatchTable = external global %DispatchTable
@@ -14,15 +13,14 @@ source_filename = "main.mun"
 
 define float @private_fn() {
 body:
-  %extern_fn_ptr = load float ()*, float ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 1), align 8
+  %extern_fn_ptr = load float ()*, float ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
   %extern_fn = call float %extern_fn_ptr()
   ret float %extern_fn
 }
 
 define float @main() {
 body:
-  %private_fn_ptr = load float ()*, float ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
-  %private_fn = call float %private_fn_ptr()
+  %private_fn = call float @private_fn()
   ret float %private_fn
 }
 
@@ -31,13 +29,11 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%DispatchTable = type { float ()*, float ()* }
+%DispatchTable = type { float ()* }
 %"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 
-@dispatchTable = global %DispatchTable { float ()* @private_fn, float ()* null }
+@dispatchTable = global %DispatchTable zeroinitializer
 @"type_info::<core::f32>::name" = private unnamed_addr constant [10 x i8] c"core::f32\00"
 @"type_info::<core::f32>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" <{ [0 x i64] zeroinitializer, [16 x i8] c"P\19b7\A8k\F2\81P\FB\83\F5P\B0\82!", [0 x i64] zeroinitializer, i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::f32>::name", i32 0, i32 0), [0 x i64] zeroinitializer, i32 32, [0 x i64] zeroinitializer, i8 4, [0 x i64] zeroinitializer, i8 0, [1 x i16] zeroinitializer }>
 @global_type_table = constant [1 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::f32>"]
-
-declare float @private_fn()
 

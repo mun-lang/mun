@@ -1,15 +1,12 @@
 ---
 source: crates/mun_codegen/src/test.rs
 expression: "pub fn fibonacci(n:i32) -> i32 {\n    if n <= 1 {\n        n\n    } else {\n        fibonacci(n-1) + fibonacci(n-2)\n    }\n}"
+
 ---
 ; == FILE IR =====================================
-; ModuleID = 'main.mun'
-source_filename = "main.mun"
 
-%DispatchTable = type { i32 (i32)* }
 %"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 
-@dispatchTable = external global %DispatchTable
 @global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
 
 define i32 @fibonacci(i32 %0) {
@@ -19,12 +16,10 @@ body:
 
 else:                                             ; preds = %body
   %sub = sub i32 %0, 1
-  %fibonacci_ptr = load i32 (i32)*, i32 (i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
-  %fibonacci = call i32 %fibonacci_ptr(i32 %sub)
+  %fibonacci = call i32 @fibonacci(i32 %sub)
   %sub5 = sub i32 %0, 2
-  %fibonacci_ptr6 = load i32 (i32)*, i32 (i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
-  %fibonacci7 = call i32 %fibonacci_ptr6(i32 %sub5)
-  %add = add i32 %fibonacci, %fibonacci7
+  %fibonacci6 = call i32 @fibonacci(i32 %sub5)
+  %add = add i32 %fibonacci, %fibonacci6
   br label %if_merge
 
 if_merge:                                         ; preds = %body, %else
@@ -37,13 +32,9 @@ if_merge:                                         ; preds = %body, %else
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%DispatchTable = type { i32 (i32)* }
 %"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 
-@dispatchTable = global %DispatchTable { i32 (i32)* @fibonacci }
 @"type_info::<core::i32>::name" = private unnamed_addr constant [10 x i8] c"core::i32\00"
 @"type_info::<core::i32>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" <{ [0 x i64] zeroinitializer, [16 x i8] c"\17yzt\19\D62\17\D25\95C\17\88[\FA", [0 x i64] zeroinitializer, i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::i32>::name", i32 0, i32 0), [0 x i64] zeroinitializer, i32 32, [0 x i64] zeroinitializer, i8 4, [0 x i64] zeroinitializer, i8 0, [1 x i16] zeroinitializer }>
 @global_type_table = constant [1 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::i32>"]
-
-declare i32 @fibonacci(i32)
 

@@ -9,7 +9,7 @@ use hir::{
     AstDatabase, DiagnosticSink, FileId, Module, PackageSet, SourceDatabase, SourceRoot,
     SourceRootId, Upcast,
 };
-use mun_codegen::{AssemblyIR, CodeGenDatabase, TargetAssembly};
+use mun_codegen::{AssemblyIR, CodeGenDatabase, ModuleGroup, TargetAssembly};
 use paths::RelativePathBuf;
 
 use std::{path::PathBuf, sync::Arc};
@@ -320,7 +320,9 @@ impl Driver {
         let assembly_path = self.assembly_output_path(module);
 
         // Get the compiled assembly
-        let assembly = self.db.target_assembly(module);
+        let assembly = self
+            .db
+            .target_assembly(ModuleGroup::from_single_module(self.db.upcast(), module));
 
         // Did the assembly change since last time?
         if !force
@@ -352,7 +354,9 @@ impl Driver {
         let ir_path = self.ir_output_path(module);
 
         // Get the assembly's IR
-        let assembly_ir = self.db.assembly_ir(module);
+        let assembly_ir = self
+            .db
+            .assembly_ir(ModuleGroup::from_single_module(self.db.upcast(), module));
 
         // Write to disk
         assembly_ir.copy_to(&ir_path)?;

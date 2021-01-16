@@ -3,8 +3,6 @@ source: crates/mun_codegen/src/test.rs
 expression: "pub fn assign_leftshift(a: i16, b: i16) -> i16 {\n    a <<= b;\n    a\n}\npub fn assign_rightshift(a: i16, b: i16) -> i16 {\n    a >>= b;\n    a\n}"
 ---
 ; == FILE IR =====================================
-; ModuleID = 'main.mun'
-source_filename = "main.mun"
 
 %"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 

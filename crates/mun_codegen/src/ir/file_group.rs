@@ -3,6 +3,7 @@ use super::{
     intrinsics,
     type_table::{TypeTable, TypeTableBuilder},
 };
+use crate::module_group::ModuleGroup;
 use crate::{
     code_gen::CodeGenContext,
     value::{IrTypeContext, IrValueContext},
@@ -30,7 +31,7 @@ pub struct FileGroupIR<'ink> {
 ///  files using something like `FileGroupId`.
 pub(crate) fn gen_file_group_ir<'db, 'ink>(
     code_gen: &CodeGenContext<'db, 'ink>,
-    module: hir::Module,
+    module_group: &ModuleGroup,
 ) -> FileGroupIR<'ink> {
     let llvm_module = code_gen.context.create_module("group_name");
 
@@ -39,7 +40,10 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
     let mut needs_alloc = false;
 
     // Collect all intrinsic functions, wrapper function, and generate struct declarations.
-    for def in module.declarations(code_gen.db) {
+    for def in module_group
+        .iter()
+        .flat_map(|module| module.declarations(code_gen.db))
+    {
         match def {
             ModuleDef::Function(f) if !f.is_extern(code_gen.db) => {
                 intrinsics::collect_fn_body(
@@ -80,10 +84,15 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
         &llvm_module,
         &intrinsics_map,
         &code_gen.hir_types,
+        module_group,
     );
-    for def in module.declarations(code_gen.db) {
+    for def in module_group
+        .iter()
+        .flat_map(|module| module.declarations(code_gen.db))
+    {
         if let ModuleDef::Function(f) = def {
-            if f.visibility(code_gen.db).is_externally_visible() && !f.is_extern(code_gen.db) {
+            // Find all functions that must be present in the dispatch table
+            if !f.is_extern(code_gen.db) {
                 let body = f.body(code_gen.db);
                 let infer = f.infer(code_gen.db);
                 dispatch_table_builder.collect_body(&body, &infer);
@@ -114,7 +123,10 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
     );
 
     // Collect all used types
-    for def in module.declarations(code_gen.db) {
+    for def in module_group
+        .iter()
+        .flat_map(|module| module.declarations(code_gen.db))
+    {
         match def {
             ModuleDef::Struct(s) => {
                 type_table_builder.collect_struct(s);

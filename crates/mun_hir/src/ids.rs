@@ -97,7 +97,7 @@ macro_rules! impl_intern {
 }
 
 /// Represents an id of a module inside a package.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct ModuleId {
     pub package: PackageId,
     pub local_id: LocalModuleId,

@@ -120,8 +120,12 @@ fn gen_signature_return_type_from_type_info<'ink>(
 ) -> Value<'ink, *const ir::TypeInfo<'ink>> {
     ret_type
         .map(|info| {
-            TypeTable::get(context.module, &info, context)
-                .expect("could not find TypeInfo that should definitely be there")
+            TypeTable::get(context.module, &info, context).unwrap_or_else(|| {
+                panic!(
+                    "could not find TypeInfo that should definitely be there: {}",
+                    info.name
+                )
+            })
         })
         .unwrap_or_else(|| Value::null(context))
 }

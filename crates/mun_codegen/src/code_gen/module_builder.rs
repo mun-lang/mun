@@ -1,3 +1,4 @@
+use crate::module_group::ModuleGroup;
 use crate::{
     assembly::Assembly,
     code_gen::{optimize_module, symbols, CodeGenContext, CodeGenerationError},
@@ -9,34 +10,30 @@ use inkwell::module::{Linkage, Module};
 /// A struct that can be used to build an LLVM `Module`.
 pub struct ModuleBuilder<'db, 'ink, 'ctx> {
     code_gen: &'ctx CodeGenContext<'db, 'ink>,
-    module: hir::Module,
+    module_group: ModuleGroup,
     assembly_module: Module<'ink>,
 }
 
 impl<'db, 'ink, 'ctx> ModuleBuilder<'db, 'ink, 'ctx> {
     /// Constructs a module for the given `hir::FileId` using the provided `CodeGenContext`.
-    pub fn new(
+    pub(crate) fn new(
         code_gen: &'ctx CodeGenContext<'db, 'ink>,
-        module: hir::Module,
+        module_group: ModuleGroup,
     ) -> Result<Self, anyhow::Error> {
         // Construct a module for the assembly
-        let file_id = module
-            .file_id(code_gen.db)
-            .expect("module must have a file");
-        let assembly_module =
-            code_gen.create_module(code_gen.db.file_relative_path(file_id).as_str());
+        let assembly_module = code_gen.create_module(&module_group.name);
 
         Ok(Self {
             code_gen,
-            module,
+            module_group,
             assembly_module,
         })
     }
 
     /// Constructs an object file.
     pub fn build(self) -> Result<Assembly<'db, 'ink, 'ctx>, anyhow::Error> {
-        let group_ir = gen_file_group_ir(self.code_gen, self.module);
-        let file = gen_file_ir(self.code_gen, &group_ir, self.module);
+        let group_ir = gen_file_group_ir(self.code_gen, &self.module_group);
+        let file = gen_file_ir(self.code_gen, &group_ir, self.module_group.clone());
 
         // Clone the LLVM modules so that we can modify it without modifying the cached value.
         self.assembly_module

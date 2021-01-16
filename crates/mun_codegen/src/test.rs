@@ -3,7 +3,7 @@ use crate::{
     ir::file::gen_file_ir,
     ir::file_group::gen_file_group_ir,
     mock::MockDatabase,
-    CodeGenDatabase,
+    CodeGenDatabase, ModuleGroup,
 };
 use hir::{
     diagnostics::DiagnosticSink, line_index::LineIndex, HirDatabase, Module, SourceDatabase, Upcast,
@@ -813,7 +813,7 @@ fn incremental_compilation() {
 
     {
         let events = db.log_executed(|| {
-            db.target_assembly(module);
+            db.target_assembly(ModuleGroup::from_single_module(db.upcast(), module));
         });
         assert!(
             format!("{:?}", events).contains("package_defs"),
@@ -831,7 +831,7 @@ fn incremental_compilation() {
 
     {
         let events = db.log_executed(|| {
-            db.target_assembly(module);
+            db.target_assembly(ModuleGroup::from_single_module(db.upcast(), module));
         });
         println!("events: {:?}", events);
         assert!(
@@ -980,6 +980,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
 
     let llvm_context = Context::create();
     let code_gen = CodeGenContext::new(&llvm_context, db.upcast());
+    let module_group = ModuleGroup::from_single_module(db.upcast(), module);
 
     // The thread is named after the test case, so we can use it to name our snapshots.
     let thread_name = std::thread::current()
@@ -990,8 +991,8 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
     let (group_ir_value, file_ir_value) = if !messages.is_empty() {
         ("".to_owned(), messages.join("\n"))
     } else {
-        let group_ir = gen_file_group_ir(&code_gen, module);
-        let file_ir = gen_file_ir(&code_gen, &group_ir, module);
+        let group_ir = gen_file_group_ir(&code_gen, &module_group);
+        let file_ir = gen_file_ir(&code_gen, &group_ir, module_group.clone());
 
         (
             format!("{}", group_ir.llvm_module.print_to_string().to_string(),),
@@ -1001,8 +1002,8 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
 
     // To ensure that we test symbol generation
     if messages.is_empty() {
-        let module_builder =
-            ModuleBuilder::new(&code_gen, module).expect("Failed to initialize module builder");
+        let module_builder = ModuleBuilder::new(&code_gen, module_group)
+            .expect("Failed to initialize module builder");
         let _obj_file = module_builder.build().expect("Failed to build object file");
     }
 

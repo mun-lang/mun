@@ -1,3 +1,4 @@
+use crate::module_group::ModuleGroup;
 use crate::{
     code_gen::{CodeGenContext, ModuleBuilder, ObjectFile},
     db::CodeGenDatabase,
@@ -42,10 +43,10 @@ impl<'db, 'ink, 'ctx> Assembly<'db, 'ink, 'ctx> {
 /// Builds an assembly for the specified file
 fn build_assembly<'db, 'ink, 'ctx>(
     code_gen_context: &'ctx CodeGenContext<'db, 'ink>,
-    module: hir::Module,
+    module_group: ModuleGroup,
 ) -> Assembly<'db, 'ink, 'ctx> {
     let module_builder =
-        ModuleBuilder::new(code_gen_context, module).expect("could not create ModuleBuilder");
+        ModuleBuilder::new(code_gen_context, module_group).expect("could not create ModuleBuilder");
 
     module_builder.build().expect("unable to create assembly")
 }
@@ -81,14 +82,14 @@ impl TargetAssembly {
 /// Builds an assembly for the specified module.
 pub(crate) fn build_target_assembly(
     db: &dyn CodeGenDatabase,
-    module: hir::Module,
+    module_group: ModuleGroup,
 ) -> Arc<TargetAssembly> {
     // Setup the code generation context
     let inkwell_context = Context::create();
     let code_gen_context = CodeGenContext::new(&inkwell_context, db);
 
     // Build an assembly for the module
-    let assembly = build_assembly(&code_gen_context, module);
+    let assembly = build_assembly(&code_gen_context, module_group);
 
     // Convert the assembly into an object file
     let obj_file = assembly
@@ -135,13 +136,16 @@ impl AssemblyIR {
 }
 
 /// Builds an IR file for the specified module.
-pub(crate) fn build_assembly_ir(db: &dyn CodeGenDatabase, module: hir::Module) -> Arc<AssemblyIR> {
+pub(crate) fn build_assembly_ir(
+    db: &dyn CodeGenDatabase,
+    module_group: ModuleGroup,
+) -> Arc<AssemblyIR> {
     // Setup the code generation context
     let inkwell_context = Context::create();
     let code_gen_context = CodeGenContext::new(&inkwell_context, db);
 
     // Build an assembly for the file
-    let assembly = build_assembly(&code_gen_context, module);
+    let assembly = build_assembly(&code_gen_context, module_group);
 
     // Construct a temporary file for the assembly
     let file = NamedTempFile::new().expect("could not create temp file for shared object");

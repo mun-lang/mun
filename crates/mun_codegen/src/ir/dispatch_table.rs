@@ -1,3 +1,4 @@
+use crate::module_group::ModuleGroup;
 use crate::{intrinsics::Intrinsic, ir::function, ir::ty::HirTypeCache, type_info::TypeInfo};
 use hir::{Body, Expr, ExprId, HirDatabase, InferenceResult};
 use inkwell::{
@@ -7,6 +8,7 @@ use inkwell::{
     types::{BasicTypeEnum, FunctionType},
     values::{BasicValueEnum, PointerValue},
 };
+use rustc_hash::FxHashSet;
 use std::{
     collections::{BTreeMap, HashMap},
     sync::Arc,
@@ -174,6 +176,10 @@ pub(crate) struct DispatchTableBuilder<'db, 'ink, 't> {
     table_ref: Option<inkwell::values::GlobalValue<'ink>>,
     // This is the actual DispatchTable type
     table_type: inkwell::types::StructType<'ink>,
+    // The group of modules for which the dispatch table is being build
+    module_group: &'t ModuleGroup,
+    // The set of modules that is referenced
+    referenced_modules: FxHashSet<hir::Module>,
 }
 
 struct TypedDispatchableFunction<'ink> {
@@ -190,6 +196,7 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
         module: &'t Module<'ink>,
         intrinsics: &BTreeMap<FunctionPrototype, FunctionType<'ink>>,
         hir_types: &'t HirTypeCache<'db, 'ink>,
+        module_group: &'t ModuleGroup,
     ) -> Self {
         let mut table = Self {
             db,
@@ -202,6 +209,8 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
             table_ref: None,
             table_type: context.opaque_struct_type("DispatchTable"),
             hir_types,
+            module_group,
+            referenced_modules: FxHashSet::default(),
         };
 
         if !intrinsics.is_empty() {
@@ -241,7 +250,15 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
         // If this expression is a call, store it in the dispatch table
         if let Expr::Call { callee, .. } = expr {
             match infer[*callee].as_callable_def() {
-                Some(hir::CallableDef::Function(def)) => self.collect_fn_def(def),
+                Some(hir::CallableDef::Function(def)) => {
+                    if self.module_group.should_runtime_link_fn(self.db, def) {
+                        let fn_module = def.module(self.db);
+                        if !def.is_extern(self.db) && !self.module_group.contains(fn_module) {
+                            self.referenced_modules.insert(fn_module);
+                        }
+                        self.collect_fn_def(def);
+                    }
+                }
                 Some(hir::CallableDef::Struct(_)) => (),
                 None => panic!("expected a callable expression"),
             }
@@ -253,7 +270,7 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
 
     /// Collects function call expression from the given expression.
     #[allow(clippy::map_entry)]
-    fn collect_fn_def(&mut self, function: hir::Function) {
+    pub fn collect_fn_def(&mut self, function: hir::Function) {
         self.ensure_table_ref();
 
         // If the function is not yet contained in the table, add it
@@ -288,14 +305,6 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
             });
             self.prototype_to_idx.insert(prototype, index);
             self.function_to_idx.insert(function, index);
-
-            // Recurse further
-            let fn_body = function.body(self.db);
-            self.collect_expr(
-                fn_body.body_expr(),
-                &fn_body,
-                function.infer(self.db).as_ref(),
-            );
         }
     }
 
@@ -332,11 +341,21 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
                     match entry.function.hir {
                         // Case external function: Convert to typed null for the given function
                         None => function_type.const_null(),
-                        Some(f) if f.is_extern(self.db) => function_type.const_null(),
-                        // Case mun function: Get the function location as the initializer
-                        Some(f) => function::gen_prototype(self.db, self.hir_types, f, self.module)
-                            .as_global_value()
-                            .as_pointer_value(),
+                        // Case external function, or function from another module
+                        Some(f) => {
+                            if f.is_extern(self.db)
+                                || !self.module_group.contains(f.module(self.db))
+                            {
+                                // If the function is externally defined, meaning its an extern
+                                // function or its defined in another module, dont initialize.
+                                function_type.const_null()
+                            } else {
+                                // Otherwise generate a function prototype
+                                function::gen_prototype(self.db, self.hir_types, f, self.module)
+                                    .as_global_value()
+                                    .as_pointer_value()
+                            }
+                        }
                     }
                     .into()
                 })

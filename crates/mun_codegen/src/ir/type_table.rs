@@ -154,31 +154,51 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
     fn collect_expr(&mut self, expr_id: ExprId, body: &Arc<Body>, infer: &InferenceResult) {
         let expr = &body[expr_id];
 
-        // TODO: Collect used external `TypeInfo` for the type dispatch table
+        // If this expression is a call, store it in the dispatch table
+        if let hir::Expr::Call { callee, .. } = expr {
+            match infer[*callee].as_callable_def() {
+                Some(hir::CallableDef::Function(hir_fn)) => {
+                    self.maybe_collect_fn_signature(hir_fn);
+                }
+                Some(hir::CallableDef::Struct(_)) => (),
+                None => panic!("expected a callable expression"),
+            }
+        }
 
         // Recurse further
         expr.walk_child_exprs(|expr_id| self.collect_expr(expr_id, body, infer))
     }
 
-    /// Collects unique `TypeInfo` from the specified function signature and body.
-    pub fn collect_fn(&mut self, hir_fn: hir::Function) {
-        // Collect type info for exposed function
+    /// Collects `TypeInfo` from types in the signature of a function
+    pub fn collect_fn_signature(&mut self, hir_fn: hir::Function) {
+        let fn_sig = hir_fn.ty(self.db).callable_sig(self.db).unwrap();
+
+        // Collect argument types
+        for ty in fn_sig.params().iter() {
+            self.collect_type(self.hir_types.type_info(ty));
+        }
+
+        // Collect return type
+        let ret_ty = fn_sig.ret();
+        if !ret_ty.is_empty() {
+            self.collect_type(self.hir_types.type_info(ret_ty));
+        }
+    }
+
+    /// Collects `TypeInfo` from types in the signature of a function if its exposed externally.
+    pub fn maybe_collect_fn_signature(&mut self, hir_fn: hir::Function) {
+        // If a function is externally visible or contained in the dispatch table, record the types
+        // of the signature
         if hir_fn.visibility(self.db).is_externally_visible()
             || self.dispatch_table.contains(hir_fn)
         {
-            let fn_sig = hir_fn.ty(self.db).callable_sig(self.db).unwrap();
-
-            // Collect argument types
-            for ty in fn_sig.params().iter() {
-                self.collect_type(self.hir_types.type_info(ty));
-            }
-
-            // Collect return type
-            let ret_ty = fn_sig.ret();
-            if !ret_ty.is_empty() {
-                self.collect_type(self.hir_types.type_info(ret_ty));
-            }
+            self.collect_fn_signature(hir_fn);
         }
+    }
+
+    /// Collects unique `TypeInfo` from the specified function signature and body.
+    pub fn collect_fn(&mut self, hir_fn: hir::Function) {
+        self.maybe_collect_fn_signature(hir_fn);
 
         // Collect used types from body
         let body = hir_fn.body(self.db);

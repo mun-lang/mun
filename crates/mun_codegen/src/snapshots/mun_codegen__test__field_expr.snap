@@ -1,15 +1,14 @@
 ---
 source: crates/mun_codegen/src/test.rs
 expression: "struct(value) Bar(f64, Foo);\nstruct(value) Foo { a: i32 };\n\nfn bar_1(bar: Bar) -> Foo {\n    bar.1\n}\n\nfn foo_a(foo: Foo) -> i32 {\n    foo.a\n}\n\npub fn bar_1_foo_a(bar: Bar) -> i32 {\n    foo_a(bar_1(bar))\n}\n\npub fn main() -> i32 {\n    let a: Foo = Foo { a: 5 };\n    let b: Bar = Bar(1.23, a);\n    let aa_lhs = a.a + 2;\n    let aa_rhs = 2 + a.a;\n    aa_lhs + aa_rhs\n}"
+
 ---
 ; == FILE IR =====================================
-; ModuleID = 'main.mun'
-source_filename = "main.mun"
 
-%DispatchTable = type { i8** (i8*, i8*)*, i32 (%Foo)*, %Foo (%Bar)* }
+%DispatchTable = type { i8** (i8*, i8*)* }
+%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 %Foo = type { i32 }
 %Bar = type { double, %Foo }
-%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 
 @allocatorHandle = external global i8*
 @dispatchTable = external global %DispatchTable
@@ -32,10 +31,8 @@ define i32 @bar_1_foo_a(%Bar %0) {
 body:
   %.fca.0.extract = extractvalue %Bar %0, 0
   %.fca.1.0.extract = extractvalue %Bar %0, 1, 0
-  %bar_1_ptr = load %Foo (%Bar)*, %Foo (%Bar)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 2), align 8
-  %bar_1 = call %Foo %bar_1_ptr(%Bar %0)
-  %foo_a_ptr = load i32 (%Foo)*, i32 (%Foo)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 1), align 8
-  %foo_a = call i32 %foo_a_ptr(%Foo %bar_1)
+  %bar_1 = call %Foo @bar_1(%Bar %0)
+  %foo_a = call i32 @foo_a(%Foo %bar_1)
   ret i32 %foo_a
 }
 
@@ -57,13 +54,11 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%DispatchTable = type { i8** (i8*, i8*)*, i32 (%Foo)*, %Foo (%Bar)* }
-%Foo = type { i32 }
-%Bar = type { double, %Foo }
+%DispatchTable = type { i8** (i8*, i8*)* }
 %"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 %"mun_codegen::ir::types::StructInfo" = type <{ [0 x i64], i8**, [0 x i64], %"mun_codegen::ir::types::TypeInfo"**, [0 x i64], i16*, [0 x i64], i16, [0 x i64], i8, [5 x i8] }>
 
-@dispatchTable = global %DispatchTable { i8** (i8*, i8*)* null, i32 (%Foo)* @foo_a, %Foo (%Bar)* @bar_1 }
+@dispatchTable = global %DispatchTable zeroinitializer
 @"type_info::<core::i32>::name" = private unnamed_addr constant [10 x i8] c"core::i32\00"
 @"type_info::<core::i32>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" <{ [0 x i64] zeroinitializer, [16 x i8] c"\17yzt\19\D62\17\D25\95C\17\88[\FA", [0 x i64] zeroinitializer, i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::i32>::name", i32 0, i32 0), [0 x i64] zeroinitializer, i32 32, [0 x i64] zeroinitializer, i8 4, [0 x i64] zeroinitializer, i8 0, [1 x i16] zeroinitializer }>
 @"type_info::<Foo>::name" = private unnamed_addr constant [4 x i8] c"Foo\00"
@@ -89,8 +84,4 @@ source_filename = "group_name"
 @"type_info::<Bar>" = private unnamed_addr constant { %"mun_codegen::ir::types::TypeInfo", %"mun_codegen::ir::types::StructInfo" } { %"mun_codegen::ir::types::TypeInfo" <{ [0 x i64] zeroinitializer, [16 x i8] c"\FC8#Lvd)F\B1Q\06\8B\02pl\10", [0 x i64] zeroinitializer, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"type_info::<Bar>::name", i32 0, i32 0), [0 x i64] zeroinitializer, i32 128, [0 x i64] zeroinitializer, i8 8, [0 x i64] zeroinitializer, i8 1, [1 x i16] zeroinitializer }>, %"mun_codegen::ir::types::StructInfo" <{ [0 x i64] zeroinitializer, i8** getelementptr inbounds ([2 x i8*], [2 x i8*]* @"struct_info::<Bar>::field_names", i32 0, i32 0), [0 x i64] zeroinitializer, %"mun_codegen::ir::types::TypeInfo"** getelementptr inbounds ([2 x %"mun_codegen::ir::types::TypeInfo"*], [2 x %"mun_codegen::ir::types::TypeInfo"*]* @"struct_info::<Bar>::field_types", i32 0, i32 0), [0 x i64] zeroinitializer, i16* getelementptr inbounds ([2 x i16], [2 x i16]* @"struct_info::<Bar>::field_offsets", i32 0, i32 0), [0 x i64] zeroinitializer, i16 2, [0 x i64] zeroinitializer, i8 1, [5 x i8] zeroinitializer }> }
 @global_type_table = constant [7 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::i32>", %"mun_codegen::ir::types::TypeInfo"* getelementptr inbounds ({ %"mun_codegen::ir::types::TypeInfo", %"mun_codegen::ir::types::StructInfo" }, { %"mun_codegen::ir::types::TypeInfo", %"mun_codegen::ir::types::StructInfo" }* @"type_info::<Foo>", i32 0, i32 0), %"mun_codegen::ir::types::TypeInfo"* @"type_info::<*const TypeInfo>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::f64>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<*const *mut core::void>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<*mut core::void>", %"mun_codegen::ir::types::TypeInfo"* getelementptr inbounds ({ %"mun_codegen::ir::types::TypeInfo", %"mun_codegen::ir::types::StructInfo" }, { %"mun_codegen::ir::types::TypeInfo", %"mun_codegen::ir::types::StructInfo" }* @"type_info::<Bar>", i32 0, i32 0)]
 @allocatorHandle = unnamed_addr global i8* null
-
-declare i32 @foo_a(%Foo)
-
-declare %Foo @bar_1(%Bar)
 

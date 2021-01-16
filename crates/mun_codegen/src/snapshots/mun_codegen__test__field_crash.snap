@@ -3,8 +3,6 @@ source: crates/mun_codegen/src/test.rs
 expression: "struct(gc) Foo { a: i32 };\n\npub fn main(c:i32) -> i32 {\n    let b = Foo { a: c + 5 }\n    b.a\n}"
 ---
 ; == FILE IR =====================================
-; ModuleID = 'main.mun'
-source_filename = "main.mun"
 
 %DispatchTable = type { i8** (i8*, i8*)* }
 %"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
