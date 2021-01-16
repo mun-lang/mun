@@ -1,8 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "struct(value) Bar(f64, i32, bool, Foo);\nstruct(value) Foo { a: i32 };\nstruct(value) Baz;\npub fn foo() {\n    let a: Foo = Foo { a: 5 };\n    let b: Bar = Bar(1.23, a.a, true, a);\n    let c: Baz = Baz;\n}"
+expression: "\n    struct(value) Bar(f64, i32, bool, Foo);\n    struct(value) Foo { a: i32 };\n    struct(value) Baz;\n    pub fn foo() {\n        let a: Foo = Foo { a: 5 };\n        let b: Bar = Bar(1.23, a.a, true, a);\n        let c: Baz = Baz;\n    }\n    "
 ---
-; == FILE IR =====================================
+; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
@@ -33,8 +33,7 @@ body:
   ret void
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

@@ -1,8 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "fn foo() -> i32 {\n    let bar = {\n        let b = 3;\n        return b + 3;\n    };\n\n    // This code will never be executed\n    let a = 3 + 4;\n    a\n}"
+expression: "\n    fn foo() -> i32 {\n        let bar = {\n            let b = 3;\n            return b + 3;\n        };\n\n        // This code will never be executed\n        let a = 3 + 4;\n        a\n    }"
 ---
-; == FILE IR =====================================
+; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
@@ -11,8 +11,7 @@ body:
   ret i32 6
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

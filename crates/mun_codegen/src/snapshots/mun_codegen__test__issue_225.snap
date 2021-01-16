@@ -1,8 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "struct Num {\n    value: i64,\n}\n\npub fn foo(b: i64) {\n    Num { value: b }.value;\n}\n\npub fn bar(b: i64) {\n    { let a = Num { value: b }; a}.value;\n}"
+expression: "\n    struct Num {\n        value: i64,\n    }\n\n    pub fn foo(b: i64) {\n        Num { value: b }.value;\n    }\n\n    pub fn bar(b: i64) {\n        { let a = Num { value: b }; a}.value;\n    }\n        "
 ---
-; == FILE IR =====================================
+; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
@@ -46,8 +46,7 @@ body:
   ret void
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

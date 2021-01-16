@@ -1,8 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "pub fn main() -> i32 {\n    return 5;\n    let a = 3; // Nothing regarding this statement should be in the IR\n}"
+expression: "\n    pub fn main() -> i32 {\n        return 5;\n        let a = 3; // Nothing regarding this statement should be in the IR\n    }\n    "
 ---
-; == FILE IR =====================================
+; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
@@ -15,8 +15,7 @@ body:
   ret i32 5
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

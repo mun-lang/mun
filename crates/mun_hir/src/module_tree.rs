@@ -202,7 +202,7 @@ mod diagnostics {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{fixture::WithFixture, mock::MockDatabase};
+    use crate::{mock::MockDatabase, with_fixture::WithFixture};
 
     #[test]
     fn valid_module_name() {

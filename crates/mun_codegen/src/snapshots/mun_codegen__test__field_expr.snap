@@ -1,9 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "struct(value) Bar(f64, Foo);\nstruct(value) Foo { a: i32 };\n\nfn bar_1(bar: Bar) -> Foo {\n    bar.1\n}\n\nfn foo_a(foo: Foo) -> i32 {\n    foo.a\n}\n\npub fn bar_1_foo_a(bar: Bar) -> i32 {\n    foo_a(bar_1(bar))\n}\n\npub fn main() -> i32 {\n    let a: Foo = Foo { a: 5 };\n    let b: Bar = Bar(1.23, a);\n    let aa_lhs = a.a + 2;\n    let aa_rhs = 2 + a.a;\n    aa_lhs + aa_rhs\n}"
-
+expression: "\n    struct(value) Bar(f64, Foo);\n    struct(value) Foo { a: i32 };\n\n    fn bar_1(bar: Bar) -> Foo {\n        bar.1\n    }\n\n    fn foo_a(foo: Foo) -> i32 {\n        foo.a\n    }\n\n    pub fn bar_1_foo_a(bar: Bar) -> i32 {\n        foo_a(bar_1(bar))\n    }\n\n    pub fn main() -> i32 {\n        let a: Foo = Foo { a: 5 };\n        let b: Bar = Bar(1.23, a);\n        let aa_lhs = a.a + 2;\n        let aa_rhs = 2 + a.a;\n        aa_lhs + aa_rhs\n    }\n    "
 ---
-; == FILE IR =====================================
+; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
@@ -51,8 +50,7 @@ body:
   ret i32 14
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

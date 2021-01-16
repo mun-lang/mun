@@ -1,8 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "pub fn main(a:i32) -> i32 {\n    if a > 4 {\n        return a;\n    }\n    a - 1\n}"
+expression: "\n    pub fn main(a:i32) -> i32 {\n        if a > 4 {\n            return a;\n        }\n        a - 1\n    }\n    "
 ---
-; == FILE IR =====================================
+; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
@@ -23,8 +23,7 @@ if_merge:                                         ; preds = %body
   ret i32 %sub
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

@@ -1,8 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "pub fn assign(a: bool, b: bool) -> bool {\n    a = b;\n    a\n}\n// TODO: Add errors\n// a += b;\n// a *= b;\n// a -= b;\n// a /= b;\n// a %= b;"
+expression: "\n    pub fn assign(a: bool, b: bool) -> bool {\n        a = b;\n        a\n    }\n    // TODO: Add errors\n    // a += b;\n    // a *= b;\n    // a -= b;\n    // a /= b;\n    // a %= b;\n    "
 ---
-; == FILE IR =====================================
+; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
@@ -15,8 +15,7 @@ body:
   ret i1 %1
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

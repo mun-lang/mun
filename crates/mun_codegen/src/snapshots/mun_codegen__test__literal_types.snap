@@ -1,8 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "pub fn main(){\n    let a = 123;\n    let a = 123u8;\n    let a = 123u16;\n    let a = 123u32;\n    let a = 123u64;\n    let a = 123u128;\n    let a = 1_000_000_u32;\n    let a = 123i8;\n    let a = 123i16;\n    let a = 123i32;\n    let a = 123i64;\n    let a = 123123123123123123123123123123123i128;\n    let a = 1_000_000_i32;\n    let a = 1_000_123.0e-2;\n    let a = 1_000_123.0e-2f32;\n    let a = 1_000_123.0e-2f64;\n}\n\npub fn add(a:u32) -> u32 {\n    a + 12u32\n}"
+expression: "\n    pub fn main(){\n        let a = 123;\n        let a = 123u8;\n        let a = 123u16;\n        let a = 123u32;\n        let a = 123u64;\n        let a = 123u128;\n        let a = 1_000_000_u32;\n        let a = 123i8;\n        let a = 123i16;\n        let a = 123i32;\n        let a = 123i64;\n        let a = 123123123123123123123123123123123i128;\n        let a = 1_000_000_i32;\n        let a = 1_000_123.0e-2;\n        let a = 1_000_123.0e-2f32;\n        let a = 1_000_123.0e-2f64;\n    }\n\n    pub fn add(a:u32) -> u32 {\n        a + 12u32\n    }"
 ---
-; == FILE IR =====================================
+; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
@@ -56,8 +56,7 @@ body:
   ret i32 %add
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

@@ -1,8 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "pub fn assign(a: u8, b: u8) -> u8 {\n    a = b;\n    a\n}\npub fn assign_add(a: u8, b: u8) -> u8 {\n    a += b;\n    a\n}\npub fn assign_subtract(a: u8, b: u8) -> u8 {\n    a -= b;\n    a\n}\npub fn assign_multiply(a: u8, b: u8) -> u8 {\n    a *= b;\n    a\n}\npub fn assign_divide(a: u8, b: u8) -> u8 {\n    a /= b;\n    a\n}\npub fn assign_remainder(a: u8, b: u8) -> u8 {\n    a %= b;\n    a\n}"
+expression: "\n    pub fn assign(a: u8, b: u8) -> u8 {\n        a = b;\n        a\n    }\n    pub fn assign_add(a: u8, b: u8) -> u8 {\n        a += b;\n        a\n    }\n    pub fn assign_subtract(a: u8, b: u8) -> u8 {\n        a -= b;\n        a\n    }\n    pub fn assign_multiply(a: u8, b: u8) -> u8 {\n        a *= b;\n        a\n    }\n    pub fn assign_divide(a: u8, b: u8) -> u8 {\n        a /= b;\n        a\n    }\n    pub fn assign_remainder(a: u8, b: u8) -> u8 {\n        a %= b;\n        a\n    }\n                        "
 ---
-; == FILE IR =====================================
+; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
@@ -45,8 +45,7 @@ body:
   ret i8 %rem
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

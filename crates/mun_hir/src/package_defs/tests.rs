@@ -1,6 +1,6 @@
 use crate::{
-    db::DefDatabase, fixture::WithFixture, ids::ItemDefinitionId, mock::MockDatabase,
-    package_defs::PackageDefs, DiagnosticSink, Function, HirDatabase, Module, Package, Struct,
+    db::DefDatabase, ids::ItemDefinitionId, mock::MockDatabase, package_defs::PackageDefs,
+    with_fixture::WithFixture, DiagnosticSink, Function, HirDatabase, Module, Package, Struct,
     TypeAlias,
 };
 use itertools::Itertools;

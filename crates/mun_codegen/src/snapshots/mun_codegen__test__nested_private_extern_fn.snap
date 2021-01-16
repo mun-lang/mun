@@ -1,9 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "extern fn extern_fn() -> f32;\n\nfn private_fn() -> f32 {\n    extern_fn()\n}\n\npub fn main() -> f32 {\n    private_fn()\n}"
-
+expression: "\n    extern fn extern_fn() -> f32;\n\n    fn private_fn() -> f32 {\n        extern_fn()\n    }\n\n    pub fn main() -> f32 {\n        private_fn()\n    }\n    "
 ---
-; == FILE IR =====================================
+; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
@@ -26,8 +25,7 @@ body:
   ret float %private_fn
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

@@ -1,0 +1,57 @@
+---
+source: crates/mun_codegen/src/test.rs
+expression: "\n    //- /mod.mun\n    pub fn main() -> i32 {\n        foo::get_value()\n    }\n\n    //- /foo.mun\n    pub(super) fn get_value() -> i32 {\n        3\n    }\n    "
+
+---
+; == FILE IR (mod) =====================================
+; ModuleID = 'mod'
+source_filename = "mod"
+
+%DispatchTable = type { i32 ()* }
+%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
+
+@dispatchTable = external global %DispatchTable
+@global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
+
+define i32 @main() {
+body:
+  %get_value_ptr = load i32 ()*, i32 ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
+  %get_value = call i32 %get_value_ptr()
+  ret i32 %get_value
+}
+
+; == GROUP IR (mod) ====================================
+; ModuleID = 'group_name'
+source_filename = "group_name"
+
+%DispatchTable = type { i32 ()* }
+%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
+
+@dispatchTable = global %DispatchTable zeroinitializer
+@"type_info::<core::i32>::name" = private unnamed_addr constant [10 x i8] c"core::i32\00"
+@"type_info::<core::i32>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" <{ [0 x i64] zeroinitializer, [16 x i8] c"\17yzt\19\D62\17\D25\95C\17\88[\FA", [0 x i64] zeroinitializer, i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::i32>::name", i32 0, i32 0), [0 x i64] zeroinitializer, i32 32, [0 x i64] zeroinitializer, i8 4, [0 x i64] zeroinitializer, i8 0, [1 x i16] zeroinitializer }>
+@global_type_table = constant [1 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::i32>"]
+
+; == FILE IR (foo) =====================================
+; ModuleID = 'foo'
+source_filename = "foo"
+
+%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
+
+@global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
+
+define i32 @get_value() {
+body:
+  ret i32 3
+}
+
+; == GROUP IR (foo) ====================================
+; ModuleID = 'group_name'
+source_filename = "group_name"
+
+%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
+
+@"type_info::<core::i32>::name" = private unnamed_addr constant [10 x i8] c"core::i32\00"
+@"type_info::<core::i32>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" <{ [0 x i64] zeroinitializer, [16 x i8] c"\17yzt\19\D62\17\D25\95C\17\88[\FA", [0 x i64] zeroinitializer, i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::i32>::name", i32 0, i32 0), [0 x i64] zeroinitializer, i32 32, [0 x i64] zeroinitializer, i8 4, [0 x i64] zeroinitializer, i8 0, [1 x i16] zeroinitializer }>
+@global_type_table = constant [1 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::i32>"]
+

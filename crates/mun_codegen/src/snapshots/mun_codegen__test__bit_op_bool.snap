@@ -1,8 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "pub fn not(a: bool) -> bool { !a }\npub fn bitand(a: bool, b: bool) -> bool { a & b }\npub fn bitor(a: bool, b: bool) -> bool { a | b }\npub fn bitxor(a: bool, b: bool) -> bool { a ^ b }"
+expression: "\n    pub fn not(a: bool) -> bool { !a }\n    pub fn bitand(a: bool, b: bool) -> bool { a & b }\n    pub fn bitor(a: bool, b: bool) -> bool { a | b }\n    pub fn bitxor(a: bool, b: bool) -> bool { a ^ b }\n                        "
 ---
-; == FILE IR =====================================
+; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
@@ -34,8 +34,7 @@ body:
   ret i1 %bit_xor
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

@@ -1,8 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "pub fn add(a: i64, b: i64) -> i64 { a + b }\npub fn subtract(a: i64, b: i64) -> i64 { a - b }\npub fn multiply(a: i64, b: i64) -> i64 { a * b }\npub fn divide(a: i64, b: i64) -> i64 { a / b }\npub fn remainder(a: i64, b: i64) -> i64 { a % b }"
+expression: "\n    pub fn add(a: i64, b: i64) -> i64 { a + b }\n    pub fn subtract(a: i64, b: i64) -> i64 { a - b }\n    pub fn multiply(a: i64, b: i64) -> i64 { a * b }\n    pub fn divide(a: i64, b: i64) -> i64 { a / b }\n    pub fn remainder(a: i64, b: i64) -> i64 { a % b }\n                        "
 ---
-; == FILE IR =====================================
+; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
@@ -40,8 +40,7 @@ body:
   ret i64 %rem
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

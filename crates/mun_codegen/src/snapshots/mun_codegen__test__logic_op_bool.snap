@@ -1,8 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "pub fn and(a: bool, b: bool) -> bool {\n    a && b\n}\npub fn or(a: bool, b: bool) -> bool {\n    a || b\n}"
+expression: "\n    pub fn and(a: bool, b: bool) -> bool {\n        a && b\n    }\n    pub fn or(a: bool, b: bool) -> bool {\n        a || b\n    }    \n    "
 ---
-; == FILE IR =====================================
+; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
@@ -22,8 +22,7 @@ body:
   ret i1 %or
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

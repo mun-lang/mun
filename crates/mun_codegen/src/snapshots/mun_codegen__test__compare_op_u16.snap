@@ -1,8 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "pub fn equals(a: u16, b: u16) -> bool { a == b }\npub fn not_equal(a: u16, b: u16) -> bool { a != b}\npub fn less(a: u16, b: u16) -> bool { a < b }\npub fn less_equal(a: u16, b: u16) -> bool { a <= b }\npub fn greater(a: u16, b: u16) -> bool { a > b }\npub fn greater_equal(a: u16, b: u16) -> bool { a >= b }"
+expression: "\n    pub fn equals(a: u16, b: u16) -> bool { a == b }\n    pub fn not_equal(a: u16, b: u16) -> bool { a != b}\n    pub fn less(a: u16, b: u16) -> bool { a < b }\n    pub fn less_equal(a: u16, b: u16) -> bool { a <= b }\n    pub fn greater(a: u16, b: u16) -> bool { a > b }\n    pub fn greater_equal(a: u16, b: u16) -> bool { a >= b }\n                        "
 ---
-; == FILE IR =====================================
+; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
@@ -46,8 +46,7 @@ body:
   ret i1 %greatereq
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

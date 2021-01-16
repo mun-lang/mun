@@ -1,8 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "pub fn leftshift(a: u64, b: u64) -> u64 { a << b }\npub fn rightshift(a: u64, b: u64) -> u64 { a >> b }"
+expression: "\n    pub fn leftshift(a: u64, b: u64) -> u64 { a << b }\n    pub fn rightshift(a: u64, b: u64) -> u64 { a >> b }\n                        "
 ---
-; == FILE IR =====================================
+; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
@@ -22,8 +22,7 @@ body:
   ret i64 %right_shift
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

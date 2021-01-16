@@ -30,8 +30,6 @@ pub struct FileGroupIR<'ink> {
 }
 
 /// Generates IR that is shared among the group's files.
-/// TODO: Currently, a group always consists of a single file. Need to add support for multiple
-///  files using something like `FileGroupId`.
 pub(crate) fn gen_file_group_ir<'db, 'ink>(
     code_gen: &CodeGenContext<'db, 'ink>,
     module_group: &ModuleGroup,
@@ -123,6 +121,7 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
         intrinsics_map.keys(),
         &dispatch_table,
         &code_gen.hir_types,
+        module_group,
     );
 
     // Collect all used types

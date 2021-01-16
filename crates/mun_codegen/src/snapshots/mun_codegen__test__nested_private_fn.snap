@@ -1,9 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "fn nested_private_fn() -> i32 {\n    1\n}\n\nfn private_fn() -> i32 {\n    nested_private_fn()\n}\n\npub fn main() -> i32 {\n    private_fn()\n}"
-
+expression: "\n    fn nested_private_fn() -> i32 {\n        1\n    }\n\n    fn private_fn() -> i32 {\n        nested_private_fn()\n    }\n\n    pub fn main() -> i32 {\n        private_fn()\n    }\n    "
 ---
-; == FILE IR =====================================
+; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
@@ -28,8 +27,7 @@ body:
   ret i32 %private_fn
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

@@ -1,8 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "pub  fn fact(n: usize) -> usize {\n   \t    if n == 0 {return 1} else {return n * (n-1)}\n   \t    return 2;\n}"
+expression: "\n    pub  fn fact(n: usize) -> usize {\n   \t    if n == 0 {return 1} else {return n * (n-1)}\n   \t    return 2;\n    }\n    "
 ---
-; == FILE IR =====================================
+; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
@@ -24,8 +24,7 @@ else:                                             ; preds = %body
   ret i64 %mul
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

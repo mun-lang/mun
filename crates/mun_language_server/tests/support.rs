@@ -1,11 +1,11 @@
 use crossbeam_channel::{after, select};
+use hir::fixture::Fixture;
 use lsp_server::{Connection, Message, Notification, Request};
 use lsp_types::{
     notification::Exit, request::Shutdown, ProgressParams, ProgressParamsValue, Url,
     WorkDoneProgress,
 };
 use mun_language_server::{main_loop, Config, FilesWatcher};
-use mun_test::Fixture;
 use paths::AbsPathBuf;
 use project::ProjectManifest;
 use serde::Serialize;

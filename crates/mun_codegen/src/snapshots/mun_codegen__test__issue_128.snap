@@ -1,8 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "// resources/script.mun\nextern fn thing(n: i32);\nextern fn print(n: i32) -> i32;\n\npub fn main() {\n    // 1st\n    print(1);\n    thing(5);\n\n    // 2nd\n    print(2);\n    thing(78);\n}"
+expression: "\n    // resources/script.mun\n    extern fn thing(n: i32);\n    extern fn print(n: i32) -> i32;\n\n    pub fn main() {\n        // 1st\n        print(1);\n        thing(5);\n\n        // 2nd\n        print(2);\n        thing(78);\n    }\n    "
 ---
-; == FILE IR =====================================
+; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
@@ -25,8 +25,7 @@ body:
   ret void
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
