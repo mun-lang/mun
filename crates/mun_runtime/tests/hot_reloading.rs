@@ -17,6 +17,7 @@ fn hotreloadable() {
     let runtime = driver.runtime();
     driver.update(
         runtime.borrow(),
+        "mod.mun",
         r"
     pub fn main() -> i32 { 10 }
     ",
@@ -48,6 +49,7 @@ fn hotreload_struct_decl() {
     let runtime = driver.runtime();
     driver.update(
         runtime.borrow(),
+        "mod.mun",
         r#"
     struct(gc) Args {
         n: i32,

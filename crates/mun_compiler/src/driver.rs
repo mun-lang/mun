@@ -102,6 +102,10 @@ impl Driver {
         package_set.add_package(WORKSPACE);
         driver.db.set_packages(Arc::new(package_set));
 
+        driver
+            .path_to_file_id
+            .insert(RelativePathBuf::from("mod.mun"), file_id);
+
         Ok((driver, file_id))
     }
 
@@ -196,9 +200,18 @@ impl Driver {
 
 impl Driver {
     /// Sets the contents of a specific file.
-    pub fn set_file_text<T: AsRef<str>>(&mut self, file_id: FileId, text: T) {
+    pub fn set_file_text(
+        &mut self,
+        path: impl AsRef<RelativePath>,
+        text: impl AsRef<str>,
+    ) -> anyhow::Result<()> {
+        let file_id = self
+            .path_to_file_id
+            .get(path.as_ref())
+            .ok_or_else(|| anyhow::anyhow!("the path '{}' is unknown", path.as_ref()))?;
         self.db
-            .set_file_text(file_id, Arc::from(text.as_ref().to_owned()));
+            .set_file_text(*file_id, Arc::from(text.as_ref().to_owned()));
+        Ok(())
     }
 }
 
