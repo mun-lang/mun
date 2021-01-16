@@ -117,6 +117,6 @@ impl ModuleGroup {
 
     /// Returns the filename for this module group
     pub fn relative_file_path(&self) -> paths::RelativePathBuf {
-        paths::RelativePathBuf::from(self.name.replace("::", "_"))
+        paths::RelativePathBuf::from(self.name.replace("::", "$"))
     }
 }

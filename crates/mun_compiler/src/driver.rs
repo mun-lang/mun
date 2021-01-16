@@ -25,9 +25,11 @@ use mun_project::Package;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::path::Path;
+use std::time::Duration;
 use walkdir::WalkDir;
 
 pub const WORKSPACE: SourceRootId = SourceRootId(0);
+pub const LOCKFILE_NAME: &str = ".munlock";
 
 pub struct Driver {
     db: CompilerDatabase,
@@ -318,6 +320,8 @@ impl Driver {
     /// Writes all assemblies. If `force` is false, the binary will not be written if there are no
     /// changes since last time it was written.
     pub fn write_all_assemblies(&mut self, force: bool) -> Result<(), anyhow::Error> {
+        let _lock = self.acquire_filesystem_output_lock();
+
         // Create a copy of all current files
         for package in hir::Package::all(self.db.upcast()) {
             for module in package.modules(self.db.upcast()) {
@@ -328,14 +332,37 @@ impl Driver {
                 }
             }
         }
+
         Ok(())
+    }
+
+    /// Acquires a filesystem lock on the output directory. This ensures that multiple instances
+    /// cannot write to the same output directory and that the runtime does not start reading before
+    /// we finished writing.
+    fn acquire_filesystem_output_lock(&self) -> lockfile::Lockfile {
+        loop {
+            match lockfile::Lockfile::create(self.out_dir.join(LOCKFILE_NAME)) {
+                Ok(lockfile) => break lockfile,
+                Err(_) => {
+                    if self.display_color.should_enable() {
+                        eprintln!(
+                            "{} on acquiring lock on output directory",
+                            yansi_term::Color::Cyan.paint("Blocked")
+                        )
+                    } else {
+                        eprintln!("Blocked on acquiring lock on output directory")
+                    }
+                    std::thread::sleep(Duration::from_secs(1))
+                }
+            };
+        }
     }
 
     /// Generates an assembly for the target machine and specified module and stores it in the
     /// output location. If `force` is false, the binary will not be written if there are no
     /// changes since last time it was written. Returns `true` if the assembly was written, `false`
     /// if it was up to date.
-    pub fn write_target_assembly(
+    fn write_target_assembly(
         &mut self,
         module: Module,
         force: bool,
@@ -380,7 +407,7 @@ impl Driver {
     }
 
     /// Generates IR for the specified module and stores it in the output location.
-    pub fn write_assembly_ir(&mut self, module: hir::Module) -> Result<(), anyhow::Error> {
+    fn write_assembly_ir(&mut self, module: hir::Module) -> Result<(), anyhow::Error> {
         log::trace!("writing assembly IR for {:?}", module);
 
         // Find the module group to which the module belongs
