@@ -123,7 +123,7 @@ impl Module {
             .iter()
             .filter_map(|&module| module.name(db))
             .map(|name| name.to_string())
-            .intersperse("::".to_owned())
+            .intersperse(String::from("::"))
             .collect()
     }
 }

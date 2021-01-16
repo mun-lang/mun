@@ -99,7 +99,7 @@ impl TypeInfo {
     }
 
     pub fn new_struct(db: &dyn HirDatabase, s: hir::Struct, type_size: TypeSize) -> TypeInfo {
-        let name = s.name(db).to_string();
+        let name = s.full_name(db);
         let guid_string = {
             let fields: Vec<String> = s
                 .fields(db)

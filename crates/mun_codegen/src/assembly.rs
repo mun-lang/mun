@@ -1,6 +1,6 @@
 use crate::module_group::ModuleGroup;
 use crate::{
-    code_gen::{CodeGenContext, ModuleBuilder, ObjectFile},
+    code_gen::{AssemblyBuilder, CodeGenContext, ObjectFile},
     db::CodeGenDatabase,
 };
 use anyhow::anyhow;
@@ -45,8 +45,8 @@ fn build_assembly<'db, 'ink, 'ctx>(
     code_gen_context: &'ctx CodeGenContext<'db, 'ink>,
     module_group: ModuleGroup,
 ) -> Assembly<'db, 'ink, 'ctx> {
-    let module_builder =
-        ModuleBuilder::new(code_gen_context, module_group).expect("could not create ModuleBuilder");
+    let module_builder = AssemblyBuilder::new(code_gen_context, module_group)
+        .expect("could not create ModuleBuilder");
 
     module_builder.build().expect("unable to create assembly")
 }

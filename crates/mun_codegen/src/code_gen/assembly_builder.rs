@@ -8,13 +8,13 @@ use crate::{
 use inkwell::module::{Linkage, Module};
 
 /// A struct that can be used to build an LLVM `Module`.
-pub struct ModuleBuilder<'db, 'ink, 'ctx> {
+pub struct AssemblyBuilder<'db, 'ink, 'ctx> {
     code_gen: &'ctx CodeGenContext<'db, 'ink>,
     module_group: ModuleGroup,
     assembly_module: Module<'ink>,
 }
 
-impl<'db, 'ink, 'ctx> ModuleBuilder<'db, 'ink, 'ctx> {
+impl<'db, 'ink, 'ctx> AssemblyBuilder<'db, 'ink, 'ctx> {
     /// Constructs a module for the given `hir::FileId` using the provided `CodeGenContext`.
     pub(crate) fn new(
         code_gen: &'ctx CodeGenContext<'db, 'ink>,

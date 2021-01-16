@@ -283,7 +283,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
         hir_struct: hir::Struct,
     ) -> Value<'ink, ir::StructInfo<'ink>> {
         let struct_ir = self.hir_types.get_struct_type(hir_struct);
-        let name = hir_struct.name(self.db).to_string();
+        let name = hir_struct.full_name(self.db);
         let fields = hir_struct.fields(self.db);
 
         // Construct an array of field names (or null if there are no fields)

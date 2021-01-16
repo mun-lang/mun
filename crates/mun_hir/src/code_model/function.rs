@@ -10,7 +10,9 @@ use crate::{
     Body, DefDatabase, DiagnosticSink, FileId, HasVisibility, HirDatabase, InferenceResult, Name,
     Ty, Visibility,
 };
+use itertools::Itertools;
 use mun_syntax::ast::TypeAscriptionOwner;
+use std::iter::once;
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
@@ -101,6 +103,18 @@ impl Function {
         Module {
             id: self.id.lookup(db.upcast()).module,
         }
+    }
+
+    /// Returns the full name of the function including all module specifiers (e.g: `foo::bar`).
+    pub fn full_name(self, db: &dyn HirDatabase) -> String {
+        self.module(db)
+            .path_to_root(db)
+            .into_iter()
+            .filter_map(|module| module.name(db))
+            .chain(once(self.name(db)))
+            .map(|name| name.to_string())
+            .intersperse(String::from("::"))
+            .collect()
     }
 
     pub fn file_id(self, db: &dyn HirDatabase) -> FileId {

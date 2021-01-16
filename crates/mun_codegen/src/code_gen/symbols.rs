@@ -21,7 +21,7 @@ fn gen_prototype_from_function<'ink>(
     hir_types: &HirTypeCache,
 ) -> ir::FunctionPrototype<'ink> {
     let module = context.module;
-    let name = function.name(db).to_string();
+    let name = function.full_name(db);
 
     // Internalize the name of the function prototype
     let name_str = CString::new(name.clone())

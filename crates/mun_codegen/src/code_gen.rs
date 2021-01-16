@@ -4,14 +4,14 @@ use inkwell::{
     OptimizationLevel,
 };
 
+pub use assembly_builder::AssemblyBuilder;
 pub use context::CodeGenContext;
 pub use error::CodeGenerationError;
-pub use module_builder::ModuleBuilder;
 pub(crate) use object_file::ObjectFile;
 
+mod assembly_builder;
 mod context;
 mod error;
-mod module_builder;
 mod object_file;
 pub mod symbols;
 

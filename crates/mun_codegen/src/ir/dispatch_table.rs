@@ -275,7 +275,7 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
 
         // If the function is not yet contained in the table, add it
         if !self.function_to_idx.contains_key(&function) {
-            let name = function.name(self.db).to_string();
+            let name = function.full_name(self.db);
             let hir_type = function.ty(self.db);
             let sig = hir_type.callable_sig(self.db).unwrap();
             let ir_type = self.hir_types.get_function_type(function);

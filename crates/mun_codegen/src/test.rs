@@ -1,5 +1,5 @@
 use crate::{
-    code_gen::{CodeGenContext, ModuleBuilder},
+    code_gen::{AssemblyBuilder, CodeGenContext},
     ir::file::gen_file_ir,
     ir::file_group::gen_file_group_ir,
     mock::MockDatabase,
@@ -1002,7 +1002,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
 
     // To ensure that we test symbol generation
     if messages.is_empty() {
-        let module_builder = ModuleBuilder::new(&code_gen, module_group)
+        let module_builder = AssemblyBuilder::new(&code_gen, module_group)
             .expect("Failed to initialize module builder");
         let _obj_file = module_builder.build().expect("Failed to build object file");
     }
