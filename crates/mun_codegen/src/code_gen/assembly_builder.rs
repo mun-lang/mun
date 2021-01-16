@@ -8,7 +8,7 @@ use crate::{
 use inkwell::module::{Linkage, Module};
 use rustc_hash::FxHashSet;
 
-/// A struct that can be used to build an LLVM `Module`.
+/// A struct that can be used to build an `Assembly<'db, 'ink', ctx>`
 pub struct AssemblyBuilder<'db, 'ink, 'ctx, 't> {
     code_gen: &'ctx CodeGenContext<'db, 'ink>,
     module_group_partition: &'t ModulePartition,
@@ -17,7 +17,7 @@ pub struct AssemblyBuilder<'db, 'ink, 'ctx, 't> {
 }
 
 impl<'db, 'ink, 'ctx, 't> AssemblyBuilder<'db, 'ink, 'ctx, 't> {
-    /// Constructs a module for the given `hir::FileId` using the provided `CodeGenContext`.
+    /// Constructs a new `AssemblyBuilder` for the given module group.
     pub(crate) fn new(
         code_gen: &'ctx CodeGenContext<'db, 'ink>,
         module_group_partition: &'t ModulePartition,

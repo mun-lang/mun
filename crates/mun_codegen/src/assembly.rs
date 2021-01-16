@@ -88,9 +88,11 @@ pub(crate) fn build_target_assembly(
     db: &dyn CodeGenDatabase,
     module_group: ModuleGroupId,
 ) -> Arc<TargetAssembly> {
-    // Build an assembly for the module
+    // Setup the code generation context
     let inkwell_context = Context::create();
     let code_gen_context = CodeGenContext::new(&inkwell_context, db);
+
+    // Build an assembly for the module
     let assembly = build_assembly(db, &code_gen_context, module_group);
 
     // Convert the assembly into an object file
@@ -142,9 +144,11 @@ pub(crate) fn build_assembly_ir(
     db: &dyn CodeGenDatabase,
     module_group: ModuleGroupId,
 ) -> Arc<AssemblyIR> {
-    // Build an assembly for the file
+    // Setup the code generation context
     let inkwell_context = Context::create();
     let code_gen_context = CodeGenContext::new(&inkwell_context, db);
+
+    // Build an assembly for the module
     let assembly = build_assembly(db, &code_gen_context, module_group);
 
     // Construct a temporary file for the assembly
