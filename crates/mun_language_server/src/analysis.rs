@@ -1,8 +1,7 @@
-use crate::cancelation::Canceled;
-use crate::change::AnalysisChange;
-use crate::db::AnalysisDatabase;
-use crate::diagnostics::Diagnostic;
-use crate::{diagnostics, file_structure};
+use crate::{
+    cancelation::Canceled, change::AnalysisChange, db::AnalysisDatabase, diagnostics,
+    diagnostics::Diagnostic, file_structure,
+};
 use hir::{line_index::LineIndex, AstDatabase, SourceDatabase};
 use salsa::{ParallelDatabase, Snapshot};
 use std::sync::Arc;

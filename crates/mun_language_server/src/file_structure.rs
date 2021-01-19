@@ -77,7 +77,7 @@ fn try_convert_to_structure_node(node: &SyntaxNode) -> Option<StructureNode> {
         })
     }
 
-    /// Given an SyntaxNode get the text without any whitespaces
+    /// Given a `SyntaxNode` get the text without any whitespaces
     fn collapse_whitespaces(node: &SyntaxNode, output: &mut String) {
         let mut can_insert_ws = false;
         node.text().for_each_chunk(|chunk| {
@@ -96,7 +96,7 @@ fn try_convert_to_structure_node(node: &SyntaxNode) -> Option<StructureNode> {
         })
     }
 
-    /// Given a SyntaxNode construct an StructureNode by referring to the type of a node.
+    /// Given a `SyntaxNode` construct a `StructureNode` by referring to the type of a node.
     fn decl_with_type_ref<N: NameOwner>(
         node: &N,
         type_ref: Option<ast::TypeRef>,

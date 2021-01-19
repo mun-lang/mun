@@ -23,7 +23,7 @@ impl<'a> RequestDispatcher<'a> {
     /// Try to dispatch the event as the given Request type on the current thread.
     pub fn on_sync<R>(
         &mut self,
-        f: fn(&mut LanguageServerState, R::Params) -> anyhow::Result<R::Result>,
+        compute_response_fn: fn(&mut LanguageServerState, R::Params) -> anyhow::Result<R::Result>,
     ) -> anyhow::Result<&mut Self>
     where
         R: lsp_types::request::Request + 'static,
@@ -35,7 +35,7 @@ impl<'a> RequestDispatcher<'a> {
             None => return Ok(self),
         };
 
-        let result = f(self.state, params);
+        let result = compute_response_fn(self.state, params);
         let response = result_to_response::<R>(id, result);
         self.state.respond(response);
         Ok(self)
@@ -44,7 +44,7 @@ impl<'a> RequestDispatcher<'a> {
     /// Try to dispatch the event as the given Request type on the thread pool.
     pub fn on<R>(
         &mut self,
-        f: fn(LanguageServerSnapshot, R::Params) -> anyhow::Result<R::Result>,
+        compute_response_fn: fn(LanguageServerSnapshot, R::Params) -> anyhow::Result<R::Result>,
     ) -> anyhow::Result<&mut Self>
     where
         R: lsp_types::request::Request + 'static,
@@ -61,7 +61,7 @@ impl<'a> RequestDispatcher<'a> {
             let sender = self.state.task_sender.clone();
 
             move || {
-                let result = f(snapshot, params);
+                let result = compute_response_fn(snapshot, params);
                 sender
                     .send(Task::Response(result_to_response::<R>(id, result)))
                     .unwrap();
@@ -131,7 +131,7 @@ impl<'a> NotificationDispatcher<'a> {
     /// Try to dispatch the event as the given Notification type.
     pub fn on<N>(
         &mut self,
-        f: fn(&mut LanguageServerState, N::Params) -> anyhow::Result<()>,
+        handle_notification_fn: fn(&mut LanguageServerState, N::Params) -> anyhow::Result<()>,
     ) -> anyhow::Result<&mut Self>
     where
         N: lsp_types::notification::Notification + 'static,
@@ -148,7 +148,7 @@ impl<'a> NotificationDispatcher<'a> {
                 return Ok(self);
             }
         };
-        f(self.state, params)?;
+        handle_notification_fn(self.state, params)?;
         Ok(self)
     }
 
