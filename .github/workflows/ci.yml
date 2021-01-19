@@ -45,15 +45,15 @@ jobs:
         with:
           submodules: true
 
+      - name: Install LLVM
+        uses: ./.github/actions/install-llvm
+
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           override: true
           components: rustfmt
-
-      - name: Install LLVM
-        uses: ./.github/actions/install-llvm
 
       - name: Cargo build
         if: ${{ matrix.config.os == 'ubuntu-latest' }}

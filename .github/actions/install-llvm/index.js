@@ -36,15 +36,17 @@ export async function execute(cmd) {
             let llvmPath = await execute("brew --prefix llvm@8");
             core.addPath(`${llvmPath}/bin`)   
         } else if(isWindows) {
-            let llvmCachedPath = tc.find("llvm", "8.0.1", "windows-x64");
-            if(!llvmCachedPath) {
-                let _7zPath = path.join(__dirname, '..', 'externals', '7zr.exe');
-                llvmCachedPath = await tc.downloadTool("https://github.com/mun-lang/llvm-package-windows/releases/download/v8.0.1/llvm-8.0.1-windows-x64-msvc16.7z")
-                    .then(downloadPath => tc.extract7z(downloadPath, null, _7zPath))
-                    .then(extractPath => tc.cacheDir(extractPath, "llvm", "8.0.1", "windows-x64"));
-            }
-            core.addPath(`${llvmCachedPath}/bin`)
-            core.exportVariable('LIBCLANG_PATH', `${llvmCachedPath}/bin`)
+            const downloadUrl = "https://github.com/mun-lang/llvm-package-windows/releases/download/v8.0.1/llvm-8.0.1-windows-x64-msvc16.7z"
+            core.info(`downloading LLVM from '${downloadUrl}'`)
+            const downloadLocation = await tc.downloadTool(downloadUrl);
+
+            core.info("succesfully downloaded llvm release, extracting...")
+            const _7zPath = path.join(__dirname, '..', 'externals', '7zr.exe');
+            const llvmPath = await tc.extract7z(downloadLocation, null, _7zPath)
+
+            core.info("succesfully extracted llvm release")
+            core.addPath(`${llvmPath}/bin`)
+            core.exportVariable('LIBCLANG_PATH', `${llvmPath}/bin`)
         } else {
             core.setFailed(`unsupported platform '${process.platform}'`)
         }    
