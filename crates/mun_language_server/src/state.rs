@@ -7,14 +7,14 @@ use crate::{
     to_json,
 };
 use crossbeam_channel::{select, unbounded, Receiver, Sender};
-use lsp_server::ReqQueue;
+use lsp_server::{ReqQueue, Response};
 use lsp_types::{
     notification::Notification, notification::PublishDiagnostics, PublishDiagnosticsParams, Url,
 };
 use parking_lot::RwLock;
 use paths::AbsPathBuf;
 use rustc_hash::FxHashSet;
-use std::{ops::Deref, sync::Arc, time::Instant};
+use std::{convert::TryFrom, ops::Deref, sync::Arc, time::Instant};
 use vfs::VirtualFileSystem;
 
 mod protocol;
@@ -25,6 +25,7 @@ mod workspace;
 /// enables synchronizing resources like the connection with the client.
 #[derive(Debug)]
 pub(crate) enum Task {
+    Response(Response),
     Notify(lsp_server::Notification),
 }
 
@@ -192,6 +193,7 @@ impl LanguageServerState {
             Task::Notify(notification) => {
                 self.send(notification.into());
             }
+            Task::Response(response) => self.respond(response),
         }
         Ok(())
     }
@@ -374,6 +376,23 @@ impl LanguageServerSnapshot {
         let url = url_from_path_with_drive_lowercasing(path)?;
 
         Ok(url)
+    }
+
+    /// Converts the specified `Url` to a `hir::FileId`
+    pub fn uri_to_file_id(&self, url: &Url) -> anyhow::Result<hir::FileId> {
+        url.to_file_path()
+            .map_err(|_| anyhow::anyhow!("invalid uri: {}", url))
+            .and_then(|path| {
+                AbsPathBuf::try_from(path)
+                    .map_err(|_| anyhow::anyhow!("url does not refer to absolute path: {}", url))
+            })
+            .and_then(|path| {
+                self.vfs
+                    .read()
+                    .file_id(&path)
+                    .ok_or_else(|| anyhow::anyhow!("url does not refer to a file: {}", url))
+                    .map(|id| hir::FileId(id.0))
+            })
     }
 }
 

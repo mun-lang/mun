@@ -39,3 +39,4 @@ paths = {path="../mun_paths", package="mun_paths"}
 [dev-dependencies]
 tempdir = "0.3.7"
 mun_test = { path = "../mun_test"}
+insta = "0.16"

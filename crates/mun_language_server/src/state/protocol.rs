@@ -1,5 +1,5 @@
 use super::LanguageServerState;
-use crate::{conversion::convert_uri, state::RequestHandler};
+use crate::{conversion::convert_uri, handlers, state::RequestHandler};
 use anyhow::Result;
 use dispatcher::{NotificationDispatcher, RequestDispatcher};
 use lsp_types::notification::{
@@ -87,10 +87,11 @@ impl LanguageServerState {
 
         // Dispatch the event based on the type of event
         RequestDispatcher::new(self, request)
-            .on::<lsp_types::request::Shutdown>(|state, _request| {
+            .on_sync::<lsp_types::request::Shutdown>(|state, _request| {
                 state.shutdown_requested = true;
                 Ok(())
             })?
+            .on::<lsp_types::request::DocumentSymbolRequest>(handlers::handle_document_symbol)?
             .finish();
 
         Ok(())
@@ -148,7 +149,7 @@ impl LanguageServerState {
 
     /// Sends a response to the client. This method logs the time it took us to reply
     /// to a request from the client.
-    fn respond(&mut self, response: lsp_server::Response) {
+    pub(super) fn respond(&mut self, response: lsp_server::Response) {
         if let Some((_method, start)) = self.request_queue.incoming.complete(response.id.clone()) {
             let duration = start.elapsed();
             log::info!("handled req#{} in {:?}", response.id, duration);

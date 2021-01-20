@@ -1,3 +1,4 @@
+use crate::symbol_kind::SymbolKind;
 use lsp_types::Url;
 use mun_syntax::{TextRange, TextUnit};
 use paths::AbsPathBuf;
@@ -73,4 +74,13 @@ pub fn convert_uri(uri: &Url) -> anyhow::Result<AbsPathBuf> {
         .ok()
         .and_then(|path| AbsPathBuf::try_from(path).ok())
         .ok_or_else(|| anyhow::anyhow!("invalid uri: {}", uri))
+}
+
+/// Converts a symbol kind from this crate to one for the LSP protocol.
+pub fn convert_symbol_kind(symbol_kind: SymbolKind) -> lsp_types::SymbolKind {
+    match symbol_kind {
+        SymbolKind::Function => lsp_types::SymbolKind::Function,
+        SymbolKind::Struct => lsp_types::SymbolKind::Struct,
+        SymbolKind::TypeAlias => lsp_types::SymbolKind::TypeParameter,
+    }
 }
