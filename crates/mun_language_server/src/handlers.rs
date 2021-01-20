@@ -77,6 +77,7 @@ mod tests {
 
     #[test]
     fn test_build_hierarchy_from_flat_list() {
+        #[allow(deprecated)]
         let default_symbol = DocumentSymbol {
             name: "".to_string(),
             detail: None,
