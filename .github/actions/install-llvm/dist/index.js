@@ -1189,20 +1189,31 @@ async function execute(cmd) {
             core.addPath(`${llvmPath}/bin`)   
         } else if(isWindows) {
             const downloadUrl = "https://github.com/mun-lang/llvm-package-windows/releases/download/v8.0.1/llvm-8.0.1-windows-x64-msvc16.7z"
-            core.info(`downloading LLVM from '${downloadUrl}'`)
+            core.info(`Downloading LLVM from '${downloadUrl}'`)
             const downloadLocation = await tc.downloadTool(downloadUrl);
 
-            core.info("succesfully downloaded llvm release, extracting...")
+            core.info("Succesfully downloaded LLVM release, extracting...")
+            const llvmPath = path.resolve("llvm");
             const _7zPath = path.join(__dirname, '..', 'externals', '7zr.exe');
-            const llvmPath = await tc.extract7z(downloadLocation, null, _7zPath)
+            const args = [
+                "-bsp1", // output log info
+                "x", // extract
+                downloadLocation,
+                `-o${llvmPath}`
+            ]
+            const exit = await exec.exec(_7zPath, args);
+            if(exit !== 0) {
+                throw new Error("Could not extract LLVM and Clang binaries.");
+            }
 
-            core.info("succesfully extracted llvm release")
+            core.info("Succesfully extracted LLVM release")
             core.addPath(`${llvmPath}/bin`)
             core.exportVariable('LIBCLANG_PATH', `${llvmPath}/bin`)
         } else {
             core.setFailed(`unsupported platform '${process.platform}'`)
         }    
     } catch(error) {
+        console.error(error.stack);
         core.setFailed(error.message);
     }
 })();
