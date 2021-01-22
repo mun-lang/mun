@@ -10,7 +10,7 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
 
-define i32 @foo(i32) {
+define i32 @foo(i32 %0) {
 body:
   br label %loop
 

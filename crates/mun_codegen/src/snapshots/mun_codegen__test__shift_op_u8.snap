@@ -10,13 +10,13 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
 
-define i8 @leftshift(i8, i8) {
+define i8 @leftshift(i8 %0, i8 %1) {
 body:
   %left_shift = shl i8 %0, %1
   ret i8 %left_shift
 }
 
-define i8 @rightshift(i8, i8) {
+define i8 @rightshift(i8 %0, i8 %1) {
 body:
   %right_shift = lshr i8 %0, %1
   ret i8 %right_shift

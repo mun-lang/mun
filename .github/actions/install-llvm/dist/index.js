@@ -1182,14 +1182,15 @@ async function execute(cmd) {
 (async () => {
     try {
         if(isLinux) {
-            await exec.exec("sudo apt install llvm-8 llvm-8-* liblld-8*");
+            const installScript = path.join(__dirname, "../../../../scripts/install-llvm.sh");
+            await exec.exec(`sudo ${installScript}`);
         } else if(isMacOS) {
-            await exec.exec("brew install llvm@8")
-            let llvmPath = await execute("brew --prefix llvm@8");
+            await exec.exec("brew install llvm@11")
+            let llvmPath = await execute("brew --prefix llvm@11");
             core.addPath(`${llvmPath}/bin`)   
         } else if(isWindows) {
-            const downloadUrl = "https://github.com/mun-lang/llvm-package-windows/releases/download/v8.0.1/llvm-8.0.1-windows-x64-msvc16.7z"
-            core.info(`Downloading LLVM from '${downloadUrl}'`)
+            const downloadUrl = "https://github.com/mun-lang/llvm-package-windows/releases/download/v11.0.1/llvm-11.0.1-windows-x64-msvc16.7z"
+            core.info(`downloading LLVM from '${downloadUrl}'`)
             const downloadLocation = await tc.downloadTool(downloadUrl);
 
             core.info("Succesfully downloaded LLVM release, extracting...")

@@ -19,14 +19,14 @@ body:
 
 define i32 @private_fn() {
 body:
-  %nested_private_fn_ptr = load i32 ()*, i32 ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 1)
+  %nested_private_fn_ptr = load i32 ()*, i32 ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 1), align 8
   %nested_private_fn = call i32 %nested_private_fn_ptr()
   ret i32 %nested_private_fn
 }
 
 define i32 @main() {
 body:
-  %private_fn_ptr = load i32 ()*, i32 ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
+  %private_fn_ptr = load i32 ()*, i32 ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
   %private_fn = call i32 %private_fn_ptr()
   ret i32 %private_fn
 }

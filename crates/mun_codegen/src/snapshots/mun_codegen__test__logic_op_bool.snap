@@ -10,13 +10,13 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
 
-define i1 @and(i1, i1) {
+define i1 @and(i1 %0, i1 %1) {
 body:
   %and = and i1 %0, %1
   ret i1 %and
 }
 
-define i1 @or(i1, i1) {
+define i1 @or(i1 %0, i1 %1) {
 body:
   %or = or i1 %0, %1
   ret i1 %or

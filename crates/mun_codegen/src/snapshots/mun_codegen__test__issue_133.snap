@@ -12,7 +12,7 @@ source_filename = "main.mun"
 @dispatchTable = external global %DispatchTable
 @global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
 
-define i32 @do_the_things(i32) {
+define i32 @do_the_things(i32 %0) {
 body:
   %add = add i32 %0, 7
   ret i32 %add
@@ -20,7 +20,7 @@ body:
 
 define void @main() {
 body:
-  %do_the_things_ptr = load i32 (i32)*, i32 (i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
+  %do_the_things_ptr = load i32 (i32)*, i32 (i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
   %do_the_things = call i32 %do_the_things_ptr(i32 3)
   ret void
 }

@@ -1,6 +1,6 @@
 [package]
 name = "mun_lld"
-version = "80.0.0"
+version = "110.0.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 description = "Bindings for LLD used to link Mun binaries"

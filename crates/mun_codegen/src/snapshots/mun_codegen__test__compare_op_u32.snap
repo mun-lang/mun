@@ -10,37 +10,37 @@ source_filename = "main.mun"
 
 @global_type_table = external global [2 x %"mun_codegen::ir::types::TypeInfo"*]
 
-define i1 @equals(i32, i32) {
+define i1 @equals(i32 %0, i32 %1) {
 body:
   %eq = icmp eq i32 %0, %1
   ret i1 %eq
 }
 
-define i1 @not_equal(i32, i32) {
+define i1 @not_equal(i32 %0, i32 %1) {
 body:
   %neq = icmp ne i32 %0, %1
   ret i1 %neq
 }
 
-define i1 @less(i32, i32) {
+define i1 @less(i32 %0, i32 %1) {
 body:
   %less = icmp ult i32 %0, %1
   ret i1 %less
 }
 
-define i1 @less_equal(i32, i32) {
+define i1 @less_equal(i32 %0, i32 %1) {
 body:
   %lesseq = icmp ule i32 %0, %1
   ret i1 %lesseq
 }
 
-define i1 @greater(i32, i32) {
+define i1 @greater(i32 %0, i32 %1) {
 body:
   %greater = icmp ugt i32 %0, %1
   ret i1 %greater
 }
 
-define i1 @greater_equal(i32, i32) {
+define i1 @greater_equal(i32 %0, i32 %1) {
 body:
   %greatereq = icmp uge i32 %0, %1
   ret i1 %greatereq

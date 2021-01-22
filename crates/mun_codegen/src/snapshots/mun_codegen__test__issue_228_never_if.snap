@@ -10,7 +10,7 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
 
-define i64 @fact(i64) {
+define i64 @fact(i64 %0) {
 body:
   %eq = icmp eq i64 %0, 0
   br i1 %eq, label %then, label %else

@@ -15,34 +15,34 @@ source_filename = "main.mun"
 @dispatchTable = external global %DispatchTable
 @global_type_table = external global [7 x %"mun_codegen::ir::types::TypeInfo"*]
 
-define %Foo @bar_1(%Bar) {
+define %Foo @bar_1(%Bar %0) {
 body:
   %.fca.1.0.extract = extractvalue %Bar %0, 1, 0
   %Bar.1.fca.0.insert = insertvalue %Foo undef, i32 %.fca.1.0.extract, 0
   ret %Foo %Bar.1.fca.0.insert
 }
 
-define i32 @foo_a(%Foo) {
+define i32 @foo_a(%Foo %0) {
 body:
   %.fca.0.extract = extractvalue %Foo %0, 0
   ret i32 %.fca.0.extract
 }
 
-define i32 @bar_1_foo_a(%Bar) {
+define i32 @bar_1_foo_a(%Bar %0) {
 body:
   %.fca.0.extract = extractvalue %Bar %0, 0
   %.fca.1.0.extract = extractvalue %Bar %0, 1, 0
-  %bar_1_ptr = load %Foo (%Bar)*, %Foo (%Bar)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 2)
+  %bar_1_ptr = load %Foo (%Bar)*, %Foo (%Bar)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 2), align 8
   %bar_1 = call %Foo %bar_1_ptr(%Bar %0)
-  %foo_a_ptr = load i32 (%Foo)*, i32 (%Foo)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 1)
+  %foo_a_ptr = load i32 (%Foo)*, i32 (%Foo)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 1), align 8
   %foo_a = call i32 %foo_a_ptr(%Foo %bar_1)
   ret i32 %foo_a
 }
 
-define i32 @bar_1_foo_a_wrapper(%Bar**) {
+define i32 @bar_1_foo_a_wrapper(%Bar** %0) {
 body:
-  %mem_ptr = load %Bar*, %Bar** %0
-  %deref = load %Bar, %Bar* %mem_ptr
+  %mem_ptr = load %Bar*, %Bar** %0, align 8
+  %deref = load %Bar, %Bar* %mem_ptr, align 8
   %bar_1_foo_a = call i32 @bar_1_foo_a(%Bar %deref)
   ret i32 %bar_1_foo_a
 }

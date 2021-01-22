@@ -10,36 +10,36 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
 
-define double @assign(double, double) {
+define double @assign(double %0, double %1) {
 body:
   ret double %1
 }
 
-define double @assign_add(double, double) {
+define double @assign_add(double %0, double %1) {
 body:
   %add = fadd double %0, %1
   ret double %add
 }
 
-define double @assign_subtract(double, double) {
+define double @assign_subtract(double %0, double %1) {
 body:
   %sub = fsub double %0, %1
   ret double %sub
 }
 
-define double @assign_multiply(double, double) {
+define double @assign_multiply(double %0, double %1) {
 body:
   %mul = fmul double %0, %1
   ret double %mul
 }
 
-define double @assign_divide(double, double) {
+define double @assign_divide(double %0, double %1) {
 body:
   %div = fdiv double %0, %1
   ret double %div
 }
 
-define double @assign_remainder(double, double) {
+define double @assign_remainder(double %0, double %1) {
 body:
   %rem = frem double %0, %1
   ret double %rem
