@@ -180,7 +180,7 @@ impl_fundamental_static_type_info!(
 
 impl<T: HasStaticTypeName> HasStaticTypeInfo for *mut T {
     fn type_info(context: &Context, target: &TargetData) -> TypeInfo {
-        let ty = target.ptr_sized_int_type_in_context(context, None);
+        let ty = context.ptr_sized_int_type(target, None);
         TypeInfo::new_fundamental(
             format!("*mut {}", T::type_name(context, target)),
             TypeSize::from_ir_type(&ty, target),
@@ -193,7 +193,7 @@ impl<T: HasStaticTypeName> HasStaticTypeInfo for *const T {
         context: &inkwell::context::Context,
         target: &inkwell::targets::TargetData,
     ) -> TypeInfo {
-        let ty = target.ptr_sized_int_type_in_context(context, None);
+        let ty = context.ptr_sized_int_type(target, None);
         TypeInfo::new_fundamental(
             format!("*const {}", T::type_name(context, target)),
             TypeSize::from_ir_type(&ty, target),

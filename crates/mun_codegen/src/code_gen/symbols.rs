@@ -301,11 +301,18 @@ fn gen_get_info_fn<'ink>(
     };
 
     // Get access to the structs internals
-    let symbols_addr = unsafe { builder.build_struct_gep(result_ptr, 1, "symbols") };
-    let dispatch_table_addr = unsafe { builder.build_struct_gep(result_ptr, 3, "dispatch_table") };
-    let dependencies_addr = unsafe { builder.build_struct_gep(result_ptr, 5, "dependencies") };
-    let num_dependencies_addr =
-        unsafe { builder.build_struct_gep(result_ptr, 7, "num_dependencies") };
+    let symbols_addr = builder
+        .build_struct_gep(result_ptr, 1, "symbols")
+        .expect("could not retrieve `symbols` from result struct");
+    let dispatch_table_addr = builder
+        .build_struct_gep(result_ptr, 3, "dispatch_table")
+        .expect("could not retrieve `dispatch_table` from result struct");
+    let dependencies_addr = builder
+        .build_struct_gep(result_ptr, 5, "dependencies")
+        .expect("could not retrieve `dependencies` from result struct");
+    let num_dependencies_addr = builder
+        .build_struct_gep(result_ptr, 7, "num_dependencies")
+        .expect("could not retrieve `num_dependencies` from result struct");
 
     // Assign the struct values one by one.
     builder.build_store(symbols_addr, module_info.as_value(context).value);

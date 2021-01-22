@@ -210,13 +210,13 @@ macro_rules! impl_array_type {
         $(
             impl<'ink> ConstArrayType<'ink> for $inkwell_type {
                 fn const_array(self, values: &[<Self as TypeValue<'ink>>::Value]) -> inkwell::values::ArrayValue<'ink> {
-                    <$inkwell_type>::const_array(&self, values)
+                    <$inkwell_type>::const_array(self, values)
                 }
             }
 
             impl<'ink> ConstArrayValue<'ink> for $inkwell_value {
                fn const_array(values: &[Self], ir_type: Self::Type) -> inkwell::values::ArrayValue<'ink> {
-                    Self::Type::const_array(&ir_type, values)
+                    Self::Type::const_array(ir_type, values)
                }
             }
         )*
