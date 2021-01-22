@@ -43,18 +43,28 @@ export async function execute(cmd) {
             core.info("Succesfully downloaded LLVM release, extracting...")
             const llvmPath = path.resolve("llvm");
             const _7zPath = path.join(__dirname, '..', 'externals', '7zr.exe');
-            const args = [
-                "-bsp1", // output log info
-                "x", // extract
-                downloadLocation,
-                `-o${llvmPath}`
-            ]
-            const exit = await exec.exec(_7zPath, args);
-            if(exit !== 0) {
-                throw new Error("Could not extract LLVM and Clang binaries.");
+            let attempt = 1;
+            while(true) {
+                const args = [
+                    "x", // extract
+                    downloadLocation,
+                    `-o${llvmPath}`
+                ]
+                const exit = await exec.exec(_7zPath, args);
+                if(exit === 2 && attempt <= 4) {
+                    attempt += 1;
+                    console.error(`Error extracting LLVM release, retrying attempt #${attempt} after 1s..`)
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+                else if (exit !== 0) {
+                    throw new Error("Could not extract LLVM and Clang binaries.");
+                }
+                else {
+                    core.info("Succesfully extracted LLVM release")
+                    break;
+                }
             }
 
-            core.info("Succesfully extracted LLVM release")
             core.addPath(`${llvmPath}/bin`)
             core.exportVariable('LIBCLANG_PATH', `${llvmPath}/bin`)
         } else {
