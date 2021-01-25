@@ -5,7 +5,6 @@ use std::io;
 mod util;
 
 #[test]
-#[ignore]
 fn multiple_modules() {
     let driver = CompileAndRunTestDriver::from_fixture(
         r#"
@@ -19,6 +18,30 @@ fn multiple_modules() {
 
     //- /src/foo.mun
     pub fn foo() -> i32 { 5 }
+    "#,
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
+
+    assert_invoke_eq!(i32, 5, driver, "main");
+}
+
+#[test]
+fn cyclic_modules() {
+    let driver = CompileAndRunTestDriver::from_fixture(
+        r#"
+    //- /mun.toml
+    [package]
+    name="foo"
+    version="0.0.0"
+
+    //- /src/mod.mun
+    pub fn main() -> i32 { foo::foo() }
+
+    fn bar() -> i32 { 5 }
+
+    //- /src/foo.mun
+    pub fn foo() -> i32 { super::bar() }
     "#,
         |builder| builder,
     )
@@ -61,7 +84,7 @@ fn error_assembly_not_linkable() {
             "{}",
             io::Error::new(
                 io::ErrorKind::NotFound,
-                format!("Failed to link: function `dependency` is missing."),
+                format!("Failed to link due to missing dependencies."),
             )
         )
     );

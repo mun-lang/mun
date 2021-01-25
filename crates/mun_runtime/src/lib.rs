@@ -13,14 +13,13 @@ mod adt;
 mod marshal;
 mod reflection;
 
-use anyhow::Error;
 use garbage_collector::GarbageCollector;
 use memory::gc::{self, GcRuntime};
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 use rustc_hash::FxHashMap;
 use std::{
     cell::RefCell,
-    collections::HashMap,
+    collections::{HashMap, VecDeque},
     ffi, io, mem,
     path::{Path, PathBuf},
     ptr::NonNull,
@@ -86,7 +85,7 @@ impl RuntimeBuilder {
     }
 
     /// Spawns a [`Runtime`] with the builder's options.
-    pub fn spawn(self) -> Result<Rc<RefCell<Runtime>>, Error> {
+    pub fn spawn(self) -> anyhow::Result<Rc<RefCell<Runtime>>> {
         Runtime::new(self.options).map(|runtime| Rc::new(RefCell::new(runtime)))
     }
 }
@@ -96,7 +95,7 @@ type Dependency<T> = (T, DependencyCounter);
 type DependencyMap<T> = FxHashMap<String, Dependency<T>>;
 
 /// A runtime dispatch table that maps full paths to function and struct information.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct DispatchTable {
     functions: FxHashMap<String, abi::FunctionDefinition>,
     fn_dependencies: FxHashMap<String, DependencyMap<abi::FunctionPrototype>>,
@@ -161,6 +160,14 @@ impl DispatchTable {
 }
 
 /// A runtime for the Mun language.
+///
+/// # Logging
+///
+/// The runtime uses [log] as a logging facade, but does not install a logger. To produce log
+/// output, you have to use a [logger implementation][log-impl] compatible with the facade.
+///
+/// [log]: https://docs.rs/log
+/// [log-impl]: https://docs.rs/log/0.4.13/log/#available-logging-implementations
 pub struct Runtime {
     assemblies: HashMap<PathBuf, Assembly>,
     dispatch_table: DispatchTable,
@@ -202,7 +209,7 @@ impl Runtime {
     /// Constructs a new `Runtime` that loads the library at `library_path` and its
     /// dependencies. The `Runtime` contains a file watcher that is triggered with an interval
     /// of `dur`.
-    pub fn new(mut options: RuntimeOptions) -> Result<Runtime, Error> {
+    pub fn new(mut options: RuntimeOptions) -> anyhow::Result<Runtime> {
         let (tx, rx) = channel();
 
         let mut dispatch_table = DispatchTable::default();
@@ -234,7 +241,7 @@ impl Runtime {
     }
 
     /// Adds an assembly corresponding to the library at `library_path`.
-    fn add_assembly(&mut self, library_path: &Path) -> Result<(), Error> {
+    fn add_assembly(&mut self, library_path: &Path) -> anyhow::Result<()> {
         let library_path = library_path.canonicalize()?;
         if self.assemblies.contains_key(&library_path) {
             return Err(io::Error::new(
@@ -244,21 +251,48 @@ impl Runtime {
             .into());
         }
 
-        let mut assembly = Assembly::load(&library_path, self.gc.clone(), &self.dispatch_table)?;
-        for dependency in assembly.info().dependencies() {
-            self.add_assembly(Path::new(dependency))?;
+        let mut loaded = HashMap::new();
+        let mut to_load = VecDeque::new();
+        to_load.push_back(library_path);
+
+        // Load all assemblies and their dependencies
+        while let Some(library_path) = to_load.pop_front() {
+            let assembly = Assembly::load(&library_path, self.gc.clone())?;
+
+            let parent = library_path.parent().expect("Invalid library path");
+            let extension = library_path.extension();
+
+            let dependencies: Vec<String> =
+                assembly.info().dependencies().map(From::from).collect();
+            loaded.insert(library_path.clone(), assembly);
+
+            for dependency in dependencies {
+                let mut library_path = PathBuf::from(parent.join(dependency));
+                if let Some(extension) = extension {
+                    library_path = library_path.with_extension(extension);
+                }
+
+                if !loaded.contains_key(&library_path) {
+                    to_load.push_back(library_path);
+                }
+            }
         }
-        assembly.link(&mut self.dispatch_table);
 
-        self.watcher
-            .watch(library_path.parent().unwrap(), RecursiveMode::NonRecursive)?;
+        self.dispatch_table = Assembly::link_all(loaded.values_mut(), &self.dispatch_table)?;
 
-        self.assemblies.insert(library_path, assembly);
+        for (library_path, assembly) in loaded.into_iter() {
+            self.watcher
+                .watch(library_path.parent().unwrap(), RecursiveMode::NonRecursive)?;
+
+            self.assemblies.insert(library_path, assembly);
+        }
+
         Ok(())
     }
 
     /// Retrieves the function definition corresponding to `function_name`, if available.
     pub fn get_function_definition(&self, function_name: &str) -> Option<&abi::FunctionDefinition> {
+        // TODO: Verify that when someone tries to invoke a non-public function, it should fail.
         self.dispatch_table.get_fn(function_name)
     }
 
