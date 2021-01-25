@@ -1,6 +1,4 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::time::Duration;
+use std::{cell::RefCell, rc::Rc};
 
 use anyhow::anyhow;
 use clap::ArgMatches;
@@ -56,13 +54,6 @@ fn runtime(matches: &ArgMatches) -> Result<Rc<RefCell<Runtime>>, anyhow::Error> 
     let builder = RuntimeBuilder::new(
         matches.value_of("LIBRARY").unwrap(), // Safe because its a required arg
     );
-
-    let builder = if let Some(delay) = matches.value_of("delay") {
-        let delay: u64 = delay.parse()?;
-        builder.set_delay(Duration::from_millis(delay))
-    } else {
-        builder
-    };
 
     builder.spawn()
 }

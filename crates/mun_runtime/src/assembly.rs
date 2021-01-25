@@ -2,12 +2,14 @@ use crate::{
     garbage_collector::{GarbageCollector, UnsafeTypeInfo},
     DispatchTable,
 };
-use abi::AssemblyInfo;
+use abi::{AssemblyInfo, FunctionPrototype};
 use anyhow::anyhow;
 use libloader::{MunLibrary, TempLibrary};
 use log::error;
 use memory::mapping::{Mapping, MemoryMapper};
 use std::{
+    collections::HashMap,
+    ffi::c_void,
     path::{Path, PathBuf},
     ptr::NonNull,
     sync::Arc,
@@ -52,31 +54,12 @@ impl Assembly {
         Ok(assembly)
     }
 
-    /// Tries to link the `assemblies`, resulting in a new [`DispatchTable`] on success. This leaves
-    /// the original `dispatch_table` intact, in case of linking errors.
-    pub(super) fn link_all<'a>(
-        assemblies: impl Iterator<Item = &'a mut Assembly>,
-        dispatch_table: &DispatchTable,
-    ) -> Result<DispatchTable, anyhow::Error> {
-        let assemblies: Vec<&'a mut _> = assemblies.collect();
-
-        // Clone the dispatch table, such that we can roll back if linking fails
-        let mut dispatch_table = dispatch_table.clone();
-
-        // Insert all assemblies' functions into the dispatch table
-        for assembly in assemblies.iter() {
-            for function in assembly.info().symbols.functions() {
-                dispatch_table.insert_fn(function.prototype.name(), function.clone());
-            }
-        }
-
-        let mut to_link: Vec<_> = assemblies
-            .into_iter()
-            .flat_map(|asm| asm.info.dispatch_table.iter_mut())
-            // Only take signatures into account that do *not* yet have a function pointer assigned
-            // by the compiler.
-            .filter(|(ptr, _)| ptr.is_null())
-            .collect();
+    /// Private implementation of runtime linking
+    fn link_all_impl<'a>(
+        dispatch_table: &mut DispatchTable,
+        to_link: impl Iterator<Item = (&'a mut *const c_void, &'a FunctionPrototype)>,
+    ) -> anyhow::Result<()> {
+        let mut to_link: Vec<_> = to_link.collect();
 
         let mut retry = true;
         while retry {
@@ -114,65 +97,154 @@ impl Assembly {
             return Err(anyhow!("Failed to link due to missing dependencies."));
         }
 
+        Ok(())
+    }
+
+    /// Tries to link the `assemblies`, resulting in a new [`DispatchTable`] on success. This leaves
+    /// the original `dispatch_table` intact, in case of linking errors.
+    pub(super) fn link_all<'a>(
+        assemblies: impl Iterator<Item = &'a mut Assembly>,
+        dispatch_table: &DispatchTable,
+    ) -> anyhow::Result<DispatchTable> {
+        let assemblies: Vec<&'a mut _> = assemblies.collect();
+
+        // Clone the dispatch table, such that we can roll back if linking fails
+        let mut dispatch_table = dispatch_table.clone();
+
+        // Insert all assemblies' functions into the dispatch table
+        for assembly in assemblies.iter() {
+            for function in assembly.info().symbols.functions() {
+                dispatch_table.insert_fn(function.prototype.name(), function.clone());
+            }
+        }
+
+        let to_link: Vec<_> = assemblies
+            .into_iter()
+            .flat_map(|asm| asm.info.dispatch_table.iter_mut())
+            // Only take signatures into account that do *not* yet have a function pointer assigned
+            // by the compiler.
+            .filter(|(ptr, _)| ptr.is_null())
+            .collect();
+
+        Assembly::link_all_impl(&mut dispatch_table, to_link.into_iter())?;
+
         Ok(dispatch_table)
     }
 
-    /// Swaps the assembly's shared library and its information for the library at `library_path`.
-    pub fn swap(
-        &mut self,
-        library_path: &Path,
-        runtime_dispatch_table: &mut DispatchTable,
-    ) -> Result<(), anyhow::Error> {
-        let mut new_assembly = Assembly::load(library_path, self.allocator.clone())?;
+    /// Tries to link the `assemblies`, resulting in a new [`DispatchTable`] on success. This leaves
+    /// the original `dispatch_table` intact, in case of linking errors.
+    pub(super) fn relink_all<'a, 'b>(
+        unlinked_assemblies: &mut HashMap<PathBuf, Assembly>,
+        linked_assemblies: &mut HashMap<PathBuf, Assembly>,
+        dispatch_table: &DispatchTable,
+    ) -> anyhow::Result<DispatchTable> {
+        let mut assemblies = unlinked_assemblies
+            .iter_mut()
+            .map(|(old_path, asm)| {
+                let old_assembly = linked_assemblies.get(old_path);
 
-        let old_types: Vec<UnsafeTypeInfo> = self
-            .info
-            .symbols
-            .types()
-            .iter()
-            .map(|ty| {
-                // Safety: `ty` is a shared reference, so is guaranteed to not be `ptr::null()`.
-                UnsafeTypeInfo::new(unsafe {
-                    NonNull::new_unchecked(*ty as *const abi::TypeInfo as *mut _)
-                })
+                (asm, old_assembly)
             })
-            .collect();
+            .collect::<Vec<_>>();
 
-        let new_types: Vec<UnsafeTypeInfo> = new_assembly
-            .info
-            .symbols
-            .types()
-            .iter()
-            .map(|ty| {
-                // Safety: `ty` is a shared reference, so is guaranteed to not be `ptr::null()`.
-                UnsafeTypeInfo::new(unsafe {
-                    NonNull::new_unchecked(*ty as *const abi::TypeInfo as *mut _)
-                })
-            })
-            .collect();
+        // Clone the dispatch table, such that we can roll back if linking fails
+        let mut dispatch_table = dispatch_table.clone();
 
-        let mapping = Mapping::new(&old_types, &new_types);
-        let deleted_objects = self.allocator.map_memory(mapping);
-
-        // Remove the old assembly's functions
-        for function in self.info.symbols.functions() {
-            runtime_dispatch_table.remove_fn(function.prototype.name());
+        // Remove the old assemblies' functions from the dispatch table
+        for (_, old_assembly) in assemblies.iter() {
+            if let Some(assembly) = old_assembly {
+                for function in assembly.info.symbols.functions() {
+                    dispatch_table.remove_fn(function.prototype.name());
+                }
+            }
         }
 
-        new_assembly.link(runtime_dispatch_table);
-
-        // Retain all existing legacy libs
-        new_assembly.legacy_libs.append(&mut self.legacy_libs);
-
-        std::mem::swap(self, &mut new_assembly);
-        let old_assembly = new_assembly;
-
-        if !deleted_objects.is_empty() {
-            // Retain the previous assembly
-            self.legacy_libs.push(old_assembly.into_library());
+        // Insert all assemblies' functions into the dispatch table
+        for (new_assembly, _) in assemblies.iter() {
+            for function in new_assembly.info().symbols.functions() {
+                dispatch_table.insert_fn(function.prototype.name(), function.clone());
+            }
         }
 
-        Ok(())
+        let to_link = assemblies
+            .iter_mut()
+            .flat_map(|(asm, _)| asm.info.dispatch_table.iter_mut())
+            // Only take signatures into account that do *not* yet have a function pointer assigned
+            // by the compiler.
+            .filter(|(ptr, _)| ptr.is_null());
+
+        Assembly::link_all_impl(&mut dispatch_table, to_link)?;
+
+        let assemblies_to_map: Vec<_> = assemblies
+            .into_iter()
+            .filter_map(|(new_asm, old_asm)| old_asm.map(|old_asm| (old_asm, new_asm)))
+            .collect();
+
+        let mut assemblies_to_keep = HashMap::new();
+        for (old_assembly, new_assembly) in assemblies_to_map.iter() {
+            let old_types: Vec<UnsafeTypeInfo> = old_assembly
+                .info
+                .symbols
+                .types()
+                .iter()
+                .map(|ty| {
+                    // Safety: `ty` is a shared reference, so is guaranteed to not be `ptr::null()`.
+                    UnsafeTypeInfo::new(unsafe {
+                        NonNull::new_unchecked(*ty as *const abi::TypeInfo as *mut _)
+                    })
+                })
+                .collect();
+
+            let new_types: Vec<UnsafeTypeInfo> = new_assembly
+                .info
+                .symbols
+                .types()
+                .iter()
+                .map(|ty| {
+                    // Safety: `ty` is a shared reference, so is guaranteed to not be `ptr::null()`.
+                    UnsafeTypeInfo::new(unsafe {
+                        NonNull::new_unchecked(*ty as *const abi::TypeInfo as *mut _)
+                    })
+                })
+                .collect();
+
+            let mapping = Mapping::new(&old_types, &new_types);
+            let deleted_objects = old_assembly.allocator.map_memory(mapping);
+
+            if !deleted_objects.is_empty() {
+                // Retain the previous assembly
+                assemblies_to_keep.insert(
+                    old_assembly.library_path().to_path_buf(),
+                    new_assembly.library_path().to_path_buf(),
+                );
+            }
+        }
+
+        let mut newly_linked = HashMap::new();
+        std::mem::swap(unlinked_assemblies, &mut newly_linked);
+
+        for (old_path, mut new_assembly) in newly_linked.into_iter() {
+            let mut old_assembly = linked_assemblies
+                .remove(&old_path)
+                .expect("Assembly must exist.");
+
+            let new_path = if let Some(new_path) = assemblies_to_keep.remove(&old_path) {
+                // Retain all existing legacy libs
+                new_assembly
+                    .legacy_libs
+                    .append(&mut old_assembly.legacy_libs);
+
+                new_assembly.legacy_libs.push(old_assembly.into_library());
+
+                new_path
+            } else {
+                new_assembly.library_path().to_path_buf()
+            };
+
+            linked_assemblies.insert(new_path, new_assembly);
+        }
+
+        Ok(dispatch_table)
     }
 
     /// Returns the assembly's information.

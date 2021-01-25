@@ -13,9 +13,13 @@ mod adt;
 mod marshal;
 mod reflection;
 
+use anyhow::Result;
+use ffi::OsString;
 use garbage_collector::GarbageCollector;
+use log::{debug, error, info};
 use memory::gc::{self, GcRuntime};
-use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
+use mun_project::LOCKFILE_NAME;
+use notify::{RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
 use rustc_hash::FxHashMap;
 use std::{
     cell::RefCell,
@@ -29,7 +33,6 @@ use std::{
         mpsc::{channel, Receiver},
         Arc,
     },
-    time::Duration,
 };
 
 pub use crate::{
@@ -45,10 +48,36 @@ pub use abi::IntoFunctionDefinition;
 pub struct RuntimeOptions {
     /// Path to the entry point library
     pub library_path: PathBuf,
-    /// Delay during which filesystem events are collected, deduplicated, and after which emitted.
-    pub delay: Duration,
     /// Custom user injected functions
     pub user_functions: Vec<(abi::FunctionDefinition, abi::FunctionDefinitionStorage)>,
+}
+
+/// Retrieve the allocator using the provided handle.
+///
+/// # Safety
+///
+/// The allocator must have been set using the `set_allocator_handle` call - exposed by the Mun
+/// library.
+unsafe fn get_allocator(alloc_handle: *mut ffi::c_void) -> Arc<GarbageCollector> {
+    Arc::from_raw(alloc_handle as *const GarbageCollector)
+}
+
+extern "C" fn new(
+    type_info: *const abi::TypeInfo,
+    alloc_handle: *mut ffi::c_void,
+) -> *const *mut ffi::c_void {
+    // Safety: `new` is only called from within Mun assemblies' core logic, so we are guaranteed
+    // that the `Runtime` and its `GarbageCollector` still exist if this function is called, and
+    // will continue to do so for the duration of this function.
+    let allocator = unsafe { get_allocator(alloc_handle) };
+    // Safety: the Mun Compiler guarantees that `new` is never called with `ptr::null()`.
+    let type_info = UnsafeTypeInfo::new(unsafe { NonNull::new_unchecked(type_info as *mut _) });
+    let handle = allocator.alloc(type_info);
+
+    // Prevent destruction of the allocator
+    mem::forget(allocator);
+
+    handle.into()
 }
 
 /// A builder for the [`Runtime`].
@@ -62,16 +91,9 @@ impl RuntimeBuilder {
         Self {
             options: RuntimeOptions {
                 library_path: library_path.into(),
-                delay: Duration::from_millis(10),
                 user_functions: Default::default(),
             },
         }
-    }
-
-    /// Sets the `delay`.
-    pub fn set_delay(mut self, delay: Duration) -> Self {
-        self.options.delay = delay;
-        self
     }
 
     /// Adds a custom user function to the dispatch table.
@@ -170,39 +192,14 @@ impl DispatchTable {
 /// [log-impl]: https://docs.rs/log/0.4.13/log/#available-logging-implementations
 pub struct Runtime {
     assemblies: HashMap<PathBuf, Assembly>,
+    /// Assemblies that have changed and thus need to be relinked. Maps the old to the (potentially) new path.
+    assemblies_to_relink: VecDeque<(PathBuf, PathBuf)>,
     dispatch_table: DispatchTable,
     watcher: RecommendedWatcher,
-    watcher_rx: Receiver<DebouncedEvent>,
+    watcher_rx: Receiver<RawEvent>,
+    renamed_files: HashMap<u32, PathBuf>,
     gc: Arc<GarbageCollector>,
     _user_functions: Vec<abi::FunctionDefinitionStorage>,
-}
-
-/// Retrieve the allocator using the provided handle.
-///
-/// # Safety
-///
-/// The allocator must have been set using the `set_allocator_handle` call - exposed by the Mun
-/// library.
-unsafe fn get_allocator(alloc_handle: *mut ffi::c_void) -> Arc<GarbageCollector> {
-    Arc::from_raw(alloc_handle as *const GarbageCollector)
-}
-
-extern "C" fn new(
-    type_info: *const abi::TypeInfo,
-    alloc_handle: *mut ffi::c_void,
-) -> *const *mut ffi::c_void {
-    // Safety: `new` is only called from within Mun assemblies' core logic, so we are guaranteed
-    // that the `Runtime` and its `GarbageCollector` still exist if this function is called, and
-    // will continue to do so for the duration of this function.
-    let allocator = unsafe { get_allocator(alloc_handle) };
-    // Safety: the Mun Compiler guarantees that `new` is never called with `ptr::null()`.
-    let type_info = UnsafeTypeInfo::new(unsafe { NonNull::new_unchecked(type_info as *mut _) });
-    let handle = allocator.alloc(type_info);
-
-    // Prevent destruction of the allocator
-    mem::forget(allocator);
-
-    handle.into()
 }
 
 impl Runtime {
@@ -226,12 +223,14 @@ impl Runtime {
             storages.push(storage)
         }
 
-        let watcher: RecommendedWatcher = Watcher::new(tx, options.delay)?;
+        let watcher: RecommendedWatcher = Watcher::new_raw(tx)?;
         let mut runtime = Runtime {
             assemblies: HashMap::new(),
+            assemblies_to_relink: VecDeque::new(),
             dispatch_table,
             watcher,
             watcher_rx: rx,
+            renamed_files: HashMap::new(),
             gc: Arc::new(self::garbage_collector::GarbageCollector::default()),
             _user_functions: storages,
         };
@@ -257,6 +256,11 @@ impl Runtime {
 
         // Load all assemblies and their dependencies
         while let Some(library_path) = to_load.pop_front() {
+            // A dependency can be added by multiple dependants, so check that we didn't load it yet
+            if loaded.contains_key(&library_path) {
+                continue;
+            }
+
             let assembly = Assembly::load(&library_path, self.gc.clone())?;
 
             let parent = library_path.parent().expect("Invalid library path");
@@ -312,29 +316,105 @@ impl Runtime {
     /// Updates the state of the runtime. This includes checking for file changes, and reloading
     /// compiled assemblies.
     pub fn update(&mut self) -> bool {
-        while let Ok(event) = self.watcher_rx.try_recv() {
-            use notify::DebouncedEvent::*;
-            match event {
-                Write(ref path) | Rename(_, ref path) | Create(ref path) => {
-                    if let Some(assembly) = self.assemblies.get_mut(path) {
-                        if let Err(e) = assembly.swap(path, &mut self.dispatch_table) {
-                            println!(
-                                "An error occured while reloading assembly '{}': {:?}",
-                                path.to_string_lossy(),
-                                e
-                            );
-                        } else {
-                            println!(
-                                "Succesfully reloaded assembly: '{}'",
-                                path.to_string_lossy()
-                            );
-                            return true;
-                        }
+        fn is_lockfile(path: &Path) -> bool {
+            path.file_name().expect("Invalid file path.") == OsString::from(LOCKFILE_NAME)
+        }
+
+        fn relink_assemblies(runtime: &mut Runtime) -> anyhow::Result<DispatchTable> {
+            let mut loaded = HashMap::new();
+            let to_load = &mut runtime.assemblies_to_relink;
+
+            info!("Relinking assemblies:");
+            for (old_path, new_path) in to_load.iter() {
+                info!(
+                    "{} -> {}",
+                    old_path.to_string_lossy(),
+                    new_path.to_string_lossy()
+                );
+            }
+
+            // Load all assemblies and their dependencies
+            while let Some((old_path, new_path)) = to_load.pop_front() {
+                // A dependency can be added by multiple dependants, so check that we didn't load it yet
+                if loaded.contains_key(&old_path) {
+                    continue;
+                }
+
+                let assembly = Assembly::load(&new_path, runtime.gc.clone())?;
+
+                let parent = new_path.parent().expect("Invalid library path");
+                let extension = new_path.extension();
+
+                let dependencies: Vec<String> =
+                    assembly.info().dependencies().map(From::from).collect();
+                loaded.insert(old_path.clone(), assembly);
+
+                for dependency in dependencies {
+                    let mut library_path = PathBuf::from(parent.join(dependency));
+                    if let Some(extension) = extension {
+                        library_path = library_path.with_extension(extension);
+                    }
+
+                    if !loaded.contains_key(&library_path)
+                        && !runtime.assemblies.contains_key(&library_path)
+                    {
+                        to_load.push_back((old_path.clone(), library_path));
                     }
                 }
-                _ => {}
+            }
+
+            Assembly::relink_all(
+                &mut loaded,
+                &mut runtime.assemblies,
+                &runtime.dispatch_table,
+            )
+        }
+
+        while let Ok(event) = self.watcher_rx.try_recv() {
+            if let Some(path) = event.path {
+                let op = event.op.expect("Invalid event.");
+
+                if is_lockfile(&path) {
+                    if op.contains(notify::op::CREATE) {
+                        debug!("Lockfile created");
+                    }
+                    if op.contains(notify::op::REMOVE) {
+                        debug!("Lockfile deleted");
+
+                        match relink_assemblies(self) {
+                            Ok(table) => {
+                                info!("Succesfully reloaded assemblies.");
+
+                                self.dispatch_table = table;
+                                self.assemblies_to_relink.clear();
+
+                                return true;
+                            }
+                            Err(e) => error!("Failed to relink assemblies, due to {}.", e),
+                        }
+                    }
+                } else {
+                    let path = path.canonicalize().expect(&format!(
+                        "Failed to canonicalize path: {}.",
+                        path.to_string_lossy()
+                    ));
+
+                    if op.contains(notify::op::RENAME) {
+                        let cookie = event.cookie.expect("Invalid RENAME event.");
+                        if let Some(old_path) = self.renamed_files.remove(&cookie) {
+                            self.assemblies_to_relink.push_back((old_path, path));
+                        // on_file_changed(self, &old_path, &path);
+                        } else {
+                            self.renamed_files.insert(cookie, path);
+                        }
+                    } else if op.contains(notify::op::WRITE) {
+                        // TODO: don't overwrite existing
+                        self.assemblies_to_relink.push_back((path.clone(), path));
+                    }
+                }
             }
         }
+
         false
     }
 

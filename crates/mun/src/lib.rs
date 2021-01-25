@@ -40,14 +40,12 @@ where
                     Arg::with_name("manifest-path")
                         .long("manifest-path")
                         .takes_value(true)
-                        .help(&format!("Path to {}", MANIFEST_FILENAME))
+                        .help(&format!("Path to {}", MANIFEST_FILENAME)),
                 )
-                .arg(
-                    Arg::with_name("watch")
-                        .long("watch")
-                        .help("Run the compiler in watch mode.\
-                        Watch input files and trigger recompilation on changes.",)
-                )
+                .arg(Arg::with_name("watch").long("watch").help(
+                    "Run the compiler in watch mode.\
+                        Watch input files and trigger recompilation on changes.",
+                ))
                 .arg(
                     Arg::with_name("opt-level")
                         .short("O")
@@ -71,7 +69,7 @@ where
                 .arg(
                     Arg::with_name("emit-ir")
                         .long("emit-ir")
-                        .help("emits IR instead of a *.munlib")
+                        .help("emits IR instead of a *.munlib"),
                 )
                 .about("Compiles a local Mun file into a module"),
         )
@@ -88,25 +86,24 @@ where
                         .long("entry")
                         .takes_value(true)
                         .help("the function entry point to call on startup"),
-                )
-                .arg(
-                    Arg::with_name("delay")
-                        .long("delay")
-                        .takes_value(true)
-                        .help("how much to delay received filesystem events (in ms). This allows bundling of identical events, e.g. when several writes to the same file are detected. A high delay will make hot reloading less responsive. (defaults to 10 ms)"),
                 ),
         )
         .subcommand(
-            SubCommand::with_name("new")
-                .arg(Arg::with_name("path").help("the path to create a new project").required(true).index(1))
+            SubCommand::with_name("new").arg(
+                Arg::with_name("path")
+                    .help("the path to create a new project")
+                    .required(true)
+                    .index(1),
+            ),
         )
         .subcommand(
-            SubCommand::with_name("init")
-            .arg(Arg::with_name("path").help("the path to create a new project [default: .]").index(1))
+            SubCommand::with_name("init").arg(
+                Arg::with_name("path")
+                    .help("the path to create a new project [default: .]")
+                    .index(1),
+            ),
         )
-        .subcommand(
-            SubCommand::with_name("language-server")
-        )
+        .subcommand(SubCommand::with_name("language-server"))
         .get_matches_from_safe(args);
 
     match matches {

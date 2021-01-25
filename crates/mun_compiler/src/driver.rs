@@ -21,15 +21,11 @@ pub use self::config::Config;
 pub use self::display_color::DisplayColor;
 
 use crate::diagnostics_snippets::{emit_hir_diagnostic, emit_syntax_error};
-use mun_project::Package;
-use std::collections::HashMap;
-use std::convert::TryInto;
-use std::path::Path;
-use std::time::Duration;
+use mun_project::{Package, LOCKFILE_NAME};
+use std::{collections::HashMap, convert::TryInto, path::Path, time::Duration};
 use walkdir::WalkDir;
 
 pub const WORKSPACE: SourceRootId = SourceRootId(0);
-pub const LOCKFILE_NAME: &str = ".munlock";
 
 pub struct Driver {
     db: CompilerDatabase,
