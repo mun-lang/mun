@@ -22,3 +22,4 @@
 
 - [Developer Documentation](ch04-00-developer-docs.md)
     - [Salsa](ch04-01-salsa.md)
+    - [Building LLVM](ch04-02-building-llvm.md)
