@@ -37,7 +37,8 @@ pub use crate::{
 use crate::{name::AsName, source_id::AstIdMap};
 
 pub use self::code_model::{
-    Function, FunctionData, Module, ModuleDef, Package, Struct, StructMemoryKind, TypeAlias,
+    Field, Function, FunctionData, HasSource, Module, ModuleDef, Package, Struct, StructMemoryKind,
+    TypeAlias,
 };
 
 #[macro_use]
@@ -71,6 +72,8 @@ mod item_scope;
 mod mock;
 mod package_defs;
 mod package_set;
+pub mod semantics;
+mod source_analyzer;
 #[cfg(test)]
 mod tests;
 mod visibility;

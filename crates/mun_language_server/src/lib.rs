@@ -4,6 +4,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 pub use config::{Config, FilesWatcher};
 pub use main_loop::main_loop;
+use mun_syntax::{TextRange, TextSize};
 use paths::AbsPathBuf;
 use project::ProjectManifest;
 pub(crate) use state::LanguageServerState;
@@ -13,6 +14,9 @@ mod analysis;
 mod cancelation;
 mod capabilities;
 mod change;
+#[cfg(test)]
+mod change_fixture;
+mod completion;
 mod config;
 mod db;
 mod diagnostics;
@@ -24,6 +28,20 @@ mod main_loop;
 mod state;
 mod symbol_kind;
 mod to_lsp;
+
+/// Represents a position in a file
+#[derive(Clone, Copy, Debug)]
+pub struct FilePosition {
+    pub file_id: hir::FileId,
+    pub offset: TextSize,
+}
+
+/// Represents a range of text in a file.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct FileRange {
+    pub file_id: hir::FileId,
+    pub range: TextRange,
+}
 
 /// Deserializes a `T` from a json value.
 pub fn from_json<T: DeserializeOwned>(

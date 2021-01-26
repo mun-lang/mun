@@ -1,12 +1,16 @@
-use crate::code_model::{Function, Struct, StructField, TypeAlias};
+use crate::code_model::{Field, Function, Struct, TypeAlias};
 use crate::ids::{AssocItemLoc, Lookup};
 use crate::in_file::InFile;
 use crate::item_tree::{ItemTreeId, ItemTreeNode};
 use crate::{DefDatabase, ItemLoc};
 use mun_syntax::ast;
 
+/// A trait implemented for items that can be related back to their source. The
+/// [`HasSource::source`] method returns the source location of its instance.
 pub trait HasSource {
     type Ast;
+
+    /// Returns the source location of this instance.
     fn source(&self, db: &dyn DefDatabase) -> InFile<Self::Ast>;
 }
 
@@ -56,7 +60,7 @@ impl HasSource for Struct {
     }
 }
 
-impl HasSource for StructField {
+impl HasSource for Field {
     type Ast = ast::RecordFieldDef;
 
     fn source(&self, db: &dyn DefDatabase) -> InFile<Self::Ast> {

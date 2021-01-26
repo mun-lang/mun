@@ -19,6 +19,8 @@ text-size = { version = "1.1.0", features = ["serde"] }
 smol_str = { version = "0.1.17", features = ["serde"] }
 unicode-xid = "0.1.0"
 drop_bomb = "0.1.4"
+ra_ap_text_edit = "0.0.35"
+itertools = "0.10.0"
 
 [dev-dependencies]
 insta = "0.16"

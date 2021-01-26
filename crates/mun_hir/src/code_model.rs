@@ -12,13 +12,14 @@ pub use self::{
     function::Function,
     module::{Module, ModuleDef},
     package::Package,
-    r#struct::{LocalStructFieldId, Struct, StructField, StructKind, StructMemoryKind},
+    r#struct::{Field, LocalFieldId, Struct, StructKind, StructMemoryKind},
+    src::HasSource,
     type_alias::TypeAlias,
 };
 
 pub use self::{
     function::FunctionData,
-    r#struct::{StructData, StructFieldData},
+    r#struct::{FieldData, StructData},
     type_alias::TypeAliasData,
 };
 
@@ -57,13 +58,13 @@ impl DefWithStruct {
         }
     }
 
-    pub fn fields(self, db: &dyn HirDatabase) -> Vec<StructField> {
+    pub fn fields(self, db: &dyn HirDatabase) -> Vec<Field> {
         match self {
             DefWithStruct::Struct(s) => s.fields(db),
         }
     }
 
-    pub fn field(self, db: &dyn HirDatabase, name: &Name) -> Option<StructField> {
+    pub fn field(self, db: &dyn HirDatabase, name: &Name) -> Option<Field> {
         match self {
             DefWithStruct::Struct(s) => s.field(db, name),
         }

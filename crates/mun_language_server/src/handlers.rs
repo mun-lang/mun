@@ -1,5 +1,6 @@
-use crate::{from_lsp, state::LanguageServerSnapshot, to_lsp};
-use lsp_types::DocumentSymbol;
+use crate::{from_lsp, state::LanguageServerSnapshot, to_lsp, FilePosition};
+use lsp_types::{CompletionContext, CompletionItem, DocumentSymbol};
+use mun_syntax::{AstNode, TextSize};
 
 /// Computes the document symbols for a specific document. Converts the LSP types to internal
 /// formats and calls [`LanguageServerSnapshot::file_structure`] to fetch the symbols in the
@@ -30,6 +31,55 @@ pub(crate) fn handle_document_symbol(
     }
 
     Ok(Some(build_hierarchy_from_flat_list(parents).into()))
+}
+
+/// Computes completion items that should be presented to the user when the cursor is at a specific
+/// location.
+pub(crate) fn handle_completion(
+    snapshot: LanguageServerSnapshot,
+    params: lsp_types::CompletionParams,
+) -> anyhow::Result<Option<lsp_types::CompletionResponse>> {
+    let position = from_lsp::file_position(&snapshot, params.text_document_position)?;
+
+    // If the completion was triggered after a single colon there is nothing to do. We only want
+    // completion after a *double* colon (::) or after a dot (.).
+    if is_position_at_single_colon(&snapshot, position, params.context)? {
+        return Ok(None);
+    }
+
+    // Get all completions from the analysis database
+    let items = match snapshot.analysis.completions(position)? {
+        None => return Ok(None),
+        Some(items) => items,
+    };
+
+    // Convert all the items to the LSP protocol type
+    let items: Vec<CompletionItem> = items.into_iter().map(to_lsp::completion_item).collect();
+
+    return Ok(Some(items.into()));
+
+    /// Helper function to check if the given position is preceded by a single colon.
+    fn is_position_at_single_colon(
+        snapshot: &LanguageServerSnapshot,
+        position: FilePosition,
+        context: Option<CompletionContext>,
+    ) -> anyhow::Result<bool> {
+        if let Some(ctx) = context {
+            if ctx.trigger_character.unwrap_or_default() == ":" {
+                let source_file = snapshot.analysis.parse(position.file_id)?;
+                let syntax = source_file.syntax();
+                let text = syntax.text();
+                if let Some(next_char) = text.char_at(position.offset) {
+                    let diff = TextSize::of(next_char) + TextSize::of(':');
+                    let prev_char = position.offset - diff;
+                    if text.char_at(prev_char) != Some(':') {
+                        return Ok(true);
+                    }
+                }
+            }
+        }
+        Ok(false)
+    }
 }
 
 /// Constructs a hierarchy of DocumentSymbols for a list of symbols that specify which index is the

@@ -1,12 +1,13 @@
 use crate::ids::{
     DefWithBodyId, FunctionId, ItemDefinitionId, Lookup, ModuleId, StructId, TypeAliasId,
 };
+use crate::item_scope::BUILTIN_SCOPE;
 use crate::module_tree::LocalModuleId;
 use crate::package_defs::PackageDefs;
 use crate::primitive_type::PrimitiveType;
 use crate::visibility::RawVisibility;
 use crate::{
-    expr::scope::LocalScopeId, expr::PatId, DefDatabase, ExprId, ExprScopes, Path, PerNs,
+    expr::scope::LocalScopeId, expr::PatId, DefDatabase, ExprId, ExprScopes, Name, Path, PerNs,
     Visibility,
 };
 use std::sync::Arc;
@@ -56,6 +57,12 @@ pub enum TypeNs {
     StructId(StructId),
     TypeAliasId(TypeAliasId),
     PrimitiveType(PrimitiveType),
+}
+
+/// An item definition visible from a certain scope.
+pub enum ScopeDef {
+    PerNs(PerNs<(ItemDefinitionId, Visibility)>),
+    Local(PatId),
 }
 
 impl Resolver {
@@ -272,6 +279,42 @@ impl Resolver {
             package: package_defs.module_tree.package,
             local_id,
         })
+    }
+
+    /// If the resolver holds a scope from a body, returns that body.
+    pub fn body_owner(&self) -> Option<DefWithBodyId> {
+        self.scopes.iter().rev().find_map(|scope| match scope {
+            Scope::ExprScope(it) => Some(it.owner),
+            _ => None,
+        })
+    }
+
+    /// Calls the `visitor` for each entry in scope.
+    pub fn visit_all_names(&self, db: &dyn DefDatabase, visitor: &mut dyn FnMut(Name, ScopeDef)) {
+        for scope in self.scopes.iter().rev() {
+            scope.visit_names(db, visitor)
+        }
+    }
+}
+
+impl Scope {
+    /// Calls the `visitor` for each entry in scope.
+    fn visit_names(&self, _db: &dyn DefDatabase, visitor: &mut dyn FnMut(Name, ScopeDef)) {
+        match self {
+            Scope::ModuleScope(m) => {
+                m.package_defs[m.module_id]
+                    .entries()
+                    .for_each(|(name, def)| visitor(name.clone(), ScopeDef::PerNs(def)));
+                BUILTIN_SCOPE.iter().for_each(|(name, &def)| {
+                    visitor(name.clone(), ScopeDef::PerNs(def));
+                })
+            }
+            Scope::ExprScope(scope) => scope
+                .expr_scopes
+                .entries(scope.scope_id)
+                .iter()
+                .for_each(|entry| visitor(entry.name().clone(), ScopeDef::Local(entry.pat()))),
+        }
     }
 }
 

@@ -20,6 +20,7 @@ mod syntax_node;
 
 #[cfg(test)]
 mod tests;
+pub mod utils;
 
 use std::{fmt::Write, marker::PhantomData, sync::Arc};
 
@@ -117,10 +118,25 @@ impl Parse<SourceFile> {
         }
         buf
     }
+
+    /// Parses the `SourceFile` again but with the given modification applied.
+    pub fn reparse(&self, indel: &Indel) -> Parse<SourceFile> {
+        // TODO: Implement something smarter here.
+        self.full_reparse(indel)
+    }
+
+    /// Performs a "reparse" of the `SourceFile` after applying the specified modification by
+    /// simply parsing the entire thing again.
+    fn full_reparse(&self, indel: &Indel) -> Parse<SourceFile> {
+        let mut text = self.tree().syntax().text().to_string();
+        indel.apply(&mut text);
+        SourceFile::parse(&text)
+    }
 }
 
 /// `SourceFile` represents a parse tree for a single Mun file.
 pub use crate::ast::SourceFile;
+use ra_ap_text_edit::Indel;
 
 impl SourceFile {
     pub fn parse(text: &str) -> Parse<SourceFile> {

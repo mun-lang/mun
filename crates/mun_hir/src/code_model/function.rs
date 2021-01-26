@@ -138,6 +138,12 @@ impl Function {
         db.type_for_def(self.into(), Namespace::Values).0
     }
 
+    pub fn ret_type(self, db: &dyn HirDatabase) -> Ty {
+        let resolver = self.id.resolver(db.upcast());
+        let data = self.data(db.upcast());
+        Ty::from_hir(db, &resolver, &data.type_ref_map, data.ret_type).ty
+    }
+
     pub fn infer(self, db: &dyn HirDatabase) -> Arc<InferenceResult> {
         db.infer(self.id.into())
     }

@@ -67,13 +67,10 @@ fn name_ref(p: &mut Parser) {
 }
 
 fn name_ref_or_index(p: &mut Parser) {
-    if p.at(IDENT) || p.at(INT_NUMBER) {
-        let m = p.start();
-        p.bump_any();
-        m.complete(p, NAME_REF);
-    } else {
-        p.error_and_bump("expected an identifier");
-    }
+    assert!(p.at(IDENT) || p.at(INT_NUMBER));
+    let m = p.start();
+    p.bump_any();
+    m.complete(p, NAME_REF);
 }
 
 fn opt_visibility(p: &mut Parser) -> bool {

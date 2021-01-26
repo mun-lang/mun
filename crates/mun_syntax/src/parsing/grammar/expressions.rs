@@ -248,7 +248,8 @@ fn arg_list(p: &mut Parser) {
 fn postfix_dot_expr(p: &mut Parser, lhs: CompletedMarker) -> CompletedMarker {
     assert!(p.at(T![.]));
     if p.nth(1) == IDENT && p.nth(2) == T!['('] {
-        unimplemented!("Method calls are not supported yet.");
+        // TODO: Implement method calls here
+        //unimplemented!("Method calls are not supported yet.");
     }
 
     field_expr(p, lhs)
@@ -259,7 +260,11 @@ fn field_expr(p: &mut Parser, lhs: CompletedMarker) -> CompletedMarker {
     let m = lhs.precede(p);
     if p.at(T![.]) {
         p.bump(T![.]);
-        name_ref_or_index(p);
+        if p.at(IDENT) || p.at(INT_NUMBER) {
+            name_ref_or_index(p)
+        } else {
+            p.error("expected field name or number");
+        }
     } else if p.at(INDEX) {
         p.bump(INDEX);
     } else {

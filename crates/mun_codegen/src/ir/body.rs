@@ -1326,9 +1326,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         let field_idx = hir_struct
             .field(self.db, name)
             .expect("expected a struct field")
-            .id()
-            .into_raw()
-            .into();
+            .index(self.db);
 
         let field_ir_name = &format!("{}.{}", hir_struct_name, name);
         if self.is_place_expr(receiver_expr) {
@@ -1383,9 +1381,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         let field_idx = hir_struct
             .field(self.db, name)
             .expect("expected a struct field")
-            .id()
-            .into_raw()
-            .into();
+            .index(self.db);
 
         let receiver_ptr = self.gen_place_expr(receiver_expr);
         let receiver_ptr = self

@@ -104,10 +104,7 @@ impl Context {
             ast::ModuleItemKind::StructDef(ast) => self.lower_struct(&ast).map(Into::into),
             ast::ModuleItemKind::TypeAliasDef(ast) => self.lower_type_alias(&ast).map(Into::into),
             ast::ModuleItemKind::Use(ast) => Some(ModItems(
-                self.lower_use(&ast)
-                    .into_iter()
-                    .map(Into::into)
-                    .collect::<SmallVec<_>>(),
+                self.lower_use(&ast).into_iter().map(Into::into).collect(),
             )),
         }
     }
