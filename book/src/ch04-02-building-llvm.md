@@ -2,10 +2,10 @@
 
 Most, if not all, dependencies can be build by cargo except for LLVM.
 The Mun compiler makes heavy use of LLVM for all code-generation capabilities.
-Installing it however, can be tricky.
+Installing it, however, can be tricky.
 This document is a short guide on how to install LLVM on your machine so you can build Mun yourself.
 
-Currently Mun targets LLVM 8 so everything in this document refers to that version.
+Currently, Mun targets LLVM 8 so everything in this document refers to that version.
 However, these instructions should also hold for newer versions. 
 
 ## Prebuild binaries
@@ -13,11 +13,11 @@ However, these instructions should also hold for newer versions.
 On some OSes prebuild binaries are available.
 
 > NOTE: not all prebuild releases contain all libraries required by Mun. 
-> Prebuild releases from LLVM for Windows for instance are missing required executables and libraries.
+> For instance, prebuild releases of LLVM for Windows are missing required executables and libraries.
 
 ### Windows
 
-For Windows [we maintain a repository](https://github.com/mun-lang/llvm-package-windows) which contains [releases](https://github.com/mun-lang/llvm-package-windows/releases) that can can be used to build Mun. 
+For Windows, [we maintain a repository](https://github.com/mun-lang/llvm-package-windows) which contains [releases](https://github.com/mun-lang/llvm-package-windows/releases) that can can be used to build Mun. 
 These releases are also used on our CI runners. 
 
 To use a release, download and extract it to your machine. 
@@ -33,11 +33,11 @@ Visit the [LLVM APT website](https://apt.llvm.org/) to find the correct APT repo
 To add the repository:
 
 ```bash
-# To retrieve the achive signature
+# Retrieve the archive signature
 wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
 
 # Add the repository
-# $REPO_NAME should be something like:
+# ${REPO_NAME} should be something like:
 # deb http://apt.llvm.org/focal/ llvm-toolchain-focal-8 main
 #
 # The `add-apt-repository` command is installed by the `software-properties-common` package:
@@ -59,7 +59,7 @@ apt install llvm-8 llvm-8-* liblld-8*
 brew install llvm@8
 ```
 
-After install LLVM you can either add the `bin` folder of of the release to your path or you can add a release specific environment variable called `LLVM_SYS_80_PREFIX` that points to the release:
+After installing LLVM, you can either add the `bin` folder of the release to your path; or you can add a release-specific environment variable called `LLVM_SYS_80_PREFIX` that points to the release:
 
 ```bash
 export LLVM_SYS_80_PREFIX=$(brew --prefix llvm@8)
@@ -72,7 +72,7 @@ Adding the `LLVM_SYS_80_PREFIX` variable is usually easier because the LLVM bina
 ## Building from source
 
 If there are no prebuild packages available for your OS, your best bet is to install LLVM from source. 
-The build time of LLVM is quite long so this is a relatively time consuming process.
+The build time of LLVM is quite long so this is a relatively time-consuming process.
 
 You need at least: 
 - A C++ compiler (like GCC)
@@ -97,4 +97,4 @@ cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="lld;clang" -DCMAKE_I
 make install -j
 ```
 
-After LLVM is build, make sure to add the `$HOME/local/bin` to you path or add a environment variable `LLVM_SYS_80_PREFIX` (or `LLVM_SYS_110_PREFIX` depending on the LLVM version you installed) that points to `$HOME/local`. 
+After LLVM is build, make sure to add the `$HOME/local/bin` to you path or add an environment variable `LLVM_SYS_80_PREFIX` (or `LLVM_SYS_110_PREFIX` depending on the LLVM version you installed) that points to `$HOME/local`. 

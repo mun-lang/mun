@@ -147,7 +147,7 @@ Make sure you have the following dependencies installed on you machine:
 * [Rust](https://www.rust-lang.org/tools/install)
 * [LLVM 8](https://docs.mun-lang.org/ch04-02-building-llvm.html)
 
-Clone the source code including all submodules
+Clone the source code, including all submodules:
 
 ```bash
 git clone https://github.com/mun-lang/mun.git
