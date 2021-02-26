@@ -1,3 +1,0 @@
-pub(super) struct CompletionContext {
-
-}

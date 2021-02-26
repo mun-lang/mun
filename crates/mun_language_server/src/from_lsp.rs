@@ -17,7 +17,7 @@ pub(crate) fn abs_path(uri: &Url) -> anyhow::Result<AbsPathBuf> {
         .ok_or_else(|| anyhow::anyhow!("invalid uri: {}", uri))
 }
 
-/// Returns the `hir::FileId` associated with the given `Url`
+/// Returns the `hir::FileId` associated with the given `Url`.
 pub(crate) fn file_id(
     snapshot: &LanguageServerSnapshot,
     url: &lsp_types::Url,
@@ -32,7 +32,7 @@ pub(crate) fn file_id(
     })
 }
 
-/// Converts the specified `offset` to our own `TextSize` structure
+/// Converts the specified offset to our own `TextSize` structure
 pub(crate) fn offset(line_index: &LineIndex, position: lsp_types::Position) -> TextSize {
     let line_col = hir::line_index::LineCol {
         line: position.line as u32,

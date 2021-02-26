@@ -163,7 +163,7 @@ impl LineIndex {
         col.into()
     }
 
-    /// Given a line and column number for utf8 text convert it to the offset in utf16 text.
+    /// Given a line and column number for utf8 text, convert it to the offset in utf16 text.
     fn utf8_to_utf16_col(&self, line: u32, col: TextSize) -> usize {
         let mut res: usize = col.into();
         if let Some(utf16_chars) = self.utf16_lines.get(&line) {
