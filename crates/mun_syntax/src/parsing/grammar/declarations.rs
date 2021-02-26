@@ -151,7 +151,7 @@ fn use_tree(p: &mut Parser, top_level: bool) {
             if top_level {
                 p.error_recover(msg, DECLARATION_RECOVERY_SET);
             } else {
-                // if we are parsing a nested tree, we have to eat a token to main balanced `{}`
+                // if we are parsing a nested tree, we have to eat a token to remain balanced `{}`
                 p.error_and_bump(msg);
             }
             return;

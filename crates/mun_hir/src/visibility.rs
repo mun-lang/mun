@@ -58,7 +58,7 @@ pub enum Visibility {
 }
 
 impl Visibility {
-    /// Returns true if an item with this visibility is accessible from the module from the
+    /// Returns true if an item with this visibility is accessible from the module of the
     /// specified `PackageDefs`.
     pub(crate) fn is_visible_from_module_tree(
         self,

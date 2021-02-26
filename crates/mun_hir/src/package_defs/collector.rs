@@ -1,10 +1,9 @@
 use super::PackageDefs;
-use crate::item_scope::PerNsGlobImports;
 use crate::{
     ids::ItemDefinitionId,
     ids::{FunctionLoc, Intern, StructLoc, TypeAliasLoc},
     item_scope::ImportType,
-    item_scope::ItemScope,
+    item_scope::{ItemScope, PerNsGlobImports},
     item_tree::{
         self, Function, ItemTree, ItemTreeId, LocalItemTreeId, ModItem, Struct, StructDefKind,
         TypeAlias,
@@ -18,13 +17,14 @@ use crate::{
 };
 use rustc_hash::FxHashMap;
 
+/// Result of resolving an import statement
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-enum PartialResolvedImport {
-    /// None of any namespaces is resolved
+enum PartiallyResolvedImport {
+    /// None of the namespaces are resolved
     Unresolved,
     /// One of namespaces is resolved.
     Indeterminate(PerNs<(ItemDefinitionId, Visibility)>),
-    /// All namespaces are resolved, OR it is came from other crate
+    /// All namespaces are resolved, OR it came from another crate
     Resolved(PerNs<(ItemDefinitionId, Visibility)>),
 }
 
@@ -38,16 +38,17 @@ struct ImportResolution {
     resolution: PerNs<(ItemDefinitionId, Visibility)>,
 }
 
-impl PartialResolvedImport {
+impl PartiallyResolvedImport {
     fn namespaces(&self) -> PerNs<(ItemDefinitionId, Visibility)> {
         match self {
-            PartialResolvedImport::Unresolved => PerNs::none(),
-            PartialResolvedImport::Indeterminate(ns) => *ns,
-            PartialResolvedImport::Resolved(ns) => *ns,
+            PartiallyResolvedImport::Unresolved => PerNs::none(),
+            PartiallyResolvedImport::Indeterminate(ns) => *ns,
+            PartiallyResolvedImport::Resolved(ns) => *ns,
         }
     }
 }
 
+/// Definition of a single import statement
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct Import {
     /// The path of the import (e.g. foo::Bar). Note that group imports have been desugared, each
@@ -92,7 +93,7 @@ struct ImportDirective {
     import: Import,
 
     /// The current status of the import.
-    status: PartialResolvedImport,
+    status: PartiallyResolvedImport,
 }
 
 pub(super) fn collect(db: &dyn DefDatabase, package_id: PackageId) -> PackageDefs {
@@ -121,7 +122,7 @@ struct DefCollector<'db> {
     unresolved_imports: Vec<ImportDirective>,
     resolved_imports: Vec<ImportDirective>,
 
-    /// A mapping from local module to wildcard imports to other modules
+    /// A mapping from local module to wildcard imports of other modules
     glob_imports:
         FxHashMap<LocalModuleId, Vec<(LocalModuleId, Visibility, ItemTreeId<item_tree::Import>)>>,
 
@@ -135,7 +136,7 @@ impl<'db> DefCollector<'db> {
         // Collect all definitions in each module
         let module_tree = self.package_defs.module_tree.clone();
 
-        // Start by collecting the definitions from all modules. This ensures that very every module
+        // Start by collecting the definitions from all modules. This ensures that, for every module,
         // all local definitions are accessible. This is the starting point for the import
         // resolution.
         collect_modules_recursive(self, module_tree.root, None);
@@ -156,21 +157,21 @@ impl<'db> DefCollector<'db> {
                 // Check the status of the import, if the import is still considered unresolved, try
                 // again in the next round.
                 match directive.status {
-                    PartialResolvedImport::Indeterminate(_) => {
+                    PartiallyResolvedImport::Indeterminate(_) => {
                         self.record_resolved_import(&directive);
-                        // FIXME: To avoid performance regression, we consider an imported resolved
+                        // FIXME: To avoid performance regression, we consider an import resolved
                         // if it is indeterminate (i.e not all namespace resolved). This might not
                         // completely resolve correctly in the future if we can have values and
                         // types with the same name.
                         self.resolved_imports.push(directive);
                         resolved_something = true;
                     }
-                    PartialResolvedImport::Resolved(_) => {
+                    PartiallyResolvedImport::Resolved(_) => {
                         self.record_resolved_import(&directive);
                         self.resolved_imports.push(directive);
                         resolved_something = true;
                     }
-                    PartialResolvedImport::Unresolved => {
+                    PartiallyResolvedImport::Unresolved => {
                         self.unresolved_imports.push(directive);
                     }
                 }
@@ -238,27 +239,27 @@ impl<'db> DefCollector<'db> {
     }
 
     /// Given an import, try to resolve it.
-    fn resolve_import(&self, module_id: LocalModuleId, import: &Import) -> PartialResolvedImport {
+    fn resolve_import(&self, module_id: LocalModuleId, import: &Import) -> PartiallyResolvedImport {
         let res = self
             .package_defs
             .resolve_path_with_fixedpoint(self.db, module_id, &import.path);
 
         let def = res.resolved_def;
         if res.reached_fixedpoint == ReachedFixedPoint::No || def.is_none() {
-            return PartialResolvedImport::Unresolved;
+            return PartiallyResolvedImport::Unresolved;
         }
 
         if let Some(package) = res.package {
             if package != self.package_defs.module_tree.package {
-                return PartialResolvedImport::Resolved(def);
+                return PartiallyResolvedImport::Resolved(def);
             }
         }
 
-        // Check whether all namespace is resolved
+        // Check whether all namespaces have been resolved
         if def.take_types().is_some() && def.take_values().is_some() {
-            PartialResolvedImport::Resolved(def)
+            PartiallyResolvedImport::Resolved(def)
         } else {
-            PartialResolvedImport::Indeterminate(def)
+            PartiallyResolvedImport::Indeterminate(def)
         }
     }
 
@@ -316,7 +317,7 @@ impl<'db> DefCollector<'db> {
                     }
                 }
                 Some((_, _)) => {
-                    // Happens when wildcard importing something other than a module. I guess its ok to do nothing here?
+                    // Happens when wildcard importing something other than a module. I guess it's ok to do nothing here?
                 }
                 None => {
                     // Happens if a wildcard import refers to something other than a type?
@@ -383,14 +384,14 @@ impl<'db> DefCollector<'db> {
 
         let mut changed = false;
         for ImportResolution { name, resolution } in resolutions {
-            // TODO: Add an error if the visibility of the item does not allow exposing with the
+            // TODO(#309): Add an error if the visibility of the item does not allow exposing with the
             // import visibility. e.g.:
             // ```mun
             // //- foo.mun
             // pub(package) struct Foo;
             //
             // //- main.mun
-            // pub foo::Foo; // This is not allowed because Foo is only public for the package.
+            // pub foo::Foo; // This is not allowed because Foo is only public within the package.
             // ```
 
             match name {
@@ -526,7 +527,7 @@ impl<'a> ModCollectorContext<'a, '_> {
         self.def_collector.unresolved_imports.push(ImportDirective {
             module_id: self.module_id,
             import: Import::from_use(&self.item_tree, InFile::new(self.file_id, id)),
-            status: PartialResolvedImport::Unresolved,
+            status: PartiallyResolvedImport::Unresolved,
         });
         None
     }

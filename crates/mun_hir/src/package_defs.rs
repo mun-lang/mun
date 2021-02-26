@@ -55,12 +55,14 @@ mod diagnostics {
     use mun_syntax::ast::Use;
     use mun_syntax::{ast, AstPtr};
 
+    /// A type of diagnostic that may be emitted during resolving all package definitions.
     #[derive(Debug, PartialEq, Eq)]
     enum DiagnosticKind {
         UnresolvedImport { ast: AstId<ast::Use>, index: usize },
         DuplicateImport { ast: AstId<ast::Use>, index: usize },
     }
 
+    /// A diagnostic that may be emitted during resolving all package definitions.
     #[derive(Debug, PartialEq, Eq)]
     pub(super) struct DefDiagnostic {
         /// The module that contains the diagnostic

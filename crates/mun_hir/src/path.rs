@@ -16,6 +16,7 @@ pub enum PathKind {
     Package,
 }
 
+/// A possible import alias e.g. `Foo as Bar` or `Foo as _`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ImportAlias {
     /// Unnamed alias, as in `use Foo as _;`
@@ -77,7 +78,7 @@ impl Path {
         None
     }
 
-    /// Construct a path from its segments
+    /// Constructs a path from its segments.
     pub fn from_segments(kind: PathKind, segments: impl IntoIterator<Item = Name>) -> Path {
         let segments = segments.into_iter().collect::<Vec<_>>();
         Path { kind, segments }

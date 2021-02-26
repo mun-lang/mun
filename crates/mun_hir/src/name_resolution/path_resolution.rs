@@ -9,7 +9,7 @@ use std::iter::successors;
 
 /// Indicates whether or not any newly resolved import statements will actually change the outcome
 /// of an operation. This is useful to know if more iterations of an algorithm might be required, or
-/// if its hopeless.
+/// whether its hopeless.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReachedFixedPoint {
     Yes,

@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 /// Represents the tree of modules of a package.
 ///
-/// The `ModuleTree` is build by looking at all the source files of the source root of a package and
+/// The `ModuleTree` is built by looking at all the source files of the source root of a package and
 /// creating a tree based on their relative paths. See the [`ModuleTree::module_tree_query`] method.
 /// When constructing the `ModuleTree` extra empty modules may be added for missing files. For
 /// instance for the relative path `foo/bar/baz.mun`, besides the module `foo::bar::baz` the modules

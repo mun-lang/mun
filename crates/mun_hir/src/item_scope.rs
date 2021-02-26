@@ -17,8 +17,8 @@ pub(crate) enum ImportType {
 }
 
 /// A struct that holds information on which name was imported via a glob import. This information
-/// is used by the `PackageDef` collector to keep track of duplicates so that this doesnt result in
-/// a duplicate name error:
+/// is used by the `PackageDef` collector to keep track of duplicates so that this doesn't result in
+/// a duplicate name error; e.g. :
 /// ```mun
 /// use foo::{Foo, *};
 /// ```
@@ -48,7 +48,7 @@ pub(crate) struct AddResolutionFromImportResult {
     /// Whether or not adding the resolution changed the item scope
     pub changed: bool,
 
-    /// Whether or not adding the resolution will overwrite and existing entry
+    /// Whether or not adding the resolution will overwrite an existing entry
     pub duplicate: bool,
 }
 
@@ -85,7 +85,7 @@ impl ItemScope {
     }
 
     /// Adds a named item resolution into the scope. Returns true if adding the resolution changes
-    /// the scope or not.
+    /// the scope.
     pub(crate) fn add_resolution(
         &mut self,
         name: Name,
@@ -109,7 +109,7 @@ impl ItemScope {
     }
 
     /// Adds a named item resolution into the scope which is the result of a `use` statement.
-    /// Returns true if adding the resolution changes the scope or not.
+    /// Returns true if adding the resolution changes the scope.
     pub(crate) fn add_resolution_from_import(
         &mut self,
         glob_imports: &mut PerNsGlobImports,
@@ -134,7 +134,7 @@ impl ItemScope {
                         match $def_import_type {
                             // If this is a wildcard import, add it to the list of items we imported
                             // via a glob. This information is stored so if we later explicitly
-                            // import this type or value, it doesnt cause a conflict.
+                            // import this type or value, it doesn't cause a conflict.
                             ImportType::Glob => {
                                 $glob_imports.$field.insert($lookup.clone());
                             }
