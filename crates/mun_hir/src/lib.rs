@@ -22,7 +22,7 @@ mod item_tree;
 pub mod line_index;
 mod module_tree;
 mod name;
-mod name_resolution;
+pub(crate) mod name_resolution;
 mod path;
 mod primitive_type;
 mod resolve;

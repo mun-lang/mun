@@ -1,3 +1,4 @@
+use crate::module_tree::{LocalModuleId, ModuleTree};
 use crate::{ids::ModuleId, DefDatabase, HirDatabase, Resolver};
 use mun_syntax::ast;
 use std::iter::successors;
@@ -57,6 +58,23 @@ pub enum Visibility {
 }
 
 impl Visibility {
+    /// Returns true if an item with this visibility is accessible from the module of the
+    /// specified `PackageDefs`.
+    pub(crate) fn is_visible_from_module_tree(
+        self,
+        module_tree: &ModuleTree,
+        from_module: LocalModuleId,
+    ) -> bool {
+        let to_module = match self {
+            Visibility::Module(m) => m,
+            Visibility::Public => return true,
+        };
+
+        let mut ancestors = successors(Some(from_module), |m| module_tree[*m].parent);
+
+        ancestors.any(|m| m == to_module.local_id)
+    }
+
     /// Returns true if an item with this visibility is accessible from the given module.
     pub fn is_visible_from(self, db: &dyn HirDatabase, from_module: ModuleId) -> bool {
         let to_module = match self {

@@ -2,12 +2,13 @@ mod lower;
 #[cfg(test)]
 mod tests;
 
+use crate::path::ImportAlias;
 use crate::{
     arena::{Arena, Idx},
     source_id::FileAstId,
     type_ref::TypeRef,
     visibility::RawVisibility,
-    DefDatabase, FileId, InFile, Name,
+    DefDatabase, FileId, InFile, Name, Path,
 };
 use mun_syntax::{ast, AstNode};
 use std::{
@@ -45,6 +46,8 @@ impl fmt::Debug for RawVisibilityId {
 }
 
 /// An `ItemTree` is a derivative of an AST that only contains the items defined in the AST.
+///
+/// Examples of items are: functions, structs, use statements.
 #[derive(Debug, Eq, PartialEq)]
 pub struct ItemTree {
     file_id: FileId,
@@ -102,6 +105,7 @@ impl ItemVisibilities {
 
 #[derive(Default, Debug, Eq, PartialEq)]
 struct ItemTreeData {
+    imports: Arena<Import>,
     functions: Arena<Function>,
     structs: Arena<Struct>,
     fields: Arena<Field>,
@@ -222,6 +226,7 @@ mod_items! {
     Function in functions -> ast::FunctionDef,
     Struct in structs -> ast::StructDef,
     TypeAlias in type_aliases -> ast::TypeAliasDef,
+    Import in imports -> ast::Use,
 }
 
 macro_rules! impl_index {
@@ -263,6 +268,30 @@ impl<N: ItemTreeNode> Index<LocalItemTreeId<N>> for ItemTree {
     fn index(&self, id: LocalItemTreeId<N>) -> &N {
         N::lookup(self, id.index)
     }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Import {
+    /// The path of the import (e.g. foo::Bar). Note that group imports have been desugared, each
+    /// item in the import tree is a seperate import.
+    pub path: Path,
+
+    /// An optional alias for this import statement (e.g. `use foo as bar`)
+    pub alias: Option<ImportAlias>,
+
+    /// The visibility of the import statement as seen from the file that contains the import
+    /// statement.
+    pub visibility: RawVisibilityId,
+
+    /// Whether or not this is a wildcard import.
+    pub is_glob: bool,
+
+    /// AST Id of the `use` item this import was derived from. Note that multiple `Import`s can map
+    /// to the same `use` item.
+    pub ast_id: FileAstId<ast::Use>,
+
+    /// Index of this `Import` when the containing `Use` is visited with `Path::expand_use_item`.
+    pub index: usize,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -412,6 +441,9 @@ mod diagnostics {
                         SyntaxNodePtr::new(item_tree.source(db, item).syntax())
                     }
                     ModItem::TypeAlias(item) => {
+                        SyntaxNodePtr::new(item_tree.source(db, item).syntax())
+                    }
+                    ModItem::Import(item) => {
                         SyntaxNodePtr::new(item_tree.source(db, item).syntax())
                     }
                 }

@@ -4,19 +4,32 @@ use super::{
     diagnostics, Field, Fields, Function, IdRange, ItemTree, ItemTreeData, ItemTreeNode,
     LocalItemTreeId, ModItem, RawVisibilityId, Struct, StructDefKind, TypeAlias,
 };
+use crate::item_tree::Import;
 use crate::{
     arena::{Idx, RawId},
     name::AsName,
     source_id::AstIdMap,
     type_ref::TypeRef,
     visibility::RawVisibility,
-    DefDatabase, FileId, Name,
+    DefDatabase, FileId, InFile, Name, Path,
 };
 use mun_syntax::{
     ast,
     ast::{ExternOwner, ModuleItemOwner, NameOwner, StructKind, TypeAscriptionOwner},
 };
+use smallvec::SmallVec;
 use std::{collections::HashMap, convert::TryInto, marker::PhantomData, sync::Arc};
+
+struct ModItems(SmallVec<[ModItem; 1]>);
+
+impl<T> From<T> for ModItems
+where
+    T: Into<ModItem>,
+{
+    fn from(t: T) -> Self {
+        ModItems(SmallVec::from_buf([t.into(); 1]))
+    }
+}
 
 impl<N: ItemTreeNode> From<Idx<N>> for LocalItemTreeId<N> {
     fn from(index: Idx<N>) -> Self {
@@ -50,25 +63,29 @@ impl Context {
         let top_level = item_owner
             .items()
             .flat_map(|item| self.lower_mod_item(&item))
+            .flat_map(|items| items.0)
             .collect::<Vec<_>>();
 
         // Check duplicates
         let mut set = HashMap::<Name, &ModItem>::new();
         for item in top_level.iter() {
             let name = match item {
-                ModItem::Function(item) => &self.data.functions[item.index].name,
-                ModItem::Struct(item) => &self.data.structs[item.index].name,
-                ModItem::TypeAlias(item) => &self.data.type_aliases[item.index].name,
+                ModItem::Function(item) => Some(&self.data.functions[item.index].name),
+                ModItem::Struct(item) => Some(&self.data.structs[item.index].name),
+                ModItem::TypeAlias(item) => Some(&self.data.type_aliases[item.index].name),
+                ModItem::Import(_) => None,
             };
-            if let Some(first_item) = set.get(&name) {
-                self.diagnostics
-                    .push(diagnostics::ItemTreeDiagnostic::DuplicateDefinition {
-                        name: name.clone(),
-                        first: **first_item,
-                        second: *item,
-                    })
-            } else {
-                set.insert(name.clone(), item);
+            if let Some(name) = name {
+                if let Some(first_item) = set.get(&name) {
+                    self.diagnostics
+                        .push(diagnostics::ItemTreeDiagnostic::DuplicateDefinition {
+                            name: name.clone(),
+                            first: **first_item,
+                            second: *item,
+                        })
+                } else {
+                    set.insert(name.clone(), item);
+                }
             }
         }
 
@@ -81,12 +98,47 @@ impl Context {
     }
 
     /// Lowers a single module item
-    fn lower_mod_item(&mut self, item: &ast::ModuleItem) -> Option<ModItem> {
+    fn lower_mod_item(&mut self, item: &ast::ModuleItem) -> Option<ModItems> {
         match item.kind() {
             ast::ModuleItemKind::FunctionDef(ast) => self.lower_function(&ast).map(Into::into),
             ast::ModuleItemKind::StructDef(ast) => self.lower_struct(&ast).map(Into::into),
             ast::ModuleItemKind::TypeAliasDef(ast) => self.lower_type_alias(&ast).map(Into::into),
+            ast::ModuleItemKind::Use(ast) => Some(ModItems(
+                self.lower_use(&ast)
+                    .into_iter()
+                    .map(Into::into)
+                    .collect::<SmallVec<_>>(),
+            )),
         }
+    }
+
+    /// Lowers a `use` statement
+    fn lower_use(&mut self, use_item: &ast::Use) -> Vec<LocalItemTreeId<Import>> {
+        let visibility = self.lower_visibility(use_item);
+        let ast_id = self.source_ast_id_map.ast_id(use_item);
+
+        // Every use item can expand to many `Import`s.
+        let mut imports = Vec::new();
+        let tree = &mut self.data;
+        Path::expand_use_item(
+            InFile::new(self.file, use_item.clone()),
+            |path, _use_tree, is_glob, alias| {
+                imports.push(
+                    tree.imports
+                        .alloc(Import {
+                            path,
+                            alias,
+                            visibility,
+                            is_glob,
+                            ast_id,
+                            index: imports.len(),
+                        })
+                        .into(),
+                );
+            },
+        );
+
+        imports
     }
 
     /// Lowers a function

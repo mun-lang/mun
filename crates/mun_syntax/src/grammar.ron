@@ -72,6 +72,8 @@ Grammar(
         "fn",
         "if",
         "in",
+        "as",
+        "use",
         // "local",     // We use let
         "nil",
         // "not",        // We use !
@@ -169,13 +171,18 @@ Grammar(
         "RECORD_LIT",
         "RECORD_FIELD_LIST",
         "RECORD_FIELD",
+
+        "USE",
+        "USE_TREE",
+        "USE_TREE_LIST",
+        "RENAME"
     ],
     ast: {
         "SourceFile": (
             traits: [ "ModuleItemOwner", "FunctionDefOwner" ],
         ),
         "ModuleItem": (
-            enum: ["FunctionDef", "StructDef", "TypeAliasDef"]
+            enum: ["Use", "FunctionDef", "StructDef", "TypeAliasDef"]
         ),
         "Visibility": (),
         "FunctionDef": (
@@ -349,5 +356,25 @@ Grammar(
             options: [["spread", "Expr"]]
         ),
         "RecordField": (options: ["NameRef", "Expr"]),
+
+        "Use": (
+            options: [["use_tree", "UseTree"]],
+            traits: ("VisibilityOwner")
+        ),
+
+        "UseTree": (
+            options: [
+                ["use_tree_list", "UseTreeList"],
+                ["path", "Path"],
+                ["rename", "Rename"]
+            ]
+        ),
+        "UseTreeList": (
+            collections: [ ("use_trees", "UseTree") ]
+        ),
+
+        "Rename": (
+            traits: ("NameOwner")
+        )
     }
 )

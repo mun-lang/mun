@@ -610,7 +610,7 @@ pub struct ModuleItem {
 
 impl AstNode for ModuleItem {
     fn can_cast(kind: SyntaxKind) -> bool {
-        matches!(kind, FUNCTION_DEF | STRUCT_DEF | TYPE_ALIAS_DEF)
+        matches!(kind, USE | FUNCTION_DEF | STRUCT_DEF | TYPE_ALIAS_DEF)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -625,9 +625,15 @@ impl AstNode for ModuleItem {
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModuleItemKind {
+    Use(Use),
     FunctionDef(FunctionDef),
     StructDef(StructDef),
     TypeAliasDef(TypeAliasDef),
+}
+impl From<Use> for ModuleItem {
+    fn from(n: Use) -> ModuleItem {
+        ModuleItem { syntax: n.syntax }
+    }
 }
 impl From<FunctionDef> for ModuleItem {
     fn from(n: FunctionDef) -> ModuleItem {
@@ -648,6 +654,7 @@ impl From<TypeAliasDef> for ModuleItem {
 impl ModuleItem {
     pub fn kind(&self) -> ModuleItemKind {
         match self.syntax.kind() {
+            USE => ModuleItemKind::Use(Use::cast(self.syntax.clone()).unwrap()),
             FUNCTION_DEF => {
                 ModuleItemKind::FunctionDef(FunctionDef::cast(self.syntax.clone()).unwrap())
             }
@@ -1191,6 +1198,31 @@ impl RecordLit {
     }
 }
 
+// Rename
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Rename {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for Rename {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, RENAME)
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(Rename { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl ast::NameOwner for Rename {}
+impl Rename {}
+
 // RetType
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1491,6 +1523,99 @@ impl TypeRef {
 }
 
 impl TypeRef {}
+
+// Use
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Use {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for Use {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, USE)
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(Use { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl ast::VisibilityOwner for Use {}
+impl Use {
+    pub fn use_tree(&self) -> Option<UseTree> {
+        super::child_opt(self)
+    }
+}
+
+// UseTree
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct UseTree {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for UseTree {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, USE_TREE)
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(UseTree { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl UseTree {
+    pub fn use_tree_list(&self) -> Option<UseTreeList> {
+        super::child_opt(self)
+    }
+
+    pub fn path(&self) -> Option<Path> {
+        super::child_opt(self)
+    }
+
+    pub fn rename(&self) -> Option<Rename> {
+        super::child_opt(self)
+    }
+}
+
+// UseTreeList
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct UseTreeList {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for UseTreeList {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, USE_TREE_LIST)
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(UseTreeList { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl UseTreeList {
+    pub fn use_trees(&self) -> impl Iterator<Item = UseTree> {
+        super::children(self)
+    }
+}
 
 // Visibility
 

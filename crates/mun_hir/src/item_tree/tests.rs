@@ -44,6 +44,9 @@ fn format_mod_item(out: &mut String, tree: &ItemTree, item: ModItem) -> fmt::Res
         ModItem::TypeAlias(item) => {
             write!(out, "{:?}", tree[item])?;
         }
+        ModItem::Import(item) => {
+            write!(out, "{:?}", tree[item])?;
+        }
     }
 
     for line in children.lines() {

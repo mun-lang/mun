@@ -652,6 +652,12 @@ fn infer(content: &str) -> String {
         write!(diags, "{}: {}\n", diag.highlight_range(), diag.message()).unwrap();
     });
 
+    for package in Package::all(&db).iter() {
+        for module in package.modules(&db).iter() {
+            module.diagnostics(&db, &mut diag_sink);
+        }
+    }
+
     for item in Package::all(&db)
         .iter()
         .flat_map(|pkg| pkg.modules(&db))
@@ -662,12 +668,7 @@ fn infer(content: &str) -> String {
                 let source_map = fun.body_source_map(&db);
                 let infer_result = fun.infer(&db);
 
-                fun.diagnostics(&db, &mut diag_sink);
-
                 infer_def(infer_result, source_map);
-            }
-            ModuleDef::TypeAlias(item) => {
-                item.diagnostics(&db, &mut diag_sink);
             }
             _ => {}
         }

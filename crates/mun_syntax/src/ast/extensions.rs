@@ -199,3 +199,11 @@ impl ast::Visibility {
             .any(|it| it.kind() == T![super])
     }
 }
+
+impl ast::UseTree {
+    pub fn has_star_token(&self) -> bool {
+        self.syntax()
+            .children_with_tokens()
+            .any(|it| it.kind() == T![*])
+    }
+}
