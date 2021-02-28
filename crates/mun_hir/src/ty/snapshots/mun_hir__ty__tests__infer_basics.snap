@@ -2,12 +2,12 @@
 source: crates/mun_hir/src/ty/tests.rs
 expression: "fn test(a:i32, b:f64, c:never, d:bool) -> bool {\n    a;\n    b;\n    c;\n    d\n}"
 ---
-[8; 9) 'a': i32
-[15; 16) 'b': f64
-[22; 23) 'c': never
-[31; 32) 'd': bool
-[47; 77) '{     ...   d }': never
-[53; 54) 'a': i32
-[60; 61) 'b': f64
-[67; 68) 'c': never
-[74; 75) 'd': bool
+8..9 'a': i32
+15..16 'b': f64
+22..23 'c': never
+31..32 'd': bool
+47..77 '{     ...   d }': never
+53..54 'a': i32
+60..61 'b': f64
+67..68 'c': never
+74..75 'd': bool

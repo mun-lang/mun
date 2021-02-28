@@ -1,6 +1,5 @@
 use super::LanguageServerState;
-use crate::{conversion::convert_uri, handlers, state::RequestHandler};
-use anyhow::Result;
+use crate::{from_lsp, handlers, lsp_utils::apply_document_changes, state::RequestHandler};
 use dispatcher::{NotificationDispatcher, RequestDispatcher};
 use lsp_types::notification::{
     DidChangeTextDocument, DidChangeWatchedFiles, DidCloseTextDocument, DidOpenTextDocument,
@@ -15,7 +14,7 @@ impl LanguageServerState {
         &mut self,
         params: lsp_types::DidOpenTextDocumentParams,
     ) -> anyhow::Result<()> {
-        if let Ok(path) = convert_uri(&params.text_document.uri) {
+        if let Ok(path) = from_lsp::abs_path(&params.text_document.uri) {
             self.open_docs.insert(path.clone());
             self.vfs
                 .write()
@@ -33,11 +32,17 @@ impl LanguageServerState {
             text_document,
             content_changes,
         } = params;
-        if let Ok(path) = convert_uri(&text_document.uri) {
-            let new_content = content_changes.get(0).unwrap().text.clone();
-            self.vfs
-                .write()
-                .set_file_contents(&path, Some(new_content.into_bytes()));
+        if let Ok(path) = from_lsp::abs_path(&text_document.uri) {
+            let vfs = &mut *self.vfs.write();
+            let file_id = vfs
+                .file_id(&path)
+                .expect("we already checked that the file_id exists!");
+            let mut text = vfs
+                .file_contents(file_id)
+                .and_then(|contents| String::from_utf8(contents.to_vec()).ok())
+                .expect("if the file_id exists it must be valid utf8");
+            apply_document_changes(&mut text, content_changes);
+            vfs.set_file_contents(&path, Some(text.into_bytes()));
         }
         Ok(())
     }
@@ -47,7 +52,7 @@ impl LanguageServerState {
         &mut self,
         params: lsp_types::DidCloseTextDocumentParams,
     ) -> anyhow::Result<()> {
-        if let Ok(path) = convert_uri(&params.text_document.uri) {
+        if let Ok(path) = from_lsp::abs_path(&params.text_document.uri) {
             self.open_docs.remove(&path);
             self.vfs_monitor.reload(&path);
         }
@@ -60,7 +65,7 @@ impl LanguageServerState {
         params: lsp_types::DidChangeWatchedFilesParams,
     ) -> anyhow::Result<()> {
         for change in params.changes {
-            if let Ok(path) = convert_uri(&change.uri) {
+            if let Ok(path) = from_lsp::abs_path(&change.uri) {
                 self.vfs_monitor.reload(&path);
             }
         }
@@ -72,7 +77,7 @@ impl LanguageServerState {
         &mut self,
         request: lsp_server::Request,
         request_received: Instant,
-    ) -> Result<()> {
+    ) -> anyhow::Result<()> {
         self.register_request(&request, request_received);
 
         // If a shutdown was requested earlier, immediately respond with an error
@@ -98,7 +103,10 @@ impl LanguageServerState {
     }
 
     /// Handles a notification from the language server client
-    pub(super) fn on_notification(&mut self, notification: lsp_server::Notification) -> Result<()> {
+    pub(super) fn on_notification(
+        &mut self,
+        notification: lsp_server::Notification,
+    ) -> anyhow::Result<()> {
         NotificationDispatcher::new(self, notification)
             .on::<DidOpenTextDocument>(LanguageServerState::on_did_open_text_document)?
             .on::<DidChangeTextDocument>(LanguageServerState::on_did_change_text_document)?

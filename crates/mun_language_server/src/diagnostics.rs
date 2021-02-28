@@ -22,7 +22,7 @@ pub struct Diagnostic {
 /// Converts a location to a a range for use in diagnostics
 fn location_to_range(location: Location) -> TextRange {
     match location {
-        Location::Offset(offset) => TextRange::offset_len(offset, 1.into()),
+        Location::Offset(offset) => TextRange::at(offset, 1.into()),
         Location::Range(range) => range,
     }
 }

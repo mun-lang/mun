@@ -2,97 +2,97 @@
 source: crates/mun_syntax/src/tests/parser.rs
 expression: "fn foo() {\n    let a = \"hello\"\n    let b = \"world\"\n    let c\n    b = \"Hello, world!\"\n    !-5+2*(a+b);\n    -3\n}"
 ---
-SOURCE_FILE@[0; 110)
-  FUNCTION_DEF@[0; 110)
-    FN_KW@[0; 2) "fn"
-    WHITESPACE@[2; 3) " "
-    NAME@[3; 6)
-      IDENT@[3; 6) "foo"
-    PARAM_LIST@[6; 8)
-      L_PAREN@[6; 7) "("
-      R_PAREN@[7; 8) ")"
-    WHITESPACE@[8; 9) " "
-    BLOCK_EXPR@[9; 110)
-      L_CURLY@[9; 10) "{"
-      WHITESPACE@[10; 15) "\n    "
-      LET_STMT@[15; 30)
-        LET_KW@[15; 18) "let"
-        WHITESPACE@[18; 19) " "
-        BIND_PAT@[19; 20)
-          NAME@[19; 20)
-            IDENT@[19; 20) "a"
-        WHITESPACE@[20; 21) " "
-        EQ@[21; 22) "="
-        WHITESPACE@[22; 23) " "
-        LITERAL@[23; 30)
-          STRING@[23; 30) "\"hello\""
-      WHITESPACE@[30; 35) "\n    "
-      LET_STMT@[35; 50)
-        LET_KW@[35; 38) "let"
-        WHITESPACE@[38; 39) " "
-        BIND_PAT@[39; 40)
-          NAME@[39; 40)
-            IDENT@[39; 40) "b"
-        WHITESPACE@[40; 41) " "
-        EQ@[41; 42) "="
-        WHITESPACE@[42; 43) " "
-        LITERAL@[43; 50)
-          STRING@[43; 50) "\"world\""
-      WHITESPACE@[50; 55) "\n    "
-      LET_STMT@[55; 60)
-        LET_KW@[55; 58) "let"
-        WHITESPACE@[58; 59) " "
-        BIND_PAT@[59; 60)
-          NAME@[59; 60)
-            IDENT@[59; 60) "c"
-      WHITESPACE@[60; 65) "\n    "
-      EXPR_STMT@[65; 84)
-        BIN_EXPR@[65; 84)
-          PATH_EXPR@[65; 66)
-            PATH@[65; 66)
-              PATH_SEGMENT@[65; 66)
-                NAME_REF@[65; 66)
-                  IDENT@[65; 66) "b"
-          WHITESPACE@[66; 67) " "
-          EQ@[67; 68) "="
-          WHITESPACE@[68; 69) " "
-          LITERAL@[69; 84)
-            STRING@[69; 84) "\"Hello, world!\""
-      WHITESPACE@[84; 89) "\n    "
-      EXPR_STMT@[89; 101)
-        BIN_EXPR@[89; 100)
-          PREFIX_EXPR@[89; 92)
-            EXCLAMATION@[89; 90) "!"
-            PREFIX_EXPR@[90; 92)
-              MINUS@[90; 91) "-"
-              LITERAL@[91; 92)
-                INT_NUMBER@[91; 92) "5"
-          PLUS@[92; 93) "+"
-          BIN_EXPR@[93; 100)
-            LITERAL@[93; 94)
-              INT_NUMBER@[93; 94) "2"
-            STAR@[94; 95) "*"
-            PAREN_EXPR@[95; 100)
-              L_PAREN@[95; 96) "("
-              BIN_EXPR@[96; 99)
-                PATH_EXPR@[96; 97)
-                  PATH@[96; 97)
-                    PATH_SEGMENT@[96; 97)
-                      NAME_REF@[96; 97)
-                        IDENT@[96; 97) "a"
-                PLUS@[97; 98) "+"
-                PATH_EXPR@[98; 99)
-                  PATH@[98; 99)
-                    PATH_SEGMENT@[98; 99)
-                      NAME_REF@[98; 99)
-                        IDENT@[98; 99) "b"
-              R_PAREN@[99; 100) ")"
-        SEMI@[100; 101) ";"
-      WHITESPACE@[101; 106) "\n    "
-      PREFIX_EXPR@[106; 108)
-        MINUS@[106; 107) "-"
-        LITERAL@[107; 108)
-          INT_NUMBER@[107; 108) "3"
-      WHITESPACE@[108; 109) "\n"
-      R_CURLY@[109; 110) "}"
+SOURCE_FILE@0..110
+  FUNCTION_DEF@0..110
+    FN_KW@0..2 "fn"
+    WHITESPACE@2..3 " "
+    NAME@3..6
+      IDENT@3..6 "foo"
+    PARAM_LIST@6..8
+      L_PAREN@6..7 "("
+      R_PAREN@7..8 ")"
+    WHITESPACE@8..9 " "
+    BLOCK_EXPR@9..110
+      L_CURLY@9..10 "{"
+      WHITESPACE@10..15 "\n    "
+      LET_STMT@15..30
+        LET_KW@15..18 "let"
+        WHITESPACE@18..19 " "
+        BIND_PAT@19..20
+          NAME@19..20
+            IDENT@19..20 "a"
+        WHITESPACE@20..21 " "
+        EQ@21..22 "="
+        WHITESPACE@22..23 " "
+        LITERAL@23..30
+          STRING@23..30 "\"hello\""
+      WHITESPACE@30..35 "\n    "
+      LET_STMT@35..50
+        LET_KW@35..38 "let"
+        WHITESPACE@38..39 " "
+        BIND_PAT@39..40
+          NAME@39..40
+            IDENT@39..40 "b"
+        WHITESPACE@40..41 " "
+        EQ@41..42 "="
+        WHITESPACE@42..43 " "
+        LITERAL@43..50
+          STRING@43..50 "\"world\""
+      WHITESPACE@50..55 "\n    "
+      LET_STMT@55..60
+        LET_KW@55..58 "let"
+        WHITESPACE@58..59 " "
+        BIND_PAT@59..60
+          NAME@59..60
+            IDENT@59..60 "c"
+      WHITESPACE@60..65 "\n    "
+      EXPR_STMT@65..84
+        BIN_EXPR@65..84
+          PATH_EXPR@65..66
+            PATH@65..66
+              PATH_SEGMENT@65..66
+                NAME_REF@65..66
+                  IDENT@65..66 "b"
+          WHITESPACE@66..67 " "
+          EQ@67..68 "="
+          WHITESPACE@68..69 " "
+          LITERAL@69..84
+            STRING@69..84 "\"Hello, world!\""
+      WHITESPACE@84..89 "\n    "
+      EXPR_STMT@89..101
+        BIN_EXPR@89..100
+          PREFIX_EXPR@89..92
+            EXCLAMATION@89..90 "!"
+            PREFIX_EXPR@90..92
+              MINUS@90..91 "-"
+              LITERAL@91..92
+                INT_NUMBER@91..92 "5"
+          PLUS@92..93 "+"
+          BIN_EXPR@93..100
+            LITERAL@93..94
+              INT_NUMBER@93..94 "2"
+            STAR@94..95 "*"
+            PAREN_EXPR@95..100
+              L_PAREN@95..96 "("
+              BIN_EXPR@96..99
+                PATH_EXPR@96..97
+                  PATH@96..97
+                    PATH_SEGMENT@96..97
+                      NAME_REF@96..97
+                        IDENT@96..97 "a"
+                PLUS@97..98 "+"
+                PATH_EXPR@98..99
+                  PATH@98..99
+                    PATH_SEGMENT@98..99
+                      NAME_REF@98..99
+                        IDENT@98..99 "b"
+              R_PAREN@99..100 ")"
+        SEMI@100..101 ";"
+      WHITESPACE@101..106 "\n    "
+      PREFIX_EXPR@106..108
+        MINUS@106..107 "-"
+        LITERAL@107..108
+          INT_NUMBER@107..108 "3"
+      WHITESPACE@108..109 "\n"
+      R_CURLY@109..110 "}"
 

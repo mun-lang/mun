@@ -2,5 +2,5 @@
 source: crates/mun_syntax/src/tests/parser.rs
 expression: ""
 ---
-SOURCE_FILE@[0; 0)
+SOURCE_FILE@0..0
 

@@ -969,7 +969,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
         messages.borrow_mut().push(format!(
             "error {}:{}: {}",
             line_col.line + 1,
-            line_col.col + 1,
+            line_col.col_utf16 + 1,
             diag.message()
         ));
     });

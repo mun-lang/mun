@@ -1,11 +1,11 @@
-use crate::TextUnit;
+use crate::TextSize;
 
 use std::str::Chars;
 
 /// A simple view into the characters of a string.
 pub(crate) struct Cursor<'s> {
     text: &'s str,
-    len: TextUnit,
+    len: TextSize,
 }
 
 impl<'s> Cursor<'s> {
@@ -18,7 +18,7 @@ impl<'s> Cursor<'s> {
     }
 
     /// Gets the length of the remaining string.
-    pub fn into_len(self) -> TextUnit {
+    pub fn into_len(self) -> TextSize {
         self.len
     }
 
@@ -57,7 +57,7 @@ impl<'s> Cursor<'s> {
     /// Move to the next character
     pub fn bump(&mut self) -> Option<char> {
         let ch = self.chars().next()?;
-        self.len += TextUnit::of_char(ch);
+        self.len += TextSize::of(ch);
         Some(ch)
     }
 

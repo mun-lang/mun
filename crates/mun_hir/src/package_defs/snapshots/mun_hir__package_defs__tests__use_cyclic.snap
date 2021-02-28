@@ -4,11 +4,11 @@ expression: "//- /foo.mun\nuse super::baz::Cyclic;\n\npub struct Ok;\n\n//- /bar
 ---
 mod mod
 +-- mod bar
-|   +-- ERROR: [17; 23): unresolved import
+|   +-- ERROR: 17..23: unresolved import
 |   '-- use struct package::foo::Ok
 +-- mod baz
-|   +-- ERROR: [17; 23): unresolved import
+|   +-- ERROR: 17..23: unresolved import
 |   '-- use struct package::foo::Ok
 '-- mod foo
-    +-- ERROR: [4; 22): unresolved import
+    +-- ERROR: 4..22: unresolved import
     '-- struct Ok

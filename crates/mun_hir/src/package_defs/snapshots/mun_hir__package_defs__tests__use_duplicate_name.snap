@@ -4,7 +4,7 @@ expression: "//- /foo.mun\npub struct Ok;\n\n//- /bar.mun\nuse package::foo::Ok;
 ---
 mod mod
 +-- mod bar
-|   +-- ERROR: [4; 20): a second item with the same name imported. Try to use an alias.
+|   +-- ERROR: 4..20: a second item with the same name imported. Try to use an alias.
 |   '-- struct Ok
 '-- mod foo
     '-- struct Ok

@@ -1,15 +1,15 @@
 use crate::parsing::ParseError;
 use std::fmt;
 
-use text_unit::{TextRange, TextUnit};
+use text_size::{TextRange, TextSize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Location {
-    Offset(TextUnit),
+    Offset(TextSize),
     Range(TextRange),
 }
 
-impl Into<Location> for TextUnit {
+impl Into<Location> for TextSize {
     fn into(self) -> Location {
         Location::Offset(self)
     }
@@ -22,21 +22,21 @@ impl Into<Location> for TextRange {
 }
 
 impl Location {
-    pub fn offset(&self) -> TextUnit {
+    pub fn offset(&self) -> TextSize {
         match &self {
             Location::Offset(offset) => *offset,
             Location::Range(range) => range.start(),
         }
     }
 
-    pub fn end_offset(&self) -> TextUnit {
+    pub fn end_offset(&self) -> TextSize {
         match &self {
             Location::Offset(offset) => *offset,
             Location::Range(range) => range.end(),
         }
     }
 
-    pub fn add_offset(&self, plus_offset: TextUnit, minus_offset: TextUnit) -> Location {
+    pub fn add_offset(&self, plus_offset: TextSize, minus_offset: TextSize) -> Location {
         match &self {
             Location::Range(range) => Location::Range(range + plus_offset - minus_offset),
             Location::Offset(offset) => Location::Offset(offset + plus_offset - minus_offset),

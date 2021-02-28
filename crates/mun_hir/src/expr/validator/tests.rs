@@ -84,7 +84,7 @@ fn diagnostics(content: &str) -> String {
     let mut diags = String::new();
 
     let mut diag_sink = DiagnosticSink::new(|diag| {
-        write!(diags, "{}: {}\n", diag.highlight_range(), diag.message()).unwrap();
+        write!(diags, "{:?}: {}\n", diag.highlight_range(), diag.message()).unwrap();
     });
 
     for item in Package::all(&db)

@@ -637,7 +637,7 @@ fn infer(content: &str) -> String {
             );
             write!(
                 acc,
-                "{} '{}': {}\n",
+                "{:?} '{}': {}\n",
                 range,
                 ellipsize(text, 15),
                 ty.display(&db)
@@ -649,7 +649,7 @@ fn infer(content: &str) -> String {
     let mut diags = String::new();
 
     let mut diag_sink = DiagnosticSink::new(|diag| {
-        write!(diags, "{}: {}\n", diag.highlight_range(), diag.message()).unwrap();
+        write!(diags, "{:?}: {}\n", diag.highlight_range(), diag.message()).unwrap();
     });
 
     for package in Package::all(&db).iter() {

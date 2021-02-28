@@ -2,151 +2,151 @@
 source: crates/mun_syntax/src/tests/parser.rs
 expression: "fn foo() {\n    U;\n    S {};\n    S { x, y: 32, };\n    S { x: 32, y: 64 };\n    TupleStruct { 0: 1 };\n    T(1.23);\n    T(1.23, 4,)\n}"
 ---
-SOURCE_FILE@[0; 129)
-  FUNCTION_DEF@[0; 129)
-    FN_KW@[0; 2) "fn"
-    WHITESPACE@[2; 3) " "
-    NAME@[3; 6)
-      IDENT@[3; 6) "foo"
-    PARAM_LIST@[6; 8)
-      L_PAREN@[6; 7) "("
-      R_PAREN@[7; 8) ")"
-    WHITESPACE@[8; 9) " "
-    BLOCK_EXPR@[9; 129)
-      L_CURLY@[9; 10) "{"
-      WHITESPACE@[10; 15) "\n    "
-      EXPR_STMT@[15; 17)
-        PATH_EXPR@[15; 16)
-          PATH@[15; 16)
-            PATH_SEGMENT@[15; 16)
-              NAME_REF@[15; 16)
-                IDENT@[15; 16) "U"
-        SEMI@[16; 17) ";"
-      WHITESPACE@[17; 22) "\n    "
-      EXPR_STMT@[22; 27)
-        RECORD_LIT@[22; 26)
-          PATH_TYPE@[22; 23)
-            PATH@[22; 23)
-              PATH_SEGMENT@[22; 23)
-                NAME_REF@[22; 23)
-                  IDENT@[22; 23) "S"
-          WHITESPACE@[23; 24) " "
-          RECORD_FIELD_LIST@[24; 26)
-            L_CURLY@[24; 25) "{"
-            R_CURLY@[25; 26) "}"
-        SEMI@[26; 27) ";"
-      WHITESPACE@[27; 32) "\n    "
-      EXPR_STMT@[32; 48)
-        RECORD_LIT@[32; 47)
-          PATH_TYPE@[32; 33)
-            PATH@[32; 33)
-              PATH_SEGMENT@[32; 33)
-                NAME_REF@[32; 33)
-                  IDENT@[32; 33) "S"
-          WHITESPACE@[33; 34) " "
-          RECORD_FIELD_LIST@[34; 47)
-            L_CURLY@[34; 35) "{"
-            WHITESPACE@[35; 36) " "
-            RECORD_FIELD@[36; 37)
-              NAME_REF@[36; 37)
-                IDENT@[36; 37) "x"
-            COMMA@[37; 38) ","
-            WHITESPACE@[38; 39) " "
-            RECORD_FIELD@[39; 44)
-              NAME_REF@[39; 40)
-                IDENT@[39; 40) "y"
-              COLON@[40; 41) ":"
-              WHITESPACE@[41; 42) " "
-              LITERAL@[42; 44)
-                INT_NUMBER@[42; 44) "32"
-            COMMA@[44; 45) ","
-            WHITESPACE@[45; 46) " "
-            R_CURLY@[46; 47) "}"
-        SEMI@[47; 48) ";"
-      WHITESPACE@[48; 53) "\n    "
-      EXPR_STMT@[53; 72)
-        RECORD_LIT@[53; 71)
-          PATH_TYPE@[53; 54)
-            PATH@[53; 54)
-              PATH_SEGMENT@[53; 54)
-                NAME_REF@[53; 54)
-                  IDENT@[53; 54) "S"
-          WHITESPACE@[54; 55) " "
-          RECORD_FIELD_LIST@[55; 71)
-            L_CURLY@[55; 56) "{"
-            WHITESPACE@[56; 57) " "
-            RECORD_FIELD@[57; 62)
-              NAME_REF@[57; 58)
-                IDENT@[57; 58) "x"
-              COLON@[58; 59) ":"
-              WHITESPACE@[59; 60) " "
-              LITERAL@[60; 62)
-                INT_NUMBER@[60; 62) "32"
-            COMMA@[62; 63) ","
-            WHITESPACE@[63; 64) " "
-            RECORD_FIELD@[64; 69)
-              NAME_REF@[64; 65)
-                IDENT@[64; 65) "y"
-              COLON@[65; 66) ":"
-              WHITESPACE@[66; 67) " "
-              LITERAL@[67; 69)
-                INT_NUMBER@[67; 69) "64"
-            WHITESPACE@[69; 70) " "
-            R_CURLY@[70; 71) "}"
-        SEMI@[71; 72) ";"
-      WHITESPACE@[72; 77) "\n    "
-      EXPR_STMT@[77; 98)
-        RECORD_LIT@[77; 97)
-          PATH_TYPE@[77; 88)
-            PATH@[77; 88)
-              PATH_SEGMENT@[77; 88)
-                NAME_REF@[77; 88)
-                  IDENT@[77; 88) "TupleStruct"
-          WHITESPACE@[88; 89) " "
-          RECORD_FIELD_LIST@[89; 97)
-            L_CURLY@[89; 90) "{"
-            WHITESPACE@[90; 91) " "
-            RECORD_FIELD@[91; 95)
-              NAME_REF@[91; 92)
-                INT_NUMBER@[91; 92) "0"
-              COLON@[92; 93) ":"
-              WHITESPACE@[93; 94) " "
-              LITERAL@[94; 95)
-                INT_NUMBER@[94; 95) "1"
-            WHITESPACE@[95; 96) " "
-            R_CURLY@[96; 97) "}"
-        SEMI@[97; 98) ";"
-      WHITESPACE@[98; 103) "\n    "
-      EXPR_STMT@[103; 111)
-        CALL_EXPR@[103; 110)
-          PATH_EXPR@[103; 104)
-            PATH@[103; 104)
-              PATH_SEGMENT@[103; 104)
-                NAME_REF@[103; 104)
-                  IDENT@[103; 104) "T"
-          ARG_LIST@[104; 110)
-            L_PAREN@[104; 105) "("
-            LITERAL@[105; 109)
-              FLOAT_NUMBER@[105; 109) "1.23"
-            R_PAREN@[109; 110) ")"
-        SEMI@[110; 111) ";"
-      WHITESPACE@[111; 116) "\n    "
-      CALL_EXPR@[116; 127)
-        PATH_EXPR@[116; 117)
-          PATH@[116; 117)
-            PATH_SEGMENT@[116; 117)
-              NAME_REF@[116; 117)
-                IDENT@[116; 117) "T"
-        ARG_LIST@[117; 127)
-          L_PAREN@[117; 118) "("
-          LITERAL@[118; 122)
-            FLOAT_NUMBER@[118; 122) "1.23"
-          COMMA@[122; 123) ","
-          WHITESPACE@[123; 124) " "
-          LITERAL@[124; 125)
-            INT_NUMBER@[124; 125) "4"
-          COMMA@[125; 126) ","
-          R_PAREN@[126; 127) ")"
-      WHITESPACE@[127; 128) "\n"
-      R_CURLY@[128; 129) "}"
+SOURCE_FILE@0..129
+  FUNCTION_DEF@0..129
+    FN_KW@0..2 "fn"
+    WHITESPACE@2..3 " "
+    NAME@3..6
+      IDENT@3..6 "foo"
+    PARAM_LIST@6..8
+      L_PAREN@6..7 "("
+      R_PAREN@7..8 ")"
+    WHITESPACE@8..9 " "
+    BLOCK_EXPR@9..129
+      L_CURLY@9..10 "{"
+      WHITESPACE@10..15 "\n    "
+      EXPR_STMT@15..17
+        PATH_EXPR@15..16
+          PATH@15..16
+            PATH_SEGMENT@15..16
+              NAME_REF@15..16
+                IDENT@15..16 "U"
+        SEMI@16..17 ";"
+      WHITESPACE@17..22 "\n    "
+      EXPR_STMT@22..27
+        RECORD_LIT@22..26
+          PATH_TYPE@22..23
+            PATH@22..23
+              PATH_SEGMENT@22..23
+                NAME_REF@22..23
+                  IDENT@22..23 "S"
+          WHITESPACE@23..24 " "
+          RECORD_FIELD_LIST@24..26
+            L_CURLY@24..25 "{"
+            R_CURLY@25..26 "}"
+        SEMI@26..27 ";"
+      WHITESPACE@27..32 "\n    "
+      EXPR_STMT@32..48
+        RECORD_LIT@32..47
+          PATH_TYPE@32..33
+            PATH@32..33
+              PATH_SEGMENT@32..33
+                NAME_REF@32..33
+                  IDENT@32..33 "S"
+          WHITESPACE@33..34 " "
+          RECORD_FIELD_LIST@34..47
+            L_CURLY@34..35 "{"
+            WHITESPACE@35..36 " "
+            RECORD_FIELD@36..37
+              NAME_REF@36..37
+                IDENT@36..37 "x"
+            COMMA@37..38 ","
+            WHITESPACE@38..39 " "
+            RECORD_FIELD@39..44
+              NAME_REF@39..40
+                IDENT@39..40 "y"
+              COLON@40..41 ":"
+              WHITESPACE@41..42 " "
+              LITERAL@42..44
+                INT_NUMBER@42..44 "32"
+            COMMA@44..45 ","
+            WHITESPACE@45..46 " "
+            R_CURLY@46..47 "}"
+        SEMI@47..48 ";"
+      WHITESPACE@48..53 "\n    "
+      EXPR_STMT@53..72
+        RECORD_LIT@53..71
+          PATH_TYPE@53..54
+            PATH@53..54
+              PATH_SEGMENT@53..54
+                NAME_REF@53..54
+                  IDENT@53..54 "S"
+          WHITESPACE@54..55 " "
+          RECORD_FIELD_LIST@55..71
+            L_CURLY@55..56 "{"
+            WHITESPACE@56..57 " "
+            RECORD_FIELD@57..62
+              NAME_REF@57..58
+                IDENT@57..58 "x"
+              COLON@58..59 ":"
+              WHITESPACE@59..60 " "
+              LITERAL@60..62
+                INT_NUMBER@60..62 "32"
+            COMMA@62..63 ","
+            WHITESPACE@63..64 " "
+            RECORD_FIELD@64..69
+              NAME_REF@64..65
+                IDENT@64..65 "y"
+              COLON@65..66 ":"
+              WHITESPACE@66..67 " "
+              LITERAL@67..69
+                INT_NUMBER@67..69 "64"
+            WHITESPACE@69..70 " "
+            R_CURLY@70..71 "}"
+        SEMI@71..72 ";"
+      WHITESPACE@72..77 "\n    "
+      EXPR_STMT@77..98
+        RECORD_LIT@77..97
+          PATH_TYPE@77..88
+            PATH@77..88
+              PATH_SEGMENT@77..88
+                NAME_REF@77..88
+                  IDENT@77..88 "TupleStruct"
+          WHITESPACE@88..89 " "
+          RECORD_FIELD_LIST@89..97
+            L_CURLY@89..90 "{"
+            WHITESPACE@90..91 " "
+            RECORD_FIELD@91..95
+              NAME_REF@91..92
+                INT_NUMBER@91..92 "0"
+              COLON@92..93 ":"
+              WHITESPACE@93..94 " "
+              LITERAL@94..95
+                INT_NUMBER@94..95 "1"
+            WHITESPACE@95..96 " "
+            R_CURLY@96..97 "}"
+        SEMI@97..98 ";"
+      WHITESPACE@98..103 "\n    "
+      EXPR_STMT@103..111
+        CALL_EXPR@103..110
+          PATH_EXPR@103..104
+            PATH@103..104
+              PATH_SEGMENT@103..104
+                NAME_REF@103..104
+                  IDENT@103..104 "T"
+          ARG_LIST@104..110
+            L_PAREN@104..105 "("
+            LITERAL@105..109
+              FLOAT_NUMBER@105..109 "1.23"
+            R_PAREN@109..110 ")"
+        SEMI@110..111 ";"
+      WHITESPACE@111..116 "\n    "
+      CALL_EXPR@116..127
+        PATH_EXPR@116..117
+          PATH@116..117
+            PATH_SEGMENT@116..117
+              NAME_REF@116..117
+                IDENT@116..117 "T"
+        ARG_LIST@117..127
+          L_PAREN@117..118 "("
+          LITERAL@118..122
+            FLOAT_NUMBER@118..122 "1.23"
+          COMMA@122..123 ","
+          WHITESPACE@123..124 " "
+          LITERAL@124..125
+            INT_NUMBER@124..125 "4"
+          COMMA@125..126 ","
+          R_PAREN@126..127 ")"
+      WHITESPACE@127..128 "\n"
+      R_CURLY@128..129 "}"
 

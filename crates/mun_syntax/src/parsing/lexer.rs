@@ -9,7 +9,7 @@ use self::{
 };
 use crate::{
     SyntaxKind::{self, *},
-    TextUnit,
+    TextSize,
 };
 
 /// A token of Mun source
@@ -19,7 +19,7 @@ pub struct Token {
     pub kind: SyntaxKind,
 
     /// The length of the token
-    pub len: TextUnit,
+    pub len: TextSize,
 }
 
 /// Break a string up into its component tokens

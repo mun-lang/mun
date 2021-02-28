@@ -31,7 +31,7 @@ pub use crate::{
     syntax_kind::SyntaxKind,
     syntax_node::{Direction, SyntaxElement, SyntaxNode, SyntaxToken, SyntaxTreeBuilder},
 };
-pub use rowan::{SmolStr, TextRange, TextUnit, WalkEvent};
+pub use rowan::{SmolStr, TextRange, TextSize, WalkEvent};
 
 use rowan::GreenNode;
 

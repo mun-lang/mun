@@ -4,7 +4,7 @@ use crate::{
 };
 use crate::{SmolStr, SyntaxNode};
 use abi::StructMemoryKind;
-use text_unit::TextRange;
+use text_size::TextRange;
 
 impl ast::Name {
     pub fn text(&self) -> &SmolStr {
@@ -51,15 +51,15 @@ impl ast::FunctionDef {
             .or_else(|| fn_kw.map(|kw| kw.end()))
             .unwrap_or_else(|| self.syntax().text_range().end());
 
-        TextRange::from_to(start, end)
+        TextRange::new(start, end)
     }
 }
 
 fn text_of_first_token(node: &SyntaxNode) -> &SmolStr {
     node.green()
         .children()
-        .first()
-        .and_then(|it| it.as_token())
+        .next()
+        .and_then(|it| it.into_token())
         .unwrap()
         .text()
 }
@@ -166,7 +166,7 @@ impl ast::StructDef {
             .or_else(|| struct_kw.map(|kw| kw.end()))
             .unwrap_or_else(|| self.syntax().text_range().end());
 
-        TextRange::from_to(start, end)
+        TextRange::new(start, end)
     }
 }
 

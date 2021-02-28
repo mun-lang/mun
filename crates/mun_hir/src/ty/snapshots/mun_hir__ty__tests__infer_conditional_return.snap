@@ -2,26 +2,26 @@
 source: crates/mun_hir/src/ty/tests.rs
 expression: "fn foo(a:int)->i32 {\n    if a > 4 {\n        return 4;\n    }\n    a\n}\n\nfn bar(a:i32)->i32 {\n    if a > 4 {\n        return 4;\n    } else {\n        return 1;\n    }\n}"
 ---
-[9; 12): undefined type
-[7; 8) 'a': {unknown}
-[19; 67) '{     ...   a }': i32
-[25; 59) 'if a >...     }': nothing
-[28; 29) 'a': {unknown}
-[28; 33) 'a > 4': bool
-[32; 33) '4': i32
-[34; 59) '{     ...     }': never
-[44; 52) 'return 4': never
-[51; 52) '4': i32
-[64; 65) 'a': {unknown}
-[76; 77) 'a': i32
-[88; 161) '{     ...   } }': i32
-[94; 159) 'if a >...     }': i32
-[97; 98) 'a': i32
-[97; 102) 'a > 4': bool
-[101; 102) '4': i32
-[103; 128) '{     ...     }': never
-[113; 121) 'return 4': never
-[120; 121) '4': i32
-[134; 159) '{     ...     }': never
-[144; 152) 'return 1': never
-[151; 152) '1': i32
+9..12: undefined type
+7..8 'a': {unknown}
+19..67 '{     ...   a }': i32
+25..59 'if a >...     }': nothing
+28..29 'a': {unknown}
+28..33 'a > 4': bool
+32..33 '4': i32
+34..59 '{     ...     }': never
+44..52 'return 4': never
+51..52 '4': i32
+64..65 'a': {unknown}
+76..77 'a': i32
+88..161 '{     ...   } }': i32
+94..159 'if a >...     }': i32
+97..98 'a': i32
+97..102 'a > 4': bool
+101..102 '4': i32
+103..128 '{     ...     }': never
+113..121 'return 4': never
+120..121 '4': i32
+134..159 '{     ...     }': never
+144..152 'return 1': never
+151..152 '1': i32

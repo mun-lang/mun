@@ -2,329 +2,329 @@
 source: crates/mun_syntax/src/tests/parser.rs
 expression: "// Simple paths\n    use package_name;\n    use self::item_in_scope_or_package_name;\n    use self::module::Item;\n    use package::Item;\n    use self::some::Struct;\n    use package::some_item;\n\n    // Use tree list\n    use crate::{Item};\n    use self::{Item};\n\n    // Wildcard import\n    use *; // Error\n    use ::*; // Error\n    use crate::*;\n    use crate::{*};\n\n    // Renames\n    use some::path as some_name;\n    use some::{\n        other::path as some_other_name,\n        different::path as different_name,\n        yet::another::path,\n        running::out::of::synonyms::for_::different::*\n    };\n    use Foo as _;"
 ---
-SOURCE_FILE@[0; 616)
-  COMMENT@[0; 15) "// Simple paths"
-  WHITESPACE@[15; 20) "\n    "
-  USE@[20; 37)
-    USE_KW@[20; 23) "use"
-    WHITESPACE@[23; 24) " "
-    USE_TREE@[24; 36)
-      PATH@[24; 36)
-        PATH_SEGMENT@[24; 36)
-          NAME_REF@[24; 36)
-            IDENT@[24; 36) "package_name"
-    SEMI@[36; 37) ";"
-  WHITESPACE@[37; 42) "\n    "
-  USE@[42; 82)
-    USE_KW@[42; 45) "use"
-    WHITESPACE@[45; 46) " "
-    USE_TREE@[46; 81)
-      PATH@[46; 81)
-        PATH@[46; 50)
-          PATH_SEGMENT@[46; 50)
-            SELF_KW@[46; 50) "self"
-        COLONCOLON@[50; 52) "::"
-        PATH_SEGMENT@[52; 81)
-          NAME_REF@[52; 81)
-            IDENT@[52; 81) "item_in_scope_or_pack ..."
-    SEMI@[81; 82) ";"
-  WHITESPACE@[82; 87) "\n    "
-  USE@[87; 110)
-    USE_KW@[87; 90) "use"
-    WHITESPACE@[90; 91) " "
-    USE_TREE@[91; 109)
-      PATH@[91; 109)
-        PATH@[91; 103)
-          PATH@[91; 95)
-            PATH_SEGMENT@[91; 95)
-              SELF_KW@[91; 95) "self"
-          COLONCOLON@[95; 97) "::"
-          PATH_SEGMENT@[97; 103)
-            NAME_REF@[97; 103)
-              IDENT@[97; 103) "module"
-        COLONCOLON@[103; 105) "::"
-        PATH_SEGMENT@[105; 109)
-          NAME_REF@[105; 109)
-            IDENT@[105; 109) "Item"
-    SEMI@[109; 110) ";"
-  WHITESPACE@[110; 115) "\n    "
-  USE@[115; 133)
-    USE_KW@[115; 118) "use"
-    WHITESPACE@[118; 119) " "
-    USE_TREE@[119; 132)
-      PATH@[119; 132)
-        PATH@[119; 126)
-          PATH_SEGMENT@[119; 126)
-            PACKAGE_KW@[119; 126) "package"
-        COLONCOLON@[126; 128) "::"
-        PATH_SEGMENT@[128; 132)
-          NAME_REF@[128; 132)
-            IDENT@[128; 132) "Item"
-    SEMI@[132; 133) ";"
-  WHITESPACE@[133; 138) "\n    "
-  USE@[138; 161)
-    USE_KW@[138; 141) "use"
-    WHITESPACE@[141; 142) " "
-    USE_TREE@[142; 160)
-      PATH@[142; 160)
-        PATH@[142; 152)
-          PATH@[142; 146)
-            PATH_SEGMENT@[142; 146)
-              SELF_KW@[142; 146) "self"
-          COLONCOLON@[146; 148) "::"
-          PATH_SEGMENT@[148; 152)
-            NAME_REF@[148; 152)
-              IDENT@[148; 152) "some"
-        COLONCOLON@[152; 154) "::"
-        PATH_SEGMENT@[154; 160)
-          NAME_REF@[154; 160)
-            IDENT@[154; 160) "Struct"
-    SEMI@[160; 161) ";"
-  WHITESPACE@[161; 166) "\n    "
-  USE@[166; 189)
-    USE_KW@[166; 169) "use"
-    WHITESPACE@[169; 170) " "
-    USE_TREE@[170; 188)
-      PATH@[170; 188)
-        PATH@[170; 177)
-          PATH_SEGMENT@[170; 177)
-            PACKAGE_KW@[170; 177) "package"
-        COLONCOLON@[177; 179) "::"
-        PATH_SEGMENT@[179; 188)
-          NAME_REF@[179; 188)
-            IDENT@[179; 188) "some_item"
-    SEMI@[188; 189) ";"
-  WHITESPACE@[189; 195) "\n\n    "
-  COMMENT@[195; 211) "// Use tree list"
-  WHITESPACE@[211; 216) "\n    "
-  USE@[216; 234)
-    USE_KW@[216; 219) "use"
-    WHITESPACE@[219; 220) " "
-    USE_TREE@[220; 233)
-      PATH@[220; 225)
-        PATH_SEGMENT@[220; 225)
-          NAME_REF@[220; 225)
-            IDENT@[220; 225) "crate"
-      COLONCOLON@[225; 227) "::"
-      USE_TREE_LIST@[227; 233)
-        L_CURLY@[227; 228) "{"
-        USE_TREE@[228; 232)
-          PATH@[228; 232)
-            PATH_SEGMENT@[228; 232)
-              NAME_REF@[228; 232)
-                IDENT@[228; 232) "Item"
-        R_CURLY@[232; 233) "}"
-    SEMI@[233; 234) ";"
-  WHITESPACE@[234; 239) "\n    "
-  USE@[239; 256)
-    USE_KW@[239; 242) "use"
-    WHITESPACE@[242; 243) " "
-    USE_TREE@[243; 255)
-      PATH@[243; 247)
-        PATH_SEGMENT@[243; 247)
-          SELF_KW@[243; 247) "self"
-      COLONCOLON@[247; 249) "::"
-      USE_TREE_LIST@[249; 255)
-        L_CURLY@[249; 250) "{"
-        USE_TREE@[250; 254)
-          PATH@[250; 254)
-            PATH_SEGMENT@[250; 254)
-              NAME_REF@[250; 254)
-                IDENT@[250; 254) "Item"
-        R_CURLY@[254; 255) "}"
-    SEMI@[255; 256) ";"
-  WHITESPACE@[256; 262) "\n\n    "
-  COMMENT@[262; 280) "// Wildcard import"
-  WHITESPACE@[280; 285) "\n    "
-  USE@[285; 291)
-    USE_KW@[285; 288) "use"
-    WHITESPACE@[288; 289) " "
-    ERROR@[289; 290)
-      STAR@[289; 290) "*"
-    SEMI@[290; 291) ";"
-  WHITESPACE@[291; 292) " "
-  COMMENT@[292; 300) "// Error"
-  WHITESPACE@[300; 305) "\n    "
-  USE@[305; 310)
-    USE_KW@[305; 308) "use"
-    WHITESPACE@[308; 309) " "
-    ERROR@[309; 310)
-      COLON@[309; 310) ":"
-  ERROR@[310; 311)
-    COLON@[310; 311) ":"
-  ERROR@[311; 312)
-    STAR@[311; 312) "*"
-  ERROR@[312; 313)
-    SEMI@[312; 313) ";"
-  WHITESPACE@[313; 314) " "
-  COMMENT@[314; 322) "// Error"
-  WHITESPACE@[322; 327) "\n    "
-  USE@[327; 340)
-    USE_KW@[327; 330) "use"
-    WHITESPACE@[330; 331) " "
-    USE_TREE@[331; 339)
-      PATH@[331; 336)
-        PATH_SEGMENT@[331; 336)
-          NAME_REF@[331; 336)
-            IDENT@[331; 336) "crate"
-      COLONCOLON@[336; 338) "::"
-      STAR@[338; 339) "*"
-    SEMI@[339; 340) ";"
-  WHITESPACE@[340; 345) "\n    "
-  USE@[345; 360)
-    USE_KW@[345; 348) "use"
-    WHITESPACE@[348; 349) " "
-    USE_TREE@[349; 359)
-      PATH@[349; 354)
-        PATH_SEGMENT@[349; 354)
-          NAME_REF@[349; 354)
-            IDENT@[349; 354) "crate"
-      COLONCOLON@[354; 356) "::"
-      USE_TREE_LIST@[356; 359)
-        L_CURLY@[356; 357) "{"
-        USE_TREE@[357; 358)
-          STAR@[357; 358) "*"
-        R_CURLY@[358; 359) "}"
-    SEMI@[359; 360) ";"
-  WHITESPACE@[360; 366) "\n\n    "
-  COMMENT@[366; 376) "// Renames"
-  WHITESPACE@[376; 381) "\n    "
-  USE@[381; 409)
-    USE_KW@[381; 384) "use"
-    WHITESPACE@[384; 385) " "
-    USE_TREE@[385; 408)
-      PATH@[385; 395)
-        PATH@[385; 389)
-          PATH_SEGMENT@[385; 389)
-            NAME_REF@[385; 389)
-              IDENT@[385; 389) "some"
-        COLONCOLON@[389; 391) "::"
-        PATH_SEGMENT@[391; 395)
-          NAME_REF@[391; 395)
-            IDENT@[391; 395) "path"
-      WHITESPACE@[395; 396) " "
-      RENAME@[396; 408)
-        AS_KW@[396; 398) "as"
-        WHITESPACE@[398; 399) " "
-        NAME@[399; 408)
-          IDENT@[399; 408) "some_name"
-    SEMI@[408; 409) ";"
-  WHITESPACE@[409; 414) "\n    "
-  USE@[414; 598)
-    USE_KW@[414; 417) "use"
-    WHITESPACE@[417; 418) " "
-    USE_TREE@[418; 597)
-      PATH@[418; 422)
-        PATH_SEGMENT@[418; 422)
-          NAME_REF@[418; 422)
-            IDENT@[418; 422) "some"
-      COLONCOLON@[422; 424) "::"
-      USE_TREE_LIST@[424; 597)
-        L_CURLY@[424; 425) "{"
-        WHITESPACE@[425; 434) "\n        "
-        USE_TREE@[434; 464)
-          PATH@[434; 445)
-            PATH@[434; 439)
-              PATH_SEGMENT@[434; 439)
-                NAME_REF@[434; 439)
-                  IDENT@[434; 439) "other"
-            COLONCOLON@[439; 441) "::"
-            PATH_SEGMENT@[441; 445)
-              NAME_REF@[441; 445)
-                IDENT@[441; 445) "path"
-          WHITESPACE@[445; 446) " "
-          RENAME@[446; 464)
-            AS_KW@[446; 448) "as"
-            WHITESPACE@[448; 449) " "
-            NAME@[449; 464)
-              IDENT@[449; 464) "some_other_name"
-        COMMA@[464; 465) ","
-        WHITESPACE@[465; 474) "\n        "
-        USE_TREE@[474; 507)
-          PATH@[474; 489)
-            PATH@[474; 483)
-              PATH_SEGMENT@[474; 483)
-                NAME_REF@[474; 483)
-                  IDENT@[474; 483) "different"
-            COLONCOLON@[483; 485) "::"
-            PATH_SEGMENT@[485; 489)
-              NAME_REF@[485; 489)
-                IDENT@[485; 489) "path"
-          WHITESPACE@[489; 490) " "
-          RENAME@[490; 507)
-            AS_KW@[490; 492) "as"
-            WHITESPACE@[492; 493) " "
-            NAME@[493; 507)
-              IDENT@[493; 507) "different_name"
-        COMMA@[507; 508) ","
-        WHITESPACE@[508; 517) "\n        "
-        USE_TREE@[517; 535)
-          PATH@[517; 535)
-            PATH@[517; 529)
-              PATH@[517; 520)
-                PATH_SEGMENT@[517; 520)
-                  NAME_REF@[517; 520)
-                    IDENT@[517; 520) "yet"
-              COLONCOLON@[520; 522) "::"
-              PATH_SEGMENT@[522; 529)
-                NAME_REF@[522; 529)
-                  IDENT@[522; 529) "another"
-            COLONCOLON@[529; 531) "::"
-            PATH_SEGMENT@[531; 535)
-              NAME_REF@[531; 535)
-                IDENT@[531; 535) "path"
-        COMMA@[535; 536) ","
-        WHITESPACE@[536; 545) "\n        "
-        USE_TREE@[545; 591)
-          PATH@[545; 588)
-            PATH@[545; 577)
-              PATH@[545; 571)
-                PATH@[545; 561)
-                  PATH@[545; 557)
-                    PATH@[545; 552)
-                      PATH_SEGMENT@[545; 552)
-                        NAME_REF@[545; 552)
-                          IDENT@[545; 552) "running"
-                    COLONCOLON@[552; 554) "::"
-                    PATH_SEGMENT@[554; 557)
-                      NAME_REF@[554; 557)
-                        IDENT@[554; 557) "out"
-                  COLONCOLON@[557; 559) "::"
-                  PATH_SEGMENT@[559; 561)
-                    NAME_REF@[559; 561)
-                      IDENT@[559; 561) "of"
-                COLONCOLON@[561; 563) "::"
-                PATH_SEGMENT@[563; 571)
-                  NAME_REF@[563; 571)
-                    IDENT@[563; 571) "synonyms"
-              COLONCOLON@[571; 573) "::"
-              PATH_SEGMENT@[573; 577)
-                NAME_REF@[573; 577)
-                  IDENT@[573; 577) "for_"
-            COLONCOLON@[577; 579) "::"
-            PATH_SEGMENT@[579; 588)
-              NAME_REF@[579; 588)
-                IDENT@[579; 588) "different"
-          COLONCOLON@[588; 590) "::"
-          STAR@[590; 591) "*"
-        WHITESPACE@[591; 596) "\n    "
-        R_CURLY@[596; 597) "}"
-    SEMI@[597; 598) ";"
-  WHITESPACE@[598; 603) "\n    "
-  USE@[603; 616)
-    USE_KW@[603; 606) "use"
-    WHITESPACE@[606; 607) " "
-    USE_TREE@[607; 615)
-      PATH@[607; 610)
-        PATH_SEGMENT@[607; 610)
-          NAME_REF@[607; 610)
-            IDENT@[607; 610) "Foo"
-      WHITESPACE@[610; 611) " "
-      RENAME@[611; 615)
-        AS_KW@[611; 613) "as"
-        WHITESPACE@[613; 614) " "
-        UNDERSCORE@[614; 615) "_"
-    SEMI@[615; 616) ";"
+SOURCE_FILE@0..616
+  COMMENT@0..15 "// Simple paths"
+  WHITESPACE@15..20 "\n    "
+  USE@20..37
+    USE_KW@20..23 "use"
+    WHITESPACE@23..24 " "
+    USE_TREE@24..36
+      PATH@24..36
+        PATH_SEGMENT@24..36
+          NAME_REF@24..36
+            IDENT@24..36 "package_name"
+    SEMI@36..37 ";"
+  WHITESPACE@37..42 "\n    "
+  USE@42..82
+    USE_KW@42..45 "use"
+    WHITESPACE@45..46 " "
+    USE_TREE@46..81
+      PATH@46..81
+        PATH@46..50
+          PATH_SEGMENT@46..50
+            SELF_KW@46..50 "self"
+        COLONCOLON@50..52 "::"
+        PATH_SEGMENT@52..81
+          NAME_REF@52..81
+            IDENT@52..81 "item_in_scope_or_pack ..."
+    SEMI@81..82 ";"
+  WHITESPACE@82..87 "\n    "
+  USE@87..110
+    USE_KW@87..90 "use"
+    WHITESPACE@90..91 " "
+    USE_TREE@91..109
+      PATH@91..109
+        PATH@91..103
+          PATH@91..95
+            PATH_SEGMENT@91..95
+              SELF_KW@91..95 "self"
+          COLONCOLON@95..97 "::"
+          PATH_SEGMENT@97..103
+            NAME_REF@97..103
+              IDENT@97..103 "module"
+        COLONCOLON@103..105 "::"
+        PATH_SEGMENT@105..109
+          NAME_REF@105..109
+            IDENT@105..109 "Item"
+    SEMI@109..110 ";"
+  WHITESPACE@110..115 "\n    "
+  USE@115..133
+    USE_KW@115..118 "use"
+    WHITESPACE@118..119 " "
+    USE_TREE@119..132
+      PATH@119..132
+        PATH@119..126
+          PATH_SEGMENT@119..126
+            PACKAGE_KW@119..126 "package"
+        COLONCOLON@126..128 "::"
+        PATH_SEGMENT@128..132
+          NAME_REF@128..132
+            IDENT@128..132 "Item"
+    SEMI@132..133 ";"
+  WHITESPACE@133..138 "\n    "
+  USE@138..161
+    USE_KW@138..141 "use"
+    WHITESPACE@141..142 " "
+    USE_TREE@142..160
+      PATH@142..160
+        PATH@142..152
+          PATH@142..146
+            PATH_SEGMENT@142..146
+              SELF_KW@142..146 "self"
+          COLONCOLON@146..148 "::"
+          PATH_SEGMENT@148..152
+            NAME_REF@148..152
+              IDENT@148..152 "some"
+        COLONCOLON@152..154 "::"
+        PATH_SEGMENT@154..160
+          NAME_REF@154..160
+            IDENT@154..160 "Struct"
+    SEMI@160..161 ";"
+  WHITESPACE@161..166 "\n    "
+  USE@166..189
+    USE_KW@166..169 "use"
+    WHITESPACE@169..170 " "
+    USE_TREE@170..188
+      PATH@170..188
+        PATH@170..177
+          PATH_SEGMENT@170..177
+            PACKAGE_KW@170..177 "package"
+        COLONCOLON@177..179 "::"
+        PATH_SEGMENT@179..188
+          NAME_REF@179..188
+            IDENT@179..188 "some_item"
+    SEMI@188..189 ";"
+  WHITESPACE@189..195 "\n\n    "
+  COMMENT@195..211 "// Use tree list"
+  WHITESPACE@211..216 "\n    "
+  USE@216..234
+    USE_KW@216..219 "use"
+    WHITESPACE@219..220 " "
+    USE_TREE@220..233
+      PATH@220..225
+        PATH_SEGMENT@220..225
+          NAME_REF@220..225
+            IDENT@220..225 "crate"
+      COLONCOLON@225..227 "::"
+      USE_TREE_LIST@227..233
+        L_CURLY@227..228 "{"
+        USE_TREE@228..232
+          PATH@228..232
+            PATH_SEGMENT@228..232
+              NAME_REF@228..232
+                IDENT@228..232 "Item"
+        R_CURLY@232..233 "}"
+    SEMI@233..234 ";"
+  WHITESPACE@234..239 "\n    "
+  USE@239..256
+    USE_KW@239..242 "use"
+    WHITESPACE@242..243 " "
+    USE_TREE@243..255
+      PATH@243..247
+        PATH_SEGMENT@243..247
+          SELF_KW@243..247 "self"
+      COLONCOLON@247..249 "::"
+      USE_TREE_LIST@249..255
+        L_CURLY@249..250 "{"
+        USE_TREE@250..254
+          PATH@250..254
+            PATH_SEGMENT@250..254
+              NAME_REF@250..254
+                IDENT@250..254 "Item"
+        R_CURLY@254..255 "}"
+    SEMI@255..256 ";"
+  WHITESPACE@256..262 "\n\n    "
+  COMMENT@262..280 "// Wildcard import"
+  WHITESPACE@280..285 "\n    "
+  USE@285..291
+    USE_KW@285..288 "use"
+    WHITESPACE@288..289 " "
+    ERROR@289..290
+      STAR@289..290 "*"
+    SEMI@290..291 ";"
+  WHITESPACE@291..292 " "
+  COMMENT@292..300 "// Error"
+  WHITESPACE@300..305 "\n    "
+  USE@305..310
+    USE_KW@305..308 "use"
+    WHITESPACE@308..309 " "
+    ERROR@309..310
+      COLON@309..310 ":"
+  ERROR@310..311
+    COLON@310..311 ":"
+  ERROR@311..312
+    STAR@311..312 "*"
+  ERROR@312..313
+    SEMI@312..313 ";"
+  WHITESPACE@313..314 " "
+  COMMENT@314..322 "// Error"
+  WHITESPACE@322..327 "\n    "
+  USE@327..340
+    USE_KW@327..330 "use"
+    WHITESPACE@330..331 " "
+    USE_TREE@331..339
+      PATH@331..336
+        PATH_SEGMENT@331..336
+          NAME_REF@331..336
+            IDENT@331..336 "crate"
+      COLONCOLON@336..338 "::"
+      STAR@338..339 "*"
+    SEMI@339..340 ";"
+  WHITESPACE@340..345 "\n    "
+  USE@345..360
+    USE_KW@345..348 "use"
+    WHITESPACE@348..349 " "
+    USE_TREE@349..359
+      PATH@349..354
+        PATH_SEGMENT@349..354
+          NAME_REF@349..354
+            IDENT@349..354 "crate"
+      COLONCOLON@354..356 "::"
+      USE_TREE_LIST@356..359
+        L_CURLY@356..357 "{"
+        USE_TREE@357..358
+          STAR@357..358 "*"
+        R_CURLY@358..359 "}"
+    SEMI@359..360 ";"
+  WHITESPACE@360..366 "\n\n    "
+  COMMENT@366..376 "// Renames"
+  WHITESPACE@376..381 "\n    "
+  USE@381..409
+    USE_KW@381..384 "use"
+    WHITESPACE@384..385 " "
+    USE_TREE@385..408
+      PATH@385..395
+        PATH@385..389
+          PATH_SEGMENT@385..389
+            NAME_REF@385..389
+              IDENT@385..389 "some"
+        COLONCOLON@389..391 "::"
+        PATH_SEGMENT@391..395
+          NAME_REF@391..395
+            IDENT@391..395 "path"
+      WHITESPACE@395..396 " "
+      RENAME@396..408
+        AS_KW@396..398 "as"
+        WHITESPACE@398..399 " "
+        NAME@399..408
+          IDENT@399..408 "some_name"
+    SEMI@408..409 ";"
+  WHITESPACE@409..414 "\n    "
+  USE@414..598
+    USE_KW@414..417 "use"
+    WHITESPACE@417..418 " "
+    USE_TREE@418..597
+      PATH@418..422
+        PATH_SEGMENT@418..422
+          NAME_REF@418..422
+            IDENT@418..422 "some"
+      COLONCOLON@422..424 "::"
+      USE_TREE_LIST@424..597
+        L_CURLY@424..425 "{"
+        WHITESPACE@425..434 "\n        "
+        USE_TREE@434..464
+          PATH@434..445
+            PATH@434..439
+              PATH_SEGMENT@434..439
+                NAME_REF@434..439
+                  IDENT@434..439 "other"
+            COLONCOLON@439..441 "::"
+            PATH_SEGMENT@441..445
+              NAME_REF@441..445
+                IDENT@441..445 "path"
+          WHITESPACE@445..446 " "
+          RENAME@446..464
+            AS_KW@446..448 "as"
+            WHITESPACE@448..449 " "
+            NAME@449..464
+              IDENT@449..464 "some_other_name"
+        COMMA@464..465 ","
+        WHITESPACE@465..474 "\n        "
+        USE_TREE@474..507
+          PATH@474..489
+            PATH@474..483
+              PATH_SEGMENT@474..483
+                NAME_REF@474..483
+                  IDENT@474..483 "different"
+            COLONCOLON@483..485 "::"
+            PATH_SEGMENT@485..489
+              NAME_REF@485..489
+                IDENT@485..489 "path"
+          WHITESPACE@489..490 " "
+          RENAME@490..507
+            AS_KW@490..492 "as"
+            WHITESPACE@492..493 " "
+            NAME@493..507
+              IDENT@493..507 "different_name"
+        COMMA@507..508 ","
+        WHITESPACE@508..517 "\n        "
+        USE_TREE@517..535
+          PATH@517..535
+            PATH@517..529
+              PATH@517..520
+                PATH_SEGMENT@517..520
+                  NAME_REF@517..520
+                    IDENT@517..520 "yet"
+              COLONCOLON@520..522 "::"
+              PATH_SEGMENT@522..529
+                NAME_REF@522..529
+                  IDENT@522..529 "another"
+            COLONCOLON@529..531 "::"
+            PATH_SEGMENT@531..535
+              NAME_REF@531..535
+                IDENT@531..535 "path"
+        COMMA@535..536 ","
+        WHITESPACE@536..545 "\n        "
+        USE_TREE@545..591
+          PATH@545..588
+            PATH@545..577
+              PATH@545..571
+                PATH@545..561
+                  PATH@545..557
+                    PATH@545..552
+                      PATH_SEGMENT@545..552
+                        NAME_REF@545..552
+                          IDENT@545..552 "running"
+                    COLONCOLON@552..554 "::"
+                    PATH_SEGMENT@554..557
+                      NAME_REF@554..557
+                        IDENT@554..557 "out"
+                  COLONCOLON@557..559 "::"
+                  PATH_SEGMENT@559..561
+                    NAME_REF@559..561
+                      IDENT@559..561 "of"
+                COLONCOLON@561..563 "::"
+                PATH_SEGMENT@563..571
+                  NAME_REF@563..571
+                    IDENT@563..571 "synonyms"
+              COLONCOLON@571..573 "::"
+              PATH_SEGMENT@573..577
+                NAME_REF@573..577
+                  IDENT@573..577 "for_"
+            COLONCOLON@577..579 "::"
+            PATH_SEGMENT@579..588
+              NAME_REF@579..588
+                IDENT@579..588 "different"
+          COLONCOLON@588..590 "::"
+          STAR@590..591 "*"
+        WHITESPACE@591..596 "\n    "
+        R_CURLY@596..597 "}"
+    SEMI@597..598 ";"
+  WHITESPACE@598..603 "\n    "
+  USE@603..616
+    USE_KW@603..606 "use"
+    WHITESPACE@606..607 " "
+    USE_TREE@607..615
+      PATH@607..610
+        PATH_SEGMENT@607..610
+          NAME_REF@607..610
+            IDENT@607..610 "Foo"
+      WHITESPACE@610..611 " "
+      RENAME@611..615
+        AS_KW@611..613 "as"
+        WHITESPACE@613..614 " "
+        UNDERSCORE@614..615 "_"
+    SEMI@615..616 ";"
 error Offset(289): expected one of `self`, `super`, `package` or an identifier
 error Offset(309): expected one of `self`, `super`, `package` or an identifier
 error Offset(310): expected SEMI

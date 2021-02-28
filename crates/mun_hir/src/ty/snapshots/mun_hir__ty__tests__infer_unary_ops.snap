@@ -2,14 +2,14 @@
 source: crates/mun_hir/src/ty/tests.rs
 expression: "fn foo(a: i32, b: bool) {\n    a = -a;\n    b = !b;\n}"
 ---
-[7; 8) 'a': i32
-[15; 16) 'b': bool
-[24; 51) '{     ... !b; }': nothing
-[30; 31) 'a': i32
-[30; 36) 'a = -a': nothing
-[34; 36) '-a': i32
-[35; 36) 'a': i32
-[42; 43) 'b': bool
-[42; 48) 'b = !b': nothing
-[46; 48) '!b': bool
-[47; 48) 'b': bool
+7..8 'a': i32
+15..16 'b': bool
+24..51 '{     ... !b; }': nothing
+30..31 'a': i32
+30..36 'a = -a': nothing
+34..36 '-a': i32
+35..36 'a': i32
+42..43 'b': bool
+42..48 'b = !b': nothing
+46..48 '!b': bool
+47..48 'b': bool
