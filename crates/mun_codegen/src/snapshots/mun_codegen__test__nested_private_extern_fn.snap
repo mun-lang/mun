@@ -14,14 +14,14 @@ source_filename = "main.mun"
 
 define float @private_fn() {
 body:
-  %extern_fn_ptr = load float ()*, float ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 1)
+  %extern_fn_ptr = load float ()*, float ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 1), align 8
   %extern_fn = call float %extern_fn_ptr()
   ret float %extern_fn
 }
 
 define float @main() {
 body:
-  %private_fn_ptr = load float ()*, float ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
+  %private_fn_ptr = load float ()*, float ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
   %private_fn = call float %private_fn_ptr()
   ret float %private_fn
 }

@@ -15,32 +15,32 @@ source_filename = "main.mun"
 @dispatchTable = external global %DispatchTable
 @global_type_table = external global [7 x %"mun_codegen::ir::types::TypeInfo"*]
 
-define %Value @assign_value(%Value, %Value) {
+define %Value @assign_value(%Value %0, %Value %1) {
 body:
   %.fca.0.extract3 = extractvalue %Value %1, 0
   %.fca.1.extract4 = extractvalue %Value %1, 1
   ret %Value %1
 }
 
-define %Value** @assign_value_wrapper(%Value**, %Value**) {
+define %Value** @assign_value_wrapper(%Value** %0, %Value** %1) {
 body:
-  %mem_ptr = load %Value*, %Value** %0
-  %deref = load %Value, %Value* %mem_ptr
-  %mem_ptr1 = load %Value*, %Value** %1
-  %deref2 = load %Value, %Value* %mem_ptr1
+  %mem_ptr = load %Value*, %Value** %0, align 8
+  %deref = load %Value, %Value* %mem_ptr, align 4
+  %mem_ptr1 = load %Value*, %Value** %1, align 8
+  %deref2 = load %Value, %Value* %mem_ptr1, align 4
   %assign_value = call %Value @assign_value(%Value %deref, %Value %deref2)
-  %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
-  %Value_ptr = load %"mun_codegen::ir::types::TypeInfo"*, %"mun_codegen::ir::types::TypeInfo"** getelementptr inbounds ([7 x %"mun_codegen::ir::types::TypeInfo"*], [7 x %"mun_codegen::ir::types::TypeInfo"*]* @global_type_table, i64 0, i64 1)
+  %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
+  %Value_ptr = load %"mun_codegen::ir::types::TypeInfo"*, %"mun_codegen::ir::types::TypeInfo"** getelementptr inbounds ([7 x %"mun_codegen::ir::types::TypeInfo"*], [7 x %"mun_codegen::ir::types::TypeInfo"*]* @global_type_table, i64 0, i64 1), align 8
   %type_info_ptr_to_i8_ptr = bitcast %"mun_codegen::ir::types::TypeInfo"* %Value_ptr to i8*
-  %allocator_handle = load i8*, i8** @allocatorHandle
+  %allocator_handle = load i8*, i8** @allocatorHandle, align 8
   %new = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
   %Value_ptr_ptr = bitcast i8** %new to %Value**
-  %Value_mem_ptr = load %Value*, %Value** %Value_ptr_ptr
-  store %Value %assign_value, %Value* %Value_mem_ptr
+  %Value_mem_ptr = load %Value*, %Value** %Value_ptr_ptr, align 8
+  store %Value %assign_value, %Value* %Value_mem_ptr, align 4
   ret %Value** %Value_ptr_ptr
 }
 
-define %Heap** @assign_heap(%Heap**, %Heap**) {
+define %Heap** @assign_heap(%Heap** %0, %Heap** %1) {
 body:
   ret %Heap** %1
 }

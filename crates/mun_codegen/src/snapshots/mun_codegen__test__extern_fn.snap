@@ -14,7 +14,7 @@ source_filename = "main.mun"
 
 define void @main() {
 body:
-  %add_ptr = load i32 (i32, i32)*, i32 (i32, i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
+  %add_ptr = load i32 (i32, i32)*, i32 (i32, i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
   %add = call i32 %add_ptr(i32 3, i32 4)
   ret void
 }

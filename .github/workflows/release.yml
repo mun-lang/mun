@@ -23,7 +23,7 @@ jobs:
           artifacts: "mun libmun_runtime.so"
         }
         - {
-          os: "windows-2016",
+          os: "windows-latest",
           dir: win64,
           artifacts: "mun.exe mun_runtime.dll mun_runtime.dll.lib"
         }

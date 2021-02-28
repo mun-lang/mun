@@ -1340,13 +1340,19 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             let receiver_ptr = self
                 .opt_deref_value(receiver_expr, receiver_ptr.into())
                 .into_pointer_value();
-            let field_ptr = unsafe {
-                self.builder.build_struct_gep(
+            let field_ptr = self
+                .builder
+                .build_struct_gep(
                     receiver_ptr,
                     field_idx,
                     &format!("{}.{}_ptr", hir_struct_name, name),
                 )
-            };
+                .unwrap_or_else(|_| {
+                    panic!(
+                        "could not get pointer to field `{}::{}` at index {}",
+                        hir_struct_name, name, field_idx
+                    )
+                });
             Some(self.builder.build_load(field_ptr, &field_ir_name))
         } else {
             let receiver_value = self.gen_expr(receiver_expr)?;
@@ -1389,13 +1395,18 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         let receiver_ptr = self
             .opt_deref_value(receiver_expr, receiver_ptr.into())
             .into_pointer_value();
-        unsafe {
-            self.builder.build_struct_gep(
+        self.builder
+            .build_struct_gep(
                 receiver_ptr,
                 field_idx,
                 &format!("{}.{}_ptr", hir_struct_name, name),
             )
-        }
+            .unwrap_or_else(|_| {
+                panic!(
+                    "could not get pointer to field `{}::{}` at index {}",
+                    hir_struct_name, name, field_idx
+                )
+            })
     }
 }
 

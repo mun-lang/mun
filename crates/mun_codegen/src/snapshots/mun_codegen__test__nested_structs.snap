@@ -17,68 +17,68 @@ source_filename = "main.mun"
 @dispatchTable = external global %DispatchTable
 @global_type_table = external global [8 x %"mun_codegen::ir::types::TypeInfo"*]
 
-define %GcStruct** @new_gc_struct(float, float) {
+define %GcStruct** @new_gc_struct(float %0, float %1) {
 body:
   %init = insertvalue %GcStruct undef, float %0, 0
   %init3 = insertvalue %GcStruct %init, float %1, 1
-  %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
-  %GcStruct_ptr = load %"mun_codegen::ir::types::TypeInfo"*, %"mun_codegen::ir::types::TypeInfo"** getelementptr inbounds ([8 x %"mun_codegen::ir::types::TypeInfo"*], [8 x %"mun_codegen::ir::types::TypeInfo"*]* @global_type_table, i64 0, i64 5)
+  %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
+  %GcStruct_ptr = load %"mun_codegen::ir::types::TypeInfo"*, %"mun_codegen::ir::types::TypeInfo"** getelementptr inbounds ([8 x %"mun_codegen::ir::types::TypeInfo"*], [8 x %"mun_codegen::ir::types::TypeInfo"*]* @global_type_table, i64 0, i64 5), align 8
   %type_info_ptr_to_i8_ptr = bitcast %"mun_codegen::ir::types::TypeInfo"* %GcStruct_ptr to i8*
-  %allocator_handle = load i8*, i8** @allocatorHandle
+  %allocator_handle = load i8*, i8** @allocatorHandle, align 8
   %new = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
   %GcStruct_ptr_ptr = bitcast i8** %new to %GcStruct**
-  %GcStruct_mem_ptr = load %GcStruct*, %GcStruct** %GcStruct_ptr_ptr
-  store %GcStruct %init3, %GcStruct* %GcStruct_mem_ptr
+  %GcStruct_mem_ptr = load %GcStruct*, %GcStruct** %GcStruct_ptr_ptr, align 8
+  store %GcStruct %init3, %GcStruct* %GcStruct_mem_ptr, align 4
   ret %GcStruct** %GcStruct_ptr_ptr
 }
 
-define %ValueStruct @new_value_struct(float, float) {
+define %ValueStruct @new_value_struct(float %0, float %1) {
 body:
   %init = insertvalue %ValueStruct undef, float %0, 0
   %init3 = insertvalue %ValueStruct %init, float %1, 1
   ret %ValueStruct %init3
 }
 
-define %ValueStruct** @new_value_struct_wrapper(float, float) {
+define %ValueStruct** @new_value_struct_wrapper(float %0, float %1) {
 body:
   %new_value_struct = call %ValueStruct @new_value_struct(float %0, float %1)
-  %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
-  %ValueStruct_ptr = load %"mun_codegen::ir::types::TypeInfo"*, %"mun_codegen::ir::types::TypeInfo"** getelementptr inbounds ([8 x %"mun_codegen::ir::types::TypeInfo"*], [8 x %"mun_codegen::ir::types::TypeInfo"*]* @global_type_table, i64 0, i64 4)
+  %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
+  %ValueStruct_ptr = load %"mun_codegen::ir::types::TypeInfo"*, %"mun_codegen::ir::types::TypeInfo"** getelementptr inbounds ([8 x %"mun_codegen::ir::types::TypeInfo"*], [8 x %"mun_codegen::ir::types::TypeInfo"*]* @global_type_table, i64 0, i64 4), align 8
   %type_info_ptr_to_i8_ptr = bitcast %"mun_codegen::ir::types::TypeInfo"* %ValueStruct_ptr to i8*
-  %allocator_handle = load i8*, i8** @allocatorHandle
+  %allocator_handle = load i8*, i8** @allocatorHandle, align 8
   %new = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
   %ValueStruct_ptr_ptr = bitcast i8** %new to %ValueStruct**
-  %ValueStruct_mem_ptr = load %ValueStruct*, %ValueStruct** %ValueStruct_ptr_ptr
-  store %ValueStruct %new_value_struct, %ValueStruct* %ValueStruct_mem_ptr
+  %ValueStruct_mem_ptr = load %ValueStruct*, %ValueStruct** %ValueStruct_ptr_ptr, align 8
+  store %ValueStruct %new_value_struct, %ValueStruct* %ValueStruct_mem_ptr, align 4
   ret %ValueStruct** %ValueStruct_ptr_ptr
 }
 
-define %GcWrapper** @new_gc_wrapper(%GcStruct**, %ValueStruct) {
+define %GcWrapper** @new_gc_wrapper(%GcStruct** %0, %ValueStruct %1) {
 body:
   %.fca.0.extract = extractvalue %ValueStruct %1, 0
   %.fca.1.extract = extractvalue %ValueStruct %1, 1
   %init = insertvalue %GcWrapper undef, %GcStruct** %0, 0
   %init3 = insertvalue %GcWrapper %init, %ValueStruct %1, 1
-  %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
-  %GcWrapper_ptr = load %"mun_codegen::ir::types::TypeInfo"*, %"mun_codegen::ir::types::TypeInfo"** getelementptr inbounds ([8 x %"mun_codegen::ir::types::TypeInfo"*], [8 x %"mun_codegen::ir::types::TypeInfo"*]* @global_type_table, i64 0, i64 0)
+  %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
+  %GcWrapper_ptr = load %"mun_codegen::ir::types::TypeInfo"*, %"mun_codegen::ir::types::TypeInfo"** getelementptr inbounds ([8 x %"mun_codegen::ir::types::TypeInfo"*], [8 x %"mun_codegen::ir::types::TypeInfo"*]* @global_type_table, i64 0, i64 0), align 8
   %type_info_ptr_to_i8_ptr = bitcast %"mun_codegen::ir::types::TypeInfo"* %GcWrapper_ptr to i8*
-  %allocator_handle = load i8*, i8** @allocatorHandle
+  %allocator_handle = load i8*, i8** @allocatorHandle, align 8
   %new = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
   %GcWrapper_ptr_ptr = bitcast i8** %new to %GcWrapper**
-  %GcWrapper_mem_ptr = load %GcWrapper*, %GcWrapper** %GcWrapper_ptr_ptr
-  store %GcWrapper %init3, %GcWrapper* %GcWrapper_mem_ptr
+  %GcWrapper_mem_ptr = load %GcWrapper*, %GcWrapper** %GcWrapper_ptr_ptr, align 8
+  store %GcWrapper %init3, %GcWrapper* %GcWrapper_mem_ptr, align 8
   ret %GcWrapper** %GcWrapper_ptr_ptr
 }
 
-define %GcWrapper** @new_gc_wrapper_wrapper(%GcStruct**, %ValueStruct**) {
+define %GcWrapper** @new_gc_wrapper_wrapper(%GcStruct** %0, %ValueStruct** %1) {
 body:
-  %mem_ptr = load %ValueStruct*, %ValueStruct** %1
-  %deref = load %ValueStruct, %ValueStruct* %mem_ptr
+  %mem_ptr = load %ValueStruct*, %ValueStruct** %1, align 8
+  %deref = load %ValueStruct, %ValueStruct* %mem_ptr, align 4
   %new_gc_wrapper = call %GcWrapper** @new_gc_wrapper(%GcStruct** %0, %ValueStruct %deref)
   ret %GcWrapper** %new_gc_wrapper
 }
 
-define %ValueWrapper @new_value_wrapper(%GcStruct**, %ValueStruct) {
+define %ValueWrapper @new_value_wrapper(%GcStruct** %0, %ValueStruct %1) {
 body:
   %.fca.0.extract = extractvalue %ValueStruct %1, 0
   %.fca.1.extract = extractvalue %ValueStruct %1, 1
@@ -87,19 +87,19 @@ body:
   ret %ValueWrapper %init3
 }
 
-define %ValueWrapper** @new_value_wrapper_wrapper(%GcStruct**, %ValueStruct**) {
+define %ValueWrapper** @new_value_wrapper_wrapper(%GcStruct** %0, %ValueStruct** %1) {
 body:
-  %mem_ptr = load %ValueStruct*, %ValueStruct** %1
-  %deref = load %ValueStruct, %ValueStruct* %mem_ptr
+  %mem_ptr = load %ValueStruct*, %ValueStruct** %1, align 8
+  %deref = load %ValueStruct, %ValueStruct* %mem_ptr, align 4
   %new_value_wrapper = call %ValueWrapper @new_value_wrapper(%GcStruct** %0, %ValueStruct %deref)
-  %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
-  %ValueWrapper_ptr = load %"mun_codegen::ir::types::TypeInfo"*, %"mun_codegen::ir::types::TypeInfo"** getelementptr inbounds ([8 x %"mun_codegen::ir::types::TypeInfo"*], [8 x %"mun_codegen::ir::types::TypeInfo"*]* @global_type_table, i64 0, i64 2)
+  %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
+  %ValueWrapper_ptr = load %"mun_codegen::ir::types::TypeInfo"*, %"mun_codegen::ir::types::TypeInfo"** getelementptr inbounds ([8 x %"mun_codegen::ir::types::TypeInfo"*], [8 x %"mun_codegen::ir::types::TypeInfo"*]* @global_type_table, i64 0, i64 2), align 8
   %type_info_ptr_to_i8_ptr = bitcast %"mun_codegen::ir::types::TypeInfo"* %ValueWrapper_ptr to i8*
-  %allocator_handle = load i8*, i8** @allocatorHandle
+  %allocator_handle = load i8*, i8** @allocatorHandle, align 8
   %new = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
   %ValueWrapper_ptr_ptr = bitcast i8** %new to %ValueWrapper**
-  %ValueWrapper_mem_ptr = load %ValueWrapper*, %ValueWrapper** %ValueWrapper_ptr_ptr
-  store %ValueWrapper %new_value_wrapper, %ValueWrapper* %ValueWrapper_mem_ptr
+  %ValueWrapper_mem_ptr = load %ValueWrapper*, %ValueWrapper** %ValueWrapper_ptr_ptr, align 8
+  store %ValueWrapper %new_value_wrapper, %ValueWrapper* %ValueWrapper_mem_ptr, align 8
   ret %ValueWrapper** %ValueWrapper_ptr_ptr
 }
 
@@ -132,7 +132,7 @@ source_filename = "group_name"
 @"struct_info::<ValueStruct>::field_names" = private unnamed_addr constant [2 x i8*] [i8* getelementptr inbounds ([2 x i8], [2 x i8]* @"struct_info::<ValueStruct>::field_names.0", i32 0, i32 0), i8* getelementptr inbounds ([2 x i8], [2 x i8]* @"struct_info::<ValueStruct>::field_names.1", i32 0, i32 0)]
 @"struct_info::<ValueStruct>::field_types" = private unnamed_addr constant [2 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::f32>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::f32>"]
 @"struct_info::<ValueStruct>::field_offsets" = private unnamed_addr constant [2 x i16] [i16 0, i16 4]
-@"type_info::<ValueStruct>" = private unnamed_addr constant { %"mun_codegen::ir::types::TypeInfo", %"mun_codegen::ir::types::StructInfo" } { %"mun_codegen::ir::types::TypeInfo" <{ [0 x i64] zeroinitializer, [16 x i8] c"U0{\87\5C\04Q/\95!$\A2\F1\A9\F9W", [0 x i64] zeroinitializer, i8* getelementptr inbounds ([12 x i8], [12 x i8]* @"type_info::<ValueStruct>::name", i32 0, i32 0), [0 x i64] zeroinitializer, i32 64, [0 x i64] zeroinitializer, i8 4, [0 x i64] zeroinitializer, i8 1, [1 x i16] zeroinitializer }>, %"mun_codegen::ir::types::StructInfo" <{ [0 x i64] zeroinitializer, i8** getelementptr inbounds ([2 x i8*], [2 x i8*]* @"struct_info::<ValueStruct>::field_names", i32 0, i32 0), [0 x i64] zeroinitializer, %"mun_codegen::ir::types::TypeInfo"** getelementptr inbounds ([2 x %"mun_codegen::ir::types::TypeInfo"*], [2 x %"mun_codegen::ir::types::TypeInfo"*]* @"struct_info::<ValueStruct>::field_types", i32 0, i32 0), [0 x i64] zeroinitializer, i16* getelementptr inbounds ([2 x i16], [2 x i16]* @"struct_info::<ValueStruct>::field_offsets", i32 0, i32 0), [0 x i64] zeroinitializer, i16 2, [0 x i64] zeroinitializer, i8 1, [5 x i8] zeroinitializer }> }
+@"type_info::<ValueStruct>" = private unnamed_addr constant { %"mun_codegen::ir::types::TypeInfo", %"mun_codegen::ir::types::StructInfo" } { %"mun_codegen::ir::types::TypeInfo" <{ [0 x i64] zeroinitializer, [16 x i8] c"U0{\87\\\04Q/\95!$\A2\F1\A9\F9W", [0 x i64] zeroinitializer, i8* getelementptr inbounds ([12 x i8], [12 x i8]* @"type_info::<ValueStruct>::name", i32 0, i32 0), [0 x i64] zeroinitializer, i32 64, [0 x i64] zeroinitializer, i8 4, [0 x i64] zeroinitializer, i8 1, [1 x i16] zeroinitializer }>, %"mun_codegen::ir::types::StructInfo" <{ [0 x i64] zeroinitializer, i8** getelementptr inbounds ([2 x i8*], [2 x i8*]* @"struct_info::<ValueStruct>::field_names", i32 0, i32 0), [0 x i64] zeroinitializer, %"mun_codegen::ir::types::TypeInfo"** getelementptr inbounds ([2 x %"mun_codegen::ir::types::TypeInfo"*], [2 x %"mun_codegen::ir::types::TypeInfo"*]* @"struct_info::<ValueStruct>::field_types", i32 0, i32 0), [0 x i64] zeroinitializer, i16* getelementptr inbounds ([2 x i16], [2 x i16]* @"struct_info::<ValueStruct>::field_offsets", i32 0, i32 0), [0 x i64] zeroinitializer, i16 2, [0 x i64] zeroinitializer, i8 1, [5 x i8] zeroinitializer }> }
 @"struct_info::<GcWrapper>::field_types" = private unnamed_addr constant [2 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* getelementptr inbounds ({ %"mun_codegen::ir::types::TypeInfo", %"mun_codegen::ir::types::StructInfo" }, { %"mun_codegen::ir::types::TypeInfo", %"mun_codegen::ir::types::StructInfo" }* @"type_info::<GcStruct>", i32 0, i32 0), %"mun_codegen::ir::types::TypeInfo"* getelementptr inbounds ({ %"mun_codegen::ir::types::TypeInfo", %"mun_codegen::ir::types::StructInfo" }, { %"mun_codegen::ir::types::TypeInfo", %"mun_codegen::ir::types::StructInfo" }* @"type_info::<ValueStruct>", i32 0, i32 0)]
 @"struct_info::<GcWrapper>::field_offsets" = private unnamed_addr constant [2 x i16] [i16 0, i16 8]
 @"type_info::<GcWrapper>" = private unnamed_addr constant { %"mun_codegen::ir::types::TypeInfo", %"mun_codegen::ir::types::StructInfo" } { %"mun_codegen::ir::types::TypeInfo" <{ [0 x i64] zeroinitializer, [16 x i8] c"!\14\93\A7H1?90\B7\EA\DB0\82\A0\C7", [0 x i64] zeroinitializer, i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<GcWrapper>::name", i32 0, i32 0), [0 x i64] zeroinitializer, i32 128, [0 x i64] zeroinitializer, i8 8, [0 x i64] zeroinitializer, i8 1, [1 x i16] zeroinitializer }>, %"mun_codegen::ir::types::StructInfo" <{ [0 x i64] zeroinitializer, i8** getelementptr inbounds ([2 x i8*], [2 x i8*]* @"struct_info::<GcWrapper>::field_names", i32 0, i32 0), [0 x i64] zeroinitializer, %"mun_codegen::ir::types::TypeInfo"** getelementptr inbounds ([2 x %"mun_codegen::ir::types::TypeInfo"*], [2 x %"mun_codegen::ir::types::TypeInfo"*]* @"struct_info::<GcWrapper>::field_types", i32 0, i32 0), [0 x i64] zeroinitializer, i16* getelementptr inbounds ([2 x i16], [2 x i16]* @"struct_info::<GcWrapper>::field_offsets", i32 0, i32 0), [0 x i64] zeroinitializer, i16 2, [0 x i64] zeroinitializer, i8 0, [5 x i8] zeroinitializer }> }

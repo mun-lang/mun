@@ -12,17 +12,17 @@ source_filename = "main.mun"
 @dispatchTable = external global %DispatchTable
 @global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
 
-define i32 @fibonacci(i32) {
+define i32 @fibonacci(i32 %0) {
 body:
   %lesseq = icmp sle i32 %0, 1
   br i1 %lesseq, label %if_merge, label %else
 
 else:                                             ; preds = %body
   %sub = sub i32 %0, 1
-  %fibonacci_ptr = load i32 (i32)*, i32 (i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
+  %fibonacci_ptr = load i32 (i32)*, i32 (i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
   %fibonacci = call i32 %fibonacci_ptr(i32 %sub)
   %sub5 = sub i32 %0, 2
-  %fibonacci_ptr6 = load i32 (i32)*, i32 (i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
+  %fibonacci_ptr6 = load i32 (i32)*, i32 (i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
   %fibonacci7 = call i32 %fibonacci_ptr6(i32 %sub5)
   %add = add i32 %fibonacci, %fibonacci7
   br label %if_merge

@@ -10,9 +10,9 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
 
-define float @negate(float) {
+define float @negate(float %0) {
 body:
-  %neg = fsub float -0.000000e+00, %0
+  %neg = fneg float %0
   ret float %neg
 }
 

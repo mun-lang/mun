@@ -10,31 +10,31 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
 
-define i32 @add(i32, i32) {
+define i32 @add(i32 %0, i32 %1) {
 body:
   %add = add i32 %0, %1
   ret i32 %add
 }
 
-define i32 @subtract(i32, i32) {
+define i32 @subtract(i32 %0, i32 %1) {
 body:
   %sub = sub i32 %0, %1
   ret i32 %sub
 }
 
-define i32 @multiply(i32, i32) {
+define i32 @multiply(i32 %0, i32 %1) {
 body:
   %mul = mul i32 %0, %1
   ret i32 %mul
 }
 
-define i32 @divide(i32, i32) {
+define i32 @divide(i32 %0, i32 %1) {
 body:
   %div = udiv i32 %0, %1
   ret i32 %div
 }
 
-define i32 @remainder(i32, i32) {
+define i32 @remainder(i32 %0, i32 %1) {
 body:
   %rem = urem i32 %0, %1
   ret i32 %rem

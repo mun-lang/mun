@@ -12,18 +12,18 @@ source_filename = "main.mun"
 @dispatchTable = external global %DispatchTable
 @global_type_table = external global [2 x %"mun_codegen::ir::types::TypeInfo"*]
 
-define float @private_fn(i32) {
+define float @private_fn(i32 %0) {
 body:
-  %private_fn_ptr = load float (i32)*, float (i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
+  %private_fn_ptr = load float (i32)*, float (i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
   %private_fn = call float %private_fn_ptr(i32 %0)
   ret float %private_fn
 }
 
 define float @main() {
 body:
-  %other_ptr = load i32 ()*, i32 ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 1)
+  %other_ptr = load i32 ()*, i32 ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 1), align 8
   %other = call i32 %other_ptr()
-  %private_fn_ptr = load float (i32)*, float (i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0)
+  %private_fn_ptr = load float (i32)*, float (i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
   %private_fn = call float %private_fn_ptr(i32 %other)
   ret float %private_fn
 }

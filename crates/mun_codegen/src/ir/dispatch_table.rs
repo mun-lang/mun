@@ -123,13 +123,18 @@ impl<'ink> DispatchTable<'ink> {
         let table_ref = table_ref.expect("no dispatch table defined");
 
         // Create an expression that finds the associated field in the table and returns this as a pointer access
-        let ptr_to_function_ptr = unsafe {
-            builder.build_struct_gep(
+        let ptr_to_function_ptr = builder
+            .build_struct_gep(
                 table_ref.as_pointer_value(),
                 index as u32,
                 &format!("{0}_ptr_ptr", function_name),
             )
-        };
+            .unwrap_or_else(|_| {
+                panic!(
+                    "could not get {} (index: {}) from dispatch table",
+                    function_name, index
+                )
+            });
 
         builder
             .build_load(ptr_to_function_ptr, &format!("{0}_ptr", function_name))

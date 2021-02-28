@@ -62,9 +62,9 @@
 - **Cross compilation** - The Mun compiler is able to compile to all supported
   target platforms from any supported compiler platform.
 
-- **Powerful IDE integration** *not implemented yet* - The Mun language and
-  compiler framework are designed to support source code queries, allowing for
-  powerful IDE integrations such as code completion and refactoring tools.
+- **Powerful IDE integration** - The Mun language and compiler framework are 
+  designed to support source code queries, allowing for powerful IDE 
+  integrations such as code completion and refactoring tools.
 
 ## Example
 
@@ -145,7 +145,7 @@ Windows (64-bit only).
 Make sure you have the following dependencies installed on you machine:
 
 * [Rust](https://www.rust-lang.org/tools/install)
-* [LLVM 8](https://docs.mun-lang.org/ch04-02-building-llvm.html)
+* [LLVM 11](https://docs.mun-lang.org/ch04-02-building-llvm.html)
 
 Clone the source code, including all submodules:
 

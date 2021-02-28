@@ -12,46 +12,46 @@ source_filename = "main.mun"
 
 define void @main() {
 body:
-  %a15 = alloca double
-  %a14 = alloca float
-  %a13 = alloca double
-  %a12 = alloca i32
-  %a11 = alloca i128
-  %a10 = alloca i64
-  %a9 = alloca i32
-  %a8 = alloca i16
-  %a7 = alloca i8
-  %a6 = alloca i32
-  %a5 = alloca i128
-  %a4 = alloca i64
-  %a3 = alloca i32
-  %a2 = alloca i16
-  %a1 = alloca i8
-  %a = alloca i32
-  store i32 123, i32* %a
-  store i8 123, i8* %a1
-  store i16 123, i16* %a2
-  store i32 123, i32* %a3
-  store i64 123, i64* %a4
-  store i128 123, i128* %a5
-  store i32 1000000, i32* %a6
-  store i8 123, i8* %a7
-  store i16 123, i16* %a8
-  store i32 123, i32* %a9
-  store i64 123, i64* %a10
-  store i128 123123123123123123123123123123123, i128* %a11
-  store i32 1000000, i32* %a12
-  store double 0x40C3889D70A3D70A, double* %a13
-  store float 0x40C3889D80000000, float* %a14
-  store double 0x40C3889D70A3D70A, double* %a15
+  %a15 = alloca double, align 8
+  %a14 = alloca float, align 4
+  %a13 = alloca double, align 8
+  %a12 = alloca i32, align 4
+  %a11 = alloca i128, align 8
+  %a10 = alloca i64, align 8
+  %a9 = alloca i32, align 4
+  %a8 = alloca i16, align 2
+  %a7 = alloca i8, align 1
+  %a6 = alloca i32, align 4
+  %a5 = alloca i128, align 8
+  %a4 = alloca i64, align 8
+  %a3 = alloca i32, align 4
+  %a2 = alloca i16, align 2
+  %a1 = alloca i8, align 1
+  %a = alloca i32, align 4
+  store i32 123, i32* %a, align 4
+  store i8 123, i8* %a1, align 1
+  store i16 123, i16* %a2, align 2
+  store i32 123, i32* %a3, align 4
+  store i64 123, i64* %a4, align 4
+  store i128 123, i128* %a5, align 4
+  store i32 1000000, i32* %a6, align 4
+  store i8 123, i8* %a7, align 1
+  store i16 123, i16* %a8, align 2
+  store i32 123, i32* %a9, align 4
+  store i64 123, i64* %a10, align 4
+  store i128 123123123123123123123123123123123, i128* %a11, align 4
+  store i32 1000000, i32* %a12, align 4
+  store double 0x40C3889D70A3D70A, double* %a13, align 8
+  store float 0x40C3889D80000000, float* %a14, align 4
+  store double 0x40C3889D70A3D70A, double* %a15, align 8
   ret void
 }
 
-define i32 @add(i32) {
+define i32 @add(i32 %0) {
 body:
-  %a = alloca i32
-  store i32 %0, i32* %a
-  %a1 = load i32, i32* %a
+  %a = alloca i32, align 4
+  store i32 %0, i32* %a, align 4
+  %a1 = load i32, i32* %a, align 4
   %add = add i32 %a1, 12
   ret i32 %add
 }

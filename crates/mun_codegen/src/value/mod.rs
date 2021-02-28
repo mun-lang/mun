@@ -213,7 +213,7 @@ macro_rules! impl_value_type_value {
                 type Type = $ty;
 
                 fn get_type(&self) -> Self::Type {
-                    Self::get_type(self)
+                    Self::get_type(*self)
                 }
             }
         )*
@@ -235,7 +235,7 @@ macro_rules! impl_addressable_type_values {
         $(
             impl<'ink> AddressableTypeValue<'ink> for $ty {
                 fn ptr_type(&self, address_space: AddressSpace) -> inkwell::types::PointerType<'ink> {
-                    Self::ptr_type(self, address_space)
+                    Self::ptr_type(*self, address_space)
                 }
             }
         )*

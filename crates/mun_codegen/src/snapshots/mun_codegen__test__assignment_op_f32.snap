@@ -10,36 +10,36 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
 
-define float @assign(float, float) {
+define float @assign(float %0, float %1) {
 body:
   ret float %1
 }
 
-define float @assign_add(float, float) {
+define float @assign_add(float %0, float %1) {
 body:
   %add = fadd float %0, %1
   ret float %add
 }
 
-define float @assign_subtract(float, float) {
+define float @assign_subtract(float %0, float %1) {
 body:
   %sub = fsub float %0, %1
   ret float %sub
 }
 
-define float @assign_multiply(float, float) {
+define float @assign_multiply(float %0, float %1) {
 body:
   %mul = fmul float %0, %1
   ret float %mul
 }
 
-define float @assign_divide(float, float) {
+define float @assign_divide(float %0, float %1) {
 body:
   %div = fdiv float %0, %1
   ret float %div
 }
 
-define float @assign_remainder(float, float) {
+define float @assign_remainder(float %0, float %1) {
 body:
   %rem = frem float %0, %1
   ret float %rem

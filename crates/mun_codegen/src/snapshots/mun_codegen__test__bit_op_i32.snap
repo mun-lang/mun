@@ -10,25 +10,25 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
 
-define i32 @not(i32) {
+define i32 @not(i32 %0) {
 body:
   %not = xor i32 %0, -1
   ret i32 %not
 }
 
-define i32 @bitand(i32, i32) {
+define i32 @bitand(i32 %0, i32 %1) {
 body:
   %bit_and = and i32 %0, %1
   ret i32 %bit_and
 }
 
-define i32 @bitor(i32, i32) {
+define i32 @bitor(i32 %0, i32 %1) {
 body:
   %bit_or = or i32 %0, %1
   ret i32 %bit_or
 }
 
-define i32 @bitxor(i32, i32) {
+define i32 @bitxor(i32 %0, i32 %1) {
 body:
   %bit_xor = xor i32 %0, %1
   ret i32 %bit_xor

@@ -19,7 +19,7 @@ hir = { version = "=0.2.0", path = "../mun_hir", package = "mun_hir" }
 itertools = "0.9.0"
 mun_codegen_macros = { path = "../mun_codegen_macros", package = "mun_codegen_macros" }
 mun_target = { version = "=0.2.0", path = "../mun_target" }
-mun_lld = { version = "=80.0.0", path = "../mun_lld" }
+mun_lld = { path = "../mun_lld" }
 anyhow = "1.0.31"
 thiserror = "1.0.19"
 salsa = "0.15.0"
@@ -28,7 +28,7 @@ array-init="0.1.0"
 tempfile = "3"
 paste = "0.1.6"
 parking_lot = "0.10"
-inkwell = { version = "=0.1.0-llvm8sample", features = ["llvm8-0"]}
+inkwell = { version = "=0.1.0-beta.2", features = ["llvm11-0", "no-libffi-linking"]}
 by_address = "1.0.4"
 
 [dev-dependencies]

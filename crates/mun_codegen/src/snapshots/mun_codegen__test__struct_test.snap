@@ -18,18 +18,18 @@ source_filename = "main.mun"
 
 define void @foo() {
 body:
-  %c = alloca %Baz
-  %b = alloca %Bar
-  %a = alloca %Foo
-  store %Foo { i32 5 }, %Foo* %a
+  %c = alloca %Baz, align 8
+  %b = alloca %Bar, align 8
+  %a = alloca %Foo, align 8
+  store %Foo { i32 5 }, %Foo* %a, align 4
   %Foo.a_ptr = getelementptr inbounds %Foo, %Foo* %a, i32 0, i32 0
-  %Foo.a = load i32, i32* %Foo.a_ptr
-  %a1 = load %Foo, %Foo* %a
+  %Foo.a = load i32, i32* %Foo.a_ptr, align 4
+  %a1 = load %Foo, %Foo* %a, align 4
   %init = insertvalue %Bar { double 1.230000e+00, i32 undef, i1 undef, %Foo undef }, i32 %Foo.a, 1
   %init2 = insertvalue %Bar %init, i1 true, 2
   %init3 = insertvalue %Bar %init2, %Foo %a1, 3
-  store %Bar %init3, %Bar* %b
-  store %Baz undef, %Baz* %c
+  store %Bar %init3, %Bar* %b, align 8
+  store %Baz undef, %Baz* %c, align 1
   ret void
 }
 

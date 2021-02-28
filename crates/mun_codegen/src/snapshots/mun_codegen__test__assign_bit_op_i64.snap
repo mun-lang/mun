@@ -10,19 +10,19 @@ source_filename = "main.mun"
 
 @global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
 
-define i64 @assign_bitand(i64, i64) {
+define i64 @assign_bitand(i64 %0, i64 %1) {
 body:
   %bit_and = and i64 %0, %1
   ret i64 %bit_and
 }
 
-define i64 @assign_bitor(i64, i64) {
+define i64 @assign_bitor(i64 %0, i64 %1) {
 body:
   %bit_or = or i64 %0, %1
   ret i64 %bit_or
 }
 
-define i64 @assign_bitxor(i64, i64) {
+define i64 @assign_bitxor(i64 %0, i64 %1) {
 body:
   %bit_xor = xor i64 %0, %1
   ret i64 %bit_xor
