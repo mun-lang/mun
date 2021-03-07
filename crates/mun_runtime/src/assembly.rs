@@ -133,7 +133,7 @@ impl Assembly {
 
     /// Tries to link the `assemblies`, resulting in a new [`DispatchTable`] on success. This leaves
     /// the original `dispatch_table` intact, in case of linking errors.
-    pub(super) fn relink_all<'a, 'b>(
+    pub(super) fn relink_all(
         unlinked_assemblies: &mut HashMap<PathBuf, Assembly>,
         linked_assemblies: &mut HashMap<PathBuf, Assembly>,
         dispatch_table: &DispatchTable,

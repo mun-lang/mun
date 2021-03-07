@@ -189,7 +189,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
         }
     }
 
-    /// Collects `TypeInfo` from types in the signature of a function if its exposed externally.
+    /// Collects `TypeInfo` from types in the signature of a function if it's exposed externally.
     pub fn maybe_collect_fn_signature(&mut self, hir_fn: hir::Function) {
         // If a function is externally visible or contained in the dispatch table, record the types
         // of the signature

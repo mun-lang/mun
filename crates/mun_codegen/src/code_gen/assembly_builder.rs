@@ -22,17 +22,17 @@ impl<'db, 'ink, 'ctx, 't> AssemblyBuilder<'db, 'ink, 'ctx, 't> {
         code_gen: &'ctx CodeGenContext<'db, 'ink>,
         module_group_partition: &'t ModulePartition,
         module_group_id: ModuleGroupId,
-    ) -> Result<Self, anyhow::Error> {
+    ) -> Self {
         // Construct a module for the assembly
         let module_group = &module_group_partition[module_group_id];
         let assembly_module = code_gen.create_module(&module_group.name);
 
-        Ok(Self {
+        Self {
             code_gen,
             module_group_id,
             assembly_module,
             module_group_partition,
-        })
+        }
     }
 
     /// Constructs an object file.

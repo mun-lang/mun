@@ -271,7 +271,7 @@ impl Runtime {
             loaded.insert(library_path.clone(), assembly);
 
             for dependency in dependencies {
-                let mut library_path = PathBuf::from(parent.join(dependency));
+                let mut library_path = parent.join(dependency);
                 if let Some(extension) = extension {
                     library_path = library_path.with_extension(extension);
                 }
@@ -350,7 +350,7 @@ impl Runtime {
                 loaded.insert(old_path.clone(), assembly);
 
                 for dependency in dependencies {
-                    let mut library_path = PathBuf::from(parent.join(dependency));
+                    let mut library_path = parent.join(dependency);
                     if let Some(extension) = extension {
                         library_path = library_path.with_extension(extension);
                     }
@@ -394,10 +394,9 @@ impl Runtime {
                         }
                     }
                 } else {
-                    let path = path.canonicalize().expect(&format!(
-                        "Failed to canonicalize path: {}.",
-                        path.to_string_lossy()
-                    ));
+                    let path = path.canonicalize().unwrap_or_else(|_| {
+                        panic!("Failed to canonicalize path: {}.", path.to_string_lossy())
+                    });
 
                     if op.contains(notify::op::RENAME) {
                         let cookie = event.cookie.expect("Invalid RENAME event.");

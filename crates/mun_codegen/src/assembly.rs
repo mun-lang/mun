@@ -49,9 +49,7 @@ fn build_assembly<'db, 'ink, 'ctx>(
     // Setup the code generation context
     let module_partition = db.module_partition();
 
-    let module_builder = AssemblyBuilder::new(&code_gen, &module_partition, module_group_id)
-        .expect("could not create ModuleBuilder");
-
+    let module_builder = AssemblyBuilder::new(&code_gen, &module_partition, module_group_id);
     module_builder.build().expect("unable to create assembly")
 }
 

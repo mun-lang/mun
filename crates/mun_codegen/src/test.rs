@@ -1027,8 +1027,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
             let file_ir = file_ir.llvm_module.print_to_string().to_string();
 
             // To ensure that we test symbol generation
-            let module_builder = AssemblyBuilder::new(&code_gen, &module_parition, module_group_id)
-                .expect("Failed to initialize module builder");
+            let module_builder = AssemblyBuilder::new(&code_gen, &module_parition, module_group_id);
             let _obj_file = module_builder.build().expect("Failed to build object file");
 
             format!(

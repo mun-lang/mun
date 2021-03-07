@@ -62,7 +62,7 @@ impl Index<ModuleGroupId> for ModulePartition {
     }
 }
 
-/// Builds a partition of module from the contents of the database
+/// Builds a module partition from the contents of the database
 pub(crate) fn build_partition(db: &dyn CodeGenDatabase) -> Arc<ModulePartition> {
     let mut partition = ModulePartition::default();
     for module in hir::Package::all(db.upcast())

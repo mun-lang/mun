@@ -89,14 +89,14 @@ impl ModuleGroup {
 
             // The function is visible from the specified module and all child modules.
             hir::Visibility::Module(visible_mod) => {
-                // If the modules is contained within `includes_entire_subtree` it is includes in
+                // If the modules is contained within `includes_entire_subtree` it is included in
                 // the module group.
                 self.includes_entire_subtree
                     .get(&visible_mod.into())
                     // If all its children are also part of the module group we can keep the
                     // function internal, so there is no need to export it.
                     .map(|&includes_subtree| !includes_subtree)
-                    // Otherwise, if it the module is not part of the group we have to export it.
+                    // Otherwise, the module is not part of the group and we have to export it.
                     .unwrap_or(true)
             }
         }
@@ -108,7 +108,7 @@ impl ModuleGroup {
         function.is_extern(db) || !self.modules.contains(&function.module(db))
     }
 
-    /// Returns the `hir::FileId` that are included in this module group
+    /// Returns the `hir::FileId`s that are included in this module group.
     pub fn files<'s>(&'s self, db: &'s dyn HirDatabase) -> impl Iterator<Item = hir::FileId> + 's {
         self.ordered_modules
             .iter()
