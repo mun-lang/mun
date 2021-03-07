@@ -187,6 +187,7 @@ impl LanguageServerState {
     }
 
     /// Handles a task sent by another async task
+    #[allow(clippy::unnecessary_wraps)]
     fn handle_task(&mut self, task: Task) -> anyhow::Result<()> {
         match task {
             Task::Notify(notification) => {
@@ -198,6 +199,7 @@ impl LanguageServerState {
     }
 
     /// Handles a change to the underlying virtual file system.
+    #[allow(clippy::unnecessary_wraps)]
     fn handle_vfs_task(&mut self, mut task: vfs::MonitorMessage) -> anyhow::Result<()> {
         loop {
             match task {

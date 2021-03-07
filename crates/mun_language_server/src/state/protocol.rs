@@ -14,12 +14,11 @@ impl LanguageServerState {
         &mut self,
         params: lsp_types::DidOpenTextDocumentParams,
     ) -> anyhow::Result<()> {
-        if let Ok(path) = from_lsp::abs_path(&params.text_document.uri) {
-            self.open_docs.insert(path.clone());
-            self.vfs
-                .write()
-                .set_file_contents(&path, Some(params.text_document.text.into_bytes()));
-        }
+        let path = from_lsp::abs_path(&params.text_document.uri)?;
+        self.open_docs.insert(path.clone());
+        self.vfs
+            .write()
+            .set_file_contents(&path, Some(params.text_document.text.into_bytes()));
         Ok(())
     }
 
@@ -32,18 +31,17 @@ impl LanguageServerState {
             text_document,
             content_changes,
         } = params;
-        if let Ok(path) = from_lsp::abs_path(&text_document.uri) {
-            let vfs = &mut *self.vfs.write();
-            let file_id = vfs
-                .file_id(&path)
-                .expect("we already checked that the file_id exists!");
-            let mut text = vfs
-                .file_contents(file_id)
-                .and_then(|contents| String::from_utf8(contents.to_vec()).ok())
-                .expect("if the file_id exists it must be valid utf8");
-            apply_document_changes(&mut text, content_changes);
-            vfs.set_file_contents(&path, Some(text.into_bytes()));
-        }
+        let path = from_lsp::abs_path(&text_document.uri)?;
+        let vfs = &mut *self.vfs.write();
+        let file_id = vfs
+            .file_id(&path)
+            .expect("we already checked that the file_id exists!");
+        let mut text = vfs
+            .file_contents(file_id)
+            .and_then(|contents| String::from_utf8(contents.to_vec()).ok())
+            .expect("if the file_id exists it must be valid utf8");
+        apply_document_changes(&mut text, content_changes);
+        vfs.set_file_contents(&path, Some(text.into_bytes()));
         Ok(())
     }
 
@@ -52,10 +50,9 @@ impl LanguageServerState {
         &mut self,
         params: lsp_types::DidCloseTextDocumentParams,
     ) -> anyhow::Result<()> {
-        if let Ok(path) = from_lsp::abs_path(&params.text_document.uri) {
-            self.open_docs.remove(&path);
-            self.vfs_monitor.reload(&path);
-        }
+        let path = from_lsp::abs_path(&params.text_document.uri)?;
+        self.open_docs.remove(&path);
+        self.vfs_monitor.reload(&path);
         Ok(())
     }
 
@@ -65,9 +62,8 @@ impl LanguageServerState {
         params: lsp_types::DidChangeWatchedFilesParams,
     ) -> anyhow::Result<()> {
         for change in params.changes {
-            if let Ok(path) = from_lsp::abs_path(&change.uri) {
-                self.vfs_monitor.reload(&path);
-            }
+            let path = from_lsp::abs_path(&change.uri)?;
+            self.vfs_monitor.reload(&path);
         }
         Ok(())
     }

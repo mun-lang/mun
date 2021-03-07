@@ -342,7 +342,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
                 type_info_to_index.insert(type_info, index);
                 ptr
             })
-            .as_value(self.value_context);
+            .into_value(self.value_context);
 
         // If there are types, introduce a special global that contains all the TypeInfos
         if !type_info_ptrs.is_empty() {

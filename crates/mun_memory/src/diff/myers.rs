@@ -168,10 +168,14 @@ pub fn diff_length<T: Eq>(old: &[T], new: &[T]) -> usize {
                 v[idx - 1] + 1
             };
             let mut y = (x as isize - k) as usize;
-            while x < num_old && y < num_new && old[x] == new[y] {
-                x += 1;
-                y += 1;
-            }
+            let shortest_equal = old
+                .iter()
+                .skip(x)
+                .zip(new.iter().skip(y))
+                .take_while(|(a, b)| a == b)
+                .count();
+            x += shortest_equal;
+            y += shortest_equal;
             v[idx] = x;
             if x == num_old && y == num_new {
                 return d as usize;
