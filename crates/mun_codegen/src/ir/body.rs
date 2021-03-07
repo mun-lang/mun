@@ -721,13 +721,11 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
     ) -> Option<BasicValueEnum<'ink>> {
         let lhs: IntValue = self
             .gen_expr(lhs_expr)
-            .map(|value| self.opt_deref_value(lhs_expr, value))
-            .expect("no lhs value")
+            .map(|value| self.opt_deref_value(lhs_expr, value))?
             .into_int_value();
         let rhs: IntValue = self
             .gen_expr(rhs_expr)
-            .map(|value| self.opt_deref_value(rhs_expr, value))
-            .expect("no rhs value")
+            .map(|value| self.opt_deref_value(rhs_expr, value))?
             .into_int_value();
         match op {
             BinaryOp::ArithOp(op) => Some(self.gen_arith_bin_op_bool(lhs, rhs, op).into()),

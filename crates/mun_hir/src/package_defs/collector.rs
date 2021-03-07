@@ -494,48 +494,48 @@ struct ModCollectorContext<'a, 'db> {
 impl<'a> ModCollectorContext<'a, '_> {
     fn collect(&mut self, items: &[ModItem]) {
         for &item in items {
-            let definition = match item {
-                ModItem::Function(id) => self.collect_function(id),
-                ModItem::Struct(id) => self.collect_struct(id),
-                ModItem::TypeAlias(id) => self.collect_type_alias(id),
-                ModItem::Import(id) => self.collect_import(id),
-            };
-
-            if let Some(DefData {
+            let DefData {
                 id,
                 name,
                 visibility,
                 has_constructor,
-            }) = definition
-            {
-                self.def_collector.package_defs.modules[self.module_id].add_definition(id);
-                let visibility = self
-                    .def_collector
-                    .package_defs
-                    .module_tree
-                    .resolve_visibility(self.def_collector.db, self.module_id, visibility);
-                self.def_collector.package_defs.modules[self.module_id].add_resolution(
-                    name.clone(),
-                    PerNs::from_definition(id, visibility, has_constructor),
-                );
-            }
+            } = match item {
+                ModItem::Function(id) => self.collect_function(id),
+                ModItem::Struct(id) => self.collect_struct(id),
+                ModItem::TypeAlias(id) => self.collect_type_alias(id),
+                ModItem::Import(id) => {
+                    self.collect_import(id);
+                    continue;
+                }
+            };
+
+            self.def_collector.package_defs.modules[self.module_id].add_definition(id);
+            let visibility = self
+                .def_collector
+                .package_defs
+                .module_tree
+                .resolve_visibility(self.def_collector.db, self.module_id, visibility);
+            self.def_collector.package_defs.modules[self.module_id].add_resolution(
+                name.clone(),
+                PerNs::from_definition(id, visibility, has_constructor),
+            );
         }
     }
 
     /// Collects the definition data from an import statement.
-    fn collect_import(&mut self, id: LocalItemTreeId<item_tree::Import>) -> Option<DefData<'a>> {
+    fn collect_import(&mut self, id: LocalItemTreeId<item_tree::Import>) {
         self.def_collector.unresolved_imports.push(ImportDirective {
             module_id: self.module_id,
             import: Import::from_use(&self.item_tree, InFile::new(self.file_id, id)),
             status: PartiallyResolvedImport::Unresolved,
         });
-        None
     }
 
     /// Collects the definition data from a `Function`
-    fn collect_function(&self, id: LocalItemTreeId<Function>) -> Option<DefData<'a>> {
+    #[warn(clippy::unnecessary_wraps)]
+    fn collect_function(&self, id: LocalItemTreeId<Function>) -> DefData<'a> {
         let func = &self.item_tree[id];
-        Some(DefData {
+        DefData {
             id: FunctionLoc {
                 module: ModuleId {
                     package: self.def_collector.package_id,
@@ -548,13 +548,13 @@ impl<'a> ModCollectorContext<'a, '_> {
             name: &func.name,
             visibility: &self.item_tree[func.visibility],
             has_constructor: false,
-        })
+        }
     }
 
     /// Collects the definition data from a `Struct`
-    fn collect_struct(&self, id: LocalItemTreeId<Struct>) -> Option<DefData<'a>> {
+    fn collect_struct(&self, id: LocalItemTreeId<Struct>) -> DefData<'a> {
         let adt = &self.item_tree[id];
-        Some(DefData {
+        DefData {
             id: StructLoc {
                 module: ModuleId {
                     package: self.def_collector.package_id,
@@ -567,13 +567,13 @@ impl<'a> ModCollectorContext<'a, '_> {
             name: &adt.name,
             visibility: &self.item_tree[adt.visibility],
             has_constructor: adt.kind != StructDefKind::Record,
-        })
+        }
     }
 
     /// Collects the definition data from a `TypeAlias`
-    fn collect_type_alias(&self, id: LocalItemTreeId<TypeAlias>) -> Option<DefData<'a>> {
+    fn collect_type_alias(&self, id: LocalItemTreeId<TypeAlias>) -> DefData<'a> {
         let type_alias = &self.item_tree[id];
-        Some(DefData {
+        DefData {
             id: TypeAliasLoc {
                 module: ModuleId {
                     package: self.def_collector.package_id,
@@ -586,7 +586,7 @@ impl<'a> ModCollectorContext<'a, '_> {
             name: &type_alias.name,
             visibility: &self.item_tree[type_alias.visibility],
             has_constructor: false,
-        })
+        }
     }
 }
 

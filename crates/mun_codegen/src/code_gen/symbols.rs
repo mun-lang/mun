@@ -158,7 +158,7 @@ fn get_function_definition_array<'ink, 'a>(
                 ),
             }
         })
-        .as_value(context)
+        .into_value(context)
         .into_const_private_global("fn.get_info.functions", context)
 }
 

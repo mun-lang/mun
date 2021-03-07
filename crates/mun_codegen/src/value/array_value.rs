@@ -115,7 +115,7 @@ pub trait IterAsIrValue<'ink, E: SizedValueType<'ink>, T: AsValue<'ink, E>>:
     IntoIterator<Item = T>
 {
     /// Returns a `Value<[E]>` that contains all values converted to `Value<E>`.
-    fn as_value(self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, [E]>;
+    fn into_value(self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, [E]>;
 
     /// Constructs a const private global and returns a pointer to it.
     fn into_const_private_pointer<S: AsRef<str>>(
@@ -129,7 +129,7 @@ pub trait IterAsIrValue<'ink, E: SizedValueType<'ink>, T: AsValue<'ink, E>>:
         E: PointerValueType<'ink>,
         Self: Sized,
     {
-        self.as_value(context)
+        self.into_value(context)
             .into_const_private_global(name, context)
             .as_value(context)
     }
@@ -150,7 +150,7 @@ pub trait IterAsIrValue<'ink, E: SizedValueType<'ink>, T: AsValue<'ink, E>>:
     {
         let mut iter = self.into_iter().peekable();
         if iter.peek().is_some() {
-            iter.as_value(context)
+            iter.into_value(context)
                 .into_const_private_global(name, context)
                 .as_value(context)
         } else {
@@ -164,7 +164,7 @@ impl<'ink, E: SizedValueType<'ink>, T: AsValue<'ink, E>, I: IntoIterator<Item = 
 where
     E::Value: ConstArrayValue<'ink>,
 {
-    fn as_value(self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, [E]> {
+    fn into_value(self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, [E]> {
         let element_type = E::get_ir_type(context.type_context);
         // eprintln!("constructing array of type {:?}", element_type);
         let elements: Vec<E::Value> = self

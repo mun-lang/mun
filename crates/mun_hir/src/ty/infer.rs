@@ -37,10 +37,7 @@ macro_rules! ty_app {
         })
     };
     ($ctor:pat) => {
-        $crate::Ty::Apply($crate::ApplicationTy {
-            ctor: $ctor,
-            ..
-        })
+        $crate::Ty::Apply($crate::ApplicationTy { ctor: $ctor, .. })
     };
 }
 

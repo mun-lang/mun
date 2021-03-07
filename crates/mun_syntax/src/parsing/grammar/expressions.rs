@@ -211,13 +211,7 @@ fn postfix_expr(
     loop {
         lhs = match p.current() {
             T!['('] => call_expr(p, lhs),
-            T![.] => match postfix_dot_expr(p, lhs) {
-                Ok(it) => it,
-                Err(it) => {
-                    lhs = it;
-                    break;
-                }
-            },
+            T![.] => postfix_dot_expr(p, lhs),
             INDEX => field_expr(p, lhs),
             _ => break,
         }
@@ -251,16 +245,13 @@ fn arg_list(p: &mut Parser) {
     m.complete(p, ARG_LIST);
 }
 
-fn postfix_dot_expr(
-    p: &mut Parser,
-    lhs: CompletedMarker,
-) -> Result<CompletedMarker, CompletedMarker> {
+fn postfix_dot_expr(p: &mut Parser, lhs: CompletedMarker) -> CompletedMarker {
     assert!(p.at(T![.]));
     if p.nth(1) == IDENT && p.nth(2) == T!['('] {
         unimplemented!("Method calls are not supported yet.");
     }
 
-    Ok(field_expr(p, lhs))
+    field_expr(p, lhs)
 }
 
 fn field_expr(p: &mut Parser, lhs: CompletedMarker) -> CompletedMarker {
