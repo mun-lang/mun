@@ -4,8 +4,9 @@ use crate::{
     ir::ty::HirTypeCache,
     type_info::{TypeGroup, TypeInfo},
     value::{AsValue, CanInternalize, Global, IrValueContext, IterAsIrValue, Value},
+    ModuleGroup,
 };
-use hir::{Body, ExprId, HasVisibility, HirDatabase, InferenceResult};
+use hir::{Body, ExprId, HirDatabase, InferenceResult};
 use inkwell::{
     context::Context, module::Linkage, module::Module, targets::TargetData, types::ArrayType,
     values::PointerValue,
@@ -108,6 +109,7 @@ pub(crate) struct TypeTableBuilder<'db, 'ink, 't> {
     dispatch_table: &'t DispatchTable<'ink>,
     hir_types: &'t HirTypeCache<'db, 'ink>,
     entries: BTreeSet<TypeInfo>, // Use a `BTreeSet` to guarantee deterministically ordered output
+    module_group: &'t ModuleGroup,
 }
 
 impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
@@ -119,6 +121,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
         intrinsics: impl Iterator<Item = &'f FunctionPrototype>,
         dispatch_table: &'t DispatchTable<'ink>,
         hir_types: &'t HirTypeCache<'db, 'ink>,
+        module_group: &'t ModuleGroup,
     ) -> Self {
         let mut builder = Self {
             db,
@@ -127,6 +130,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
             dispatch_table,
             hir_types,
             entries: BTreeSet::new(),
+            module_group,
         };
 
         for prototype in intrinsics {
@@ -154,31 +158,51 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
     fn collect_expr(&mut self, expr_id: ExprId, body: &Arc<Body>, infer: &InferenceResult) {
         let expr = &body[expr_id];
 
-        // TODO: Collect used external `TypeInfo` for the type dispatch table
+        // If this expression is a call, store it in the dispatch table
+        if let hir::Expr::Call { callee, .. } = expr {
+            match infer[*callee].as_callable_def() {
+                Some(hir::CallableDef::Function(hir_fn)) => {
+                    self.maybe_collect_fn_signature(hir_fn);
+                }
+                Some(hir::CallableDef::Struct(_)) => (),
+                None => panic!("expected a callable expression"),
+            }
+        }
 
         // Recurse further
         expr.walk_child_exprs(|expr_id| self.collect_expr(expr_id, body, infer))
     }
 
-    /// Collects unique `TypeInfo` from the specified function signature and body.
-    pub fn collect_fn(&mut self, hir_fn: hir::Function) {
-        // Collect type info for exposed function
-        if hir_fn.visibility(self.db).is_externally_visible()
+    /// Collects `TypeInfo` from types in the signature of a function
+    pub fn collect_fn_signature(&mut self, hir_fn: hir::Function) {
+        let fn_sig = hir_fn.ty(self.db).callable_sig(self.db).unwrap();
+
+        // Collect argument types
+        for ty in fn_sig.params().iter() {
+            self.collect_type(self.hir_types.type_info(ty));
+        }
+
+        // Collect return type
+        let ret_ty = fn_sig.ret();
+        if !ret_ty.is_empty() {
+            self.collect_type(self.hir_types.type_info(ret_ty));
+        }
+    }
+
+    /// Collects `TypeInfo` from types in the signature of a function if it's exposed externally.
+    pub fn maybe_collect_fn_signature(&mut self, hir_fn: hir::Function) {
+        // If a function is externally visible or contained in the dispatch table, record the types
+        // of the signature
+        if self.module_group.should_export_fn(self.db, hir_fn)
             || self.dispatch_table.contains(hir_fn)
         {
-            let fn_sig = hir_fn.ty(self.db).callable_sig(self.db).unwrap();
-
-            // Collect argument types
-            for ty in fn_sig.params().iter() {
-                self.collect_type(self.hir_types.type_info(ty));
-            }
-
-            // Collect return type
-            let ret_ty = fn_sig.ret();
-            if !ret_ty.is_empty() {
-                self.collect_type(self.hir_types.type_info(ret_ty));
-            }
+            self.collect_fn_signature(hir_fn);
         }
+    }
+
+    /// Collects unique `TypeInfo` from the specified function signature and body.
+    pub fn collect_fn(&mut self, hir_fn: hir::Function) {
+        self.maybe_collect_fn_signature(hir_fn);
 
         // Collect used types from body
         let body = hir_fn.body(self.db);
@@ -263,7 +287,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
         hir_struct: hir::Struct,
     ) -> Value<'ink, ir::StructInfo<'ink>> {
         let struct_ir = self.hir_types.get_struct_type(hir_struct);
-        let name = hir_struct.name(self.db).to_string();
+        let name = hir_struct.full_name(self.db);
         let fields = hir_struct.fields(self.db);
 
         // Construct an array of field names (or null if there are no fields)

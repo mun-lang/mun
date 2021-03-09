@@ -1,10 +1,10 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "struct(gc) GcStruct(f32, f32);\nstruct(value) ValueStruct(f32, f32);\n\nstruct(gc) GcWrapper(GcStruct, ValueStruct)\nstruct(value) ValueWrapper(GcStruct, ValueStruct);\n\npub fn new_gc_struct(a: f32, b: f32) -> GcStruct {\n    GcStruct(a, b)\n}\n\npub fn new_value_struct(a: f32, b: f32) -> ValueStruct {\n    ValueStruct(a, b)\n}\n\npub fn new_gc_wrapper(a: GcStruct, b: ValueStruct) -> GcWrapper {\n    GcWrapper(a, b)\n}\n\npub fn new_value_wrapper(a: GcStruct, b: ValueStruct) -> ValueWrapper {\n    ValueWrapper(a, b)\n}"
+expression: "\n    struct(gc) GcStruct(f32, f32);\n    struct(value) ValueStruct(f32, f32);\n\n    struct(gc) GcWrapper(GcStruct, ValueStruct)\n    struct(value) ValueWrapper(GcStruct, ValueStruct);\n\n    pub fn new_gc_struct(a: f32, b: f32) -> GcStruct {\n        GcStruct(a, b)\n    }\n\n    pub fn new_value_struct(a: f32, b: f32) -> ValueStruct {\n        ValueStruct(a, b)\n    }\n\n    pub fn new_gc_wrapper(a: GcStruct, b: ValueStruct) -> GcWrapper {\n        GcWrapper(a, b)\n    }\n\n    pub fn new_value_wrapper(a: GcStruct, b: ValueStruct) -> ValueWrapper {\n        ValueWrapper(a, b)\n    }\n    "
 ---
-; == FILE IR =====================================
-; ModuleID = 'main.mun'
-source_filename = "main.mun"
+; == FILE IR (mod) =====================================
+; ModuleID = 'mod'
+source_filename = "mod"
 
 %DispatchTable = type { i8** (i8*, i8*)* }
 %"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
@@ -103,8 +103,7 @@ body:
   ret %ValueWrapper** %ValueWrapper_ptr_ptr
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

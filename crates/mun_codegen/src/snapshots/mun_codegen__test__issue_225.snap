@@ -1,10 +1,10 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "struct Num {\n    value: i64,\n}\n\npub fn foo(b: i64) {\n    Num { value: b }.value;\n}\n\npub fn bar(b: i64) {\n    { let a = Num { value: b }; a}.value;\n}"
+expression: "\n    struct Num {\n        value: i64,\n    }\n\n    pub fn foo(b: i64) {\n        Num { value: b }.value;\n    }\n\n    pub fn bar(b: i64) {\n        { let a = Num { value: b }; a}.value;\n    }\n        "
 ---
-; == FILE IR =====================================
-; ModuleID = 'main.mun'
-source_filename = "main.mun"
+; == FILE IR (mod) =====================================
+; ModuleID = 'mod'
+source_filename = "mod"
 
 %DispatchTable = type { i8** (i8*, i8*)* }
 %"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
@@ -46,8 +46,7 @@ body:
   ret void
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

@@ -72,7 +72,7 @@ fn cmd_supports_ansi() -> bool {
                     // From Windows 10.0.10586 version and higher ANSI escape codes work in `cmd`
                     let windows_support_ansi = major >= 10 && (patch >= 10586 || minor > 0);
                     if windows_support_ansi {
-                        let _ = ansi_term::enable_ansi_support();
+                        let _ = yansi_term::enable_ansi_support();
                     }
                     windows_support_ansi
                 } else {

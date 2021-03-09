@@ -82,7 +82,7 @@ impl MockDatabase {
         let source_root_id = SourceRootId(0);
 
         let text = Arc::from(text.to_owned());
-        let rel_path = RelativePathBuf::from("main.mun");
+        let rel_path = RelativePathBuf::from("mod.mun");
         let file_id = FileId(0);
         db.set_file_text(file_id, text);
         db.set_file_source_root(file_id, source_root_id);

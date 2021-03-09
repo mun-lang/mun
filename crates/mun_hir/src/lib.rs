@@ -5,41 +5,6 @@
 
 #![allow(dead_code)]
 
-#[macro_use]
-mod macros;
-#[macro_use]
-mod arena;
-mod code_model;
-mod db;
-pub mod diagnostics;
-mod display;
-mod expr;
-pub mod fixture;
-mod ids;
-mod in_file;
-mod input;
-mod item_tree;
-pub mod line_index;
-mod module_tree;
-mod name;
-pub(crate) mod name_resolution;
-mod path;
-mod primitive_type;
-mod resolve;
-mod source_id;
-mod ty;
-mod type_ref;
-mod utils;
-
-mod item_scope;
-#[cfg(test)]
-mod mock;
-mod package_defs;
-mod package_set;
-#[cfg(test)]
-mod tests;
-mod visibility;
-
 pub use salsa;
 
 pub use crate::{
@@ -69,9 +34,44 @@ pub use crate::{
     },
     visibility::{HasVisibility, Visibility},
 };
-
 use crate::{name::AsName, source_id::AstIdMap};
 
 pub use self::code_model::{
     Function, FunctionData, Module, ModuleDef, Package, Struct, StructMemoryKind, TypeAlias,
 };
+
+#[macro_use]
+mod macros;
+#[macro_use]
+mod arena;
+mod code_model;
+mod db;
+pub mod diagnostics;
+mod display;
+mod expr;
+mod ids;
+mod in_file;
+mod input;
+mod item_tree;
+pub mod line_index;
+mod module_tree;
+mod name;
+mod name_resolution;
+mod path;
+mod primitive_type;
+mod resolve;
+mod source_id;
+mod ty;
+mod type_ref;
+mod utils;
+
+pub mod fixture;
+mod item_scope;
+#[cfg(test)]
+mod mock;
+mod package_defs;
+mod package_set;
+#[cfg(test)]
+mod tests;
+mod visibility;
+pub mod with_fixture;

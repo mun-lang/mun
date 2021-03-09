@@ -4,16 +4,16 @@ use inkwell::{
     OptimizationLevel,
 };
 
-mod context;
-mod error;
-mod module_builder;
-mod object_file;
-pub mod symbols;
-
+pub use assembly_builder::AssemblyBuilder;
 pub use context::CodeGenContext;
 pub use error::CodeGenerationError;
-pub use module_builder::ModuleBuilder;
 pub(crate) use object_file::ObjectFile;
+
+mod assembly_builder;
+mod context;
+mod error;
+mod object_file;
+pub mod symbols;
 
 /// Optimizes the specified LLVM `Module` using the default passes for the given
 /// `OptimizationLevel`.

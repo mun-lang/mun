@@ -7,3 +7,4 @@ mod package;
 mod project_manifest;
 
 pub const MANIFEST_FILENAME: &str = "mun.toml";
+pub const LOCKFILE_NAME: &str = ".munlock";

@@ -1,10 +1,10 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "pub fn negate(a: f32) -> f32 { -a }"
+expression: "\n    pub fn negate(a: f32) -> f32 { -a }\n                        "
 ---
-; == FILE IR =====================================
-; ModuleID = 'main.mun'
-source_filename = "main.mun"
+; == FILE IR (mod) =====================================
+; ModuleID = 'mod'
+source_filename = "mod"
 
 %"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 
@@ -16,8 +16,7 @@ body:
   ret float %neg
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

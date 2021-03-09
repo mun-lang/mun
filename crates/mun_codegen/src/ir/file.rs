@@ -1,4 +1,5 @@
 use super::body::ExternalGlobals;
+use crate::module_group::ModuleGroup;
 use crate::{
     code_gen::CodeGenContext,
     ir::body::BodyIrGenerator,
@@ -6,15 +7,13 @@ use crate::{
     ir::{function, type_table::TypeTable},
     value::Global,
 };
-use hir::{FileId, HasVisibility, ModuleDef};
+use hir::{HasVisibility, ModuleDef};
 use inkwell::module::Module;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 /// The IR generated for a single source file.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct FileIR<'ink> {
-    /// The original source file
-    pub file_id: FileId,
     /// The LLVM module that contains the IR
     pub llvm_module: Module<'ink>,
     /// The `hir::Function`s that constitute the file's API.
@@ -25,14 +24,9 @@ pub struct FileIR<'ink> {
 pub(crate) fn gen_file_ir<'db, 'ink>(
     code_gen: &CodeGenContext<'db, 'ink>,
     group_ir: &FileGroupIR<'ink>,
-    module: hir::Module,
+    module_group: &ModuleGroup,
 ) -> FileIR<'ink> {
-    let file_id = module
-        .file_id(code_gen.db)
-        .expect("module must have an associated file");
-    let llvm_module = code_gen
-        .context
-        .create_module(code_gen.db.file_relative_path(file_id).as_str());
+    let llvm_module = code_gen.context.create_module(&module_group.name);
 
     let hir_types = &code_gen.hir_types;
 
@@ -40,7 +34,10 @@ pub(crate) fn gen_file_ir<'db, 'ink>(
     // Use a `BTreeMap` to guarantee deterministically ordered output.ures
     let mut functions = HashMap::new();
     let mut wrapper_functions = BTreeMap::new();
-    for def in module.declarations(code_gen.db) {
+    for def in module_group
+        .iter()
+        .flat_map(|module| module.declarations(code_gen.db))
+    {
         if let ModuleDef::Function(f) = def {
             if !f.is_extern(code_gen.db) {
                 let fun = function::gen_prototype(code_gen.db, hir_types, f, &llvm_module);
@@ -96,6 +93,7 @@ pub(crate) fn gen_file_ir<'db, 'ink>(
             &group_ir.type_table,
             external_globals.clone(),
             &code_gen.hir_types,
+            &module_group,
         );
 
         code_gen.gen_fn_body();
@@ -112,6 +110,7 @@ pub(crate) fn gen_file_ir<'db, 'ink>(
             &group_ir.type_table,
             external_globals.clone(),
             &code_gen.hir_types,
+            &module_group,
         );
 
         code_gen.gen_fn_wrapper();
@@ -121,13 +120,9 @@ pub(crate) fn gen_file_ir<'db, 'ink>(
     // Filter private methods
     let api: HashSet<hir::Function> = functions
         .keys()
-        .filter(|f| f.visibility(code_gen.db).is_externally_visible())
-        .cloned()
+        .copied()
+        .filter(|&f| module_group.should_export_fn(code_gen.db, f))
         .collect();
 
-    FileIR {
-        file_id,
-        llvm_module,
-        api,
-    }
+    FileIR { llvm_module, api }
 }

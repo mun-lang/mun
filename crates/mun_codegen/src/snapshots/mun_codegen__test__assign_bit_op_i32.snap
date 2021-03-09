@@ -1,10 +1,10 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "pub fn assign_bitand(a: i32, b: i32) -> i32 {\n    a &= b;\n    a\n}\npub fn assign_bitor(a: i32, b: i32) -> i32 {\n    a |= b;\n    a\n}\npub fn assign_bitxor(a: i32, b: i32) -> i32 {\n    a ^= b;\n    a\n}"
+expression: "\n    pub fn assign_bitand(a: i32, b: i32) -> i32 {\n        a &= b;\n        a\n    }\n    pub fn assign_bitor(a: i32, b: i32) -> i32 {\n        a |= b;\n        a\n    }\n    pub fn assign_bitxor(a: i32, b: i32) -> i32 {\n        a ^= b;\n        a\n    }\n                        "
 ---
-; == FILE IR =====================================
-; ModuleID = 'main.mun'
-source_filename = "main.mun"
+; == FILE IR (mod) =====================================
+; ModuleID = 'mod'
+source_filename = "mod"
 
 %"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 
@@ -28,8 +28,7 @@ body:
   ret i32 %bit_xor
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

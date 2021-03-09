@@ -1,10 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "pub fn main() {\n  let a = 3+3.0;\n  let b = 3.0+3;\n}"
+expression: "\n    pub fn main() {\n      let a = 3+3.0;\n      let b = 3.0+3;\n    }\n    "
 ---
-; == FILE IR =====================================
-error 2:13: mismatched type
-error 3:15: mismatched type
-
-; == GROUP IR ====================================
-
+mod.mun (2:13): error: mismatched type
+mod.mun (3:15): error: mismatched type

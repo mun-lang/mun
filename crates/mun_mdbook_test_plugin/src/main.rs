@@ -70,7 +70,7 @@ fn test_code(code: &str) {
             let previous_hook = panic::take_hook();
             panic::set_hook(Box::new(|_| {}));
 
-            if panic::catch_unwind(|| CompileTestDriver::new(&code)).is_ok() {
+            if panic::catch_unwind(|| CompileTestDriver::from_file(&code)).is_ok() {
                 panic::set_hook(previous_hook);
                 panic!("Code that should have caused the error compiled successfully ❌")
             }
@@ -78,7 +78,7 @@ fn test_code(code: &str) {
             panic::set_hook(previous_hook);
         }
         TestingMethod::Compile => {
-            CompileTestDriver::new(&code);
+            CompileTestDriver::from_file(&code);
         }
         TestingMethod::CompileAndRun => {
             let compile_and_run_test_driver =

@@ -1,18 +1,17 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "fn private_main() {\n    let a = 1;\n}"
+expression: "\n    fn private_main() {\n        let a = 1;\n    }\n    "
 ---
-; == FILE IR =====================================
-; ModuleID = 'main.mun'
-source_filename = "main.mun"
+; == FILE IR (mod) =====================================
+; ModuleID = 'mod'
+source_filename = "mod"
 
 define void @private_main() {
 body:
   ret void
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

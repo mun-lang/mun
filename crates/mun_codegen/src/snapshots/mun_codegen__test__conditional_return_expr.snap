@@ -1,10 +1,10 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "pub fn main(a:i32) -> i32 {\n    if a > 4 {\n        return a;\n    }\n    a - 1\n}"
+expression: "\n    pub fn main(a:i32) -> i32 {\n        if a > 4 {\n            return a;\n        }\n        a - 1\n    }\n    "
 ---
-; == FILE IR =====================================
-; ModuleID = 'main.mun'
-source_filename = "main.mun"
+; == FILE IR (mod) =====================================
+; ModuleID = 'mod'
+source_filename = "mod"
 
 %"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 
@@ -23,8 +23,7 @@ if_merge:                                         ; preds = %body
   ret i32 %sub
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

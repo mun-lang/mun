@@ -2,8 +2,9 @@ use super::{Function, Package, Struct, TypeAlias};
 use crate::ids::{ItemDefinitionId, ModuleId};
 use crate::primitive_type::PrimitiveType;
 use crate::{DiagnosticSink, FileId, HirDatabase, Name};
+use itertools::Itertools;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Module {
     pub(crate) id: ModuleId,
 }
@@ -51,21 +52,6 @@ impl Module {
             })
     }
 
-    /// Returns all the child modules of this module
-    pub fn children(self, db: &dyn HirDatabase) -> Vec<Module> {
-        let module_tree = db.module_tree(self.id.package);
-        module_tree[self.id.local_id]
-            .children
-            .iter()
-            .map(|(_, local_id)| Module {
-                id: ModuleId {
-                    package: self.id.package,
-                    local_id: *local_id,
-                },
-            })
-            .collect()
-    }
-
     /// Returns the file that defines the module
     pub fn file_id(self, db: &dyn HirDatabase) -> Option<FileId> {
         db.module_tree(self.id.package).modules[self.id.local_id].file
@@ -105,6 +91,21 @@ impl Module {
         }
     }
 
+    /// Returns all the child modules of this module
+    pub fn children(self, db: &dyn HirDatabase) -> Vec<Module> {
+        let module_tree = db.module_tree(self.id.package);
+        module_tree[self.id.local_id]
+            .children
+            .iter()
+            .map(|(_, local_id)| Module {
+                id: ModuleId {
+                    package: self.id.package,
+                    local_id: *local_id,
+                },
+            })
+            .collect()
+    }
+
     /// Returns the path from this module to the root module
     pub fn path_to_root(self, db: &dyn HirDatabase) -> Vec<Module> {
         let mut res = vec![self];
@@ -114,6 +115,16 @@ impl Module {
             curr = next
         }
         res
+    }
+
+    /// Returns the name of this module including all parent modules
+    pub fn full_name(self, db: &dyn HirDatabase) -> String {
+        self.path_to_root(db)
+            .iter()
+            .filter_map(|&module| module.name(db))
+            .map(|name| name.to_string())
+            .intersperse(String::from("::"))
+            .collect()
     }
 }
 

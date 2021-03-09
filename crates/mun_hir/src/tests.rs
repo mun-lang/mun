@@ -1,7 +1,7 @@
 use crate::{
     db::{DefDatabase, SourceDatabase},
-    fixture::WithFixture,
     mock::MockDatabase,
+    with_fixture::WithFixture,
     PackageId,
 };
 use std::sync::Arc;

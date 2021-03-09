@@ -11,7 +11,7 @@ fn test_abi_compatibility() {
     let fn_name2 = "bar";
     let struct_name = "Foo";
     let struct_name2 = "Bar";
-    let driver = CompileTestDriver::new(&format!(
+    let driver = CompileTestDriver::from_file(&format!(
         r#"
     pub fn {fn_name}(_: f64) -> i32 {{ 0 }}
     pub fn {fn_name2}() {{ }}

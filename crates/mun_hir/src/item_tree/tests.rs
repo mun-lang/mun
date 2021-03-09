@@ -1,5 +1,5 @@
+use crate::with_fixture::WithFixture;
 use crate::{
-    fixture::WithFixture,
     item_tree::Fields,
     item_tree::{ItemTree, ModItem},
     mock::MockDatabase,

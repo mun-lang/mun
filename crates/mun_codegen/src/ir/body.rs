@@ -1,3 +1,4 @@
+use crate::module_group::ModuleGroup;
 use crate::{
     intrinsics,
     ir::ty::HirTypeCache,
@@ -49,6 +50,7 @@ pub(crate) struct BodyIrGenerator<'db, 'ink, 't> {
     active_loop: Option<LoopInfo<'ink>>,
     hir_function: hir::Function,
     external_globals: ExternalGlobals<'ink>,
+    module_group: &'t ModuleGroup,
 }
 
 impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
@@ -62,6 +64,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         type_table: &'t TypeTable<'ink>,
         external_globals: ExternalGlobals<'ink>,
         hir_types: &'t HirTypeCache<'db, 'ink>,
+        module_group: &'t ModuleGroup,
     ) -> Self {
         let (hir_function, ir_function) = function;
 
@@ -91,6 +94,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             hir_function,
             external_globals,
             hir_types,
+            module_group,
         }
     }
 
@@ -167,7 +171,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .collect();
 
         let ret_value = self
-            .gen_call(self.hir_function, &args, false)
+            .gen_call(self.hir_function, &args)
             .try_as_basic_value()
             .left();
 
@@ -231,7 +235,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                             .map(|expr| self.gen_expr(*expr).expect("expected a value"))
                             .collect();
 
-                        self.gen_call(def, &args, true)
+                        self.gen_call(def, &args)
                             .try_as_basic_value()
                             .left()
                             // If the called function is a void function it doesn't return anything.
@@ -1065,10 +1069,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
     /// Returns true if a call to the specified function should be looked up in the dispatch table;
     /// if false is returned the function should be called directly.
-    fn should_use_dispatch_table(&self, _function: hir::Function) -> bool {
-        // TODO: add logic to determine when to use the dispatch table (dont use it in release for
-        //  example)
-        true
+    fn should_use_dispatch_table(&self, function: hir::Function) -> bool {
+        self.module_group.should_runtime_link_fn(self.db, function)
     }
 
     /// Generates IR for a function call.
@@ -1076,12 +1078,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         &mut self,
         function: hir::Function,
         args: &[BasicValueEnum<'ink>],
-        allow_dispatch_table: bool,
     ) -> CallSiteValue<'ink> {
-        if self.dispatch_table.contains(function)
-            && allow_dispatch_table
-            && self.should_use_dispatch_table(function)
-        {
+        if self.should_use_dispatch_table(function) {
             let ptr_value = self.dispatch_table.gen_function_lookup(
                 self.db,
                 self.external_globals.dispatch_table,

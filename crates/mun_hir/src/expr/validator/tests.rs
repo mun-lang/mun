@@ -1,8 +1,8 @@
 use crate::{
     diagnostics::DiagnosticSink,
     expr::validator::{ExprValidator, TypeAliasValidator},
-    fixture::WithFixture,
     mock::MockDatabase,
+    with_fixture::WithFixture,
     ModuleDef, Package,
 };
 use std::fmt::Write;

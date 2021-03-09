@@ -3,40 +3,43 @@ use crate::{
     code_gen::{optimize_module, symbols, CodeGenContext, CodeGenerationError},
     ir::{file::gen_file_ir, file_group::gen_file_group_ir},
     value::{IrTypeContext, IrValueContext},
+    ModuleGroupId, ModulePartition,
 };
 use inkwell::module::{Linkage, Module};
+use rustc_hash::FxHashSet;
 
-/// A struct that can be used to build an LLVM `Module`.
-pub struct ModuleBuilder<'db, 'ink, 'ctx> {
+/// A struct that can be used to build an `Assembly<'db, 'ink', ctx>`
+pub struct AssemblyBuilder<'db, 'ink, 'ctx, 't> {
     code_gen: &'ctx CodeGenContext<'db, 'ink>,
-    module: hir::Module,
+    module_group_partition: &'t ModulePartition,
+    module_group_id: ModuleGroupId,
     assembly_module: Module<'ink>,
 }
 
-impl<'db, 'ink, 'ctx> ModuleBuilder<'db, 'ink, 'ctx> {
-    /// Constructs a module for the given `hir::FileId` using the provided `CodeGenContext`.
-    pub fn new(
+impl<'db, 'ink, 'ctx, 't> AssemblyBuilder<'db, 'ink, 'ctx, 't> {
+    /// Constructs a new `AssemblyBuilder` for the given module group.
+    pub(crate) fn new(
         code_gen: &'ctx CodeGenContext<'db, 'ink>,
-        module: hir::Module,
-    ) -> Result<Self, anyhow::Error> {
+        module_group_partition: &'t ModulePartition,
+        module_group_id: ModuleGroupId,
+    ) -> Self {
         // Construct a module for the assembly
-        let file_id = module
-            .file_id(code_gen.db)
-            .expect("module must have a file");
-        let assembly_module =
-            code_gen.create_module(code_gen.db.file_relative_path(file_id).as_str());
+        let module_group = &module_group_partition[module_group_id];
+        let assembly_module = code_gen.create_module(&module_group.name);
 
-        Ok(Self {
+        Self {
             code_gen,
-            module,
+            module_group_id,
             assembly_module,
-        })
+            module_group_partition,
+        }
     }
 
     /// Constructs an object file.
     pub fn build(self) -> Result<Assembly<'db, 'ink, 'ctx>, anyhow::Error> {
-        let group_ir = gen_file_group_ir(self.code_gen, self.module);
-        let file = gen_file_ir(self.code_gen, &group_ir, self.module);
+        let module_group = &self.module_group_partition[self.module_group_id];
+        let group_ir = gen_file_group_ir(self.code_gen, module_group);
+        let file = gen_file_ir(self.code_gen, &group_ir, module_group);
 
         // Clone the LLVM modules so that we can modify it without modifying the cached value.
         self.assembly_module
@@ -70,6 +73,20 @@ impl<'db, 'ink, 'ctx> ModuleBuilder<'db, 'ink, 'ctx> {
             module: &self.assembly_module,
         };
 
+        // Build the set of dependencies
+        let dependencies = group_ir
+            .referenced_modules
+            .iter()
+            .filter_map(|&module| self.module_group_partition.group_for_module(module))
+            .collect::<FxHashSet<_>>()
+            .into_iter()
+            .map(|group_id| {
+                self.module_group_partition[group_id]
+                    .relative_file_path()
+                    .to_string()
+            })
+            .collect();
+
         // Generate the `get_info` method.
         symbols::gen_reflection_ir(
             self.code_gen.db,
@@ -79,6 +96,7 @@ impl<'db, 'ink, 'ctx> ModuleBuilder<'db, 'ink, 'ctx> {
             &group_ir.type_table,
             &self.code_gen.hir_types,
             self.code_gen.optimization_level,
+            dependencies,
         );
 
         // Optimize the assembly module

@@ -3,12 +3,14 @@ use super::{
     intrinsics,
     type_table::{TypeTable, TypeTableBuilder},
 };
+use crate::module_group::ModuleGroup;
 use crate::{
     code_gen::CodeGenContext,
     value::{IrTypeContext, IrValueContext},
 };
 use hir::{HasVisibility, ModuleDef};
 use inkwell::{module::Module, types::PointerType, values::UnnamedAddress, AddressSpace};
+use rustc_hash::FxHashSet;
 use std::collections::BTreeMap;
 
 /// The IR generated for a group of files. It is used to generate IR for all of the group's files
@@ -23,14 +25,14 @@ pub struct FileGroupIR<'ink> {
     pub(crate) type_table: TypeTable<'ink>,
     /// The allocator handle, if it exists
     pub(crate) allocator_handle_type: Option<PointerType<'ink>>,
+    /// The modules that contain code that was referenced from this group of modules
+    pub(crate) referenced_modules: FxHashSet<hir::Module>,
 }
 
 /// Generates IR that is shared among the group's files.
-/// TODO: Currently, a group always consists of a single file. Need to add support for multiple
-///  files using something like `FileGroupId`.
 pub(crate) fn gen_file_group_ir<'db, 'ink>(
     code_gen: &CodeGenContext<'db, 'ink>,
-    module: hir::Module,
+    module_group: &ModuleGroup,
 ) -> FileGroupIR<'ink> {
     let llvm_module = code_gen.context.create_module("group_name");
 
@@ -39,7 +41,10 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
     let mut needs_alloc = false;
 
     // Collect all intrinsic functions, wrapper function, and generate struct declarations.
-    for def in module.declarations(code_gen.db) {
+    for def in module_group
+        .iter()
+        .flat_map(|module| module.declarations(code_gen.db))
+    {
         match def {
             ModuleDef::Function(f) if !f.is_extern(code_gen.db) => {
                 intrinsics::collect_fn_body(
@@ -80,10 +85,15 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
         &llvm_module,
         &intrinsics_map,
         &code_gen.hir_types,
+        module_group,
     );
-    for def in module.declarations(code_gen.db) {
+    for def in module_group
+        .iter()
+        .flat_map(|module| module.declarations(code_gen.db))
+    {
         if let ModuleDef::Function(f) = def {
-            if f.visibility(code_gen.db).is_externally_visible() && !f.is_extern(code_gen.db) {
+            // Find all functions that must be present in the dispatch table
+            if !f.is_extern(code_gen.db) {
                 let body = f.body(code_gen.db);
                 let infer = f.infer(code_gen.db);
                 dispatch_table_builder.collect_body(&body, &infer);
@@ -91,7 +101,7 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
         }
     }
 
-    let dispatch_table = dispatch_table_builder.build();
+    let (dispatch_table, referenced_modules) = dispatch_table_builder.build();
 
     let target_data = code_gen.target_machine.get_target_data();
     let type_context = IrTypeContext {
@@ -111,10 +121,14 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
         intrinsics_map.keys(),
         &dispatch_table,
         &code_gen.hir_types,
+        module_group,
     );
 
     // Collect all used types
-    for def in module.declarations(code_gen.db) {
+    for def in module_group
+        .iter()
+        .flat_map(|module| module.declarations(code_gen.db))
+    {
         match def {
             ModuleDef::Struct(s) => {
                 type_table_builder.collect_struct(s);
@@ -144,5 +158,6 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
         dispatch_table,
         type_table,
         allocator_handle_type,
+        referenced_modules,
     }
 }

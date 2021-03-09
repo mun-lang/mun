@@ -1,10 +1,10 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "pub fn foo() {\n    loop {}\n}"
+expression: "\n    pub fn foo() {\n        loop {}\n    }\n    "
 ---
-; == FILE IR =====================================
-; ModuleID = 'main.mun'
-source_filename = "main.mun"
+; == FILE IR (mod) =====================================
+; ModuleID = 'mod'
+source_filename = "mod"
 
 define void @foo() {
 body:
@@ -14,8 +14,7 @@ loop:                                             ; preds = %loop, %body
   br label %loop
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

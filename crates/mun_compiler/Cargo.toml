@@ -23,9 +23,10 @@ mun_project = { version = "=0.1.0", path = "../mun_project" }
 mun_diagnostics = { version = "=0.1.0", path = "../mun_diagnostics" }
 annotate-snippets = { version = "0.9.0", features = ["color"] }
 unicode-segmentation = "1.6.0"
-ansi_term = "0.12.1"
+yansi-term = "0.1.2"
 walkdir = "2.3"
 log = "0.4"
+lockfile = "0.2.2"
 
 [dev-dependencies]
 insta = "0.16"

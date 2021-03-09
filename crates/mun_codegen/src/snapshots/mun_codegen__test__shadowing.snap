@@ -1,10 +1,10 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "pub fn foo(a:i32) -> i32 {\n    let a = a+1;\n    {\n        let a = a+2;\n    }\n    a+3\n}\n\npub fn bar(a:i32) -> i32 {\n    let a = a+1;\n    let a = {\n        let a = a+2;\n        a\n    }\n    a+3\n}"
+expression: "\n    pub fn foo(a:i32) -> i32 {\n        let a = a+1;\n        {\n            let a = a+2;\n        }\n        a+3\n    }\n\n    pub fn bar(a:i32) -> i32 {\n        let a = a+1;\n        let a = {\n            let a = a+2;\n            a\n        }\n        a+3\n    }\n    "
 ---
-; == FILE IR =====================================
-; ModuleID = 'main.mun'
-source_filename = "main.mun"
+; == FILE IR (mod) =====================================
+; ModuleID = 'mod'
+source_filename = "mod"
 
 %"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
 
@@ -25,8 +25,7 @@ body:
   ret i32 %add9
 }
 
-
-; == GROUP IR ====================================
+; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 

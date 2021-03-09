@@ -72,6 +72,7 @@ fn map_struct_insert_field1() {
 
     driver.update(
         runtime_ref,
+        "mod.mun",
         r#"
         struct Foo {
             a: i64,
@@ -112,6 +113,7 @@ fn map_struct_insert_field2() {
 
     driver.update(
         runtime_ref,
+        "mod.mun",
         r#"
         struct Foo {
             a: i64,
@@ -152,6 +154,7 @@ fn map_struct_insert_field3() {
 
     driver.update(
         runtime_ref,
+        "mod.mun",
         r#"
         struct Foo {
             a: i64,
@@ -194,6 +197,7 @@ fn map_struct_remove_field1() {
 
     driver.update(
         runtime_ref,
+        "mod.mun",
         r#"
         struct Foo {
             c: i64,
@@ -232,6 +236,7 @@ fn map_struct_remove_field2() {
 
     driver.update(
         runtime_ref,
+        "mod.mun",
         r#"
         struct Foo {
             b: i64,
@@ -270,6 +275,7 @@ fn map_struct_remove_field3() {
 
     driver.update(
         runtime_ref,
+        "mod.mun",
         r#"
         struct Foo {
             a: i64,
@@ -312,6 +318,7 @@ fn map_struct_cast_fields1() {
 
     driver.update(
         runtime_ref,
+        "mod.mun",
         r#"
         struct Foo(
             u16,
@@ -354,6 +361,7 @@ fn map_struct_cast_fields2() {
 
     driver.update(
         runtime_ref,
+        "mod.mun",
         r#"
         struct Foo(
             u16,    // Cannot convert from `i16` to `u16`
@@ -393,6 +401,7 @@ fn map_struct_swap_fields1() {
 
     driver.update(
         runtime_ref,
+        "mod.mun",
         r#"
         struct Foo {
             c: f64,
@@ -437,6 +446,7 @@ fn map_struct_swap_fields2() {
 
     driver.update(
         runtime_ref,
+        "mod.mun",
         r#"
         struct Foo {
             d: i64,
@@ -481,6 +491,7 @@ fn map_struct_rename_field1() {
 
     driver.update(
         runtime_ref,
+        "mod.mun",
         r#"
         struct Foo {
             a: i64,
@@ -523,6 +534,7 @@ fn map_struct_rename_field2() {
 
     driver.update(
         runtime_ref,
+        "mod.mun",
         r#"
         struct Foo {
             d: i64,
@@ -567,6 +579,7 @@ fn map_struct_all() {
 
     driver.update(
         runtime_ref,
+        "mod.mun",
         r#"
         struct Foo {
             b: f64, // move
@@ -612,6 +625,7 @@ fn delete_used_struct() {
 
     driver.update(
         runtime_ref,
+        "mod.mun",
         r#"
         struct Bar(i64);
 
@@ -696,6 +710,7 @@ fn nested_structs() {
     // Tests mapping of `gc -> gc`, `value -> value`
     driver.update(
         runtime_ref,
+        "mod.mun",
         r#"
     struct(gc) GcStruct(f64, f64);
     struct(value) ValueStruct(f64, f64);
@@ -724,6 +739,7 @@ fn nested_structs() {
     // Tests an identity mapping
     driver.update(
         runtime.borrow(),
+        "mod.mun",
         r#"
     struct(gc) GcStruct(f64, f64);
     struct(value) ValueStruct(f64, f64);
@@ -757,6 +773,7 @@ fn nested_structs() {
     // Tests mapping of `gc -> value`, `value -> gc`
     driver.update(
         runtime.borrow(),
+        "mod.mun",
         r#"
     struct(value) GcStruct(f64, f64);
     struct(gc) ValueStruct(f64, f64);
@@ -782,6 +799,7 @@ fn nested_structs() {
     // retention of an old library (due to removal of `GcStruct` and `ValueStruct`)
     driver.update(
         runtime.borrow(),
+        "mod.mun",
         r#"
     struct(gc) GcStruct2(f64);
     struct(value) ValueStruct2(f64);
@@ -829,6 +847,7 @@ fn nested_structs() {
     // Tests mapping of different struct type, when `gc -> gc`, `value -> value`
     driver.update(
         runtime.borrow(),
+        "mod.mun",
         r#"
     struct(gc) GcStruct(f64, f64);
     struct(value) ValueStruct(f64, f64);
@@ -889,6 +908,7 @@ fn insert_struct() {
 
     driver.update(
         runtime_ref,
+        "mod.mun",
         r#"
         struct Bar(i64);
         struct(value) Baz(f64);

@@ -1,4 +1,4 @@
-use crate::{AssemblyIR, TargetAssembly};
+use crate::{AssemblyIR, ModuleGroupId, ModulePartition, TargetAssembly};
 use by_address::ByAddress;
 use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, Target, TargetTriple};
 use std::sync::Arc;
@@ -15,19 +15,21 @@ pub trait CodeGenDatabase: hir::HirDatabase + hir::Upcast<dyn hir::HirDatabase> 
     #[salsa::input]
     fn optimization_level(&self) -> inkwell::OptimizationLevel;
 
+    /// Returns the current module partition
+    #[salsa::invoke(crate::module_partition::build_partition)]
+    fn module_partition(&self) -> Arc<ModulePartition>;
+
     /// Returns the inkwell target machine that completely describes the code generation target. All
     /// target-specific information should be accessible through this interface.
     fn target_machine(&self) -> ByAddress<Arc<inkwell::targets::TargetMachine>>;
 
     /// Returns a file containing the IR for the specified module.
-    /// TODO: Currently, a group always consists of a single file. Need to add support for multiple.
     #[salsa::invoke(crate::assembly::build_assembly_ir)]
-    fn assembly_ir(&self, module: hir::Module) -> Arc<AssemblyIR>;
+    fn assembly_ir(&self, module_group: ModuleGroupId) -> Arc<AssemblyIR>;
 
     /// Returns a fully linked shared object for the specified module.
-    /// TODO: Currently, a group always consists of a single file. Need to add support for multiple.
     #[salsa::invoke(crate::assembly::build_target_assembly)]
-    fn target_assembly(&self, module: hir::Module) -> Arc<TargetAssembly>;
+    fn target_assembly(&self, module_group: ModuleGroupId) -> Arc<TargetAssembly>;
 }
 
 /// Constructs the primary interface to the complete machine description for the target machine. All

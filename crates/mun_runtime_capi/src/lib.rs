@@ -11,11 +11,12 @@ pub mod hub;
 #[cfg(test)]
 mod tests;
 
-use std::ffi::{c_void, CStr, CString};
-use std::{os::raw::c_char, time::Duration};
+use std::{
+    ffi::{c_void, CStr, CString},
+    os::raw::c_char,
+};
 
-use crate::error::ErrorHandle;
-use crate::hub::HUB;
+use crate::{error::ErrorHandle, hub::HUB};
 use anyhow::anyhow;
 use runtime::Runtime;
 
@@ -45,10 +46,6 @@ pub struct RuntimeHandle(*mut c_void);
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct RuntimeOptions {
-    /// The interval at which changes to the disk are detected. `0` will initialize this value to
-    /// default.
-    pub delay_ms: u32,
-
     /// Function definitions that should be inserted in the runtime before a mun library is loaded.
     /// This is useful to initialize `extern` functions used in a mun library.
     ///
@@ -63,7 +60,6 @@ pub struct RuntimeOptions {
 impl Default for RuntimeOptions {
     fn default() -> Self {
         RuntimeOptions {
-            delay_ms: 0,
             functions: std::ptr::null(),
             num_functions: 0,
         }
@@ -118,12 +114,6 @@ pub unsafe extern "C" fn mun_runtime_create(
         }
     };
 
-    let delay_ms = if options.delay_ms > 0 {
-        options.delay_ms
-    } else {
-        10
-    };
-
     let user_functions =
         std::slice::from_raw_parts(options.functions, options.num_functions as usize)
             .iter()
@@ -139,7 +129,6 @@ pub unsafe extern "C" fn mun_runtime_create(
 
     let runtime_options = runtime::RuntimeOptions {
         library_path: library_path.into(),
-        delay: Duration::from_millis(delay_ms.into()),
         user_functions,
     };
 
