@@ -1,0 +1,5 @@
+extern fn extern_fn(a: u32, b: u32) -> u32;
+
+pub fn main(a: u32, b: u32) -> u32 {
+    extern_fn(a,b)
+}
