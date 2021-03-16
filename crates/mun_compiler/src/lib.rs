@@ -37,6 +37,9 @@ pub struct CompilerOptions {
 
     /// The compiler configuration
     pub config: Config,
+
+    /// Wether or not to display colors on the command line
+    pub emit_colors: DisplayColor,
 }
 
 impl CompilerOptions {
@@ -44,6 +47,7 @@ impl CompilerOptions {
         CompilerOptions {
             input: PathOrInline::Path(input.as_ref().to_path_buf()),
             config: Config::default(),
+            emit_colors: DisplayColor::Auto,
         }
     }
 
@@ -57,6 +61,7 @@ impl CompilerOptions {
                 contents: input.as_ref().to_string(),
             },
             config: Config::default(),
+            emit_colors: DisplayColor::Auto,
         }
     }
 }
@@ -79,11 +84,15 @@ pub fn ensure_package_output_dir(
     Ok(out_dir)
 }
 
-pub fn compile_manifest(manifest_path: &Path, config: Config) -> Result<bool, anyhow::Error> {
+pub fn compile_manifest(
+    manifest_path: &Path,
+    config: Config,
+    emit_colors: DisplayColor,
+) -> Result<bool, anyhow::Error> {
     let (_package, mut driver) = Driver::with_package_path(manifest_path, config)?;
 
     // Emit diagnostics. If one of the snippets is an error, abort gracefully.
-    if driver.emit_diagnostics(&mut stderr())? {
+    if driver.emit_diagnostics(&mut stderr(), emit_colors)? {
         return Ok(false);
     };
 

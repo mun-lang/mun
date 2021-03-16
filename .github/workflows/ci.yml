@@ -66,12 +66,16 @@ jobs:
         uses: actions-rs/install@v0.1
         with:
           crate: mdbook
-          version: latest
+          version: 0.4.7
           use-tool-cache: true
 
       - name: mdbook test
         if: ${{ matrix.config.os == 'ubuntu-latest' }}
         run: mdbook test book -L target/debug/deps
+
+      - name: mdbook build
+        if: ${{ matrix.config.os == 'ubuntu-latest' }}
+        run: mdbook build book
 
       - name: Cargo test
         uses: actions-rs/cargo@v1

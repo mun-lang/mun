@@ -8,16 +8,12 @@ pushd ./book
     mdbook="mdbook"
     if ! [ -x "$(command -v $mdbook)" ]; then 
         echo "Installing mdbook.."
-        curl -sL https://github.com/rust-lang-nursery/mdBook/releases/download/v0.3.7/mdbook-v0.3.7-x86_64-unknown-linux-gnu.tar.gz | tar zxv
+        curl -sL https://github.com/rust-lang-nursery/mdBook/releases/download/v0.4.7/mdbook-v0.4.7-x86_64-unknown-linux-gnu.tar.gz | tar zxv
         mdbook="./mdbook"
     fi
 
     # Echo mdbook version
     $mdbook --version
-
-    # Comment out everything that has to do with the test plugin. We don't want to run it when 
-    # generating the book
-    sed -e '/.*mun_mdbook_test_plugin.*/ s/^#*/#/' -i ./book.toml
 
     # First build our custom highlight.js
     ./ci/build-highlight-js
