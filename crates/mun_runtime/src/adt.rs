@@ -305,7 +305,7 @@ impl RootedStruct {
             let runtime_ref = runtime.borrow();
             // Safety: The type returned from `ptr_type` is guaranteed to live at least as long as
             // `Runtime` does not change. As we hold a shared reference to `Runtime`, this is safe.
-            assert!(unsafe { gc.ptr_type(raw.0).into_inner().as_ref().group.is_struct() });
+            assert!(unsafe { gc.ptr_type(raw.0).into_inner().as_ref().data.is_struct() });
 
             GcRootPtr::new(&runtime_ref.gc, raw.0)
         };

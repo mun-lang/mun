@@ -6,7 +6,8 @@ expression: "\n    pub fn assign_bitand(a: bool, b: bool) -> bool {\n        a &
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
+%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [3 x i8], %"mun_codegen::ir::types::TypeInfoData", [0 x i64] }>
+%"mun_codegen::ir::types::TypeInfoData" = type <{ [0 x i8], i8, [39 x i8] }>
 
 @global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
 
@@ -32,9 +33,10 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [0 x i64], i8, [1 x i16] }>
+%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [3 x i8], %"mun_codegen::ir::types::TypeInfoData", [0 x i64] }>
+%"mun_codegen::ir::types::TypeInfoData" = type <{ [0 x i8], i8, [39 x i8] }>
 
 @"type_info::<core::bool>::name" = private unnamed_addr constant [11 x i8] c"core::bool\00"
-@"type_info::<core::bool>" = private unnamed_addr constant %"mun_codegen::ir::types::TypeInfo" <{ [0 x i64] zeroinitializer, [16 x i8] c"x\82\81m t7\03\CB\F8k\81-;\C9\84", [0 x i64] zeroinitializer, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @"type_info::<core::bool>::name", i32 0, i32 0), [0 x i64] zeroinitializer, i32 1, [0 x i64] zeroinitializer, i8 1, [0 x i64] zeroinitializer, i8 0, [1 x i16] zeroinitializer }>
+@"type_info::<core::bool>" = private unnamed_addr constant <{ [16 x i8], i8*, [48 x i8] }> <{ [16 x i8] c"x\82\81m t7\03\CB\F8k\81-;\C9\84", i8* getelementptr inbounds ([11 x i8], [11 x i8]* @"type_info::<core::bool>::name", i32 0, i32 0), [48 x i8] c"\01\00\00\00\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" }>
 @global_type_table = constant [1 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::bool>"]
 

@@ -1,6 +1,6 @@
 use crate::{
     AssemblyInfo, DispatchTable, FunctionDefinition, FunctionPrototype, FunctionSignature, Guid,
-    ModuleInfo, StructInfo, StructMemoryKind, TypeGroup, TypeInfo,
+    ModuleInfo, StructInfo, StructMemoryKind, TypeInfo, TypeInfoData,
 };
 use std::{
     ffi::{c_void, CStr},
@@ -16,12 +16,6 @@ pub(crate) const FAKE_FN_NAME: &str = "fn_name";
 pub(crate) const FAKE_MODULE_PATH: &str = "path::to::module";
 pub(crate) const FAKE_STRUCT_NAME: &str = "StructName";
 pub(crate) const FAKE_TYPE_NAME: &str = "TypeName";
-
-/// A dummy struct for initializing a struct's `TypeInfo`
-pub(crate) struct StructTypeInfo {
-    _type_info: TypeInfo,
-    _struct_info: StructInfo,
-}
 
 pub(crate) fn fake_assembly_info(
     symbols: ModuleInfo,
@@ -103,24 +97,17 @@ pub(crate) fn fake_struct_info(
     }
 }
 
-pub(crate) fn fake_struct_type_info(
+pub(crate) fn fake_type_info(
     name: &CStr,
-    struct_info: StructInfo,
     size: u32,
     alignment: u8,
-) -> StructTypeInfo {
-    StructTypeInfo {
-        _type_info: fake_type_info(name, TypeGroup::StructTypes, size, alignment),
-        _struct_info: struct_info,
-    }
-}
-
-pub(crate) fn fake_type_info(name: &CStr, group: TypeGroup, size: u32, alignment: u8) -> TypeInfo {
+    data: TypeInfoData,
+) -> TypeInfo {
     TypeInfo {
         guid: FAKE_TYPE_GUID,
         name: name.as_ptr(),
         size_in_bits: size,
         alignment,
-        group,
+        data,
     }
 }

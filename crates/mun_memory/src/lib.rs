@@ -10,6 +10,21 @@ pub mod prelude {
     pub use crate::mapping::{Action, FieldMapping};
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub enum TypeGroup {
+    Primitive,
+    Struct,
+}
+
+impl<'t> From<&'t abi::TypeInfoData> for TypeGroup {
+    fn from(data: &'t abi::TypeInfoData) -> Self {
+        match data {
+            abi::TypeInfoData::Primitive => TypeGroup::Primitive,
+            abi::TypeInfoData::Struct(_) => TypeGroup::Struct,
+        }
+    }
+}
+
 /// A trait used to obtain a type's description.
 pub trait TypeDesc: Send + Sync {
     /// Returns the name of this type.
@@ -17,7 +32,7 @@ pub trait TypeDesc: Send + Sync {
     /// Returns the `Guid` of this type.
     fn guid(&self) -> &abi::Guid;
     /// Returns the `TypeGroup` of this type.
-    fn group(&self) -> abi::TypeGroup;
+    fn group(&self) -> TypeGroup;
 }
 
 /// A trait used to obtain a type's memory description.

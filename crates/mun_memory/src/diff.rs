@@ -1,6 +1,6 @@
 pub mod myers;
 
-use crate::{TypeDesc, TypeFields};
+use crate::{TypeDesc, TypeFields, TypeGroup};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FieldEditKind {
@@ -80,35 +80,35 @@ where
     let mut mapping: Vec<Diff> = Vec::with_capacity(diff.len());
     let (deletions, insertions) = myers::split_diff(&diff);
 
-    // ASSUMPTION: `FundamentalTypes` can never be converted to `StructTypes`, hence they can be
+    // ASSUMPTION: `Primitive` types can never be converted to `Struct` types, hence they can be
     // compared separately.
-    let deleted_fundamentals = deletions
+    let deleted_primitives = deletions
         .iter()
-        .filter(|idx| unsafe { old.get_unchecked(**idx) }.group().is_fundamental())
+        .filter(|idx| unsafe { old.get_unchecked(**idx) }.group() == TypeGroup::Primitive)
         .cloned()
         .collect();
     let deleted_structs = deletions
         .iter()
-        .filter(|idx| unsafe { old.get_unchecked(**idx) }.group().is_struct())
+        .filter(|idx| unsafe { old.get_unchecked(**idx) }.group() == TypeGroup::Struct)
         .cloned()
         .collect();
 
-    let inserted_fundamentals = insertions
+    let inserted_primitives = insertions
         .iter()
-        .filter(|idx| unsafe { new.get_unchecked(**idx) }.group().is_fundamental())
+        .filter(|idx| unsafe { new.get_unchecked(**idx) }.group() == TypeGroup::Primitive)
         .cloned()
         .collect();
     let inserted_structs = insertions
         .iter()
-        .filter(|idx| unsafe { new.get_unchecked(**idx) }.group().is_struct())
+        .filter(|idx| unsafe { new.get_unchecked(**idx) }.group() == TypeGroup::Struct)
         .cloned()
         .collect();
 
-    append_fundamental_mapping(
+    append_primitive_mapping(
         old,
         new,
-        deleted_fundamentals,
-        inserted_fundamentals,
+        deleted_primitives,
+        inserted_primitives,
         &mut mapping,
     );
     append_struct_mapping(old, new, deleted_structs, inserted_structs, &mut mapping);
@@ -119,7 +119,7 @@ where
     mapping
 }
 
-fn append_fundamental_mapping<T>(
+fn append_primitive_mapping<T>(
     old: &[T],
     new: &[T],
     deletions: Vec<usize>,

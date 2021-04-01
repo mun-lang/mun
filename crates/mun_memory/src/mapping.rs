@@ -1,7 +1,7 @@
 use crate::{
     diff::{diff, Diff, FieldDiff, FieldEditKind},
     gc::GcPtr,
-    TypeDesc, TypeFields, TypeMemory,
+    TypeDesc, TypeFields, TypeGroup, TypeMemory,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -83,7 +83,7 @@ where
         let mut new_candidates: HashSet<T> = new
             .iter()
             // Filter non-struct types
-            .filter(|ty| ty.group().is_struct())
+            .filter(|ty| ty.group() == TypeGroup::Struct)
             // Filter inserted structs
             .filter(|ty| !insertions.contains(*ty))
             .cloned()
@@ -92,7 +92,7 @@ where
         let mut old_candidates: HashSet<T> = old
             .iter()
             // Filter non-struct types
-            .filter(|ty| ty.group().is_struct())
+            .filter(|ty| ty.group() == TypeGroup::Struct)
             // Filter deleted structs
             .filter(|ty| !deletions.contains(*ty))
             // Filter edited types

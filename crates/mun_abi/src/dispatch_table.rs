@@ -113,7 +113,7 @@ mod tests {
         test_utils::{
             fake_dispatch_table, fake_fn_prototype, fake_type_info, FAKE_FN_NAME, FAKE_TYPE_NAME,
         },
-        TypeGroup,
+        TypeInfoData,
     };
     use std::{ffi::CString, ptr};
 
@@ -130,7 +130,7 @@ mod tests {
     #[test]
     fn test_dispatch_table_iter_mut_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
+        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -163,7 +163,7 @@ mod tests {
     #[test]
     fn test_dispatch_table_ptrs_mut_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
+        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -192,7 +192,7 @@ mod tests {
     #[test]
     fn test_dispatch_table_signatures_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
+        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -214,7 +214,7 @@ mod tests {
     #[test]
     fn test_dispatch_table_get_ptr_unchecked() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
+        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -230,7 +230,7 @@ mod tests {
     #[test]
     fn test_dispatch_table_get_ptr_none() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
+        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -246,7 +246,7 @@ mod tests {
     #[test]
     fn test_dispatch_table_get_ptr_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
+        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -262,7 +262,7 @@ mod tests {
     #[test]
     fn test_dispatch_table_get_ptr_unchecked_mut() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
+        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -281,7 +281,7 @@ mod tests {
     #[test]
     fn test_dispatch_table_get_ptr_mut_none() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
+        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -297,7 +297,7 @@ mod tests {
     #[test]
     fn test_dispatch_table_get_ptr_mut_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, TypeGroup::FundamentalTypes, 1, 1);
+        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
         let return_type = Some(&type_info);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");

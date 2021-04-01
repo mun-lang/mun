@@ -2,7 +2,7 @@ use crate::{
     cast,
     gc::{Event, GcPtr, GcRuntime, Observer, RawGcPtr, Stats, TypeTrace},
     mapping::{self, FieldMapping, MemoryMapper},
-    TypeDesc, TypeMemory,
+    TypeDesc, TypeGroup, TypeMemory,
 };
 use mapping::{Conversion, Mapping};
 use parking_lot::RwLock;
@@ -315,8 +315,8 @@ where
                             src as *mut u8
                         };
 
-                        if old_ty.group().is_struct() {
-                            debug_assert!(new_ty.group().is_struct());
+                        if old_ty.group() == TypeGroup::Struct {
+                            debug_assert_eq!(new_ty.group(), TypeGroup::Struct);
 
                             // When the name is the same, we are dealing with the same struct,
                             // but different internals

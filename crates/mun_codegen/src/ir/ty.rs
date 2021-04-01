@@ -230,7 +230,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
                 TypeCtor::Float(ty) => {
                     let ir_ty = self.get_float_type(ty);
                     let type_size = TypeSize::from_ir_type(&ir_ty, &self.target_data);
-                    TypeInfo::new_fundamental(
+                    TypeInfo::new_primitive(
                         format!("core::{}", ty.resolve(&self.db.target_data_layout())),
                         type_size,
                     )
@@ -238,7 +238,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
                 TypeCtor::Int(ty) => {
                     let ir_ty = self.get_int_type(ty);
                     let type_size = TypeSize::from_ir_type(&ir_ty, &self.target_data);
-                    TypeInfo::new_fundamental(
+                    TypeInfo::new_primitive(
                         format!("core::{}", ty.resolve(&self.db.target_data_layout())),
                         type_size,
                     )
@@ -246,7 +246,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
                 TypeCtor::Bool => {
                     let ir_ty = self.get_bool_type();
                     let type_size = TypeSize::from_ir_type(&ir_ty, &self.target_data);
-                    TypeInfo::new_fundamental("core::bool", type_size)
+                    TypeInfo::new_primitive("core::bool", type_size)
                 }
                 TypeCtor::Struct(s) => {
                     let ir_ty = self.get_struct_type(s);

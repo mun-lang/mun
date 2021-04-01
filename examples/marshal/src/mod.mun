@@ -1,0 +1,103 @@
+// TODO: Add 128-bit integers
+
+pub fn marshal_bool(a: bool, b: bool) -> bool { a || b }
+pub fn marshal_float(a: f32, b: f32) -> f32 { a + b }
+pub fn marshal_double(a: f64, b: f64) -> f64 { a + b }
+pub fn marshal_int8_t(a: i8, b: i8) -> i8 { a + b }
+pub fn marshal_int16_t(a: i16, b: i16) -> i16 { a + b }
+pub fn marshal_int32_t(a: i32, b: i32) -> i32 { a + b }
+pub fn marshal_int64_t(a: i64, b: i64) -> i64 { a + b }
+// pub fn marshal_int128_t(a: i128, b: i128) -> i128 { a + b }
+pub fn marshal_uint8_t(a: u8, b: u8) -> u8 { a + b }
+pub fn marshal_uint16_t(a: u16, b: u16) -> u16 { a + b }
+pub fn marshal_uint32_t(a: u32, b: u32) -> u32 { a + b }
+pub fn marshal_uint64_t(a: u64, b: u64) -> u64 { a + b }
+// pub fn marshal_uint128_t(a: u128, b: u128) -> u8 { a + b }
+
+struct bool_struct(bool, bool);
+struct float_struct(f32, f32);
+struct double_struct(f64, f64);
+struct int8_t_struct(i8, i8);
+struct int16_t_struct(i16, i16);
+struct int32_t_struct(i32, i32);
+struct int64_t_struct(i64, i64);
+// struct int128_t_struct(i128, i128);
+struct uint8_t_struct(u8, u8);
+struct uint16_t_struct(u16, u16);
+struct uint32_t_struct(u32, u32);
+struct uint64_t_struct(u64, u64);
+// struct uint128_t_struct(u128, u128);
+
+pub fn new_bool(a: bool, b: bool) -> bool_struct {
+    bool_struct(a, b)
+}
+
+pub fn new_float(a: f32, b: f32) -> float_struct {
+    float_struct(a, b)
+}
+
+pub fn new_double(a: f64, b: f64) -> double_struct {
+    double_struct(a, b)
+}
+
+pub fn new_int8_t(a: i8, b: i8) -> int8_t_struct {
+    int8_t_struct(a, b)
+}
+
+pub fn new_int16_t(a: i16, b: i16) -> int16_t_struct {
+    int16_t_struct(a, b)
+}
+
+pub fn new_int32_t(a: i32, b: i32) -> int32_t_struct {
+    int32_t_struct(a, b)
+}
+
+pub fn new_int64_t(a: i64, b: i64) -> int64_t_struct {
+    int64_t_struct(a, b)
+}
+
+// pub fn new_int128_t(a: i128, b: i128) -> int128_t_struct {
+//     int128_t_struct(a, b)
+// }
+
+pub fn new_uint8_t(a: u8, b: u8) -> uint8_t_struct {
+    uint8_t_struct(a, b)
+}
+
+pub fn new_uint16_t(a: u16, b: u16) -> uint16_t_struct {
+    uint16_t_struct(a, b)
+}
+
+pub fn new_uint32_t(a: u32, b: u32) -> uint32_t_struct {
+    uint32_t_struct(a, b)
+}
+
+pub fn new_uint64_t(a: u64, b: u64) -> uint64_t_struct {
+    uint64_t_struct(a, b)
+}
+
+// pub fn new_uint128_t(a: u128, b: u128) -> uint128_t_struct {
+//     uint128_t_struct(a, b)
+// }
+
+struct(gc) GcStruct(f32, f32);
+struct(value) ValueStruct(f32, f32);
+
+struct(gc) GcWrapper(GcStruct, ValueStruct)
+struct(value) ValueWrapper(GcStruct, ValueStruct);
+
+pub fn new_gc_struct(a: f32, b: f32) -> GcStruct {
+    GcStruct(a, b)
+}
+
+pub fn new_value_struct(a: f32, b: f32) -> ValueStruct {
+    ValueStruct(a, b)
+}
+
+pub fn new_gc_wrapper(a: GcStruct, b: ValueStruct) -> GcWrapper {
+    GcWrapper(a, b)
+}
+
+pub fn new_value_wrapper(a: GcStruct, b: ValueStruct) -> ValueWrapper {
+    ValueWrapper(a, b)
+}

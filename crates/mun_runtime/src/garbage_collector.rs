@@ -1,4 +1,7 @@
-use memory::gc::{self, HasIndirectionPtr};
+use memory::{
+    gc::{self, HasIndirectionPtr},
+    TypeGroup,
+};
 use std::{alloc::Layout, hash::Hash, ptr::NonNull};
 
 /// `UnsafeTypeInfo` is a type that wraps a `NonNull<TypeInfo>` and indicates unsafe interior
@@ -50,8 +53,8 @@ impl memory::TypeDesc for UnsafeTypeInfo {
         unsafe { &self.0.as_ref().guid }
     }
 
-    fn group(&self) -> abi::TypeGroup {
-        unsafe { self.0.as_ref().group }
+    fn group(&self) -> TypeGroup {
+        TypeGroup::from(unsafe { &self.0.as_ref().data })
     }
 }
 
