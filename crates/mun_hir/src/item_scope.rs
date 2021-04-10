@@ -1,6 +1,7 @@
-use crate::module_tree::LocalModuleId;
-use crate::primitive_type::PrimitiveType;
-use crate::{ids::ItemDefinitionId, visibility::Visibility, Name, PerNs};
+use crate::{
+    ids::ItemDefinitionId, module_tree::LocalModuleId, primitive_type::PrimitiveType,
+    visibility::Visibility, Name, PerNs,
+};
 use once_cell::sync::Lazy;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::hash_map::Entry;

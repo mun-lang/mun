@@ -28,17 +28,17 @@ pub(crate) struct AnalysisDatabase {
     storage: salsa::Storage<Self>,
 }
 
-impl AnalysisDatabase {
-    pub fn new() -> Self {
+impl Default for AnalysisDatabase {
+    fn default() -> Self {
         let mut db = AnalysisDatabase {
             storage: Default::default(),
         };
-
         db.set_target(Target::host_target().expect("could not determine host target spec"));
-
         db
     }
+}
 
+impl AnalysisDatabase {
     /// Triggers a simple write on the database which will cancell all outstanding snapshots.
     pub fn request_cancelation(&mut self) {
         self.salsa_runtime_mut().synthetic_write(Durability::LOW);

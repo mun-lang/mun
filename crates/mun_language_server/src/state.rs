@@ -106,7 +106,7 @@ impl LanguageServerState {
         let (task_sender, task_receiver) = unbounded();
 
         // Construct the state that will hold all the analysis and apply the initial state
-        let mut analysis = Analysis::new();
+        let mut analysis = Analysis::default();
         let mut change = AnalysisChange::new();
         change.set_packages(Default::default());
         change.set_roots(Default::default());

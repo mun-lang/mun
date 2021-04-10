@@ -184,6 +184,11 @@ impl Ty {
     pub fn is_known(&self) -> bool {
         *self == Ty::Unknown
     }
+
+    /// Returns true if this instance is of an unknown type.
+    pub fn is_unknown(&self) -> bool {
+        matches!(self, Ty::Unknown)
+    }
 }
 
 /// A list of substitutions for generic parameters.

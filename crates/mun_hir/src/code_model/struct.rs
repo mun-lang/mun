@@ -31,13 +31,15 @@ impl From<StructId> for Struct {
     }
 }
 
+/// A field of a [`Struct`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct StructField {
+pub struct Field {
     pub(crate) parent: Struct,
-    pub(crate) id: LocalStructFieldId,
+    pub(crate) id: LocalFieldId,
 }
 
-impl StructField {
+impl Field {
+    /// Returns the type of the field
     pub fn ty(self, db: &dyn HirDatabase) -> Ty {
         let data = self.parent.data(db.upcast());
         let type_ref_id = data.fields[self.id].type_ref;
@@ -45,11 +47,18 @@ impl StructField {
         lower[type_ref_id].clone()
     }
 
+    /// Returns the name of the field
     pub fn name(self, db: &dyn HirDatabase) -> Name {
         self.parent.data(db.upcast()).fields[self.id].name.clone()
     }
 
-    pub fn id(self) -> LocalStructFieldId {
+    /// Returns the index of this field in the parent
+    pub fn index(self, _db: &dyn HirDatabase) -> u32 {
+        self.id.into_raw().into()
+    }
+
+    /// Returns the ID of the field with relation to the parent struct
+    pub(crate) fn id(self) -> LocalFieldId {
         self.id
     }
 }
@@ -86,20 +95,20 @@ impl Struct {
             .collect()
     }
 
-    pub fn fields(self, db: &dyn HirDatabase) -> Vec<StructField> {
+    pub fn fields(self, db: &dyn HirDatabase) -> Vec<Field> {
         self.data(db.upcast())
             .fields
             .iter()
-            .map(|(id, _)| StructField { parent: self, id })
+            .map(|(id, _)| Field { parent: self, id })
             .collect()
     }
 
-    pub fn field(self, db: &dyn HirDatabase, name: &Name) -> Option<StructField> {
+    pub fn field(self, db: &dyn HirDatabase, name: &Name) -> Option<Field> {
         self.data(db.upcast())
             .fields
             .iter()
             .find(|(_, data)| data.name == *name)
-            .map(|(id, _)| StructField { parent: self, id })
+            .map(|(id, _)| Field { parent: self, id })
     }
 
     pub fn ty(self, db: &dyn HirDatabase) -> Ty {
@@ -131,7 +140,7 @@ impl Struct {
 /// )
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StructFieldData {
+pub struct FieldData {
     pub name: Name,
     pub type_ref: LocalTypeRefId,
 }
@@ -155,13 +164,13 @@ impl fmt::Display for StructKind {
 }
 
 /// An identifier for a struct's or tuple's field
-pub type LocalStructFieldId = Idx<StructFieldData>;
+pub type LocalFieldId = Idx<FieldData>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct StructData {
     pub name: Name,
     pub visibility: RawVisibility,
-    pub fields: Arena<StructFieldData>,
+    pub fields: Arena<FieldData>,
     pub kind: StructKind,
     pub memory_kind: StructMemoryKind,
     type_ref_map: TypeRefMap,
@@ -185,7 +194,7 @@ impl StructData {
             ast::StructKind::Record(r) => {
                 let fields = r
                     .fields()
-                    .map(|fd| StructFieldData {
+                    .map(|fd| FieldData {
                         name: fd.name().map(|n| n.as_name()).unwrap_or_else(Name::missing),
                         type_ref: type_ref_builder.alloc_from_node_opt(fd.ascribed_type().as_ref()),
                     })
@@ -196,7 +205,7 @@ impl StructData {
                 let fields = t
                     .fields()
                     .enumerate()
-                    .map(|(index, fd)| StructFieldData {
+                    .map(|(index, fd)| FieldData {
                         name: Name::new_tuple_field(index),
                         type_ref: type_ref_builder.alloc_from_node_opt(fd.type_ref().as_ref()),
                     })

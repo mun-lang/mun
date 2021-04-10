@@ -1,0 +1,6 @@
+---
+source: crates/mun_language_server/src/completion/dot.rs
+expression: "completion_string(r#\"\n        struct FooBar(i32, i32)\n        \n        fn foo() {\n            let bar = FooBar(0,0);\n            bar.$0\n        }\n        \"#,\n                  Some(CompletionKind::Reference))"
+---
+fd 0 i32
+fd 1 i32

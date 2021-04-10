@@ -1,3 +1,4 @@
+use crate::completion::{CompletionItem, CompletionItemKind};
 use crate::state::LanguageServerSnapshot;
 use crate::symbol_kind::SymbolKind;
 use lsp_types::Url;
@@ -71,6 +72,9 @@ pub(crate) fn symbol_kind(symbol_kind: SymbolKind) -> lsp_types::SymbolKind {
         SymbolKind::Function => lsp_types::SymbolKind::Function,
         SymbolKind::Struct => lsp_types::SymbolKind::Struct,
         SymbolKind::TypeAlias => lsp_types::SymbolKind::TypeParameter,
+        SymbolKind::Field => lsp_types::SymbolKind::Field,
+        SymbolKind::Local => lsp_types::SymbolKind::Variable,
+        SymbolKind::Module => lsp_types::SymbolKind::Module,
     }
 }
 
@@ -80,4 +84,48 @@ pub(crate) fn url(snapshot: &LanguageServerSnapshot, file_id: hir::FileId) -> an
     let path = vfs.file_path(vfs::FileId(file_id.0));
     let url = url_from_path_with_drive_lowercasing(path)?;
     Ok(url)
+}
+
+/// Converts from our `CompletionItem` to an LSP `CompletionItem`
+pub(crate) fn completion_item(completion_item: CompletionItem) -> lsp_types::CompletionItem {
+    lsp_types::CompletionItem {
+        label: completion_item.label,
+        kind: completion_item.kind.map(completion_item_kind),
+        detail: completion_item.detail,
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: None,
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: None,
+        additional_text_edits: None,
+        command: None,
+        data: None,
+        tags: None,
+    }
+}
+
+pub(crate) fn completion_item_kind(
+    completion_item_kind: CompletionItemKind,
+) -> lsp_types::CompletionItemKind {
+    match completion_item_kind {
+        CompletionItemKind::Binding => lsp_types::CompletionItemKind::Variable,
+        CompletionItemKind::BuiltinType => lsp_types::CompletionItemKind::Struct,
+        CompletionItemKind::Keyword => lsp_types::CompletionItemKind::Keyword,
+        CompletionItemKind::Method => lsp_types::CompletionItemKind::Method,
+        CompletionItemKind::Snippet => lsp_types::CompletionItemKind::Snippet,
+        CompletionItemKind::UnresolvedReference => lsp_types::CompletionItemKind::Reference,
+        CompletionItemKind::SymbolKind(symbol) => match symbol {
+            SymbolKind::Field => lsp_types::CompletionItemKind::Field,
+            SymbolKind::Function => lsp_types::CompletionItemKind::Function,
+            SymbolKind::Local => lsp_types::CompletionItemKind::Variable,
+            SymbolKind::Module => lsp_types::CompletionItemKind::Module,
+            SymbolKind::Struct => lsp_types::CompletionItemKind::Struct,
+            SymbolKind::TypeAlias => lsp_types::CompletionItemKind::Struct,
+        },
+        CompletionItemKind::Attribute => lsp_types::CompletionItemKind::EnumMember,
+    }
 }

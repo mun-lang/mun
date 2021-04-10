@@ -1,8 +1,9 @@
 use crate::{
-    cancelation::Canceled, change::AnalysisChange, db::AnalysisDatabase, diagnostics,
-    diagnostics::Diagnostic, file_structure,
+    cancelation::Canceled, change::AnalysisChange, completion, db::AnalysisDatabase, diagnostics,
+    diagnostics::Diagnostic, file_structure, FilePosition,
 };
 use hir::{line_index::LineIndex, AstDatabase, SourceDatabase};
+use mun_syntax::SourceFile;
 use salsa::{ParallelDatabase, Snapshot};
 use std::sync::Arc;
 
@@ -11,17 +12,12 @@ pub type Cancelable<T> = Result<T, Canceled>;
 
 /// The `Analysis` struct is the basis of all language server operations. It maintains the current
 /// state of the source.
+#[derive(Default)]
 pub struct Analysis {
     db: AnalysisDatabase,
 }
 
 impl Analysis {
-    pub fn new() -> Self {
-        Analysis {
-            db: AnalysisDatabase::new(),
-        }
-    }
-
     /// Applies the given changes to the state. If there are outstanding `AnalysisSnapshot`s they
     /// will be canceled.
     pub fn apply_change(&mut self, change: AnalysisChange) {
@@ -53,6 +49,11 @@ pub struct AnalysisSnapshot {
 }
 
 impl AnalysisSnapshot {
+    /// Returns the syntax tree of the file.
+    pub fn parse(&self, file_id: hir::FileId) -> Cancelable<SourceFile> {
+        self.with_db(|db| db.parse(file_id).tree())
+    }
+
     /// Computes the set of diagnostics for the given file.
     pub fn diagnostics(&self, file_id: hir::FileId) -> Cancelable<Vec<Diagnostic>> {
         self.with_db(|db| diagnostics::diagnostics(db, file_id))
@@ -78,6 +79,14 @@ impl AnalysisSnapshot {
         file_id: hir::FileId,
     ) -> Cancelable<Vec<file_structure::StructureNode>> {
         self.with_db(|db| file_structure::file_structure(&db.parse(file_id).tree()))
+    }
+
+    /// Computes completions at the given position
+    pub fn completions(
+        &self,
+        position: FilePosition,
+    ) -> Cancelable<Option<Vec<completion::CompletionItem>>> {
+        self.with_db(|db| completion::completions(db, position).map(Into::into))
     }
 
     /// Performs an operation on that may be Canceled.

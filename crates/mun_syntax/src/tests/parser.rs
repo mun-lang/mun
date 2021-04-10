@@ -7,6 +7,16 @@ fn snapshot_test(text: &str) {
 }
 
 #[test]
+fn missing_field_expr() {
+    snapshot_test(
+        r#"
+    fn foo() {
+        var.
+    }"#,
+    );
+}
+
+#[test]
 fn empty() {
     snapshot_test(r#""#);
 }

@@ -93,6 +93,7 @@ impl LanguageServerState {
                 Ok(())
             })?
             .on::<lsp_types::request::DocumentSymbolRequest>(handlers::handle_document_symbol)?
+            .on::<lsp_types::request::Completion>(handlers::handle_completion)?
             .finish();
 
         Ok(())
