@@ -2,7 +2,6 @@ use compiler::{Config, DisplayColor, Driver, PathOrInline, RelativePathBuf};
 use runtime::{Runtime, RuntimeBuilder};
 use std::{
     cell::{Ref, RefCell},
-    io::Cursor,
     path::{Path, PathBuf},
     rc::Rc,
     thread::sleep,
@@ -30,7 +29,6 @@ impl CompileTestDriver {
         let temp_output_dir = tempfile::TempDir::new().unwrap();
         let config = Config {
             out_dir: Some(temp_output_dir.path().to_path_buf()),
-            display_color: DisplayColor::Disable,
             ..Config::default()
         };
 
@@ -45,16 +43,11 @@ impl CompileTestDriver {
         // Initialize the driver from the fixture content
         let (_, mut driver) =
             Driver::with_package_path(temp_source_dir.path().join("mun.toml"), config).unwrap();
-        let mut compiler_errors: Vec<u8> = Vec::new();
-        if driver
-            .emit_diagnostics(&mut Cursor::new(&mut compiler_errors))
-            .unwrap()
+        if let Some(compiler_errors) = driver
+            .emit_diagnostics_to_string(DisplayColor::Disable)
+            .expect("could not create diagnostics")
         {
-            panic!(
-                "compiler errors:\n{}",
-                String::from_utf8(compiler_errors)
-                    .expect("compiler errors are not UTF-8 formatted")
-            )
+            panic!("compiler errors:\n{}", compiler_errors)
         }
 
         driver.write_all_assemblies(true).unwrap();
@@ -73,7 +66,6 @@ impl CompileTestDriver {
         let temp_dir = tempfile::TempDir::new().unwrap();
         let config = Config {
             out_dir: Some(temp_dir.path().to_path_buf()),
-            display_color: DisplayColor::Disable,
             ..Config::default()
         };
         let input = PathOrInline::Inline {
@@ -81,16 +73,11 @@ impl CompileTestDriver {
             contents: text.to_owned(),
         };
         let (mut driver, file_id) = Driver::with_file(config, input).unwrap();
-        let mut compiler_errors: Vec<u8> = Vec::new();
-        if driver
-            .emit_diagnostics(&mut Cursor::new(&mut compiler_errors))
-            .unwrap()
+        if let Some(compiler_errors) = driver
+            .emit_diagnostics_to_string(DisplayColor::Disable)
+            .expect("could not generate compiler diagnostics")
         {
-            panic!(
-                "compiler errors:\n{}",
-                String::from_utf8(compiler_errors)
-                    .expect("compiler errors are not UTF-8 formatted")
-            )
+            panic!("compiler errors:\n{}", compiler_errors)
         }
 
         driver.write_all_assemblies(true).unwrap();
@@ -108,17 +95,13 @@ impl CompileTestDriver {
     /// recompiled.
     pub fn update(&mut self, path: impl AsRef<paths::RelativePath>, text: &str) {
         self.driver.set_file_text(path, text).unwrap();
-        let mut compiler_errors: Vec<u8> = Vec::new();
-        if self
+
+        let compiler_errors = self
             .driver
-            .emit_diagnostics(&mut Cursor::new(&mut compiler_errors))
-            .unwrap()
-        {
-            panic!(
-                "compiler errors:\n{}",
-                String::from_utf8(compiler_errors)
-                    .expect("compiler errors are not UTF-8 formatted")
-            )
+            .emit_diagnostics_to_string(DisplayColor::Disable)
+            .expect("error creating diagnostics");
+        if let Some(compiler_errors) = compiler_errors {
+            panic!("compiler errors:\n{}", compiler_errors)
         }
         self.driver.write_all_assemblies(true).unwrap();
     }

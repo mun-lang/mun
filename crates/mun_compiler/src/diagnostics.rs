@@ -5,10 +5,7 @@ mod tests {
 
     /// Compile passed source code and return all compilation errors
     fn compilation_errors(source_code: &str) -> String {
-        let config = Config {
-            display_color: DisplayColor::Disable,
-            ..Config::default()
-        };
+        let config = Config::default();
 
         let input = PathOrInline::Inline {
             rel_path: RelativePathBuf::from("main.mun"),
@@ -20,7 +17,10 @@ mod tests {
         let mut compilation_errors = Vec::<u8>::new();
 
         let _ = driver
-            .emit_diagnostics(&mut Cursor::new(&mut compilation_errors))
+            .emit_diagnostics(
+                &mut Cursor::new(&mut compilation_errors),
+                DisplayColor::Disable,
+            )
             .unwrap();
 
         String::from_utf8(compilation_errors).unwrap()

@@ -12,8 +12,6 @@ use hir::{
 use mun_codegen::{AssemblyIR, CodeGenDatabase, ModuleGroup, TargetAssembly};
 use paths::RelativePathBuf;
 
-use std::{path::PathBuf, sync::Arc};
-
 mod config;
 mod display_color;
 
@@ -22,7 +20,10 @@ pub use self::display_color::DisplayColor;
 
 use crate::diagnostics_snippets::{emit_hir_diagnostic, emit_syntax_error};
 use mun_project::{Package, LOCKFILE_NAME};
-use std::{collections::HashMap, convert::TryInto, path::Path, time::Duration};
+use std::{
+    collections::HashMap, convert::TryInto, io::Cursor, path::Path, path::PathBuf, sync::Arc,
+    time::Duration,
+};
 use walkdir::WalkDir;
 
 pub const WORKSPACE: SourceRootId = SourceRootId(0);
@@ -38,14 +39,13 @@ pub struct Driver {
 
     module_to_temp_assembly_path: HashMap<Module, PathBuf>,
 
-    display_color: DisplayColor,
     emit_ir: bool,
 }
 
 impl Driver {
     /// Constructs a driver with a specific configuration.
-    pub fn with_config(config: Config, out_dir: PathBuf) -> Result<Self, anyhow::Error> {
-        Ok(Self {
+    pub fn with_config(config: Config, out_dir: PathBuf) -> Self {
+        Self {
             db: CompilerDatabase::new(&config),
             out_dir,
             source_root: Default::default(),
@@ -53,21 +53,17 @@ impl Driver {
             file_id_to_path: Default::default(),
             next_file_id: 0,
             module_to_temp_assembly_path: Default::default(),
-            display_color: config.display_color,
             emit_ir: config.emit_ir,
-        })
+        }
     }
 
     /// Constructs a driver with a configuration and a single file.
-    pub fn with_file(
-        config: Config,
-        path: PathOrInline,
-    ) -> Result<(Driver, FileId), anyhow::Error> {
+    pub fn with_file(config: Config, path: PathOrInline) -> anyhow::Result<(Driver, FileId)> {
         let out_dir = config.out_dir.clone().unwrap_or_else(|| {
             std::env::current_dir().expect("could not determine current working directory")
         });
 
-        let mut driver = Driver::with_config(config, out_dir)?;
+        let mut driver = Driver::with_config(config, out_dir);
 
         // Get the path and contents of the path
         let (rel_path, text) = match path {
@@ -120,7 +116,7 @@ impl Driver {
             .map_err(|e| anyhow::anyhow!("could not create package output directory: {}", e))?;
 
         // Construct the driver
-        let mut driver = Driver::with_config(config, output_dir)?;
+        let mut driver = Driver::with_config(config, output_dir);
 
         // Iterate over all files in the source directory of the package and store their information in
         // the database
@@ -216,8 +212,12 @@ impl Driver {
 impl Driver {
     /// Emits all diagnostic messages currently in the database; returns true if errors were
     /// emitted.
-    pub fn emit_diagnostics(&self, writer: &mut dyn std::io::Write) -> Result<bool, anyhow::Error> {
-        let emit_colors = self.display_color.should_enable();
+    pub fn emit_diagnostics(
+        &self,
+        writer: &mut dyn std::io::Write,
+        display_color: DisplayColor,
+    ) -> Result<bool, anyhow::Error> {
+        let emit_colors = display_color.should_enable();
         let mut has_error = false;
 
         for package in hir::Package::all(self.db.upcast()) {
@@ -264,6 +264,24 @@ impl Driver {
         }
 
         Ok(has_error)
+    }
+
+    /// Returns all diagnostics as a human readable string
+    pub fn emit_diagnostics_to_string(
+        &self,
+        display_color: DisplayColor,
+    ) -> anyhow::Result<Option<String>> {
+        let mut compiler_errors: Vec<u8> = Vec::new();
+        if !self.emit_diagnostics(&mut Cursor::new(&mut compiler_errors), display_color)? {
+            Ok(None)
+        } else {
+            Ok(Some(String::from_utf8(compiler_errors).map_err(|e| {
+                anyhow::anyhow!(
+                    "could not convert compiler diagnostics to valid UTF8: {}",
+                    e
+                )
+            })?))
+        }
     }
 }
 
@@ -340,14 +358,17 @@ impl Driver {
             match lockfile::Lockfile::create(self.out_dir.join(LOCKFILE_NAME)) {
                 Ok(lockfile) => break lockfile,
                 Err(_) => {
-                    if self.display_color.should_enable() {
-                        eprintln!(
-                            "{} on acquiring lock on output directory",
-                            yansi_term::Color::Cyan.paint("Blocked")
-                        )
-                    } else {
-                        eprintln!("Blocked on acquiring lock on output directory")
-                    }
+                    // TODO(#313): Implement/abstract a better way to emit warnings/errors from the
+                    //  driver. Directly writing to stdout accesses global state. The driver is not
+                    //  aware of how to output logging information.
+                    // if self.display_color.should_enable() {
+                    //     eprintln!(
+                    //         "{} on acquiring lock on output directory",
+                    //         yansi_term::Color::Cyan.paint("Blocked")
+                    //     )
+                    // } else {
+                    //     eprintln!("Blocked on acquiring lock on output directory")
+                    // }
                     std::thread::sleep(Duration::from_secs(1))
                 }
             };
