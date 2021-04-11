@@ -12,8 +12,6 @@ license = "MIT OR Apache-2.0"
 keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 rustc-hash="1.1.0"
 lsp-types = "0.86.0"
