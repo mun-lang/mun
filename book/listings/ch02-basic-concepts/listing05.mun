@@ -1,0 +1,12 @@
+# pub fn main() {
+#   fibonacci_n();
+# }
+
+fn arg() -> i64 {
+    5
+}
+
+pub fn fibonacci_n() -> i64 {
+    let n = arg();
+    fibonacci::fibonacci(n)
+}
