@@ -16,7 +16,7 @@ mun new hello_fibonacci
 
 This command creates a new directory called `hello_fibonacci` with the following contents:
 
-```
+```markdown
 hello_fibonacci
 ├── src
 |   └── mod.mun
