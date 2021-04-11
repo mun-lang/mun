@@ -161,13 +161,13 @@ cargo build --release
 ```
 
 ## Language server
-Mun contains initial support for the lsp protocol, start the executable using:
+Mun contains support for the lsp protocol, start the executable using:
 
 ```bash
 mun language-server
 ```
 
-Currently, only diagnostics are supported.
+Alternatively, you can install editor-specific extensions.
 
 ### VS code
 

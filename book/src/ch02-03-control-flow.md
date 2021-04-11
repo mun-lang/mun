@@ -1,8 +1,7 @@
 ## Control flow
 
-Executing or repeating a block of code only under specific conditions are common
-constructs that allow developers to control the flow of execution. Mun provides
- `if`/`else` expressions and loops.
+Executing or repeating a block of code only under specific conditions are common constructs that allow developers to control the flow of execution. 
+Mun provides `if`/`else` expressions and loops.
 
 ### `if` expressions
 
@@ -20,14 +19,13 @@ pub fn main() {
 }
 ```
 
-All `if` expressions start with the keyword `if`, followed by a condition. As
-opposed to many C-like languages, Mun omits parentheses around the condition.
-Only when the condition is true - in the example, whether the `number` variable
-is less than 5 - the consecutive code block (or *arm*) is executed.
+All `if` expressions start with the keyword `if`, followed by a condition. 
+As opposed to many C-like languages, Mun omits parentheses around the condition.
+Only when the condition is true - in the example, whether the `number` variable is less than 5 - the consecutive code block (or *arm*) is executed.
 
-Optionally, an `else` expression can be added that will be executed when the
-condition evaluates to false. You can also have multiple conditions by combining
-`if` and `else` in an `else if` expression. For example:
+Optionally, an `else` expression can be added that will be executed when the condition evaluates to false. 
+You can also have multiple conditions by combining `if` and `else` in an `else if` expression. 
+For example:
 
 ```mun
 pub fn main() {
@@ -44,11 +42,9 @@ pub fn main() {
 }
 ```
 
-
 #### Using `if` in a `let` statement
 
-The `if` expression can be used on the right side of a `let` statement
-just like a block:
+The `if` expression can be used on the right side of a `let` statement just like a block:
 
 ```mun
 pub fn main() {
@@ -61,16 +57,14 @@ pub fn main() {
 }
 ```
 
-Depending on the condition, the `number` variable will be bound to the value of
-the `if` block or the `else` block. This means that both the `if` and `else`
-arms need to evaluate to the same type. If the types are mismatched the compiler
-will report an error.
-
+Depending on the condition, the `number` variable will be bound to the value of the `if` block or the `else` block. 
+This means that both the `if` and `else` arms need to evaluate to the same type. 
+If the types are mismatched the compiler will report an error.
 
 ### `loop` expressions
 
-A `loop` expression can be used to create an infinite loop. Breaking out of the
-loop is done using the `break` statement.
+A `loop` expression can be used to create an infinite loop. 
+Breaking out of the loop is done using the `break` statement.
 
 ```mun
 pub fn main() {
@@ -85,8 +79,7 @@ pub fn main() {
 }
 ```
 
-Similar to `if`/`else` expressions, `loop` blocks can have a return value that
-can be returned through the use of a `break` statement.
+Similar to `if`/`else` expressions, `loop` blocks can have a return value that can be returned through the use of a `break` statement.
 
 ```mun
 # pub fn main() {
@@ -115,13 +108,11 @@ let a = loop {
 # }
 ```
 
-
 ### `while` expressions
 
-`while` loops execute a block of code as long as a condition holds. A `while`
-loop starts with the keyword `while` followed by a condition expression and a
-block of code to execute upon each iteration. Just like with the `if`
-expression, no parentheses are required around the condition expression.
+`while` loops execute a block of code as long as a condition holds. 
+A `while` loop starts with the keyword `while` followed by a condition expression and a block of code to execute upon each iteration. 
+Just like with the `if` expression, no parentheses are required around the condition expression.
 
 ```mun
 pub fn main() {
@@ -134,9 +125,5 @@ pub fn main() {
 
 A `break` statement inside the `while` loop immediately exits the loop.
 
-Unlike a `loop` expression, a `break` in a while loop cannot return a value
-because a while loop can exit both through the use of a `break` statement and
-because the condition no longer holds. Although we could explicitly return a
-value from the `while` loop through the use of a `break` statement it is unclear
-which value should be returned if the loop exits because the condition no longer
-holds.
+Unlike a `loop` expression, a `break` in a while loop cannot return a value because a while loop can exit both through the use of a `break` statement and because the condition no longer holds. 
+Although we could explicitly return a value from the `while` loop through the use of a `break` statement it is unclear which value should be returned if the loop exits because the condition no longer holds.

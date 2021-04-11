@@ -1,14 +1,16 @@
 #include <iostream>
 
-#include "mun/runtime.h"
+#include "mun/mun.h"
 
-int main() {
+int main(int argc, char *argv[]) {
     if (argc < 2) {
         return 1;
     }
 
     auto lib_path = argv[1];
-    if (auto runtime = mun::make_runtime(lib_path)) {
+    mun::RuntimeOptions options;
+    mun::Error error;
+    if (auto runtime = mun::make_runtime(lib_path, options, &error)) {
         while (true) {
             auto arg = mun::invoke_fn<int64_t>(*runtime, "arg").wait();
             auto result =
@@ -18,7 +20,12 @@ int main() {
 
             runtime->update();
         }
+
+        return 0;
     }
+
+    std::cerr << "Failed to construct Mun runtime due to error: "
+              << error.message() << std::endl;
 
     return 2;
 }

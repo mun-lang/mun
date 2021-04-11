@@ -13,6 +13,7 @@
     - [Functions](ch02-02-functions.md)
     - [Control flow](ch02-03-control-flow.md)
     - [Extern functions](ch02-04-extern-fn.md)
+    - [`use` keyword](ch02-05-use-keyword.md)
 
 - [Structs](ch03-00-structs.md)
     - [Records vs Tuples](ch03-01-records-vs-tuples.md)
