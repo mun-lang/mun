@@ -3,7 +3,7 @@
 [![Build Status][build-badge]][build]
 [![Crates.io][crates-badge]][crates]
 [![docs master][docs-master-badge]][docs-master]
-[![docs v0.2][docs-v0.2-badge]][docs-v0.2]
+[![docs v0.3][docs-v0.3-badge]][docs-v0.3]
 [![MIT/Apache][licence-badge]][license]
 [![Join us on Discord][discord-badge]][discord]
 [![codecov][coverage-badge]][coverage]
@@ -21,8 +21,8 @@
 [docs-master-badge]: https://img.shields.io/badge/docs-master-blue.svg
 [docs-master]: https://docs.mun-lang.org/
 
-[docs-v0.2-badge]: https://img.shields.io/badge/docs-v0.2-blue.svg
-[docs-v0.2]: https://docs.mun-lang.org/v0.2/
+[docs-v0.3-badge]: https://img.shields.io/badge/docs-v0.3-blue.svg
+[docs-v0.3]: https://docs.mun-lang.org/v0.3/
 
 [licence-badge]: https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue
 [license]: COPYRIGHT
