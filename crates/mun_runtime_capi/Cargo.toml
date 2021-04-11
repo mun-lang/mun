@@ -26,6 +26,6 @@ parking_lot = "0.10"
 rand = "0.7.2"
 
 [dev-dependencies]
-compiler = { version="=0.3.0", path="../mun_compiler", package = "mun_compiler" }
+compiler = { path="../mun_compiler", package = "mun_compiler" }
 paste = "0.1"
 tempfile = "3"
