@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 description = "Functionality for loading Mun libraries"
-documentation = "https://docs.mun-lang.org/v0.2"
+documentation = "https://docs.mun-lang.org/v0.3"
 readme = "README.md"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
@@ -14,7 +14,7 @@ categories = ["game-development", "mun"]
 
 [dependencies]
 log = "0.4.13"
-abi = { version = "=0.2.0", path = "../mun_abi", package = "mun_abi" }
+abi = { version = "=0.3.0", path = "../mun_abi", package = "mun_abi" }
 anyhow = "1.0"
 libloading = "0.6"
 tempfile = "3"

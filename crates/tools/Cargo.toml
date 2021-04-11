@@ -1,6 +1,6 @@
 [package]
 name = "tools"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 

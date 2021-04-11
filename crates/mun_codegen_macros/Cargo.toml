@@ -3,6 +3,14 @@ name = "mun_codegen_macros"
 version = "0.1.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
+description = "Macros used by mun code generation"
+documentation = "https://docs.mun-lang.org/v0.3"
+readme = "README.md"
+homepage = "https://mun-lang.org"
+repository = "https://github.com/mun-lang/mun"
+license = "MIT OR Apache-2.0"
+keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
+categories = ["Game development", "Mun"]
 
 [lib]
 proc-macro = true

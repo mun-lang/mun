@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 description = "Provides the ability to test Mun code snippets in an mdbook"
-documentation = "https://docs.mun-lang.org/v0.2"
+documentation = "https://docs.mun-lang.org/v0.3"
 readme = "README.md"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
@@ -19,6 +19,6 @@ mdbook = "0.4.7"
 pulldown-cmark = "0.8.0"
 bytecount = "0.6.2"
 itertools = "0.10.0"
-mun_runtime = { path = "../mun_runtime" }
-mun_compiler = { path = "../mun_compiler" }
+mun_runtime = { version = "=0.3.0", path = "../mun_runtime" }
+mun_compiler = { version = "=0.3.0", path = "../mun_compiler" }
 tempdir = "0.3.7"

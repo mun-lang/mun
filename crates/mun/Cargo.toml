@@ -1,10 +1,10 @@
 [package]
 name = "mun"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 description = "Command-line interface for compiling, monitoring and running Mun code"
-documentation = "https://docs.mun-lang.org/v0.2"
+documentation = "https://docs.mun-lang.org/v0.3"
 readme = "README.md"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
@@ -18,10 +18,10 @@ anyhow = "1.0.31"
 clap = "2.33.0"
 log = "0.4"
 pretty_env_logger = "0.4"
-mun_abi = { version = "=0.2.0", path = "../mun_abi" }
-mun_compiler = { version = "=0.2.0", path = "../mun_compiler" }
-mun_compiler_daemon = { version = "=0.2.0", path = "../mun_compiler_daemon" }
-mun_runtime = { version = "=0.2.0", path = "../mun_runtime" }
+mun_abi = { version = "=0.3.0", path = "../mun_abi" }
+mun_compiler = { version = "=0.3.0", path = "../mun_compiler" }
+mun_compiler_daemon = { version = "=0.3.0", path = "../mun_compiler_daemon" }
+mun_runtime = { version = "=0.3.0", path = "../mun_runtime" }
 mun_language_server = { version = "=0.1.0", path = "../mun_language_server" }
 mun_project = { version = "=0.1.0", path = "../mun_project" }
 
@@ -32,7 +32,7 @@ features = ["precommit-hook", "run-cargo-test", "run-cargo-fmt", "run-cargo-clip
 
 [dev-dependencies]
 tempfile = "3.1"
-mun_skeptic = { path = "../mun_skeptic" }
+mun_skeptic = { version = "=0.1.0", path = "../mun_skeptic" }
 
 [build-dependencies]
-mun_skeptic = { path = "../mun_skeptic" }
+mun_skeptic = { version = "=0.1.0", path = "../mun_skeptic" }

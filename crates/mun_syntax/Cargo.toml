@@ -1,10 +1,10 @@
 [package]
 name = "mun_syntax"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 description = "Parsing functionality for the Mun programming language"
-documentation = "https://docs.mun-lang.org/v0.2"
+documentation = "https://docs.mun-lang.org/v0.3"
 readme = "README.md"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
@@ -13,7 +13,7 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-abi = { version = "=0.2.0", path = "../mun_abi", package = "mun_abi" }
+abi = { version = "=0.3.0", path = "../mun_abi", package = "mun_abi" }
 rowan = "0.10.0"
 text-size = { version = "1.1.0", features = ["serde"] }
 smol_str = { version = "0.1.17", features = ["serde"] }
