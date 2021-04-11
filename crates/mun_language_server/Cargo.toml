@@ -37,6 +37,6 @@ ra_ap_text_edit="0.0.35"
 
 [dev-dependencies]
 tempdir = "0.3.7"
-mun_test = { version = "=0.1.0", path = "../mun_test"}
+mun_test = { path = "../mun_test"}
 insta = "0.16"
 itertools = "0.10.0"

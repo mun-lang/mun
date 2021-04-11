@@ -34,11 +34,11 @@ by_address = "1.0.4"
 paths = { version="=0.1.0", path="../mun_paths", package="mun_paths"}
 
 [dev-dependencies]
-abi = { version = "=0.3.0", path = "../mun_abi", package = "mun_abi" }
+abi = { path = "../mun_abi", package = "mun_abi" }
 insta = "0.16"
-libloader = { version = "=0.1.0", path = "../mun_libloader", package = "mun_libloader" }
-mun_test = { version = "=0.1.0", path = "../mun_test" }
-runtime = { version = "=0.3.0", path = "../mun_runtime", package = "mun_runtime" }
+libloader = { path = "../mun_libloader", package = "mun_libloader" }
+mun_test = { path = "../mun_test" }
+runtime = { path = "../mun_runtime", package = "mun_runtime" }
 
 [build-dependencies]
 semver = "0.9.0"

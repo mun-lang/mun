@@ -1,6 +1,6 @@
 [package]
 name = "mun_memory"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 description = "Memory management functionality for Mun"
