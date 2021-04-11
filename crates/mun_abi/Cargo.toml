@@ -1,10 +1,10 @@
 [package]
 name = "mun_abi"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 description = "Rust wrapper for the Mun ABI"
-documentation = "https://docs.mun-lang.org/v0.2"
+documentation = "https://docs.mun-lang.org/v0.3"
 readme = "README.md"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"

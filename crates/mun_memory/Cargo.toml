@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 description = "Memory management functionality for Mun"
-documentation = "https://docs.mun-lang.org/v0.2"
+documentation = "https://docs.mun-lang.org/v0.3"
 readme = "README.md"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
@@ -13,7 +13,7 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-abi = { version = "=0.2.0", path = "../mun_abi", package = "mun_abi" }
+abi = { version = "=0.3.0", path = "../mun_abi", package = "mun_abi" }
 once_cell = "1.4.0"
 parking_lot = "0.10"
 lazy_static = "1.4.0"

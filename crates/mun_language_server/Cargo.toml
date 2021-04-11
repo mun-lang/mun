@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 description = "Provides a language server protocol server for the Mun language"
-documentation = "https://docs.mun-lang.org/v0.2"
+documentation = "https://docs.mun-lang.org/v0.3"
 readme = "README.md"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
@@ -25,20 +25,20 @@ serde_derive = "1.0"
 anyhow = "1.0"
 thiserror = "1.0"
 salsa = "0.15.0"
-hir = { version = "=0.2.0", path="../mun_hir", package="mun_hir" }
+hir = { version = "=0.3.0", path="../mun_hir", package="mun_hir" }
 threadpool="1.8.1"
-vfs = { path = "../mun_vfs", package="mun_vfs" }
-project = { path = "../mun_project", package="mun_project" }
-mun_target = { version = "=0.2.0", path = "../mun_target" }
-mun_syntax = { version = "=0.2.0", path = "../mun_syntax" }
+vfs = { version = "=0.1.0", path = "../mun_vfs", package="mun_vfs" }
+project = { version = "=0.1.0", path = "../mun_project", package="mun_project" }
+mun_target = { version = "=0.3.0", path = "../mun_target" }
+mun_syntax = { version = "=0.3.0", path = "../mun_syntax" }
 mun_diagnostics = { version = "=0.1.0", path = "../mun_diagnostics" }
 crossbeam-channel = "0.5.0"
 parking_lot="0.11.1"
-paths = {path="../mun_paths", package="mun_paths"}
+paths = { version = "=0.1.0", path="../mun_paths", package="mun_paths"}
 ra_ap_text_edit="0.0.35"
 
 [dev-dependencies]
 tempdir = "0.3.7"
-mun_test = { path = "../mun_test"}
+mun_test = { version = "=0.1.0", path = "../mun_test"}
 insta = "0.16"
 itertools = "0.10.0"
