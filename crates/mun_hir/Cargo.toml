@@ -31,4 +31,4 @@ arrayvec = "0.5.2"
 insta = "0.16"
 text_trees = "0.1.2"
 parking_lot = "0.10"
-mun_test = { version = "=0.1.0", path = "../mun_test" }
+mun_test = { path = "../mun_test" }
