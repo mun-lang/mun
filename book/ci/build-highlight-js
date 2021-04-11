@@ -13,7 +13,7 @@ main() {
 
     # copy the minified sources to the theme directory
     mkdir -p theme
-    cp vendor/highlight.js/build/highlight.pack.js theme/highlight.js
+    cp vendor/highlight.js/build/highlight.min.js theme/highlight.js
 }
 
 main
