@@ -20,7 +20,7 @@ crate-type = ["cdylib"]
 anyhow = "1.0.31"
 lazy_static = "1.4.0"
 abi = { version = "=0.3.0", path = "../mun_abi", package = "mun_abi" }
-memory = { version = "=0.1.0", path = "../mun_memory", package = "mun_memory" }
+memory = { version = "=0.2.0", path = "../mun_memory", package = "mun_memory" }
 runtime = { version = "=0.3.0", path = "../mun_runtime", package = "mun_runtime" }
 parking_lot = "0.10"
 rand = "0.7.2"
