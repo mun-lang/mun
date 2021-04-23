@@ -289,6 +289,7 @@ impl<'s> Marshal<'s> for StructRef<'s> {
 
 /// Type-agnostic wrapper for interoperability with a Mun struct, that has been rooted. To marshal,
 /// obtain a `StructRef` for the `RootedStruct`.
+#[derive(Clone)]
 pub struct RootedStruct {
     handle: GcRootPtr,
     runtime: Rc<RefCell<Runtime>>,
