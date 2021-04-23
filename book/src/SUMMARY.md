@@ -24,3 +24,6 @@
 - [Developer Documentation](ch04-00-developer-docs.md)
     - [Salsa](ch04-01-salsa.md)
     - [Building LLVM](ch04-02-building-llvm.md)
+
+- [RFCs](rfcs/rfcs.md)
+    - [Dynamically sized arrays](rfcs/0001-dynamically-sized-arrays.md)
