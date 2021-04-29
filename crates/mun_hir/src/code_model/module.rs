@@ -2,7 +2,6 @@ use super::{Function, Package, Struct, TypeAlias};
 use crate::ids::{ItemDefinitionId, ModuleId};
 use crate::primitive_type::PrimitiveType;
 use crate::{DiagnosticSink, FileId, HirDatabase, Name};
-use itertools::Itertools;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Module {
@@ -119,12 +118,14 @@ impl Module {
 
     /// Returns the name of this module including all parent modules
     pub fn full_name(self, db: &dyn HirDatabase) -> String {
-        self.path_to_root(db)
-            .iter()
-            .filter_map(|&module| module.name(db))
-            .map(|name| name.to_string())
-            .intersperse(String::from("::"))
-            .collect()
+        itertools::Itertools::intersperse(
+            self.path_to_root(db)
+                .iter()
+                .filter_map(|&module| module.name(db))
+                .map(|name| name.to_string()),
+            String::from("::"),
+        )
+        .collect()
     }
 }
 

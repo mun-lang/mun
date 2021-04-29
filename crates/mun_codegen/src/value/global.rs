@@ -6,7 +6,7 @@ use crate::value::AddressableType;
 use inkwell::{
     module::Linkage,
     types::PointerType,
-    values::{BasicValueEnum, PointerValue, UnnamedAddress},
+    values::{BasicValueEnum, UnnamedAddress},
     AddressSpace,
 };
 use std::marker::PhantomData;
@@ -145,8 +145,8 @@ where
     }
 }
 
-impl<'ink, T: ?Sized> Into<inkwell::values::PointerValue<'ink>> for Global<'ink, T> {
-    fn into(self) -> PointerValue<'ink> {
-        self.value.as_pointer_value()
+impl<'ink, T: ?Sized> From<Global<'ink, T>> for inkwell::values::PointerValue<'ink> {
+    fn from(global: Global<'ink, T>) -> Self {
+        global.value.as_pointer_value()
     }
 }

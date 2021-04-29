@@ -16,7 +16,7 @@ use std::collections::BTreeMap;
 /// The IR generated for a group of files. It is used to generate IR for all of the group's files
 /// and the resulting `Assembly`'s symbols.
 #[derive(Debug, PartialEq, Eq)]
-pub struct FileGroupIR<'ink> {
+pub struct FileGroupIr<'ink> {
     /// The LLVM module that contains the IR
     pub(crate) llvm_module: Module<'ink>,
     /// The dispatch table
@@ -33,7 +33,7 @@ pub struct FileGroupIR<'ink> {
 pub(crate) fn gen_file_group_ir<'db, 'ink>(
     code_gen: &CodeGenContext<'db, 'ink>,
     module_group: &ModuleGroup,
-) -> FileGroupIR<'ink> {
+) -> FileGroupIr<'ink> {
     let llvm_module = code_gen.context.create_module("group_name");
 
     // Use a `BTreeMap` to guarantee deterministically ordered output.
@@ -153,7 +153,7 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
         None
     };
 
-    FileGroupIR {
+    FileGroupIr {
         llvm_module,
         dispatch_table,
         type_table,

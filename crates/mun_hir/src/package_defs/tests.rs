@@ -3,7 +3,6 @@ use crate::{
     with_fixture::WithFixture, DiagnosticSink, Function, HirDatabase, Module, Package, Struct,
     TypeAlias,
 };
-use itertools::Itertools;
 use rustc_hash::FxHashSet;
 
 #[test]
@@ -154,14 +153,14 @@ fn resolve_snapshot(text: &str) {
 fn resolve(content: &str) -> String {
     let db = MockDatabase::with_files(content);
 
-    Package::all(&db)
-        .iter()
-        .map(|package| {
+    itertools::Itertools::intersperse(
+        Package::all(&db).iter().map(|package| {
             let package_defs = db.package_defs(package.id);
             tree_for_module(&db, &package_defs, package.root_module(&db)).to_string()
-        })
-        .intersperse("\n".to_owned())
-        .collect()
+        }),
+        "\n".to_owned(),
+    )
+    .collect()
 }
 
 fn tree_for_module(
@@ -274,15 +273,17 @@ fn tree_for_module(
 
 /// Returns a fully qualified path of a module e.g. `package::foo::bar::baz`
 fn fully_qualified_module_path(db: &dyn HirDatabase, module: Module) -> String {
-    module
-        .path_to_root(db)
-        .into_iter()
-        .map(|m| {
-            m.name(db)
-                .map(|name| name.to_string())
-                .unwrap_or_else(|| "package".to_owned())
-        })
-        .rev()
-        .intersperse("::".to_string())
-        .collect::<String>()
+    itertools::Itertools::intersperse(
+        module
+            .path_to_root(db)
+            .into_iter()
+            .map(|m| {
+                m.name(db)
+                    .map(|name| name.to_string())
+                    .unwrap_or_else(|| "package".to_owned())
+            })
+            .rev(),
+        "::".to_string(),
+    )
+    .collect::<String>()
 }

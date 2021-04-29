@@ -155,7 +155,7 @@ mod tests {
         assert!(vfs.file_id(&test_path).is_none());
 
         // Store some data in the vfs, this should definitly trigger a change
-        assert!(vfs.set_file_contents(&test_path, Some(vec![])), true);
+        assert!(vfs.set_file_contents(&test_path, Some(vec![])));
         assert!(vfs.has_changes());
 
         // We should now have a FileId
@@ -173,10 +173,10 @@ mod tests {
         assert_eq!(vfs.set_file_contents(&test_path, Some(vec![])), false);
 
         // Actually modify the contents
-        assert!(vfs.set_file_contents(&test_path, Some(vec![0])), true);
+        assert!(vfs.set_file_contents(&test_path, Some(vec![0])));
 
         // Remove the file contents, should also trigger a change
-        assert!(vfs.set_file_contents(&test_path, None), true);
+        assert!(vfs.set_file_contents(&test_path, None));
 
         // We should now no longer have a file id because the contents was removed
         assert_eq!(vfs.file_id(&test_path), None);

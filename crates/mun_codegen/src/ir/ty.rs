@@ -94,7 +94,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
     pub fn get_struct_reference_type(&self, struct_ty: hir::Struct) -> BasicTypeEnum<'ink> {
         let ir_ty = self.get_struct_type(struct_ty);
         match struct_ty.data(self.db.upcast()).memory_kind {
-            hir::StructMemoryKind::GC => {
+            hir::StructMemoryKind::Gc => {
                 // GC values are pointers to pointers
                 // struct Foo {}
                 // Foo**

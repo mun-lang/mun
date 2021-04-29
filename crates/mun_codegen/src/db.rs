@@ -1,4 +1,4 @@
-use crate::{AssemblyIR, ModuleGroupId, ModulePartition, TargetAssembly};
+use crate::{AssemblyIr, ModuleGroupId, ModulePartition, TargetAssembly};
 use by_address::ByAddress;
 use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, Target, TargetTriple};
 use std::sync::Arc;
@@ -25,7 +25,7 @@ pub trait CodeGenDatabase: hir::HirDatabase + hir::Upcast<dyn hir::HirDatabase> 
 
     /// Returns a file containing the IR for the specified module.
     #[salsa::invoke(crate::assembly::build_assembly_ir)]
-    fn assembly_ir(&self, module_group: ModuleGroupId) -> Arc<AssemblyIR>;
+    fn assembly_ir(&self, module_group: ModuleGroupId) -> Arc<AssemblyIr>;
 
     /// Returns a fully linked shared object for the specified module.
     #[salsa::invoke(crate::assembly::build_target_assembly)]

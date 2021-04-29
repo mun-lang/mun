@@ -56,13 +56,13 @@ fn test_abi_compatibility() {
         &lib_info.symbols,
         struct_name,
         &["0", "1"],
-        StructMemoryKind::GC,
+        StructMemoryKind::Gc,
     );
 
     struct Bar {
         _a: i32,
         _b: i32,
-    };
+    }
     test_struct_info::<Bar, i32>(
         &lib_info.symbols,
         struct_name2,
@@ -110,10 +110,8 @@ fn test_abi_compatibility() {
     fn test_function_return_type_none(fn_def: &abi::FunctionDefinition) {
         assert!(
             fn_def.prototype.signature.return_type().is_none(),
-            format!(
-                "Function '{}' should not have a return type.",
-                fn_def.prototype.name(),
-            )
+            "Function '{}' should not have a return type.",
+            fn_def.prototype.name(),
         );
     }
 

@@ -17,7 +17,6 @@ use std::{fmt, sync::Arc};
 use crate::resolve::HasResolver;
 use crate::visibility::RawVisibility;
 pub use ast::StructMemoryKind;
-use itertools::Itertools;
 use std::iter::once;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -85,14 +84,16 @@ impl Struct {
 
     /// Returns the full name of the struct including all module specifiers (e.g: `foo::Bar`).
     pub fn full_name(self, db: &dyn HirDatabase) -> String {
-        self.module(db)
-            .path_to_root(db)
-            .into_iter()
-            .filter_map(|module| module.name(db))
-            .chain(once(self.name(db)))
-            .map(|name| name.to_string())
-            .intersperse(String::from("::"))
-            .collect()
+        itertools::Itertools::intersperse(
+            self.module(db)
+                .path_to_root(db)
+                .into_iter()
+                .filter_map(|module| module.name(db))
+                .chain(once(self.name(db)))
+                .map(|name| name.to_string()),
+            String::from("::"),
+        )
+        .collect()
     }
 
     pub fn fields(self, db: &dyn HirDatabase) -> Vec<Field> {

@@ -126,7 +126,7 @@ impl ast::MemoryTypeSpecifier {
         if self.is_value() {
             StructMemoryKind::Value
         } else if self.is_gc() {
-            StructMemoryKind::GC
+            StructMemoryKind::Gc
         } else {
             StructMemoryKind::default()
         }
