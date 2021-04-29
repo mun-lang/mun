@@ -4,7 +4,6 @@ use crate::{
     db::AnalysisDatabase,
     FilePosition,
 };
-use itertools::Itertools;
 
 /// Creates an analysis database from a multi-file fixture and a position marked with `$0`.
 pub(crate) fn position(fixture: &str) -> (AnalysisDatabase, FilePosition) {
@@ -50,15 +49,15 @@ pub(crate) fn completion_string(code: &str, filter_kind: Option<CompletionKind>)
         .max()
         .unwrap_or_default()
         .min(16);
-    completions
-        .into_iter()
-        .map(|item| {
+    itertools::Itertools::intersperse(
+        completions.into_iter().map(|item| {
             let mut result = format!("{} {}", item.kind.unwrap().tag(), &item.label);
             if let Some(detail) = item.detail {
                 result = format!("{:width$} {}", result, detail, width = label_width + 3);
             }
             result
-        })
-        .intersperse(String::from("\n"))
-        .collect()
+        }),
+        String::from("\n"),
+    )
+    .collect()
 }

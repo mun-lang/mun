@@ -17,7 +17,7 @@ pub use global::Global;
 pub use string::CanInternalize;
 
 use inkwell::types::{BasicTypeEnum, PointerType, StructType};
-use inkwell::values::{BasicValueEnum, PointerValue};
+use inkwell::values::PointerValue;
 use inkwell::AddressSpace;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -358,13 +358,13 @@ impl<'ink, T: ConcreteValueType<'ink> + ?Sized> std::fmt::Debug for Value<'ink, 
     }
 }
 
-impl<'ink, T: ConcreteValueType<'ink> + ?Sized> Into<inkwell::values::BasicValueEnum<'ink>>
-    for Value<'ink, T>
+impl<'ink, T: ConcreteValueType<'ink> + ?Sized> From<Value<'ink, T>>
+    for inkwell::values::BasicValueEnum<'ink>
 where
     T::Value: Into<inkwell::values::BasicValueEnum<'ink>>,
 {
-    fn into(self) -> BasicValueEnum<'ink> {
-        self.value.into()
+    fn from(value: Value<'ink, T>) -> Self {
+        value.value.into()
     }
 }
 

@@ -525,26 +525,26 @@ struct ObjectInfo<T: TypeMemory + TypeTrace + Clone> {
 unsafe impl<T: TypeMemory + TypeTrace + Clone> Send for ObjectInfo<T> {}
 unsafe impl<T: TypeMemory + TypeTrace + Clone> Sync for ObjectInfo<T> {}
 
-impl<T: TypeMemory + TypeTrace + Clone> Into<*const ObjectInfo<T>> for GcPtr {
-    fn into(self) -> *const ObjectInfo<T> {
-        self.as_ptr() as *const ObjectInfo<T>
+impl<T: TypeMemory + TypeTrace + Clone> From<GcPtr> for *const ObjectInfo<T> {
+    fn from(ptr: GcPtr) -> Self {
+        ptr.as_ptr() as Self
     }
 }
 
-impl<T: TypeMemory + TypeTrace + Clone> Into<*mut ObjectInfo<T>> for GcPtr {
-    fn into(self) -> *mut ObjectInfo<T> {
-        self.as_ptr() as *mut ObjectInfo<T>
+impl<T: TypeMemory + TypeTrace + Clone> From<GcPtr> for *mut ObjectInfo<T> {
+    fn from(ptr: GcPtr) -> Self {
+        ptr.as_ptr() as Self
     }
 }
 
-impl<T: TypeMemory + TypeTrace + Clone> Into<GcPtr> for *const ObjectInfo<T> {
-    fn into(self) -> GcPtr {
-        (self as RawGcPtr).into()
+impl<T: TypeMemory + TypeTrace + Clone> From<*const ObjectInfo<T>> for GcPtr {
+    fn from(info: *const ObjectInfo<T>) -> Self {
+        (info as RawGcPtr).into()
     }
 }
 
-impl<T: TypeMemory + TypeTrace + Clone> Into<GcPtr> for *mut ObjectInfo<T> {
-    fn into(self) -> GcPtr {
-        (self as RawGcPtr).into()
+impl<T: TypeMemory + TypeTrace + Clone> From<*mut ObjectInfo<T>> for GcPtr {
+    fn from(info: *mut ObjectInfo<T>) -> Self {
+        (info as RawGcPtr).into()
     }
 }

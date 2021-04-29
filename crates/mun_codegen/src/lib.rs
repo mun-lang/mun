@@ -1,7 +1,7 @@
 pub use inkwell::{builder::Builder, context::Context, module::Module, OptimizationLevel};
 
 pub use crate::{
-    assembly::{AssemblyIR, TargetAssembly},
+    assembly::{AssemblyIr, TargetAssembly},
     code_gen::AssemblyBuilder,
     db::{CodeGenDatabase, CodeGenDatabaseStorage},
     module_group::ModuleGroup,

@@ -151,7 +151,7 @@ impl Ty {
             TypeCtor::Struct(s) => {
                 let name = s.name(db).to_string();
 
-                Some(if s.data(db.upcast()).memory_kind == StructMemoryKind::GC {
+                Some(if s.data(db.upcast()).memory_kind == StructMemoryKind::Gc {
                     format!("struct {}", name)
                 } else {
                     let fields: Vec<String> = s

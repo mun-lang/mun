@@ -104,7 +104,7 @@ impl Iterator for Trace {
 
             let field_ty = struct_ty.field_types()[index];
             if let Some(field_struct_ty) = field_ty.as_struct() {
-                if field_struct_ty.memory_kind == abi::StructMemoryKind::GC {
+                if field_struct_ty.memory_kind == abi::StructMemoryKind::Gc {
                     let offset = struct_ty.field_offsets()[index];
                     return Some(unsafe {
                         *self.obj.deref::<u8>().add(offset as usize).cast::<GcPtr>()

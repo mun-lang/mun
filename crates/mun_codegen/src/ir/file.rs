@@ -3,7 +3,7 @@ use crate::module_group::ModuleGroup;
 use crate::{
     code_gen::CodeGenContext,
     ir::body::BodyIrGenerator,
-    ir::file_group::FileGroupIR,
+    ir::file_group::FileGroupIr,
     ir::{function, type_table::TypeTable},
     value::Global,
 };
@@ -13,7 +13,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 /// The IR generated for a single source file.
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct FileIR<'ink> {
+pub struct FileIr<'ink> {
     /// The LLVM module that contains the IR
     pub llvm_module: Module<'ink>,
     /// The `hir::Function`s that constitute the file's API.
@@ -23,9 +23,9 @@ pub struct FileIR<'ink> {
 /// Generates IR for the specified file.
 pub(crate) fn gen_file_ir<'db, 'ink>(
     code_gen: &CodeGenContext<'db, 'ink>,
-    group_ir: &FileGroupIR<'ink>,
+    group_ir: &FileGroupIr<'ink>,
     module_group: &ModuleGroup,
-) -> FileIR<'ink> {
+) -> FileIr<'ink> {
     let llvm_module = code_gen.context.create_module(&module_group.name);
 
     let hir_types = &code_gen.hir_types;
@@ -124,5 +124,5 @@ pub(crate) fn gen_file_ir<'db, 'ink>(
         .filter(|&f| module_group.should_export_fn(code_gen.db, f))
         .collect();
 
-    FileIR { llvm_module, api }
+    FileIr { llvm_module, api }
 }

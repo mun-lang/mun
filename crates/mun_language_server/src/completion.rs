@@ -46,9 +46,9 @@ pub(crate) struct Completions {
     buf: Vec<CompletionItem>,
 }
 
-impl Into<Vec<CompletionItem>> for Completions {
-    fn into(self) -> Vec<CompletionItem> {
-        self.buf
+impl From<Completions> for Vec<CompletionItem> {
+    fn from(completions: Completions) -> Self {
+        completions.buf
     }
 }
 

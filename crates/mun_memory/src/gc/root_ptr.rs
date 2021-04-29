@@ -47,9 +47,9 @@ impl<T: TypeMemory + TypeTrace, G: GcRuntime<T>> GcRootPtr<T, G> {
     }
 }
 
-impl<T: TypeMemory + TypeTrace, G: GcRuntime<T>> Into<GcPtr> for GcRootPtr<T, G> {
-    fn into(self) -> GcPtr {
-        self.handle
+impl<T: TypeMemory + TypeTrace, G: GcRuntime<T>> From<GcRootPtr<T, G>> for GcPtr {
+    fn from(ptr: GcRootPtr<T, G>) -> Self {
+        ptr.handle
     }
 }
 
