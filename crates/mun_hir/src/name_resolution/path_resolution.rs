@@ -41,8 +41,8 @@ impl ResolvePathResult {
     ) -> ResolvePathResult {
         ResolvePathResult {
             resolved_def,
-            reached_fixedpoint,
             segment_index,
+            reached_fixedpoint,
             package,
         }
     }

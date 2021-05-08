@@ -53,9 +53,9 @@ impl ModuleGroup {
 
         Self {
             ordered_modules,
-            name,
-            includes_entire_subtree,
             modules,
+            includes_entire_subtree,
+            name,
         }
     }
 
