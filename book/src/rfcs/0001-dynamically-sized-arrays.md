@@ -1,6 +1,7 @@
 - Feature name: dynamically_sized_arrays
 - Start date: 2021-04-23
 - RFC PR: [https://github.com/mun-lang/mun/pull/324](https://github.com/mun-lang/mun/pull/324)
+- RFC Issue: [https://github.com/mun-lang/mun/issues/328](https://github.com/mun-lang/mun/issues/328)
 
 # Summary
 
@@ -86,7 +87,7 @@ When you add elements to an array and that array begins to exceed its reserved c
 > let array = [0.0; count] 
 >
 > // constructs an array of `count` elements all initialized to `Foo {}`
-> let array = [value; count]
+> let array = [Foo{}; count]
 >
 > // constructs an array of `count` elements all initialized to `value`
 > let array = [value; count]
@@ -101,6 +102,18 @@ let an_array: [f32] = construct_array()
 let first_element = an_array[0]
 an_array[1] = 5.0
 ```
+
+For now, accessing elements out of bounds results in undefined behavior. 
+When we have support for exceptions/panics/error handling this should be resolved.
+
+To get number of elements in an array you can use the `len()` member function. 
+To add a new element you can use the `push(element: T)` function.
+
+## Generics
+
+Arrays are the first generic feature in Mun so this has to be added in the backend (HIR and IR). 
+The goal of this RFC is not to implement generics so full parser support is not required.
+Implementing access, `len()`, and `push(element: T)` can be implemented by hardcoding this in HIR.
 
 # Features to be implemented
 
@@ -150,13 +163,3 @@ The garbage collector has to be able construct and traverse array elements.
 Similar to `StructRef` and `RootedStruct` we will need `ArrayRef` and `RootedArray`.
 
 Optionally, it would be nice if you could create an empty array from Rust or C#. This will require implementing `TypeInfo` and `TypeRef` to be able to construct an array of a certain *type*.
-
-# Open questions
-
-* How can we implement the `push`, `len`, etc operation? Does this require `impl`?
-* The `len` and `push` functions have to be implemented in Rust. How can we expose this information. Hard-code this in HIR?
-* Can we already handle the generics in arrays? In `[T]`, `T` is a generic.
-* How do we handle out of bounds indexing? We have no support for panics yet. Should we implement that first?
-
-
-
