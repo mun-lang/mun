@@ -6,7 +6,6 @@
 
 pub mod runtime;
 
-use itertools::Itertools;
 use mdbook::renderer::RenderContext;
 use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag};
 use std::{
@@ -253,12 +252,14 @@ fn emit_tests(out_path: impl AsRef<Path>, tests: Vec<Test>) {
 /// Creates the Mun code that this test will be operating on.
 fn create_test_input(lines: &[String]) -> String {
     // Build the text of the code by stripping any leading #
-    lines
-        .iter()
-        .flat_map(|text| text.lines())
-        .map(|line| line.strip_prefix('#').unwrap_or(line))
-        .intersperse("\n")
-        .collect()
+    itertools::Itertools::intersperse(
+        lines
+            .iter()
+            .flat_map(|text| text.lines())
+            .map(|line| line.strip_prefix('#').unwrap_or(line)),
+        "\n",
+    )
+    .collect()
 }
 
 /// Emit code to run test specified test

@@ -26,7 +26,7 @@ pub struct StructInfo {
 pub enum StructMemoryKind {
     /// A garbage collected struct is allocated on the heap and uses reference semantics when passed
     /// around.
-    GC,
+    Gc,
 
     /// A value struct is allocated on the stack and uses value semantics when passed around.
     ///
@@ -99,14 +99,14 @@ impl StructInfo {
 
 impl Default for StructMemoryKind {
     fn default() -> Self {
-        StructMemoryKind::GC
+        StructMemoryKind::Gc
     }
 }
 
 impl From<StructMemoryKind> for u64 {
     fn from(kind: StructMemoryKind) -> Self {
         match kind {
-            StructMemoryKind::GC => 0,
+            StructMemoryKind::Gc => 0,
             StructMemoryKind::Value => 1,
         }
     }
@@ -155,7 +155,7 @@ mod tests {
 
     #[test]
     fn test_struct_info_memory_kind_gc() {
-        let struct_memory_kind = StructMemoryKind::GC;
+        let struct_memory_kind = StructMemoryKind::Gc;
         let struct_info = fake_struct_info(&[], &[], &[], struct_memory_kind.clone());
 
         assert_eq!(struct_info.memory_kind, struct_memory_kind);

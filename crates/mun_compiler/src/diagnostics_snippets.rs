@@ -85,7 +85,7 @@ fn emit_diagnostic(
         source_code: Arc<str>,
         line_index: Arc<LineIndex>,
         annotations: Vec<mun_diagnostics::SourceAnnotation>,
-    };
+    }
 
     let annotations = {
         let mut annotations = Vec::new();

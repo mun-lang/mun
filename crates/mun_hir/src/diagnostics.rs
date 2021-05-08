@@ -248,7 +248,7 @@ impl Diagnostic for IncompatibleBranch {
 }
 
 #[derive(Debug)]
-pub struct InvalidLHS {
+pub struct InvalidLhs {
     /// The file that contains the expressions
     pub file: FileId,
 
@@ -259,7 +259,7 @@ pub struct InvalidLHS {
     pub lhs: SyntaxNodePtr,
 }
 
-impl Diagnostic for InvalidLHS {
+impl Diagnostic for InvalidLhs {
     fn message(&self) -> String {
         "invalid left hand side of expression".to_string()
     }

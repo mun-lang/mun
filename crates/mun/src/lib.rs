@@ -14,9 +14,9 @@ pub enum ExitStatus {
     Error,
 }
 
-impl Into<ExitStatus> for bool {
-    fn into(self) -> ExitStatus {
-        if self {
+impl From<bool> for ExitStatus {
+    fn from(value: bool) -> Self {
+        if value {
             ExitStatus::Success
         } else {
             ExitStatus::Error

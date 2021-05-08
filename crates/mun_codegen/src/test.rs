@@ -9,7 +9,6 @@ use hir::{
     diagnostics::DiagnosticSink, with_fixture::WithFixture, HirDatabase, SourceDatabase, Upcast,
 };
 use inkwell::{context::Context, OptimizationLevel};
-use itertools::Itertools;
 use mun_target::spec::Target;
 use std::cell::RefCell;
 
@@ -1019,7 +1018,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
         .replace("test::", "");
 
     let value = if messages.is_empty() {
-        module_parition.iter().map(|(module_group_id, module_group)| {
+        itertools::Itertools::intersperse(module_parition.iter().map(|(module_group_id, module_group)| {
             let group_ir = gen_file_group_ir(&code_gen, &module_group);
             let file_ir = gen_file_ir(&code_gen, &group_ir, &module_group);
 
@@ -1037,11 +1036,9 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
                 module_group.relative_file_path(),
                 group_ir
             )
-        }).intersperse(String::from("\n")).collect::<String>()
+        }),String::from("\n")).collect::<String>()
     } else {
-        messages
-            .into_iter()
-            .intersperse(String::from("\n"))
+        itertools::Itertools::intersperse(messages.into_iter(), String::from("\n"))
             .collect::<String>()
     };
 

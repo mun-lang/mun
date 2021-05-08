@@ -9,7 +9,7 @@ use hir::{
     AstDatabase, DiagnosticSink, FileId, Module, PackageSet, SourceDatabase, SourceRoot,
     SourceRootId, Upcast,
 };
-use mun_codegen::{AssemblyIR, CodeGenDatabase, ModuleGroup, TargetAssembly};
+use mun_codegen::{AssemblyIr, CodeGenDatabase, ModuleGroup, TargetAssembly};
 use paths::RelativePathBuf;
 
 mod config;
@@ -303,7 +303,7 @@ impl Driver {
             .group_for_file(file_id)
             .expect("could not find file in module parition");
         self.path_for_module_group(&module_partition[module_group_id])
-            .with_extension(AssemblyIR::EXTENSION)
+            .with_extension(AssemblyIr::EXTENSION)
     }
 
     /// Get the path where the driver will write the assembly for the specified module.
@@ -323,7 +323,7 @@ impl Driver {
             .group_for_module(module)
             .expect("could not find file in module parition");
         self.path_for_module_group(&module_partition[module_group_id])
-            .with_extension(AssemblyIR::EXTENSION)
+            .with_extension(AssemblyIr::EXTENSION)
     }
 
     /// Returns the output path for the specified module group without an extension
@@ -440,7 +440,7 @@ impl Driver {
         // Determine the filename of the group
         let assembly_path = self
             .path_for_module_group(module_group)
-            .with_extension(AssemblyIR::EXTENSION);
+            .with_extension(AssemblyIr::EXTENSION);
 
         // Write to disk
         assembly_ir.copy_to(&assembly_path)?;

@@ -312,7 +312,7 @@ impl<'a> InferenceResultBuilder<'a> {
                         let resolver =
                             resolver_for_expr(self.db.upcast(), self.body.owner(), tgt_expr);
                         if !self.check_place_expression(&resolver, *lhs) {
-                            self.diagnostics.push(InferenceDiagnostic::InvalidLHS {
+                            self.diagnostics.push(InferenceDiagnostic::InvalidLhs {
                                 id: tgt_expr,
                                 lhs: *lhs,
                             })
@@ -1017,7 +1017,7 @@ mod diagnostics {
         diagnostics::{
             AccessUnknownField, BreakOutsideLoop, BreakWithValueOutsideLoop, CannotApplyBinaryOp,
             CannotApplyUnaryOp, ExpectedFunction, FieldCountMismatch, IncompatibleBranch,
-            InvalidLHS, LiteralOutOfRange, MismatchedStructLit, MismatchedType, MissingElseBranch,
+            InvalidLhs, LiteralOutOfRange, MismatchedStructLit, MismatchedType, MissingElseBranch,
             MissingFields, NoFields, NoSuchField, ParameterCountMismatch, ReturnMissingExpression,
         },
         diagnostics::{CyclicType, DiagnosticSink, UnresolvedType, UnresolvedValue},
@@ -1069,7 +1069,7 @@ mod diagnostics {
             id: ExprId,
             ty: Ty,
         },
-        InvalidLHS {
+        InvalidLhs {
             id: ExprId,
             lhs: ExprId,
         },
@@ -1274,7 +1274,7 @@ mod diagnostics {
                         ty: ty.clone(),
                     });
                 }
-                InferenceDiagnostic::InvalidLHS { id, lhs } => {
+                InferenceDiagnostic::InvalidLhs { id, lhs } => {
                     let id = body
                         .expr_syntax(*id)
                         .unwrap()
@@ -1285,7 +1285,7 @@ mod diagnostics {
                         .unwrap()
                         .value
                         .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
-                    sink.push(InvalidLHS {
+                    sink.push(InvalidLhs {
                         file,
                         expr: id,
                         lhs,

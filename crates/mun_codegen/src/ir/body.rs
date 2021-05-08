@@ -357,7 +357,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
         match hir_struct.data(self.db.upcast()).memory_kind {
             hir::StructMemoryKind::Value => struct_lit.into(),
-            hir::StructMemoryKind::GC => {
+            hir::StructMemoryKind::Gc => {
                 // TODO: Root memory in GC
                 self.gen_struct_alloc_on_heap(hir_struct, struct_lit)
             }
@@ -594,7 +594,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             ..
         }) = ty
         {
-            if s.data(self.db.upcast()).memory_kind == hir::StructMemoryKind::GC {
+            if s.data(self.db.upcast()).memory_kind == hir::StructMemoryKind::Gc {
                 return deref_heap_value(&self.builder, value);
             }
         }

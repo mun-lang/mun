@@ -235,7 +235,7 @@ impl<'db> DefCollector<'db> {
             for (name, child_module_id) in child_module_ids {
                 collect_modules_recursive(collector, child_module_id, Some((name, module_id)));
             }
-        };
+        }
     }
 
     /// Given an import, try to resolve it.

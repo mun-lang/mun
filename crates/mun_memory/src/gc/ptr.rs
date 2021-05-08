@@ -40,15 +40,15 @@ impl HasIndirectionPtr for GcPtr {
     }
 }
 
-impl Into<RawGcPtr> for GcPtr {
-    fn into(self) -> RawGcPtr {
-        self.0
+impl From<GcPtr> for RawGcPtr {
+    fn from(ptr: GcPtr) -> Self {
+        ptr.0
     }
 }
 
-impl Into<GcPtr> for RawGcPtr {
-    fn into(self) -> GcPtr {
-        GcPtr(self)
+impl From<RawGcPtr> for GcPtr {
+    fn from(ptr: RawGcPtr) -> Self {
+        GcPtr(ptr)
     }
 }
 

@@ -67,11 +67,11 @@ pub trait DiagnosticForWith<With> {
     fn with_diagnostic<R, F: FnMut(&dyn Diagnostic) -> R>(&self, with: &With, f: F) -> R;
 }
 
-impl Into<SourceAnnotation> for SecondaryAnnotation {
-    fn into(self) -> SourceAnnotation {
+impl From<SecondaryAnnotation> for SourceAnnotation {
+    fn from(annotation: SecondaryAnnotation) -> Self {
         SourceAnnotation {
-            range: self.range.value,
-            message: self.message,
+            range: annotation.range.value,
+            message: annotation.message,
         }
     }
 }

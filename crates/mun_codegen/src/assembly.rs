@@ -109,21 +109,21 @@ pub(crate) fn build_target_assembly(
     Arc::new(TargetAssembly { file })
 }
 
-/// An `AssemblyIR` is a reference to an IR file stored on disk.
+/// An `AssemblyIr` is a reference to an IR file stored on disk.
 #[derive(Debug)]
-pub struct AssemblyIR {
+pub struct AssemblyIr {
     file: NamedTempFile,
 }
 
-impl PartialEq for AssemblyIR {
+impl PartialEq for AssemblyIr {
     fn eq(&self, other: &Self) -> bool {
         self.path().eq(other.path())
     }
 }
 
-impl Eq for AssemblyIR {}
+impl Eq for AssemblyIr {}
 
-impl AssemblyIR {
+impl AssemblyIr {
     pub const EXTENSION: &'static str = "ll";
 
     /// Returns the current location of the IR File.
@@ -141,7 +141,7 @@ impl AssemblyIR {
 pub(crate) fn build_assembly_ir(
     db: &dyn CodeGenDatabase,
     module_group: ModuleGroupId,
-) -> Arc<AssemblyIR> {
+) -> Arc<AssemblyIr> {
     // Setup the code generation context
     let inkwell_context = Context::create();
     let code_gen_context = CodeGenContext::new(&inkwell_context, db);
@@ -157,5 +157,5 @@ pub(crate) fn build_assembly_ir(
         .write_ir_to_file(file.path())
         .expect("could not write to temp file");
 
-    Arc::new(AssemblyIR { file })
+    Arc::new(AssemblyIr { file })
 }
