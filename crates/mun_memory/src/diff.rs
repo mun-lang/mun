@@ -131,6 +131,7 @@ fn append_primitive_mapping<T>(
     let mut insertions: Vec<Option<usize>> = insertions.into_iter().map(Some).collect();
 
     // For all deletions,
+    #[allow(clippy::manual_flatten)]
     'outer: for old_idx in deletions {
         let old_ty = unsafe { old.get_unchecked(old_idx) };
         // is there an insertion
@@ -154,10 +155,8 @@ fn append_primitive_mapping<T>(
     }
 
     // If an insertion did not have a matching deletion, then `Insert` it.
-    for insertion in insertions {
-        if let Some(index) = insertion {
-            mapping.push(Diff::Insert { index });
-        }
+    for index in insertions.into_iter().flatten() {
+        mapping.push(Diff::Insert { index });
     }
 }
 
@@ -296,6 +295,7 @@ where
 
     let mut mapping = Vec::with_capacity(diff.len());
     // For all deletions,
+    #[allow(clippy::manual_flatten)]
     'outer: for old_idx in deletions {
         let old_ty = unsafe { old.get_unchecked(old_idx) };
         // is there an insertion with the same name and type `T`?
@@ -391,10 +391,8 @@ where
     }
 
     // If an insertion did not have a matching deletion, then insert it.
-    for insertion in insertions {
-        if let Some(index) = insertion {
-            mapping.push(FieldDiff::Insert { index });
-        }
+    for index in insertions.into_iter().flatten() {
+        mapping.push(FieldDiff::Insert { index });
     }
 
     mapping.shrink_to_fit();

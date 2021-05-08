@@ -347,10 +347,7 @@ impl LanguageServerState {
                 .file_contents(file.file_id)
                 .map(Vec::from)
                 .unwrap_or_default();
-            let text = match String::from_utf8(bytes).ok() {
-                Some(text) => Some(Arc::from(text)),
-                None => None,
-            };
+            let text = String::from_utf8(bytes).ok().map(Arc::from);
 
             // Notify the database about this change
             analysis_change.change_file(hir::FileId(file.file_id.0), text);

@@ -310,7 +310,7 @@ impl RootedStruct {
             GcRootPtr::new(&runtime_ref.gc, raw.0)
         };
 
-        Self { runtime, handle }
+        Self { handle, runtime }
     }
 
     /// Converts the `RootedStruct` into a `StructRef`, using an external shared reference to a

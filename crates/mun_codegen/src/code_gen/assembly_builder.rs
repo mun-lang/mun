@@ -29,9 +29,9 @@ impl<'db, 'ink, 'ctx, 't> AssemblyBuilder<'db, 'ink, 'ctx, 't> {
 
         Self {
             code_gen,
+            module_group_partition,
             module_group_id,
             assembly_module,
-            module_group_partition,
         }
     }
 
