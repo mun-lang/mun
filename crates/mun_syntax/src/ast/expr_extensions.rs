@@ -176,10 +176,8 @@ impl ast::FieldExpr {
     pub fn field_access(&self) -> Option<FieldKind> {
         if let Some(nr) = self.name_ref() {
             Some(FieldKind::Name(nr))
-        } else if let Some(tok) = self.index_token() {
-            Some(FieldKind::Index(tok))
         } else {
-            None
+            self.index_token().map(FieldKind::Index)
         }
     }
 

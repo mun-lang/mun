@@ -110,10 +110,10 @@ impl ModuleTree {
         }
 
         Arc::new(ModuleTree {
+            root,
+            modules,
             package,
             diagnostics,
-            modules,
-            root,
         })
     }
 
