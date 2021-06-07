@@ -164,7 +164,7 @@ impl<'t> Parser<'t> {
 
     /// Create an error node and consume the next token.
     pub(crate) fn error_recover(&mut self, message: &str, recovery: TokenSet) {
-        if self.at(T!['{']) || self.at(T!['{']) || self.at_ts(recovery) {
+        if self.at(T!['{']) || self.at(T!['}']) || self.at_ts(recovery) {
             self.error(message);
         } else {
             let m = self.start();
