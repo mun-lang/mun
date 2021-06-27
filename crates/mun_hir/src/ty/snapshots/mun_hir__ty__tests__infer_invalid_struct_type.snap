@@ -3,7 +3,7 @@ source: crates/mun_hir/src/ty/tests.rs
 expression: "fn main(){\n    let a = Foo {b: 3};\n}"
 ---
 23..26: undefined type
-9..36 '{     ... 3}; }': nothing
+9..36 '{     ... 3}; }': ()
 19..20 'a': {unknown}
 23..33 'Foo {b: 3}': {unknown}
 31..32 '3': i32

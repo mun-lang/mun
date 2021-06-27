@@ -4,4 +4,4 @@ expression: "completion_string(r#\"\n        fn foo() {\n            let bar = 0
 ---
 lc foo_bar i32
 lc bar     i32
-fn foo     -> nothing
+fn foo     -> ()

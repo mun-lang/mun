@@ -1,5 +1,5 @@
 use super::InferenceResultBuilder;
-use crate::{Ty, TypeCtor};
+use crate::{ty::TyKind, Ty};
 
 impl<'a> InferenceResultBuilder<'a> {
     /// Unify two types, but may coerce the first one to the second using implicit coercion rules if
@@ -22,8 +22,8 @@ impl<'a> InferenceResultBuilder<'a> {
     }
 
     fn coerce_inner(&mut self, from_ty: Ty, to_ty: &Ty) -> bool {
-        match (&from_ty, to_ty) {
-            (ty_app!(TypeCtor::Never), ..) => return true,
+        match (from_ty.interned(), to_ty.interned()) {
+            (TyKind::Never, ..) => return true,
             _ => {
                 if self.type_variables.unify_inner_trivial(&from_ty, &to_ty) {
                     return true;

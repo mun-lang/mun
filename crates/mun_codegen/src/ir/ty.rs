@@ -2,7 +2,7 @@ use crate::{
     ir::IsIrType,
     type_info::{TypeInfo, TypeSize},
 };
-use hir::{ty_app, FloatBitness, HirDatabase, IntBitness, ResolveBitness, Ty, TypeCtor};
+use hir::{FloatBitness, HirDatabase, HirDisplay, IntBitness, ResolveBitness, Ty, TyKind};
 use inkwell::{
     context::Context,
     targets::TargetData,
@@ -10,6 +10,7 @@ use inkwell::{
     types::{AnyTypeEnum, BasicType, BasicTypeEnum, FloatType, IntType, StructType},
     AddressSpace,
 };
+use smallvec::SmallVec;
 use std::{cell::RefCell, collections::HashMap};
 
 /// An object to cache and convert HIR types to Inkwell types.
@@ -62,7 +63,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
         //  between compilations. We have to have a way to uniquely identify the `hir::Struct` and
         //  its contents.
 
-        let ty = Ty::simple(TypeCtor::Struct(struct_ty));
+        let ty = Ty::struct_ty(struct_ty);
 
         // Get the type from the cache
         if let Some(ir_ty) = self.types.borrow().get(&ty) {
@@ -138,10 +139,11 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
             })
             .collect();
 
-        match ty.ret() {
-            Ty::Empty => self.context.void_type().fn_type(&param_tys, false),
-            ty => self
-                .get_basic_type(&ty)
+        let return_type = ty.ret();
+        match return_type.interned() {
+            TyKind::Tuple(0, _) => self.context.void_type().fn_type(&param_tys, false),
+            _ => self
+                .get_basic_type(return_type)
                 .expect("could not convert return value")
                 .fn_type(&param_tys, false),
         }
@@ -160,10 +162,11 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
             })
             .collect();
 
-        match ty.ret() {
-            Ty::Empty => self.context.void_type().fn_type(&param_tys, false),
-            ty => self
-                .get_public_basic_type(&ty)
+        let return_type = ty.ret();
+        match return_type.interned() {
+            TyKind::Tuple(0, _) => self.context.void_type().fn_type(&param_tys, false),
+            _ => self
+                .get_public_basic_type(return_type)
                 .expect("could not convert return value")
                 .fn_type(&param_tys, false),
         }
@@ -172,14 +175,12 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
     /// Returns the inkwell type of the specified HIR type as a basic value. If the type cannot be
     /// represented as a basic type enum, `None` is returned.
     pub fn get_basic_type(&self, ty: &hir::Ty) -> Option<BasicTypeEnum<'ink>> {
-        match ty {
-            Ty::Empty => Some(self.get_empty_type().into()),
-            ty_app!(hir::TypeCtor::Float(float_ty)) => Some(self.get_float_type(*float_ty).into()),
-            ty_app!(hir::TypeCtor::Int(int_ty)) => Some(self.get_int_type(*int_ty).into()),
-            ty_app!(hir::TypeCtor::Struct(struct_ty)) => {
-                Some(self.get_struct_reference_type(*struct_ty))
-            }
-            ty_app!(hir::TypeCtor::Bool) => Some(self.get_bool_type().into()),
+        match ty.interned() {
+            TyKind::Tuple(_, substs) => Some(self.get_tuple_type(substs).into()),
+            TyKind::Float(float_ty) => Some(self.get_float_type(*float_ty).into()),
+            TyKind::Int(int_ty) => Some(self.get_int_type(*int_ty).into()),
+            TyKind::Struct(struct_ty) => Some(self.get_struct_reference_type(*struct_ty)),
+            TyKind::Bool => Some(self.get_bool_type().into()),
             _ => None,
         }
     }
@@ -188,14 +189,12 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
     /// public API. Internally this means that struct types are always pointers. If the type cannot
     /// be represented as a basic type enum, `None` is returned.
     pub fn get_public_basic_type(&self, ty: &hir::Ty) -> Option<BasicTypeEnum<'ink>> {
-        match ty {
-            Ty::Empty => Some(self.get_empty_type().into()),
-            ty_app!(hir::TypeCtor::Float(float_ty)) => Some(self.get_float_type(*float_ty).into()),
-            ty_app!(hir::TypeCtor::Int(int_ty)) => Some(self.get_int_type(*int_ty).into()),
-            ty_app!(hir::TypeCtor::Struct(struct_ty)) => {
-                Some(self.get_public_struct_reference_type(*struct_ty))
-            }
-            ty_app!(hir::TypeCtor::Bool) => Some(self.get_bool_type().into()),
+        match ty.interned() {
+            TyKind::Tuple(_, substs) => Some(self.get_tuple_type(substs).into()),
+            TyKind::Float(float_ty) => Some(self.get_float_type(*float_ty).into()),
+            TyKind::Int(int_ty) => Some(self.get_int_type(*int_ty).into()),
+            TyKind::Struct(struct_ty) => Some(self.get_public_struct_reference_type(*struct_ty)),
+            TyKind::Bool => Some(self.get_bool_type().into()),
             _ => None,
         }
     }
@@ -203,17 +202,18 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
     /// Returns the inkwell type of the specified HIR type. If the type cannot be represented as an
     /// inkwell type, `None` is returned.
     pub fn get_any_type(&self, ty: &hir::Ty) -> Option<AnyTypeEnum<'ink>> {
-        match ty {
-            Ty::Empty => Some(self.get_empty_type().into()),
-            ty_app!(hir::TypeCtor::Float(float_ty)) => Some(self.get_float_type(*float_ty).into()),
-            ty_app!(hir::TypeCtor::Int(int_ty)) => Some(self.get_int_type(*int_ty).into()),
-            ty_app!(hir::TypeCtor::Struct(struct_ty)) => {
-                Some(self.get_struct_type(*struct_ty).into())
-            }
-            ty_app!(hir::TypeCtor::Bool) => Some(self.context.bool_type().into()),
-            ty_app!(hir::TypeCtor::FnDef(hir::CallableDef::Function(fn_ty))) => {
+        match ty.interned() {
+            TyKind::Tuple(_, substs) => Some(self.get_tuple_type(substs).into()),
+            TyKind::Float(float_ty) => Some(self.get_float_type(*float_ty).into()),
+            TyKind::Int(int_ty) => Some(self.get_int_type(*int_ty).into()),
+            TyKind::Struct(struct_ty) => Some(self.get_struct_type(*struct_ty).into()),
+            TyKind::FnDef(hir::CallableDef::Function(fn_ty), type_params) => {
+                if !type_params.is_empty() {
+                    unimplemented!("cannot yet deal with type parameters in functions");
+                }
                 Some(self.get_function_type(*fn_ty).into())
             }
+            TyKind::Bool => Some(self.get_bool_type().into()),
             _ => None,
         }
     }
@@ -223,39 +223,49 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
         self.context.struct_type(&[], false)
     }
 
+    /// Returns the type for a tuple
+    pub fn get_tuple_type(&self, type_params: &[Ty]) -> StructType<'ink> {
+        let mut tuple_ir_types: SmallVec<[BasicTypeEnum<'ink>; 2]> =
+            SmallVec::with_capacity(type_params.len());
+        for ty in type_params {
+            tuple_ir_types.push(
+                self.get_basic_type(ty)
+                    .expect("tuple type should be a basic type"),
+            )
+        }
+        self.context.struct_type(&tuple_ir_types, false)
+    }
+
     /// Returns a `TypeInfo` for the specified `ty`
     pub fn type_info(&self, ty: &Ty) -> TypeInfo {
-        match ty {
-            Ty::Apply(ctor) => match ctor.ctor {
-                TypeCtor::Float(ty) => {
-                    let ir_ty = self.get_float_type(ty);
-                    let type_size = TypeSize::from_ir_type(&ir_ty, &self.target_data);
-                    TypeInfo::new_primitive(
-                        format!("core::{}", ty.resolve(&self.db.target_data_layout())),
-                        type_size,
-                    )
-                }
-                TypeCtor::Int(ty) => {
-                    let ir_ty = self.get_int_type(ty);
-                    let type_size = TypeSize::from_ir_type(&ir_ty, &self.target_data);
-                    TypeInfo::new_primitive(
-                        format!("core::{}", ty.resolve(&self.db.target_data_layout())),
-                        type_size,
-                    )
-                }
-                TypeCtor::Bool => {
-                    let ir_ty = self.get_bool_type();
-                    let type_size = TypeSize::from_ir_type(&ir_ty, &self.target_data);
-                    TypeInfo::new_primitive("core::bool", type_size)
-                }
-                TypeCtor::Struct(s) => {
-                    let ir_ty = self.get_struct_type(s);
-                    let type_size = TypeSize::from_ir_type(&ir_ty, &self.target_data);
-                    TypeInfo::new_struct(self.db, s, type_size)
-                }
-                _ => unreachable!("{:?} unhandled", ctor),
-            },
-            _ => unreachable!("{:?} unhandled", ty),
+        match ty.interned() {
+            &TyKind::Float(ty) => {
+                let ir_ty = self.get_float_type(ty);
+                let type_size = TypeSize::from_ir_type(&ir_ty, &self.target_data);
+                TypeInfo::new_primitive(
+                    format!("core::{}", ty.resolve(&self.db.target_data_layout())),
+                    type_size,
+                )
+            }
+            &TyKind::Int(ty) => {
+                let ir_ty = self.get_int_type(ty);
+                let type_size = TypeSize::from_ir_type(&ir_ty, &self.target_data);
+                TypeInfo::new_primitive(
+                    format!("core::{}", ty.resolve(&self.db.target_data_layout())),
+                    type_size,
+                )
+            }
+            TyKind::Bool => {
+                let ir_ty = self.get_bool_type();
+                let type_size = TypeSize::from_ir_type(&ir_ty, &self.target_data);
+                TypeInfo::new_primitive("core::bool", type_size)
+            }
+            &TyKind::Struct(s) => {
+                let ir_ty = self.get_struct_type(s);
+                let type_size = TypeSize::from_ir_type(&ir_ty, &self.target_data);
+                TypeInfo::new_struct(self.db, s, type_size)
+            }
+            _ => unimplemented!("{} unhandled", ty.display(self.db)),
         }
     }
 }

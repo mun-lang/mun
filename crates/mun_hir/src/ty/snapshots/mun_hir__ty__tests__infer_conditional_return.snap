@@ -5,7 +5,7 @@ expression: "fn foo(a:int)->i32 {\n    if a > 4 {\n        return 4;\n    }\n   
 9..12: undefined type
 7..8 'a': {unknown}
 19..67 '{     ...   a }': i32
-25..59 'if a >...     }': nothing
+25..59 'if a >...     }': ()
 28..29 'a': {unknown}
 28..33 'a > 4': bool
 32..33 '4': i32

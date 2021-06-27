@@ -16,7 +16,7 @@ expression: "//- /foo.mun\nstruct Foo {};\nstruct Bar(i64);\nstruct Baz;\nfn foo
 76..93: access of private type
 128..145: access of private type
 177..197: access of private type
-10..812 '{     ...o(); }': nothing
+10..812 '{     ...o(); }': ()
 20..21 'a': Foo
 24..44 'packag...Foo {}': Foo
 72..73 'a': Bar
@@ -37,10 +37,10 @@ expression: "//- /foo.mun\nstruct Foo {};\nstruct Bar(i64);\nstruct Baz;\nfn foo
 318..326 'foo::Baz': Baz
 354..355 'a': Foo
 358..371 'foo::FooBar{}': Foo
-396..413 'packag...o::foo': function foo() -> nothing
-396..415 'packag...:foo()': nothing
-439..447 'foo::foo': function foo() -> nothing
-439..449 'foo::foo()': nothing
+396..413 'packag...o::foo': function foo() -> ()
+396..415 'packag...:foo()': ()
+439..447 'foo::foo': function foo() -> ()
+439..449 'foo::foo()': ()
 478..479 'a': PubSupFoo
 482..508 'packag...Foo {}': PubSupFoo
 518..519 'a': PubSupBar
@@ -61,11 +61,11 @@ expression: "//- /foo.mun\nstruct Foo {};\nstruct Bar(i64);\nstruct Baz;\nfn foo
 704..718 'foo::PubSupBaz': PubSupBaz
 728..729 'a': PubSupFoo
 732..751 'foo::P...oBar{}': PubSupFoo
-758..783 'packag...up_foo': function pub_sup_foo() -> nothing
-758..785 'packag..._foo()': nothing
-791..807 'foo::p...up_foo': function pub_sup_foo() -> nothing
-791..809 'foo::p..._foo()': nothing
-10..200 '{     ...Bar{}}': nothing
+758..783 'packag...up_foo': function pub_sup_foo() -> ()
+758..785 'packag..._foo()': ()
+791..807 'foo::p...up_foo': function pub_sup_foo() -> ()
+791..809 'foo::p..._foo()': ()
+10..200 '{     ...Bar{}}': ()
 20..21 'a': Foo
 24..44 'packag...Foo {}': Foo
 72..73 'a': Bar
@@ -76,11 +76,11 @@ expression: "//- /foo.mun\nstruct Foo {};\nstruct Bar(i64);\nstruct Baz;\nfn foo
 128..145 'packag...o::Baz': Baz
 173..174 'a': Foo
 177..199 'packag...oBar{}': Foo
-53..55 '{}': nothing
-158..160 '{}': nothing
-314..316 '{}': nothing
-507..509 '{}': nothing
-10..300 '{     ...o(); }': nothing
+53..55 '{}': ()
+158..160 '{}': ()
+314..316 '{}': ()
+507..509 '{}': ()
+10..300 '{     ...o(); }': ()
 20..21 'a': Foo
 24..44 'packag...Foo {}': Foo
 54..55 'a': Bar
@@ -101,7 +101,7 @@ expression: "//- /foo.mun\nstruct Foo {};\nstruct Bar(i64);\nstruct Baz;\nfn foo
 214..224 'super::Baz': Baz
 234..235 'a': Foo
 238..253 'super::FooBar{}': Foo
-260..277 'packag...o::foo': function foo() -> nothing
-260..279 'packag...:foo()': nothing
-285..295 'super::foo': function foo() -> nothing
-285..297 'super::foo()': nothing
+260..277 'packag...o::foo': function foo() -> ()
+260..279 'packag...:foo()': ()
+285..295 'super::foo': function foo() -> ()
+285..297 'super::foo()': ()

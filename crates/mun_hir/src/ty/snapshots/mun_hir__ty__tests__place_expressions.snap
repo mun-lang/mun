@@ -4,10 +4,10 @@ expression: "fn foo(a:i32) {\n    a += 3;\n    3 = 5; // error: invalid left han
 ---
 32..33: invalid left hand side of expression
 7..8 'a': i32
-14..87 '{     ...sion }': nothing
+14..87 '{     ...sion }': ()
 20..21 'a': i32
-20..26 'a += 3': nothing
+20..26 'a += 3': ()
 25..26 '3': i32
 32..33 '3': i32
-32..37 '3 = 5': nothing
+32..37 '3 = 5': ()
 36..37 '5': i32

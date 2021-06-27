@@ -7,7 +7,7 @@ expression: "struct Foo {}\ntype Foo = Foo;\n\ntype A = B;\ntype B = A;\n\nfn ma
 52..53: cyclic type
 119..120: cyclic type
 159..160: cyclic type
-66..189 '{     ...type }': nothing
+66..189 '{     ...type }': ()
 76..77 'a': Foo
 116..117 'b': {unknown}
 156..157 'c': {unknown}

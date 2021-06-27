@@ -29,8 +29,8 @@ pub use crate::{
     primitive_type::{FloatBitness, IntBitness, Signedness},
     resolve::{resolver_for_expr, resolver_for_scope, Resolver, TypeNs, ValueNs},
     ty::{
-        lower::CallableDef, ApplicationTy, FloatTy, InferenceResult, IntTy, ResolveBitness, Ty,
-        TypeCtor,
+        lower::CallableDef, FloatTy, InferenceResult, IntTy, ResolveBitness, Substitution, Ty,
+        TyKind,
     },
     visibility::{HasVisibility, Visibility},
 };
