@@ -55,7 +55,7 @@ impl<'a> ExprValidator<'a> {
             .iter()
             .chain(std::iter::once(ret_type_ref))
             .map(|type_ref| {
-                let ty = Ty::from_hir(self.db, &resolver, fn_data.type_ref_map(), *type_ref).ty;
+                let (ty, _) = Ty::from_hir(self.db, &resolver, fn_data.type_ref_map(), *type_ref);
                 (ty, type_ref)
             });
 

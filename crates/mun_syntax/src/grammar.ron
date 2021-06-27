@@ -137,6 +137,7 @@ Grammar(
         "TUPLE_FIELD_DEF",
 
         "PATH_TYPE",
+        "ARRAY_TYPE",
         "NEVER_TYPE",
 
         "LET_STMT",
@@ -150,11 +151,13 @@ Grammar(
         "CALL_EXPR",
         "FIELD_EXPR",
         "IF_EXPR",
+        "INDEX_EXPR",
         "BLOCK_EXPR",
         "RETURN_EXPR",
         "WHILE_EXPR",
         "LOOP_EXPR",
         "BREAK_EXPR",
+        "ARRAY_EXPR",
         "CONDITION",
 
         "BIND_PAT",
@@ -279,6 +282,8 @@ Grammar(
             traits: ["ArgListOwner"],
             options: [ "Expr" ],
         ),
+        "IndexExpr": (
+        ),
         "FieldExpr": (
             options: ["Expr", "NameRef"]
         ),
@@ -286,6 +291,11 @@ Grammar(
             options: [ "Condition" ]
         ),
         "BreakExpr": (options: ["Expr"]),
+        "ArrayExpr": (
+            collections: [
+                [ "exprs", "Expr" ]
+            ]
+        ),
         "ArgList": (
             collections: [
                 ["args", "Expr"]
@@ -307,6 +317,8 @@ Grammar(
                 "ReturnExpr",
                 "BreakExpr",
                 "BlockExpr",
+                "ArrayExpr",
+                "IndexExpr",
                 "RecordLit",
             ]
         ),
@@ -314,10 +326,12 @@ Grammar(
         "Name": (),
         "NameRef": (),
         "PathType": (options: ["Path"]),
+        "ArrayType": (options: ["TypeRef"]),
         "NeverType": (),
         "TypeRef": (
             enum: [
                 "PathType",
+                "ArrayType",
                 "NeverType",
             ]
         ),

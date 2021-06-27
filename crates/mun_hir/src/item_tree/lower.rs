@@ -5,11 +5,11 @@ use super::{
     LocalItemTreeId, ModItem, RawVisibilityId, Struct, StructDefKind, TypeAlias,
 };
 use crate::item_tree::Import;
+use crate::type_ref::{TypeRefMap, TypeRefMapBuilder};
 use crate::{
     arena::{Idx, RawId},
     name::AsName,
     source_id::AstIdMap,
-    type_ref::TypeRef,
     visibility::RawVisibility,
     DefDatabase, FileId, InFile, Name, Path,
 };
@@ -142,28 +142,31 @@ impl Context {
     fn lower_function(&mut self, func: &ast::FunctionDef) -> Option<LocalItemTreeId<Function>> {
         let name = func.name()?.as_name();
         let visibility = self.lower_visibility(func);
+        let mut types = TypeRefMap::builder();
 
         // Lower all the params
         let mut params = Vec::new();
         if let Some(param_list) = func.param_list() {
             for param in param_list.params() {
-                let type_ref = self.lower_type_ref_opt(param.ascribed_type());
+                let type_ref = types.alloc_from_node_opt(param.ascribed_type().as_ref());
                 params.push(type_ref);
             }
         }
 
         // Lowers the return type
-        let ret_type = func
-            .ret_type()
-            .and_then(|rt| rt.type_ref())
-            .map_or_else(|| TypeRef::Empty, |ty| self.lower_type_ref(&ty));
+        let ret_type = match func.ret_type().and_then(|rt| rt.type_ref()) {
+            None => types.unit(),
+            Some(ty) => types.alloc_from_node(&ty),
+        };
 
         let is_extern = func.is_extern();
 
+        let (types, _types_source_map) = types.finish();
         let ast_id = self.source_ast_id_map.ast_id(func);
         let res = Function {
             name,
             visibility,
+            types,
             is_extern,
             params: params.into_boxed_slice(),
             ret_type,
@@ -177,16 +180,20 @@ impl Context {
     fn lower_struct(&mut self, strukt: &ast::StructDef) -> Option<LocalItemTreeId<Struct>> {
         let name = strukt.name()?.as_name();
         let visibility = self.lower_visibility(strukt);
-        let fields = self.lower_fields(&strukt.kind());
+        let mut types = TypeRefMap::builder();
+        let fields = self.lower_fields(&strukt.kind(), &mut types);
         let ast_id = self.source_ast_id_map.ast_id(strukt);
         let kind = match strukt.kind() {
             StructKind::Record(_) => StructDefKind::Record,
             StructKind::Tuple(_) => StructDefKind::Tuple,
             StructKind::Unit => StructDefKind::Unit,
         };
+
+        let (types, _types_source_map) = types.finish();
         let res = Struct {
             name,
             visibility,
+            types,
             fields,
             ast_id,
             kind,
@@ -195,14 +202,18 @@ impl Context {
     }
 
     /// Lowers the fields of a struct or enum
-    fn lower_fields(&mut self, struct_kind: &ast::StructKind) -> Fields {
+    fn lower_fields(
+        &mut self,
+        struct_kind: &ast::StructKind,
+        types: &mut TypeRefMapBuilder,
+    ) -> Fields {
         match struct_kind {
             StructKind::Record(it) => {
-                let range = self.lower_record_fields(it);
+                let range = self.lower_record_fields(it, types);
                 Fields::Record(range)
             }
             StructKind::Tuple(it) => {
-                let range = self.lower_tuple_fields(it);
+                let range = self.lower_tuple_fields(it, types);
                 Fields::Tuple(range)
             }
             StructKind::Unit => Fields::Unit,
@@ -210,10 +221,14 @@ impl Context {
     }
 
     /// Lowers records fields (e.g. `{ a: i32, b: i32 }`)
-    fn lower_record_fields(&mut self, fields: &ast::RecordFieldDefList) -> IdRange<Field> {
+    fn lower_record_fields(
+        &mut self,
+        fields: &ast::RecordFieldDefList,
+        types: &mut TypeRefMapBuilder,
+    ) -> IdRange<Field> {
         let start = self.next_field_idx();
         for field in fields.fields() {
-            if let Some(data) = self.lower_record_field(&field) {
+            if let Some(data) = self.lower_record_field(&field, types) {
                 let _idx = self.data.fields.alloc(data);
             }
         }
@@ -222,18 +237,26 @@ impl Context {
     }
 
     /// Lowers a record field (e.g. `a:i32`)
-    fn lower_record_field(&mut self, field: &ast::RecordFieldDef) -> Option<Field> {
+    fn lower_record_field(
+        &mut self,
+        field: &ast::RecordFieldDef,
+        types: &mut TypeRefMapBuilder,
+    ) -> Option<Field> {
         let name = field.name()?.as_name();
-        let type_ref = self.lower_type_ref_opt(field.ascribed_type());
+        let type_ref = types.alloc_from_node_opt(field.ascribed_type().as_ref());
         let res = Field { name, type_ref };
         Some(res)
     }
 
     /// Lowers tuple fields (e.g. `(i32, u8)`)
-    fn lower_tuple_fields(&mut self, fields: &ast::TupleFieldDefList) -> IdRange<Field> {
+    fn lower_tuple_fields(
+        &mut self,
+        fields: &ast::TupleFieldDefList,
+        types: &mut TypeRefMapBuilder,
+    ) -> IdRange<Field> {
         let start = self.next_field_idx();
         for (i, field) in fields.fields().enumerate() {
-            let data = self.lower_tuple_field(i, &field);
+            let data = self.lower_tuple_field(i, &field, types);
             let _idx = self.data.fields.alloc(data);
         }
         let end = self.next_field_idx();
@@ -241,9 +264,14 @@ impl Context {
     }
 
     /// Lowers a tuple field (e.g. `i32`)
-    fn lower_tuple_field(&mut self, idx: usize, field: &ast::TupleFieldDef) -> Field {
+    fn lower_tuple_field(
+        &mut self,
+        idx: usize,
+        field: &ast::TupleFieldDef,
+        types: &mut TypeRefMapBuilder,
+    ) -> Field {
         let name = Name::new_tuple_field(idx);
-        let type_ref = self.lower_type_ref_opt(field.type_ref());
+        let type_ref = types.alloc_from_node_opt(field.type_ref().as_ref());
         Field { name, type_ref }
     }
 
@@ -254,27 +282,18 @@ impl Context {
     ) -> Option<LocalItemTreeId<TypeAlias>> {
         let name = type_alias.name()?.as_name();
         let visibility = self.lower_visibility(type_alias);
-        let type_ref = type_alias.type_ref().map(|ty| self.lower_type_ref(&ty));
+        let mut types = TypeRefMap::builder();
+        let type_ref = type_alias.type_ref().map(|ty| types.alloc_from_node(&ty));
         let ast_id = self.source_ast_id_map.ast_id(type_alias);
+        let (types, _types_source_map) = types.finish();
         let res = TypeAlias {
             name,
             visibility,
+            types,
             type_ref,
             ast_id,
         };
         Some(self.data.type_aliases.alloc(res).into())
-    }
-
-    /// Lowers an `ast::TypeRef`
-    fn lower_type_ref(&self, type_ref: &ast::TypeRef) -> TypeRef {
-        TypeRef::from_ast(type_ref.clone())
-    }
-
-    /// Lowers an optional `ast::TypeRef`
-    fn lower_type_ref_opt(&self, type_ref: Option<ast::TypeRef>) -> TypeRef {
-        type_ref
-            .map(|ty| self.lower_type_ref(&ty))
-            .unwrap_or(TypeRef::Error)
     }
 
     /// Lowers an `ast::VisibilityOwner`

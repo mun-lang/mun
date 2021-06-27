@@ -43,6 +43,62 @@ impl ArgList {
     }
 }
 
+// ArrayExpr
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ArrayExpr {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for ArrayExpr {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, ARRAY_EXPR)
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(ArrayExpr { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl ArrayExpr {
+    pub fn exprs(&self) -> impl Iterator<Item = Expr> {
+        super::children(self)
+    }
+}
+
+// ArrayType
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ArrayType {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for ArrayType {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, ARRAY_TYPE)
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(ArrayType { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl ArrayType {
+    pub fn type_ref(&self) -> Option<TypeRef> {
+        super::child_opt(self)
+    }
+}
+
 // BinExpr
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -241,6 +297,8 @@ impl AstNode for Expr {
                 | RETURN_EXPR
                 | BREAK_EXPR
                 | BLOCK_EXPR
+                | ARRAY_EXPR
+                | INDEX_EXPR
                 | RECORD_LIT
         )
     }
@@ -270,6 +328,8 @@ pub enum ExprKind {
     ReturnExpr(ReturnExpr),
     BreakExpr(BreakExpr),
     BlockExpr(BlockExpr),
+    ArrayExpr(ArrayExpr),
+    IndexExpr(IndexExpr),
     RecordLit(RecordLit),
 }
 impl From<Literal> for Expr {
@@ -337,6 +397,16 @@ impl From<BlockExpr> for Expr {
         Expr { syntax: n.syntax }
     }
 }
+impl From<ArrayExpr> for Expr {
+    fn from(n: ArrayExpr) -> Expr {
+        Expr { syntax: n.syntax }
+    }
+}
+impl From<IndexExpr> for Expr {
+    fn from(n: IndexExpr) -> Expr {
+        Expr { syntax: n.syntax }
+    }
+}
 impl From<RecordLit> for Expr {
     fn from(n: RecordLit) -> Expr {
         Expr { syntax: n.syntax }
@@ -359,6 +429,8 @@ impl Expr {
             RETURN_EXPR => ExprKind::ReturnExpr(ReturnExpr::cast(self.syntax.clone()).unwrap()),
             BREAK_EXPR => ExprKind::BreakExpr(BreakExpr::cast(self.syntax.clone()).unwrap()),
             BLOCK_EXPR => ExprKind::BlockExpr(BlockExpr::cast(self.syntax.clone()).unwrap()),
+            ARRAY_EXPR => ExprKind::ArrayExpr(ArrayExpr::cast(self.syntax.clone()).unwrap()),
+            INDEX_EXPR => ExprKind::IndexExpr(IndexExpr::cast(self.syntax.clone()).unwrap()),
             RECORD_LIT => ExprKind::RecordLit(RecordLit::cast(self.syntax.clone()).unwrap()),
             _ => unreachable!(),
         }
@@ -494,6 +566,30 @@ impl IfExpr {
         super::child_opt(self)
     }
 }
+
+// IndexExpr
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct IndexExpr {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for IndexExpr {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, INDEX_EXPR)
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(IndexExpr { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl IndexExpr {}
 
 // LetStmt
 
@@ -1483,7 +1579,7 @@ pub struct TypeRef {
 
 impl AstNode for TypeRef {
     fn can_cast(kind: SyntaxKind) -> bool {
-        matches!(kind, PATH_TYPE | NEVER_TYPE)
+        matches!(kind, PATH_TYPE | ARRAY_TYPE | NEVER_TYPE)
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -1499,10 +1595,16 @@ impl AstNode for TypeRef {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeRefKind {
     PathType(PathType),
+    ArrayType(ArrayType),
     NeverType(NeverType),
 }
 impl From<PathType> for TypeRef {
     fn from(n: PathType) -> TypeRef {
+        TypeRef { syntax: n.syntax }
+    }
+}
+impl From<ArrayType> for TypeRef {
+    fn from(n: ArrayType) -> TypeRef {
         TypeRef { syntax: n.syntax }
     }
 }
@@ -1516,6 +1618,7 @@ impl TypeRef {
     pub fn kind(&self) -> TypeRefKind {
         match self.syntax.kind() {
             PATH_TYPE => TypeRefKind::PathType(PathType::cast(self.syntax.clone()).unwrap()),
+            ARRAY_TYPE => TypeRefKind::ArrayType(ArrayType::cast(self.syntax.clone()).unwrap()),
             NEVER_TYPE => TypeRefKind::NeverType(NeverType::cast(self.syntax.clone()).unwrap()),
             _ => unreachable!(),
         }

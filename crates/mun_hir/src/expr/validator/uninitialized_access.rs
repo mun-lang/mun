@@ -180,6 +180,15 @@ impl<'d> ExprValidator<'d> {
             Expr::Field { expr, .. } => {
                 self.validate_expr_access(sink, initialized_patterns, *expr, ExprKind::Normal);
             }
+            Expr::Index { base, index } => {
+                self.validate_expr_access(sink, initialized_patterns, *base, ExprKind::Normal);
+                self.validate_expr_access(sink, initialized_patterns, *index, ExprKind::Normal);
+            }
+            Expr::Array(exprs) => {
+                for expr in exprs {
+                    self.validate_expr_access(sink, initialized_patterns, *expr, ExprKind::Normal);
+                }
+            }
             Expr::Literal(_) => {}
             Expr::Missing => {}
         }

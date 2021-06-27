@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     ids::Lookup,
     ids::TypeAliasId,
-    type_ref::{LocalTypeRefId, TypeRefBuilder, TypeRefMap, TypeRefSourceMap},
+    type_ref::{LocalTypeRefId, TypeRefMap, TypeRefSourceMap},
     visibility::RawVisibility,
     DefDatabase, DiagnosticSink, FileId, HasVisibility, HirDatabase, Name, Visibility,
 };
@@ -11,7 +11,7 @@ use crate::{
 use super::Module;
 use crate::expr::validator::TypeAliasValidator;
 use crate::resolve::HasResolver;
-use crate::ty::lower::LowerBatchResult;
+use crate::ty::lower::LowerTyMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TypeAlias {
@@ -47,7 +47,7 @@ impl TypeAlias {
         self.data(db.upcast()).type_ref_id
     }
 
-    pub fn lower(self, db: &dyn HirDatabase) -> Arc<LowerBatchResult> {
+    pub fn lower(self, db: &dyn HirDatabase) -> Arc<LowerTyMap> {
         db.lower_type_alias(self)
     }
 
@@ -78,7 +78,7 @@ impl TypeAliasData {
         let item_tree = db.item_tree(loc.id.file_id);
         let alias = &item_tree[loc.id.value];
         let src = item_tree.source(db, loc.id.value);
-        let mut type_ref_builder = TypeRefBuilder::default();
+        let mut type_ref_builder = TypeRefMap::builder();
         let type_ref_opt = src.type_ref();
         let type_ref_id = type_ref_builder.alloc_from_node_opt(type_ref_opt.as_ref());
         let (type_ref_map, type_ref_source_map) = type_ref_builder.finish();

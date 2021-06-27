@@ -351,6 +351,15 @@ impl ast::IfExpr {
     }
 }
 
+impl ast::IndexExpr {
+    pub fn base(&self) -> Option<ast::Expr> {
+        children(self).next()
+    }
+    pub fn index(&self) -> Option<ast::Expr> {
+        children(self).nth(1)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{split_float_text_and_suffix, split_int_text_and_suffix};

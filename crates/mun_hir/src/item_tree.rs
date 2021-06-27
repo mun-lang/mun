@@ -3,10 +3,10 @@ mod lower;
 mod tests;
 
 use crate::path::ImportAlias;
+use crate::type_ref::{LocalTypeRefId, TypeRefMap};
 use crate::{
     arena::{Arena, Idx},
     source_id::FileAstId,
-    type_ref::TypeRef,
     visibility::RawVisibility,
     DefDatabase, FileId, InFile, Name, Path,
 };
@@ -299,8 +299,9 @@ pub struct Function {
     pub name: Name,
     pub visibility: RawVisibilityId,
     pub is_extern: bool,
-    pub params: Box<[TypeRef]>,
-    pub ret_type: TypeRef,
+    pub types: TypeRefMap,
+    pub params: Box<[LocalTypeRefId]>,
+    pub ret_type: LocalTypeRefId,
     pub ast_id: FileAstId<ast::FunctionDef>,
 }
 
@@ -308,6 +309,7 @@ pub struct Function {
 pub struct Struct {
     pub name: Name,
     pub visibility: RawVisibilityId,
+    pub types: TypeRefMap,
     pub fields: Fields,
     pub ast_id: FileAstId<ast::StructDef>,
     pub kind: StructDefKind,
@@ -317,7 +319,8 @@ pub struct Struct {
 pub struct TypeAlias {
     pub name: Name,
     pub visibility: RawVisibilityId,
-    pub type_ref: Option<TypeRef>,
+    pub types: TypeRefMap,
+    pub type_ref: Option<LocalTypeRefId>,
     pub ast_id: FileAstId<ast::TypeAliasDef>,
 }
 
@@ -343,7 +346,7 @@ pub enum Fields {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Field {
     pub name: Name,
-    pub type_ref: TypeRef,
+    pub type_ref: LocalTypeRefId,
 }
 
 /// A range of Ids

@@ -107,7 +107,7 @@ impl AstIdMap {
 
     /// Returns the `AstPtr` of the given id.
     pub(crate) fn get<N: AstNode>(&self, id: FileAstId<N>) -> AstPtr<N> {
-        self.arena[id.raw].try_cast::<N>().unwrap()
+        self.arena[id.raw].clone().try_cast::<N>().unwrap()
     }
 
     /// Constructs a new `ErasedFileAstId` from a `SyntaxNode`

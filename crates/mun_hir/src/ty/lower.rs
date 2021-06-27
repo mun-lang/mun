@@ -1,3 +1,5 @@
+//! Methods for lower the HIR to types.
+
 pub(crate) use self::diagnostics::LowerDiagnostic;
 use crate::resolve::{HasResolver, TypeNs};
 use crate::ty::{Substitution, TyKind};
@@ -15,43 +17,33 @@ use crate::{
 use crate::{HasVisibility, Visibility};
 use std::{ops::Index, sync::Arc};
 
+/// A struct which holds resolved type references to `Ty`s.
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct LowerBatchStandardTypes {
-    unknown: Ty,
+pub struct LowerTyMap {
+    pub(crate) type_ref_to_type: ArenaMap<LocalTypeRefId, Ty>,
+    pub(crate) diagnostics: Vec<LowerDiagnostic>,
+
+    unknown_ty: Ty,
 }
 
-impl Default for LowerBatchStandardTypes {
+impl Default for LowerTyMap {
     fn default() -> Self {
-        LowerBatchStandardTypes {
-            unknown: TyKind::Unknown.intern(),
+        LowerTyMap {
+            type_ref_to_type: Default::default(),
+            diagnostics: vec![],
+            unknown_ty: TyKind::Unknown.intern(),
         }
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub(crate) struct LowerResult {
-    pub(crate) ty: Ty,
-    pub(crate) diagnostics: Vec<LowerDiagnostic>,
-}
-
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct LowerBatchResult {
-    pub(crate) type_ref_to_type: ArenaMap<LocalTypeRefId, Ty>,
-    pub(crate) diagnostics: Vec<LowerDiagnostic>,
-
-    standard_types: LowerBatchStandardTypes,
-}
-
-impl Index<LocalTypeRefId> for LowerBatchResult {
+impl Index<LocalTypeRefId> for LowerTyMap {
     type Output = Ty;
     fn index(&self, expr: LocalTypeRefId) -> &Ty {
-        self.type_ref_to_type
-            .get(expr)
-            .unwrap_or(&self.standard_types.unknown)
+        self.type_ref_to_type.get(expr).unwrap_or(&self.unknown_ty)
     }
 }
 
-impl LowerBatchResult {
+impl LowerTyMap {
     /// Adds all the `LowerDiagnostic`s of the result to the `DiagnosticSink`.
     pub(crate) fn add_diagnostics(
         &self,
@@ -67,18 +59,22 @@ impl LowerBatchResult {
 }
 
 impl Ty {
+    /// Tries to lower a HIR type reference to an actual resolved type. Besides the type also
+    /// returns an diagnostics that where encountered along the way.
     pub(crate) fn from_hir(
         db: &dyn HirDatabase,
         resolver: &Resolver,
         type_ref_map: &TypeRefMap,
         type_ref: LocalTypeRefId,
-    ) -> LowerResult {
+    ) -> (Ty, Vec<diagnostics::LowerDiagnostic>) {
         let mut diagnostics = Vec::new();
         let ty =
             Ty::from_hir_with_diagnostics(db, resolver, type_ref_map, &mut diagnostics, type_ref);
-        LowerResult { ty, diagnostics }
+        (ty, diagnostics)
     }
 
+    /// Tries to lower a HIR type reference to an actual resolved type. Takes a mutable reference
+    /// to a `Vec` which will hold any diagnostics encountered a long the way.
     fn from_hir_with_diagnostics(
         db: &dyn HirDatabase,
         resolver: &Resolver,
@@ -87,10 +83,28 @@ impl Ty {
         type_ref: LocalTypeRefId,
     ) -> Ty {
         let res = match &type_ref_map[type_ref] {
-            TypeRef::Path(path) => Ty::from_hir_path(db, resolver, type_ref, path, diagnostics),
+            TypeRef::Path(path) => Ty::from_path(db, resolver, type_ref, path, diagnostics),
             TypeRef::Error => Some((TyKind::Unknown.intern(), false)),
-            TypeRef::Empty => Some((Ty::unit(), false)),
+            TypeRef::Tuple(inner) => {
+                let inner_tys = inner.iter().map(|tr| {
+                    Self::from_hir_with_diagnostics(db, resolver, type_ref_map, diagnostics, *tr)
+                });
+                Some((
+                    TyKind::Tuple(inner_tys.len(), inner_tys.collect()).intern(),
+                    false,
+                ))
+            }
             TypeRef::Never => Some((TyKind::Never.intern(), false)),
+            TypeRef::Array(inner) => {
+                let inner = Self::from_hir_with_diagnostics(
+                    db,
+                    resolver,
+                    type_ref_map,
+                    diagnostics,
+                    *inner,
+                );
+                Some((TyKind::Array(inner).intern(), false))
+            }
         };
         if let Some((ty, is_cyclic)) = res {
             if is_cyclic {
@@ -103,7 +117,8 @@ impl Ty {
         }
     }
 
-    fn from_hir_path(
+    /// Constructs a `Ty` from a path.
+    fn from_path(
         db: &dyn HirDatabase,
         resolver: &Resolver,
         type_ref: LocalTypeRefId,
@@ -131,29 +146,27 @@ impl Ty {
     }
 }
 
+/// Resolves all types in the specified `TypeRefMap`.
 pub fn types_from_hir(
     db: &dyn HirDatabase,
     resolver: &Resolver,
     type_ref_map: &TypeRefMap,
-) -> Arc<LowerBatchResult> {
-    let mut result = LowerBatchResult::default();
+) -> Arc<LowerTyMap> {
+    let mut result = LowerTyMap::default();
     for (id, _) in type_ref_map.iter() {
-        let LowerResult { ty, diagnostics } = Ty::from_hir(db, resolver, type_ref_map, id);
-        for diagnostic in diagnostics {
-            result.diagnostics.push(diagnostic);
-        }
-        // TODO: Add detection of cyclic types
+        let ty =
+            Ty::from_hir_with_diagnostics(db, resolver, type_ref_map, &mut result.diagnostics, id);
         result.type_ref_to_type.insert(id, ty);
     }
     Arc::new(result)
 }
 
-pub fn lower_struct_query(db: &dyn HirDatabase, s: Struct) -> Arc<LowerBatchResult> {
+pub fn lower_struct_query(db: &dyn HirDatabase, s: Struct) -> Arc<LowerTyMap> {
     let data = s.data(db.upcast());
     types_from_hir(db, &s.id.resolver(db.upcast()), data.type_ref_map())
 }
 
-pub fn lower_type_alias_query(db: &dyn HirDatabase, t: TypeAlias) -> Arc<LowerBatchResult> {
+pub fn lower_type_alias_query(db: &dyn HirDatabase, t: TypeAlias) -> Arc<LowerTyMap> {
     let data = t.data(db.upcast());
     types_from_hir(db, &t.id.resolver(db.upcast()), data.type_ref_map())
 }
@@ -281,9 +294,9 @@ pub(crate) fn fn_sig_for_fn(db: &dyn HirDatabase, def: Function) -> FnSig {
     let params = data
         .params()
         .iter()
-        .map(|tr| Ty::from_hir(db, &resolver, data.type_ref_map(), *tr).ty)
+        .map(|tr| Ty::from_hir(db, &resolver, data.type_ref_map(), *tr).0)
         .collect::<Vec<_>>();
-    let ret = Ty::from_hir(db, &resolver, data.type_ref_map(), *data.ret_type()).ty;
+    let ret = Ty::from_hir(db, &resolver, data.type_ref_map(), *data.ret_type()).0;
     FnSig::from_params_and_return(params, ret)
 }
 
@@ -293,7 +306,7 @@ pub(crate) fn fn_sig_for_struct_constructor(db: &dyn HirDatabase, def: Struct) -
     let params = data
         .fields
         .iter()
-        .map(|(_, field)| Ty::from_hir(db, &resolver, data.type_ref_map(), field.type_ref).ty)
+        .map(|(_, field)| Ty::from_hir(db, &resolver, data.type_ref_map(), field.type_ref).0)
         .collect::<Vec<_>>();
     let ret = type_for_struct(db, def);
     FnSig::from_params_and_return(params, ret)
@@ -317,7 +330,7 @@ fn type_for_type_alias(db: &dyn HirDatabase, def: TypeAlias) -> Ty {
     let data = def.data(db.upcast());
     let resolver = def.id.resolver(db.upcast());
     let type_ref = def.type_ref(db);
-    Ty::from_hir(db, &resolver, data.type_ref_map(), type_ref).ty
+    Ty::from_hir(db, &resolver, data.type_ref_map(), type_ref).0
 }
 
 pub mod diagnostics {

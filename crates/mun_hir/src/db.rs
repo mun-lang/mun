@@ -7,7 +7,7 @@ use crate::item_tree::{self, ItemTree};
 use crate::module_tree::ModuleTree;
 use crate::name_resolution::Namespace;
 use crate::package_defs::PackageDefs;
-use crate::ty::lower::LowerBatchResult;
+use crate::ty::lower::LowerTyMap;
 use crate::ty::{CallableDef, FnSig, Ty, TypableDef};
 use crate::{
     code_model::{FunctionData, StructData, TypeAliasData},
@@ -128,10 +128,10 @@ pub trait HirDatabase: DefDatabase + Upcast<dyn DefDatabase> {
     fn infer(&self, def: DefWithBodyId) -> Arc<InferenceResult>;
 
     #[salsa::invoke(crate::ty::lower::lower_struct_query)]
-    fn lower_struct(&self, def: Struct) -> Arc<LowerBatchResult>;
+    fn lower_struct(&self, def: Struct) -> Arc<LowerTyMap>;
 
     #[salsa::invoke(crate::ty::lower::lower_type_alias_query)]
-    fn lower_type_alias(&self, def: TypeAlias) -> Arc<LowerBatchResult>;
+    fn lower_type_alias(&self, def: TypeAlias) -> Arc<LowerTyMap>;
 
     #[salsa::invoke(crate::ty::callable_item_sig)]
     fn callable_sig(&self, def: CallableDef) -> FnSig;

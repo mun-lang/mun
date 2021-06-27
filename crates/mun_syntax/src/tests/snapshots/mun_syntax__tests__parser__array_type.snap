@@ -1,0 +1,53 @@
+---
+source: crates/mun_syntax/src/tests/parser.rs
+expression: "fn main(a: [int]) {\n    let a:[[bool]];\n}"
+---
+SOURCE_FILE@0..41
+  FUNCTION_DEF@0..41
+    FN_KW@0..2 "fn"
+    WHITESPACE@2..3 " "
+    NAME@3..7
+      IDENT@3..7 "main"
+    PARAM_LIST@7..17
+      L_PAREN@7..8 "("
+      PARAM@8..16
+        BIND_PAT@8..9
+          NAME@8..9
+            IDENT@8..9 "a"
+        COLON@9..10 ":"
+        WHITESPACE@10..11 " "
+        ARRAY_TYPE@11..16
+          L_BRACKET@11..12 "["
+          PATH_TYPE@12..15
+            PATH@12..15
+              PATH_SEGMENT@12..15
+                NAME_REF@12..15
+                  IDENT@12..15 "int"
+          R_BRACKET@15..16 "]"
+      R_PAREN@16..17 ")"
+    WHITESPACE@17..18 " "
+    BLOCK_EXPR@18..41
+      L_CURLY@18..19 "{"
+      WHITESPACE@19..24 "\n    "
+      LET_STMT@24..39
+        LET_KW@24..27 "let"
+        WHITESPACE@27..28 " "
+        BIND_PAT@28..29
+          NAME@28..29
+            IDENT@28..29 "a"
+        COLON@29..30 ":"
+        ARRAY_TYPE@30..38
+          L_BRACKET@30..31 "["
+          ARRAY_TYPE@31..37
+            L_BRACKET@31..32 "["
+            PATH_TYPE@32..36
+              PATH@32..36
+                PATH_SEGMENT@32..36
+                  NAME_REF@32..36
+                    IDENT@32..36 "bool"
+            R_BRACKET@36..37 "]"
+          R_BRACKET@37..38 "]"
+        SEMI@38..39 ";"
+      WHITESPACE@39..40 "\n"
+      R_CURLY@40..41 "}"
+

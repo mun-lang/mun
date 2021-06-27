@@ -4,7 +4,7 @@ use crate::expr::BodySourceMap;
 use crate::ids::{FunctionId, Lookup};
 use crate::name_resolution::Namespace;
 use crate::resolve::HasResolver;
-use crate::type_ref::{LocalTypeRefId, TypeRefBuilder, TypeRefMap, TypeRefSourceMap};
+use crate::type_ref::{LocalTypeRefId, TypeRefMap, TypeRefSourceMap};
 use crate::visibility::RawVisibility;
 use crate::{
     Body, DefDatabase, DiagnosticSink, FileId, HasVisibility, HirDatabase, InferenceResult, Name,
@@ -43,7 +43,7 @@ impl FunctionData {
         let func = &item_tree[loc.id.value];
         let src = item_tree.source(db, loc.id.value);
 
-        let mut type_ref_builder = TypeRefBuilder::default();
+        let mut type_ref_builder = TypeRefMap::builder();
 
         let mut params = Vec::new();
         if let Some(param_list) = src.param_list() {
@@ -142,7 +142,7 @@ impl Function {
     pub fn ret_type(self, db: &dyn HirDatabase) -> Ty {
         let resolver = self.id.resolver(db.upcast());
         let data = self.data(db.upcast());
-        Ty::from_hir(db, &resolver, &data.type_ref_map, data.ret_type).ty
+        Ty::from_hir(db, &resolver, &data.type_ref_map, data.ret_type).0
     }
 
     pub fn infer(self, db: &dyn HirDatabase) -> Arc<InferenceResult> {

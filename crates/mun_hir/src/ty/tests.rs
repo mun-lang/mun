@@ -31,6 +31,56 @@ fn issue_354() {
 }
 
 #[test]
+fn array_element_assignment() {
+    infer_snapshot(
+        r"
+    fn main() {
+        let a = [1,2,3,4,5]
+        a[2] = 4u8
+    }",
+    )
+}
+
+#[test]
+fn array_is_place_expr() {
+    infer_snapshot(
+        r"
+    fn main() {
+        let a = [1,2,3,4,5]
+        a = [5,6,7]
+        a[0] = 0;
+        [1,2,3][0] = 4
+    }",
+    )
+}
+
+#[test]
+fn infer_array_structs() {
+    infer_snapshot(
+        r"
+        struct Foo;
+
+    fn main() -> Foo {
+        let a = [Foo, Foo, Foo];
+        a[2]
+    }",
+    )
+}
+
+#[test]
+fn infer_array() {
+    infer_snapshot(
+        r"
+    fn main() -> u8 {
+        let b = 5;
+        let c = 3;
+        let a = [1,b,4,c];
+        a[3]
+    }",
+    )
+}
+
+#[test]
 fn private_access() {
     insta::assert_snapshot!(infer(
         r#"

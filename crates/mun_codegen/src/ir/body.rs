@@ -1058,8 +1058,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
     fn is_place_expr(&self, expr: ExprId) -> bool {
         let body = self.body.clone();
         match &body[expr] {
-            Expr::Path(..) => true,
+            Expr::Path(..) | Expr::Array(_) => true,
             Expr::Field { expr, .. } => self.is_place_expr(*expr),
+            Expr::Index { base, .. } => self.is_place_expr(*base),
             _ => false,
         }
     }

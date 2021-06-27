@@ -9,7 +9,8 @@ impl<'a> InferenceResultBuilder<'a> {
         let body = Arc::clone(&self.body); // avoid borrow checker problem
         match &body[expr] {
             Expr::Path(p) => self.check_place_path(resolver, p),
-            Expr::Field { .. } => true,
+            Expr::Index { base, .. } => self.check_place_expression(resolver, *base),
+            Expr::Field { .. } | Expr::Array(_) => true,
             _ => false,
         }
     }

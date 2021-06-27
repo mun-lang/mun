@@ -1,6 +1,46 @@
 use crate::SourceFile;
 
 #[test]
+fn array_type() {
+    snapshot_test(
+        r"
+    fn main(a: [int]) {
+        let a:[[bool]];
+    }
+    ",
+    )
+}
+
+#[test]
+fn index_expr() {
+    snapshot_test(
+        r"
+    fn main() {
+        let a = [1,2,3,4]
+        let b = a[0];
+        let c = a[b];
+        a[0] = c;
+        let a = { [3,4,5] }[1];
+    }
+    ",
+    )
+}
+
+#[test]
+fn array_expr() {
+    snapshot_test(
+        r"
+    fn main() {
+        let a = [1,2,3,]
+        let a = []
+        let a = [call(123)]
+        let a = [Struct { }, Struct { }]
+    }
+    ",
+    )
+}
+
+#[test]
 fn missing_field_expr() {
     insta::assert_snapshot!(SourceFile::parse(
         r#"

@@ -20,7 +20,7 @@ use mun_syntax::{ast, AstNode, Parse, SourceFile, SyntaxKind, SyntaxNodePtr, Tex
 /// If the specified syntax node is not a function definition or structure definition, returns the
 /// range of the syntax node itself.
 fn syntax_node_signature_range(
-    syntax_node_ptr: SyntaxNodePtr,
+    syntax_node_ptr: &SyntaxNodePtr,
     parse: &Parse<SourceFile>,
 ) -> TextRange {
     match syntax_node_ptr.kind() {
@@ -56,7 +56,7 @@ fn syntax_node_signature_range(
 /// If the specified syntax node is not a function definition or structure definition, returns the
 /// range of the syntax node itself.
 fn syntax_node_identifier_range(
-    syntax_node_ptr: SyntaxNodePtr,
+    syntax_node_ptr: &SyntaxNodePtr,
     parse: &Parse<SourceFile>,
 ) -> TextRange {
     match syntax_node_ptr.kind() {
@@ -88,7 +88,7 @@ pub struct DuplicateDefinition<'db, 'diag, DB: mun_hir::HirDatabase> {
 
 impl<'db, 'diag, DB: mun_hir::HirDatabase> Diagnostic for DuplicateDefinition<'db, 'diag, DB> {
     fn range(&self) -> TextRange {
-        syntax_node_identifier_range(self.diag.definition, &self.db.parse(self.diag.file))
+        syntax_node_identifier_range(&self.diag.definition, &self.db.parse(self.diag.file))
     }
 
     fn title(&self) -> String {
@@ -102,7 +102,7 @@ impl<'db, 'diag, DB: mun_hir::HirDatabase> Diagnostic for DuplicateDefinition<'d
     fn primary_annotation(&self) -> Option<SourceAnnotation> {
         Some(SourceAnnotation {
             range: syntax_node_signature_range(
-                self.diag.definition,
+                &self.diag.definition,
                 &self.db.parse(self.diag.file),
             ),
             message: format!("`{}` redefined here", self.diag.name),
@@ -114,7 +114,7 @@ impl<'db, 'diag, DB: mun_hir::HirDatabase> Diagnostic for DuplicateDefinition<'d
             range: InFile::new(
                 self.diag.file,
                 syntax_node_signature_range(
-                    self.diag.first_definition,
+                    &self.diag.first_definition,
                     &self.db.parse(self.diag.file),
                 ),
             ),

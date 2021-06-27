@@ -89,7 +89,7 @@ impl Diagnostic for UnresolvedValue {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.expr)
+        InFile::new(self.file, self.expr.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -149,7 +149,7 @@ impl Diagnostic for PrivateAccess {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.expr)
+        InFile::new(self.file, self.expr.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -170,7 +170,7 @@ impl Diagnostic for ExpectedFunction {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.expr)
+        InFile::new(self.file, self.expr.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -215,7 +215,7 @@ impl Diagnostic for ParameterCountMismatch {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.expr)
+        InFile::new(self.file, self.expr.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -237,7 +237,7 @@ impl Diagnostic for MismatchedType {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.expr)
+        InFile::new(self.file, self.expr.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -259,7 +259,7 @@ impl Diagnostic for IncompatibleBranch {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.if_expr)
+        InFile::new(self.file, self.if_expr.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -285,7 +285,7 @@ impl Diagnostic for InvalidLhs {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.lhs)
+        InFile::new(self.file, self.lhs.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -306,7 +306,7 @@ impl Diagnostic for MissingElseBranch {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.if_expr)
+        InFile::new(self.file, self.if_expr.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -328,7 +328,7 @@ impl Diagnostic for CannotApplyBinaryOp {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.expr)
+        InFile::new(self.file, self.expr.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -349,7 +349,7 @@ impl Diagnostic for CannotApplyUnaryOp {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.expr)
+        InFile::new(self.file, self.expr.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -371,7 +371,7 @@ impl Diagnostic for DuplicateDefinition {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.definition)
+        InFile::new(self.file, self.definition.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -391,7 +391,7 @@ impl Diagnostic for ReturnMissingExpression {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.return_expr)
+        InFile::new(self.file, self.return_expr.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -411,7 +411,7 @@ impl Diagnostic for BreakOutsideLoop {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.break_expr)
+        InFile::new(self.file, self.break_expr.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -431,7 +431,7 @@ impl Diagnostic for BreakWithValueOutsideLoop {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.break_expr)
+        InFile::new(self.file, self.break_expr.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -453,7 +453,7 @@ impl Diagnostic for AccessUnknownField {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.expr)
+        InFile::new(self.file, self.expr.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -481,7 +481,7 @@ impl Diagnostic for FieldCountMismatch {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.expr)
+        InFile::new(self.file, self.expr.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -508,7 +508,7 @@ impl Diagnostic for MissingFields {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.fields)
+        InFile::new(self.file, self.fields.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -533,7 +533,7 @@ impl Diagnostic for MismatchedStructLit {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.expr)
+        InFile::new(self.file, self.expr.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -554,7 +554,7 @@ impl Diagnostic for NoFields {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.receiver_expr)
+        InFile::new(self.file, self.receiver_expr.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -573,7 +573,7 @@ impl Diagnostic for NoSuchField {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.field)
+        InFile::new(self.file, self.field.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -593,7 +593,7 @@ impl Diagnostic for PossiblyUninitializedVariable {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.pat)
+        InFile::new(self.file, self.pat.clone())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -612,7 +612,7 @@ impl Diagnostic for ExternCannotHaveBody {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        self.func
+        self.func.clone()
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -631,7 +631,7 @@ impl Diagnostic for ExternNonPrimitiveParam {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        self.param
+        self.param.clone()
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -651,7 +651,7 @@ impl Diagnostic for IntLiteralTooLarge {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        self.literal.map(|ptr| ptr.into())
+        self.literal.clone().map(|ptr| ptr.into())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -672,7 +672,7 @@ impl Diagnostic for LiteralOutOfRange {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        self.literal.map(|ptr| ptr.into())
+        self.literal.clone().map(|ptr| ptr.into())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -693,7 +693,7 @@ impl Diagnostic for InvalidLiteralSuffix {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        self.literal.map(|ptr| ptr.into())
+        self.literal.clone().map(|ptr| ptr.into())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -720,7 +720,7 @@ impl Diagnostic for InvalidFloatingPointLiteral {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        self.literal.map(|ptr| ptr.into())
+        self.literal.clone().map(|ptr| ptr.into())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -740,7 +740,7 @@ impl Diagnostic for InvalidLiteral {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        self.literal.map(|ptr| ptr.into())
+        self.literal.clone().map(|ptr| ptr.into())
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -759,7 +759,7 @@ impl Diagnostic for FreeTypeAliasWithoutTypeRef {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        self.type_alias_def
+        self.type_alias_def.clone()
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -778,7 +778,7 @@ impl Diagnostic for UnresolvedImport {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        self.use_tree.map(Into::into)
+        self.use_tree.clone().map(Into::into)
     }
 
     fn as_any(&self) -> &(dyn Any + Send) {
@@ -797,7 +797,7 @@ impl Diagnostic for ImportDuplicateDefinition {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        self.use_tree.map(Into::into)
+        self.use_tree.clone().map(Into::into)
     }
 
     fn as_any(&self) -> &(dyn Any + Send) {

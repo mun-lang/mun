@@ -1,0 +1,13 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "struct Foo;\n\nfn main() -> Foo {\n    let a = [Foo, Foo, Foo];\n    a[2]\n}"
+---
+30..71 '{     ...a[2] }': Foo
+40..41 'a': [Foo]
+44..59 '[Foo, Foo, Foo]': [Foo]
+45..48 'Foo': Foo
+50..53 'Foo': Foo
+55..58 'Foo': Foo
+65..66 'a': [Foo]
+65..69 'a[2]': Foo
+67..68 '2': i32

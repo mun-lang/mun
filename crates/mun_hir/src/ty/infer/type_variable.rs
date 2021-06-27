@@ -137,6 +137,7 @@ impl TypeVariableTable {
         if a.equals_ctor(&b) {
             match (a.interned(), b.interned()) {
                 (TyKind::Tuple(_, a), TyKind::Tuple(_, b)) => self.unify_substitutions(a, b),
+                (TyKind::Array(t1), TyKind::Array(t2)) => self.unify_inner(t1, t2),
                 _ => true,
             }
         } else {
