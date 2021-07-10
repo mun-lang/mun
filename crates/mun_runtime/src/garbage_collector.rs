@@ -52,34 +52,43 @@ impl memory::TypeDesc for UnsafeTypeInfo {
     fn guid(&self) -> &abi::Guid {
         unsafe { &self.0.as_ref().guid }
     }
+}
 
-    fn group(&self) -> TypeGroup {
-        TypeGroup::from(unsafe { &self.0.as_ref().data })
+impl memory::TypeComposition for UnsafeTypeInfo {
+    type ArrayType = abi::ArrayInfo;
+    type StructType = abi::StructInfo;
+
+    fn group(&self) -> TypeGroup<'_, Self::ArrayType, Self::StructType> {
+        match unsafe { &self.0.as_ref().data } {
+            TypeInfoData::Primitive => TypeGroup::Primitive,
+            TypeInfoData::Struct(s) => TypeGroup::Struct(s),
+            TypeInfoData::Array(a) => TypeGroup::Array(a),
+        }
     }
 }
 
-impl memory::TypeFields<UnsafeTypeInfo> for UnsafeTypeInfo {
-    fn fields(&self) -> Vec<(&str, Self)> {
-        if let Some(s) = unsafe { self.0.as_ref().as_struct() } {
-            s.field_names()
-                .zip(s.field_types().iter().map(|ty| {
-                    // Safety: `ty` is a shared reference, so is guaranteed to not be `ptr::null()`.
-                    UnsafeTypeInfo::new(unsafe {
-                        NonNull::new_unchecked(*ty as *const abi::TypeInfo as *mut _)
-                    })
-                }))
-                .collect()
-        } else {
-            Vec::new()
-        }
+impl memory::StructType<UnsafeTypeInfo> for abi::StructInfo {
+    fn fields(&self) -> Vec<(&str, UnsafeTypeInfo)> {
+        self.field_names()
+            .zip(self.field_types().iter().map(|ty| {
+                // Safety: `ty` is a shared reference, so is guaranteed to not be `ptr::null()`.
+                UnsafeTypeInfo::new(unsafe {
+                    NonNull::new_unchecked(*ty as *const abi::TypeInfo as *mut _)
+                })
+            }))
+            .collect()
     }
 
     fn offsets(&self) -> &[u16] {
-        if let Some(s) = unsafe { self.0.as_ref().as_struct() } {
-            s.field_offsets()
-        } else {
-            &[]
-        }
+        self.field_offsets()
+    }
+}
+
+impl memory::ArrayType<UnsafeTypeInfo> for abi::ArrayInfo {
+    fn element_type(&self) -> UnsafeTypeInfo {
+        UnsafeTypeInfo::new(unsafe {
+            NonNull::new_unchecked(self.element_type() as *const abi::TypeInfo as *mut _)
+        })
     }
 }
 
@@ -96,23 +105,31 @@ impl Iterator for Trace {
     type Item = GcPtr;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let struct_ty = unsafe { self.ty.0.as_ref() }.as_struct()?;
-        let field_count = struct_ty.field_types().len();
-        while self.index < field_count {
-            let index = self.index;
-            self.index += 1;
+        let ty = unsafe { self.ty.0.as_ref() };
+        match &ty.data {
+            TypeInfoData::Primitive => None,
+            TypeInfoData::Struct(struct_ty) => {
+                let field_count = struct_ty.field_types().len();
+                while self.index < field_count {
+                    let index = self.index;
+                    self.index += 1;
 
-            let field_ty = struct_ty.field_types()[index];
-            if let Some(field_struct_ty) = field_ty.as_struct() {
-                if field_struct_ty.memory_kind == abi::StructMemoryKind::Gc {
-                    let offset = struct_ty.field_offsets()[index];
-                    return Some(unsafe {
-                        *self.obj.deref::<u8>().add(offset as usize).cast::<GcPtr>()
-                    });
+                    let field_ty = struct_ty.field_types()[index];
+                    if let Some(field_struct_ty) = field_ty.as_struct() {
+                        if field_struct_ty.memory_kind == abi::StructMemoryKind::Gc {
+                            let offset = struct_ty.field_offsets()[index];
+                            return Some(unsafe {
+                                *self.obj.deref::<u8>().add(offset as usize).cast::<GcPtr>()
+                            });
+                        }
+                    }
                 }
+                None
+            }
+            TypeInfoData::Array(_array_ty) => {
+                todo!("array tracing is not yet implemented")
             }
         }
-        None
     }
 }
 
@@ -148,5 +165,7 @@ impl gc::TypeTrace for UnsafeTypeInfo {
 /// Defines the garbage collector used by the `Runtime`.
 pub type GarbageCollector = gc::MarkSweep<UnsafeTypeInfo, gc::NoopObserver<gc::Event>>;
 
+use abi::TypeInfoData;
 pub use gc::GcPtr;
+
 pub type GcRootPtr = gc::GcRootPtr<UnsafeTypeInfo, GarbageCollector>;

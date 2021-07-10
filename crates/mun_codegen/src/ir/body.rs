@@ -1,3 +1,4 @@
+use super::MunArrayValue;
 use crate::module_group::ModuleGroup;
 use crate::{
     intrinsics,
@@ -269,6 +270,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 expr: receiver_expr,
                 name,
             } => self.gen_field(expr, *receiver_expr, name),
+            Expr::Array(exprs) => self.gen_array(expr, exprs).map(Into::into),
+            Expr::Index { base, index } => self.gen_index(expr, *base, *index),
             _ => unimplemented!("unimplemented expr type {:?}", &body[expr]),
         }
     }
@@ -387,13 +390,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             "type_info_ptr_to_i8_ptr",
         );
 
-        let allocator_handle = self.builder.build_load(
-            self.external_globals
-                .alloc_handle
-                .expect("no allocator handle was specified, this is required for structs")
-                .as_pointer_value(),
-            "allocator_handle",
-        );
+        let allocator_handle = self.get_allocator_handle_ptr().into();
 
         // An object pointer adds an extra layer of indirection to allow for hot reloading. To
         // make it struct type agnostic, it is stored in a `*const *mut std::ffi::c_void`.
@@ -735,7 +732,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     Some(op) => self.gen_arith_bin_op_bool(lhs, rhs, op),
                     None => rhs,
                 };
-                let place = self.gen_place_expr(lhs_expr);
+                let place = self.gen_place_expr(lhs_expr)?;
                 self.builder.build_store(place, rhs);
                 Some(self.gen_empty())
             }
@@ -798,7 +795,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     Some(op) => self.gen_arith_bin_op_float(lhs, rhs, op),
                     None => rhs,
                 };
-                let place = self.gen_place_expr(lhs_expr);
+                let place = self.gen_place_expr(lhs_expr)?;
                 self.builder.build_store(place, rhs);
                 Some(self.gen_empty())
             }
@@ -834,7 +831,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     Some(op) => self.gen_arith_bin_op_int(lhs, rhs, op, signedness),
                     None => rhs,
                 };
-                let place = self.gen_place_expr(lhs_expr);
+                let place = self.gen_place_expr(lhs_expr)?;
                 self.builder.build_store(place, rhs);
                 Some(self.gen_empty())
             }
@@ -863,7 +860,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     ),
                     None => rhs,
                 };
-                let place = self.gen_place_expr(lhs_expr);
+                let place = self.gen_place_expr(lhs_expr)?;
                 self.builder.build_store(place, rhs);
                 Some(self.gen_empty())
             }
@@ -892,7 +889,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     ),
                     None => rhs,
                 };
-                let place = self.gen_place_expr(lhs_expr);
+                let place = self.gen_place_expr(lhs_expr)?;
                 self.builder.build_store(place, rhs);
                 Some(self.gen_empty())
             }
@@ -1038,17 +1035,18 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
     /// Given an expression generate code that results in a memory address that can be used for
     /// other place operations.
-    fn gen_place_expr(&mut self, expr: ExprId) -> PointerValue<'ink> {
+    fn gen_place_expr(&mut self, expr: ExprId) -> Option<PointerValue<'ink>> {
         let body = self.body.clone();
         match &body[expr] {
             Expr::Path(ref p) => {
                 let resolver = hir::resolver_for_expr(self.db.upcast(), self.body.owner(), expr);
-                self.gen_path_place_expr(p, expr, &resolver)
+                Some(self.gen_path_place_expr(p, expr, &resolver))
             }
             Expr::Field {
                 expr: receiver_expr,
                 name,
             } => self.gen_place_field(expr, *receiver_expr, name),
+            Expr::Index { base, index } => self.gen_place_index(expr, *base, *index),
             _ => unreachable!("invalid place expression"),
         }
     }
@@ -1328,7 +1326,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
         let field_ir_name = &format!("{}.{}", hir_struct_name, name);
         if self.is_place_expr(receiver_expr) {
-            let receiver_ptr = self.gen_place_expr(receiver_expr);
+            let receiver_ptr = self.gen_place_expr(receiver_expr)?;
             let receiver_ptr = self
                 .opt_deref_value(receiver_expr, receiver_ptr.into())
                 .into_pointer_value();
@@ -1369,7 +1367,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         _expr: ExprId,
         receiver_expr: ExprId,
         name: &Name,
-    ) -> PointerValue<'ink> {
+    ) -> Option<PointerValue<'ink>> {
         let hir_struct = self.infer[receiver_expr]
             .as_struct()
             .expect("expected a struct");
@@ -1381,22 +1379,150 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .expect("expected a struct field")
             .index(self.db);
 
-        let receiver_ptr = self.gen_place_expr(receiver_expr);
+        let receiver_ptr = self.gen_place_expr(receiver_expr)?;
         let receiver_ptr = self
             .opt_deref_value(receiver_expr, receiver_ptr.into())
             .into_pointer_value();
-        self.builder
-            .build_struct_gep(
-                receiver_ptr,
-                field_idx,
-                &format!("{}.{}_ptr", hir_struct_name, name),
-            )
-            .unwrap_or_else(|_| {
-                panic!(
-                    "could not get pointer to field `{}::{}` at index {}",
-                    hir_struct_name, name, field_idx
+        Some(
+            self.builder
+                .build_struct_gep(
+                    receiver_ptr,
+                    field_idx,
+                    &format!("{}.{}_ptr", hir_struct_name, name),
                 )
-            })
+                .unwrap_or_else(|_| {
+                    panic!(
+                        "could not get pointer to field `{}::{}` at index {}",
+                        hir_struct_name, name, field_idx
+                    )
+                }),
+        )
+    }
+
+    /// Generates code to construct an array literal at runtime. Returns `None` if the code
+    /// generation for the array literal never returns.
+    fn gen_array(&mut self, expr: ExprId, exprs: &[ExprId]) -> Option<MunArrayValue<'ink>> {
+        let array_ty = &self.infer[expr];
+        let element_ty = array_ty
+            .as_array()
+            .expect("the type of an array literal expression must be an Array");
+
+        let new_array_fn_ptr = self.dispatch_table.gen_intrinsic_lookup(
+            self.external_globals.dispatch_table,
+            &self.builder,
+            &intrinsics::new_array,
+        );
+
+        let type_info_ptr = self.type_table.gen_type_info_lookup(
+            self.context,
+            &self.builder,
+            &self.hir_types.type_info(&array_ty),
+            self.external_globals.type_table,
+        );
+
+        // HACK: We should be able to use pointers for built-in struct types like `TypeInfo` in intrinsics
+        let type_info_ptr = self.builder.build_bitcast(
+            type_info_ptr,
+            self.context.i8_type().ptr_type(AddressSpace::Generic),
+            "type_info_ptr_to_i8_ptr",
+        );
+
+        let allocator_handle = self.get_allocator_handle_ptr();
+
+        let length_value = self
+            .hir_types
+            .get_usize_type()
+            .const_int(exprs.len() as u64, false);
+
+        // An object pointer adds an extra layer of indirection to allow for hot reloading. To
+        // make it struct type agnostic, it is stored in a `*const *mut std::ffi::c_void`.
+        let untyped_array_ptr = self
+            .builder
+            .build_call(
+                new_array_fn_ptr,
+                &[type_info_ptr, length_value.into(), allocator_handle.into()],
+                "new_array",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        // Cast the object pointer to the array struct type
+        let array_ptr = self
+            .builder
+            .build_bitcast(
+                untyped_array_ptr,
+                self.hir_types.get_array_reference_type(element_ty),
+                &format!("{}_array_ptr", element_ty.display(self.db)),
+            )
+            .into_pointer_value();
+
+        let array = MunArrayValue::from_ptr_unchecked(array_ptr);
+        let array_elements = array.get_elements(&self.builder);
+        for (idx, expr) in exprs.iter().enumerate() {
+            let element_ptr = unsafe {
+                self.builder.build_gep(
+                    array_elements,
+                    &[self.context.i64_type().const_int(idx as u64, false)],
+                    &format!("elem_{}_ptr", idx),
+                )
+            };
+
+            let expr_value = self.gen_expr(*expr)?;
+            self.builder.build_store(element_ptr, expr_value);
+        }
+
+        // Once all values have been stored in the array, update the length of the array
+        let length = array.length_ty().const_int(exprs.len() as u64, false);
+        let array_length_ptr = array.get_length_ptr(&self.builder);
+        self.builder.build_store(array_length_ptr, length);
+
+        Some(array)
+    }
+
+    /// Generates an index into an array
+    fn gen_index(
+        &mut self,
+        expr: ExprId,
+        base: ExprId,
+        index: ExprId,
+    ) -> Option<BasicValueEnum<'ink>> {
+        let element_ptr = self.gen_place_index(expr, base, index)?;
+        Some(self.builder.build_load(element_ptr, ""))
+    }
+
+    /// Generates an index into an array
+    fn gen_place_index(
+        &mut self,
+        _expr: ExprId,
+        base: ExprId,
+        index: ExprId,
+    ) -> Option<PointerValue<'ink>> {
+        let base = MunArrayValue::from_ptr_unchecked(self.gen_expr(base)?.into_pointer_value());
+        let index = self.gen_expr(index)?.into_int_value();
+
+        let elements = base.get_elements(&self.builder);
+        Some(unsafe {
+            self.builder.build_gep(
+                elements,
+                &[index],
+                &format!("{}.idx_ptr", base.get_name().to_string_lossy()),
+            )
+        })
+    }
+
+    /// Returns a pointer to the allocator handle
+    fn get_allocator_handle_ptr(&self) -> PointerValue<'ink> {
+        self.builder
+            .build_load(
+                self.external_globals
+                    .alloc_handle
+                    .expect("no allocator handle was specified, this is required for structs")
+                    .as_pointer_value(),
+                "allocator_handle",
+            )
+            .into_pointer_value()
     }
 }
 

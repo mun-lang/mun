@@ -51,12 +51,10 @@ impl<'ink> TypeTable<'ink> {
     ) -> PointerValue<'ink> {
         let table_ref = table_ref.expect("no type table defined");
 
-        let index: u64 = (*self
-            .type_info_to_index
-            .get(type_info)
-            .expect("unknown type"))
-        .try_into()
-        .expect("too many types");
+        let index: u64 = match self.type_info_to_index.get(type_info) {
+            None => panic!("unknown type {}", &type_info.name),
+            Some(&index) => index.try_into().expect("too many types"),
+        };
 
         let global_index = context.i64_type().const_zero();
         let array_index = context.i64_type().const_int(index as u64, false);
@@ -168,6 +166,11 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
                 None => panic!("expected a callable expression"),
             }
         }
+        // If the type of the expression is an array literal we will need to collect the element
+        // type, because `new_array` is called with the type.
+        else if let hir::Expr::Array(_) = expr {
+            self.collect_type(self.hir_types.type_info(&infer[expr_id]));
+        }
 
         // Recurse further
         expr.walk_child_exprs(|expr_id| self.collect_expr(expr_id, body, infer))
@@ -277,6 +280,9 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
             TypeInfoData::Struct(s) => {
                 ir::TypeInfoData::Struct(self.gen_struct_info(type_info_to_ir, *s))
             }
+            TypeInfoData::Array(element_ty) => {
+                ir::TypeInfoData::Array(self.gen_array_info(type_info_to_ir, element_ty))
+            }
         }
     }
 
@@ -342,6 +348,19 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
                 .try_into()
                 .expect("could not convert num_fields to smaller bit size"),
             memory_kind: hir_struct.data(self.db.upcast()).memory_kind.clone(),
+        }
+    }
+
+    /// Generate `ir::ArrayInfo` for a an array with elements of type `element_ty`.
+    fn gen_array_info(
+        &self,
+        type_info_to_ir: &mut HashMap<TypeInfo, Value<'ink, *const ir::TypeInfo<'ink>>>,
+        element_ty: &hir::Ty,
+    ) -> ir::ArrayInfo<'ink> {
+        let element_type_info = self.hir_types.type_info(element_ty);
+        ir::ArrayInfo {
+            element_type: self.gen_type_info(type_info_to_ir, &element_type_info),
+            _dummy: 0,
         }
     }
 

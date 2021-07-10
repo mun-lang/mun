@@ -13,6 +13,41 @@ use mun_target::spec::Target;
 use std::cell::RefCell;
 
 #[test]
+fn array_index_assign() {
+    test_snapshot_unoptimized(
+        r"
+    pub fn main() {
+        let a = [1,2,3,4,]
+        a[1] = 100
+    }
+    ",
+    )
+}
+
+#[test]
+fn array_index() {
+    test_snapshot(
+        r"
+    pub fn main() -> i8 {
+        let a = [1,2,3,4,]
+        a[3]
+    }
+    ",
+    )
+}
+
+#[test]
+fn array_literal() {
+    test_snapshot_unoptimized(
+        r"
+    pub fn main() {
+        let a = [1,2,3,4,]
+    }
+    ",
+    )
+}
+
+#[test]
 fn multi_file() {
     test_snapshot(
         r"

@@ -5,7 +5,7 @@ mod root_ptr;
 use crate::TypeMemory;
 use std::marker::PhantomData;
 
-pub use mark_sweep::MarkSweep;
+pub use mark_sweep::{MarkSweep, MarkSweepType};
 pub use ptr::{GcPtr, HasIndirectionPtr, RawGcPtr};
 pub use root_ptr::GcRootPtr;
 
@@ -27,6 +27,9 @@ pub trait TypeTrace: Send + Sync {
 pub trait GcRuntime<T: TypeMemory + TypeTrace>: Send + Sync {
     /// Allocates an object of the given type returning a GcPtr
     fn alloc(&self, ty: T) -> GcPtr;
+
+    /// Allocates an array of the given type. `T` must be an array type.
+    fn alloc_array(&self, ty: T, n: usize) -> GcPtr;
 
     /// Returns the type of the specified `obj`.
     fn ptr_type(&self, obj: GcPtr) -> T;

@@ -1,6 +1,6 @@
 use crate::{
-    AssemblyInfo, DispatchTable, FunctionDefinition, FunctionPrototype, FunctionSignature, Guid,
-    ModuleInfo, StructInfo, StructMemoryKind, TypeInfo, TypeInfoData,
+    ArrayInfo, AssemblyInfo, DispatchTable, FunctionDefinition, FunctionPrototype,
+    FunctionSignature, Guid, ModuleInfo, StructInfo, StructMemoryKind, TypeInfo, TypeInfoData,
 };
 use std::{
     ffi::{c_void, CStr},
@@ -109,5 +109,11 @@ pub(crate) fn fake_type_info(
         size_in_bits: size,
         alignment,
         data,
+    }
+}
+
+pub(crate) fn fake_array_info(element_type: &TypeInfo) -> ArrayInfo {
+    ArrayInfo {
+        element_type: element_type as *const TypeInfo,
     }
 }

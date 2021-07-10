@@ -1,4 +1,4 @@
-use crate::{static_type_map::StaticTypeMap, Guid, StructInfo};
+use crate::{static_type_map::StaticTypeMap, ArrayInfo, Guid, StructInfo};
 use once_cell::sync::OnceCell;
 use std::{
     convert::TryInto,
@@ -36,6 +36,8 @@ pub enum TypeInfoData {
     Primitive,
     /// Struct types (i.e. record, tuple, or unit structs)
     Struct(StructInfo),
+    /// Array types
+    Array(ArrayInfo),
 }
 
 impl TypeInfo {
@@ -48,6 +50,15 @@ impl TypeInfo {
     pub fn as_struct(&self) -> Option<&StructInfo> {
         if let TypeInfoData::Struct(s) = &self.data {
             Some(s)
+        } else {
+            None
+        }
+    }
+
+    /// Retrieves the type's array information, if available.
+    pub fn as_array(&self) -> Option<&ArrayInfo> {
+        if let TypeInfoData::Array(arr) = &self.data {
+            Some(arr)
         } else {
             None
         }
@@ -105,6 +116,23 @@ impl TypeInfoData {
     /// Returns whether this is a struct type.
     pub fn is_struct(&self) -> bool {
         matches!(self, TypeInfoData::Struct(_))
+    }
+
+    /// Returns whether this is an array type
+    pub fn is_array(&self) -> bool {
+        matches!(self, TypeInfoData::Array(_))
+    }
+}
+
+impl From<StructInfo> for TypeInfoData {
+    fn from(info: StructInfo) -> Self {
+        TypeInfoData::Struct(info)
+    }
+}
+
+impl From<ArrayInfo> for TypeInfoData {
+    fn from(info: ArrayInfo) -> Self {
+        TypeInfoData::Array(info)
     }
 }
 

@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use mun_memory::{
     diff::{myers, Diff, FieldDiff, FieldEditKind},
-    TypeDesc, TypeFields, TypeGroup, TypeMemory,
+    ArrayType, StructType, TypeComposition, TypeDesc, TypeGroup, TypeMemory,
 };
 use std::alloc::Layout;
 
@@ -54,6 +54,12 @@ pub struct TypeInfo {
 pub enum TypeInfoData {
     Primitive,
     Struct(StructInfo),
+    Array(ArrayInfo),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ArrayInfo {
+    pub element_ty: Box<TypeInfo>,
 }
 
 impl TypeInfo {
@@ -87,22 +93,16 @@ impl PartialEq for TypeInfo {
 
 impl Eq for TypeInfo {}
 
-impl TypeDesc for &TypeInfo {
+impl TypeDesc for TypeInfo {
     fn name(&self) -> &str {
         &self.name
     }
     fn guid(&self) -> &abi::Guid {
         &self.guid
     }
-    fn group(&self) -> TypeGroup {
-        match self.data {
-            TypeInfoData::Primitive => TypeGroup::Primitive,
-            TypeInfoData::Struct(_) => TypeGroup::Struct,
-        }
-    }
 }
 
-impl TypeMemory for &TypeInfo {
+impl TypeMemory for TypeInfo {
     fn layout(&self) -> Layout {
         self.layout
     }
@@ -113,21 +113,36 @@ impl TypeMemory for &TypeInfo {
     }
 }
 
-impl<'t> TypeFields<&'t TypeInfo> for &'t TypeInfo {
-    fn fields(&self) -> Vec<(&str, Self)> {
+impl TypeComposition for TypeInfo {
+    type ArrayType = ArrayInfo;
+    type StructType = StructInfo;
+
+    fn group(&self) -> TypeGroup<'_, Self::ArrayType, Self::StructType> {
         match &self.data {
-            TypeInfoData::Primitive => Vec::new(),
-            TypeInfoData::Struct(s) => s
-                .fields
-                .iter()
-                .map(|(name, ty)| (name.as_str(), ty))
-                .collect(),
+            TypeInfoData::Primitive => TypeGroup::Primitive,
+            TypeInfoData::Struct(s) => TypeGroup::Struct(s),
+            TypeInfoData::Array(a) => TypeGroup::Array(a),
         }
+    }
+}
+
+impl StructType<TypeInfo> for StructInfo {
+    fn fields(&self) -> Vec<(&str, TypeInfo)> {
+        self.fields
+            .iter()
+            .map(|(name, ty)| (name.as_str(), ty.clone()))
+            .collect()
     }
 
     fn offsets(&self) -> &[u16] {
         // This is a stub, as we don't do any actual memory mapping
         &[]
+    }
+}
+
+impl ArrayType<TypeInfo> for ArrayInfo {
+    fn element_type(&self) -> TypeInfo {
+        self.element_ty.as_ref().clone()
     }
 }
 
@@ -148,8 +163,8 @@ pub fn apply_myers_diff<'t, T: Copy + Eq>(old: &[T], new: &[T], diff: Vec<myers:
 }
 
 pub(crate) fn apply_diff<'t>(
-    old: &[&TypeInfo],
-    new: &[&TypeInfo],
+    old: &[TypeInfo],
+    new: &[TypeInfo],
     diff: Vec<Diff>,
 ) -> Vec<TypeInfo> {
     let mut combined: Vec<TypeInfo> = old.iter().map(|ty| (*ty).clone()).collect();

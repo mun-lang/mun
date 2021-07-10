@@ -54,6 +54,7 @@ pub struct TypeInfo<'ink> {
 pub enum TypeInfoData<'ink> {
     Primitive,
     Struct(StructInfo<'ink>),
+    Array(ArrayInfo<'ink>),
 }
 
 #[derive(AsValue)]
@@ -73,6 +74,17 @@ pub struct FunctionPrototype<'ink> {
 pub struct FunctionDefinition<'ink> {
     pub prototype: FunctionPrototype<'ink>,
     pub fn_ptr: Value<'ink, *const fn()>,
+}
+
+#[derive(AsValue)]
+pub struct ArrayInfo<'ink> {
+    pub element_type: Value<'ink, *const TypeInfo<'ink>>,
+
+    // HACK: I dont understand why, but without this dummy field here we get a compiler error:
+    // the trait `ConcreteValueType<'ink>` is not implemented for `*const ir::types::TypeInfo<'ink>`
+    //
+    // Having this here doesn't really matter.
+    pub _dummy: u8,
 }
 
 #[derive(AsValue)]

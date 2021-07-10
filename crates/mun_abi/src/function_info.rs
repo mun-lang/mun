@@ -69,7 +69,7 @@ impl fmt::Display for FunctionPrototype {
         }
         write!(f, ")")?;
         if let Some(ret_type) = self.signature.return_type() {
-            write!(f, ":{}", ret_type)?
+            write!(f, "->{}", ret_type)?
         }
         Ok(())
     }

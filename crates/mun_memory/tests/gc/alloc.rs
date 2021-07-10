@@ -1,6 +1,7 @@
 use super::util::{EventAggregator, HasTypeInfo, TypeInfo};
 use mun_memory::gc::{Event, GcRootPtr, GcRuntime, MarkSweep};
 use std::sync::Arc;
+use abi::HasStaticTypeInfo;
 
 #[test]
 fn alloc() {

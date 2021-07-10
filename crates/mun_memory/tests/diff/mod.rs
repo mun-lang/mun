@@ -16,8 +16,8 @@ fn add() {
         StructInfo::new(&[("a", &int), ("b", &float)]),
     );
 
-    let old = &[&int, &struct1];
-    let new = &[&int, &struct1, &float];
+    let old = &[int.clone(), struct1.clone()];
+    let new = &[int.clone(), struct1.clone(), float.clone()];
 
     let diff = diff(old, new);
     assert_eq!(diff, vec![Diff::Insert { index: 2 }]);

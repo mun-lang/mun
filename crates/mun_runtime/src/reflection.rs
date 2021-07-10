@@ -30,6 +30,9 @@ pub fn equals_return_type<T: ReturnTypeReflection>(
                 return Err(("struct", T::type_name()));
             }
         }
+        abi::TypeInfoData::Array(_) => {
+            unimplemented!()
+        }
     }
     Ok(())
 }

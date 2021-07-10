@@ -87,14 +87,16 @@ impl Assembly {
         }
 
         if !to_link.is_empty() {
+            let mut missing_functions = vec![];
             for (_, fn_prototype) in to_link {
-                error!(
-                    "Failed to link: function `{}` is missing.",
-                    fn_prototype.name()
-                );
+                error!("Failed to link: function `{}` is missing.", fn_prototype);
+                missing_functions.push(format!("- {}", fn_prototype));
             }
 
-            return Err(anyhow!("Failed to link due to missing dependencies."));
+            return Err(anyhow!(
+                "Failed to link due to missing dependencies.\n{}",
+                missing_functions.join("\n")
+            ));
         }
 
         Ok(())

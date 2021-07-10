@@ -1,6 +1,6 @@
 use super::ir::IsIrType;
 use abi::Guid;
-use hir::HirDatabase;
+use hir::{HirDatabase, HirDisplay};
 use inkwell::context::Context;
 use inkwell::targets::TargetData;
 use inkwell::types::AnyType;
@@ -10,6 +10,7 @@ use std::hash::{Hash, Hasher};
 pub enum TypeInfoData {
     Primitive,
     Struct(hir::Struct),
+    Array(hir::Ty),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -77,6 +78,21 @@ impl TypeInfo {
             guid: Guid(md5::compute(name.as_ref()).0),
             size: type_size,
             data: TypeInfoData::Primitive,
+        }
+    }
+
+    pub fn new_array(db: &dyn HirDatabase, element_ty: hir::Ty, type_size: TypeSize) -> TypeInfo {
+        let guid_string = format!(
+            "[{}]",
+            element_ty
+                .guid_string(db)
+                .expect("could not build guid_string for element ty")
+        );
+        Self {
+            guid: Guid(md5::compute(&guid_string).0),
+            name: format!("[{}]", element_ty.display(db)),
+            size: type_size,
+            data: TypeInfoData::Array(element_ty),
         }
     }
 

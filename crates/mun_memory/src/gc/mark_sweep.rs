@@ -1,11 +1,7 @@
-use crate::{
-    cast,
-    gc::{Event, GcPtr, GcRuntime, Observer, RawGcPtr, Stats, TypeTrace},
-    mapping::{self, FieldMapping, MemoryMapper},
-    TypeDesc, TypeGroup, TypeMemory,
-};
+use crate::{cast, gc::{Event, GcPtr, GcRuntime, Observer, RawGcPtr, Stats, TypeTrace}, mapping::{self, FieldMapping, MemoryMapper}, TypeDesc, TypeMemory, TypeComposition, ArrayType};
 use mapping::{Conversion, Mapping};
 use parking_lot::RwLock;
+use std::alloc::{Layout, LayoutError};
 use std::{
     collections::{HashMap, VecDeque},
     hash::Hash,
@@ -14,11 +10,14 @@ use std::{
     ptr::NonNull,
 };
 
+pub trait MarkSweepType: Clone + TypeMemory + TypeTrace + TypeComposition {}
+impl<T: Clone + TypeMemory + TypeTrace + TypeComposition> MarkSweepType for T {}
+
 /// Implements a simple mark-sweep type garbage collector.
 #[derive(Debug)]
 pub struct MarkSweep<T, O>
 where
-    T: TypeMemory + TypeTrace + Clone,
+    T: MarkSweepType,
     O: Observer<Event = Event>,
 {
     objects: RwLock<HashMap<GcPtr, Pin<Box<ObjectInfo<T>>>>>,
@@ -28,7 +27,7 @@ where
 
 impl<T, O> Default for MarkSweep<T, O>
 where
-    T: TypeMemory + TypeTrace + Clone,
+    T: MarkSweepType,
     O: Observer<Event = Event> + Default,
 {
     fn default() -> Self {
@@ -42,7 +41,7 @@ where
 
 impl<T, O> MarkSweep<T, O>
 where
-    T: TypeMemory + TypeTrace + Clone,
+    T: MarkSweepType,
     O: Observer<Event = Event>,
 {
     /// Creates a `MarkSweep` memory collector with the specified `Observer`.
@@ -70,11 +69,78 @@ where
     }
 }
 
-fn alloc_obj<T: Clone + TypeMemory + TypeTrace>(ty: T) -> Pin<Box<ObjectInfo<T>>> {
+/// Allocates memory for an object.
+fn alloc_obj<T: MarkSweepType>(ty: T) -> Pin<Box<ObjectInfo<T>>> {
     let ptr = unsafe { std::alloc::alloc(ty.layout()) };
     Box::pin(ObjectInfo {
         ptr,
+        length: 1,
+        capacity: 1,
         ty,
+        roots: 0,
+        color: Color::White,
+    })
+}
+
+/// An error that might occur when requesting memory layout of a type
+#[derive(Debug)]
+pub enum MemoryLayoutError {
+    /// An error that is returned when the memory requested is to large to deal with.
+    OutOfBounds,
+
+    /// An error that is returned by constructing a Layout
+    LayoutError(LayoutError),
+}
+
+impl From<LayoutError> for MemoryLayoutError {
+    fn from(err: LayoutError) -> Self {
+        MemoryLayoutError::LayoutError(err)
+    }
+}
+
+/// Creates a layout describing the record for `n` instances of `layout`, with a suitable amount of
+/// padding between each to ensure that each instance is given its requested size an alignment.
+///
+/// Implementation taken from `Layout::repeat` (which is currently unstable)
+fn repeat_layout(layout: Layout, n: usize) -> Result<Layout, MemoryLayoutError> {
+    let len_rounded_up = layout.size().wrapping_add(layout.align()).wrapping_sub(1)
+        & !layout.align().wrapping_sub(1);
+    let padded_size = layout.size() + len_rounded_up.wrapping_sub(layout.align());
+    let alloc_size = padded_size
+        .checked_mul(n)
+        .ok_or(MemoryLayoutError::OutOfBounds)?;
+    Layout::from_size_align(alloc_size, layout.align()).map_err(Into::into)
+}
+
+/// Allocates memory for an array type with `length` elements. `array_ty` must be an array type.
+fn alloc_array<T: MarkSweepType>(array_ty: T, length: usize) -> Pin<Box<ObjectInfo<T>>> {
+    // Get the element type of the array
+    let element_ty = array_ty
+        .as_array()
+        .expect("array type doesnt have an element type")
+        .element_type();
+
+    // Determine the memory layout of the array elements
+    let layout = if element_ty.is_stack_allocated() {
+        repeat_layout(element_ty.layout(), length)
+    } else {
+        Layout::array::<GcPtr>(length).map_err(Into::into)
+    }
+    .unwrap_or_else(|e| {
+        panic!(
+            "invalid memory layout when allocating an array of {} elements: {:?}",
+            length, e
+        )
+    });
+
+    // Allocate memory for the array elements
+    let ptr = unsafe { std::alloc::alloc(layout) };
+
+    Box::pin(ObjectInfo {
+        ptr,
+        length,
+        capacity: length,
+        ty: array_ty,
         roots: 0,
         color: Color::White,
     })
@@ -82,11 +148,26 @@ fn alloc_obj<T: Clone + TypeMemory + TypeTrace>(ty: T) -> Pin<Box<ObjectInfo<T>>
 
 impl<T, O> GcRuntime<T> for MarkSweep<T, O>
 where
-    T: TypeMemory + TypeTrace + Clone,
+    T: MarkSweepType,
     O: Observer<Event = Event>,
 {
     fn alloc(&self, ty: T) -> GcPtr {
         let object = alloc_obj(ty.clone());
+
+        // We want to return a pointer to the `ObjectInfo`, to be used as handle.
+        let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
+
+        {
+            let mut objects = self.objects.write();
+            objects.insert(handle, object);
+        }
+
+        self.log_alloc(handle, ty);
+        handle
+    }
+
+    fn alloc_array(&self, ty: T, n: usize) -> GcPtr {
+        let object = alloc_array(ty.clone(), n);
 
         // We want to return a pointer to the `ObjectInfo`, to be used as handle.
         let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
@@ -135,7 +216,7 @@ where
 
 impl<T, O> MarkSweep<T, O>
 where
-    T: TypeMemory + TypeTrace + Clone,
+    T: MarkSweepType,
     O: Observer<Event = Event>,
 {
     /// Collects all memory that is no longer referenced by rooted objects. Returns `true` if memory
@@ -188,7 +269,7 @@ where
                 }
                 true
             } else {
-                unsafe { std::alloc::dealloc(obj.ptr, obj.ty.layout()) };
+                unsafe { std::alloc::dealloc(obj.ptr, obj.value_layout()) };
                 self.observer.event(Event::Deallocation(*h));
                 {
                     let mut stats = self.stats.write();
@@ -207,7 +288,7 @@ where
 
 impl<T, O> MemoryMapper<T> for MarkSweep<T, O>
 where
-    T: TypeDesc + TypeMemory + TypeTrace + Clone + Eq + Hash,
+    T: TypeDesc + MarkSweepType + Eq + Hash,
     O: Observer<Event = Event>,
 {
     fn map_memory(&self, mapping: Mapping<T, T>) -> Vec<GcPtr> {
@@ -231,6 +312,8 @@ where
                 if object_info.ty == old_ty {
                     object_info.set(ObjectInfo {
                         ptr: object_info.ptr,
+                        length: object_info.length,
+                        capacity: object_info.capacity,
                         roots: object_info.roots,
                         color: object_info.color,
                         ty: new_ty.clone(),
@@ -262,6 +345,8 @@ where
 
                     object_info.set(ObjectInfo {
                         ptr: dest.as_ptr(),
+                        length: object_info.length,
+                        capacity: object_info.capacity,
                         roots: object_info.roots,
                         color: object_info.color,
                         ty: conversion.new_ty.clone(),
@@ -292,7 +377,7 @@ where
             src: NonNull<u8>,
             dest: NonNull<u8>,
         ) where
-            T: TypeDesc + TypeMemory + TypeTrace + Clone + Eq + Hash,
+            T: TypeDesc + TypeComposition + MarkSweepType + Eq + Hash,
             O: Observer<Event = Event>,
         {
             for FieldMapping {
@@ -315,8 +400,8 @@ where
                             src as *mut u8
                         };
 
-                        if old_ty.group() == TypeGroup::Struct {
-                            debug_assert_eq!(new_ty.group(), TypeGroup::Struct);
+                        if old_ty.is_struct() {
+                            debug_assert!(new_ty.is_struct());
 
                             // When the name is the same, we are dealing with the same struct,
                             // but different internals
@@ -514,36 +599,55 @@ enum Color {
 /// meta information.
 #[derive(Debug)]
 #[repr(C)]
-struct ObjectInfo<T: TypeMemory + TypeTrace + Clone> {
+struct ObjectInfo<T: MarkSweepType> {
     pub ptr: *mut u8,
+    pub length: usize,
+    pub capacity: usize,
     pub roots: u32,
     pub color: Color,
     pub ty: T,
 }
 
+impl<T: MarkSweepType> ObjectInfo<T> {
+    /// Returns the memory layout of the value stored with this object
+    pub fn value_layout(&self) -> Layout {
+        if let Some(array_type) = self.ty.as_array() {
+            let element_type = array_type.element_type();
+            if element_type.is_stack_allocated() {
+                repeat_layout(element_type.layout(), self.capacity)
+            } else {
+                Layout::array::<GcPtr>(self.capacity).map_err(Into::into)
+            }
+            .expect("must have a valid layout since it has already been allocated")
+        } else {
+            self.ty.layout()
+        }
+    }
+}
+
 /// An `ObjectInfo` is thread-safe.
-unsafe impl<T: TypeMemory + TypeTrace + Clone> Send for ObjectInfo<T> {}
-unsafe impl<T: TypeMemory + TypeTrace + Clone> Sync for ObjectInfo<T> {}
+unsafe impl<T: MarkSweepType> Send for ObjectInfo<T> {}
+unsafe impl<T: MarkSweepType> Sync for ObjectInfo<T> {}
 
-impl<T: TypeMemory + TypeTrace + Clone> From<GcPtr> for *const ObjectInfo<T> {
+impl<T: MarkSweepType> From<GcPtr> for *const ObjectInfo<T> {
     fn from(ptr: GcPtr) -> Self {
         ptr.as_ptr() as Self
     }
 }
 
-impl<T: TypeMemory + TypeTrace + Clone> From<GcPtr> for *mut ObjectInfo<T> {
+impl<T: MarkSweepType> From<GcPtr> for *mut ObjectInfo<T> {
     fn from(ptr: GcPtr) -> Self {
         ptr.as_ptr() as Self
     }
 }
 
-impl<T: TypeMemory + TypeTrace + Clone> From<*const ObjectInfo<T>> for GcPtr {
+impl<T: MarkSweepType> From<*const ObjectInfo<T>> for GcPtr {
     fn from(info: *const ObjectInfo<T>) -> Self {
         (info as RawGcPtr).into()
     }
 }
 
-impl<T: TypeMemory + TypeTrace + Clone> From<*mut ObjectInfo<T>> for GcPtr {
+impl<T: MarkSweepType> From<*mut ObjectInfo<T>> for GcPtr {
     fn from(info: *mut ObjectInfo<T>) -> Self {
         (info as RawGcPtr).into()
     }

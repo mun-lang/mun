@@ -13,9 +13,11 @@ mod static_type_map;
 mod struct_info;
 mod type_info;
 
+mod array_info;
 #[cfg(test)]
 mod test_utils;
 
+pub use array_info::ArrayInfo;
 pub use assembly_info::AssemblyInfo;
 pub use dispatch_table::DispatchTable;
 pub use function_info::{

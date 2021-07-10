@@ -1,7 +1,7 @@
 use crate::{
     diff::{diff, Diff, FieldDiff, FieldEditKind},
     gc::GcPtr,
-    TypeDesc, TypeFields, TypeGroup, TypeMemory,
+    StructType, TypeComposition, TypeDesc, TypeMemory,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -37,7 +37,7 @@ pub enum Action<T: TypeDesc + TypeMemory> {
 
 impl<T> Mapping<T, T>
 where
-    T: TypeDesc + TypeFields<T> + TypeMemory + Copy + Eq + Hash,
+    T: TypeDesc + TypeComposition + TypeMemory + Clone + Eq + Hash,
 {
     ///
     pub fn new(old: &[T], new: &[T]) -> Self {
@@ -52,27 +52,27 @@ where
         for diff in diff.iter() {
             match diff {
                 Diff::Delete { index } => {
-                    deletions.insert(unsafe { *old.get_unchecked(*index) });
+                    deletions.insert(unsafe { old.get_unchecked(*index).clone() });
                 }
                 Diff::Edit {
                     diff,
                     old_index,
                     new_index,
                 } => {
-                    let old_ty = unsafe { *old.get_unchecked(*old_index) };
-                    let new_ty = unsafe { *new.get_unchecked(*new_index) };
-                    conversions.insert(old_ty, unsafe { field_mapping(old_ty, new_ty, diff) });
+                    let old_ty = unsafe { old.get_unchecked(*old_index).clone() };
+                    let new_ty = unsafe { new.get_unchecked(*new_index).clone() };
+                    conversions.insert(old_ty.clone(), unsafe { field_mapping(old_ty, new_ty, diff) });
                 }
                 Diff::Insert { index } => {
-                    insertions.insert(unsafe { *new.get_unchecked(*index) });
+                    insertions.insert(unsafe { new.get_unchecked(*index).clone() });
                 }
                 Diff::Move {
                     old_index,
                     new_index,
                 } => identical.push(unsafe {
                     (
-                        *old.get_unchecked(*old_index),
-                        *new.get_unchecked(*new_index),
+                        old.get_unchecked(*old_index).clone(),
+                        new.get_unchecked(*new_index).clone(),
                     )
                 }),
             }
@@ -83,7 +83,7 @@ where
         let mut new_candidates: HashSet<T> = new
             .iter()
             // Filter non-struct types
-            .filter(|ty| ty.group() == TypeGroup::Struct)
+            .filter(|ty| ty.is_struct())
             // Filter inserted structs
             .filter(|ty| !insertions.contains(*ty))
             .cloned()
@@ -92,7 +92,7 @@ where
         let mut old_candidates: HashSet<T> = old
             .iter()
             // Filter non-struct types
-            .filter(|ty| ty.group() == TypeGroup::Struct)
+            .filter(|ty| ty.is_struct())
             // Filter deleted structs
             .filter(|ty| !deletions.contains(*ty))
             // Filter edited types
@@ -139,12 +139,13 @@ where
 /// # Safety
 ///
 /// Expects the `diff` to be based on `old_ty` and `new_ty`. If not, it causes undefined behavior.
-pub unsafe fn field_mapping<T: Clone + TypeDesc + TypeFields<T> + TypeMemory>(
+pub unsafe fn field_mapping<T: Clone + TypeDesc + TypeComposition + TypeMemory>(
     old_ty: T,
     new_ty: T,
     diff: &[FieldDiff],
 ) -> Conversion<T> {
-    let old_fields = old_ty.fields();
+    let old_struct = old_ty.as_struct().expect("old_ty must be a struct type");
+    let old_fields = old_struct.fields();
 
     let deletions: HashSet<usize> = diff
         .iter()
@@ -232,9 +233,10 @@ pub unsafe fn field_mapping<T: Clone + TypeDesc + TypeFields<T> + TypeMemory>(
         }
     }
 
-    let new_fields = new_ty.fields();
-    let old_offsets = old_ty.offsets();
-    let new_offsets = new_ty.offsets();
+    let new_struct = new_ty.as_struct().expect("new_ty must be a struct type");
+    let new_fields = new_struct.fields();
+    let old_offsets = old_struct.offsets();
+    let new_offsets = new_struct.offsets();
     Conversion {
         field_mapping: mapping
             .into_iter()

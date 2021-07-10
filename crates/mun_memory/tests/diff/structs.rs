@@ -27,8 +27,8 @@ fn add() {
         StructInfo::new(&[("c", &float), ("d", &int)]),
     );
 
-    let old = &[&struct1];
-    let new = &[&struct1, &struct2];
+    let old = &[struct1.clone()];
+    let new = &[struct1.clone(), struct2.clone()];
 
     let diff = diff(old, new);
     assert_eq!(diff, vec![Diff::Insert { index: 1 }]);
@@ -54,8 +54,8 @@ fn remove() {
         StructInfo::new(&[("c", &float), ("d", &int)]),
     );
 
-    let old = &[&struct1, &struct2];
-    let new = &[&struct1];
+    let old = &[struct1.clone(), struct2.clone()];
+    let new = &[struct1.clone()];
 
     let diff = diff(old, new);
     assert_eq!(diff, vec![Diff::Delete { index: 1 },]);
@@ -78,8 +78,8 @@ fn replace() {
         StructInfo::new(&[("c", &float), ("d", &int)]),
     );
 
-    let old = &[&struct1];
-    let new = &[&struct2];
+    let old = &[struct1.clone()];
+    let new = &[struct2];
 
     let diff = diff(old, new);
     assert_eq!(
@@ -105,8 +105,8 @@ fn swap() {
         StructInfo::new(&[("c", &float), ("d", &int)]),
     );
 
-    let old = &[&struct1, &struct2];
-    let new = &[&struct2, &struct1];
+    let old = &[struct1.clone(), struct2.clone()];
+    let new = &[struct2.clone(), struct1.clone()];
 
     let diff = diff(old, new);
     assert_eq!(
@@ -138,8 +138,8 @@ fn add_field1() {
         StructInfo::new(&[("a", &int), ("b", &int), ("c", &float)]),
     );
 
-    let old = &[&struct1];
-    let new = &[&struct2];
+    let old = &[struct1.clone()];
+    let new = &[struct2];
 
     let diff = diff(old, new);
     assert_eq!(
@@ -169,8 +169,8 @@ fn add_field2() {
         StructInfo::new(&[("a", &int), ("b", &float), ("c", &float)]),
     );
 
-    let old = &[&struct1];
-    let new = &[&struct2];
+    let old = &[struct1.clone()];
+    let new = &[struct2];
 
     let diff = diff(old, new);
     assert_eq!(
@@ -200,8 +200,8 @@ fn add_field3() {
         StructInfo::new(&[("a", &int), ("b", &float), ("c", &float)]),
     );
 
-    let old = &[&struct1];
-    let new = &[&struct2];
+    let old = &[struct1.clone()];
+    let new = &[struct2];
 
     let diff = diff(old, new);
     assert_eq!(
@@ -227,8 +227,8 @@ fn remove_field1() {
     );
     let struct2 = TypeInfo::new_struct(STRUCT1_NAME, STRUCT2_GUID, StructInfo::new(&[("c", &int)]));
 
-    let old = &[&struct1];
-    let new = &[&struct2];
+    let old = &[struct1.clone()];
+    let new = &[struct2];
 
     let diff = diff(old, new);
     assert_eq!(
@@ -257,8 +257,8 @@ fn remove_field2() {
     );
     let struct2 = TypeInfo::new_struct(STRUCT1_NAME, STRUCT2_GUID, StructInfo::new(&[("b", &int)]));
 
-    let old = &[&struct1];
-    let new = &[&struct2];
+    let old = &[struct1.clone()];
+    let new = &[struct2];
 
     let diff = diff(old, new);
     assert_eq!(
@@ -287,8 +287,8 @@ fn remove_field3() {
     );
     let struct2 = TypeInfo::new_struct(STRUCT1_NAME, STRUCT2_GUID, StructInfo::new(&[("a", &int)]));
 
-    let old = &[&struct1];
-    let new = &[&struct2];
+    let old = &[struct1.clone()];
+    let new = &[struct2];
 
     let diff = diff(old, new);
     assert_eq!(
@@ -321,8 +321,8 @@ fn swap_fields() {
         StructInfo::new(&[("c", &float), ("a", &float), ("b", &int)]),
     );
 
-    let old = &[&struct1];
-    let new = &[&struct2];
+    let old = &[struct1.clone()];
+    let new = &[struct2];
 
     let diff = diff(old, new);
     assert_eq!(
@@ -356,8 +356,8 @@ fn swap_fields2() {
         StructInfo::new(&[("d", &int), ("c", &float), ("b", &int), ("a", &float)]),
     );
 
-    let old = &[&struct1];
-    let new = &[&struct2];
+    let old = &[struct1.clone()];
+    let new = &[struct2];
 
     let diff = diff(old, new);
     assert_eq!(
@@ -403,8 +403,8 @@ fn cast_field() {
         StructInfo::new(&[("a", &float), ("b", &int), ("c", &int)]),
     );
 
-    let old = &[&struct1];
-    let new = &[&struct2];
+    let old = &[struct1.clone()];
+    let new = &[struct2];
 
     let diff = diff(old, new);
     assert_eq!(
@@ -447,8 +447,8 @@ fn rename_field1() {
         StructInfo::new(&[("a", &int), ("d", &float), ("c", &float)]),
     );
 
-    let old = &[&struct1];
-    let new = &[&struct2];
+    let old = &[struct1.clone()];
+    let new = &[struct2];
 
     let diff = diff(old, new);
     assert_eq!(
@@ -481,8 +481,8 @@ fn rename_field2() {
         StructInfo::new(&[("d", &int), ("e", &float), ("f", &float)]),
     );
 
-    let old = &[&struct1];
-    let new = &[&struct2];
+    let old = &[struct1.clone()];
+    let new = &[struct2];
 
     let diff = diff(old, new);
     assert_eq!(

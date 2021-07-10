@@ -6,8 +6,8 @@ fn add() {
     let int = TypeInfo::new_fundamental::<i64>();
     let float = TypeInfo::new_fundamental::<f64>();
 
-    let old = &[&int];
-    let new = &[&int, &float];
+    let old = &[int.clone()];
+    let new = &[int.clone(), float.clone()];
 
     let diff = diff(old, new);
     assert_eq!(diff, vec![Diff::Insert { index: 1 }]);
@@ -19,8 +19,8 @@ fn remove() {
     let int = TypeInfo::new_fundamental::<i64>();
     let float = TypeInfo::new_fundamental::<f64>();
 
-    let old = &[&int, &float];
-    let new = &[&float];
+    let old = &[int.clone(), float.clone()];
+    let new = &[float.clone()];
 
     let diff = diff(old, new);
     assert_eq!(diff, vec![Diff::Delete { index: 0 },]);
@@ -32,8 +32,8 @@ fn replace() {
     let int = TypeInfo::new_fundamental::<i64>();
     let float = TypeInfo::new_fundamental::<f64>();
 
-    let old = &[&int];
-    let new = &[&float];
+    let old = &[int.clone()];
+    let new = &[float.clone()];
 
     let diff = diff(old, new);
     assert_eq!(
@@ -48,8 +48,8 @@ fn swap() {
     let int = TypeInfo::new_fundamental::<i64>();
     let float = TypeInfo::new_fundamental::<f64>();
 
-    let old = &[&int, &float];
-    let new = &[&float, &int];
+    let old = &[int.clone(), float.clone()];
+    let new = &[float.clone(), int.clone()];
 
     let diff = diff(old, new);
     assert_eq!(

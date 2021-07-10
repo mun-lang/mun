@@ -11,6 +11,7 @@ use crate::type_info::TypeInfo;
 pub mod body;
 #[macro_use]
 pub(crate) mod dispatch_table;
+mod array;
 pub mod file;
 pub(crate) mod file_group;
 pub mod function;
@@ -18,6 +19,8 @@ mod intrinsics;
 pub mod ty;
 pub(crate) mod type_table;
 pub mod types;
+
+use array::MunArrayValue;
 
 /// Defines that a type has a static representation in inkwell
 pub trait IsIrType<'ink> {

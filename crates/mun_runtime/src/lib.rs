@@ -78,6 +78,26 @@ extern "C" fn new(
     handle.into()
 }
 
+extern "C" fn new_array(
+    type_info: *const abi::TypeInfo,
+    length: usize,
+    alloc_handle: *mut ffi::c_void,
+) -> *const *mut ffi::c_void {
+    // Safety: `new` is only called from within Mun assemblies' core logic, so we are guaranteed
+    // that the `Runtime` and its `GarbageCollector` still exist if this function is called, and
+    // will continue to do so for the duration of this function.
+    let allocator = unsafe { get_allocator(alloc_handle) };
+    // Safety: the Mun Compiler guarantees that `new` is never called with `ptr::null()`.
+    let type_info = UnsafeTypeInfo::new(unsafe { NonNull::new_unchecked(type_info as *mut _) });
+
+    let handle = allocator.alloc_array(type_info, length);
+
+    // Prevent destruction of the allocator
+    mem::forget(allocator);
+
+    handle.into()
+}
+
 /// A builder for the [`Runtime`].
 pub struct RuntimeBuilder {
     options: RuntimeOptions,
@@ -218,6 +238,16 @@ impl Runtime {
         options.user_functions.push(IntoFunctionDefinition::into(
             new as extern "C" fn(*const abi::TypeInfo, *mut ffi::c_void) -> *const *mut ffi::c_void,
             "new",
+        ));
+
+        options.user_functions.push(IntoFunctionDefinition::into(
+            new_array
+                as extern "C" fn(
+                    *const abi::TypeInfo,
+                    usize,
+                    *mut ffi::c_void,
+                ) -> *const *mut ffi::c_void,
+            "new_array",
         ));
 
         let mut storages = Vec::with_capacity(options.user_functions.len());

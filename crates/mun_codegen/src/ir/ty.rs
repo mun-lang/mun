@@ -3,11 +3,12 @@ use crate::{
     type_info::{TypeInfo, TypeSize},
 };
 use hir::{FloatBitness, HirDatabase, HirDisplay, IntBitness, ResolveBitness, Ty, TyKind};
+use inkwell::types::PointerType;
 use inkwell::{
     context::Context,
     targets::TargetData,
     types::FunctionType,
-    types::{AnyTypeEnum, BasicType, BasicTypeEnum, FloatType, IntType, StructType},
+    types::{BasicType, BasicTypeEnum, FloatType, IntType, StructType},
     AddressSpace,
 };
 use smallvec::SmallVec;
@@ -18,7 +19,7 @@ pub struct HirTypeCache<'db, 'ink> {
     context: &'ink Context,
     db: &'db dyn HirDatabase,
     target_data: TargetData,
-    types: RefCell<HashMap<hir::Ty, StructType<'ink>>>,
+    types: RefCell<HashMap<hir::TyKind, StructType<'ink>>>,
 }
 
 impl<'db, 'ink> HirTypeCache<'db, 'ink> {
@@ -48,7 +49,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
             IntBitness::X32 => self.context.i32_type(),
             IntBitness::X16 => self.context.i16_type(),
             IntBitness::X8 => self.context.i8_type(),
-            IntBitness::Xsize => usize::ir_type(self.context, &self.target_data),
+            IntBitness::Xsize => self.get_usize_type(),
         }
     }
 
@@ -57,13 +58,18 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
         self.context.bool_type()
     }
 
+    /// Returns the type for usize. The size of the type depends on the target architecture.
+    pub fn get_usize_type(&self) -> IntType<'ink> {
+        usize::ir_type(self.context, &self.target_data)
+    }
+
     /// Returns the type of the specified integer type
     pub fn get_struct_type(&self, struct_ty: hir::Struct) -> StructType<'ink> {
         // TODO: This assumes the contents of the hir::Struct does not change. It definitely does
         //  between compilations. We have to have a way to uniquely identify the `hir::Struct` and
         //  its contents.
 
-        let ty = Ty::struct_ty(struct_ty);
+        let ty = TyKind::Struct(struct_ty);
 
         // Get the type from the cache
         if let Some(ir_ty) = self.types.borrow().get(&ty) {
@@ -91,7 +97,59 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
         ir_ty
     }
 
-    /// Returns the type of the struct that should be used for variables.
+    /// Returns the IR type of the specified array type.
+    pub fn get_array_type(&self, element_ty: &hir::Ty) -> StructType<'ink> {
+        // Get the type from the cache
+        let ty = TyKind::Array(element_ty.clone());
+        if let Some(ir_ty) = self.types.borrow().get(&ty) {
+            return *ir_ty;
+        };
+
+        // Opaquely construct the array struct type and store it in the cache
+        let ir_ty = self
+            .context
+            .opaque_struct_type(&format!("[{}]", element_ty.display(self.db)));
+        self.types.borrow_mut().insert(ty, ir_ty);
+
+        // Mun Arrays are represented as:
+        //
+        // ```c
+        // struct ArrayT {
+        //     T* elements;
+        //     usize_t len;
+        //     usize_t capacity;
+        // }
+        // ```
+
+        let size_ir_type = self.context.ptr_sized_int_type(&self.target_data, None);
+        let element_ir_type = self
+            .get_basic_type(&element_ty)
+            .expect("could not convert array element type to basic type");
+        let element_ir_ptr_type = BasicType::ptr_type(&element_ir_type, AddressSpace::Generic);
+
+        // Fill the struct members
+        ir_ty.set_body(
+            &[
+                /* elements */ element_ir_ptr_type.into(),
+                /* length */ size_ir_type.into(),
+                /* capacity */ size_ir_type.into(),
+            ],
+            false,
+        );
+
+        ir_ty
+    }
+
+    /// Returns the type of an array that should be used for variables. Arrays are always stored on
+    /// the heap so this will always be a pointer to an Array<Ty>.
+    pub fn get_array_reference_type(&self, element_ty: &hir::Ty) -> PointerType<'ink> {
+        let ir_ty = self.get_array_type(element_ty);
+        ir_ty.ptr_type(AddressSpace::Generic)
+    }
+
+    /// Returns the type of the struct that should be used for variables. Depending on the memory
+    /// type of the struct this is either a pointer to a GCHandle which holds a pointer to a struct,
+    /// or, in case of a value struct, the struct type itself.
     pub fn get_struct_reference_type(&self, struct_ty: hir::Struct) -> BasicTypeEnum<'ink> {
         let ir_ty = self.get_struct_type(struct_ty);
         match struct_ty.data(self.db.upcast()).memory_kind {
@@ -183,6 +241,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
             TyKind::Int(int_ty) => Some(self.get_int_type(*int_ty).into()),
             TyKind::Struct(struct_ty) => Some(self.get_struct_reference_type(*struct_ty)),
             TyKind::Bool => Some(self.get_bool_type().into()),
+            TyKind::Array(element_ty) => Some(self.get_array_reference_type(element_ty).into()),
             _ => None,
         }
     }
@@ -197,28 +256,29 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
             TyKind::Int(int_ty) => Some(self.get_int_type(*int_ty).into()),
             TyKind::Struct(struct_ty) => Some(self.get_public_struct_reference_type(*struct_ty)),
             TyKind::Bool => Some(self.get_bool_type().into()),
+            TyKind::Array(element_ty) => Some(self.get_array_reference_type(element_ty).into()),
             _ => None,
         }
     }
 
-    /// Returns the inkwell type of the specified HIR type. If the type cannot be represented as an
-    /// inkwell type, `None` is returned.
-    pub fn get_any_type(&self, ty: &hir::Ty) -> Option<AnyTypeEnum<'ink>> {
-        match ty.interned() {
-            TyKind::Tuple(_, substs) => Some(self.get_tuple_type(substs).into()),
-            TyKind::Float(float_ty) => Some(self.get_float_type(*float_ty).into()),
-            TyKind::Int(int_ty) => Some(self.get_int_type(*int_ty).into()),
-            TyKind::Struct(struct_ty) => Some(self.get_struct_type(*struct_ty).into()),
-            TyKind::FnDef(hir::CallableDef::Function(fn_ty), type_params) => {
-                if !type_params.is_empty() {
-                    unimplemented!("cannot yet deal with type parameters in functions");
-                }
-                Some(self.get_function_type(*fn_ty).into())
-            }
-            TyKind::Bool => Some(self.get_bool_type().into()),
-            _ => None,
-        }
-    }
+    // /// Returns the inkwell type of the specified HIR type. If the type cannot be represented as an
+    // /// inkwell type, `None` is returned.
+    // pub fn get_any_type(&self, ty: &hir::Ty) -> Option<AnyTypeEnum<'ink>> {
+    //     match ty.interned() {
+    //         TyKind::Tuple(_, substs) => Some(self.get_tuple_type(substs).into()),
+    //         TyKind::Float(float_ty) => Some(self.get_float_type(*float_ty).into()),
+    //         TyKind::Int(int_ty) => Some(self.get_int_type(*int_ty).into()),
+    //         TyKind::Struct(struct_ty) => Some(self.get_struct_type(*struct_ty).into()),
+    //         TyKind::FnDef(hir::CallableDef::Function(fn_ty), type_params) => {
+    //             if !type_params.is_empty() {
+    //                 unimplemented!("cannot yet deal with type parameters in functions");
+    //             }
+    //             Some(self.get_function_type(*fn_ty).into())
+    //         }
+    //         TyKind::Bool => Some(self.get_bool_type().into()),
+    //         _ => None,
+    //     }
+    // }
 
     /// Returns the empty type
     pub fn get_empty_type(&self) -> StructType<'ink> {
@@ -266,6 +326,11 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
                 let ir_ty = self.get_struct_type(s);
                 let type_size = TypeSize::from_ir_type(&ir_ty, &self.target_data);
                 TypeInfo::new_struct(self.db, s, type_size)
+            }
+            TyKind::Array(ty) => {
+                let ir_ty = self.get_array_type(ty);
+                let type_size = TypeSize::from_ir_type(&ir_ty, &self.target_data);
+                TypeInfo::new_array(self.db, ty.clone(), type_size)
             }
             _ => unimplemented!("{} unhandled", ty.display(self.db)),
         }

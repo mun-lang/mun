@@ -150,6 +150,14 @@ impl Ty {
         }
     }
 
+    /// If this type represents an array type, returns a reference to the element type.
+    pub fn as_array(&self) -> Option<&Ty> {
+        match self.interned() {
+            TyKind::Array(element_ty) => Some(element_ty),
+            _ => None,
+        }
+    }
+
     /// Returns true if this type represents the empty tuple type
     pub fn is_empty(&self) -> bool {
         matches!(self.interned(), TyKind::Tuple(0, _))
@@ -210,6 +218,7 @@ impl Ty {
             TyKind::Bool => Some("core::bool".to_string()),
             TyKind::Float(ty) => Some(format!("core::{}", ty.as_str())),
             TyKind::Int(ty) => Some(format!("core::{}", ty.as_str())),
+            TyKind::Array(ty) => Some(format!("[{}]", ty.display(db))),
             _ => None,
         }
     }
