@@ -35,7 +35,7 @@ paths = { version="=0.1.0", path="../mun_paths", package="mun_paths"}
 
 [dev-dependencies]
 abi = { path = "../mun_abi", package = "mun_abi" }
-insta = "0.16"
+insta = "1.7.1"
 libloader = { path = "../mun_libloader", package = "mun_libloader" }
 mun_test = { path = "../mun_test" }
 runtime = { path = "../mun_runtime", package = "mun_runtime" }
