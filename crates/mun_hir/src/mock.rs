@@ -31,19 +31,19 @@ impl salsa::Database for MockDatabase {
 }
 
 impl Upcast<dyn AstDatabase> for MockDatabase {
-    fn upcast(&self) -> &dyn AstDatabase {
+    fn upcast(&self) -> &(dyn AstDatabase + 'static) {
         &*self
     }
 }
 
 impl Upcast<dyn DefDatabase> for MockDatabase {
-    fn upcast(&self) -> &dyn DefDatabase {
+    fn upcast(&self) -> &(dyn DefDatabase + 'static) {
         &*self
     }
 }
 
 impl Upcast<dyn SourceDatabase> for MockDatabase {
-    fn upcast(&self) -> &dyn SourceDatabase {
+    fn upcast(&self) -> &(dyn SourceDatabase + 'static) {
         &*self
     }
 }
