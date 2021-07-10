@@ -15,4 +15,4 @@ categories = ["api-bindings", "game-development", "mun"]
 [dependencies]
 md5 = "0.7.0"
 once_cell = "1.4.0"
-parking_lot = "0.10"
+parking_lot = "0.11.1"

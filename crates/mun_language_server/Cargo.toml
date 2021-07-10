@@ -31,7 +31,7 @@ mun_target = { version = "=0.3.0", path = "../mun_target" }
 mun_syntax = { version = "=0.3.0", path = "../mun_syntax" }
 mun_diagnostics = { version = "=0.1.0", path = "../mun_diagnostics" }
 crossbeam-channel = "0.5.0"
-parking_lot="0.11.1"
+parking_lot = "0.11.1"
 paths = { version = "=0.1.0", path="../mun_paths", package="mun_paths"}
 ra_ap_text_edit="0.0.35"
 
