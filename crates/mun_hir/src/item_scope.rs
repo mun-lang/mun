@@ -60,7 +60,7 @@ pub(crate) static BUILTIN_SCOPE: Lazy<FxHashMap<Name, PerNs<(ItemDefinitionId, V
             .map(|(name, ty)| {
                 (
                     name.clone(),
-                    PerNs::types((ty.clone().into(), Visibility::Public)),
+                    PerNs::types(((*ty).into(), Visibility::Public)),
                 )
             })
             .collect()

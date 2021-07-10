@@ -335,12 +335,10 @@ fn main() {
     // Link LLVM libraries
     println!("cargo:rustc-link-search=native={}", libdir);
     let blacklist = vec!["LLVMLineEditor"];
-    for name in get_link_libraries().iter().filter(|n| {
-        blacklist
-            .iter()
-            .find(|blacklisted| n.contains(**blacklisted))
-            .is_none()
-    }) {
+    for name in get_link_libraries()
+        .iter()
+        .filter(|n| !blacklist.iter().any(|blacklisted| n.contains(*blacklisted)))
+    {
         println!("cargo:rustc-link-lib=static={}", name);
     }
 

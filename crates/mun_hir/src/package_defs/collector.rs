@@ -147,7 +147,7 @@ impl<'db> DefCollector<'db> {
             let mut resolved_something = false;
 
             // Get all the current unresolved import directives
-            let imports = std::mem::replace(&mut self.unresolved_imports, Vec::new());
+            let imports = std::mem::take(&mut self.unresolved_imports);
 
             // For each import, try to resolve it with the current state.
             for mut directive in imports {
