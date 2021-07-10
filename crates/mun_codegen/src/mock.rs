@@ -32,31 +32,31 @@ impl salsa::Database for MockDatabase {
 }
 
 impl hir::Upcast<dyn hir::AstDatabase> for MockDatabase {
-    fn upcast(&self) -> &dyn hir::AstDatabase {
+    fn upcast(&self) -> &(dyn hir::AstDatabase + 'static) {
         &*self
     }
 }
 
 impl hir::Upcast<dyn hir::SourceDatabase> for MockDatabase {
-    fn upcast(&self) -> &dyn hir::SourceDatabase {
+    fn upcast(&self) -> &(dyn hir::SourceDatabase + 'static) {
         &*self
     }
 }
 
 impl hir::Upcast<dyn hir::DefDatabase> for MockDatabase {
-    fn upcast(&self) -> &dyn hir::DefDatabase {
+    fn upcast(&self) -> &(dyn hir::DefDatabase + 'static) {
         &*self
     }
 }
 
 impl hir::Upcast<dyn hir::HirDatabase> for MockDatabase {
-    fn upcast(&self) -> &dyn hir::HirDatabase {
+    fn upcast(&self) -> &(dyn hir::HirDatabase + 'static) {
         &*self
     }
 }
 
 impl hir::Upcast<dyn CodeGenDatabase> for MockDatabase {
-    fn upcast(&self) -> &dyn CodeGenDatabase {
+    fn upcast(&self) -> &(dyn CodeGenDatabase + 'static) {
         &*self
     }
 }

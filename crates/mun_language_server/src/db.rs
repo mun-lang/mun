@@ -46,6 +46,9 @@ impl AnalysisDatabase {
 }
 
 impl salsa::Database for AnalysisDatabase {
+    fn on_propagated_panic(&self) -> ! {
+        Canceled::throw()
+    }
     fn salsa_event(&self, event: salsa::Event) {
         match event.kind {
             salsa::EventKind::DidValidateMemoizedValue { .. }
@@ -58,25 +61,25 @@ impl salsa::Database for AnalysisDatabase {
 }
 
 impl Upcast<dyn hir::AstDatabase> for AnalysisDatabase {
-    fn upcast(&self) -> &dyn hir::AstDatabase {
+    fn upcast(&self) -> &(dyn hir::AstDatabase + 'static) {
         &*self
     }
 }
 
 impl Upcast<dyn hir::SourceDatabase> for AnalysisDatabase {
-    fn upcast(&self) -> &dyn hir::SourceDatabase {
+    fn upcast(&self) -> &(dyn hir::SourceDatabase + 'static) {
         &*self
     }
 }
 
 impl Upcast<dyn hir::DefDatabase> for AnalysisDatabase {
-    fn upcast(&self) -> &dyn hir::DefDatabase {
+    fn upcast(&self) -> &(dyn hir::DefDatabase + 'static) {
         &*self
     }
 }
 
 impl Upcast<dyn hir::HirDatabase> for AnalysisDatabase {
-    fn upcast(&self) -> &dyn hir::HirDatabase {
+    fn upcast(&self) -> &(dyn hir::HirDatabase + 'static) {
         &*self
     }
 }
