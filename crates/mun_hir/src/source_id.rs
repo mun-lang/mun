@@ -17,7 +17,7 @@ use std::{
 pub(crate) type AstId<N> = InFile<FileAstId<N>>;
 
 impl<N: AstNode> AstId<N> {
-    pub fn to_node(&self, db: &dyn AstDatabase) -> N {
+    pub fn to_node(self, db: &dyn AstDatabase) -> N {
         let root = db.parse(self.file_id);
         db.ast_id_map(self.file_id)
             .get(self.value)

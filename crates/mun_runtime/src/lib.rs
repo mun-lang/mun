@@ -14,7 +14,6 @@ mod marshal;
 mod reflection;
 
 use anyhow::Result;
-use ffi::OsString;
 use garbage_collector::GarbageCollector;
 use log::{debug, error, info};
 use memory::gc::{self, GcRuntime};
@@ -317,7 +316,7 @@ impl Runtime {
     /// compiled assemblies.
     pub fn update(&mut self) -> bool {
         fn is_lockfile(path: &Path) -> bool {
-            path.file_name().expect("Invalid file path.") == OsString::from(LOCKFILE_NAME)
+            path.file_name().expect("Invalid file path.") == LOCKFILE_NAME
         }
 
         fn relink_assemblies(runtime: &mut Runtime) -> anyhow::Result<DispatchTable> {

@@ -4,7 +4,7 @@ expression: "\"Hello, world!\"\n'Hello, world!'\n\"\\n\"\n\"\\\"\\\\\"\n\"multi\
 ---
 STRING 15 "\"Hello, world!\""
 WHITESPACE 1 "\n"
-STRING 15 "\'Hello, world!\'"
+STRING 15 "'Hello, world!'"
 WHITESPACE 1 "\n"
 STRING 4 "\"\\n\""
 WHITESPACE 1 "\n"
