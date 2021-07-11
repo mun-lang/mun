@@ -23,7 +23,7 @@ mun_target = { version = "=0.3.0", path = "../mun_target" }
 mun_lld = { version = "=110.0.0", path = "../mun_lld" }
 anyhow = "1.0.31"
 thiserror = "1.0.19"
-salsa = "0.15.0"
+salsa = "0.16.1"
 md5="0.6.1"
 array-init="0.1.0"
 tempfile = "3"

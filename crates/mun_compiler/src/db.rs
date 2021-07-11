@@ -16,31 +16,31 @@ pub struct CompilerDatabase {
 }
 
 impl Upcast<dyn hir::AstDatabase> for CompilerDatabase {
-    fn upcast(&self) -> &dyn hir::AstDatabase {
+    fn upcast(&self) -> &(dyn hir::AstDatabase + 'static) {
         &*self
     }
 }
 
 impl Upcast<dyn hir::SourceDatabase> for CompilerDatabase {
-    fn upcast(&self) -> &dyn hir::SourceDatabase {
+    fn upcast(&self) -> &(dyn hir::SourceDatabase + 'static) {
         &*self
     }
 }
 
 impl Upcast<dyn hir::DefDatabase> for CompilerDatabase {
-    fn upcast(&self) -> &dyn hir::DefDatabase {
+    fn upcast(&self) -> &(dyn hir::DefDatabase + 'static) {
         &*self
     }
 }
 
 impl Upcast<dyn hir::HirDatabase> for CompilerDatabase {
-    fn upcast(&self) -> &dyn hir::HirDatabase {
+    fn upcast(&self) -> &(dyn hir::HirDatabase + 'static) {
         &*self
     }
 }
 
 impl Upcast<dyn CodeGenDatabase> for CompilerDatabase {
-    fn upcast(&self) -> &dyn CodeGenDatabase {
+    fn upcast(&self) -> &(dyn CodeGenDatabase + 'static) {
         &*self
     }
 }
