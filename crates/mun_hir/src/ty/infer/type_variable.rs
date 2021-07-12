@@ -1,4 +1,8 @@
-use crate::{ty::infer::InferTy, ty_app, Ty, TypeCtor};
+use crate::{
+    ty::infer::InferTy,
+    ty::{TyKind, TypeWalk},
+    Ty,
+};
 use ena::unify::{InPlaceUnificationTable, NoError, UnifyKey, UnifyValue};
 use std::{borrow::Cow, fmt};
 
@@ -92,23 +96,26 @@ struct Delegate;
 impl TypeVariableTable {
     /// Constructs a new generic type variable type
     pub fn new_type_var(&mut self) -> Ty {
-        Ty::Infer(InferTy::TypeVar(
+        TyKind::InferenceVar(InferTy::TypeVar(
             self.eq_relations.new_key(TypeVarValue::Unknown),
         ))
+        .intern()
     }
 
     /// Constructs a new type variable that is used to represent *some* integer type
     pub fn new_integer_var(&mut self) -> Ty {
-        Ty::Infer(InferTy::IntVar(
+        TyKind::InferenceVar(InferTy::IntVar(
             self.eq_relations.new_key(TypeVarValue::Unknown),
         ))
+        .intern()
     }
 
     /// Constructs a new type variable that is used to represent *some* floating-point type
     pub fn new_float_var(&mut self) -> Ty {
-        Ty::Infer(InferTy::FloatVar(
+        TyKind::InferenceVar(InferTy::FloatVar(
             self.eq_relations.new_key(TypeVarValue::Unknown),
         ))
+        .intern()
     }
 
     /// Unifies the two types. If one or more type variables are involved instantiate or equate the
@@ -133,35 +140,45 @@ impl TypeVariableTable {
 
     /// Handles unificiation of trivial cases.
     pub(crate) fn unify_inner_trivial(&mut self, a: &Ty, b: &Ty) -> bool {
-        match (a, b) {
+        match (a.interned(), b.interned()) {
             // Ignore unificiation if dealing with unknown types, there are no guarentees in that case.
-            (Ty::Unknown, _) | (_, Ty::Unknown) => true,
+            (TyKind::Unknown, _) | (_, TyKind::Unknown) => true,
 
             // In case of two unknowns of the same type, equate them
-            (Ty::Infer(InferTy::TypeVar(tv_a)), Ty::Infer(InferTy::TypeVar(tv_b)))
-            | (Ty::Infer(InferTy::IntVar(tv_a)), Ty::Infer(InferTy::IntVar(tv_b)))
-            | (Ty::Infer(InferTy::FloatVar(tv_a)), Ty::Infer(InferTy::FloatVar(tv_b))) => {
+            (
+                TyKind::InferenceVar(InferTy::TypeVar(tv_a)),
+                TyKind::InferenceVar(InferTy::TypeVar(tv_b)),
+            )
+            | (
+                TyKind::InferenceVar(InferTy::IntVar(tv_a)),
+                TyKind::InferenceVar(InferTy::IntVar(tv_b)),
+            )
+            | (
+                TyKind::InferenceVar(InferTy::FloatVar(tv_a)),
+                TyKind::InferenceVar(InferTy::FloatVar(tv_b)),
+            ) => {
                 self.equate(*tv_a, *tv_b);
                 true
             }
 
             // Instantiate the variable if unifying with a concrete type
-            (Ty::Infer(InferTy::TypeVar(tv)), other) | (other, Ty::Infer(InferTy::TypeVar(tv))) => {
-                self.instantiate(*tv, other.clone());
+            (TyKind::InferenceVar(InferTy::TypeVar(tv)), other)
+            | (other, TyKind::InferenceVar(InferTy::TypeVar(tv))) => {
+                self.instantiate(*tv, other.clone().intern());
                 true
             }
 
             // Instantiate the variable if unifying an unknown integer type with a concrete integer type
-            (Ty::Infer(InferTy::IntVar(tv)), other @ ty_app!(TypeCtor::Int(_)))
-            | (other @ ty_app!(TypeCtor::Int(_)), Ty::Infer(InferTy::IntVar(tv))) => {
-                self.instantiate(*tv, other.clone());
+            (TyKind::InferenceVar(InferTy::IntVar(tv)), other @ TyKind::Int(_))
+            | (other @ TyKind::Int(_), TyKind::InferenceVar(InferTy::IntVar(tv))) => {
+                self.instantiate(*tv, other.clone().intern());
                 true
             }
 
             // Instantiate the variable if unifying an unknown float type with a concrete float type
-            (Ty::Infer(InferTy::FloatVar(tv)), other @ ty_app!(TypeCtor::Float(_)))
-            | (other @ ty_app!(TypeCtor::Float(_)), Ty::Infer(InferTy::FloatVar(tv))) => {
-                self.instantiate(*tv, other.clone());
+            (TyKind::InferenceVar(InferTy::FloatVar(tv)), other @ TyKind::Float(_))
+            | (other @ TyKind::Float(_), TyKind::InferenceVar(InferTy::FloatVar(tv))) => {
+                self.instantiate(*tv, other.clone().intern());
                 true
             }
 
@@ -198,8 +215,8 @@ impl TypeVariableTable {
         // The type variable could resolve to an int/float variable. Therefore try to resolve up to
         // three times; each type of variable shouldn't occur more than once
         for _i in 0..3 {
-            match &*ty {
-                Ty::Infer(tv) => {
+            match ty.interned() {
+                TyKind::InferenceVar(tv) => {
                     let inner = tv.to_inner();
                     match self.eq_relations.inlined_probe_value(inner).known() {
                         Some(known_ty) => ty = Cow::Owned(known_ty.clone()),
@@ -225,8 +242,8 @@ impl TypeVariableTable {
         tv_stack: &mut Vec<TypeVarId>,
         ty: Ty,
     ) -> Ty {
-        ty.fold(&mut |ty| match ty {
-            Ty::Infer(tv) => {
+        ty.fold(&mut |ty| match ty.interned() {
+            TyKind::InferenceVar(tv) => {
                 let inner = tv.to_inner();
                 if tv_stack.contains(&inner) {
                     return tv.fallback_value();
@@ -255,8 +272,8 @@ impl TypeVariableTable {
         tv_stack: &mut Vec<TypeVarId>,
         ty: Ty,
     ) -> Ty {
-        ty.fold(&mut |ty| match ty {
-            Ty::Infer(tv) => {
+        ty.fold(&mut |ty| match ty.interned() {
+            TyKind::InferenceVar(tv) => {
                 let inner = tv.to_inner();
                 if tv_stack.contains(&inner) {
                     return tv.fallback_value();

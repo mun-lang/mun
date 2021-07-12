@@ -1,7 +1,6 @@
 use super::ExprValidator;
 use crate::diagnostics::{DiagnosticSink, LiteralOutOfRange};
-use crate::ty::ResolveBitness;
-use crate::{ty_app, TypeCtor};
+use crate::ty::{ResolveBitness, TyKind};
 use crate::{Expr, HirDisplay, Literal};
 
 impl<'a> ExprValidator<'a> {
@@ -12,8 +11,8 @@ impl<'a> ExprValidator<'a> {
             let expr = &self.body[expr_id];
             if let Expr::Literal(Literal::Int(lit)) = &expr {
                 let ty = &self.infer[expr_id];
-                match ty {
-                    ty_app!(TypeCtor::Int(int_ty)) => {
+                match ty.interned() {
+                    TyKind::Int(int_ty) => {
                         if lit.value > int_ty.resolve(&self.db.target_data_layout()).max() {
                             let literal = self
                                 .body_source_map

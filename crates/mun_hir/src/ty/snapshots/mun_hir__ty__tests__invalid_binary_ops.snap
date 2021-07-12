@@ -3,7 +3,7 @@ source: crates/mun_hir/src/ty/tests.rs
 expression: "fn foo() {\n    let b = false;\n    let n = 1;\n    let _ = b + n; // error: invalid binary operation\n}"
 ---
 57..62: cannot apply binary operator
-9..100 '{     ...tion }': nothing
+9..100 '{     ...tion }': ()
 19..20 'b': bool
 23..28 'false': bool
 38..39 'n': i32

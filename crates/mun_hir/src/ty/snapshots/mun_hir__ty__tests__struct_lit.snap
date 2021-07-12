@@ -12,7 +12,7 @@ expression: "struct Foo;\nstruct Bar {\n    a: f64,\n}\nstruct Baz(f64, i32);\n\
 615..618: mismatched struct literal kind. expected `tuple`, found `unit struct`
 712..717: mismatched struct literal kind. expected `tuple`, found `record`
 806..811: this tuple struct literal has 2 fields but 0 fields were supplied
-72..890 '{     ...lied }': nothing
+72..890 '{     ...lied }': ()
 82..83 'a': Foo
 91..94 'Foo': Foo
 104..105 'b': Bar

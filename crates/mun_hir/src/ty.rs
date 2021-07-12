@@ -7,7 +7,6 @@ mod resolve;
 use crate::display::{HirDisplay, HirFormatter};
 use crate::ty::infer::InferTy;
 use crate::ty::lower::fn_sig_for_struct_constructor;
-use crate::utils::make_mut_slice;
 use crate::{HirDatabase, Struct, StructMemoryKind, TypeAlias};
 pub(crate) use infer::infer_query;
 pub use infer::InferenceResult;
@@ -16,44 +15,21 @@ pub(crate) use lower::{
 };
 pub use primitives::{FloatTy, IntTy};
 pub use resolve::ResolveBitness;
-use std::ops::{Deref, DerefMut};
+use smallvec::SmallVec;
+use std::ops::Deref;
 use std::sync::Arc;
 use std::{fmt, mem};
 
 #[cfg(test)]
 mod tests;
 
-/// This should be cheap to clone.
+/// A kind of type.
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
-pub enum Ty {
-    Empty,
+pub enum TyKind {
+    /// An abstract datatype (structures, tuples, or enumerations)
+    /// TODO: Add enumerations
+    Struct(Struct),
 
-    Apply(ApplicationTy),
-
-    /// A type variable used during type checking. Not to be confused with a type parameter.
-    Infer(InferTy),
-
-    /// A placeholder for a type which could not be computed; this is propagated to avoid useless
-    /// error messages. Doubles as a placeholder where type variables are inserted before type
-    /// checking, since we want to try to infer a better type here anyway -- for the IDE use case,
-    /// we want to try to infer as much as possible even in the presence of type errors.
-    Unknown,
-}
-
-/// A nominal type with (maybe 0) type parameters. This might be a primitive
-/// type like `bool`, a struct, tuple, function pointer, reference or
-/// several other things.
-#[derive(Clone, PartialEq, Eq, Debug, Hash)]
-pub struct ApplicationTy {
-    pub ctor: TypeCtor,
-    pub parameters: Substs,
-}
-
-/// A type constructor or type name: this might be something like the primitive
-/// type `bool`, a struct like `Vec`, or things like function pointers or
-/// tuples.
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
-pub enum TypeCtor {
     /// The primitive floating point type. Written as `float`.
     Float(FloatTy),
 
@@ -63,9 +39,11 @@ pub enum TypeCtor {
     /// The primitive boolean type. Written as `bool`.
     Bool,
 
-    /// An abstract datatype (structures, tuples, or enumerations)
-    /// TODO: Add tuples and enumerations
-    Struct(Struct),
+    /// A tuple type. For example `(f32, f64, bool)`.
+    Tuple(usize, Substitution),
+
+    /// A type variable used during type checking. Not to be confused with a type parameter.
+    InferenceVar(InferTy),
 
     /// A type alias
     TypeAlias(TypeAlias),
@@ -73,9 +51,9 @@ pub enum TypeCtor {
     /// The never type `never`.
     Never,
 
-    /// The anonymous type of a function declaration/definition. Each
-    /// function has a unique type, which is output (for a function
-    /// named `foo` returning an `number`) as `fn() -> number {foo}`.
+    /// The anonymous type of a function declaration/definition. Each function has a unique type,
+    /// which is output (for a function named `foo` returning an `number`) as
+    /// `fn() -> number {foo}`.
     ///
     /// This includes tuple struct / enum variant constructors as well.
     ///
@@ -85,60 +63,93 @@ pub enum TypeCtor {
     /// function foo() -> number { 1 }
     /// let bar = foo; // bar: function() -> number {foo}
     /// ```
-    FnDef(CallableDef),
+    FnDef(CallableDef, Substitution),
+
+    /// A placeholder for a type which could not be computed; this is propagated to avoid useless
+    /// error messages. Doubles as a placeholder where type variables are inserted before type
+    /// checking, since we want to try to infer a better type here anyway -- for the IDE use case,
+    /// we want to try to infer as much as possible even in the presence of type errors.
+    Unknown,
+}
+
+/// External representation of a type. This should be cheap to clone.
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+pub struct Ty(Arc<TyKind>);
+
+impl TyKind {
+    /// Constructs a new `Ty` by interning self
+    pub fn intern(self) -> Ty {
+        Ty(Arc::new(self))
+    }
 }
 
 impl Ty {
-    pub fn simple(ctor: TypeCtor) -> Ty {
-        Ty::Apply(ApplicationTy {
-            ctor,
-            parameters: Substs::empty(),
-        })
+    /// Returns the `TyKind` from which this instance was constructed
+    pub fn interned(&self) -> &TyKind {
+        &self.0
     }
 
-    pub fn as_simple(&self) -> Option<TypeCtor> {
-        match self {
-            Ty::Apply(ApplicationTy { ctor, parameters }) if parameters.0.is_empty() => Some(*ctor),
+    /// Returns a mutable reference of `TyKind` for this instance
+    pub fn interned_mut(&mut self) -> &mut TyKind {
+        Arc::make_mut(&mut self.0)
+    }
+
+    /// Convert this instance back to the `TyKind` that created it.
+    pub fn into_inner(self) -> TyKind {
+        Arc::try_unwrap(self.0).unwrap_or_else(|a| (*a).clone())
+    }
+}
+
+impl Ty {
+    /// Constructs an instance of the unit type `()`
+    pub fn unit() -> Self {
+        TyKind::Tuple(0, Substitution::empty()).intern()
+    }
+
+    /// Constructs a new struct type
+    pub fn struct_ty(strukt: Struct) -> Ty {
+        TyKind::Struct(strukt).intern()
+    }
+
+    /// If this type represents a struct type, returns the type of the struct.
+    pub fn as_struct(&self) -> Option<Struct> {
+        match self.interned() {
+            TyKind::Struct(s) => Some(*s),
             _ => None,
         }
     }
 
-    pub fn is_empty(&self) -> bool {
-        *self == Ty::Empty
+    /// If this type represents a tuple type, returns a reference to the substitutions of the tuple.
+    pub fn as_tuple(&self) -> Option<&Substitution> {
+        match self.interned() {
+            TyKind::Tuple(_, substs) => Some(substs),
+            _ => None,
+        }
     }
 
+    /// Returns true if this type represents the empty tuple type
+    pub fn is_empty(&self) -> bool {
+        matches!(self.interned(), TyKind::Tuple(0, _))
+    }
+
+    /// Returns true if this type represents the never type
     pub fn is_never(&self) -> bool {
-        self.as_simple() == Some(TypeCtor::Never)
+        matches!(self.interned(), TyKind::Never)
     }
 
     /// Returns the callable definition for the given expression or `None` if the type does not
     /// represent a callable.
     pub fn as_callable_def(&self) -> Option<CallableDef> {
-        match self {
-            Ty::Apply(a_ty) => match a_ty.ctor {
-                TypeCtor::FnDef(def) => Some(def),
-                _ => None,
-            },
+        match self.interned() {
+            TyKind::FnDef(def, _) => Some(*def),
             _ => None,
         }
     }
 
-    pub fn as_struct(&self) -> Option<Struct> {
-        match self {
-            Ty::Apply(a_ty) => match a_ty.ctor {
-                TypeCtor::FnDef(CallableDef::Struct(s)) | TypeCtor::Struct(s) => Some(s),
-                _ => None,
-            },
-            _ => None,
-        }
-    }
-
+    /// Returns the callable signature of the type, if the type is callable.
     pub fn callable_sig(&self, db: &dyn HirDatabase) -> Option<FnSig> {
-        match self {
-            Ty::Apply(a_ty) => match a_ty.ctor {
-                TypeCtor::FnDef(def) => Some(db.callable_sig(def)),
-                _ => None,
-            },
+        match self.interned() {
+            TyKind::FnDef(def, _) => Some(db.callable_sig(*def)),
             _ => None,
         }
     }
@@ -147,8 +158,8 @@ impl Ty {
     ///
     /// This name needs to be unique as it is used to generate a type's `Guid`.
     pub fn guid_string(&self, db: &dyn HirDatabase) -> Option<String> {
-        self.as_simple().and_then(|ty_ctor| match ty_ctor {
-            TypeCtor::Struct(s) => {
+        match self.interned() {
+            &TyKind::Struct(s) => {
                 let name = s.name(db).to_string();
 
                 Some(if s.data(db.upcast()).memory_kind == StructMemoryKind::Gc {
@@ -173,39 +184,68 @@ impl Ty {
                     )
                 })
             }
-            TypeCtor::Bool => Some("core::bool".to_string()),
-            TypeCtor::Float(ty) => Some(format!("core::{}", ty.as_str())),
-            TypeCtor::Int(ty) => Some(format!("core::{}", ty.as_str())),
+            TyKind::Bool => Some("core::bool".to_string()),
+            TyKind::Float(ty) => Some(format!("core::{}", ty.as_str())),
+            TyKind::Int(ty) => Some(format!("core::{}", ty.as_str())),
             _ => None,
-        })
+        }
     }
 
     /// Returns true if this instance represents a known type.
     pub fn is_known(&self) -> bool {
-        *self == Ty::Unknown
+        !matches!(self.interned(), TyKind::Unknown)
     }
 
     /// Returns true if this instance is of an unknown type.
     pub fn is_unknown(&self) -> bool {
-        matches!(self, Ty::Unknown)
+        matches!(self.interned(), TyKind::Unknown)
+    }
+
+    /// Returns the type parameters of this type if it has some (i.e. is an ADT or function); so
+    /// if `self` is an `Option<u32>`, this returns the `u32`
+    pub fn type_parameters(&self) -> Option<&Substitution> {
+        match self.interned() {
+            TyKind::Tuple(_, substs) | TyKind::FnDef(_, substs) => Some(substs),
+            _ => None,
+        }
+    }
+
+    /// Returns a mutable reference to the type parameters of this type if it has some (i.e. is an
+    /// ADT or function); so if `self` is an `Option<u32>`, this returns the `u32`
+    pub fn type_parameters_mut(&mut self) -> Option<&mut Substitution> {
+        match self.interned_mut() {
+            TyKind::Tuple(_, substs) | TyKind::FnDef(_, substs) => Some(substs),
+            _ => None,
+        }
     }
 }
 
 /// A list of substitutions for generic parameters.
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
-pub struct Substs(Arc<[Ty]>);
+pub struct Substitution(SmallVec<[Ty; 2]>);
 
-impl Substs {
-    pub fn empty() -> Substs {
-        Substs(Arc::new([]))
+impl Substitution {
+    /// Constructs a new empty instance
+    pub fn empty() -> Substitution {
+        Substitution(SmallVec::new())
     }
 
-    pub fn single(ty: Ty) -> Substs {
-        Substs(Arc::new([ty]))
+    /// Constructs a new instance with a single type
+    pub fn single(ty: Ty) -> Substitution {
+        Substitution({
+            let mut v = SmallVec::new();
+            v.push(ty);
+            v
+        })
+    }
+
+    /// Returns a reference to the interned types of this instance
+    pub fn interned(&self) -> &[Ty] {
+        &self.0
     }
 }
 
-impl Deref for Substs {
+impl Deref for Substitution {
     type Target = [Ty];
 
     fn deref(&self) -> &[Ty] {
@@ -213,9 +253,17 @@ impl Deref for Substs {
     }
 }
 
-impl DerefMut for Substs {
-    fn deref_mut(&mut self) -> &mut [Ty] {
-        make_mut_slice(&mut self.0)
+impl TypeWalk for Substitution {
+    fn walk(&self, f: &mut impl FnMut(&Ty)) {
+        for t in &self.0 {
+            t.walk(f);
+        }
+    }
+
+    fn walk_mut(&mut self, f: &mut impl FnMut(&mut Ty)) {
+        for t in &mut self.0 {
+            t.walk_mut(f);
+        }
     }
 }
 
@@ -256,29 +304,27 @@ impl FnSig {
 
 impl HirDisplay for Ty {
     fn hir_fmt(&self, f: &mut HirFormatter) -> fmt::Result {
-        match self {
-            Ty::Apply(a_ty) => a_ty.hir_fmt(f),
-            Ty::Unknown => write!(f, "{{unknown}}"),
-            Ty::Empty => write!(f, "nothing"),
-            Ty::Infer(tv) => match tv {
+        match self.interned() {
+            TyKind::Struct(s) => write!(f, "{}", s.name(f.db)),
+            TyKind::Float(ty) => write!(f, "{}", ty),
+            TyKind::Int(ty) => write!(f, "{}", ty),
+            TyKind::Bool => write!(f, "bool"),
+            TyKind::Tuple(_, elems) => {
+                write!(f, "(")?;
+                f.write_joined(elems.iter(), ", ")?;
+                if elems.len() == 1 {
+                    write!(f, ",")?;
+                }
+                write!(f, ")")
+            }
+            TyKind::InferenceVar(tv) => match tv {
                 InferTy::TypeVar(tv) => write!(f, "'{}", tv.0),
                 InferTy::IntVar(_) => write!(f, "{{integer}}"),
                 InferTy::FloatVar(_) => write!(f, "{{float}}"),
             },
-        }
-    }
-}
-
-impl HirDisplay for ApplicationTy {
-    fn hir_fmt(&self, f: &mut HirFormatter) -> fmt::Result {
-        match self.ctor {
-            TypeCtor::Float(ty) => write!(f, "{}", ty),
-            TypeCtor::Int(ty) => write!(f, "{}", ty),
-            TypeCtor::Bool => write!(f, "bool"),
-            TypeCtor::Struct(def) => write!(f, "{}", def.name(f.db)),
-            TypeCtor::TypeAlias(def) => write!(f, "{}", def.name(f.db)),
-            TypeCtor::Never => write!(f, "never"),
-            TypeCtor::FnDef(CallableDef::Function(def)) => {
+            TyKind::TypeAlias(def) => write!(f, "{}", def.name(f.db)),
+            TyKind::Never => write!(f, "never"),
+            &TyKind::FnDef(CallableDef::Function(def), _) => {
                 let sig = fn_sig_for_fn(f.db, def);
                 let name = def.name(f.db);
                 write!(f, "function {}", name)?;
@@ -286,7 +332,7 @@ impl HirDisplay for ApplicationTy {
                 f.write_joined(sig.params(), ", ")?;
                 write!(f, ") -> {}", sig.ret().display(f.db))
             }
-            TypeCtor::FnDef(CallableDef::Struct(def)) => {
+            &TyKind::FnDef(CallableDef::Struct(def), _) => {
                 let sig = fn_sig_for_struct_constructor(f.db, def);
                 let name = def.name(f.db);
                 write!(f, "ctor {}", name)?;
@@ -294,6 +340,7 @@ impl HirDisplay for ApplicationTy {
                 f.write_joined(sig.params(), ", ")?;
                 write!(f, ") -> {}", sig.ret().display(f.db))
             }
+            TyKind::Unknown => write!(f, "{{unknown}}"),
         }
     }
 }
@@ -304,27 +351,50 @@ impl HirDisplay for &Ty {
     }
 }
 
-impl Ty {
-    fn walk_mut(&mut self, f: &mut impl FnMut(&mut Ty)) {
-        match self {
-            Ty::Apply(ty) => {
-                for t in ty.parameters.iter_mut() {
-                    t.walk_mut(f);
-                }
-            }
-            Ty::Empty | Ty::Infer(_) | Ty::Unknown => {}
-        }
-        f(self)
-    }
+/// This allows walking structures that contain types.
+pub trait TypeWalk {
+    /// Calls the function `f` for each `Ty` in this instance.
+    fn walk(&self, f: &mut impl FnMut(&Ty));
 
+    /// Calls the function `f` for each `Ty` in this instance with a mutable reference.
+    fn walk_mut(&mut self, f: &mut impl FnMut(&mut Ty));
+
+    /// Folds this instance by replacing all instances of types with other instances as specified
+    /// by the function `f`.
     fn fold(mut self, f: &mut impl FnMut(Ty) -> Ty) -> Self
     where
         Self: Sized,
     {
         self.walk_mut(&mut |ty_mut| {
-            let ty = mem::replace(ty_mut, Ty::Unknown);
+            let ty = mem::replace(ty_mut, TyKind::Unknown.intern());
             *ty_mut = f(ty);
         });
         self
+    }
+}
+
+impl TypeWalk for Ty {
+    fn walk(&self, f: &mut impl FnMut(&Ty)) {
+        #[allow(clippy::match_single_binding)]
+        match self.interned() {
+            _ => {
+                if let Some(substs) = self.type_parameters() {
+                    substs.walk(f)
+                }
+            }
+        }
+        f(self)
+    }
+
+    fn walk_mut(&mut self, f: &mut impl FnMut(&mut Ty)) {
+        #[allow(clippy::match_single_binding)]
+        match self.interned_mut() {
+            _ => {
+                if let Some(substs) = self.type_parameters_mut() {
+                    substs.walk_mut(f)
+                }
+            }
+        }
+        f(self)
     }
 }

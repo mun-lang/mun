@@ -1,5 +1,6 @@
 pub(crate) use self::diagnostics::LowerDiagnostic;
 use crate::resolve::{HasResolver, TypeNs};
+use crate::ty::{Substitution, TyKind};
 use crate::{
     arena::map::ArenaMap,
     code_model::StructKind,
@@ -7,11 +8,24 @@ use crate::{
     name_resolution::Namespace,
     primitive_type::PrimitiveType,
     resolve::Resolver,
-    ty::{FnSig, Ty, TypeCtor},
+    ty::{FnSig, Ty},
     type_ref::{LocalTypeRefId, TypeRef, TypeRefMap, TypeRefSourceMap},
     FileId, Function, HirDatabase, ModuleDef, Path, Struct, TypeAlias,
 };
 use std::{ops::Index, sync::Arc};
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct LowerBatchStandardTypes {
+    unknown: Ty,
+}
+
+impl Default for LowerBatchStandardTypes {
+    fn default() -> Self {
+        LowerBatchStandardTypes {
+            unknown: TyKind::Unknown.intern(),
+        }
+    }
+}
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub(crate) struct LowerResult {
@@ -23,12 +37,16 @@ pub(crate) struct LowerResult {
 pub struct LowerBatchResult {
     pub(crate) type_ref_to_type: ArenaMap<LocalTypeRefId, Ty>,
     pub(crate) diagnostics: Vec<LowerDiagnostic>,
+
+    standard_types: LowerBatchStandardTypes,
 }
 
 impl Index<LocalTypeRefId> for LowerBatchResult {
     type Output = Ty;
     fn index(&self, expr: LocalTypeRefId) -> &Ty {
-        self.type_ref_to_type.get(expr).unwrap_or(&Ty::Unknown)
+        self.type_ref_to_type
+            .get(expr)
+            .unwrap_or(&self.standard_types.unknown)
     }
 }
 
@@ -69,9 +87,9 @@ impl Ty {
     ) -> Ty {
         let res = match &type_ref_map[type_ref] {
             TypeRef::Path(path) => Ty::from_hir_path(db, resolver, type_ref, path, diagnostics),
-            TypeRef::Error => Some((Ty::Unknown, false)),
-            TypeRef::Empty => Some((Ty::Empty, false)),
-            TypeRef::Never => Some((Ty::simple(TypeCtor::Never), false)),
+            TypeRef::Error => Some((TyKind::Unknown.intern(), false)),
+            TypeRef::Empty => Some((Ty::unit(), false)),
+            TypeRef::Never => Some((TyKind::Never.intern(), false)),
         };
         if let Some((ty, is_cyclic)) = res {
             if is_cyclic {
@@ -80,7 +98,7 @@ impl Ty {
             ty
         } else {
             diagnostics.push(LowerDiagnostic::UnresolvedType { id: type_ref });
-            Ty::Unknown
+            TyKind::Unknown.intern()
         }
     }
 
@@ -207,9 +225,9 @@ pub(crate) fn type_for_def(db: &dyn HirDatabase, def: TypableDef, ns: Namespace)
         (TypableDef::TypeAlias(t), Namespace::Types) => type_for_type_alias(db, t),
 
         // 'error' cases:
-        (TypableDef::Function(_), Namespace::Types) => Ty::Unknown,
-        (TypableDef::PrimitiveType(_), Namespace::Values) => Ty::Unknown,
-        (TypableDef::TypeAlias(_), Namespace::Values) => Ty::Unknown,
+        (TypableDef::Function(_), Namespace::Types) => TyKind::Unknown.intern(),
+        (TypableDef::PrimitiveType(_), Namespace::Values) => TyKind::Unknown.intern(),
+        (TypableDef::TypeAlias(_), Namespace::Values) => TyKind::Unknown.intern(),
     };
     (ty, false)
 }
@@ -221,22 +239,23 @@ pub(crate) fn type_for_cycle_recover(
     _def: &TypableDef,
     _ns: &Namespace,
 ) -> (Ty, bool) {
-    (Ty::Unknown, true)
+    (TyKind::Unknown.intern(), true)
 }
 
 /// Build the declared type of a static.
 fn type_for_primitive(def: PrimitiveType) -> Ty {
-    Ty::simple(match def {
-        PrimitiveType::Float(f) => TypeCtor::Float(f.into()),
-        PrimitiveType::Int(i) => TypeCtor::Int(i.into()),
-        PrimitiveType::Bool => TypeCtor::Bool,
-    })
+    match def {
+        PrimitiveType::Float(f) => TyKind::Float(f.into()),
+        PrimitiveType::Int(i) => TyKind::Int(i.into()),
+        PrimitiveType::Bool => TyKind::Bool,
+    }
+    .intern()
 }
 
 /// Build the declared type of a function. This should not need to look at the
 /// function body.
 fn type_for_fn(_db: &dyn HirDatabase, def: Function) -> Ty {
-    Ty::simple(TypeCtor::FnDef(def.into()))
+    TyKind::FnDef(def.into(), Substitution::empty()).intern()
 }
 
 pub(crate) fn callable_item_sig(db: &dyn HirDatabase, def: CallableDef) -> FnSig {
@@ -274,14 +293,14 @@ pub(crate) fn fn_sig_for_struct_constructor(db: &dyn HirDatabase, def: Struct) -
 fn type_for_struct_constructor(db: &dyn HirDatabase, def: Struct) -> Ty {
     let struct_data = db.struct_data(def.id);
     if struct_data.kind == StructKind::Tuple {
-        Ty::simple(TypeCtor::FnDef(def.into()))
+        TyKind::FnDef(def.into(), Substitution::empty()).intern()
     } else {
         type_for_struct(db, def)
     }
 }
 
 fn type_for_struct(_db: &dyn HirDatabase, def: Struct) -> Ty {
-    Ty::simple(TypeCtor::Struct(def))
+    TyKind::Struct(def).intern()
 }
 
 fn type_for_type_alias(db: &dyn HirDatabase, def: TypeAlias) -> Ty {

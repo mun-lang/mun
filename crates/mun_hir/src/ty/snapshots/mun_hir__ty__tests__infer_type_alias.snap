@@ -4,6 +4,6 @@ expression: "type Foo = i32;\ntype Bar = Foo;\ntype Baz = UnknownType;  // error
 ---
 43..54: undefined type
 91..92 'a': i32
-99..122 '{     ...= a; }': nothing
+99..122 '{     ...= a; }': ()
 109..110 'b': i32
 118..119 'a': i32

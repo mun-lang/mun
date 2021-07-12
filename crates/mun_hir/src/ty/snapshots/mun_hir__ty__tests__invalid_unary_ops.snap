@@ -6,12 +6,12 @@ expression: "fn bar(a: f64, b: bool) {\n    a = !a; // mismatched type\n    b = 
 66..67: cannot apply unary operator
 7..8 'a': f64
 15..16 'b': bool
-24..89 '{     ...type }': nothing
+24..89 '{     ...type }': ()
 30..31 'a': f64
-30..36 'a = !a': nothing
+30..36 'a = !a': ()
 34..36 '!a': {unknown}
 35..36 'a': f64
 61..62 'b': bool
-61..67 'b = -b': nothing
+61..67 'b = -b': ()
 65..67 '-b': {unknown}
 66..67 'b': bool

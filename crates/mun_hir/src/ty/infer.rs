@@ -11,7 +11,7 @@ use crate::{
     ty::op,
     ty::{Ty, TypableDef},
     type_ref::LocalTypeRefId,
-    ApplicationTy, BinaryOp, Function, HirDatabase, Name, Path, TypeCtor,
+    BinaryOp, Function, HirDatabase, Name, Path,
 };
 use rustc_hash::FxHashSet;
 use std::ops::Index;
@@ -25,23 +25,24 @@ use crate::expr::{LiteralFloat, LiteralFloatKind, LiteralInt, LiteralIntKind};
 use crate::ids::DefWithBodyId;
 use crate::resolve::{resolver_for_expr, HasResolver};
 use crate::ty::primitives::{FloatTy, IntTy};
-use std::mem;
+use crate::ty::TyKind;
 pub use type_variable::TypeVarId;
 
-#[macro_export]
-macro_rules! ty_app {
-    ($ctor:pat, $param:pat) => {
-        $crate::Ty::Apply($crate::ApplicationTy {
-            ctor: $ctor,
-            parameters: $param,
-        })
-    };
-    ($ctor:pat) => {
-        $crate::Ty::Apply($crate::ApplicationTy { ctor: $ctor, .. })
-    };
+mod coerce;
+
+/// A list of interned types
+#[derive(Clone, PartialEq, Eq, Debug)]
+struct InternedStandardTypes {
+    unknown: Ty,
 }
 
-mod coerce;
+impl Default for InternedStandardTypes {
+    fn default() -> Self {
+        InternedStandardTypes {
+            unknown: TyKind::Unknown.intern(),
+        }
+    }
+}
 
 /// The result of type inference: A mapping from expressions and patterns to types.
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -49,19 +50,26 @@ pub struct InferenceResult {
     pub(crate) type_of_expr: ArenaMap<ExprId, Ty>,
     pub(crate) type_of_pat: ArenaMap<PatId, Ty>,
     pub(crate) diagnostics: Vec<diagnostics::InferenceDiagnostic>,
+
+    /// Interned Unknown to return references to.
+    standard_types: InternedStandardTypes,
 }
 
 impl Index<ExprId> for InferenceResult {
     type Output = Ty;
     fn index(&self, expr: ExprId) -> &Ty {
-        self.type_of_expr.get(expr).unwrap_or(&Ty::Unknown)
+        self.type_of_expr
+            .get(expr)
+            .unwrap_or(&self.standard_types.unknown)
     }
 }
 
 impl Index<PatId> for InferenceResult {
     type Output = Ty;
     fn index(&self, pat: PatId) -> &Ty {
-        self.type_of_pat.get(pat).unwrap_or(&Ty::Unknown)
+        self.type_of_pat
+            .get(pat)
+            .unwrap_or(&self.standard_types.unknown)
     }
 }
 
@@ -114,10 +122,11 @@ impl InferTy {
 
     fn fallback_value(self) -> Ty {
         match self {
-            InferTy::TypeVar(..) => Ty::Unknown,
-            InferTy::IntVar(..) => Ty::simple(TypeCtor::Int(IntTy::i32())),
-            InferTy::FloatVar(..) => Ty::simple(TypeCtor::Float(FloatTy::f64())),
+            InferTy::TypeVar(..) => TyKind::Unknown,
+            InferTy::IntVar(..) => TyKind::Int(IntTy::i32()),
+            InferTy::FloatVar(..) => TyKind::Float(FloatTy::f64()),
         }
+        .intern()
     }
 }
 
@@ -161,7 +170,7 @@ impl<'a> InferenceResultBuilder<'a> {
             db,
             body,
             resolver,
-            return_ty: Ty::Unknown, // set in collect_fn_signature
+            return_ty: TyKind::Unknown.intern(), // set in collect_fn_signature
         }
     }
 
@@ -271,13 +280,18 @@ impl<'a> InferenceResultBuilder<'a> {
                 id: expr,
             });
             ty
-        } else if expected.ty == Ty::Unknown {
+        } else if expected.ty.is_unknown() {
             ty
         } else {
             expected.ty.clone()
         };
 
         self.resolve_ty_as_far_as_possible(ty)
+    }
+
+    /// Returns a type used for errors
+    fn error_type(&self) -> Ty {
+        TyKind::Unknown.intern()
     }
 
     /// Infer the type of the given expression. Returns the type of the expression.
@@ -289,12 +303,12 @@ impl<'a> InferenceResultBuilder<'a> {
     ) -> Ty {
         let body = Arc::clone(&self.body); // avoid borrow checker problem
         let ty = match &body[tgt_expr] {
-            Expr::Missing => Ty::Unknown,
+            Expr::Missing => self.error_type(),
             Expr::Path(p) => {
                 // FIXME this could be more efficient...
                 let resolver = resolver_for_expr(self.db.upcast(), self.body.owner(), tgt_expr);
                 self.infer_path_expr(&resolver, p, tgt_expr, check_params)
-                    .unwrap_or(Ty::Unknown)
+                    .unwrap_or_else(|| self.error_type())
             }
             Expr::If {
                 condition,
@@ -304,7 +318,7 @@ impl<'a> InferenceResultBuilder<'a> {
             Expr::BinaryOp { lhs, rhs, op } => match op {
                 Some(op) => {
                     let lhs_expected = match op {
-                        BinaryOp::LogicOp(..) => Expectation::has_type(Ty::simple(TypeCtor::Bool)),
+                        BinaryOp::LogicOp(..) => Expectation::has_type(TyKind::Bool.intern()),
                         _ => Expectation::none(),
                     };
                     let lhs_ty = self.infer_expr(*lhs, &lhs_expected);
@@ -319,7 +333,7 @@ impl<'a> InferenceResultBuilder<'a> {
                         }
                     };
                     let rhs_expected = op::binary_op_rhs_expectation(*op, lhs_ty.clone());
-                    if lhs_ty != Ty::Unknown && rhs_expected == Ty::Unknown {
+                    if lhs_ty.is_known() && rhs_expected.is_unknown() {
                         self.diagnostics
                             .push(InferenceDiagnostic::CannotApplyBinaryOp {
                                 id: tgt_expr,
@@ -330,26 +344,28 @@ impl<'a> InferenceResultBuilder<'a> {
                     let rhs_ty = self.infer_expr(*rhs, &Expectation::has_type(rhs_expected));
                     op::binary_op_return_ty(*op, rhs_ty)
                 }
-                _ => Ty::Unknown,
+                _ => self.error_type(),
             },
             Expr::Block { statements, tail } => self.infer_block(statements, *tail, expected),
             Expr::Call { callee: call, args } => self.infer_call(tgt_expr, *call, args, expected),
             Expr::Literal(lit) => match lit {
-                Literal::String(_) => Ty::Unknown,
-                Literal::Bool(_) => Ty::simple(TypeCtor::Bool),
+                Literal::String(_) => TyKind::Unknown.intern(),
+                Literal::Bool(_) => TyKind::Bool.intern(),
                 Literal::Int(LiteralInt {
                     kind: LiteralIntKind::Suffixed(suffix),
                     ..
-                }) => Ty::simple(TypeCtor::Int(IntTy {
+                }) => TyKind::Int(IntTy {
                     bitness: suffix.bitness,
                     signedness: suffix.signedness,
-                })),
+                })
+                .intern(),
                 Literal::Float(LiteralFloat {
                     kind: LiteralFloatKind::Suffixed(suffix),
                     ..
-                }) => Ty::simple(TypeCtor::Float(FloatTy {
+                }) => TyKind::Float(FloatTy {
                     bitness: suffix.bitness,
-                })),
+                })
+                .intern(),
                 Literal::Int(LiteralInt {
                     kind: LiteralIntKind::Unsuffixed,
                     ..
@@ -362,12 +378,12 @@ impl<'a> InferenceResultBuilder<'a> {
             Expr::Return { expr } => {
                 if let Some(expr) = expr {
                     self.infer_expr(*expr, &Expectation::has_type(self.return_ty.clone()));
-                } else if self.return_ty != Ty::Empty {
+                } else if !self.return_ty.is_empty() {
                     self.diagnostics
                         .push(InferenceDiagnostic::ReturnMissingExpression { id: tgt_expr });
                 }
 
-                Ty::simple(TypeCtor::Never)
+                TyKind::Never.intern()
             }
             Expr::Break { expr } => self.infer_break(tgt_expr, *expr),
             Expr::Loop { body } => self.infer_loop_expr(tgt_expr, *body, expected),
@@ -396,7 +412,7 @@ impl<'a> InferenceResultBuilder<'a> {
                                 None
                             }
                         })
-                        .map_or(Ty::Unknown, |field| field.ty(self.db));
+                        .map_or(self.error_type(), |field| field.ty(self.db));
                     self.infer_expr_coerce(field.expr, &Expectation::has_type(field_ty));
                 }
                 if let Some(expr) = spread {
@@ -409,8 +425,8 @@ impl<'a> InferenceResultBuilder<'a> {
             }
             Expr::Field { expr, name } => {
                 let receiver_ty = self.infer_expr(*expr, &Expectation::none());
-                match receiver_ty {
-                    ty_app!(TypeCtor::Struct(s)) => {
+                match receiver_ty.interned() {
+                    TyKind::Struct(s) => {
                         match s.field(self.db, name).map(|field| field.ty(self.db)) {
                             Some(field_ty) => field_ty,
                             None => {
@@ -421,7 +437,7 @@ impl<'a> InferenceResultBuilder<'a> {
                                         name: name.clone(),
                                     });
 
-                                Ty::Unknown
+                                self.error_type()
                             }
                         }
                     }
@@ -430,7 +446,7 @@ impl<'a> InferenceResultBuilder<'a> {
                             id: *expr,
                             found: receiver_ty,
                         });
-                        Ty::Unknown
+                        self.error_type()
                     }
                 }
             }
@@ -438,43 +454,31 @@ impl<'a> InferenceResultBuilder<'a> {
                 let inner_ty =
                     self.infer_expr_inner(*expr, &Expectation::none(), &CheckParams::default());
                 match op {
-                    UnaryOp::Not => match &inner_ty {
-                        Ty::Apply(ApplicationTy {
-                            ctor: TypeCtor::Bool,
-                            ..
-                        })
-                        | Ty::Apply(ApplicationTy {
-                            ctor: TypeCtor::Int(_),
-                            ..
-                        })
-                        | Ty::Infer(InferTy::IntVar(..)) => inner_ty,
+                    UnaryOp::Not => match inner_ty.interned() {
+                        TyKind::Bool
+                        | TyKind::Int(_)
+                        | TyKind::InferenceVar(InferTy::IntVar(_)) => inner_ty,
                         _ => {
                             self.diagnostics
                                 .push(InferenceDiagnostic::CannotApplyUnaryOp {
                                     id: *expr,
                                     ty: inner_ty,
                                 });
-                            Ty::Unknown
+                            self.error_type()
                         }
                     },
-                    UnaryOp::Neg => match &inner_ty {
-                        Ty::Apply(ApplicationTy {
-                            ctor: TypeCtor::Float(_),
-                            ..
-                        })
-                        | Ty::Apply(ApplicationTy {
-                            ctor: TypeCtor::Int(_),
-                            ..
-                        })
-                        | Ty::Infer(InferTy::IntVar(..))
-                        | Ty::Infer(InferTy::FloatVar(..)) => inner_ty,
+                    UnaryOp::Neg => match inner_ty.interned() {
+                        TyKind::Float(_)
+                        | TyKind::Int(_)
+                        | TyKind::InferenceVar(InferTy::IntVar(_))
+                        | TyKind::InferenceVar(InferTy::FloatVar(_)) => inner_ty,
                         _ => {
                             self.diagnostics
                                 .push(InferenceDiagnostic::CannotApplyUnaryOp {
                                     id: *expr,
                                     ty: inner_ty,
                                 });
-                            Ty::Unknown
+                            self.error_type()
                         }
                     },
                 }
@@ -495,10 +499,7 @@ impl<'a> InferenceResultBuilder<'a> {
         then_branch: ExprId,
         else_branch: Option<ExprId>,
     ) -> Ty {
-        self.infer_expr(
-            condition,
-            &Expectation::has_type(Ty::simple(TypeCtor::Bool)),
-        );
+        self.infer_expr(condition, &Expectation::has_type(TyKind::Bool.intern()));
         let then_ty = self.infer_expr_coerce(then_branch, expected);
         match else_branch {
             Some(else_branch) => {
@@ -517,14 +518,14 @@ impl<'a> InferenceResultBuilder<'a> {
                 }
             }
             None => {
-                if !self.coerce(&then_ty, &Ty::Empty) {
+                if !self.coerce(&then_ty, &Ty::unit()) {
                     self.diagnostics
                         .push(InferenceDiagnostic::MissingElseBranch {
                             id: tgt_expr,
                             then_ty,
                         })
                 }
-                Ty::Empty
+                Ty::unit()
             }
         }
     }
@@ -545,8 +546,8 @@ impl<'a> InferenceResultBuilder<'a> {
             },
         );
 
-        match callee_ty {
-            ty_app!(TypeCtor::Struct(s)) => {
+        match callee_ty.interned() {
+            TyKind::Struct(s) => {
                 // Erroneously found either a unit struct or record struct literal. Record struct
                 // literals can never be used as a value so that will have already been reported.
                 if s.data(self.db.upcast()).kind == StructKind::Unit {
@@ -565,7 +566,7 @@ impl<'a> InferenceResultBuilder<'a> {
 
                 callee_ty
             }
-            ty_app!(TypeCtor::FnDef(def)) => {
+            TyKind::FnDef(def, _substs) => {
                 // Found either a tuple struct literal or function
                 let sig = callee_ty.callable_sig(self.db).unwrap();
                 let (param_tys, ret_ty) = (sig.params().to_vec(), sig.ret().clone());
@@ -581,9 +582,9 @@ impl<'a> InferenceResultBuilder<'a> {
 
                 ret_ty
             }
-            Ty::Unknown => {
+            TyKind::Unknown => {
                 // Error has already been emitted somewhere else
-                Ty::Unknown
+                self.error_type()
             }
             _ => {
                 self.diagnostics
@@ -591,7 +592,7 @@ impl<'a> InferenceResultBuilder<'a> {
                         id: callee,
                         found: callee_ty,
                     });
-                Ty::Unknown
+                self.error_type()
             }
         }
     }
@@ -767,22 +768,18 @@ impl<'a> InferenceResultBuilder<'a> {
         //let mut tv_stack = Vec::new();
         let mut expr_types = std::mem::take(&mut self.type_of_expr);
         for (expr, ty) in expr_types.iter_mut() {
-            let was_unknown = ty == &mut Ty::Unknown;
-            let resolved = self
-                .type_variables
-                .resolve_ty_completely(mem::replace(ty, Ty::Unknown));
-            if !was_unknown && resolved == Ty::Unknown {
+            let was_unknown = ty.is_unknown();
+            let resolved = self.type_variables.resolve_ty_completely(ty.clone());
+            if !was_unknown && resolved.is_unknown() {
                 self.report_expr_inference_failure(expr);
             }
             *ty = resolved;
         }
         let mut pat_types = std::mem::take(&mut self.type_of_pat);
         for (pat, ty) in pat_types.iter_mut() {
-            let was_unknown = ty == &mut Ty::Unknown;
-            let resolved = self
-                .type_variables
-                .resolve_ty_completely(mem::replace(ty, Ty::Unknown));
-            if !was_unknown && resolved == Ty::Unknown {
+            let was_unknown = ty.is_unknown();
+            let resolved = self.type_variables.resolve_ty_completely(ty.clone());
+            if !was_unknown && resolved.is_unknown() {
                 self.report_pat_inference_failure(pat);
             }
             *ty = resolved;
@@ -795,6 +792,7 @@ impl<'a> InferenceResultBuilder<'a> {
             type_of_expr: expr_types,
             type_of_pat: pat_types,
             diagnostics: self.diagnostics,
+            standard_types: Default::default(),
         }
     }
 
@@ -815,7 +813,7 @@ impl<'a> InferenceResultBuilder<'a> {
                     let decl_ty = type_ref
                         .as_ref()
                         .map(|tr| self.resolve_type(*tr))
-                        .unwrap_or(Ty::Unknown);
+                        .unwrap_or_else(|| self.error_type());
                     //let decl_ty = self.insert_type_vars(decl_ty);
                     let ty = if let Some(expr) = initializer {
                         self.infer_expr_coerce(*expr, &Expectation::has_type(decl_ty))
@@ -827,7 +825,7 @@ impl<'a> InferenceResultBuilder<'a> {
                     self.infer_pat(*pat, ty);
                 }
                 Statement::Expr(expr) => {
-                    if let ty_app!(TypeCtor::Never) = self.infer_expr(*expr, &Expectation::none()) {
+                    if self.infer_expr(*expr, &Expectation::none()).is_never() {
                         diverges = true;
                     };
                 }
@@ -837,17 +835,17 @@ impl<'a> InferenceResultBuilder<'a> {
             // Perform coercion of the trailing expression unless the expression has a Never return
             // type because we want the block to get the Never type in that case.
             let ty = self.infer_expr_inner(expr, expected, &CheckParams::default());
-            if let ty_app!(TypeCtor::Never) = ty {
-                Ty::simple(TypeCtor::Never)
+            if ty.is_never() {
+                ty
             } else {
                 self.coerce_expr_ty(expr, ty, expected)
             }
         } else {
-            Ty::Empty
+            Ty::unit()
         };
 
         if diverges {
-            Ty::simple(TypeCtor::Never)
+            TyKind::Never.intern()
         } else {
             ty
         }
@@ -861,12 +859,12 @@ impl<'a> InferenceResultBuilder<'a> {
                     self.diagnostics
                         .push(InferenceDiagnostic::BreakWithValueOutsideLoop { id: tgt_expr });
                 }
-                return Ty::simple(TypeCtor::Never);
+                return TyKind::Never.intern();
             }
             None => {
                 self.diagnostics
                     .push(InferenceDiagnostic::BreakOutsideLoop { id: tgt_expr });
-                return Ty::simple(TypeCtor::Never);
+                return TyKind::Never.intern();
             }
         };
 
@@ -874,7 +872,7 @@ impl<'a> InferenceResultBuilder<'a> {
         let ty = if let Some(expr) = expr {
             self.infer_expr_inner(expr, &expected, &CheckParams::default())
         } else {
-            Ty::Empty
+            Ty::unit()
         };
 
         // Verify that it matches what we expected
@@ -892,13 +890,13 @@ impl<'a> InferenceResultBuilder<'a> {
         // Update the expected type for the rest of the loop
         self.active_loop = Some(ActiveLoop::Loop(ty.clone(), Expectation::has_type(ty)));
 
-        Ty::simple(TypeCtor::Never)
+        TyKind::Never.intern()
     }
 
     fn infer_loop_expr(&mut self, _tgt_expr: ExprId, body: ExprId, expected: &Expectation) -> Ty {
         if let ActiveLoop::Loop(ty, _) = self.infer_loop_block(
             body,
-            ActiveLoop::Loop(Ty::simple(TypeCtor::Never), expected.clone()),
+            ActiveLoop::Loop(TyKind::Never.intern(), expected.clone()),
         ) {
             ty
         } else {
@@ -910,7 +908,7 @@ impl<'a> InferenceResultBuilder<'a> {
         let top_level_loop = std::mem::replace(&mut self.active_loop, Some(lp));
 
         // Infer the body of the loop
-        self.infer_expr_coerce(body, &Expectation::has_type(Ty::Empty));
+        self.infer_expr_coerce(body, &Expectation::has_type(Ty::unit()));
 
         // Take the result of the loop information and replace with top level loop
         std::mem::replace(&mut self.active_loop, top_level_loop).unwrap()
@@ -923,13 +921,9 @@ impl<'a> InferenceResultBuilder<'a> {
         body: ExprId,
         _expected: &Expectation,
     ) -> Ty {
-        self.infer_expr(
-            condition,
-            &Expectation::has_type(Ty::simple(TypeCtor::Bool)),
-        );
-
+        self.infer_expr(condition, &Expectation::has_type(TyKind::Bool.intern()));
         self.infer_loop_block(body, ActiveLoop::While);
-        Ty::Empty
+        Ty::unit()
     }
 
     pub fn report_pat_inference_failure(&mut self, _pat: PatId) {
@@ -970,11 +964,13 @@ impl Expectation {
 
     /// This expresses no expectation on the type.
     fn none() -> Self {
-        Expectation { ty: Ty::Unknown }
+        Expectation {
+            ty: TyKind::Unknown.intern(),
+        }
     }
 
     fn is_none(&self) -> bool {
-        self.ty == Ty::Unknown
+        self.ty.is_unknown()
     }
 }
 

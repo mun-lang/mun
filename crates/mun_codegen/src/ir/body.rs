@@ -9,7 +9,7 @@ use crate::{
 use hir::{
     ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDatabase, HirDisplay, InferenceResult,
     Literal, LogicOp, Name, Ordering, Pat, PatId, Path, ResolveBitness, Resolver, Statement,
-    TypeCtor, UnaryOp, ValueNs,
+    TyKind, UnaryOp, ValueNs,
 };
 use inkwell::{
     basic_block::BasicBlock,
@@ -245,8 +245,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                             // `nothing` is returned instead of a `never`.
                             //
                             // This unit value will also be optimized out.
-                            .or_else(|| match self.infer[expr] {
-                                hir::ty_app!(hir::TypeCtor::Never) => None,
+                            .or_else(|| match self.infer[expr].interned() {
+                                TyKind::Never => None,
                                 _ => Some(self.context.const_struct(&[], false).into()),
                             })
                     }
@@ -275,11 +275,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
     fn gen_literal(&mut self, lit: &Literal, expr: ExprId) -> BasicValueEnum<'ink> {
         match lit {
             Literal::Int(v) => {
-                let ty = match &self.infer[expr] {
-                    hir::Ty::Apply(hir::ApplicationTy {
-                        ctor: hir::TypeCtor::Int(int_ty),
-                        ..
-                    }) => int_ty,
+                let ty = match &self.infer[expr].interned() {
+                    TyKind::Int(int_ty) => int_ty,
                     _ => unreachable!(
                         "cannot construct an IR value for anything but an integral type"
                     ),
@@ -303,12 +300,10 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             }
 
             Literal::Float(v) => {
-                let ty = match &self.infer[expr] {
-                    hir::Ty::Apply(hir::ApplicationTy {
-                        ctor: hir::TypeCtor::Float(float_ty),
-                        ..
-                    }) => float_ty,
-                    _ => unreachable!("cannot construct an IR value for anything but a float type"),
+                let ty = &self.infer[expr];
+                let ty = match ty.interned()  {
+                    TyKind::Float(float_ty) => float_ty,
+                    _ => unreachable!("cannot construct an IR value for anything but a float type (literal type: {})", ty.display(self.db)),
                 };
 
                 let context = self.context;
@@ -589,11 +584,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         value: BasicValueEnum<'ink>,
     ) -> BasicValueEnum<'ink> {
         let ty = &self.infer[expr];
-        if let hir::Ty::Apply(hir::ApplicationTy {
-            ctor: hir::TypeCtor::Struct(s),
-            ..
-        }) = ty
-        {
+        if let Some(s) = ty.as_struct() {
             if s.data(self.db.upcast()).memory_kind == hir::StructMemoryKind::Gc {
                 return deref_heap_value(&self.builder, value);
             }
@@ -632,11 +623,11 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         op: BinaryOp,
     ) -> Option<BasicValueEnum<'ink>> {
         let lhs_type = self.infer[lhs].clone();
-        match lhs_type.as_simple() {
-            Some(TypeCtor::Bool) => self.gen_binary_op_bool(lhs, rhs, op),
-            Some(TypeCtor::Float(_ty)) => self.gen_binary_op_float(lhs, rhs, op),
-            Some(TypeCtor::Int(ty)) => self.gen_binary_op_int(lhs, rhs, op, ty.signedness),
-            Some(TypeCtor::Struct(s)) => {
+        match lhs_type.interned() {
+            TyKind::Bool => self.gen_binary_op_bool(lhs, rhs, op),
+            TyKind::Float(_) => self.gen_binary_op_float(lhs, rhs, op),
+            TyKind::Int(ty) => self.gen_binary_op_int(lhs, rhs, op, ty.signedness),
+            TyKind::Struct(s) => {
                 if s.data(self.db.upcast()).memory_kind == hir::StructMemoryKind::Value {
                     self.gen_binary_op_value_struct(lhs, rhs, op)
                 } else {
@@ -656,11 +647,11 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
     /// Generates IR to calculate a unary operation on an expression.
     fn gen_unary_op(&mut self, expr: ExprId, op: UnaryOp) -> Option<BasicValueEnum<'ink>> {
-        let ty = self.infer[expr].clone();
-        match ty.as_simple() {
-            Some(TypeCtor::Float(_ty)) => self.gen_unary_op_float(expr, op),
-            Some(TypeCtor::Int(ty)) => self.gen_unary_op_int(expr, op, ty.signedness),
-            Some(TypeCtor::Bool) => self.gen_unary_op_bool(expr, op),
+        let ty = &self.infer[expr];
+        match ty.interned() {
+            TyKind::Float(_) => self.gen_unary_op_float(expr, op),
+            &TyKind::Int(int_ty) => self.gen_unary_op_int(expr, op, int_ty.signedness),
+            TyKind::Bool => self.gen_unary_op_bool(expr, op),
             _ => unimplemented!("unimplemented operation op{0}", ty.display(self.db)),
         }
     }
