@@ -330,7 +330,7 @@ fn test_runtime_update() {
 fn test_gc_alloc_invalid_obj() {
     let driver = TestDriver::new(
         r#"
-        struct Foo;
+        pub struct Foo;
 
         pub fn main() -> Foo { Foo }
     "#,
@@ -368,7 +368,7 @@ fn test_gc_alloc_invalid_obj() {
 fn test_gc_alloc() {
     let driver = TestDriver::new(
         r#"
-        struct Foo;
+        pub struct Foo;
 
         pub fn main() -> Foo { Foo }
     "#,
@@ -408,7 +408,7 @@ fn test_gc_alloc() {
 fn test_gc_ptr_type_invalid_type_info() {
     let driver = TestDriver::new(
         r#"
-        struct Foo;
+        pub struct Foo;
 
         pub fn main() -> Foo { Foo }
     "#,
@@ -432,7 +432,7 @@ fn test_gc_ptr_type_invalid_type_info() {
 fn test_gc_ptr_type() {
     let driver = TestDriver::new(
         r#"
-        struct Foo;
+        pub struct Foo;
 
         pub fn main() -> Foo { Foo }
     "#,
@@ -479,7 +479,7 @@ fn test_gc_ptr_type() {
 fn test_gc_rooting() {
     let driver = TestDriver::new(
         r#"
-        struct Foo;
+        pub struct Foo;
 
         pub fn main() -> Foo { Foo }
     "#,
@@ -531,7 +531,7 @@ fn test_gc_rooting() {
 fn test_gc_ptr_collect_invalid_reclaimed() {
     let driver = TestDriver::new(
         r#"
-        struct Foo;
+        pub struct Foo;
 
         pub fn main() -> Foo { Foo }
     "#,

@@ -1,12 +1,15 @@
 use crate::code_model::src::HasSource;
 use crate::diagnostics::{
-    ExternCannotHaveBody, ExternNonPrimitiveParam, FreeTypeAliasWithoutTypeRef,
+    ExportedPrivate, ExternCannotHaveBody, ExternNonPrimitiveParam, FreeTypeAliasWithoutTypeRef,
 };
 use crate::expr::BodySourceMap;
 use crate::in_file::InFile;
+use crate::resolve::HasResolver;
 use crate::{
     diagnostics::DiagnosticSink, Body, Expr, Function, HirDatabase, InferenceResult, TypeAlias,
 };
+use crate::{HasVisibility, Ty, Visibility};
+
 use mun_syntax::{AstNode, SyntaxNodePtr};
 use std::sync::Arc;
 
@@ -40,6 +43,43 @@ impl<'a> ExprValidator<'a> {
         self.validate_literal_ranges(sink);
         self.validate_uninitialized_access(sink);
         self.validate_extern(sink);
+        self.validate_privacy(sink);
+    }
+
+    pub fn validate_privacy(&self, sink: &mut DiagnosticSink) {
+        let resolver = self.func.id.resolver(self.db.upcast());
+        let fn_data = self.func.data(self.db.upcast());
+        let ret_type_ref = fn_data.ret_type();
+        let param_types = fn_data
+            .params()
+            .iter()
+            .chain(std::iter::once(ret_type_ref))
+            .map(|type_ref| {
+                let ty = Ty::from_hir(self.db, &resolver, &fn_data.type_ref_map(), *type_ref).ty;
+                dbg!(type_ref, ty.clone());
+                (ty, type_ref)
+            });
+
+        let fn_visibility = self.func.visibility(self.db);
+        let type_is_allowed = |ty: &Ty| match fn_visibility {
+            Visibility::Module(module_id) => {
+                ty.visibility(self.db).is_visible_from(self.db, module_id)
+            }
+            Visibility::Public => ty.visibility(self.db).is_externally_visible(),
+        };
+
+        let file_id = self.func.source(self.db.upcast()).file_id;
+        param_types
+            .filter(|(ty, _)| !type_is_allowed(&ty))
+            .for_each(|(_, type_ref)| {
+                sink.push(ExportedPrivate {
+                    file: file_id,
+                    type_ref: fn_data
+                        .type_ref_source_map()
+                        .type_ref_syntax(*type_ref)
+                        .unwrap(),
+                })
+            });
     }
 
     pub fn validate_extern(&self, sink: &mut DiagnosticSink) {

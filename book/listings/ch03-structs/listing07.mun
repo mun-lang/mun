@@ -1,4 +1,4 @@
-# struct Vector3(f32, f32, f32)
+# pub struct Vector3(f32, f32, f32)
 pub fn vector3_add(lhs: Vector3, rhs: Vector3) -> Vector3 {
     lhs.0 += rhs.0;
     lhs.1 += rhs.1;

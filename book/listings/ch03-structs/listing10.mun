@@ -1,4 +1,4 @@
-struct(value) Vector2 {
+pub struct(value) Vector2 {
     x: f32,
     y: f32,
 }

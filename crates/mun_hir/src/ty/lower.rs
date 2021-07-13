@@ -12,6 +12,7 @@ use crate::{
     type_ref::{LocalTypeRefId, TypeRef, TypeRefMap, TypeRefSourceMap},
     FileId, Function, HirDatabase, ModuleDef, Path, Struct, TypeAlias,
 };
+use crate::{HasVisibility, Visibility};
 use std::{ops::Index, sync::Arc};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -209,6 +210,15 @@ impl CallableDef {
 
     pub fn is_struct(self) -> bool {
         matches!(self, CallableDef::Struct(_))
+    }
+}
+
+impl HasVisibility for CallableDef {
+    fn visibility(&self, db: &dyn HirDatabase) -> Visibility {
+        match self {
+            CallableDef::Struct(strukt) => strukt.visibility(db),
+            CallableDef::Function(function) => function.visibility(db),
+        }
     }
 }
 

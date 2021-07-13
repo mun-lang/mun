@@ -179,6 +179,26 @@ impl Diagnostic for ExpectedFunction {
 }
 
 #[derive(Debug)]
+pub struct ExportedPrivate {
+    pub file: FileId,
+    pub type_ref: AstPtr<ast::TypeRef>,
+}
+
+impl Diagnostic for ExportedPrivate {
+    fn message(&self) -> String {
+        "can't leak private type".to_string()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        InFile::new(self.file, self.type_ref.syntax_node_ptr())
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
 pub struct ParameterCountMismatch {
     pub file: FileId,
     pub expr: SyntaxNodePtr,

@@ -46,6 +46,13 @@ mod tests {
     }
 
     #[test]
+    fn test_leaked_private_type_error_function() {
+        insta::assert_display_snapshot!(compilation_errors(
+            "\n\nstruct Foo;\n pub fn Bar() -> Foo { Foo } \n fn main() {}"
+        ));
+    }
+
+    #[test]
     fn test_expected_function_error() {
         insta::assert_display_snapshot!(compilation_errors(
             "\n\nfn main() {\nlet a = Foo();\n\nlet b = Bar();\n}"

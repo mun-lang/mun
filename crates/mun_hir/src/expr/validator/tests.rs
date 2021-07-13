@@ -78,6 +78,89 @@ fn test_free_type_alias_without_type_ref() {
     )
 }
 
+#[test]
+fn test_private_leak_function_return() {
+    diagnostics_snapshot(
+        r#"
+    struct Foo(usize);
+
+    pub fn bar() -> Foo { // Foo is not public
+        Foo(0)
+    }
+
+    pub fn baz(a: usize, b: usize) -> Foo {
+        Foo(2)
+    }
+
+    pub struct FooBar(usize);
+
+    pub fn FooBaz() -> FooBar {
+        FooBar(0)
+    }
+
+    fn BarBaz() -> FooBar {
+        FooBar(1)
+    }
+    "#,
+    )
+}
+
+#[test]
+fn test_private_leak_function_args() {
+    diagnostics_snapshot(
+        r#"
+    struct Foo(usize);
+
+    pub fn bar(a: Foo, b: isize) -> usize{ // Foo is not public
+        0
+    }
+
+    pub fn baz(a: isize, b: Foo) -> isize {
+        -1
+    }
+
+    pub struct FooBar(usize);
+
+    pub fn FooBaz(a: FooBar) -> FooBar {
+        a
+    }
+
+    fn BarBaz(a: isize, b: FooBar) -> isize {
+        a
+    }
+    "#,
+    )
+}
+
+#[test]
+fn test_private_leak_function_scoped() {
+    diagnostics_snapshot(
+        r#"
+    // Illegal, Bar has a smaller scope than this use statement
+    pub(super) struct Bar;
+
+    // Illegal, Bar has a smaller scope than this function
+    pub fn baz() -> Bar {
+        Bar
+    }
+    "#,
+    )
+}
+
+// No errors, check https://github.com/mun-lang/mun/issues/339
+#[test]
+fn test_private_leak_alias() {
+    diagnostics_snapshot(
+        r#"
+    type Bar = usize;
+
+    pub fn baz() -> Bar {
+        0
+    }
+    "#,
+    )
+}
+
 fn diagnostics(content: &str) -> String {
     let (db, _file_id) = MockDatabase::with_single_file(content);
 

@@ -2,6 +2,7 @@
 mod access_unknown_field;
 mod duplicate_definition_error;
 mod expected_function;
+mod exported_private;
 mod mismatched_type;
 mod missing_fields;
 mod possibly_unitialized_variable;
@@ -36,6 +37,8 @@ impl<DB: mun_hir::HirDatabase> DiagnosticForWith<DB> for dyn mun_hir::Diagnostic
             ))
         } else if let Some(v) = self.downcast_ref::<mun_hir::diagnostics::MissingFields>() {
             f(&missing_fields::MissingFields::new(with, v))
+        } else if let Some(v) = self.downcast_ref::<mun_hir::diagnostics::ExportedPrivate>() {
+            f(&exported_private::ExportedPrivate::new(with, v))
         } else {
             f(&GenericHirDiagnostic { diagnostic: self })
         }

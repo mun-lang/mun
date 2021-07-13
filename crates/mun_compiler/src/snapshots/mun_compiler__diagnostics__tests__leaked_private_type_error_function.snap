@@ -1,0 +1,11 @@
+---
+source: crates/mun_compiler/src/diagnostics.rs
+expression: "compilation_errors(\"\\n\\nstruct Foo;\\n pub fn Bar() -> Foo { Foo } \\n fn main() {}\")"
+
+---
+error: can't leak `Foo`
+ --> main.mun:4:18
+  |
+4 |  pub fn Bar() -> Foo { Foo } 
+  |                  ^^^ can't leak private type
+  |
