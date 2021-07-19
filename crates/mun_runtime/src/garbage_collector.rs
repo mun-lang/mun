@@ -1,6 +1,6 @@
 use memory::{
     gc::{self, HasIndirectionPtr},
-    TypeGroup,
+    CompositeTypeKind,
 };
 use std::{alloc::Layout, hash::Hash, ptr::NonNull};
 
@@ -54,23 +54,31 @@ impl memory::TypeDesc for UnsafeTypeInfo {
     }
 }
 
-impl memory::TypeComposition for UnsafeTypeInfo {
+impl memory::CompositeType for UnsafeTypeInfo {
     type ArrayType = abi::ArrayInfo;
-    type StructType = abi::StructInfo;
+    type StructType = WrappedAbiStructInfo;
 
-    fn group(&self) -> TypeGroup<'_, Self::ArrayType, Self::StructType> {
+    fn group(&self) -> CompositeTypeKind<'_, Self::ArrayType, Self::StructType> {
         match unsafe { &self.0.as_ref().data } {
-            TypeInfoData::Primitive => TypeGroup::Primitive,
-            TypeInfoData::Struct(s) => TypeGroup::Struct(s),
-            TypeInfoData::Array(a) => TypeGroup::Array(a),
+            TypeInfoData::Primitive => CompositeTypeKind::Primitive,
+            TypeInfoData::Struct(s) => CompositeTypeKind::Struct(unsafe {
+                std::mem::transmute::<&abi::StructInfo, &WrappedAbiStructInfo>(s)
+            }),
+            TypeInfoData::Array(a) => CompositeTypeKind::Array(a),
         }
     }
 }
 
-impl memory::StructType<UnsafeTypeInfo> for abi::StructInfo {
+/// This is a super hacky unsafe way to be able to implement traits from `mun_memory` for types
+/// defined in `mun_abi`.
+#[repr(transparent)]
+pub struct WrappedAbiStructInfo(pub abi::StructInfo);
+
+impl memory::StructFields<UnsafeTypeInfo> for WrappedAbiStructInfo {
     fn fields(&self) -> Vec<(&str, UnsafeTypeInfo)> {
-        self.field_names()
-            .zip(self.field_types().iter().map(|ty| {
+        self.0
+            .field_names()
+            .zip(self.0.field_types().iter().map(|ty| {
                 // Safety: `ty` is a shared reference, so is guaranteed to not be `ptr::null()`.
                 UnsafeTypeInfo::new(unsafe {
                     NonNull::new_unchecked(*ty as *const abi::TypeInfo as *mut _)
@@ -78,9 +86,10 @@ impl memory::StructType<UnsafeTypeInfo> for abi::StructInfo {
             }))
             .collect()
     }
-
+}
+impl memory::StructFieldLayout for WrappedAbiStructInfo {
     fn offsets(&self) -> &[u16] {
-        self.field_offsets()
+        self.0.field_offsets()
     }
 }
 

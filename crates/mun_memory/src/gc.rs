@@ -5,7 +5,7 @@ mod root_ptr;
 use crate::TypeMemory;
 use std::marker::PhantomData;
 
-pub use mark_sweep::{MarkSweep, MarkSweepType};
+pub use mark_sweep::MarkSweep;
 pub use ptr::{GcPtr, HasIndirectionPtr, RawGcPtr};
 pub use root_ptr::GcRootPtr;
 

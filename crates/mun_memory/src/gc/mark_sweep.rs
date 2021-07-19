@@ -1,4 +1,9 @@
-use crate::{cast, gc::{Event, GcPtr, GcRuntime, Observer, RawGcPtr, Stats, TypeTrace}, mapping::{self, FieldMapping, MemoryMapper}, TypeDesc, TypeMemory, TypeComposition, ArrayType};
+use crate::{
+    cast,
+    gc::{Event, GcPtr, GcRuntime, Observer, RawGcPtr, Stats, TypeTrace},
+    mapping::{self, FieldMapping, MemoryMapper},
+    ArrayType, CompositeType, StructFields, TypeDesc, TypeMemory,
+};
 use mapping::{Conversion, Mapping};
 use parking_lot::RwLock;
 use std::alloc::{Layout, LayoutError};
@@ -10,14 +15,10 @@ use std::{
     ptr::NonNull,
 };
 
-pub trait MarkSweepType: Clone + TypeMemory + TypeTrace + TypeComposition {}
-impl<T: Clone + TypeMemory + TypeTrace + TypeComposition> MarkSweepType for T {}
-
 /// Implements a simple mark-sweep type garbage collector.
 #[derive(Debug)]
 pub struct MarkSweep<T, O>
 where
-    T: MarkSweepType,
     O: Observer<Event = Event>,
 {
     objects: RwLock<HashMap<GcPtr, Pin<Box<ObjectInfo<T>>>>>,
@@ -27,7 +28,6 @@ where
 
 impl<T, O> Default for MarkSweep<T, O>
 where
-    T: MarkSweepType,
     O: Observer<Event = Event> + Default,
 {
     fn default() -> Self {
@@ -41,7 +41,7 @@ where
 
 impl<T, O> MarkSweep<T, O>
 where
-    T: MarkSweepType,
+    T: TypeMemory,
     O: Observer<Event = Event>,
 {
     /// Creates a `MarkSweep` memory collector with the specified `Observer`.
@@ -70,7 +70,7 @@ where
 }
 
 /// Allocates memory for an object.
-fn alloc_obj<T: MarkSweepType>(ty: T) -> Pin<Box<ObjectInfo<T>>> {
+fn alloc_obj<T: TypeMemory>(ty: T) -> Pin<Box<ObjectInfo<T>>> {
     let ptr = unsafe { std::alloc::alloc(ty.layout()) };
     Box::pin(ObjectInfo {
         ptr,
@@ -113,7 +113,10 @@ fn repeat_layout(layout: Layout, n: usize) -> Result<Layout, MemoryLayoutError> 
 }
 
 /// Allocates memory for an array type with `length` elements. `array_ty` must be an array type.
-fn alloc_array<T: MarkSweepType>(array_ty: T, length: usize) -> Pin<Box<ObjectInfo<T>>> {
+fn alloc_array<T: CompositeType + TypeMemory>(array_ty: T, length: usize) -> Pin<Box<ObjectInfo<T>>>
+where
+    T::ArrayType: ArrayType<T>,
+{
     // Get the element type of the array
     let element_ty = array_ty
         .as_array()
@@ -148,7 +151,8 @@ fn alloc_array<T: MarkSweepType>(array_ty: T, length: usize) -> Pin<Box<ObjectIn
 
 impl<T, O> GcRuntime<T> for MarkSweep<T, O>
 where
-    T: MarkSweepType,
+    T: Clone + TypeMemory + TypeTrace + CompositeType,
+    T::ArrayType: ArrayType<T>,
     O: Observer<Event = Event>,
 {
     fn alloc(&self, ty: T) -> GcPtr {
@@ -216,7 +220,8 @@ where
 
 impl<T, O> MarkSweep<T, O>
 where
-    T: MarkSweepType,
+    T: Clone + TypeMemory + TypeTrace + CompositeType,
+    T::ArrayType: ArrayType<T>,
     O: Observer<Event = Event>,
 {
     /// Collects all memory that is no longer referenced by rooted objects. Returns `true` if memory
@@ -288,7 +293,9 @@ where
 
 impl<T, O> MemoryMapper<T> for MarkSweep<T, O>
 where
-    T: TypeDesc + MarkSweepType + Eq + Hash,
+    T: TypeDesc + Clone + TypeMemory + TypeTrace + CompositeType + Eq + Hash,
+    T::ArrayType: ArrayType<T>,
+    T::StructType: StructFields<T>,
     O: Observer<Event = Event>,
 {
     fn map_memory(&self, mapping: Mapping<T, T>) -> Vec<GcPtr> {
@@ -377,7 +384,9 @@ where
             src: NonNull<u8>,
             dest: NonNull<u8>,
         ) where
-            T: TypeDesc + TypeComposition + MarkSweepType + Eq + Hash,
+            T: TypeDesc + Clone + TypeMemory + TypeTrace + CompositeType + Eq + Hash,
+            T::ArrayType: ArrayType<T>,
+            //T::StructType:<T>,
             O: Observer<Event = Event>,
         {
             for FieldMapping {
@@ -599,7 +608,7 @@ enum Color {
 /// meta information.
 #[derive(Debug)]
 #[repr(C)]
-struct ObjectInfo<T: MarkSweepType> {
+struct ObjectInfo<T> {
     pub ptr: *mut u8,
     pub length: usize,
     pub capacity: usize,
@@ -608,7 +617,10 @@ struct ObjectInfo<T: MarkSweepType> {
     pub ty: T,
 }
 
-impl<T: MarkSweepType> ObjectInfo<T> {
+impl<T: TypeMemory + CompositeType> ObjectInfo<T>
+where
+    T::ArrayType: ArrayType<T>,
+{
     /// Returns the memory layout of the value stored with this object
     pub fn value_layout(&self) -> Layout {
         if let Some(array_type) = self.ty.as_array() {
@@ -626,28 +638,28 @@ impl<T: MarkSweepType> ObjectInfo<T> {
 }
 
 /// An `ObjectInfo` is thread-safe.
-unsafe impl<T: MarkSweepType> Send for ObjectInfo<T> {}
-unsafe impl<T: MarkSweepType> Sync for ObjectInfo<T> {}
+unsafe impl<T> Send for ObjectInfo<T> {}
+unsafe impl<T> Sync for ObjectInfo<T> {}
 
-impl<T: MarkSweepType> From<GcPtr> for *const ObjectInfo<T> {
+impl<T> From<GcPtr> for *const ObjectInfo<T> {
     fn from(ptr: GcPtr) -> Self {
         ptr.as_ptr() as Self
     }
 }
 
-impl<T: MarkSweepType> From<GcPtr> for *mut ObjectInfo<T> {
+impl<T> From<GcPtr> for *mut ObjectInfo<T> {
     fn from(ptr: GcPtr) -> Self {
         ptr.as_ptr() as Self
     }
 }
 
-impl<T: MarkSweepType> From<*const ObjectInfo<T>> for GcPtr {
+impl<T> From<*const ObjectInfo<T>> for GcPtr {
     fn from(info: *const ObjectInfo<T>) -> Self {
         (info as RawGcPtr).into()
     }
 }
 
-impl<T: MarkSweepType> From<*mut ObjectInfo<T>> for GcPtr {
+impl<T> From<*mut ObjectInfo<T>> for GcPtr {
     fn from(info: *mut ObjectInfo<T>) -> Self {
         (info as RawGcPtr).into()
     }

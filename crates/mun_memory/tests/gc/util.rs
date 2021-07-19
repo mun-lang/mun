@@ -1,13 +1,28 @@
 #![allow(dead_code, unused_macros)]
 
 use mun_memory::gc::{self, GcPtr};
+use mun_memory::CompositeTypeKind;
 use parking_lot::Mutex;
 use std::alloc::Layout;
 
 pub struct TypeInfo {
     pub size: usize,
     pub alignment: usize,
-    pub tracer: Option<&'static fn(handle: GcPtr) -> Vec<GcPtr>>,
+    pub kind: TypeInfoKind,
+}
+
+pub enum TypeInfoKind {
+    Primitive,
+    Struct(StructInfo),
+    Array(ArrayInfo),
+}
+
+pub struct StructInfo {
+    pub trace: &'static fn(handle: GcPtr) -> Vec<GcPtr>,
+}
+
+pub struct ArrayInfo {
+    pub element_ty: &'static TypeInfo,
 }
 
 pub trait Trace {
@@ -29,7 +44,7 @@ macro_rules! impl_primitive_types {
                 static [<TYPE_ $ty>]: TypeInfo = TypeInfo {
                     size: std::mem::size_of::<$ty>(),
                     alignment: std::mem::align_of::<$ty>(),
-                    tracer: None
+                    kind: TypeInfoKind::Primitive
                 };
 
                 impl HasTypeInfo for $ty {
@@ -58,7 +73,7 @@ macro_rules! impl_struct_ty {
             static [<TYPE_ $ty>]: TypeInfo = TypeInfo {
                 size: std::mem::size_of::<$ty>(),
                 alignment: std::mem::align_of::<$ty>(),
-                tracer: Some(&([<trace_ $ty>] as fn(handle: GcPtr) -> Vec<GcPtr>))
+                kind: TypeInfoKind::Struct(StructInfo { trace: &([<trace_ $ty>] as fn(handle: GcPtr) -> Vec<GcPtr>) })
             };
 
             impl HasTypeInfo for $ty {
@@ -88,12 +103,31 @@ impl gc::TypeTrace for &'static TypeInfo {
     type Trace = <Vec<GcPtr> as IntoIterator>::IntoIter;
 
     fn trace(&self, obj: GcPtr) -> Self::Trace {
-        let handles = if let Some(tracer) = self.tracer {
-            tracer(obj)
-        } else {
-            Vec::new()
-        };
-        handles.into_iter()
+        match &self.kind {
+            TypeInfoKind::Primitive => Vec::new(),
+            TypeInfoKind::Struct(s) => (s.trace)(obj),
+            TypeInfoKind::Array(_) => Vec::new(),
+        }
+        .into_iter()
+    }
+}
+
+impl mun_memory::CompositeType for &'static TypeInfo {
+    type ArrayType = ArrayInfo;
+    type StructType = StructInfo;
+
+    fn group(&self) -> CompositeTypeKind<'_, Self::ArrayType, Self::StructType> {
+        match &self.kind {
+            TypeInfoKind::Primitive => CompositeTypeKind::Primitive,
+            TypeInfoKind::Struct(s) => CompositeTypeKind::Struct(s),
+            TypeInfoKind::Array(a) => CompositeTypeKind::Array(a),
+        }
+    }
+}
+
+impl mun_memory::ArrayType<&'static TypeInfo> for ArrayInfo {
+    fn element_type(&self) -> &'static TypeInfo {
+        self.element_ty
     }
 }
 

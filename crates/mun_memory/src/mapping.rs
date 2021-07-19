@@ -1,7 +1,7 @@
 use crate::{
     diff::{diff, Diff, FieldDiff, FieldEditKind},
     gc::GcPtr,
-    StructType, TypeComposition, TypeDesc, TypeMemory,
+    CompositeType, StructFieldLayout, StructFields, TypeDesc, TypeMemory,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -37,7 +37,8 @@ pub enum Action<T: TypeDesc + TypeMemory> {
 
 impl<T> Mapping<T, T>
 where
-    T: TypeDesc + TypeComposition + TypeMemory + Clone + Eq + Hash,
+    T: TypeDesc + CompositeType + TypeMemory + Clone + Eq + Hash,
+    T::StructType: StructFields<T> + StructFieldLayout,
 {
     ///
     pub fn new(old: &[T], new: &[T]) -> Self {
@@ -61,7 +62,9 @@ where
                 } => {
                     let old_ty = unsafe { old.get_unchecked(*old_index).clone() };
                     let new_ty = unsafe { new.get_unchecked(*new_index).clone() };
-                    conversions.insert(old_ty.clone(), unsafe { field_mapping(old_ty, new_ty, diff) });
+                    conversions.insert(old_ty.clone(), unsafe {
+                        field_mapping(old_ty, new_ty, diff)
+                    });
                 }
                 Diff::Insert { index } => {
                     insertions.insert(unsafe { new.get_unchecked(*index).clone() });
@@ -139,11 +142,14 @@ where
 /// # Safety
 ///
 /// Expects the `diff` to be based on `old_ty` and `new_ty`. If not, it causes undefined behavior.
-pub unsafe fn field_mapping<T: Clone + TypeDesc + TypeComposition + TypeMemory>(
+pub unsafe fn field_mapping<T: Clone + TypeDesc + CompositeType + TypeMemory>(
     old_ty: T,
     new_ty: T,
     diff: &[FieldDiff],
-) -> Conversion<T> {
+) -> Conversion<T>
+where
+    T::StructType: StructFields<T> + StructFieldLayout,
+{
     let old_struct = old_ty.as_struct().expect("old_ty must be a struct type");
     let old_fields = old_struct.fields();
 

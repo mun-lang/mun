@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use mun_memory::{
     diff::{myers, Diff, FieldDiff, FieldEditKind},
-    ArrayType, StructType, TypeComposition, TypeDesc, TypeGroup, TypeMemory,
+    ArrayType, CompositeType, CompositeTypeKind, StructFields, TypeDesc, TypeMemory,
 };
 use std::alloc::Layout;
 
@@ -113,30 +113,25 @@ impl TypeMemory for TypeInfo {
     }
 }
 
-impl TypeComposition for TypeInfo {
+impl CompositeType for TypeInfo {
     type ArrayType = ArrayInfo;
     type StructType = StructInfo;
 
-    fn group(&self) -> TypeGroup<'_, Self::ArrayType, Self::StructType> {
+    fn group(&self) -> CompositeTypeKind<'_, Self::ArrayType, Self::StructType> {
         match &self.data {
-            TypeInfoData::Primitive => TypeGroup::Primitive,
-            TypeInfoData::Struct(s) => TypeGroup::Struct(s),
-            TypeInfoData::Array(a) => TypeGroup::Array(a),
+            TypeInfoData::Primitive => CompositeTypeKind::Primitive,
+            TypeInfoData::Struct(s) => CompositeTypeKind::Struct(s),
+            TypeInfoData::Array(a) => CompositeTypeKind::Array(a),
         }
     }
 }
 
-impl StructType<TypeInfo> for StructInfo {
+impl StructFields<TypeInfo> for StructInfo {
     fn fields(&self) -> Vec<(&str, TypeInfo)> {
         self.fields
             .iter()
             .map(|(name, ty)| (name.as_str(), ty.clone()))
             .collect()
-    }
-
-    fn offsets(&self) -> &[u16] {
-        // This is a stub, as we don't do any actual memory mapping
-        &[]
     }
 }
 
@@ -162,11 +157,7 @@ pub fn apply_myers_diff<'t, T: Copy + Eq>(old: &[T], new: &[T], diff: Vec<myers:
     combined
 }
 
-pub(crate) fn apply_diff<'t>(
-    old: &[TypeInfo],
-    new: &[TypeInfo],
-    diff: Vec<Diff>,
-) -> Vec<TypeInfo> {
+pub(crate) fn apply_diff<'t>(old: &[TypeInfo], new: &[TypeInfo], diff: Vec<Diff>) -> Vec<TypeInfo> {
     let mut combined: Vec<TypeInfo> = old.iter().map(|ty| (*ty).clone()).collect();
     for diff in diff.iter().rev() {
         match diff {

@@ -1,6 +1,6 @@
 pub mod myers;
 
-use crate::{StructType, TypeComposition, TypeDesc};
+use crate::{CompositeType, StructFields, TypeDesc};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FieldEditKind {
@@ -74,7 +74,8 @@ impl PartialOrd for Diff {
 /// Given an `old` and a `new` set of types `T`, calculates the difference.
 pub fn diff<T>(old: &[T], new: &[T]) -> Vec<Diff>
 where
-    T: Clone + Eq + TypeDesc + TypeComposition,
+    T: Clone + Eq + TypeDesc + CompositeType,
+    T::StructType: StructFields<T>,
 {
     let diff = myers::diff(old, new);
     let mut mapping: Vec<Diff> = Vec::with_capacity(diff.len());
@@ -170,7 +171,8 @@ fn append_struct_mapping<T>(
     insertions: Vec<usize>,
     mapping: &mut Vec<Diff>,
 ) where
-    T: Eq + TypeDesc + TypeComposition,
+    T: Eq + TypeDesc + CompositeType,
+    T::StructType: StructFields<T>,
 {
     let num_deleted = deletions.len();
     let num_inserted = insertions.len();

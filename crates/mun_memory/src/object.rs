@@ -6,4 +6,3 @@ pub trait Object<Type: Copy + Send + Sync, Value: Send + Sync> {
     /// Returns a pointer to the instance data of the object
     fn value_ptr(&self) -> Value;
 }
-
