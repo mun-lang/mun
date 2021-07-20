@@ -29,7 +29,7 @@ fn hotreloadable() {
 fn hotreload_struct_decl() {
     let mut driver = CompileAndRunTestDriver::new(
         r#"
-    struct(gc) Args {
+    pub struct(gc) Args {
         n: i32,
         foo: Bar,
     }
@@ -51,7 +51,7 @@ fn hotreload_struct_decl() {
         runtime.borrow(),
         "mod.mun",
         r#"
-    struct(gc) Args {
+    pub struct(gc) Args {
         n: i32,
         foo: Bar,
     }

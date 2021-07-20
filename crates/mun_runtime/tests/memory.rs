@@ -49,7 +49,7 @@ fn gc_trace() {
 fn map_struct_insert_field1() {
     let mut driver = CompileAndRunTestDriver::new(
         r#"
-        struct Foo {
+        pub struct Foo {
             b: i64,
             c: f64,
         }
@@ -90,7 +90,7 @@ fn map_struct_insert_field1() {
 fn map_struct_insert_field2() {
     let mut driver = CompileAndRunTestDriver::new(
         r#"
-        struct Foo {
+        pub struct Foo {
             a: i64,
             c: f64,
         }
@@ -131,7 +131,7 @@ fn map_struct_insert_field2() {
 fn map_struct_insert_field3() {
     let mut driver = CompileAndRunTestDriver::new(
         r#"
-        struct Foo {
+        pub struct Foo {
             a: i64,
             b: f64,
         }
@@ -172,7 +172,7 @@ fn map_struct_insert_field3() {
 fn map_struct_remove_field1() {
     let mut driver = CompileAndRunTestDriver::new(
         r#"
-        struct Foo {
+        pub struct Foo {
             a: f64,
             b: f64,
             c: i64,
@@ -211,7 +211,7 @@ fn map_struct_remove_field1() {
 fn map_struct_remove_field2() {
     let mut driver = CompileAndRunTestDriver::new(
         r#"
-        struct Foo {
+        pub struct Foo {
             a: f64,
             b: i64,
             c: f64,
@@ -250,7 +250,7 @@ fn map_struct_remove_field2() {
 fn map_struct_remove_field3() {
     let mut driver = CompileAndRunTestDriver::new(
         r#"
-        struct Foo {
+        pub struct Foo {
             a: i64,
             b: f64,
             c: f64,
@@ -289,7 +289,7 @@ fn map_struct_remove_field3() {
 fn map_struct_cast_fields1() {
     let mut driver = CompileAndRunTestDriver::new(
         r#"
-        struct Foo(
+        pub struct Foo(
             u8,
             i16,
             u32,
@@ -340,7 +340,7 @@ fn map_struct_cast_fields1() {
 fn map_struct_cast_fields2() {
     let mut driver = CompileAndRunTestDriver::new(
         r#"
-        struct Foo(
+        pub struct Foo(
             i16,
         )
 
@@ -376,7 +376,7 @@ fn map_struct_cast_fields2() {
 fn map_struct_swap_fields1() {
     let mut driver = CompileAndRunTestDriver::new(
         r#"
-        struct Foo {
+        pub struct Foo {
             a: f64,
             b: i64,
             c: f64,
@@ -419,7 +419,7 @@ fn map_struct_swap_fields1() {
 fn map_struct_swap_fields2() {
     let mut driver = CompileAndRunTestDriver::new(
         r#"
-        struct Foo {
+        pub struct Foo {
             a: f64,
             b: i64,
             c: f64,
@@ -466,7 +466,7 @@ fn map_struct_swap_fields2() {
 fn map_struct_rename_field1() {
     let mut driver = CompileAndRunTestDriver::new(
         r#"
-        struct Foo {
+        pub struct Foo {
             a: i64,
             b: f64,
             c: f64,
@@ -509,7 +509,7 @@ fn map_struct_rename_field1() {
 fn map_struct_rename_field2() {
     let mut driver = CompileAndRunTestDriver::new(
         r#"
-        struct Foo {
+        pub struct Foo {
             a: i64,
             b: f64,
             c: f64,
@@ -552,7 +552,7 @@ fn map_struct_rename_field2() {
 fn map_struct_all() {
     let mut driver = CompileAndRunTestDriver::new(
         r#"
-        struct Foo {
+        pub struct Foo {
             a: i32,
             b: f64,
             c: f64,
@@ -581,7 +581,7 @@ fn map_struct_all() {
         runtime_ref,
         "mod.mun",
         r#"
-        struct Foo {
+        pub struct Foo {
             b: f64, // move
         //  c: f64, // remove    
             d: i64, // move + convert
@@ -600,7 +600,7 @@ fn map_struct_all() {
 fn delete_used_struct() {
     let mut driver = CompileAndRunTestDriver::new(
         r#"
-        struct Foo {
+        pub struct Foo {
             a: i64,
             b: f64,
             c: f64,
@@ -627,7 +627,7 @@ fn delete_used_struct() {
         runtime_ref,
         "mod.mun",
         r#"
-        struct Bar(i64);
+        pub struct Bar(i64);
 
         pub fn bar_new(a: i64) -> Bar {
             Bar(a)
@@ -654,11 +654,11 @@ fn delete_used_struct() {
 fn nested_structs() {
     let mut driver = CompileAndRunTestDriver::new(
         r#"
-    struct(gc) GcStruct(f32, f32);
-    struct(value) ValueStruct(f32, f32);
+    pub struct(gc) GcStruct(f32, f32);
+    pub struct(value) ValueStruct(f32, f32);
 
-    struct(gc) GcWrapper(GcStruct, ValueStruct)
-    struct(value) ValueWrapper(GcStruct, ValueStruct);
+    pub struct(gc) GcWrapper(GcStruct, ValueStruct)
+    pub struct(value) ValueWrapper(GcStruct, ValueStruct);
 
     pub fn new_gc_struct(a: f32, b: f32) -> GcStruct {
         GcStruct(a, b)
@@ -712,11 +712,11 @@ fn nested_structs() {
         runtime_ref,
         "mod.mun",
         r#"
-    struct(gc) GcStruct(f64, f64);
-    struct(value) ValueStruct(f64, f64);
+    pub struct(gc) GcStruct(f64, f64);
+    pub struct(value) ValueStruct(f64, f64);
 
-    struct(gc) GcWrapper(GcStruct, ValueStruct)
-    struct(value) ValueWrapper(GcStruct, ValueStruct);
+    pub struct(gc) GcWrapper(GcStruct, ValueStruct)
+    pub struct(value) ValueWrapper(GcStruct, ValueStruct);
     "#,
     );
 
@@ -741,11 +741,11 @@ fn nested_structs() {
         runtime.borrow(),
         "mod.mun",
         r#"
-    struct(gc) GcStruct(f64, f64);
-    struct(value) ValueStruct(f64, f64);
+    pub struct(gc) GcStruct(f64, f64);
+    pub struct(value) ValueStruct(f64, f64);
 
-    struct(gc) GcWrapper(GcStruct, ValueStruct)
-    struct(value) ValueWrapper(GcStruct, ValueStruct);
+    pub struct(gc) GcWrapper(GcStruct, ValueStruct)
+    pub struct(value) ValueWrapper(GcStruct, ValueStruct);
     "#,
     );
 
@@ -885,7 +885,7 @@ fn nested_structs() {
 fn insert_struct() {
     let mut driver = CompileAndRunTestDriver::new(
         r#"
-        struct Foo {
+        pub struct Foo {
             a: i64,
             c: f64,
         }

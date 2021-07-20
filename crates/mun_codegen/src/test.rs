@@ -221,8 +221,8 @@ fn logic_op_bool() {
 fn assignment_op_struct() {
     test_snapshot(
         r#"
-    struct(value) Value(i32, i32);
-    struct(gc) Heap(f64, f64);
+    pub struct(value) Value(i32, i32);
+    pub struct(gc) Heap(f64, f64);
 
     pub fn assign_value(a: Value, b: Value) -> Value {
         a = b;
@@ -734,8 +734,8 @@ fn struct_test() {
 fn field_expr() {
     test_snapshot(
         r#"
-    struct(value) Bar(f64, Foo);
-    struct(value) Foo { a: i32 };
+    pub struct(value) Bar(f64, Foo);
+    pub struct(value) Foo { a: i32 };
 
     fn bar_1(bar: Bar) -> Foo {
         bar.1
@@ -874,11 +874,11 @@ fn incremental_compilation() {
 fn nested_structs() {
     test_snapshot(
         r#"
-    struct(gc) GcStruct(f32, f32);
-    struct(value) ValueStruct(f32, f32);
+    pub struct(gc) GcStruct(f32, f32);
+    pub struct(value) ValueStruct(f32, f32);
 
-    struct(gc) GcWrapper(GcStruct, ValueStruct)
-    struct(value) ValueWrapper(GcStruct, ValueStruct);
+    pub struct(gc) GcWrapper(GcStruct, ValueStruct)
+    pub struct(value) ValueWrapper(GcStruct, ValueStruct);
 
     pub fn new_gc_struct(a: f32, b: f32) -> GcStruct {
         GcStruct(a, b)

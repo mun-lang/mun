@@ -246,7 +246,7 @@ fn compiler_valid_utf8() {
 
     let driver = CompileAndRunTestDriver::new(
         r#"
-    struct Foo {
+    pub struct Foo {
         a: i32,
     }
 
@@ -342,10 +342,10 @@ fn field_crash() {
 fn marshal_struct() {
     let driver = CompileAndRunTestDriver::new(
         r#"
-    struct(value) Foo { a: i32, b: bool };
-    struct Bar(i32, bool);
-    struct(value) Baz(Foo);
-    struct(gc) Qux(Bar);
+    pub struct(value) Foo { a: i32, b: bool };
+    pub struct Bar(i32, bool);
+    pub struct(value) Baz(Foo);
+    pub struct(gc) Qux(Bar);
 
     pub fn foo_new(a: i32, b: bool) -> Foo {
         Foo { a, b, }
@@ -608,7 +608,7 @@ fn extern_fn_invalid_sig() {
 fn test_primitive_types() {
     let driver = CompileAndRunTestDriver::new(
         r#"
-    struct Primitives {
+    pub struct Primitives {
         a:u8,
         b:u16,
         c:u32,

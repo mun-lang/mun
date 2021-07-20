@@ -1,6 +1,6 @@
 extern fn log_f32(value: f32);
 
-struct SimContext;
+pub struct SimContext;
 
 pub fn new_sim() -> SimContext {
     SimContext

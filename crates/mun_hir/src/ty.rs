@@ -7,6 +7,8 @@ mod resolve;
 use crate::display::{HirDisplay, HirFormatter};
 use crate::ty::infer::InferTy;
 use crate::ty::lower::fn_sig_for_struct_constructor;
+use crate::HasVisibility;
+use crate::Visibility;
 use crate::{HirDatabase, Struct, StructMemoryKind, TypeAlias};
 pub(crate) use infer::infer_query;
 pub use infer::InferenceResult;
@@ -76,10 +78,27 @@ pub enum TyKind {
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Ty(Arc<TyKind>);
 
+impl HasVisibility for Ty {
+    fn visibility(&self, db: &dyn HirDatabase) -> Visibility {
+        self.0.visibility(db)
+    }
+}
+
 impl TyKind {
     /// Constructs a new `Ty` by interning self
     pub fn intern(self) -> Ty {
         Ty(Arc::new(self))
+    }
+}
+
+impl HasVisibility for TyKind {
+    fn visibility(&self, db: &dyn HirDatabase) -> Visibility {
+        match self {
+            TyKind::Struct(strukt) => strukt.visibility(db),
+            TyKind::TypeAlias(type_alias) => type_alias.visibility(db),
+            TyKind::FnDef(callable_def, _) => callable_def.visibility(db),
+            _ => Visibility::Public,
+        }
     }
 }
 

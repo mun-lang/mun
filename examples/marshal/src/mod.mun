@@ -14,18 +14,18 @@ pub fn marshal_uint32_t(a: u32, b: u32) -> u32 { a + b }
 pub fn marshal_uint64_t(a: u64, b: u64) -> u64 { a + b }
 // pub fn marshal_uint128_t(a: u128, b: u128) -> u8 { a + b }
 
-struct bool_struct(bool, bool);
-struct float_struct(f32, f32);
-struct double_struct(f64, f64);
-struct int8_t_struct(i8, i8);
-struct int16_t_struct(i16, i16);
-struct int32_t_struct(i32, i32);
-struct int64_t_struct(i64, i64);
+pub struct bool_struct(bool, bool);
+pub struct float_struct(f32, f32);
+pub struct double_struct(f64, f64);
+pub struct int8_t_struct(i8, i8);
+pub struct int16_t_struct(i16, i16);
+pub struct int32_t_struct(i32, i32);
+pub struct int64_t_struct(i64, i64);
 // struct int128_t_struct(i128, i128);
-struct uint8_t_struct(u8, u8);
-struct uint16_t_struct(u16, u16);
-struct uint32_t_struct(u32, u32);
-struct uint64_t_struct(u64, u64);
+pub struct uint8_t_struct(u8, u8);
+pub struct uint16_t_struct(u16, u16);
+pub struct uint32_t_struct(u32, u32);
+pub struct uint64_t_struct(u64, u64);
 // struct uint128_t_struct(u128, u128);
 
 pub fn new_bool(a: bool, b: bool) -> bool_struct {
@@ -80,11 +80,11 @@ pub fn new_uint64_t(a: u64, b: u64) -> uint64_t_struct {
 //     uint128_t_struct(a, b)
 // }
 
-struct(gc) GcStruct(f32, f32);
-struct(value) ValueStruct(f32, f32);
+pub struct(gc) GcStruct(f32, f32);
+pub struct(value) ValueStruct(f32, f32);
 
-struct(gc) GcWrapper(GcStruct, ValueStruct)
-struct(value) ValueWrapper(GcStruct, ValueStruct);
+pub struct(gc) GcWrapper(GcStruct, ValueStruct)
+pub struct(value) ValueWrapper(GcStruct, ValueStruct);
 
 pub fn new_gc_struct(a: f32, b: f32) -> GcStruct {
     GcStruct(a, b)
