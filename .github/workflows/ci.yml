@@ -24,6 +24,8 @@ jobs:
       - name: Install LLVM
         uses: ./.github/actions/install-llvm
 
+      - uses: Swatinem/rust-cache@v1
+
       - name: Cargo check
         uses: actions-rs/cargo@v1
         with:
@@ -54,6 +56,8 @@ jobs:
           profile: minimal
           override: true
           components: rustfmt
+
+      - uses: Swatinem/rust-cache@v1
 
       - name: Cargo build
         if: ${{ matrix.config.os == 'ubuntu-latest' }}
@@ -99,6 +103,8 @@ jobs:
           override: true
           components: clippy, rustfmt
 
+      - uses: Swatinem/rust-cache@v1
+
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
         with:
@@ -128,6 +134,8 @@ jobs:
           profile: minimal
           override: true
           components: rustfmt
+
+      - uses: Swatinem/rust-cache@v1
 
       - name: Install LLVM
         uses: ./.github/actions/install-llvm
