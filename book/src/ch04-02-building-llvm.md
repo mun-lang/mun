@@ -48,7 +48,7 @@ add-apt-repository "${REPO_NAME}"
 Once you have the proper APT repository configured you can install the required LLVM binaries with:
 
 ```bash
-apt install llvm-11 llvm-11-* liblld-11*
+apt install llvm-11 llvm-11-* liblld-11* libclang-common-11-dev
 ```
 
 ### MacOS
