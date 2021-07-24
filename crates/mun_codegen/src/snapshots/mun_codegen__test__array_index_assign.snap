@@ -10,7 +10,7 @@ source_filename = "mod"
 %DispatchTable = type { i8** (i8*, i64, i8*)* }
 %"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [3 x i8], %"mun_codegen::ir::types::TypeInfoData", [0 x i64] }>
 %"mun_codegen::ir::types::TypeInfoData" = type <{ [0 x i8], i8, [39 x i8] }>
-%"[i32]" = type { i32*, i64, i64 }
+%"[i32]" = type { { i64, i32 }* }
 
 @allocatorHandle = external global i8*
 @dispatchTable = external global %DispatchTable
@@ -25,8 +25,9 @@ body:
   %allocator_handle = load i8*, i8** @allocatorHandle, align 8
   %new_array = call i8** %new_array_ptr(i8* %type_info_ptr_to_i8_ptr, i64 4, i8* %allocator_handle)
   %i32_array_ptr = bitcast i8** %new_array to %"[i32]"*
-  %i32_array_ptr.elements_ptr_ptr = getelementptr inbounds %"[i32]", %"[i32]"* %i32_array_ptr, i32 0, i32 0
-  %i32_array_ptr.elements_ptr = load i32*, i32** %i32_array_ptr.elements_ptr_ptr, align 8
+  %i32_array_ptr.value_ptr = getelementptr inbounds %"[i32]", %"[i32]"* %i32_array_ptr, i32 0, i32 0
+  %i32_array_ptr.value = load { i64, i32 }*, { i64, i32 }** %i32_array_ptr.value_ptr, align 8
+  %i32_array_ptr.elements_ptr = getelementptr inbounds { i64, i32 }, { i64, i32 }* %i32_array_ptr.value, i32 0, i32 1
   %elem_0_ptr = getelementptr i32, i32* %i32_array_ptr.elements_ptr, i64 0
   store i32 1, i32* %elem_0_ptr, align 4
   %elem_1_ptr = getelementptr i32, i32* %i32_array_ptr.elements_ptr, i64 1
@@ -35,19 +36,23 @@ body:
   store i32 3, i32* %elem_2_ptr, align 4
   %elem_3_ptr = getelementptr i32, i32* %i32_array_ptr.elements_ptr, i64 3
   store i32 4, i32* %elem_3_ptr, align 4
-  %i32_array_ptr.length_ptr = getelementptr inbounds %"[i32]", %"[i32]"* %i32_array_ptr, i32 0, i32 1
+  %i32_array_ptr.value_ptr1 = getelementptr inbounds %"[i32]", %"[i32]"* %i32_array_ptr, i32 0, i32 0
+  %i32_array_ptr.value2 = load { i64, i32 }*, { i64, i32 }** %i32_array_ptr.value_ptr1, align 8
+  %i32_array_ptr.length_ptr = getelementptr inbounds { i64, i32 }, { i64, i32 }* %i32_array_ptr.value2, i32 0, i32 0
   store i64 4, i64* %i32_array_ptr.length_ptr, align 4
   store %"[i32]"* %i32_array_ptr, %"[i32]"** %a, align 8
-  %a1 = load %"[i32]"*, %"[i32]"** %a, align 8
-  %a1.elements_ptr_ptr = getelementptr inbounds %"[i32]", %"[i32]"* %a1, i32 0, i32 0
-  %a1.elements_ptr = load i32*, i32** %a1.elements_ptr_ptr, align 8
-  %a1.idx_ptr = getelementptr i32, i32* %a1.elements_ptr, i32 1
-  %0 = load i32, i32* %a1.idx_ptr, align 4
-  %a2 = load %"[i32]"*, %"[i32]"** %a, align 8
-  %a2.elements_ptr_ptr = getelementptr inbounds %"[i32]", %"[i32]"* %a2, i32 0, i32 0
-  %a2.elements_ptr = load i32*, i32** %a2.elements_ptr_ptr, align 8
-  %a2.idx_ptr = getelementptr i32, i32* %a2.elements_ptr, i32 1
-  store i32 100, i32* %a2.idx_ptr, align 4
+  %a3 = load %"[i32]"*, %"[i32]"** %a, align 8
+  %a3.value_ptr = getelementptr inbounds %"[i32]", %"[i32]"* %a3, i32 0, i32 0
+  %a3.value = load { i64, i32 }*, { i64, i32 }** %a3.value_ptr, align 8
+  %a3.elements_ptr = getelementptr inbounds { i64, i32 }, { i64, i32 }* %a3.value, i32 0, i32 1
+  %a3.idx_ptr = getelementptr i32, i32* %a3.elements_ptr, i32 1
+  %0 = load i32, i32* %a3.idx_ptr, align 4
+  %a4 = load %"[i32]"*, %"[i32]"** %a, align 8
+  %a4.value_ptr = getelementptr inbounds %"[i32]", %"[i32]"* %a4, i32 0, i32 0
+  %a4.value = load { i64, i32 }*, { i64, i32 }** %a4.value_ptr, align 8
+  %a4.elements_ptr = getelementptr inbounds { i64, i32 }, { i64, i32 }* %a4.value, i32 0, i32 1
+  %a4.idx_ptr = getelementptr i32, i32* %a4.elements_ptr, i32 1
+  store i32 100, i32* %a4.idx_ptr, align 4
   ret void
 }
 
@@ -69,7 +74,7 @@ source_filename = "group_name"
 @"type_info::<[i32]>::name" = private unnamed_addr constant [6 x i8] c"[i32]\00"
 @"type_info::<core::i32>::name" = private unnamed_addr constant [10 x i8] c"core::i32\00"
 @"type_info::<core::i32>" = private unnamed_addr constant <{ [16 x i8], i8*, [48 x i8] }> <{ [16 x i8] c"\17yzt\19\D62\17\D25\95C\17\88[\FA", i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::i32>::name", i32 0, i32 0), [48 x i8] c" \00\00\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" }>
-@"type_info::<[i32]>" = private unnamed_addr constant <{ [16 x i8], i8*, [16 x i8], <{ [16 x i8], i8*, [48 x i8] }>*, [24 x i8] }> <{ [16 x i8] c"\DF\EC9\D8\CE\B8\8E&\88\86+\9E\E0\F7qo", i8* getelementptr inbounds ([6 x i8], [6 x i8]* @"type_info::<[i32]>::name", i32 0, i32 0), [16 x i8] c"\C0\00\00\00\08\00\00\00\02\00\00\00\00\00\00\00", <{ [16 x i8], i8*, [48 x i8] }>* @"type_info::<core::i32>", [24 x i8] zeroinitializer }>
+@"type_info::<[i32]>" = private unnamed_addr constant <{ [16 x i8], i8*, [16 x i8], <{ [16 x i8], i8*, [48 x i8] }>*, [24 x i8] }> <{ [16 x i8] c"\DF\EC9\D8\CE\B8\8E&\88\86+\9E\E0\F7qo", i8* getelementptr inbounds ([6 x i8], [6 x i8]* @"type_info::<[i32]>::name", i32 0, i32 0), [16 x i8] c"@\00\00\00\08\00\00\00\02\00\00\00\00\00\00\00", <{ [16 x i8], i8*, [48 x i8] }>* @"type_info::<core::i32>", [24 x i8] zeroinitializer }>
 @"type_info::<*mut core::void>::name" = private unnamed_addr constant [16 x i8] c"*mut core::void\00"
 @"type_info::<*mut core::void>" = private unnamed_addr constant <{ [16 x i8], i8*, [48 x i8] }> <{ [16 x i8] c"\F0Y\22\FC\95\9E\7F\CE\08T\B1\A2\CD\A7\FAz", i8* getelementptr inbounds ([16 x i8], [16 x i8]* @"type_info::<*mut core::void>::name", i32 0, i32 0), [48 x i8] c"@\00\00\00\08\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" }>
 @global_type_table = constant [5 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<*const TypeInfo>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::u64>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<*const *mut core::void>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<[i32]>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<*mut core::void>"]

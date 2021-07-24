@@ -27,7 +27,9 @@ fn test_trace() {
     }
 
     // Trace foo to see if we get bar back
-    let mut trace = Foo::type_info().trace(foo_handle);
+    let mut trace = Vec::new();
+    Foo::type_info().trace(foo_handle, |ptr| trace.push(ptr));
+    let mut trace = trace.into_iter();
 
     assert_eq!(trace.next(), Some(bar_handle));
     assert_eq!(trace.next(), None)

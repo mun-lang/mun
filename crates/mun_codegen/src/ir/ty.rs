@@ -114,10 +114,14 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
         // Mun Arrays are represented as:
         //
         // ```c
-        // struct ArrayT {
-        //     T* elements;
+        // struct Obj {
+        //     ArrayValueT *value;
+        //     ...
+        // }
+        //
+        // struct ArrayValueT {
         //     usize_t len;
-        //     usize_t capacity;
+        //     T elements[len];
         // }
         // ```
 
@@ -125,17 +129,15 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
         let element_ir_type = self
             .get_basic_type(&element_ty)
             .expect("could not convert array element type to basic type");
-        let element_ir_ptr_type = BasicType::ptr_type(&element_ir_type, AddressSpace::Generic);
+
+        let array_value_type = self
+            .context
+            .struct_type(&[size_ir_type.into(), element_ir_type], false);
+
+        let array_value_ptr_type = array_value_type.ptr_type(AddressSpace::Generic);
 
         // Fill the struct members
-        ir_ty.set_body(
-            &[
-                /* elements */ element_ir_ptr_type.into(),
-                /* length */ size_ir_type.into(),
-                /* capacity */ size_ir_type.into(),
-            ],
-            false,
-        );
+        ir_ty.set_body(&[/* value */ array_value_ptr_type.into()], false);
 
         ir_ty
     }

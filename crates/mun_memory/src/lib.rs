@@ -7,6 +7,7 @@ pub mod mapping;
 mod object;
 
 pub use object::Object;
+use std::ptr::NonNull;
 
 pub mod prelude {
     pub use crate::diff::{diff, Diff, FieldDiff, FieldEditKind};
@@ -22,12 +23,23 @@ pub trait TypeDesc {
     fn guid(&self) -> &abi::Guid;
 }
 
+/// A trait that enables requesting the memory layout of the data allocated for the type.
+pub trait HasDynamicMemoryLayout {
+    /// Returns the size of the memory allocated for this type given a pointer to the memory.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because there are no guarantees about the memory being passed in.
+    unsafe fn layout(&self, ptr: NonNull<u8>) -> Layout;
+}
+
 /// A trait used to obtain a type's memory description.
 pub trait TypeMemory {
     /// Returns the memory layout of this type.
     fn layout(&self) -> Layout;
 
     /// Returns whether the memory is stack-allocated.
+    /// TODO: Split this into a different trait.
     fn is_stack_allocated(&self) -> bool;
 }
 
@@ -47,6 +59,44 @@ pub trait StructFieldLayout {
 pub trait ArrayType<T> {
     /// Returns the type of the elements stored in the array
     fn element_type(&self) -> T;
+}
+
+/// A trait that describes the memory layout of an array
+pub trait ArrayMemoryLayout {
+    type ElementIterator: Iterator<Item = NonNull<u8>>;
+
+    /// Returns the memory to allocate for an array with `n` elements
+    fn layout(&self, n: usize) -> Layout;
+
+    /// Returns the memory layout of of an block of allocated memory for this type.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because there are no guarantees about the memory being passed in.
+    unsafe fn data_layout(&self, ptr: NonNull<u8>) -> Layout;
+
+    /// Returns the length of the array given a pointer to the memory.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because there are no guarantees about the memory being passed in.
+    unsafe fn retrieve_length(&self, ptr: NonNull<u8>) -> usize;
+
+    /// Returns an iterator over all elements in the array.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because there are no guarantees about the memory being passed in.
+    ///
+    /// The memory pointed to by `ptr` must remain valid until the `ElementIterator` is dropped.
+    unsafe fn elements(&self, ptr: NonNull<u8>) -> Self::ElementIterator;
+
+    /// Updates the length of the array as stored in memory
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because there are no guarantees about the memory being passed in.
+    unsafe fn store_length(&self, ptr: NonNull<u8>, n: usize);
 }
 
 /// Marks a type to be a possible composite of different types. Implementers implement the

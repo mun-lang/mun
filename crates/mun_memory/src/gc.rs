@@ -2,7 +2,7 @@ mod mark_sweep;
 mod ptr;
 mod root_ptr;
 
-use crate::TypeMemory;
+use crate::{ArrayMemoryLayout, CompositeType};
 use std::marker::PhantomData;
 
 pub use mark_sweep::MarkSweep;
@@ -16,20 +16,21 @@ pub struct Stats {
 }
 
 /// A trait used to trace an object type.
-pub trait TypeTrace: Send + Sync {
-    type Trace: Iterator<Item = GcPtr>;
-
-    /// Returns an iterator to iterate over all GC objects that are referenced by the given object.
-    fn trace(&self, obj: GcPtr) -> Self::Trace;
+pub trait TypeTrace {
+    /// Calls the function `f` for every GcPtr stored in `obj`.
+    fn trace<F: FnMut(GcPtr)>(&self, obj: GcPtr, f: F);
 }
 
 /// An object that can be used to allocate and collect memory.
-pub trait GcRuntime<T: TypeMemory + TypeTrace>: Send + Sync {
+pub trait GcRuntime<T>: Send + Sync {
     /// Allocates an object of the given type returning a GcPtr
     fn alloc(&self, ty: T) -> GcPtr;
 
     /// Allocates an array of the given type. `T` must be an array type.
-    fn alloc_array(&self, ty: T, n: usize) -> GcPtr;
+    fn alloc_array(&self, ty: T, n: usize) -> GcPtr
+    where
+        T: CompositeType,
+        T::ArrayType: ArrayMemoryLayout;
 
     /// Returns the type of the specified `obj`.
     fn ptr_type(&self, obj: GcPtr) -> T;

@@ -4,6 +4,7 @@ use mun_memory::gc::{self, GcPtr};
 use mun_memory::CompositeTypeKind;
 use parking_lot::Mutex;
 use std::alloc::Layout;
+use std::ptr::NonNull;
 
 pub struct TypeInfo {
     pub size: usize,
@@ -99,16 +100,21 @@ impl mun_memory::TypeMemory for &'static TypeInfo {
     }
 }
 
-impl gc::TypeTrace for &'static TypeInfo {
-    type Trace = <Vec<GcPtr> as IntoIterator>::IntoIter;
+impl mun_memory::HasDynamicMemoryLayout for &'static TypeInfo {
+    unsafe fn layout(&self, _ptr: NonNull<u8>) -> Layout {
+        mun_memory::TypeMemory::layout(self)
+    }
+}
 
-    fn trace(&self, obj: GcPtr) -> Self::Trace {
-        match &self.kind {
+impl gc::TypeTrace for &'static TypeInfo {
+    fn trace<F: FnMut(GcPtr)>(&self, obj: GcPtr, mut f: F) {
+        for ptr in match &self.kind {
             TypeInfoKind::Primitive => Vec::new(),
             TypeInfoKind::Struct(s) => (s.trace)(obj),
             TypeInfoKind::Array(_) => Vec::new(),
+        } {
+            f(ptr)
         }
-        .into_iter()
     }
 }
 
