@@ -121,18 +121,25 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
         //
         // struct ArrayValueT {
         //     usize_t len;
-        //     T elements[len];
+        //     usize_t capacity;
+        //     T elements[capacity];
         // }
         // ```
 
-        let size_ir_type = self.context.ptr_sized_int_type(&self.target_data, None);
+        let length_ir_type = self.context.ptr_sized_int_type(&self.target_data, None);
+        let capacity_ir_type = self.context.ptr_sized_int_type(&self.target_data, None);
         let element_ir_type = self
             .get_basic_type(&element_ty)
             .expect("could not convert array element type to basic type");
 
-        let array_value_type = self
-            .context
-            .struct_type(&[size_ir_type.into(), element_ir_type], false);
+        let array_value_type = self.context.struct_type(
+            &[
+                length_ir_type.into(),
+                capacity_ir_type.into(),
+                element_ir_type,
+            ],
+            false,
+        );
 
         let array_value_ptr_type = array_value_type.ptr_type(AddressSpace::Generic);
 

@@ -1,18 +1,18 @@
 use crate::{
     gc::{GcPtr, GcRuntime, HasIndirectionPtr, TypeTrace},
-    TypeMemory,
+    HasCompileTimeMemoryLayout,
 };
 use std::marker::PhantomData;
 use std::sync::{Arc, Weak};
 
 /// A `GcPtr` that automatically roots and unroots its internal `GcPtr`.
-pub struct GcRootPtr<T: TypeMemory + TypeTrace, G: GcRuntime<T>> {
+pub struct GcRootPtr<T: HasCompileTimeMemoryLayout + TypeTrace, G: GcRuntime<T>> {
     handle: GcPtr,
     runtime: Weak<G>,
     ty: PhantomData<T>,
 }
 
-impl<T: TypeMemory + TypeTrace, G: GcRuntime<T>> Clone for GcRootPtr<T, G> {
+impl<T: HasCompileTimeMemoryLayout + TypeTrace, G: GcRuntime<T>> Clone for GcRootPtr<T, G> {
     fn clone(&self) -> Self {
         if let Some(runtime) = self.runtime.upgrade() {
             runtime.root(self.handle)
@@ -25,7 +25,7 @@ impl<T: TypeMemory + TypeTrace, G: GcRuntime<T>> Clone for GcRootPtr<T, G> {
     }
 }
 
-impl<T: TypeMemory + TypeTrace, G: GcRuntime<T>> GcRootPtr<T, G> {
+impl<T: HasCompileTimeMemoryLayout + TypeTrace, G: GcRuntime<T>> GcRootPtr<T, G> {
     /// Constructs a new GCRootHandle from a runtime and a handle
     pub fn new(runtime: &Arc<G>, handle: GcPtr) -> Self {
         runtime.root(handle);
@@ -52,13 +52,13 @@ impl<T: TypeMemory + TypeTrace, G: GcRuntime<T>> GcRootPtr<T, G> {
     }
 }
 
-impl<T: TypeMemory + TypeTrace, G: GcRuntime<T>> From<GcRootPtr<T, G>> for GcPtr {
+impl<T: HasCompileTimeMemoryLayout + TypeTrace, G: GcRuntime<T>> From<GcRootPtr<T, G>> for GcPtr {
     fn from(ptr: GcRootPtr<T, G>) -> Self {
         ptr.handle
     }
 }
 
-impl<T: TypeMemory + TypeTrace, G: GcRuntime<T>> Drop for GcRootPtr<T, G> {
+impl<T: HasCompileTimeMemoryLayout + TypeTrace, G: GcRuntime<T>> Drop for GcRootPtr<T, G> {
     fn drop(&mut self) {
         if let Some(runtime) = self.runtime.upgrade() {
             runtime.unroot(self.handle)
@@ -66,7 +66,9 @@ impl<T: TypeMemory + TypeTrace, G: GcRuntime<T>> Drop for GcRootPtr<T, G> {
     }
 }
 
-impl<T: TypeMemory + TypeTrace, G: GcRuntime<T>> HasIndirectionPtr for GcRootPtr<T, G> {
+impl<T: HasCompileTimeMemoryLayout + TypeTrace, G: GcRuntime<T>> HasIndirectionPtr
+    for GcRootPtr<T, G>
+{
     unsafe fn deref<R: Sized>(&self) -> *const R {
         self.handle.deref()
     }

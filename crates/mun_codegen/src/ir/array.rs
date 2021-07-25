@@ -11,13 +11,14 @@
 //!
 //! struct ArrayValueT {
 //!     usize_t len;
-//!     T elements[len];
+//!     usize_t capacity;
+//!     T elements[capacity];
 //! }
 //! ```
 
 use inkwell::builder::Builder;
 use inkwell::types::{BasicTypeEnum, IntType, StructType};
-use inkwell::values::{BasicValueEnum, PointerValue};
+use inkwell::values::{BasicValueEnum, IntValue, PointerValue};
 use std::ffi::CStr;
 
 /// A helper struct that wraps a PointerValue which points to an in memory Mun array value.
@@ -56,23 +57,23 @@ impl<'ink> MunArrayValue<'ink> {
             .expect("could not get `length` from array struct")
     }
 
-    // /// Generate code to fetch the capacity of the array.
-    // pub fn get_capacity(&self, builder: &Builder<'ink>) -> IntValue<'ink> {
-    //     let value_name = self.0.get_name().to_string_lossy();
-    //     let length_ptr = builder
-    //         .build_struct_gep(self.0, 2, &format!("{}.capacity_ptr", &value_name))
-    //         .expect("could not get `length` from array struct");
-    //     builder
-    //         .build_load(length_ptr, &format!("{}.capacity", &value_name))
-    //         .into_int_value()
-    // }
+    /// Generate code to fetch the capacity of the array.
+    pub fn get_capacity(&self, builder: &Builder<'ink>) -> IntValue<'ink> {
+        let value_name = self.0.get_name().to_string_lossy();
+        let length_ptr = builder
+            .build_struct_gep(self.0, 1, &format!("{}.capacity_ptr", &value_name))
+            .expect("could not get `length` from array struct");
+        builder
+            .build_load(length_ptr, &format!("{}.capacity", &value_name))
+            .into_int_value()
+    }
 
     /// Generate code to a pointer to the elements stored in the array.
     pub fn get_elements(&self, builder: &Builder<'ink>) -> PointerValue<'ink> {
         let value_name = self.0.get_name().to_string_lossy();
         let array_ptr = self.get_array_ptr(builder);
         builder
-            .build_struct_gep(array_ptr, 1, &format!("{}.elements_ptr", &value_name))
+            .build_struct_gep(array_ptr, 2, &format!("{}.elements_ptr", &value_name))
             .expect("could not get `elements` from array struct")
     }
 
@@ -84,18 +85,18 @@ impl<'ink> MunArrayValue<'ink> {
             .into_int_type()
     }
 
-    // /// Returns the type of the `length` field
-    // pub fn capacity_ty(&self) -> IntType {
-    //     self.struct_ty()
-    //         .get_field_type_at_index(2)
-    //         .expect("an array must have a second field")
-    //         .into_int_type()
-    // }
+    /// Returns the type of the `length` field
+    pub fn capacity_ty(&self) -> IntType {
+        self.struct_ty()
+            .get_field_type_at_index(1)
+            .expect("an array must have a second field")
+            .into_int_type()
+    }
 
     /// Returns the type of the elements stored in this array
     pub fn element_ty(&self) -> BasicTypeEnum<'ink> {
         self.struct_ty()
-            .get_field_type_at_index(1)
+            .get_field_type_at_index(2)
             .expect("an array must have a second field")
     }
 

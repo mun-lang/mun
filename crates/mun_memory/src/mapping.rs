@@ -1,27 +1,27 @@
 use crate::{
     diff::{diff, Diff, FieldDiff, FieldEditKind},
     gc::GcPtr,
-    CompositeType, StructFieldLayout, StructFields, TypeDesc, TypeMemory,
+    CompositeType, HasCompileTimeMemoryLayout, StructMemoryLayout, StructType, TypeDesc,
 };
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
 };
 
-pub struct Mapping<T: Eq + Hash, U: TypeDesc + TypeMemory> {
+pub struct Mapping<T: Eq + Hash, U: TypeDesc + HasCompileTimeMemoryLayout> {
     pub deletions: HashSet<T>,
     pub conversions: HashMap<T, Conversion<U>>,
     pub identical: Vec<(T, T)>,
 }
 
-pub struct Conversion<T: TypeDesc + TypeMemory> {
+pub struct Conversion<T: TypeDesc + HasCompileTimeMemoryLayout> {
     pub field_mapping: Vec<FieldMapping<T>>,
     pub new_ty: T,
 }
 
 /// Description of the mapping of a single field. When stored together with the new index, this
 /// provides all information necessary for a mapping function.
-pub struct FieldMapping<T: TypeDesc + TypeMemory> {
+pub struct FieldMapping<T: TypeDesc + HasCompileTimeMemoryLayout> {
     pub new_ty: T,
     pub new_offset: usize,
     pub action: Action<T>,
@@ -29,7 +29,7 @@ pub struct FieldMapping<T: TypeDesc + TypeMemory> {
 
 /// The `Action` to take when mapping memory from A to B.
 #[derive(Eq, PartialEq)]
-pub enum Action<T: TypeDesc + TypeMemory> {
+pub enum Action<T: TypeDesc + HasCompileTimeMemoryLayout> {
     Cast { old_offset: usize, old_ty: T },
     Copy { old_offset: usize },
     Insert,
@@ -37,8 +37,8 @@ pub enum Action<T: TypeDesc + TypeMemory> {
 
 impl<T> Mapping<T, T>
 where
-    T: TypeDesc + CompositeType + TypeMemory + Clone + Eq + Hash,
-    T::StructType: StructFields<T> + StructFieldLayout,
+    T: TypeDesc + CompositeType + HasCompileTimeMemoryLayout + Clone + Eq + Hash,
+    T::StructType: StructType<T> + StructMemoryLayout,
 {
     ///
     pub fn new(old: &[T], new: &[T]) -> Self {
@@ -142,13 +142,13 @@ where
 /// # Safety
 ///
 /// Expects the `diff` to be based on `old_ty` and `new_ty`. If not, it causes undefined behavior.
-pub unsafe fn field_mapping<T: Clone + TypeDesc + CompositeType + TypeMemory>(
+pub unsafe fn field_mapping<T: Clone + TypeDesc + CompositeType + HasCompileTimeMemoryLayout>(
     old_ty: T,
     new_ty: T,
     diff: &[FieldDiff],
 ) -> Conversion<T>
 where
-    T::StructType: StructFields<T> + StructFieldLayout,
+    T::StructType: StructType<T> + StructMemoryLayout,
 {
     let old_struct = old_ty.as_struct().expect("old_ty must be a struct type");
     let old_fields = old_struct.fields();
@@ -273,7 +273,7 @@ where
 }
 
 /// A trait used to map allocated memory using type differences.
-pub trait MemoryMapper<T: Eq + Hash + TypeDesc + TypeMemory> {
+pub trait MemoryMapper<T: Eq + Hash + TypeDesc + HasCompileTimeMemoryLayout> {
     /// Maps its allocated memory using the provided `mapping`.
     ///
     /// A `Vec<GcPtr>` is returned containing all objects of types that were deleted. The

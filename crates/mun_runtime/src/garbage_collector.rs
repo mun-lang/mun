@@ -1,6 +1,7 @@
 use memory::{
     gc::{self, HasIndirectionPtr},
-    ArrayMemoryLayout, ArrayType, CompositeTypeKind, TypeMemory,
+    ArrayMemoryLayout, ArrayType, CompositeType, CompositeTypeKind, HasCompileTimeMemoryLayout,
+    StructMemoryLayout, StructType,
 };
 use std::{alloc::Layout, hash::Hash, ptr::NonNull};
 
@@ -81,7 +82,7 @@ pub struct WrappedAbiStructInfo(pub abi::StructInfo);
 #[repr(transparent)]
 pub struct WrappedAbiArrayInfo(pub abi::ArrayInfo);
 
-impl memory::StructFields<UnsafeTypeInfo> for WrappedAbiStructInfo {
+impl memory::StructType<UnsafeTypeInfo> for WrappedAbiStructInfo {
     fn fields(&self) -> Vec<(&str, UnsafeTypeInfo)> {
         self.0
             .field_names()
@@ -94,7 +95,7 @@ impl memory::StructFields<UnsafeTypeInfo> for WrappedAbiStructInfo {
             .collect()
     }
 }
-impl memory::StructFieldLayout for WrappedAbiStructInfo {
+impl memory::StructMemoryLayout for WrappedAbiStructInfo {
     fn offsets(&self) -> &[u16] {
         self.0.field_offsets()
     }
@@ -138,6 +139,13 @@ fn repeat_layout(layout: Layout, n: usize) -> Result<Layout, MemoryLayoutError> 
     Layout::from_size_align(alloc_size, layout.align()).map_err(Into::into)
 }
 
+/// Returns the amount of padding we must insert after `size` to ensure that the following address
+/// will satisfy `align` (measured in bytes).
+const fn padding_needed_for(size: usize, align: usize) -> usize {
+    let len_rounded_up = size.wrapping_add(align).wrapping_sub(1) & !align.wrapping_sub(1);
+    len_rounded_up.wrapping_sub(size)
+}
+
 /// An iterator type to iterate over the elements of an array.
 pub struct ArrayIterator {
     element_offset: NonNull<u8>,
@@ -145,6 +153,8 @@ pub struct ArrayIterator {
     remaining: usize,
 }
 
+// Implements the Iterator trait for `ArrayIterator`. Some of the functions are specialized to allow
+// for faster access.
 impl Iterator for ArrayIterator {
     type Item = NonNull<u8>;
 
@@ -211,34 +221,49 @@ impl WrappedAbiArrayInfo {
     }
 
     /// Returns the layout of the size and the offset from the start of the array block in bytes
-    const fn size_layout() -> (Layout, usize) {
+    const fn length_layout() -> (Layout, usize) {
         (Layout::new::<usize>(), 0)
+    }
+
+    /// Returns the layout of the size and the offset from the start of the array block in bytes
+    const fn capacity_layout() -> (Layout, usize) {
+        let capacity_type_layout = Layout::new::<usize>();
+        let (length_layout, length_offset) = Self::length_layout();
+        let length_size_offset = length_layout.size() + length_offset;
+        (
+            capacity_type_layout,
+            length_size_offset
+                + padding_needed_for(length_size_offset, capacity_type_layout.align()),
+        )
+    }
+
+    /// Returns the layout of the length and the capacity together
+    const fn length_and_capacity_layout() -> Layout {
+        let (length_layout, _) = Self::length_layout();
+        let (capacity_layout, capacity_offset) = Self::capacity_layout();
+        let align = if length_layout.align() > capacity_layout.align() {
+            length_layout.align()
+        } else {
+            capacity_layout.align()
+        };
+        let size = capacity_offset + capacity_layout.size();
+        unsafe { Layout::from_size_align_unchecked(size, align) }
     }
 
     /// Returns the offset of the first element of the array from the start of the array block in
     /// bytes.
     fn element_offset(&self) -> usize {
-        let (size_layout, offset) = Self::size_layout();
         let element_layout = self.element_layout();
-
+        let (capacity_layout, capacity_offset) = Self::capacity_layout();
         let element_align = element_layout.align();
-        let size_len = size_layout.size();
-
-        let unaligned_element_offset = offset + size_len;
-        let len_rounded_up = unaligned_element_offset
-            .wrapping_add(element_align)
-            .wrapping_sub(1)
-            & !element_align.wrapping_sub(1);
-        len_rounded_up.wrapping_sub(unaligned_element_offset)
+        let capacity_size_and_offset = capacity_offset + capacity_layout.size();
+        capacity_size_and_offset + padding_needed_for(capacity_size_and_offset, element_align)
     }
 
     /// Returns the number of bytes between each element
     fn element_stride(&self) -> usize {
         let element_layout = self.element_layout();
-        let size = element_layout.size();
-        let align = element_layout.align();
-        let len_rounded_up = size.wrapping_add(align).wrapping_sub(1) & !align.wrapping_sub(1);
-        len_rounded_up.wrapping_sub(size)
+        element_layout.size() + padding_needed_for(element_layout.size(), element_layout.align())
     }
 }
 
@@ -248,21 +273,36 @@ impl memory::ArrayMemoryLayout for WrappedAbiArrayInfo {
     fn layout(&self, n: usize) -> Layout {
         let elements_layout = repeat_layout(self.element_layout(), n)
             .expect("unable to create a memory layout for array");
-        let length_layout = Layout::new::<usize>();
-
-        length_layout
+        let length_and_capacity_layout = Self::length_and_capacity_layout();
+        length_and_capacity_layout
             .extend(elements_layout)
-            .expect("unable to construct memory layout for array value")
+            .unwrap()
             .0
     }
 
-    unsafe fn data_layout(&self, ptr: NonNull<u8>) -> Layout {
-        let len = self.retrieve_length(ptr);
-        self.layout(len)
+    fn init(&self, n: usize, data: &mut [u8]) {
+        debug_assert!(data.len() >= self.element_offset());
+        let (_, length_offset) = Self::length_layout();
+        let (_, capacity_offset) = Self::capacity_layout();
+        unsafe {
+            *data.as_mut_ptr().add(length_offset).cast() = 0usize;
+            *data.as_mut_ptr().add(capacity_offset).cast() = n;
+        }
     }
 
     unsafe fn retrieve_length(&self, ptr: NonNull<u8>) -> usize {
-        *ptr.cast().as_ptr()
+        let (_, length_offset) = Self::length_layout();
+        *ptr.as_ptr().add(length_offset).cast()
+    }
+
+    unsafe fn store_length(&self, ptr: NonNull<u8>, n: usize) {
+        let (_, length_offset) = Self::length_layout();
+        *ptr.as_ptr().add(length_offset).cast() = n;
+    }
+
+    unsafe fn retrieve_capacity(&self, ptr: NonNull<u8>) -> usize {
+        let (_, capacity_offset) = Self::capacity_layout();
+        *ptr.as_ptr().add(capacity_offset).cast()
     }
 
     unsafe fn elements(&self, ptr: NonNull<u8>) -> Self::ElementIterator {
@@ -272,18 +312,17 @@ impl memory::ArrayMemoryLayout for WrappedAbiArrayInfo {
             remaining: self.retrieve_length(ptr),
         }
     }
-
-    unsafe fn store_length(&self, ptr: NonNull<u8>, n: usize) {
-        *ptr.cast().as_ptr() = n;
-    }
 }
 
-impl memory::HasDynamicMemoryLayout for UnsafeTypeInfo {
+impl memory::HasRuntimeMemoryLayout for UnsafeTypeInfo {
     unsafe fn layout(&self, ptr: NonNull<u8>) -> Layout {
-        match &self.0.as_ref().data {
-            TypeInfoData::Primitive | TypeInfoData::Struct(_) => TypeMemory::layout(self),
-            TypeInfoData::Array(a) => {
-                std::mem::transmute::<&abi::ArrayInfo, &WrappedAbiArrayInfo>(a).data_layout(ptr)
+        match self.group() {
+            CompositeTypeKind::Primitive | CompositeTypeKind::Struct(_) => {
+                HasCompileTimeMemoryLayout::layout(self)
+            }
+            CompositeTypeKind::Array(array) => {
+                let len = array.retrieve_capacity(ptr);
+                array.layout(len)
             }
         }
     }
@@ -292,7 +331,7 @@ impl memory::HasDynamicMemoryLayout for UnsafeTypeInfo {
 unsafe impl Send for UnsafeTypeInfo {}
 unsafe impl Sync for UnsafeTypeInfo {}
 
-impl memory::TypeMemory for UnsafeTypeInfo {
+impl memory::HasCompileTimeMemoryLayout for UnsafeTypeInfo {
     fn layout(&self) -> Layout {
         let ty = unsafe { self.0.as_ref() };
         Layout::from_size_align(ty.size_in_bytes(), ty.alignment())
@@ -309,19 +348,22 @@ impl memory::TypeMemory for UnsafeTypeInfo {
     }
 }
 
-fn trace<F: FnMut(GcPtr)>(ty: &abi::TypeInfo, value_ptr: NonNull<u8>, f: &mut F, is_root: bool) {
-    match &ty.data {
-        TypeInfoData::Primitive => {
+/// Iterates over the memory specified by `value_ptr` which should be interpreted as being of type
+/// `ty`. `is_root` indicates whether this is the root value or a value stored inside another value.
+fn trace<F: FnMut(GcPtr)>(ty: UnsafeTypeInfo, value_ptr: NonNull<u8>, f: &mut F, is_root: bool) {
+    match ty.group() {
+        CompositeTypeKind::Primitive => {
             // Nothing to do
         }
-        TypeInfoData::Struct(struct_info) => {
-            if struct_info.memory_kind == abi::StructMemoryKind::Gc && !is_root {
+        CompositeTypeKind::Struct(struct_info) => {
+            if !ty.is_stack_allocated() && !is_root {
                 f(unsafe { *value_ptr.cast::<GcPtr>().as_ptr() })
             } else {
-                for (&field_type, &field_offset) in struct_info
-                    .field_types()
-                    .iter()
-                    .zip(struct_info.field_offsets().iter())
+                for (field_type, &field_offset) in struct_info
+                    .fields()
+                    .into_iter()
+                    .map(|(_, ty)| ty)
+                    .zip(struct_info.offsets().iter())
                 {
                     let field_ptr = unsafe {
                         NonNull::new_unchecked(value_ptr.as_ptr().add(field_offset as usize))
@@ -330,10 +372,8 @@ fn trace<F: FnMut(GcPtr)>(ty: &abi::TypeInfo, value_ptr: NonNull<u8>, f: &mut F,
                 }
             }
         }
-        TypeInfoData::Array(array_info) => {
-            let array_ty =
-                unsafe { std::mem::transmute::<&abi::ArrayInfo, &WrappedAbiArrayInfo>(array_info) };
-            let element_ty = unsafe { array_ty.element_type().0.as_ref() };
+        CompositeTypeKind::Array(array_ty) => {
+            let element_ty = array_ty.element_type();
             for element_ptr in unsafe { array_ty.elements(value_ptr) } {
                 trace(element_ty, element_ptr, f, false)
             }
@@ -344,7 +384,7 @@ fn trace<F: FnMut(GcPtr)>(ty: &abi::TypeInfo, value_ptr: NonNull<u8>, f: &mut F,
 impl gc::TypeTrace for UnsafeTypeInfo {
     fn trace<F: FnMut(GcPtr)>(&self, obj: GcPtr, mut f: F) {
         trace(
-            unsafe { self.0.as_ref() },
+            *self,
             unsafe { NonNull::new_unchecked(obj.deref::<u8>() as *mut u8) },
             &mut f,
             true,

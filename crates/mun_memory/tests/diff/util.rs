@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use mun_memory::{
     diff::{myers, Diff, FieldDiff, FieldEditKind},
-    ArrayType, CompositeType, CompositeTypeKind, StructFields, TypeDesc, TypeMemory,
+    ArrayType, CompositeType, CompositeTypeKind, HasCompileTimeMemoryLayout, StructType, TypeDesc,
 };
 use std::alloc::Layout;
 
@@ -102,7 +102,7 @@ impl TypeDesc for TypeInfo {
     }
 }
 
-impl TypeMemory for TypeInfo {
+impl HasCompileTimeMemoryLayout for TypeInfo {
     fn layout(&self) -> Layout {
         self.layout
     }
@@ -126,7 +126,7 @@ impl CompositeType for TypeInfo {
     }
 }
 
-impl StructFields<TypeInfo> for StructInfo {
+impl StructType<TypeInfo> for StructInfo {
     fn fields(&self) -> Vec<(&str, TypeInfo)> {
         self.fields
             .iter()

@@ -88,7 +88,7 @@ macro_rules! impl_struct_ty {
 
 impl_primitive_types!(i8, i16, i32, i64, u8, u16, u32, u64, f32, f64, bool);
 
-impl mun_memory::TypeMemory for &'static TypeInfo {
+impl mun_memory::HasCompileTimeMemoryLayout for &'static TypeInfo {
     fn layout(&self) -> Layout {
         Layout::from_size_align(self.size as usize, self.alignment as usize)
             .expect("invalid layout specified by TypeInfo")
@@ -100,9 +100,9 @@ impl mun_memory::TypeMemory for &'static TypeInfo {
     }
 }
 
-impl mun_memory::HasDynamicMemoryLayout for &'static TypeInfo {
+impl mun_memory::HasRuntimeMemoryLayout for &'static TypeInfo {
     unsafe fn layout(&self, _ptr: NonNull<u8>) -> Layout {
-        mun_memory::TypeMemory::layout(self)
+        mun_memory::HasCompileTimeMemoryLayout::layout(self)
     }
 }
 

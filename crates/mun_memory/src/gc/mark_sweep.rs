@@ -2,8 +2,8 @@ use crate::{
     cast,
     gc::{Event, GcPtr, GcRuntime, Observer, RawGcPtr, Stats, TypeTrace},
     mapping::{self, FieldMapping, MemoryMapper},
-    ArrayMemoryLayout, ArrayType, CompositeType, HasDynamicMemoryLayout, StructFields, TypeDesc,
-    TypeMemory,
+    ArrayMemoryLayout, ArrayType, CompositeType, HasCompileTimeMemoryLayout,
+    HasRuntimeMemoryLayout, StructType, TypeDesc,
 };
 use mapping::{Conversion, Mapping};
 use parking_lot::RwLock;
@@ -42,7 +42,7 @@ where
 
 impl<T, O> MarkSweep<T, O>
 where
-    T: HasDynamicMemoryLayout,
+    T: HasRuntimeMemoryLayout,
     O: Observer<Event = Event>,
 {
     /// Creates a `MarkSweep` memory collector with the specified `Observer`.
@@ -74,7 +74,7 @@ where
 }
 
 /// Allocates memory for an object.
-fn alloc_obj<T: TypeMemory>(ty: T) -> Pin<Box<ObjectInfo<T>>> {
+fn alloc_obj<T: HasCompileTimeMemoryLayout>(ty: T) -> Pin<Box<ObjectInfo<T>>> {
     let ptr = NonNull::new(unsafe { std::alloc::alloc(ty.layout()) })
         .expect("error allocating memory for type");
     Box::pin(ObjectInfo {
@@ -86,7 +86,7 @@ fn alloc_obj<T: TypeMemory>(ty: T) -> Pin<Box<ObjectInfo<T>>> {
 }
 
 /// Allocates memory for an array type with `length` elements. `array_ty` must be an array type.
-fn alloc_array<T: CompositeType + TypeMemory>(ty: T, length: usize) -> Pin<Box<ObjectInfo<T>>>
+fn alloc_array<T: CompositeType>(ty: T, length: usize) -> Pin<Box<ObjectInfo<T>>>
 where
     T::ArrayType: ArrayMemoryLayout,
 {
@@ -99,8 +99,13 @@ where
     let ptr = NonNull::new(unsafe { std::alloc::alloc(layout) })
         .expect("error allocating memory for array");
 
-    // Update the length stored in memory
-    unsafe { array_ty.store_length(ptr, length) };
+    // Initialize the memory
+    unsafe {
+        array_ty.init(
+            length,
+            std::slice::from_raw_parts_mut(ptr.as_ptr(), layout.size()),
+        )
+    };
 
     Box::pin(ObjectInfo {
         ptr: ptr.cast(),
@@ -112,7 +117,7 @@ where
 
 impl<T, O> GcRuntime<T> for MarkSweep<T, O>
 where
-    T: Clone + TypeMemory + CompositeType + HasDynamicMemoryLayout,
+    T: Clone + HasCompileTimeMemoryLayout + CompositeType + HasRuntimeMemoryLayout,
     O: Observer<Event = Event>,
 {
     fn alloc(&self, ty: T) -> GcPtr {
@@ -183,7 +188,7 @@ where
 
 impl<T, O> MarkSweep<T, O>
 where
-    T: TypeTrace + HasDynamicMemoryLayout,
+    T: TypeTrace + HasRuntimeMemoryLayout,
     O: Observer<Event = Event>,
 {
     /// Collects all memory that is no longer referenced by rooted objects. Returns `true` if memory
@@ -262,14 +267,14 @@ impl<T, O> MemoryMapper<T> for MarkSweep<T, O>
 where
     T: TypeDesc
         + Clone
-        + TypeMemory
+        + HasCompileTimeMemoryLayout
         + TypeTrace
         + CompositeType
         + Eq
         + Hash
-        + HasDynamicMemoryLayout,
+        + HasRuntimeMemoryLayout,
     T::ArrayType: ArrayType<T> + ArrayMemoryLayout,
-    T::StructType: StructFields<T>,
+    T::StructType: StructType<T>,
     O: Observer<Event = Event>,
 {
     fn map_memory(&self, mapping: Mapping<T, T>) -> Vec<GcPtr> {
@@ -308,9 +313,9 @@ where
                 if object_info.ty == *old_ty {
                     let src = object_info.ptr;
                     let dest = unsafe {
-                        NonNull::new_unchecked(std::alloc::alloc_zeroed(TypeMemory::layout(
-                            &conversion.new_ty,
-                        )))
+                        NonNull::new_unchecked(std::alloc::alloc_zeroed(
+                            HasCompileTimeMemoryLayout::layout(&conversion.new_ty),
+                        ))
                     };
 
                     map_fields(
@@ -325,7 +330,7 @@ where
                     unsafe {
                         std::alloc::dealloc(
                             src.as_ptr(),
-                            HasDynamicMemoryLayout::layout(old_ty, src),
+                            HasRuntimeMemoryLayout::layout(old_ty, src),
                         )
                     };
 
@@ -360,7 +365,13 @@ where
             src: NonNull<u8>,
             dest: NonNull<u8>,
         ) where
-            T: TypeDesc + Clone + TypeMemory + TypeTrace + CompositeType + Eq + Hash,
+            T: TypeDesc
+                + Clone
+                + HasCompileTimeMemoryLayout
+                + TypeTrace
+                + CompositeType
+                + Eq
+                + Hash,
             T::ArrayType: ArrayType<T> + ArrayMemoryLayout,
             //T::StructType:<T>,
             O: Observer<Event = Event>,
@@ -601,7 +612,7 @@ struct ObjectInfo<T> {
     pub ty: T,
 }
 
-impl<T: HasDynamicMemoryLayout> ObjectInfo<T> {
+impl<T: HasRuntimeMemoryLayout> ObjectInfo<T> {
     /// Returns the memory layout of the value stored with this object
     pub fn value_layout(&self) -> Layout {
         unsafe { self.ty.layout(self.ptr) }

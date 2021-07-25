@@ -24,7 +24,7 @@ pub trait TypeDesc {
 }
 
 /// A trait that enables requesting the memory layout of the data allocated for the type.
-pub trait HasDynamicMemoryLayout {
+pub trait HasRuntimeMemoryLayout {
     /// Returns the size of the memory allocated for this type given a pointer to the memory.
     ///
     /// # Safety
@@ -34,7 +34,7 @@ pub trait HasDynamicMemoryLayout {
 }
 
 /// A trait used to obtain a type's memory description.
-pub trait TypeMemory {
+pub trait HasCompileTimeMemoryLayout {
     /// Returns the memory layout of this type.
     fn layout(&self) -> Layout;
 
@@ -43,19 +43,23 @@ pub trait TypeMemory {
     fn is_stack_allocated(&self) -> bool;
 }
 
-/// A trait used to obtain a types fields.
-pub trait StructFields<T> {
+/// A trait that describes the contents of a struct. This trait does *not* define how the memory of
+/// the type is laid out. The memory layout of a struct is defined by the [`StructMemoryLayout`]
+/// trait.
+pub trait StructType<T> {
     /// Returns the name and type of each field in the struct
     fn fields(&self) -> Vec<(&str, T)>;
 }
 
-/// A trait used to obtain a type's field memory layout.
-pub trait StructFieldLayout {
+/// A trait that describes the memory layout of a struct. It can be used to obtain the individual
+/// fields of a struct in memory.
+pub trait StructMemoryLayout {
     /// Returns the offset (in bytes) of each field relative to the start of the struct
     fn offsets(&self) -> &[u16];
 }
 
-/// A trait that describes an array e.g. `[T]`
+/// A trait that describes an array e.g. `[T]`. This trait does *not* define how the memory of the
+/// trait is laid out. The memory layout of an array is defined by the [`ArrayMemoryLayout`] trait.
 pub trait ArrayType<T> {
     /// Returns the type of the elements stored in the array
     fn element_type(&self) -> T;
@@ -68,35 +72,44 @@ pub trait ArrayMemoryLayout {
     /// Returns the memory to allocate for an array with `n` elements
     fn layout(&self, n: usize) -> Layout;
 
-    /// Returns the memory layout of of an block of allocated memory for this type.
-    ///
-    /// # Safety
-    ///
-    /// This function is unsafe because there are no guarantees about the memory being passed in.
-    unsafe fn data_layout(&self, ptr: NonNull<u8>) -> Layout;
+    /// Initialize memory allocated for an array with `n` elements. This ensures that the memory
+    /// allocated for an array is always properly initialized.
+    fn init(&self, n: usize, data: &mut [u8]);
 
-    /// Returns the length of the array given a pointer to the memory.
+    /// Returns the number of elements in the array given a pointer to the memory.
     ///
     /// # Safety
     ///
-    /// This function is unsafe because there are no guarantees about the memory being passed in.
+    /// This function is unsafe because there are no guarantees that the memory passed into this
+    /// function via `ptr` actually refers to memory allocated for this trait.
     unsafe fn retrieve_length(&self, ptr: NonNull<u8>) -> usize;
+
+    /// Updates the number of elements in the array given a pointer to the memory.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because there are no guarantees that the memory passed into this
+    /// function via `ptr` actually refers to memory allocated for this trait.
+    unsafe fn store_length(&self, ptr: NonNull<u8>, n: usize);
+
+    /// Returns the maximum number of elements that can be stored in the array pointed to by `ptr`.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because there are no guarantees that the memory passed into this
+    /// function via `ptr` actually refers to memory allocated for this trait.
+    unsafe fn retrieve_capacity(&self, ptr: NonNull<u8>) -> usize;
 
     /// Returns an iterator over all elements in the array.
     ///
     /// # Safety
     ///
-    /// This function is unsafe because there are no guarantees about the memory being passed in.
+    /// This function is unsafe because there are no guarantees that the memory passed into this
+    /// function via `ptr` actually refers to memory allocated for this trait.
     ///
-    /// The memory pointed to by `ptr` must remain valid until the `ElementIterator` is dropped.
+    /// Note: The memory pointed to by `ptr` must remain valid until the `ElementIterator` is
+    /// dropped.
     unsafe fn elements(&self, ptr: NonNull<u8>) -> Self::ElementIterator;
-
-    /// Updates the length of the array as stored in memory
-    ///
-    /// # Safety
-    ///
-    /// This function is unsafe because there are no guarantees about the memory being passed in.
-    unsafe fn store_length(&self, ptr: NonNull<u8>, n: usize);
 }
 
 /// Marks a type to be a possible composite of different types. Implementers implement the
