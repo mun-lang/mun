@@ -270,25 +270,6 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
         }
     }
 
-    // /// Returns the inkwell type of the specified HIR type. If the type cannot be represented as an
-    // /// inkwell type, `None` is returned.
-    // pub fn get_any_type(&self, ty: &hir::Ty) -> Option<AnyTypeEnum<'ink>> {
-    //     match ty.interned() {
-    //         TyKind::Tuple(_, substs) => Some(self.get_tuple_type(substs).into()),
-    //         TyKind::Float(float_ty) => Some(self.get_float_type(*float_ty).into()),
-    //         TyKind::Int(int_ty) => Some(self.get_int_type(*int_ty).into()),
-    //         TyKind::Struct(struct_ty) => Some(self.get_struct_type(*struct_ty).into()),
-    //         TyKind::FnDef(hir::CallableDef::Function(fn_ty), type_params) => {
-    //             if !type_params.is_empty() {
-    //                 unimplemented!("cannot yet deal with type parameters in functions");
-    //             }
-    //             Some(self.get_function_type(*fn_ty).into())
-    //         }
-    //         TyKind::Bool => Some(self.get_bool_type().into()),
-    //         _ => None,
-    //     }
-    // }
-
     /// Returns the empty type
     pub fn get_empty_type(&self) -> StructType<'ink> {
         self.context.struct_type(&[], false)

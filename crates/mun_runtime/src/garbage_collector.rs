@@ -72,13 +72,13 @@ impl memory::CompositeType for UnsafeTypeInfo {
     }
 }
 
-/// This is a super hacky unsafe way to be able to implement traits from `mun_memory` for types
-/// defined in `mun_abi`.
+/// HACK: This is a super hacky unsafe way to be able to implement traits from `mun_memory` for
+/// types defined in `mun_abi`.
 #[repr(transparent)]
 pub struct WrappedAbiStructInfo(pub abi::StructInfo);
 
-/// This is a super hacky unsafe way to be able to implement traits from `mun_memory` for types
-/// defined in `mun_abi`.
+/// HACK: This is a super hacky unsafe way to be able to implement traits from `mun_memory` for
+/// types defined in `mun_abi`.
 #[repr(transparent)]
 pub struct WrappedAbiArrayInfo(pub abi::ArrayInfo);
 
