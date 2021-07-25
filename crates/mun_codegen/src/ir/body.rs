@@ -1458,7 +1458,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             )
             .into_pointer_value();
 
-        let array = MunArrayValue::from_ptr_unchecked(array_ptr);
+        let array = unsafe { MunArrayValue::from_ptr_unchecked(array_ptr) };
         let array_elements = array.get_elements(&self.builder);
         for (idx, expr) in exprs.iter().enumerate() {
             let element_ptr = unsafe {
@@ -1499,7 +1499,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         base: ExprId,
         index: ExprId,
     ) -> Option<PointerValue<'ink>> {
-        let base = MunArrayValue::from_ptr_unchecked(self.gen_expr(base)?.into_pointer_value());
+        let base =
+            unsafe { MunArrayValue::from_ptr_unchecked(self.gen_expr(base)?.into_pointer_value()) };
         let index = self.gen_expr(index)?.into_int_value();
 
         let elements = base.get_elements(&self.builder);

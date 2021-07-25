@@ -28,7 +28,7 @@ pub struct MunArrayValue<'ink>(PointerValue<'ink>);
 impl<'ink> MunArrayValue<'ink> {
     /// Constructs a new instance from an inkwell PointerValue without checking if this is actually
     /// a pointer to an array.
-    pub fn from_ptr_unchecked(ptr: PointerValue<'ink>) -> Self {
+    pub unsafe fn from_ptr_unchecked(ptr: PointerValue<'ink>) -> Self {
         Self(ptr)
     }
 
