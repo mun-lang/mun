@@ -1,7 +1,7 @@
 use super::{Monitor, MonitorConfig, MonitorDirectories, MonitorEntry, MonitorMessage};
 use crate::{AbsPath, AbsPathBuf};
 use crossbeam_channel::{never, select, unbounded, Receiver, Sender};
-use notify::{RecursiveMode, Watcher};
+use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use std::{convert::TryFrom, thread};
 use walkdir::WalkDir;
 
@@ -139,7 +139,7 @@ impl NotifyThread {
         self.watcher = None;
         if !config.watch.is_empty() {
             let (watcher_sender, watcher_receiver) = unbounded();
-            let watcher = log_notify_error(Watcher::new_immediate(move |event| {
+            let watcher = log_notify_error(RecommendedWatcher::new(move |event| {
                 watcher_sender
                     .send(event)
                     .expect("unable to send notify event over channel")
