@@ -56,7 +56,6 @@ impl<'a> ExprValidator<'a> {
             .chain(std::iter::once(ret_type_ref))
             .map(|type_ref| {
                 let ty = Ty::from_hir(self.db, &resolver, &fn_data.type_ref_map(), *type_ref).ty;
-                dbg!(type_ref, ty.clone());
                 (ty, type_ref)
             });
 
