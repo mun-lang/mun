@@ -1,11 +1,5 @@
-use crate::{
-    diagnostics::DiagnosticSink,
-    expr::validator::{ExprValidator, TypeAliasValidator},
-    mock::MockDatabase,
-    with_fixture::WithFixture,
-    ModuleDef, Package,
-};
-use std::fmt::Write;
+#[cfg(test)]
+use crate::utils::tests::*;
 
 #[test]
 fn test_uninitialized_access() {
@@ -161,35 +155,9 @@ fn test_private_leak_alias() {
     )
 }
 
-fn diagnostics(content: &str) -> String {
-    let (db, _file_id) = MockDatabase::with_single_file(content);
-
-    let mut diags = String::new();
-
-    let mut diag_sink = DiagnosticSink::new(|diag| {
-        write!(diags, "{:?}: {}\n", diag.highlight_range(), diag.message()).unwrap();
-    });
-
-    for item in Package::all(&db)
-        .iter()
-        .flat_map(|pkg| pkg.modules(&db))
-        .flat_map(|module| module.declarations(&db))
-    {
-        match item {
-            ModuleDef::Function(item) => {
-                ExprValidator::new(item, &db).validate_body(&mut diag_sink);
-            }
-            ModuleDef::TypeAlias(item) => {
-                TypeAliasValidator::new(item, &db).validate_target_type_existence(&mut diag_sink);
-            }
-            _ => {}
-        }
-    }
-
-    drop(diag_sink);
-    diags
-}
-
+// this function needs to be declared in each file separately
+// since insta's AutoName creates files in the directory from which
+// the macro is called.
 fn diagnostics_snapshot(text: &str) {
     let text = text.trim().replace("\n    ", "\n");
     insta::assert_snapshot!(insta::_macro_support::AutoName, diagnostics(&text), &text);

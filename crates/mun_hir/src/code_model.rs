@@ -2,7 +2,7 @@ mod function;
 mod module;
 mod package;
 pub(crate) mod src;
-mod r#struct;
+pub(crate) mod r#struct;
 mod type_alias;
 
 use crate::{expr::BodySourceMap, HirDatabase, Name};
