@@ -10,7 +10,7 @@ use crate::{
 };
 use mun_syntax::{
     ast,
-    ast::{NameOwner, TypeAscriptionOwner},
+    ast::{NameOwner, TypeAscriptionOwner, VisibilityOwner},
 };
 use std::{fmt, sync::Arc};
 
@@ -18,6 +18,8 @@ use crate::resolve::HasResolver;
 use crate::visibility::RawVisibility;
 pub use ast::StructMemoryKind;
 use std::iter::once;
+
+pub(crate) mod validator;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Struct {
@@ -125,6 +127,8 @@ impl Struct {
         let data = self.data(db.upcast());
         let lower = self.lower(db);
         lower.add_diagnostics(db, self.file_id(db), data.type_ref_source_map(), sink);
+        let validator = validator::StructValidator::new(self, db, self.file_id(db));
+        validator.validate_privacy(sink);
     }
 }
 
@@ -144,6 +148,7 @@ impl Struct {
 pub struct FieldData {
     pub name: Name,
     pub type_ref: LocalTypeRefId,
+    pub visibility: RawVisibility,
 }
 
 /// A struct's fields' data (record, tuple, or unit struct)
@@ -198,6 +203,7 @@ impl StructData {
                     .map(|fd| FieldData {
                         name: fd.name().map(|n| n.as_name()).unwrap_or_else(Name::missing),
                         type_ref: type_ref_builder.alloc_from_node_opt(fd.ascribed_type().as_ref()),
+                        visibility: RawVisibility::from_ast(fd.visibility()),
                     })
                     .collect();
                 (fields, StructKind::Record)
@@ -209,6 +215,7 @@ impl StructData {
                     .map(|(index, fd)| FieldData {
                         name: Name::new_tuple_field(index),
                         type_ref: type_ref_builder.alloc_from_node_opt(fd.type_ref().as_ref()),
+                        visibility: RawVisibility::from_ast(fd.visibility()),
                     })
                     .collect();
                 (fields, StructKind::Tuple)
