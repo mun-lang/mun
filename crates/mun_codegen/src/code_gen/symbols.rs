@@ -361,7 +361,7 @@ fn gen_get_info_fn<'ink>(
     }
 
     // Run the function optimizer on the generate function
-    function::create_pass_manager(&context.module, optimization_level).run_on(&get_symbols_fn);
+    function::create_pass_manager(context.module, optimization_level).run_on(&get_symbols_fn);
 }
 
 /// Generates a method `void set_allocator_handle(void*)` that stores the argument into the global

@@ -40,12 +40,12 @@ impl Manifest {
 
     /// Returns the name of the package
     pub fn name(&self) -> &str {
-        &self.package_id.name()
+        self.package_id.name()
     }
 
     /// Returns the version of the package
     pub fn version(&self) -> &semver::Version {
-        &self.package_id.version()
+        self.package_id.version()
     }
 
     /// Returns the metadata information of the package

@@ -11,8 +11,8 @@ pub(super) fn binary_op_rhs_expectation(op: BinaryOp, lhs_ty: Ty) -> Ty {
             TyKind::Int(_)
             | TyKind::Float(_)
             | TyKind::Bool
-            | TyKind::InferenceVar(InferTy::FloatVar(_))
-            | TyKind::InferenceVar(InferTy::IntVar(_)) => lhs_ty,
+            | TyKind::InferenceVar(InferTy::Float(_))
+            | TyKind::InferenceVar(InferTy::Int(_)) => lhs_ty,
             _ => TyKind::Unknown.intern(),
         },
 
@@ -21,8 +21,8 @@ pub(super) fn binary_op_rhs_expectation(op: BinaryOp, lhs_ty: Ty) -> Ty {
             | TyKind::Float(_)
             | TyKind::Bool
             | TyKind::Struct(_)
-            | TyKind::InferenceVar(InferTy::FloatVar(_))
-            | TyKind::InferenceVar(InferTy::IntVar(_)) => lhs_ty,
+            | TyKind::InferenceVar(InferTy::Float(_))
+            | TyKind::InferenceVar(InferTy::Int(_)) => lhs_ty,
             _ => TyKind::Unknown.intern(),
         },
         BinaryOp::Assignment {
@@ -45,7 +45,7 @@ pub(super) fn binary_op_rhs_expectation(op: BinaryOp, lhs_ty: Ty) -> Ty {
         | BinaryOp::ArithOp(ArithOp::BitAnd)
         | BinaryOp::ArithOp(ArithOp::BitOr)
         | BinaryOp::ArithOp(ArithOp::BitXor) => match lhs_ty.interned() {
-            TyKind::Int(_) | TyKind::Bool | TyKind::InferenceVar(InferTy::IntVar(_)) => lhs_ty,
+            TyKind::Int(_) | TyKind::Bool | TyKind::InferenceVar(InferTy::Int(_)) => lhs_ty,
             _ => TyKind::Unknown.intern(),
         },
 
@@ -53,8 +53,8 @@ pub(super) fn binary_op_rhs_expectation(op: BinaryOp, lhs_ty: Ty) -> Ty {
         BinaryOp::Assignment { op: Some(_) } | BinaryOp::ArithOp(_) => match lhs_ty.interned() {
             TyKind::Int(_)
             | TyKind::Float(_)
-            | TyKind::InferenceVar(InferTy::FloatVar(_))
-            | TyKind::InferenceVar(InferTy::IntVar(_)) => lhs_ty,
+            | TyKind::InferenceVar(InferTy::Float(_))
+            | TyKind::InferenceVar(InferTy::Int(_)) => lhs_ty,
             _ => TyKind::Unknown.intern(),
         },
     }
@@ -67,8 +67,8 @@ pub(super) fn binary_op_return_ty(op: BinaryOp, rhs_ty: Ty) -> Ty {
         BinaryOp::ArithOp(_) => match rhs_ty.interned() {
             TyKind::Int(_)
             | TyKind::Float(_)
-            | TyKind::InferenceVar(InferTy::FloatVar(_))
-            | TyKind::InferenceVar(InferTy::IntVar(_)) => rhs_ty,
+            | TyKind::InferenceVar(InferTy::Float(_))
+            | TyKind::InferenceVar(InferTy::Int(_)) => rhs_ty,
             _ => TyKind::Unknown.intern(),
         },
         BinaryOp::CmpOp(_) | BinaryOp::LogicOp(_) => TyKind::Bool.intern(),

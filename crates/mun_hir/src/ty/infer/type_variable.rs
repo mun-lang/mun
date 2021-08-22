@@ -96,7 +96,7 @@ struct Delegate;
 impl TypeVariableTable {
     /// Constructs a new generic type variable type
     pub fn new_type_var(&mut self) -> Ty {
-        TyKind::InferenceVar(InferTy::TypeVar(
+        TyKind::InferenceVar(InferTy::Type(
             self.eq_relations.new_key(TypeVarValue::Unknown),
         ))
         .intern()
@@ -104,7 +104,7 @@ impl TypeVariableTable {
 
     /// Constructs a new type variable that is used to represent *some* integer type
     pub fn new_integer_var(&mut self) -> Ty {
-        TyKind::InferenceVar(InferTy::IntVar(
+        TyKind::InferenceVar(InferTy::Int(
             self.eq_relations.new_key(TypeVarValue::Unknown),
         ))
         .intern()
@@ -112,7 +112,7 @@ impl TypeVariableTable {
 
     /// Constructs a new type variable that is used to represent *some* floating-point type
     pub fn new_float_var(&mut self) -> Ty {
-        TyKind::InferenceVar(InferTy::FloatVar(
+        TyKind::InferenceVar(InferTy::Float(
             self.eq_relations.new_key(TypeVarValue::Unknown),
         ))
         .intern()
@@ -146,38 +146,38 @@ impl TypeVariableTable {
 
             // In case of two unknowns of the same type, equate them
             (
-                TyKind::InferenceVar(InferTy::TypeVar(tv_a)),
-                TyKind::InferenceVar(InferTy::TypeVar(tv_b)),
+                TyKind::InferenceVar(InferTy::Type(tv_a)),
+                TyKind::InferenceVar(InferTy::Type(tv_b)),
             )
             | (
-                TyKind::InferenceVar(InferTy::IntVar(tv_a)),
-                TyKind::InferenceVar(InferTy::IntVar(tv_b)),
+                TyKind::InferenceVar(InferTy::Int(tv_a)),
+                TyKind::InferenceVar(InferTy::Int(tv_b)),
             )
             | (
-                TyKind::InferenceVar(InferTy::FloatVar(tv_a)),
-                TyKind::InferenceVar(InferTy::FloatVar(tv_b)),
+                TyKind::InferenceVar(InferTy::Float(tv_a)),
+                TyKind::InferenceVar(InferTy::Float(tv_b)),
             ) => {
                 self.equate(*tv_a, *tv_b);
                 true
             }
 
             // Instantiate the variable if unifying with a concrete type
-            (TyKind::InferenceVar(InferTy::TypeVar(tv)), other)
-            | (other, TyKind::InferenceVar(InferTy::TypeVar(tv))) => {
+            (TyKind::InferenceVar(InferTy::Type(tv)), other)
+            | (other, TyKind::InferenceVar(InferTy::Type(tv))) => {
                 self.instantiate(*tv, other.clone().intern());
                 true
             }
 
             // Instantiate the variable if unifying an unknown integer type with a concrete integer type
-            (TyKind::InferenceVar(InferTy::IntVar(tv)), other @ TyKind::Int(_))
-            | (other @ TyKind::Int(_), TyKind::InferenceVar(InferTy::IntVar(tv))) => {
+            (TyKind::InferenceVar(InferTy::Int(tv)), other @ TyKind::Int(_))
+            | (other @ TyKind::Int(_), TyKind::InferenceVar(InferTy::Int(tv))) => {
                 self.instantiate(*tv, other.clone().intern());
                 true
             }
 
             // Instantiate the variable if unifying an unknown float type with a concrete float type
-            (TyKind::InferenceVar(InferTy::FloatVar(tv)), other @ TyKind::Float(_))
-            | (other @ TyKind::Float(_), TyKind::InferenceVar(InferTy::FloatVar(tv))) => {
+            (TyKind::InferenceVar(InferTy::Float(tv)), other @ TyKind::Float(_))
+            | (other @ TyKind::Float(_), TyKind::InferenceVar(InferTy::Float(tv))) => {
                 self.instantiate(*tv, other.clone().intern());
                 true
             }

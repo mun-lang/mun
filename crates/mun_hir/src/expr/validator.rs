@@ -55,7 +55,7 @@ impl<'a> ExprValidator<'a> {
             .iter()
             .chain(std::iter::once(ret_type_ref))
             .map(|type_ref| {
-                let ty = Ty::from_hir(self.db, &resolver, &fn_data.type_ref_map(), *type_ref).ty;
+                let ty = Ty::from_hir(self.db, &resolver, fn_data.type_ref_map(), *type_ref).ty;
                 (ty, type_ref)
             });
 
@@ -69,7 +69,7 @@ impl<'a> ExprValidator<'a> {
 
         let file_id = self.func.source(self.db.upcast()).file_id;
         param_types
-            .filter(|(ty, _)| !type_is_allowed(&ty))
+            .filter(|(ty, _)| !type_is_allowed(ty))
             .for_each(|(_, type_ref)| {
                 sink.push(ExportedPrivate {
                     file: file_id,

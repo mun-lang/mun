@@ -93,7 +93,7 @@ pub(crate) fn gen_file_ir<'db, 'ink>(
             &group_ir.type_table,
             external_globals.clone(),
             &code_gen.hir_types,
-            &module_group,
+            module_group,
         );
 
         code_gen.gen_fn_body();
@@ -110,7 +110,7 @@ pub(crate) fn gen_file_ir<'db, 'ink>(
             &group_ir.type_table,
             external_globals.clone(),
             &code_gen.hir_types,
-            &module_group,
+            module_group,
         );
 
         code_gen.gen_fn_wrapper();

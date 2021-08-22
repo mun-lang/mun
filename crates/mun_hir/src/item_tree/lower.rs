@@ -76,7 +76,7 @@ impl Context {
                 ModItem::Import(_) => None,
             };
             if let Some(name) = name {
-                if let Some(first_item) = set.get(&name) {
+                if let Some(first_item) = set.get(name) {
                     self.diagnostics
                         .push(diagnostics::ItemTreeDiagnostic::DuplicateDefinition {
                             name: name.clone(),

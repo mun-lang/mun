@@ -90,7 +90,7 @@ impl PackageDefs {
                     Some((idx, segment)) => (idx, segment),
                     None => return ResolvePathResult::empty(ReachedFixedPoint::Yes),
                 };
-                self.resolve_name_in_module(db, original_module, &segment)
+                self.resolve_name_in_module(db, original_module, segment)
             }
             PathKind::Super(lvl) => {
                 let m = successors(Some(original_module), |m| self.module_tree[*m].parent)
@@ -127,7 +127,7 @@ impl PackageDefs {
             };
 
             curr_per_ns = match curr {
-                ItemDefinitionId::ModuleId(module) => self[module.local_id].get(&segment),
+                ItemDefinitionId::ModuleId(module) => self[module.local_id].get(segment),
                 // TODO: Enum variants
                 s => {
                     return ResolvePathResult::with(

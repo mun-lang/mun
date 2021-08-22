@@ -337,9 +337,9 @@ impl HirDisplay for Ty {
                 write!(f, ")")
             }
             TyKind::InferenceVar(tv) => match tv {
-                InferTy::TypeVar(tv) => write!(f, "'{}", tv.0),
-                InferTy::IntVar(_) => write!(f, "{{integer}}"),
-                InferTy::FloatVar(_) => write!(f, "{{float}}"),
+                InferTy::Type(tv) => write!(f, "'{}", tv.0),
+                InferTy::Int(_) => write!(f, "{{integer}}"),
+                InferTy::Float(_) => write!(f, "{{float}}"),
             },
             TyKind::TypeAlias(def) => write!(f, "{}", def.name(f.db)),
             TyKind::Never => write!(f, "never"),

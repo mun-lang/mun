@@ -73,7 +73,7 @@ impl ModuleTree {
         {
             // Iterate over all segments of the relative path and construct modules on the way
             let mut module_id = root;
-            for path_segment in path_to_module_path(&relative_path)
+            for path_segment in path_to_module_path(relative_path)
                 .into_iter()
                 .map(Name::new)
             {

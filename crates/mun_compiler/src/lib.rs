@@ -68,7 +68,7 @@ impl CompilerOptions {
 
 /// Returns true if the given path is considered to be a Mun source file
 pub fn is_source_file<P: AsRef<Path>>(p: P) -> bool {
-    p.as_ref().extension() == Some(&OsStr::new("mun"))
+    p.as_ref().extension() == Some(OsStr::new("mun"))
 }
 
 /// Returns and creates the output dir for the specified package

@@ -526,7 +526,7 @@ impl<'a> ModCollectorContext<'a, '_> {
     fn collect_import(&mut self, id: LocalItemTreeId<item_tree::Import>) {
         self.def_collector.unresolved_imports.push(ImportDirective {
             module_id: self.module_id,
-            import: Import::from_use(&self.item_tree, InFile::new(self.file_id, id)),
+            import: Import::from_use(self.item_tree, InFile::new(self.file_id, id)),
             status: PartiallyResolvedImport::Unresolved,
         });
     }

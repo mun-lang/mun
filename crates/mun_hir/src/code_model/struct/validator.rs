@@ -38,7 +38,7 @@ impl<'a> StructValidator<'a> {
 
         let field_types = public_fields.map(|(_, field_data)| {
             let type_ref = field_data.type_ref;
-            let ty = Ty::from_hir(self.db, &resolver, &struct_data.type_ref_map(), type_ref).ty;
+            let ty = Ty::from_hir(self.db, &resolver, struct_data.type_ref_map(), type_ref).ty;
             (ty, type_ref)
         });
 
@@ -51,7 +51,7 @@ impl<'a> StructValidator<'a> {
         };
 
         field_types
-            .filter(|(ty, _)| !type_is_allowed(&ty))
+            .filter(|(ty, _)| !type_is_allowed(ty))
             .for_each(|(_, type_ref)| {
                 sink.push(ExportedPrivate {
                     file: self.file_id,

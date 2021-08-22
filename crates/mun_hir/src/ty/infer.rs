@@ -108,23 +108,23 @@ pub fn infer_query(db: &dyn HirDatabase, def: DefWithBodyId) -> Arc<InferenceRes
 /// literals; e.g `100` can be represented by a lot of different integer types.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum InferTy {
-    TypeVar(type_variable::TypeVarId),
-    IntVar(type_variable::TypeVarId),
-    FloatVar(type_variable::TypeVarId),
+    Type(type_variable::TypeVarId),
+    Int(type_variable::TypeVarId),
+    Float(type_variable::TypeVarId),
 }
 
 impl InferTy {
     fn to_inner(self) -> type_variable::TypeVarId {
         match self {
-            InferTy::TypeVar(ty) | InferTy::IntVar(ty) | InferTy::FloatVar(ty) => ty,
+            InferTy::Type(ty) | InferTy::Int(ty) | InferTy::Float(ty) => ty,
         }
     }
 
     fn fallback_value(self) -> Ty {
         match self {
-            InferTy::TypeVar(..) => TyKind::Unknown,
-            InferTy::IntVar(..) => TyKind::Int(IntTy::i32()),
-            InferTy::FloatVar(..) => TyKind::Float(FloatTy::f64()),
+            InferTy::Type(..) => TyKind::Unknown,
+            InferTy::Int(..) => TyKind::Int(IntTy::i32()),
+            InferTy::Float(..) => TyKind::Float(FloatTy::f64()),
         }
         .intern()
     }
@@ -192,7 +192,7 @@ impl<'a> InferenceResultBuilder<'a> {
             self.db,
             // FIXME use right resolver for block
             &self.resolver,
-            &self.body.type_refs(),
+            self.body.type_refs(),
             type_ref,
         );
 
@@ -314,7 +314,7 @@ impl<'a> InferenceResultBuilder<'a> {
                 condition,
                 then_branch,
                 else_branch,
-            } => self.infer_if(tgt_expr, &expected, *condition, *then_branch, *else_branch),
+            } => self.infer_if(tgt_expr, expected, *condition, *then_branch, *else_branch),
             Expr::BinaryOp { lhs, rhs, op } => match op {
                 Some(op) => {
                     let lhs_expected = match op {
@@ -419,7 +419,7 @@ impl<'a> InferenceResultBuilder<'a> {
                     self.infer_expr(*expr, &Expectation::has_type(ty.clone()));
                 }
                 if let Some(s) = ty.as_struct() {
-                    self.check_record_lit(tgt_expr, &ty, s, &fields);
+                    self.check_record_lit(tgt_expr, &ty, s, fields);
                 }
                 ty
             }
@@ -455,9 +455,9 @@ impl<'a> InferenceResultBuilder<'a> {
                     self.infer_expr_inner(*expr, &Expectation::none(), &CheckParams::default());
                 match op {
                     UnaryOp::Not => match inner_ty.interned() {
-                        TyKind::Bool
-                        | TyKind::Int(_)
-                        | TyKind::InferenceVar(InferTy::IntVar(_)) => inner_ty,
+                        TyKind::Bool | TyKind::Int(_) | TyKind::InferenceVar(InferTy::Int(_)) => {
+                            inner_ty
+                        }
                         _ => {
                             self.diagnostics
                                 .push(InferenceDiagnostic::CannotApplyUnaryOp {
@@ -470,8 +470,8 @@ impl<'a> InferenceResultBuilder<'a> {
                     UnaryOp::Neg => match inner_ty.interned() {
                         TyKind::Float(_)
                         | TyKind::Int(_)
-                        | TyKind::InferenceVar(InferTy::IntVar(_))
-                        | TyKind::InferenceVar(InferTy::FloatVar(_)) => inner_ty,
+                        | TyKind::InferenceVar(InferTy::Int(_))
+                        | TyKind::InferenceVar(InferTy::Float(_)) => inner_ty,
                         _ => {
                             self.diagnostics
                                 .push(InferenceDiagnostic::CannotApplyUnaryOp {

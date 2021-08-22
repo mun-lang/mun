@@ -40,7 +40,7 @@ fn collect_expr<'db, 'ink>(
     if let Expr::Call { callee, .. } = expr {
         match infer[*callee].as_callable_def() {
             Some(hir::CallableDef::Struct(_)) => {
-                collect_intrinsic(context, &target, &intrinsics::new, intrinsics);
+                collect_intrinsic(context, target, &intrinsics::new, intrinsics);
                 // self.collect_intrinsic(module, entries, &intrinsics::drop);
                 *needs_alloc = true;
             }
@@ -50,7 +50,7 @@ fn collect_expr<'db, 'ink>(
     }
 
     if let Expr::RecordLit { .. } = expr {
-        collect_intrinsic(context, &target, &intrinsics::new, intrinsics);
+        collect_intrinsic(context, target, &intrinsics::new, intrinsics);
         // self.collect_intrinsic(module, entries, &intrinsics::drop);
         *needs_alloc = true;
     }
@@ -60,7 +60,7 @@ fn collect_expr<'db, 'ink>(
         if let Some((ValueNs::StructId(_), _)) =
             resolver.resolve_path_as_value_fully(db.upcast(), path)
         {
-            collect_intrinsic(context, &target, &intrinsics::new, intrinsics);
+            collect_intrinsic(context, target, &intrinsics::new, intrinsics);
             // self.collect_intrinsic( module, entries, &intrinsics::drop);
             *needs_alloc = true;
         }

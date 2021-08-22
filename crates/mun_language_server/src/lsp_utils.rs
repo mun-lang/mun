@@ -35,7 +35,7 @@ pub(crate) fn apply_document_changes(
         match change.range {
             Some(range) => {
                 if !index_valid.covers(range.end.line) {
-                    line_index = LineIndex::new(&old_text);
+                    line_index = LineIndex::new(old_text);
                 }
                 index_valid = IndexValid::UpToLineExclusive(range.start.line);
                 let range = from_lsp::text_range(&line_index, range);

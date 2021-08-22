@@ -8,7 +8,7 @@ pub fn target() -> TargetResult {
     // MACOSX_DEPLOYMENT_TARGET.  To enable cross-language LTO to work
     // correctly, we do too.
     let arch = "x86_64";
-    let llvm_target = super::apple_base::macos_llvm_target(&arch);
+    let llvm_target = super::apple_base::macos_llvm_target(arch);
 
     Ok(Target {
         llvm_target,
