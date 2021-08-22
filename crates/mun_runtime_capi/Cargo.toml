@@ -1,6 +1,6 @@
 [package]
 name = "mun_runtime_capi"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 description = "Provides a C API for the Mun runtime"
@@ -19,9 +19,9 @@ crate-type = ["cdylib"]
 [dependencies]
 anyhow = "1.0.31"
 lazy_static = "1.4.0"
-abi = { version = "=0.3.0", path = "../mun_abi", package = "mun_abi" }
-memory = { version = "=0.2.0", path = "../mun_memory", package = "mun_memory" }
-runtime = { version = "=0.3.0", path = "../mun_runtime", package = "mun_runtime" }
+abi = { version = "=0.3.1", path = "../mun_abi", package = "mun_abi" }
+memory = { version = "=0.2.1", path = "../mun_memory", package = "mun_memory" }
+runtime = { version = "=0.3.1", path = "../mun_runtime", package = "mun_runtime" }
 parking_lot = "0.11.1"
 rand = "0.7.2"
 

@@ -1,6 +1,6 @@
 [package]
 name = "mun_language_server"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 description = "Provides a language server protocol server for the Mun language"
@@ -23,13 +23,13 @@ serde_derive = "1.0"
 anyhow = "1.0"
 thiserror = "1.0"
 salsa = "0.16.1"
-hir = { version = "=0.3.0", path="../mun_hir", package="mun_hir" }
+hir = { version = "=0.3.1", path="../mun_hir", package="mun_hir" }
 threadpool="1.8.1"
 vfs = { version = "=0.1.0", path = "../mun_vfs", package="mun_vfs" }
 project = { version = "=0.1.0", path = "../mun_project", package="mun_project" }
 mun_target = { version = "=0.3.0", path = "../mun_target" }
-mun_syntax = { version = "=0.3.0", path = "../mun_syntax" }
-mun_diagnostics = { version = "=0.1.0", path = "../mun_diagnostics" }
+mun_syntax = { version = "=0.3.1", path = "../mun_syntax" }
+mun_diagnostics = { version = "=0.1.1", path = "../mun_diagnostics" }
 crossbeam-channel = "0.5.0"
 parking_lot = "0.11.1"
 paths = { version = "=0.1.0", path="../mun_paths", package="mun_paths"}

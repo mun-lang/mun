@@ -1,6 +1,6 @@
 [package]
 name = "mun_abi"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 description = "Rust wrapper for the Mun ABI"

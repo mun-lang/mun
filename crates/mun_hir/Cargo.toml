@@ -1,6 +1,6 @@
 [package]
 name = "mun_hir"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2018"
 description = "Provides high-level intermediate representation of Mun code"
@@ -15,7 +15,7 @@ categories = ["game-development", "mun"]
 [dependencies]
 salsa = "0.16.1"
 superslice = "1.0"
-mun_syntax = { version = "=0.3.0", path = "../mun_syntax" }
+mun_syntax = { version = "=0.3.1", path = "../mun_syntax" }
 mun_target = { version = "=0.3.0", path = "../mun_target" }
 paths = { version="=0.1.0", path="../mun_paths", package="mun_paths"}
 rustc-hash = "1.1"
