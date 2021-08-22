@@ -66,7 +66,7 @@ type ErasedFileAstId = Idx<SyntaxNodePtr>;
 
 impl AstIdMap {
     pub(crate) fn ast_id_map_query(db: &dyn AstDatabase, file_id: FileId) -> Arc<AstIdMap> {
-        let map = AstIdMap::from_source(&db.parse(file_id).tree().syntax());
+        let map = AstIdMap::from_source(db.parse(file_id).tree().syntax());
         Arc::new(map)
     }
 

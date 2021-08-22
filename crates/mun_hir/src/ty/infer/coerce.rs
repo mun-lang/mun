@@ -25,7 +25,7 @@ impl<'a> InferenceResultBuilder<'a> {
         match (from_ty.interned(), to_ty.interned()) {
             (TyKind::Never, ..) => return true,
             _ => {
-                if self.type_variables.unify_inner_trivial(&from_ty, &to_ty) {
+                if self.type_variables.unify_inner_trivial(&from_ty, to_ty) {
                     return true;
                 }
             }

@@ -134,18 +134,18 @@ fn lower_use_tree(
                 if let Some(segment) = ast_path.segment() {
                     if segment.kind() == Some(ast::PathSegmentKind::SelfKw) {
                         if let Some(prefix) = prefix {
-                            cb(prefix, &tree, false, alias);
+                            cb(prefix, tree, false, alias);
                             return;
                         }
                     }
                 }
             }
             if let Some(path) = convert_path(prefix, &ast_path) {
-                cb(path, &tree, is_glob, alias)
+                cb(path, tree, is_glob, alias)
             }
         } else if is_glob {
             if let Some(prefix) = prefix {
-                cb(prefix, &tree, is_glob, None)
+                cb(prefix, tree, is_glob, None)
             }
         }
     }

@@ -172,8 +172,7 @@ impl Resolver {
 
                 Scope::ModuleScope(m) => {
                     let (module_def, idx) =
-                        m.package_defs
-                            .resolve_path_in_module(db, m.module_id, &path);
+                        m.package_defs.resolve_path_in_module(db, m.module_id, path);
                     return match idx {
                         None => {
                             let (value, vis) = to_value_ns(module_def)?;
@@ -235,8 +234,7 @@ impl Resolver {
                 Scope::ExprScope(_) => continue,
                 Scope::ModuleScope(m) => {
                     let (module_def, idx) =
-                        m.package_defs
-                            .resolve_path_in_module(db, m.module_id, &path);
+                        m.package_defs.resolve_path_in_module(db, m.module_id, path);
                     let (res, vis) = to_type_ns(module_def)?;
                     return Some((res, vis, idx));
                 }

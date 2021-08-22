@@ -118,15 +118,14 @@ impl Assembly {
             }
         }
 
-        let to_link: Vec<_> = assemblies
+        let to_link = assemblies
             .into_iter()
             .flat_map(|asm| asm.info.dispatch_table.iter_mut())
             // Only take signatures into account that do *not* yet have a function pointer assigned
             // by the compiler.
-            .filter(|(ptr, _)| ptr.is_null())
-            .collect();
+            .filter(|(ptr, _)| ptr.is_null());
 
-        Assembly::link_all_impl(&mut dispatch_table, to_link.into_iter())?;
+        Assembly::link_all_impl(&mut dispatch_table, to_link)?;
 
         Ok(dispatch_table)
     }

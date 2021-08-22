@@ -62,7 +62,7 @@ impl<'db, 'ink, 'ctx, 't> AssemblyBuilder<'db, 'ink, 'ctx, 't> {
 
         let target_data = self.code_gen.target_machine.get_target_data();
         let type_context = IrTypeContext {
-            context: &self.code_gen.context,
+            context: self.code_gen.context,
             target_data: &target_data,
             struct_types: &self.code_gen.rust_types,
         };

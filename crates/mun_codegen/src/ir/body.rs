@@ -566,7 +566,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     *param
                 } else if let Some(ptr) = self.pat_to_local.get(&pat) {
                     let name = self.pat_to_name.get(&pat).expect("could not find pat name");
-                    self.builder.build_load(*ptr, &name)
+                    self.builder.build_load(*ptr, name)
                 } else {
                     unreachable!("could not find the pattern..");
                 }
@@ -1078,7 +1078,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 function,
             );
             self.builder
-                .build_call(ptr_value, &args, &function.name(self.db).to_string())
+                .build_call(ptr_value, args, &function.name(self.db).to_string())
         } else {
             let llvm_function = self.function_map.get(&function).unwrap_or_else(|| {
                 panic!(
@@ -1087,7 +1087,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 )
             });
             self.builder
-                .build_call(*llvm_function, &args, &function.name(self.db).to_string())
+                .build_call(*llvm_function, args, &function.name(self.db).to_string())
         }
     }
 
@@ -1338,7 +1338,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                         hir_struct_name, name, field_idx
                     )
                 });
-            Some(self.builder.build_load(field_ptr, &field_ir_name))
+            Some(self.builder.build_load(field_ptr, field_ir_name))
         } else {
             let receiver_value = self.gen_expr(receiver_expr)?;
             let receiver_value = self.opt_deref_value(receiver_expr, receiver_value);

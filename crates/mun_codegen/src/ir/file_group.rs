@@ -48,7 +48,7 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
         match def {
             ModuleDef::Function(f) if !f.is_extern(code_gen.db) => {
                 intrinsics::collect_fn_body(
-                    &code_gen.context,
+                    code_gen.context,
                     code_gen.target_machine.get_target_data(),
                     code_gen.db,
                     &mut intrinsics_map,
@@ -62,7 +62,7 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
                     && !fn_sig.marshallable(code_gen.db)
                 {
                     intrinsics::collect_wrapper_body(
-                        &code_gen.context,
+                        code_gen.context,
                         code_gen.target_machine.get_target_data(),
                         &mut intrinsics_map,
                         &mut needs_alloc,
@@ -105,13 +105,13 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
 
     let target_data = code_gen.target_machine.get_target_data();
     let type_context = IrTypeContext {
-        context: &code_gen.context,
+        context: code_gen.context,
         target_data: &target_data,
         struct_types: &code_gen.rust_types,
     };
     let value_context = IrValueContext {
         type_context: &type_context,
-        context: &code_gen.context,
+        context: code_gen.context,
         module: &llvm_module,
     };
     let mut type_table_builder = TypeTableBuilder::new(

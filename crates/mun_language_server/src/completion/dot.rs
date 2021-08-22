@@ -10,7 +10,7 @@ pub(super) fn complete_dot(result: &mut Completions, ctx: &CompletionContext) {
     };
 
     // Figure out the type of the expression
-    let receiver_ty = match ctx.sema.type_of_expr(&dot_receiver) {
+    let receiver_ty = match ctx.sema.type_of_expr(dot_receiver) {
         Some(ty) => ty,
         _ => return,
     };

@@ -38,7 +38,7 @@ impl<'db, 'diag, DB: mun_hir::HirDatabase> UnresolvedValue<'db, 'diag, DB> {
         let parse = db.parse(diag.file);
 
         // Get the text of the value as a string
-        let value_name = diag.expr.to_node(&parse.tree().syntax()).text().to_string();
+        let value_name = diag.expr.to_node(parse.tree().syntax()).text().to_string();
 
         UnresolvedValue {
             _db: db,

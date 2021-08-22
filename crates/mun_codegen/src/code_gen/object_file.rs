@@ -18,7 +18,7 @@ impl ObjectFile {
         module: &inkwell::module::Module,
     ) -> Result<Self, anyhow::Error> {
         let obj = target_machine
-            .write_to_memory_buffer(&module, FileType::Object)
+            .write_to_memory_buffer(module, FileType::Object)
             .map_err(|e| CodeGenerationError::CodeGenerationError(e.to_string()))?;
 
         let mut obj_file = tempfile::NamedTempFile::new()
@@ -40,7 +40,7 @@ impl ObjectFile {
         linker.add_object(self.obj_file.path())?;
 
         // Link the object
-        linker.build_shared_object(&output_path)?;
+        linker.build_shared_object(output_path)?;
         linker.finalize()?;
 
         Ok(())

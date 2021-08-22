@@ -52,7 +52,7 @@ impl ExprScopes {
         };
         let root = scopes.root_scope();
         scopes.add_params_bindings(body, root, body.params().iter().map(|p| &p.0));
-        compute_expr_scopes(body.body_expr(), &body, &mut scopes, root);
+        compute_expr_scopes(body.body_expr(), body, &mut scopes, root);
         scopes
     }
 
@@ -152,7 +152,7 @@ fn compute_expr_scopes(expr: ExprId, body: &Body, scopes: &mut ExprScopes, scope
     scopes.set_scope(expr, scope);
     match &body[expr] {
         Expr::Block { statements, tail } => {
-            compute_block_scopes(&statements, *tail, body, scopes, scope);
+            compute_block_scopes(statements, *tail, body, scopes, scope);
         }
         e => e.walk_child_exprs(|e| compute_expr_scopes(e, body, scopes, scope)),
     };

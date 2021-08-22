@@ -10,8 +10,9 @@ pub(super) struct CompletionContext<'a> {
     pub sema: Semantics<'a>,
     pub scope: SemanticsScope<'a>,
     pub db: &'a AnalysisDatabase,
-    pub position: FilePosition,
 
+    // TODO: Add this when it is used
+    //pub position: FilePosition,
     /// True if the context is currently at a trivial path.
     pub is_trivial_path: bool,
 
@@ -52,7 +53,8 @@ impl<'a> CompletionContext<'a> {
             sema,
             scope,
             db,
-            position,
+            // TODO: add this when it is used
+            //position,
             is_trivial_path: false,
             is_param: false,
             is_path_type: false,
