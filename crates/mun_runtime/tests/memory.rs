@@ -1,4 +1,4 @@
-use mun_runtime::{invoke_fn, StructRef};
+use mun_runtime::StructRef;
 use mun_test::CompileAndRunTestDriver;
 
 #[macro_use]
@@ -33,7 +33,7 @@ fn gc_trace() {
     let runtime = driver.runtime();
     let runtime_ref = runtime.borrow();
 
-    let value: StructRef = invoke_fn!(runtime_ref, "new_foo").unwrap();
+    let value: StructRef = runtime_ref.invoke("new_foo", ()).unwrap();
     let value = value.root(driver.runtime());
 
     assert_eq!(runtime_ref.gc_collect(), false);
@@ -67,7 +67,7 @@ fn map_struct_insert_field1() {
 
     let b = 5i64;
     let c = 3.0f64;
-    let foo: StructRef = invoke_fn!(runtime_ref, "foo_new", b, c).unwrap();
+    let foo: StructRef = runtime_ref.invoke("foo_new", (b, c)).unwrap();
     let foo = foo.root(driver.runtime());
 
     driver.update(
@@ -108,7 +108,7 @@ fn map_struct_insert_field2() {
 
     let a = 5i64;
     let c = 3.0f64;
-    let foo: StructRef = invoke_fn!(runtime_ref, "foo_new", a, c).unwrap();
+    let foo: StructRef = runtime_ref.invoke("foo_new", (a, c)).unwrap();
     let foo = foo.root(driver.runtime());
 
     driver.update(
@@ -149,7 +149,7 @@ fn map_struct_insert_field3() {
 
     let a = 5i64;
     let b = 3.0f64;
-    let foo: StructRef = invoke_fn!(runtime_ref, "foo_new", a, b).unwrap();
+    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b)).unwrap();
     let foo = foo.root(driver.runtime());
 
     driver.update(
@@ -192,7 +192,7 @@ fn map_struct_remove_field1() {
     let a = 1.0f64;
     let b = 3.0f64;
     let c = 5i64;
-    let foo: StructRef = invoke_fn!(runtime_ref, "foo_new", a, b, c).unwrap();
+    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c)).unwrap();
     let foo = foo.root(driver.runtime());
 
     driver.update(
@@ -231,7 +231,7 @@ fn map_struct_remove_field2() {
     let a = 1.0f64;
     let b = 5i64;
     let c = 3.0f64;
-    let foo: StructRef = invoke_fn!(runtime_ref, "foo_new", a, b, c).unwrap();
+    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c)).unwrap();
     let foo = foo.root(driver.runtime());
 
     driver.update(
@@ -270,7 +270,7 @@ fn map_struct_remove_field3() {
     let a = 5i64;
     let b = 1.0f64;
     let c = 3.0f64;
-    let foo: StructRef = invoke_fn!(runtime_ref, "foo_new", a, b, c).unwrap();
+    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c)).unwrap();
     let foo = foo.root(driver.runtime());
 
     driver.update(
@@ -313,7 +313,7 @@ fn map_struct_cast_fields1() {
     let c = 3u32;
     let d = -4i64;
     let e = 3.14f32;
-    let foo: StructRef = invoke_fn!(runtime_ref, "foo_new", a, b, c, d, e).unwrap();
+    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c, d, e)).unwrap();
     let foo = foo.root(driver.runtime());
 
     driver.update(
@@ -356,7 +356,7 @@ fn map_struct_cast_fields2() {
     let runtime_ref = runtime.borrow();
 
     let a = -2i16;
-    let foo: StructRef = invoke_fn!(runtime_ref, "foo_new", a).unwrap();
+    let foo: StructRef = runtime_ref.invoke("foo_new", (a,)).unwrap();
     let foo = foo.root(driver.runtime());
 
     driver.update(
@@ -396,7 +396,7 @@ fn map_struct_swap_fields1() {
     let a = 1.0f64;
     let b = 3i64;
     let c = 5.0f64;
-    let foo: StructRef = invoke_fn!(runtime_ref, "foo_new", a, b, c).unwrap();
+    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c)).unwrap();
     let foo = foo.root(driver.runtime());
 
     driver.update(
@@ -441,7 +441,7 @@ fn map_struct_swap_fields2() {
     let b = 3i64;
     let c = 5.0f64;
     let d = 7i64;
-    let foo: StructRef = invoke_fn!(runtime_ref, "foo_new", a, b, c, d).unwrap();
+    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c, d)).unwrap();
     let foo = foo.root(driver.runtime());
 
     driver.update(
@@ -486,7 +486,7 @@ fn map_struct_rename_field1() {
     let a = 5i64;
     let b = 1.0f64;
     let c = 3.0f64;
-    let foo: StructRef = invoke_fn!(runtime_ref, "foo_new", a, b, c).unwrap();
+    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c)).unwrap();
     let foo = foo.root(driver.runtime());
 
     driver.update(
@@ -529,7 +529,7 @@ fn map_struct_rename_field2() {
     let a = 5i64;
     let b = 1.0f64;
     let c = 3.0f64;
-    let foo: StructRef = invoke_fn!(runtime_ref, "foo_new", a, b, c).unwrap();
+    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c)).unwrap();
     let foo = foo.root(driver.runtime());
 
     driver.update(
@@ -574,7 +574,7 @@ fn map_struct_all() {
     let b = 1.0f64;
     let c = 3.0f64;
     let d = -1i32;
-    let foo: StructRef = invoke_fn!(runtime_ref, "foo_new", a, b, c, d).unwrap();
+    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c, d)).unwrap();
     let foo = foo.root(driver.runtime());
 
     driver.update(
@@ -620,7 +620,7 @@ fn delete_used_struct() {
     let a = 5i64;
     let b = 1.0f64;
     let c = 3.0f64;
-    let foo: StructRef = invoke_fn!(runtime_ref, "foo_new", a, b, c).unwrap();
+    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c)).unwrap();
     let foo = foo.root(driver.runtime());
 
     driver.update(
@@ -685,24 +685,19 @@ fn nested_structs() {
 
     let a = -3.14f32;
     let b = 6.18f32;
-    let gc_struct: StructRef = invoke_fn!(runtime_ref, "new_gc_struct", a, b).unwrap();
-    let value_struct: StructRef = invoke_fn!(runtime_ref, "new_value_struct", a, b).unwrap();
+    let gc_struct: StructRef = runtime_ref.invoke("new_gc_struct", (a, b)).unwrap();
+    let value_struct: StructRef = runtime_ref.invoke("new_value_struct", (a, b)).unwrap();
 
-    let gc_wrapper: StructRef = invoke_fn!(
-        runtime_ref,
-        "new_gc_wrapper",
-        gc_struct.clone(),
-        value_struct.clone()
-    )
-    .unwrap();
+    let gc_wrapper: StructRef = runtime_ref
+        .invoke("new_gc_wrapper", (gc_struct.clone(), value_struct.clone()))
+        .unwrap();
 
-    let value_wrapper: StructRef = invoke_fn!(
-        runtime_ref,
-        "new_value_wrapper",
-        gc_struct.clone(),
-        value_struct.clone()
-    )
-    .unwrap();
+    let value_wrapper: StructRef = runtime_ref
+        .invoke(
+            "new_value_wrapper",
+            (gc_struct.clone(), value_struct.clone()),
+        )
+        .unwrap();
 
     let gc_wrapper = gc_wrapper.root(driver.runtime());
     let value_wrapper = value_wrapper.root(driver.runtime());
@@ -903,7 +898,7 @@ fn insert_struct() {
 
     let a = 5i64;
     let c = 3.0f64;
-    let foo: StructRef = invoke_fn!(runtime_ref, "foo_new", a, c).unwrap();
+    let foo: StructRef = runtime_ref.invoke("foo_new", (a, c)).unwrap();
     let foo = foo.root(driver.runtime());
 
     driver.update(

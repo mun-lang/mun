@@ -1,4 +1,4 @@
-use mun_runtime::{invoke_fn, RuntimeBuilder};
+use mun_runtime::RuntimeBuilder;
 use std::{cell::RefCell, env, rc::Rc};
 
 fn main() {
@@ -11,8 +11,8 @@ fn main() {
     loop {
         {
             let runtime_ref = runtime.borrow();
-            let arg: i64 = invoke_fn!(runtime_ref, "arg").unwrap();
-            let result: i64 = invoke_fn!(runtime_ref, "fibonacci", arg).unwrap();
+            let arg: i64 = runtime_ref.invoke("arg", ()).unwrap();
+            let result: i64 = runtime_ref.invoke("fibonacci", (arg,)).unwrap();
             println!("fibonacci({}) = {}", arg, result);
         }
         runtime.borrow_mut().update();

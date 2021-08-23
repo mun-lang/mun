@@ -216,7 +216,6 @@ impl<'s> Marshal<'s> for StructRef<'s> {
 
     fn marshal_from<'r>(value: Self::MunType, runtime: &'r Runtime) -> Self
     where
-        Self: 's,
         'r: 's,
     {
         StructRef::new(value, runtime)
