@@ -2,41 +2,343 @@ use crate::SourceFile;
 
 #[test]
 fn array_type() {
-    snapshot_test(
-        r"
+    insta::assert_snapshot!(SourceFile::parse(
+        r#"
     fn main(a: [int]) {
         let a:[[bool]];
-    }
-    ",
+    }"#,
+    ).debug_dump(), @r###"
+    SOURCE_FILE@0..54
+      FUNCTION_DEF@0..54
+        WHITESPACE@0..5 "\n    "
+        FN_KW@5..7 "fn"
+        WHITESPACE@7..8 " "
+        NAME@8..12
+          IDENT@8..12 "main"
+        PARAM_LIST@12..22
+          L_PAREN@12..13 "("
+          PARAM@13..21
+            BIND_PAT@13..14
+              NAME@13..14
+                IDENT@13..14 "a"
+            COLON@14..15 ":"
+            WHITESPACE@15..16 " "
+            ARRAY_TYPE@16..21
+              L_BRACKET@16..17 "["
+              PATH_TYPE@17..20
+                PATH@17..20
+                  PATH_SEGMENT@17..20
+                    NAME_REF@17..20
+                      IDENT@17..20 "int"
+              R_BRACKET@20..21 "]"
+          R_PAREN@21..22 ")"
+        WHITESPACE@22..23 " "
+        BLOCK_EXPR@23..54
+          L_CURLY@23..24 "{"
+          WHITESPACE@24..33 "\n        "
+          LET_STMT@33..48
+            LET_KW@33..36 "let"
+            WHITESPACE@36..37 " "
+            BIND_PAT@37..38
+              NAME@37..38
+                IDENT@37..38 "a"
+            COLON@38..39 ":"
+            ARRAY_TYPE@39..47
+              L_BRACKET@39..40 "["
+              ARRAY_TYPE@40..46
+                L_BRACKET@40..41 "["
+                PATH_TYPE@41..45
+                  PATH@41..45
+                    PATH_SEGMENT@41..45
+                      NAME_REF@41..45
+                        IDENT@41..45 "bool"
+                R_BRACKET@45..46 "]"
+              R_BRACKET@46..47 "]"
+            SEMI@47..48 ";"
+          WHITESPACE@48..53 "\n    "
+          R_CURLY@53..54 "}"
+    "###
     )
 }
 
 #[test]
 fn index_expr() {
-    snapshot_test(
-        r"
+    insta::assert_snapshot!(SourceFile::parse(
+        r#"
     fn main() {
         let a = [1,2,3,4]
         let b = a[0];
         let c = a[b];
         a[0] = c;
         let a = { [3,4,5] }[1];
-    }
-    ",
+    }"#,
+    ).debug_dump(), @r###"
+    SOURCE_FILE@0..142
+      FUNCTION_DEF@0..142
+        WHITESPACE@0..5 "\n    "
+        FN_KW@5..7 "fn"
+        WHITESPACE@7..8 " "
+        NAME@8..12
+          IDENT@8..12 "main"
+        PARAM_LIST@12..14
+          L_PAREN@12..13 "("
+          R_PAREN@13..14 ")"
+        WHITESPACE@14..15 " "
+        BLOCK_EXPR@15..142
+          L_CURLY@15..16 "{"
+          WHITESPACE@16..25 "\n        "
+          LET_STMT@25..42
+            LET_KW@25..28 "let"
+            WHITESPACE@28..29 " "
+            BIND_PAT@29..30
+              NAME@29..30
+                IDENT@29..30 "a"
+            WHITESPACE@30..31 " "
+            EQ@31..32 "="
+            WHITESPACE@32..33 " "
+            ARRAY_EXPR@33..42
+              L_BRACKET@33..34 "["
+              LITERAL@34..35
+                INT_NUMBER@34..35 "1"
+              COMMA@35..36 ","
+              LITERAL@36..37
+                INT_NUMBER@36..37 "2"
+              COMMA@37..38 ","
+              LITERAL@38..39
+                INT_NUMBER@38..39 "3"
+              COMMA@39..40 ","
+              LITERAL@40..41
+                INT_NUMBER@40..41 "4"
+              R_BRACKET@41..42 "]"
+          WHITESPACE@42..51 "\n        "
+          LET_STMT@51..64
+            LET_KW@51..54 "let"
+            WHITESPACE@54..55 " "
+            BIND_PAT@55..56
+              NAME@55..56
+                IDENT@55..56 "b"
+            WHITESPACE@56..57 " "
+            EQ@57..58 "="
+            WHITESPACE@58..59 " "
+            INDEX_EXPR@59..63
+              PATH_EXPR@59..60
+                PATH@59..60
+                  PATH_SEGMENT@59..60
+                    NAME_REF@59..60
+                      IDENT@59..60 "a"
+              L_BRACKET@60..61 "["
+              LITERAL@61..62
+                INT_NUMBER@61..62 "0"
+              R_BRACKET@62..63 "]"
+            SEMI@63..64 ";"
+          WHITESPACE@64..73 "\n        "
+          LET_STMT@73..86
+            LET_KW@73..76 "let"
+            WHITESPACE@76..77 " "
+            BIND_PAT@77..78
+              NAME@77..78
+                IDENT@77..78 "c"
+            WHITESPACE@78..79 " "
+            EQ@79..80 "="
+            WHITESPACE@80..81 " "
+            INDEX_EXPR@81..85
+              PATH_EXPR@81..82
+                PATH@81..82
+                  PATH_SEGMENT@81..82
+                    NAME_REF@81..82
+                      IDENT@81..82 "a"
+              L_BRACKET@82..83 "["
+              PATH_EXPR@83..84
+                PATH@83..84
+                  PATH_SEGMENT@83..84
+                    NAME_REF@83..84
+                      IDENT@83..84 "b"
+              R_BRACKET@84..85 "]"
+            SEMI@85..86 ";"
+          WHITESPACE@86..95 "\n        "
+          EXPR_STMT@95..104
+            BIN_EXPR@95..103
+              INDEX_EXPR@95..99
+                PATH_EXPR@95..96
+                  PATH@95..96
+                    PATH_SEGMENT@95..96
+                      NAME_REF@95..96
+                        IDENT@95..96 "a"
+                L_BRACKET@96..97 "["
+                LITERAL@97..98
+                  INT_NUMBER@97..98 "0"
+                R_BRACKET@98..99 "]"
+              WHITESPACE@99..100 " "
+              EQ@100..101 "="
+              WHITESPACE@101..102 " "
+              PATH_EXPR@102..103
+                PATH@102..103
+                  PATH_SEGMENT@102..103
+                    NAME_REF@102..103
+                      IDENT@102..103 "c"
+            SEMI@103..104 ";"
+          WHITESPACE@104..113 "\n        "
+          LET_STMT@113..132
+            LET_KW@113..116 "let"
+            WHITESPACE@116..117 " "
+            BIND_PAT@117..118
+              NAME@117..118
+                IDENT@117..118 "a"
+            WHITESPACE@118..119 " "
+            EQ@119..120 "="
+            WHITESPACE@120..121 " "
+            BLOCK_EXPR@121..132
+              L_CURLY@121..122 "{"
+              WHITESPACE@122..123 " "
+              ARRAY_EXPR@123..130
+                L_BRACKET@123..124 "["
+                LITERAL@124..125
+                  INT_NUMBER@124..125 "3"
+                COMMA@125..126 ","
+                LITERAL@126..127
+                  INT_NUMBER@126..127 "4"
+                COMMA@127..128 ","
+                LITERAL@128..129
+                  INT_NUMBER@128..129 "5"
+                R_BRACKET@129..130 "]"
+              WHITESPACE@130..131 " "
+              R_CURLY@131..132 "}"
+          EXPR_STMT@132..136
+            ARRAY_EXPR@132..135
+              L_BRACKET@132..133 "["
+              LITERAL@133..134
+                INT_NUMBER@133..134 "1"
+              R_BRACKET@134..135 "]"
+            SEMI@135..136 ";"
+          WHITESPACE@136..141 "\n    "
+          R_CURLY@141..142 "}"
+    "###
     )
 }
 
 #[test]
 fn array_expr() {
-    snapshot_test(
-        r"
+    insta::assert_snapshot!(SourceFile::parse(
+        r#"
     fn main() {
         let a = [1,2,3,]
         let a = []
         let a = [call(123)]
         let a = [Struct { }, Struct { }]
-    }
-    ",
+    }"#,
+    ).debug_dump(), @r###"
+    SOURCE_FILE@0..135
+      FUNCTION_DEF@0..135
+        WHITESPACE@0..5 "\n    "
+        FN_KW@5..7 "fn"
+        WHITESPACE@7..8 " "
+        NAME@8..12
+          IDENT@8..12 "main"
+        PARAM_LIST@12..14
+          L_PAREN@12..13 "("
+          R_PAREN@13..14 ")"
+        WHITESPACE@14..15 " "
+        BLOCK_EXPR@15..135
+          L_CURLY@15..16 "{"
+          WHITESPACE@16..25 "\n        "
+          LET_STMT@25..41
+            LET_KW@25..28 "let"
+            WHITESPACE@28..29 " "
+            BIND_PAT@29..30
+              NAME@29..30
+                IDENT@29..30 "a"
+            WHITESPACE@30..31 " "
+            EQ@31..32 "="
+            WHITESPACE@32..33 " "
+            ARRAY_EXPR@33..41
+              L_BRACKET@33..34 "["
+              LITERAL@34..35
+                INT_NUMBER@34..35 "1"
+              COMMA@35..36 ","
+              LITERAL@36..37
+                INT_NUMBER@36..37 "2"
+              COMMA@37..38 ","
+              LITERAL@38..39
+                INT_NUMBER@38..39 "3"
+              COMMA@39..40 ","
+              R_BRACKET@40..41 "]"
+          WHITESPACE@41..50 "\n        "
+          LET_STMT@50..60
+            LET_KW@50..53 "let"
+            WHITESPACE@53..54 " "
+            BIND_PAT@54..55
+              NAME@54..55
+                IDENT@54..55 "a"
+            WHITESPACE@55..56 " "
+            EQ@56..57 "="
+            WHITESPACE@57..58 " "
+            ARRAY_EXPR@58..60
+              L_BRACKET@58..59 "["
+              R_BRACKET@59..60 "]"
+          WHITESPACE@60..69 "\n        "
+          LET_STMT@69..88
+            LET_KW@69..72 "let"
+            WHITESPACE@72..73 " "
+            BIND_PAT@73..74
+              NAME@73..74
+                IDENT@73..74 "a"
+            WHITESPACE@74..75 " "
+            EQ@75..76 "="
+            WHITESPACE@76..77 " "
+            ARRAY_EXPR@77..88
+              L_BRACKET@77..78 "["
+              CALL_EXPR@78..87
+                PATH_EXPR@78..82
+                  PATH@78..82
+                    PATH_SEGMENT@78..82
+                      NAME_REF@78..82
+                        IDENT@78..82 "call"
+                ARG_LIST@82..87
+                  L_PAREN@82..83 "("
+                  LITERAL@83..86
+                    INT_NUMBER@83..86 "123"
+                  R_PAREN@86..87 ")"
+              R_BRACKET@87..88 "]"
+          WHITESPACE@88..97 "\n        "
+          LET_STMT@97..129
+            LET_KW@97..100 "let"
+            WHITESPACE@100..101 " "
+            BIND_PAT@101..102
+              NAME@101..102
+                IDENT@101..102 "a"
+            WHITESPACE@102..103 " "
+            EQ@103..104 "="
+            WHITESPACE@104..105 " "
+            ARRAY_EXPR@105..129
+              L_BRACKET@105..106 "["
+              RECORD_LIT@106..116
+                PATH_TYPE@106..112
+                  PATH@106..112
+                    PATH_SEGMENT@106..112
+                      NAME_REF@106..112
+                        IDENT@106..112 "Struct"
+                WHITESPACE@112..113 " "
+                RECORD_FIELD_LIST@113..116
+                  L_CURLY@113..114 "{"
+                  WHITESPACE@114..115 " "
+                  R_CURLY@115..116 "}"
+              COMMA@116..117 ","
+              WHITESPACE@117..118 " "
+              RECORD_LIT@118..128
+                PATH_TYPE@118..124
+                  PATH@118..124
+                    PATH_SEGMENT@118..124
+                      NAME_REF@118..124
+                        IDENT@118..124 "Struct"
+                WHITESPACE@124..125 " "
+                RECORD_FIELD_LIST@125..128
+                  L_CURLY@125..126 "{"
+                  WHITESPACE@126..127 " "
+                  R_CURLY@127..128 "}"
+              R_BRACKET@128..129 "]"
+          WHITESPACE@129..134 "\n    "
+          R_CURLY@134..135 "}"
+    "###
     )
 }
 

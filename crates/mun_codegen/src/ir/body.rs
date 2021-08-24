@@ -390,7 +390,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             "type_info_ptr_to_i8_ptr",
         );
 
-        let allocator_handle = self.get_allocator_handle_ptr().into();
+        let allocator_handle = self.get_allocator_handle_ptr();
 
         // An object pointer adds an extra layer of indirection to allow for hot reloading. To
         // make it struct type agnostic, it is stored in a `*const *mut std::ffi::c_void`.
@@ -1416,7 +1416,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         let type_info_ptr = self.type_table.gen_type_info_lookup(
             self.context,
             &self.builder,
-            &self.hir_types.type_info(&array_ty),
+            &self.hir_types.type_info(array_ty),
             self.external_globals.type_table,
         );
 
@@ -1440,7 +1440,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .builder
             .build_call(
                 new_array_fn_ptr,
-                &[type_info_ptr, length_value.into(), allocator_handle.into()],
+                &[type_info_ptr.into(), length_value.into(), allocator_handle.into()],
                 "new_array",
             )
             .try_as_basic_value()

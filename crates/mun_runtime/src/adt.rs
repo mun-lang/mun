@@ -2,10 +2,11 @@ use crate::garbage_collector::{GcPtr, GcRootPtr, UnsafeTypeInfo};
 use crate::{
     marshal::Marshal,
     reflection::{
-        equals_argument_type, equals_return_type, ArgumentReflection, ReturnTypeReflection,
+        equals_argument_type, ArgumentReflection, ReturnTypeReflection,
     },
     GarbageCollector, Runtime,
 };
+use abi::TypeInfo;
 use memory::gc::{GcRuntime, HasIndirectionPtr};
 use once_cell::sync::OnceCell;
 use std::{
@@ -20,7 +21,7 @@ pub struct RawStruct(GcPtr);
 
 impl RawStruct {
     /// Returns a pointer to the struct memory.
-    pub unsafe fn get_ptr(&self) -> *const u8 {
+    pub unsafe fn get_ptr(&self) -> NonNull<u8> {
         self.0.deref()
     }
 }
@@ -72,7 +73,9 @@ impl<'s> StructRef<'s> {
     ) -> NonNull<T> {
         let offset = *struct_info.field_offsets().get_unchecked(field_idx);
         // Safety: self.raw's memory pointer is never null
-        NonNull::new_unchecked(self.raw.get_ptr().add(offset as usize).cast::<T>() as *mut _)
+        NonNull::new_unchecked(
+            self.raw.get_ptr().as_ptr().add(offset as usize).cast::<T>() as *mut _
+        )
     }
 
     /// Retrieves the value of the field corresponding to the specified `field_name`.
@@ -90,15 +93,15 @@ impl<'s> StructRef<'s> {
         // Safety: If we found the `field_idx`, we are guaranteed to also have the `field_type` and
         // `field_offset`.
         let field_type = unsafe { struct_info.field_types().get_unchecked(field_idx) };
-        equals_return_type::<T>(field_type).map_err(|(expected, found)| {
-            format!(
-                "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
+        if !T::equals_type(field_type) {
+            return Err(format!(
+                "mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
                 type_info.name(),
                 field_name,
-                expected,
-                found,
-            )
-        })?;
+                T::type_name(),
+                type_info.name(),
+            ));
+        };
 
         // If we found the `field_idx`, we are guaranteed to also have the `field_offset`
         let field_ptr =
@@ -204,6 +207,10 @@ impl<'r> ReturnTypeReflection for StructRef<'r> {
         static GUID: OnceCell<abi::Guid> = OnceCell::new();
         *GUID.get_or_init(|| abi::Guid(md5::compute(<Self as ReturnTypeReflection>::type_name()).0))
     }
+
+    fn equals_type(type_info: &TypeInfo) -> bool {
+        type_info.as_struct().is_some()
+    }
 }
 
 impl<'s> Marshal<'s> for StructRef<'s> {
@@ -238,7 +245,7 @@ impl<'s> Marshal<'s> for StructRef<'s> {
             // For a value struct, `ptr` points to a struct value.
 
             // Create a new object using the runtime's intrinsic
-            let mut gc_handle = {
+            let gc_handle = {
                 runtime.gc().alloc(
                     // Safety: `ty` is a shared reference, so is guaranteed to not be `ptr::null()`.
                     UnsafeTypeInfo::new(unsafe {
@@ -249,9 +256,9 @@ impl<'s> Marshal<'s> for StructRef<'s> {
 
             // Construct
             let src = ptr.cast::<u8>().as_ptr() as *const _;
-            let dest = unsafe { gc_handle.deref_mut::<u8>() };
+            let dest = unsafe { gc_handle.deref::<u8>() };
             let size = type_info.size_in_bytes();
-            unsafe { ptr::copy_nonoverlapping(src, dest, size) };
+            unsafe { ptr::copy_nonoverlapping(src, dest.as_ptr(), size) };
 
             gc_handle
         } else {
@@ -274,7 +281,9 @@ impl<'s> Marshal<'s> for StructRef<'s> {
         if struct_info.memory_kind == abi::StructMemoryKind::Value {
             let dest = ptr.cast::<u8>().as_ptr();
             let size = type_info.size_in_bytes();
-            unsafe { ptr::copy_nonoverlapping(value.into_raw().get_ptr(), dest, size as usize) };
+            unsafe {
+                ptr::copy_nonoverlapping(value.into_raw().get_ptr().as_ptr(), dest, size as usize)
+            };
         } else {
             unsafe { *ptr.as_mut() = value.into_raw() };
         }

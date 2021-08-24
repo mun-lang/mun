@@ -67,7 +67,7 @@ fn collect_expr<'db, 'ink>(
     }
 
     if let Expr::Array(_) = expr {
-        collect_intrinsic(context, &target, &intrinsics::new_array, intrinsics);
+        collect_intrinsic(context, target, &intrinsics::new_array, intrinsics);
         *needs_alloc = true;
     }
 

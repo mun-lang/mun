@@ -18,12 +18,12 @@ impl_struct_ty!(Foo);
 #[test]
 fn test_trace() {
     let runtime = MarkSweep::<&'static TypeInfo, EventAggregator<Event>>::default();
-    let mut foo_handle = runtime.alloc(Foo::type_info());
+    let foo_handle = runtime.alloc(Foo::type_info());
     let bar_handle = runtime.alloc(i64::type_info());
 
     // Assign bar to foo.bar
     unsafe {
-        (*foo_handle.deref_mut::<Foo>()).bar = bar_handle;
+        foo_handle.deref::<Foo>().as_mut().bar = bar_handle;
     }
 
     // Trace foo to see if we get bar back
@@ -38,12 +38,12 @@ fn test_trace() {
 #[test]
 fn trace_collect() {
     let runtime = Arc::new(MarkSweep::<&'static TypeInfo, EventAggregator<Event>>::default());
-    let mut foo = GcRootPtr::new(&runtime, runtime.alloc(Foo::type_info()));
+    let foo = GcRootPtr::new(&runtime, runtime.alloc(Foo::type_info()));
     let bar = runtime.alloc(i64::type_info());
 
     // Assign bar to foo.bar
     unsafe {
-        (*foo.deref_mut::<Foo>()).bar = bar;
+        foo.deref::<Foo>().as_mut().bar = bar;
     }
 
     // Collect garbage, bar should not be collected
@@ -70,11 +70,11 @@ fn trace_collect() {
 #[test]
 fn trace_cycle() {
     let runtime = Arc::new(MarkSweep::<&'static TypeInfo, EventAggregator<Event>>::default());
-    let mut foo = GcRootPtr::new(&runtime, runtime.alloc(Foo::type_info()));
+    let foo = GcRootPtr::new(&runtime, runtime.alloc(Foo::type_info()));
 
     // Assign bar to foo.bar
     unsafe {
-        (*foo.deref_mut::<Foo>()).bar = foo.handle();
+        foo.deref::<Foo>().as_mut().bar = foo.handle();
     }
 
     // Collect garbage, nothing should be collected since foo is rooted

@@ -1,4 +1,4 @@
-use crate::{marshal::Marshal, Runtime, StructRef};
+use crate::{marshal::Marshal, Runtime};
 use abi::HasStaticTypeInfo;
 use once_cell::sync::OnceCell;
 
@@ -15,28 +15,6 @@ pub fn equals_argument_type<'e, 'f, T: ArgumentReflection>(
     }
 }
 
-/// Returns whether the specified return type matches the `type_info`.
-pub fn equals_return_type<T: ReturnTypeReflection>(
-    type_info: &abi::TypeInfo,
-) -> Result<(), (&str, &str)> {
-    match type_info.data {
-        abi::TypeInfoData::Primitive => {
-            if type_info.guid != T::type_guid() {
-                return Err((type_info.name(), T::type_name()));
-            }
-        }
-        abi::TypeInfoData::Struct(_) => {
-            if <StructRef as ReturnTypeReflection>::type_guid() != T::type_guid() {
-                return Err(("struct", T::type_name()));
-            }
-        }
-        abi::TypeInfoData::Array(_) => {
-            unimplemented!()
-        }
-    }
-    Ok(())
-}
-
 /// A type to emulate dynamic typing across compilation units for static types.
 pub trait ReturnTypeReflection: Sized {
     /// Retrieves the type's `Guid`.
@@ -44,6 +22,11 @@ pub trait ReturnTypeReflection: Sized {
 
     /// Retrieves the type's name.
     fn type_name() -> &'static str;
+
+    /// Returns true if this type equals the given type information
+    fn equals_type(type_info: &abi::TypeInfo) -> bool {
+        type_info.name() == Self::type_name()
+    }
 }
 
 /// A type to emulate dynamic typing across compilation units for statically typed values.
@@ -134,6 +117,7 @@ impl ReturnTypeReflection for () {
         *GUID.get_or_init(|| abi::Guid(md5::compute(Self::type_name()).0))
     }
 }
+
 impl<'t> Marshal<'t> for () {
     type MunType = ();
 

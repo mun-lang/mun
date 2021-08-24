@@ -3,6 +3,7 @@ use crate::{
     HasCompileTimeMemoryLayout,
 };
 use std::marker::PhantomData;
+use std::ptr::NonNull;
 use std::sync::{Arc, Weak};
 
 /// A `GcPtr` that automatically roots and unroots its internal `GcPtr`.
@@ -69,7 +70,7 @@ impl<T: HasCompileTimeMemoryLayout + TypeTrace, G: GcRuntime<T>> Drop for GcRoot
 impl<T: HasCompileTimeMemoryLayout + TypeTrace, G: GcRuntime<T>> HasIndirectionPtr
     for GcRootPtr<T, G>
 {
-    unsafe fn deref<R: Sized>(&self) -> *const R {
+    unsafe fn deref<R: Sized>(&self) -> NonNull<R> {
         self.handle.deref()
     }
 }

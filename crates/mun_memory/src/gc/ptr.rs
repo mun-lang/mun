@@ -1,3 +1,5 @@
+use std::ptr::NonNull;
+
 /// A `GcPtr` is what you interact with outside of the allocator. It is a pointer to a piece of
 /// memory that points to the actual data stored in memory.
 ///
@@ -22,21 +24,12 @@ pub trait HasIndirectionPtr {
     /// # Safety
     ///
     /// This is an unsafe method because derefencing could result in an access violation.
-    unsafe fn deref<T: Sized>(&self) -> *const T;
-
-    /// Returns a mutable pointer to the referenced memory.
-    ///
-    /// # Safety
-    ///
-    /// This is an unsafe method because derefencing could result in an access violation.
-    unsafe fn deref_mut<T: Sized>(&mut self) -> *mut T {
-        self.deref::<T>() as *mut _
-    }
+    unsafe fn deref<T: Sized>(&self) -> NonNull<T>;
 }
 
 impl HasIndirectionPtr for GcPtr {
-    unsafe fn deref<T: Sized>(&self) -> *const T {
-        (*self.0).cast()
+    unsafe fn deref<T: Sized>(&self) -> NonNull<T> {
+        NonNull::new_unchecked(*self.0 as *mut T)
     }
 }
 

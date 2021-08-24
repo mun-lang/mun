@@ -65,7 +65,7 @@ macro_rules! impl_struct_ty {
             #[allow(non_upper_case_globals, non_snake_case)]
             fn [<trace_ $ty>](obj:GcPtr) -> Vec<GcPtr> {
                 let mut result = Vec::new();
-                let foo = unsafe { &(*obj.deref::<$ty>()) };
+                let foo = unsafe { &(obj.deref::<$ty>().as_ref()) };
                 foo.trace(&mut result);
                 result
             }

@@ -397,7 +397,7 @@ fn test_gc_alloc() {
     assert_eq!(handle.token(), 0);
 
     let obj = unsafe { obj.assume_init() };
-    assert_ne!(unsafe { obj.deref::<u8>() }, ptr::null());
+    assert_ne!(unsafe { obj.deref::<u8>().as_ptr() }, ptr::null_mut());
 
     let mut reclaimed = false;
     let handle = unsafe { mun_gc_collect(driver.runtime, &mut reclaimed as *mut _) };
@@ -461,7 +461,7 @@ fn test_gc_ptr_type() {
     assert_eq!(handle.token(), 0);
 
     let obj = unsafe { obj.assume_init() };
-    assert_ne!(unsafe { obj.deref::<u8>() }, ptr::null());
+    assert_ne!(unsafe { obj.deref::<u8>().as_ptr() }, ptr::null_mut());
 
     let mut ty = MaybeUninit::uninit();
     let handle = unsafe { mun_gc_ptr_type(driver.runtime, obj, ty.as_mut_ptr()) };
@@ -508,7 +508,7 @@ fn test_gc_rooting() {
     assert_eq!(handle.token(), 0);
 
     let obj = unsafe { obj.assume_init() };
-    assert_ne!(unsafe { obj.deref::<u8>() }, ptr::null());
+    assert_ne!(unsafe { obj.deref::<u8>().as_ptr() }, ptr::null_mut());
 
     let handle = unsafe { mun_gc_root(driver.runtime, obj) };
 

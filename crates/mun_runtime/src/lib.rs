@@ -8,6 +8,7 @@ mod assembly;
 #[macro_use]
 mod garbage_collector;
 mod adt;
+mod array;
 mod marshal;
 mod reflection;
 
@@ -32,6 +33,7 @@ use std::{
 
 pub use crate::{
     adt::{RootedStruct, StructRef},
+    array::{ArrayRef, RawArray},
     assembly::Assembly,
     garbage_collector::UnsafeTypeInfo,
     marshal::Marshal,
@@ -652,7 +654,15 @@ impl Runtime {
 
         // Validate the return type
         match if let Some(return_type) = function_info.prototype.signature.return_type() {
-            crate::reflection::equals_return_type::<ReturnType>(return_type)
+            if !ReturnType::equals_type(return_type) {
+                Err((
+                    return_type.name(),
+                    ReturnType::type_name(),
+                ))
+            }
+            else {
+                Ok(())
+            }
         } else if <() as ReturnTypeReflection>::type_guid() != ReturnType::type_guid() {
             Err((
                 <() as ReturnTypeReflection>::type_name(),

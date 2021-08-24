@@ -129,7 +129,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
         let length_ir_type = self.context.ptr_sized_int_type(&self.target_data, None);
         let capacity_ir_type = self.context.ptr_sized_int_type(&self.target_data, None);
         let element_ir_type = self
-            .get_basic_type(&element_ty)
+            .get_basic_type(element_ty)
             .expect("could not convert array element type to basic type");
 
         let array_value_type = self.context.struct_type(

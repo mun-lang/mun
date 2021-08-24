@@ -190,9 +190,15 @@ impl Iterator for ArrayIterator {
 
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
         if self.remaining > n {
-            let result = self.element_offset;
-            self.element_offset = unsafe {
+            let result = unsafe {
                 NonNull::new_unchecked(self.element_offset.as_ptr().add(self.element_stride * n))
+            };
+            self.element_offset = unsafe {
+                NonNull::new_unchecked(
+                    self.element_offset
+                        .as_ptr()
+                        .add(self.element_stride * (n + 1)),
+                )
             };
             self.remaining -= n;
             Some(result)
@@ -383,12 +389,7 @@ fn trace<F: FnMut(GcPtr)>(ty: UnsafeTypeInfo, value_ptr: NonNull<u8>, f: &mut F,
 
 impl gc::TypeTrace for UnsafeTypeInfo {
     fn trace<F: FnMut(GcPtr)>(&self, obj: GcPtr, mut f: F) {
-        trace(
-            *self,
-            unsafe { NonNull::new_unchecked(obj.deref::<u8>() as *mut u8) },
-            &mut f,
-            true,
-        )
+        trace(*self, unsafe { obj.deref::<u8>() }, &mut f, true)
     }
 }
 
