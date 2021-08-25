@@ -60,7 +60,6 @@ where
             let mut stats = self.stats.write();
             let object_info: *const ObjectInfo<T> = handle.into();
             let value_memory_layout = unsafe { (*object_info).ty.layout((*object_info).ptr) };
-            dbg!(("alloc", &value_memory_layout));
             stats.allocated_memory += value_memory_layout.size();
         }
 
