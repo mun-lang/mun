@@ -36,3 +36,64 @@ fn array_of_structs() {
     assert_eq!(result.len(), 2);
     assert_eq!(number, 18571);
 }
+
+#[test]
+fn arrays_as_argument() {
+    let driver = CompileAndRunTestDriver::new(
+        r"
+    pub fn generate() -> [i32] { [5,4,3,2,1] }
+    pub fn add_one(array: [i32], len: usize) -> [i32] {
+        let i = 0;
+        loop {
+            array[i] += 1;
+            i += 1;
+            if i >= len {
+                break array
+            }
+        }
+    }
+    ",
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
+
+    let runtime = driver.runtime();
+    let runtime_ref = runtime.borrow();
+    let result: ArrayRef<'_, i32> = invoke_fn!(runtime_ref, "generate").unwrap();
+
+    assert_eq!(result.len(), 5);
+    assert!(result.capacity() >= 5);
+    assert_eq!(result.iter().collect::<Vec<_>>(), vec![5, 4, 3, 2, 1]);
+
+    let result_array: ArrayRef<'_, i32> =
+        invoke_fn!(runtime_ref, "add_one", result.clone(), result.len()).unwrap();
+
+    assert_eq!(result_array.len(), 5);
+    assert!(result_array.capacity() >= 5);
+    assert_eq!(result_array.iter().collect::<Vec<_>>(), vec![6, 5, 4, 3, 2]);
+}
+
+#[test]
+fn root_array() {
+    let driver = CompileAndRunTestDriver::new(
+        r"
+    pub fn main() -> [i32] { [5,4,3,2,1] }
+    ",
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
+
+    let result = {
+        let runtime = driver.runtime();
+        let runtime_ref = runtime.borrow();
+        let array: ArrayRef<i32> = invoke_fn!(runtime_ref, "main").unwrap();
+        array.root(driver.runtime())
+    };
+
+    assert_eq!(result.by_ref().len(), 5);
+    assert!(result.by_ref().capacity() >= 5);
+    assert_eq!(
+        result.by_ref().iter().collect::<Vec<_>>(),
+        vec![5, 4, 3, 2, 1]
+    );
+}

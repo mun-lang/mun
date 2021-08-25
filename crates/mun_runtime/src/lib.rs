@@ -33,7 +33,7 @@ use std::{
 
 pub use crate::{
     adt::{RootedStruct, StructRef},
-    array::{ArrayRef, RawArray},
+    array::{ArrayRef, RootedArray},
     assembly::Assembly,
     garbage_collector::UnsafeTypeInfo,
     marshal::Marshal,
