@@ -93,7 +93,7 @@ impl AstIdMap {
         assert!(node.parent().is_none());
 
         let mut res = AstIdMap::default();
-        // By walking the tree in bread-first order we make sure that parents
+        // By walking the tree in breadth-first order we make sure that parents
         // get lower ids then children. That is, adding a new child does not
         // change parent's id. This means that, say, adding a new function to a
         // trait does not change ids of top-level items, which helps caching.
