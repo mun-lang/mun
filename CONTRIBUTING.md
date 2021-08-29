@@ -54,7 +54,7 @@ codebase to enable this functionality. See
 ## Git Workflow
 
 We follow a Git workflow similar to
-[Kubernetes](https://github.com/kubernetes/community/blob/master/contributors/guide/git_workflow.png).
+[Kubernetes](https://github.com/kubernetes/community/blob/main/contributors/guide/git_workflow.png).
 If you are not familiar with it, please review the following instructions.
 
 ### Fork the Repository
@@ -85,16 +85,16 @@ git remote -v
 
 ### Create a Branch
 
-Update your local `master` branch:
+Update your local `main` branch:
 
 ```bash
 cd $working_dir/mun
 git fetch upstream
-git checkout master
-git rebase upstream/master
+git checkout main
+git rebase upstream/main
 ```
 
-Branch from `master`:
+Branch from `main`:
 
 ```bash
 git checkout -b feature/my-precious
@@ -107,7 +107,7 @@ Now you are ready to edit code on the `feature/my-precious` branch.
 ```bash
 # While on your feature/my-precious branch
 git fetch upstream
-git rebase upstream/master
+git rebase upstream/main
 ```
 
 Please don't use `git pull` instead of the above `fetch` / `rebase`. By default,
@@ -171,7 +171,7 @@ Refs #133
 ```
 
 For more examples, check [recent commit
-message](https://github.com/mun-lang/mun/commits/master).
+message](https://github.com/mun-lang/mun/commits/main).
 
 ### Push Changes
 
@@ -188,7 +188,7 @@ push](https://blog.developer.atlassian.com/force-with-lease/) changes.
 ### Create a Pull Request
 
 Please submit a [GitHub Pull Request to
-mun-lang/mun](https://github.com/mun-lang/mun/pull/new/master) with a clear list
+mun-lang/mun](https://github.com/mun-lang/mun/pull/new/main) with a clear list
 of changes (read more about [pull
 requests](http://help.github.com/pull-requests/)). When you submit a pull request,
 make sure to include tests that validate the implemented feature or bugfix
