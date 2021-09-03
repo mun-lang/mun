@@ -519,7 +519,7 @@ impl<Name: AsRef<str>, T: InvokeArgs> InvokeErr<Name, T> {
 /// A trait that handles calling a certain function with a set of arguments. This trait is
 /// implemented for tuples up to and including 20 elements.
 pub trait InvokeArgs {
-    /// Determines if the specified function can be called with these arguments
+    /// Determines whether the specified function can be called with these arguments
     fn can_invoke<'runtime>(
         &self,
         runtime: &'runtime Runtime,
@@ -530,7 +530,7 @@ pub trait InvokeArgs {
     ///
     /// # Safety
     ///
-    /// The `fn_ptr` is casted and invoked which might result in undefined behavior.
+    /// The `fn_ptr` is cast and invoked which might result in undefined behavior.
     unsafe fn invoke<ReturnType>(self, fn_ptr: *const c_void) -> ReturnType;
 }
 
