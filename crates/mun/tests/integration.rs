@@ -1,5 +1,5 @@
 use mun::run_with_args;
-use mun_runtime::{invoke_fn, RuntimeBuilder};
+use mun_runtime::RuntimeBuilder;
 use std::ffi::OsString;
 use std::path::Path;
 
@@ -75,6 +75,6 @@ fn build_and_run(project: &Path) {
 
     let runtime = RuntimeBuilder::new(&library_path).spawn().unwrap();
     let runtime_ref = runtime.borrow();
-    let result: f64 = invoke_fn!(runtime_ref, "main").unwrap();
+    let result: f64 = runtime_ref.invoke("main", ()).unwrap();
     assert_eq!(result, 3.14159);
 }

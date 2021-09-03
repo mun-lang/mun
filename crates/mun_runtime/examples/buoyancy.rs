@@ -1,4 +1,4 @@
-use mun_runtime::{invoke_fn, RuntimeBuilder, StructRef};
+use mun_runtime::{RuntimeBuilder, StructRef};
 use std::{env, time};
 
 extern "C" fn log_f32(value: f32) {
@@ -18,7 +18,7 @@ fn main() {
         .expect("Failed to spawn Runtime");
 
     let runtime_ref = runtime.borrow();
-    let ctx: StructRef = invoke_fn!(runtime_ref, "new_sim").unwrap();
+    let ctx: StructRef = runtime_ref.invoke("new_sim", ()).unwrap();
 
     let mut previous = time::Instant::now();
     const FRAME_TIME: time::Duration = time::Duration::from_millis(40);
@@ -34,7 +34,9 @@ fn main() {
         };
 
         let runtime_ref = runtime.borrow();
-        let _: () = invoke_fn!(runtime_ref, "sim_update", ctx.clone(), elapsed_secs).unwrap();
+        let _: () = runtime_ref
+            .invoke("sim_update", (ctx.clone(), elapsed_secs))
+            .unwrap();
         previous = now;
 
         runtime.borrow_mut().update();

@@ -1,4 +1,4 @@
-use mun_runtime::{invoke_fn, RuntimeBuilder};
+use mun_runtime::RuntimeBuilder;
 use std::env;
 
 // How to run?
@@ -16,9 +16,12 @@ fn main() {
     let mut runtime_ref = runtime.borrow_mut();
 
     loop {
-        let n: i64 = invoke_fn!(runtime_ref, "nth").unwrap_or_else(|e| e.wait(&mut runtime_ref));
-        let result: i64 =
-            invoke_fn!(runtime_ref, "fibonacci", n).unwrap_or_else(|e| e.wait(&mut runtime_ref));
+        let n: i64 = runtime_ref
+            .invoke("nth", ())
+            .unwrap_or_else(|e| e.wait(&mut runtime_ref));
+        let result: i64 = runtime_ref
+            .invoke("fibonacci", (n,))
+            .unwrap_or_else(|e| e.wait(&mut runtime_ref));
         println!("fibonacci({}) = {}", n, result);
         runtime_ref.update();
     }

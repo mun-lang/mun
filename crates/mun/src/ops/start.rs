@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use anyhow::anyhow;
 use clap::ArgMatches;
-use mun_runtime::{invoke_fn, ReturnTypeReflection, Runtime, RuntimeBuilder};
+use mun_runtime::{ReturnTypeReflection, Runtime, RuntimeBuilder};
 
 use crate::ExitStatus;
 
@@ -24,15 +24,21 @@ pub fn start(matches: &ArgMatches) -> Result<ExitStatus, anyhow::Error> {
     if let Some(ret_type) = fn_definition.prototype.signature.return_type() {
         let type_guid = &ret_type.guid;
         if *type_guid == bool::type_guid() {
-            let result: bool = invoke_fn!(borrowed, entry_point).map_err(|e| anyhow!("{}", e))?;
+            let result: bool = borrowed
+                .invoke(entry_point, ())
+                .map_err(|e| anyhow!("{}", e))?;
 
             println!("{}", result)
         } else if *type_guid == f64::type_guid() {
-            let result: f64 = invoke_fn!(borrowed, entry_point).map_err(|e| anyhow!("{}", e))?;
+            let result: f64 = borrowed
+                .invoke(entry_point, ())
+                .map_err(|e| anyhow!("{}", e))?;
 
             println!("{}", result)
         } else if *type_guid == i64::type_guid() {
-            let result: i64 = invoke_fn!(borrowed, entry_point).map_err(|e| anyhow!("{}", e))?;
+            let result: i64 = borrowed
+                .invoke(entry_point, ())
+                .map_err(|e| anyhow!("{}", e))?;
 
             println!("{}", result)
         } else {
@@ -44,7 +50,8 @@ pub fn start(matches: &ArgMatches) -> Result<ExitStatus, anyhow::Error> {
         Ok(ExitStatus::Success)
     } else {
         #[allow(clippy::unit_arg)]
-        invoke_fn!(borrowed, entry_point)
+        borrowed
+            .invoke(entry_point, ())
             .map(|_: ()| ExitStatus::Success)
             .map_err(|e| anyhow!("{}", e))
     }

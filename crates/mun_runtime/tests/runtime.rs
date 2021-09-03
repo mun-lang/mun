@@ -5,6 +5,24 @@ use std::io;
 mod util;
 
 #[test]
+fn invoke() {
+    let driver = CompileAndRunTestDriver::new(
+        r#"
+    pub fn sum(a: i32, b: i32) -> i32 { a + b }
+    "#,
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
+
+    let result: i32 = driver
+        .runtime()
+        .borrow()
+        .invoke("sum", (123i32, 456i32))
+        .unwrap();
+    assert_eq!(123 + 456, result);
+}
+
+#[test]
 fn multiple_modules() {
     let driver = CompileAndRunTestDriver::from_fixture(
         r#"

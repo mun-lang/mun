@@ -1,7 +1,7 @@
 //! Code to perform tests on Mun code.
 
 use mun_compiler::{Config, DisplayColor, PathOrInline, RelativePathBuf};
-use mun_runtime::{invoke_fn, RuntimeBuilder};
+use mun_runtime::RuntimeBuilder;
 
 /// The type of test to create
 #[derive(Copy, Clone)]
@@ -82,5 +82,8 @@ pub fn run_test(code: &str, mode: TestMode) {
     }
 
     // Call the main function
-    let _: () = invoke_fn!(runtime.borrow_mut(), "main").expect("error calling main function");
+    let _: () = runtime
+        .borrow_mut()
+        .invoke("main", ())
+        .expect("error calling main function");
 }

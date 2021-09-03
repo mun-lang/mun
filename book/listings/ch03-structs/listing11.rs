@@ -1,5 +1,5 @@
 # extern crate mun_runtime;
-use mun_runtime::{invoke_fn, RuntimeBuilder, StructRef};
+use mun_runtime::{RuntimeBuilder, StructRef};
 use std::{cell::RefCell, env, rc::Rc};
 
 fn main() {
@@ -10,7 +10,7 @@ fn main() {
         .expect("Failed to spawn Runtime");
 
     let runtime_ref = runtime.borrow();
-    let a: StructRef = invoke_fn!(runtime_ref, "vector2_new", -1.0f32, 1.0f32).unwrap();
-    let b: StructRef = invoke_fn!(runtime_ref, "vector2_new", 1.0f32, -1.0f32).unwrap();
-    let added: StructRef = invoke_fn!(runtime_ref, "vector2_add", a, b).unwrap();
+    let a: StructRef = runtime_ref.invoke("vector2_new", (-1.0f32, 1.0f32)).unwrap();
+    let b: StructRef = runtime_ref.invoke("vector2_new", (1.0f32, -1.0f32)).unwrap();
+    let added: StructRef = runtime_ref.invoke("vector2_add", (a, b)).unwrap();
 }

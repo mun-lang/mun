@@ -6,8 +6,6 @@
 
 mod assembly;
 #[macro_use]
-mod macros;
-#[macro_use]
 mod garbage_collector;
 mod adt;
 mod marshal;
@@ -41,7 +39,10 @@ pub use crate::{
     marshal::Marshal,
     reflection::{ArgumentReflection, ReturnTypeReflection},
 };
+use abi::FunctionSignature;
 pub use abi::IntoFunctionDefinition;
+use std::ffi::c_void;
+use std::fmt::{Debug, Display, Formatter};
 
 /// Options for the construction of a [`Runtime`].
 pub struct RuntimeOptions {
@@ -436,21 +437,210 @@ impl Runtime {
     }
 }
 
-invoke_fn_impl! {
-    fn invoke_fn0() -> InvokeErr0;
-    fn invoke_fn1(arg1: A) -> InvokeErr1;
-    fn invoke_fn2(arg1: A, arg2: B) -> InvokeErr2;
-    fn invoke_fn3(arg1: A, arg2: B, arg3: C) -> InvokeErr3;
-    fn invoke_fn4(arg1: A, arg2: B, arg3: C, arg4: D) -> InvokeErr4;
-    fn invoke_fn5(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E) -> InvokeErr5;
-    fn invoke_fn6(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F) -> InvokeErr6;
-    fn invoke_fn7(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G) -> InvokeErr7;
-    fn invoke_fn8(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H) -> InvokeErr8;
-    fn invoke_fn9(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I) -> InvokeErr9;
-    fn invoke_fn10(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J) -> InvokeErr10;
-    fn invoke_fn11(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J, arg11: K) -> InvokeErr11;
-    fn invoke_fn12(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J, arg11: K, arg12: L) -> InvokeErr12;
-    fn invoke_fn13(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J, arg11: K, arg12: L, arg13: M) -> InvokeErr13;
-    fn invoke_fn14(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J, arg11: K, arg12: L, arg13: M, arg14: N) -> InvokeErr14;
-    fn invoke_fn15(arg1: A, arg2: B, arg3: C, arg4: D, arg5: E, arg6: F, arg7: G, arg8: H, arg9: I, arg10: J, arg11: K, arg12: L, arg13: M, arg14: N, arg15: O) -> InvokeErr15;
+/// An error that might occur when calling a mun function from Rust.
+pub struct InvokeErr<Name: AsRef<str>, T> {
+    msg: String,
+    function_name: Name,
+    arguments: T,
+}
+
+impl<Name: AsRef<str>, T> Debug for InvokeErr<Name, T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.msg)
+    }
+}
+
+impl<Name: AsRef<str>, T> Display for InvokeErr<Name, T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.msg)
+    }
+}
+
+impl<Name: AsRef<str>, T: InvokeArgs> InvokeErr<Name, T> {
+    /// Retries a function invocation once, resulting in a potentially successful
+    /// invocation.
+    // FIXME: `unwrap_or_else` does not compile for `StructRef`, due to
+    // https://doc.rust-lang.org/nomicon/lifetime-mismatch.html#improperly-reduced-borrows
+    pub fn retry<'r, 'o, Output>(self, runtime: &'r mut Runtime) -> Result<Output, Self>
+    where
+        Output: 'o + ReturnTypeReflection + Marshal<'o>,
+        'r: 'o,
+    {
+        // Safety: The output of `retry_impl` is guaranteed to only contain a shared
+        // reference.
+        unsafe { self.retry_impl(runtime) }
+    }
+
+    /// Retries the function invocation until it succeeds, resulting in an output.
+    // FIXME: `unwrap_or_else` does not compile for `StructRef`, due to
+    // https://doc.rust-lang.org/nomicon/lifetime-mismatch.html#improperly-reduced-borrows
+    pub fn wait<'r, 'o, Output>(mut self, runtime: &'r mut Runtime) -> Output
+    where
+        Output: 'o + ReturnTypeReflection + Marshal<'o>,
+        'r: 'o,
+    {
+        // Safety: The output of `retry_impl` is guaranteed to only contain a shared
+        // reference.
+        let runtime = &*runtime;
+
+        loop {
+            self = match unsafe { self.retry_impl(runtime) } {
+                Ok(output) => return output,
+                Err(e) => e,
+            };
+        }
+    }
+
+    /// Inner implementation that retries a function invocation once, resulting in a
+    /// potentially successful invocation. This is a workaround for:
+    /// https://doc.rust-lang.org/nomicon/lifetime-mismatch.html
+    ///
+    /// # Safety
+    ///
+    /// When calling this function, you have to guarantee that `runtime` is mutably
+    /// borrowed. The `Output` value can only contain a shared borrow of `runtime`.
+    unsafe fn retry_impl<'r, 'o, Output>(self, runtime: &'r Runtime) -> Result<Output, Self>
+    where
+        Output: 'o + ReturnTypeReflection + Marshal<'o>,
+        'r: 'o,
+    {
+        #[allow(clippy::cast_ref_to_mut)]
+        let runtime = &mut *(runtime as *const Runtime as *mut Runtime);
+
+        eprintln!("{}", self.msg);
+        while !runtime.update() {
+            // Wait until there has been an update that might fix the error
+        }
+
+        runtime.invoke(self.function_name, self.arguments)
+    }
+}
+
+/// A trait that handles calling a certain function with a set of arguments. This trait is
+/// implemented for tuples up to and including 20 elements.
+pub trait InvokeArgs {
+    /// Determines whether the specified function can be called with these arguments
+    fn can_invoke<'runtime>(
+        &self,
+        runtime: &'runtime Runtime,
+        signature: &FunctionSignature,
+    ) -> Result<(), String>;
+
+    /// Calls the specified function with these function arguments
+    ///
+    /// # Safety
+    ///
+    /// The `fn_ptr` is cast and invoked which might result in undefined behavior.
+    unsafe fn invoke<ReturnType>(self, fn_ptr: *const c_void) -> ReturnType;
+}
+
+// Implement `InvokeTraits` for tuples up to and including 20 elements
+seq_macro::seq!(N in 0..=20 {#(
+seq_macro::seq!(I in 0..N {
+    impl<'arg, #(T#I: ArgumentReflection + Marshal<'arg>,)*> InvokeArgs for (#(T#I,)*) {
+        #[allow(unused_variables)]
+        fn can_invoke<'runtime>(&self, runtime: &'runtime Runtime, signature: &FunctionSignature) -> Result<(), String> {
+            let arg_types = signature.arg_types();
+
+            // Ensure the number of arguments match
+            #[allow(clippy::len_zero)]
+            if N != arg_types.len() {
+                return Err(format!("invalid return type. Expected: {}. Found: {}", N, arg_types.len()))
+            }
+
+            #(
+            crate::reflection::equals_argument_type(runtime, arg_types[I], &self.I)
+                .map_err(|(expected, found)| {
+                    format!(
+                        "invalid argument type at index {}. Expected: {}. Found: {}.",
+                        I,
+                        expected,
+                        found,
+                    )
+                })?;
+            )*
+
+            Ok(())
+        }
+
+        unsafe fn invoke<ReturnType>(self, fn_ptr: *const c_void) -> ReturnType {
+            #[allow(clippy::type_complexity)]
+            let function: fn(#(T#I::MunType,)*) -> ReturnType = core::mem::transmute(fn_ptr);
+            function(#(self.I.marshal_into(),)*)
+        }
+    }
+});
+)*});
+
+impl Runtime {
+    /// Invokes the Mun function called `function_name` with the specified `arguments`.
+    pub fn invoke<
+        'runtime,
+        'ret,
+        ReturnType: ReturnTypeReflection + Marshal<'ret> + 'ret,
+        ArgTypes: InvokeArgs,
+        Name: AsRef<str>,
+    >(
+        &'runtime self,
+        function_name: Name,
+        arguments: ArgTypes,
+    ) -> Result<ReturnType, InvokeErr<Name, ArgTypes>>
+    where
+        'runtime: 'ret,
+    {
+        // Get the function information from the runtime
+        let function_name_str = function_name.as_ref();
+        let function_info = match self
+            .get_function_definition(function_name_str)
+            .ok_or_else(|| format!("failed to obtain function '{}'", function_name_str))
+        {
+            Ok(function_info) => function_info,
+            Err(msg) => {
+                return Err(InvokeErr {
+                    msg,
+                    function_name,
+                    arguments,
+                })
+            }
+        };
+
+        // Validate the arguments
+        match arguments.can_invoke(self, &function_info.prototype.signature) {
+            Ok(_) => {}
+            Err(msg) => {
+                return Err(InvokeErr {
+                    msg,
+                    function_name,
+                    arguments,
+                })
+            }
+        };
+
+        // Validate the return type
+        match if let Some(return_type) = function_info.prototype.signature.return_type() {
+            crate::reflection::equals_return_type::<ReturnType>(return_type)
+        } else if <() as ReturnTypeReflection>::type_guid() != ReturnType::type_guid() {
+            Err((
+                <() as ReturnTypeReflection>::type_name(),
+                ReturnType::type_name(),
+            ))
+        } else {
+            Ok(())
+        } {
+            Ok(_) => {}
+            Err((expected, found)) => {
+                return Err(InvokeErr {
+                    msg: format!(
+                        "invalid return type. Expected: {}. Found: {}",
+                        expected, found,
+                    ),
+                    function_name,
+                    arguments,
+                })
+            }
+        }
+
+        let result: ReturnType::MunType = unsafe { arguments.invoke(function_info.fn_ptr) };
+        Ok(Marshal::marshal_from(result, self))
+    }
 }
