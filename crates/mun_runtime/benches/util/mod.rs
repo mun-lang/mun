@@ -1,4 +1,4 @@
-use compiler::{Config, Driver, OptimizationLevel, PathOrInline};
+use compiler::{Config, DisplayColor, Driver, OptimizationLevel, PathOrInline};
 use mlua::Lua;
 use mun_runtime::RuntimeBuilder;
 use std::cell::RefCell;
@@ -25,7 +25,10 @@ pub fn runtime_from_file<P: AsRef<Path>>(p: P) -> Rc<RefCell<mun_runtime::Runtim
     )
     .unwrap();
     let mut cursor = NoColor::new(Cursor::new(Vec::new()));
-    if driver.emit_diagnostics(&mut cursor).unwrap() {
+    if driver
+        .emit_diagnostics(&mut cursor, DisplayColor::Auto)
+        .unwrap()
+    {
         let errors = String::from_utf8(cursor.into_inner().into_inner())
             .unwrap_or_else(|e| format!("<could not utf8 decode error string: {}>", e));
         panic!("compiler errors..\n{}", errors);
