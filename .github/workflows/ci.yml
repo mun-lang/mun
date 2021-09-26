@@ -1,12 +1,16 @@
 name: CI
 
-on: [pull_request, push]
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - release/*
 
 env:
   RUSTFLAGS: -Dwarnings
 
 jobs:
-
   check:
     name: Check
     runs-on: ubuntu-latest
@@ -34,15 +38,12 @@ jobs:
 
   test:
     name: Test
-    runs-on: ${{ matrix.config.os }}
+    runs-on: ${{ matrix.os }}
     needs: check
     strategy:
       fail-fast: false
       matrix:
-        config:
-        - { os: "ubuntu-latest"}
-        - { os: "windows-latest"}
-        - { os: "macOS-latest"}
+        os: ["ubuntu-latest", "windows-latest", "macOS-latest"]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -60,14 +61,44 @@ jobs:
 
       - uses: Swatinem/rust-cache@v1
 
-      - name: Cargo build
-        if: ${{ matrix.config.os == 'ubuntu-latest' }}
+      - name: Cargo test
         uses: actions-rs/cargo@v1
         with:
-          command: build
+          command: test
+          args: --workspace -- --nocapture
+          
+      - name: Create build folder (debug)
+        run: cmake -E make_directory ${{ runner.workspace }}/build/debug
+        
+      - name: Create build folder (release)
+        run: cmake -E make_directory ${{ runner.workspace }}/build/release
+
+      - name: Configure cmake (debug)
+        working-directory: ${{ runner.workspace }}/build/debug
+        run: cmake -DCMAKE_BUILD_TYPE=Debug -S $GITHUB_WORKSPACE -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_executable_url_or_path=$GITHUB_WORKSPACE/target/debug/ -Dmun_library_url_or_path=$GITHUB_WORKSPACE/target/debug/ -Dmun_examples_path=$GITHUB_WORKSPACE/examples
+      
+      - name: Configure cmake (release)
+        working-directory: ${{ runner.workspace }}/build/release
+        run: cmake -DCMAKE_BUILD_TYPE=Release -S $GITHUB_WORKSPACE -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_executable_url_or_path=$GITHUB_WORKSPACE/target/debug/ -Dmun_library_url_or_path=$GITHUB_WORKSPACE/target/debug/ -Dmun_examples_path=$GITHUB_WORKSPACE/examples
+
+      - name: Build C++ (debug)
+        working-directory: ${{ runner.workspace }}/build/debug
+        run: cmake --build . --config Debug
+        
+      - name: Build C++ (release)
+        working-directory: ${{ runner.workspace }}/build/release
+        run: cmake --build . --config Release
+
+      - name: Test C++ (debug)
+        working-directory: ${{ runner.workspace }}/build/debug
+        run: ctest -C Debug
+        
+      - name: Test C++ (release)
+        working-directory: ${{ runner.workspace }}/build/release
+        run: ctest -C Release
 
       - name: Install mdbook
-        if: ${{ matrix.config.os == 'ubuntu-latest' }}
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: actions-rs/install@v0.1
         with:
           crate: mdbook
@@ -75,18 +106,12 @@ jobs:
           use-tool-cache: true
 
       - name: mdbook test
-        if: ${{ matrix.config.os == 'ubuntu-latest' }}
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: mdbook test book -L target/debug/deps
 
       - name: mdbook build
-        if: ${{ matrix.config.os == 'ubuntu-latest' }}
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: mdbook build book
-
-      - name: Cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -- --nocapture
 
   style:
     name: Check Style
