@@ -1,4 +1,10 @@
-# Mun
+<p align="center">
+  <a href="https://mun-lang.org">
+    <img src="./assets/logo.svg" alt="The Mun logo" width="128" height="128">
+  </a>
+</p>
+
+<h1 align="center">Mun</h1>
 
 [![Build Status][build-badge]][build]
 [![Crates.io][crates-badge]][crates]
