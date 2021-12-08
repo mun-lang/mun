@@ -134,7 +134,7 @@ impl Linker for Ld64Linker {
     }
 
     fn finalize(&mut self) -> Result<(), LinkerError> {
-        mun_lld::link(mun_lld::LldFlavor::MachO, &self.args)
+        mun_lld::link(mun_lld::LldFlavor::DarwinOld, &self.args)
             .ok()
             .map_err(LinkerError::LinkError)
     }

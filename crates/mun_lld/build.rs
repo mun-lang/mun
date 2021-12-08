@@ -347,6 +347,9 @@ fn main() {
         println!("cargo:rustc-link-lib=dylib={}", name);
     }
 
+    // xar is used in lld::macho::BitcodeBundleSection
+    println!("cargo:rustc-link-lib=dylib=xar");
+
     let use_debug_msvcrt = env::var_os(format!(
         "LLVM_SYS_{}_USE_DEBUG_MSVCRT",
         env!("CARGO_PKG_VERSION_MAJOR")
@@ -373,6 +376,7 @@ fn main() {
     println!("cargo:rustc-link-lib=static=lldDriver");
     println!("cargo:rustc-link-lib=static=lldELF");
     println!("cargo:rustc-link-lib=static=lldMachO");
+    println!("cargo:rustc-link-lib=static=lldMachO2");
     println!("cargo:rustc-link-lib=static=lldMinGW");
     println!("cargo:rustc-link-lib=static=lldReaderWriter");
     println!("cargo:rustc-link-lib=static=lldWasm");

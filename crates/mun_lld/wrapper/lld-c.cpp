@@ -19,7 +19,8 @@ const char* mun_alloc_str(const std::string& str)
 // mutexes. Each type of LLD driver seems to be disconnected so we use a mutex for every type.
 std::mutex _coffMutex;
 std::mutex _elfMutex;
-std::mutex _machOMutex;
+std::mutex _darwinMutex;
+std::mutex _darwinOldMutex;
 std::mutex _wasmMutex;
 
 extern "C" {
@@ -27,8 +28,9 @@ extern "C" {
 enum LldFlavor {
   Elf = 0,
   Wasm = 1,
-  MachO = 2,
-  Coff = 3,
+  Darwin = 2,
+  DarwinOld = 3,
+  Coff = 4,
 };
 
 struct LldInvokeResult {
@@ -65,9 +67,15 @@ LldInvokeResult mun_lld_link(LldFlavor flavor, int argc, const char *const *argv
       result.success = lld::wasm::link(args, false, outputStream, errorStream);
       break;
     }
-    case MachO:
+    case Darwin:
     {
-      std::unique_lock <std::mutex> lock(_machOMutex);
+      std::unique_lock <std::mutex> lock(_darwinMutex);
+      result.success = lld::macho::link(args, false, outputStream, errorStream);
+      break;
+    }
+    case DarwinOld:
+    {
+      std::unique_lock <std::mutex> lock(_darwinOldMutex);
       result.success = lld::mach_o::link(args, false, outputStream, errorStream);
       break;
     }
