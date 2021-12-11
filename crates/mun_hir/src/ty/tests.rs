@@ -5,6 +5,19 @@ use crate::{
 use std::{fmt::Write, sync::Arc};
 
 #[test]
+fn issue_354() {
+    infer_snapshot(
+        r#"
+    fn value() -> i64 { 6 }
+
+    pub fn main() {
+        let t = 2;
+        t = loop { break value(); };
+    }"#,
+    )
+}
+
+#[test]
 fn private_access() {
     infer_snapshot(
         r#"
