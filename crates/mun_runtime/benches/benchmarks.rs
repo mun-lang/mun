@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use mun_runtime::{invoke_fn, StructRef};
+use mun_runtime::StructRef;
 
 mod util;
 
@@ -19,7 +19,7 @@ pub fn fibonacci_benchmark(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("mun", i), i, |b, i| {
             let runtime_ref = runtime.borrow();
             b.iter(|| {
-                let _: i64 = invoke_fn!(runtime_ref, "main", *i).unwrap();
+                let _: i64 = runtime_ref.invoke("main", (*i,)).unwrap();
             })
         });
 
@@ -80,7 +80,7 @@ pub fn empty_benchmark(c: &mut Criterion) {
     group.bench_function("mun", |b| {
         let runtime_ref = runtime.borrow();
         b.iter(|| {
-            let _: i64 = invoke_fn!(runtime_ref, "empty", black_box(20i64)).unwrap();
+            let _: i64 = runtime_ref.invoke("empty", (black_box(20i64),)).unwrap();
         })
     });
     group.bench_function("rust", |b| b.iter(|| empty(black_box(20))));
@@ -115,8 +115,8 @@ pub fn get_struct_field_benchmark(c: &mut Criterion) {
     // Perform setup (not part of the benchmark)
     let runtime = util::runtime_from_file("struct.mun");
     let runtime_ref = runtime.borrow_mut();
-    let mun_gc_parent: StructRef = invoke_fn!(runtime_ref, "make_gc_parent").unwrap();
-    let mun_value_parent: StructRef = invoke_fn!(runtime_ref, "make_value_parent").unwrap();
+    let mun_gc_parent: StructRef = runtime_ref.invoke("make_gc_parent", ()).unwrap();
+    let mun_value_parent: StructRef = runtime_ref.invoke("make_value_parent", ()).unwrap();
 
     let rust_child = RustChild(-2.0, -1.0, 1.0, 2.0);
     let rust_parent = RustParent {
@@ -204,8 +204,8 @@ pub fn set_struct_field_benchmark(c: &mut Criterion) {
     // Perform setup (not part of the benchmark)
     let runtime = util::runtime_from_file("struct.mun");
     let runtime_ref = runtime.borrow();
-    let mut mun_gc_parent: StructRef = invoke_fn!(runtime_ref, "make_gc_parent").unwrap();
-    let mut mun_value_parent: StructRef = invoke_fn!(runtime_ref, "make_value_parent").unwrap();
+    let mut mun_gc_parent: StructRef = runtime_ref.invoke("make_value_parent", ()).unwrap();
+    let mut mun_value_parent: StructRef = runtime_ref.invoke("make_value_parent", ()).unwrap();
 
     let rust_child = RustChild(-2.0, -1.0, 1.0, 2.0);
     let mut rust_child2 = rust_child.clone();
