@@ -67,18 +67,10 @@ impl Driver {
 
         // Get the path and contents of the path
         let (rel_path, text) = match path {
-            PathOrInline::Path(p) => {
-                let filename = p.file_name().ok_or_else(|| {
-                    std::io::Error::new(
-                        std::io::ErrorKind::InvalidInput,
-                        "Input path is missing a filename.",
-                    )
-                })?;
-                (
-                    RelativePathBuf::from_path(filename).unwrap(),
-                    std::fs::read_to_string(p)?,
-                )
-            }
+            PathOrInline::Path(p) => (
+                RelativePathBuf::from_path("mod.mun").unwrap(),
+                std::fs::read_to_string(p)?,
+            ),
             PathOrInline::Inline { rel_path, contents } => (rel_path, contents),
         };
 
@@ -87,7 +79,7 @@ impl Driver {
         driver.next_file_id += 1;
         driver.db.set_file_text(file_id, Arc::from(text));
         driver.db.set_file_source_root(file_id, WORKSPACE);
-        driver.source_root.insert_file(file_id, rel_path);
+        driver.source_root.insert_file(file_id, rel_path.clone());
         driver
             .db
             .set_source_root(WORKSPACE, Arc::new(driver.source_root.clone()));
@@ -96,9 +88,7 @@ impl Driver {
         package_set.add_package(WORKSPACE);
         driver.db.set_packages(Arc::new(package_set));
 
-        driver
-            .path_to_file_id
-            .insert(RelativePathBuf::from("mod.mun"), file_id);
+        driver.path_to_file_id.insert(rel_path, file_id);
 
         Ok((driver, file_id))
     }
