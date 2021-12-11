@@ -18,7 +18,7 @@ enum ForegroundMessage {
 #[derive(Debug)]
 pub struct NotifyMonitor {
     sender: Sender<ForegroundMessage>,
-    thread: thread::JoinHandle<()>,
+    _thread: thread::JoinHandle<()>,
 }
 
 impl Monitor for NotifyMonitor {
@@ -31,7 +31,10 @@ impl Monitor for NotifyMonitor {
         let thread = thread::Builder::new()
             .spawn(move || background_thread.run(receiver))
             .expect("failed to spawn notify background thread");
-        NotifyMonitor { sender, thread }
+        NotifyMonitor {
+            sender,
+            _thread: thread,
+        }
     }
 
     fn set_config(&mut self, config: MonitorConfig) {
