@@ -592,8 +592,12 @@ impl Runtime {
         let function_name_str = function_name.as_ref();
         let function_info = match self
             .get_function_definition(function_name_str)
-            .ok_or_else(|| format!("failed to obtain function '{}'", function_name_str))
-        {
+            .ok_or_else(|| {
+                format!(
+                    "failed to obtain function '{}', no such function exists.",
+                    function_name_str
+                )
+            }) {
             Ok(function_info) => function_info,
             Err(msg) => {
                 return Err(InvokeErr {

@@ -1,7 +1,7 @@
 use crate::{
     ty::infer::InferTy,
     ty::{TyKind, TypeWalk},
-    Ty,
+    Substitution, Ty,
 };
 use ena::unify::{InPlaceUnificationTable, NoError, UnifyKey, UnifyValue};
 use std::{borrow::Cow, fmt};
@@ -134,8 +134,22 @@ impl TypeVariableTable {
         // First resolve both types as much as possible
         let a = self.replace_if_possible(a);
         let b = self.replace_if_possible(b);
+        if a.equals_ctor(&b) {
+            match (a.interned(), b.interned()) {
+                (TyKind::Tuple(_, a), TyKind::Tuple(_, b)) => self.unify_substitutions(a, b),
+                _ => true,
+            }
+        } else {
+            self.unify_inner_trivial(&a, &b)
+        }
+    }
 
-        self.unify_inner_trivial(&a, &b)
+    fn unify_substitutions(&mut self, substs1: &Substitution, substs2: &Substitution) -> bool {
+        substs1
+            .0
+            .iter()
+            .zip(substs2.0.iter())
+            .all(|(t1, t2)| self.unify_inner(t1, t2))
     }
 
     /// Handles unificiation of trivial cases.

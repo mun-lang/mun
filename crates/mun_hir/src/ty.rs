@@ -156,6 +156,20 @@ impl Ty {
         matches!(self.interned(), TyKind::Never)
     }
 
+    /// Returns true if these types represent the same type based on their outer type.
+    pub fn equals_ctor(&self, other: &Ty) -> bool {
+        match (self.interned(), other.interned()) {
+            (TyKind::Struct(a), TyKind::Struct(b)) => a == b,
+            (TyKind::Float(a), TyKind::Float(b)) => a == b,
+            (TyKind::Int(a), TyKind::Int(b)) => a == b,
+            (TyKind::Bool, TyKind::Bool) | (TyKind::Never, TyKind::Never) => true,
+            (TyKind::Tuple(_, a), TyKind::Tuple(_, b)) => a == b,
+            (TyKind::TypeAlias(a), TyKind::TypeAlias(b)) => a == b,
+            (TyKind::FnDef(a, _), TyKind::FnDef(b, _)) => a == b,
+            _ => false,
+        }
+    }
+
     /// Returns the callable definition for the given expression or `None` if the type does not
     /// represent a callable.
     pub fn as_callable_def(&self) -> Option<CallableDef> {

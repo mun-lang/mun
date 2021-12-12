@@ -1,11 +1,11 @@
-use compiler::{Config, Driver, OptimizationLevel, PathOrInline};
+use compiler::{Config, DisplayColor, Driver, OptimizationLevel, PathOrInline};
 use mlua::Lua;
 use mun_runtime::RuntimeBuilder;
-use std::cell::RefCell;
-use std::io::Cursor;
-use std::path::{Path, PathBuf};
-use std::rc::Rc;
-use termcolor::NoColor;
+use std::{
+    cell::RefCell,
+    path::{Path, PathBuf},
+    rc::Rc,
+};
 use wasmer_runtime::{instantiate, Instance};
 
 fn compute_resource_path<P: AsRef<Path>>(p: P) -> PathBuf {
@@ -24,10 +24,10 @@ pub fn runtime_from_file<P: AsRef<Path>>(p: P) -> Rc<RefCell<mun_runtime::Runtim
         path,
     )
     .unwrap();
-    let mut cursor = NoColor::new(Cursor::new(Vec::new()));
-    if driver.emit_diagnostics(&mut cursor).unwrap() {
-        let errors = String::from_utf8(cursor.into_inner().into_inner())
-            .unwrap_or_else(|e| format!("<could not utf8 decode error string: {}>", e));
+    if let Some(errors) = driver
+        .emit_diagnostics_to_string(DisplayColor::Disable)
+        .unwrap()
+    {
         panic!("compiler errors..\n{}", errors);
     }
 
