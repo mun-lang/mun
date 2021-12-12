@@ -1,10 +1,7 @@
-<p align="center">
-  <a href="https://mun-lang.org">
-    <img src="./assets/logo.svg" alt="The Mun logo" width="128" height="128">
-  </a>
-</p>
+# ![Mun][logo-light-mode] ![Mun][logo-dark-mode]
 
-<h1 align="center">Mun</h1>
+[logo-light-mode]: assets/readme/logotype.svg#gh-light-mode-only
+[logo-dark-mode]: assets/readme/logotype-white.svg#gh-dark-mode-only
 
 [![Build Status][build-badge]][build]
 [![Crates.io][crates-badge]][crates]
