@@ -1,4 +1,7 @@
-# Mun
+# ![Mun][logo-light-mode] ![Mun][logo-dark-mode]
+
+[logo-light-mode]: assets/readme/logotype.svg#gh-light-mode-only
+[logo-dark-mode]: assets/readme/logotype-white.svg#gh-dark-mode-only
 
 [![Build Status][build-badge]][build]
 [![Crates.io][crates-badge]][crates]
