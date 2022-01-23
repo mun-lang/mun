@@ -34,7 +34,7 @@ pub(crate) fn diagnostics(db: &AnalysisDatabase, file_id: hir::FileId) -> Vec<Di
     // Add all syntax errors
     let parse = db.parse(file_id);
     result.extend(parse.errors().iter().map(|err| Diagnostic {
-        message: format!("parse error: {}", err.to_string()),
+        message: format!("parse error: {}", err),
         range: location_to_range(err.location()),
         additional_annotations: vec![],
     }));

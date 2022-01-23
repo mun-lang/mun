@@ -91,7 +91,7 @@ impl TypeInfo {
                         .ty(db)
                         .guid_string(db)
                         .expect("type should be convertible to a string");
-                    format!("{}: {}", f.name(db).to_string(), ty_string)
+                    format!("{}: {}", f.name(db), ty_string)
                 })
                 .collect();
 
