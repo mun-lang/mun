@@ -22,6 +22,7 @@ mod test;
 
 pub mod value;
 
+mod apple;
 pub(crate) mod intrinsics;
 mod linker;
 mod module_group;

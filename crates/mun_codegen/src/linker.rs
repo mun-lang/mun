@@ -1,3 +1,4 @@
+use crate::apple::get_apple_sdk_root;
 use mun_target::spec;
 use mun_target::spec::LinkerFlavor;
 use std::fmt;
@@ -11,6 +12,9 @@ pub enum LinkerError {
 
     /// Error in path conversion
     PathError(PathBuf),
+
+    /// Could not locate platform SDK
+    PlatformSdkMissing(String),
 }
 
 impl fmt::Display for LinkerError {
@@ -22,6 +26,9 @@ impl fmt::Display for LinkerError {
                 "path contains invalid UTF-8 characters: {}",
                 path.display()
             ),
+            LinkerError::PlatformSdkMissing(err) => {
+                write!(f, "could not find platform sdk: {}", err)
+            }
         }
     }
 }
@@ -119,6 +126,9 @@ impl Linker for Ld64Linker {
 
         // Link as dynamic library
         self.args.push("-dylib".to_owned());
+
+        let sdk_root = get_apple_sdk_root().map_err(LinkerError::PlatformSdkMissing)?;
+        self.args.push(format!("-L{}/usr/lib", sdk_root.display()));
         self.args.push("-lsystem".to_owned());
 
         // Specify output path
