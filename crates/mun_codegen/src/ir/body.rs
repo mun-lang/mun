@@ -411,7 +411,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 struct_ir_ty
                     .ptr_type(AddressSpace::Generic)
                     .ptr_type(AddressSpace::Generic),
-                &format!("{}_ptr_ptr", hir_struct.name(self.db).to_string()),
+                &format!("{}_ptr_ptr", hir_struct.name(self.db)),
             )
             .into_pointer_value();
 
@@ -420,7 +420,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .builder
             .build_load(
                 struct_ptr_ptr,
-                &format!("{}_mem_ptr", hir_struct.name(self.db).to_string()),
+                &format!("{}_mem_ptr", hir_struct.name(self.db)),
             )
             .into_pointer_value();
 

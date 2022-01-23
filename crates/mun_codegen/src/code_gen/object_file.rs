@@ -19,7 +19,7 @@ impl ObjectFile {
     ) -> Result<Self, anyhow::Error> {
         let obj = target_machine
             .write_to_memory_buffer(module, FileType::Object)
-            .map_err(|e| CodeGenerationError::CodeGenerationError(e.to_string()))?;
+            .map_err(|e| CodeGenerationError::MachineCodeError(e.to_string()))?;
 
         let mut obj_file = tempfile::NamedTempFile::new()
             .map_err(CodeGenerationError::CouldNotCreateObjectFile)?;
