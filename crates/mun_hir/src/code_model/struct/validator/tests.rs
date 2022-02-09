@@ -3,7 +3,7 @@ use crate::utils::tests::*;
 
 #[test]
 fn test_private_leak_struct_fields() {
-    diagnostics_snapshot(
+    insta::assert_snapshot!(diagnostics(
         r#"
     
     struct Foo(usize);
@@ -34,14 +34,9 @@ fn test_private_leak_struct_fields() {
         pub foo: Foo,
         pub bar: Bar,
     }
-    "#,
-    )
-}
-
-// this function needs to be declared in each file separately
-// since insta's AutoName creates files in the directory from which
-// the macro is called.
-fn diagnostics_snapshot(text: &str) {
-    let text = text.trim().replace("\n    ", "\n");
-    insta::assert_snapshot!(insta::_macro_support::AutoName, diagnostics(&text), &text);
+    "#),
+    @r###"
+    180..183: can't leak private type
+    392..395: can't leak private type
+    "###)
 }

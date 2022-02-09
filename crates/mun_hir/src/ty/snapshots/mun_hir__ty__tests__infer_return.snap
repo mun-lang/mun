@@ -1,9 +1,0 @@
----
-source: crates/mun_hir/src/ty/tests.rs
-expression: "fn test()->i32 {\n    return; // error: mismatched type\n    return 5;\n}"
----
-21..27: `return;` in a function whose return type is not `()`
-15..70 '{     ...n 5; }': never
-21..27 'return': never
-59..67 'return 5': never
-66..67 '5': i32

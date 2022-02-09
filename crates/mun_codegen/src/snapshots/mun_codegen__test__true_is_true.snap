@@ -1,6 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1045
 expression: "\n    pub fn test_true() -> bool {\n        true\n    }\n\n    pub fn test_false() -> bool {\n        false\n    }"
+
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'

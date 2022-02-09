@@ -1,6 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1045
 expression: "\n    // resources/script.mun\n    extern fn thing(n: i32);\n    extern fn print(n: i32) -> i32;\n\n    pub fn main() {\n        // 1st\n        print(1);\n        thing(5);\n\n        // 2nd\n        print(2);\n        thing(78);\n    }\n    "
+
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'

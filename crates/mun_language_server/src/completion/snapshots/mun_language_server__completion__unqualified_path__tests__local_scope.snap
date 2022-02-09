@@ -1,6 +1,8 @@
 ---
 source: crates/mun_language_server/src/completion/unqualified_path.rs
+assertion_line: 29
 expression: "completion_string(r#\"\n        fn foo() {\n            let bar = 0;\n            let foo_bar = 0;\n            f$0\n        }\n        \"#,\n                  Some(CompletionKind::Reference))"
+
 ---
 lc foo_bar i32
 lc bar     i32

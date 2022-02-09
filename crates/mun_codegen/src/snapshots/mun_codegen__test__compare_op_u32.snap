@@ -1,6 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1045
 expression: "\n    pub fn equals(a: u32, b: u32) -> bool { a == b }\n    pub fn not_equal(a: u32, b: u32) -> bool { a != b}\n    pub fn less(a: u32, b: u32) -> bool { a < b }\n    pub fn less_equal(a: u32, b: u32) -> bool { a <= b }\n    pub fn greater(a: u32, b: u32) -> bool { a > b }\n    pub fn greater_equal(a: u32, b: u32) -> bool { a >= b }\n                        "
+
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'

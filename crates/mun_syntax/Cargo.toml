@@ -23,4 +23,4 @@ ra_ap_text_edit = "0.0.35"
 itertools = "0.10.0"
 
 [dev-dependencies]
-insta = "1.7.1"
+insta = "1.12.0"

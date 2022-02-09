@@ -1,6 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1045
 expression: "\n    pub fn not(a: i8) -> i8 { !a }\n    pub fn bitand(a: i8, b: i8) -> i8 { a & b }\n    pub fn bitor(a: i8, b: i8) -> i8 { a | b }\n    pub fn bitxor(a: i8, b: i8) -> i8 { a ^ b }\n                        "
+
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'

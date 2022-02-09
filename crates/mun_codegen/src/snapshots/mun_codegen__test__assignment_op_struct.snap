@@ -1,6 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
-expression: "\n    struct(value) Value(i32, i32);\n    struct(gc) Heap(f64, f64);\n\n    pub fn assign_value(a: Value, b: Value) -> Value {\n        a = b;\n        a\n    }\n\n    pub fn assign_heap(a: Heap, b: Heap) -> Heap {\n        a = b;\n        a\n    }\n    // TODO: Add errors\n    // a += b;\n    // a *= b;\n    // a -= b;\n    // a /= b;\n    // a %= b;\n    "
+assertion_line: 1045
+expression: "\n    pub struct(value) Value(i32, i32);\n    pub struct(gc) Heap(f64, f64);\n\n    pub fn assign_value(a: Value, b: Value) -> Value {\n        a = b;\n        a\n    }\n\n    pub fn assign_heap(a: Heap, b: Heap) -> Heap {\n        a = b;\n        a\n    }\n    // TODO: Add errors\n    // a += b;\n    // a *= b;\n    // a -= b;\n    // a /= b;\n    // a %= b;\n    "
+
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'

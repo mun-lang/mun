@@ -1,6 +1,8 @@
 ---
 source: crates/mun_compiler/src/diagnostics.rs
+assertion_line: 64
 expression: "compilation_errors(\"\\n\\nfn main() {\\nlet a: f64 = false;\\n\\nlet b: bool = 22;\\n}\")"
+
 ---
 error: expected `f64`, found `bool`
  --> main.mun:4:14

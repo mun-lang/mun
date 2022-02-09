@@ -1,8 +1,0 @@
----
-source: crates/mun_hir/src/ty/tests.rs
-expression: "struct Foo;\nstruct(gc) Bar {\n    f: f64,\n    i: i32,\n}\nstruct(value) Baz(f64, i32);\n\n\nfn main() {\n    let foo: Foo;\n    let bar: Bar;\n    let baz: Baz;\n}"
----
-96..153 '{     ...Baz; }': ()
-106..109 'foo': Foo
-124..127 'bar': Bar
-142..145 'baz': Baz

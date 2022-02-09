@@ -1,6 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1045
 expression: "\n    pub fn assign(a: bool, b: bool) -> bool {\n        a = b;\n        a\n    }\n    // TODO: Add errors\n    // a += b;\n    // a *= b;\n    // a -= b;\n    // a /= b;\n    // a %= b;\n    "
+
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'

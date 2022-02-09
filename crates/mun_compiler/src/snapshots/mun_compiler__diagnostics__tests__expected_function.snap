@@ -1,6 +1,8 @@
 ---
 source: crates/mun_compiler/src/diagnostics.rs
+assertion_line: 107
 expression: "compilation_errors(\"\\n\\nfn foo() { let a = 3; a(); }\")"
+
 ---
 error: expected function, found `{integer}`
  --> main.mun:3:23

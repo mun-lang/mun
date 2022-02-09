@@ -17,4 +17,4 @@ log = "0.4.8"
 thiserror = "1.0.19"
 
 [dev-dependencies]
-insta = "1.7.1"
+insta = "1.12.0"

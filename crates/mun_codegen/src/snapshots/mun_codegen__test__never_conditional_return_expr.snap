@@ -1,6 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1045
 expression: "\n    pub fn main(a:i32) -> i32 {\n        if a > 4 {\n            return a;\n        } else {\n            return a - 1;\n        }\n    }\n    "
+
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'

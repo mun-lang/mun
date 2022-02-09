@@ -1,6 +1,0 @@
----
-source: crates/mun_hir/src/expr/validator/tests.rs
-expression: "type Bar = usize;\n\n// Illegal, Bar has a smaller scope than this function\npub fn baz() -> Bar {\n    0\n}"
-
----
-

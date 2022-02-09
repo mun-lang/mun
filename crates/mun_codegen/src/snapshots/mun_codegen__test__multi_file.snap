@@ -1,5 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1045
 expression: "\n    //- /mod.mun\n    pub fn main() -> i32 {\n        foo::get_value()\n    }\n\n    //- /foo.mun\n    pub(super) fn get_value() -> i32 {\n        3\n    }\n    "
 
 ---

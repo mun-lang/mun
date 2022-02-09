@@ -1,6 +1,8 @@
 ---
 source: crates/mun_compiler/src/diagnostics.rs
+assertion_line: 78
 expression: "compilation_errors(\"\\n\\nfn main() {\\nlet a;\\nif 5>6 {\\na = 5\\n}\\nlet b = a;\\n}\")"
+
 ---
 error: use of possibly-uninitialized `a`
  --> main.mun:8:9

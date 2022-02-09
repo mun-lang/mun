@@ -1,5 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1045
 expression: "\n    extern fn other() -> i32;\n\n    fn private_fn(a: i32) -> f32 {\n        private_fn(a)\n    }\n\n    pub fn main() -> f32 {\n        private_fn(other())\n    }\n    "
 
 ---

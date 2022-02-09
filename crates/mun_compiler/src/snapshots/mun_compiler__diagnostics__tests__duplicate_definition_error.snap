@@ -1,6 +1,8 @@
 ---
 source: crates/mun_compiler/src/diagnostics.rs
+assertion_line: 71
 expression: "compilation_errors(\"\\n\\nfn foo(){}\\n\\nfn foo(){}\\n\\nstruct Bar;\\n\\nstruct Bar;\\n\\nfn BAZ(){}\\n\\nstruct BAZ;\")"
+
 ---
 error: a value named `foo` has already been defined in this module
  --> main.mun:5:1

@@ -1,5 +1,6 @@
 ---
 source: crates/mun_compiler/src/diagnostics.rs
+assertion_line: 50
 expression: "compilation_errors(\"\\n\\nstruct Foo;\\n pub fn Bar() -> Foo { Foo } \\n fn main() {}\")"
 
 ---
