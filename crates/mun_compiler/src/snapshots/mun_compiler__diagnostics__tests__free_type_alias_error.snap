@@ -1,6 +1,8 @@
 ---
 source: crates/mun_compiler/src/diagnostics.rs
+assertion_line: 92
 expression: "compilation_errors(\"\\n\\ntype Foo;\")"
+
 ---
 error: free type alias without type ref
  --> main.mun:3:1

@@ -1,6 +1,8 @@
 ---
 source: crates/mun_compiler/src/diagnostics.rs
+assertion_line: 36
 expression: "compilation_errors(\"\\n\\nfn main() {\\nlet b = a;\\n\\nlet d = c;\\n}\")"
+
 ---
 error: cannot find value `a` in this scope
  --> main.mun:4:9

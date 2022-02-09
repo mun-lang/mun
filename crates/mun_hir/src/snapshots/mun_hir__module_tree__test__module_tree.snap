@@ -1,6 +1,8 @@
 ---
 source: crates/mun_hir/src/module_tree.rs
+assertion_line: 255
 expression: module_tree
+
 ---
 ModuleTree {
     root: Idx::<ModuleData>(0),

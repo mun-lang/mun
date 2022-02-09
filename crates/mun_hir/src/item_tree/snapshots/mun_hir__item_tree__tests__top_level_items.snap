@@ -1,6 +1,8 @@
 ---
 source: crates/mun_hir/src/item_tree/tests.rs
+assertion_line: 61
 expression: "print_item_tree(r#\"\n    fn foo(a:i32, b:u8, c:String) -> i32 {}\n    pub fn bar(a:i32, b:u8, c:String) ->  {}\n    pub(super) fn bar(a:i32, b:u8, c:String) ->  {}\n    pub(package) fn baz(a:i32, b:, c:String) ->  {}\n    extern fn eval(a:String) -> bool;\n\n    struct Foo {\n        a: i32,\n        b: u8,\n        c: String,\n    }\n    struct Foo2 {\n        a: i32,\n        b: ,\n        c: String,\n    }\n    struct Bar (i32, u32, String)\n    struct Baz;\n\n    type FooBar = Foo;\n    type FooBar = package::Foo;\n    \"#).unwrap()"
+
 ---
 top-level items:
 Function { name: Name(Text("foo")), visibility: RawVisibilityId("pub(self)"), is_extern: false, params: [Path(Path { kind: Plain, segments: [Name(Text("i32"))] }), Path(Path { kind: Plain, segments: [Name(Text("u8"))] }), Path(Path { kind: Plain, segments: [Name(Text("String"))] })], ret_type: Path(Path { kind: Plain, segments: [Name(Text("i32"))] }), ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(0), _ty: PhantomData } }

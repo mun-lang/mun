@@ -1,8 +1,0 @@
----
-source: crates/mun_hir/src/expr/validator/tests.rs
-expression: "struct Foo(usize);\n\npub fn bar() -> Foo { // Foo is not public\n    Foo(0)\n}\n\npub fn baz(a: usize, b: usize) -> Foo {\n    Foo(2)\n}\n\npub struct FooBar(usize);\n\npub fn FooBaz() -> FooBar {\n    FooBar(0)\n}\n\nfn BarBaz() -> FooBar {\n    FooBar(1)\n}"
-
----
-36..39: can't leak private type
-111..114: can't leak private type
-

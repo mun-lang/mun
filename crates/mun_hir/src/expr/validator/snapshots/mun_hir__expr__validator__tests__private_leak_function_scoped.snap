@@ -1,7 +1,0 @@
----
-source: crates/mun_hir/src/expr/validator/tests.rs
-expression: "// Illegal, Bar has a smaller scope that this use statement\npub(super) struct Bar;\n\n// Illegal, Bar has a smaller scope than this function\npub fn baz() -> Bar {\n    Bar\n}"
-
----
-155..158: can't leak private type
-

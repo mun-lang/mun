@@ -1,6 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1045
 expression: "\n    pub fn fibonacci(n:i32) -> i32 {\n        let a = 0;\n        let b = 1;\n        let i = 1;\n        loop {\n            if i > n {\n                return a\n            }\n            let sum = a + b;\n            a = b;\n            b = sum;\n            i += 1;\n        }\n    }\n    "
+
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'

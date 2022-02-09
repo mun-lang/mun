@@ -1,6 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1045
 expression: "\n    pub fn assign_bitand(a: u128, b: u128) -> u128 {\n        a &= b;\n        a\n    }\n    pub fn assign_bitor(a: u128, b: u128) -> u128 {\n        a |= b;\n        a\n    }\n    pub fn assign_bitxor(a: u128, b: u128) -> u128 {\n        a ^= b;\n        a\n    }\n                        "
+
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'

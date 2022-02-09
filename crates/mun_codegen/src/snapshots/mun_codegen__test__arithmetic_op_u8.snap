@@ -1,6 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1045
 expression: "\n    pub fn add(a: u8, b: u8) -> u8 { a + b }\n    pub fn subtract(a: u8, b: u8) -> u8 { a - b }\n    pub fn multiply(a: u8, b: u8) -> u8 { a * b }\n    pub fn divide(a: u8, b: u8) -> u8 { a / b }\n    pub fn remainder(a: u8, b: u8) -> u8 { a % b }\n                        "
+
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'

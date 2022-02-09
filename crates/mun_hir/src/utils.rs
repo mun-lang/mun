@@ -11,8 +11,6 @@ pub(crate) fn make_mut_slice<T: Clone>(a: &mut Arc<[T]>) -> &mut [T] {
 
 #[cfg(test)]
 pub mod tests {
-    use std::fmt::Write;
-
     use crate::{
         code_model::r#struct::validator::StructValidator,
         diagnostics::DiagnosticSink,
@@ -25,10 +23,10 @@ pub mod tests {
     pub fn diagnostics(content: &str) -> String {
         let (db, _file_id) = MockDatabase::with_single_file(content);
 
-        let mut diags = String::new();
+        let mut diags = Vec::new();
 
         let mut diag_sink = DiagnosticSink::new(|diag| {
-            writeln!(diags, "{:?}: {}", diag.highlight_range(), diag.message()).unwrap();
+            diags.push(format!("{:?}: {}", diag.highlight_range(), diag.message()));
         });
 
         for item in Package::all(&db)
@@ -52,6 +50,6 @@ pub mod tests {
         }
 
         drop(diag_sink);
-        diags
+        diags.join("\n")
     }
 }

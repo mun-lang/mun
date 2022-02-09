@@ -1,6 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1045
 expression: "\n    struct(gc) Foo { a: i32 };\n\n    pub fn main(c:i32) -> i32 {\n        let b = Foo { a: c + 5 }\n        b.a\n    }\n    "
+
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'

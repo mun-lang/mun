@@ -1,6 +1,8 @@
 ---
 source: crates/mun_compiler/src/diagnostics.rs
+assertion_line: 31
 expression: "compilation_errors(\"\\n\\nfn main(\\n struct Foo\\n\")"
+
 ---
 error: syntax error
  --> main.mun:3:9

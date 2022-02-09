@@ -1,6 +1,8 @@
 ---
 source: crates/mun_language_server/src/completion/dot.rs
+assertion_line: 32
 expression: "completion_string(r#\"\n        struct FooBar {\n            foo: i32,\n            bar: i32,\n        };\n        \n        fn foo() {\n            let bar = FooBar { foo: 0, bar: 0 };\n            bar.$0\n        }\n        \"#,\n                  Some(CompletionKind::Reference))"
+
 ---
 fd foo i32
 fd bar i32

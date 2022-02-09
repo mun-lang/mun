@@ -1,6 +1,8 @@
 ---
 source: crates/mun_target/tests/data_layout.rs
+assertion_line: 24
 expression: layout
+
 ---
 TargetDataLayout {
     endian: Little,

@@ -1,8 +1,0 @@
----
-source: crates/mun_hir/src/code_model/struct/validator/tests.rs
-expression: "struct Foo(usize);\npub struct Bar(usize);\n\n// valid, bar is public\npub struct Baz {\n    foo: Foo,\n    pub bar: Bar,\n}\n\n// invalid, Foo is private\npub struct FooBar {\n    pub foo: Foo,\n    pub bar: Bar,\n}\n\n// valid, FooBaz is private\nstruct FooBaz {\n    pub foo: Foo,\n    pub bar: Bar,\n}\n\npub(crate) struct BarBaz;\n\n// invalid, exporting pub(crate) to pub\npub struct FooBarBaz {\n    pub foo: Foo,\n    pub bar: Bar,\n}"
-
----
-179..182: can't leak private type
-391..394: can't leak private type
-

@@ -1,6 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1045
 expression: "\n    pub fn foo(n:i32) -> i32 {\n        loop {\n            if n > 5 {\n                break n;\n            }\n            if n > 10 {\n                break 10;\n            }\n            n += 1;\n        }\n    }\n    "
+
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'

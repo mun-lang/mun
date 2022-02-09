@@ -1,6 +1,8 @@
 ---
 source: crates/mun_language_server/tests/initialization.rs
+assertion_line: 50
 expression: symbols
+
 ---
 Some(
     Nested(

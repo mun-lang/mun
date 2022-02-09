@@ -7,7 +7,7 @@ use rustc_hash::FxHashSet;
 
 #[test]
 fn use_alias() {
-    resolve_snapshot(
+    insta::assert_snapshot!(resolve(
         r#"
     //- /foo.mun
     pub struct Ok;
@@ -19,13 +19,22 @@ fn use_alias() {
 
     //- /baz.mun
     use package::bar::ReallyOk;
-    "#,
-    )
+    "#),
+    @r###"
+    mod mod
+    +-- mod bar
+    |   +-- struct Ok
+    |   '-- use struct package::foo::Ok
+    +-- mod baz
+    |   '-- use struct package::foo::Ok
+    '-- mod foo
+        '-- struct Ok
+    "###);
 }
 
 #[test]
 fn use_duplicate_name() {
-    resolve_snapshot(
+    insta::assert_snapshot!(resolve(
         r#"
     //- /foo.mun
     pub struct Ok;
@@ -34,13 +43,20 @@ fn use_duplicate_name() {
     use package::foo::Ok;
 
     pub struct Ok;
-    "#,
-    )
+    "#),
+    @r###"
+    mod mod
+    +-- mod bar
+    |   +-- ERROR: 4..20: a second item with the same name imported. Try to use an alias.
+    |   '-- struct Ok
+    '-- mod foo
+        '-- struct Ok
+    "###);
 }
 
 #[test]
 fn use_cyclic_wildcard() {
-    resolve_snapshot(
+    insta::assert_snapshot!(resolve(
         r#"
     //- /foo.mun
     pub use super::baz::*;
@@ -49,13 +65,21 @@ fn use_cyclic_wildcard() {
 
     //- /baz.mun
     pub use super::foo::{self, *};
-    "#,
-    )
+    "#),
+    @r###"
+    mod mod
+    +-- mod baz
+    |   +-- use struct package::foo::Ok
+    |   '-- use mod package::foo
+    '-- mod foo
+        +-- struct Ok
+        '-- use mod package::foo
+    "###);
 }
 
 #[test]
 fn use_wildcard() {
-    resolve_snapshot(
+    insta::assert_snapshot!(resolve(
         r#"
     //- /foo.mun
     pub struct Foo;
@@ -66,13 +90,23 @@ fn use_wildcard() {
 
     //- /bar.mun
     use package::foo::bar::*;   // Should reference two structs (Foo and FooBar)
-    "#,
-    )
+    "#),
+    @r###"
+    mod mod
+    +-- mod bar
+    |   +-- use struct package::foo::Foo
+    |   '-- use struct package::foo::bar::FooBar
+    '-- mod foo
+        +-- struct Foo
+        '-- mod bar
+            +-- struct FooBar
+            '-- use struct package::foo::Foo
+    "###);
 }
 
 #[test]
 fn use_self() {
-    resolve_snapshot(
+    insta::assert_snapshot!(resolve(
         r#"
     //- /foo.mun
     pub struct Ok;
@@ -80,13 +114,20 @@ fn use_self() {
     //- /bar.mun
     use super::foo::{self};
     use foo::Ok;
-    "#,
-    )
+    "#),
+    @r###"
+    mod mod
+    +-- mod bar
+    |   +-- use struct package::foo::Ok
+    |   '-- use mod package::foo
+    '-- mod foo
+        '-- struct Ok
+    "###);
 }
 
 #[test]
 fn use_cyclic() {
-    resolve_snapshot(
+    insta::assert_snapshot!(resolve(
         r#"
     //- /foo.mun
     use super::baz::Cyclic;
@@ -98,13 +139,24 @@ fn use_cyclic() {
 
     //- /baz.mun
     use super::bar::{Cyclic, Ok};
-    "#,
-    )
+    "#),
+    @r###"
+    mod mod
+    +-- mod bar
+    |   +-- ERROR: 17..23: unresolved import
+    |   '-- use struct package::foo::Ok
+    +-- mod baz
+    |   +-- ERROR: 17..23: unresolved import
+    |   '-- use struct package::foo::Ok
+    '-- mod foo
+        +-- ERROR: 4..22: unresolved import
+        '-- struct Ok
+    "###);
 }
 
 #[test]
 fn use_unresolved() {
-    resolve_snapshot(
+    insta::assert_snapshot!(resolve(
         r#"
     //- /foo.mun
     pub struct Foo;
@@ -113,13 +165,20 @@ fn use_unresolved() {
     use foo::Foo;   // works
     use foo::Bar;   // doesnt work (Bar does not exist)
     use baz::Baz;   // doesnt work (baz does not exist)
-    "#,
-    )
+    "#),
+    @r###"
+    mod mod
+    +-- ERROR: 29..37: unresolved import
+    +-- ERROR: 81..89: unresolved import
+    +-- use struct package::foo::Foo
+    '-- mod foo
+        '-- struct Foo
+    "###);
 }
 
 #[test]
 fn use_() {
-    resolve_snapshot(
+    insta::assert_snapshot!(resolve(
         r#"
     //- /bar.mun
     use package::Foo;
@@ -140,14 +199,20 @@ fn use_() {
     pub fn foo_from_bar(bar: Bar) -> Foo {
         bar.0
     }
-    "#,
-    )
-}
-
-fn resolve_snapshot(text: &str) {
-    let text = text.trim().replace("\n    ", "\n");
-    let resolved = resolve(&text);
-    insta::assert_snapshot!(insta::_macro_support::AutoName, resolved.trim(), &text);
+    "#),
+    @r###"
+    mod mod
+    +-- struct Baz
+    +-- use struct package::foo::Foo
+    +-- mod bar
+    |   +-- struct Bar
+    |   '-- use struct package::foo::Foo
+    '-- mod foo
+        +-- fn foo_from_bar
+        +-- struct Foo
+        +-- use struct package::Baz
+        '-- use struct package::bar::Bar
+    "###);
 }
 
 fn resolve(content: &str) -> String {

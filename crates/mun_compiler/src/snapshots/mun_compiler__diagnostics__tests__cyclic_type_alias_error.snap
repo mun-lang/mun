@@ -1,6 +1,8 @@
 ---
 source: crates/mun_compiler/src/diagnostics.rs
+assertion_line: 102
 expression: "compilation_errors(\"\\n\\ntype Foo = Foo;\")"
+
 ---
 error: cyclic type
  --> main.mun:3:12

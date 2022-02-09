@@ -28,7 +28,7 @@ smallvec = "1.6.1"
 arrayvec = "0.5.2"
 
 [dev-dependencies]
-insta = "1.7.1"
+insta = "1.12.0"
 text_trees = "0.1.2"
 parking_lot = "0.11.1"
 mun_test = { path = "../mun_test" }

@@ -3,19 +3,19 @@ use crate::utils::tests::*;
 
 #[test]
 fn test_uninitialized_access() {
-    diagnostics_snapshot(
-        r#"
+    insta::assert_snapshot!(
+        diagnostics(r#"
     fn foo() {
         let a:int;
         let b = a + 3;
     }
-    "#,
-    )
+    "#), @"38..39: use of possibly-uninitialized variable"
+    );
 }
 
 #[test]
 fn test_uninitialized_access_if() {
-    diagnostics_snapshot(
+    insta::assert_snapshot!(diagnostics(
         r#"
     fn foo() {
         let a:int;
@@ -47,12 +47,12 @@ fn test_uninitialized_access_if() {
         let b = a + 4;  // `a` is not initialized but this is dead code anyway
     }
     "#,
-    )
+    ), @"191..192: use of possibly-uninitialized variable");
 }
 
 #[test]
 fn test_uninitialized_access_while() {
-    diagnostics_snapshot(
+    insta::assert_snapshot!(diagnostics(
         r#"
     fn foo(b:int) {
         let a:int;
@@ -60,21 +60,21 @@ fn test_uninitialized_access_while() {
         let c = a + 4;  // `a` is possibly-unitialized
     }
     "#,
-    )
+    ), @"86..87: use of possibly-uninitialized variable");
 }
 
 #[test]
 fn test_free_type_alias_without_type_ref() {
-    diagnostics_snapshot(
+    insta::assert_snapshot!(diagnostics(
         r#"
     type Foo; // `Foo` must have a target type
     "#,
-    )
+    ), @"0..9: free type alias without type ref");
 }
 
 #[test]
 fn test_private_leak_function_return() {
-    diagnostics_snapshot(
+    insta::assert_snapshot!(diagnostics(
         r#"
     struct Foo(usize);
 
@@ -96,12 +96,15 @@ fn test_private_leak_function_return() {
         FooBar(1)
     }
     "#,
-    )
+    ), @r###"
+    36..39: can't leak private type
+    111..114: can't leak private type
+    "###);
 }
 
 #[test]
 fn test_private_leak_function_args() {
-    diagnostics_snapshot(
+    insta::assert_snapshot!(diagnostics(
         r#"
     struct Foo(usize);
 
@@ -123,12 +126,15 @@ fn test_private_leak_function_args() {
         a
     }
     "#,
-    )
+    ), @r###"
+    34..37: can't leak private type
+    113..116: can't leak private type
+    "###);
 }
 
 #[test]
 fn test_private_leak_function_scoped() {
-    diagnostics_snapshot(
+    insta::assert_snapshot!(diagnostics(
         r#"
     // Illegal, Bar has a smaller scope than this use statement
     pub(super) struct Bar;
@@ -138,13 +144,13 @@ fn test_private_leak_function_scoped() {
         Bar
     }
     "#,
-    )
+    ), @"155..158: can't leak private type");
 }
 
 // No errors, check https://github.com/mun-lang/mun/issues/339
 #[test]
 fn test_private_leak_alias() {
-    diagnostics_snapshot(
+    insta::assert_snapshot!(diagnostics(
         r#"
     type Bar = usize;
 
@@ -152,13 +158,5 @@ fn test_private_leak_alias() {
         0
     }
     "#,
-    )
-}
-
-// this function needs to be declared in each file separately
-// since insta's AutoName creates files in the directory from which
-// the macro is called.
-fn diagnostics_snapshot(text: &str) {
-    let text = text.trim().replace("\n    ", "\n");
-    insta::assert_snapshot!(insta::_macro_support::AutoName, diagnostics(&text), &text);
+    ), @"");
 }

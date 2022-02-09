@@ -1,9 +1,0 @@
----
-source: crates/mun_hir/src/expr/validator/tests.rs
-expression: "struct Foo(usize);\npub fn bar() -> Foo { // Foo is not private\n    Foo(0)\n}\n\npub fn baz(a: Foo) -> usize { // Foo is not private\n    0\n}\n\nfn foobar() -> Foo { // Function is private so this should pass\n    Foo(0)\n}\n\npub struct FooBaz(usize);\n\npub fn BarBaz(a: Foo) -> usize {\n    0\n}\n\nfn BazFoo(a: Foo) -> usize {\n    0\n}"
-
----
-18..75: exported private type
-77..136: exported private type
-243..283: exported private type
-

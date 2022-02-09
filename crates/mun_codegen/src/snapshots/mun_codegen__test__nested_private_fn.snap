@@ -1,5 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1045
 expression: "\n    fn nested_private_fn() -> i32 {\n        1\n    }\n\n    fn private_fn() -> i32 {\n        nested_private_fn()\n    }\n\n    pub fn main() -> i32 {\n        private_fn()\n    }\n    "
 
 ---

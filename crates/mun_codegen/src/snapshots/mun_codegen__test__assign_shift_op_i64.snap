@@ -1,6 +1,8 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1045
 expression: "\n    pub fn assign_leftshift(a: i64, b: i64) -> i64 {\n        a <<= b;\n        a\n    }\n    pub fn assign_rightshift(a: i64, b: i64) -> i64 {\n        a >>= b;\n        a\n    }\n                        "
+
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
