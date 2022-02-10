@@ -2,7 +2,7 @@ use super::*;
 use crate::{parsing::grammar::paths::is_use_path_start, T};
 
 pub(super) const DECLARATION_RECOVERY_SET: TokenSet =
-    TokenSet::new(&[T![fn], T![pub], T![struct], T![use]]);
+    TokenSet::new(&[T![fn], T![pub], T![struct], T![use], T![;]]);
 
 pub(super) fn mod_contents(p: &mut Parser) {
     while !p.at(EOF) {
