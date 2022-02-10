@@ -101,6 +101,6 @@ fn error_block(p: &mut Parser, message: &str) {
     p.error(message);
     p.bump(T!['{']);
     expressions::expr_block_contents(p);
-    p.eat(T!['{']);
+    p.eat(T!['}']);
     m.complete(p, ERROR);
 }
