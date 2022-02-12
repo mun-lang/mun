@@ -2,7 +2,7 @@
 name = "mun_lld"
 version = "110.0.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
-edition = "2018"
+edition = "2021"
 description = "Bindings for LLD used to link Mun binaries"
 documentation = "https://docs.mun-lang.org/v0.3"
 readme = "README.md"

@@ -2,7 +2,7 @@
 name = "tools"
 version = "0.3.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 teraron = "0.1.0"

@@ -2,7 +2,7 @@
 name = "mun_syntax"
 version = "0.3.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
-edition = "2018"
+edition = "2021"
 description = "Parsing functionality for the Mun programming language"
 documentation = "https://docs.mun-lang.org/v0.3"
 readme = "README.md"
