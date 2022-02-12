@@ -2,7 +2,7 @@
 name = "mun_memory"
 version = "0.2.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
-edition = "2018"
+edition = "2021"
 description = "Memory management functionality for Mun"
 documentation = "https://docs.mun-lang.org/v0.3"
 readme = "README.md"
