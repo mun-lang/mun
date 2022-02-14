@@ -1,7 +1,8 @@
 use inkwell::context::Context;
 use inkwell::targets::TargetData;
 use inkwell::types::{
-    AnyType, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType, PointerType,
+    AnyType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType,
+    PointerType,
 };
 use inkwell::AddressSpace;
 
@@ -41,7 +42,7 @@ pub trait IsFunctionReturnType<'ink> {
     fn fn_type(
         context: &'ink Context,
         target: &TargetData,
-        arg_types: &[BasicTypeEnum<'ink>],
+        arg_types: &[BasicMetadataTypeEnum<'ink>],
         is_var_args: bool,
     ) -> FunctionType<'ink>;
 }
@@ -51,7 +52,7 @@ impl<'ink, T: IsBasicIrType<'ink>> IsFunctionReturnType<'ink> for T {
     fn fn_type(
         context: &'ink Context,
         target: &TargetData,
-        arg_types: &[BasicTypeEnum<'ink>],
+        arg_types: &[BasicMetadataTypeEnum<'ink>],
         is_var_args: bool,
     ) -> FunctionType<'ink> {
         T::ir_type(context, target).fn_type(arg_types, is_var_args)
@@ -62,7 +63,7 @@ impl<'ink> IsFunctionReturnType<'ink> for () {
     fn fn_type(
         context: &'ink Context,
         _target: &TargetData,
-        arg_types: &[BasicTypeEnum<'ink>],
+        arg_types: &[BasicMetadataTypeEnum<'ink>],
         is_var_args: bool,
     ) -> FunctionType<'ink> {
         context.void_type().fn_type(arg_types, is_var_args)
@@ -92,7 +93,7 @@ pub trait AsFunctionReturnType<'ink> {
         &self,
         context: &'ink Context,
         target: &TargetData,
-        arg_types: &[BasicTypeEnum<'ink>],
+        arg_types: &[BasicMetadataTypeEnum<'ink>],
         is_var_args: bool,
     ) -> FunctionType<'ink>;
 }
@@ -102,7 +103,7 @@ impl<'ink, T: AsBasicIrType<'ink>> AsFunctionReturnType<'ink> for T {
         &self,
         context: &'ink Context,
         target: &TargetData,
-        arg_types: &[BasicTypeEnum<'ink>],
+        arg_types: &[BasicMetadataTypeEnum<'ink>],
         is_var_args: bool,
     ) -> FunctionType<'ink> {
         self.as_ir_type(context, target)
@@ -115,7 +116,7 @@ impl<'ink> AsFunctionReturnType<'ink> for () {
         &self,
         context: &'ink Context,
         _target: &TargetData,
-        arg_types: &[BasicTypeEnum<'ink>],
+        arg_types: &[BasicMetadataTypeEnum<'ink>],
         is_var_args: bool,
     ) -> FunctionType<'ink> {
         context.void_type().fn_type(arg_types, is_var_args)

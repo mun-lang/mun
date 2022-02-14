@@ -12,12 +12,12 @@ export async function execute(cmd) {
     let myError = '';
     await exec.exec(cmd, [], {
         listeners: {
-        stdout: (data) => {
-            myOutput += data.toString().trim();
-        },
-        stderr: (data) => {
-            myError += data.toString().trim();
-        }
+            stdout: (data) => {
+                myOutput += data.toString().trim();
+            },
+            stderr: (data) => {
+                myError += data.toString().trim();
+            }
         }
     });
 
@@ -29,15 +29,15 @@ export async function execute(cmd) {
 
 (async () => {
     try {
-        if(isLinux) {
+        if (isLinux) {
             const installScript = path.join(__dirname, "../../../../scripts/install-llvm.sh");
             await exec.exec(`sudo ${installScript}`);
-        } else if(isMacOS) {
-            await exec.exec("brew install llvm@11")
-            let llvmPath = await execute("brew --prefix llvm@11");
-            core.addPath(`${llvmPath}/bin`)   
-        } else if(isWindows) {
-            const downloadUrl = "https://github.com/mun-lang/llvm-package-windows/releases/download/v11.0.1/llvm-11.0.1-windows-x64-msvc16.7z"
+        } else if (isMacOS) {
+            await exec.exec("brew install llvm@13")
+            let llvmPath = await execute("brew --prefix llvm@13");
+            core.addPath(`${llvmPath}/bin`)
+        } else if (isWindows) {
+            const downloadUrl = "https://github.com/mun-lang/llvm-package-windows/releases/download/v13.0.0/llvm-13.0.0-windows-x64-msvc16.7z"
             core.info(`downloading LLVM from '${downloadUrl}'`)
             const downloadLocation = await tc.downloadTool(downloadUrl);
 
@@ -45,14 +45,14 @@ export async function execute(cmd) {
             const llvmPath = path.resolve("llvm");
             const _7zPath = path.join(__dirname, '..', 'externals', '7zr.exe');
             let attempt = 1;
-            while(true) {
+            while (true) {
                 const args = [
                     "x", // extract
                     downloadLocation,
                     `-o${llvmPath}`
                 ]
                 const exit = await exec.exec(_7zPath, args);
-                if(exit === 2 && attempt <= 4) {
+                if (exit === 2 && attempt <= 4) {
                     attempt += 1;
                     console.error(`Error extracting LLVM release, retrying attempt #${attempt} after 1s..`)
                     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -70,8 +70,8 @@ export async function execute(cmd) {
             core.exportVariable('LIBCLANG_PATH', `${llvmPath}/bin`)
         } else {
             core.setFailed(`unsupported platform '${process.platform}'`)
-        }    
-    } catch(error) {
+        }
+    } catch (error) {
         console.error(error.stack);
         core.setFailed(error.message);
     }
