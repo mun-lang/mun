@@ -4,7 +4,7 @@
 
 set -eux
 
-LLVM_VERSION=11
+LLVM_VERSION=12
 DISTRO=$(lsb_release -is)
 VERSION=$(lsb_release -sr)
 DIST_VERSION="${DISTRO}_${VERSION}"

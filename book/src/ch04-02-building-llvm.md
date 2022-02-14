@@ -5,7 +5,7 @@ The Mun compiler makes heavy use of LLVM for all code-generation capabilities.
 Installing it, however, can be tricky.
 This document is a short guide on how to install LLVM on your machine so you can build Mun yourself.
 
-Currently, Mun targets LLVM 11 so everything in this document refers to that version.
+Currently, Mun targets LLVM 12 so everything in this document refers to that version.
 However, these instructions should also hold for newer versions. 
 
 ## Prebuild binaries
@@ -21,10 +21,10 @@ For Windows, [we maintain a repository](https://github.com/mun-lang/llvm-package
 These releases are also used on our CI runners. 
 
 To use a release, download and extract it to your machine. 
-To make sure the build pipeline can find the binaries, add an environment variable called `LLVM_SYS_110_PREFIX` that points to the folder where you extracted the release.
+To make sure the build pipeline can find the binaries, add an environment variable called `LLVM_SYS_120_PREFIX` that points to the folder where you extracted the release.
 It is also possible to add the `bin` folder of the release to your path but using the environment variables allows you to have multiple LLVM releases on your machine.
 
-> For LLVM 8 you should add the `LLVM_SYS_80_PREFIX` environment variable, for LLVM 11 add `LLVM_SYS_110_PREFIX`.
+> For LLVM 8 you should add the `LLVM_SYS_80_PREFIX` environment variable, for LLVM 12 add `LLVM_SYS_120_PREFIX`.
 
 ### Debian & Ubuntu
 
@@ -38,7 +38,7 @@ wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
 
 # Add the repository
 # ${REPO_NAME} should be something like:
-# deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main
+# deb http://apt.llvm.org/focal/ llvm-toolchain-focal-12 main
 #
 # The `add-apt-repository` command is installed by the `software-properties-common` package:
 # sudo apt install software-properties-common 
@@ -48,7 +48,7 @@ add-apt-repository "${REPO_NAME}"
 Once you have the proper APT repository configured you can install the required LLVM binaries with:
 
 ```bash
-apt install llvm-11 llvm-11-* liblld-11* libclang-common-11-dev
+apt install llvm-12 llvm-12-* liblld-12* libclang-common-12-dev
 ```
 
 ### MacOS
@@ -56,18 +56,18 @@ apt install llvm-11 llvm-11-* liblld-11* libclang-common-11-dev
 [Brew](https://brew.sh/) contains a cask for LLVM that can be used to build Mun:
 
 ```bash
-brew install llvm@11
+brew install llvm@12
 ```
 
-After installing LLVM, you can either add the `bin` folder of the release to your path; or you can add a release-specific environment variable called `LLVM_SYS_110_PREFIX` that points to the release:
+After installing LLVM, you can either add the `bin` folder of the release to your path; or you can add a release-specific environment variable called `LLVM_SYS_120_PREFIX` that points to the release:
 
 ```bash
-export LLVM_SYS_110_PREFIX=$(brew --prefix llvm@11)
+export LLVM_SYS_120_PREFIX=$(brew --prefix llvm@12)
 ```
 
-Adding the `LLVM_SYS_110_PREFIX` variable is usually easier because the LLVM binaries will not conflict with any preinstalled version of LLVM and it allows you to easily install another version of LLVM side-by-side.
+Adding the `LLVM_SYS_120_PREFIX` variable is usually easier because the LLVM binaries will not conflict with any preinstalled version of LLVM and it allows you to easily install another version of LLVM side-by-side.
 
-> For LLVM 8 you should add the `LLVM_SYS_80_PREFIX` environment variable, for LLVM 11 add `LLVM_SYS_110_PREFIX`.
+> For LLVM 8 you should add the `LLVM_SYS_80_PREFIX` environment variable, for LLVM 12 add `LLVM_SYS_120_PREFIX`.
 
 ## Building from source
 
@@ -83,18 +83,18 @@ Download a dump of the LLVM repository from the [LLVM github repository](https:/
 
 ```bash
 wget -qO- \
-  https://github.com/llvm/llvm-project/archive/llvmorg-11.0.1.tar.gz | \
+  https://github.com/llvm/llvm-project/archive/llvmorg-12.0.1.tar.gz | \
   tar xzf -
 ```
 
 Then build the required components and install them to `~/local`.
 
 ```bash
-cd llvm-project-llvmorg-11.0.1/llvm
+cd llvm-project-llvmorg-12.0.1/llvm
 mkdir build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="lld;clang" -DCMAKE_INSTALL_PREFIX=$HOME/local -DCMAKE_INSTALL_PREFIX=$HOME/local -DLLVM_ENABLE_LIBXML2=OFF
 make install -j
 ```
 
-After LLVM is build, make sure to add the `$HOME/local/bin` to you path or add an environment variable `LLVM_SYS_110_PREFIX` (or `LLVM_SYS_110_PREFIX` depending on the LLVM version you installed) that points to `$HOME/local`. 
+After LLVM is build, make sure to add the `$HOME/local/bin` to you path or add an environment variable `LLVM_SYS_120_PREFIX` (or `LLVM_SYS_120_PREFIX` depending on the LLVM version you installed) that points to `$HOME/local`. 

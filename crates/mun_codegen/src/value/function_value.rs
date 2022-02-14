@@ -23,7 +23,7 @@ macro_rules! into_function_info_impl {
                         context.context.void_type().fn_type(
                             &[
                                 $(
-                                    $T::get_ir_type(context).as_basic_type_enum()
+                                    $T::get_ir_type(context).as_basic_type_enum().into()
                                 ),*
                             ],
                             false
@@ -32,7 +32,7 @@ macro_rules! into_function_info_impl {
                         $R::get_ir_type(context).fn_type(
                             &[
                                 $(
-                                    $T::get_ir_type(context).as_basic_type_enum()
+                                    $T::get_ir_type(context).as_basic_type_enum().into()
                                 ),*
                             ],
                             false

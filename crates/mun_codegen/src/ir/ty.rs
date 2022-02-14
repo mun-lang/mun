@@ -136,6 +136,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
             .map(|p| {
                 self.get_basic_type(p)
                     .expect("could not convert function argument to basic type")
+                    .into()
             })
             .collect();
 
@@ -159,6 +160,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
             .map(|p| {
                 self.get_public_basic_type(p)
                     .expect("could not convert function argument to public basic type")
+                    .into()
             })
             .collect();
 
