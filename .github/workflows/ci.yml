@@ -37,7 +37,38 @@ jobs:
           args: --all-targets
 
   test:
-    name: Test
+    name: Test Mun
+    runs-on: ${{ matrix.os }}
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "windows-latest", "macOS-latest"]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Install LLVM
+        uses: ./.github/actions/install-llvm
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          override: true
+          components: rustfmt
+
+      - uses: Swatinem/rust-cache@v1
+        
+      - name: Cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace -- --nocapture
+
+  test-dependents:
+    name: Test Mun Dependents (C++ & book)
     runs-on: ${{ matrix.os }}
     needs: check
     strategy:
@@ -75,11 +106,11 @@ jobs:
 
       - name: Configure cmake (debug)
         working-directory: ${{ runner.workspace }}/build/debug
-        run: cmake -DCMAKE_BUILD_TYPE=Debug -S $GITHUB_WORKSPACE -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_binaries_path=$GITHUB_WORKSPACE/target/debug/ -Dmun_examples_path=$GITHUB_WORKSPACE/examples
+        run: cmake -DCMAKE_BUILD_TYPE=Debug -S ${{ github.workspace }}  -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_binaries_path=${{ github.workspace }} /target/debug/ -Dmun_examples_path=${{ github.workspace }} /examples
       
       - name: Configure cmake (release)
         working-directory: ${{ runner.workspace }}/build/release
-        run: cmake -DCMAKE_BUILD_TYPE=Release -S $GITHUB_WORKSPACE -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_binaries_path=$GITHUB_WORKSPACE/target/debug/ -Dmun_examples_path=$GITHUB_WORKSPACE/examples
+        run: cmake -DCMAKE_BUILD_TYPE=Release -S ${{ github.workspace }}  -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_binaries_path=${{ github.workspace }} /target/debug/ -Dmun_examples_path=${{ github.workspace }} /examples
 
       - name: Build C++ (debug)
         working-directory: ${{ runner.workspace }}/build/debug
@@ -112,12 +143,6 @@ jobs:
       - name: mdbook build
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: mdbook build book
-        
-      - name: Cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --workspace -- --nocapture
 
   style:
     name: Check Style
