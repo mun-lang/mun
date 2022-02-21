@@ -1,31 +1,34 @@
 include(ExternalProject)
 
-set(mun_executable_url_or_path "" CACHE FILEPATH "Location of an archive on the web or a local directory containing containing the Mun executable. This is required for building the Mun test snippets")
+set(mun_executable_url "" CACHE FILEPATH "Location of an archive on the web containing the Mun executable. This is required for building the Mun tests.")
+set(mun_examples_path "" CACHE FILEPATH "Location of Mun examples. This is required for building the Mun tests.")
 
 add_executable(mun_executable IMPORTED)
-if (mun_executable_url_or_path)
-    if (IS_DIRECTORY ${mun_executable_url_or_path})
-        set_target_properties(mun_executable PROPERTIES IMPORTED_LOCATION ${mun_executable_url_or_path}/mun${CMAKE_EXECUTABLE_SUFFIX})
-    else ()
-        # Download the mun executable
-        ExternalProject_Add(
-            mun_executable_download
-            PREFIX ${CMAKE_CURRENT_BINARY_DIR}/mun
-            URL ${mun_executable_url_or_path}
-            CONFIGURE_COMMAND ""
-            BUILD_COMMAND ""
-            INSTALL_COMMAND ""
-        )
+if (mun_binaries_path)
+    set_target_properties(mun_executable PROPERTIES IMPORTED_LOCATION ${mun_binaries_path}/mun${CMAKE_EXECUTABLE_SUFFIX})
+elseif (mun_executable_url)
+    # Download the mun executable
+    ExternalProject_Add(
+        mun_executable_download
+        PREFIX ${CMAKE_CURRENT_BINARY_DIR}/mun
+        URL ${mun_executable_url}
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ""
+        INSTALL_COMMAND ""
+    )
 
-        ExternalProject_Get_Property(mun_executable_download source_dir)
-        set_target_properties(mun_executable PROPERTIES IMPORTED_LOCATION ${source_dir}/mun${CMAKE_EXECUTABLE_SUFFIX})
-        add_dependencies(mun_executable mun_executable_download)
-    endif ()
+    ExternalProject_Get_Property(mun_executable_download source_dir)
+    set_target_properties(mun_executable PROPERTIES IMPORTED_LOCATION ${source_dir}/mun${CMAKE_EXECUTABLE_SUFFIX})
+    add_dependencies(mun_executable mun_executable_download)
 else ()
-    message(FATAL_ERROR "You must specify the mun_executable_url_or_path to be able to test the Mun Runtime")
+    message(FATAL_ERROR "You must specify the `mun_binaries_path` or `mun_executable_url` to be able to use the Mun Runtime")
 endif ()
 
-if (NOT mun_examples_path)
+if (mun_examples_path)
+    if (NOT IS_DIRECTORY ${mun_binaries_path})
+        message(FATAL_ERROR "The provided location of Mun examples is invalid.")
+    endif ()
+else ()
     message(FATAL_ERROR "You must specify the mun_examples_path to be able to test the Mun Runtime")
 endif ()
 

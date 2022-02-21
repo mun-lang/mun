@@ -75,11 +75,11 @@ jobs:
 
       - name: Configure cmake (debug)
         working-directory: ${{ runner.workspace }}/build/debug
-        run: cmake -DCMAKE_BUILD_TYPE=Debug -S $GITHUB_WORKSPACE -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_executable_url_or_path=$GITHUB_WORKSPACE/target/debug/ -Dmun_library_url_or_path=$GITHUB_WORKSPACE/target/debug/ -Dmun_examples_path=$GITHUB_WORKSPACE/examples
+        run: cmake -DCMAKE_BUILD_TYPE=Debug -S $GITHUB_WORKSPACE -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_binaries_path=$GITHUB_WORKSPACE/target/debug/ -Dmun_examples_path=$GITHUB_WORKSPACE/examples
       
       - name: Configure cmake (release)
         working-directory: ${{ runner.workspace }}/build/release
-        run: cmake -DCMAKE_BUILD_TYPE=Release -S $GITHUB_WORKSPACE -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_executable_url_or_path=$GITHUB_WORKSPACE/target/debug/ -Dmun_library_url_or_path=$GITHUB_WORKSPACE/target/debug/ -Dmun_examples_path=$GITHUB_WORKSPACE/examples
+        run: cmake -DCMAKE_BUILD_TYPE=Release -S $GITHUB_WORKSPACE -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_binaries_path=$GITHUB_WORKSPACE/target/debug/ -Dmun_examples_path=$GITHUB_WORKSPACE/examples
 
       - name: Build C++ (debug)
         working-directory: ${{ runner.workspace }}/build/debug
