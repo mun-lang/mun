@@ -16,7 +16,10 @@ source_filename = "mod"
 define i32 @fibonacci(i32 %0) {
 body:
   %lesseq = icmp sle i32 %0, 1
-  br i1 %lesseq, label %if_merge, label %else
+  br i1 %lesseq, label %then, label %else
+
+then:                                             ; preds = %body
+  br label %if_merge
 
 else:                                             ; preds = %body
   %sub = sub i32 %0, 1
@@ -26,8 +29,8 @@ else:                                             ; preds = %body
   %add = add i32 %fibonacci, %fibonacci6
   br label %if_merge
 
-if_merge:                                         ; preds = %body, %else
-  %iftmp = phi i32 [ %add, %else ], [ %0, %body ]
+if_merge:                                         ; preds = %else, %then
+  %iftmp = phi i32 [ %0, %then ], [ %add, %else ]
   ret i32 %iftmp
 }
 

@@ -20,11 +20,14 @@ body:
 loop:                                             ; preds = %if_merge6, %body
   %n.0 = phi i32 [ %0, %body ], [ %add, %if_merge6 ]
   %greater = icmp sgt i32 %n.0, 5
-  br i1 %greater, label %exit, label %if_merge
+  br i1 %greater, label %then, label %if_merge
 
-exit:                                             ; preds = %if_merge, %loop
-  %exit8 = phi i32 [ %n.0, %loop ], [ 10, %if_merge ]
+exit:                                             ; preds = %if_merge, %then
+  %exit8 = phi i32 [ %n.0, %then ], [ 10, %if_merge ]
   ret i32 %exit8
+
+then:                                             ; preds = %loop
+  br label %exit
 
 if_merge:                                         ; preds = %loop
   %greater4 = icmp sgt i32 %n.0, 10

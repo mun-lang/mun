@@ -11,6 +11,7 @@ use hir::{
     Literal, LogicOp, Name, Ordering, Pat, PatId, Path, ResolveBitness, Resolver, Statement,
     TyKind, UnaryOp, ValueNs,
 };
+use inkwell::values::BasicMetadataValueEnum;
 use inkwell::{
     basic_block::BasicBlock,
     builder::Builder,
@@ -152,7 +153,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
     pub fn gen_fn_wrapper(&mut self) {
         let fn_sig = self.hir_function.ty(self.db).callable_sig(self.db).unwrap();
-        let args: Vec<BasicValueEnum> = fn_sig
+        let args: Vec<BasicMetadataValueEnum> = fn_sig
             .params()
             .iter()
             .enumerate()
@@ -167,6 +168,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 } else {
                     param
                 }
+                .into()
             })
             .collect();
 
@@ -230,9 +232,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 match self.infer[*callee].as_callable_def() {
                     Some(hir::CallableDef::Function(def)) => {
                         // Get all the arguments
-                        let args: Vec<BasicValueEnum> = args
+                        let args: Vec<BasicMetadataValueEnum> = args
                             .iter()
-                            .map(|expr| self.gen_expr(*expr).expect("expected a value"))
+                            .map(|expr| self.gen_expr(*expr).expect("expected a value").into())
                             .collect();
 
                         self.gen_call(def, &args)
@@ -397,7 +399,11 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         // make it struct type agnostic, it is stored in a `*const *mut std::ffi::c_void`.
         let object_ptr = self
             .builder
-            .build_call(new_fn_ptr, &[type_info_ptr, allocator_handle], "new")
+            .build_call(
+                new_fn_ptr,
+                &[type_info_ptr.into(), allocator_handle.into()],
+                "new",
+            )
             .try_as_basic_value()
             .left()
             .unwrap()
@@ -1068,7 +1074,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
     fn gen_call(
         &mut self,
         function: hir::Function,
-        args: &[BasicValueEnum<'ink>],
+        args: &[BasicMetadataValueEnum<'ink>],
     ) -> CallSiteValue<'ink> {
         if self.should_use_dispatch_table(function) {
             let ptr_value = self.dispatch_table.gen_function_lookup(

@@ -1,12 +1,13 @@
 use crate::module_group::ModuleGroup;
 use crate::{intrinsics::Intrinsic, ir::function, ir::ty::HirTypeCache, type_info::TypeInfo};
 use hir::{Body, Expr, ExprId, HirDatabase, InferenceResult};
+use inkwell::values::CallableValue;
 use inkwell::{
     context::Context,
     module::Module,
     targets::TargetData,
     types::{BasicTypeEnum, FunctionType},
-    values::{BasicValueEnum, PointerValue},
+    values::BasicValueEnum,
 };
 use rustc_hash::FxHashSet;
 use std::{
@@ -80,7 +81,7 @@ impl<'ink> DispatchTable<'ink> {
         table_ref: Option<inkwell::values::GlobalValue<'ink>>,
         builder: &inkwell::builder::Builder<'ink>,
         function: hir::Function,
-    ) -> PointerValue<'ink> {
+    ) -> CallableValue<'ink> {
         let function_name = function.name(db).to_string();
 
         // Get the index of the function
@@ -100,7 +101,7 @@ impl<'ink> DispatchTable<'ink> {
         table_ref: Option<inkwell::values::GlobalValue<'ink>>,
         builder: &inkwell::builder::Builder<'ink>,
         intrinsic: &impl Intrinsic,
-    ) -> PointerValue<'ink> {
+    ) -> CallableValue<'ink> {
         let prototype = intrinsic.prototype(self.context, &self.target);
 
         // Get the index of the intrinsic
@@ -120,7 +121,7 @@ impl<'ink> DispatchTable<'ink> {
         builder: &inkwell::builder::Builder<'ink>,
         function_name: &str,
         index: usize,
-    ) -> PointerValue<'ink> {
+    ) -> CallableValue<'ink> {
         // Get the internal table reference
         let table_ref = table_ref.expect("no dispatch table defined");
 
@@ -141,6 +142,8 @@ impl<'ink> DispatchTable<'ink> {
         builder
             .build_load(ptr_to_function_ptr, &format!("{0}_ptr", function_name))
             .into_pointer_value()
+            .try_into()
+            .expect("Pointer value is not a valid function pointer.")
     }
 
     /// Returns the value that represents the dispatch table in IR or `None` if no table was

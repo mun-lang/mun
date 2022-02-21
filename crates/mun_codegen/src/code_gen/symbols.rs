@@ -7,10 +7,12 @@ use crate::{
         type_table::TypeTable,
     },
     type_info::TypeInfo,
-    value::{AsValue, CanInternalize, Global, IrValueContext, IterAsIrValue, Value},
+    value::{
+        AsValue, CanInternalize, Global, IrValueContext, IterAsIrValue, SizedValueType, Value,
+    },
 };
 use hir::{HirDatabase, Ty};
-use inkwell::{attributes::Attribute, module::Linkage};
+use inkwell::{attributes::Attribute, module::Linkage, types::AnyType};
 use std::convert::TryFrom;
 use std::{collections::HashSet, ffi::CString};
 
@@ -288,12 +290,12 @@ fn gen_get_info_fn<'ink>(
             .add_function("get_info", get_symbols_type, Some(Linkage::DLLExport));
 
     if target.options.is_like_windows {
-        get_symbols_fn.add_attribute(
-            inkwell::attributes::AttributeLoc::Param(0),
-            context
-                .context
-                .create_enum_attribute(Attribute::get_named_enum_kind_id("sret"), 0),
+        let type_attribute = context.context.create_type_attribute(
+            Attribute::get_named_enum_kind_id("sret"),
+            ir::AssemblyInfo::get_ir_type(context.type_context).as_any_type_enum(),
         );
+
+        get_symbols_fn.add_attribute(inkwell::attributes::AttributeLoc::Param(0), type_attribute);
     }
 
     let builder = context.context.create_builder();
