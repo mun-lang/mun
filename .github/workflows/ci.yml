@@ -61,11 +61,11 @@ jobs:
 
       - uses: Swatinem/rust-cache@v1
 
-      - name: Cargo test
+      - name: Cargo build
         uses: actions-rs/cargo@v1
         with:
-          command: test
-          args: --workspace -- --nocapture
+          command: build
+          args: --workspace
           
       - name: Create build folder (debug)
         run: cmake -E make_directory ${{ runner.workspace }}/build/debug
