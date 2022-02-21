@@ -106,11 +106,11 @@ jobs:
 
       - name: Configure cmake (debug)
         working-directory: ${{ runner.workspace }}/build/debug
-        run: cmake -DCMAKE_BUILD_TYPE=Debug -S ${{ github.workspace }}  -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_binaries_path=${{ github.workspace }} /target/debug/ -Dmun_examples_path=${{ github.workspace }} /examples
+        run: cmake -DCMAKE_BUILD_TYPE=Debug -S ${{ github.workspace }} -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_binaries_path=${{ github.workspace }}/target/debug/ -Dmun_examples_path=${{ github.workspace }}/examples
       
       - name: Configure cmake (release)
         working-directory: ${{ runner.workspace }}/build/release
-        run: cmake -DCMAKE_BUILD_TYPE=Release -S ${{ github.workspace }}  -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_binaries_path=${{ github.workspace }} /target/debug/ -Dmun_examples_path=${{ github.workspace }} /examples
+        run: cmake -DCMAKE_BUILD_TYPE=Release -S ${{ github.workspace }} -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_binaries_path=${{ github.workspace }}/target/debug/ -Dmun_examples_path=${{ github.workspace }}/examples
 
       - name: Build C++ (debug)
         working-directory: ${{ runner.workspace }}/build/debug
