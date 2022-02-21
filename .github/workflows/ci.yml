@@ -112,6 +112,12 @@ jobs:
       - name: mdbook build
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: mdbook build book
+        
+      - name: Cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace -- --nocapture
 
   style:
     name: Check Style
