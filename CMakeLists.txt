@@ -4,7 +4,7 @@ project(MunRuntime VERSION 0.1.0 LANGUAGES C CXX)
 option(mun_build_examples "Build all of Mun's own examples." OFF)
 option(mun_build_tests "Build all of Mun's own tests." OFF)
 set(mun_binaries_path "" CACHE FILEPATH "Location of a local directory containing the Mun libraries and executable.")
-set(mun_library_url "" CACHE FILEPATH "Location of an archive on the web containing the Mun libraries.")
+set(mun_library_url "" CACHE FILEPATH "URL to an archive on the web containing the Mun libraries.")
 
 set(cpp_source_dir ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
 

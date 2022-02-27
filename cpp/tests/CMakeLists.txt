@@ -1,6 +1,6 @@
 include(ExternalProject)
 
-set(mun_executable_url "" CACHE FILEPATH "Location of an archive on the web containing the Mun executable. This is required for building the Mun tests.")
+set(mun_executable_url "" CACHE FILEPATH "URL to an archive on the web containing the Mun executable. This is required for building the Mun tests.")
 set(mun_examples_path "" CACHE FILEPATH "Location of Mun examples. This is required for building the Mun tests.")
 
 add_executable(mun_executable IMPORTED)
