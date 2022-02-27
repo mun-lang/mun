@@ -4,7 +4,6 @@ the below applies to the result of this template
 // Do not edit manually
 
 #![allow(bad_style, missing_docs, unreachable_pub, clippy::manual_non_exhaustive, clippy::upper_case_acronyms)]
-#![cfg_attr(rustfmt, rustfmt_skip)]
 use super::SyntaxInfo;
 
 /// The kind of syntax node, e.g. `IDENT`, `USE_KW`, or `STRUCT_DEF`.

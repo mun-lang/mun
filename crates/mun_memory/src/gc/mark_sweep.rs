@@ -101,7 +101,7 @@ where
     }
 
     fn ptr_type(&self, handle: GcPtr) -> T {
-        let _ = self.objects.read();
+        let _lock = self.objects.read();
 
         // Convert the handle to our internal representation
         let object_info: *const ObjectInfo<T> = handle.into();
@@ -111,7 +111,7 @@ where
     }
 
     fn root(&self, handle: GcPtr) {
-        let _ = self.objects.write();
+        let _lock = self.objects.write();
 
         // Convert the handle to our internal representation
         let object_info: *mut ObjectInfo<T> = handle.into();
@@ -120,7 +120,7 @@ where
     }
 
     fn unroot(&self, handle: GcPtr) {
-        let _ = self.objects.write();
+        let _lock = self.objects.write();
 
         // Convert the handle to our internal representation
         let object_info: *mut ObjectInfo<T> = handle.into();

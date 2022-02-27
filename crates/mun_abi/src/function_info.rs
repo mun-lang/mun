@@ -143,7 +143,7 @@ impl FunctionDefinitionStorage {
         fn_ptr: *const c_void,
     ) -> (FunctionDefinition, FunctionDefinitionStorage) {
         let name = CString::new(name).unwrap();
-        let type_infos: Vec<&'static TypeInfo> = args.iter().copied().collect();
+        let type_infos = args.to_vec();
 
         let num_arg_types = type_infos.len() as u16;
         let return_type = if let Some(ty) = ret {
