@@ -62,7 +62,7 @@ pub fn generate_doc_tests_from_mdbook(book_root: impl Into<PathBuf>) {
             mdbook::BookItem::Chapter(cp) => Some(cp),
             _ => None,
         })
-        .map(|cp| {
+        .flat_map(|cp| {
             extract_tests_from_string(
                 &cp.content,
                 &cp.path
@@ -76,7 +76,6 @@ pub fn generate_doc_tests_from_mdbook(book_root: impl Into<PathBuf>) {
                     .unwrap_or_else(String::new),
             )
         })
-        .flatten()
         .collect::<Vec<_>>();
 
     // Get information from environment variables
