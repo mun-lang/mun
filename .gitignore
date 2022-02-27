@@ -30,3 +30,13 @@ Cargo.lock
 # Build artifacts
 *.munlib
 **/target/*
+
+# Visual Studio
+.vs/
+out/
+CMakeSettings.json
+
+# Build artifacts
+*.munlib
+**/target/*
+build/
