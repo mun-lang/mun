@@ -256,9 +256,7 @@ fn compiler_valid_utf8() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-    let foo_func = runtime_ref.get_function_definition("foo").unwrap();
+    let foo_func = driver.runtime.get_function_definition("foo").unwrap();
     assert_eq!(
         unsafe { CStr::from_ptr(foo_func.prototype.name) }
             .to_str()
@@ -389,20 +387,19 @@ fn marshal_struct() {
         assert_eq!(Ok(data.0), s.get::<T>(field_name));
     }
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-
     let int_data = TestData(3i32, 6i32);
     let bool_data = TestData(true, false);
 
     // Verify that struct marshalling works for fundamental types
-    let mut foo: StructRef = runtime_ref
+    let mut foo: StructRef = driver
+        .runtime
         .invoke("foo_new", (int_data.0, bool_data.0))
         .unwrap();
     test_field(&mut foo, &int_data, "a");
     test_field(&mut foo, &bool_data, "b");
 
-    let mut bar: StructRef = runtime_ref
+    let mut bar: StructRef = driver
+        .runtime
         .invoke("bar_new", (int_data.0, bool_data.0))
         .unwrap();
     test_field(&mut bar, &int_data, "0");
@@ -435,37 +432,43 @@ fn marshal_struct() {
     }
 
     // Verify that struct marshalling works for struct types
-    let mut baz: StructRef = runtime_ref.invoke("baz_new", (foo,)).unwrap();
-    let c1: StructRef = runtime_ref
+    let mut baz: StructRef = driver.runtime.invoke("baz_new", (foo,)).unwrap();
+    let c1: StructRef = driver
+        .runtime
         .invoke("foo_new", (int_data.0, bool_data.0))
         .unwrap();
-    let c2: StructRef = runtime_ref
+    let c2: StructRef = driver
+        .runtime
         .invoke("foo_new", (int_data.1, bool_data.1))
         .unwrap();
     test_struct(&mut baz, c1, c2);
 
-    let mut qux: StructRef = runtime_ref.invoke("qux_new", (bar,)).unwrap();
-    let c1: StructRef = runtime_ref
+    let mut qux: StructRef = driver.runtime.invoke("qux_new", (bar,)).unwrap();
+    let c1: StructRef = driver
+        .runtime
         .invoke("bar_new", (int_data.0, bool_data.0))
         .unwrap();
-    let c2: StructRef = runtime_ref
+    let c2: StructRef = driver
+        .runtime
         .invoke("bar_new", (int_data.1, bool_data.1))
         .unwrap();
     test_struct(&mut qux, c1, c2);
 
     // Verify the dispatch table works when a marshallable wrapper function exists alongside the
     // original function.
-    let mut baz2: StructRef = runtime_ref
+    let mut baz2: StructRef = driver
+        .runtime
         .invoke("baz_new_transitive", (int_data.0, bool_data.0))
         .unwrap();
     // TODO: Find an ergonomic solution for this:
     // .unwrap_or_else(|e| e.wait(&mut runtime_ref));
 
-    let runtime_ref = runtime.borrow();
-    let c1: StructRef = runtime_ref
+    let c1: StructRef = driver
+        .runtime
         .invoke("foo_new", (int_data.0, bool_data.0))
         .unwrap();
-    let c2: StructRef = runtime_ref
+    let c2: StructRef = driver
+        .runtime
         .invoke("foo_new", (int_data.1, bool_data.1))
         .unwrap();
     test_struct(&mut baz2, c1, c2);
@@ -541,11 +544,11 @@ fn marshal_struct() {
     assert!(bar_err.is_err());
 
     // Specify invalid return type
-    let bar_err: Result<i64, _> = runtime_ref.invoke("baz_new", (foo,));
+    let bar_err: Result<i64, _> = driver.runtime.invoke("baz_new", (foo,));
     assert!(bar_err.is_err());
 
     // Pass invalid struct type
-    let bar_err: Result<StructRef, _> = runtime_ref.invoke("baz_new", (bar,));
+    let bar_err: Result<StructRef, _> = driver.runtime.invoke("baz_new", (bar,));
     assert!(bar_err.is_err());
 }
 
@@ -670,10 +673,8 @@ fn test_primitive_types() {
         assert_eq!(Ok(data.0), s.get::<T>(field_name));
     }
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-
-    let mut foo: StructRef = runtime_ref
+    let mut foo: StructRef = driver
+        .runtime
         .invoke(
             "new_primitives",
             (
@@ -711,10 +712,7 @@ fn can_add_external_without_return() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-
-    let _: () = runtime_ref.invoke("main", ()).unwrap();
+    let _: () = driver.runtime.invoke("main", ()).unwrap();
 }
 
 #[test]

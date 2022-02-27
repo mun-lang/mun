@@ -14,9 +14,7 @@ fn hotreloadable() {
     .expect("Failed to build test driver");
     assert_invoke_eq!(i32, 5, driver, "main");
 
-    let runtime = driver.runtime();
     driver.update(
-        runtime.borrow(),
         "mod.mun",
         r"
     pub fn main() -> i32 { 10 }
@@ -46,9 +44,7 @@ fn hotreload_struct_decl() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
     driver.update(
-        runtime.borrow(),
         "mod.mun",
         r#"
     pub struct(gc) Args {

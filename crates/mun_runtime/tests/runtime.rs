@@ -14,11 +14,7 @@ fn invoke() {
     )
     .expect("Failed to build test driver");
 
-    let result: i32 = driver
-        .runtime()
-        .borrow()
-        .invoke("sum", (123i32, 456i32))
-        .unwrap();
+    let result: i32 = driver.runtime.invoke("sum", (123i32, 456i32)).unwrap();
     assert_eq!(123 + 456, result);
 }
 
