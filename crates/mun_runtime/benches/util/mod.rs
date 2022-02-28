@@ -1,11 +1,7 @@
 use compiler::{Config, DisplayColor, Driver, OptimizationLevel, PathOrInline};
 use mlua::Lua;
-use mun_runtime::RuntimeBuilder;
-use std::{
-    cell::RefCell,
-    path::{Path, PathBuf},
-    rc::Rc,
-};
+use mun_runtime::Runtime;
+use std::path::{Path, PathBuf};
 use wasmer_runtime::{instantiate, Instance};
 
 fn compute_resource_path<P: AsRef<Path>>(p: P) -> PathBuf {
@@ -14,7 +10,7 @@ fn compute_resource_path<P: AsRef<Path>>(p: P) -> PathBuf {
         .join(p)
 }
 
-pub fn runtime_from_file<P: AsRef<Path>>(p: P) -> Rc<RefCell<mun_runtime::Runtime>> {
+pub fn runtime_from_file<P: AsRef<Path>>(p: P) -> Runtime {
     let path = PathOrInline::Path(compute_resource_path(p));
     let (mut driver, file_id) = Driver::with_file(
         Config {
@@ -33,7 +29,7 @@ pub fn runtime_from_file<P: AsRef<Path>>(p: P) -> Rc<RefCell<mun_runtime::Runtim
 
     let out_path = driver.assembly_output_path_from_file(file_id);
     driver.write_all_assemblies(false).unwrap();
-    RuntimeBuilder::new(out_path).spawn().unwrap()
+    Runtime::builder(out_path).finish().unwrap()
 }
 
 pub fn lua_from_file<P: AsRef<Path>>(p: P) -> Lua {

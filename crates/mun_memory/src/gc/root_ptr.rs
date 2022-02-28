@@ -36,6 +36,11 @@ impl<T: TypeMemory + TypeTrace, G: GcRuntime<T>> GcRootPtr<T, G> {
         }
     }
 
+    /// Returns the runtime that owns the memory
+    pub fn runtime(&self) -> &Weak<G> {
+        &self.runtime
+    }
+
     /// Returns the handle of this instance
     pub fn handle(&self) -> GcPtr {
         self.handle

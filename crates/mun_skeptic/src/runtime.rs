@@ -1,7 +1,7 @@
 //! Code to perform tests on Mun code.
 
 use mun_compiler::{Config, DisplayColor, PathOrInline, RelativePathBuf};
-use mun_runtime::RuntimeBuilder;
+use mun_runtime::Runtime;
 
 /// The type of test to create
 #[derive(Copy, Clone)]
@@ -72,18 +72,17 @@ pub fn run_test(code: &str, mode: TestMode) {
 
     // Create a runtime
     let assembly_path = driver.assembly_output_path_from_file(file_id);
-    let runtime = RuntimeBuilder::new(assembly_path)
-        .spawn()
+    let runtime = Runtime::builder(assembly_path)
+        .finish()
         .expect("error creating runtime for test assembly");
 
     // Find the main function
-    if runtime.borrow().get_function_definition("main").is_none() {
+    if runtime.get_function_definition("main").is_none() {
         panic!("Could not find `main` function");
     }
 
     // Call the main function
     let _: () = runtime
-        .borrow_mut()
         .invoke("main", ())
         .expect("error calling main function");
 }
