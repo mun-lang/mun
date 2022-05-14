@@ -37,7 +37,7 @@ export async function execute(cmd) {
             let llvmPath = await execute("brew --prefix llvm@12");
             core.addPath(`${llvmPath}/bin`)
         } else if (isWindows) {
-            const downloadUrl = "https://github.com/mun-lang/llvm-package-windows/releases/download/v12.0.1/llvm-12.0.1-windows-x64-msvc16.7z"
+            const downloadUrl = "https://github.com/mun-lang/llvm-package-windows/releases/download/v12.0.1/llvm-12.0.1-windows-x64-msvc16-mt.7z"
             core.info(`downloading LLVM from '${downloadUrl}'`)
             const downloadLocation = await tc.downloadTool(downloadUrl);
 

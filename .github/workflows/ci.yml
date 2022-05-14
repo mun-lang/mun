@@ -10,6 +10,10 @@ on:
 env:
   RUSTFLAGS: -Dwarnings
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     name: Check
@@ -44,6 +48,10 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "windows-latest", "macOS-latest"]
+        include:
+          - RUSTFLAGS: "-Dwarnings"
+          - os: "windows-latest"
+            RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
     steps:
       - uses: actions/checkout@v2
         with:
@@ -63,6 +71,8 @@ jobs:
         
       - name: Cargo test
         uses: actions-rs/cargo@v1
+        env:
+          RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
         with:
           command: test
           args: --workspace -- --nocapture
@@ -75,6 +85,10 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "windows-latest", "macOS-latest"]
+        include:
+          - RUSTFLAGS: "-Dwarnings"
+          - os: "windows-latest"
+            RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
     steps:
       - uses: actions/checkout@v2
         with:
@@ -94,6 +108,8 @@ jobs:
 
       - name: Cargo build
         uses: actions-rs/cargo@v1
+        env:
+          RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
         with:
           command: build
           args: --workspace
