@@ -6,7 +6,7 @@ on:
       - release/*
 
 env:
-  RUSTFLAGS: -Dwarnings -Ctarget-feature=+crt-static
+  RUSTFLAGS: -Dwarnings
 
 jobs:
 
