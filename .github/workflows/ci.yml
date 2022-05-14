@@ -75,7 +75,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "windows-latest", "macOS-latest"]
-        RUSTFLAGS: "-Dwarnings"
+        RUSTFLAGS: ["-Dwarnings"]
         include:
           - os: "windows-latest"
             RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"

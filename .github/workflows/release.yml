@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        RUSTFLAGS: "-Dwarnings"
+        RUSTFLAGS: ["-Dwarnings"]
         config:
           - os: "ubuntu-latest"
             dir: linux64
