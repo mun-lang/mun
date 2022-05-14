@@ -33,7 +33,7 @@ mlua = { package ="mlua", version="0.2", default-features = false, features=["ve
 mun_test = { path = "../mun_test" }
 tempfile = "3"
 termcolor = "1.1"
-wasmer-runtime = "0.16"
+wasmer = "2.2.1"
 
 [[bench]]
 name = "benchmarks"

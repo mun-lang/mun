@@ -2,7 +2,7 @@ use compiler::{Config, DisplayColor, Driver, OptimizationLevel, PathOrInline};
 use mlua::Lua;
 use mun_runtime::Runtime;
 use std::path::{Path, PathBuf};
-use wasmer_runtime::{instantiate, Instance};
+use wasmer::{Instance, Module, Store};
 
 fn compute_resource_path<P: AsRef<Path>>(p: P) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -40,8 +40,9 @@ pub fn lua_from_file<P: AsRef<Path>>(p: P) -> Lua {
     lua
 }
 
-pub fn wasmer_from_file<P: AsRef<Path>>(p: P) -> Instance {
+pub fn wasmer_from_file<P: AsRef<Path>>(store: &Store, p: P) -> Instance {
     let wasm_content = std::fs::read(compute_resource_path(p)).unwrap();
-    let import_objects = wasmer_runtime::imports! {};
-    instantiate(&wasm_content, &import_objects).unwrap()
+    let import_objects = wasmer::imports! {};
+    let module = Module::new(store, &wasm_content).unwrap();
+    Instance::new(&module, &import_objects).unwrap()
 }
