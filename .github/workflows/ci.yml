@@ -45,7 +45,7 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "windows-latest", "macOS-latest"]
         include:
-          - RUSTFLAGS: [ "-Dwarnings" ]
+          - RUSTFLAGS: "-Dwarnings"
           - os: "windows-latest"
             RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
     steps:
@@ -82,7 +82,7 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "windows-latest", "macOS-latest"]
         include:
-          - RUSTFLAGS: ["-Dwarnings"]
+          - RUSTFLAGS: "-Dwarnings"
           - os: "windows-latest"
             RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
     steps:
