@@ -8,7 +8,7 @@ on:
       - release/*
 
 env:
-  RUSTFLAGS: -Dwarnings
+  RUSTFLAGS: -Dwarnings -Ctarget-feature=+crt-static
 
 jobs:
   check:
