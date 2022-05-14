@@ -255,9 +255,7 @@ impl Ty {
     pub fn equals_ctor(&self, other: &Ty) -> bool {
         match (self.interned(), other.interned()) {
             (TyKind::Struct(s1), TyKind::Struct(s2)) => s1 == s2,
-            (TyKind::Tuple(_, substs1), TyKind::Tuple(_, substs2)) => {
-                substs1 == substs2
-            }
+            (TyKind::Tuple(_, substs1), TyKind::Tuple(_, substs2)) => substs1 == substs2,
             (TyKind::Array(_), TyKind::Array(_)) => true,
             (TyKind::Float(f1), TyKind::Float(f2)) => f1 == f2,
             (TyKind::Int(i1), TyKind::Int(i2)) => i1 == i2,

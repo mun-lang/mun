@@ -1440,7 +1440,11 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .builder
             .build_call(
                 new_array_fn_ptr,
-                &[type_info_ptr.into(), length_value.into(), allocator_handle.into()],
+                &[
+                    type_info_ptr.into(),
+                    length_value.into(),
+                    allocator_handle.into(),
+                ],
                 "new_array",
             )
             .try_as_basic_value()

@@ -1,9 +1,7 @@
 use crate::garbage_collector::{GcPtr, GcRootPtr, UnsafeTypeInfo};
 use crate::{
     marshal::Marshal,
-    reflection::{
-        equals_argument_type, ArgumentReflection, ReturnTypeReflection,
-    },
+    reflection::{equals_argument_type, ArgumentReflection, ReturnTypeReflection},
     GarbageCollector, Runtime,
 };
 use abi::TypeInfo;

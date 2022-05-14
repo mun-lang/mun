@@ -57,16 +57,16 @@ fn arrays_as_argument() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-    let result: ArrayRef<'_, i32> = invoke_fn!(runtime_ref, "generate").unwrap();
+    let result: ArrayRef<'_, i32> = driver.runtime.invoke("generate", ()).unwrap();
 
     assert_eq!(result.len(), 5);
     assert!(result.capacity() >= 5);
     assert_eq!(result.iter().collect::<Vec<_>>(), vec![5, 4, 3, 2, 1]);
 
-    let result_array: ArrayRef<'_, i32> =
-        invoke_fn!(runtime_ref, "add_one", result.clone(), result.len()).unwrap();
+    let result_array: ArrayRef<'_, i32> = driver
+        .runtime
+        .invoke("add_one", (result.clone(), result.len()))
+        .unwrap();
 
     assert_eq!(result_array.len(), 5);
     assert!(result_array.capacity() >= 5);
@@ -84,16 +84,12 @@ fn root_array() {
     .expect("Failed to build test driver");
 
     let result = {
-        let runtime = driver.runtime();
-        let runtime_ref = runtime.borrow();
-        let array: ArrayRef<i32> = invoke_fn!(runtime_ref, "main").unwrap();
-        array.root(driver.runtime())
+        let array: ArrayRef<i32> = driver.runtime.invoke("main", ()).unwrap();
+        array.root()
     };
 
-    assert_eq!(result.by_ref().len(), 5);
-    assert!(result.by_ref().capacity() >= 5);
-    assert_eq!(
-        result.by_ref().iter().collect::<Vec<_>>(),
-        vec![5, 4, 3, 2, 1]
-    );
+    let result = result.as_ref(&driver.runtime);
+    assert_eq!(result.len(), 5);
+    assert!(result.capacity() >= 5);
+    assert_eq!(result.iter().collect::<Vec<_>>(), vec![5, 4, 3, 2, 1]);
 }

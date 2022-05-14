@@ -655,12 +655,8 @@ impl Runtime {
         // Validate the return type
         match if let Some(return_type) = function_info.prototype.signature.return_type() {
             if !ReturnType::equals_type(return_type) {
-                Err((
-                    return_type.name(),
-                    ReturnType::type_name(),
-                ))
-            }
-            else {
+                Err((return_type.name(), ReturnType::type_name()))
+            } else {
                 Ok(())
             }
         } else if <() as ReturnTypeReflection>::type_guid() != ReturnType::type_guid() {

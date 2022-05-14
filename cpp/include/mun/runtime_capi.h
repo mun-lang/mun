@@ -74,6 +74,13 @@ typedef struct MunStructInfo {
 } MunStructInfo;
 
 /**
+ * Represents an array declaration.
+ */
+typedef struct MunArrayInfo {
+    const struct MunTypeInfo *element_type;
+} MunArrayInfo;
+
+/**
  * Contains data specific to a group of types that illicit the same characteristics.
  */
 enum MunTypeInfoData_Tag
@@ -89,6 +96,10 @@ enum MunTypeInfoData_Tag
      * Struct types (i.e. record, tuple, or unit structs)
      */
     Struct,
+    /**
+     * Array types
+     */
+    Array,
 };
 #ifndef __cplusplus
 typedef uint8_t MunTypeInfoData_Tag;
@@ -99,6 +110,10 @@ typedef union MunTypeInfoData {
     struct {
         MunTypeInfoData_Tag struct_tag;
         struct MunStructInfo struct_;
+    };
+    struct {
+        MunTypeInfoData_Tag array_tag;
+        struct MunArrayInfo array;
     };
 } MunTypeInfoData;
 
