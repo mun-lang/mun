@@ -49,7 +49,7 @@ jobs:
           RUSTFLAGS: ${{ matrix.config.RUSTFLAGS }}
         with:
           command: build
-          args: --workspace
+          args: --release
 
       - run: mkdir -p ${{ matrix.config.dir }}
 
