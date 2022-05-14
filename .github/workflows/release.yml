@@ -16,22 +16,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        RUSTFLAGS: "-Dwarnings"
         config:
-        - {
-          os: "ubuntu-latest",
-          dir: linux64,
-          artifacts: "mun libmun_runtime.so"
-        }
-        - {
-          os: "windows-latest",
-          dir: win64,
-          artifacts: "mun.exe mun_runtime.dll mun_runtime.dll.lib"
-        }
-        - {
-          os: "macOS-latest",
-          dir: osx64,
-          artifacts: "mun libmun_runtime.dylib"
-        }
+          - os: "ubuntu-latest"
+            dir: linux64
+            artifacts: "mun libmun_runtime.so"
+          - os: "windows-latest"
+            dir: win64
+            artifacts: "mun.exe mun_runtime.dll mun_runtime.dll.lib"
+          - os: "macOS-latest"
+            dir: osx64
+            artifacts: "mun libmun_runtime.dylib"
+        include:
+          - os: "windows-latest"
+            RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
     steps:
       - uses: actions/checkout@v2
         with:
@@ -46,18 +44,10 @@ jobs:
       - name: Install LLVM
         uses: ./.github/actions/install-llvm
 
-      - name: Cargo build (unix)
-        if: ${{ matrix.os != 'windows-latest' }}
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --workspace
-
-      - name: Cargo build (windows)
-        if: ${{ matrix.os == 'windows-latest' }}
+      - name: Cargo build
         uses: actions-rs/cargo@v1
         env:
-          RUSTFLAGS: -Dwarnings -Ctarget-feature=+crt-static
+          RUSTFLAGS: ${{ matrix.config.RUSTFLAGS }}
         with:
           command: build
           args: --workspace
