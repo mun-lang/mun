@@ -8,7 +8,7 @@ on:
       - release/*
 
 env:
-  RUSTFLAGS: -Dwarnings -Ctarget-feature=+crt-static
+  RUSTFLAGS: -Dwarnings
 
 jobs:
   check:
@@ -92,8 +92,18 @@ jobs:
 
       - uses: Swatinem/rust-cache@v1
 
-      - name: Cargo build
+      - name: Cargo build (unix)
+        if: ${{ matrix.os != 'windows-latest' }}
         uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --workspace
+
+      - name: Cargo build (windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        uses: actions-rs/cargo@v1
+        env:
+          RUSTFLAGS: -Dwarnings -Ctarget-feature=+crt-static
         with:
           command: build
           args: --workspace
