@@ -1,32 +1,30 @@
 use crate::ops::init::{create_dir, create_project};
 use crate::ExitStatus;
-use clap::ArgMatches;
 use std::path::PathBuf;
+
+#[derive(clap::Args)]
+pub struct Args {
+    path: PathBuf,
+}
 
 /// This method is invoked when the executable is run with the `new` argument indicating that a
 /// user requested us to create a new project in a new directory.
-pub fn new(matches: &ArgMatches) -> Result<ExitStatus, anyhow::Error> {
-    let create_in: PathBuf = matches
-        .value_of("path")
-        .expect(
-            "Path argument not found: This should be unreachable as clap requires this argument.",
-        )
-        .into();
-
-    let project_name = create_in
+pub fn new(args: Args) -> Result<ExitStatus, anyhow::Error> {
+    let project_name = args
+        .path
         .file_name()
         .expect("Invalid path argument.")
         .to_str()
         .expect("Project name is invalid UTF-8.");
 
-    if create_in.exists() {
+    if args.path.exists() {
         eprint!(
             "destination `{}` already exists\n\n\
              Use `mun init` to initialize the directory",
-            create_in.display()
+            args.path.display()
         );
         return Ok(ExitStatus::Error);
     }
-    create_dir(&create_in)?;
-    create_project(&create_in, project_name)
+    create_dir(&args.path)?;
+    create_project(&args.path, project_name)
 }
