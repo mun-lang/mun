@@ -216,7 +216,7 @@ jobs:
       - name: Run cargo-tarpaulin
         uses: actions-rs/tarpaulin@v0.1
 
-      - uses: codecov/codecov-action@v1
+      - uses: codecov/codecov-action@v3
         with:
           file: ${{ steps.coverage.outputs.report }}
           name: ${{ matrix.os }}
