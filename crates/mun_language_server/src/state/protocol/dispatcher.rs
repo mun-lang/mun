@@ -2,6 +2,7 @@ use super::LanguageServerState;
 use crate::cancelation::is_canceled;
 use crate::from_json;
 use crate::state::{LanguageServerSnapshot, Task};
+use lsp_server::ExtractError;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -143,7 +144,10 @@ impl<'a> NotificationDispatcher<'a> {
         };
         let params = match notification.extract::<N::Params>(N::METHOD) {
             Ok(it) => it,
-            Err(notification) => {
+            Err(ExtractError::JsonError { method, error }) => {
+                panic!("Invalid request\nMethod: {method}\n error: {error}",)
+            }
+            Err(ExtractError::MethodMismatch(notification)) => {
                 self.notification = Some(notification);
                 return Ok(self);
             }

@@ -148,7 +148,11 @@ impl LanguageServerState {
     /// Handles a response to a request we made. The response gets forwarded to where we made the
     /// request from.
     pub(super) fn complete_request(&mut self, response: lsp_server::Response) {
-        let handler = self.request_queue.outgoing.complete(response.id.clone());
+        let handler = self
+            .request_queue
+            .outgoing
+            .complete(response.id.clone())
+            .expect("received response for unknown request");
         handler(self, response)
     }
 
