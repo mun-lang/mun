@@ -1,6 +1,9 @@
-use super::util::{EventAggregator, HasTypeInfo, Trace, TypeInfo};
-use crate::{assert_variant, impl_struct_ty};
-use mun_memory::gc::{Event, GcPtr, GcRootPtr, GcRuntime, HasIndirectionPtr, MarkSweep, TypeTrace};
+use super::util::{EventAggregator, Trace, TypeInfo};
+use crate::assert_variant;
+use mun_memory::{
+    gc::{Event, GcPtr, GcRootPtr, HasIndirectionPtr, MarkSweep},
+    type_table::TypeTable,
+};
 use std::sync::Arc;
 
 struct Foo {
@@ -17,7 +20,9 @@ impl_struct_ty!(Foo);
 
 #[test]
 fn test_trace() {
-    let runtime = MarkSweep::<&'static TypeInfo, EventAggregator<Event>>::default();
+    let type_table = TypeTable::default();
+
+    let runtime = MarkSweep::<EventAggregator<Event>>::default();
     let mut foo_handle = runtime.alloc(Foo::type_info());
     let bar_handle = runtime.alloc(i64::type_info());
 

@@ -12,9 +12,12 @@ mod module_info;
 mod static_type_map;
 mod struct_info;
 mod type_info;
+mod type_lut;
 
 #[cfg(test)]
 mod test_utils;
+
+use std::ffi::{CStr, CString};
 
 pub use assembly_info::AssemblyInfo;
 pub use dispatch_table::DispatchTable;
@@ -23,8 +26,10 @@ pub use function_info::{
     IntoFunctionDefinition,
 };
 pub use module_info::ModuleInfo;
+use once_cell::sync::OnceCell;
 pub use struct_info::{StructInfo, StructMemoryKind};
 pub use type_info::{HasStaticTypeInfo, TypeInfo, TypeInfoData};
+pub use type_lut::{TypeId, TypeLut};
 
 /// The Mun ABI prelude
 ///
@@ -47,6 +52,20 @@ pub const SET_ALLOCATOR_HANDLE_FN_NAME: &str = "set_allocator_handle";
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct Guid(pub [u8; 16]);
+
+impl From<&[u8]> for Guid {
+    fn from(bytes: &[u8]) -> Self {
+        Guid(md5::compute(&bytes).0)
+    }
+}
+
+impl Guid {
+    pub fn empty() -> Guid {
+        // TODO: Once `const_fn` lands, replace this with a const md5 hash
+        static GUID: OnceCell<Guid> = OnceCell::new();
+        *GUID.get_or_init(|| Guid::from("()".as_bytes()))
+    }
+}
 
 /// Represents the privacy level of modules, functions, or variables.
 #[repr(u8)]

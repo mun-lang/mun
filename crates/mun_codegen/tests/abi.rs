@@ -44,7 +44,7 @@ fn test_abi_compatibility() {
     assert_eq!(module_info.num_functions, 2);
 
     let fn_def = get_function_info(module_info, fn_name);
-    test_function_args(fn_def, &[(f64::type_name(), f64::type_guid())]);
+    test_function_args(fn_def, &[(f64::type_name(), f64::type_id())]);
     test_function_return_type_some::<i32>(fn_def);
 
     let fn_def2 = get_function_info(module_info, fn_name2);
@@ -120,7 +120,7 @@ fn test_abi_compatibility() {
             "Function '{}' should have a return type.",
             fn_def.prototype.name()
         ));
-        assert_eq!(fn_return_type.guid, R::type_guid());
+        assert_eq!(fn_return_type.guid, R::type_id());
         assert_eq!(fn_return_type.name(), R::type_name());
     }
 
@@ -153,7 +153,7 @@ fn test_abi_compatibility() {
             assert_eq!(lhs, *rhs);
         }
         for field_type in struct_info.field_types().iter() {
-            assert_eq!(field_type.guid, F::type_guid());
+            assert_eq!(field_type.guid, F::type_id());
             assert_eq!(field_type.name(), F::type_name());
         }
 

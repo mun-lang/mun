@@ -1,12 +1,13 @@
-use crate::{
-    garbage_collector::{GarbageCollector, UnsafeTypeInfo},
-    DispatchTable,
-};
+use crate::{garbage_collector::GarbageCollector, DispatchTable};
 use abi::{AssemblyInfo, FunctionPrototype};
 use anyhow::anyhow;
 use libloader::{MunLibrary, TempLibrary};
 use log::error;
-use memory::mapping::{Mapping, MemoryMapper};
+use memory::{
+    mapping::{Mapping, MemoryMapper},
+    type_table::TypeTable,
+    TypeInfo,
+};
 use std::{
     collections::HashMap,
     ffi::c_void,
@@ -72,7 +73,8 @@ impl Assembly {
                 if let Some(fn_def) = dispatch_table.get_fn(fn_prototype.name()) {
                     // Ensure that the function's signature is the same.
                     if fn_prototype.signature != fn_def.prototype.signature {
-                        return Err(anyhow!("Failed to link: function '{}' is missing. A function with the same name does exist, but the signatures do not match (expected: {}, found: {}).", fn_prototype.name(), fn_prototype, fn_def.prototype));
+                        return Err(anyhow!("Failed to link: function '{}' is missing. A function with the same name does exist, but the signatures do not match.", fn_prototype.name()));
+                        // (expected: {}, found: {}).", fn_prototype.name(), fn_prototype, fn_def.prototype));
                     }
 
                     *dispatch_ptr = fn_def.fn_ptr;
@@ -136,7 +138,8 @@ impl Assembly {
         unlinked_assemblies: &mut HashMap<PathBuf, Assembly>,
         linked_assemblies: &mut HashMap<PathBuf, Assembly>,
         dispatch_table: &DispatchTable,
-    ) -> anyhow::Result<DispatchTable> {
+        type_table: &TypeTable,
+    ) -> anyhow::Result<(DispatchTable, TypeTable)> {
         let mut assemblies = unlinked_assemblies
             .iter_mut()
             .map(|(old_path, asm)| {
@@ -145,6 +148,11 @@ impl Assembly {
                 (asm, old_assembly)
             })
             .collect::<Vec<_>>();
+
+        // Clone the type table, such that we can roll back if linking fails
+        let mut type_table = type_table.clone();
+
+        // TODO: Link types
 
         // Clone the dispatch table, such that we can roll back if linking fails
         let mut dispatch_table = dispatch_table.clone();
@@ -173,51 +181,6 @@ impl Assembly {
             .filter(|(ptr, _)| ptr.is_null());
 
         Assembly::link_all_impl(&mut dispatch_table, to_link)?;
-
-        let assemblies_to_map: Vec<_> = assemblies
-            .into_iter()
-            .filter_map(|(new_asm, old_asm)| old_asm.map(|old_asm| (old_asm, new_asm)))
-            .collect();
-
-        let mut assemblies_to_keep = HashMap::new();
-        for (old_assembly, new_assembly) in assemblies_to_map.iter() {
-            let old_types: Vec<UnsafeTypeInfo> = old_assembly
-                .info
-                .symbols
-                .types()
-                .iter()
-                .map(|ty| {
-                    // Safety: `ty` is a shared reference, so is guaranteed to not be `ptr::null()`.
-                    UnsafeTypeInfo::new(unsafe {
-                        NonNull::new_unchecked(*ty as *const abi::TypeInfo as *mut _)
-                    })
-                })
-                .collect();
-
-            let new_types: Vec<UnsafeTypeInfo> = new_assembly
-                .info
-                .symbols
-                .types()
-                .iter()
-                .map(|ty| {
-                    // Safety: `ty` is a shared reference, so is guaranteed to not be `ptr::null()`.
-                    UnsafeTypeInfo::new(unsafe {
-                        NonNull::new_unchecked(*ty as *const abi::TypeInfo as *mut _)
-                    })
-                })
-                .collect();
-
-            let mapping = Mapping::new(&old_types, &new_types);
-            let deleted_objects = old_assembly.allocator.map_memory(mapping);
-
-            if !deleted_objects.is_empty() {
-                // Retain the previous assembly
-                assemblies_to_keep.insert(
-                    old_assembly.library_path().to_path_buf(),
-                    new_assembly.library_path().to_path_buf(),
-                );
-            }
-        }
 
         let mut newly_linked = HashMap::new();
         std::mem::swap(unlinked_assemblies, &mut newly_linked);

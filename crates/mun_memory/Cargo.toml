@@ -14,9 +14,11 @@ categories = ["game-development", "mun"]
 
 [dependencies]
 abi = { version = "=0.3.0", path = "../mun_abi", package = "mun_abi" }
+itertools = "0.10.3"
+lazy_static = "1.4.0"
 once_cell = "1.4.0"
 parking_lot = "0.11.1"
-lazy_static = "1.4.0"
+rustc-hash = "1.1"
 
 [dev-dependencies]
 paste = "0.1"

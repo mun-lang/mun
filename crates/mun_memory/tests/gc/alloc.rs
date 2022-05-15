@@ -1,5 +1,5 @@
-use super::util::{EventAggregator, HasTypeInfo, TypeInfo};
-use mun_memory::gc::{Event, GcRootPtr, GcRuntime, MarkSweep};
+use super::util::{EventAggregator, TypeInfo};
+use mun_memory::gc::{Event, GcRootPtr, MarkSweep};
 use std::sync::Arc;
 
 #[test]

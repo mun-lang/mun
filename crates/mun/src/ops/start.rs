@@ -23,19 +23,19 @@ pub fn start(matches: &ArgMatches) -> Result<ExitStatus, anyhow::Error> {
 
     if let Some(ret_type) = fn_definition.prototype.signature.return_type() {
         let type_guid = &ret_type.guid;
-        if *type_guid == bool::type_guid() {
+        if *type_guid == bool::type_id() {
             let result: bool = borrowed
                 .invoke(entry_point, ())
                 .map_err(|e| anyhow!("{}", e))?;
 
             println!("{}", result)
-        } else if *type_guid == f64::type_guid() {
+        } else if *type_guid == f64::type_id() {
             let result: f64 = borrowed
                 .invoke(entry_point, ())
                 .map_err(|e| anyhow!("{}", e))?;
 
             println!("{}", result)
-        } else if *type_guid == i64::type_guid() {
+        } else if *type_guid == i64::type_id() {
             let result: i64 = borrowed
                 .invoke(entry_point, ())
                 .map_err(|e| anyhow!("{}", e))?;

@@ -1,8 +1,8 @@
 use crate::{
     cast,
-    gc::{Event, GcPtr, GcRuntime, Observer, RawGcPtr, Stats, TypeTrace},
+    gc::{Event, GcPtr, GcRuntime, HasIndirectionPtr, Observer, RawGcPtr, Stats, TypeTrace},
     mapping::{self, FieldMapping, MemoryMapper},
-    TypeDesc, TypeGroup, TypeMemory,
+    type_info::{TypeInfo, TypeInfoData},
 };
 use mapping::{Conversion, Mapping};
 use parking_lot::RwLock;
@@ -12,23 +12,64 @@ use std::{
     ops::Deref,
     pin::Pin,
     ptr::NonNull,
+    sync::Arc,
 };
+
+pub struct Trace {
+    obj: GcPtr,
+    ty: Arc<TypeInfo>,
+    index: usize,
+}
+
+impl Iterator for Trace {
+    type Item = GcPtr;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let struct_ty = self.ty.as_ref().as_struct()?;
+        let field_count = struct_ty.field_types.len();
+        while self.index < field_count {
+            let index = self.index;
+            self.index += 1;
+
+            let field_ty = &struct_ty.field_types[index];
+            if let TypeInfoData::Struct(field_struct_ty) = &field_ty.data {
+                if field_struct_ty.memory_kind == abi::StructMemoryKind::Gc {
+                    let offset = struct_ty.field_offsets[index];
+                    return Some(unsafe {
+                        *self.obj.deref::<u8>().add(offset as usize).cast::<GcPtr>()
+                    });
+                }
+            }
+        }
+        None
+    }
+}
+
+impl TypeTrace for Arc<TypeInfo> {
+    type Trace = Trace;
+
+    fn trace(&self, obj: GcPtr) -> Self::Trace {
+        Trace {
+            ty: self.clone(),
+            obj,
+            index: 0,
+        }
+    }
+}
 
 /// Implements a simple mark-sweep type garbage collector.
 #[derive(Debug)]
-pub struct MarkSweep<T, O>
+pub struct MarkSweep<O>
 where
-    T: TypeMemory + TypeTrace + Clone,
     O: Observer<Event = Event>,
 {
-    objects: RwLock<HashMap<GcPtr, Pin<Box<ObjectInfo<T>>>>>,
+    objects: RwLock<HashMap<GcPtr, Pin<Box<ObjectInfo>>>>,
     observer: O,
     stats: RwLock<Stats>,
 }
 
-impl<T, O> Default for MarkSweep<T, O>
+impl<O> Default for MarkSweep<O>
 where
-    T: TypeMemory + TypeTrace + Clone,
     O: Observer<Event = Event> + Default,
 {
     fn default() -> Self {
@@ -40,9 +81,8 @@ where
     }
 }
 
-impl<T, O> MarkSweep<T, O>
+impl<O> MarkSweep<O>
 where
-    T: TypeMemory + TypeTrace + Clone,
     O: Observer<Event = Event>,
 {
     /// Creates a `MarkSweep` memory collector with the specified `Observer`.
@@ -55,10 +95,10 @@ where
     }
 
     /// Logs an allocation
-    fn log_alloc(&self, handle: GcPtr, ty: T) {
+    fn log_alloc(&self, handle: GcPtr, ty: &TypeInfo) {
         {
             let mut stats = self.stats.write();
-            stats.allocated_memory += ty.layout().size();
+            stats.allocated_memory += ty.layout.size();
         }
 
         self.observer.event(Event::Allocation(handle));
@@ -70,8 +110,8 @@ where
     }
 }
 
-fn alloc_obj<T: Clone + TypeMemory + TypeTrace>(ty: T) -> Pin<Box<ObjectInfo<T>>> {
-    let ptr = unsafe { std::alloc::alloc(ty.layout()) };
+fn alloc_obj(ty: Arc<TypeInfo>) -> Pin<Box<ObjectInfo>> {
+    let ptr = unsafe { std::alloc::alloc(ty.layout) };
     Box::pin(ObjectInfo {
         ptr,
         ty,
@@ -80,12 +120,11 @@ fn alloc_obj<T: Clone + TypeMemory + TypeTrace>(ty: T) -> Pin<Box<ObjectInfo<T>>
     })
 }
 
-impl<T, O> GcRuntime<T> for MarkSweep<T, O>
+impl<O> GcRuntime for MarkSweep<O>
 where
-    T: TypeMemory + TypeTrace + Clone,
     O: Observer<Event = Event>,
 {
-    fn alloc(&self, ty: T) -> GcPtr {
+    fn alloc(&self, ty: &Arc<TypeInfo>) -> GcPtr {
         let object = alloc_obj(ty.clone());
 
         // We want to return a pointer to the `ObjectInfo`, to be used as handle.
@@ -96,15 +135,15 @@ where
             objects.insert(handle, object);
         }
 
-        self.log_alloc(handle, ty);
+        self.log_alloc(handle, &ty);
         handle
     }
 
-    fn ptr_type(&self, handle: GcPtr) -> T {
+    fn ptr_type(&self, handle: GcPtr) -> Arc<TypeInfo> {
         let _ = self.objects.read();
 
         // Convert the handle to our internal representation
-        let object_info: *const ObjectInfo<T> = handle.into();
+        let object_info: *const ObjectInfo = handle.into();
 
         // Return the type of the object
         unsafe { (*object_info).ty.clone() }
@@ -114,7 +153,7 @@ where
         let _ = self.objects.write();
 
         // Convert the handle to our internal representation
-        let object_info: *mut ObjectInfo<T> = handle.into();
+        let object_info: *mut ObjectInfo = handle.into();
 
         unsafe { (*object_info).roots += 1 };
     }
@@ -123,7 +162,7 @@ where
         let _ = self.objects.write();
 
         // Convert the handle to our internal representation
-        let object_info: *mut ObjectInfo<T> = handle.into();
+        let object_info: *mut ObjectInfo = handle.into();
 
         unsafe { (*object_info).roots -= 1 };
     }
@@ -133,9 +172,8 @@ where
     }
 }
 
-impl<T, O> MarkSweep<T, O>
+impl<O> MarkSweep<O>
 where
-    T: TypeMemory + TypeTrace + Clone,
     O: Observer<Event = Event>,
 {
     /// Collects all memory that is no longer referenced by rooted objects. Returns `true` if memory
@@ -150,7 +188,7 @@ where
             .iter()
             .filter_map(|(_, obj)| {
                 if obj.roots > 0 {
-                    Some(obj.as_ref().get_ref() as *const _ as *mut ObjectInfo<T>)
+                    Some(obj.as_ref().get_ref() as *const _ as *mut ObjectInfo)
                 } else {
                     None
                 }
@@ -167,7 +205,7 @@ where
                     .get_mut(&reference)
                     .expect("found invalid reference");
                 if ref_ptr.color == Color::White {
-                    let ptr = ref_ptr.as_ref().get_ref() as *const _ as *mut ObjectInfo<T>;
+                    let ptr = ref_ptr.as_ref().get_ref() as *const _ as *mut ObjectInfo;
                     unsafe { (*ptr).color = Color::Gray };
                     roots.push_back(ptr);
                 }
@@ -188,11 +226,11 @@ where
                 }
                 true
             } else {
-                unsafe { std::alloc::dealloc(obj.ptr, obj.ty.layout()) };
+                unsafe { std::alloc::dealloc(obj.ptr, obj.ty.layout) };
                 self.observer.event(Event::Deallocation(*h));
                 {
                     let mut stats = self.stats.write();
-                    stats.allocated_memory -= obj.ty.layout().size();
+                    stats.allocated_memory -= obj.ty.layout.size();
                 }
                 false
             }
@@ -205,12 +243,11 @@ where
     }
 }
 
-impl<T, O> MemoryMapper<T> for MarkSweep<T, O>
+impl<O> MemoryMapper for MarkSweep<O>
 where
-    T: TypeDesc + TypeMemory + TypeTrace + Clone + Eq + Hash,
     O: Observer<Event = Event>,
 {
-    fn map_memory(&self, mapping: Mapping<T, T>) -> Vec<GcPtr> {
+    fn map_memory(&self, mapping: Mapping) -> Vec<GcPtr> {
         let mut objects = self.objects.write();
 
         // Determine which types are still allocated with deleted types
@@ -246,7 +283,7 @@ where
                 if object_info.ty == *old_ty {
                     let src = unsafe { NonNull::new_unchecked(object_info.ptr) };
                     let dest = unsafe {
-                        NonNull::new_unchecked(std::alloc::alloc_zeroed(conversion.new_ty.layout()))
+                        NonNull::new_unchecked(std::alloc::alloc_zeroed(conversion.new_ty.layout))
                     };
 
                     map_fields(
@@ -258,7 +295,7 @@ where
                         dest,
                     );
 
-                    unsafe { std::alloc::dealloc(src.as_ptr(), old_ty.layout()) };
+                    unsafe { std::alloc::dealloc(src.as_ptr(), old_ty.layout) };
 
                     object_info.set(ObjectInfo {
                         ptr: dest.as_ptr(),
@@ -279,20 +316,19 @@ where
             let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
             objects.insert(handle, object);
 
-            self.log_alloc(handle, ty);
+            self.log_alloc(handle, &ty);
         }
 
         return deleted;
 
-        fn map_fields<T, O>(
-            gc: &MarkSweep<T, O>,
-            new_allocations: &mut Vec<Pin<Box<ObjectInfo<T>>>>,
-            conversions: &HashMap<T, Conversion<T>>,
-            mapping: &[FieldMapping<T>],
+        fn map_fields<O>(
+            gc: &MarkSweep<O>,
+            new_allocations: &mut Vec<Pin<Box<ObjectInfo>>>,
+            conversions: &HashMap<Arc<TypeInfo>, Conversion>,
+            mapping: &[FieldMapping],
             src: NonNull<u8>,
             dest: NonNull<u8>,
         ) where
-            T: TypeDesc + TypeMemory + TypeTrace + Clone + Eq + Hash,
             O: Observer<Event = Event>,
         {
             for FieldMapping {
@@ -315,12 +351,12 @@ where
                             src as *mut u8
                         };
 
-                        if old_ty.group() == TypeGroup::Struct {
-                            debug_assert_eq!(new_ty.group(), TypeGroup::Struct);
+                        if old_ty.data.is_struct() {
+                            debug_assert!(new_ty.data.is_struct());
 
                             // When the name is the same, we are dealing with the same struct,
                             // but different internals
-                            let is_same_struct = old_ty.name() == new_ty.name();
+                            let is_same_struct = old_ty.name == new_ty.name;
 
                             // If the same struct changed, there must also be a conversion
                             let conversion = conversions.get(old_ty);
@@ -365,7 +401,7 @@ where
                                             std::ptr::write_bytes(
                                                 (*object).ptr,
                                                 0,
-                                                new_ty.layout().size(),
+                                                new_ty.layout.size(),
                                             )
                                         };
                                     }
@@ -396,7 +432,7 @@ where
 
                                     // Zero-initialize heap-allocated object
                                     unsafe {
-                                        std::ptr::write_bytes(object.ptr, 0, new_ty.layout().size())
+                                        std::ptr::write_bytes(object.ptr, 0, new_ty.layout.size())
                                     };
 
                                     // Write handle to field
@@ -413,7 +449,7 @@ where
                                 // Convert the handle to our internal representation
                                 // Safety: we already hold a write lock on `objects`, so
                                 // this is legal.
-                                let obj: *mut ObjectInfo<T> = field_handle.into();
+                                let obj: *mut ObjectInfo = field_handle.into();
                                 let obj = unsafe { &*obj };
 
                                 if is_same_struct {
@@ -437,7 +473,7 @@ where
                                             std::ptr::copy_nonoverlapping(
                                                 obj.ptr,
                                                 field_dest,
-                                                obj.ty.layout().size(),
+                                                obj.ty.layout.size(),
                                             )
                                         };
                                     }
@@ -446,8 +482,8 @@ where
                                 }
                             }
                         } else if !cast::try_cast_from_to(
-                            *old_ty.guid(),
-                            *new_ty.guid(),
+                            old_ty.id.clone(),
+                            new_ty.id.clone(),
                             unsafe { NonNull::new_unchecked(field_src) },
                             unsafe { NonNull::new_unchecked(field_dest) },
                         ) {
@@ -465,7 +501,7 @@ where
                             std::ptr::copy_nonoverlapping(
                                 field_src,
                                 field_dest,
-                                new_ty.layout().size(),
+                                new_ty.layout.size(),
                             )
                         };
                     }
@@ -478,7 +514,7 @@ where
                             let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
 
                             // Zero-initialize heap-allocated object
-                            unsafe { std::ptr::write_bytes(object.ptr, 0, new_ty.layout().size()) };
+                            unsafe { std::ptr::write_bytes(object.ptr, 0, new_ty.layout.size()) };
 
                             // Write handle to field
                             let field_dest = field_dest.cast::<GcPtr>();
@@ -514,37 +550,37 @@ enum Color {
 /// meta information.
 #[derive(Debug)]
 #[repr(C)]
-struct ObjectInfo<T: TypeMemory + TypeTrace + Clone> {
+struct ObjectInfo {
     pub ptr: *mut u8,
     pub roots: u32,
     pub color: Color,
-    pub ty: T,
+    pub ty: Arc<TypeInfo>,
 }
 
 /// An `ObjectInfo` is thread-safe.
-unsafe impl<T: TypeMemory + TypeTrace + Clone> Send for ObjectInfo<T> {}
-unsafe impl<T: TypeMemory + TypeTrace + Clone> Sync for ObjectInfo<T> {}
+unsafe impl Send for ObjectInfo {}
+unsafe impl Sync for ObjectInfo {}
 
-impl<T: TypeMemory + TypeTrace + Clone> From<GcPtr> for *const ObjectInfo<T> {
+impl From<GcPtr> for *const ObjectInfo {
     fn from(ptr: GcPtr) -> Self {
         ptr.as_ptr() as Self
     }
 }
 
-impl<T: TypeMemory + TypeTrace + Clone> From<GcPtr> for *mut ObjectInfo<T> {
+impl From<GcPtr> for *mut ObjectInfo {
     fn from(ptr: GcPtr) -> Self {
         ptr.as_ptr() as Self
     }
 }
 
-impl<T: TypeMemory + TypeTrace + Clone> From<*const ObjectInfo<T>> for GcPtr {
-    fn from(info: *const ObjectInfo<T>) -> Self {
+impl From<*const ObjectInfo> for GcPtr {
+    fn from(info: *const ObjectInfo) -> Self {
         (info as RawGcPtr).into()
     }
 }
 
-impl<T: TypeMemory + TypeTrace + Clone> From<*mut ObjectInfo<T>> for GcPtr {
-    fn from(info: *mut ObjectInfo<T>) -> Self {
+impl From<*mut ObjectInfo> for GcPtr {
+    fn from(info: *mut ObjectInfo) -> Self {
         (info as RawGcPtr).into()
     }
 }

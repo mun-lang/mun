@@ -101,9 +101,17 @@ pub struct DispatchTable<'ink> {
 }
 
 #[derive(AsValue)]
+pub struct TypeLut<'ink> {
+    pub type_ids: Value<'ink, *const abi::Guid>,
+    pub type_ptrs: Value<'ink, *mut *const TypeInfo<'ink>>,
+    pub num_entries: u32,
+}
+
+#[derive(AsValue)]
 pub struct AssemblyInfo<'ink> {
     pub symbols: ModuleInfo<'ink>,
     pub dispatch_table: DispatchTable<'ink>,
+    pub type_lut: TypeLut<'ink>,
     pub dependencies: Value<'ink, *const *const u8>,
     pub num_dependencies: u32,
 }

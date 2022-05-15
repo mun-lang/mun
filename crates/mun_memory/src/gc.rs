@@ -2,8 +2,8 @@ mod mark_sweep;
 mod ptr;
 mod root_ptr;
 
-use crate::TypeMemory;
-use std::marker::PhantomData;
+use crate::type_info::TypeInfo;
+use std::{marker::PhantomData, sync::Arc};
 
 pub use mark_sweep::MarkSweep;
 pub use ptr::{GcPtr, HasIndirectionPtr, RawGcPtr};
@@ -24,12 +24,12 @@ pub trait TypeTrace: Send + Sync {
 }
 
 /// An object that can be used to allocate and collect memory.
-pub trait GcRuntime<T: TypeMemory + TypeTrace>: Send + Sync {
+pub trait GcRuntime: Send + Sync {
     /// Allocates an object of the given type returning a GcPtr
-    fn alloc(&self, ty: T) -> GcPtr;
+    fn alloc(&self, ty: &Arc<TypeInfo>) -> GcPtr;
 
     /// Returns the type of the specified `obj`.
-    fn ptr_type(&self, obj: GcPtr) -> T;
+    fn ptr_type(&self, obj: GcPtr) -> Arc<TypeInfo>;
 
     /// Roots the specified `obj`, which keeps it and objects it references alive. Objects marked
     /// as root, must call `unroot` before they can be collected. An object can be rooted multiple

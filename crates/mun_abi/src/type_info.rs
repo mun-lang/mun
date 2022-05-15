@@ -1,4 +1,4 @@
-use crate::{static_type_map::StaticTypeMap, Guid, StructInfo};
+use crate::{static_type_map::StaticTypeMap, Guid, StructInfo, TypeId};
 use once_cell::sync::OnceCell;
 use std::{
     convert::TryInto,
@@ -16,8 +16,8 @@ use std::{
 #[repr(C)]
 #[derive(Debug)]
 pub struct TypeInfo {
-    /// Type GUID
-    pub guid: Guid,
+    /// Type ID
+    pub id: TypeId,
     /// Type name
     pub name: *const c_char,
     /// The exact size of the type in bits without any padding
@@ -83,13 +83,13 @@ impl fmt::Display for TypeInfo {
 
 impl PartialEq for TypeInfo {
     fn eq(&self, other: &Self) -> bool {
-        self.guid == other.guid
+        self.id == other.id
     }
 }
 
 impl std::hash::Hash for TypeInfo {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.guid.hash(state);
+        self.id.hash(state);
     }
 }
 
@@ -145,12 +145,12 @@ impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *const T {
         &map.call_once::<T, _>(|| {
             let name =
                 CString::new(format!("*const {}", T::type_name().to_str().unwrap())).unwrap();
-            let guid = Guid(md5::compute(&name.as_bytes()).0);
+            let guid = Guid::from(name.as_bytes());
             let name_ptr = name.as_ptr();
             (
                 name,
                 TypeInfo {
-                    guid,
+                    id: TypeId { guid },
                     name: name_ptr,
                     size_in_bits: (std::mem::size_of::<*const T>() * 8)
                         .try_into()
@@ -181,12 +181,12 @@ impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *mut T {
 
         &map.call_once::<T, _>(|| {
             let name = CString::new(format!("*mut {}", T::type_name().to_str().unwrap())).unwrap();
-            let guid = Guid(md5::compute(&name.as_bytes()).0);
+            let guid = Guid::from(name.as_bytes());
             let name_ptr = name.as_ptr();
             (
                 name,
                 TypeInfo {
-                    guid,
+                    id: TypeId { guid },
                     name: name_ptr,
                     size_in_bits: (std::mem::size_of::<*const T>() * 8)
                         .try_into()
@@ -214,9 +214,10 @@ macro_rules! impl_primitive_type_info {
                         static TYPE_INFO_NAME: OnceCell<CString> = OnceCell::new();
                         let type_info_name: &'static CString = TYPE_INFO_NAME
                             .get_or_init(|| CString::new(format!("core::{}", stringify!($ty))).unwrap());
+                        let guid = Guid::from(type_info_name.as_bytes());
 
                         TypeInfo {
-                            guid: Guid(md5::compute(&type_info_name.as_bytes()).0),
+                            id: TypeId { guid },
                             name: type_info_name.as_ptr(),
                             size_in_bits: (std::mem::size_of::<$ty>() * 8)
                                 .try_into()
@@ -250,7 +251,22 @@ macro_rules! impl_has_type_info_name {
     }
 }
 
-impl_primitive_type_info!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64, bool);
+impl_primitive_type_info!(
+    i8,
+    i16,
+    i32,
+    i64,
+    i128,
+    u8,
+    u16,
+    u32,
+    u64,
+    u128,
+    f32,
+    f64,
+    bool,
+    ()
+);
 
 impl_has_type_info_name!(
     std::ffi::c_void => "core::void",

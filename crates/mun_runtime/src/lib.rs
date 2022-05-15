@@ -14,7 +14,11 @@ mod reflection;
 use anyhow::Result;
 use garbage_collector::GarbageCollector;
 use log::{debug, error, info};
-use memory::gc::{self, GcRuntime};
+use memory::{
+    gc::{self, GcRuntime},
+    type_table::TypeTable,
+    TypeInfo,
+};
 use mun_project::LOCKFILE_NAME;
 use notify::{RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
 use rustc_hash::FxHashMap;
@@ -23,7 +27,6 @@ use std::{
     collections::{HashMap, VecDeque},
     ffi, io, mem,
     path::{Path, PathBuf},
-    ptr::NonNull,
     rc::Rc,
     string::ToString,
     sync::{
@@ -35,7 +38,6 @@ use std::{
 pub use crate::{
     adt::{RootedStruct, StructRef},
     assembly::Assembly,
-    garbage_collector::UnsafeTypeInfo,
     marshal::Marshal,
     reflection::{ArgumentReflection, ReturnTypeReflection},
 };
@@ -62,20 +64,35 @@ unsafe fn get_allocator(alloc_handle: *mut ffi::c_void) -> Arc<GarbageCollector>
     Arc::from_raw(alloc_handle as *const GarbageCollector)
 }
 
+/// Retrieve the `TypeInfo` using the provided handle.
+///
+/// # Safety
+///
+/// The type handle must have been returned from a call to [`Arc<TypeInfo>::into_raw`][into_raw].
+unsafe fn get_type_info(type_handle: *const ffi::c_void) -> Arc<TypeInfo> {
+    Arc::from_raw(type_handle as *const TypeInfo)
+}
+
 extern "C" fn new(
-    type_info: *const abi::TypeInfo,
+    type_handle: *const ffi::c_void,
     alloc_handle: *mut ffi::c_void,
 ) -> *const *mut ffi::c_void {
+    // SAFETY: The runtime always constructs and uses `Arc<TypeInfo>::into_raw` to set the type
+    // type handles in the type LUT.
+    let type_info = unsafe { get_type_info(alloc_handle) };
+
     // Safety: `new` is only called from within Mun assemblies' core logic, so we are guaranteed
     // that the `Runtime` and its `GarbageCollector` still exist if this function is called, and
     // will continue to do so for the duration of this function.
     let allocator = unsafe { get_allocator(alloc_handle) };
     // Safety: the Mun Compiler guarantees that `new` is never called with `ptr::null()`.
-    let type_info = UnsafeTypeInfo::new(unsafe { NonNull::new_unchecked(type_info as *mut _) });
-    let handle = allocator.alloc(type_info);
+    let handle = allocator.alloc(&type_info);
 
     // Prevent destruction of the allocator
     mem::forget(allocator);
+
+    // Prevent destruction of the type info
+    mem::forget(type_info);
 
     handle.into()
 }
@@ -195,6 +212,7 @@ pub struct Runtime {
     /// Assemblies that have changed and thus need to be relinked. Maps the old to the (potentially) new path.
     assemblies_to_relink: VecDeque<(PathBuf, PathBuf)>,
     dispatch_table: DispatchTable,
+    type_table: TypeTable,
     watcher: RecommendedWatcher,
     watcher_rx: Receiver<RawEvent>,
     renamed_files: HashMap<u32, PathBuf>,
@@ -210,10 +228,11 @@ impl Runtime {
         let (tx, rx) = channel();
 
         let mut dispatch_table = DispatchTable::default();
+        let type_table = TypeTable::default();
 
         // Add internal functions
         options.user_functions.push(IntoFunctionDefinition::into(
-            new as extern "C" fn(*const abi::TypeInfo, *mut ffi::c_void) -> *const *mut ffi::c_void,
+            new as extern "C" fn(*const ffi::c_void, *mut ffi::c_void) -> *const *mut ffi::c_void,
             "new",
         ));
 
@@ -228,6 +247,7 @@ impl Runtime {
             assemblies: HashMap::new(),
             assemblies_to_relink: VecDeque::new(),
             dispatch_table,
+            type_table,
             watcher,
             watcher_rx: rx,
             renamed_files: HashMap::new(),
@@ -301,16 +321,13 @@ impl Runtime {
     }
 
     /// Retrieves the type definition corresponding to `type_name`, if available.
-    pub fn get_type_info(&self, type_name: &str) -> Option<&abi::TypeInfo> {
-        for assembly in self.assemblies.values() {
-            for type_info in assembly.info().symbols.types().iter() {
-                if type_info.name() == type_name {
-                    return Some(type_info);
-                }
-            }
-        }
+    pub fn get_type_info(&self, type_name: &str) -> Option<Arc<TypeInfo>> {
+        self.type_table.find_type_info_by_name(type_name)
+    }
 
-        None
+    /// Retrieve the type information corresponding to the `type_id`, if available.
+    pub fn get_type_info_by_id(&self, type_id: &abi::TypeId) -> Option<Arc<TypeInfo>> {
+        self.type_table.find_type_info_by_id(type_id)
     }
 
     /// Updates the state of the runtime. This includes checking for file changes, and reloading
@@ -320,7 +337,7 @@ impl Runtime {
             path.file_name().expect("Invalid file path.") == LOCKFILE_NAME
         }
 
-        fn relink_assemblies(runtime: &mut Runtime) -> anyhow::Result<DispatchTable> {
+        fn relink_assemblies(runtime: &mut Runtime) -> anyhow::Result<(DispatchTable, TypeTable)> {
             let mut loaded = HashMap::new();
             let to_load = &mut runtime.assemblies_to_relink;
 
@@ -367,6 +384,7 @@ impl Runtime {
                 &mut loaded,
                 &mut runtime.assemblies,
                 &runtime.dispatch_table,
+                &runtime.type_table,
             )
         }
 
@@ -382,10 +400,11 @@ impl Runtime {
                         debug!("Lockfile deleted");
 
                         match relink_assemblies(self) {
-                            Ok(table) => {
+                            Ok((dispatch_table, type_table)) => {
                                 info!("Succesfully reloaded assemblies.");
 
-                                self.dispatch_table = table;
+                                self.dispatch_table = dispatch_table;
+                                self.type_table = type_table;
                                 self.assemblies_to_relink.clear();
 
                                 return true;
@@ -421,7 +440,7 @@ impl Runtime {
     ///
     /// We cannot return an `Arc` here, because the lifetime of data contained in `GarbageCollector`
     /// is dependent on the `Runtime`.
-    pub fn gc(&self) -> &dyn GcRuntime<UnsafeTypeInfo> {
+    pub fn gc(&self) -> &dyn GcRuntime {
         self.gc.as_ref()
     }
 
@@ -545,19 +564,18 @@ seq_macro::seq!(I in 0..N {
             // Ensure the number of arguments match
             #[allow(clippy::len_zero)]
             if N != arg_types.len() {
-                return Err(format!("invalid return type. Expected: {}. Found: {}", N, arg_types.len()))
+                return Err(format!("Invalid return type. Expected: {}. Found: {}", N, arg_types.len()))
             }
 
             #(
-            crate::reflection::equals_argument_type(runtime, arg_types[I], &self.I)
-                .map_err(|(expected, found)| {
-                    format!(
-                        "invalid argument type at index {}. Expected: {}. Found: {}.",
-                        I,
-                        expected,
-                        found,
-                    )
-                })?;
+            if arg_types[I] != self.I.type_id(runtime) {
+                return Err(format!(
+                    "Invalid argument type at index {}. Expected: {}. Found: {}.",
+                    I,
+                    self.I.type_name(runtime),
+                    runtime.get_type_info_by_id(&arg_types[I]).unwrap(),
+                ));
+            }
             )*
 
             Ok(())
@@ -621,27 +639,17 @@ impl Runtime {
         };
 
         // Validate the return type
-        match if let Some(return_type) = function_info.prototype.signature.return_type() {
-            crate::reflection::equals_return_type::<ReturnType>(return_type)
-        } else if <() as ReturnTypeReflection>::type_guid() != ReturnType::type_guid() {
-            Err((
-                <() as ReturnTypeReflection>::type_name(),
-                ReturnType::type_name(),
-            ))
-        } else {
-            Ok(())
-        } {
-            Ok(_) => {}
-            Err((expected, found)) => {
-                return Err(InvokeErr {
-                    msg: format!(
-                        "invalid return type. Expected: {}. Found: {}",
-                        expected, found,
-                    ),
-                    function_name,
-                    arguments,
-                })
-            }
+        let return_type = &function_info.prototype.signature.return_type;
+        if return_type.guid != ReturnType::type_id().guid {
+            return Err(InvokeErr {
+                msg: format!(
+                    "invalid return type. Expected: {}. Found: {}",
+                    ReturnType::type_name(),
+                    self.get_type_info_by_id(return_type).unwrap().name,
+                ),
+                function_name,
+                arguments,
+            });
         }
 
         let result: ReturnType::MunType = unsafe { arguments.invoke(function_info.fn_ptr) };

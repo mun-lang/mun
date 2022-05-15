@@ -9,7 +9,7 @@ pub struct ModuleInfo {
     /// Module functions
     pub(crate) functions: *const FunctionDefinition,
     /// Module types
-    pub(crate) types: *const *const TypeInfo,
+    pub(crate) types: *const TypeInfo,
     /// Number of module functions
     pub num_functions: u32,
     /// Number of module types
@@ -47,13 +47,11 @@ impl ModuleInfo {
     }
 
     /// Returns the module's types.
-    pub fn types(&self) -> &[&TypeInfo] {
+    pub fn types(&self) -> &[TypeInfo] {
         if self.num_types == 0 {
             &[]
         } else {
-            unsafe {
-                slice::from_raw_parts(self.types.cast::<&TypeInfo>(), self.num_types as usize)
-            }
+            unsafe { slice::from_raw_parts(self.types, self.num_types as usize) }
         }
     }
 }
@@ -96,7 +94,7 @@ mod tests {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
         let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
-        let return_type = Some(&type_info);
+        let return_type = Some(type_info.id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
         let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
@@ -109,10 +107,10 @@ mod tests {
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name");
         let struct_info = fake_struct_info(&[], &[], &[], Default::default());
         let type_info = fake_type_info(&struct_name, 1, 1, TypeInfoData::Struct(struct_info));
-        let types = &[&type_info];
+        let types = [type_info];
 
         let module_path = CString::new(FAKE_MODULE_PATH).expect("Invalid fake module path.");
-        let module = fake_module_info(&module_path, functions, types);
+        let module = fake_module_info(&module_path, functions, &types);
 
         let result_functions = module.functions();
         assert_eq!(result_functions.len(), functions.len());
@@ -129,7 +127,7 @@ mod tests {
             );
         }
 
-        let result_types: &[&TypeInfo] = module.types();
+        let result_types: &[TypeInfo] = module.types();
         assert_eq!(result_types.len(), types.len());
         for (lhs, rhs) in result_types.iter().zip(types.iter()) {
             assert_eq!(lhs, rhs);

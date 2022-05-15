@@ -74,7 +74,7 @@ impl TypeInfo {
     pub fn new_primitive<S: AsRef<str>>(name: S, type_size: TypeSize) -> TypeInfo {
         TypeInfo {
             name: name.as_ref().to_string(),
-            guid: Guid(md5::compute(name.as_ref()).0),
+            guid: Guid::from(name.as_ref().as_bytes()),
             size: type_size,
             data: TypeInfoData::Primitive,
         }
@@ -102,7 +102,7 @@ impl TypeInfo {
             )
         };
         Self {
-            guid: Guid(md5::compute(&guid_string).0),
+            guid: Guid::from(guid_string.as_bytes()),
             name,
             size: type_size,
             data: TypeInfoData::Struct(s),

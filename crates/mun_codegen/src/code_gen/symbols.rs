@@ -243,12 +243,15 @@ pub(super) fn gen_reflection_ir<'db, 'ink>(
     // Construct the dispatch table struct
     let dispatch_table = gen_dispatch_table(context, dispatch_table);
 
+    // let type_lut =  gen_type_lut(context, type_lut);
+
     // Construct the actual `get_info` function
     gen_get_info_fn(
         db,
         context,
         module_info,
         dispatch_table,
+        // type_lut,
         optimization_level,
         dependencies,
     );
@@ -262,6 +265,7 @@ fn gen_get_info_fn<'ink>(
     context: &IrValueContext<'ink, '_, '_>,
     module_info: ir::ModuleInfo<'ink>,
     dispatch_table: ir::DispatchTable<'ink>,
+    // type_lut: ir::TypeLut<'ink>,
     optimization_level: inkwell::OptimizationLevel,
     dependencies: Vec<String>,
 ) {
@@ -323,16 +327,20 @@ fn gen_get_info_fn<'ink>(
     let dispatch_table_addr = builder
         .build_struct_gep(result_ptr, 3, "dispatch_table")
         .expect("could not retrieve `dispatch_table` from result struct");
+    let type_lut_addr = builder
+        .build_struct_gep(result_ptr, 5, "type_lut")
+        .expect("could not retrieve `type_lut` from result struct");
     let dependencies_addr = builder
-        .build_struct_gep(result_ptr, 5, "dependencies")
+        .build_struct_gep(result_ptr, 7, "dependencies")
         .expect("could not retrieve `dependencies` from result struct");
     let num_dependencies_addr = builder
-        .build_struct_gep(result_ptr, 7, "num_dependencies")
+        .build_struct_gep(result_ptr, 9, "num_dependencies")
         .expect("could not retrieve `num_dependencies` from result struct");
 
     // Assign the struct values one by one.
     builder.build_store(symbols_addr, module_info.as_value(context).value);
     builder.build_store(dispatch_table_addr, dispatch_table.as_value(context).value);
+    // builder.build_store(type_lut_addr, type_lut.as_value(context).value);
     builder.build_store(
         dependencies_addr,
         dependencies
