@@ -540,7 +540,7 @@ pub trait InvokeArgs {
 // Implement `InvokeTraits` for tuples up to and including 20 elements
 seq_macro::seq!(N in 0..=20 {#(
 seq_macro::seq!(I in 0..N {
-    impl<'arg, #(T #I: ArgumentReflection + Marshal<'arg>,)*> InvokeArgs for (#(T #I,)*) {
+    impl<'arg, #(T~I: ArgumentReflection + Marshal<'arg>,)*> InvokeArgs for (#(T~I,)*) {
         #[allow(unused_variables)]
         fn can_invoke<'runtime>(&self, runtime: &'runtime Runtime, signature: &FunctionSignature) -> Result<(), String> {
             let arg_types = signature.arg_types();
@@ -568,7 +568,7 @@ seq_macro::seq!(I in 0..N {
 
         unsafe fn invoke<ReturnType>(self, fn_ptr: *const c_void) -> ReturnType {
             #[allow(clippy::type_complexity)]
-            let function: fn(#(T #I::MunType,)*) -> ReturnType = core::mem::transmute(fn_ptr);
+            let function: fn(#(T~I::MunType,)*) -> ReturnType = core::mem::transmute(fn_ptr);
             function(#(self.I.marshal_into(),)*)
         }
     }
