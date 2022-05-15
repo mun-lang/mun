@@ -17,7 +17,7 @@ rustc-hash = "1.1.0"
 abi = { version = "=0.3.0", path = "../mun_abi", package = "mun_abi" }
 bytemuck = "1.4.1"
 hir = { version = "=0.3.0", path = "../mun_hir", package = "mun_hir" }
-itertools = "0.9.0"
+itertools = "0.10.3"
 mun_codegen_macros = { version = "=0.1.0", path = "../mun_codegen_macros", package = "mun_codegen_macros" }
 mun_target = { version = "=0.3.0", path = "../mun_target" }
 lld_rs = "120.0.1"
