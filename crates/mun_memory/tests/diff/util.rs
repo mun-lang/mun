@@ -132,7 +132,7 @@ impl<'t> TypeFields<&'t TypeInfo> for &'t TypeInfo {
 }
 
 pub fn apply_myers_diff<'t, T: Copy + Eq>(old: &[T], new: &[T], diff: Vec<myers::Diff>) -> Vec<T> {
-    let mut combined: Vec<_> = old.iter().cloned().collect();
+    let mut combined: Vec<_> = old.to_vec();
     for diff in diff.iter().rev() {
         if let myers::Diff::Delete { index } = diff {
             combined.remove(*index);
@@ -195,7 +195,7 @@ pub(crate) fn apply_diff<'t>(
 fn apply_mapping<'t>(old: &mut TypeInfo, new: &TypeInfo, mapping: &[FieldDiff]) {
     if let TypeInfoData::Struct(old_struct) = &mut old.data {
         if let TypeInfoData::Struct(new_struct) = &new.data {
-            let mut combined: Vec<_> = old_struct.fields.iter().cloned().collect();
+            let mut combined: Vec<_> = old_struct.fields.to_vec();
             for diff in mapping.iter().rev() {
                 match diff {
                     FieldDiff::Delete { index } => {

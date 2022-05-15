@@ -188,7 +188,7 @@ mod tests {
                         ..default_symbol.clone()
                     }
                 ]),
-                ..default_symbol.clone()
+                ..default_symbol
             }]
         )
     }

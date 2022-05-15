@@ -1019,8 +1019,8 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
 
     let value = if messages.is_empty() {
         itertools::Itertools::intersperse(module_parition.iter().map(|(module_group_id, module_group)| {
-            let group_ir = gen_file_group_ir(&code_gen, &module_group);
-            let file_ir = gen_file_ir(&code_gen, &group_ir, &module_group);
+            let group_ir = gen_file_group_ir(&code_gen, module_group);
+            let file_ir = gen_file_ir(&code_gen, &group_ir, module_group);
 
             let group_ir = group_ir.llvm_module.print_to_string().to_string();
             let file_ir = file_ir.llvm_module.print_to_string().to_string();
@@ -1042,5 +1042,5 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
             .collect::<String>()
     };
 
-    insta::assert_snapshot!(thread_name, value, &text);
+    insta::assert_snapshot!(thread_name, value, text);
 }
