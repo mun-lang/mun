@@ -838,7 +838,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 self.builder.build_store(place, rhs);
                 Some(self.gen_empty())
             }
-            _ => unreachable!(format!("Operator {:?} is not implemented for integer", op)),
+            _ => unreachable!("Operator {:?} is not implemented for integer", op),
         }
     }
 
@@ -1019,7 +1019,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             | ArithOp::BitAnd
             | ArithOp::BitOr
             | ArithOp::BitXor => {
-                unreachable!(format!("Operator {:?} is not implemented for float", op))
+                unreachable!("Operator {:?} is not implemented for float", op)
             }
         }
     }

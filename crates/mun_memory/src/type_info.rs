@@ -94,6 +94,16 @@ impl TypeFields for Arc<TypeInfo> {
 }
 
 impl TypeInfo {
+    /// Returns whether this is a fundamental type.
+    pub fn is_primitive(&self) -> bool {
+        self.data.is_primitive()
+    }
+
+    /// Returns whether this is a struct type.
+    pub fn is_struct(&self) -> bool {
+        self.data.is_struct()
+    }
+
     /// Retrieves the type's struct information, if available.
     pub fn as_struct(&self) -> Option<&StructInfo> {
         if let TypeInfoData::Struct(s) = &self.data {
@@ -175,3 +185,49 @@ impl StructInfo {
         })
     }
 }
+
+/// A trait that defines static type information for types that can provide it.
+pub trait HasStaticTypeInfo: abi::HasStaticTypeInfo {
+    fn type_info() -> Arc<TypeInfo>;
+}
+
+macro_rules! impl_primitive_type {
+    ($($ty:ty),+) => {
+        $(
+            impl HasStaticTypeInfo for $ty {
+                fn type_info() -> Arc<TypeInfo> {
+                    static TYPE_INFO: once_cell::sync::OnceCell<Arc<TypeInfo>> = once_cell::sync::OnceCell::new();
+                    TYPE_INFO.get_or_init(|| {
+                        let type_info = <$ty as abi::HasStaticTypeInfo>::type_info();
+                        Arc::new(TypeInfo {
+                            id: type_info.id.clone(),
+                            name: type_info.name().to_owned(),
+                            layout:  Layout::from_size_align(type_info.size_in_bytes(), type_info.alignment())
+                                .expect("TypeInfo contains invalid size and alignment."),
+                            data: TypeInfoData::Primitive
+                        })
+                    }).clone()
+                }
+            }
+        )+
+    }
+}
+
+impl_primitive_type!(
+    i8,
+    i16,
+    i32,
+    i64,
+    i128,
+    isize,
+    u8,
+    u16,
+    u32,
+    u64,
+    u128,
+    usize,
+    f32,
+    f64,
+    bool,
+    ()
+);

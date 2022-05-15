@@ -85,7 +85,7 @@ impl Linker for LdLinker {
     }
 
     fn finalize(&mut self) -> Result<(), LinkerError> {
-        mun_lld::link(mun_lld::LldFlavor::Elf, &self.args)
+        lld_rs::link(lld_rs::LldFlavor::Elf, &self.args)
             .ok()
             .map_err(LinkerError::LinkError)
     }
@@ -144,7 +144,7 @@ impl Linker for Ld64Linker {
     }
 
     fn finalize(&mut self) -> Result<(), LinkerError> {
-        mun_lld::link(mun_lld::LldFlavor::MachO, &self.args)
+        lld_rs::link(lld_rs::LldFlavor::MachO, &self.args)
             .ok()
             .map_err(LinkerError::LinkError)
     }
@@ -194,7 +194,7 @@ impl Linker for MsvcLinker {
     }
 
     fn finalize(&mut self) -> Result<(), LinkerError> {
-        mun_lld::link(mun_lld::LldFlavor::Coff, &self.args)
+        lld_rs::link(lld_rs::LldFlavor::Coff, &self.args)
             .ok()
             .map_err(LinkerError::LinkError)
     }

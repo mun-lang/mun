@@ -1,6 +1,6 @@
 use std::{alloc::Layout, sync::Arc};
 
-pub use type_info::{StructInfo, TypeInfo, TypeInfoData};
+pub use type_info::{HasStaticTypeInfo, StructInfo, TypeInfo, TypeInfoData};
 
 mod cast;
 pub mod diff;

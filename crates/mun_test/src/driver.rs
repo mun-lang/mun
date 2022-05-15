@@ -1,9 +1,7 @@
 use compiler::{Config, DisplayColor, Driver, PathOrInline, RelativePathBuf};
 use runtime::{Runtime, RuntimeBuilder};
 use std::{
-    cell::{Ref, RefCell},
     path::{Path, PathBuf},
-    rc::Rc,
     thread::sleep,
     time::{Duration, Instant},
 };
@@ -127,7 +125,9 @@ impl std::fmt::Debug for CompileTestDriver {
 /// This allows testing of Mun constructs that depend on hot-reloading.
 pub struct CompileAndRunTestDriver {
     driver: CompileTestDriver,
-    runtime: Rc<RefCell<Runtime>>,
+
+    /// The runtime created by this instance.
+    pub runtime: Runtime,
 }
 
 impl std::fmt::Debug for CompileAndRunTestDriver {
@@ -146,8 +146,8 @@ impl CompileAndRunTestDriver {
         config_fn: impl FnOnce(RuntimeBuilder) -> RuntimeBuilder,
     ) -> Result<Self, anyhow::Error> {
         let driver = CompileTestDriver::from_fixture(fixture);
-        let builder = RuntimeBuilder::new(driver.lib_path());
-        let runtime = config_fn(builder).spawn()?;
+        let builder = Runtime::builder(driver.lib_path());
+        let runtime = config_fn(builder).finish()?;
 
         Ok(Self { driver, runtime })
     }
@@ -159,8 +159,8 @@ impl CompileAndRunTestDriver {
         config_fn: impl FnOnce(RuntimeBuilder) -> RuntimeBuilder,
     ) -> Result<Self, anyhow::Error> {
         let driver = CompileTestDriver::from_file(text);
-        let builder = RuntimeBuilder::new(driver.lib_path());
-        let runtime = config_fn(builder).spawn()?;
+        let builder = Runtime::builder(driver.lib_path());
+        let runtime = config_fn(builder).finish()?;
 
         Ok(Self { driver, runtime })
     }
@@ -171,17 +171,11 @@ impl CompileAndRunTestDriver {
     /// A reference to the borrowed `runtime` is used as an argument to allow moving of the
     /// existing borrow inside the update function. This obviates the necessity for `update` to use
     /// the `Runtime`.
-    pub fn update(
-        &mut self,
-        runtime: Ref<'_, Runtime>,
-        path: impl AsRef<paths::RelativePath>,
-        text: &str,
-    ) {
+    pub fn update(&mut self, path: impl AsRef<paths::RelativePath>, text: &str) {
         self.driver.update(path, text);
 
         let start_time = Instant::now();
-        drop(runtime);
-        while !self.runtime().borrow_mut().update() {
+        while !self.runtime.update() {
             let now = Instant::now();
             if now - start_time > Duration::from_secs(10) {
                 panic!("runtime did not update after recompilation within 10 seconds");
@@ -189,10 +183,5 @@ impl CompileAndRunTestDriver {
                 sleep(Duration::from_millis(1));
             }
         }
-    }
-
-    /// Returns the `Runtime` used by the driver.
-    pub fn runtime(&self) -> Rc<RefCell<Runtime>> {
-        self.runtime.clone()
     }
 }

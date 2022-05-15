@@ -2,7 +2,7 @@ use crate::{
     garbage_collector::GcRootPtr,
     marshal::Marshal,
     reflection::{equals_return_type, ArgumentReflection, ReturnTypeReflection},
-    Runtime,
+    GarbageCollector, Runtime,
 };
 use memory::{
     gc::{GcPtr, GcRuntime, HasIndirectionPtr},
@@ -10,12 +10,8 @@ use memory::{
 };
 use once_cell::sync::OnceCell;
 use std::{
-    cell::{Ref, RefCell},
-    marker::PhantomPinned,
-    mem::MaybeUninit,
     pin::Pin,
     ptr::{self, NonNull},
-    rc::Rc,
     sync::Arc,
 };
 
@@ -54,8 +50,8 @@ impl<'s> StructRef<'s> {
     }
 
     /// Roots the `StructRef`.
-    pub fn root(self, runtime: Rc<RefCell<Runtime>>) -> RootedStruct {
-        RootedStruct::new(&self.runtime.gc, runtime, self.raw)
+    pub fn root(self) -> RootedStruct {
+        RootedStruct::new(&self.runtime.gc, self.raw)
     }
 
     /// Returns the type information of the struct.
@@ -137,7 +133,7 @@ impl<'s> StructRef<'s> {
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
                 type_info.name,
                 field_name,
-                value.type_name(self.runtime),
+                value.type_info(self.runtime).name,
                 field_type
             ));
         }
@@ -172,7 +168,7 @@ impl<'s> StructRef<'s> {
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
                 type_info.name,
                 field_name,
-                value.type_name(self.runtime),
+                value.type_info(self.runtime).name,
                 field_type
             ));
         }
@@ -184,26 +180,8 @@ impl<'s> StructRef<'s> {
 }
 
 impl<'r> ArgumentReflection for StructRef<'r> {
-    fn type_id(&self, runtime: &Runtime) -> abi::TypeId {
-        runtime.gc().ptr_type(self.raw.0).id.clone()
-    }
-
-    fn type_name(&self, runtime: &Runtime) -> &str {
-        &runtime.gc().ptr_type(self.raw.0).name
-    }
-}
-
-impl<'r> ReturnTypeReflection for StructRef<'r> {
-    fn type_name() -> &'static str {
-        "struct"
-    }
-
-    fn type_id() -> abi::TypeId {
-        // TODO: Once `const_fn` lands, replace this with a const md5 hash
-        static GUID: OnceCell<abi::TypeId> = OnceCell::new();
-        *GUID.get_or_init(|| {
-            abi::Guid::from(<Self as ReturnTypeReflection>::type_name().as_bytes()).into()
-        })
+    fn type_info(&self, _runtime: &Runtime) -> Arc<TypeInfo> {
+        self.type_info()
     }
 }
 
@@ -271,86 +249,43 @@ impl<'s> Marshal<'s> for StructRef<'s> {
     }
 }
 
+impl<'r> ReturnTypeReflection for StructRef<'r> {
+    fn type_name() -> &'static str {
+        "struct"
+    }
+
+    fn type_id() -> abi::TypeId {
+        // TODO: Once `const_fn` lands, replace this with a const md5 hash
+        static GUID: OnceCell<abi::TypeId> = OnceCell::new();
+        GUID.get_or_init(|| {
+            abi::Guid::from(<Self as ReturnTypeReflection>::type_name().as_bytes()).into()
+        })
+        .clone()
+    }
+}
+
 /// Type-agnostic wrapper for interoperability with a Mun struct, that has been rooted. To marshal,
 /// obtain a `StructRef` for the `RootedStruct`.
 #[derive(Clone)]
 pub struct RootedStruct {
     handle: GcRootPtr,
-    runtime: Rc<RefCell<Runtime>>,
 }
 
 impl RootedStruct {
     /// Creates a `RootedStruct` that wraps a raw Mun struct.
-    fn new<G: GcRuntime>(gc: &Arc<G>, runtime: Rc<RefCell<Runtime>>, raw: RawStruct) -> Self {
-        let handle = {
-            assert!(gc.ptr_type(raw.0).data.is_struct());
-
-            let runtime_ref = runtime.borrow();
-            GcRootPtr::new(&runtime_ref.gc, raw.0)
-        };
-
-        Self { handle, runtime }
+    fn new(gc: &Arc<GarbageCollector>, raw: RawStruct) -> Self {
+        // Safety: The type returned from `ptr_type` is guaranteed to live at least as long as
+        // `Runtime` does not change. As we hold a shared reference to `Runtime`, this is safe.
+        assert!(unsafe { gc.ptr_type(raw.0).is_struct() });
+        Self {
+            handle: GcRootPtr::new(gc, raw.0),
+        }
     }
 
     /// Converts the `RootedStruct` into a `StructRef`, using an external shared reference to a
     /// `Runtime`.
-    ///
-    /// # Safety
-    ///
-    /// The `RootedStruct` should have been allocated by the `Runtime`.
-    pub unsafe fn as_ref<'r>(&self, runtime: &'r Runtime) -> StructRef<'r> {
+    pub fn as_ref<'r>(&self, runtime: &'r Runtime) -> StructRef<'r> {
+        assert_eq!(Arc::as_ptr(&runtime.gc), self.handle.runtime().as_ptr());
         StructRef::new(RawStruct(self.handle.handle()), runtime)
-    }
-
-    /// Converts the `RootedStruct` to a pinned `RootedStructRef` that can be used just like a
-    /// `StructRef`.
-    pub fn by_ref(&self) -> Pin<Box<RootedStructRef>> {
-        RootedStructRef::new(RawStruct(self.handle.handle()), self.borrow_runtime())
-    }
-
-    /// Borrows the struct's runtime.
-    pub fn borrow_runtime(&self) -> Ref<Runtime> {
-        self.runtime.borrow()
-    }
-}
-
-/// Type-agnostic wrapper for safely obtaining a `StructRef` from a `RootedStruct`.
-pub struct RootedStructRef<'s> {
-    runtime: Ref<'s, Runtime>,
-    struct_ref: MaybeUninit<StructRef<'s>>,
-    _pin: PhantomPinned,
-}
-
-impl<'s> RootedStructRef<'s> {
-    fn new(raw: RawStruct, runtime: Ref<'s, Runtime>) -> Pin<Box<Self>> {
-        let struct_ref = RootedStructRef {
-            runtime,
-            struct_ref: MaybeUninit::uninit(),
-            _pin: PhantomPinned,
-        };
-        let mut boxed = Box::pin(struct_ref);
-
-        let runtime = NonNull::from(&boxed.runtime);
-
-        // Safety: Modifying a field doesn't move the whole struct
-        unsafe {
-            let struct_ref = StructRef::new(raw, &*runtime.as_ptr());
-            let mut_ref: Pin<&mut Self> = Pin::as_mut(&mut boxed);
-            Pin::get_unchecked_mut(mut_ref)
-                .struct_ref
-                .as_mut_ptr()
-                .write(struct_ref);
-        }
-
-        boxed
-    }
-}
-
-impl<'s> std::ops::Deref for RootedStructRef<'s> {
-    type Target = StructRef<'s>;
-
-    fn deref(&self) -> &Self::Target {
-        // Safety: We always guarantee to set the `struct_ref` upon construction.
-        unsafe { &*self.struct_ref.as_ptr() }
     }
 }

@@ -1,4 +1,4 @@
-use mun_runtime::RuntimeBuilder;
+use mun_runtime::Runtime;
 use std::env;
 
 // How to run?
@@ -9,20 +9,18 @@ fn main() {
     let lib_dir = env::args().nth(1).expect("Expected path to a Mun library.");
     println!("lib: {}", lib_dir);
 
-    let runtime = RuntimeBuilder::new(lib_dir)
-        .spawn()
+    let mut runtime = Runtime::builder(lib_dir)
+        .finish()
         .expect("Failed to spawn Runtime");
 
-    let mut runtime_ref = runtime.borrow_mut();
-
     loop {
-        let n: i64 = runtime_ref
+        let n: i64 = runtime
             .invoke("nth", ())
-            .unwrap_or_else(|e| e.wait(&mut runtime_ref));
-        let result: i64 = runtime_ref
+            .unwrap_or_else(|e| e.wait(&mut runtime));
+        let result: i64 = runtime
             .invoke("fibonacci", (n,))
-            .unwrap_or_else(|e| e.wait(&mut runtime_ref));
+            .unwrap_or_else(|e| e.wait(&mut runtime));
         println!("fibonacci({}) = {}", n, result);
-        runtime_ref.update();
+        runtime.update();
     }
 }

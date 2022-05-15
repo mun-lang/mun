@@ -1,5 +1,5 @@
 use mun::run_with_args;
-use mun_runtime::RuntimeBuilder;
+use mun_runtime::Runtime;
 use std::ffi::OsString;
 use std::path::Path;
 
@@ -73,8 +73,7 @@ fn build_and_run(project: &Path) {
     let library_path = project.join("target/mod.munlib");
     assert!(library_path.is_file());
 
-    let runtime = RuntimeBuilder::new(&library_path).spawn().unwrap();
-    let runtime_ref = runtime.borrow();
-    let result: f64 = runtime_ref.invoke("main", ()).unwrap();
+    let runtime = Runtime::builder(&library_path).finish().unwrap();
+    let result: f64 = runtime.invoke("main", ()).unwrap();
     assert_eq!(result, 3.14159);
 }

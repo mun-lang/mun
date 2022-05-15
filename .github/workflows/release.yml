@@ -17,21 +17,18 @@ jobs:
       fail-fast: false
       matrix:
         config:
-        - {
-          os: "ubuntu-latest",
-          dir: linux64,
-          artifacts: "mun libmun_runtime.so"
-        }
-        - {
-          os: "windows-latest",
-          dir: win64,
-          artifacts: "mun.exe mun_runtime.dll mun_runtime.dll.lib"
-        }
-        - {
-          os: "macOS-latest",
-          dir: osx64,
-          artifacts: "mun libmun_runtime.dylib"
-        }
+          - os: "ubuntu-latest"
+            dir: linux64
+            artifacts: "mun libmun_runtime.so"
+            RUSTFLAGS: "-Dwarnings"
+          - os: "windows-latest"
+            dir: win64
+            artifacts: "mun.exe mun_runtime.dll mun_runtime.dll.lib"
+            RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
+          - os: "macOS-latest"
+            dir: osx64
+            artifacts: "mun libmun_runtime.dylib"
+            RUSTFLAGS: "-Dwarnings"
     steps:
       - uses: actions/checkout@v2
         with:
@@ -48,6 +45,8 @@ jobs:
 
       - name: Cargo build
         uses: actions-rs/cargo@v1
+        env:
+          RUSTFLAGS: ${{ matrix.config.RUSTFLAGS }}
         with:
           command: build
           args: --release

@@ -23,10 +23,10 @@ use mun_project::LOCKFILE_NAME;
 use notify::{RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
 use rustc_hash::FxHashMap;
 use std::{
-    cell::RefCell,
     collections::{HashMap, VecDeque},
     ffi, io, mem,
     path::{Path, PathBuf},
+    ptr::NonNull,
     rc::Rc,
     string::ToString,
     sync::{
@@ -104,7 +104,7 @@ pub struct RuntimeBuilder {
 
 impl RuntimeBuilder {
     /// Constructs a new `RuntimeBuilder` for the shared library at `library_path`.
-    pub fn new<P: Into<PathBuf>>(library_path: P) -> Self {
+    fn new<P: Into<PathBuf>>(library_path: P) -> Self {
         Self {
             options: RuntimeOptions {
                 library_path: library_path.into(),
@@ -123,9 +123,9 @@ impl RuntimeBuilder {
         self
     }
 
-    /// Spawns a [`Runtime`] with the builder's options.
-    pub fn spawn(self) -> anyhow::Result<Rc<RefCell<Runtime>>> {
-        Runtime::new(self.options).map(|runtime| Rc::new(RefCell::new(runtime)))
+    /// Constructs a [`Runtime`] with the builder's options.
+    pub fn finish(self) -> anyhow::Result<Runtime> {
+        Runtime::new(self.options)
     }
 }
 
@@ -161,6 +161,24 @@ impl DispatchTable {
     /// Removes and returns the `fn_info` corresponding to `fn_path`, if it exists.
     pub fn remove_fn<S: AsRef<str>>(&mut self, fn_path: S) -> Option<abi::FunctionDefinition> {
         self.functions.remove(fn_path.as_ref())
+    }
+
+    /// Removes the function definitions from the given assembly from this dispatch table.
+    pub fn remove_module(&mut self, assembly: &abi::ModuleInfo) {
+        for function in assembly.functions() {
+            if let Some(value) = self.functions.get(function.prototype.name()) {
+                if value.fn_ptr == function.fn_ptr {
+                    self.functions.remove(function.prototype.name());
+                }
+            }
+        }
+    }
+
+    /// Add the function definitions from the given assembly from this dispatch table.
+    pub fn insert_module(&mut self, assembly: &abi::ModuleInfo) {
+        for function in assembly.functions() {
+            self.insert_fn(function.prototype.name(), function.clone());
+        }
     }
 
     /// Adds `fn_path` from `assembly_path` as a dependency; incrementing its usage counter.
@@ -221,6 +239,11 @@ pub struct Runtime {
 }
 
 impl Runtime {
+    /// Constructs a new [`RuntimeBuilder`] to construct a new [`Runtime`] instance.
+    pub fn builder<P: Into<PathBuf>>(library_path: P) -> RuntimeBuilder {
+        RuntimeBuilder::new(library_path)
+    }
+
     /// Constructs a new `Runtime` that loads the library at `library_path` and its
     /// dependencies. The `Runtime` contains a file watcher that is triggered with an interval
     /// of `dur`.
@@ -457,25 +480,25 @@ impl Runtime {
 }
 
 /// An error that might occur when calling a mun function from Rust.
-pub struct InvokeErr<Name: AsRef<str>, T> {
+pub struct InvokeErr<'name, T> {
     msg: String,
-    function_name: Name,
+    function_name: &'name str,
     arguments: T,
 }
 
-impl<Name: AsRef<str>, T> Debug for InvokeErr<Name, T> {
+impl<'name, T> Debug for InvokeErr<'name, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", &self.msg)
     }
 }
 
-impl<Name: AsRef<str>, T> Display for InvokeErr<Name, T> {
+impl<'name, T> Display for InvokeErr<'name, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", &self.msg)
     }
 }
 
-impl<Name: AsRef<str>, T: InvokeArgs> InvokeErr<Name, T> {
+impl<'name, T: InvokeArgs> InvokeErr<'name, T> {
     /// Retries a function invocation once, resulting in a potentially successful
     /// invocation.
     // FIXME: `unwrap_or_else` does not compile for `StructRef`, due to
@@ -572,7 +595,7 @@ seq_macro::seq!(I in 0..N {
                 return Err(format!(
                     "Invalid argument type at index {}. Expected: {}. Found: {}.",
                     I,
-                    self.I.type_name(runtime),
+                    self.I.type_info(runtime).name,
                     runtime.get_type_info_by_id(&arg_types[I]).unwrap(),
                 ));
             }
@@ -595,27 +618,24 @@ impl Runtime {
     pub fn invoke<
         'runtime,
         'ret,
+        'name,
         ReturnType: ReturnTypeReflection + Marshal<'ret> + 'ret,
         ArgTypes: InvokeArgs,
-        Name: AsRef<str>,
     >(
         &'runtime self,
-        function_name: Name,
+        function_name: &'name str,
         arguments: ArgTypes,
-    ) -> Result<ReturnType, InvokeErr<Name, ArgTypes>>
+    ) -> Result<ReturnType, InvokeErr<'name, ArgTypes>>
     where
         'runtime: 'ret,
     {
         // Get the function information from the runtime
-        let function_name_str = function_name.as_ref();
-        let function_info = match self
-            .get_function_definition(function_name_str)
-            .ok_or_else(|| {
-                format!(
-                    "failed to obtain function '{}', no such function exists.",
-                    function_name_str
-                )
-            }) {
+        let function_info = match self.get_function_definition(function_name).ok_or_else(|| {
+            format!(
+                "failed to obtain function '{}', no such function exists.",
+                function_name
+            )
+        }) {
             Ok(function_info) => function_info,
             Err(msg) => {
                 return Err(InvokeErr {

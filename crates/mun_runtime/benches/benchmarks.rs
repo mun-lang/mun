@@ -1,5 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use mun_runtime::StructRef;
+use wasmer::Store;
 
 mod util;
 
@@ -9,7 +10,9 @@ pub fn fibonacci_benchmark(c: &mut Criterion) {
     // Perform setup (not part of the benchmark)
     let runtime = util::runtime_from_file("fibonacci.mun");
     let lua = util::lua_from_file("fibonacci.lua");
-    let wasm = util::wasmer_from_file("fibonacci.wasm");
+    let wasm_store = Store::default();
+    let wasm = util::wasmer_from_file(&wasm_store, "fibonacci.wasm");
+    let wasm_func = wasm.exports.get_function("main").unwrap();
 
     let mut group = c.benchmark_group("fibonacci");
 
@@ -17,9 +20,8 @@ pub fn fibonacci_benchmark(c: &mut Criterion) {
     for i in [100i64, 200i64, 500i64, 1000i64, 4000i64, 8000i64].iter() {
         // Run Mun fibonacci
         group.bench_with_input(BenchmarkId::new("mun", i), i, |b, i| {
-            let runtime_ref = runtime.borrow();
             b.iter(|| {
-                let _: i64 = runtime_ref.invoke("main", (*i,)).unwrap();
+                let _: i64 = runtime.invoke("main", (*i,)).unwrap();
             })
         });
 
@@ -39,7 +41,7 @@ pub fn fibonacci_benchmark(c: &mut Criterion) {
         // Run Wasm fibonacci
         group.bench_with_input(BenchmarkId::new("wasm", i), i, |b, i| {
             b.iter(|| {
-                wasm.call("main", &[(*i as i32).into()]).unwrap();
+                wasm_func.call(&[(*i as i32).into()]).unwrap();
             })
         });
     }
@@ -73,14 +75,15 @@ pub fn empty_benchmark(c: &mut Criterion) {
     // Perform setup (not part of the benchmark)
     let runtime = util::runtime_from_file("empty.mun");
     let lua = util::lua_from_file("empty.lua");
-    let wasm = util::wasmer_from_file("empty.wasm");
+    let wasm_store = Store::default();
+    let wasm = util::wasmer_from_file(&wasm_store, "empty.wasm");
+    let wasm_func = wasm.exports.get_function("empty").unwrap();
 
     let mut group = c.benchmark_group("empty");
 
     group.bench_function("mun", |b| {
-        let runtime_ref = runtime.borrow();
         b.iter(|| {
-            let _: i64 = runtime_ref.invoke("empty", (black_box(20i64),)).unwrap();
+            let _: i64 = runtime.invoke("empty", (black_box(20i64),)).unwrap();
         })
     });
     group.bench_function("rust", |b| b.iter(|| empty(black_box(20))));
@@ -91,7 +94,7 @@ pub fn empty_benchmark(c: &mut Criterion) {
         })
     });
     group.bench_function("wasm", |b| {
-        b.iter(|| wasm.call("empty", &[black_box(20i64).into()]))
+        b.iter(|| wasm_func.call(&[black_box(20i64).into()]))
     });
 
     group.finish();
@@ -114,9 +117,8 @@ struct RustParent<'a> {
 pub fn get_struct_field_benchmark(c: &mut Criterion) {
     // Perform setup (not part of the benchmark)
     let runtime = util::runtime_from_file("struct.mun");
-    let runtime_ref = runtime.borrow_mut();
-    let mun_gc_parent: StructRef = runtime_ref.invoke("make_gc_parent", ()).unwrap();
-    let mun_value_parent: StructRef = runtime_ref.invoke("make_value_parent", ()).unwrap();
+    let mun_gc_parent: StructRef = runtime.invoke("make_gc_parent", ()).unwrap();
+    let mun_value_parent: StructRef = runtime.invoke("make_value_parent", ()).unwrap();
 
     let rust_child = RustChild(-2.0, -1.0, 1.0, 2.0);
     let rust_parent = RustParent {
@@ -203,9 +205,8 @@ pub fn get_struct_field_benchmark(c: &mut Criterion) {
 pub fn set_struct_field_benchmark(c: &mut Criterion) {
     // Perform setup (not part of the benchmark)
     let runtime = util::runtime_from_file("struct.mun");
-    let runtime_ref = runtime.borrow();
-    let mut mun_gc_parent: StructRef = runtime_ref.invoke("make_value_parent", ()).unwrap();
-    let mut mun_value_parent: StructRef = runtime_ref.invoke("make_value_parent", ()).unwrap();
+    let mut mun_gc_parent: StructRef = runtime.invoke("make_value_parent", ()).unwrap();
+    let mut mun_value_parent: StructRef = runtime.invoke("make_value_parent", ()).unwrap();
 
     let rust_child = RustChild(-2.0, -1.0, 1.0, 2.0);
     let mut rust_child2 = rust_child.clone();

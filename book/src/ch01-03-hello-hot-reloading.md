@@ -18,7 +18,7 @@ Apart from running Mun libraries from the command-line interface, a common use c
 
 ### Mun embedded in C++
 
-Mun [exposes](https://github.com/mun-lang/runtime-ffi) a C API and complementary C++ bindings for the Mun Runtime. 
+Mun [exposes](https://github.com/mun-lang/mun/tree/main/cpp) a C API and complementary C++ bindings for the Mun Runtime. 
 Listing 1-3 shows a C++ application that constructs a Mun Runtime for the `hello_fibonacci` library and continuously invokes the `fibonacci` function and outputs its result.
 
 Filename: main.cc

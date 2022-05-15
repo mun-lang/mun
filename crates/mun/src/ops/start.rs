@@ -1,18 +1,15 @@
-use std::{cell::RefCell, rc::Rc};
-
 use anyhow::anyhow;
 use clap::ArgMatches;
-use mun_runtime::{ReturnTypeReflection, Runtime, RuntimeBuilder};
+use mun_runtime::{ReturnTypeReflection, Runtime};
 
 use crate::ExitStatus;
 
 /// Starts the runtime with the specified library and invokes function `entry`.
-pub fn start(matches: &ArgMatches) -> Result<ExitStatus, anyhow::Error> {
+pub fn start(matches: &ArgMatches) -> anyhow::Result<ExitStatus> {
     let runtime = runtime(matches)?;
 
-    let borrowed = runtime.borrow();
     let entry_point = matches.value_of("entry").unwrap_or("main");
-    let fn_definition = borrowed
+    let fn_definition = runtime
         .get_function_definition(entry_point)
         .ok_or_else(|| {
             std::io::Error::new(
@@ -24,19 +21,19 @@ pub fn start(matches: &ArgMatches) -> Result<ExitStatus, anyhow::Error> {
     if let Some(ret_type) = fn_definition.prototype.signature.return_type() {
         let type_guid = &ret_type.guid;
         if *type_guid == bool::type_id() {
-            let result: bool = borrowed
+            let result: bool = runtime
                 .invoke(entry_point, ())
                 .map_err(|e| anyhow!("{}", e))?;
 
             println!("{}", result)
         } else if *type_guid == f64::type_id() {
-            let result: f64 = borrowed
+            let result: f64 = runtime
                 .invoke(entry_point, ())
                 .map_err(|e| anyhow!("{}", e))?;
 
             println!("{}", result)
         } else if *type_guid == i64::type_id() {
-            let result: i64 = borrowed
+            let result: i64 = runtime
                 .invoke(entry_point, ())
                 .map_err(|e| anyhow!("{}", e))?;
 
@@ -50,17 +47,16 @@ pub fn start(matches: &ArgMatches) -> Result<ExitStatus, anyhow::Error> {
         Ok(ExitStatus::Success)
     } else {
         #[allow(clippy::unit_arg)]
-        borrowed
+        runtime
             .invoke(entry_point, ())
             .map(|_: ()| ExitStatus::Success)
             .map_err(|e| anyhow!("{}", e))
     }
 }
 
-fn runtime(matches: &ArgMatches) -> Result<Rc<RefCell<Runtime>>, anyhow::Error> {
-    let builder = RuntimeBuilder::new(
+fn runtime(matches: &ArgMatches) -> anyhow::Result<Runtime> {
+    Runtime::builder(
         matches.value_of("LIBRARY").unwrap(), // Safe because its a required arg
-    );
-
-    builder.spawn()
+    )
+    .finish()
 }

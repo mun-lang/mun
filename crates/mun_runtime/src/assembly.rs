@@ -26,8 +26,7 @@ pub struct Assembly {
 }
 
 impl Assembly {
-    /// Loads an assembly and its information for the shared library at `library_path`. The
-    /// resulting `Assembly` is ensured to be linkable.
+    /// Loads an assembly and its information for the shared library at `library_path`.
     pub fn load(library_path: &Path, gc: Arc<GarbageCollector>) -> Result<Self, anyhow::Error> {
         let mut library = MunLibrary::new(library_path)?;
 
@@ -132,21 +131,18 @@ impl Assembly {
         Ok(dispatch_table)
     }
 
-    /// Tries to link the `assemblies`, resulting in a new [`DispatchTable`] on success. This leaves
-    /// the original `dispatch_table` intact, in case of linking errors.
+    /// Tries to link the `unlinked_assemblies`, resulting in a new [`DispatchTable`] on success.
+    /// This leaves the original `dispatch_table` intact, in case of linking errors.
     pub(super) fn relink_all(
         unlinked_assemblies: &mut HashMap<PathBuf, Assembly>,
         linked_assemblies: &mut HashMap<PathBuf, Assembly>,
         dispatch_table: &DispatchTable,
         type_table: &TypeTable,
     ) -> anyhow::Result<(DispatchTable, TypeTable)> {
+        // Associate the new assemblies with the old assemblies
         let mut assemblies = unlinked_assemblies
             .iter_mut()
-            .map(|(old_path, asm)| {
-                let old_assembly = linked_assemblies.get(old_path);
-
-                (asm, old_assembly)
-            })
+            .map(|(old_path, asm)| (asm, linked_assemblies.get(old_path)))
             .collect::<Vec<_>>();
 
         // Clone the type table, such that we can roll back if linking fails
@@ -158,55 +154,60 @@ impl Assembly {
         let mut dispatch_table = dispatch_table.clone();
 
         // Remove the old assemblies' functions from the dispatch table
-        for (_, old_assembly) in assemblies.iter() {
-            if let Some(assembly) = old_assembly {
-                for function in assembly.info.symbols.functions() {
-                    dispatch_table.remove_fn(function.prototype.name());
-                }
-            }
+        for old_assembly in assemblies
+            .iter()
+            .filter_map(|(_, old_assembly)| old_assembly.as_ref())
+        {
+            dispatch_table.remove_module(&old_assembly.info().symbols)
         }
 
         // Insert all assemblies' functions into the dispatch table
         for (new_assembly, _) in assemblies.iter() {
-            for function in new_assembly.info().symbols.functions() {
-                dispatch_table.insert_fn(function.prototype.name(), function.clone());
-            }
+            dispatch_table.insert_module(&new_assembly.info().symbols);
         }
 
-        let to_link = assemblies
-            .iter_mut()
-            .flat_map(|(asm, _)| asm.info.dispatch_table.iter_mut())
-            // Only take signatures into account that do *not* yet have a function pointer assigned
-            // by the compiler.
-            .filter(|(ptr, _)| ptr.is_null());
+        // Update the dispatch tables of the assemblies themselves based on our global dispatch
+        // table. This will effectively link the function definitions of the assemblies together.
+        // It also modifies the internal state of the assemblies.
+        //
+        // Note that linking may fail because for instance functions remaining unlinked (missing)
+        // or the signature of a function doesnt match.
+        Assembly::link_all_impl(
+            &mut dispatch_table,
+            assemblies
+                .iter_mut()
+                .flat_map(|(asm, _)| asm.info.dispatch_table.iter_mut())
+                // Only take signatures into account that do *not* yet have a function pointer assigned
+                // by the compiler. When an assembly is compiled it "pre-fills" its internal dispatch
+                // table with pointers to self-referencing functions.
+                .filter(|(ptr, _)| ptr.is_null()),
+        )?;
 
-        Assembly::link_all_impl(&mut dispatch_table, to_link)?;
+        // let mut newly_linked = HashMap::new();
+        // std::mem::swap(unlinked_assemblies, &mut newly_linked);
+        //
+        // for (old_path, mut new_assembly) in newly_linked.into_iter() {
+        //     let mut old_assembly = linked_assemblies
+        //         .remove(&old_path)
+        //         .expect("Assembly must exist.");
+        //
+        //     let new_path = if let Some(new_path) = assemblies_to_keep.remove(&old_path) {
+        //         // Retain all existing legacy libs
+        //         new_assembly
+        //             .legacy_libs
+        //             .append(&mut old_assembly.legacy_libs);
+        //
+        //         new_assembly.legacy_libs.push(old_assembly.into_library());
+        //
+        //         new_path
+        //     } else {
+        //         new_assembly.library_path().to_path_buf()
+        //     };
+        //
+        //     linked_assemblies.insert(new_path, new_assembly);
+        // }
 
-        let mut newly_linked = HashMap::new();
-        std::mem::swap(unlinked_assemblies, &mut newly_linked);
-
-        for (old_path, mut new_assembly) in newly_linked.into_iter() {
-            let mut old_assembly = linked_assemblies
-                .remove(&old_path)
-                .expect("Assembly must exist.");
-
-            let new_path = if let Some(new_path) = assemblies_to_keep.remove(&old_path) {
-                // Retain all existing legacy libs
-                new_assembly
-                    .legacy_libs
-                    .append(&mut old_assembly.legacy_libs);
-
-                new_assembly.legacy_libs.push(old_assembly.into_library());
-
-                new_path
-            } else {
-                new_assembly.library_path().to_path_buf()
-            };
-
-            linked_assemblies.insert(new_path, new_assembly);
-        }
-
-        Ok(dispatch_table)
+        Ok((dispatch_table, type_table))
     }
 
     /// Returns the assembly's information.

@@ -1,4 +1,4 @@
-use mun_runtime::RuntimeBuilder;
+use mun_runtime::Runtime;
 use std::{cell::RefCell, rc::Rc};
 
 extern "C" fn random() -> i64 {
@@ -8,12 +8,11 @@ extern "C" fn random() -> i64 {
 }
 
 fn main() {
-    let runtime = RuntimeBuilder::new("main.munlib")
+    let runtime = Runtime::builder("main.munlib")
         .insert_fn("random", random as extern "C" fn() -> i64)
-        .spawn()
+        .finish()
         .expect("Failed to spawn Runtime");
 
-    let runtime_ref = runtime.borrow();
-    let result: bool = runtime_ref.invoke("random_bool", ()).unwrap();
+    let result: bool = runtime.invoke("random_bool", ()).unwrap();
     println!("random_bool: {}", result);
 }

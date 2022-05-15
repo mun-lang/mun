@@ -1,12 +1,8 @@
 use compiler::{Config, DisplayColor, Driver, OptimizationLevel, PathOrInline};
 use mlua::Lua;
-use mun_runtime::RuntimeBuilder;
-use std::{
-    cell::RefCell,
-    path::{Path, PathBuf},
-    rc::Rc,
-};
-use wasmer_runtime::{instantiate, Instance};
+use mun_runtime::Runtime;
+use std::path::{Path, PathBuf};
+use wasmer::{Instance, Module, Store};
 
 fn compute_resource_path<P: AsRef<Path>>(p: P) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -14,7 +10,7 @@ fn compute_resource_path<P: AsRef<Path>>(p: P) -> PathBuf {
         .join(p)
 }
 
-pub fn runtime_from_file<P: AsRef<Path>>(p: P) -> Rc<RefCell<mun_runtime::Runtime>> {
+pub fn runtime_from_file<P: AsRef<Path>>(p: P) -> Runtime {
     let path = PathOrInline::Path(compute_resource_path(p));
     let (mut driver, file_id) = Driver::with_file(
         Config {
@@ -33,7 +29,7 @@ pub fn runtime_from_file<P: AsRef<Path>>(p: P) -> Rc<RefCell<mun_runtime::Runtim
 
     let out_path = driver.assembly_output_path_from_file(file_id);
     driver.write_all_assemblies(false).unwrap();
-    RuntimeBuilder::new(out_path).spawn().unwrap()
+    Runtime::builder(out_path).finish().unwrap()
 }
 
 pub fn lua_from_file<P: AsRef<Path>>(p: P) -> Lua {
@@ -44,8 +40,9 @@ pub fn lua_from_file<P: AsRef<Path>>(p: P) -> Lua {
     lua
 }
 
-pub fn wasmer_from_file<P: AsRef<Path>>(p: P) -> Instance {
+pub fn wasmer_from_file<P: AsRef<Path>>(store: &Store, p: P) -> Instance {
     let wasm_content = std::fs::read(compute_resource_path(p)).unwrap();
-    let import_objects = wasmer_runtime::imports! {};
-    instantiate(&wasm_content, &import_objects).unwrap()
+    let import_objects = wasmer::imports! {};
+    let module = Module::new(store, &wasm_content).unwrap();
+    Instance::new(&module, &import_objects).unwrap()
 }

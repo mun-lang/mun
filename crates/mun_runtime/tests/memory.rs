@@ -30,19 +30,17 @@ fn gc_trace() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
+    let runtime = &driver.runtime;
+    let value: StructRef = runtime.invoke("new_foo", ()).unwrap();
+    let value = value.root();
 
-    let value: StructRef = runtime_ref.invoke("new_foo", ()).unwrap();
-    let value = value.root(driver.runtime());
-
-    assert_eq!(runtime_ref.gc_collect(), false);
-    assert!(runtime_ref.gc_stats().allocated_memory > 0);
+    assert_eq!(runtime.gc_collect(), false);
+    assert!(runtime.gc_stats().allocated_memory > 0);
 
     drop(value);
 
-    assert_eq!(runtime_ref.gc_collect(), true);
-    assert_eq!(runtime_ref.gc_stats().allocated_memory, 0);
+    assert_eq!(runtime.gc_collect(), true);
+    assert_eq!(runtime.gc_stats().allocated_memory, 0);
 }
 
 #[test]
@@ -62,16 +60,12 @@ fn map_struct_insert_field1() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-
     let b = 5i64;
     let c = 3.0f64;
-    let foo: StructRef = runtime_ref.invoke("foo_new", (b, c)).unwrap();
-    let foo = foo.root(driver.runtime());
+    let foo: StructRef = driver.runtime.invoke("foo_new", (b, c)).unwrap();
+    let foo = foo.root();
 
     driver.update(
-        runtime_ref,
         "mod.mun",
         r#"
         struct Foo {
@@ -81,9 +75,11 @@ fn map_struct_insert_field1() {
         }
     "#,
     );
-    assert_eq!(foo.by_ref().get::<i64>("a").unwrap(), 0);
-    assert_eq!(foo.by_ref().get::<i64>("b").unwrap(), b);
-    assert_eq!(foo.by_ref().get::<f64>("c").unwrap(), c);
+
+    let runtime = &driver.runtime;
+    assert_eq!(foo.as_ref(runtime).get::<i64>("a").unwrap(), 0);
+    assert_eq!(foo.as_ref(runtime).get::<i64>("b").unwrap(), b);
+    assert_eq!(foo.as_ref(runtime).get::<f64>("c").unwrap(), c);
 }
 
 #[test]
@@ -103,16 +99,12 @@ fn map_struct_insert_field2() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-
     let a = 5i64;
     let c = 3.0f64;
-    let foo: StructRef = runtime_ref.invoke("foo_new", (a, c)).unwrap();
-    let foo = foo.root(driver.runtime());
+    let foo: StructRef = driver.runtime.invoke("foo_new", (a, c)).unwrap();
+    let foo = foo.root();
 
     driver.update(
-        runtime_ref,
         "mod.mun",
         r#"
         struct Foo {
@@ -122,9 +114,9 @@ fn map_struct_insert_field2() {
         }
     "#,
     );
-    assert_eq!(foo.by_ref().get::<i64>("a").unwrap(), a);
-    assert_eq!(foo.by_ref().get::<f64>("b").unwrap(), 0.0);
-    assert_eq!(foo.by_ref().get::<f64>("c").unwrap(), c);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<i64>("a").unwrap(), a);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<f64>("b").unwrap(), 0.0);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<f64>("c").unwrap(), c);
 }
 
 #[test]
@@ -144,16 +136,12 @@ fn map_struct_insert_field3() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-
     let a = 5i64;
     let b = 3.0f64;
-    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b)).unwrap();
-    let foo = foo.root(driver.runtime());
+    let foo: StructRef = driver.runtime.invoke("foo_new", (a, b)).unwrap();
+    let foo = foo.root();
 
     driver.update(
-        runtime_ref,
         "mod.mun",
         r#"
         struct Foo {
@@ -163,9 +151,9 @@ fn map_struct_insert_field3() {
         }
     "#,
     );
-    assert_eq!(foo.by_ref().get::<i64>("a").unwrap(), a);
-    assert_eq!(foo.by_ref().get::<f64>("b").unwrap(), b);
-    assert_eq!(foo.by_ref().get::<f64>("c").unwrap(), 0.0);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<i64>("a").unwrap(), a);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<f64>("b").unwrap(), b);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<f64>("c").unwrap(), 0.0);
 }
 
 #[test]
@@ -186,17 +174,13 @@ fn map_struct_remove_field1() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-
     let a = 1.0f64;
     let b = 3.0f64;
     let c = 5i64;
-    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c)).unwrap();
-    let foo = foo.root(driver.runtime());
+    let foo: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo = foo.root();
 
     driver.update(
-        runtime_ref,
         "mod.mun",
         r#"
         struct Foo {
@@ -204,7 +188,7 @@ fn map_struct_remove_field1() {
         }
     "#,
     );
-    assert_eq!(foo.by_ref().get::<i64>("c").unwrap(), c);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<i64>("c").unwrap(), c);
 }
 
 #[test]
@@ -225,17 +209,13 @@ fn map_struct_remove_field2() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-
     let a = 1.0f64;
     let b = 5i64;
     let c = 3.0f64;
-    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c)).unwrap();
-    let foo = foo.root(driver.runtime());
+    let foo: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo = foo.root();
 
     driver.update(
-        runtime_ref,
         "mod.mun",
         r#"
         struct Foo {
@@ -243,7 +223,7 @@ fn map_struct_remove_field2() {
         }
     "#,
     );
-    assert_eq!(foo.by_ref().get::<i64>("b").unwrap(), b);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<i64>("b").unwrap(), b);
 }
 
 #[test]
@@ -264,17 +244,13 @@ fn map_struct_remove_field3() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-
     let a = 5i64;
     let b = 1.0f64;
     let c = 3.0f64;
-    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c)).unwrap();
-    let foo = foo.root(driver.runtime());
+    let foo: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo = foo.root();
 
     driver.update(
-        runtime_ref,
         "mod.mun",
         r#"
         struct Foo {
@@ -282,7 +258,7 @@ fn map_struct_remove_field3() {
         }
     "#,
     );
-    assert_eq!(foo.by_ref().get::<i64>("a").unwrap(), a);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<i64>("a").unwrap(), a);
 }
 
 #[test]
@@ -305,19 +281,15 @@ fn map_struct_cast_fields1() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-
     let a = 1u8;
     let b = -2i16;
     let c = 3u32;
     let d = -4i64;
     let e = 3.14f32;
-    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c, d, e)).unwrap();
-    let foo = foo.root(driver.runtime());
+    let foo: StructRef = driver.runtime.invoke("foo_new", (a, b, c, d, e)).unwrap();
+    let foo = foo.root();
 
     driver.update(
-        runtime_ref,
         "mod.mun",
         r#"
         struct Foo(
@@ -329,11 +301,26 @@ fn map_struct_cast_fields1() {
         )
     "#,
     );
-    assert_eq!(foo.by_ref().get::<u16>("0").unwrap(), a.into());
-    assert_eq!(foo.by_ref().get::<i32>("1").unwrap(), b.into());
-    assert_eq!(foo.by_ref().get::<u64>("2").unwrap(), c.into());
-    assert_eq!(foo.by_ref().get::<i128>("3").unwrap(), d.into());
-    assert_eq!(foo.by_ref().get::<f64>("4").unwrap(), e.into());
+    assert_eq!(
+        foo.as_ref(&driver.runtime).get::<u16>("0").unwrap(),
+        a.into()
+    );
+    assert_eq!(
+        foo.as_ref(&driver.runtime).get::<i32>("1").unwrap(),
+        b.into()
+    );
+    assert_eq!(
+        foo.as_ref(&driver.runtime).get::<u64>("2").unwrap(),
+        c.into()
+    );
+    assert_eq!(
+        foo.as_ref(&driver.runtime).get::<i128>("3").unwrap(),
+        d.into()
+    );
+    assert_eq!(
+        foo.as_ref(&driver.runtime).get::<f64>("4").unwrap(),
+        e.into()
+    );
 }
 
 #[test]
@@ -352,15 +339,11 @@ fn map_struct_cast_fields2() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-
     let a = -2i16;
-    let foo: StructRef = runtime_ref.invoke("foo_new", (a,)).unwrap();
-    let foo = foo.root(driver.runtime());
+    let foo: StructRef = driver.runtime.invoke("foo_new", (a,)).unwrap();
+    let foo = foo.root();
 
     driver.update(
-        runtime_ref,
         "mod.mun",
         r#"
         struct Foo(
@@ -369,7 +352,7 @@ fn map_struct_cast_fields2() {
     "#,
     );
 
-    assert_eq!(foo.by_ref().get::<u16>("0").unwrap(), 0);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<u16>("0").unwrap(), 0);
 }
 
 #[test]
@@ -390,17 +373,13 @@ fn map_struct_swap_fields1() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-
     let a = 1.0f64;
     let b = 3i64;
     let c = 5.0f64;
-    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c)).unwrap();
-    let foo = foo.root(driver.runtime());
+    let foo: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo = foo.root();
 
     driver.update(
-        runtime_ref,
         "mod.mun",
         r#"
         struct Foo {
@@ -410,9 +389,9 @@ fn map_struct_swap_fields1() {
         }
     "#,
     );
-    assert_eq!(foo.by_ref().get::<f64>("a").unwrap(), a);
-    assert_eq!(foo.by_ref().get::<i64>("b").unwrap(), b);
-    assert_eq!(foo.by_ref().get::<f64>("c").unwrap(), c);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<f64>("a").unwrap(), a);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<i64>("b").unwrap(), b);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<f64>("c").unwrap(), c);
 }
 
 #[test]
@@ -434,18 +413,14 @@ fn map_struct_swap_fields2() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-
     let a = 1.0f64;
     let b = 3i64;
     let c = 5.0f64;
     let d = 7i64;
-    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c, d)).unwrap();
-    let foo = foo.root(driver.runtime());
+    let foo: StructRef = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
+    let foo = foo.root();
 
     driver.update(
-        runtime_ref,
         "mod.mun",
         r#"
         struct Foo {
@@ -456,10 +431,10 @@ fn map_struct_swap_fields2() {
         }
     "#,
     );
-    assert_eq!(foo.by_ref().get::<f64>("a").unwrap(), a);
-    assert_eq!(foo.by_ref().get::<i64>("b").unwrap(), b);
-    assert_eq!(foo.by_ref().get::<f64>("c").unwrap(), c);
-    assert_eq!(foo.by_ref().get::<i64>("d").unwrap(), d);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<f64>("a").unwrap(), a);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<i64>("b").unwrap(), b);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<f64>("c").unwrap(), c);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<i64>("d").unwrap(), d);
 }
 
 #[test]
@@ -480,17 +455,13 @@ fn map_struct_rename_field1() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-
     let a = 5i64;
     let b = 1.0f64;
     let c = 3.0f64;
-    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c)).unwrap();
-    let foo = foo.root(driver.runtime());
+    let foo: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo = foo.root();
 
     driver.update(
-        runtime_ref,
         "mod.mun",
         r#"
         struct Foo {
@@ -500,9 +471,9 @@ fn map_struct_rename_field1() {
         }
     "#,
     );
-    assert_eq!(foo.by_ref().get::<i64>("a").unwrap(), a);
-    assert_eq!(foo.by_ref().get::<f64>("d").unwrap(), b);
-    assert_eq!(foo.by_ref().get::<f64>("c").unwrap(), c);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<i64>("a").unwrap(), a);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<f64>("d").unwrap(), b);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<f64>("c").unwrap(), c);
 }
 
 #[test]
@@ -523,17 +494,13 @@ fn map_struct_rename_field2() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-
     let a = 5i64;
     let b = 1.0f64;
     let c = 3.0f64;
-    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c)).unwrap();
-    let foo = foo.root(driver.runtime());
+    let foo: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo = foo.root();
 
     driver.update(
-        runtime_ref,
         "mod.mun",
         r#"
         struct Foo {
@@ -543,9 +510,9 @@ fn map_struct_rename_field2() {
         }
     "#,
     );
-    assert_eq!(foo.by_ref().get::<i64>("d").unwrap(), a);
-    assert_eq!(foo.by_ref().get::<f64>("e").unwrap(), b);
-    assert_eq!(foo.by_ref().get::<f64>("f").unwrap(), c);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<i64>("d").unwrap(), a);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<f64>("e").unwrap(), b);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<f64>("f").unwrap(), c);
 }
 
 #[test]
@@ -567,18 +534,14 @@ fn map_struct_all() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-
     let a = 5i32;
     let b = 1.0f64;
     let c = 3.0f64;
     let d = -1i32;
-    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c, d)).unwrap();
-    let foo = foo.root(driver.runtime());
+    let foo: StructRef = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
+    let foo = foo.root();
 
     driver.update(
-        runtime_ref,
         "mod.mun",
         r#"
         pub struct Foo {
@@ -590,10 +553,13 @@ fn map_struct_all() {
         }
     "#,
     );
-    assert_eq!(foo.by_ref().get::<f64>("b").unwrap(), b);
-    assert_eq!(foo.by_ref().get::<i64>("d").unwrap(), d.into());
-    assert_eq!(foo.by_ref().get::<i32>("e").unwrap(), a);
-    assert_eq!(foo.by_ref().get::<i32>("f").unwrap(), 0);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<f64>("b").unwrap(), b);
+    assert_eq!(
+        foo.as_ref(&driver.runtime).get::<i64>("d").unwrap(),
+        d.into()
+    );
+    assert_eq!(foo.as_ref(&driver.runtime).get::<i32>("e").unwrap(), a);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<i32>("f").unwrap(), 0);
 }
 
 #[test]
@@ -614,17 +580,13 @@ fn delete_used_struct() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-
     let a = 5i64;
     let b = 1.0f64;
     let c = 3.0f64;
-    let foo: StructRef = runtime_ref.invoke("foo_new", (a, b, c)).unwrap();
-    let foo = foo.root(driver.runtime());
+    let foo: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo = foo.root();
 
     driver.update(
-        runtime_ref,
         "mod.mun",
         r#"
         pub struct Bar(i64);
@@ -635,19 +597,11 @@ fn delete_used_struct() {
     "#,
     );
 
-    assert!(driver
-        .runtime()
-        .borrow()
-        .get_function_definition("foo_new")
-        .is_none());
-    assert!(driver
-        .runtime()
-        .borrow()
-        .get_function_definition("bar_new")
-        .is_some());
-    assert_eq!(foo.by_ref().get::<i64>("a").unwrap(), a);
-    assert_eq!(foo.by_ref().get::<f64>("b").unwrap(), b);
-    assert_eq!(foo.by_ref().get::<f64>("c").unwrap(), c);
+    assert!(driver.runtime.get_function_definition("foo_new").is_none());
+    assert!(driver.runtime.get_function_definition("bar_new").is_some());
+    assert_eq!(foo.as_ref(&driver.runtime).get::<i64>("a").unwrap(), a);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<f64>("b").unwrap(), b);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<f64>("c").unwrap(), c);
 }
 
 #[test]
@@ -680,31 +634,29 @@ fn nested_structs() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-
     let a = -3.14f32;
     let b = 6.18f32;
-    let gc_struct: StructRef = runtime_ref.invoke("new_gc_struct", (a, b)).unwrap();
-    let value_struct: StructRef = runtime_ref.invoke("new_value_struct", (a, b)).unwrap();
+    let gc_struct: StructRef = driver.runtime.invoke("new_gc_struct", (a, b)).unwrap();
+    let value_struct: StructRef = driver.runtime.invoke("new_value_struct", (a, b)).unwrap();
 
-    let gc_wrapper: StructRef = runtime_ref
+    let gc_wrapper: StructRef = driver
+        .runtime
         .invoke("new_gc_wrapper", (gc_struct.clone(), value_struct.clone()))
         .unwrap();
 
-    let value_wrapper: StructRef = runtime_ref
+    let value_wrapper: StructRef = driver
+        .runtime
         .invoke(
             "new_value_wrapper",
             (gc_struct.clone(), value_struct.clone()),
         )
         .unwrap();
 
-    let gc_wrapper = gc_wrapper.root(driver.runtime());
-    let value_wrapper = value_wrapper.root(driver.runtime());
+    let gc_wrapper = gc_wrapper.root();
+    let value_wrapper = value_wrapper.root();
 
     // Tests mapping of `gc -> gc`, `value -> value`
     driver.update(
-        runtime_ref,
         "mod.mun",
         r#"
     pub struct(gc) GcStruct(f64, f64);
@@ -715,25 +667,36 @@ fn nested_structs() {
     "#,
     );
 
-    let gc_0 = gc_wrapper.by_ref().get::<StructRef>("0").unwrap();
+    let gc_0 = gc_wrapper
+        .as_ref(&driver.runtime)
+        .get::<StructRef>("0")
+        .unwrap();
     assert_eq!(gc_0.get::<f64>("0"), Ok(a.into()));
     assert_eq!(gc_0.get::<f64>("1"), Ok(b.into()));
 
-    let gc_1 = gc_wrapper.by_ref().get::<StructRef>("1").unwrap();
+    let gc_1 = gc_wrapper
+        .as_ref(&driver.runtime)
+        .get::<StructRef>("1")
+        .unwrap();
     assert_eq!(gc_1.get::<f64>("0"), Ok(a.into()));
     assert_eq!(gc_1.get::<f64>("1"), Ok(b.into()));
 
-    let value_0 = value_wrapper.by_ref().get::<StructRef>("0").unwrap();
+    let value_0 = value_wrapper
+        .as_ref(&driver.runtime)
+        .get::<StructRef>("0")
+        .unwrap();
     assert_eq!(value_0.get::<f64>("0"), Ok(a.into()));
     assert_eq!(value_0.get::<f64>("1"), Ok(b.into()));
 
-    let value_1 = value_wrapper.by_ref().get::<StructRef>("1").unwrap();
+    let value_1 = value_wrapper
+        .as_ref(&driver.runtime)
+        .get::<StructRef>("1")
+        .unwrap();
     assert_eq!(value_1.get::<f64>("0"), Ok(a.into()));
     assert_eq!(value_1.get::<f64>("1"), Ok(b.into()));
 
     // Tests an identity mapping
     driver.update(
-        runtime.borrow(),
         "mod.mun",
         r#"
     pub struct(gc) GcStruct(f64, f64);
@@ -744,30 +707,41 @@ fn nested_structs() {
     "#,
     );
 
-    let gc_0 = gc_wrapper.by_ref().get::<StructRef>("0").unwrap();
+    let gc_0 = gc_wrapper
+        .as_ref(&driver.runtime)
+        .get::<StructRef>("0")
+        .unwrap();
     assert_eq!(gc_0.get::<f64>("0"), Ok(a.into()));
     assert_eq!(gc_0.get::<f64>("1"), Ok(b.into()));
 
-    let gc_1 = gc_wrapper.by_ref().get::<StructRef>("1").unwrap();
+    let gc_1 = gc_wrapper
+        .as_ref(&driver.runtime)
+        .get::<StructRef>("1")
+        .unwrap();
     assert_eq!(gc_1.get::<f64>("0"), Ok(a.into()));
     assert_eq!(gc_1.get::<f64>("1"), Ok(b.into()));
 
-    let value_0 = value_wrapper.by_ref().get::<StructRef>("0").unwrap();
+    let value_0 = value_wrapper
+        .as_ref(&driver.runtime)
+        .get::<StructRef>("0")
+        .unwrap();
     assert_eq!(value_0.get::<f64>("0"), Ok(a.into()));
     assert_eq!(value_0.get::<f64>("1"), Ok(b.into()));
 
-    let value_1 = value_wrapper.by_ref().get::<StructRef>("1").unwrap();
+    let value_1 = value_wrapper
+        .as_ref(&driver.runtime)
+        .get::<StructRef>("1")
+        .unwrap();
     assert_eq!(value_1.get::<f64>("0"), Ok(a.into()));
     assert_eq!(value_1.get::<f64>("1"), Ok(b.into()));
 
-    let gc_0 = gc_0.root(driver.runtime());
-    let gc_1 = gc_1.root(driver.runtime());
-    let value_0 = value_0.root(driver.runtime());
-    let value_1 = value_1.root(driver.runtime());
+    let gc_0 = gc_0.root();
+    let gc_1 = gc_1.root();
+    let value_0 = value_0.root();
+    let value_1 = value_1.root();
 
     // Tests mapping of `gc -> value`, `value -> gc`
     driver.update(
-        runtime.borrow(),
         "mod.mun",
         r#"
     struct(value) GcStruct(f64, f64);
@@ -778,22 +752,33 @@ fn nested_structs() {
     "#,
     );
 
-    assert_eq!(gc_0.by_ref().get::<f64>("0"), Ok(a.into()));
-    assert_eq!(gc_0.by_ref().get::<f64>("1"), Ok(b.into()));
+    assert_eq!(gc_0.as_ref(&driver.runtime).get::<f64>("0"), Ok(a.into()));
+    assert_eq!(gc_0.as_ref(&driver.runtime).get::<f64>("1"), Ok(b.into()));
 
-    assert_eq!(gc_1.by_ref().get::<f64>("0"), Ok(a.into()));
-    assert_eq!(gc_1.by_ref().get::<f64>("1"), Ok(b.into()));
+    assert_eq!(gc_1.as_ref(&driver.runtime).get::<f64>("0"), Ok(a.into()));
+    assert_eq!(gc_1.as_ref(&driver.runtime).get::<f64>("1"), Ok(b.into()));
 
-    assert_eq!(value_0.by_ref().get::<f64>("0"), Ok(a.into()));
-    assert_eq!(value_0.by_ref().get::<f64>("1"), Ok(b.into()));
+    assert_eq!(
+        value_0.as_ref(&driver.runtime).get::<f64>("0"),
+        Ok(a.into())
+    );
+    assert_eq!(
+        value_0.as_ref(&driver.runtime).get::<f64>("1"),
+        Ok(b.into())
+    );
 
-    assert_eq!(value_1.by_ref().get::<f64>("0"), Ok(a.into()));
-    assert_eq!(value_1.by_ref().get::<f64>("1"), Ok(b.into()));
+    assert_eq!(
+        value_1.as_ref(&driver.runtime).get::<f64>("0"),
+        Ok(a.into())
+    );
+    assert_eq!(
+        value_1.as_ref(&driver.runtime).get::<f64>("1"),
+        Ok(b.into())
+    );
 
     // Tests mapping of different struct type, when `gc -> value`, `value -> gc`, and
     // retention of an old library (due to removal of `GcStruct` and `ValueStruct`)
     driver.update(
-        runtime.borrow(),
         "mod.mun",
         r#"
     struct(gc) GcStruct2(f64);
@@ -805,43 +790,66 @@ fn nested_structs() {
     );
 
     // Existing, rooted objects should remain untouched
-    assert_eq!(gc_0.by_ref().get::<f64>("0"), Ok(a.into()));
-    assert_eq!(gc_0.by_ref().get::<f64>("1"), Ok(b.into()));
+    assert_eq!(gc_0.as_ref(&driver.runtime).get::<f64>("0"), Ok(a.into()));
+    assert_eq!(gc_0.as_ref(&driver.runtime).get::<f64>("1"), Ok(b.into()));
 
-    assert_eq!(gc_1.by_ref().get::<f64>("0"), Ok(a.into()));
-    assert_eq!(gc_1.by_ref().get::<f64>("1"), Ok(b.into()));
+    assert_eq!(gc_1.as_ref(&driver.runtime).get::<f64>("0"), Ok(a.into()));
+    assert_eq!(gc_1.as_ref(&driver.runtime).get::<f64>("1"), Ok(b.into()));
 
-    assert_eq!(value_0.by_ref().get::<f64>("0"), Ok(a.into()));
-    assert_eq!(value_0.by_ref().get::<f64>("1"), Ok(b.into()));
+    assert_eq!(
+        value_0.as_ref(&driver.runtime).get::<f64>("0"),
+        Ok(a.into())
+    );
+    assert_eq!(
+        value_0.as_ref(&driver.runtime).get::<f64>("1"),
+        Ok(b.into())
+    );
 
-    assert_eq!(value_1.by_ref().get::<f64>("0"), Ok(a.into()));
-    assert_eq!(value_1.by_ref().get::<f64>("1"), Ok(b.into()));
+    assert_eq!(
+        value_1.as_ref(&driver.runtime).get::<f64>("0"),
+        Ok(a.into())
+    );
+    assert_eq!(
+        value_1.as_ref(&driver.runtime).get::<f64>("1"),
+        Ok(b.into())
+    );
 
     // The values in the wrappers should have been updated
-    let mut gc_0 = gc_wrapper.by_ref().get::<StructRef>("0").unwrap();
+    let mut gc_0 = gc_wrapper
+        .as_ref(&driver.runtime)
+        .get::<StructRef>("0")
+        .unwrap();
     assert_eq!(gc_0.get::<f64>("0"), Ok(0.0));
     gc_0.set::<f64>("0", a.into()).unwrap();
 
-    let mut gc_1 = gc_wrapper.by_ref().get::<StructRef>("1").unwrap();
+    let mut gc_1 = gc_wrapper
+        .as_ref(&driver.runtime)
+        .get::<StructRef>("1")
+        .unwrap();
     assert_eq!(gc_1.get::<f64>("0"), Ok(0.0));
     gc_1.set::<f64>("0", a.into()).unwrap();
 
-    let mut value_0 = value_wrapper.by_ref().get::<StructRef>("0").unwrap();
+    let mut value_0 = value_wrapper
+        .as_ref(&driver.runtime)
+        .get::<StructRef>("0")
+        .unwrap();
     assert_eq!(value_0.get::<f64>("0"), Ok(0.0));
     value_0.set::<f64>("0", a.into()).unwrap();
 
-    let mut value_1 = value_wrapper.by_ref().get::<StructRef>("1").unwrap();
+    let mut value_1 = value_wrapper
+        .as_ref(&driver.runtime)
+        .get::<StructRef>("1")
+        .unwrap();
     assert_eq!(value_1.get::<f64>("0"), Ok(0.0));
     value_1.set::<f64>("0", a.into()).unwrap();
 
-    let gc_0 = gc_0.root(driver.runtime());
-    let gc_1 = gc_1.root(driver.runtime());
-    let value_0 = value_0.root(driver.runtime());
-    let value_1 = value_1.root(driver.runtime());
+    let gc_0 = gc_0.root();
+    let gc_1 = gc_1.root();
+    let value_0 = value_0.root();
+    let value_1 = value_1.root();
 
     // Tests mapping of different struct type, when `gc -> gc`, `value -> value`
     driver.update(
-        runtime.borrow(),
         "mod.mun",
         r#"
     struct(gc) GcStruct(f64, f64);
@@ -853,25 +861,43 @@ fn nested_structs() {
     );
 
     // Existing, rooted objects should remain untouched
-    assert_eq!(gc_0.by_ref().get::<f64>("0"), Ok(a.into()));
-    assert_eq!(gc_1.by_ref().get::<f64>("0"), Ok(a.into()));
-    assert_eq!(value_0.by_ref().get::<f64>("0"), Ok(a.into()));
-    assert_eq!(value_1.by_ref().get::<f64>("0"), Ok(a.into()));
+    assert_eq!(gc_0.as_ref(&driver.runtime).get::<f64>("0"), Ok(a.into()));
+    assert_eq!(gc_1.as_ref(&driver.runtime).get::<f64>("0"), Ok(a.into()));
+    assert_eq!(
+        value_0.as_ref(&driver.runtime).get::<f64>("0"),
+        Ok(a.into())
+    );
+    assert_eq!(
+        value_1.as_ref(&driver.runtime).get::<f64>("0"),
+        Ok(a.into())
+    );
 
     // The values in the wrappers should have been updated
-    let gc_0 = gc_wrapper.by_ref().get::<StructRef>("0").unwrap();
+    let gc_0 = gc_wrapper
+        .as_ref(&driver.runtime)
+        .get::<StructRef>("0")
+        .unwrap();
     assert_eq!(gc_0.get::<f64>("0"), Ok(0.0));
     assert_eq!(gc_0.get::<f64>("1"), Ok(0.0));
 
-    let gc_1 = gc_wrapper.by_ref().get::<StructRef>("1").unwrap();
+    let gc_1 = gc_wrapper
+        .as_ref(&driver.runtime)
+        .get::<StructRef>("1")
+        .unwrap();
     assert_eq!(gc_1.get::<f64>("0"), Ok(0.0));
     assert_eq!(gc_1.get::<f64>("1"), Ok(0.0));
 
-    let value_0 = value_wrapper.by_ref().get::<StructRef>("0").unwrap();
+    let value_0 = value_wrapper
+        .as_ref(&driver.runtime)
+        .get::<StructRef>("0")
+        .unwrap();
     assert_eq!(value_0.get::<f64>("0"), Ok(0.0));
     assert_eq!(value_0.get::<f64>("1"), Ok(0.0));
 
-    let value_1 = value_wrapper.by_ref().get::<StructRef>("1").unwrap();
+    let value_1 = value_wrapper
+        .as_ref(&driver.runtime)
+        .get::<StructRef>("1")
+        .unwrap();
     assert_eq!(value_1.get::<f64>("0"), Ok(0.0));
     assert_eq!(value_1.get::<f64>("1"), Ok(0.0));
 }
@@ -893,16 +919,12 @@ fn insert_struct() {
     )
     .expect("Failed to build test driver");
 
-    let runtime = driver.runtime();
-    let runtime_ref = runtime.borrow();
-
     let a = 5i64;
     let c = 3.0f64;
-    let foo: StructRef = runtime_ref.invoke("foo_new", (a, c)).unwrap();
-    let foo = foo.root(driver.runtime());
+    let foo: StructRef = driver.runtime.invoke("foo_new", (a, c)).unwrap();
+    let foo = foo.root();
 
     driver.update(
-        runtime_ref,
         "mod.mun",
         r#"
         struct Bar(i64);
@@ -917,12 +939,12 @@ fn insert_struct() {
     "#,
     );
 
-    assert_eq!(foo.by_ref().get::<i64>("a").unwrap(), a);
-    assert_eq!(foo.by_ref().get::<f64>("c").unwrap(), c);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<i64>("a").unwrap(), a);
+    assert_eq!(foo.as_ref(&driver.runtime).get::<f64>("c").unwrap(), c);
 
-    let b = foo.by_ref().get::<StructRef>("b").unwrap();
+    let b = foo.as_ref(&driver.runtime).get::<StructRef>("b").unwrap();
     assert_eq!(b.get::<i64>("0"), Ok(0));
 
-    let d = foo.by_ref().get::<StructRef>("d").unwrap();
+    let d = foo.as_ref(&driver.runtime).get::<StructRef>("d").unwrap();
     assert_eq!(d.get::<f64>("0"), Ok(0.0));
 }

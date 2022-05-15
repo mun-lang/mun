@@ -1,12 +1,11 @@
-use mun_runtime::RuntimeBuilder;
+use mun_runtime::Runtime;
 use std::{cell::RefCell, rc::Rc};
 
 fn main() {
-    let runtime = RuntimeBuilder::new("main.munlib")
-        .spawn()
+    let runtime = Runtime::builder("main.munlib")
+        .finish()
         .expect("Failed to spawn Runtime");
 
-    let runtime_ref = runtime.borrow();
-    let result: bool = runtime_ref.invoke("random_bool", ()).unwrap();
+    let result: bool = runtime.invoke("random_bool", ()).unwrap();
     println!("random bool: {}", result);
 }

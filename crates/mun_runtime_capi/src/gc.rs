@@ -5,7 +5,6 @@ use anyhow::anyhow;
 use runtime::Runtime;
 
 pub use memory::gc::GcPtr;
-pub use runtime::UnsafeTypeInfo;
 
 /// Allocates an object in the runtime of the given `type_info`. If successful, `obj` is set,
 /// otherwise a non-zero error handle is returned.

@@ -1,5 +1,4 @@
-use crate::type_info::TypeInfo;
-use abi::HasStaticTypeInfo;
+use crate::type_info::{HasStaticTypeInfo, TypeInfo};
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
@@ -63,26 +62,20 @@ impl Default for TypeTable {
             type_name_to_type_info: Default::default(),
         };
 
-        fn insert_primitive_type<T: HasStaticTypeInfo>(type_table: &mut TypeTable) {
-            type_table.insert_type(Arc::new(
-                TypeInfo::try_from_abi(<T>::type_info(), &type_table).unwrap(),
-            ));
-        }
-
-        insert_primitive_type::<i8>(&mut type_table);
-        insert_primitive_type::<i16>(&mut type_table);
-        insert_primitive_type::<i32>(&mut type_table);
-        insert_primitive_type::<i64>(&mut type_table);
-        insert_primitive_type::<i128>(&mut type_table);
-        insert_primitive_type::<u8>(&mut type_table);
-        insert_primitive_type::<u16>(&mut type_table);
-        insert_primitive_type::<u32>(&mut type_table);
-        insert_primitive_type::<u64>(&mut type_table);
-        insert_primitive_type::<u128>(&mut type_table);
-        insert_primitive_type::<f32>(&mut type_table);
-        insert_primitive_type::<f64>(&mut type_table);
-        insert_primitive_type::<bool>(&mut type_table);
-        insert_primitive_type::<()>(&mut type_table);
+        type_table.insert_type(i8::type_info());
+        type_table.insert_type(i16::type_info());
+        type_table.insert_type(i32::type_info());
+        type_table.insert_type(i64::type_info());
+        type_table.insert_type(i128::type_info());
+        type_table.insert_type(u8::type_info());
+        type_table.insert_type(u16::type_info());
+        type_table.insert_type(u32::type_info());
+        type_table.insert_type(u64::type_info());
+        type_table.insert_type(u128::type_info());
+        type_table.insert_type(f32::type_info());
+        type_table.insert_type(f64::type_info());
+        type_table.insert_type(bool::type_info());
+        type_table.insert_type(<()>::type_info());
 
         type_table
     }
