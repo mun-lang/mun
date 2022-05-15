@@ -68,9 +68,8 @@ impl<'a> DiagnosticSink<'a> {
     pub(crate) fn push(&mut self, d: impl Diagnostic) {
         let d: &dyn Diagnostic = &d;
         for cb in self.callbacks.iter_mut() {
-            match cb(d) {
-                Ok(()) => return,
-                Err(()) => (),
+            if cb(d).is_ok() {
+                return;
             }
         }
         (self.default_callback)(d)

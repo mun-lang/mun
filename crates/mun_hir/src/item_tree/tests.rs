@@ -9,16 +9,16 @@ use std::{fmt, fmt::Write, sync::Arc};
 
 fn item_tree(text: &str) -> Arc<ItemTree> {
     let (db, file_id) = MockDatabase::with_single_file(text);
-    db.item_tree(file_id.into())
+    db.item_tree(file_id)
 }
 
 fn print_item_tree(text: &str) -> Result<String, fmt::Error> {
     let tree = item_tree(text);
     let mut out = String::new();
-    write!(&mut out, "top-level items:\n")?;
+    writeln!(&mut out, "top-level items:")?;
     for item in tree.top_level_items() {
         format_mod_item(&mut out, &tree, *item)?;
-        write!(&mut out, "\n")?;
+        writeln!(&mut out)?;
     }
 
     Ok(out)
@@ -35,7 +35,7 @@ fn format_mod_item(out: &mut String, tree: &ItemTree, item: ModItem) -> fmt::Res
             match &tree[item].fields {
                 Fields::Record(a) | Fields::Tuple(a) => {
                     for field in a.clone() {
-                        write!(children, "{:?}\n", tree[field])?;
+                        writeln!(children, "{:?}", tree[field])?;
                     }
                 }
                 _ => {}

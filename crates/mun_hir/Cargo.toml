@@ -14,7 +14,6 @@ categories = ["game-development", "mun"]
 
 [dependencies]
 salsa = "0.16.1"
-superslice = "1.0"
 mun_syntax = { version = "=0.3.0", path = "../mun_syntax" }
 mun_target = { version = "=0.3.0", path = "../mun_target" }
 paths = { version="=0.1.0", path="../mun_paths", package="mun_paths"}
