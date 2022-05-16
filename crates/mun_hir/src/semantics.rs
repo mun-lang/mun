@@ -18,9 +18,9 @@ use crate::{
     source_analyzer::SourceAnalyzer,
     FileId, HirDatabase, InFile, ModuleDef, Name, PatId, PerNs, Resolver, Ty, Visibility,
 };
-use arrayvec::ArrayVec;
 use mun_syntax::{ast, AstNode, SyntaxNode, TextSize};
 use rustc_hash::FxHashMap;
+use smallvec::SmallVec;
 use std::cell::RefCell;
 
 /// The primary API to get semantic information, like types, from syntax trees. Exposes the database
@@ -162,8 +162,8 @@ pub enum ScopeDef {
 
 impl ScopeDef {
     /// Returns all the `ScopeDef`s from a `PerNs`. Never returns duplicates.
-    pub fn all_items(def: PerNs<(ItemDefinitionId, Visibility)>) -> ArrayVec<[Self; 2]> {
-        let mut items = ArrayVec::new();
+    pub fn all_items(def: PerNs<(ItemDefinitionId, Visibility)>) -> SmallVec<[Self; 2]> {
+        let mut items = SmallVec::new();
         match (def.take_types(), def.take_values()) {
             (Some(ty), None) => items.push(ScopeDef::ModuleDef(ty.0.into())),
             (None, Some(val)) => items.push(ScopeDef::ModuleDef(val.0.into())),
