@@ -16,7 +16,7 @@ categories = ["game-development", "mun"]
 
 [dependencies]
 mdbook = "0.4.7"
-pulldown-cmark = "0.8.0"
+pulldown-cmark = "0.9.1"
 bytecount = "0.6.2"
 itertools = "0.10.0"
 mun_runtime = { version = "=0.3.0", path = "../mun_runtime" }
