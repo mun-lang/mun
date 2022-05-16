@@ -8,7 +8,9 @@ pub struct MunLibrary(TempLibrary);
 
 impl MunLibrary {
     pub fn new(library_path: &Path) -> Result<Self, anyhow::Error> {
-        let library = TempLibrary::new(library_path)?;
+        // Although loading a library is technically unsafe, we assume here that this is not the
+        // case for munlibs.
+        let library = unsafe { TempLibrary::new(library_path) }?;
 
         // Verify that the `*.munlib` contains all required functions
         let _get_abi_version_fn: libloading::Symbol<'_, extern "C" fn() -> u32> =
