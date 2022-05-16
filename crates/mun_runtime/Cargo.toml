@@ -22,7 +22,7 @@ memory = { version = "=0.2.0", path = "../mun_memory", package = "mun_memory" }
 mun_project = { version = "=0.1.0", path = "../mun_project" }
 notify = "4.0.12"
 once_cell = "1.4.0"
-parking_lot = "0.11.1"
+parking_lot = "0.12.0"
 rustc-hash = "1.1"
 seq-macro = "0.3.0"
 
