@@ -23,8 +23,7 @@ ena = "0.14"
 drop_bomb = "0.1.4"
 either = "1.5.3"
 itertools = "0.10.0"
-smallvec = "1.6.1"
-arrayvec = "0.5.2"
+smallvec = { version = "1.6.1", features=["union"] }
 
 [dev-dependencies]
 insta = "1.12.0"

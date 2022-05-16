@@ -32,7 +32,7 @@ parking_lot = "0.12.0"
 inkwell = { version = "=0.1.0-beta.4", features = ["llvm12-0", "no-libffi-linking"]}
 by_address = "1.0.4"
 paths = { version="=0.1.0", path="../mun_paths", package="mun_paths"}
-smallvec = "1.6.1"
+smallvec = { version = "1.6.1", features=["union"] }
 once_cell = "1.4.0"
 
 [dev-dependencies]
