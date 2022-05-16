@@ -1,13 +1,16 @@
-use super::util::{EventAggregator, TypeInfo};
-use mun_memory::gc::{Event, GcRootPtr, MarkSweep};
+use super::util::EventAggregator;
+use mun_memory::{
+    gc::{Event, GcRootPtr, GcRuntime, MarkSweep},
+    HasStaticTypeInfo,
+};
 use std::sync::Arc;
 
 #[test]
 fn alloc() {
-    let runtime = MarkSweep::<&'static TypeInfo, EventAggregator<Event>>::default();
-    let handle = runtime.alloc(i64::type_info());
+    let runtime = MarkSweep::<EventAggregator<Event>>::default();
+    let handle = runtime.alloc(&i64::type_info());
 
-    assert!(std::ptr::eq(runtime.ptr_type(handle), i64::type_info()));
+    assert_eq!(runtime.ptr_type(handle), i64::type_info());
 
     let mut events = runtime.observer().take_all().into_iter();
     assert_eq!(events.next(), Some(Event::Allocation(handle)));
@@ -16,8 +19,8 @@ fn alloc() {
 
 #[test]
 fn collect_simple() {
-    let runtime = MarkSweep::<&'static TypeInfo, EventAggregator<Event>>::default();
-    let handle = runtime.alloc(i64::type_info());
+    let runtime = MarkSweep::<EventAggregator<Event>>::default();
+    let handle = runtime.alloc(&i64::type_info());
 
     runtime.collect();
 
@@ -31,11 +34,11 @@ fn collect_simple() {
 
 #[test]
 fn collect_rooted() {
-    let runtime = Arc::new(MarkSweep::<&'static TypeInfo, EventAggregator<Event>>::default());
+    let runtime = Arc::new(MarkSweep::<EventAggregator<Event>>::default());
 
     // Allocate simple object and rooted object
-    let handle = runtime.alloc(i64::type_info());
-    let rooted = GcRootPtr::new(&runtime, runtime.alloc(i64::type_info()));
+    let handle = runtime.alloc(&i64::type_info());
+    let rooted = GcRootPtr::new(&runtime, runtime.alloc(&i64::type_info()));
 
     // Collect unreachable objects, should not collect the root handle
     runtime.collect();

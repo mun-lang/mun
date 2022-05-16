@@ -1,8 +1,4 @@
-use crate::{
-    gc::{GcPtr, TypeTrace},
-    type_table::TypeTable,
-    TypeFields,
-};
+use crate::{type_table::TypeTable, TypeFields};
 use abi::StructMemoryKind;
 use itertools::izip;
 use std::{
@@ -38,15 +34,8 @@ pub enum TypeInfoData {
 /// A linked version of [`mun_abi::StructInfo`] that has resolved all occurrences of `TypeId` with `TypeInfo`.  
 #[derive(Clone, Debug)]
 pub struct StructInfo {
-    /// Struct fields' names
-    pub field_names: Vec<String>,
-    /// Struct fields' information
-    pub field_types: Vec<Arc<TypeInfo>>,
-    /// Struct fields' offsets
-    pub field_offsets: Vec<u16>,
-    // TODO: Field accessibility levels
-    // const MunPrivacy_t *field_privacies,
-    // TODO: Add struct accessibility level
+    /// Struct fields
+    pub fields: Vec<FieldInfo>,
     /// Struct memory kind
     pub memory_kind: abi::StructMemoryKind,
 }
@@ -72,21 +61,9 @@ impl std::hash::Hash for TypeInfo {
 }
 
 impl TypeFields for Arc<TypeInfo> {
-    fn fields(&self) -> Vec<(&str, &Arc<TypeInfo>)> {
+    fn fields(&self) -> &[FieldInfo] {
         if let TypeInfoData::Struct(s) = &self.data {
-            s.field_names
-                .iter()
-                .map(String::as_str)
-                .zip(s.field_types.iter())
-                .collect()
-        } else {
-            Vec::new()
-        }
-    }
-
-    fn offsets(&self) -> &[u16] {
-        if let TypeInfoData::Struct(s) = &self.data {
-            &s.field_offsets
+            &s.fields
         } else {
             &[]
         }
@@ -158,32 +135,50 @@ impl TypeInfoData {
 
 impl StructInfo {
     /// Returns the `TypeInfo` and offset corresponding to the field matching the specified `field_name`, if it exists.
-    pub fn find_field_by_name<S: AsRef<str>>(
-        &self,
-        field_name: S,
-    ) -> Option<(&Arc<TypeInfo>, usize)> {
-        izip!(&self.field_names, &self.field_types, &self.field_offsets)
-            .find(|(name, _, _)| **name == field_name.as_ref())
-            .map(|(_, ty, offset)| (ty, usize::from(*offset)))
+    pub fn find_field_by_name<S: AsRef<str>>(&self, field_name: S) -> Option<&FieldInfo> {
+        self.fields
+            .iter()
+            .find(|field| field.name == field_name.as_ref())
     }
 
     pub fn try_from_abi(
         struct_info: &abi::StructInfo,
         type_table: &TypeTable,
     ) -> Option<StructInfo> {
-        let field_types: Option<Vec<Arc<TypeInfo>>> = struct_info
-            .field_types()
-            .into_iter()
-            .map(|type_id| type_table.find_type_info_by_id(type_id))
-            .collect();
+        let fields: Option<Vec<FieldInfo>> = izip!(
+            struct_info.field_names(),
+            struct_info.field_types(),
+            struct_info.field_offsets()
+        )
+        .map(|(name, type_id, offset)| {
+            type_table
+                .find_type_info_by_id(type_id)
+                .map(|type_info| FieldInfo {
+                    name: name.to_owned(),
+                    type_info,
+                    offset: *offset,
+                })
+        })
+        .collect();
 
-        field_types.map(|field_types| StructInfo {
-            field_names: struct_info.field_names().map(ToOwned::to_owned).collect(),
-            field_types,
-            field_offsets: struct_info.field_offsets().into_iter().cloned().collect(),
+        fields.map(|fields| StructInfo {
+            fields,
             memory_kind: struct_info.memory_kind,
         })
     }
+}
+
+/// A linked version of a struct field.
+#[derive(Clone, Debug)]
+pub struct FieldInfo {
+    /// The field's name
+    pub name: String,
+    /// The field's type
+    pub type_info: Arc<TypeInfo>,
+    /// The field's offset
+    pub offset: u16,
+    // TODO: Field accessibility levels
+    // const MunPrivacy_t *field_privacies,
 }
 
 /// A trait that defines static type information for types that can provide it.

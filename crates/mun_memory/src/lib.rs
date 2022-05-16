@@ -1,6 +1,4 @@
-use std::{alloc::Layout, sync::Arc};
-
-pub use type_info::{HasStaticTypeInfo, StructInfo, TypeInfo, TypeInfoData};
+pub use type_info::{FieldInfo, HasStaticTypeInfo, StructInfo, TypeInfo, TypeInfoData};
 
 mod cast;
 pub mod diff;
@@ -18,8 +16,5 @@ pub mod prelude {
 /// A trait used to obtain a type's fields.
 pub trait TypeFields: Send + Sync {
     /// Returns the type's fields.
-    fn fields(&self) -> Vec<(&str, &Arc<TypeInfo>)>;
-
-    /// Returns the type's fields' offsets.
-    fn offsets(&self) -> &[u16];
+    fn fields(&self) -> &[FieldInfo];
 }

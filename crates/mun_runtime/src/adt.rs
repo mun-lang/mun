@@ -10,7 +10,6 @@ use memory::{
 };
 use once_cell::sync::OnceCell;
 use std::{
-    pin::Pin,
     ptr::{self, NonNull},
     sync::Arc,
 };
@@ -81,27 +80,27 @@ impl<'s> StructRef<'s> {
         // Safety: `as_struct` is guaranteed to return `Some` for `StructRef`s.
         let struct_info = type_info.as_struct().unwrap();
 
-        let (field_type, field_offset) =
-            struct_info.find_field_by_name(field_name).ok_or_else(|| {
-                format!(
-                    "Struct `{}` does not contain field `{}`.",
-                    type_info.name, field_name
-                )
-            })?;
+        let field_info = struct_info.find_field_by_name(field_name).ok_or_else(|| {
+            format!(
+                "Struct `{}` does not contain field `{}`.",
+                type_info.name, field_name
+            )
+        })?;
 
-        equals_return_type::<T>(&field_type).map_err(|(expected, found)| {
+        equals_return_type::<T>(&field_info.type_info).map_err(|(expected, found)| {
             format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
                 type_info.name, field_name, expected, found,
             )
         })?;
 
-        // If we found the `field_idx`, we are guaranteed to also have the `field_offset`
-        let field_ptr = unsafe { self.get_field_ptr_unchecked::<T::MunType>(field_offset) };
+        // SAFETY: The offset in the ABI is always valid.
+        let field_ptr =
+            unsafe { self.get_field_ptr_unchecked::<T::MunType>(usize::from(field_info.offset)) };
         Ok(Marshal::marshal_from_ptr(
             field_ptr,
             self.runtime,
-            field_type,
+            &field_info.type_info,
         ))
     }
 
@@ -120,27 +119,28 @@ impl<'s> StructRef<'s> {
         // Safety: `as_struct` is guaranteed to return `Some` for `StructRef`s.
         let struct_info = type_info.as_struct().unwrap();
 
-        let (field_type, field_offset) =
-            struct_info.find_field_by_name(field_name).ok_or_else(|| {
-                format!(
-                    "Struct `{}` does not contain field `{}`.",
-                    type_info.name, field_name
-                )
-            })?;
+        let field_info = struct_info.find_field_by_name(field_name).ok_or_else(|| {
+            format!(
+                "Struct `{}` does not contain field `{}`.",
+                type_info.name, field_name
+            )
+        })?;
 
-        if field_type.id != value.type_id(self.runtime) {
+        if field_info.type_info.id != value.type_id(self.runtime) {
             return Err(format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
                 type_info.name,
                 field_name,
                 value.type_info(self.runtime).name,
-                field_type
+                field_info.type_info
             ));
         }
 
-        let field_ptr = unsafe { self.get_field_ptr_unchecked::<T::MunType>(field_offset) };
-        let old = Marshal::marshal_from_ptr(field_ptr, self.runtime, field_type);
-        Marshal::marshal_to_ptr(value, field_ptr, self.runtime, field_type);
+        // SAFETY: The offset in the ABI is always valid.
+        let field_ptr =
+            unsafe { self.get_field_ptr_unchecked::<T::MunType>(usize::from(field_info.offset)) };
+        let old = Marshal::marshal_from_ptr(field_ptr, self.runtime, &field_info.type_info);
+        Marshal::marshal_to_ptr(value, field_ptr, self.runtime, &field_info.type_info);
         Ok(old)
     }
 
@@ -155,26 +155,27 @@ impl<'s> StructRef<'s> {
         // Safety: `as_struct` is guaranteed to return `Some` for `StructRef`s.
         let struct_info = type_info.as_struct().unwrap();
 
-        let (field_type, field_offset) =
-            struct_info.find_field_by_name(field_name).ok_or_else(|| {
-                format!(
-                    "Struct `{}` does not contain field `{}`.",
-                    type_info.name, field_name
-                )
-            })?;
+        let field_info = struct_info.find_field_by_name(field_name).ok_or_else(|| {
+            format!(
+                "Struct `{}` does not contain field `{}`.",
+                type_info.name, field_name
+            )
+        })?;
 
-        if field_type.id != value.type_id(self.runtime) {
+        if field_info.type_info.id != value.type_id(self.runtime) {
             return Err(format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
                 type_info.name,
                 field_name,
                 value.type_info(self.runtime).name,
-                field_type
+                field_info.type_info
             ));
         }
 
-        let field_ptr = unsafe { self.get_field_ptr_unchecked::<T::MunType>(field_offset) };
-        Marshal::marshal_to_ptr(value, field_ptr, self.runtime, field_type);
+        // SAFETY: The offset in the ABI is always valid.
+        let field_ptr =
+            unsafe { self.get_field_ptr_unchecked::<T::MunType>(usize::from(field_info.offset)) };
+        Marshal::marshal_to_ptr(value, field_ptr, self.runtime, &field_info.type_info);
         Ok(())
     }
 }

@@ -7,21 +7,10 @@ use mun_memory::{
     TypeInfo,
 };
 
-// TODO: Once we can generate `Guid`s based on the data layout, we can just directly check
-// `TypeInfo`s against each other.
 fn assert_eq_struct(result: &[Arc<TypeInfo>], expected: &[Arc<TypeInfo>]) {
     assert_eq!(result.len(), expected.len());
     for (lhs, rhs) in result.into_iter().zip(expected.into_iter()) {
-        assert_eq!(lhs.layout, rhs.layout);
-        assert_eq!(lhs.data.is_struct(), rhs.data.is_struct());
-
-        let lhs = lhs.as_struct().unwrap();
-        let rhs = rhs.as_struct().unwrap();
-
-        assert_eq!(lhs.field_names, rhs.field_names);
-        assert_eq!(lhs.field_types, rhs.field_types);
-        assert_eq!(lhs.field_offsets, rhs.field_offsets);
-        assert_eq!(lhs.memory_kind, rhs.memory_kind);
+        assert_eq!(lhs, rhs);
     }
 }
 
@@ -29,13 +18,10 @@ fn assert_eq_struct(result: &[Arc<TypeInfo>], expected: &[Arc<TypeInfo>]) {
 fn add() {
     let type_table = TypeTable::default();
 
-    let int = type_table.find_type_info_by_name("core::i64").unwrap();
-    let float = type_table.find_type_info_by_name("core::f64").unwrap();
-
-    let struct1 = fake_struct!(type_table, STRUCT1_NAME,
+    let struct1 = fake_struct!(type_table, "struct1",
         "a" => i64, "b" => f64
     );
-    let struct2 = fake_struct!(type_table, STRUCT2_NAME,
+    let struct2 = fake_struct!(type_table, "struct2",
         "c" => f64, "d" => i64
     );
 
@@ -54,13 +40,10 @@ fn add() {
 fn remove() {
     let type_table = TypeTable::default();
 
-    let int = type_table.find_type_info_by_name("core::i64").unwrap();
-    let float = type_table.find_type_info_by_name("core::f64").unwrap();
-
-    let struct1 = fake_struct!(type_table, STRUCT1_NAME,
+    let struct1 = fake_struct!(type_table, "struct1",
         "a" => i64, "b" => f64
     );
-    let struct2 = fake_struct!(type_table, STRUCT2_NAME,
+    let struct2 = fake_struct!(type_table, "struct2",
         "c" => f64, "d" => i64
     );
 
@@ -76,13 +59,10 @@ fn remove() {
 fn replace() {
     let type_table = TypeTable::default();
 
-    let int = type_table.find_type_info_by_name("core::i64").unwrap();
-    let float = type_table.find_type_info_by_name("core::f64").unwrap();
-
-    let struct1 = fake_struct!(type_table, STRUCT1_NAME,
+    let struct1 = fake_struct!(type_table, "struct1",
         "a" => i64, "b" => f64
     );
-    let struct2 = fake_struct!(type_table, STRUCT2_NAME,
+    let struct2 = fake_struct!(type_table, "struct2",
         "c" => f64, "d" => i64
     );
 
@@ -101,13 +81,10 @@ fn replace() {
 fn swap() {
     let type_table = TypeTable::default();
 
-    let int = type_table.find_type_info_by_name("core::i64").unwrap();
-    let float = type_table.find_type_info_by_name("core::f64").unwrap();
-
-    let struct1 = fake_struct!(type_table, STRUCT1_NAME,
+    let struct1 = fake_struct!(type_table, "struct1",
         "a" => i64, "b" => f64
     );
-    let struct2 = fake_struct!(type_table, STRUCT2_NAME,
+    let struct2 = fake_struct!(type_table, "struct2",
         "c" => f64, "d" => i64
     );
 
@@ -132,10 +109,10 @@ fn swap() {
 fn add_field1() {
     let type_table = TypeTable::default();
 
-    let struct1 = fake_struct!(type_table, STRUCT1_NAME,
+    let struct1 = fake_struct!(type_table, "struct1",
         "b" => i64, "c" => f64
     );
-    let struct2 = fake_struct!(type_table, STRUCT2_NAME,
+    let struct2 = fake_struct!(type_table, "struct1",
         "a" => i64, "b" => i64, "c" => f64
     );
 
@@ -158,10 +135,10 @@ fn add_field1() {
 fn add_field2() {
     let type_table = TypeTable::default();
 
-    let struct1 = fake_struct!(type_table, STRUCT1_NAME,
+    let struct1 = fake_struct!(type_table, "struct1",
         "a" => i64, "c" => f64
     );
-    let struct2 = fake_struct!(type_table, STRUCT2_NAME,
+    let struct2 = fake_struct!(type_table, "struct1",
         "a" => i64, "b" => f64, "c" => f64
     );
 
@@ -184,10 +161,10 @@ fn add_field2() {
 fn add_field3() {
     let type_table = TypeTable::default();
 
-    let struct1 = fake_struct!(type_table, STRUCT1_NAME,
+    let struct1 = fake_struct!(type_table, "struct1",
         "a" => i64, "b" => f64
     );
-    let struct2 = fake_struct!(type_table, STRUCT2_NAME,
+    let struct2 = fake_struct!(type_table, "struct1",
         "a" => i64, "b" => f64, "c" => f64
     );
 
@@ -210,10 +187,10 @@ fn add_field3() {
 fn remove_field1() {
     let type_table = TypeTable::default();
 
-    let struct1 = fake_struct!(type_table, STRUCT1_NAME,
+    let struct1 = fake_struct!(type_table, "struct1",
         "a" => f64, "b" => f64, "c" => i64
     );
-    let struct2 = fake_struct!(type_table, STRUCT2_NAME, "c" => i64);
+    let struct2 = fake_struct!(type_table, "struct1", "c" => i64);
 
     let old = &[struct1.clone()];
     let new = &[struct2.clone()];
@@ -237,10 +214,10 @@ fn remove_field1() {
 fn remove_field2() {
     let type_table = TypeTable::default();
 
-    let struct1 = fake_struct!(type_table, STRUCT1_NAME,
+    let struct1 = fake_struct!(type_table, "struct1",
         "a" => f64, "b" => i64, "c" => f64
     );
-    let struct2 = fake_struct!(type_table, STRUCT1_NAME, "b" => i64);
+    let struct2 = fake_struct!(type_table, "struct1", "b" => i64);
 
     let old = &[struct1.clone()];
     let new = &[struct2.clone()];
@@ -264,10 +241,10 @@ fn remove_field2() {
 fn remove_field3() {
     let type_table = TypeTable::default();
 
-    let struct1 = fake_struct!(type_table, STRUCT1_NAME,
+    let struct1 = fake_struct!(type_table, "struct1",
         "a" => i64, "b" => f64, "c" => f64
     );
-    let struct2 = fake_struct!(type_table, STRUCT2_NAME, "a" => i64);
+    let struct2 = fake_struct!(type_table, "struct1", "a" => i64);
 
     let old = &[struct1.clone()];
     let new = &[struct2.clone()];
@@ -291,10 +268,10 @@ fn remove_field3() {
 fn swap_fields() {
     let type_table = TypeTable::default();
 
-    let struct1 = fake_struct!(type_table, STRUCT1_NAME,
+    let struct1 = fake_struct!(type_table, "struct1",
         "a" => f64, "b" => i64, "c" => f64
     );
-    let struct2 = fake_struct!(type_table, STRUCT2_NAME,
+    let struct2 = fake_struct!(type_table, "struct1",
         "c" => f64, "a" => f64, "b" => i64
     );
 
@@ -321,10 +298,10 @@ fn swap_fields() {
 fn swap_fields2() {
     let type_table = TypeTable::default();
 
-    let struct1 = fake_struct!(type_table, STRUCT1_NAME,
+    let struct1 = fake_struct!(type_table, "struct1",
         "a" => f64, "b" => i64, "c" => f64, "d" => i64
     );
-    let struct2 = fake_struct!(type_table, STRUCT2_NAME,
+    let struct2 = fake_struct!(type_table, "struct1",
         "d" => i64, "c" => f64, "b" => i64, "a" => f64
     );
 
@@ -363,10 +340,10 @@ fn swap_fields2() {
 fn cast_field() {
     let type_table = TypeTable::default();
 
-    let struct1 = fake_struct!(type_table, STRUCT1_NAME,
+    let struct1 = fake_struct!(type_table, "struct1",
         "a" => i64, "b" => f64, "c" => f64
     );
-    let struct2 = fake_struct!(type_table, STRUCT2_NAME,
+    let struct2 = fake_struct!(type_table, "struct1",
         "a" => f64, "b" => i64, "c" => i64
     );
 
@@ -395,17 +372,17 @@ fn cast_field() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2]);
 }
 
 #[test]
 fn rename_field1() {
     let type_table = TypeTable::default();
 
-    let struct1 = fake_struct!(type_table, STRUCT1_NAME,
+    let struct1 = fake_struct!(type_table, "struct1",
         "a" => i64, "b" => f64, "c" => f64
     );
-    let struct2 = fake_struct!(type_table, STRUCT2_NAME,
+    let struct2 = fake_struct!(type_table, "struct1",
         "a" => i64, "d" => f64, "c" => f64
     );
 
@@ -431,10 +408,10 @@ fn rename_field1() {
 fn rename_field2() {
     let type_table = TypeTable::default();
 
-    let struct1 = fake_struct!(type_table, STRUCT1_NAME,
+    let struct1 = fake_struct!(type_table, "struct1",
         "a" => i64, "b" => f64, "c" => f64
     );
-    let struct2 = fake_struct!(type_table, STRUCT2_NAME,
+    let struct2 = fake_struct!(type_table, "struct1",
         "d" => i64, "e" => f64, "f" => f64
     );
 

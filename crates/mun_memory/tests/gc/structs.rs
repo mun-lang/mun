@@ -1,38 +1,42 @@
-use super::util::{EventAggregator, Trace, TypeInfo};
-use crate::assert_variant;
+use super::util::{EventAggregator, Trace};
+use crate::{assert_variant, fake_struct};
 use mun_memory::{
-    gc::{Event, GcPtr, GcRootPtr, HasIndirectionPtr, MarkSweep},
+    gc::{Event, GcPtr, GcRootPtr, GcRuntime, HasIndirectionPtr, MarkSweep, TypeTrace},
     type_table::TypeTable,
 };
 use std::sync::Arc;
 
-struct Foo {
+struct FooObject {
     bar: GcPtr,
 }
 
-impl Trace for Foo {
+impl Trace for FooObject {
     fn trace(&self, handles: &mut Vec<GcPtr>) {
         handles.push(self.bar)
     }
 }
 
-impl_struct_ty!(Foo);
-
 #[test]
 fn test_trace() {
-    let type_table = TypeTable::default();
+    let mut type_table = TypeTable::default();
+
+    let bar_type_info = fake_struct!(type_table, "core::Bar", "a" => i64);
+    type_table.insert_type(bar_type_info.clone());
+
+    let foo_type_info = fake_struct!(type_table, "core::Foo", "bar" => Bar);
+    type_table.insert_type(foo_type_info.clone());
 
     let runtime = MarkSweep::<EventAggregator<Event>>::default();
-    let mut foo_handle = runtime.alloc(Foo::type_info());
-    let bar_handle = runtime.alloc(i64::type_info());
+    let mut foo_handle = runtime.alloc(&foo_type_info);
+    let bar_handle = runtime.alloc(&bar_type_info);
 
     // Assign bar to foo.bar
     unsafe {
-        (*foo_handle.deref_mut::<Foo>()).bar = bar_handle;
+        (*foo_handle.deref_mut::<FooObject>()).bar = bar_handle;
     }
 
     // Trace foo to see if we get bar back
-    let mut trace = Foo::type_info().trace(foo_handle);
+    let mut trace = foo_type_info.trace(foo_handle);
 
     assert_eq!(trace.next(), Some(bar_handle));
     assert_eq!(trace.next(), None)
@@ -40,13 +44,21 @@ fn test_trace() {
 
 #[test]
 fn trace_collect() {
-    let runtime = Arc::new(MarkSweep::<&'static TypeInfo, EventAggregator<Event>>::default());
-    let mut foo = GcRootPtr::new(&runtime, runtime.alloc(Foo::type_info()));
-    let bar = runtime.alloc(i64::type_info());
+    let mut type_table = TypeTable::default();
+
+    let bar_type_info = fake_struct!(type_table, "core::Bar", "a" => i64);
+    type_table.insert_type(bar_type_info.clone());
+
+    let foo_type_info = fake_struct!(type_table, "core::Foo", "bar" => Bar);
+    type_table.insert_type(foo_type_info.clone());
+
+    let runtime = Arc::new(MarkSweep::<EventAggregator<Event>>::default());
+    let mut foo = GcRootPtr::new(&runtime, runtime.alloc(&foo_type_info));
+    let bar = runtime.alloc(&bar_type_info);
 
     // Assign bar to foo.bar
     unsafe {
-        (*foo.deref_mut::<Foo>()).bar = bar;
+        (*foo.deref_mut::<FooObject>()).bar = bar;
     }
 
     // Collect garbage, bar should not be collected
@@ -72,12 +84,20 @@ fn trace_collect() {
 
 #[test]
 fn trace_cycle() {
-    let runtime = Arc::new(MarkSweep::<&'static TypeInfo, EventAggregator<Event>>::default());
-    let mut foo = GcRootPtr::new(&runtime, runtime.alloc(Foo::type_info()));
+    let mut type_table = TypeTable::default();
 
-    // Assign bar to foo.bar
+    let bar_type_info = fake_struct!(type_table, "core::Bar", "a" => i64);
+    type_table.insert_type(bar_type_info.clone());
+
+    let foo_type_info = fake_struct!(type_table, "core::Foo", "bar" => Bar);
+    type_table.insert_type(foo_type_info.clone());
+
+    let runtime = Arc::new(MarkSweep::<EventAggregator<Event>>::default());
+    let mut foo = GcRootPtr::new(&runtime, runtime.alloc(&foo_type_info));
+
+    // Assign foo to foo.bar
     unsafe {
-        (*foo.deref_mut::<Foo>()).bar = foo.handle();
+        (*foo.deref_mut::<FooObject>()).bar = foo.handle();
     }
 
     // Collect garbage, nothing should be collected since foo is rooted

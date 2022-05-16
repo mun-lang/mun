@@ -1,4 +1,4 @@
-use crate::{Guid, TypeInfo};
+use crate::Guid;
 use std::{ffi, slice};
 
 /// Represents a unique identifier for types. The runtime can use this to lookup the corresponding [`TypeInfo`].

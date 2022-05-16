@@ -6,7 +6,6 @@ use crate::{
 };
 use std::{
     collections::{HashMap, HashSet},
-    hash::Hash,
     sync::Arc,
 };
 
@@ -239,8 +238,6 @@ pub unsafe fn field_mapping(
     }
 
     let new_fields = new_ty.fields();
-    let old_offsets = old_ty.offsets();
-    let new_offsets = new_ty.offsets();
     Conversion {
         field_mapping: mapping
             .into_iter()
@@ -248,15 +245,18 @@ pub unsafe fn field_mapping(
             .map(|(new_index, desc)| {
                 let old_offset = desc
                     .old_index
-                    .map(|idx| usize::from(*old_offsets.get_unchecked(idx)));
+                    .map(|idx| usize::from(old_fields.get_unchecked(idx).offset));
 
                 FieldMapping {
-                    new_ty: new_fields.get_unchecked(new_index).1.clone(),
-                    new_offset: usize::from(*new_offsets.get_unchecked(new_index)),
+                    new_ty: new_fields.get_unchecked(new_index).type_info.clone(),
+                    new_offset: usize::from(new_fields.get_unchecked(new_index).offset),
                     action: match desc.action {
                         ActionDesc::Cast => Action::Cast {
                             old_offset: old_offset.unwrap(),
-                            old_ty: old_fields.get_unchecked(desc.old_index.unwrap()).1.clone(),
+                            old_ty: old_fields
+                                .get_unchecked(desc.old_index.unwrap())
+                                .type_info
+                                .clone(),
                         },
                         ActionDesc::Copy => Action::Copy {
                             old_offset: old_offset.unwrap(),

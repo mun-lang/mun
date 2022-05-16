@@ -8,7 +8,6 @@ use mapping::{Conversion, Mapping};
 use parking_lot::RwLock;
 use std::{
     collections::{HashMap, VecDeque},
-    hash::Hash,
     ops::Deref,
     pin::Pin,
     ptr::NonNull,
@@ -26,17 +25,20 @@ impl Iterator for Trace {
 
     fn next(&mut self) -> Option<Self::Item> {
         let struct_ty = self.ty.as_ref().as_struct()?;
-        let field_count = struct_ty.field_types.len();
+        let field_count = struct_ty.fields.len();
         while self.index < field_count {
             let index = self.index;
             self.index += 1;
 
-            let field_ty = &struct_ty.field_types[index];
-            if let TypeInfoData::Struct(field_struct_ty) = &field_ty.data {
+            let field = &struct_ty.fields[index];
+            if let TypeInfoData::Struct(field_struct_ty) = &field.type_info.data {
                 if field_struct_ty.memory_kind == abi::StructMemoryKind::Gc {
-                    let offset = struct_ty.field_offsets[index];
                     return Some(unsafe {
-                        *self.obj.deref::<u8>().add(offset as usize).cast::<GcPtr>()
+                        *self
+                            .obj
+                            .deref::<u8>()
+                            .add(usize::from(field.offset))
+                            .cast::<GcPtr>()
                     });
                 }
             }

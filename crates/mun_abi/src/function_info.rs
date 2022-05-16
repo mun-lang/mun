@@ -1,7 +1,6 @@
-use crate::{Guid, HasStaticTypeInfo, TypeId, TypeInfo};
+use crate::{HasStaticTypeInfo, TypeId, TypeInfo};
 use std::{
     ffi::{c_void, CStr, CString},
-    fmt::{self, Formatter},
     os::raw::c_char,
     slice, str,
 };
@@ -58,6 +57,7 @@ impl FunctionPrototype {
     }
 }
 
+// TODO: Create a runtime-specific version of FunctionPrototype that resolves the `TypeId`s
 // impl fmt::Display for FunctionPrototype {
 //     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
 //         write!(f, "fn {}(", self.name())?;
@@ -90,7 +90,7 @@ impl FunctionSignature {
 
     /// Returns the function's return type.
     pub fn return_type(&self) -> Option<TypeId> {
-        if self.return_type.guid == Guid::empty() {
+        if self.return_type == <()>::type_info().id {
             None
         } else {
             Some(self.return_type.clone())
