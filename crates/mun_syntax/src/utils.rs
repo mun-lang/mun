@@ -10,7 +10,7 @@ pub fn ancestors_at_offset(
     offset: TextSize,
 ) -> impl Iterator<Item = SyntaxNode> {
     node.token_at_offset(offset)
-        .map(|token| token.parent().ancestors())
+        .map(|token| token.ancestors())
         .kmerge_by(|node1, node2| node1.text_range().len() < node2.text_range().len())
 }
 

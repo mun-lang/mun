@@ -3,7 +3,7 @@ use std::mem;
 use crate::{
     parsing::{lexer::Token, ParseError, TreeSink},
     syntax_node::GreenNode,
-    SmolStr, SyntaxError,
+    SyntaxError,
     SyntaxKind::{self, *},
     SyntaxTreeBuilder, TextRange, TextSize,
 };
@@ -128,7 +128,7 @@ impl<'a> TextTreeSink<'a> {
 
     fn do_token(&mut self, kind: SyntaxKind, len: TextSize, n_tokens: usize) {
         let range = TextRange::at(self.text_pos, len);
-        let text: SmolStr = self.text[range].into();
+        let text = &self.text[range];
         self.text_pos += len;
         self.token_pos += n_tokens;
         self.inner.token(kind, text);

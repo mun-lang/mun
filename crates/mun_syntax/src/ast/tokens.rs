@@ -2,6 +2,7 @@
 
 use crate::{
     ast::AstToken,
+    SyntaxKind,
     SyntaxKind::{COMMENT, WHITESPACE},
     SyntaxToken,
 };
@@ -10,8 +11,11 @@ use crate::{
 pub struct Comment(SyntaxToken);
 
 impl AstToken for Comment {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        kind == COMMENT
+    }
     fn cast(token: SyntaxToken) -> Option<Self> {
-        if token.kind() == COMMENT {
+        if Self::can_cast(token.kind()) {
             Some(Comment(token))
         } else {
             None
@@ -129,8 +133,11 @@ fn prefix_by_kind(kind: CommentKind) -> &'static str {
 pub struct Whitespace(SyntaxToken);
 
 impl AstToken for Whitespace {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        kind == WHITESPACE
+    }
     fn cast(token: SyntaxToken) -> Option<Self> {
-        if token.kind() == WHITESPACE {
+        if Self::can_cast(token.kind()) {
             Some(Whitespace(token))
         } else {
             None

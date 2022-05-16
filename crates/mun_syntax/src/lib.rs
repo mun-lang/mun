@@ -17,6 +17,7 @@ mod parsing;
 mod ptr;
 mod syntax_error;
 mod syntax_node;
+mod token_text;
 
 #[cfg(test)]
 mod tests;
@@ -25,14 +26,16 @@ pub mod utils;
 use std::{fmt::Write, marker::PhantomData, sync::Arc};
 
 pub use crate::{
-    ast::AstNode,
+    ast::{AstNode, AstToken},
     parsing::{lexer::Token, tokenize},
     ptr::{AstPtr, SyntaxNodePtr},
     syntax_error::{Location, SyntaxError, SyntaxErrorKind},
     syntax_kind::SyntaxKind,
     syntax_node::{Direction, SyntaxElement, SyntaxNode, SyntaxToken, SyntaxTreeBuilder},
+    token_text::TokenText,
 };
-pub use rowan::{SmolStr, TextRange, TextSize, WalkEvent};
+pub use rowan::{TextRange, TextSize, WalkEvent};
+pub use smol_str::SmolStr;
 
 use rowan::GreenNode;
 
