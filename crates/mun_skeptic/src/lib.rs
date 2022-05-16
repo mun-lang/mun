@@ -116,10 +116,10 @@ fn extract_tests_from_string(markdown: &str, file_stem: &str) -> Vec<Test> {
     for (event, range) in Parser::new(markdown).into_offset_iter() {
         let line_number = bytecount::count(&markdown.as_bytes()[0..range.end], b'\n');
         match event {
-            Event::Start(Tag::Heading(level)) if level < 3 => {
+            Event::Start(Tag::Heading(level, _, _)) if (level as i32) < 3 => {
                 block = Block::Header(String::new());
             }
-            Event::End(Tag::Heading(level)) if level < 3 => {
+            Event::End(Tag::Heading(level, _, _)) if (level as i32) < 3 => {
                 let cur_buffer = mem::replace(&mut block, Block::None);
                 if let Block::Header(sect) = cur_buffer {
                     section = Some(sanitize_test_name(&sect));
