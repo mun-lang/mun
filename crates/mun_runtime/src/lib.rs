@@ -26,8 +26,6 @@ use std::{
     collections::{HashMap, VecDeque},
     ffi, io, mem,
     path::{Path, PathBuf},
-    ptr::NonNull,
-    rc::Rc,
     string::ToString,
     sync::{
         mpsc::{channel, Receiver},
@@ -325,7 +323,8 @@ impl Runtime {
             }
         }
 
-        self.dispatch_table = Assembly::link_all(loaded.values_mut(), &self.dispatch_table)?;
+        (self.dispatch_table, self.type_table) =
+            Assembly::link_all(loaded.values_mut(), &self.dispatch_table, &self.type_table)?;
 
         for (library_path, assembly) in loaded.into_iter() {
             self.watcher

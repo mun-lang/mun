@@ -1,6 +1,5 @@
 use crate::{marshal::Marshal, Runtime, StructRef};
 use memory::{HasStaticTypeInfo, TypeInfo, TypeInfoData};
-use std::alloc::Layout;
 use std::sync::Arc;
 
 /// Returns whether the specified return type matches the `type_info`.

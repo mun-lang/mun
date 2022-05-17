@@ -1,6 +1,7 @@
 use crate::{
     AssemblyInfo, DispatchTable, FunctionDefinition, FunctionPrototype, FunctionSignature, Guid,
-    ModuleInfo, StructInfo, StructMemoryKind, TypeId, TypeInfo, TypeInfoData, TypeLut,
+    HasStaticTypeInfo, ModuleInfo, StructInfo, StructMemoryKind, TypeId, TypeInfo, TypeInfoData,
+    TypeLut,
 };
 use std::{
     ffi::{self, CStr},
@@ -66,9 +67,7 @@ pub(crate) fn fake_fn_signature(
 ) -> FunctionSignature {
     FunctionSignature {
         arg_types: arg_types.as_ptr(),
-        return_type: return_type.unwrap_or(TypeId {
-            guid: Guid::empty(),
-        }),
+        return_type: return_type.unwrap_or(<()>::type_info().id.clone()),
         num_arg_types: arg_types.len() as u16,
     }
 }

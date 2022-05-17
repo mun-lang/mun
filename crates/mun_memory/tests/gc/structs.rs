@@ -1,4 +1,4 @@
-use super::util::{EventAggregator, Trace};
+use super::util::{EventAggregator, Trace, TypeInfo};
 use crate::{assert_variant, fake_struct};
 use mun_memory::{
     gc::{Event, GcPtr, GcRootPtr, GcRuntime, HasIndirectionPtr, MarkSweep, TypeTrace},

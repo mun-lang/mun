@@ -1,5 +1,5 @@
 use crate::Guid;
-use std::{ffi, slice};
+use std::{ffi, fmt, slice};
 
 /// Represents a unique identifier for types. The runtime can use this to lookup the corresponding [`TypeInfo`].
 #[repr(C)]
@@ -12,6 +12,12 @@ pub struct TypeId {
 impl From<Guid> for TypeId {
     fn from(guid: Guid) -> Self {
         TypeId { guid }
+    }
+}
+
+impl fmt::Display for TypeId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.guid.fmt(f)
     }
 }
 
