@@ -12,7 +12,7 @@ use crate::type_ref::{LocalTypeRefId, TypeRef, TypeRefBuilder, TypeRefMap, TypeR
 use either::Either;
 pub use mun_syntax::ast::PrefixOp as UnaryOp;
 use mun_syntax::ast::{ArgListOwner, BinOp, LoopBodyOwner, NameOwner, TypeAscriptionOwner};
-use mun_syntax::{ast, AstNode, AstPtr, SmolStr, T};
+use mun_syntax::{ast, AstNode, AstPtr};
 use rustc_hash::FxHashMap;
 use std::ops::Index;
 use std::sync::Arc;
@@ -235,10 +235,10 @@ pub enum LiteralError {
     LexerError,
 
     /// Encountered an unknown suffix
-    InvalidIntSuffix(SmolStr),
+    InvalidIntSuffix(String),
 
     /// Encountered an unknown suffix
-    InvalidFloatSuffix(SmolStr),
+    InvalidFloatSuffix(String),
 
     /// Trying to add floating point suffix to a literal that is not a floating point number
     NonDecimalFloat(u32),
@@ -601,13 +601,13 @@ impl<'a> ExprCollector<'a> {
             ast::ExprKind::BreakExpr(r) => self.collect_break(r),
             ast::ExprKind::BlockExpr(b) => self.collect_block(b),
             ast::ExprKind::Literal(e) => match e.kind() {
-                ast::LiteralKind::Bool => {
-                    let lit = Literal::Bool(e.token().kind() == T![true]);
+                ast::LiteralKind::Bool(value) => {
+                    let lit = Literal::Bool(value);
                     self.alloc_expr(Expr::Literal(lit), syntax_ptr)
                 }
-                ast::LiteralKind::IntNumber => {
-                    let (text, suffix) = e.text_and_suffix();
-                    let (lit, errors) = integer_lit(&text, suffix.as_ref().map(SmolStr::as_str));
+                ast::LiteralKind::IntNumber(lit) => {
+                    let (text, suffix) = lit.split_into_parts();
+                    let (lit, errors) = integer_lit(text, suffix);
                     let expr_id = self.alloc_expr(Expr::Literal(lit), syntax_ptr);
 
                     for err in errors {
@@ -617,9 +617,9 @@ impl<'a> ExprCollector<'a> {
 
                     expr_id
                 }
-                ast::LiteralKind::FloatNumber => {
-                    let (text, suffix) = e.text_and_suffix();
-                    let (lit, errors) = float_lit(&text, suffix.as_ref().map(SmolStr::as_str));
+                ast::LiteralKind::FloatNumber(lit) => {
+                    let (text, suffix) = lit.split_into_parts();
+                    let (lit, errors) = float_lit(text, suffix);
                     let expr_id = self.alloc_expr(Expr::Literal(lit), syntax_ptr);
 
                     for err in errors {
@@ -629,7 +629,7 @@ impl<'a> ExprCollector<'a> {
 
                     expr_id
                 }
-                ast::LiteralKind::String => {
+                ast::LiteralKind::String(_lit) => {
                     let lit = Literal::String(Default::default());
                     self.alloc_expr(Expr::Literal(lit), syntax_ptr)
                 }
@@ -957,7 +957,7 @@ fn filtered_float_lit(str: &str, suffix: Option<&str>, base: u32) -> (Literal, V
         Some(suf) => match PrimitiveFloat::from_suffix(suf) {
             Some(suf) => LiteralFloatKind::Suffixed(suf),
             None => {
-                errors.push(LiteralError::InvalidFloatSuffix(SmolStr::new(suf)));
+                errors.push(LiteralError::InvalidFloatSuffix(suf.into()));
                 LiteralFloatKind::Unsuffixed
             }
         },
@@ -994,7 +994,7 @@ fn integer_lit(str: &str, suffix: Option<&str>) -> (Literal, Vec<LiteralError>) 
                     return filtered_float_lit(&str, suffix, base);
                 }
 
-                errors.push(LiteralError::InvalidIntSuffix(SmolStr::new(suf)));
+                errors.push(LiteralError::InvalidIntSuffix(suf.into()));
                 LiteralIntKind::Unsuffixed
             }
         },
@@ -1034,7 +1034,6 @@ mod test {
     use crate::expr::{integer_lit, LiteralInt, LiteralIntKind};
     use crate::primitive_type::{PrimitiveFloat, PrimitiveInt};
     use crate::Literal;
-    use mun_syntax::SmolStr;
 
     #[test]
     fn test_integer_literals() {
@@ -1117,7 +1116,7 @@ mod test {
                     kind: LiteralIntKind::Unsuffixed,
                     value: 1234
                 }),
-                vec![LiteralError::InvalidIntSuffix(SmolStr::new("foo"))]
+                vec![LiteralError::InvalidIntSuffix(String::from("foo"))]
             )
         );
 
@@ -1318,7 +1317,7 @@ mod test {
                     kind: LiteralFloatKind::Unsuffixed,
                     value: 123412.34
                 }),
-                vec![LiteralError::InvalidFloatSuffix(SmolStr::new("foo"))]
+                vec![LiteralError::InvalidFloatSuffix(String::from("foo"))]
             )
         );
 
@@ -1354,6 +1353,7 @@ mod diagnostics {
         InvalidLiteralSuffix,
     };
     use crate::HirDatabase;
+    use mun_syntax::SmolStr;
 
     impl ExprDiagnostic {
         pub(crate) fn add_to(
@@ -1381,12 +1381,12 @@ mod diagnostics {
                         LiteralError::LexerError => sink.push(InvalidLiteral { literal }),
                         LiteralError::InvalidIntSuffix(suffix) => sink.push(InvalidLiteralSuffix {
                             literal,
-                            suffix: suffix.clone(),
+                            suffix: SmolStr::new(suffix),
                         }),
                         LiteralError::InvalidFloatSuffix(suffix) => {
                             sink.push(InvalidLiteralSuffix {
                                 literal,
-                                suffix: suffix.clone(),
+                                suffix: SmolStr::new(suffix),
                             })
                         }
                         LiteralError::NonDecimalFloat(base) => {

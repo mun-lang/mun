@@ -1,27 +1,27 @@
 use crate::{
     ast::{self, child_opt, AstNode, NameOwner},
-    SyntaxKind, T,
+    SyntaxKind, SyntaxNode, TokenText, T,
 };
-use crate::{SmolStr, SyntaxNode};
 use abi::StructMemoryKind;
+use rowan::{GreenNodeData, GreenTokenData, NodeOrToken};
+use std::borrow::Cow;
 use text_size::TextRange;
 
 impl ast::Name {
-    pub fn text(&self) -> &SmolStr {
+    pub fn text(&self) -> TokenText<'_> {
         text_of_first_token(self.syntax())
     }
 }
 
 impl ast::NameRef {
-    pub fn text(&self) -> &SmolStr {
+    pub fn text(&self) -> TokenText<'_> {
         text_of_first_token(self.syntax())
     }
 
     pub fn as_tuple_field(&self) -> Option<usize> {
         self.syntax().children_with_tokens().find_map(|c| {
             if c.kind() == SyntaxKind::INT_NUMBER {
-                c.as_token()
-                    .and_then(|tok| tok.text().as_str().parse().ok())
+                c.as_token().and_then(|tok| tok.text().parse().ok())
             } else {
                 None
             }
@@ -55,13 +55,19 @@ impl ast::FunctionDef {
     }
 }
 
-fn text_of_first_token(node: &SyntaxNode) -> &SmolStr {
-    node.green()
-        .children()
-        .next()
-        .and_then(|it| it.into_token())
-        .unwrap()
-        .text()
+fn text_of_first_token(node: &SyntaxNode) -> TokenText<'_> {
+    fn first_token(green_ref: &GreenNodeData) -> &GreenTokenData {
+        green_ref
+            .children()
+            .next()
+            .and_then(NodeOrToken::into_token)
+            .unwrap()
+    }
+
+    match node.green() {
+        Cow::Borrowed(green_ref) => TokenText::borrowed(first_token(green_ref).text()),
+        Cow::Owned(green) => TokenText::owned(first_token(&green).to_owned()),
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
