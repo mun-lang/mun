@@ -3,29 +3,10 @@
 use mun_memory::gc::{self, GcPtr};
 use parking_lot::Mutex;
 
-// pub struct TypeInfo {
-//     pub size: usize,
-//     pub alignment: usize,
-//     pub tracer: Option<&'static fn(handle: GcPtr) -> Vec<GcPtr>>,
-// }
-
 pub trait Trace {
     /// Called to collect all GC handles in the type
     fn trace(&self, handles: &mut Vec<GcPtr>);
 }
-
-// impl gc::TypeTrace for &'static TypeInfo {
-//     type Trace = <Vec<GcPtr> as IntoIterator>::IntoIter;
-
-//     fn trace(&self, obj: GcPtr) -> Self::Trace {
-//         let handles = if let Some(tracer) = self.tracer {
-//             tracer(obj)
-//         } else {
-//             Vec::new()
-//         };
-//         handles.into_iter()
-//     }
-// }
 
 pub struct EventAggregator<T: Sync + Send + Sized> {
     events: Mutex<Vec<T>>,
