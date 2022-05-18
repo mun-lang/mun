@@ -27,7 +27,23 @@ pub struct Assembly {
 impl Assembly {
     /// Loads an assembly and its information for the shared library at `library_path`. The
     /// resulting `Assembly` is ensured to be linkable.
-    pub fn load(library_path: &Path, gc: Arc<GarbageCollector>) -> Result<Self, anyhow::Error> {
+    ///
+    /// # Safety
+    ///
+    /// A munlib is simply a shared object. When a library is loaded, initialisation routines
+    /// contained within it are executed. For the purposes of safety, the execution of these
+    /// routines is conceptually the same calling an unknown foreign function and may impose
+    /// arbitrary requirements on the caller for the call to be sound.
+    ///
+    /// Additionally, the callers of this function must also ensure that execution of the
+    /// termination routines contained within the library is safe as well. These routines may be
+    /// executed when the library is unloaded.
+    ///
+    /// See [`libloading::Library::new`] for more information.
+    pub unsafe fn load(
+        library_path: &Path,
+        gc: Arc<GarbageCollector>,
+    ) -> Result<Self, anyhow::Error> {
         let mut library = MunLibrary::new(library_path)?;
 
         let version = library.get_abi_version();

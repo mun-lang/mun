@@ -16,7 +16,10 @@ pub struct Args {
 
 /// Starts the runtime with the specified library and invokes function `entry`.
 pub fn start(args: Args) -> anyhow::Result<ExitStatus> {
-    let runtime = Runtime::builder(args.library).finish()?;
+    let builder = Runtime::builder(args.library);
+
+    // Safety: we assume that the passed in library is safe
+    let runtime = unsafe { builder.finish() }?;
 
     let fn_definition = runtime
         .get_function_definition(&args.entry)
