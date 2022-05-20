@@ -8,9 +8,10 @@ extern "C" fn random() -> i64 {
 }
 
 fn main() {
-    let runtime = Runtime::builder("main.munlib")
-        .insert_fn("random", random as extern "C" fn() -> i64)
-        .finish()
+    // Safety: We assume that the library that is loaded is a valid munlib
+    let builder = Runtime::builder("main.munlib")
+        .insert_fn("random", random as extern "C" fn() -> i64);
+    let mut runtime = unsafe { builder.finish() }
         .expect("Failed to spawn Runtime");
 
     let result: bool = runtime.invoke("random_bool", ()).unwrap();
