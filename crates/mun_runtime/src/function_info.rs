@@ -9,6 +9,8 @@ pub struct FunctionDefinition {
     pub fn_ptr: *const c_void,
 }
 
+unsafe impl Send for FunctionDefinition {}
+
 impl FunctionDefinition {
     pub fn try_from_abi(fn_def: &abi::FunctionDefinition, type_table: &TypeTable) -> Option<Self> {
         let prototype = FunctionPrototype::try_from_abi(&fn_def.prototype, type_table)?;
@@ -65,4 +67,49 @@ impl FunctionSignature {
             return_type,
         })
     }
+}
+
+/// A value-to-`FunctionDefinition` conversion that consumes the input value.
+pub trait IntoFunctionDefinition {
+    /// Performs the conversion.
+    fn into<S: Into<String>>(self, name: S) -> FunctionDefinition;
+}
+
+macro_rules! into_function_info_impl {
+    ($(
+        extern "C" fn($($T:ident),*) -> $R:ident;
+    )+) => {
+        $(
+            impl<$R: memory::HasStaticTypeInfo, $($T: memory::HasStaticTypeInfo,)*> IntoFunctionDefinition
+            for extern "C" fn($($T),*) -> $R
+            {
+                fn into<S: Into<String>>(self, name: S) -> FunctionDefinition {
+                    FunctionDefinition {
+                        fn_ptr: self as *const std::ffi::c_void,
+                        prototype: FunctionPrototype {
+                            name: name.into(),
+                            signature: FunctionSignature {
+                                arg_types: vec![$(<$T as memory::HasStaticTypeInfo>::type_info().clone(),)*],
+                                return_type: <R as memory::HasStaticTypeInfo>::type_info().clone(),
+                            }
+                        }
+                    }
+                }
+            }
+        )+
+    }
+}
+
+into_function_info_impl! {
+    extern "C" fn() -> R;
+    extern "C" fn(A) -> R;
+    extern "C" fn(A, B) -> R;
+    extern "C" fn(A, B, C) -> R;
+    extern "C" fn(A, B, C, D) -> R;
+    extern "C" fn(A, B, C, D, E) -> R;
+    extern "C" fn(A, B, C, D, E, F) -> R;
+    extern "C" fn(A, B, C, D, E, F, G) -> R;
+    extern "C" fn(A, B, C, D, E, F, G, H) -> R;
+    extern "C" fn(A, B, C, D, E, F, G, H, I) -> R;
+    extern "C" fn(A, B, C, D, E, F, G, H, I, J) -> R;
 }

@@ -8,9 +8,9 @@ use std::sync::Arc;
 #[test]
 fn alloc() {
     let runtime = MarkSweep::<EventAggregator<Event>>::default();
-    let handle = runtime.alloc(&i64::type_info());
+    let handle = runtime.alloc(i64::type_info());
 
-    assert_eq!(runtime.ptr_type(handle), i64::type_info());
+    assert_eq!(&runtime.ptr_type(handle), i64::type_info());
 
     let mut events = runtime.observer().take_all().into_iter();
     assert_eq!(events.next(), Some(Event::Allocation(handle)));

@@ -62,20 +62,20 @@ impl Default for TypeTable {
             type_name_to_type_info: Default::default(),
         };
 
-        type_table.insert_type(i8::type_info());
-        type_table.insert_type(i16::type_info());
-        type_table.insert_type(i32::type_info());
-        type_table.insert_type(i64::type_info());
-        type_table.insert_type(i128::type_info());
-        type_table.insert_type(u8::type_info());
-        type_table.insert_type(u16::type_info());
-        type_table.insert_type(u32::type_info());
-        type_table.insert_type(u64::type_info());
-        type_table.insert_type(u128::type_info());
-        type_table.insert_type(f32::type_info());
-        type_table.insert_type(f64::type_info());
-        type_table.insert_type(bool::type_info());
-        type_table.insert_type(<()>::type_info());
+        type_table.insert_type(i8::type_info().clone());
+        type_table.insert_type(i16::type_info().clone());
+        type_table.insert_type(i32::type_info().clone());
+        type_table.insert_type(i64::type_info().clone());
+        type_table.insert_type(i128::type_info().clone());
+        type_table.insert_type(u8::type_info().clone());
+        type_table.insert_type(u16::type_info().clone());
+        type_table.insert_type(u32::type_info().clone());
+        type_table.insert_type(u64::type_info().clone());
+        type_table.insert_type(u128::type_info().clone());
+        type_table.insert_type(f32::type_info().clone());
+        type_table.insert_type(f64::type_info().clone());
+        type_table.insert_type(bool::type_info().clone());
+        type_table.insert_type(<()>::type_info().clone());
 
         type_table
     }

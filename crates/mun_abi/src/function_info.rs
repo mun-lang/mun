@@ -212,7 +212,7 @@ mod tests {
         test_utils::{
             fake_fn_prototype, fake_fn_signature, fake_type_info, FAKE_FN_NAME, FAKE_TYPE_NAME,
         },
-        Guid, TypeInfoData,
+        TypeInfoData,
     };
     use std::ffi::CString;
 

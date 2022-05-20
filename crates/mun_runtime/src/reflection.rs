@@ -44,7 +44,7 @@ macro_rules! impl_primitive_type {
         $(
             impl ArgumentReflection for $ty {
                 fn type_info(&self, runtime: &Runtime) -> Arc<TypeInfo> {
-                    <Self as HasStaticTypeInfo>::type_info()
+                    <Self as HasStaticTypeInfo>::type_info().clone()
                 }
             }
 
@@ -124,7 +124,7 @@ where
     *const T: HasStaticTypeInfo,
 {
     fn type_info(&self, _runtime: &Runtime) -> Arc<TypeInfo> {
-        <Self as HasStaticTypeInfo>::type_info()
+        <Self as HasStaticTypeInfo>::type_info().clone()
     }
 }
 
@@ -146,7 +146,7 @@ where
     *mut T: HasStaticTypeInfo,
 {
     fn type_info(&self, _runtime: &Runtime) -> Arc<TypeInfo> {
-        <Self as HasStaticTypeInfo>::type_info()
+        <Self as HasStaticTypeInfo>::type_info().clone()
     }
 }
 

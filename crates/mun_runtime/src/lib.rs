@@ -9,13 +9,12 @@ mod assembly;
 mod garbage_collector;
 mod adt;
 mod dispatch_table;
-pub mod function_info;
+mod function_info;
 mod marshal;
 mod reflection;
 
 use anyhow::Result;
 use dispatch_table::DispatchTable;
-use function_info::{FunctionDefinition, FunctionSignature};
 use garbage_collector::GarbageCollector;
 use log::{debug, error, info};
 use memory::{
@@ -40,8 +39,8 @@ pub use crate::{
     assembly::Assembly,
     marshal::Marshal,
     reflection::{ArgumentReflection, ReturnTypeReflection},
+    function_info::{IntoFunctionDefinition, FunctionDefinition, FunctionSignature, FunctionPrototype}
 };
-pub use abi::IntoFunctionDefinition;
 use std::ffi::c_void;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -78,7 +77,7 @@ extern "C" fn new(
 ) -> *const *mut ffi::c_void {
     // SAFETY: The runtime always constructs and uses `Arc<TypeInfo>::into_raw` to set the type
     // type handles in the type LUT.
-    let type_info = unsafe { get_type_info(alloc_handle) };
+    let type_info = unsafe { get_type_info(type_handle) };
 
     // Safety: `new` is only called from within Mun assemblies' core logic, so we are guaranteed
     // that the `Runtime` and its `GarbageCollector` still exist if this function is called, and
@@ -113,7 +112,7 @@ impl RuntimeBuilder {
     }
 
     /// Adds a custom user function to the dispatch table.
-    pub fn insert_fn<S: AsRef<str>, F: abi::IntoFunctionDefinition>(
+    pub fn insert_fn<S: Into<String>, F: IntoFunctionDefinition>(
         mut self,
         name: S,
         func: F,
@@ -170,7 +169,6 @@ impl Runtime {
             "new",
         ));
 
-        let mut storages = Vec::with_capacity(options.user_functions.len());
         options.user_functions.into_iter().for_each(|fn_def| {
             dispatch_table.insert_fn(fn_def.prototype.name.clone(), fn_def);
         });

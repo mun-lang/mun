@@ -1,11 +1,13 @@
 use crate::{type_table::TypeTable, TypeFields};
-use abi::StructMemoryKind;
+use abi::{Guid, StructMemoryKind};
 use itertools::izip;
 use std::{
     alloc::Layout,
     fmt::{self, Formatter},
     sync::Arc,
 };
+use std::sync::Once;
+use abi::static_type_map::StaticTypeMap;
 
 /// A linked version of [`mun_abi::TypeInfo`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
 #[derive(Clone, Debug)]
@@ -182,15 +184,15 @@ pub struct FieldInfo {
 }
 
 /// A trait that defines static type information for types that can provide it.
-pub trait HasStaticTypeInfo: abi::HasStaticTypeInfo {
-    fn type_info() -> Arc<TypeInfo>;
+pub trait HasStaticTypeInfo {
+    fn type_info() -> &'static Arc<TypeInfo>;
 }
 
 macro_rules! impl_primitive_type {
     ($($ty:ty),+) => {
         $(
             impl HasStaticTypeInfo for $ty {
-                fn type_info() -> Arc<TypeInfo> {
+                fn type_info() -> &'static Arc<TypeInfo> {
                     static TYPE_INFO: once_cell::sync::OnceCell<Arc<TypeInfo>> = once_cell::sync::OnceCell::new();
                     TYPE_INFO.get_or_init(|| {
                         let type_info = <$ty as abi::HasStaticTypeInfo>::type_info();
@@ -201,7 +203,7 @@ macro_rules! impl_primitive_type {
                                 .expect("TypeInfo contains invalid size and alignment."),
                             data: TypeInfoData::Primitive
                         })
-                    }).clone()
+                    })
                 }
             }
         )+
@@ -226,3 +228,57 @@ impl_primitive_type!(
     bool,
     ()
 );
+
+/// Every type that has at least a type name also has a valid pointer type name
+impl<T: abi::HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *mut T {
+    fn type_info() -> &'static Arc<TypeInfo> {
+        static mut VALUE: Option<StaticTypeMap<Arc<TypeInfo>>> = None;
+        static INIT: Once = Once::new();
+
+        let map = unsafe {
+            INIT.call_once(|| {
+                VALUE = Some(StaticTypeMap::new());
+            });
+            VALUE.as_ref().unwrap()
+        };
+
+        map.call_once::<T, _>(|| {
+            let name = format!("*mut {}", <T as abi::HasStaticTypeInfoName>::type_name().to_str().expect("static type name is not a valid UTF-8 string"));
+            let size_in_bits = (std::mem::size_of::<*mut T>()).try_into().expect("size of T is larger than the maximum allowed ABI size. Please file a bug.");
+            let alignment = (std::mem::align_of::<*mut T>()).try_into().expect("alignment of T is larger than the maximum allowed ABI size. Please file a bug.");
+            Arc::new(TypeInfo {
+                id: Guid::from(name.as_bytes()).into(),
+                name,
+                layout: Layout::from_size_align(size_in_bits, alignment).expect("invalid layout for static type"),
+                data: TypeInfoData::Primitive
+            })
+        })
+    }
+}
+
+/// Every type that has at least a type name also has a valid pointer type name
+impl<T: abi::HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *const T {
+    fn type_info() -> &'static Arc<TypeInfo> {
+        static mut VALUE: Option<StaticTypeMap<Arc<TypeInfo>>> = None;
+        static INIT: Once = Once::new();
+
+        let map = unsafe {
+            INIT.call_once(|| {
+                VALUE = Some(StaticTypeMap::new());
+            });
+            VALUE.as_ref().unwrap()
+        };
+
+        map.call_once::<T, _>(|| {
+            let name = format!("*mut {}", <T as abi::HasStaticTypeInfoName>::type_name().to_str().expect("static type name is not a valid UTF-8 string"));
+            let size_in_bits = (std::mem::size_of::<*const T>()).try_into().expect("size of T is larger than the maximum allowed ABI size. Please file a bug.");
+            let alignment = (std::mem::align_of::<*const T>()).try_into().expect("alignment of T is larger than the maximum allowed ABI size. Please file a bug.");
+            Arc::new(TypeInfo {
+                id: Guid::from(name.as_bytes()).into(),
+                name,
+                layout: Layout::from_size_align(size_in_bits, alignment).expect("invalid layout for static type"),
+                data: TypeInfoData::Primitive
+            })
+        })
+    }
+}
