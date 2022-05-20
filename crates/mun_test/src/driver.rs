@@ -147,7 +147,10 @@ impl CompileAndRunTestDriver {
     ) -> Result<Self, anyhow::Error> {
         let driver = CompileTestDriver::from_fixture(fixture);
         let builder = Runtime::builder(driver.lib_path());
-        let runtime = config_fn(builder).finish()?;
+
+        // Safety: We compiled the library ourselves, therefor loading the munlib is safe.
+        let build = config_fn(builder);
+        let runtime = unsafe { build.finish() }?;
 
         Ok(Self { driver, runtime })
     }
@@ -160,7 +163,10 @@ impl CompileAndRunTestDriver {
     ) -> Result<Self, anyhow::Error> {
         let driver = CompileTestDriver::from_file(text);
         let builder = Runtime::builder(driver.lib_path());
-        let runtime = config_fn(builder).finish()?;
+
+        // Safety: We compiled the library ourselves, therefor loading the munlib is safe.
+        let build = config_fn(builder);
+        let runtime = unsafe { build.finish() }?;
 
         Ok(Self { driver, runtime })
     }
@@ -175,7 +181,9 @@ impl CompileAndRunTestDriver {
         self.driver.update(path, text);
 
         let start_time = Instant::now();
-        while !self.runtime.update() {
+
+        // Safety: We compiled the library ourselves, therefor updating the runtime is safe.
+        while !unsafe { self.runtime.update() } {
             let now = Instant::now();
             if now - start_time > Duration::from_secs(10) {
                 panic!("runtime did not update after recompilation within 10 seconds");

@@ -26,11 +26,13 @@ fn test_abi_compatibility() {
     ));
 
     // Assert that all library functions are exposed
-    let lib = MunLibrary::new(driver.lib_path()).expect("Failed to load generated Mun library.");
+    // Safety: We compiled the code ourselves, therefor loading the library is safe
+    let lib = unsafe { MunLibrary::new(driver.lib_path()) }
+        .expect("Failed to load generated Mun library.");
 
-    assert_eq!(ABI_VERSION, lib.get_abi_version());
+    assert_eq!(ABI_VERSION, unsafe { lib.get_abi_version() });
 
-    let lib_info = lib.get_info();
+    let lib_info = unsafe { lib.get_info() };
 
     // Dependency compatibility
     assert_eq!(lib_info.num_dependencies, 0);
