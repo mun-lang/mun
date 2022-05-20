@@ -1,5 +1,4 @@
 use crate::{garbage_collector::GarbageCollector, DispatchTable};
-use abi::{AssemblyInfo, FunctionPrototype};
 use anyhow::anyhow;
 use libloader::{MunLibrary, TempLibrary};
 use log::error;
@@ -12,7 +11,6 @@ use std::{
     collections::{HashMap, VecDeque},
     ffi::c_void,
     path::{Path, PathBuf},
-    ptr::NonNull,
     sync::Arc,
 };
 
@@ -20,8 +18,7 @@ use std::{
 pub struct Assembly {
     library_path: PathBuf,
     library: TempLibrary,
-    legacy_libs: Vec<TempLibrary>,
-    info: AssemblyInfo,
+    info: abi::AssemblyInfo,
     allocator: Arc<GarbageCollector>,
 }
 
@@ -46,7 +43,6 @@ impl Assembly {
         let assembly = Assembly {
             library_path: library_path.to_path_buf(),
             library: library.into_inner(),
-            legacy_libs: Vec::new(),
             info,
             allocator: gc,
         };
@@ -94,7 +90,8 @@ impl Assembly {
     /// Private implementation of runtime linking
     fn link_all_functions<'a>(
         dispatch_table: &mut DispatchTable,
-        to_link: impl Iterator<Item = (&'a mut *const c_void, &'a FunctionPrototype)>,
+        type_table: &TypeTable,
+        to_link: impl Iterator<Item = (&'a mut *const c_void, &'a abi::FunctionPrototype)>,
     ) -> anyhow::Result<()> {
         let mut to_link: Vec<_> = to_link.collect();
 
@@ -107,8 +104,15 @@ impl Assembly {
             for (dispatch_ptr, fn_prototype) in to_link.into_iter() {
                 // Ensure that the function is in the runtime dispatch table
                 if let Some(fn_def) = dispatch_table.get_fn(fn_prototype.name()) {
+                    let type_ids = fn_def
+                        .prototype
+                        .signature
+                        .arg_types
+                        .iter()
+                        .map(|type_info| &type_info.id);
+
                     // Ensure that the function's signature is the same.
-                    if fn_prototype.signature != fn_def.prototype.signature {
+                    if !fn_prototype.signature.arg_types().iter().eq(type_ids) {
                         return Err(anyhow!("Failed to link: function '{}' is missing. A function with the same name does exist, but the signatures do not match.", fn_prototype.name()));
                         // (expected: {}, found: {}).", fn_prototype.name(), fn_prototype, fn_def.prototype));
                     }
@@ -179,7 +183,7 @@ impl Assembly {
 
         // Insert all assemblies' functions into the dispatch table
         for assembly in assemblies.iter() {
-            dispatch_table.insert_module(&assembly.info().symbols);
+            dispatch_table.insert_module(&assembly.info().symbols, &type_table);
         }
 
         let functions_to_link = assemblies
@@ -189,7 +193,7 @@ impl Assembly {
             // by the compiler.
             .filter(|(ptr, _)| ptr.is_null());
 
-        Assembly::link_all_functions(&mut dispatch_table, functions_to_link)?;
+        Assembly::link_all_functions(&mut dispatch_table, &type_table, functions_to_link)?;
 
         Ok((dispatch_table, type_table))
     }
@@ -202,146 +206,138 @@ impl Assembly {
         dispatch_table: &DispatchTable,
         type_table: &TypeTable,
     ) -> anyhow::Result<(DispatchTable, TypeTable)> {
+        let mut dependencies: HashMap<String, Vec<String>> = unlinked_assemblies
+            .values()
+            .map(|assembly| {
+                let info = &assembly.info;
+                let dependencies: Vec<String> = info.dependencies().map(From::from).collect();
+
+                (info.symbols.path().to_owned(), dependencies)
+            })
+            .filter(|(_, dependencies)| !dependencies.is_empty())
+            .collect();
+
         // Associate the new assemblies with the old assemblies
-        let mut assemblies = unlinked_assemblies
+        let mut assemblies_to_link: VecDeque<_> = unlinked_assemblies
             .iter_mut()
-            .map(|(old_path, asm)| (asm, linked_assemblies.get(old_path)))
-            .collect::<Vec<_>>();
+            .map(|(old_path, asm)| (linked_assemblies.get(old_path), asm))
+            .collect();
 
         // Clone the type table, such that we can roll back if linking fails
         let mut type_table = type_table.clone();
 
-        // Remove the old assemblies' types from the type table
-        assemblies
-            .iter()
-            .filter_map(|(_, old_assembly)| old_assembly.as_ref())
-            .flat_map(|asm| asm.info().symbols.types().iter())
-            .for_each(|type_info| assert!(type_table.remove_type_by_id(&type_info.id).is_some()));
-
-        // Collect all types that need to be loaded
-        let mut types_to_load: VecDeque<&abi::TypeInfo> = assemblies
-            .iter()
-            .flat_map(|(new_assembly, _)| new_assembly.info().symbols.types().iter())
-            .collect();
-
-        // Load all types
-        while let Some(type_info) = types_to_load.pop_front() {
-            if let Some(type_info) = TypeInfo::try_from_abi(type_info, &type_table) {
-                assert!(type_table.insert_type(Arc::new(type_info)).is_none());
-            } else {
-                types_to_load.push_back(type_info);
-            }
-        }
-
-        let types_to_link = assemblies
-            .iter_mut()
-            .flat_map(|asm| asm.info.type_lut.iter_mut())
-            // Only take signatures into account that do *not* yet have a type handle assigned
-            // by the compiler.
-            .filter(|(_, ptr)| ptr.is_null());
-
-        Assembly::link_all_types(&mut type_table, types_to_link)?;
-
         // Clone the dispatch table, such that we can roll back if linking fails
         let mut dispatch_table = dispatch_table.clone();
 
-        // Remove the old assemblies' functions from the dispatch table
-        for old_assembly in assemblies
-            .iter()
-            .filter_map(|(_, old_assembly)| old_assembly.as_ref())
-        {
-            dispatch_table.remove_module(&old_assembly.info().symbols)
-        }
+        while let Some(mut entry) = assemblies_to_link.pop_front() {
+            let (ref old_assembly, ref mut new_assembly) = entry;
 
-        // Insert all assemblies' functions into the dispatch table
-        for (new_assembly, _) in assemblies.iter() {
-            dispatch_table.insert_module(&new_assembly.info().symbols);
-        }
+            let new_path = new_assembly.info.symbols.path();
 
-        // Update the dispatch tables of the assemblies themselves based on our global dispatch
-        // table. This will effectively link the function definitions of the assemblies together.
-        // It also modifies the internal state of the assemblies.
-        //
-        // Note that linking may fail because for instance functions remaining unlinked (missing)
-        // or the signature of a function doesnt match.
-        Assembly::link_all_functions(
-            &mut dispatch_table,
-            assemblies
+            // Are there any dependencies that still need to be loaded?
+            if dependencies.contains_key(new_path) {
+                assemblies_to_link.push_back(entry);
+
+                continue;
+            }
+
+            let old_types: Option<(&Assembly, Vec<Arc<TypeInfo>>)> =
+                old_assembly.map(|old_assembly| {
+                    // Remove the old assemblies' types from the type table
+                    let old_types = old_assembly
+                        .info
+                        .symbols
+                        .types()
+                        .iter()
+                        .map(|type_info| {
+                            type_table.remove_type_by_id(&type_info.id).expect(
+                                "All types from a loaded assembly must exist in the type table.",
+                            )
+                        })
+                        .collect();
+
+                    (old_assembly, old_types)
+                });
+
+            // Collect all types that need to be loaded
+            let mut types_to_load: VecDeque<&abi::TypeInfo> =
+                new_assembly.info.symbols.types().iter().collect();
+
+            let mut new_types = Vec::with_capacity(types_to_load.len());
+
+            // Load all types, retrying types that depend on other unloaded types within the module
+            while let Some(type_info) = types_to_load.pop_front() {
+                if let Some(type_info) = TypeInfo::try_from_abi(type_info, &type_table) {
+                    let type_info = Arc::new(type_info);
+                    new_types.push(type_info.clone());
+
+                    assert!(type_table.insert_type(type_info).is_none());
+                } else {
+                    types_to_load.push_back(type_info);
+                }
+            }
+
+            let types_to_link = new_assembly
+                .info
+                .type_lut
                 .iter_mut()
-                .flat_map(|(asm, _)| asm.info.dispatch_table.iter_mut())
+                // Only take signatures into account that do *not* yet have a type handle assigned
+                // by the compiler.
+                .filter(|(_, ptr)| ptr.is_null());
+
+            Assembly::link_all_types(&mut type_table, types_to_link)?;
+
+            // Memory map allocated object
+            if let Some((old_assembly, old_types)) = old_types {
+                let mapping = Mapping::new(&old_types, &new_types);
+                let _deleted_objects = old_assembly.allocator.map_memory(mapping);
+                // DISCUSSION: Do we need to maintain an assembly for the type LUT of allocated objects with deleted types?
+            }
+
+            // Remove the old assembly's functions from the dispatch table
+            if let Some(old_assembly) = old_assembly {
+                dispatch_table.remove_module(&old_assembly.info.symbols);
+            }
+
+            // Insert the new assembly's functions into the dispatch table
+            dispatch_table.insert_module(&new_assembly.info.symbols, &type_table);
+
+            let functions_to_link = new_assembly
+                .info
+                .dispatch_table
+                .iter_mut()
                 // Only take signatures into account that do *not* yet have a function pointer assigned
                 // by the compiler. When an assembly is compiled it "pre-fills" its internal dispatch
                 // table with pointers to self-referencing functions.
-                .filter(|(ptr, _)| ptr.is_null()),
-        )?;
+                .filter(|(ptr, _)| ptr.is_null());
 
-        // TODO: Handle memory mapping
-        let assemblies_to_map: Vec<_> = assemblies
-            .into_iter()
-            .filter_map(|(new_asm, old_asm)| old_asm.map(|old_asm| (old_asm, new_asm)))
-            .collect();
+            // Update the dispatch tables of the assemblies themselves based on our global dispatch
+            // table. This will effectively link the function definitions of the assemblies together.
+            // It also modifies the internal state of the assemblies.
+            //
+            // Note that linking may fail because for instance functions remaining unlinked (missing)
+            // or the signature of a function doesnt match.
+            Assembly::link_all_functions(&mut dispatch_table, &type_table, functions_to_link)?;
 
-        let mut assemblies_to_keep = HashMap::new();
-        for (old_assembly, new_assembly) in assemblies_to_map.iter() {
-            let old_types: Vec<UnsafeTypeInfo> = old_assembly
-                .info
-                .symbols
-                .types()
-                .iter()
-                .map(|ty| {
-                    // Safety: `ty` is a shared reference, so is guaranteed to not be `ptr::null()`.
-                    UnsafeTypeInfo::new(unsafe {
-                        NonNull::new_unchecked(*ty as *const abi::TypeInfo as *mut _)
-                    })
-                })
-                .collect();
+            // Remove this assembly from the dependencies
+            dependencies
+                .values_mut()
+                .for_each(|dependencies| dependencies.retain(|path| path != new_path));
 
-            let new_types: Vec<UnsafeTypeInfo> = new_assembly
-                .info
-                .symbols
-                .types()
-                .iter()
-                .map(|ty| {
-                    // Safety: `ty` is a shared reference, so is guaranteed to not be `ptr::null()`.
-                    UnsafeTypeInfo::new(unsafe {
-                        NonNull::new_unchecked(*ty as *const abi::TypeInfo as *mut _)
-                    })
-                })
-                .collect();
-
-            let mapping = Mapping::new(&old_types, &new_types);
-            let deleted_objects = old_assembly.allocator.map_memory(mapping);
-
-            if !deleted_objects.is_empty() {
-                // Retain the previous assembly
-                assemblies_to_keep.insert(
-                    old_assembly.library_path().to_path_buf(),
-                    new_assembly.library_path().to_path_buf(),
-                );
-            }
+            // Remove assemblies that no longer have dependencies
+            dependencies.retain(|_, dependencies| !dependencies.is_empty());
         }
 
         let mut newly_linked = HashMap::new();
         std::mem::swap(unlinked_assemblies, &mut newly_linked);
 
-        for (old_path, mut new_assembly) in newly_linked.into_iter() {
-            let mut old_assembly = linked_assemblies
-                .remove(&old_path)
-                .expect("Assembly must exist.");
+        for (old_path, new_assembly) in newly_linked.into_iter() {
+            assert!(
+                linked_assemblies.remove(&old_path).is_some(),
+                "Assembly must exist."
+            );
 
-            let new_path = if let Some(new_path) = assemblies_to_keep.remove(&old_path) {
-                // Retain all existing legacy libs
-                new_assembly
-                    .legacy_libs
-                    .append(&mut old_assembly.legacy_libs);
-
-                new_assembly.legacy_libs.push(old_assembly.into_library());
-
-                new_path
-            } else {
-                new_assembly.library_path().to_path_buf()
-            };
-
+            let new_path = new_assembly.library_path.clone();
             linked_assemblies.insert(new_path, new_assembly);
         }
 
@@ -349,7 +345,7 @@ impl Assembly {
     }
 
     /// Returns the assembly's information.
-    pub fn info(&self) -> &AssemblyInfo {
+    pub fn info(&self) -> &abi::AssemblyInfo {
         &self.info
     }
 

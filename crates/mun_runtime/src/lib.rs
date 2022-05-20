@@ -8,10 +8,14 @@ mod assembly;
 #[macro_use]
 mod garbage_collector;
 mod adt;
+mod dispatch_table;
+pub mod function_info;
 mod marshal;
 mod reflection;
 
 use anyhow::Result;
+use dispatch_table::DispatchTable;
+use function_info::{FunctionDefinition, FunctionSignature};
 use garbage_collector::GarbageCollector;
 use log::{debug, error, info};
 use memory::{
@@ -21,12 +25,10 @@ use memory::{
 };
 use mun_project::LOCKFILE_NAME;
 use notify::{RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
-use rustc_hash::FxHashMap;
 use std::{
     collections::{HashMap, VecDeque},
     ffi, io, mem,
     path::{Path, PathBuf},
-    string::ToString,
     sync::{
         mpsc::{channel, Receiver},
         Arc,
@@ -39,7 +41,6 @@ pub use crate::{
     marshal::Marshal,
     reflection::{ArgumentReflection, ReturnTypeReflection},
 };
-use abi::FunctionSignature;
 pub use abi::IntoFunctionDefinition;
 use std::ffi::c_void;
 use std::fmt::{Debug, Display, Formatter};
@@ -49,7 +50,7 @@ pub struct RuntimeOptions {
     /// Path to the entry point library
     pub library_path: PathBuf,
     /// Custom user injected functions
-    pub user_functions: Vec<(abi::FunctionDefinition, abi::FunctionDefinitionStorage)>,
+    pub user_functions: Vec<FunctionDefinition>,
 }
 
 /// Retrieve the allocator using the provided handle.
@@ -127,93 +128,6 @@ impl RuntimeBuilder {
     }
 }
 
-type DependencyCounter = usize;
-type Dependency<T> = (T, DependencyCounter);
-type DependencyMap<T> = FxHashMap<String, Dependency<T>>;
-
-/// A runtime dispatch table that maps full paths to function and struct information.
-#[derive(Clone, Default)]
-pub struct DispatchTable {
-    functions: FxHashMap<String, abi::FunctionDefinition>,
-    fn_dependencies: FxHashMap<String, DependencyMap<abi::FunctionPrototype>>,
-}
-
-impl DispatchTable {
-    /// Retrieves the [`abi::FunctionDefinition`] corresponding to `fn_path`, if it exists.
-    pub fn get_fn(&self, fn_path: &str) -> Option<&abi::FunctionDefinition> {
-        self.functions.get(fn_path)
-    }
-
-    /// Inserts the `fn_info` for `fn_path` into the dispatch table.
-    ///
-    /// If the dispatch table already contained this `fn_path`, the value is updated, and the old
-    /// value is returned.
-    pub fn insert_fn<S: ToString>(
-        &mut self,
-        fn_path: S,
-        fn_info: abi::FunctionDefinition,
-    ) -> Option<abi::FunctionDefinition> {
-        self.functions.insert(fn_path.to_string(), fn_info)
-    }
-
-    /// Removes and returns the `fn_info` corresponding to `fn_path`, if it exists.
-    pub fn remove_fn<S: AsRef<str>>(&mut self, fn_path: S) -> Option<abi::FunctionDefinition> {
-        self.functions.remove(fn_path.as_ref())
-    }
-
-    /// Removes the function definitions from the given assembly from this dispatch table.
-    pub fn remove_module(&mut self, assembly: &abi::ModuleInfo) {
-        for function in assembly.functions() {
-            if let Some(value) = self.functions.get(function.prototype.name()) {
-                if value.fn_ptr == function.fn_ptr {
-                    self.functions.remove(function.prototype.name());
-                }
-            }
-        }
-    }
-
-    /// Add the function definitions from the given assembly from this dispatch table.
-    pub fn insert_module(&mut self, assembly: &abi::ModuleInfo) {
-        for function in assembly.functions() {
-            self.insert_fn(function.prototype.name(), function.clone());
-        }
-    }
-
-    /// Adds `fn_path` from `assembly_path` as a dependency; incrementing its usage counter.
-    pub fn add_fn_dependency<S: ToString, T: ToString>(
-        &mut self,
-        assembly_path: S,
-        fn_path: T,
-        fn_prototype: abi::FunctionPrototype,
-    ) {
-        let dependencies = self
-            .fn_dependencies
-            .entry(assembly_path.to_string())
-            .or_default();
-
-        let (_, counter) = dependencies
-            .entry(fn_path.to_string())
-            .or_insert((fn_prototype, 0));
-
-        *counter += 1;
-    }
-
-    /// Removes `fn_path` from `assembly_path` as a dependency; decrementing its usage counter.
-    pub fn remove_fn_dependency<S: AsRef<str>, T: AsRef<str>>(
-        &mut self,
-        assembly_path: S,
-        fn_path: T,
-    ) {
-        if let Some(dependencies) = self.fn_dependencies.get_mut(assembly_path.as_ref()) {
-            if let Some((key, (fn_sig, counter))) = dependencies.remove_entry(fn_path.as_ref()) {
-                if counter > 1 {
-                    dependencies.insert(key, (fn_sig, counter - 1));
-                }
-            }
-        }
-    }
-}
-
 /// A runtime for the Mun language.
 ///
 /// # Logging
@@ -233,7 +147,6 @@ pub struct Runtime {
     watcher_rx: Receiver<RawEvent>,
     renamed_files: HashMap<u32, PathBuf>,
     gc: Arc<GarbageCollector>,
-    _user_functions: Vec<abi::FunctionDefinitionStorage>,
 }
 
 impl Runtime {
@@ -258,10 +171,9 @@ impl Runtime {
         ));
 
         let mut storages = Vec::with_capacity(options.user_functions.len());
-        for (info, storage) in options.user_functions.into_iter() {
-            dispatch_table.insert_fn(info.prototype.name().to_string(), info);
-            storages.push(storage)
-        }
+        options.user_functions.into_iter().for_each(|fn_def| {
+            dispatch_table.insert_fn(fn_def.prototype.name.clone(), fn_def);
+        });
 
         let watcher: RecommendedWatcher = Watcher::new_raw(tx)?;
         let mut runtime = Runtime {
@@ -273,7 +185,6 @@ impl Runtime {
             watcher_rx: rx,
             renamed_files: HashMap::new(),
             gc: Arc::new(self::garbage_collector::GarbageCollector::default()),
-            _user_functions: storages,
         };
 
         runtime.add_assembly(&options.library_path)?;
@@ -337,7 +248,7 @@ impl Runtime {
     }
 
     /// Retrieves the function definition corresponding to `function_name`, if available.
-    pub fn get_function_definition(&self, function_name: &str) -> Option<&abi::FunctionDefinition> {
+    pub fn get_function_definition(&self, function_name: &str) -> Option<&FunctionDefinition> {
         // TODO: Verify that when someone tries to invoke a non-public function, it should fail.
         self.dispatch_table.get_fn(function_name)
     }
@@ -581,7 +492,7 @@ seq_macro::seq!(I in 0..N {
     impl<'arg, #(T #I: ArgumentReflection + Marshal<'arg>,)*> InvokeArgs for (#(T #I,)*) {
         #[allow(unused_variables)]
         fn can_invoke<'runtime>(&self, runtime: &'runtime Runtime, signature: &FunctionSignature) -> Result<(), String> {
-            let arg_types = signature.arg_types();
+            let arg_types = &signature.arg_types;
 
             // Ensure the number of arguments match
             #[allow(clippy::len_zero)]
@@ -590,12 +501,12 @@ seq_macro::seq!(I in 0..N {
             }
 
             #(
-            if arg_types[I] != self.I.type_id(runtime) {
+            if arg_types[I].id != self.I.type_id(runtime) {
                 return Err(format!(
                     "Invalid argument type at index {}. Expected: {}. Found: {}.",
                     I,
                     self.I.type_info(runtime).name,
-                    runtime.get_type_info_by_id(&arg_types[I]).unwrap(),
+                    arg_types[I].name,
                 ));
             }
             )*
@@ -659,12 +570,12 @@ impl Runtime {
 
         // Validate the return type
         let return_type = &function_info.prototype.signature.return_type;
-        if return_type.guid != ReturnType::type_id().guid {
+        if return_type.id != ReturnType::type_id() {
             return Err(InvokeErr {
                 msg: format!(
                     "invalid return type. Expected: {}. Found: {}",
                     ReturnType::type_name(),
-                    self.get_type_info_by_id(return_type).unwrap().name,
+                    return_type.name,
                 ),
                 function_name,
                 arguments,
