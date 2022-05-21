@@ -26,26 +26,28 @@ use notify::{RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
 use std::{
     collections::{HashMap, VecDeque},
     ffi,
-    io,
-    mem,
+    ffi::c_void,
+    fmt::{Debug, Display, Formatter},
+    io, mem,
     path::{Path, PathBuf},
     sync::{
         mpsc::{channel, Receiver},
         Arc,
     },
-    ffi::c_void,
-    fmt::{Debug, Display, Formatter}
 };
 
 pub use crate::{
     adt::{RootedStruct, StructRef},
     assembly::Assembly,
+    function_info::{
+        FunctionDefinition, FunctionPrototype, FunctionSignature, IntoFunctionDefinition,
+    },
     marshal::Marshal,
     reflection::{ArgumentReflection, ReturnTypeReflection},
-    function_info::{IntoFunctionDefinition, FunctionDefinition, FunctionSignature, FunctionPrototype}
 };
 // Re-export some useful types so crates dont have to depend on mun_memory as well.
-pub use memory::{HasStaticTypeInfo, TypeInfo, StructInfo, FieldInfo, TypeFields};
+use crate::reflection::equals_return_type;
+pub use memory::{FieldInfo, HasStaticTypeInfo, StructInfo, TypeFields, TypeInfo};
 
 /// Options for the construction of a [`Runtime`].
 pub struct RuntimeOptions {
@@ -573,18 +575,19 @@ impl Runtime {
         };
 
         // Validate the return type
-        let return_type = &function_info.prototype.signature.return_type;
-        if return_type.id != ReturnType::type_id() {
-            return Err(InvokeErr {
-                msg: format!(
-                    "invalid return type. Expected: {}. Found: {}",
-                    ReturnType::type_name(),
-                    return_type.name,
-                ),
-                function_name,
-                arguments,
-            });
-        }
+        match equals_return_type::<ReturnType>(&function_info.prototype.signature.return_type) {
+            Err((got, expected)) => {
+                return Err(InvokeErr {
+                    msg: format!(
+                        "unexpected return type, got '{}', expected '{}",
+                        expected, got
+                    ),
+                    function_name,
+                    arguments,
+                })
+            }
+            Ok(_) => {}
+        };
 
         let result: ReturnType::MunType = unsafe { arguments.invoke(function_info.fn_ptr) };
         Ok(Marshal::marshal_from(result, self))
