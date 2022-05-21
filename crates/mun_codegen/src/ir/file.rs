@@ -1,5 +1,6 @@
 use super::body::ExternalGlobals;
 use crate::module_group::ModuleGroup;
+use crate::type_info::TypeInfo;
 use crate::{
     code_gen::CodeGenContext,
     ir::body::BodyIrGenerator,
@@ -7,7 +8,7 @@ use crate::{
     ir::{function, type_table::TypeTable},
     value::Global,
 };
-use hir::{HasVisibility, ModuleDef};
+use hir::{HasVisibility, ModuleDef, Ty};
 use inkwell::module::Module;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -17,7 +18,9 @@ pub struct FileIr<'ink> {
     /// The LLVM module that contains the IR
     pub llvm_module: Module<'ink>,
     /// The `hir::Function`s that constitute the file's API.
-    pub api: HashSet<hir::Function>,
+    pub function_definitions: HashSet<hir::Function>,
+    /// The types defined in this file
+    pub type_definitions: HashSet<TypeInfo>,
 }
 
 /// Generates IR for the specified file.
@@ -33,6 +36,7 @@ pub(crate) fn gen_file_ir<'db, 'ink>(
     // Generate all exposed function and wrapper function signatures.
     // Use a `BTreeMap` to guarantee deterministically ordered output.ures
     let mut functions = HashMap::new();
+    let mut type_definitions = HashSet::new();
     let mut wrapper_functions = BTreeMap::new();
     for def in module_group
         .iter()
@@ -56,6 +60,9 @@ pub(crate) fn gen_file_ir<'db, 'ink>(
                     wrapper_functions.insert(f, wrapper_fun);
                 }
             }
+        }
+        if let ModuleDef::Struct(s) = def {
+            type_definitions.insert(hir_types.type_info(&s.ty(code_gen.db)));
         }
     }
 
@@ -118,11 +125,15 @@ pub(crate) fn gen_file_ir<'db, 'ink>(
     }
 
     // Filter private methods
-    let api: HashSet<hir::Function> = functions
+    let function_definitions: HashSet<hir::Function> = functions
         .keys()
         .copied()
         .filter(|&f| module_group.should_export_fn(code_gen.db, f))
         .collect();
 
-    FileIr { llvm_module, api }
+    FileIr {
+        llvm_module,
+        function_definitions,
+        type_definitions
+    }
 }

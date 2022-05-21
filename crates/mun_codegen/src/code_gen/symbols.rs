@@ -1,3 +1,4 @@
+use crate::type_info::TypeInfoData;
 use crate::{
     ir::ty::HirTypeCache,
     ir::types as ir,
@@ -11,6 +12,7 @@ use crate::{
         AsValue, CanInternalize, Global, IrValueContext, IterAsIrValue, SizedValueType, Value,
     },
 };
+use abi::{HasStaticTypeInfo, TypeId};
 use hir::{HirDatabase, Ty};
 use inkwell::{attributes::Attribute, module::Linkage, types::AnyType};
 use std::convert::TryFrom;
@@ -33,15 +35,20 @@ fn gen_prototype_from_function<'ink>(
 
     // Get the `ir::TypeInfo` pointer for the return type of the function
     let fn_sig = function.ty(db).callable_sig(db).unwrap();
-    let return_type = gen_signature_return_type(context, fn_sig.ret(), hir_types);
+    let return_type = if fn_sig.ret().is_empty() {
+        <()>::type_info().id.clone().into()
+    } else {
+        ir::TypeId {
+            guid: hir_types.type_info(fn_sig.ret()).guid,
+        }
+    };
 
     // Construct an array of pointers to `ir::TypeInfo`s for the arguments of the prototype
     let arg_types = fn_sig
         .params()
         .iter()
-        .map(|ty| {
-            TypeTable::get(module, &hir_types.type_info(ty), context)
-                .expect("expected a TypeInfo for a prototype argument but it was not found")
+        .map(|ty| ir::TypeId {
+            guid: hir_types.type_info(ty).guid,
         })
         .into_const_private_pointer_or_null(format!("fn_sig::<{}>::arg_types", &name), context);
 
@@ -71,17 +78,20 @@ fn gen_prototype_from_dispatch_entry<'ink>(
         );
 
     // Get the `ir::TypeInfo` pointer for the return type of the function
-    let return_type =
-        gen_signature_return_type_from_type_info(context, function.prototype.ret_type.clone());
+    let return_type = function
+        .prototype
+        .ret_type
+        .as_ref()
+        .map(|ty| ir::TypeId { guid: ty.guid })
+        .unwrap_or_else(|| <()>::type_info().id.clone().into());
 
     // Construct an array of pointers to `ir::TypeInfo`s for the arguments of the prototype
     let arg_types = function
         .prototype
         .arg_types
         .iter()
-        .map(|type_info| {
-            TypeTable::get(module, type_info, context)
-                .expect("expected a TypeInfo for a prototype argument but it was not found")
+        .map(|type_info| ir::TypeId {
+            guid: type_info.guid,
         })
         .into_const_private_pointer_or_null(
             format!("{}_param_types", function.prototype.name),
@@ -98,39 +108,120 @@ fn gen_prototype_from_dispatch_entry<'ink>(
     }
 }
 
-/// Given a function, construct a pointer to a `ir::TypeInfo` global that represents the return type
-/// of the function; or `null` if the return type is empty.
-fn gen_signature_return_type<'ink>(
+/// Construct a global that holds a reference to all types. e.g.:
+/// MunTypeInfo[] definitions = { ... }
+fn get_type_definition_array<'ink, 'a>(
+    db: &dyn HirDatabase,
     context: &IrValueContext<'ink, '_, '_>,
-    ret_type: &Ty,
+    types: impl Iterator<Item = &'a TypeInfo>,
     hir_types: &HirTypeCache,
 ) -> Value<'ink, *const ir::TypeInfo<'ink>> {
-    gen_signature_return_type_from_type_info(
-        context,
-        if ret_type.is_empty() {
-            None
-        } else {
-            Some(hir_types.type_info(ret_type))
-        },
-    )
+    types
+        .map(|type_info| ir::TypeInfo {
+            id: ir::TypeId {
+                guid: type_info.guid.clone(),
+            },
+            name: CString::new(type_info.name.clone())
+                .expect("typename is not a valid CString")
+                .intern(format!("type_info::<{}>::name", type_info.name), context)
+                .as_value(context),
+            size_in_bits: type_info
+                .size
+                .bit_size
+                .try_into()
+                .expect("could not convert size in bits to smaller size"),
+            alignment: type_info
+                .size
+                .alignment
+                .try_into()
+                .expect("could not convert alignment to smaller size"),
+            data: gen_type_info_data(db, &type_info.data, context, hir_types),
+        })
+        .into_const_private_pointer_or_null("fn.get_info.types", context)
 }
 
-/// Given a function, construct a pointer to a `ir::TypeInfo` global that represents the return type
-/// of the function; or `null` if the return type is empty.
-fn gen_signature_return_type_from_type_info<'ink>(
+fn gen_type_info_data<'ink>(
+    db: &dyn HirDatabase,
+    data: &TypeInfoData,
     context: &IrValueContext<'ink, '_, '_>,
-    ret_type: Option<TypeInfo>,
-) -> Value<'ink, *const ir::TypeInfo<'ink>> {
-    ret_type
-        .map(|info| {
-            TypeTable::get(context.module, &info, context).unwrap_or_else(|| {
-                panic!(
-                    "could not find TypeInfo that should definitely be there: {}",
-                    info.name
+    hir_types: &HirTypeCache,
+) -> ir::TypeInfoData<'ink> {
+    match data {
+        TypeInfoData::Primitive => ir::TypeInfoData::Primitive,
+        TypeInfoData::Struct(s) => {
+            ir::TypeInfoData::Struct(gen_struct_info(db, *s, context, hir_types))
+        }
+    }
+}
+
+fn gen_struct_info<'ink>(
+    db: &dyn HirDatabase,
+    hir_struct: hir::Struct,
+    context: &IrValueContext<'ink, '_, '_>,
+    hir_types: &HirTypeCache,
+) -> ir::StructInfo<'ink> {
+    let struct_ir = hir_types.get_struct_type(hir_struct);
+    let name = hir_struct.full_name(db);
+    let fields = hir_struct.fields(db);
+
+    // Construct an array of field names (or null if there are no fields)
+    let field_names = fields
+        .iter()
+        .enumerate()
+        .map(|(idx, field)| {
+            CString::new(field.name(db).to_string())
+                .expect("field name is not a valid CString")
+                .intern(
+                    format!("struct_info::<{}>::field_names.{}", name, idx),
+                    context,
                 )
-            })
+                .as_value(context)
         })
-        .unwrap_or_else(|| Value::null(context))
+        .into_const_private_pointer_or_null(
+            format!("struct_info::<{}>::field_names", name),
+            context,
+        );
+
+    // Construct an array of field types (or null if there are no fields)
+    let field_types = fields
+        .iter()
+        .map(|field| {
+            let field_type_info = hir_types.type_info(&field.ty(db));
+            ir::TypeId {
+                guid: field_type_info.guid,
+            }
+        })
+        .into_const_private_pointer_or_null(
+            format!("struct_info::<{}>::field_types", name),
+            context,
+        );
+
+    // Construct an array of field offsets (or null if there are no fields)
+    let field_offsets = fields
+        .iter()
+        .enumerate()
+        .map(|(idx, _)| {
+            context
+                .type_context
+                .target_data
+                .offset_of_element(&struct_ir, idx as u32)
+                .unwrap() as u16
+        })
+        .into_const_private_pointer_or_null(
+            format!("struct_info::<{}>::field_offsets", name),
+            context,
+        );
+
+    ir::StructInfo {
+        field_names,
+        field_types,
+        field_offsets,
+        num_fields: fields
+            .len()
+            .try_into()
+            .expect("could not convert num_fields to smaller bit size"),
+        memory_kind: hir_struct.data(db.upcast()).memory_kind.clone(),
+    }
 }
 
 /// Construct a global that holds a reference to all functions. e.g.:
@@ -167,6 +258,53 @@ fn get_function_definition_array<'ink, 'a>(
         })
         .into_value(context)
         .into_const_private_global("fn.get_info.functions", context)
+}
+
+/// Generate the type lookup table information. e.g.:
+/// ```c
+/// MunTypeLut typeLut = { ... }
+/// ```
+fn gen_type_lut<'ink>(
+    context: &IrValueContext<'ink, '_, '_>,
+    type_table: &TypeTable,
+) -> ir::TypeLut<'ink> {
+    let module = context.module;
+
+    // Get a list of all Guids
+    let type_ids = type_table
+        .entries()
+        .iter()
+        .map(|ty| ir::TypeId {
+            guid: ty.guid.clone(),
+        })
+        .into_const_private_pointer("fn.get_info.typeLut.typeIds", context);
+
+    let type_names = type_table
+        .entries()
+        .iter()
+        .map(|ty| {
+            CString::new(ty.name.as_str())
+                .expect("unable to create CString from typeinfo name")
+                .intern(&ty.name, context)
+                .as_value(context)
+        })
+        .into_const_private_pointer("fn.get_info.typeLut.typeNames", context);
+
+    let type_ptrs = TypeTable::find_global(module)
+        .map(|type_table| {
+            Value::<*mut *const std::ffi::c_void>::with_cast(
+                type_table.as_value(context).value,
+                context,
+            )
+        })
+        .unwrap_or_else(|| Value::null(context));
+
+    ir::TypeLut {
+        type_ids,
+        type_ptrs,
+        type_names,
+        num_entries: type_table.num_types().try_into().expect("too many types"),
+    }
 }
 
 /// Generate the dispatch table information. e.g.:
@@ -211,7 +349,8 @@ fn gen_dispatch_table<'ink>(
 pub(super) fn gen_reflection_ir<'db, 'ink>(
     db: &'db dyn HirDatabase,
     context: &IrValueContext<'ink, '_, '_>,
-    api: &HashSet<hir::Function>,
+    function_definitions: &HashSet<hir::Function>,
+    type_definitions: &HashSet<TypeInfo>,
     dispatch_table: &DispatchTable<'ink>,
     type_table: &TypeTable<'ink>,
     hir_types: &HirTypeCache<'db, 'ink>,
@@ -220,13 +359,13 @@ pub(super) fn gen_reflection_ir<'db, 'ink>(
 ) {
     let module = context.module;
 
-    let num_functions = api.len() as u32;
-    let functions = get_function_definition_array(db, context, api.iter(), hir_types);
+    let num_functions = function_definitions.len() as u32;
+    let functions =
+        get_function_definition_array(db, context, function_definitions.iter(), hir_types);
 
     // Get the TypeTable global
-    let types = TypeTable::find_global(module)
-        .map(|g| g.as_value(context))
-        .unwrap_or_else(|| Value::null(context));
+    let num_types = type_definitions.len() as u32;
+    let types = get_type_definition_array(db, context, type_definitions.iter(), hir_types);
 
     // Construct the module info struct
     let module_info = ir::ModuleInfo {
@@ -237,13 +376,13 @@ pub(super) fn gen_reflection_ir<'db, 'ink>(
         functions: functions.as_value(context),
         num_functions,
         types,
-        num_types: type_table.num_types() as u32,
+        num_types,
     };
 
     // Construct the dispatch table struct
     let dispatch_table = gen_dispatch_table(context, dispatch_table);
 
-    // let type_lut =  gen_type_lut(context, type_lut);
+    let type_lut = gen_type_lut(context, type_table);
 
     // Construct the actual `get_info` function
     gen_get_info_fn(
@@ -251,7 +390,7 @@ pub(super) fn gen_reflection_ir<'db, 'ink>(
         context,
         module_info,
         dispatch_table,
-        // type_lut,
+        type_lut,
         optimization_level,
         dependencies,
     );
@@ -265,7 +404,7 @@ fn gen_get_info_fn<'ink>(
     context: &IrValueContext<'ink, '_, '_>,
     module_info: ir::ModuleInfo<'ink>,
     dispatch_table: ir::DispatchTable<'ink>,
-    // type_lut: ir::TypeLut<'ink>,
+    type_lut: ir::TypeLut<'ink>,
     optimization_level: inkwell::OptimizationLevel,
     dependencies: Vec<String>,
 ) {
@@ -340,7 +479,7 @@ fn gen_get_info_fn<'ink>(
     // Assign the struct values one by one.
     builder.build_store(symbols_addr, module_info.as_value(context).value);
     builder.build_store(dispatch_table_addr, dispatch_table.as_value(context).value);
-    // builder.build_store(type_lut_addr, type_lut.as_value(context).value);
+    builder.build_store(type_lut_addr, type_lut.as_value(context).value);
     builder.build_store(
         dependencies_addr,
         dependencies

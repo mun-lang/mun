@@ -77,6 +77,11 @@ impl Default for TypeTable {
         type_table.insert_type(bool::type_info().clone());
         type_table.insert_type(<()>::type_info().clone());
 
+        // Types used by the FFI interface
+        type_table.insert_type(<*const std::ffi::c_void>::type_info().clone());
+        type_table.insert_type(<*mut std::ffi::c_void>::type_info().clone());
+        type_table.insert_type(<*const *mut std::ffi::c_void>::type_info().clone());
+
         type_table
     }
 }

@@ -2,16 +2,12 @@
 source: crates/mun_codegen/src/test.rs
 assertion_line: 1045
 expression: "\n    pub fn add(a: u64, b: u64) -> u64 { a + b }\n    pub fn subtract(a: u64, b: u64) -> u64 { a - b }\n    pub fn multiply(a: u64, b: u64) -> u64 { a * b }\n    pub fn divide(a: u64, b: u64) -> u64 { a / b }\n    pub fn remainder(a: u64, b: u64) -> u64 { a % b }\n                        "
-
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [3 x i8], %"mun_codegen::ir::types::TypeInfoData", [0 x i64] }>
-%"mun_codegen::ir::types::TypeInfoData" = type <{ [0 x i8], i8, [39 x i8] }>
-
-@global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
+@global_type_lookup_table = external global [15 x i64*]
 
 define i64 @add(i64 %0, i64 %1) {
 body:
@@ -47,10 +43,5 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [3 x i8], %"mun_codegen::ir::types::TypeInfoData", [0 x i64] }>
-%"mun_codegen::ir::types::TypeInfoData" = type <{ [0 x i8], i8, [39 x i8] }>
-
-@"type_info::<core::u64>::name" = private unnamed_addr constant [10 x i8] c"core::u64\00"
-@"type_info::<core::u64>" = private unnamed_addr constant <{ [16 x i8], i8*, [48 x i8] }> <{ [16 x i8] c"\A6\E7g \D1\8B\1Aq`\1F\1E\07\BB5@q", i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::u64>::name", i32 0, i32 0), [48 x i8] c"@\00\00\00\08\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" }>
-@global_type_table = constant [1 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::u64>"]
+@global_type_lookup_table = constant [15 x i64*] zeroinitializer
 

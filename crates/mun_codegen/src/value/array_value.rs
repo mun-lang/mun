@@ -85,6 +85,8 @@ macro_rules! impl_array(
                     Value::from_raw(value)
                 }
             }
+
+            impl<'ink, T> AddressableType<'ink, [T; $size]> for [T; $size] {}
         )+
     }
 );

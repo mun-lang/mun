@@ -2,18 +2,15 @@
 source: crates/mun_codegen/src/test.rs
 assertion_line: 1045
 expression: "\n    extern fn other() -> i32;\n\n    fn private_fn(a: i32) -> f32 {\n        private_fn(a)\n    }\n\n    pub fn main() -> f32 {\n        private_fn(other())\n    }\n    "
-
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
 %DispatchTable = type { i32 ()* }
-%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [3 x i8], %"mun_codegen::ir::types::TypeInfoData", [0 x i64] }>
-%"mun_codegen::ir::types::TypeInfoData" = type <{ [0 x i8], i8, [39 x i8] }>
 
 @dispatchTable = external global %DispatchTable
-@global_type_table = external global [2 x %"mun_codegen::ir::types::TypeInfo"*]
+@global_type_lookup_table = external global [3 x i64*]
 
 define float @private_fn(i32 %0) {
 body:
@@ -34,13 +31,7 @@ body:
 source_filename = "group_name"
 
 %DispatchTable = type { i32 ()* }
-%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [3 x i8], %"mun_codegen::ir::types::TypeInfoData", [0 x i64] }>
-%"mun_codegen::ir::types::TypeInfoData" = type <{ [0 x i8], i8, [39 x i8] }>
 
 @dispatchTable = global %DispatchTable zeroinitializer
-@"type_info::<core::i32>::name" = private unnamed_addr constant [10 x i8] c"core::i32\00"
-@"type_info::<core::i32>" = private unnamed_addr constant <{ [16 x i8], i8*, [48 x i8] }> <{ [16 x i8] c"\17yzt\19\D62\17\D25\95C\17\88[\FA", i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::i32>::name", i32 0, i32 0), [48 x i8] c" \00\00\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" }>
-@"type_info::<core::f32>::name" = private unnamed_addr constant [10 x i8] c"core::f32\00"
-@"type_info::<core::f32>" = private unnamed_addr constant <{ [16 x i8], i8*, [48 x i8] }> <{ [16 x i8] c"P\19b7\A8k\F2\81P\FB\83\F5P\B0\82!", i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::f32>::name", i32 0, i32 0), [48 x i8] c" \00\00\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" }>
-@global_type_table = constant [2 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::i32>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::f32>"]
+@global_type_lookup_table = constant [3 x i64*] zeroinitializer
 

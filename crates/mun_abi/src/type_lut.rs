@@ -1,4 +1,7 @@
 use crate::Guid;
+use itertools::izip;
+use std::ffi::CStr;
+use std::os::raw::c_char;
 use std::{ffi, fmt, slice};
 
 /// Represents a unique identifier for types. The runtime can use this to lookup the corresponding [`TypeInfo`].
@@ -30,37 +33,55 @@ pub struct TypeLut {
     pub(crate) type_ids: *const TypeId,
     /// Type information handles
     pub(crate) type_handles: *mut *const ffi::c_void,
+    /// Debug names
+    pub(crate) type_names: *const *const c_char,
     /// Number of types
     pub num_entries: u32,
 }
 
 impl TypeLut {
     /// Returns an iterator over pairs of type IDs and type handles.
-    pub fn iter(&self) -> impl Iterator<Item = (&TypeId, &*const ffi::c_void)> {
-        if self.num_entries == 0 {
-            (&[]).iter().zip((&[]).iter())
-        } else {
+    pub fn iter(&self) -> impl Iterator<Item = (&TypeId, &*const ffi::c_void, &str)> {
+        let (type_ids, type_ptrs, type_names) = if self.num_entries != 0 {
             let ptrs =
                 unsafe { slice::from_raw_parts_mut(self.type_handles, self.num_entries as usize) };
             let type_ids =
                 unsafe { slice::from_raw_parts(self.type_ids, self.num_entries as usize) };
+            let type_names =
+                unsafe { slice::from_raw_parts(self.type_names, self.num_entries as usize) };
 
-            type_ids.iter().zip(ptrs.iter())
-        }
+            (type_ids.iter(), ptrs.iter(), type_names.iter())
+        } else {
+            ((&[]).iter(), (&[]).iter(), (&[]).iter())
+        };
+
+        izip!(type_ids, type_ptrs, type_names).map(|(id, ptr, type_name)| {
+            (id, ptr, unsafe {
+                std::str::from_utf8_unchecked(CStr::from_ptr(*type_name).to_bytes())
+            })
+        })
     }
 
     /// Returns an iterator over pairs of type IDs and mutable type handles.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&TypeId, &mut *const ffi::c_void)> {
-        if self.num_entries == 0 {
-            (&[]).iter().zip((&mut []).iter_mut())
-        } else {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&TypeId, &mut *const ffi::c_void, &str)> {
+        let (type_ids, type_ptrs, type_names) = if self.num_entries != 0 {
             let ptrs =
                 unsafe { slice::from_raw_parts_mut(self.type_handles, self.num_entries as usize) };
             let type_ids =
                 unsafe { slice::from_raw_parts(self.type_ids, self.num_entries as usize) };
+            let type_names =
+                unsafe { slice::from_raw_parts(self.type_names, self.num_entries as usize) };
 
-            type_ids.iter().zip(ptrs.iter_mut())
-        }
+            (type_ids.iter(), ptrs.iter_mut(), type_names.iter())
+        } else {
+            ((&[]).iter(), (&mut []).iter_mut(), (&[]).iter())
+        };
+
+        izip!(type_ids, type_ptrs, type_names).map(|(id, ptr, type_name)| {
+            (id, ptr, unsafe {
+                std::str::from_utf8_unchecked(CStr::from_ptr(*type_name).to_bytes())
+            })
+        })
     }
 
     /// Returns mutable type handles.

@@ -52,36 +52,24 @@ impl Assembly {
 
     fn link_all_types<'a>(
         type_table: &mut TypeTable,
-        to_link: impl Iterator<Item = (&'a abi::TypeId, &'a mut *const c_void)>,
+        to_link: impl Iterator<Item = (&'a abi::TypeId, &'a mut *const c_void, &'a str)>,
     ) -> anyhow::Result<()> {
         let mut to_link: Vec<_> = to_link.collect();
 
-        let mut retry = true;
-        while retry {
-            retry = false;
-            let mut failed_to_link = Vec::new();
-
-            // Try to link outstanding entries
-            for (type_id, type_info_ptr) in to_link.into_iter() {
-                // Ensure that the function is in the runtime dispatch table
-                if let Some(type_info) = type_table.find_type_info_by_id(type_id) {
-                    *type_info_ptr = Arc::into_raw(type_info) as *const c_void;
-                    retry = true;
-                } else {
-                    failed_to_link.push((type_id, type_info_ptr));
-                }
+        // Try to link all LUT entries
+        let mut failed_to_link = false;
+        for (type_id, type_info_ptr, debug_name) in to_link.into_iter() {
+            // Ensure that the function is in the runtime dispatch table
+            if let Some(type_info) = type_table.find_type_info_by_id(type_id) {
+                *type_info_ptr = Arc::into_raw(type_info) as *const c_void;
+            } else {
+                dbg!(debug_name);
+                failed_to_link = true;
             }
-
-            // Move all failed entries, for (potentially) another try
-            to_link = failed_to_link;
         }
 
-        if !to_link.is_empty() {
-            for (type_id, _) in to_link {
-                error!("Failed to link: type `{}` is missing.", type_id);
-            }
-
-            return Err(anyhow!("Failed to link types due to missing dependencies."));
+        if failed_to_link {
+            return Err(anyhow!("Failed to link types due to missing type dependencies."));
         }
 
         Ok(())
@@ -163,7 +151,9 @@ impl Assembly {
         // Load all types
         while let Some(type_info) = types_to_load.pop_front() {
             match TypeInfo::try_from_abi(type_info, &type_table) {
-                Ok(type_info) => assert!(type_table.insert_type(Arc::new(type_info)).is_none()),
+                Ok(type_info) => {
+                    assert!(type_table.insert_type(Arc::new(type_info)).is_none())
+                },
                 Err(TryFromAbiError::UnknownTypeId(type_id)) => types_to_load.push_back(type_info),
             }
         }
@@ -173,7 +163,7 @@ impl Assembly {
             .flat_map(|asm| asm.info.type_lut.iter_mut())
             // Only take signatures into account that do *not* yet have a type handle assigned
             // by the compiler.
-            .filter(|(_, ptr)| ptr.is_null());
+            .filter(|(_, ptr, _)| ptr.is_null());
 
         Assembly::link_all_types(&mut type_table, types_to_link)?;
 
@@ -284,7 +274,7 @@ impl Assembly {
                 .iter_mut()
                 // Only take signatures into account that do *not* yet have a type handle assigned
                 // by the compiler.
-                .filter(|(_, ptr)| ptr.is_null());
+                .filter(|(_, ptr, _)| ptr.is_null());
 
             Assembly::link_all_types(&mut type_table, types_to_link)?;
 

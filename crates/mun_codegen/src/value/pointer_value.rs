@@ -2,7 +2,32 @@ use super::{
     AddressableType, AsBytesAndPtrs, BytesOrPtr, ConcreteValueType, HasConstValue, IrTypeContext,
     IrValueContext, PointerValueType, SizedValueType, Value,
 };
+use crate::value::ValueType;
 use inkwell::{types::PointerType, AddressSpace};
+
+impl<'ink> ConcreteValueType<'ink> for *const std::ffi::c_void {
+    type Value = inkwell::values::PointerValue<'ink>;
+}
+
+impl<'ink> SizedValueType<'ink> for *const std::ffi::c_void {
+    fn get_ir_type(
+        context: &IrTypeContext<'ink, '_>,
+    ) -> <<Self as ConcreteValueType<'ink>>::Value as ValueType<'ink>>::Type {
+        context
+            .context
+            .ptr_sized_int_type(context.target_data, None)
+            .ptr_type(AddressSpace::Generic)
+    }
+}
+
+impl<'ink> PointerValueType<'ink> for *const std::ffi::c_void {
+    fn get_ptr_type(
+        context: &IrTypeContext<'ink, '_>,
+        address_space: Option<AddressSpace>,
+    ) -> PointerType<'ink> {
+        Self::get_ir_type(context).ptr_type(address_space.unwrap_or(AddressSpace::Generic))
+    }
+}
 
 impl<'ink, T: PointerValueType<'ink>> ConcreteValueType<'ink> for *const T {
     type Value = inkwell::values::PointerValue<'ink>;

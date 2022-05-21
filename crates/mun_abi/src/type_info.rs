@@ -8,13 +8,13 @@ use std::{
     str,
     sync::Once,
 };
+use std::fmt::Debug;
 
 /// Represents the type declaration for a value type.
 ///
 /// TODO: add support for polymorphism, enumerations, type parameters, generic type definitions, and
 /// constructed generic types.
 #[repr(C)]
-#[derive(Debug)]
 pub struct TypeInfo {
     /// Type ID
     pub id: TypeId,
@@ -26,6 +26,18 @@ pub struct TypeInfo {
     pub(crate) alignment: u8,
     /// Type group
     pub data: TypeInfoData,
+}
+
+impl Debug for TypeInfo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TypeInfo")
+            .field("id", &self.id)
+            .field("name", &self.name())
+            .field("size_in_bits", &self.size_in_bits)
+            .field("alignment", &self.alignment)
+            .field("data", &self.data)
+            .finish()
+    }
 }
 
 /// Contains data specific to a group of types that illicit the same characteristics.

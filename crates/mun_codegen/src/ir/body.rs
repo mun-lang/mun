@@ -31,7 +31,7 @@ struct LoopInfo<'ink> {
 pub(crate) struct ExternalGlobals<'ink> {
     pub alloc_handle: Option<GlobalValue<'ink>>,
     pub dispatch_table: Option<GlobalValue<'ink>>,
-    pub type_table: Option<Global<'ink, [*const ir::TypeInfo<'ink>]>>,
+    pub type_table: Option<Global<'ink, [*const std::ffi::c_void]>>,
 }
 
 pub(crate) struct BodyIrGenerator<'db, 'ink, 't> {

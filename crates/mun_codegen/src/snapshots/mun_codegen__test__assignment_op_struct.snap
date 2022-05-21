@@ -2,21 +2,18 @@
 source: crates/mun_codegen/src/test.rs
 assertion_line: 1045
 expression: "\n    pub struct(value) Value(i32, i32);\n    pub struct(gc) Heap(f64, f64);\n\n    pub fn assign_value(a: Value, b: Value) -> Value {\n        a = b;\n        a\n    }\n\n    pub fn assign_heap(a: Heap, b: Heap) -> Heap {\n        a = b;\n        a\n    }\n    // TODO: Add errors\n    // a += b;\n    // a *= b;\n    // a -= b;\n    // a /= b;\n    // a %= b;\n    "
-
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
 %DispatchTable = type { i8** (i8*, i8*)* }
-%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [3 x i8], %"mun_codegen::ir::types::TypeInfoData", [0 x i64] }>
-%"mun_codegen::ir::types::TypeInfoData" = type <{ [0 x i8], i8, [39 x i8] }>
 %Value = type { i32, i32 }
 %Heap = type { double, double }
 
 @allocatorHandle = external global i8*
 @dispatchTable = external global %DispatchTable
-@global_type_table = external global [7 x %"mun_codegen::ir::types::TypeInfo"*]
+@global_type_lookup_table = external global [27 x i64*]
 
 define %Value @assign_value(%Value %0, %Value %1) {
 body:
@@ -33,8 +30,8 @@ body:
   %deref2 = load %Value, %Value* %mem_ptr1, align 4
   %assign_value = call %Value @assign_value(%Value %deref, %Value %deref2)
   %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
-  %Value_ptr = load %"mun_codegen::ir::types::TypeInfo"*, %"mun_codegen::ir::types::TypeInfo"** getelementptr inbounds ([7 x %"mun_codegen::ir::types::TypeInfo"*], [7 x %"mun_codegen::ir::types::TypeInfo"*]* @global_type_table, i64 0, i64 1), align 8
-  %type_info_ptr_to_i8_ptr = bitcast %"mun_codegen::ir::types::TypeInfo"* %Value_ptr to i8*
+  %Value_ptr = load i64*, i64** getelementptr inbounds ([27 x i64*], [27 x i64*]* @global_type_lookup_table, i64 0, i64 15), align 8
+  %type_info_ptr_to_i8_ptr = bitcast i64* %Value_ptr to i8*
   %allocator_handle = load i8*, i8** @allocatorHandle, align 8
   %new = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
   %Value_ptr_ptr = bitcast i8** %new to %Value**
@@ -53,34 +50,8 @@ body:
 source_filename = "group_name"
 
 %DispatchTable = type { i8** (i8*, i8*)* }
-%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [3 x i8], %"mun_codegen::ir::types::TypeInfoData", [0 x i64] }>
-%"mun_codegen::ir::types::TypeInfoData" = type <{ [0 x i8], i8, [39 x i8] }>
 
 @dispatchTable = global %DispatchTable zeroinitializer
-@"type_info::<core::i32>::name" = private unnamed_addr constant [10 x i8] c"core::i32\00"
-@"type_info::<core::i32>" = private unnamed_addr constant <{ [16 x i8], i8*, [48 x i8] }> <{ [16 x i8] c"\17yzt\19\D62\17\D25\95C\17\88[\FA", i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::i32>::name", i32 0, i32 0), [48 x i8] c" \00\00\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" }>
-@"type_info::<Value>::name" = private unnamed_addr constant [6 x i8] c"Value\00"
-@"struct_info::<Value>::field_names.0" = private unnamed_addr constant [2 x i8] c"0\00"
-@"struct_info::<Value>::field_names.1" = private unnamed_addr constant [2 x i8] c"1\00"
-@"struct_info::<Value>::field_names" = private unnamed_addr constant [2 x i8*] [i8* getelementptr inbounds ([2 x i8], [2 x i8]* @"struct_info::<Value>::field_names.0", i32 0, i32 0), i8* getelementptr inbounds ([2 x i8], [2 x i8]* @"struct_info::<Value>::field_names.1", i32 0, i32 0)]
-@"struct_info::<Value>::field_types" = private unnamed_addr constant [2 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::i32>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::i32>"]
-@"struct_info::<Value>::field_offsets" = private unnamed_addr constant [2 x i16] [i16 0, i16 4]
-@"type_info::<Value>" = private unnamed_addr constant <{ [16 x i8], i8*, [16 x i8], i8**, [0 x i8], %"mun_codegen::ir::types::TypeInfo"**, [0 x i8], i16*, [8 x i8] }> <{ [16 x i8] c"(3\1C%q\83\13+L\A6Q\F7\1DX\A6\9B", i8* getelementptr inbounds ([6 x i8], [6 x i8]* @"type_info::<Value>::name", i32 0, i32 0), [16 x i8] c"@\00\00\00\04\00\00\00\01\00\00\00\00\00\00\00", i8** getelementptr inbounds ([2 x i8*], [2 x i8*]* @"struct_info::<Value>::field_names", i32 0, i32 0), [0 x i8] zeroinitializer, %"mun_codegen::ir::types::TypeInfo"** getelementptr inbounds ([2 x %"mun_codegen::ir::types::TypeInfo"*], [2 x %"mun_codegen::ir::types::TypeInfo"*]* @"struct_info::<Value>::field_types", i32 0, i32 0), [0 x i8] zeroinitializer, i16* getelementptr inbounds ([2 x i16], [2 x i16]* @"struct_info::<Value>::field_offsets", i32 0, i32 0), [8 x i8] c"\02\00\01\00\00\00\00\00" }>
-@"type_info::<Heap>::name" = private unnamed_addr constant [5 x i8] c"Heap\00"
-@"struct_info::<Heap>::field_names.0" = private unnamed_addr constant [2 x i8] c"0\00"
-@"struct_info::<Heap>::field_names.1" = private unnamed_addr constant [2 x i8] c"1\00"
-@"struct_info::<Heap>::field_names" = private unnamed_addr constant [2 x i8*] [i8* getelementptr inbounds ([2 x i8], [2 x i8]* @"struct_info::<Heap>::field_names.0", i32 0, i32 0), i8* getelementptr inbounds ([2 x i8], [2 x i8]* @"struct_info::<Heap>::field_names.1", i32 0, i32 0)]
-@"type_info::<core::f64>::name" = private unnamed_addr constant [10 x i8] c"core::f64\00"
-@"type_info::<core::f64>" = private unnamed_addr constant <{ [16 x i8], i8*, [48 x i8] }> <{ [16 x i8] c"`\DBF\9C?YJ%G\AD4\9F\D5\92%A", i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::f64>::name", i32 0, i32 0), [48 x i8] c"@\00\00\00\08\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" }>
-@"struct_info::<Heap>::field_types" = private unnamed_addr constant [2 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::f64>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::f64>"]
-@"struct_info::<Heap>::field_offsets" = private unnamed_addr constant [2 x i16] [i16 0, i16 8]
-@"type_info::<Heap>" = private unnamed_addr constant <{ [16 x i8], i8*, [16 x i8], i8**, [0 x i8], %"mun_codegen::ir::types::TypeInfo"**, [0 x i8], i16*, [8 x i8] }> <{ [16 x i8] c"1\1CC\F80{\17\AFq\94\89\FB4\AC\A8\F3", i8* getelementptr inbounds ([5 x i8], [5 x i8]* @"type_info::<Heap>::name", i32 0, i32 0), [16 x i8] c"\80\00\00\00\08\00\00\00\01\00\00\00\00\00\00\00", i8** getelementptr inbounds ([2 x i8*], [2 x i8*]* @"struct_info::<Heap>::field_names", i32 0, i32 0), [0 x i8] zeroinitializer, %"mun_codegen::ir::types::TypeInfo"** getelementptr inbounds ([2 x %"mun_codegen::ir::types::TypeInfo"*], [2 x %"mun_codegen::ir::types::TypeInfo"*]* @"struct_info::<Heap>::field_types", i32 0, i32 0), [0 x i8] zeroinitializer, i16* getelementptr inbounds ([2 x i16], [2 x i16]* @"struct_info::<Heap>::field_offsets", i32 0, i32 0), [8 x i8] c"\02\00\00\00\00\00\00\00" }>
-@"type_info::<*const TypeInfo>::name" = private unnamed_addr constant [16 x i8] c"*const TypeInfo\00"
-@"type_info::<*const TypeInfo>" = private unnamed_addr constant <{ [16 x i8], i8*, [48 x i8] }> <{ [16 x i8] c"=\A1-\1F\C2\A7\88`d\90\F4\B5\BEE}x", i8* getelementptr inbounds ([16 x i8], [16 x i8]* @"type_info::<*const TypeInfo>::name", i32 0, i32 0), [48 x i8] c"@\00\00\00\08\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" }>
-@"type_info::<*const *mut core::void>::name" = private unnamed_addr constant [23 x i8] c"*const *mut core::void\00"
-@"type_info::<*const *mut core::void>" = private unnamed_addr constant <{ [16 x i8], i8*, [48 x i8] }> <{ [16 x i8] c"\C5fO\BD\84\DF\06\BFd+\B1\9Abv\CE\00", i8* getelementptr inbounds ([23 x i8], [23 x i8]* @"type_info::<*const *mut core::void>::name", i32 0, i32 0), [48 x i8] c"@\00\00\00\08\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" }>
-@"type_info::<*mut core::void>::name" = private unnamed_addr constant [16 x i8] c"*mut core::void\00"
-@"type_info::<*mut core::void>" = private unnamed_addr constant <{ [16 x i8], i8*, [48 x i8] }> <{ [16 x i8] c"\F0Y\22\FC\95\9E\7F\CE\08T\B1\A2\CD\A7\FAz", i8* getelementptr inbounds ([16 x i8], [16 x i8]* @"type_info::<*mut core::void>::name", i32 0, i32 0), [48 x i8] c"@\00\00\00\08\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" }>
-@global_type_table = constant [7 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::i32>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<Value>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<Heap>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<*const TypeInfo>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::f64>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<*const *mut core::void>", %"mun_codegen::ir::types::TypeInfo"* @"type_info::<*mut core::void>"]
+@global_type_lookup_table = constant [27 x i64*] zeroinitializer
 @allocatorHandle = unnamed_addr global i8* null
 

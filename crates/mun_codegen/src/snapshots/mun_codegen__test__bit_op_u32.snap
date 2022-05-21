@@ -2,16 +2,12 @@
 source: crates/mun_codegen/src/test.rs
 assertion_line: 1045
 expression: "\n    pub fn not(a: u32) -> u32 { !a }\n    pub fn bitand(a: u32, b: u32) -> u32 { a & b }\n    pub fn bitor(a: u32, b: u32) -> u32 { a | b }\n    pub fn bitxor(a: u32, b: u32) -> u32 { a ^ b }\n                        "
-
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [3 x i8], %"mun_codegen::ir::types::TypeInfoData", [0 x i64] }>
-%"mun_codegen::ir::types::TypeInfoData" = type <{ [0 x i8], i8, [39 x i8] }>
-
-@global_type_table = external global [1 x %"mun_codegen::ir::types::TypeInfo"*]
+@global_type_lookup_table = external global [11 x i64*]
 
 define i32 @not(i32 %0) {
 body:
@@ -41,10 +37,5 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%"mun_codegen::ir::types::TypeInfo" = type <{ [0 x i64], [16 x i8], [0 x i64], i8*, [0 x i64], i32, [0 x i64], i8, [3 x i8], %"mun_codegen::ir::types::TypeInfoData", [0 x i64] }>
-%"mun_codegen::ir::types::TypeInfoData" = type <{ [0 x i8], i8, [39 x i8] }>
-
-@"type_info::<core::u32>::name" = private unnamed_addr constant [10 x i8] c"core::u32\00"
-@"type_info::<core::u32>" = private unnamed_addr constant <{ [16 x i8], i8*, [48 x i8] }> <{ [16 x i8] c"daz5d\A6\BE\88\81=&Y\A1+\C6\1D", i8* getelementptr inbounds ([10 x i8], [10 x i8]* @"type_info::<core::u32>::name", i32 0, i32 0), [48 x i8] c" \00\00\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" }>
-@global_type_table = constant [1 x %"mun_codegen::ir::types::TypeInfo"*] [%"mun_codegen::ir::types::TypeInfo"* @"type_info::<core::u32>"]
+@global_type_lookup_table = constant [11 x i64*] zeroinitializer
 

@@ -116,7 +116,7 @@ impl TypeInfo {
             id: type_info.id.clone(),
             name: type_info.name().to_owned(),
             layout: Layout::from_size_align(type_info.size_in_bytes(), type_info.alignment())
-                .expect("TypeInfo contains invalid size and alignment."),
+                .expect(&format!("TypeInfo contains invalid size and alignment (size: {}, align: {})", type_info.size_in_bytes(), type_info.alignment())),
             data,
         })
     }
@@ -282,7 +282,7 @@ impl<T: abi::HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *const T {
         };
 
         map.call_once::<T, _>(|| {
-            let name = format!("*mut {}", <T as abi::HasStaticTypeInfoName>::type_name().to_str().expect("static type name is not a valid UTF-8 string"));
+            let name = format!("*const {}", <T as abi::HasStaticTypeInfoName>::type_name().to_str().expect("static type name is not a valid UTF-8 string"));
             let size_in_bits = (std::mem::size_of::<*const T>()).try_into().expect("size of T is larger than the maximum allowed ABI size. Please file a bug.");
             let alignment = (std::mem::align_of::<*const T>()).try_into().expect("alignment of T is larger than the maximum allowed ABI size. Please file a bug.");
             Arc::new(TypeInfo {
