@@ -2,6 +2,7 @@
 
 use std::ffi::CString;
 use std::hash::Hash;
+use std::ops::{ControlFlow};
 use std::os::raw::c_char;
 use std::ptr;
 

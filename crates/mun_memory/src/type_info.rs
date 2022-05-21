@@ -1,4 +1,4 @@
-use crate::{type_table::TypeTable, TypeFields};
+use crate::{TryFromAbiError, type_table::TypeTable, TypeFields};
 use abi::{Guid, StructMemoryKind};
 use itertools::izip;
 use std::{
@@ -73,6 +73,17 @@ impl TypeFields for Arc<TypeInfo> {
 }
 
 impl TypeInfo {
+    /// Returns true if this instance represents the TypeInfo of the given type.
+    ///
+    /// ```rust
+    /// # use mun_memory::HasStaticTypeInfo;
+    /// assert!(i64::type_info().equals::<i64>());
+    /// assert!(!i64::type_info().equals::<f64>())
+    /// ```
+    pub fn equals<T: HasStaticTypeInfo>(&self) -> bool {
+        T::type_info().as_ref() == self
+    }
+
     /// Returns whether this is a fundamental type.
     pub fn is_primitive(&self) -> bool {
         self.data.is_primitive()
@@ -100,7 +111,7 @@ impl TypeInfo {
         }
     }
 
-    pub fn try_from_abi(type_info: &abi::TypeInfo, type_table: &TypeTable) -> Option<TypeInfo> {
+    pub fn try_from_abi(type_info: &abi::TypeInfo, type_table: &TypeTable) -> Result<TypeInfo, TryFromAbiError> {
         TypeInfoData::try_from_abi(&type_info.data, type_table).map(|data| TypeInfo {
             id: type_info.id.clone(),
             name: type_info.name().to_owned(),
@@ -125,9 +136,9 @@ impl TypeInfoData {
     pub fn try_from_abi(
         type_info_data: &abi::TypeInfoData,
         type_table: &TypeTable,
-    ) -> Option<TypeInfoData> {
+    ) -> Result<TypeInfoData, TryFromAbiError> {
         match type_info_data {
-            abi::TypeInfoData::Primitive => Some(TypeInfoData::Primitive),
+            abi::TypeInfoData::Primitive => Ok(TypeInfoData::Primitive),
             abi::TypeInfoData::Struct(s) => {
                 StructInfo::try_from_abi(s, type_table).map(TypeInfoData::Struct)
             }
@@ -146,8 +157,8 @@ impl StructInfo {
     pub fn try_from_abi(
         struct_info: &abi::StructInfo,
         type_table: &TypeTable,
-    ) -> Option<StructInfo> {
-        let fields: Option<Vec<FieldInfo>> = izip!(
+    ) -> Result<StructInfo, TryFromAbiError> {
+        let fields: Result<Vec<FieldInfo>, TryFromAbiError> = izip!(
             struct_info.field_names(),
             struct_info.field_types(),
             struct_info.field_offsets()
@@ -155,6 +166,7 @@ impl StructInfo {
         .map(|(name, type_id, offset)| {
             type_table
                 .find_type_info_by_id(type_id)
+                .ok_or_else(|| TryFromAbiError::UnknownTypeId(type_id.clone()))
                 .map(|type_info| FieldInfo {
                     name: name.to_owned(),
                     type_info,

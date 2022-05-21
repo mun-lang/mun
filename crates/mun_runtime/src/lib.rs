@@ -20,18 +20,21 @@ use log::{debug, error, info};
 use memory::{
     gc::{self, GcRuntime},
     type_table::TypeTable,
-    TypeInfo,
 };
 use mun_project::LOCKFILE_NAME;
 use notify::{RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
 use std::{
     collections::{HashMap, VecDeque},
-    ffi, io, mem,
+    ffi,
+    io,
+    mem,
     path::{Path, PathBuf},
     sync::{
         mpsc::{channel, Receiver},
         Arc,
     },
+    ffi::c_void,
+    fmt::{Debug, Display, Formatter}
 };
 
 pub use crate::{
@@ -41,13 +44,15 @@ pub use crate::{
     reflection::{ArgumentReflection, ReturnTypeReflection},
     function_info::{IntoFunctionDefinition, FunctionDefinition, FunctionSignature, FunctionPrototype}
 };
-use std::ffi::c_void;
-use std::fmt::{Debug, Display, Formatter};
+// Re-export some useful types so crates dont have to depend on mun_memory as well.
+pub use memory::{HasStaticTypeInfo, TypeInfo, StructInfo, FieldInfo, TypeFields};
 
 /// Options for the construction of a [`Runtime`].
 pub struct RuntimeOptions {
     /// Path to the entry point library
     pub library_path: PathBuf,
+    /// Custom type table used for the runtime
+    pub type_table: TypeTable,
     /// Custom user injected functions
     pub user_functions: Vec<FunctionDefinition>,
 }
@@ -106,6 +111,7 @@ impl RuntimeBuilder {
         Self {
             options: RuntimeOptions {
                 library_path: library_path.into(),
+                type_table: Default::default(),
                 user_functions: Default::default(),
             },
         }
@@ -161,7 +167,7 @@ impl Runtime {
         let (tx, rx) = channel();
 
         let mut dispatch_table = DispatchTable::default();
-        let type_table = TypeTable::default();
+        let type_table = options.type_table;
 
         // Add internal functions
         options.user_functions.push(IntoFunctionDefinition::into(

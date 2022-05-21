@@ -1,4 +1,4 @@
-use memory::{type_table::TypeTable, TypeInfo};
+use memory::{type_table::TypeTable, TryFromAbiError, TypeInfo};
 use std::{ffi::c_void, sync::Arc};
 
 #[derive(Clone)]
@@ -12,10 +12,13 @@ pub struct FunctionDefinition {
 unsafe impl Send for FunctionDefinition {}
 
 impl FunctionDefinition {
-    pub fn try_from_abi(fn_def: &abi::FunctionDefinition, type_table: &TypeTable) -> Option<Self> {
+    pub fn try_from_abi(
+        fn_def: &abi::FunctionDefinition,
+        type_table: &TypeTable,
+    ) -> Result<Self, TryFromAbiError> {
         let prototype = FunctionPrototype::try_from_abi(&fn_def.prototype, type_table)?;
 
-        Some(Self {
+        Ok(Self {
             prototype,
             fn_ptr: fn_def.fn_ptr,
         })
@@ -34,10 +37,10 @@ impl FunctionPrototype {
     pub fn try_from_abi(
         fn_prototype: &abi::FunctionPrototype,
         type_table: &TypeTable,
-    ) -> Option<Self> {
+    ) -> Result<Self, TryFromAbiError> {
         let signature = FunctionSignature::try_from_abi(&fn_prototype.signature, type_table)?;
 
-        Some(Self {
+        Ok(Self {
             name: fn_prototype.name().to_owned(),
             signature,
         })
@@ -53,16 +56,23 @@ pub struct FunctionSignature {
 }
 
 impl FunctionSignature {
-    pub fn try_from_abi(fn_sig: &abi::FunctionSignature, type_table: &TypeTable) -> Option<Self> {
+    pub fn try_from_abi(
+        fn_sig: &abi::FunctionSignature,
+        type_table: &TypeTable,
+    ) -> Result<Self, TryFromAbiError> {
         let arg_types: Vec<Arc<TypeInfo>> = fn_sig
             .arg_types()
             .iter()
-            .map(|type_id| type_table.find_type_info_by_id(type_id))
-            .collect::<Option<_>>()?;
+            .map(|type_id| {
+                type_table
+                    .find_type_info_by_id(type_id)
+                    .ok_or_else(|| TryFromAbiError::UnknownTypeId(type_id.clone()))
+            })
+            .collect::<Result<_, _>>()?;
 
-        let return_type = type_table.find_type_info_by_id(&fn_sig.return_type)?;
+        let return_type = type_table.find_type_info_by_id(&fn_sig.return_type).ok_or_else(|| TryFromAbiError::UnknownTypeId(fn_sig.return_type.clone()))?;
 
-        Some(Self {
+        Ok(Self {
             arg_types,
             return_type,
         })

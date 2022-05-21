@@ -18,11 +18,12 @@ use std::{
 
 use crate::{error::ErrorHandle, hub::HUB};
 use anyhow::anyhow;
-use runtime::Runtime;
+use runtime::{FunctionDefinition, Runtime};
 
 pub(crate) type Token = usize;
 
 pub use memory::gc::GcPtr;
+use memory::type_table::TypeTable;
 
 /// A type to uniquely index typed collections.
 pub trait TypedHandle {
@@ -114,22 +115,21 @@ pub unsafe extern "C" fn mun_runtime_create(
         }
     };
 
+    let mut type_table = TypeTable::default();
     let user_functions =
-        std::slice::from_raw_parts(options.functions, options.num_functions as usize)
+        match std::slice::from_raw_parts(options.functions, options.num_functions as usize)
             .iter()
-            .map(|def| {
-                abi::FunctionDefinitionStorage::new_function(
-                    def.prototype.name(),
-                    def.prototype.signature.arg_types(),
-                    def.prototype.signature.return_type(),
-                    def.fn_ptr,
-                )
-            })
-            .collect();
+            .map(|def| FunctionDefinition::try_from_abi(def, &type_table))
+            .collect::<Result<_, _>>()
+        {
+            Err(e) => return HUB.errors.register(e.into()),
+            Ok(user_functions) => user_functions,
+        };
 
     let runtime_options = runtime::RuntimeOptions {
         library_path: library_path.into(),
         user_functions,
+        type_table,
     };
 
     let runtime = match Runtime::new(runtime_options) {

@@ -84,13 +84,13 @@ fn test_abi_compatibility() {
             ))
     }
 
-    fn test_function_args(fn_def: &abi::FunctionDefinition, args: &[(&str, abi::Guid)]) {
+    fn test_function_args(fn_def: &abi::FunctionDefinition, args: &[(&str, abi::TypeId)]) {
         assert_eq!(
             usize::from(fn_def.prototype.signature.num_arg_types),
             args.len()
         );
 
-        for (idx, (arg_name, arg_guid)) in args.iter().enumerate() {
+        for (idx, (_, arg_guid)) in args.iter().enumerate() {
             let fn_arg_type = fn_def
                 .prototype
                 .signature
@@ -101,8 +101,7 @@ fn test_abi_compatibility() {
                     fn_def.prototype.name()
                 ));
 
-            assert_eq!(fn_arg_type.guid, *arg_guid);
-            assert_eq!(fn_arg_type.name(), *arg_name);
+            assert_eq!(fn_arg_type.guid, arg_guid.guid)
         }
     }
 
@@ -120,8 +119,8 @@ fn test_abi_compatibility() {
             "Function '{}' should have a return type.",
             fn_def.prototype.name()
         ));
-        assert_eq!(fn_return_type.guid, R::type_id());
-        assert_eq!(fn_return_type.name(), R::type_name());
+        assert_eq!(fn_return_type.guid, R::type_id().guid);
+        // assert_eq!(fn_return_type.name(), R::type_name());
     }
 
     fn test_struct_info<T: Sized, F: Sized + ReturnTypeReflection>(
@@ -153,8 +152,7 @@ fn test_abi_compatibility() {
             assert_eq!(lhs, *rhs);
         }
         for field_type in struct_info.field_types().iter() {
-            assert_eq!(field_type.guid, F::type_id());
-            assert_eq!(field_type.name(), F::type_name());
+            assert_eq!(field_type.guid, F::type_id().guid);
         }
 
         let mut offset = 0;

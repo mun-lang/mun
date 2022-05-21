@@ -1,7 +1,6 @@
 use crate::{error::*, gc::*, *};
 use compiler::{Config, DisplayColor, Driver, PathOrInline, RelativePathBuf};
 use memory::gc::{GcPtr, HasIndirectionPtr, RawGcPtr};
-use runtime::UnsafeTypeInfo;
 use std::{
     ffi::CString,
     io::stderr,

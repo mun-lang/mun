@@ -5,7 +5,7 @@ use log::error;
 use memory::{
     mapping::{Mapping, MemoryMapper},
     type_table::TypeTable,
-    TypeInfo,
+    TryFromAbiError, TypeInfo,
 };
 use std::{
     collections::{HashMap, VecDeque},
@@ -162,10 +162,9 @@ impl Assembly {
 
         // Load all types
         while let Some(type_info) = types_to_load.pop_front() {
-            if let Some(type_info) = TypeInfo::try_from_abi(type_info, &type_table) {
-                assert!(type_table.insert_type(Arc::new(type_info)).is_none());
-            } else {
-                types_to_load.push_back(type_info);
+            match TypeInfo::try_from_abi(type_info, &type_table) {
+                Ok(type_info) => assert!(type_table.insert_type(Arc::new(type_info)).is_none()),
+                Err(TryFromAbiError::UnknownTypeId(type_id)) => types_to_load.push_back(type_info),
             }
         }
 
@@ -267,13 +266,15 @@ impl Assembly {
 
             // Load all types, retrying types that depend on other unloaded types within the module
             while let Some(type_info) = types_to_load.pop_front() {
-                if let Some(type_info) = TypeInfo::try_from_abi(type_info, &type_table) {
-                    let type_info = Arc::new(type_info);
-                    new_types.push(type_info.clone());
-
-                    assert!(type_table.insert_type(type_info).is_none());
-                } else {
-                    types_to_load.push_back(type_info);
+                match TypeInfo::try_from_abi(type_info, &type_table) {
+                    Ok(type_info) => {
+                        let type_info = Arc::new(type_info);
+                        new_types.push(type_info.clone());
+                        assert!(type_table.insert_type(type_info).is_none());
+                    },
+                    Err(TryFromAbiError::UnknownTypeId(_)) => {
+                        types_to_load.push_back(type_info);
+                    }
                 }
             }
 
