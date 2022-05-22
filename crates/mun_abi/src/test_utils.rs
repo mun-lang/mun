@@ -38,12 +38,14 @@ pub(crate) fn fake_assembly_info(
 pub(crate) fn fake_type_lut(
     type_ids: &[TypeId],
     type_handles: &mut [*const ffi::c_void],
+    type_names: &[*const c_char],
 ) -> TypeLut {
     assert_eq!(type_ids.len(), type_handles.len());
 
     TypeLut {
         type_ids: type_ids.as_ptr(),
         type_handles: type_handles.as_mut_ptr(),
+        type_names: type_names.as_ptr(),
         num_entries: type_ids.len() as u32,
     }
 }

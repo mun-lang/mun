@@ -2,7 +2,7 @@ use crate::Guid;
 use itertools::izip;
 use std::ffi::CStr;
 use std::os::raw::c_char;
-use std::{ffi, fmt, slice};
+use std::{ffi, fmt, slice, str};
 
 /// Represents a unique identifier for types. The runtime can use this to lookup the corresponding [`TypeInfo`].
 #[repr(C)]
@@ -146,18 +146,32 @@ impl TypeLut {
             None
         }
     }
+
+    /// Returns type names.
+    pub fn type_names(&self) -> impl Iterator<Item = &str> {
+        let type_names = if self.num_entries == 0 {
+            &[]
+        } else {
+            unsafe { slice::from_raw_parts(self.type_names, self.num_entries as usize) }
+        };
+
+        type_names
+            .iter()
+            .map(|n| unsafe { str::from_utf8_unchecked(CStr::from_ptr(*n).to_bytes()) })
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::test_utils::{fake_type_lut, FAKE_TYPE_ID};
-    use std::ptr;
+    use crate::test_utils::{fake_type_lut, FAKE_TYPE_ID, FAKE_TYPE_NAME};
+    use std::{ffi::CString, ptr};
 
     #[test]
     fn test_type_lut_iter_mut_none() {
         let type_ids = &[];
         let type_ptrs = &mut [];
-        let mut type_lut = fake_type_lut(type_ids, type_ptrs);
+        let type_names = &[];
+        let mut type_lut = fake_type_lut(type_ids, type_ptrs, type_names);
 
         let iter = type_ids.iter().zip(type_ptrs.iter_mut());
         assert_eq!(type_lut.iter_mut().count(), iter.count());
@@ -165,9 +179,12 @@ mod tests {
 
     #[test]
     fn test_type_lut_iter_mut_some() {
+        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
+
         let type_ids = &[FAKE_TYPE_ID];
         let type_ptrs = &mut [ptr::null()];
-        let mut type_lut = fake_type_lut(type_ids, type_ptrs);
+        let type_names = &[type_name.as_ptr()];
+        let mut type_lut = fake_type_lut(type_ids, type_ptrs, type_names);
 
         let iter = type_ids.iter().zip(type_ptrs.iter_mut());
         assert_eq!(type_lut.iter_mut().count(), iter.len());
@@ -182,16 +199,20 @@ mod tests {
     fn test_type_lut_ptrs_mut_none() {
         let type_ids = &[];
         let type_ptrs = &mut [];
-        let mut type_lut = fake_type_lut(type_ids, type_ptrs);
+        let type_names = &[];
+        let mut type_lut = fake_type_lut(type_ids, type_ptrs, type_names);
 
         assert_eq!(type_lut.type_handles_mut().len(), 0);
     }
 
     #[test]
     fn test_type_lut_ptrs_mut_some() {
+        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
+
         let type_ids = &[FAKE_TYPE_ID];
         let type_ptrs = &mut [ptr::null()];
-        let mut type_lut = fake_type_lut(type_ids, type_ptrs);
+        let type_names = &[type_name.as_ptr()];
+        let mut type_lut = fake_type_lut(type_ids, type_ptrs, type_names);
 
         let result = type_lut.type_handles_mut();
         assert_eq!(result.len(), type_ptrs.len());
@@ -204,16 +225,20 @@ mod tests {
     fn test_type_lut_type_ids_none() {
         let type_ids = &[];
         let type_ptrs = &mut [];
-        let type_lut = fake_type_lut(type_ids, type_ptrs);
+        let type_names = &[];
+        let type_lut = fake_type_lut(type_ids, type_ptrs, type_names);
 
         assert_eq!(type_lut.type_ids().len(), 0);
     }
 
     #[test]
     fn test_type_lut_type_ids_some() {
+        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
+
         let type_ids = &[FAKE_TYPE_ID];
         let type_ptrs = &mut [ptr::null()];
-        let type_lut = fake_type_lut(type_ids, type_ptrs);
+        let type_names = &[type_name.as_ptr()];
+        let type_lut = fake_type_lut(type_ids, type_ptrs, type_names);
 
         let result = type_lut.type_ids();
         assert_eq!(result.len(), type_ids.len());
@@ -224,10 +249,13 @@ mod tests {
 
     #[test]
     fn test_type_lut_get_ptr_unchecked() {
+        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
+
         let type_ids = &[FAKE_TYPE_ID];
         let type_ptrs = &mut [ptr::null()];
+        let type_names = &[type_name.as_ptr()];
 
-        let type_lut = fake_type_lut(type_ids, type_ptrs);
+        let type_lut = fake_type_lut(type_ids, type_ptrs, type_names);
         assert_eq!(
             unsafe { type_lut.get_type_handle_unchecked(0) },
             type_ptrs[0]
@@ -236,28 +264,37 @@ mod tests {
 
     #[test]
     fn test_type_lut_get_ptr_none() {
+        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
+
         let prototype = &[FAKE_TYPE_ID];
         let type_ptrs = &mut [ptr::null()];
+        let type_names = &[type_name.as_ptr()];
 
-        let type_lut = fake_type_lut(prototype, type_ptrs);
+        let type_lut = fake_type_lut(prototype, type_ptrs, type_names);
         assert_eq!(type_lut.get_type_handle(1), None);
     }
 
     #[test]
     fn test_type_lut_get_ptr_some() {
+        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
+
         let type_ids = &[FAKE_TYPE_ID];
         let type_ptrs = &mut [ptr::null()];
+        let type_names = &[type_name.as_ptr()];
 
-        let type_lut = fake_type_lut(type_ids, type_ptrs);
+        let type_lut = fake_type_lut(type_ids, type_ptrs, type_names);
         assert_eq!(type_lut.get_type_handle(0), Some(type_ptrs[0]));
     }
 
     #[test]
     fn test_type_lut_get_ptr_unchecked_mut() {
+        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
+
         let type_ids = &[FAKE_TYPE_ID];
         let type_ptrs = &mut [ptr::null()];
+        let type_names = &[type_name.as_ptr()];
 
-        let mut type_lut = fake_type_lut(type_ids, type_ptrs);
+        let mut type_lut = fake_type_lut(type_ids, type_ptrs, type_names);
         assert_eq!(
             unsafe { type_lut.get_type_handle_unchecked_mut(0) },
             &mut type_ptrs[0]
@@ -266,19 +303,49 @@ mod tests {
 
     #[test]
     fn test_type_lut_get_ptr_mut_none() {
+        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
+
         let type_ids = &[FAKE_TYPE_ID];
         let type_ptrs = &mut [ptr::null()];
+        let type_names = &[type_name.as_ptr()];
 
-        let mut type_lut = fake_type_lut(type_ids, type_ptrs);
+        let mut type_lut = fake_type_lut(type_ids, type_ptrs, type_names);
         assert_eq!(type_lut.get_type_handle_mut(1), None);
     }
 
     #[test]
     fn test_type_lut_get_ptr_mut_some() {
+        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
+
         let type_ids = &[FAKE_TYPE_ID];
         let type_ptrs = &mut [ptr::null()];
+        let type_names = &[type_name.as_ptr()];
 
-        let mut type_lut = fake_type_lut(type_ids, type_ptrs);
+        let mut type_lut = fake_type_lut(type_ids, type_ptrs, type_names);
         assert_eq!(type_lut.get_type_handle_mut(0), Some(&mut type_ptrs[0]));
+    }
+
+    #[test]
+    fn test_type_lut_type_names_none() {
+        let type_ids = &[];
+        let type_ptrs = &mut [];
+        let type_names = &[];
+        let type_lut = fake_type_lut(type_ids, type_ptrs, type_names);
+
+        assert_eq!(type_lut.type_names().count(), 0);
+    }
+
+    #[test]
+    fn test_type_lut_type_names_some() {
+        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
+
+        let type_ids = &[FAKE_TYPE_ID];
+        let type_ptrs = &mut [ptr::null()];
+        let type_names = &[type_name.as_ptr()];
+        let type_lut = fake_type_lut(type_ids, type_ptrs, type_names);
+
+        for (lhs, rhs) in type_lut.type_names().zip([FAKE_TYPE_NAME].iter()) {
+            assert_eq!(lhs, *rhs)
+        }
     }
 }

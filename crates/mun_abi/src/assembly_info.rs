@@ -48,7 +48,7 @@ mod tests {
         let module = fake_module_info(&module_path, &[], &[]);
 
         let dispatch_table = fake_dispatch_table(&[], &mut []);
-        let type_lut = fake_type_lut(&[], &mut []);
+        let type_lut = fake_type_lut(&[], &mut [], &[]);
 
         let dependency = CString::new(FAKE_DEPENDENCY).expect("Invalid fake dependency.");
         let dependencies = &[dependency.as_ptr()];
