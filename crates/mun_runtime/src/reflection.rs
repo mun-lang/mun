@@ -32,8 +32,10 @@ pub trait ReturnTypeReflection: Sized {
 
 /// A type to emulate dynamic typing across compilation units for statically typed values.
 pub trait ArgumentReflection: Sized {
+    /// Retrieves the argument's type information.
     fn type_info(&self, runtime: &Runtime) -> Arc<TypeInfo>;
 
+    /// Retrieves the argument's type ID.
     fn type_id(&self, runtime: &Runtime) -> abi::TypeId {
         self.type_info(runtime).id.clone()
     }
@@ -43,7 +45,7 @@ macro_rules! impl_primitive_type {
     ($($ty:ty),+) => {
         $(
             impl ArgumentReflection for $ty {
-                fn type_info(&self, runtime: &Runtime) -> Arc<TypeInfo> {
+                fn type_info(&self, _runtime: &Runtime) -> Arc<TypeInfo> {
                     <Self as HasStaticTypeInfo>::type_info().clone()
                 }
             }
@@ -90,7 +92,6 @@ macro_rules! impl_primitive_type {
                 fn marshal_to_ptr(
                     value: Self,
                     mut ptr: std::ptr::NonNull<Self::MunType>,
-                    runtime: &Runtime,
                     _type_info: &Arc<TypeInfo>,
                 ) {
                     unsafe { *ptr.as_mut() = value };

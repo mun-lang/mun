@@ -67,7 +67,7 @@ impl<'s> StructRef<'s> {
         // SAFETY: self.raw's memory pointer is never null
         let ptr = self.raw.get_ptr();
 
-        unsafe { NonNull::new_unchecked(ptr.add(offset).cast::<T>() as *mut T) }
+        NonNull::new_unchecked(ptr.add(offset).cast::<T>() as *mut T)
     }
 
     /// Retrieves the value of the field corresponding to the specified `field_name`.
@@ -140,7 +140,7 @@ impl<'s> StructRef<'s> {
         let field_ptr =
             unsafe { self.get_field_ptr_unchecked::<T::MunType>(usize::from(field_info.offset)) };
         let old = Marshal::marshal_from_ptr(field_ptr, self.runtime, &field_info.type_info);
-        Marshal::marshal_to_ptr(value, field_ptr, self.runtime, &field_info.type_info);
+        Marshal::marshal_to_ptr(value, field_ptr, &field_info.type_info);
         Ok(old)
     }
 
@@ -175,7 +175,7 @@ impl<'s> StructRef<'s> {
         // SAFETY: The offset in the ABI is always valid.
         let field_ptr =
             unsafe { self.get_field_ptr_unchecked::<T::MunType>(usize::from(field_info.offset)) };
-        Marshal::marshal_to_ptr(value, field_ptr, self.runtime, &field_info.type_info);
+        Marshal::marshal_to_ptr(value, field_ptr, &field_info.type_info);
         Ok(())
     }
 }
@@ -232,12 +232,7 @@ impl<'s> Marshal<'s> for StructRef<'s> {
         StructRef::new(RawStruct(gc_handle), runtime)
     }
 
-    fn marshal_to_ptr(
-        value: Self,
-        mut ptr: NonNull<Self::MunType>,
-        runtime: &Runtime,
-        type_info: &Arc<TypeInfo>,
-    ) {
+    fn marshal_to_ptr(value: Self, mut ptr: NonNull<Self::MunType>, type_info: &Arc<TypeInfo>) {
         let struct_info = type_info.as_struct().unwrap();
         if struct_info.memory_kind == abi::StructMemoryKind::Value {
             let dest = ptr.cast::<u8>().as_ptr();
@@ -275,9 +270,7 @@ pub struct RootedStruct {
 impl RootedStruct {
     /// Creates a `RootedStruct` that wraps a raw Mun struct.
     fn new(gc: &Arc<GarbageCollector>, raw: RawStruct) -> Self {
-        // Safety: The type returned from `ptr_type` is guaranteed to live at least as long as
-        // `Runtime` does not change. As we hold a shared reference to `Runtime`, this is safe.
-        assert!(unsafe { gc.ptr_type(raw.0).is_struct() });
+        assert!(gc.ptr_type(raw.0).is_struct());
         Self {
             handle: GcRootPtr::new(gc, raw.0),
         }

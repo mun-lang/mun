@@ -31,10 +31,5 @@ pub trait Marshal<'t>: Sized {
         'r: 't;
 
     /// Marshals `value` to memory location `ptr` (i.e. Rust -> Mun).
-    fn marshal_to_ptr(
-        value: Self,
-        ptr: NonNull<Self::MunType>,
-        runtime: &Runtime,
-        type_info: &Arc<TypeInfo>,
-    );
+    fn marshal_to_ptr(value: Self, ptr: NonNull<Self::MunType>, type_info: &Arc<TypeInfo>);
 }

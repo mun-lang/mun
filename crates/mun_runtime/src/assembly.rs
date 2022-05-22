@@ -54,7 +54,7 @@ impl Assembly {
         type_table: &mut TypeTable,
         to_link: impl Iterator<Item = (&'a abi::TypeId, &'a mut *const c_void, &'a str)>,
     ) -> anyhow::Result<()> {
-        let mut to_link: Vec<_> = to_link.collect();
+        let to_link: Vec<_> = to_link.collect();
 
         // Try to link all LUT entries
         let mut failed_to_link = false;
@@ -69,7 +69,9 @@ impl Assembly {
         }
 
         if failed_to_link {
-            return Err(anyhow!("Failed to link types due to missing type dependencies."));
+            return Err(anyhow!(
+                "Failed to link types due to missing type dependencies."
+            ));
         }
 
         Ok(())
@@ -78,7 +80,6 @@ impl Assembly {
     /// Private implementation of runtime linking
     fn link_all_functions<'a>(
         dispatch_table: &mut DispatchTable,
-        type_table: &TypeTable,
         to_link: impl Iterator<Item = (&'a mut *const c_void, &'a abi::FunctionPrototype)>,
     ) -> anyhow::Result<()> {
         let mut to_link: Vec<_> = to_link.collect();
@@ -153,8 +154,8 @@ impl Assembly {
             match TypeInfo::try_from_abi(type_info, &type_table) {
                 Ok(type_info) => {
                     assert!(type_table.insert_type(Arc::new(type_info)).is_none())
-                },
-                Err(TryFromAbiError::UnknownTypeId(type_id)) => types_to_load.push_back(type_info),
+                }
+                Err(TryFromAbiError::UnknownTypeId(_)) => types_to_load.push_back(type_info),
             }
         }
 
@@ -182,7 +183,7 @@ impl Assembly {
             // by the compiler.
             .filter(|(ptr, _)| ptr.is_null());
 
-        Assembly::link_all_functions(&mut dispatch_table, &type_table, functions_to_link)?;
+        Assembly::link_all_functions(&mut dispatch_table, functions_to_link)?;
 
         Ok((dispatch_table, type_table))
     }
@@ -261,7 +262,7 @@ impl Assembly {
                         let type_info = Arc::new(type_info);
                         new_types.push(type_info.clone());
                         assert!(type_table.insert_type(type_info).is_none());
-                    },
+                    }
                     Err(TryFromAbiError::UnknownTypeId(_)) => {
                         types_to_load.push_back(type_info);
                     }
@@ -308,7 +309,7 @@ impl Assembly {
             //
             // Note that linking may fail because for instance functions remaining unlinked (missing)
             // or the signature of a function doesnt match.
-            Assembly::link_all_functions(&mut dispatch_table, &type_table, functions_to_link)?;
+            Assembly::link_all_functions(&mut dispatch_table, functions_to_link)?;
 
             // Remove this assembly from the dependencies
             dependencies
