@@ -116,7 +116,6 @@ pub(crate) fn gen_file_group_ir<'db, 'ink>(
     };
     let mut type_table_builder = TypeTableBuilder::new(
         code_gen.db,
-        code_gen.target_machine.get_target_data(),
         &value_context,
         intrinsics_map.keys(),
         &dispatch_table,

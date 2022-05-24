@@ -1,24 +1,15 @@
-use super::types as ir;
 use crate::{
     ir::dispatch_table::{DispatchTable, FunctionPrototype},
     ir::ty::HirTypeCache,
     type_info::{TypeInfo, TypeInfoData},
-    value::{AsValue, CanInternalize, Global, IrValueContext, IterAsIrValue, Value},
+    value::{Global, IrValueContext, IterAsIrValue, Value},
     ModuleGroup,
 };
-use abi::Guid;
 use hir::{Body, ExprId, HirDatabase, InferenceResult};
 use inkwell::{
-    context::Context, module::Linkage, module::Module, targets::TargetData, types::ArrayType,
-    values::PointerValue,
+    context::Context, module::Linkage, module::Module, types::ArrayType, values::PointerValue,
 };
-use std::{
-    collections::{BTreeSet, HashMap},
-    convert::TryInto,
-    ffi::CString,
-    mem,
-    sync::Arc,
-};
+use std::{collections::HashMap, convert::TryInto, mem, sync::Arc};
 
 /// A type table in IR is a list of pointers to unique type information that are used to generate
 /// function and struct information.
@@ -100,7 +91,6 @@ impl<'ink> TypeTable<'ink> {
 /// Used to build a `TypeTable` from HIR.
 pub(crate) struct TypeTableBuilder<'db, 'ink, 't> {
     db: &'db dyn HirDatabase,
-    target_data: TargetData,
     value_context: &'t IrValueContext<'ink, 't, 't>,
     dispatch_table: &'t DispatchTable<'ink>,
     hir_types: &'t HirTypeCache<'db, 'ink>,
@@ -112,7 +102,6 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
     /// Creates a new `TypeTableBuilder`.
     pub(crate) fn new<'f>(
         db: &'db dyn HirDatabase,
-        target_data: TargetData,
         value_context: &'t IrValueContext<'ink, '_, '_>,
         intrinsics: impl Iterator<Item = &'f FunctionPrototype>,
         dispatch_table: &'t DispatchTable<'ink>,
@@ -121,7 +110,6 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
     ) -> Self {
         let mut builder = Self {
             db,
-            target_data,
             value_context,
             dispatch_table,
             hir_types,
@@ -222,7 +210,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
         let mut entries = Vec::new();
         mem::swap(&mut entries, &mut self.entries);
 
-        let mut type_info_to_index = entries
+        let type_info_to_index = entries
             .iter()
             .enumerate()
             .map(|(idx, type_info)| (type_info.clone(), idx))

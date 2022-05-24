@@ -1,4 +1,6 @@
-use crate::value::{AddressableType, AsValue, BytesOrPtr, IrTypeContext, IrValueContext, SizedValueType, TransparentValue, Value};
+use crate::value::{
+    AsValue, BytesOrPtr, IrTypeContext, IrValueContext, SizedValueType, TransparentValue, Value,
+};
 use itertools::Itertools;
 use mun_codegen_macros::AsValue;
 
@@ -45,9 +47,7 @@ pub struct TypeId {
 
 impl From<abi::TypeId> for TypeId {
     fn from(type_id: abi::TypeId) -> Self {
-        TypeId {
-            guid: type_id.guid
-        }
+        TypeId { guid: type_id.guid }
     }
 }
 

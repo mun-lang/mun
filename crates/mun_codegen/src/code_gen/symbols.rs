@@ -12,8 +12,8 @@ use crate::{
         AsValue, CanInternalize, Global, IrValueContext, IterAsIrValue, SizedValueType, Value,
     },
 };
-use abi::{HasStaticTypeInfo, TypeId};
-use hir::{HirDatabase, Ty};
+use abi::HasStaticTypeInfo;
+use hir::HirDatabase;
 use inkwell::{attributes::Attribute, module::Linkage, types::AnyType};
 use std::convert::TryFrom;
 use std::{collections::HashSet, ffi::CString};

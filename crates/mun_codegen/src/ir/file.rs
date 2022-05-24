@@ -8,7 +8,7 @@ use crate::{
     ir::{function, type_table::TypeTable},
     value::Global,
 };
-use hir::{HasVisibility, ModuleDef, Ty};
+use hir::{HasVisibility, ModuleDef};
 use inkwell::module::Module;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -134,6 +134,6 @@ pub(crate) fn gen_file_ir<'db, 'ink>(
     FileIr {
         llvm_module,
         function_definitions,
-        type_definitions
+        type_definitions,
     }
 }

@@ -1,8 +1,5 @@
 use crate::ir::dispatch_table::FunctionPrototype;
-use crate::type_info::TypeInfo;
-use inkwell::context::Context;
-use inkwell::targets::TargetData;
-use inkwell::types::FunctionType;
+use inkwell::{context::Context, targets::TargetData, types::FunctionType};
 use std::ffi;
 
 #[macro_use]

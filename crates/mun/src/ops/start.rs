@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use clap::ArgMatches;
-use mun_runtime::{HasStaticTypeInfo, ReturnTypeReflection, Runtime};
+use mun_runtime::Runtime;
 
 use crate::ExitStatus;
 
@@ -37,17 +37,17 @@ pub fn start(matches: &ArgMatches) -> anyhow::Result<ExitStatus> {
             .map_err(|e| anyhow!("{}", e))?;
 
         println!("{}", result)
-    } else if return_type.equals:: < () >() {
+    } else if return_type.equals::<()>() {
         #[allow(clippy::unit_arg)]
         runtime
             .invoke(entry_point, ())
             .map(|_: ()| ExitStatus::Success)
-            .map_err(|e| anyhow!("{}", e))
+            .map_err(|e| anyhow!("{}", e))?;
     } else {
         return Err(anyhow!(
-                "Only native Mun return types are supported for entry points. Found: {}",
-                ret_type.name()
-            ));
+            "Only native Mun return types are supported for entry points. Found: {}",
+            return_type.name
+        ));
     }
     Ok(ExitStatus::Success)
 }
