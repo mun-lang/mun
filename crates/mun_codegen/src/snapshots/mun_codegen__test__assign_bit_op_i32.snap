@@ -31,5 +31,5 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = constant [9 x i64*] zeroinitializer
+@global_type_lookup_table = global [9 x i64*] zeroinitializer
 

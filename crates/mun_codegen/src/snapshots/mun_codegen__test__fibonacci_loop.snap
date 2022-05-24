@@ -33,5 +33,5 @@ if_merge:                                         ; preds = %loop
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = constant [2 x i64*] zeroinitializer
+@global_type_lookup_table = global [2 x i64*] zeroinitializer
 

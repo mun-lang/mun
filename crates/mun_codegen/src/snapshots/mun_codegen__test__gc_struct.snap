@@ -48,6 +48,6 @@ source_filename = "group_name"
 %DispatchTable = type { i8** (i8*, i8*)* }
 
 @dispatchTable = global %DispatchTable zeroinitializer
-@global_type_lookup_table = constant [6 x i64*] zeroinitializer
+@global_type_lookup_table = global [6 x i64*] zeroinitializer
 @allocatorHandle = unnamed_addr global i8* null
 

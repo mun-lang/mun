@@ -26,7 +26,7 @@ source_filename = "group_name"
 %DispatchTable = type { i32 ()* }
 
 @dispatchTable = global %DispatchTable zeroinitializer
-@global_type_lookup_table = constant [2 x i64*] zeroinitializer
+@global_type_lookup_table = global [2 x i64*] zeroinitializer
 
 ; == FILE IR (foo) =====================================
 ; ModuleID = 'foo'
@@ -43,5 +43,5 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = constant [1 x i64*] zeroinitializer
+@global_type_lookup_table = global [1 x i64*] zeroinitializer
 

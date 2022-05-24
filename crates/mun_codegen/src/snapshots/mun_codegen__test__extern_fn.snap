@@ -26,5 +26,5 @@ source_filename = "group_name"
 %DispatchTable = type { i32 (i32, i32)* }
 
 @dispatchTable = global %DispatchTable zeroinitializer
-@global_type_lookup_table = constant [6 x i64*] zeroinitializer
+@global_type_lookup_table = global [6 x i64*] zeroinitializer
 

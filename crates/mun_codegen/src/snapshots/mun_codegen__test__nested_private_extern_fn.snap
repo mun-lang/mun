@@ -32,5 +32,5 @@ source_filename = "group_name"
 %DispatchTable = type { float ()* }
 
 @dispatchTable = global %DispatchTable zeroinitializer
-@global_type_lookup_table = constant [3 x i64*] zeroinitializer
+@global_type_lookup_table = global [3 x i64*] zeroinitializer
 
