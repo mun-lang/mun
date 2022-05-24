@@ -9,8 +9,6 @@ use std::ffi::c_void;
 pub struct StructInfoHandle(pub *const c_void);
 
 /// Retrieves the struct's fields.
-///
-/// If `struct_handle` is null, the returned will
 #[no_mangle]
 pub unsafe extern "C" fn mun_struct_info_fields(
     struct_info: StructInfoHandle,
@@ -44,6 +42,7 @@ pub unsafe extern "C" fn mun_struct_info_fields(
         }
     };
 
+    // TODO: Clone Arc<TypeInfo>
     field_infos_begin.0 = struct_info.fields.as_ptr() as *const c_void;
     *num_fields = struct_info.fields.len();
 
@@ -78,3 +77,5 @@ pub unsafe extern "C" fn mun_struct_info_memory_kind(
 
     ErrorHandle::default()
 }
+
+// TODO: Add tests

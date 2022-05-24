@@ -57,7 +57,7 @@ impl FunctionPrototype {
 pub struct FunctionSignature {
     /// Argument types
     pub arg_types: Vec<Arc<TypeInfo>>,
-    /// Optional return type
+    /// Return type
     pub return_type: Arc<TypeInfo>,
 }
 
