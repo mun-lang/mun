@@ -1,23 +1,18 @@
+use crate::function_info::FunctionDefinition;
 use memory::type_table::TypeTable;
 use rustc_hash::FxHashMap;
-
-use crate::function_info::{FunctionDefinition, FunctionPrototype};
-
-type DependencyCounter = usize;
-type Dependency<T> = (T, DependencyCounter);
-type DependencyMap<T> = FxHashMap<String, Dependency<T>>;
+use std::sync::Arc;
 
 /// A runtime dispatch table that maps full paths to function and struct information.
 #[derive(Clone, Default)]
 pub struct DispatchTable {
-    functions: FxHashMap<String, FunctionDefinition>,
-    fn_dependencies: FxHashMap<String, DependencyMap<FunctionPrototype>>,
+    functions: FxHashMap<String, Arc<FunctionDefinition>>,
 }
 
 impl DispatchTable {
     /// Retrieves the [`FunctionDefinition`] corresponding to `fn_path`, if it exists.
-    pub fn get_fn(&self, fn_path: &str) -> Option<&FunctionDefinition> {
-        self.functions.get(fn_path)
+    pub fn get_fn(&self, fn_path: &str) -> Option<Arc<FunctionDefinition>> {
+        self.functions.get(fn_path).map(Clone::clone)
     }
 
     /// Inserts the `fn_info` for `fn_path` into the dispatch table.
@@ -27,13 +22,13 @@ impl DispatchTable {
     pub fn insert_fn<S: ToString>(
         &mut self,
         fn_path: S,
-        fn_info: FunctionDefinition,
-    ) -> Option<FunctionDefinition> {
+        fn_info: Arc<FunctionDefinition>,
+    ) -> Option<Arc<FunctionDefinition>> {
         self.functions.insert(fn_path.to_string(), fn_info)
     }
 
     /// Removes and returns the `fn_info` corresponding to `fn_path`, if it exists.
-    pub fn remove_fn<S: AsRef<str>>(&mut self, fn_path: S) -> Option<FunctionDefinition> {
+    pub fn remove_fn<S: AsRef<str>>(&mut self, fn_path: S) -> Option<Arc<FunctionDefinition>> {
         self.functions.remove(fn_path.as_ref())
     }
 
@@ -54,41 +49,7 @@ impl DispatchTable {
             let fn_def = FunctionDefinition::try_from_abi(fn_def, type_table)
                 .expect("All types from a loaded assembly must exist in the type table.");
 
-            self.insert_fn(fn_def.prototype.name.clone(), fn_def);
-        }
-    }
-
-    /// Adds `fn_path` from `assembly_path` as a dependency; incrementing its usage counter.
-    pub fn add_fn_dependency<S: ToString, T: ToString>(
-        &mut self,
-        assembly_path: S,
-        fn_path: T,
-        fn_prototype: FunctionPrototype,
-    ) {
-        let dependencies = self
-            .fn_dependencies
-            .entry(assembly_path.to_string())
-            .or_default();
-
-        let (_, counter) = dependencies
-            .entry(fn_path.to_string())
-            .or_insert((fn_prototype, 0));
-
-        *counter += 1;
-    }
-
-    /// Removes `fn_path` from `assembly_path` as a dependency; decrementing its usage counter.
-    pub fn remove_fn_dependency<S: AsRef<str>, T: AsRef<str>>(
-        &mut self,
-        assembly_path: S,
-        fn_path: T,
-    ) {
-        if let Some(dependencies) = self.fn_dependencies.get_mut(assembly_path.as_ref()) {
-            if let Some((key, (fn_sig, counter))) = dependencies.remove_entry(fn_path.as_ref()) {
-                if counter > 1 {
-                    dependencies.insert(key, (fn_sig, counter - 1));
-                }
-            }
+            self.insert_fn(fn_def.prototype.name.clone(), Arc::new(fn_def));
         }
     }
 }

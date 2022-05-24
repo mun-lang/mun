@@ -1,6 +1,7 @@
 use memory::{type_table::TypeTable, TryFromAbiError, TypeInfo};
 use std::{ffi::c_void, sync::Arc};
 
+/// A linked version of [`mun_abi::FunctionDefinition`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
 #[derive(Clone)]
 pub struct FunctionDefinition {
     /// Function prototype
@@ -10,8 +11,10 @@ pub struct FunctionDefinition {
 }
 
 unsafe impl Send for FunctionDefinition {}
+unsafe impl Sync for FunctionDefinition {}
 
 impl FunctionDefinition {
+    /// Tries to convert from an `abi::FunctionDefinition`.
     pub fn try_from_abi(
         fn_def: &abi::FunctionDefinition,
         type_table: &TypeTable,
@@ -25,6 +28,7 @@ impl FunctionDefinition {
     }
 }
 
+/// A linked version of [`mun_abi::FunctionPrototype`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
 #[derive(Clone)]
 pub struct FunctionPrototype {
     /// Function name
@@ -34,6 +38,7 @@ pub struct FunctionPrototype {
 }
 
 impl FunctionPrototype {
+    /// Tries to convert from an `abi::FunctionPrototype`.
     pub fn try_from_abi(
         fn_prototype: &abi::FunctionPrototype,
         type_table: &TypeTable,
@@ -47,6 +52,7 @@ impl FunctionPrototype {
     }
 }
 
+/// A linked version of [`mun_abi::FunctionSignature`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
 #[derive(Clone)]
 pub struct FunctionSignature {
     /// Argument types
@@ -56,6 +62,7 @@ pub struct FunctionSignature {
 }
 
 impl FunctionSignature {
+    /// Tries to convert from an `abi::FunctionSignature`.
     pub fn try_from_abi(
         fn_sig: &abi::FunctionSignature,
         type_table: &TypeTable,
@@ -70,7 +77,9 @@ impl FunctionSignature {
             })
             .collect::<Result<_, _>>()?;
 
-        let return_type = type_table.find_type_info_by_id(&fn_sig.return_type).ok_or_else(|| TryFromAbiError::UnknownTypeId(fn_sig.return_type.clone()))?;
+        let return_type = type_table
+            .find_type_info_by_id(&fn_sig.return_type)
+            .ok_or_else(|| TryFromAbiError::UnknownTypeId(fn_sig.return_type.clone()))?;
 
         Ok(Self {
             arg_types,

@@ -178,7 +178,7 @@ impl Runtime {
         ));
 
         options.user_functions.into_iter().for_each(|fn_def| {
-            dispatch_table.insert_fn(fn_def.prototype.name.clone(), fn_def);
+            dispatch_table.insert_fn(fn_def.prototype.name.clone(), Arc::new(fn_def));
         });
 
         let watcher: RecommendedWatcher = Watcher::new_raw(tx)?;
@@ -254,13 +254,13 @@ impl Runtime {
     }
 
     /// Retrieves the function definition corresponding to `function_name`, if available.
-    pub fn get_function_definition(&self, function_name: &str) -> Option<&FunctionDefinition> {
+    pub fn get_function_definition(&self, function_name: &str) -> Option<Arc<FunctionDefinition>> {
         // TODO: Verify that when someone tries to invoke a non-public function, it should fail.
         self.dispatch_table.get_fn(function_name)
     }
 
     /// Retrieves the type definition corresponding to `type_name`, if available.
-    pub fn get_type_info(&self, type_name: &str) -> Option<Arc<TypeInfo>> {
+    pub fn get_type_info_by_name(&self, type_name: &str) -> Option<Arc<TypeInfo>> {
         self.type_table.find_type_info_by_name(type_name)
     }
 

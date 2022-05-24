@@ -1,13 +1,13 @@
-use crate::{TryFromAbiError, type_table::TypeTable, TypeFields};
+use crate::{type_table::TypeTable, TryFromAbiError, TypeFields};
+use abi::static_type_map::StaticTypeMap;
 use abi::{Guid, StructMemoryKind};
 use itertools::izip;
+use std::sync::Once;
 use std::{
     alloc::Layout,
     fmt::{self, Formatter},
     sync::Arc,
 };
-use std::sync::Once;
-use abi::static_type_map::StaticTypeMap;
 
 /// A linked version of [`mun_abi::TypeInfo`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
 #[derive(Clone, Debug)]
@@ -111,12 +111,20 @@ impl TypeInfo {
         }
     }
 
-    pub fn try_from_abi(type_info: &abi::TypeInfo, type_table: &TypeTable) -> Result<TypeInfo, TryFromAbiError> {
+    /// Tries to convert from an `abi::TypeInfo`.
+    pub fn try_from_abi(
+        type_info: &abi::TypeInfo,
+        type_table: &TypeTable,
+    ) -> Result<TypeInfo, TryFromAbiError> {
         TypeInfoData::try_from_abi(&type_info.data, type_table).map(|data| TypeInfo {
             id: type_info.id.clone(),
             name: type_info.name().to_owned(),
             layout: Layout::from_size_align(type_info.size_in_bytes(), type_info.alignment())
-                .expect(&format!("TypeInfo contains invalid size and alignment (size: {}, align: {})", type_info.size_in_bytes(), type_info.alignment())),
+                .expect(&format!(
+                    "TypeInfo contains invalid size and alignment (size: {}, align: {})",
+                    type_info.size_in_bytes(),
+                    type_info.alignment()
+                )),
             data,
         })
     }
@@ -133,6 +141,7 @@ impl TypeInfoData {
         matches!(self, TypeInfoData::Struct(_))
     }
 
+    /// Tries to convert from an `abi::TypeInfoData`.
     pub fn try_from_abi(
         type_info_data: &abi::TypeInfoData,
         type_table: &TypeTable,
@@ -154,6 +163,7 @@ impl StructInfo {
             .find(|field| field.name == field_name.as_ref())
     }
 
+    /// Tries to convert from an `abi::StructInfo`.
     pub fn try_from_abi(
         struct_info: &abi::StructInfo,
         type_table: &TypeTable,
@@ -255,14 +265,24 @@ impl<T: abi::HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *mut T {
         };
 
         map.call_once::<T, _>(|| {
-            let name = format!("*mut {}", <T as abi::HasStaticTypeInfoName>::type_name().to_str().expect("static type name is not a valid UTF-8 string"));
-            let size_in_bits = (std::mem::size_of::<*mut T>()).try_into().expect("size of T is larger than the maximum allowed ABI size. Please file a bug.");
-            let alignment = (std::mem::align_of::<*mut T>()).try_into().expect("alignment of T is larger than the maximum allowed ABI size. Please file a bug.");
+            let name = format!(
+                "*mut {}",
+                <T as abi::HasStaticTypeInfoName>::type_name()
+                    .to_str()
+                    .expect("static type name is not a valid UTF-8 string")
+            );
+            let size_in_bits = (std::mem::size_of::<*mut T>()).try_into().expect(
+                "size of T is larger than the maximum allowed ABI size. Please file a bug.",
+            );
+            let alignment = (std::mem::align_of::<*mut T>()).try_into().expect(
+                "alignment of T is larger than the maximum allowed ABI size. Please file a bug.",
+            );
             Arc::new(TypeInfo {
                 id: Guid::from(name.as_bytes()).into(),
                 name,
-                layout: Layout::from_size_align(size_in_bits, alignment).expect("invalid layout for static type"),
-                data: TypeInfoData::Primitive
+                layout: Layout::from_size_align(size_in_bits, alignment)
+                    .expect("invalid layout for static type"),
+                data: TypeInfoData::Primitive,
             })
         })
     }
@@ -282,14 +302,24 @@ impl<T: abi::HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *const T {
         };
 
         map.call_once::<T, _>(|| {
-            let name = format!("*const {}", <T as abi::HasStaticTypeInfoName>::type_name().to_str().expect("static type name is not a valid UTF-8 string"));
-            let size_in_bits = (std::mem::size_of::<*const T>()).try_into().expect("size of T is larger than the maximum allowed ABI size. Please file a bug.");
-            let alignment = (std::mem::align_of::<*const T>()).try_into().expect("alignment of T is larger than the maximum allowed ABI size. Please file a bug.");
+            let name = format!(
+                "*const {}",
+                <T as abi::HasStaticTypeInfoName>::type_name()
+                    .to_str()
+                    .expect("static type name is not a valid UTF-8 string")
+            );
+            let size_in_bits = (std::mem::size_of::<*const T>()).try_into().expect(
+                "size of T is larger than the maximum allowed ABI size. Please file a bug.",
+            );
+            let alignment = (std::mem::align_of::<*const T>()).try_into().expect(
+                "alignment of T is larger than the maximum allowed ABI size. Please file a bug.",
+            );
             Arc::new(TypeInfo {
                 id: Guid::from(name.as_bytes()).into(),
                 name,
-                layout: Layout::from_size_align(size_in_bits, alignment).expect("invalid layout for static type"),
-                data: TypeInfoData::Primitive
+                layout: Layout::from_size_align(size_in_bits, alignment)
+                    .expect("invalid layout for static type"),
+                data: TypeInfoData::Primitive,
             })
         })
     }

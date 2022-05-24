@@ -1,15 +1,10 @@
 //! A statically-allocated, concurrent data structure for storage of Rust objects that are utilized
 //! through Mun Runtime C API calls.
 
-use std::collections::HashMap;
-use std::hash::Hash;
-use std::sync::Arc;
-
+use crate::{error::ErrorHandle, handle::TypedHandle};
 use lazy_static::lazy_static;
 use parking_lot::{RwLock, RwLockReadGuard};
-
-use crate::error::ErrorHandle;
-use crate::TypedHandle;
+use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 fn generate_handle<H: TypedHandle>() -> H {
     loop {
