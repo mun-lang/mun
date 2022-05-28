@@ -20,7 +20,7 @@ fn alloc() {
 #[test]
 fn collect_simple() {
     let runtime = MarkSweep::<EventAggregator<Event>>::default();
-    let handle = runtime.alloc(&i64::type_info());
+    let handle = runtime.alloc(i64::type_info());
 
     runtime.collect();
 
@@ -37,8 +37,8 @@ fn collect_rooted() {
     let runtime = Arc::new(MarkSweep::<EventAggregator<Event>>::default());
 
     // Allocate simple object and rooted object
-    let handle = runtime.alloc(&i64::type_info());
-    let rooted = GcRootPtr::new(&runtime, runtime.alloc(&i64::type_info()));
+    let handle = runtime.alloc(i64::type_info());
+    let rooted = GcRootPtr::new(&runtime, runtime.alloc(i64::type_info()));
 
     // Collect unreachable objects, should not collect the root handle
     runtime.collect();

@@ -69,7 +69,7 @@ pub(crate) fn fake_fn_signature(
 ) -> FunctionSignature {
     FunctionSignature {
         arg_types: arg_types.as_ptr(),
-        return_type: return_type.unwrap_or(<()>::type_info().id.clone()),
+        return_type: return_type.unwrap_or_else(|| <()>::type_info().id.clone()),
         num_arg_types: arg_types.len() as u16,
     }
 }

@@ -24,5 +24,5 @@ pub trait TypeFields: Send + Sync {
 #[derive(Debug, Error)]
 pub enum TryFromAbiError {
     #[error("unknown TypeId '{0}'")]
-    UnknownTypeId(abi::TypeId)
+    UnknownTypeId(abi::TypeId),
 }

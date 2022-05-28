@@ -116,7 +116,7 @@ fn get_type_definition_array<'ink, 'a>(
     types
         .map(|type_info| ir::TypeInfo {
             id: ir::TypeId {
-                guid: type_info.guid.clone(),
+                guid: type_info.guid,
             },
             name: CString::new(type_info.name.clone())
                 .expect("typename is not a valid CString")
@@ -217,7 +217,7 @@ fn gen_struct_info<'ink>(
             .len()
             .try_into()
             .expect("could not convert num_fields to smaller bit size"),
-        memory_kind: hir_struct.data(db.upcast()).memory_kind.clone(),
+        memory_kind: hir_struct.data(db.upcast()).memory_kind,
     }
 }
 
@@ -271,9 +271,7 @@ fn gen_type_lut<'ink>(
     let type_ids = type_table
         .entries()
         .iter()
-        .map(|ty| ir::TypeId {
-            guid: ty.guid.clone(),
-        })
+        .map(|ty| ir::TypeId { guid: ty.guid })
         .into_const_private_pointer("fn.get_info.typeLut.typeIds", context);
 
     let type_names = type_table

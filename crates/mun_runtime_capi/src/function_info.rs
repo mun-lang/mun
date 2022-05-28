@@ -27,6 +27,11 @@ impl FunctionInfoHandle {
 }
 
 /// Decrements the strong count of the `Arc<FunctionDefinition>` associated with `handle`.
+///
+/// # Safety
+///
+/// This function might be unsafe if the underlying data has already been deallocated by a previous
+/// call to [`mun_function_info_decrement_strong_count`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_function_info_decrement_strong_count(
     fn_info: FunctionInfoHandle,
@@ -40,6 +45,11 @@ pub unsafe extern "C" fn mun_function_info_decrement_strong_count(
 }
 
 /// Increments the strong count of the `Arc<FunctionDefinition>` associated with `handle`.
+///
+/// # Safety
+///
+/// This function might be unsafe if the underlying data has been deallocated by a previous call
+/// to [`mun_function_info_decrement_strong_count`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_function_info_increment_strong_count(
     fn_info: FunctionInfoHandle,
@@ -53,6 +63,11 @@ pub unsafe extern "C" fn mun_function_info_increment_strong_count(
 }
 
 /// Retrieves the function's function pointer.
+///
+/// # Safety
+///
+/// This function might be unsafe if the underlying data has been deallocated by a previous call
+/// to [`mun_function_info_decrement_strong_count`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_function_info_fn_ptr(fn_info: FunctionInfoHandle) -> *const c_void {
     let fn_def = match (fn_info.0 as *const FunctionDefinition).as_ref() {
@@ -68,6 +83,9 @@ pub unsafe extern "C" fn mun_function_info_fn_ptr(fn_info: FunctionInfoHandle) -
 /// # Safety
 ///
 /// The caller is responsible for calling `mun_string_destroy` on the return pointer - if it is not null.
+///
+/// This function might be unsafe if the underlying data has been deallocated by a previous call
+/// to [`mun_function_info_decrement_strong_count`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_function_info_name(fn_info: FunctionInfoHandle) -> *const c_char {
     let fn_def = match (fn_info.0 as *const FunctionDefinition).as_ref() {
@@ -86,6 +104,9 @@ pub unsafe extern "C" fn mun_function_info_name(fn_info: FunctionInfoHandle) -> 
 ///
 /// If a non-null handle is returned, the caller is responsible for calling
 /// `mun_type_info_span_destroy` on the returned handle.
+///
+/// This function might be unsafe if the underlying data has been deallocated by a previous call
+/// to [`mun_function_info_decrement_strong_count`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_function_info_argument_types(
     fn_info: FunctionInfoHandle,
@@ -123,6 +144,11 @@ pub unsafe extern "C" fn mun_function_info_argument_types(
 }
 
 /// Retrieves the function's return type.
+///
+/// # Safety
+///
+/// This function might be unsafe if the underlying data has been deallocated by a previous call
+/// to [`mun_function_info_decrement_strong_count`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_function_info_return_type(
     fn_info: FunctionInfoHandle,

@@ -229,13 +229,13 @@ mod tests {
         let text = "ℱ٥ℜ\n†ěṦτ\nℙน尺קő$ع";
         let text_len = text.len();
         let index = LineIndex::new(text);
-        assert_eq!(index.text_part(0, 0, &text, text_len), Some("ℱ٥ℜ"));
-        assert_eq!(index.text_part(0, 1, &text, text_len), Some("ℱ٥ℜ\n†ěṦτ"));
+        assert_eq!(index.text_part(0, 0, text, text_len), Some("ℱ٥ℜ"));
+        assert_eq!(index.text_part(0, 1, text, text_len), Some("ℱ٥ℜ\n†ěṦτ"));
         assert_eq!(
-            index.text_part(1, 2, &text, text_len),
+            index.text_part(1, 2, text, text_len),
             Some("†ěṦτ\nℙน尺קő$ع")
         );
-        assert_eq!(index.text_part(0, 2, &text, text_len), Some(text));
+        assert_eq!(index.text_part(0, 2, text, text_len), Some(text));
     }
     #[test]
     fn test_text_part_utf16() {
@@ -249,10 +249,7 @@ mod tests {
             line: 1,
             col_utf16: 1,
         });
-        assert_eq!(
-            index.text_part(1, 1, &text, (end - start).into()),
-            Some("❤️")
-        );
+        assert_eq!(index.text_part(1, 1, text, (end - start).into()), Some("❤️"));
     }
 
     #[test]

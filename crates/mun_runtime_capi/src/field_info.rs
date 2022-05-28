@@ -30,13 +30,14 @@ pub struct FieldInfoSpan {
     pub len: usize,
 }
 
-/// A C-style handle to an array of `TypeInfo`s.
-
 /// Retrieves the field's name.
 ///
 /// # Safety
 ///
 /// The caller is responsible for calling `mun_string_destroy` on the return pointer - if it is not null.
+///
+/// This function might result in undefined behavior if the [`crate::TypeInfoHandle`] associated
+/// with this `FieldInfoHandle` has been deallocated.
 #[no_mangle]
 pub unsafe extern "C" fn mun_field_info_name(field_info: FieldInfoHandle) -> *const c_char {
     let field_info = match (field_info.0 as *const FieldInfo).as_ref() {
@@ -48,6 +49,11 @@ pub unsafe extern "C" fn mun_field_info_name(field_info: FieldInfoHandle) -> *co
 }
 
 /// Retrieves the field's type.
+///
+/// # Safety
+///
+/// This method is considered unsafe because the passed `field_info` might have been deallocated by
+/// a call to [`mun_type_info_decrement_strong_count`] of the type that contains this field.
 #[no_mangle]
 pub unsafe extern "C" fn mun_field_info_type(field_info: FieldInfoHandle) -> TypeInfoHandle {
     let field_info = match (field_info.0 as *const FieldInfo).as_ref() {
@@ -59,6 +65,11 @@ pub unsafe extern "C" fn mun_field_info_type(field_info: FieldInfoHandle) -> Typ
 }
 
 /// Retrieves the field's offset.
+///
+/// # Safety
+///
+/// This method is considered unsafe because the passed `field_info` might have been deallocated by
+/// a call to [`mun_type_info_decrement_strong_count`] of the type that contains this field.
 #[no_mangle]
 pub unsafe extern "C" fn mun_field_info_offset(
     field_info: FieldInfoHandle,

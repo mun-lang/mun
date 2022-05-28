@@ -210,7 +210,7 @@ fn append_struct_mapping(
                     let old_ty = unsafe { old.get_unchecked(*old_idx) };
                     let old_fields = unsafe { old_fields.get_unchecked(*old_idx) };
 
-                    let length = myers::diff_length(&old_fields, &new_fields);
+                    let length = myers::diff_length(old_fields, new_fields);
 
                     // Given N old fields and M new fields, the smallest set capable of
                     // completely changing a struct is N + M.

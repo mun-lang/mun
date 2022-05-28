@@ -54,11 +54,9 @@ impl Assembly {
         type_table: &mut TypeTable,
         to_link: impl Iterator<Item = (&'a abi::TypeId, &'a mut *const c_void, &'a str)>,
     ) -> anyhow::Result<()> {
-        let to_link: Vec<_> = to_link.collect();
-
         // Try to link all LUT entries
         let mut failed_to_link = false;
-        for (type_id, type_info_ptr, debug_name) in to_link.into_iter() {
+        for (type_id, type_info_ptr, debug_name) in to_link {
             // Ensure that the function is in the runtime dispatch table
             if let Some(type_info) = type_table.find_type_info_by_id(type_id) {
                 *type_info_ptr = Arc::into_raw(type_info) as *const c_void;

@@ -9,7 +9,7 @@ use mun_memory::{
 
 fn assert_eq_struct(result: &[Arc<TypeInfo>], expected: &[Arc<TypeInfo>]) {
     assert_eq!(result.len(), expected.len());
-    for (lhs, rhs) in result.into_iter().zip(expected.into_iter()) {
+    for (lhs, rhs) in result.iter().zip(expected.iter()) {
         assert_eq!(lhs, rhs);
     }
 }
@@ -30,10 +30,7 @@ fn add() {
 
     let diff = diff(old, new);
     assert_eq!(diff, vec![Diff::Insert { index: 1 }]);
-    assert_eq_struct(
-        &apply_diff(old, new, diff),
-        &vec![struct1.clone(), struct2.clone()],
-    );
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct1, struct2]);
 }
 
 #[test]
@@ -47,12 +44,12 @@ fn remove() {
         "c" => f64, "d" => i64
     );
 
-    let old = &[struct1.clone(), struct2.clone()];
+    let old = &[struct1.clone(), struct2];
     let new = &[struct1.clone()];
 
     let diff = diff(old, new);
     assert_eq!(diff, vec![Diff::Delete { index: 1 },]);
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct1.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct1]);
 }
 
 #[test]
@@ -66,7 +63,7 @@ fn replace() {
         "c" => f64, "d" => i64
     );
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -74,7 +71,7 @@ fn replace() {
         diff,
         vec![Diff::Delete { index: 0 }, Diff::Insert { index: 0 }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
@@ -99,10 +96,7 @@ fn swap() {
             new_index: 1
         }]
     );
-    assert_eq_struct(
-        &apply_diff(old, new, diff),
-        &vec![struct2.clone(), struct1.clone()],
-    );
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2, struct1]);
 }
 
 #[test]
@@ -116,7 +110,7 @@ fn add_field1() {
         "a" => i64, "b" => i64, "c" => f64
     );
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -128,7 +122,7 @@ fn add_field1() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
@@ -142,7 +136,7 @@ fn add_field2() {
         "a" => i64, "b" => f64, "c" => f64
     );
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -154,7 +148,7 @@ fn add_field2() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
@@ -168,7 +162,7 @@ fn add_field3() {
         "a" => i64, "b" => f64, "c" => f64
     );
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -180,7 +174,7 @@ fn add_field3() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
@@ -192,7 +186,7 @@ fn remove_field1() {
     );
     let struct2 = fake_struct!(type_table, "struct1", "c" => i64);
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -207,7 +201,7 @@ fn remove_field1() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
@@ -219,7 +213,7 @@ fn remove_field2() {
     );
     let struct2 = fake_struct!(type_table, "struct1", "b" => i64);
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -234,7 +228,7 @@ fn remove_field2() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
@@ -246,7 +240,7 @@ fn remove_field3() {
     );
     let struct2 = fake_struct!(type_table, "struct1", "a" => i64);
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -261,7 +255,7 @@ fn remove_field3() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
@@ -275,7 +269,7 @@ fn swap_fields() {
         "c" => f64, "a" => f64, "b" => i64
     );
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -291,7 +285,7 @@ fn swap_fields() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
@@ -305,7 +299,7 @@ fn swap_fields2() {
         "d" => i64, "c" => f64, "b" => i64, "a" => f64
     );
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -333,7 +327,7 @@ fn swap_fields2() {
             new_index: 0
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
@@ -347,7 +341,7 @@ fn cast_field() {
         "a" => f64, "b" => i64, "c" => i64
     );
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -372,7 +366,7 @@ fn cast_field() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
@@ -386,7 +380,7 @@ fn rename_field1() {
         "a" => i64, "d" => f64, "c" => f64
     );
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -401,7 +395,7 @@ fn rename_field1() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
@@ -415,7 +409,7 @@ fn rename_field2() {
         "d" => i64, "e" => f64, "f" => f64
     );
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -440,5 +434,5 @@ fn rename_field2() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }

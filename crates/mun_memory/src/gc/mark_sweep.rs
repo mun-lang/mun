@@ -137,7 +137,7 @@ where
             objects.insert(handle, object);
         }
 
-        self.log_alloc(handle, &ty);
+        self.log_alloc(handle, ty);
         handle
     }
 

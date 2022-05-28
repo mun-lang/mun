@@ -1,5 +1,6 @@
 use crate::{static_type_map::StaticTypeMap, Guid, StructInfo, TypeId};
 use once_cell::sync::OnceCell;
+use std::fmt::Debug;
 use std::{
     convert::TryInto,
     ffi::{CStr, CString},
@@ -8,7 +9,6 @@ use std::{
     str,
     sync::Once,
 };
-use std::fmt::Debug;
 
 /// Represents the type declaration for a value type.
 ///
@@ -149,7 +149,7 @@ impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *const T {
 
         let map = unsafe {
             INIT.call_once(|| {
-                VALUE = Some(StaticTypeMap::new());
+                VALUE = Some(StaticTypeMap::default());
             });
             VALUE.as_ref().unwrap()
         };
@@ -186,7 +186,7 @@ impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *mut T {
 
         let map = unsafe {
             INIT.call_once(|| {
-                VALUE = Some(StaticTypeMap::new());
+                VALUE = Some(StaticTypeMap::default());
             });
             VALUE.as_ref().unwrap()
         };

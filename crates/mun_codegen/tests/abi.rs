@@ -78,10 +78,7 @@ fn test_abi_compatibility() {
             .functions()
             .iter()
             .find(|f| f.prototype.name() == fn_name)
-            .expect(&format!(
-                "Failed to retrieve function definition '{}'",
-                fn_name
-            ))
+            .unwrap_or_else(|| panic!("Failed to retrieve function definition '{}'", fn_name))
     }
 
     fn test_function_args(fn_def: &abi::FunctionDefinition, args: &[(&str, abi::TypeId)]) {
@@ -96,10 +93,12 @@ fn test_abi_compatibility() {
                 .signature
                 .arg_types()
                 .get(idx)
-                .expect(&format!(
-                    "Function '{}' should have an argument.",
-                    fn_def.prototype.name()
-                ));
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Function '{}' should have an argument.",
+                        fn_def.prototype.name()
+                    )
+                });
 
             assert_eq!(fn_arg_type.guid, arg_guid.guid)
         }
@@ -115,10 +114,12 @@ fn test_abi_compatibility() {
     }
 
     fn test_function_return_type_some<R: ReturnTypeReflection>(fn_def: &abi::FunctionDefinition) {
-        let fn_return_type = fn_def.prototype.signature.return_type().expect(&format!(
-            "Function '{}' should have a return type.",
-            fn_def.prototype.name()
-        ));
+        let fn_return_type = fn_def.prototype.signature.return_type().unwrap_or_else(|| {
+            panic!(
+                "Function '{}' should have a return type.",
+                fn_def.prototype.name()
+            )
+        });
         assert_eq!(fn_return_type.guid, R::type_id().guid);
         // assert_eq!(fn_return_type.name(), R::type_name());
     }
@@ -133,7 +134,7 @@ fn test_abi_compatibility() {
             .types()
             .iter()
             .find(|ty| ty.name() == struct_name)
-            .expect(&format!("Failed to retrieve struct '{}'", struct_name));
+            .unwrap_or_else(|| panic!("Failed to retrieve struct '{}'", struct_name));
 
         assert_eq!(type_info.name(), struct_name);
         assert_eq!(type_info.size_in_bits(), 8 * mem::size_of::<T>());

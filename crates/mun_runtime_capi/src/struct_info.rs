@@ -17,6 +17,9 @@ pub struct StructInfoHandle(pub *const c_void);
 /// # Safety
 ///
 /// The caller is responsible for calling `mun_field_info_span_destroy` on the returned span.
+///
+/// This function might result in undefined behavior if the [`crate::TypeInfoHandle`] associated
+/// with this `StructInfoHandle` has been deallocated.
 #[no_mangle]
 pub unsafe extern "C" fn mun_struct_info_fields(
     struct_info: StructInfoHandle,
@@ -53,6 +56,11 @@ pub unsafe extern "C" fn mun_struct_info_fields(
 }
 
 /// Retrieves the struct's memory kind.
+///
+/// # Safety
+///
+/// This function might result in undefined behavior if the [`crate::TypeInfoHandle`] associated
+/// with this `StructInfoHandle` has been deallocated.
 #[no_mangle]
 pub unsafe extern "C" fn mun_struct_info_memory_kind(
     struct_info: StructInfoHandle,
