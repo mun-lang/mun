@@ -61,14 +61,14 @@ fn build(project: &Path, args: &[&str]) {
         OsString::from(project.join("mun.toml")),
     ]
     .into_iter()
-    .chain(args.into_iter().map(|&arg| arg.into()))
+    .chain(args.iter().map(|&arg| arg.into()))
     .collect();
     assert_eq!(run_with_args(args).unwrap(), mun::ExitStatus::Success);
 }
 
 /// Builds and runs an newly generated mun project
 fn build_and_run(project: &Path) {
-    build(project.as_ref(), &[]);
+    build(project, &[]);
 
     let library_path = project.join("target/mod.munlib");
     assert!(library_path.is_file());

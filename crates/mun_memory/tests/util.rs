@@ -34,7 +34,7 @@ fn type_guid_string(type_info: &TypeInfo) -> String {
             if s.memory_kind == abi::StructMemoryKind::Gc {
                 format!("struct {}", type_info.name)
             } else {
-                struct_guid_string(&type_info.name, &s)
+                struct_guid_string(&type_info.name, s)
             }
         }
     }

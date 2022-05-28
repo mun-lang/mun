@@ -98,7 +98,7 @@ fn error_assembly_not_linkable() {
             "{}",
             io::Error::new(
                 io::ErrorKind::NotFound,
-                format!("Failed to link due to missing dependencies."),
+                "Failed to link due to missing dependencies.".to_string(),
             )
         )
     );

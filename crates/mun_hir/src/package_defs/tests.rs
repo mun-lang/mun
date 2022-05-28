@@ -265,7 +265,7 @@ fn tree_for_module(
             .iter()
             .filter(|decl| !local_declarations.contains(*decl)),
     ) {
-        let is_local = local_declarations.contains(&def);
+        let is_local = local_declarations.contains(def);
         match def {
             ItemDefinitionId::ModuleId(m) => {
                 if m.package == module.id.package

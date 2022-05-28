@@ -120,11 +120,13 @@ impl TypeInfo {
             id: type_info.id.clone(),
             name: type_info.name().to_owned(),
             layout: Layout::from_size_align(type_info.size_in_bytes(), type_info.alignment())
-                .expect(&format!(
-                    "TypeInfo contains invalid size and alignment (size: {}, align: {})",
-                    type_info.size_in_bytes(),
-                    type_info.alignment()
-                )),
+                .unwrap_or_else(|_| {
+                    panic!(
+                        "TypeInfo contains invalid size and alignment (size: {}, align: {})",
+                        type_info.size_in_bytes(),
+                        type_info.alignment()
+                    )
+                }),
             data,
         })
     }
@@ -259,7 +261,7 @@ impl<T: abi::HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *mut T {
 
         let map = unsafe {
             INIT.call_once(|| {
-                VALUE = Some(StaticTypeMap::new());
+                VALUE = Some(StaticTypeMap::default());
             });
             VALUE.as_ref().unwrap()
         };
@@ -271,12 +273,8 @@ impl<T: abi::HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *mut T {
                     .to_str()
                     .expect("static type name is not a valid UTF-8 string")
             );
-            let size_in_bits = (std::mem::size_of::<*mut T>()).try_into().expect(
-                "size of T is larger than the maximum allowed ABI size. Please file a bug.",
-            );
-            let alignment = (std::mem::align_of::<*mut T>()).try_into().expect(
-                "alignment of T is larger than the maximum allowed ABI size. Please file a bug.",
-            );
+            let size_in_bits = std::mem::size_of::<*mut T>();
+            let alignment = std::mem::align_of::<*mut T>();
             Arc::new(TypeInfo {
                 id: Guid::from(name.as_bytes()).into(),
                 name,
@@ -296,7 +294,7 @@ impl<T: abi::HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *const T {
 
         let map = unsafe {
             INIT.call_once(|| {
-                VALUE = Some(StaticTypeMap::new());
+                VALUE = Some(StaticTypeMap::default());
             });
             VALUE.as_ref().unwrap()
         };
@@ -308,12 +306,8 @@ impl<T: abi::HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *const T {
                     .to_str()
                     .expect("static type name is not a valid UTF-8 string")
             );
-            let size_in_bits = (std::mem::size_of::<*const T>()).try_into().expect(
-                "size of T is larger than the maximum allowed ABI size. Please file a bug.",
-            );
-            let alignment = (std::mem::align_of::<*const T>()).try_into().expect(
-                "alignment of T is larger than the maximum allowed ABI size. Please file a bug.",
-            );
+            let size_in_bits = std::mem::size_of::<*const T>();
+            let alignment = std::mem::align_of::<*const T>();
             Arc::new(TypeInfo {
                 id: Guid::from(name.as_bytes()).into(),
                 name,

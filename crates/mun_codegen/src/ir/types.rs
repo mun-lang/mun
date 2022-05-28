@@ -32,11 +32,11 @@ impl<'ink> TransparentValue<'ink> for abi::StructMemoryKind {
     type Target = u8;
 
     fn as_target_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, Self::Target> {
-        (self.clone() as u8).as_value(context)
+        (*self as u8).as_value(context)
     }
 
     fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
-        vec![vec![self.clone() as u8].into()]
+        vec![vec![*self as u8].into()]
     }
 }
 

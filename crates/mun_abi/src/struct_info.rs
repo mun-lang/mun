@@ -132,7 +132,7 @@ mod tests {
     #[test]
     fn test_struct_info_memory_kind_gc() {
         let struct_memory_kind = StructMemoryKind::Gc;
-        let struct_info = fake_struct_info(&[], &[], &[], struct_memory_kind.clone());
+        let struct_info = fake_struct_info(&[], &[], &[], struct_memory_kind);
 
         assert_eq!(struct_info.memory_kind, struct_memory_kind);
     }
@@ -140,7 +140,7 @@ mod tests {
     #[test]
     fn test_struct_info_memory_kind_value() {
         let struct_memory_kind = StructMemoryKind::Value;
-        let struct_info = fake_struct_info(&[], &[], &[], struct_memory_kind.clone());
+        let struct_info = fake_struct_info(&[], &[], &[], struct_memory_kind);
 
         assert_eq!(struct_info.memory_kind, struct_memory_kind);
     }

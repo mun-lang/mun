@@ -575,19 +575,18 @@ impl Runtime {
         };
 
         // Validate the return type
-        match equals_return_type::<ReturnType>(&function_info.prototype.signature.return_type) {
-            Err((got, expected)) => {
-                return Err(InvokeErr {
-                    msg: format!(
-                        "unexpected return type, got '{}', expected '{}",
-                        expected, got
-                    ),
-                    function_name,
-                    arguments,
-                })
-            }
-            Ok(_) => {}
-        };
+        if let Err((got, expected)) =
+            equals_return_type::<ReturnType>(&function_info.prototype.signature.return_type)
+        {
+            return Err(InvokeErr {
+                msg: format!(
+                    "unexpected return type, got '{}', expected '{}",
+                    expected, got
+                ),
+                function_name,
+                arguments,
+            });
+        }
 
         let result: ReturnType::MunType = unsafe { arguments.invoke(function_info.fn_ptr) };
         Ok(Marshal::marshal_from(result, self))

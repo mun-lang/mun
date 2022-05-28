@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn cast_f32_to_f64() {
-        assert_cast(3.14f32, 0f64);
+        assert_cast(std::f32::consts::PI, 0f64);
     }
 
     #[test]

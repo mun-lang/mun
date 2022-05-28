@@ -1,5 +1,6 @@
 use mun_runtime::StructRef;
 use mun_test::CompileAndRunTestDriver;
+use std::sync::Arc;
 
 #[macro_use]
 mod util;
@@ -947,4 +948,65 @@ fn insert_struct() {
 
     let d = foo.as_ref(&driver.runtime).get::<StructRef>("d").unwrap();
     assert_eq!(d.get::<f64>("0"), Ok(0.0));
+}
+
+#[test]
+fn test_type_table() {
+    let driver = CompileAndRunTestDriver::from_fixture(
+        r#"
+    //- /mun.toml
+    [package]
+    name="foo"
+    version="0.0.0"
+
+    //- /src/mod.mun
+
+    //- /src/foo.mun
+    use package::bar::Bar;
+
+    pub struct Foo {
+        bar: Bar
+    }
+
+    pub fn new_foo() -> Foo {
+        Foo {
+            bar: Bar {value: 3}
+        }
+    }
+
+    //- /src/bar.mun
+    pub struct Bar {
+        value: i32
+    }
+    "#,
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
+
+    let a: StructRef = driver
+        .runtime
+        .invoke("foo::new_foo", ())
+        .expect("failed to call 'new_foo'");
+
+    // Get the type of the Bar struct
+    let bar_type = driver
+        .runtime
+        .get_type_info_by_name("bar::Bar")
+        .expect("could not find Bar type");
+
+    // Get the type of the `bar` field of `Foo`.
+    let foo_bar_field_type = a
+        .type_info()
+        .as_struct()
+        .expect("is not a struct?")
+        .find_field_by_name("bar")
+        .expect("could not find `bar` field")
+        .type_info
+        .clone();
+
+    // These types should be equal
+    assert_eq!(foo_bar_field_type, bar_type);
+
+    // In fact the pointers should be equal!
+    assert!(Arc::ptr_eq(&foo_bar_field_type, &bar_type));
 }

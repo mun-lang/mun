@@ -10,14 +10,15 @@ pub struct StaticTypeMap<T: 'static> {
     map: ReentrantMutex<RefCell<HashMap<TypeId, &'static T>>>,
 }
 
-impl<T: 'static> StaticTypeMap<T> {
-    /// Instantiates a new instance
-    pub fn new() -> Self {
+impl<T: 'static> Default for StaticTypeMap<T> {
+    fn default() -> Self {
         Self {
             map: ReentrantMutex::new(RefCell::new(HashMap::default())),
         }
     }
+}
 
+impl<T: 'static> StaticTypeMap<T> {
     /// Initialize static value corresponding to provided type.
     ///
     /// Initialized value will stay on heap until program terminated.

@@ -138,7 +138,7 @@ mod tests {
                 if let TypeInfoData::Struct(rhs) = &rhs.data {
                     assert_eq!(lhs.field_types(), rhs.field_types());
                 } else {
-                    assert!(false);
+                    unreachable!()
                 }
             }
         }

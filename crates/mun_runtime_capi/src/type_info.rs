@@ -54,6 +54,11 @@ impl TypeInfoSpan {
 }
 
 /// Decrements the strong count of the `Arc<TypeInfo>` associated with `handle`.
+///
+/// # Safety
+///
+/// This function results in undefined behavior if the passed in `TypeInfoHandle` has already been
+/// deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_info_decrement_strong_count(handle: TypeInfoHandle) -> bool {
     if !handle.0.is_null() {
@@ -65,6 +70,11 @@ pub unsafe extern "C" fn mun_type_info_decrement_strong_count(handle: TypeInfoHa
 }
 
 /// Increments the strong count of the `Arc<TypeInfo>` associated with `handle`.
+///
+/// # Safety
+///
+/// This function results in undefined behavior if the passed in `TypeInfoHandle` has already been
+/// deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_info_increment_strong_count(handle: TypeInfoHandle) -> bool {
     if !handle.0.is_null() {
@@ -76,6 +86,11 @@ pub unsafe extern "C" fn mun_type_info_increment_strong_count(handle: TypeInfoHa
 }
 
 /// Retrieves the type's ID.
+///
+/// # Safety
+///
+/// This function results in undefined behavior if the passed in `TypeInfoHandle` has been
+/// deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_info_id(
     type_info: TypeInfoHandle,
@@ -101,6 +116,9 @@ pub unsafe extern "C" fn mun_type_info_id(
 /// # Safety
 ///
 /// The caller is responsible for calling `mun_string_destroy` on the return pointer - if it is not null.
+///
+/// This function results in undefined behavior if the passed in `TypeInfoHandle` has been
+/// deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_info_name(type_info: TypeInfoHandle) -> *const c_char {
     let type_info = match (type_info.0 as *const TypeInfo).as_ref() {
@@ -112,6 +130,11 @@ pub unsafe extern "C" fn mun_type_info_name(type_info: TypeInfoHandle) -> *const
 }
 
 /// Retrieves the type's size.
+///
+/// # Safety
+///
+/// This function results in undefined behavior if the passed in `TypeInfoHandle` has been
+/// deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_info_size(
     type_info: TypeInfoHandle,
@@ -133,6 +156,11 @@ pub unsafe extern "C" fn mun_type_info_size(
 }
 
 /// Retrieves the type's alignment.
+///
+/// # Safety
+///
+/// This function results in undefined behavior if the passed in `TypeInfoHandle` has been
+/// deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_info_align(
     type_info: TypeInfoHandle,
@@ -177,6 +205,7 @@ impl TypeInfoData {
     }
 
     /// Returns the C-style handle to the struct information, if available.
+    #[cfg(test)]
     pub(crate) fn as_struct(&self) -> Option<StructInfoHandle> {
         if let TypeInfoData::Struct(handle) = self {
             Some(*handle)
@@ -191,7 +220,8 @@ impl TypeInfoData {
 /// # Safety
 ///
 /// The original `TypeInfoHandle` needs to stay alive as long as the `TypeInfoData` lives. The
-/// `TypeInfoData` is destroyed at the same time as the `TypeInfo`.
+/// `TypeInfoData` is destroyed at the same time as the `TypeInfo`. A `TypeInfo` might be destroyed
+/// through a call to [`mun_type_info_decrement_strong_count`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_info_data(
     type_info: TypeInfoHandle,

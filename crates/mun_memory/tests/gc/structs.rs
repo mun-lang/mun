@@ -53,19 +53,19 @@ fn trace_collect() {
     type_table.insert_type(foo_type_info.clone());
 
     let runtime = Arc::new(MarkSweep::<EventAggregator<Event>>::default());
-    let mut foo = GcRootPtr::new(&runtime, runtime.alloc(&foo_type_info));
+    let mut foo_ptr = GcRootPtr::new(&runtime, runtime.alloc(&foo_type_info));
     let bar = runtime.alloc(&bar_type_info);
 
     // Assign bar to foo.bar
     unsafe {
-        (*foo.deref_mut::<FooObject>()).bar = bar;
+        (*foo_ptr.deref_mut::<FooObject>()).bar = bar;
     }
 
     // Collect garbage, bar should not be collected
     runtime.collect();
 
     // Drop foo
-    let foo = foo.unroot();
+    let foo = foo_ptr.unroot();
 
     // Collect garbage, both foo and bar should be collected
     runtime.collect();
@@ -87,24 +87,24 @@ fn trace_cycle() {
     let mut type_table = TypeTable::default();
 
     let bar_type_info = fake_struct!(type_table, "core::Bar", "a" => i64);
-    type_table.insert_type(bar_type_info.clone());
+    type_table.insert_type(bar_type_info);
 
     let foo_type_info = fake_struct!(type_table, "core::Foo", "bar" => Bar);
     type_table.insert_type(foo_type_info.clone());
 
     let runtime = Arc::new(MarkSweep::<EventAggregator<Event>>::default());
-    let mut foo = GcRootPtr::new(&runtime, runtime.alloc(&foo_type_info));
+    let mut foo_ptr = GcRootPtr::new(&runtime, runtime.alloc(&foo_type_info));
 
     // Assign foo to foo.bar
     unsafe {
-        (*foo.deref_mut::<FooObject>()).bar = foo.handle();
+        (*foo_ptr.deref_mut::<FooObject>()).bar = foo_ptr.handle();
     }
 
     // Collect garbage, nothing should be collected since foo is rooted
     runtime.collect();
 
     // Drop foo
-    let foo = foo.unroot();
+    let foo = foo_ptr.unroot();
 
     // Collect garbage, foo should be collected
     runtime.collect();

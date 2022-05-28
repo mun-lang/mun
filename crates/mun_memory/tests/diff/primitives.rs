@@ -26,7 +26,7 @@ fn remove() {
     let int = type_table.find_type_info_by_name("core::i64").unwrap();
     let float = type_table.find_type_info_by_name("core::f64").unwrap();
 
-    let old = &[int.clone(), float.clone()];
+    let old = &[int, float.clone()];
     let new = &[float.clone()];
 
     let diff = diff(old, new);
@@ -41,7 +41,7 @@ fn replace() {
     let int = type_table.find_type_info_by_name("core::i64").unwrap();
     let float = type_table.find_type_info_by_name("core::f64").unwrap();
 
-    let old = &[int.clone()];
+    let old = &[int];
     let new = &[float.clone()];
 
     let diff = diff(old, new);

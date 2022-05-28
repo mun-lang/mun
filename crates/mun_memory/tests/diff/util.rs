@@ -7,8 +7,8 @@ use std::sync::Arc;
 
 use crate::util::{fake_layout, struct_guid};
 
-pub fn apply_myers_diff<'t, T: Clone + Eq>(old: &[T], new: &[T], diff: Vec<myers::Diff>) -> Vec<T> {
-    let mut combined: Vec<_> = old.iter().cloned().collect();
+pub fn apply_myers_diff<T: Clone + Eq>(old: &[T], new: &[T], diff: Vec<myers::Diff>) -> Vec<T> {
+    let mut combined: Vec<_> = old.to_vec();
     for diff in diff.iter().rev() {
         if let myers::Diff::Delete { index } = diff {
             combined.remove(*index);
@@ -23,12 +23,12 @@ pub fn apply_myers_diff<'t, T: Clone + Eq>(old: &[T], new: &[T], diff: Vec<myers
     combined
 }
 
-pub(crate) fn apply_diff<'t>(
+pub(crate) fn apply_diff(
     old: &[Arc<TypeInfo>],
     new: &[Arc<TypeInfo>],
     diff: Vec<Diff>,
 ) -> Vec<Arc<TypeInfo>> {
-    let mut combined: Vec<Arc<TypeInfo>> = old.iter().cloned().collect();
+    let mut combined: Vec<Arc<TypeInfo>> = old.to_vec();
     for diff in diff.iter().rev() {
         match diff {
             Diff::Delete { index } => {
@@ -68,7 +68,7 @@ pub(crate) fn apply_diff<'t>(
     combined
 }
 
-fn apply_mapping<'t>(old: &mut TypeInfo, new: &TypeInfo, mapping: &[FieldDiff]) {
+fn apply_mapping(old: &mut TypeInfo, new: &TypeInfo, mapping: &[FieldDiff]) {
     if let TypeInfoData::Struct(old_struct) = &mut old.data {
         if let TypeInfoData::Struct(new_struct) = &new.data {
             let mut combined = old_struct.clone();
@@ -147,8 +147,8 @@ fn apply_mapping<'t>(old: &mut TypeInfo, new: &TypeInfo, mapping: &[FieldDiff]) 
             }
 
             *old_struct = combined;
-            old.layout = fake_layout(&old_struct);
-            old.id.guid = struct_guid(&old.name, &old_struct);
+            old.layout = fake_layout(old_struct);
+            old.id.guid = struct_guid(&old.name, old_struct);
         } else {
             unreachable!()
         }

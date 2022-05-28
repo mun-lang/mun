@@ -27,10 +27,10 @@ impl DispatchTable {
         self.functions.insert(fn_path.to_string(), fn_info)
     }
 
-    /// Removes and returns the `fn_info` corresponding to `fn_path`, if it exists.
-    pub fn remove_fn<S: AsRef<str>>(&mut self, fn_path: S) -> Option<Arc<FunctionDefinition>> {
-        self.functions.remove(fn_path.as_ref())
-    }
+    // /// Removes and returns the `fn_info` corresponding to `fn_path`, if it exists.
+    // pub fn remove_fn<S: AsRef<str>>(&mut self, fn_path: S) -> Option<Arc<FunctionDefinition>> {
+    //     self.functions.remove(fn_path.as_ref())
+    // }
 
     /// Removes the function definitions from the given assembly from this dispatch table.
     pub fn remove_module(&mut self, assembly: &abi::ModuleInfo) {

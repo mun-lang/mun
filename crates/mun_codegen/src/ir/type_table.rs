@@ -134,7 +134,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
         if let TypeInfoData::Struct(hir_struct) = type_info.data {
             self.collect_struct(hir_struct);
         } else {
-            self.entries.push(type_info.clone());
+            self.entries.push(type_info);
         }
     }
 
@@ -197,7 +197,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
     /// Collects unique `TypeInfo` from the specified struct type.
     pub fn collect_struct(&mut self, hir_struct: hir::Struct) {
         let type_info = self.hir_types.type_info(&hir_struct.ty(self.db));
-        self.entries.push(type_info.clone());
+        self.entries.push(type_info);
 
         let fields = hir_struct.fields(self.db);
         for field in fields.into_iter() {
