@@ -1,10 +1,7 @@
 use compiler::{Config, DisplayColor, Driver, PathOrInline, RelativePathBuf};
 use std::{ffi::CString, io::stderr, path::Path, ptr};
 
-use crate::{
-    handle::TypedHandle,
-    runtime::{mun_runtime_create, mun_runtime_destroy, RuntimeHandle, RuntimeOptions},
-};
+use crate::runtime::{mun_runtime_create, mun_runtime_destroy, RuntimeHandle, RuntimeOptions};
 
 /// Combines a compiler and runtime in one. Use of the TestDriver allows for quick testing of Mun
 /// constructs in the runtime with hot-reloading support.
@@ -60,7 +57,7 @@ fn make_runtime(lib_path: &Path) -> RuntimeHandle {
             &mut handle as *mut _,
         )
     };
-    assert_eq!(error.token(), 0, "Failed to create runtime");
+    assert_eq!(error.0, ptr::null(), "Failed to create runtime");
     handle
 }
 
@@ -77,13 +74,13 @@ macro_rules! test_invalid_runtime {
                     let handle =
                         unsafe { [<mun_ $name>](runtime $(, $arg)*) };
 
-                    let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+                    let message = unsafe { CStr::from_ptr(handle.0) };
                     assert_eq!(
                         message.to_str().unwrap(),
                         "Invalid argument: 'runtime' is null pointer."
                     );
 
-                    unsafe { mun_destroy_string(message.as_ptr()) };
+                    unsafe { mun_error_destroy(handle) };
                 }
             }
         )+

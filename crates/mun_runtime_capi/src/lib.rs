@@ -4,12 +4,8 @@
 //! integrate the Mun Runtime into other languages that allow interoperability with C.
 #![warn(missing_docs)]
 
-#[macro_use]
-mod handle;
-
 pub mod error;
 pub mod gc;
-pub mod hub;
 pub mod runtime;
 
 pub mod field_info;
@@ -31,11 +27,9 @@ use std::{ffi::CString, os::raw::c_char};
 /// its content will be deallocated. Passing pointers to invalid data or memory allocated by other
 /// processes, will lead to undefined behavior.
 #[no_mangle]
-pub unsafe extern "C" fn mun_destroy_string(string: *const c_char) {
+pub unsafe extern "C" fn mun_string_destroy(string: *const c_char) {
     if !string.is_null() {
         // Destroy the string
         let _string = CString::from_raw(string as *mut _);
     }
 }
-
-

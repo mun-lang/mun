@@ -1,5 +1,6 @@
-use crate::{error::ErrorHandle, hub::HUB, type_info::TypeInfoHandle};
-use anyhow::anyhow;
+//! Exposes field information using the C ABI.
+
+use crate::{error::ErrorHandle, type_info::TypeInfoHandle};
 use memory::FieldInfo;
 use std::{
     ffi::{c_void, CString},
@@ -54,20 +55,12 @@ pub unsafe extern "C" fn mun_field_info_offset(
 ) -> ErrorHandle {
     let field_info = match (field_info.0 as *const FieldInfo).as_ref() {
         Some(field_info) => field_info,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'field_info' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'field_info' is null pointer."),
     };
 
     let field_offset = match field_offset.as_mut() {
         Some(field_offset) => field_offset,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'field_offset' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'field_offset' is null pointer."),
     };
 
     *field_offset = field_info.offset;
@@ -79,9 +72,8 @@ pub unsafe extern "C" fn mun_field_info_offset(
 mod tests {
     use super::*;
     use crate::{
-        error::mun_error_message,
-        handle::TypedHandle,
-        mun_destroy_string,
+        error::mun_error_destroy,
+        mun_string_destroy,
         runtime::{mun_runtime_get_type_info_by_name, RuntimeHandle},
         struct_info::mun_struct_info_fields,
         test_util::TestDriver,
@@ -105,14 +97,14 @@ mod tests {
                 type_info.as_mut_ptr(),
             )
         };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
         assert!(has_type_info);
 
         let type_info = unsafe { type_info.assume_init() };
 
         let mut type_info_data = MaybeUninit::uninit();
         let handle = unsafe { mun_type_info_data(type_info, type_info_data.as_mut_ptr()) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let type_info_data = unsafe { type_info_data.assume_init() };
         let struct_info = type_info_data
@@ -128,7 +120,7 @@ mod tests {
                 num_fields.as_mut_ptr(),
             )
         };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let num_fields = unsafe { num_fields.assume_init() };
         assert!(num_fields > 0);
@@ -156,11 +148,13 @@ mod tests {
         let name = unsafe { mun_field_info_name(field_info) };
         assert_ne!(name, ptr::null());
 
-        let name = unsafe { CStr::from_ptr(name) }
+        let name_str = unsafe { CStr::from_ptr(name) }
             .to_str()
             .expect("Invalid field name.");
 
-        assert_eq!(name, "a");
+        assert_eq!(name_str, "a");
+
+        unsafe { mun_string_destroy(name) };
     }
     #[test]
     fn test_field_info_type_invalid_handle() {
@@ -184,7 +178,7 @@ mod tests {
 
         let mut type_id = MaybeUninit::uninit();
         let handle = unsafe { mun_type_info_id(type_info, type_id.as_mut_ptr()) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let type_id = unsafe { type_id.assume_init() };
         assert_eq!(type_id, <i32>::type_info().id);
@@ -195,15 +189,15 @@ mod tests {
         let mut field_offset = MaybeUninit::uninit();
         let handle =
             unsafe { mun_field_info_offset(FieldInfoHandle::null(), field_offset.as_mut_ptr()) };
-        assert_ne!(handle.token(), 0);
+        assert_ne!(handle.0, ptr::null());
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'field_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -219,15 +213,15 @@ mod tests {
         let field_info = get_first_field(driver.runtime, "Foo");
 
         let handle = unsafe { mun_field_info_offset(field_info, ptr::null_mut()) };
-        assert_ne!(handle.token(), 0);
+        assert_ne!(handle.0, ptr::null());
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'field_offset' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -244,7 +238,7 @@ mod tests {
 
         let mut field_offset = MaybeUninit::uninit();
         let handle = unsafe { mun_field_info_offset(field_info, field_offset.as_mut_ptr()) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let field_offset = unsafe { field_offset.assume_init() };
         assert_eq!(field_offset, 0);

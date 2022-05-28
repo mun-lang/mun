@@ -1,5 +1,6 @@
-use crate::{error::ErrorHandle, hub::HUB, struct_info::StructInfoHandle};
-use anyhow::anyhow;
+//! Exposes type information using the C ABI.
+
+use crate::{error::ErrorHandle, struct_info::StructInfoHandle};
 use memory::{StructInfo, TypeInfo};
 use std::{
     ffi::{c_void, CString},
@@ -82,20 +83,12 @@ pub unsafe extern "C" fn mun_type_info_id(
 ) -> ErrorHandle {
     let type_info = match (type_info.0 as *const TypeInfo).as_ref() {
         Some(type_info) => type_info,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'type_info' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'type_info' is null pointer."),
     };
 
     let type_id = match type_id.as_mut() {
         Some(type_id) => type_id,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'type_id' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'type_id' is null pointer."),
     };
 
     *type_id = type_info.id.clone();
@@ -126,20 +119,12 @@ pub unsafe extern "C" fn mun_type_info_size(
 ) -> ErrorHandle {
     let type_info = match (type_info.0 as *const TypeInfo).as_ref() {
         Some(type_info) => type_info,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'type_info' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'type_info' is null pointer."),
     };
 
     let size = match size.as_mut() {
         Some(size) => size,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'size' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'size' is null pointer."),
     };
 
     *size = type_info.layout.size();
@@ -155,20 +140,12 @@ pub unsafe extern "C" fn mun_type_info_align(
 ) -> ErrorHandle {
     let type_info = match (type_info.0 as *const TypeInfo).as_ref() {
         Some(type_info) => type_info,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'type_info' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'type_info' is null pointer."),
     };
 
     let align = match align.as_mut() {
         Some(align) => align,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'align' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'align' is null pointer."),
     };
 
     *align = type_info.layout.align();
@@ -217,20 +194,12 @@ pub unsafe extern "C" fn mun_type_info_data(
 ) -> ErrorHandle {
     let type_info = match (type_info.0 as *const TypeInfo).as_ref() {
         Some(type_info) => type_info,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'type_info' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'type_info' is null pointer."),
     };
 
     let type_info_data = match type_info_data.as_mut() {
         Some(type_info_data) => type_info_data,
-        None => {
-            return HUB.errors.register(anyhow!(
-                "Invalid argument: 'type_info_data' is null pointer."
-            ))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'type_info_data' is null pointer."),
     };
 
     *type_info_data = match &type_info.data {
@@ -270,9 +239,7 @@ pub unsafe extern "C" fn mun_destroy_type_info_array(array_handle: TypeInfoArray
 mod tests {
     use super::*;
     use crate::{
-        error::mun_error_message,
-        handle::TypedHandle,
-        mun_destroy_string,
+        error::mun_error_destroy,
         runtime::{mun_runtime_get_type_info_by_name, RuntimeHandle},
         test_util::TestDriver,
     };
@@ -298,7 +265,7 @@ mod tests {
                 type_info.as_mut_ptr(),
             )
         };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let has_type_info = unsafe { has_type_info.assume_init() };
         assert!(has_type_info);
@@ -371,15 +338,15 @@ mod tests {
     #[test]
     fn test_type_info_id_invalid_type_info() {
         let handle = unsafe { mun_type_info_id(TypeInfoHandle::null(), ptr::null_mut()) };
-        assert_ne!(handle.token(), 0);
+        assert_ne!(handle.0, ptr::null());
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'type_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -392,15 +359,15 @@ mod tests {
 
         let type_info = get_type_info_by_name(driver.runtime, "core::i32");
         let handle = unsafe { mun_type_info_id(type_info, ptr::null_mut()) };
-        assert_ne!(handle.token(), 0);
+        assert_ne!(handle.0, ptr::null());
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'type_id' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -414,7 +381,7 @@ mod tests {
         let type_info = get_type_info_by_name(driver.runtime, "core::i32");
         let mut type_id = MaybeUninit::uninit();
         let handle = unsafe { mun_type_info_id(type_info, type_id.as_mut_ptr()) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let type_id = unsafe { type_id.assume_init() };
         assert_eq!(type_id, <i32>::type_info().id);
@@ -448,15 +415,15 @@ mod tests {
     #[test]
     fn test_type_info_size_invalid_type_info() {
         let handle = unsafe { mun_type_info_size(TypeInfoHandle::null(), ptr::null_mut()) };
-        assert_ne!(handle.token(), 0);
+        assert_ne!(handle.0, ptr::null());
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'type_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -469,15 +436,15 @@ mod tests {
 
         let type_info = get_type_info_by_name(driver.runtime, "core::i32");
         let handle = unsafe { mun_type_info_size(type_info, ptr::null_mut()) };
-        assert_ne!(handle.token(), 0);
+        assert_ne!(handle.0, ptr::null());
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'size' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -491,7 +458,7 @@ mod tests {
         let type_info = get_type_info_by_name(driver.runtime, "core::i32");
         let mut size = MaybeUninit::uninit();
         let handle = unsafe { mun_type_info_size(type_info, size.as_mut_ptr()) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let size = unsafe { size.assume_init() };
         assert_eq!(size, mem::size_of::<i32>());
@@ -500,15 +467,15 @@ mod tests {
     #[test]
     fn test_type_info_align_invalid_type_info() {
         let handle = unsafe { mun_type_info_align(TypeInfoHandle::null(), ptr::null_mut()) };
-        assert_ne!(handle.token(), 0);
+        assert_ne!(handle.0, ptr::null());
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'type_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -521,15 +488,15 @@ mod tests {
 
         let type_info = get_type_info_by_name(driver.runtime, "core::i32");
         let handle = unsafe { mun_type_info_align(type_info, ptr::null_mut()) };
-        assert_ne!(handle.token(), 0);
+        assert_ne!(handle.0, ptr::null());
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'align' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -543,7 +510,7 @@ mod tests {
         let type_info = get_type_info_by_name(driver.runtime, "core::i32");
         let mut align = MaybeUninit::uninit();
         let handle = unsafe { mun_type_info_align(type_info, align.as_mut_ptr()) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let align = unsafe { align.assume_init() };
         assert_eq!(align, mem::align_of::<i32>());
@@ -552,15 +519,15 @@ mod tests {
     #[test]
     fn test_type_info_data_invalid_type_info() {
         let handle = unsafe { mun_type_info_data(TypeInfoHandle::null(), ptr::null_mut()) };
-        assert_ne!(handle.token(), 0);
+        assert_ne!(handle.0, ptr::null());
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'type_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -573,15 +540,15 @@ mod tests {
 
         let type_info = get_type_info_by_name(driver.runtime, "core::i32");
         let handle = unsafe { mun_type_info_data(type_info, ptr::null_mut()) };
-        assert_ne!(handle.token(), 0);
+        assert_ne!(handle.0, ptr::null());
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'type_info_data' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -595,7 +562,7 @@ mod tests {
         let type_info = get_type_info_by_name(driver.runtime, "core::i32");
         let mut type_info_data = MaybeUninit::uninit();
         let handle = unsafe { mun_type_info_data(type_info, type_info_data.as_mut_ptr()) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let type_info_data = unsafe { type_info_data.assume_init() };
         assert!(type_info_data.is_primitive());
@@ -615,7 +582,7 @@ mod tests {
         let type_info = get_type_info_by_name(driver.runtime, "Foo");
         let mut type_info_data = MaybeUninit::uninit();
         let handle = unsafe { mun_type_info_data(type_info, type_info_data.as_mut_ptr()) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let type_info_data = unsafe { type_info_data.assume_init() };
         assert!(!type_info_data.is_primitive());

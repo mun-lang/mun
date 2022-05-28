@@ -1,9 +1,9 @@
+//! Exposes function information using the C ABI.
+
 use crate::{
     error::ErrorHandle,
-    hub::HUB,
     type_info::{TypeInfoArrayHandle, TypeInfoHandle},
 };
-use anyhow::anyhow;
 use memory::TypeInfo;
 use runtime::FunctionDefinition;
 use std::{
@@ -94,29 +94,17 @@ pub unsafe extern "C" fn mun_function_info_argument_types(
 ) -> ErrorHandle {
     let fn_info = match (fn_info.0 as *const FunctionDefinition).as_ref() {
         Some(fn_info) => fn_info,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'fn_info' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'fn_info' is null pointer."),
     };
 
     let arg_types = match arg_types.as_mut() {
         Some(arg_types) => arg_types,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'arg_types' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'arg_types' is null pointer."),
     };
 
     let has_args = match has_args.as_mut() {
         Some(has_args) => has_args,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'has_args' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'has_args' is null pointer."),
     };
 
     let fn_sig = &fn_info.prototype.signature;
@@ -157,9 +145,8 @@ pub unsafe extern "C" fn mun_function_info_return_type(
 mod tests {
     use super::*;
     use crate::{
-        error::mun_error_message,
-        handle::TypedHandle,
-        mun_destroy_string,
+        error::mun_error_destroy,
+        mun_string_destroy,
         runtime::{mun_runtime_get_function_info, RuntimeHandle},
         test_util::TestDriver,
         type_info::mun_type_info_id,
@@ -187,7 +174,7 @@ mod tests {
                 fn_definition.as_mut_ptr(),
             )
         };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
         assert!(has_fn_info);
 
         unsafe { fn_definition.assume_init() }
@@ -292,11 +279,13 @@ mod tests {
         let name = unsafe { mun_function_info_name(fn_info) };
         assert_ne!(name, ptr::null());
 
-        let name = unsafe { CStr::from_ptr(name) }
+        let name_str = unsafe { CStr::from_ptr(name) }
             .to_str()
             .expect("Invalid function name.");
 
-        assert_eq!(name, "main");
+        assert_eq!(name_str, "main");
+
+        unsafe { mun_string_destroy(name) };
     }
 
     #[test]
@@ -308,15 +297,15 @@ mod tests {
                 ptr::null_mut(),
             )
         };
-        assert_ne!(handle.token(), 0);
+        assert_ne!(handle.0, ptr::null());
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'fn_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -330,15 +319,15 @@ mod tests {
         let fn_info = get_fake_function_info(driver.runtime, "main");
         let handle =
             unsafe { mun_function_info_argument_types(fn_info, ptr::null_mut(), ptr::null_mut()) };
-        assert_ne!(handle.token(), 0);
+        assert_ne!(handle.0, ptr::null());
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'arg_types' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -354,15 +343,15 @@ mod tests {
         let handle = unsafe {
             mun_function_info_argument_types(fn_info, arg_types.as_mut_ptr(), ptr::null_mut())
         };
-        assert_ne!(handle.token(), 0);
+        assert_ne!(handle.0, ptr::null());
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'has_args' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -379,7 +368,7 @@ mod tests {
         let handle = unsafe {
             mun_function_info_argument_types(fn_info, arg_types.as_mut_ptr(), has_args.as_mut_ptr())
         };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let arg_types = unsafe { arg_types.assume_init() };
         let has_args = unsafe { has_args.assume_init() };
@@ -402,7 +391,7 @@ mod tests {
         let handle = unsafe {
             mun_function_info_argument_types(fn_info, arg_types.as_mut_ptr(), has_args.as_mut_ptr())
         };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let arg_types = unsafe { arg_types.assume_init() };
         let has_args = unsafe { has_args.assume_init() };
@@ -415,7 +404,7 @@ mod tests {
 
             let mut type_id = MaybeUninit::uninit();
             let handle = unsafe { mun_type_info_id(type_info, type_id.as_mut_ptr()) };
-            assert_eq!(handle.token(), 0);
+            assert_eq!(handle.0, ptr::null());
 
             let type_id = unsafe { type_id.assume_init() };
             assert_eq!(type_id, <i32>::type_info().id);
@@ -442,7 +431,7 @@ mod tests {
 
         let mut type_id = MaybeUninit::uninit();
         let handle = unsafe { mun_type_info_id(return_type, type_id.as_mut_ptr()) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let type_id = unsafe { type_id.assume_init() };
         assert_eq!(type_id, <()>::type_info().id);
@@ -462,7 +451,7 @@ mod tests {
 
         let mut type_id = MaybeUninit::uninit();
         let handle = unsafe { mun_type_info_id(return_type, type_id.as_mut_ptr()) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let type_id = unsafe { type_id.assume_init() };
         assert_eq!(type_id, <i32>::type_info().id);

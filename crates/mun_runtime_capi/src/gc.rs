@@ -2,8 +2,7 @@
 
 use std::{ffi::c_void, sync::Arc};
 
-use crate::{error::ErrorHandle, hub::HUB, runtime::RuntimeHandle, type_info::TypeInfoHandle};
-use anyhow::anyhow;
+use crate::{error::ErrorHandle, runtime::RuntimeHandle, type_info::TypeInfoHandle};
 use memory::TypeInfo;
 use runtime::Runtime;
 
@@ -27,26 +26,16 @@ pub unsafe extern "C" fn mun_gc_alloc(
 ) -> ErrorHandle {
     let runtime = match (runtime.0 as *mut Runtime).as_ref() {
         Some(runtime) => runtime,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'runtime' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'runtime' is null pointer."),
     };
 
     if type_info.0.is_null() {
-        return HUB
-            .errors
-            .register(anyhow!("Invalid argument: 'type_info' is null pointer."));
+        return ErrorHandle::new("Invalid argument: 'type_info' is null pointer.");
     }
 
     let obj = match obj.as_mut() {
         Some(obj) => obj,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'obj' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'obj' is null pointer."),
     };
 
     let type_info = Arc::from_raw(type_info.0 as *const TypeInfo);
@@ -76,20 +65,12 @@ pub unsafe extern "C" fn mun_gc_ptr_type(
 ) -> ErrorHandle {
     let runtime = match (handle.0 as *mut Runtime).as_ref() {
         Some(runtime) => runtime,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'runtime' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'runtime' is null pointer."),
     };
 
     let type_info = match type_info.as_mut() {
         Some(type_info) => type_info,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'type_info' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'type_info' is null pointer."),
     };
 
     type_info.0 = Arc::into_raw(runtime.gc().ptr_type(obj)) as *const c_void;
@@ -114,11 +95,7 @@ pub unsafe extern "C" fn mun_gc_ptr_type(
 pub unsafe extern "C" fn mun_gc_root(handle: RuntimeHandle, obj: GcPtr) -> ErrorHandle {
     let runtime = match (handle.0 as *mut Runtime).as_ref() {
         Some(runtime) => runtime,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'runtime' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'runtime' is null pointer."),
     };
 
     runtime.gc().root(obj);
@@ -141,11 +118,7 @@ pub unsafe extern "C" fn mun_gc_root(handle: RuntimeHandle, obj: GcPtr) -> Error
 pub unsafe extern "C" fn mun_gc_unroot(handle: RuntimeHandle, obj: GcPtr) -> ErrorHandle {
     let runtime = match (handle.0 as *mut Runtime).as_ref() {
         Some(runtime) => runtime,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'runtime' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'runtime' is null pointer."),
     };
 
     runtime.gc().unroot(obj);
@@ -170,20 +143,12 @@ pub unsafe extern "C" fn mun_gc_collect(
 ) -> ErrorHandle {
     let runtime = match (handle.0 as *mut Runtime).as_ref() {
         Some(runtime) => runtime,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'runtime' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'runtime' is null pointer."),
     };
 
     let reclaimed = match reclaimed.as_mut() {
         Some(reclaimed) => reclaimed,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'reclaimed' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'reclaimed' is null pointer."),
     };
 
     *reclaimed = runtime.gc_collect();
@@ -196,8 +161,8 @@ mod tests {
 
     use super::*;
     use crate::{
-        error::mun_error_message, handle::TypedHandle, mun_destroy_string,
-        runtime::mun_runtime_get_type_info_by_name, test_invalid_runtime, test_util::TestDriver,
+        error::mun_error_destroy, runtime::mun_runtime_get_type_info_by_name, test_invalid_runtime,
+        test_util::TestDriver,
     };
     use std::{
         ffi::{CStr, CString},
@@ -233,16 +198,18 @@ mod tests {
                 &mut type_info as *mut TypeInfoHandle,
             )
         };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let handle = unsafe { mun_gc_alloc(driver.runtime, type_info, ptr::null_mut()) };
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        assert_ne!(handle.0, ptr::null());
+
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'obj' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -265,18 +232,18 @@ mod tests {
                 &mut type_info as *mut TypeInfoHandle,
             )
         };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let mut obj = MaybeUninit::uninit();
         let handle = unsafe { mun_gc_alloc(driver.runtime, type_info, obj.as_mut_ptr()) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let obj = unsafe { obj.assume_init() };
         assert_ne!(unsafe { obj.deref::<u8>() }, ptr::null());
 
         let mut reclaimed = false;
         let handle = unsafe { mun_gc_collect(driver.runtime, &mut reclaimed as *mut _) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
     }
 
     #[test]
@@ -292,13 +259,13 @@ mod tests {
             mun_gc_ptr_type(driver.runtime, raw_ptr.into(), ptr::null_mut())
         };
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'type_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -321,25 +288,25 @@ mod tests {
                 &mut type_info as *mut TypeInfoHandle,
             )
         };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let mut obj = MaybeUninit::uninit();
         let handle = unsafe { mun_gc_alloc(driver.runtime, type_info, obj.as_mut_ptr()) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let obj = unsafe { obj.assume_init() };
         assert_ne!(unsafe { obj.deref::<u8>() }, ptr::null());
 
         let mut ty = MaybeUninit::uninit();
         let handle = unsafe { mun_gc_ptr_type(driver.runtime, obj, ty.as_mut_ptr()) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let ty = unsafe { ty.assume_init() };
         assert_eq!(type_info.0, ty.0);
 
         let mut reclaimed = false;
         let handle = unsafe { mun_gc_collect(driver.runtime, &mut reclaimed as *mut _) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
         assert!(reclaimed);
     }
 
@@ -363,29 +330,29 @@ mod tests {
                 &mut type_info as *mut TypeInfoHandle,
             )
         };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let mut obj = MaybeUninit::uninit();
         let handle = unsafe { mun_gc_alloc(driver.runtime, type_info, obj.as_mut_ptr()) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let obj = unsafe { obj.assume_init() };
         assert_ne!(unsafe { obj.deref::<u8>() }, ptr::null());
 
         let handle = unsafe { mun_gc_root(driver.runtime, obj) };
 
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let mut reclaimed = false;
         let handle = unsafe { mun_gc_collect(driver.runtime, &mut reclaimed as *mut _) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
         assert!(!reclaimed);
 
         let handle = unsafe { mun_gc_unroot(driver.runtime, obj) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let handle = unsafe { mun_gc_collect(driver.runtime, &mut reclaimed as *mut _) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
         assert!(reclaimed);
     }
 
@@ -401,12 +368,12 @@ mod tests {
 
         let handle = unsafe { mun_gc_collect(driver.runtime, ptr::null_mut()) };
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'reclaimed' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 }

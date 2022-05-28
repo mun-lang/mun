@@ -1,5 +1,6 @@
-use crate::{error::ErrorHandle, field_info::FieldInfoHandle, hub::HUB};
-use anyhow::anyhow;
+//! Exposes struct information using the C ABI.
+
+use crate::{error::ErrorHandle, field_info::FieldInfoHandle};
 use memory::StructInfo;
 use std::ffi::c_void;
 
@@ -17,29 +18,19 @@ pub unsafe extern "C" fn mun_struct_info_fields(
 ) -> ErrorHandle {
     let struct_info = match (struct_info.0 as *const StructInfo).as_ref() {
         Some(struct_info) => struct_info,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'struct_info' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'struct_info' is null pointer."),
     };
 
     let field_infos_begin = match field_infos_begin.as_mut() {
         Some(field_infos_begin) => field_infos_begin,
         None => {
-            return HUB.errors.register(anyhow!(
-                "Invalid argument: 'field_infos_begin' is null pointer."
-            ))
+            return ErrorHandle::new("Invalid argument: 'field_infos_begin' is null pointer.");
         }
     };
 
     let num_fields = match num_fields.as_mut() {
         Some(num_fields) => num_fields,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'num_fields' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'num_fields' is null pointer."),
     };
 
     // TODO: Clone Arc<TypeInfo>
@@ -57,20 +48,12 @@ pub unsafe extern "C" fn mun_struct_info_memory_kind(
 ) -> ErrorHandle {
     let struct_info = match (struct_info.0 as *const StructInfo).as_ref() {
         Some(struct_info) => struct_info,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'struct_info' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'struct_info' is null pointer."),
     };
 
     let memory_kind = match memory_kind.as_mut() {
         Some(memory_kind) => memory_kind,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'memory_kind' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'memory_kind' is null pointer."),
     };
 
     *memory_kind = struct_info.memory_kind;

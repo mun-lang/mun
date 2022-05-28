@@ -1,4 +1,5 @@
-use anyhow::anyhow;
+//! Exposes the Mun runtime using the C ABI.
+
 use memory::type_table::TypeTable;
 use runtime::{FunctionDefinition, Runtime};
 use std::{
@@ -7,9 +8,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::{
-    error::ErrorHandle, function_info::FunctionInfoHandle, hub::HUB, type_info::TypeInfoHandle,
-};
+use crate::{error::ErrorHandle, function_info::FunctionInfoHandle, type_info::TypeInfoHandle};
 
 /// A C-style handle to a runtime.
 #[repr(C)]
@@ -64,33 +63,23 @@ pub unsafe extern "C" fn mun_runtime_create(
     handle: *mut RuntimeHandle,
 ) -> ErrorHandle {
     if library_path.is_null() {
-        return HUB
-            .errors
-            .register(anyhow!("Invalid argument: 'library_path' is null pointer."));
+        return ErrorHandle::new("Invalid argument: 'library_path' is null pointer.");
     }
 
     if options.num_functions > 0 && options.functions.is_null() {
-        return HUB
-            .errors
-            .register(anyhow!("Invalid argument: 'functions' is null pointer."));
+        return ErrorHandle::new("Invalid argument: 'functions' is null pointer.");
     }
 
     let library_path = match CStr::from_ptr(library_path).to_str() {
         Ok(path) => path,
         Err(_) => {
-            return HUB.errors.register(anyhow!(
-                "Invalid argument: 'library_path' is not UTF-8 encoded.",
-            ))
+            return ErrorHandle::new("Invalid argument: 'library_path' is not UTF-8 encoded.");
         }
     };
 
     let handle = match handle.as_mut() {
         Some(handle) => handle,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'handle' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'handle' is null pointer."),
     };
 
     let type_table = TypeTable::default();
@@ -100,7 +89,7 @@ pub unsafe extern "C" fn mun_runtime_create(
             .map(|def| FunctionDefinition::try_from_abi(def, &type_table))
             .collect::<Result<_, _>>()
         {
-            Err(e) => return HUB.errors.register(e.into()),
+            Err(e) => return ErrorHandle::new(e.to_string()),
             Ok(user_functions) => user_functions,
         };
 
@@ -112,7 +101,7 @@ pub unsafe extern "C" fn mun_runtime_create(
 
     let runtime = match Runtime::new(runtime_options) {
         Ok(runtime) => runtime,
-        Err(e) => return HUB.errors.register(e),
+        Err(e) => return ErrorHandle::new(e.to_string()),
     };
 
     handle.0 = Box::into_raw(Box::new(runtime)) as *mut _;
@@ -147,44 +136,28 @@ pub unsafe extern "C" fn mun_runtime_get_function_info(
 ) -> ErrorHandle {
     let runtime = match (handle.0 as *mut Runtime).as_ref() {
         Some(runtime) => runtime,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'runtime' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'runtime' is null pointer."),
     };
 
     if fn_name.is_null() {
-        return HUB
-            .errors
-            .register(anyhow!("Invalid argument: 'fn_name' is null pointer."));
+        return ErrorHandle::new("Invalid argument: 'fn_name' is null pointer.");
     }
 
     let fn_name = match CStr::from_ptr(fn_name).to_str() {
         Ok(name) => name,
         Err(_) => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'fn_name' is not UTF-8 encoded."))
+            return ErrorHandle::new("Invalid argument: 'fn_name' is not UTF-8 encoded.");
         }
     };
 
     let has_fn_info = match has_fn_info.as_mut() {
         Some(has_info) => has_info,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'has_fn_info' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'has_fn_info' is null pointer."),
     };
 
     let fn_info = match fn_info.as_mut() {
         Some(fn_info) => fn_info,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'fn_info' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'fn_info' is null pointer."),
     };
 
     match runtime.get_function_definition(fn_name) {
@@ -218,44 +191,26 @@ pub unsafe extern "C" fn mun_runtime_get_type_info_by_name(
 ) -> ErrorHandle {
     let runtime = match (runtime.0 as *mut Runtime).as_ref() {
         Some(runtime) => runtime,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'runtime' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'runtime' is null pointer."),
     };
 
     if type_name.is_null() {
-        return HUB
-            .errors
-            .register(anyhow!("Invalid argument: 'type_name' is null pointer."));
+        return ErrorHandle::new("Invalid argument: 'type_name' is null pointer.");
     }
 
     let type_name = match CStr::from_ptr(type_name).to_str() {
         Ok(name) => name,
-        Err(_) => {
-            return HUB.errors.register(anyhow!(
-                "Invalid argument: 'type_name' is not UTF-8 encoded."
-            ))
-        }
+        Err(_) => return ErrorHandle::new("Invalid argument: 'type_name' is not UTF-8 encoded."),
     };
 
     let has_type_info = match has_type_info.as_mut() {
         Some(has_type) => has_type,
-        None => {
-            return HUB.errors.register(anyhow!(
-                "Invalid argument: 'has_type_info' is null pointer."
-            ))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'has_type_info' is null pointer."),
     };
 
     let type_info = match type_info.as_mut() {
         Some(type_info) => type_info,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'type_info' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'type_info' is null pointer."),
     };
 
     match runtime.get_type_info_by_name(type_name) {
@@ -289,38 +244,24 @@ pub unsafe extern "C" fn mun_runtime_get_type_info_by_id(
 ) -> ErrorHandle {
     let runtime = match (runtime.0 as *mut Runtime).as_ref() {
         Some(runtime) => runtime,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'runtime' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'runtime' is null pointer."),
     };
 
     let type_id = match type_id.as_ref() {
         Some(type_id) => type_id,
         None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'type_id' is null pointer."));
+            return ErrorHandle::new("Invalid argument: 'type_id' is null pointer.");
         }
     };
 
     let has_type_info = match has_type_info.as_mut() {
         Some(has_type) => has_type,
-        None => {
-            return HUB.errors.register(anyhow!(
-                "Invalid argument: 'has_type_info' is null pointer."
-            ))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'has_type_info' is null pointer."),
     };
 
     let type_info = match type_info.as_mut() {
         Some(type_info) => type_info,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'type_info' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'type_info' is null pointer."),
     };
 
     match runtime.get_type_info_by_id(type_id) {
@@ -351,20 +292,12 @@ pub unsafe extern "C" fn mun_runtime_update(
 ) -> ErrorHandle {
     let runtime = match (handle.0 as *mut Runtime).as_mut() {
         Some(runtime) => runtime,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'runtime' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'runtime' is null pointer."),
     };
 
     let updated = match updated.as_mut() {
         Some(updated) => updated,
-        None => {
-            return HUB
-                .errors
-                .register(anyhow!("Invalid argument: 'updated' is null pointer."))
-        }
+        None => return ErrorHandle::new("Invalid argument: 'updated' is null pointer."),
     };
 
     *updated = runtime.update();
@@ -375,8 +308,8 @@ pub unsafe extern "C" fn mun_runtime_update(
 mod tests {
     use super::*;
     use crate::{
-        error::mun_error_message, handle::TypedHandle, mun_destroy_string, test_invalid_runtime,
-        test_util::TestDriver, type_info::mun_type_info_id,
+        error::mun_error_destroy, test_invalid_runtime, test_util::TestDriver,
+        type_info::mun_type_info_id,
     };
     use std::{ffi::CString, mem::MaybeUninit, ptr};
 
@@ -391,15 +324,15 @@ mod tests {
     fn test_runtime_create_invalid_lib_path() {
         let handle =
             unsafe { mun_runtime_create(ptr::null(), RuntimeOptions::default(), ptr::null_mut()) };
-        assert_ne!(handle.token(), 0);
+        assert_ne!(handle.0, ptr::null());
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'library_path' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -413,15 +346,15 @@ mod tests {
                 ptr::null_mut(),
             )
         };
-        assert_ne!(handle.token(), 0);
+        assert_ne!(handle.0, ptr::null());
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'library_path' is not UTF-8 encoded."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -435,15 +368,15 @@ mod tests {
                 ptr::null_mut(),
             )
         };
-        assert_ne!(handle.token(), 0);
+        assert_ne!(handle.0, ptr::null());
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'handle' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -463,13 +396,13 @@ mod tests {
             )
         };
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'fn_name' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -490,13 +423,13 @@ mod tests {
             )
         };
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'fn_name' is not UTF-8 encoded."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -517,13 +450,13 @@ mod tests {
             )
         };
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'has_fn_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -545,13 +478,13 @@ mod tests {
             )
         };
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'fn_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -573,7 +506,7 @@ mod tests {
                 fn_definition.as_mut_ptr(),
             )
         };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
         assert!(has_fn_info);
         let _fn_definition = unsafe { fn_definition.assume_init() };
     }
@@ -595,13 +528,13 @@ mod tests {
             )
         };
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'type_name' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -622,13 +555,13 @@ mod tests {
             )
         };
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'type_name' is not UTF-8 encoded."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -649,13 +582,13 @@ mod tests {
             )
         };
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'has_type_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -677,13 +610,13 @@ mod tests {
             )
         };
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'type_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -705,7 +638,7 @@ mod tests {
                 type_info.as_mut_ptr(),
             )
         };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
         assert!(has_type_info);
         let _type_info = unsafe { type_info.assume_init() };
     }
@@ -727,13 +660,13 @@ mod tests {
             )
         };
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'type_id' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -756,13 +689,13 @@ mod tests {
             )
         };
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'has_type_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -786,13 +719,13 @@ mod tests {
             )
         };
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'type_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -814,13 +747,13 @@ mod tests {
                 type_info.as_mut_ptr(),
             )
         };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
         assert!(has_type_info);
         let type_info = unsafe { type_info.assume_init() };
 
         let mut type_id = MaybeUninit::uninit();
         let handle = unsafe { mun_type_info_id(type_info, type_id.as_mut_ptr()) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
 
         let type_id = unsafe { type_id.assume_init() };
         let mut has_type_info = false;
@@ -833,7 +766,7 @@ mod tests {
                 type_info.as_mut_ptr(),
             )
         };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
         assert!(has_type_info);
         let _type_info = unsafe { type_info.assume_init() };
     }
@@ -848,13 +781,13 @@ mod tests {
 
         let handle = unsafe { mun_runtime_update(driver.runtime, ptr::null_mut()) };
 
-        let message = unsafe { CStr::from_ptr(mun_error_message(handle)) };
+        let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'updated' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_error_destroy(handle) };
     }
 
     #[test]
@@ -867,6 +800,6 @@ mod tests {
 
         let mut updated = false;
         let handle = unsafe { mun_runtime_update(driver.runtime, &mut updated as *mut _) };
-        assert_eq!(handle.token(), 0);
+        assert_eq!(handle.0, ptr::null());
     }
 }

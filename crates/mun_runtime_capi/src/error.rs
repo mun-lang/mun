@@ -1,27 +1,36 @@
 //! Exposes error reporting using the C ABI.
 
-use crate::{hub::HUB, typed_handle};
-use std::{ffi::CString, hash::Hash, os::raw::c_char, ptr};
+use std::{ffi::CString, os::raw::c_char, ptr};
 
-typed_handle!(ErrorHandle);
+#[repr(C)]
+#[derive(Clone, Copy)]
+/// A C-style handle to an error message.
+///
+/// If the handle contains a non-null pointer, an error occurred.
+pub struct ErrorHandle(pub *const c_char);
 
-/// Destructs the error corresponding to `error_handle`.
-#[no_mangle]
-pub extern "C" fn mun_error_destroy(error_handle: ErrorHandle) {
-    // If an error exists, destroy it
-    let _error = HUB.errors.unregister(error_handle);
+impl ErrorHandle {
+    /// Constructs an `ErrorHandle` from the specified error message.
+    pub(crate) fn new<T: Into<Vec<u8>>>(error_message: T) -> Self {
+        let error_message = CString::new(error_message).expect("Invalid error message");
+        Self(CString::into_raw(error_message))
+    }
 }
 
-/// Retrieves the error message corresponding to `error_handle`. If the `error_handle` exists, a
-/// valid `char` pointer is returned, otherwise a null-pointer is returned.
-#[no_mangle]
-pub extern "C" fn mun_error_message(error_handle: ErrorHandle) -> *const c_char {
-    let errors = HUB.errors.get_data();
-    let error = match errors.get(&error_handle) {
-        Some(error) => error,
-        None => return ptr::null(),
-    };
+impl Default for ErrorHandle {
+    fn default() -> Self {
+        Self(ptr::null())
+    }
+}
 
-    let message = format!("{}", error);
-    CString::new(message).unwrap().into_raw() as *const _
+/// Destructs the error message corresponding to the specified handle.
+///
+/// # Safety
+///
+/// Only call this function on an ErrorHandle once.
+#[no_mangle]
+pub unsafe extern "C" fn mun_error_destroy(error: ErrorHandle) {
+    if !error.0.is_null() {
+        let _drop = CString::from_raw(error.0 as *mut c_char);
+    }
 }
