@@ -1,9 +1,3 @@
-[submodule "crates/mun_abi/ffi"]
-	path = crates/mun_abi/ffi
-	url = https://github.com/mun-lang/abi-c.git
-[submodule "crates/mun_runtime_capi/ffi"]
-	path = crates/mun_runtime_capi/ffi
-	url = https://github.com/mun-lang/runtime-ffi.git
 [submodule "book/vendor/highlight.js"]
 	path = book/vendor/highlight.js
 	url = https://github.com/mun-lang/highlight.js.git
