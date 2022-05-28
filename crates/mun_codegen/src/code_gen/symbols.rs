@@ -25,7 +25,6 @@ fn gen_prototype_from_function<'ink>(
     function: hir::Function,
     hir_types: &HirTypeCache,
 ) -> ir::FunctionPrototype<'ink> {
-    let module = context.module;
     let name = function.full_name(db);
 
     // Internalize the name of the function prototype
@@ -67,8 +66,6 @@ fn gen_prototype_from_dispatch_entry<'ink>(
     context: &IrValueContext<'ink, '_, '_>,
     function: &DispatchableFunction,
 ) -> ir::FunctionPrototype<'ink> {
-    let module = context.module;
-
     // Internalize the name of the function prototype
     let name_str = CString::new(function.prototype.name.clone())
         .expect("function prototype name is not a valid CString")
@@ -357,8 +354,6 @@ pub(super) fn gen_reflection_ir<'db, 'ink>(
     optimization_level: inkwell::OptimizationLevel,
     dependencies: Vec<String>,
 ) {
-    let module = context.module;
-
     let num_functions = function_definitions.len() as u32;
     let functions =
         get_function_definition_array(db, context, function_definitions.iter(), hir_types);
