@@ -2,7 +2,7 @@
 
 use crate::{
     error::ErrorHandle,
-    type_info::{TypeInfoArrayHandle, TypeInfoHandle},
+    type_info::{TypeInfoHandle, TypeInfoSpan},
 };
 use memory::TypeInfo;
 use runtime::FunctionDefinition;
@@ -67,7 +67,7 @@ pub unsafe extern "C" fn mun_function_info_fn_ptr(fn_info: FunctionInfoHandle) -
 ///
 /// # Safety
 ///
-/// The caller is responsible for calling `mun_destroy_string` on the return pointer - if it is not null.
+/// The caller is responsible for calling `mun_string_destroy` on the return pointer - if it is not null.
 #[no_mangle]
 pub unsafe extern "C" fn mun_function_info_name(fn_info: FunctionInfoHandle) -> *const c_char {
     let fn_def = match (fn_info.0 as *const FunctionDefinition).as_ref() {
@@ -85,12 +85,11 @@ pub unsafe extern "C" fn mun_function_info_name(fn_info: FunctionInfoHandle) -> 
 /// # Safety
 ///
 /// If a non-null handle is returned, the caller is responsible for calling
-/// `mun_destroy_type_info_array` on the returned handle.
+/// `mun_type_info_span_destroy` on the returned handle.
 #[no_mangle]
 pub unsafe extern "C" fn mun_function_info_argument_types(
     fn_info: FunctionInfoHandle,
-    arg_types: *mut TypeInfoArrayHandle,
-    has_args: *mut bool,
+    arg_types: *mut TypeInfoSpan,
 ) -> ErrorHandle {
     let fn_info = match (fn_info.0 as *const FunctionDefinition).as_ref() {
         Some(fn_info) => fn_info,
@@ -102,21 +101,16 @@ pub unsafe extern "C" fn mun_function_info_argument_types(
         None => return ErrorHandle::new("Invalid argument: 'arg_types' is null pointer."),
     };
 
-    let has_args = match has_args.as_mut() {
-        Some(has_args) => has_args,
-        None => return ErrorHandle::new("Invalid argument: 'has_args' is null pointer."),
-    };
-
     let fn_sig = &fn_info.prototype.signature;
-    let types: Vec<*const TypeInfo> = fn_sig
+    let mut types: Vec<*const TypeInfo> = fn_sig
         .arg_types
         .iter()
         .map(|ty| Arc::into_raw(ty.clone()))
         .collect();
 
-    *has_args = !types.is_empty();
-    arg_types.data = if *has_args {
-        types.as_ptr() as *const *const c_void
+    arg_types.data = if !types.is_empty() {
+        types.shrink_to_fit();
+        types.as_ptr() as *const _
     } else {
         ptr::null()
     };
@@ -142,7 +136,7 @@ pub unsafe extern "C" fn mun_function_info_return_type(
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::{
         error::mun_error_destroy,
@@ -159,7 +153,7 @@ mod tests {
         sync::Arc,
     };
 
-    fn get_fake_function_info<T: Into<Vec<u8>>>(
+    pub(crate) fn get_fake_function_info<T: Into<Vec<u8>>>(
         runtime: RuntimeHandle,
         fn_name: T,
     ) -> FunctionInfoHandle {
@@ -291,11 +285,7 @@ mod tests {
     #[test]
     fn test_function_info_argument_types_invalid_fn_info() {
         let handle = unsafe {
-            mun_function_info_argument_types(
-                FunctionInfoHandle::null(),
-                ptr::null_mut(),
-                ptr::null_mut(),
-            )
+            mun_function_info_argument_types(FunctionInfoHandle::null(), ptr::null_mut())
         };
         assert_ne!(handle.0, ptr::null());
 
@@ -317,38 +307,13 @@ mod tests {
         );
 
         let fn_info = get_fake_function_info(driver.runtime, "main");
-        let handle =
-            unsafe { mun_function_info_argument_types(fn_info, ptr::null_mut(), ptr::null_mut()) };
+        let handle = unsafe { mun_function_info_argument_types(fn_info, ptr::null_mut()) };
         assert_ne!(handle.0, ptr::null());
 
         let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'arg_types' is null pointer."
-        );
-
-        unsafe { mun_error_destroy(handle) };
-    }
-
-    #[test]
-    fn test_function_info_argument_types_invalid_has_args() {
-        let driver = TestDriver::new(
-            r#"
-        pub fn main() -> i32 { 12345 }
-    "#,
-        );
-
-        let fn_info = get_fake_function_info(driver.runtime, "main");
-        let mut arg_types = MaybeUninit::uninit();
-        let handle = unsafe {
-            mun_function_info_argument_types(fn_info, arg_types.as_mut_ptr(), ptr::null_mut())
-        };
-        assert_ne!(handle.0, ptr::null());
-
-        let message = unsafe { CStr::from_ptr(handle.0) };
-        assert_eq!(
-            message.to_str().unwrap(),
-            "Invalid argument: 'has_args' is null pointer."
         );
 
         unsafe { mun_error_destroy(handle) };
@@ -364,17 +329,12 @@ mod tests {
 
         let fn_info = get_fake_function_info(driver.runtime, "main");
         let mut arg_types = MaybeUninit::uninit();
-        let mut has_args = MaybeUninit::uninit();
-        let handle = unsafe {
-            mun_function_info_argument_types(fn_info, arg_types.as_mut_ptr(), has_args.as_mut_ptr())
-        };
+        let handle = unsafe { mun_function_info_argument_types(fn_info, arg_types.as_mut_ptr()) };
         assert_eq!(handle.0, ptr::null());
 
         let arg_types = unsafe { arg_types.assume_init() };
-        let has_args = unsafe { has_args.assume_init() };
         assert_eq!(arg_types.data, ptr::null());
         assert_eq!(arg_types.len, 0);
-        assert_eq!(has_args, false);
     }
 
     #[test]
@@ -387,16 +347,11 @@ mod tests {
 
         let fn_info = get_fake_function_info(driver.runtime, "add");
         let mut arg_types = MaybeUninit::uninit();
-        let mut has_args = MaybeUninit::uninit();
-        let handle = unsafe {
-            mun_function_info_argument_types(fn_info, arg_types.as_mut_ptr(), has_args.as_mut_ptr())
-        };
+        let handle = unsafe { mun_function_info_argument_types(fn_info, arg_types.as_mut_ptr()) };
         assert_eq!(handle.0, ptr::null());
 
         let arg_types = unsafe { arg_types.assume_init() };
-        let has_args = unsafe { has_args.assume_init() };
         assert_eq!(arg_types.len, 2);
-        assert_eq!(has_args, true);
 
         (0..arg_types.len).into_iter().for_each(|index| {
             let type_info = arg_types.get(index);

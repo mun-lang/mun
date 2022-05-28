@@ -21,11 +21,22 @@ impl FieldInfoHandle {
     }
 }
 
+/// A C-style handle to an array of `FieldInfoHandle`s.
+#[repr(C)]
+pub struct FieldInfoSpan {
+    /// Pointer to the start of the array buffer
+    pub data: *const FieldInfoHandle,
+    /// Length of the array (and capacity)
+    pub len: usize,
+}
+
+/// A C-style handle to an array of `TypeInfo`s.
+
 /// Retrieves the field's name.
 ///
 /// # Safety
 ///
-/// The caller is responsible for calling `mun_destroy_string` on the return pointer - if it is not null.
+/// The caller is responsible for calling `mun_string_destroy` on the return pointer - if it is not null.
 #[no_mangle]
 pub unsafe extern "C" fn mun_field_info_name(field_info: FieldInfoHandle) -> *const c_char {
     let field_info = match (field_info.0 as *const FieldInfo).as_ref() {
@@ -68,6 +79,29 @@ pub unsafe extern "C" fn mun_field_info_offset(
     ErrorHandle::default()
 }
 
+/// Deallocates a span of `FieldInfo`s that was allocated by the runtime.
+///
+/// Deallocating span only deallocates the data allocated for the span. Deallocating a span will not
+/// deallocate the FieldInfo's it references. `FieldInfo`s are destroyed when the top-level
+/// `TypeInfo` is destroyed.
+///
+/// # Safety
+///
+/// This function receives a span as parameter. Only when the spans data pointer is not null, is the
+/// content deallocated. Passing pointers to invalid data of memory allocated by other processes,
+/// will lead to undefined behavior.
+#[no_mangle]
+pub unsafe extern "C" fn mun_field_info_span_destroy(span: FieldInfoSpan) -> bool {
+    if span.data.is_null() {
+        return false;
+    }
+
+    let data = span.data as *mut *const FieldInfo;
+    let _types = Vec::from_raw_parts(data, span.len, span.len);
+
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -83,6 +117,7 @@ mod tests {
     use std::{
         ffi::{CStr, CString},
         mem::MaybeUninit,
+        slice,
     };
 
     fn get_first_field<T: Into<Vec<u8>>>(runtime: RuntimeHandle, type_name: T) -> FieldInfoHandle {
@@ -111,21 +146,19 @@ mod tests {
             .as_struct()
             .expect("Type was expected to be a struct.");
 
-        let mut field_info = MaybeUninit::uninit();
-        let mut num_fields = MaybeUninit::uninit();
-        let handle = unsafe {
-            mun_struct_info_fields(
-                struct_info,
-                field_info.as_mut_ptr(),
-                num_fields.as_mut_ptr(),
-            )
-        };
+        let mut fields = MaybeUninit::uninit();
+        let handle = unsafe { mun_struct_info_fields(struct_info, fields.as_mut_ptr()) };
         assert_eq!(handle.0, ptr::null());
 
-        let num_fields = unsafe { num_fields.assume_init() };
-        assert!(num_fields > 0);
+        let fields = unsafe { fields.assume_init() };
+        assert!(fields.len > 0);
 
-        unsafe { field_info.assume_init() }
+        let field_slice = unsafe { slice::from_raw_parts(fields.data, fields.len) };
+        let first_field = field_slice[0];
+
+        assert!(unsafe { mun_field_info_span_destroy(fields) });
+
+        first_field
     }
 
     #[test]

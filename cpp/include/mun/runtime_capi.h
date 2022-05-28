@@ -175,18 +175,32 @@ typedef struct MunFieldInfoHandle {
 } MunFieldInfoHandle;
 
 /**
- * A C-style handle to an array of `TypeInfo`s.
+ * A C-style handle to an array of `FieldInfoHandle`s.
  */
-typedef struct MunTypeInfoArrayHandle {
+typedef struct MunFieldInfoSpan {
     /**
      * Pointer to the start of the array buffer
      */
-    const void *const *data;
+    const struct MunFieldInfoHandle *data;
     /**
      * Length of the array (and capacity)
      */
     uintptr_t len;
-} MunTypeInfoArrayHandle;
+} MunFieldInfoSpan;
+
+/**
+ * A C-style handle to an array of `TypeInfoHandle`s.
+ */
+typedef struct MunTypeInfoSpan {
+    /**
+     * Pointer to the start of the array buffer
+     */
+    const struct MunTypeInfoHandle *data;
+    /**
+     * Length of the array (and capacity)
+     */
+    uintptr_t len;
+} MunTypeInfoSpan;
 
 /**
  * A C-style handle to a `StructInfo`.
@@ -263,7 +277,7 @@ extern "C" {
  * its content will be deallocated. Passing pointers to invalid data or memory allocated by other
  * processes, will lead to undefined behavior.
  */
-void mun_destroy_string(const char *string);
+void mun_string_destroy(const char *string);
 
 /**
  * Destructs the error message corresponding to the specified handle.
@@ -446,11 +460,12 @@ struct MunErrorHandle mun_runtime_get_type_info_by_id(struct MunRuntimeHandle ru
 struct MunErrorHandle mun_runtime_update(struct MunRuntimeHandle handle, bool *updated);
 
 /**
+ * A C-style handle to an array of `TypeInfo`s.
  * Retrieves the field's name.
  *
  * # Safety
  *
- * The caller is responsible for calling `mun_destroy_string` on the return pointer - if it is not null.
+ * The caller is responsible for calling `mun_string_destroy` on the return pointer - if it is not null.
  */
 const char *mun_field_info_name(struct MunFieldInfoHandle field_info);
 
@@ -464,6 +479,21 @@ struct MunTypeInfoHandle mun_field_info_type(struct MunFieldInfoHandle field_inf
  */
 struct MunErrorHandle mun_field_info_offset(struct MunFieldInfoHandle field_info,
                                             uint16_t *field_offset);
+
+/**
+ * Deallocates a span of `FieldInfo`s that was allocated by the runtime.
+ *
+ * Deallocating span only deallocates the data allocated for the span. Deallocating a span will not
+ * deallocate the FieldInfo's it references. `FieldInfo`s are destroyed when the top-level
+ * `TypeInfo` is destroyed.
+ *
+ * # Safety
+ *
+ * This function receives a span as parameter. Only when the spans data pointer is not null, is the
+ * content deallocated. Passing pointers to invalid data of memory allocated by other processes,
+ * will lead to undefined behavior.
+ */
+bool mun_field_info_span_destroy(struct MunFieldInfoSpan span);
 
 /**
  * Decrements the strong count of the `Arc<FunctionDefinition>` associated with `handle`.
@@ -485,7 +515,7 @@ const void *mun_function_info_fn_ptr(struct MunFunctionInfoHandle fn_info);
  *
  * # Safety
  *
- * The caller is responsible for calling `mun_destroy_string` on the return pointer - if it is not null.
+ * The caller is responsible for calling `mun_string_destroy` on the return pointer - if it is not null.
  */
 const char *mun_function_info_name(struct MunFunctionInfoHandle fn_info);
 
@@ -495,11 +525,10 @@ const char *mun_function_info_name(struct MunFunctionInfoHandle fn_info);
  * # Safety
  *
  * If a non-null handle is returned, the caller is responsible for calling
- * `mun_destroy_type_info_array` on the returned handle.
+ * `mun_type_info_span_destroy` on the returned handle.
  */
 struct MunErrorHandle mun_function_info_argument_types(struct MunFunctionInfoHandle fn_info,
-                                                       struct MunTypeInfoArrayHandle *arg_types,
-                                                       bool *has_args);
+                                                       struct MunTypeInfoSpan *arg_types);
 
 /**
  * Retrieves the function's return type.
@@ -507,11 +536,14 @@ struct MunErrorHandle mun_function_info_argument_types(struct MunFunctionInfoHan
 struct MunTypeInfoHandle mun_function_info_return_type(struct MunFunctionInfoHandle fn_info);
 
 /**
- * Retrieves the struct's fields.
+ * Retrieves information about the struct's fields.
+ *
+ * # Safety
+ *
+ * The caller is responsible for calling `mun_field_info_span_destroy` on the returned span.
  */
 struct MunErrorHandle mun_struct_info_fields(struct MunStructInfoHandle struct_info,
-                                             struct MunFieldInfoHandle *field_infos_begin,
-                                             uintptr_t *num_fields);
+                                             struct MunFieldInfoSpan *field_info_span);
 
 /**
  * Retrieves the struct's memory kind.
@@ -540,7 +572,7 @@ struct MunErrorHandle mun_type_info_id(struct MunTypeInfoHandle type_info,
  *
  * # Safety
  *
- * The caller is responsible for calling `mun_destroy_string` on the return pointer - if it is not null.
+ * The caller is responsible for calling `mun_string_destroy` on the return pointer - if it is not null.
  */
 const char *mun_type_info_name(struct MunTypeInfoHandle type_info);
 
@@ -556,20 +588,25 @@ struct MunErrorHandle mun_type_info_align(struct MunTypeInfoHandle type_info, ui
 
 /**
  * Retrieves the type's data.
+ *
+ * # Safety
+ *
+ * The original `TypeInfoHandle` needs to stay alive as long as the `TypeInfoData` lives. The
+ * `TypeInfoData` is destroyed at the same time as the `TypeInfo`.
  */
 struct MunErrorHandle mun_type_info_data(struct MunTypeInfoHandle type_info,
                                          union MunTypeInfoData *type_info_data);
 
 /**
- * Deallocates an array of `TypeInfo` that was allocated by the runtime.
+ * Deallocates an span of `TypeInfo` that was allocated by the runtime.
  *
  * # Safety
  *
- * This function receives a handle as parameter. Only when the handle's pointer is not null, its
+ * This function receives a span as parameter. Only when the spans data pointer is not null, its
  * content will be deallocated. Passing pointers to invalid data or memory allocated by other
  * processes, will lead to undefined behavior.
  */
-bool mun_destroy_type_info_array(struct MunTypeInfoArrayHandle array_handle);
+bool mun_type_info_span_destroy(struct MunTypeInfoSpan array_handle);
 
 #ifdef __cplusplus
 } // extern "C"
