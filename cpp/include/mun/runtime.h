@@ -28,7 +28,7 @@ class Runtime {
      */
     Runtime(MunRuntimeHandle handle) noexcept : m_handle(handle) {}
 
-   public:
+public:
     /** Move constructs a runtime
      *
      * \param other an rvalue reference to a runtime
@@ -90,7 +90,7 @@ class Runtime {
     bool gc_collect() const noexcept {
         bool reclaimed;
         auto error_handle = mun_gc_collect(m_handle, &reclaimed);
-        assert(error_handle._0 == 0);
+        assert(error_handle._0 == nullptr);
 
         return reclaimed;
     }
@@ -109,7 +109,7 @@ class Runtime {
      */
     void gc_root_ptr(MunGcPtr obj) const noexcept {
         const auto error_handle = mun_gc_root(m_handle, obj);
-        assert(error_handle._0 == 0);
+        assert(error_handle._0 == nullptr);
     }
 
     /**
@@ -124,7 +124,7 @@ class Runtime {
      */
     void gc_unroot_ptr(MunGcPtr obj) const noexcept {
         const auto error_handle = mun_gc_unroot(m_handle, obj);
-        assert(error_handle._0 == 0);
+        assert(error_handle._0 == nullptr);
     }
 
     /**
@@ -136,7 +136,7 @@ class Runtime {
     MunUnsafeTypeInfo ptr_type(MunGcPtr obj) const noexcept {
         MunUnsafeTypeInfo type_info;
         const auto error_handle = mun_gc_ptr_type(m_handle, obj, &type_info);
-        assert(error_handle._0 == 0);
+        assert(error_handle._0 == nullptr);
         return type_info;
     }
 
@@ -156,7 +156,7 @@ class Runtime {
         return updated;
     }
 
-   private:
+private:
     MunRuntimeHandle m_handle;
 };
 

@@ -25,14 +25,16 @@ constexpr inline bool operator!=(const MunGuid& lhs, const MunGuid& rhs) noexcep
 
 template <typename T>
 struct ArgumentReflection {
-    static constexpr const char* type_name(const T&) noexcept { return TypeInfo<T>::Type.name; }
-    static constexpr MunGuid type_guid(const T&) noexcept { return TypeInfo<T>::Type.guid; }
+    static constexpr const char* type_name(const T&) noexcept {
+        return StaticTypeInfo<T>::Type.name;
+    }
+    static constexpr MunGuid type_guid(const T&) noexcept { return StaticTypeInfo<T>::Type.guid; }
 };
 
 template <typename T>
 struct ReturnTypeReflection {
-    static constexpr const char* type_name() noexcept { return TypeInfo<T>::Type.name; }
-    static constexpr MunGuid type_guid() noexcept { return TypeInfo<T>::Type.guid; }
+    static constexpr const char* type_name() noexcept { return StaticTypeInfo<T>::Type.name; }
+    static constexpr MunGuid type_guid() noexcept { return StaticTypeInfo<T>::Type.guid; }
 };
 
 template <>
