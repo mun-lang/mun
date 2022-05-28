@@ -83,7 +83,7 @@ macro_rules! test_invalid_runtime {
                         "Invalid argument: 'runtime' is null pointer."
                     );
 
-                    unsafe { mun_destroy_string(message.as_ptr()) };
+                    unsafe { mun_string_destroy(message.as_ptr()) };
                 }
             }
         )+

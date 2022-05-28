@@ -196,7 +196,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        error::mun_error_message, handle::TypedHandle, mun_destroy_string,
+        error::mun_error_message, handle::TypedHandle, mun_string_destroy,
         runtime::mun_runtime_get_type_info_by_name, test_invalid_runtime, test_util::TestDriver,
     };
     use std::{
@@ -242,7 +242,7 @@ mod tests {
             "Invalid argument: 'obj' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -298,7 +298,7 @@ mod tests {
             "Invalid argument: 'type_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -407,6 +407,6 @@ mod tests {
             "Invalid argument: 'reclaimed' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 }

@@ -375,7 +375,7 @@ pub unsafe extern "C" fn mun_runtime_update(
 mod tests {
     use super::*;
     use crate::{
-        error::mun_error_message, handle::TypedHandle, mun_destroy_string, test_invalid_runtime,
+        error::mun_error_message, handle::TypedHandle, mun_string_destroy, test_invalid_runtime,
         test_util::TestDriver, type_info::mun_type_info_id,
     };
     use std::{ffi::CString, mem::MaybeUninit, ptr};
@@ -399,7 +399,7 @@ mod tests {
             "Invalid argument: 'library_path' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -421,7 +421,7 @@ mod tests {
             "Invalid argument: 'library_path' is not UTF-8 encoded."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -443,7 +443,7 @@ mod tests {
             "Invalid argument: 'handle' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -469,7 +469,7 @@ mod tests {
             "Invalid argument: 'fn_name' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -496,7 +496,7 @@ mod tests {
             "Invalid argument: 'fn_name' is not UTF-8 encoded."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -523,7 +523,7 @@ mod tests {
             "Invalid argument: 'has_fn_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -551,7 +551,7 @@ mod tests {
             "Invalid argument: 'fn_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -601,7 +601,7 @@ mod tests {
             "Invalid argument: 'type_name' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -628,7 +628,7 @@ mod tests {
             "Invalid argument: 'type_name' is not UTF-8 encoded."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -655,7 +655,7 @@ mod tests {
             "Invalid argument: 'has_type_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -683,7 +683,7 @@ mod tests {
             "Invalid argument: 'type_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -733,7 +733,7 @@ mod tests {
             "Invalid argument: 'type_id' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -762,7 +762,7 @@ mod tests {
             "Invalid argument: 'has_type_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -792,7 +792,7 @@ mod tests {
             "Invalid argument: 'type_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -854,7 +854,7 @@ mod tests {
             "Invalid argument: 'updated' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]

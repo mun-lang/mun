@@ -20,16 +20,16 @@ impl TypeInfoHandle {
     }
 }
 
-/// A C-style handle to an array of `TypeInfo`s.
+/// A C-style handle to an array of `TypeInfoHandle`s.
 #[repr(C)]
-pub struct TypeInfoArrayHandle {
+pub struct TypeInfoSpan {
     /// Pointer to the start of the array buffer
-    pub data: *const *const c_void,
+    pub data: *const TypeInfoHandle,
     /// Length of the array (and capacity)
     pub len: usize,
 }
 
-impl TypeInfoArrayHandle {
+impl TypeInfoSpan {
     /// A null handle.
     pub fn null() -> Self {
         Self {
@@ -107,7 +107,7 @@ pub unsafe extern "C" fn mun_type_info_id(
 ///
 /// # Safety
 ///
-/// The caller is responsible for calling `mun_destroy_string` on the return pointer - if it is not null.
+/// The caller is responsible for calling `mun_string_destroy` on the return pointer - if it is not null.
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_info_name(type_info: TypeInfoHandle) -> *const c_char {
     let type_info = match (type_info.0 as *const TypeInfo).as_ref() {
@@ -210,6 +210,11 @@ impl TypeInfoData {
 }
 
 /// Retrieves the type's data.
+///
+/// # Safety
+///
+/// The original `TypeInfoHandle` needs to stay alive as long as the `TypeInfoData` lives. The
+/// `TypeInfoData` is destroyed at the same time as the `TypeInfo`.
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_info_data(
     type_info: TypeInfoHandle,
@@ -243,15 +248,15 @@ pub unsafe extern "C" fn mun_type_info_data(
     ErrorHandle::default()
 }
 
-/// Deallocates an array of `TypeInfo` that was allocated by the runtime.
+/// Deallocates an span of `TypeInfo` that was allocated by the runtime.
 ///
 /// # Safety
 ///
-/// This function receives a handle as parameter. Only when the handle's pointer is not null, its
+/// This function receives a span as parameter. Only when the spans data pointer is not null, its
 /// content will be deallocated. Passing pointers to invalid data or memory allocated by other
 /// processes, will lead to undefined behavior.
 #[no_mangle]
-pub unsafe extern "C" fn mun_destroy_type_info_array(array_handle: TypeInfoArrayHandle) -> bool {
+pub unsafe extern "C" fn mun_type_info_span_destroy(array_handle: TypeInfoSpan) -> bool {
     if array_handle.data.is_null() {
         return false;
     }
@@ -267,12 +272,12 @@ pub unsafe extern "C" fn mun_destroy_type_info_array(array_handle: TypeInfoArray
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::{
         error::mun_error_message,
         handle::TypedHandle,
-        mun_destroy_string,
+        mun_string_destroy,
         runtime::{mun_runtime_get_type_info_by_name, RuntimeHandle},
         test_util::TestDriver,
     };
@@ -282,8 +287,10 @@ mod tests {
         mem::{self, MaybeUninit},
         sync::Arc,
     };
+    use crate::function_info::mun_function_info_argument_types;
+    use crate::function_info::tests::get_fake_function_info;
 
-    fn get_type_info_by_name<T: Into<Vec<u8>>>(
+    pub(crate) fn get_type_info_by_name<T: Into<Vec<u8>>>(
         runtime: RuntimeHandle,
         type_name: T,
     ) -> TypeInfoHandle {
@@ -379,7 +386,7 @@ mod tests {
             "Invalid argument: 'type_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -400,7 +407,7 @@ mod tests {
             "Invalid argument: 'type_id' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -456,7 +463,7 @@ mod tests {
             "Invalid argument: 'type_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -477,7 +484,7 @@ mod tests {
             "Invalid argument: 'size' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -508,7 +515,7 @@ mod tests {
             "Invalid argument: 'type_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -529,7 +536,7 @@ mod tests {
             "Invalid argument: 'align' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -560,7 +567,7 @@ mod tests {
             "Invalid argument: 'type_info' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -581,7 +588,7 @@ mod tests {
             "Invalid argument: 'type_info_data' is null pointer."
         );
 
-        unsafe { mun_destroy_string(message.as_ptr()) };
+        unsafe { mun_string_destroy(message.as_ptr()) };
     }
 
     #[test]
@@ -606,10 +613,10 @@ mod tests {
     fn test_type_info_data_struct() {
         let driver = TestDriver::new(
             r#"
-        pub struct Foo;
+            pub struct Foo;
 
-        pub fn main() -> Foo { Foo }
-    "#,
+            pub fn main() -> Foo { Foo }
+            "#,
         );
 
         let type_info = get_type_info_by_name(driver.runtime, "Foo");
@@ -622,5 +629,33 @@ mod tests {
         assert!(type_info_data.is_struct());
     }
 
-    // TODO: Test mun_destroy_type_info_array
+    #[test]
+    fn test_type_info_span_destroy() {
+        let driver = TestDriver::new(
+            r#"
+        pub fn add(a: i32, b: i32) -> i32 { a + b }
+        pub fn empty() -> i32 { 0 }
+    "#,
+        );
+
+        let fn_info = get_fake_function_info(driver.runtime, "add");
+        let mut arg_types = MaybeUninit::uninit();
+        let handle = unsafe {
+            mun_function_info_argument_types(fn_info, arg_types.as_mut_ptr())
+        };
+        assert_eq!(handle.token(), 0);
+
+        let arg_types = unsafe { arg_types.assume_init() };
+        assert!(unsafe { mun_type_info_span_destroy(arg_types) });
+
+        let fn_info = get_fake_function_info(driver.runtime, "empty");
+        let mut arg_types = MaybeUninit::uninit();
+        let handle = unsafe {
+            mun_function_info_argument_types(fn_info, arg_types.as_mut_ptr())
+        };
+        assert_eq!(handle.token(), 0);
+
+        let arg_types = unsafe { arg_types.assume_init() };
+        assert!(!unsafe { mun_type_info_span_destroy(arg_types) });
+    }
 }
