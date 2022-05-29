@@ -322,7 +322,6 @@ pub fn resolver_for_expr(db: &dyn DefDatabase, owner: DefWithBodyId, expr_id: Ex
     resolver_for_scope(db, owner, scopes.scope_for(expr_id))
 }
 
-#[allow(clippy::needless_collect)] // false positive https://github.com/rust-lang/rust-clippy/issues/5991
 pub fn resolver_for_scope(
     db: &dyn DefDatabase,
     owner: DefWithBodyId,
@@ -331,6 +330,8 @@ pub fn resolver_for_scope(
     let mut r = owner.resolver(db);
     let scopes = db.expr_scopes(owner);
     let scope_chain = scopes.scope_chain(scope_id).collect::<Vec<_>>();
+    r.scopes.reserve(scope_chain.len());
+
     for scope in scope_chain.into_iter().rev() {
         r = r.push_expr_scope(owner, Arc::clone(&scopes), scope);
     }
