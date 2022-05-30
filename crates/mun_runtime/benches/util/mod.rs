@@ -29,7 +29,10 @@ pub fn runtime_from_file<P: AsRef<Path>>(p: P) -> Runtime {
 
     let out_path = driver.assembly_output_path_from_file(file_id);
     driver.write_all_assemblies(false).unwrap();
-    Runtime::builder(out_path).finish().unwrap()
+    let builder = Runtime::builder(out_path);
+
+    // Safety: we compiled the code ourselves, so this is safe.
+    unsafe { builder.finish() }.unwrap()
 }
 
 pub fn lua_from_file<P: AsRef<Path>>(p: P) -> Lua {

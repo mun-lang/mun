@@ -10,9 +10,10 @@ the below applies to the result of this template
 //! this mode has all AST accessors.
 
 use crate::{
-    ast::{self, AstNode},
+    ast::{self, AstNode, AstToken},
     SyntaxKind::{self, *},
     SyntaxNode,
+    SyntaxToken
 };
 
 {% for node, methods in ast %}// {{ node }}
@@ -106,6 +107,26 @@ impl {{ node }} {
     }
 {% endfor -%}
 {%- endif -%}
+}
+
+{% endfor %}
+{% for token in literals %}// {{ token | camel }}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct {{ token | camel }} {
+    pub(crate) syntax: SyntaxToken,
+}
+impl std::fmt::Display for {{ token | camel }} {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(&self.syntax, f)
+    }
+}
+impl AstToken for {{ token | camel }} {
+    fn can_cast(kind: SyntaxKind) -> bool { kind == {{ token }} }
+    fn cast(syntax: SyntaxToken) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) { Some(Self { syntax }) } else { None }
+    }
+    fn syntax(&self) -> &SyntaxToken { &self.syntax }
 }
 
 {% endfor %}

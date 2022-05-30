@@ -14,8 +14,8 @@ categories = ["game-development", "mun"]
 
 [dependencies]
 rustc-hash="1.1.0"
-lsp-types = "0.86.0"
-lsp-server = "0.5.0"
+lsp-types = "0.93.0"
+lsp-server = "0.6.0"
 log = "0.4"
 serde = "1.0"
 serde_json = "1.0"
@@ -31,9 +31,9 @@ mun_target = { version = "=0.3.0", path = "../mun_target" }
 mun_syntax = { version = "=0.3.0", path = "../mun_syntax" }
 mun_diagnostics = { version = "=0.1.0", path = "../mun_diagnostics" }
 crossbeam-channel = "0.5.0"
-parking_lot = "0.11.1"
+parking_lot = "0.12.0"
 paths = { version = "=0.1.0", path="../mun_paths", package="mun_paths"}
-ra_ap_text_edit="0.0.35"
+ra_ap_text_edit="0.0.104"
 
 [dev-dependencies]
 tempdir = "0.3.7"

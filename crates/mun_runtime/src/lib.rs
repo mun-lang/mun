@@ -130,7 +130,20 @@ impl RuntimeBuilder {
     }
 
     /// Constructs a [`Runtime`] with the builder's options.
-    pub fn finish(self) -> anyhow::Result<Runtime> {
+    ///
+    /// # Safety
+    ///
+    /// A munlib is simply a shared object. When a library is loaded, initialisation routines
+    /// contained within it are executed. For the purposes of safety, the execution of these
+    /// routines is conceptually the same calling an unknown foreign function and may impose
+    /// arbitrary requirements on the caller for the call to be sound.
+    ///
+    /// Additionally, the callers of this function must also ensure that execution of the
+    /// termination routines contained within the library is safe as well. These routines may be
+    /// executed when the library is unloaded.
+    ///
+    /// See [`Assembly::load`] for more information.
+    pub unsafe fn finish(self) -> anyhow::Result<Runtime> {
         Runtime::new(self.options)
     }
 }
@@ -165,7 +178,20 @@ impl Runtime {
     /// Constructs a new `Runtime` that loads the library at `library_path` and its
     /// dependencies. The `Runtime` contains a file watcher that is triggered with an interval
     /// of `dur`.
-    pub fn new(mut options: RuntimeOptions) -> anyhow::Result<Runtime> {
+    ///
+    /// # Safety
+    ///
+    /// A munlib is simply a shared object. When a library is loaded, initialisation routines
+    /// contained within it are executed. For the purposes of safety, the execution of these
+    /// routines is conceptually the same calling an unknown foreign function and may impose
+    /// arbitrary requirements on the caller for the call to be sound.
+    ///
+    /// Additionally, the callers of this function must also ensure that execution of the
+    /// termination routines contained within the library is safe as well. These routines may be
+    /// executed when the library is unloaded.
+    ///
+    /// See [`Assembly::load`] for more information.
+    pub unsafe fn new(mut options: RuntimeOptions) -> anyhow::Result<Runtime> {
         let (tx, rx) = channel();
 
         let mut dispatch_table = DispatchTable::default();
@@ -198,7 +224,20 @@ impl Runtime {
     }
 
     /// Adds an assembly corresponding to the library at `library_path`.
-    fn add_assembly(&mut self, library_path: &Path) -> anyhow::Result<()> {
+    ///
+    /// # Safety
+    ///
+    /// A munlib is simply a shared object. When a library is loaded, initialisation routines
+    /// contained within it are executed. For the purposes of safety, the execution of these
+    /// routines is conceptually the same calling an unknown foreign function and may impose
+    /// arbitrary requirements on the caller for the call to be sound.
+    ///
+    /// Additionally, the callers of this function must also ensure that execution of the
+    /// termination routines contained within the library is safe as well. These routines may be
+    /// executed when the library is unloaded.
+    ///
+    /// See [`Assembly::load`] for more information.
+    unsafe fn add_assembly(&mut self, library_path: &Path) -> anyhow::Result<()> {
         let library_path = library_path.canonicalize()?;
         if self.assemblies.contains_key(&library_path) {
             return Err(io::Error::new(
@@ -271,12 +310,26 @@ impl Runtime {
 
     /// Updates the state of the runtime. This includes checking for file changes, and reloading
     /// compiled assemblies.
-    pub fn update(&mut self) -> bool {
+    /// # Safety
+    ///
+    /// A munlib is simply a shared object. When a library is loaded, initialisation routines
+    /// contained within it are executed. For the purposes of safety, the execution of these
+    /// routines is conceptually the same calling an unknown foreign function and may impose
+    /// arbitrary requirements on the caller for the call to be sound.
+    ///
+    /// Additionally, the callers of this function must also ensure that execution of the
+    /// termination routines contained within the library is safe as well. These routines may be
+    /// executed when the library is unloaded.
+    ///
+    /// See [`Assembly::load`] for more information.
+    pub unsafe fn update(&mut self) -> bool {
         fn is_lockfile(path: &Path) -> bool {
             path.file_name().expect("Invalid file path.") == LOCKFILE_NAME
         }
 
-        fn relink_assemblies(runtime: &mut Runtime) -> anyhow::Result<(DispatchTable, TypeTable)> {
+        unsafe fn relink_assemblies(
+            runtime: &mut Runtime,
+        ) -> anyhow::Result<(DispatchTable, TypeTable)> {
             let mut loaded = HashMap::new();
             let to_load = &mut runtime.assemblies_to_relink;
 
@@ -495,7 +548,7 @@ pub trait InvokeArgs {
 // Implement `InvokeTraits` for tuples up to and including 20 elements
 seq_macro::seq!(N in 0..=20 {#(
 seq_macro::seq!(I in 0..N {
-    impl<'arg, #(T #I: ArgumentReflection + Marshal<'arg>,)*> InvokeArgs for (#(T #I,)*) {
+    impl<'arg, #(T~I: ArgumentReflection + Marshal<'arg>,)*> InvokeArgs for (#(T~I,)*) {
         #[allow(unused_variables)]
         fn can_invoke<'runtime>(&self, runtime: &'runtime Runtime, signature: &FunctionSignature) -> Result<(), String> {
             let arg_types = &signature.arg_types;
@@ -522,7 +575,7 @@ seq_macro::seq!(I in 0..N {
 
         unsafe fn invoke<ReturnType>(self, fn_ptr: *const c_void) -> ReturnType {
             #[allow(clippy::type_complexity)]
-            let function: fn(#(T #I::MunType,)*) -> ReturnType = core::mem::transmute(fn_ptr);
+            let function: fn(#(T~I::MunType,)*) -> ReturnType = core::mem::transmute(fn_ptr);
             function(#(self.I.marshal_into(),)*)
         }
     }

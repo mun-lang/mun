@@ -256,7 +256,7 @@ fn handle_diagnostics(state: LanguageServerSnapshot, sender: Sender<Task>) -> an
                 for d in diagnostics {
                     lsp_diagnostics.push(lsp_types::Diagnostic {
                         range: to_lsp::range(d.range, &line_index),
-                        severity: Some(lsp_types::DiagnosticSeverity::Error),
+                        severity: Some(lsp_types::DiagnosticSeverity::ERROR),
                         code: None,
                         code_description: None,
                         source: Some("mun".to_string()),

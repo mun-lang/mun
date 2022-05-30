@@ -1,46 +1,58 @@
 use anyhow::anyhow;
-use clap::ArgMatches;
 use mun_runtime::Runtime;
+use std::path::PathBuf;
 
 use crate::ExitStatus;
 
-/// Starts the runtime with the specified library and invokes function `entry`.
-pub fn start(matches: &ArgMatches) -> anyhow::Result<ExitStatus> {
-    let runtime = runtime(matches)?;
+#[derive(clap::Args)]
+pub struct Args {
+    /// The library to use
+    library: PathBuf,
 
-    let entry_point = matches.value_of("entry").unwrap_or("main");
+    /// The function entry point to call on startup
+    #[clap(default_value_t = String::from("main"))]
+    entry: String,
+}
+
+/// Starts the runtime with the specified library and invokes function `entry`.
+pub fn start(args: Args) -> anyhow::Result<ExitStatus> {
+    let builder = Runtime::builder(args.library);
+
+    // Safety: we assume that the passed in library is safe
+    let runtime = unsafe { builder.finish() }?;
+
     let fn_definition = runtime
-        .get_function_definition(entry_point)
+        .get_function_definition(&args.entry)
         .ok_or_else(|| {
             std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
-                format!("Failed to obtain entry point '{}'", entry_point),
+                format!("Failed to obtain entry point '{}'", &args.entry),
             )
         })?;
 
     let return_type = &fn_definition.prototype.signature.return_type;
     if return_type.equals::<bool>() {
         let result: bool = runtime
-            .invoke(entry_point, ())
+            .invoke(&args.entry, ())
             .map_err(|e| anyhow!("{}", e))?;
 
         println!("{}", result)
     } else if return_type.equals::<f64>() {
         let result: f64 = runtime
-            .invoke(entry_point, ())
+            .invoke(&args.entry, ())
             .map_err(|e| anyhow!("{}", e))?;
 
         println!("{}", result)
     } else if return_type.equals::<i64>() {
         let result: i64 = runtime
-            .invoke(entry_point, ())
+            .invoke(&args.entry, ())
             .map_err(|e| anyhow!("{}", e))?;
 
         println!("{}", result)
     } else if return_type.equals::<()>() {
         #[allow(clippy::unit_arg)]
         runtime
-            .invoke(entry_point, ())
+            .invoke(&args.entry, ())
             .map(|_: ()| ExitStatus::Success)
             .map_err(|e| anyhow!("{}", e))?;
     } else {
@@ -48,13 +60,6 @@ pub fn start(matches: &ArgMatches) -> anyhow::Result<ExitStatus> {
             "Only native Mun return types are supported for entry points. Found: {}",
             return_type.name
         ));
-    }
+    };
     Ok(ExitStatus::Success)
-}
-
-fn runtime(matches: &ArgMatches) -> anyhow::Result<Runtime> {
-    Runtime::builder(
-        matches.value_of("LIBRARY").unwrap(), // Safe because its a required arg
-    )
-    .finish()
 }

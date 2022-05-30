@@ -69,12 +69,12 @@ pub(crate) fn position(
 /// Converts a symbol kind from this crate to one for the LSP protocol.
 pub(crate) fn symbol_kind(symbol_kind: SymbolKind) -> lsp_types::SymbolKind {
     match symbol_kind {
-        SymbolKind::Function => lsp_types::SymbolKind::Function,
-        SymbolKind::Struct => lsp_types::SymbolKind::Struct,
-        SymbolKind::TypeAlias => lsp_types::SymbolKind::TypeParameter,
-        SymbolKind::Field => lsp_types::SymbolKind::Field,
-        SymbolKind::Local => lsp_types::SymbolKind::Variable,
-        SymbolKind::Module => lsp_types::SymbolKind::Module,
+        SymbolKind::Function => lsp_types::SymbolKind::FUNCTION,
+        SymbolKind::Struct => lsp_types::SymbolKind::STRUCT,
+        SymbolKind::TypeAlias => lsp_types::SymbolKind::TYPE_PARAMETER,
+        SymbolKind::Field => lsp_types::SymbolKind::FIELD,
+        SymbolKind::Local => lsp_types::SymbolKind::VARIABLE,
+        SymbolKind::Module => lsp_types::SymbolKind::MODULE,
     }
 }
 
@@ -92,19 +92,7 @@ pub(crate) fn completion_item(completion_item: CompletionItem) -> lsp_types::Com
         label: completion_item.label,
         kind: completion_item.kind.map(completion_item_kind),
         detail: completion_item.detail,
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: None,
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: None,
-        additional_text_edits: None,
-        command: None,
-        data: None,
-        tags: None,
+        ..Default::default()
     }
 }
 
@@ -112,20 +100,20 @@ pub(crate) fn completion_item_kind(
     completion_item_kind: CompletionItemKind,
 ) -> lsp_types::CompletionItemKind {
     match completion_item_kind {
-        CompletionItemKind::Binding => lsp_types::CompletionItemKind::Variable,
-        CompletionItemKind::BuiltinType => lsp_types::CompletionItemKind::Struct,
-        CompletionItemKind::Keyword => lsp_types::CompletionItemKind::Keyword,
-        CompletionItemKind::Method => lsp_types::CompletionItemKind::Method,
-        CompletionItemKind::Snippet => lsp_types::CompletionItemKind::Snippet,
-        CompletionItemKind::UnresolvedReference => lsp_types::CompletionItemKind::Reference,
+        CompletionItemKind::Binding => lsp_types::CompletionItemKind::VARIABLE,
+        CompletionItemKind::BuiltinType => lsp_types::CompletionItemKind::STRUCT,
+        CompletionItemKind::Keyword => lsp_types::CompletionItemKind::KEYWORD,
+        CompletionItemKind::Method => lsp_types::CompletionItemKind::METHOD,
+        CompletionItemKind::Snippet => lsp_types::CompletionItemKind::SNIPPET,
+        CompletionItemKind::UnresolvedReference => lsp_types::CompletionItemKind::REFERENCE,
         CompletionItemKind::SymbolKind(symbol) => match symbol {
-            SymbolKind::Field => lsp_types::CompletionItemKind::Field,
-            SymbolKind::Function => lsp_types::CompletionItemKind::Function,
-            SymbolKind::Local => lsp_types::CompletionItemKind::Variable,
-            SymbolKind::Module => lsp_types::CompletionItemKind::Module,
-            SymbolKind::Struct => lsp_types::CompletionItemKind::Struct,
-            SymbolKind::TypeAlias => lsp_types::CompletionItemKind::Struct,
+            SymbolKind::Field => lsp_types::CompletionItemKind::FIELD,
+            SymbolKind::Function => lsp_types::CompletionItemKind::FUNCTION,
+            SymbolKind::Local => lsp_types::CompletionItemKind::VARIABLE,
+            SymbolKind::Module => lsp_types::CompletionItemKind::MODULE,
+            SymbolKind::Struct => lsp_types::CompletionItemKind::STRUCT,
+            SymbolKind::TypeAlias => lsp_types::CompletionItemKind::STRUCT,
         },
-        CompletionItemKind::Attribute => lsp_types::CompletionItemKind::EnumMember,
+        CompletionItemKind::Attribute => lsp_types::CompletionItemKind::ENUM_MEMBER,
     }
 }

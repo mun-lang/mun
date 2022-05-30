@@ -128,7 +128,7 @@ mod tests {
         let default_symbol = DocumentSymbol {
             name: "".to_string(),
             detail: None,
-            kind: SymbolKind::File,
+            kind: SymbolKind::FILE,
             tags: None,
             deprecated: None,
             range: Default::default(),

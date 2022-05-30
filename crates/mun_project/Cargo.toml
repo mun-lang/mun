@@ -17,6 +17,6 @@ rustc-hash = "1.1.0"
 serde = "1.0"
 serde_derive = "1.0"
 toml = "0.5"
-semver = { version = "0.10", features = ["serde"] }
+semver = { version = "1.0", features = ["serde"] }
 anyhow = "1.0"
 paths = { version="=0.1.0", path="../mun_paths", package="mun_paths" }

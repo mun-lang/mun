@@ -1,7 +1,7 @@
 #ifndef MUN_RUNTIME_BINDINGS_H_
 #define MUN_RUNTIME_BINDINGS_H_
 
-/* Generated with cbindgen:0.16.0 */
+/* Generated with cbindgen:0.23.0 */
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -460,22 +460,34 @@ struct MunErrorHandle mun_runtime_get_type_info_by_id(struct MunRuntimeHandle ru
 struct MunErrorHandle mun_runtime_update(struct MunRuntimeHandle handle, bool *updated);
 
 /**
- * A C-style handle to an array of `TypeInfo`s.
  * Retrieves the field's name.
  *
  * # Safety
  *
  * The caller is responsible for calling `mun_string_destroy` on the return pointer - if it is not null.
+ *
+ * This function might result in undefined behavior if the [`crate::TypeInfoHandle`] associated
+ * with this `FieldInfoHandle` has been deallocated.
  */
 const char *mun_field_info_name(struct MunFieldInfoHandle field_info);
 
 /**
  * Retrieves the field's type.
+ *
+ * # Safety
+ *
+ * This method is considered unsafe because the passed `field_info` might have been deallocated by
+ * a call to [`mun_type_info_decrement_strong_count`] of the type that contains this field.
  */
 struct MunTypeInfoHandle mun_field_info_type(struct MunFieldInfoHandle field_info);
 
 /**
  * Retrieves the field's offset.
+ *
+ * # Safety
+ *
+ * This method is considered unsafe because the passed `field_info` might have been deallocated by
+ * a call to [`mun_type_info_decrement_strong_count`] of the type that contains this field.
  */
 struct MunErrorHandle mun_field_info_offset(struct MunFieldInfoHandle field_info,
                                             uint16_t *field_offset);
@@ -497,16 +509,31 @@ bool mun_field_info_span_destroy(struct MunFieldInfoSpan span);
 
 /**
  * Decrements the strong count of the `Arc<FunctionDefinition>` associated with `handle`.
+ *
+ * # Safety
+ *
+ * This function might be unsafe if the underlying data has already been deallocated by a previous
+ * call to [`mun_function_info_decrement_strong_count`].
  */
 bool mun_function_info_decrement_strong_count(struct MunFunctionInfoHandle fn_info);
 
 /**
  * Increments the strong count of the `Arc<FunctionDefinition>` associated with `handle`.
+ *
+ * # Safety
+ *
+ * This function might be unsafe if the underlying data has been deallocated by a previous call
+ * to [`mun_function_info_decrement_strong_count`].
  */
 bool mun_function_info_increment_strong_count(struct MunFunctionInfoHandle fn_info);
 
 /**
  * Retrieves the function's function pointer.
+ *
+ * # Safety
+ *
+ * This function might be unsafe if the underlying data has been deallocated by a previous call
+ * to [`mun_function_info_decrement_strong_count`].
  */
 const void *mun_function_info_fn_ptr(struct MunFunctionInfoHandle fn_info);
 
@@ -516,6 +543,9 @@ const void *mun_function_info_fn_ptr(struct MunFunctionInfoHandle fn_info);
  * # Safety
  *
  * The caller is responsible for calling `mun_string_destroy` on the return pointer - if it is not null.
+ *
+ * This function might be unsafe if the underlying data has been deallocated by a previous call
+ * to [`mun_function_info_decrement_strong_count`].
  */
 const char *mun_function_info_name(struct MunFunctionInfoHandle fn_info);
 
@@ -526,12 +556,20 @@ const char *mun_function_info_name(struct MunFunctionInfoHandle fn_info);
  *
  * If a non-null handle is returned, the caller is responsible for calling
  * `mun_type_info_span_destroy` on the returned handle.
+ *
+ * This function might be unsafe if the underlying data has been deallocated by a previous call
+ * to [`mun_function_info_decrement_strong_count`].
  */
 struct MunErrorHandle mun_function_info_argument_types(struct MunFunctionInfoHandle fn_info,
                                                        struct MunTypeInfoSpan *arg_types);
 
 /**
  * Retrieves the function's return type.
+ *
+ * # Safety
+ *
+ * This function might be unsafe if the underlying data has been deallocated by a previous call
+ * to [`mun_function_info_decrement_strong_count`].
  */
 struct MunTypeInfoHandle mun_function_info_return_type(struct MunFunctionInfoHandle fn_info);
 
@@ -541,28 +579,51 @@ struct MunTypeInfoHandle mun_function_info_return_type(struct MunFunctionInfoHan
  * # Safety
  *
  * The caller is responsible for calling `mun_field_info_span_destroy` on the returned span.
+ *
+ * This function might result in undefined behavior if the [`crate::TypeInfoHandle`] associated
+ * with this `StructInfoHandle` has been deallocated.
  */
 struct MunErrorHandle mun_struct_info_fields(struct MunStructInfoHandle struct_info,
                                              struct MunFieldInfoSpan *field_info_span);
 
 /**
  * Retrieves the struct's memory kind.
+ *
+ * # Safety
+ *
+ * This function might result in undefined behavior if the [`crate::TypeInfoHandle`] associated
+ * with this `StructInfoHandle` has been deallocated.
  */
 struct MunErrorHandle mun_struct_info_memory_kind(struct MunStructInfoHandle struct_info,
                                                   MunStructMemoryKind *memory_kind);
 
 /**
  * Decrements the strong count of the `Arc<TypeInfo>` associated with `handle`.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `TypeInfoHandle` has already been
+ * deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
  */
 bool mun_type_info_decrement_strong_count(struct MunTypeInfoHandle handle);
 
 /**
  * Increments the strong count of the `Arc<TypeInfo>` associated with `handle`.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `TypeInfoHandle` has already been
+ * deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
  */
 bool mun_type_info_increment_strong_count(struct MunTypeInfoHandle handle);
 
 /**
  * Retrieves the type's ID.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `TypeInfoHandle` has been
+ * deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
  */
 struct MunErrorHandle mun_type_info_id(struct MunTypeInfoHandle type_info,
                                        struct MunTypeId *type_id);
@@ -573,16 +634,29 @@ struct MunErrorHandle mun_type_info_id(struct MunTypeInfoHandle type_info,
  * # Safety
  *
  * The caller is responsible for calling `mun_string_destroy` on the return pointer - if it is not null.
+ *
+ * This function results in undefined behavior if the passed in `TypeInfoHandle` has been
+ * deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
  */
 const char *mun_type_info_name(struct MunTypeInfoHandle type_info);
 
 /**
  * Retrieves the type's size.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `TypeInfoHandle` has been
+ * deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
  */
 struct MunErrorHandle mun_type_info_size(struct MunTypeInfoHandle type_info, uintptr_t *size);
 
 /**
  * Retrieves the type's alignment.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `TypeInfoHandle` has been
+ * deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
  */
 struct MunErrorHandle mun_type_info_align(struct MunTypeInfoHandle type_info, uintptr_t *align);
 
@@ -592,7 +666,8 @@ struct MunErrorHandle mun_type_info_align(struct MunTypeInfoHandle type_info, ui
  * # Safety
  *
  * The original `TypeInfoHandle` needs to stay alive as long as the `TypeInfoData` lives. The
- * `TypeInfoData` is destroyed at the same time as the `TypeInfo`.
+ * `TypeInfoData` is destroyed at the same time as the `TypeInfo`. A `TypeInfo` might be destroyed
+ * through a call to [`mun_type_info_decrement_strong_count`].
  */
 struct MunErrorHandle mun_type_info_data(struct MunTypeInfoHandle type_info,
                                          union MunTypeInfoData *type_info_data);

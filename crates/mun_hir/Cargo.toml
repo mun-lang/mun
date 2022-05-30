@@ -14,7 +14,6 @@ categories = ["game-development", "mun"]
 
 [dependencies]
 salsa = "0.16.1"
-superslice = "1.0"
 mun_syntax = { version = "=0.3.0", path = "../mun_syntax" }
 mun_target = { version = "=0.3.0", path = "../mun_target" }
 paths = { version="=0.1.0", path="../mun_paths", package="mun_paths"}
@@ -24,11 +23,10 @@ ena = "0.14"
 drop_bomb = "0.1.4"
 either = "1.5.3"
 itertools = "0.10.0"
-smallvec = "1.6.1"
-arrayvec = "0.5.2"
+smallvec = { version = "1.6.1", features=["union"] }
 
 [dev-dependencies]
 insta = "1.12.0"
 text_trees = "0.1.2"
-parking_lot = "0.11.1"
+parking_lot = "0.12.0"
 mun_test = { path = "../mun_test" }

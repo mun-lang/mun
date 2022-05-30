@@ -19,7 +19,7 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
 
@@ -53,7 +53,7 @@ jobs:
           - os: "windows-latest"
             RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
 
@@ -90,7 +90,7 @@ jobs:
           - os: "windows-latest"
             RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
 
@@ -165,7 +165,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: check
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
 
@@ -197,7 +197,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: check
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
 
@@ -216,7 +216,7 @@ jobs:
       - name: Run cargo-tarpaulin
         uses: actions-rs/tarpaulin@v0.1
 
-      - uses: codecov/codecov-action@v1
+      - uses: codecov/codecov-action@v3
         with:
           file: ${{ steps.coverage.outputs.report }}
           name: ${{ matrix.os }}

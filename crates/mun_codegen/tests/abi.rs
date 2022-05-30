@@ -26,11 +26,13 @@ fn test_abi_compatibility() {
     ));
 
     // Assert that all library functions are exposed
-    let lib = MunLibrary::new(driver.lib_path()).expect("Failed to load generated Mun library.");
+    // Safety: We compiled the code ourselves, therefor loading the library is safe
+    let lib = unsafe { MunLibrary::new(driver.lib_path()) }
+        .expect("Failed to load generated Mun library.");
 
-    assert_eq!(ABI_VERSION, lib.get_abi_version());
+    assert_eq!(ABI_VERSION, unsafe { lib.get_abi_version() });
 
-    let lib_info = lib.get_info();
+    let lib_info = unsafe { lib.get_info() };
 
     // Dependency compatibility
     assert_eq!(lib_info.num_dependencies, 0);
@@ -87,7 +89,7 @@ fn test_abi_compatibility() {
             args.len()
         );
 
-        for (idx, (_, arg_guid)) in args.iter().enumerate() {
+        for (idx, (_, arg_type_id)) in args.iter().enumerate() {
             let fn_arg_type = fn_def
                 .prototype
                 .signature
@@ -100,7 +102,7 @@ fn test_abi_compatibility() {
                     )
                 });
 
-            assert_eq!(fn_arg_type.guid, arg_guid.guid)
+            assert_eq!(fn_arg_type, arg_type_id);
         }
     }
 
@@ -120,8 +122,7 @@ fn test_abi_compatibility() {
                 fn_def.prototype.name()
             )
         });
-        assert_eq!(fn_return_type.guid, R::type_id().guid);
-        // assert_eq!(fn_return_type.name(), R::type_name());
+        assert_eq!(fn_return_type, R::type_id());
     }
 
     fn test_struct_info<T: Sized, F: Sized + ReturnTypeReflection>(

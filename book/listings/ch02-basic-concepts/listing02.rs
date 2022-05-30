@@ -2,8 +2,9 @@ use mun_runtime::Runtime;
 use std::{cell::RefCell, rc::Rc};
 
 fn main() {
-    let runtime = Runtime::builder("main.munlib")
-        .finish()
+    // Safety: We assume that the library that is loaded is a valid munlib
+    let builder = Runtime::builder("main.munlib");
+    let mut runtime = unsafe { builder.finish() }
         .expect("Failed to spawn Runtime");
 
     let result: bool = runtime.invoke("random_bool", ()).unwrap();

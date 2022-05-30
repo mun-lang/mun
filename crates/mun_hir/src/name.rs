@@ -39,12 +39,10 @@ impl Name {
     }
 
     /// Resolve a name from the text of token.
-    fn resolve(raw_text: &SmolStr) -> Name {
-        let raw_start = "r#";
-        if raw_text.as_str().starts_with(raw_start) {
-            Name::new_text(SmolStr::new(&raw_text[raw_start.len()..]))
-        } else {
-            Name::new_text(raw_text.clone())
+    fn resolve(raw_text: &str) -> Name {
+        match raw_text.strip_prefix("r#") {
+            Some(text) => Name::new_text(SmolStr::new(text)),
+            None => Name::new_text(raw_text.into()),
         }
     }
 
@@ -72,14 +70,14 @@ impl AsName for ast::NameRef {
     fn as_name(&self) -> Name {
         match self.as_tuple_field() {
             Some(idx) => Name::new_tuple_field(idx),
-            None => Name::resolve(self.text()),
+            None => Name::resolve(&self.text()),
         }
     }
 }
 
 impl AsName for ast::Name {
     fn as_name(&self) -> Name {
-        Name::resolve(self.text())
+        Name::resolve(&self.text())
     }
 }
 

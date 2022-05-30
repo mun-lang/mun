@@ -1,11 +1,11 @@
 pub type Result<T> = std::result::Result<T, anyhow::Error>;
 
+pub use crate::syntax::Mode::{self, Overwrite, Verify};
 use anyhow::bail;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-pub use teraron::{Mode, Overwrite, Verify};
 
 pub mod abi;
 pub mod runtime_capi;

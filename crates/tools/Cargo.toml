@@ -5,9 +5,10 @@ authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 
 [dependencies]
-teraron = "0.1.0"
-clap = "2.32.0"
+tera = "1.15.0"
+clap = { version="3.1.18", features=["derive"] }
 anyhow = "1.0.31"
-ron = "0.4.2"
-cbindgen = "= 0.16.0"
+ron = "0.7.0"
+cbindgen = "= 0.23.0"
 difference = "2.0"
+heck = "0.4.0"

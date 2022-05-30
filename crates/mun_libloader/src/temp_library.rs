@@ -16,7 +16,27 @@ pub struct TempLibrary {
 }
 
 impl TempLibrary {
-    pub fn new(path: &Path) -> Result<Self, Error> {
+    /// Find and load a dynamic library.
+    ///
+    /// The `filename` argument may be either:
+    ///
+    /// * A library filename;
+    /// * The absolute path to the library;
+    /// * A relative (to the current working directory) path to the library.
+    ///
+    /// # Safety
+    ///
+    /// When a library is loaded, initialisation routines contained within it are executed.
+    /// For the purposes of safety, the execution of these routines is conceptually the same calling
+    /// an unknown foreign function and may impose arbitrary requirements on the caller for the call
+    /// to be sound.
+    ///
+    /// Additionally, the callers of this function must also ensure that execution of the
+    /// termination routines contained within the library is safe as well. These routines may be
+    /// executed when the library is unloaded.
+    ///
+    /// See [`libloading::Library::new`] for more information.
+    pub unsafe fn new(path: &Path) -> Result<Self, Error> {
         let tmp_path = tempfile::NamedTempFile::new()?.into_temp_path();
         fs::copy(path, &tmp_path)?;
         let library = Library::new(&tmp_path)?;

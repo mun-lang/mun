@@ -72,9 +72,10 @@ pub fn run_test(code: &str, mode: TestMode) {
 
     // Create a runtime
     let assembly_path = driver.assembly_output_path_from_file(file_id);
-    let runtime = Runtime::builder(assembly_path)
-        .finish()
-        .expect("error creating runtime for test assembly");
+    let builder = Runtime::builder(assembly_path);
+
+    // Safety: We compiled the mun code ourselves, therefor loading the munlib is safe
+    let runtime = unsafe { builder.finish() }.expect("error creating runtime for test assembly");
 
     // Find the main function
     if runtime.get_function_definition("main").is_none() {

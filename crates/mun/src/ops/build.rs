@@ -2,28 +2,79 @@ use std::env;
 use std::path::{Path, PathBuf};
 
 use anyhow::anyhow;
-use clap::ArgMatches;
+use clap::ArgEnum;
 use mun_compiler::{Config, DisplayColor, Target};
 use mun_project::MANIFEST_FILENAME;
 
 use crate::ExitStatus;
 
-/// Options for building Mun code
-struct BuildOptions {
-    manifest_path: Option<String>,
-    display_colors: DisplayColor,
-    compiler_options: Config,
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ArgEnum)]
+pub enum UseColor {
+    Disable,
+    Enable,
+    Auto,
+}
+
+#[derive(clap::Args)]
+pub struct Args {
+    /// Path to the manifest of the project
+    #[clap(long)]
+    manifest_path: Option<PathBuf>,
+
+    /// Optimization level [0,3]
+    #[clap(long, short = 'O', default_value_t = 2)]
+    opt_level: u8,
+
+    /// Use color in output
+    #[clap(long, arg_enum)]
+    color: Option<UseColor>,
+
+    /// Emits IR instead of a *.munlib
+    #[clap(long)]
+    emit_ir: bool,
+
+    /// Run the compiler in watch mode. Watch input files and trigger recompilation on changes.
+    #[clap(long)]
+    watch: bool,
+
+    /// Target for machine code
+    #[clap(long, parse(try_from_str=Target::search))]
+    target: Option<Target>,
 }
 
 /// This method is invoked when the executable is run with the `build` argument indicating that a
 /// user requested us to build a project in the current directory or one of its parent directories.
-pub fn build(matches: &ArgMatches) -> Result<ExitStatus, anyhow::Error> {
+pub fn build(args: Args) -> Result<ExitStatus, anyhow::Error> {
     log::trace!("starting build");
 
-    let options = extract_build_options(matches)?;
+    let optimization_lvl = match args.opt_level {
+        0 => mun_compiler::OptimizationLevel::None,
+        1 => mun_compiler::OptimizationLevel::Less,
+        2 => mun_compiler::OptimizationLevel::Default,
+        3 => mun_compiler::OptimizationLevel::Aggressive,
+        _ => return Err(anyhow!("Only optimization levels 0-3 are supported")),
+    };
+
+    let display_colors = args
+        .color
+        .map(|clr| match clr {
+            UseColor::Disable => DisplayColor::Disable,
+            UseColor::Enable => DisplayColor::Enable,
+            UseColor::Auto => DisplayColor::Auto,
+        })
+        .or_else(|| {
+            env::var("MUN_TERMINAL_COLOR")
+                .map(|value| match value.as_str() {
+                    "disable" => DisplayColor::Disable,
+                    "enable" => DisplayColor::Enable,
+                    _ => DisplayColor::Auto,
+                })
+                .ok()
+        })
+        .unwrap_or(DisplayColor::Auto);
 
     // Locate the manifest
-    let manifest_path = match options.manifest_path {
+    let manifest_path = match &args.manifest_path {
         None => {
             let current_dir =
                 std::env::current_dir().expect("could not determine current working directory");
@@ -35,24 +86,33 @@ pub fn build(matches: &ArgMatches) -> Result<ExitStatus, anyhow::Error> {
                 )
             })?
         }
-        Some(path) => std::fs::canonicalize(Path::new(&path))
-            .map_err(|_| anyhow::anyhow!("'{}' does not refer to a valid manifest path", path))?,
+        Some(path) => std::fs::canonicalize(Path::new(&path)).map_err(|_| {
+            anyhow::anyhow!(
+                "'{}' does not refer to a valid manifest path",
+                path.display()
+            )
+        })?,
     };
 
     log::info!("located build manifest at: {}", manifest_path.display());
 
-    if matches.is_present("watch") {
+    let compiler_options = Config {
+        target: args
+            .target
+            .unwrap_or_else(|| Target::host_target().expect("unable to determine host target")),
+        optimization_lvl,
+        out_dir: None,
+        emit_ir: args.emit_ir,
+    };
+
+    if args.watch {
         mun_compiler_daemon::compile_and_watch_manifest(
             &manifest_path,
-            options.compiler_options,
-            options.display_colors,
+            compiler_options,
+            display_colors,
         )
     } else {
-        mun_compiler::compile_manifest(
-            &manifest_path,
-            options.compiler_options,
-            options.display_colors,
-        )
+        mun_compiler::compile_manifest(&manifest_path, compiler_options, display_colors)
     }
     .map(Into::into)
 }
@@ -68,46 +128,6 @@ fn find_manifest(directory: &Path) -> Option<PathBuf> {
         current_dir = dir.parent();
     }
     None
-}
-
-/// Extract build options from the command line
-fn extract_build_options(matches: &ArgMatches) -> Result<BuildOptions, anyhow::Error> {
-    let optimization_lvl = match matches.value_of("opt-level") {
-        Some("0") => mun_compiler::OptimizationLevel::None,
-        Some("1") => mun_compiler::OptimizationLevel::Less,
-        None | Some("2") => mun_compiler::OptimizationLevel::Default,
-        Some("3") => mun_compiler::OptimizationLevel::Aggressive,
-        _ => return Err(anyhow!("Only optimization levels 0-3 are supported")),
-    };
-
-    let display_colors = matches
-        .value_of("color")
-        .map(ToOwned::to_owned)
-        .or_else(|| env::var("MUN_TERMINAL_COLOR").ok())
-        .map(|value| match value.as_str() {
-            "disable" => DisplayColor::Disable,
-            "enable" => DisplayColor::Enable,
-            _ => DisplayColor::Auto,
-        })
-        .unwrap_or(DisplayColor::Auto);
-
-    let emit_ir = matches.is_present("emit-ir");
-
-    let manifest_path = matches.value_of("manifest-path").map(ToOwned::to_owned);
-
-    Ok(BuildOptions {
-        manifest_path,
-        display_colors,
-        compiler_options: Config {
-            target: matches
-                .value_of("target")
-                .map_or_else(Target::host_target, Target::search)?,
-            optimization_lvl,
-            out_dir: None,
-
-            emit_ir,
-        },
-    })
 }
 
 #[cfg(test)]

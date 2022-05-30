@@ -92,7 +92,7 @@ impl InferenceResult {
 pub fn infer_query(db: &dyn HirDatabase, def: DefWithBodyId) -> Arc<InferenceResult> {
     let body = db.body(def);
     let resolver = def.resolver(db.upcast());
-    let mut ctx = InferenceResultBuilder::new(db, body, resolver);
+    let mut ctx = InferenceResultBuilder::new(db, &body, resolver);
 
     match def {
         DefWithBodyId::FunctionId(_) => ctx.infer_signature(),
@@ -139,7 +139,7 @@ enum ActiveLoop {
 /// The inference context contains all information needed during type inference.
 struct InferenceResultBuilder<'a> {
     db: &'a dyn HirDatabase,
-    body: Arc<Body>,
+    body: &'a Body,
     resolver: Resolver,
 
     type_of_expr: ArenaMap<ExprId, Ty>,
@@ -160,7 +160,7 @@ struct InferenceResultBuilder<'a> {
 
 impl<'a> InferenceResultBuilder<'a> {
     /// Construct a new `InferenceContext` from a `Body` and a `Resolver` for that body.
-    fn new(db: &'a dyn HirDatabase, body: Arc<Body>, resolver: Resolver) -> Self {
+    fn new(db: &'a dyn HirDatabase, body: &'a Body, resolver: Resolver) -> Self {
         InferenceResultBuilder {
             type_of_expr: ArenaMap::default(),
             type_of_pat: ArenaMap::default(),
@@ -216,24 +216,21 @@ impl<'a> InferenceResultBuilder<'a> {
     /// Collect all the parameter patterns from the body. After calling this method the `return_ty`
     /// will have a valid value, also all parameters are added inferred.
     fn infer_signature(&mut self) {
-        let body = Arc::clone(&self.body); // avoid borrow checker problem
-
         // Iterate over all the parameters and associated types of the body and infer the types of
         // the parameters.
-        for (pat, type_ref) in body.params().iter() {
+        for (pat, type_ref) in self.body.params().iter() {
             let ty = self.resolve_type(*type_ref);
             self.infer_pat(*pat, ty);
         }
 
         // Resolve the return type
-        self.return_ty = self.resolve_type(body.ret_type())
+        self.return_ty = self.resolve_type(self.body.ret_type())
     }
 
     /// Record the type of the specified pattern and all sub-patterns.
     fn infer_pat(&mut self, pat: PatId, ty: Ty) {
-        let body = Arc::clone(&self.body); // avoid borrow checker problem
         #[allow(clippy::single_match)]
-        match &body[pat] {
+        match &self.body[pat] {
             Pat::Bind { .. } => {
                 self.set_pat_type(pat, ty);
             }
@@ -301,8 +298,7 @@ impl<'a> InferenceResultBuilder<'a> {
         expected: &Expectation,
         check_params: &CheckParams,
     ) -> Ty {
-        let body = Arc::clone(&self.body); // avoid borrow checker problem
-        let ty = match &body[tgt_expr] {
+        let ty = match &self.body[tgt_expr] {
             Expr::Missing => self.error_type(),
             Expr::Path(p) => {
                 // FIXME this could be more efficient...

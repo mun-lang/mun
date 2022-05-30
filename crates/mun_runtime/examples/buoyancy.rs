@@ -12,10 +12,10 @@ extern "C" fn log_f32(value: f32) {
 fn main() {
     let lib_dir = env::args().nth(1).expect("Expected path to a Mun library.");
 
-    let mut runtime = Runtime::builder(lib_dir)
-        .insert_fn("log_f32", log_f32 as extern "C" fn(f32))
-        .finish()
-        .expect("Failed to spawn Runtime");
+    let builder = Runtime::builder(lib_dir).insert_fn("log_f32", log_f32 as extern "C" fn(f32));
+
+    // Safety: we assume here that the library passed on the command-line is safe.
+    let mut runtime = unsafe { builder.finish() }.expect("Failed to spawn Runtime");
 
     let ctx = runtime
         .invoke::<StructRef, ()>("new_sim", ())
@@ -40,6 +40,7 @@ fn main() {
             .unwrap();
         previous = now;
 
-        runtime.update();
+        // Safety: We assume that any changes in the library are safe
+        unsafe { runtime.update() };
     }
 }

@@ -2,10 +2,11 @@ mod expr_extensions;
 #[macro_use]
 mod extensions;
 mod generated;
+mod token_extensions;
 mod tokens;
 mod traits;
 
-use crate::{syntax_node::SyntaxNodeChildren, SmolStr, SyntaxKind, SyntaxNode, SyntaxToken};
+use crate::{syntax_node::SyntaxNodeChildren, SyntaxKind, SyntaxNode, SyntaxToken};
 
 pub use self::{
     expr_extensions::*,
@@ -32,11 +33,17 @@ pub trait AstNode: Clone {
 
 /// Like an `AstNode`, but wraps tokens rather than interior nodes.
 pub trait AstToken {
+    fn can_cast(kind: SyntaxKind) -> bool
+    where
+        Self: Sized;
+
     fn cast(token: SyntaxToken) -> Option<Self>
     where
         Self: Sized;
+
     fn syntax(&self) -> &SyntaxToken;
-    fn text(&self) -> &SmolStr {
+
+    fn text(&self) -> &str {
         self.syntax().text()
     }
 }
