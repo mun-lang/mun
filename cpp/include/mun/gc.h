@@ -9,7 +9,7 @@ namespace mun {
 class Runtime;
 
 class GcRootPtr {
-   public:
+public:
     /** Constructs a rooted garbage collection pointer from the provided raw
      * garbage collection handle.
      *
@@ -79,7 +79,7 @@ class GcRootPtr {
         return ptr;
     }
 
-   private:
+private:
     MunGcPtr m_ptr;
     const Runtime* m_runtime;
 };

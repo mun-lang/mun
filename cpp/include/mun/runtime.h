@@ -6,8 +6,10 @@
 #include <string_view>
 
 #include "mun/error.h"
-#include "mun/function.h"
+#include "mun/function_info.h"
 #include "mun/runtime_capi.h"
+#include "mun/runtime_function.h"
+#include "mun/type_info.h"
 
 namespace mun {
 
@@ -45,19 +47,19 @@ public:
      * \param out_error a pointer that will optionally return an error
      * \return possibly, the desired `MunFunctionDefinition` struct
      */
-    std::optional<MunFunctionDefinition> find_function_definition(
-        std::string_view fn_name, Error* out_error = nullptr) noexcept {
+    std::optional<FunctionInfo> find_function_info(std::string_view fn_name,
+                                                   Error* out_error = nullptr) noexcept {
         bool has_fn;
-        MunFunctionDefinition temp;
-        if (auto error = Error(
-                mun_runtime_get_function_definition(m_handle, fn_name.data(), &has_fn, &temp))) {
+        MunFunctionInfoHandle fn_info;
+        if (auto error =
+                Error(mun_runtime_get_function_info(m_handle, fn_name.data(), &has_fn, &fn_info))) {
             if (out_error) {
                 *out_error = std::move(error);
             }
             return std::nullopt;
         }
 
-        return has_fn ? std::make_optional(std::move(temp)) : std::nullopt;
+        return has_fn ? std::make_optional(std::move(fn_info)) : std::nullopt;
     }
 
     /**
@@ -69,10 +71,10 @@ public:
      * \param out_error a pointer to fill with a potential error
      * \return potentially, the handle of an allocated object
      */
-    std::optional<MunGcPtr> gc_alloc(MunUnsafeTypeInfo type_info,
+    std::optional<MunGcPtr> gc_alloc(const TypeInfo& type_info,
                                      Error* out_error = nullptr) const noexcept {
         MunGcPtr obj;
-        if (auto error = Error(mun_gc_alloc(m_handle, type_info, &obj))) {
+        if (auto error = Error(mun_gc_alloc(m_handle, type_info.handle(), &obj))) {
             if (out_error) {
                 *out_error = std::move(error);
             }
@@ -133,11 +135,11 @@ public:
      * \param obj a garbage collection handle
      * \return the handle's type information
      */
-    MunUnsafeTypeInfo ptr_type(MunGcPtr obj) const noexcept {
-        MunUnsafeTypeInfo type_info;
-        const auto error_handle = mun_gc_ptr_type(m_handle, obj, &type_info);
+    TypeInfo ptr_type(MunGcPtr obj) const noexcept {
+        MunTypeInfoHandle type_handle;
+        const auto error_handle = mun_gc_ptr_type(m_handle, obj, &type_handle);
         assert(error_handle._0 == nullptr);
-        return type_info;
+        return TypeInfo(type_handle);
     }
 
     /** Checks for updates to hot reloadable assemblies.
@@ -193,8 +195,7 @@ inline std::optional<Runtime> make_runtime(std::string_view library_path,
         definition = MunFunctionDefinition{
             MunFunctionPrototype{
                 func.name.c_str(),
-                MunFunctionSignature{func.arg_types.data(),
-                                     func.ret_type.has_value() ? func.ret_type.value() : nullptr,
+                MunFunctionSignature{func.arg_types.data(), func.ret_type,
                                      static_cast<uint16_t>(func.arg_types.size())}},
             func.fn_ptr};
     }

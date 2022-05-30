@@ -7,29 +7,25 @@ namespace mun {
 template <typename T>
 struct Marshal;
 
-#define IMPL_PRIMITIVE_TYPE_MARSHAL(ty)                                                          \
-    template <>                                                                                  \
-    struct Marshal<ty> {                                                                         \
-        using type = ty;                                                                         \
-                                                                                                 \
-        static type from(type value, const Runtime&) noexcept { return value; }                  \
-                                                                                                 \
-        static type to(type value) noexcept { return value; }                                    \
-                                                                                                 \
-        static type copy_from(const type* value, const Runtime&,                                 \
-                              std::optional<const MunTypeInfo*>) noexcept {                      \
-            return *value;                                                                       \
-        }                                                                                        \
-                                                                                                 \
-        static void move_to(type value, type* ptr, std::optional<const MunTypeInfo*>) noexcept { \
-            *ptr = std::move(value);                                                             \
-        }                                                                                        \
-                                                                                                 \
-        static type swap_at(type value, type* ptr, const Runtime&,                               \
-                            std::optional<const MunTypeInfo*>) noexcept {                        \
-            std::swap(value, *ptr);                                                              \
-            return std::move(value);                                                             \
-        }                                                                                        \
+#define IMPL_PRIMITIVE_TYPE_MARSHAL(ty)                                                            \
+    template <>                                                                                    \
+    struct Marshal<ty> {                                                                           \
+        using type = ty;                                                                           \
+                                                                                                   \
+        static type from(type value, const Runtime&) noexcept { return value; }                    \
+                                                                                                   \
+        static type to(type value) noexcept { return value; }                                      \
+                                                                                                   \
+        static type copy_from(const type* value, const Runtime&, TypeInfo) noexcept {              \
+            return *value;                                                                         \
+        }                                                                                          \
+                                                                                                   \
+        static void move_to(type value, type* ptr, TypeInfo) noexcept { *ptr = std::move(value); } \
+                                                                                                   \
+        static type swap_at(type value, type* ptr, const Runtime&, TypeInfo) noexcept {            \
+            std::swap(value, *ptr);                                                                \
+            return std::move(value);                                                               \
+        }                                                                                          \
     };
 
 // TODO: Add support for 128-bit integers

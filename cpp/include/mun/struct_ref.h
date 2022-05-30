@@ -11,23 +11,29 @@
 #include "mun/gc.h"
 #include "mun/marshal.h"
 #include "mun/runtime.h"
+#include "mun/static_type_info.h"
+#include "mun/struct_info.h"
+#include "mun/type_info.h"
 
 namespace mun {
 namespace details {
-inline std::optional<size_t> find_index(std::string_view type_name,
-                                        const MunStructInfo& struct_info,
-                                        std::string_view field_name) noexcept {
-    const auto begin = struct_info.field_names;
-    const auto end = struct_info.field_names + struct_info.num_fields;
+inline std::optional<FieldInfo> find_field(std::string_view type_name,
+                                           const StructInfo& struct_info,
+                                           std::string_view field_name) noexcept {
+    const auto fields = struct_info.fields();
 
-    const auto it = std::find(begin, end, field_name);
-    if (it == end) {
+    const auto it = std::find_if(fields.begin(), fields.end(),
+                                 [field_name](const MunFieldInfoHandle& field_handle) {
+                                     const FieldInfo field_info(field_handle);
+                                     return field_info.name() == field_name;
+                                 });
+    if (it == fields.end()) {
         std::cerr << "StructRef `" << type_name << "` does not contain field `" << field_name
                   << "`." << std::endl;
         return std::nullopt;
     }
 
-    return std::make_optional(std::distance(begin, it));
+    return std::make_optional(FieldInfo(*it));
 }
 
 inline std::string format_struct_field(std::string_view struct_name,
@@ -39,17 +45,13 @@ inline std::string format_struct_field(std::string_view struct_name,
 }
 }  // namespace details
 
-inline size_t type_info_size_in_bytes(const MunTypeInfo& type_info) noexcept {
-    return static_cast<size_t>((type_info.size_in_bits + 7) / 8);
-}
-
 /** Type-agnostic wrapper for interoperability with a Mun struct.
  *
  * Roots and unroots the underlying object upon construction and destruction,
  * respectively.
  */
 class StructRef {
-   public:
+public:
     /** Constructs a `StructRef` that wraps a raw Mun struct.
      *
      * \param runtime a reference to the runtime in which the object instance
@@ -58,7 +60,7 @@ class StructRef {
      */
     StructRef(const Runtime& runtime, MunGcPtr raw) noexcept
         : m_runtime(&runtime), m_handle(GcRootPtr(runtime, raw)) {
-        assert(runtime.ptr_type(raw)->data.tag == MunTypeInfoData_Tag::Struct);
+        assert(runtime.ptr_type(raw).data().tag == MunTypeInfoData_Tag::Struct);
     }
 
     StructRef(const StructRef&) noexcept = default;
@@ -79,7 +81,7 @@ class StructRef {
      *
      * \return a pointer to the struct's type information
      */
-    const MunUnsafeTypeInfo info() const noexcept { return m_runtime->ptr_type(raw()); }
+    const TypeInfo info() const noexcept { return m_runtime->ptr_type(raw()); }
 
     /** Tries to retrieve the copied value of the field corresponding to
      * `field_name`.
@@ -109,7 +111,7 @@ class StructRef {
     template <typename T>
     bool set(std::string_view field_name, T value) noexcept;
 
-   private:
+private:
     const Runtime* m_runtime;
     GcRootPtr m_handle;
 };
@@ -125,19 +127,18 @@ struct Marshal<StructRef> {
     static type to(StructRef value) noexcept { return value.raw(); }
 
     static StructRef copy_from(const type* ptr, const Runtime& runtime,
-                               std::optional<const MunTypeInfo*> type_info) noexcept {
+                               TypeInfo type_info) noexcept {
         // Safety: `type_info_as_struct` is guaranteed to return a value for
         // `StructRef`s.
-        const auto& struct_info = type_info.value()->data.struct_;
+        const StructInfo struct_info(type_info.data().struct_);
 
         MunGcPtr gc_handle;
-        if (struct_info.memory_kind == MunStructMemoryKind::Value) {
+        if (struct_info.memory_kind() == MunStructMemoryKind::Value) {
             // Create a new managed object
-            gc_handle = *runtime.gc_alloc(const_cast<MunUnsafeTypeInfo>(type_info.value()));
+            gc_handle = *runtime.gc_alloc(type_info);
 
             // Copy the old object into the new object
-            const auto size = type_info_size_in_bytes(*type_info.value());
-            std::memcpy(*gc_handle, ptr, size);
+            std::memcpy(*gc_handle, ptr, type_info.size());
         } else {
             // For a gc struct, `ptr` points to a `MunGcPtr`.
             gc_handle = *ptr;
@@ -146,32 +147,31 @@ struct Marshal<StructRef> {
         return StructRef(runtime, gc_handle);
     }
 
-    static void move_to(type value, type* ptr,
-                        std::optional<const MunTypeInfo*> type_info) noexcept {
+    static void move_to(type value, type* ptr, TypeInfo type_info) noexcept {
         // Safety: `type_info_as_struct` is guaranteed to return a value for
         // `StructRef`s.
-        const auto& struct_info = type_info.value()->data.struct_;
-        if (struct_info.memory_kind == MunStructMemoryKind::Value) {
-            const auto size = type_info_size_in_bytes(*type_info.value());
+        const StructInfo struct_info(type_info.data().struct_);
+        if (struct_info.memory_kind() == MunStructMemoryKind::Value) {
             // Copy the `struct(value)` into the old object
-            std::memcpy(ptr, *value, size);
+            std::memcpy(ptr, *value, type_info.size());
         } else {
             *ptr = std::move(value);
         }
     }
 
     static StructRef swap_at(type value, type* ptr, const Runtime& runtime,
-                             std::optional<const MunTypeInfo*> type_info) noexcept {
+                             TypeInfo type_info) noexcept {
         // Safety: `type_info_as_struct` is guaranteed to return a value for
         // `StructRef`s.
-        const auto& struct_info = type_info.value()->data.struct_;
+        const StructInfo struct_info(type_info.data().struct_);
 
         MunGcPtr gc_handle;
-        if (struct_info.memory_kind == MunStructMemoryKind::Value) {
+        if (struct_info.memory_kind() == MunStructMemoryKind::Value) {
             // Create a new managed object
-            gc_handle = *runtime.gc_alloc(const_cast<MunUnsafeTypeInfo>(type_info.value()));
+            gc_handle = *runtime.gc_alloc(type_info);
 
-            const auto size = type_info_size_in_bytes(*type_info.value());
+            const auto size = type_info.size();
+
             // Copy the old object into the new object
             std::memcpy(*gc_handle, ptr, size);
             // Copy the `struct(value)` into the old object
@@ -192,14 +192,14 @@ namespace mun {
 
 template <>
 struct ArgumentReflection<StructRef> {
-    static const char* type_name(const StructRef& s) noexcept { return s.info()->name; }
-    static MunGuid type_guid(const StructRef& s) noexcept { return s.info()->guid; }
+    static const char* type_name(const StructRef& s) noexcept { return s.info().name().data(); }
+    static MunTypeId type_id(const StructRef& s) noexcept { return s.info().id(); }
 };
 
 template <>
 struct ReturnTypeReflection<StructRef> {
     static constexpr const char* type_name() noexcept { return "struct"; }
-    static constexpr MunGuid type_guid() noexcept { return details::type_guid(type_name()); }
+    static constexpr MunTypeId type_id() noexcept { return details::type_id(type_name()); }
 };
 
 template <typename T>
@@ -208,25 +208,24 @@ std::optional<T> StructRef::get(std::string_view field_name) const noexcept {
 
     // Safety: `type_info_as_struct` is guaranteed to return a value for
     // `StructRef`s.
-    const auto& struct_info = type_info->data.struct_;
-    if (const auto idx = details::find_index(type_info->name, struct_info, field_name)) {
-        const auto* field_type = struct_info.field_types[*idx];
-        if (auto diff = reflection::equals_return_type<T>(*field_type)) {
+    const StructInfo struct_info(type_info.data().struct_);
+    if (const auto field_info = details::find_field(type_info.name(), struct_info, field_name)) {
+        if (auto diff = reflection::equals_return_type<T>(field_info->type())) {
             const auto& [expected, found] = *diff;
 
             std::cerr << "Mismatched types for `"
-                      << details::format_struct_field(type_info->name, field_name)
+                      << details::format_struct_field(type_info.name(), field_name)
                       << "`. Expected: `" << expected << "`. Found: `" << found << "`."
                       << std::endl;
 
             return std::nullopt;
         }
 
-        const auto offset = static_cast<size_t>(struct_info.field_offsets[*idx]);
+        const auto offset = static_cast<size_t>(field_info->offset());
         const auto byte_ptr = reinterpret_cast<const std::byte*>(*raw());
         return std::make_optional(Marshal<T>::copy_from(
             reinterpret_cast<const typename Marshal<T>::type*>(byte_ptr + offset), *m_runtime,
-            field_type ? std::make_optional(field_type) : std::nullopt));
+            field_info->type()));
     } else {
         return std::nullopt;
     }
@@ -237,26 +236,24 @@ std::optional<T> StructRef::replace(std::string_view field_name, T value) noexce
 
     // Safety: `type_info_as_struct` is guaranteed to return a value for
     // `StructRef`s.
-    const auto& struct_info = type_info->data.struct_;
-    if (const auto idx = details::find_index(type_info->name, struct_info, field_name)) {
-        const auto* field_type = struct_info.field_types[*idx];
-        if (auto diff = reflection::equals_return_type<T>(*field_type)) {
+    const StructInfo struct_info(type_info.data().struct_);
+    if (const auto field_info = details::find_field(type_info.name(), struct_info, field_name)) {
+        if (auto diff = reflection::equals_return_type<T>(field_info->type())) {
             const auto& [expected, found] = *diff;
 
             std::cerr << "Mismatched types for `"
-                      << details::format_struct_field(type_info->name, field_name)
+                      << details::format_struct_field(type_info.name(), field_name)
                       << "`. Expected: `" << expected << "`. Found: `" << found << "`."
                       << std::endl;
 
             return std::nullopt;
         }
 
-        const auto offset = static_cast<size_t>(struct_info.field_offsets[*idx]);
         auto byte_ptr = reinterpret_cast<std::byte*>(*raw());
         return std::make_optional(Marshal<T>::swap_at(
             Marshal<T>::to(std::move(value)),
-            reinterpret_cast<typename Marshal<T>::type*>(byte_ptr + offset), *m_runtime,
-            field_type ? std::make_optional(field_type) : std::nullopt));
+            reinterpret_cast<typename Marshal<T>::type*>(byte_ptr + field_info->offset()),
+            *m_runtime, field_info->type()));
     } else {
         return std::nullopt;
     }
@@ -267,26 +264,25 @@ bool StructRef::set(std::string_view field_name, T value) noexcept {
 
     // Safety: `type_info_as_struct` is guaranteed to return a value for
     // `StructRef`s.
-    const auto& struct_info = type_info->data.struct_;
-    if (const auto idx = details::find_index(type_info->name, struct_info, field_name)) {
-        const auto* field_type = struct_info.field_types[*idx];
-        if (auto diff = reflection::equals_return_type<T>(*field_type)) {
+    const StructInfo struct_info(type_info.data().struct_);
+    if (const auto field_info = details::find_field(type_info.name(), struct_info, field_name)) {
+        if (auto diff = reflection::equals_return_type<T>(field_info->type())) {
             const auto& [expected, found] = *diff;
 
             std::cerr << "Mismatched types for `"
-                      << details::format_struct_field(type_info->name, field_name)
+                      << details::format_struct_field(type_info.name(), field_name)
                       << "`. Expected: `" << expected << "`. Found: `" << found << "`."
                       << std::endl;
 
             return false;
         }
 
-        const auto offset = static_cast<size_t>(struct_info.field_offsets[*idx]);
         auto byte_ptr = reinterpret_cast<std::byte*>(*raw());
 
-        Marshal<T>::move_to(Marshal<T>::to(std::move(value)),
-                            reinterpret_cast<typename Marshal<T>::type*>(byte_ptr + offset),
-                            field_type ? std::make_optional(field_type) : std::nullopt);
+        Marshal<T>::move_to(
+            Marshal<T>::to(std::move(value)),
+            reinterpret_cast<typename Marshal<T>::type*>(byte_ptr + field_info->offset()),
+            field_info->type());
         return true;
     } else {
         return false;
