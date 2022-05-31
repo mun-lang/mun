@@ -1,46 +1,49 @@
 use crate::{
     diff::{diff, Diff, FieldDiff, FieldEditKind},
     gc::GcPtr,
-    TypeDesc, TypeFields, TypeGroup, TypeMemory,
+    type_info::TypeInfo,
+    TypeFields,
 };
 use std::{
     collections::{HashMap, HashSet},
-    hash::Hash,
+    sync::Arc,
 };
 
-pub struct Mapping<T: Eq + Hash, U: TypeDesc + TypeMemory> {
-    pub deletions: HashSet<T>,
-    pub conversions: HashMap<T, Conversion<U>>,
-    pub identical: Vec<(T, T)>,
+pub struct Mapping {
+    pub deletions: HashSet<Arc<TypeInfo>>,
+    pub conversions: HashMap<Arc<TypeInfo>, Conversion>,
+    pub identical: Vec<(Arc<TypeInfo>, Arc<TypeInfo>)>,
 }
 
-pub struct Conversion<T: TypeDesc + TypeMemory> {
-    pub field_mapping: Vec<FieldMapping<T>>,
-    pub new_ty: T,
+pub struct Conversion {
+    pub field_mapping: Vec<FieldMapping>,
+    pub new_ty: Arc<TypeInfo>,
 }
 
 /// Description of the mapping of a single field. When stored together with the new index, this
 /// provides all information necessary for a mapping function.
-pub struct FieldMapping<T: TypeDesc + TypeMemory> {
-    pub new_ty: T,
+pub struct FieldMapping {
+    pub new_ty: Arc<TypeInfo>,
     pub new_offset: usize,
-    pub action: Action<T>,
+    pub action: Action,
 }
 
 /// The `Action` to take when mapping memory from A to B.
 #[derive(Eq, PartialEq)]
-pub enum Action<T: TypeDesc + TypeMemory> {
-    Cast { old_offset: usize, old_ty: T },
-    Copy { old_offset: usize },
+pub enum Action {
+    Cast {
+        old_offset: usize,
+        old_ty: Arc<TypeInfo>,
+    },
+    Copy {
+        old_offset: usize,
+    },
     Insert,
 }
 
-impl<T> Mapping<T, T>
-where
-    T: TypeDesc + TypeFields<T> + TypeMemory + Copy + Eq + Hash,
-{
+impl Mapping {
     ///
-    pub fn new(old: &[T], new: &[T]) -> Self {
+    pub fn new(old: &[Arc<TypeInfo>], new: &[Arc<TypeInfo>]) -> Self {
         let diff = diff(old, new);
 
         let mut conversions = HashMap::new();
@@ -52,27 +55,29 @@ where
         for diff in diff.iter() {
             match diff {
                 Diff::Delete { index } => {
-                    deletions.insert(unsafe { *old.get_unchecked(*index) });
+                    deletions.insert(unsafe { old.get_unchecked(*index).clone() });
                 }
                 Diff::Edit {
                     diff,
                     old_index,
                     new_index,
                 } => {
-                    let old_ty = unsafe { *old.get_unchecked(*old_index) };
-                    let new_ty = unsafe { *new.get_unchecked(*new_index) };
-                    conversions.insert(old_ty, unsafe { field_mapping(old_ty, new_ty, diff) });
+                    let old_ty = unsafe { old.get_unchecked(*old_index) };
+                    let new_ty = unsafe { new.get_unchecked(*new_index) };
+                    conversions.insert(old_ty.clone(), unsafe {
+                        field_mapping(old_ty, new_ty, diff)
+                    });
                 }
                 Diff::Insert { index } => {
-                    insertions.insert(unsafe { *new.get_unchecked(*index) });
+                    insertions.insert(unsafe { new.get_unchecked(*index).clone() });
                 }
                 Diff::Move {
                     old_index,
                     new_index,
                 } => identical.push(unsafe {
                     (
-                        *old.get_unchecked(*old_index),
-                        *new.get_unchecked(*new_index),
+                        old.get_unchecked(*old_index).clone(),
+                        new.get_unchecked(*new_index).clone(),
                     )
                 }),
             }
@@ -80,19 +85,19 @@ where
 
         // These candidates are used to collect a list of `new_index -> old_index` mappings for
         // identical types.
-        let mut new_candidates: HashSet<T> = new
+        let mut new_candidates: HashSet<_> = new
             .iter()
             // Filter non-struct types
-            .filter(|ty| ty.group() == TypeGroup::Struct)
+            .filter(|ty| ty.data.is_struct())
             // Filter inserted structs
             .filter(|ty| !insertions.contains(*ty))
             .cloned()
             .collect();
 
-        let mut old_candidates: HashSet<T> = old
+        let mut old_candidates: HashSet<_> = old
             .iter()
             // Filter non-struct types
-            .filter(|ty| ty.group() == TypeGroup::Struct)
+            .filter(|ty| ty.data.is_struct())
             // Filter deleted structs
             .filter(|ty| !deletions.contains(*ty))
             // Filter edited types
@@ -139,11 +144,11 @@ where
 /// # Safety
 ///
 /// Expects the `diff` to be based on `old_ty` and `new_ty`. If not, it causes undefined behavior.
-pub unsafe fn field_mapping<T: Clone + TypeDesc + TypeFields<T> + TypeMemory>(
-    old_ty: T,
-    new_ty: T,
+pub unsafe fn field_mapping(
+    old_ty: &Arc<TypeInfo>,
+    new_ty: &Arc<TypeInfo>,
     diff: &[FieldDiff],
-) -> Conversion<T> {
+) -> Conversion {
     let old_fields = old_ty.fields();
 
     let deletions: HashSet<usize> = diff
@@ -233,8 +238,6 @@ pub unsafe fn field_mapping<T: Clone + TypeDesc + TypeFields<T> + TypeMemory>(
     }
 
     let new_fields = new_ty.fields();
-    let old_offsets = old_ty.offsets();
-    let new_offsets = new_ty.offsets();
     Conversion {
         field_mapping: mapping
             .into_iter()
@@ -242,15 +245,18 @@ pub unsafe fn field_mapping<T: Clone + TypeDesc + TypeFields<T> + TypeMemory>(
             .map(|(new_index, desc)| {
                 let old_offset = desc
                     .old_index
-                    .map(|idx| usize::from(*old_offsets.get_unchecked(idx)));
+                    .map(|idx| usize::from(old_fields.get_unchecked(idx).offset));
 
                 FieldMapping {
-                    new_ty: new_fields.get_unchecked(new_index).1.clone(),
-                    new_offset: usize::from(*new_offsets.get_unchecked(new_index)),
+                    new_ty: new_fields.get_unchecked(new_index).type_info.clone(),
+                    new_offset: usize::from(new_fields.get_unchecked(new_index).offset),
                     action: match desc.action {
                         ActionDesc::Cast => Action::Cast {
                             old_offset: old_offset.unwrap(),
-                            old_ty: old_fields.get_unchecked(desc.old_index.unwrap()).1.clone(),
+                            old_ty: old_fields
+                                .get_unchecked(desc.old_index.unwrap())
+                                .type_info
+                                .clone(),
                         },
                         ActionDesc::Copy => Action::Copy {
                             old_offset: old_offset.unwrap(),
@@ -260,15 +266,15 @@ pub unsafe fn field_mapping<T: Clone + TypeDesc + TypeFields<T> + TypeMemory>(
                 }
             })
             .collect(),
-        new_ty,
+        new_ty: new_ty.clone(),
     }
 }
 
 /// A trait used to map allocated memory using type differences.
-pub trait MemoryMapper<T: Eq + Hash + TypeDesc + TypeMemory> {
+pub trait MemoryMapper {
     /// Maps its allocated memory using the provided `mapping`.
     ///
     /// A `Vec<GcPtr>` is returned containing all objects of types that were deleted. The
     /// corresponding types have to remain in-memory until the objects have been deallocated.
-    fn map_memory(&self, mapping: Mapping<T, T>) -> Vec<GcPtr>;
+    fn map_memory(&self, mapping: Mapping) -> Vec<GcPtr>;
 }

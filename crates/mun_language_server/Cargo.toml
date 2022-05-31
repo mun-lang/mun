@@ -21,7 +21,7 @@ serde = "1.0"
 serde_json = "1.0"
 serde_derive = "1.0"
 anyhow = "1.0"
-thiserror = "1.0"
+thiserror = "1.0.19"
 salsa = "0.16.1"
 hir = { version = "=0.3.0", path="../mun_hir", package="mun_hir" }
 threadpool="1.8.1"

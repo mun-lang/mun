@@ -8,22 +8,28 @@ mod assembly;
 #[macro_use]
 mod garbage_collector;
 mod adt;
+mod dispatch_table;
+mod function_info;
 mod marshal;
 mod reflection;
 
 use anyhow::Result;
+use dispatch_table::DispatchTable;
 use garbage_collector::GarbageCollector;
 use log::{debug, error, info};
-use memory::gc::{self, GcRuntime};
+use memory::{
+    gc::{self, GcRuntime},
+    type_table::TypeTable,
+};
 use mun_project::LOCKFILE_NAME;
 use notify::{RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
-use rustc_hash::FxHashMap;
 use std::{
     collections::{HashMap, VecDeque},
-    ffi, io, mem,
+    ffi,
+    ffi::c_void,
+    fmt::{Debug, Display, Formatter},
+    io, mem,
     path::{Path, PathBuf},
-    ptr::NonNull,
-    string::ToString,
     sync::{
         mpsc::{channel, Receiver},
         Arc,
@@ -33,21 +39,24 @@ use std::{
 pub use crate::{
     adt::{RootedStruct, StructRef},
     assembly::Assembly,
-    garbage_collector::UnsafeTypeInfo,
+    function_info::{
+        FunctionDefinition, FunctionPrototype, FunctionSignature, IntoFunctionDefinition,
+    },
     marshal::Marshal,
     reflection::{ArgumentReflection, ReturnTypeReflection},
 };
-use abi::FunctionSignature;
-pub use abi::IntoFunctionDefinition;
-use std::ffi::c_void;
-use std::fmt::{Debug, Display, Formatter};
+// Re-export some useful types so crates dont have to depend on mun_memory as well.
+use crate::reflection::equals_return_type;
+pub use memory::{FieldInfo, HasStaticTypeInfo, StructInfo, TypeFields, TypeInfo};
 
 /// Options for the construction of a [`Runtime`].
 pub struct RuntimeOptions {
     /// Path to the entry point library
     pub library_path: PathBuf,
+    /// Custom type table used for the runtime
+    pub type_table: TypeTable,
     /// Custom user injected functions
-    pub user_functions: Vec<(abi::FunctionDefinition, abi::FunctionDefinitionStorage)>,
+    pub user_functions: Vec<FunctionDefinition>,
 }
 
 /// Retrieve the allocator using the provided handle.
@@ -60,20 +69,35 @@ unsafe fn get_allocator(alloc_handle: *mut ffi::c_void) -> Arc<GarbageCollector>
     Arc::from_raw(alloc_handle as *const GarbageCollector)
 }
 
+/// Retrieve the `TypeInfo` using the provided handle.
+///
+/// # Safety
+///
+/// The type handle must have been returned from a call to [`Arc<TypeInfo>::into_raw`][into_raw].
+unsafe fn get_type_info(type_handle: *const ffi::c_void) -> Arc<TypeInfo> {
+    Arc::from_raw(type_handle as *const TypeInfo)
+}
+
 extern "C" fn new(
-    type_info: *const abi::TypeInfo,
+    type_handle: *const ffi::c_void,
     alloc_handle: *mut ffi::c_void,
 ) -> *const *mut ffi::c_void {
+    // SAFETY: The runtime always constructs and uses `Arc<TypeInfo>::into_raw` to set the type
+    // type handles in the type LUT.
+    let type_info = unsafe { get_type_info(type_handle) };
+
     // Safety: `new` is only called from within Mun assemblies' core logic, so we are guaranteed
     // that the `Runtime` and its `GarbageCollector` still exist if this function is called, and
     // will continue to do so for the duration of this function.
     let allocator = unsafe { get_allocator(alloc_handle) };
     // Safety: the Mun Compiler guarantees that `new` is never called with `ptr::null()`.
-    let type_info = UnsafeTypeInfo::new(unsafe { NonNull::new_unchecked(type_info as *mut _) });
-    let handle = allocator.alloc(type_info);
+    let handle = allocator.alloc(&type_info);
 
     // Prevent destruction of the allocator
     mem::forget(allocator);
+
+    // Prevent destruction of the type info
+    mem::forget(type_info);
 
     handle.into()
 }
@@ -89,13 +113,14 @@ impl RuntimeBuilder {
         Self {
             options: RuntimeOptions {
                 library_path: library_path.into(),
+                type_table: Default::default(),
                 user_functions: Default::default(),
             },
         }
     }
 
     /// Adds a custom user function to the dispatch table.
-    pub fn insert_fn<S: AsRef<str>, F: abi::IntoFunctionDefinition>(
+    pub fn insert_fn<S: Into<String>, F: IntoFunctionDefinition>(
         mut self,
         name: S,
         func: F,
@@ -123,75 +148,6 @@ impl RuntimeBuilder {
     }
 }
 
-type DependencyCounter = usize;
-type Dependency<T> = (T, DependencyCounter);
-type DependencyMap<T> = FxHashMap<String, Dependency<T>>;
-
-/// A runtime dispatch table that maps full paths to function and struct information.
-#[derive(Clone, Default)]
-pub struct DispatchTable {
-    functions: FxHashMap<String, abi::FunctionDefinition>,
-    fn_dependencies: FxHashMap<String, DependencyMap<abi::FunctionPrototype>>,
-}
-
-impl DispatchTable {
-    /// Retrieves the [`abi::FunctionDefinition`] corresponding to `fn_path`, if it exists.
-    pub fn get_fn(&self, fn_path: &str) -> Option<&abi::FunctionDefinition> {
-        self.functions.get(fn_path)
-    }
-
-    /// Inserts the `fn_info` for `fn_path` into the dispatch table.
-    ///
-    /// If the dispatch table already contained this `fn_path`, the value is updated, and the old
-    /// value is returned.
-    pub fn insert_fn<S: ToString>(
-        &mut self,
-        fn_path: S,
-        fn_info: abi::FunctionDefinition,
-    ) -> Option<abi::FunctionDefinition> {
-        self.functions.insert(fn_path.to_string(), fn_info)
-    }
-
-    /// Removes and returns the `fn_info` corresponding to `fn_path`, if it exists.
-    pub fn remove_fn<S: AsRef<str>>(&mut self, fn_path: S) -> Option<abi::FunctionDefinition> {
-        self.functions.remove(fn_path.as_ref())
-    }
-
-    /// Adds `fn_path` from `assembly_path` as a dependency; incrementing its usage counter.
-    pub fn add_fn_dependency<S: ToString, T: ToString>(
-        &mut self,
-        assembly_path: S,
-        fn_path: T,
-        fn_prototype: abi::FunctionPrototype,
-    ) {
-        let dependencies = self
-            .fn_dependencies
-            .entry(assembly_path.to_string())
-            .or_default();
-
-        let (_, counter) = dependencies
-            .entry(fn_path.to_string())
-            .or_insert((fn_prototype, 0));
-
-        *counter += 1;
-    }
-
-    /// Removes `fn_path` from `assembly_path` as a dependency; decrementing its usage counter.
-    pub fn remove_fn_dependency<S: AsRef<str>, T: AsRef<str>>(
-        &mut self,
-        assembly_path: S,
-        fn_path: T,
-    ) {
-        if let Some(dependencies) = self.fn_dependencies.get_mut(assembly_path.as_ref()) {
-            if let Some((key, (fn_sig, counter))) = dependencies.remove_entry(fn_path.as_ref()) {
-                if counter > 1 {
-                    dependencies.insert(key, (fn_sig, counter - 1));
-                }
-            }
-        }
-    }
-}
-
 /// A runtime for the Mun language.
 ///
 /// # Logging
@@ -206,11 +162,11 @@ pub struct Runtime {
     /// Assemblies that have changed and thus need to be relinked. Maps the old to the (potentially) new path.
     assemblies_to_relink: VecDeque<(PathBuf, PathBuf)>,
     dispatch_table: DispatchTable,
+    type_table: TypeTable,
     watcher: RecommendedWatcher,
     watcher_rx: Receiver<RawEvent>,
     renamed_files: HashMap<u32, PathBuf>,
     gc: Arc<GarbageCollector>,
-    _user_functions: Vec<abi::FunctionDefinitionStorage>,
 }
 
 impl Runtime {
@@ -239,29 +195,28 @@ impl Runtime {
         let (tx, rx) = channel();
 
         let mut dispatch_table = DispatchTable::default();
+        let type_table = options.type_table;
 
         // Add internal functions
         options.user_functions.push(IntoFunctionDefinition::into(
-            new as extern "C" fn(*const abi::TypeInfo, *mut ffi::c_void) -> *const *mut ffi::c_void,
+            new as extern "C" fn(*const ffi::c_void, *mut ffi::c_void) -> *const *mut ffi::c_void,
             "new",
         ));
 
-        let mut storages = Vec::with_capacity(options.user_functions.len());
-        for (info, storage) in options.user_functions.into_iter() {
-            dispatch_table.insert_fn(info.prototype.name().to_string(), info);
-            storages.push(storage)
-        }
+        options.user_functions.into_iter().for_each(|fn_def| {
+            dispatch_table.insert_fn(fn_def.prototype.name.clone(), Arc::new(fn_def));
+        });
 
         let watcher: RecommendedWatcher = Watcher::new_raw(tx)?;
         let mut runtime = Runtime {
             assemblies: HashMap::new(),
             assemblies_to_relink: VecDeque::new(),
             dispatch_table,
+            type_table,
             watcher,
             watcher_rx: rx,
             renamed_files: HashMap::new(),
             gc: Arc::new(self::garbage_collector::GarbageCollector::default()),
-            _user_functions: storages,
         };
 
         runtime.add_assembly(&options.library_path)?;
@@ -324,7 +279,8 @@ impl Runtime {
             }
         }
 
-        self.dispatch_table = Assembly::link_all(loaded.values_mut(), &self.dispatch_table)?;
+        (self.dispatch_table, self.type_table) =
+            Assembly::link_all(loaded.values_mut(), &self.dispatch_table, &self.type_table)?;
 
         for (library_path, assembly) in loaded.into_iter() {
             self.watcher
@@ -337,22 +293,19 @@ impl Runtime {
     }
 
     /// Retrieves the function definition corresponding to `function_name`, if available.
-    pub fn get_function_definition(&self, function_name: &str) -> Option<&abi::FunctionDefinition> {
+    pub fn get_function_definition(&self, function_name: &str) -> Option<Arc<FunctionDefinition>> {
         // TODO: Verify that when someone tries to invoke a non-public function, it should fail.
         self.dispatch_table.get_fn(function_name)
     }
 
     /// Retrieves the type definition corresponding to `type_name`, if available.
-    pub fn get_type_info(&self, type_name: &str) -> Option<&abi::TypeInfo> {
-        for assembly in self.assemblies.values() {
-            for type_info in assembly.info().symbols.types().iter() {
-                if type_info.name() == type_name {
-                    return Some(type_info);
-                }
-            }
-        }
+    pub fn get_type_info_by_name(&self, type_name: &str) -> Option<Arc<TypeInfo>> {
+        self.type_table.find_type_info_by_name(type_name)
+    }
 
-        None
+    /// Retrieve the type information corresponding to the `type_id`, if available.
+    pub fn get_type_info_by_id(&self, type_id: &abi::TypeId) -> Option<Arc<TypeInfo>> {
+        self.type_table.find_type_info_by_id(type_id)
     }
 
     /// Updates the state of the runtime. This includes checking for file changes, and reloading
@@ -374,7 +327,9 @@ impl Runtime {
             path.file_name().expect("Invalid file path.") == LOCKFILE_NAME
         }
 
-        unsafe fn relink_assemblies(runtime: &mut Runtime) -> anyhow::Result<DispatchTable> {
+        unsafe fn relink_assemblies(
+            runtime: &mut Runtime,
+        ) -> anyhow::Result<(DispatchTable, TypeTable)> {
             let mut loaded = HashMap::new();
             let to_load = &mut runtime.assemblies_to_relink;
 
@@ -421,6 +376,7 @@ impl Runtime {
                 &mut loaded,
                 &mut runtime.assemblies,
                 &runtime.dispatch_table,
+                &runtime.type_table,
             )
         }
 
@@ -436,10 +392,11 @@ impl Runtime {
                         debug!("Lockfile deleted");
 
                         match relink_assemblies(self) {
-                            Ok(table) => {
+                            Ok((dispatch_table, type_table)) => {
                                 info!("Succesfully reloaded assemblies.");
 
-                                self.dispatch_table = table;
+                                self.dispatch_table = dispatch_table;
+                                self.type_table = type_table;
                                 self.assemblies_to_relink.clear();
 
                                 return true;
@@ -475,7 +432,7 @@ impl Runtime {
     ///
     /// We cannot return an `Arc` here, because the lifetime of data contained in `GarbageCollector`
     /// is dependent on the `Runtime`.
-    pub fn gc(&self) -> &dyn GcRuntime<UnsafeTypeInfo> {
+    pub fn gc(&self) -> &dyn GcRuntime {
         self.gc.as_ref()
     }
 
@@ -594,24 +551,23 @@ seq_macro::seq!(I in 0..N {
     impl<'arg, #(T~I: ArgumentReflection + Marshal<'arg>,)*> InvokeArgs for (#(T~I,)*) {
         #[allow(unused_variables)]
         fn can_invoke<'runtime>(&self, runtime: &'runtime Runtime, signature: &FunctionSignature) -> Result<(), String> {
-            let arg_types = signature.arg_types();
+            let arg_types = &signature.arg_types;
 
             // Ensure the number of arguments match
             #[allow(clippy::len_zero)]
             if N != arg_types.len() {
-                return Err(format!("invalid return type. Expected: {}. Found: {}", N, arg_types.len()))
+                return Err(format!("Invalid return type. Expected: {}. Found: {}", N, arg_types.len()))
             }
 
             #(
-            crate::reflection::equals_argument_type(runtime, arg_types[I], &self.I)
-                .map_err(|(expected, found)| {
-                    format!(
-                        "invalid argument type at index {}. Expected: {}. Found: {}.",
-                        I,
-                        expected,
-                        found,
-                    )
-                })?;
+            if arg_types[I].id != self.I.type_id(runtime) {
+                return Err(format!(
+                    "Invalid argument type at index {}. Expected: {}. Found: {}.",
+                    I,
+                    self.I.type_info(runtime).name,
+                    arg_types[I].name,
+                ));
+            }
             )*
 
             Ok(())
@@ -672,27 +628,17 @@ impl Runtime {
         };
 
         // Validate the return type
-        match if let Some(return_type) = function_info.prototype.signature.return_type() {
-            crate::reflection::equals_return_type::<ReturnType>(return_type)
-        } else if <() as ReturnTypeReflection>::type_guid() != ReturnType::type_guid() {
-            Err((
-                <() as ReturnTypeReflection>::type_name(),
-                ReturnType::type_name(),
-            ))
-        } else {
-            Ok(())
-        } {
-            Ok(_) => {}
-            Err((expected, found)) => {
-                return Err(InvokeErr {
-                    msg: format!(
-                        "invalid return type. Expected: {}. Found: {}",
-                        expected, found,
-                    ),
-                    function_name,
-                    arguments,
-                })
-            }
+        if let Err((got, expected)) =
+            equals_return_type::<ReturnType>(&function_info.prototype.signature.return_type)
+        {
+            return Err(InvokeErr {
+                msg: format!(
+                    "unexpected return type, got '{}', expected '{}",
+                    expected, got
+                ),
+                function_name,
+                arguments,
+            });
         }
 
         let result: ReturnType::MunType = unsafe { arguments.invoke(function_info.fn_ptr) };

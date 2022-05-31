@@ -1,8 +1,5 @@
 use crate::ir::dispatch_table::FunctionPrototype;
-use crate::type_info::TypeInfo;
-use inkwell::context::Context;
-use inkwell::targets::TargetData;
-use inkwell::types::FunctionType;
+use inkwell::{context::Context, targets::TargetData, types::FunctionType};
 use std::ffi;
 
 #[macro_use]
@@ -20,5 +17,5 @@ pub trait Intrinsic: Sync {
 
 intrinsics! {
     /// Allocates memory for the specified `type` in the allocator referred to by `alloc_handle`.
-    pub fn new(type: *const TypeInfo, alloc_handle: *mut ffi::c_void) -> *const *mut ffi::c_void;
+    pub fn new(type_handle: *const ffi::c_void, alloc_handle: *mut ffi::c_void) -> *const *mut ffi::c_void;
 }

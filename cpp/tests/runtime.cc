@@ -12,7 +12,8 @@ inline std::string get_munlib_path(std::string_view name) {
 
 TEST_CASE("runtime can be constructed", "[runtime]") {
     mun::Error err;
-    if (auto runtime = mun::make_runtime(get_munlib_path("fibonacci/target/mod.munlib"), {}, &err)) {
+    if (auto runtime =
+            mun::make_runtime(get_munlib_path("fibonacci/target/mod.munlib"), {}, &err)) {
         REQUIRE(!err);
     } else {
         REQUIRE(err);
@@ -22,11 +23,12 @@ TEST_CASE("runtime can be constructed", "[runtime]") {
 
 TEST_CASE("runtime can find `FunctionInfo`", "[runtime]") {
     mun::Error err;
-    if (auto runtime = mun::make_runtime(get_munlib_path("fibonacci/target/mod.munlib"), {}, &err)) {
+    if (auto runtime =
+            mun::make_runtime(get_munlib_path("fibonacci/target/mod.munlib"), {}, &err)) {
         REQUIRE(!err);
         REQUIRE(runtime.has_value());
 
-        if (auto function_info = runtime->find_function_definition("fibonacci", &err)) {
+        if (auto function_info = runtime->find_function_info("fibonacci", &err)) {
             REQUIRE(!err);
         } else {
             REQUIRE(err);
@@ -41,7 +43,8 @@ TEST_CASE("runtime can find `FunctionInfo`", "[runtime]") {
 // TODO: Test hot reloading
 TEST_CASE("runtime can update", "[runtime]") {
     mun::Error err;
-    if (auto runtime = mun::make_runtime(get_munlib_path("fibonacci/target/mod.munlib"), {}, &err)) {
+    if (auto runtime =
+            mun::make_runtime(get_munlib_path("fibonacci/target/mod.munlib"), {}, &err)) {
         REQUIRE(!err);
 
         runtime->update(&err);

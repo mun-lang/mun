@@ -46,7 +46,7 @@ fn test_abi_compatibility() {
     assert_eq!(module_info.num_functions, 2);
 
     let fn_def = get_function_info(module_info, fn_name);
-    test_function_args(fn_def, &[(f64::type_name(), f64::type_guid())]);
+    test_function_args(fn_def, &[(f64::type_name(), f64::type_id())]);
     test_function_return_type_some::<i32>(fn_def);
 
     let fn_def2 = get_function_info(module_info, fn_name2);
@@ -83,13 +83,13 @@ fn test_abi_compatibility() {
             .unwrap_or_else(|| panic!("Failed to retrieve function definition '{}'", fn_name))
     }
 
-    fn test_function_args(fn_def: &abi::FunctionDefinition, args: &[(&str, abi::Guid)]) {
+    fn test_function_args(fn_def: &abi::FunctionDefinition, args: &[(&str, abi::TypeId)]) {
         assert_eq!(
             usize::from(fn_def.prototype.signature.num_arg_types),
             args.len()
         );
 
-        for (idx, (arg_name, arg_guid)) in args.iter().enumerate() {
+        for (idx, (_, arg_type_id)) in args.iter().enumerate() {
             let fn_arg_type = fn_def
                 .prototype
                 .signature
@@ -102,8 +102,7 @@ fn test_abi_compatibility() {
                     )
                 });
 
-            assert_eq!(fn_arg_type.guid, *arg_guid);
-            assert_eq!(fn_arg_type.name(), *arg_name);
+            assert_eq!(fn_arg_type, arg_type_id);
         }
     }
 
@@ -123,8 +122,7 @@ fn test_abi_compatibility() {
                 fn_def.prototype.name()
             )
         });
-        assert_eq!(fn_return_type.guid, R::type_guid());
-        assert_eq!(fn_return_type.name(), R::type_name());
+        assert_eq!(fn_return_type, R::type_id());
     }
 
     fn test_struct_info<T: Sized, F: Sized + ReturnTypeReflection>(
@@ -156,8 +154,7 @@ fn test_abi_compatibility() {
             assert_eq!(lhs, *rhs);
         }
         for field_type in struct_info.field_types().iter() {
-            assert_eq!(field_type.guid, F::type_guid());
-            assert_eq!(field_type.name(), F::type_name());
+            assert_eq!(field_type.guid, F::type_id().guid);
         }
 
         let mut offset = 0;

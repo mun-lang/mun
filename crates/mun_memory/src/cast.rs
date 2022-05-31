@@ -7,14 +7,14 @@ type CastFn = fn(NonNull<u8>, NonNull<u8>);
 macro_rules! insert_cast_fn {
     { $table:ident, $A:ty, $B:ty } => {
         $table.insert(
-            (<$A>::type_info().guid, <$B>::type_info().guid),
+            (<$A>::type_info().id.clone(), <$B>::type_info().id.clone()),
             cast_from_to::<$A, $B> as CastFn,
         )
     }
 }
 
 lazy_static! {
-    static ref CAST_FN_TABLE: HashMap<(abi::Guid, abi::Guid), CastFn> = {
+    static ref CAST_FN_TABLE: HashMap<(abi::TypeId, abi::TypeId), CastFn> = {
         let mut table = HashMap::new();
         insert_cast_fn!(table, f32, f64);
         insert_cast_fn!(table, i8, i16);
@@ -60,12 +60,12 @@ where
 }
 
 pub fn try_cast_from_to(
-    old_guid: abi::Guid,
-    new_guid: abi::Guid,
+    old_id: abi::TypeId,
+    new_id: abi::TypeId,
     src: NonNull<u8>,
     dest: NonNull<u8>,
 ) -> bool {
-    if let Some(cast_fn) = CAST_FN_TABLE.get(&(old_guid, new_guid)) {
+    if let Some(cast_fn) = CAST_FN_TABLE.get(&(old_id, new_id)) {
         cast_fn(src, dest);
         true
     } else {
@@ -85,8 +85,8 @@ mod tests {
         B: PartialEq + std::fmt::Debug + HasStaticTypeInfo,
     {
         assert!(try_cast_from_to(
-            A::type_info().guid,
-            B::type_info().guid,
+            A::type_info().id.clone(),
+            B::type_info().id.clone(),
             unsafe { NonNull::new_unchecked(&a as *const _ as *mut _) },
             unsafe { NonNull::new_unchecked(&mut b as *mut _) }.cast::<u8>(),
         ));
@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn cast_f32_to_f64() {
-        assert_cast(3.14f32, 0f64);
+        assert_cast(std::f32::consts::PI, 0f64);
     }
 
     #[test]

@@ -43,6 +43,66 @@ typedef struct MunGuid {
 } MunGuid;
 
 /**
+ * Represents a unique identifier for types. The runtime can use this to lookup the corresponding [`TypeInfo`].
+ */
+typedef struct MunTypeId {
+    /**
+     * The GUID of the type
+     */
+    struct MunGuid guid;
+} MunTypeId;
+
+/**
+ * Represents a function signature.
+ */
+typedef struct MunFunctionSignature {
+    /**
+     * Argument types
+     */
+    const struct MunTypeId *arg_types;
+    /**
+     * Optional return type
+     */
+    struct MunTypeId return_type;
+    /**
+     * Number of argument types
+     */
+    uint16_t num_arg_types;
+} MunFunctionSignature;
+
+/**
+ * Represents a function prototype. A function prototype contains the name, type signature, but
+ * not an implementation.
+ */
+typedef struct MunFunctionPrototype {
+    /**
+     * Function name
+     */
+    const char *name;
+    /**
+     * The type signature of the function
+     */
+    struct MunFunctionSignature signature;
+} MunFunctionPrototype;
+
+/**
+ * Represents a function definition. A function definition contains the name, type signature, and
+ * a pointer to the implementation.
+ *
+ * `fn_ptr` can be used to call the declared function.
+ */
+typedef struct MunFunctionDefinition {
+    /**
+     * Function prototype
+     */
+    struct MunFunctionPrototype prototype;
+    /**
+     * Function pointer
+     */
+    const void *fn_ptr;
+} MunFunctionDefinition;
+
+/**
  * Represents a struct declaration.
  */
 typedef struct MunStructInfo {
@@ -53,7 +113,7 @@ typedef struct MunStructInfo {
     /**
      * Struct fields' information
      */
-    const struct MunTypeInfo *const *field_types;
+    const struct MunTypeId *field_types;
     /**
      * Struct fields' offsets
      */
@@ -105,9 +165,9 @@ typedef union MunTypeInfoData {
  */
 typedef struct MunTypeInfo {
     /**
-     * Type GUID
+     * Type ID
      */
-    struct MunGuid guid;
+    struct MunTypeId id;
     /**
      * Type name
      */
@@ -127,56 +187,6 @@ typedef struct MunTypeInfo {
 } MunTypeInfo;
 
 /**
- * Represents a function signature.
- */
-typedef struct MunFunctionSignature {
-    /**
-     * Argument types
-     */
-    const struct MunTypeInfo *const *arg_types;
-    /**
-     * Optional return type
-     */
-    const struct MunTypeInfo *return_type;
-    /**
-     * Number of argument types
-     */
-    uint16_t num_arg_types;
-} MunFunctionSignature;
-
-/**
- * Represents a function prototype. A function prototype contains the name, type signature, but
- * not an implementation.
- */
-typedef struct MunFunctionPrototype {
-    /**
-     * Function name
-     */
-    const char *name;
-    /**
-     * The type signature of the function
-     */
-    struct MunFunctionSignature signature;
-} MunFunctionPrototype;
-
-/**
- * Represents a function definition. A function definition contains the name, type signature, and
- * a pointer to the implementation.
- *
- * `fn_ptr` can be used to call the declared function.
- */
-typedef struct MunFunctionDefinition {
-    /**
-     * Function prototype
-     */
-    struct MunFunctionPrototype prototype;
-    /**
-     * Function pointer
-     */
-    const void *fn_ptr;
-} MunFunctionDefinition;
-
-/**
  * Represents a module declaration.
  */
 typedef struct MunModuleInfo {
@@ -191,7 +201,7 @@ typedef struct MunModuleInfo {
     /**
      * Module types
      */
-    const struct MunTypeInfo *const *types;
+    const struct MunTypeInfo *types;
     /**
      * Number of module functions
      */
@@ -223,6 +233,30 @@ typedef struct MunDispatchTable {
 } MunDispatchTable;
 
 /**
+ * Represents a lookup table for type information. This is used for runtime linking.
+ *
+ * Type IDs and handles are stored separately for cache efficiency.
+ */
+typedef struct MunTypeLut {
+    /**
+     * Type IDs
+     */
+    const struct MunTypeId *type_ids;
+    /**
+     * Type information handles
+     */
+    const void **type_handles;
+    /**
+     * Debug names
+     */
+    const char *const *type_names;
+    /**
+     * Number of types
+     */
+    uint32_t num_entries;
+} MunTypeLut;
+
+/**
  * Represents an assembly declaration.
  */
 typedef struct MunAssemblyInfo {
@@ -231,9 +265,13 @@ typedef struct MunAssemblyInfo {
      */
     struct MunModuleInfo symbols;
     /**
-     * Dispatch table
+     * Function dispatch table
      */
     struct MunDispatchTable dispatch_table;
+    /**
+     * Type lookup table
+     */
+    struct MunTypeLut type_lut;
     /**
      * Paths to assembly dependencies
      */

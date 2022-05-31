@@ -1,6 +1,11 @@
 pub mod myers;
 
-use crate::{TypeDesc, TypeFields, TypeGroup};
+use std::sync::Arc;
+
+use crate::{
+    type_info::{FieldInfo, TypeInfo},
+    TypeFields,
+};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FieldEditKind {
@@ -71,11 +76,8 @@ impl PartialOrd for Diff {
     }
 }
 
-/// Given an `old` and a `new` set of types `T`, calculates the difference.
-pub fn diff<T>(old: &[T], new: &[T]) -> Vec<Diff>
-where
-    T: Copy + Eq + TypeDesc + TypeFields<T>,
-{
+/// Given an `old` and a `new` set of types, calculates the difference.
+pub fn diff(old: &[Arc<TypeInfo>], new: &[Arc<TypeInfo>]) -> Vec<Diff> {
     let diff = myers::diff(old, new);
     let mut mapping: Vec<Diff> = Vec::with_capacity(diff.len());
     let (deletions, insertions) = myers::split_diff(&diff);
@@ -84,23 +86,23 @@ where
     // compared separately.
     let deleted_primitives = deletions
         .iter()
-        .filter(|idx| unsafe { old.get_unchecked(**idx) }.group() == TypeGroup::Primitive)
+        .filter(|idx| unsafe { old.get_unchecked(**idx) }.data.is_primitive())
         .cloned()
         .collect();
     let deleted_structs = deletions
         .iter()
-        .filter(|idx| unsafe { old.get_unchecked(**idx) }.group() == TypeGroup::Struct)
+        .filter(|idx| unsafe { old.get_unchecked(**idx) }.data.is_struct())
         .cloned()
         .collect();
 
     let inserted_primitives = insertions
         .iter()
-        .filter(|idx| unsafe { new.get_unchecked(**idx) }.group() == TypeGroup::Primitive)
+        .filter(|idx| unsafe { new.get_unchecked(**idx) }.data.is_primitive())
         .cloned()
         .collect();
     let inserted_structs = insertions
         .iter()
-        .filter(|idx| unsafe { new.get_unchecked(**idx) }.group() == TypeGroup::Struct)
+        .filter(|idx| unsafe { new.get_unchecked(**idx) }.data.is_struct())
         .cloned()
         .collect();
 
@@ -119,15 +121,13 @@ where
     mapping
 }
 
-fn append_primitive_mapping<T>(
-    old: &[T],
-    new: &[T],
+fn append_primitive_mapping(
+    old: &[Arc<TypeInfo>],
+    new: &[Arc<TypeInfo>],
     deletions: Vec<usize>,
     insertions: Vec<usize>,
     mapping: &mut Vec<Diff>,
-) where
-    T: Eq,
-{
+) {
     let mut insertions: Vec<Option<usize>> = insertions.into_iter().map(Some).collect();
 
     // For all deletions,
@@ -160,18 +160,42 @@ fn append_primitive_mapping<T>(
     }
 }
 
-/// Given a set of indices for `deletions` from the `old` slice of types `T` and a set of indices
-/// for `insertions` into the `new` slice of types `T`, appends the corresponding `Diff` mapping
+/// A helper struct to check equality between fields.
+#[derive(Eq, PartialEq)]
+struct UniqueFieldInfo<'a> {
+    name: &'a str,
+    type_info: &'a TypeInfo,
+}
+
+impl<'a> From<&'a FieldInfo> for UniqueFieldInfo<'a> {
+    fn from(other: &'a FieldInfo) -> Self {
+        Self {
+            name: &other.name,
+            type_info: &other.type_info,
+        }
+    }
+}
+
+/// Given a set of indices for `deletions` from the `old` slice of types and a set of indices
+/// for `insertions` into the `new` slice of types, appends the corresponding `Diff` mapping
 /// for all
-fn append_struct_mapping<T>(
-    old: &[T],
-    new: &[T],
+fn append_struct_mapping(
+    old: &[Arc<TypeInfo>],
+    new: &[Arc<TypeInfo>],
     deletions: Vec<usize>,
     insertions: Vec<usize>,
     mapping: &mut Vec<Diff>,
-) where
-    T: Eq + TypeDesc + TypeFields<T>,
-{
+) {
+    let old_fields: Vec<Vec<UniqueFieldInfo>> = old
+        .iter()
+        .map(|ty| ty.fields().iter().map(UniqueFieldInfo::from).collect())
+        .collect();
+
+    let new_fields: Vec<Vec<UniqueFieldInfo>> = new
+        .iter()
+        .map(|ty| ty.fields().iter().map(UniqueFieldInfo::from).collect())
+        .collect();
+
     let num_deleted = deletions.len();
     let num_inserted = insertions.len();
     // For all (insertion, deletion) pairs, calculate their `myers::diff_length`
@@ -179,13 +203,14 @@ fn append_struct_mapping<T>(
         .iter()
         .flat_map(|new_idx| {
             let new_ty = unsafe { new.get_unchecked(*new_idx) };
-            let new_fields = new_ty.fields();
+            let new_fields = unsafe { new_fields.get_unchecked(*new_idx) };
             deletions
                 .iter()
                 .map(|old_idx| {
                     let old_ty = unsafe { old.get_unchecked(*old_idx) };
-                    let old_fields = old_ty.fields();
-                    let length = myers::diff_length(&old_fields, &new_fields);
+                    let old_fields = unsafe { old_fields.get_unchecked(*old_idx) };
+
+                    let length = myers::diff_length(old_fields, new_fields);
 
                     // Given N old fields and M new fields, the smallest set capable of
                     // completely changing a struct is N + M.
@@ -196,7 +221,7 @@ fn append_struct_mapping<T>(
                     // let min = new_fields.len() + old_fields.len();
 
                     // If the type's name is equal
-                    if old_ty.name() == new_ty.name() || length == 0 {
+                    if old_ty.name == new_ty.name || length == 0 {
                         // TODO: Potentially we want to retain an X% for types with equal names,
                         // whilst allowing types with different names to be modified for up to Y%.
                         length
@@ -235,13 +260,13 @@ fn append_struct_mapping<T>(
                 new_index,
             }
         } else {
-            let old_ty = unsafe { old.get_unchecked(old_index) };
-            let new_ty = unsafe { new.get_unchecked(new_index) };
+            let old_fields = unsafe { old_fields.get_unchecked(old_index) };
+            let new_fields = unsafe { new_fields.get_unchecked(new_index) };
 
             // ASSUMPTION: Don't use recursion, because all types are individually checked for
             // differences.
             // TODO: Support value struct vs heap struct?
-            let diff = field_diff(&old_ty.fields(), &new_ty.fields());
+            let diff = field_diff(old_fields, new_fields);
 
             // Edit the struct, potentially moving it in the process.
             Diff::Edit {
@@ -285,10 +310,7 @@ fn append_struct_mapping<T>(
 }
 
 /// Given an `old` and a `new` set of fields, calculates the difference.
-fn field_diff<T>(old: &[(&str, T)], new: &[(&str, T)]) -> Vec<FieldDiff>
-where
-    T: Eq,
-{
+fn field_diff<'a, 'b>(old: &[UniqueFieldInfo<'a>], new: &[UniqueFieldInfo<'b>]) -> Vec<FieldDiff> {
     let diff = myers::diff(old, new);
     let (deletions, insertions) = myers::split_diff(&diff);
     let mut insertions: Vec<Option<usize>> = insertions.into_iter().map(Some).collect();
@@ -318,7 +340,7 @@ where
         for insertion in insertions.iter_mut() {
             if let Some(new_idx) = insertion {
                 let new_ty = unsafe { new.get_unchecked(*new_idx) };
-                if old_ty.0 == new_ty.0 {
+                if old_ty.name == new_ty.name {
                     // If so,
                     mapping.push(if old_idx == *new_idx {
                         // convert the type in-place.
@@ -339,13 +361,13 @@ where
                 }
             }
         }
-        // Else, is there an insertion with a different name but same type `T`?
-        // As there can be multiple fields with the same type `T`, we want to find the closest one.
+        // Else, is there an insertion with a different name but same type?
+        // As there can be multiple fields with the same type, we want to find the closest one.
         let mut closest = None;
         for (insert_idx, insertion) in insertions.iter_mut().enumerate() {
             if let Some(new_idx) = insertion {
                 let new_ty = unsafe { new.get_unchecked(*new_idx) };
-                if old_ty.1 == new_ty.1 {
+                if old_ty.type_info == new_ty.type_info {
                     let diff = old_idx.max(*new_idx) - old_idx.min(*new_idx);
                     // If so, select the closest candidate.
                     if let Some((closest_idx, closest_diff)) = &mut closest {

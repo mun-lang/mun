@@ -198,30 +198,12 @@ mod tests {
             ],
         };
 
-        assert_eq!(
-            config.contains_file(abs_manifest_dir.join("mod.mun")),
-            false
-        );
-        assert_eq!(
-            config.contains_file(abs_manifest_dir.join("src/mod.mun")),
-            true
-        );
-        assert_eq!(
-            config.contains_file(abs_manifest_dir.join("src/mod.rs")),
-            false
-        );
-        assert_eq!(
-            config.contains_file(abs_manifest_dir.join(".git/src/mod.mun")),
-            false
-        );
-        assert_eq!(
-            config.contains_file(abs_manifest_dir.join("src/.git/mod.mun")),
-            false
-        );
-        assert_eq!(
-            config.contains_file(abs_manifest_dir.join("src/.git/special_case/mod.mun")),
-            true
-        );
-        assert_eq!(config.contains_dir(abs_manifest_dir.join("src")), true);
+        assert!(!config.contains_file(abs_manifest_dir.join("mod.mun")));
+        assert!(config.contains_file(abs_manifest_dir.join("src/mod.mun")));
+        assert!(!config.contains_file(abs_manifest_dir.join("src/mod.rs")));
+        assert!(!config.contains_file(abs_manifest_dir.join(".git/src/mod.mun")));
+        assert!(!config.contains_file(abs_manifest_dir.join("src/.git/mod.mun")));
+        assert!(config.contains_file(abs_manifest_dir.join("src/.git/special_case/mod.mun")));
+        assert!(config.contains_dir(abs_manifest_dir.join("src")));
     }
 }

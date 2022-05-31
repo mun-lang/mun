@@ -9,9 +9,9 @@ namespace mun {
  * Frees the corresponding error object on destruction, if it exists.
  */
 class Error {
-   public:
+public:
     /** Default constructs an error. */
-    Error() noexcept : m_handle{0} {}
+    Error() noexcept : m_handle{nullptr} {}
 
     /** Constructs an error from a `MunErrorHandle`.
      *
@@ -23,7 +23,7 @@ class Error {
      *
      * \param other an rvalue reference to an error
      */
-    Error(Error&& other) noexcept : m_handle(other.m_handle) { other.m_handle._0 = 0; }
+    Error(Error&& other) noexcept : m_handle(other.m_handle) { other.m_handle._0 = nullptr; }
 
     /** Move assigns an error.
      *
@@ -31,23 +31,23 @@ class Error {
      */
     Error& operator=(Error&& other) noexcept {
         m_handle = other.m_handle;
-        other.m_handle._0 = 0;
+        other.m_handle._0 = nullptr;
         return *this;
     }
 
     /** Destructs the error. */
     ~Error() noexcept { mun_error_destroy(m_handle); }
 
-    /** Retrieves the error message, if it exists, otherwise returns a nullptr.
+    /** Returns the error message, if it exists, otherwise returns a nullptr.
      *
      * The message is UTF-8 encoded.
      */
-    const char* message() noexcept { return mun_error_message(m_handle); }
+    const char* message() noexcept { return m_handle._0; }
 
-    /** Retrieves whether an error exists */
-    operator bool() const noexcept { return m_handle._0 != 0; }
+    /** Retrieves whether an error occurred */
+    operator bool() const noexcept { return m_handle._0 != nullptr; }
 
-   private:
+private:
     MunErrorHandle m_handle;
 };
 }  // namespace mun
