@@ -179,6 +179,27 @@ mod tests {
     );
 
     #[test]
+    fn test_gc_alloc_invalid_type_info() {
+        let driver = TestDriver::new(
+            r#"
+        pub struct Foo;
+    "#,
+        );
+
+        let handle =
+            unsafe { mun_gc_alloc(driver.runtime, TypeInfoHandle::null(), ptr::null_mut()) };
+        assert_ne!(handle.0, ptr::null());
+
+        let message = unsafe { CStr::from_ptr(handle.0) };
+        assert_eq!(
+            message.to_str().unwrap(),
+            "Invalid argument: 'type_info' is null pointer."
+        );
+
+        unsafe { mun_error_destroy(handle) };
+    }
+
+    #[test]
     fn test_gc_alloc_invalid_obj() {
         let driver = TestDriver::new(
             r#"

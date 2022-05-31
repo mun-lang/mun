@@ -358,6 +358,25 @@ mod tests {
     }
 
     #[test]
+    fn test_runtime_create_invalid_functions() {
+        let lib_path = CString::new("some/path").expect("Invalid library path");
+
+        let mut options = RuntimeOptions::default();
+        options.num_functions = 1;
+
+        let handle = unsafe { mun_runtime_create(lib_path.into_raw(), options, ptr::null_mut()) };
+        assert_ne!(handle.0, ptr::null());
+
+        let message = unsafe { CStr::from_ptr(handle.0) };
+        assert_eq!(
+            message.to_str().unwrap(),
+            "Invalid argument: 'functions' is null pointer."
+        );
+
+        unsafe { mun_error_destroy(handle) };
+    }
+
+    #[test]
     fn test_runtime_create_invalid_handle() {
         let lib_path = CString::new("some/path").expect("Invalid library path");
 
@@ -374,6 +393,43 @@ mod tests {
         assert_eq!(
             message.to_str().unwrap(),
             "Invalid argument: 'handle' is null pointer."
+        );
+
+        unsafe { mun_error_destroy(handle) };
+    }
+
+    #[test]
+    fn test_runtime_create_invalid_user_function() {
+        let lib_path = CString::new("some/path").expect("Invalid library path");
+
+        let type_id = abi::TypeId {
+            guid: abi::Guid([0u8; 16]),
+        };
+        let functions = vec![abi::FunctionDefinition {
+            prototype: abi::FunctionPrototype {
+                name: ptr::null(),
+                signature: abi::FunctionSignature {
+                    arg_types: ptr::null(),
+                    return_type: type_id.clone(),
+                    num_arg_types: 0,
+                },
+            },
+            fn_ptr: ptr::null(),
+        }];
+
+        let mut options = RuntimeOptions::default();
+        options.functions = functions.as_ptr();
+        options.num_functions = 1;
+
+        let mut runtime = MaybeUninit::uninit();
+        let handle =
+            unsafe { mun_runtime_create(lib_path.into_raw(), options, runtime.as_mut_ptr()) };
+        assert_ne!(handle.0, ptr::null());
+
+        let message = unsafe { CStr::from_ptr(handle.0) };
+        assert_eq!(
+            message.to_str().unwrap(),
+            format!("unknown TypeId '{}'", type_id)
         );
 
         unsafe { mun_error_destroy(handle) };
@@ -488,7 +544,30 @@ mod tests {
     }
 
     #[test]
-    fn test_runtime_get_function_info() {
+    fn test_runtime_get_function_info_none() {
+        let driver = TestDriver::new(
+            r#"
+        pub fn main() -> i32 { 3 }
+    "#,
+        );
+
+        let fn_name = CString::new("add").expect("Invalid function name");
+        let mut has_fn_info = false;
+        let mut fn_definition = MaybeUninit::uninit();
+        let handle = unsafe {
+            mun_runtime_get_function_info(
+                driver.runtime,
+                fn_name.as_ptr(),
+                &mut has_fn_info as *mut _,
+                fn_definition.as_mut_ptr(),
+            )
+        };
+        assert_eq!(handle.0, ptr::null());
+        assert!(!has_fn_info);
+    }
+
+    #[test]
+    fn test_runtime_get_function_info_some() {
         let driver = TestDriver::new(
             r#"
         pub fn main() -> i32 { 3 }
@@ -620,7 +699,30 @@ mod tests {
     }
 
     #[test]
-    fn test_runtime_get_type_info_by_name() {
+    fn test_runtime_get_type_info_by_name_none() {
+        let driver = TestDriver::new(
+            r#"
+            pub struct Foo;
+    "#,
+        );
+
+        let type_name = CString::new("Bar").expect("Invalid type name");
+        let mut has_type_info = false;
+        let mut type_info = MaybeUninit::uninit();
+        let handle = unsafe {
+            mun_runtime_get_type_info_by_name(
+                driver.runtime,
+                type_name.as_ptr(),
+                &mut has_type_info as *mut _,
+                type_info.as_mut_ptr(),
+            )
+        };
+        assert_eq!(handle.0, ptr::null());
+        assert!(!has_type_info);
+    }
+
+    #[test]
+    fn test_runtime_get_type_info_by_name_some() {
         let driver = TestDriver::new(
             r#"
             pub struct Foo;
@@ -729,7 +831,32 @@ mod tests {
     }
 
     #[test]
-    fn test_runtime_get_type_info_by_id() {
+    fn test_runtime_get_type_info_by_id_none() {
+        let driver = TestDriver::new(
+            r#"
+            pub struct Foo;
+    "#,
+        );
+
+        let type_id = abi::TypeId {
+            guid: abi::Guid([0u8; 16]),
+        };
+        let mut has_type_info = false;
+        let mut type_info = MaybeUninit::uninit();
+        let handle = unsafe {
+            mun_runtime_get_type_info_by_id(
+                driver.runtime,
+                &type_id as *const abi::TypeId,
+                &mut has_type_info as *mut _,
+                type_info.as_mut_ptr(),
+            )
+        };
+        assert_eq!(handle.0, ptr::null());
+        assert!(!has_type_info);
+    }
+
+    #[test]
+    fn test_runtime_get_type_info_by_id_some() {
         let driver = TestDriver::new(
             r#"
             pub struct Foo;

@@ -31,14 +31,6 @@ pub struct TypeInfoSpan {
 }
 
 impl TypeInfoSpan {
-    /// A null handle.
-    pub fn null() -> Self {
-        Self {
-            data: ptr::null(),
-            len: 0,
-        }
-    }
-
     /// Retrieves the `TypeInfoHandle` at the specified index, if within bounds.
     /// Otherwise, returns null.
     pub fn get(&self, index: usize) -> TypeInfoHandle {

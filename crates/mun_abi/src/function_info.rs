@@ -34,7 +34,7 @@ pub struct FunctionPrototype {
 #[derive(Clone)]
 pub struct FunctionSignature {
     /// Argument types
-    pub(crate) arg_types: *const TypeId,
+    pub arg_types: *const TypeId,
     /// Optional return type
     pub return_type: TypeId,
     /// Number of argument types

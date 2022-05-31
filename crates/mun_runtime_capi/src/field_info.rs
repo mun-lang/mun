@@ -17,7 +17,7 @@ pub struct FieldInfoHandle(pub *const c_void);
 impl FieldInfoHandle {
     /// A null handle.
     pub fn null() -> Self {
-        FieldInfoHandle(ptr::null())
+        Self(ptr::null())
     }
 }
 
@@ -28,6 +28,16 @@ pub struct FieldInfoSpan {
     pub data: *const FieldInfoHandle,
     /// Length of the array (and capacity)
     pub len: usize,
+}
+
+impl FieldInfoSpan {
+    /// An empty span.
+    pub fn empty() -> Self {
+        Self {
+            data: ptr::null(),
+            len: 0,
+        }
+    }
 }
 
 /// Retrieves the field's name.
@@ -286,5 +296,10 @@ mod tests {
 
         let field_offset = unsafe { field_offset.assume_init() };
         assert_eq!(field_offset, 0);
+    }
+
+    #[test]
+    fn test_field_info_span_destroy_empty() {
+        assert!(!unsafe { mun_field_info_span_destroy(FieldInfoSpan::empty()) });
     }
 }

@@ -12,6 +12,13 @@ use std::{ffi::c_void, mem, ptr};
 #[derive(Clone, Copy, Debug)]
 pub struct StructInfoHandle(pub *const c_void);
 
+impl StructInfoHandle {
+    /// A null handle.
+    pub fn null() -> Self {
+        Self(ptr::null())
+    }
+}
+
 /// Retrieves information about the struct's fields.
 ///
 /// # Safety
@@ -110,7 +117,21 @@ mod tests {
     }
 
     #[test]
-    fn test_mun_struct_info_fields_invalid_arg() {
+    fn test_struct_info_fields_invalid_struct_info() {
+        let handle = unsafe { mun_struct_info_fields(StructInfoHandle::null(), ptr::null_mut()) };
+        assert_ne!(handle.0, ptr::null());
+
+        let message = unsafe { CStr::from_ptr(handle.0) };
+        assert_eq!(
+            message.to_str().unwrap(),
+            "Invalid argument: 'struct_info' is null pointer."
+        );
+
+        unsafe { mun_error_destroy(handle) };
+    }
+
+    #[test]
+    fn test_struct_info_fields_invalid_arg() {
         let driver = TestDriver::new(
             r#"
             pub struct Foo;"#,
@@ -130,7 +151,26 @@ mod tests {
     }
 
     #[test]
-    fn test_mun_struct_info_fields() {
+    fn test_struct_info_fields_none() {
+        let driver = TestDriver::new(
+            r#"
+            pub struct Foo;"#,
+        );
+
+        let foo_struct_info = get_struct_info_by_name(driver.runtime, "Foo");
+
+        let mut foo_fields_span = MaybeUninit::uninit();
+        let handle =
+            unsafe { mun_struct_info_fields(foo_struct_info, foo_fields_span.as_mut_ptr()) };
+        assert_eq!(handle.0, ptr::null());
+
+        let foo_fields_span = unsafe { foo_fields_span.assume_init() };
+        assert_eq!(foo_fields_span.data, ptr::null());
+        assert_eq!(foo_fields_span.len, 0);
+    }
+
+    #[test]
+    fn test_struct_info_fields_some() {
         let driver = TestDriver::new(
             r#"
             pub struct Foo {
@@ -166,7 +206,42 @@ mod tests {
     }
 
     #[test]
-    fn test_mun_struct_info_memory_kind() {
+    fn test_struct_info_memory_kind_invalid_struct_info() {
+        let handle =
+            unsafe { mun_struct_info_memory_kind(StructInfoHandle::null(), ptr::null_mut()) };
+        assert_ne!(handle.0, ptr::null());
+
+        let message = unsafe { CStr::from_ptr(handle.0) };
+        assert_eq!(
+            message.to_str().unwrap(),
+            "Invalid argument: 'struct_info' is null pointer."
+        );
+
+        unsafe { mun_error_destroy(handle) };
+    }
+
+    #[test]
+    fn test_struct_info_memory_kind_invalid_memory_kind() {
+        let driver = TestDriver::new(
+            r#"
+            pub struct Foo;"#,
+        );
+
+        let struct_info = get_struct_info_by_name(driver.runtime, "Foo");
+        let handle = unsafe { mun_struct_info_memory_kind(struct_info, ptr::null_mut()) };
+        assert_ne!(handle.0, ptr::null());
+
+        let message = unsafe { CStr::from_ptr(handle.0) };
+        assert_eq!(
+            message.to_str().unwrap(),
+            "Invalid argument: 'memory_kind' is null pointer."
+        );
+
+        unsafe { mun_error_destroy(handle) };
+    }
+
+    #[test]
+    fn test_struct_info_memory_kind() {
         let driver = TestDriver::new(
             r#"
             pub struct Foo {
