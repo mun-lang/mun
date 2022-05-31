@@ -81,7 +81,7 @@ public:
      *
      * \return a pointer to the struct's type information
      */
-    const TypeInfo info() const noexcept { return m_runtime->ptr_type(raw()); }
+    TypeInfo info() const noexcept { return m_runtime->ptr_type(raw()); }
 
     /** Tries to retrieve the copied value of the field corresponding to
      * `field_name`.
@@ -127,7 +127,7 @@ struct Marshal<StructRef> {
     static type to(StructRef value) noexcept { return value.raw(); }
 
     static StructRef copy_from(const type* ptr, const Runtime& runtime,
-                               TypeInfo type_info) noexcept {
+                               const TypeInfo& type_info) noexcept {
         // Safety: `type_info_as_struct` is guaranteed to return a value for
         // `StructRef`s.
         const StructInfo struct_info(type_info.data().struct_);
@@ -147,7 +147,7 @@ struct Marshal<StructRef> {
         return StructRef(runtime, gc_handle);
     }
 
-    static void move_to(type value, type* ptr, TypeInfo type_info) noexcept {
+    static void move_to(type value, type* ptr, const TypeInfo& type_info) noexcept {
         // Safety: `type_info_as_struct` is guaranteed to return a value for
         // `StructRef`s.
         const StructInfo struct_info(type_info.data().struct_);
@@ -160,7 +160,7 @@ struct Marshal<StructRef> {
     }
 
     static StructRef swap_at(type value, type* ptr, const Runtime& runtime,
-                             TypeInfo type_info) noexcept {
+                             const TypeInfo& type_info) noexcept {
         // Safety: `type_info_as_struct` is guaranteed to return a value for
         // `StructRef`s.
         const StructInfo struct_info(type_info.data().struct_);

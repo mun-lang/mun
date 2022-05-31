@@ -16,13 +16,15 @@ struct Marshal;
                                                                                                    \
         static type to(type value) noexcept { return value; }                                      \
                                                                                                    \
-        static type copy_from(const type* value, const Runtime&, TypeInfo) noexcept {              \
+        static type copy_from(const type* value, const Runtime&, const TypeInfo&) noexcept {       \
             return *value;                                                                         \
         }                                                                                          \
                                                                                                    \
-        static void move_to(type value, type* ptr, TypeInfo) noexcept { *ptr = std::move(value); } \
+        static void move_to(type value, type* ptr, const TypeInfo&) noexcept {                     \
+            *ptr = std::move(value);                                                               \
+        }                                                                                          \
                                                                                                    \
-        static type swap_at(type value, type* ptr, const Runtime&, TypeInfo) noexcept {            \
+        static type swap_at(type value, type* ptr, const Runtime&, const TypeInfo&) noexcept {     \
             std::swap(value, *ptr);                                                                \
             return std::move(value);                                                               \
         }                                                                                          \

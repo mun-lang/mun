@@ -59,6 +59,9 @@ public:
      */
     FieldInfoSpan(MunFieldInfoSpan span) noexcept : m_span(span) {}
 
+    FieldInfoSpan(FieldInfoSpan&&) = default;
+    FieldInfoSpan(const FieldInfoSpan&) = delete;
+
     ~FieldInfoSpan() noexcept { mun_field_info_span_destroy(m_span); }
 
     /**

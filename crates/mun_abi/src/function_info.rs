@@ -57,24 +57,6 @@ impl FunctionPrototype {
     }
 }
 
-// TODO: Create a runtime-specific version of FunctionPrototype that resolves the `TypeId`s
-// impl fmt::Display for FunctionPrototype {
-//     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-//         write!(f, "fn {}(", self.name())?;
-//         for (i, arg) in self.signature.arg_types().iter().enumerate() {
-//             if i > 0 {
-//                 write!(f, ", ")?;
-//             }
-//             write!(f, "{}", arg)?;
-//         }
-//         write!(f, ")")?;
-//         if let Some(ret_type) = self.signature.return_type() {
-//             write!(f, ":{}", ret_type)?
-//         }
-//         Ok(())
-//     }
-// }
-
 unsafe impl Send for FunctionPrototype {}
 unsafe impl Sync for FunctionPrototype {}
 
@@ -97,23 +79,6 @@ impl FunctionSignature {
         }
     }
 }
-
-// impl fmt::Display for FunctionSignature {
-//     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-//         write!(f, "fn(")?;
-//         for (i, arg) in self.arg_types().iter().enumerate() {
-//             if i > 0 {
-//                 write!(f, ", ")?;
-//             }
-//             write!(f, "{}", arg)?;
-//         }
-//         write!(f, ")")?;
-//         if let Some(ret_type) = self.return_type() {
-//             write!(f, ":{}", ret_type)?
-//         }
-//         Ok(())
-//     }
-// }
 
 impl PartialEq for FunctionSignature {
     fn eq(&self, other: &Self) -> bool {
