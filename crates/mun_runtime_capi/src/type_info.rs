@@ -345,11 +345,11 @@ pub(crate) mod tests {
     fn test_type_info_increment_strong_count() {
         let driver = TestDriver::new(
             r#"
-        pub fn main() -> i32 { 12345 }
+        struct Foo;
     "#,
         );
 
-        let type_info = get_type_info_by_name(driver.runtime, "core::i32");
+        let type_info = get_type_info_by_name(driver.runtime, "Foo");
 
         let type_info_arc = unsafe { Arc::from_raw(type_info.0 as *const TypeInfo) };
         let strong_count = Arc::strong_count(&type_info_arc);
