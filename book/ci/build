@@ -8,7 +8,7 @@ set -euo pipefail
 mdbook="mdbook"
 if ! [ -x "$(command -v $mdbook)" ]; then
     echo "Installing mdbook.."
-    curl -sL https://github.com/rust-lang-nursery/mdBook/releases/download/v0.4.7/mdbook-v0.4.7-x86_64-unknown-linux-gnu.tar.gz | tar zxv
+    curl -sL https://github.com/rust-lang-nursery/mdBook/releases/download/v0.4.18/mdbook-v0.4.18-x86_64-unknown-linux-gnu.tar.gz | tar zxv
     mdbook="./mdbook"
 fi
 
