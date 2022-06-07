@@ -2,24 +2,22 @@
 
 set -euo pipefail
 
-pushd ./book
+# This script assumes you are in the `book` directory of the repository
 
-    # Check if mdbook is installed, otherwise download the binaries
-    mdbook="mdbook"
-    if ! [ -x "$(command -v $mdbook)" ]; then 
-        echo "Installing mdbook.."
-        curl -sL https://github.com/rust-lang-nursery/mdBook/releases/download/v0.4.7/mdbook-v0.4.7-x86_64-unknown-linux-gnu.tar.gz | tar zxv
-        mdbook="./mdbook"
-    fi
+# Check if mdbook is installed, otherwise download the binaries
+mdbook="mdbook"
+if ! [ -x "$(command -v $mdbook)" ]; then
+    echo "Installing mdbook.."
+    curl -sL https://github.com/rust-lang-nursery/mdBook/releases/download/v0.4.18/mdbook-v0.4.18-x86_64-unknown-linux-gnu.tar.gz | tar zxv
+    mdbook="./mdbook"
+fi
 
-    # Echo mdbook version
-    $mdbook --version
+# Echo mdbook version
+$mdbook --version
 
-    # First build our custom highlight.js
-    ./ci/build-highlight-js
+# First build our custom highlight.js
+./ci/build-highlight-js
 
-    # Actually build the book
-    echo 'Building book..'
-    $mdbook build
-
-popd
+# Actually build the book
+echo 'Building book..'
+$mdbook build
