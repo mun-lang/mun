@@ -9,13 +9,16 @@ mod assembly_info;
 mod dispatch_table;
 mod function_info;
 mod module_info;
-mod static_type_map;
+pub mod static_type_map;
 mod struct_info;
 mod type_info;
+mod type_lut;
 
 mod array_info;
 #[cfg(test)]
 mod test_utils;
+
+use std::fmt;
 
 pub use array_info::ArrayInfo;
 pub use assembly_info::AssemblyInfo;
@@ -26,13 +29,16 @@ pub use function_info::{
 };
 pub use module_info::ModuleInfo;
 pub use struct_info::{StructInfo, StructMemoryKind};
-pub use type_info::{HasStaticTypeInfo, TypeInfo, TypeInfoData};
+pub use type_info::{HasStaticTypeInfo, HasStaticTypeInfoName, TypeInfo, TypeInfoData};
+pub use type_lut::{TypeId, TypeLut};
 
 /// The Mun ABI prelude
 ///
 /// The *prelude* contains imports that are used almost every time.
 pub mod prelude {
-    pub use crate::{HasStaticTypeInfo, IntoFunctionDefinition, StructMemoryKind};
+    pub use crate::{
+        HasStaticTypeInfo, HasStaticTypeInfoName, IntoFunctionDefinition, StructMemoryKind,
+    };
 }
 
 /// Defines the current ABI version
@@ -49,6 +55,54 @@ pub const SET_ALLOCATOR_HANDLE_FN_NAME: &str = "set_allocator_handle";
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct Guid(pub [u8; 16]);
+
+impl From<&[u8]> for Guid {
+    fn from(bytes: &[u8]) -> Self {
+        Guid(md5::compute(&bytes).0)
+    }
+}
+
+impl fmt::Display for Guid {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let hyphenated = format_hyphenated(&self.0);
+
+        // SAFETY: The encoded buffer is ASCII encoded
+        let hyphenated = unsafe { std::str::from_utf8_unchecked(&hyphenated) };
+
+        return f.write_str(hyphenated);
+
+        #[inline]
+        const fn format_hyphenated(src: &[u8; 16]) -> [u8; 36] {
+            const LUT: [u8; 16] = [
+                b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b'a', b'b', b'c', b'd',
+                b'e', b'f',
+            ];
+
+            let groups = [(0, 8), (9, 13), (14, 18), (19, 23), (24, 36)];
+            let mut dst = [0; 36];
+
+            let mut group_idx = 0;
+            let mut i = 0;
+            while group_idx < 5 {
+                let (start, end) = groups[group_idx];
+                let mut j = start;
+                while j < end {
+                    let x = src[i];
+                    i += 1;
+
+                    dst[j] = LUT[(x >> 4) as usize];
+                    dst[j + 1] = LUT[(x & 0x0f) as usize];
+                    j += 2;
+                }
+                if group_idx < 4 {
+                    dst[end] = b'-';
+                }
+                group_idx += 1;
+            }
+            dst
+        }
+    }
+}
 
 /// Represents the privacy level of modules, functions, or variables.
 #[repr(u8)]

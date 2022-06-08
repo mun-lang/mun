@@ -1,13 +1,11 @@
 use crate::resolve::ValueNs;
 use crate::{ty::infer::InferenceResultBuilder, Expr, ExprId, Path, Resolver};
-use std::sync::Arc;
 
 impl<'a> InferenceResultBuilder<'a> {
     /// Checks if the specified expression is a place-expression. A place expression represents a
     /// memory location.
     pub(super) fn check_place_expression(&mut self, resolver: &Resolver, expr: ExprId) -> bool {
-        let body = Arc::clone(&self.body); // avoid borrow checker problem
-        match &body[expr] {
+        match &self.body[expr] {
             Expr::Path(p) => self.check_place_path(resolver, p),
             Expr::Index { base, .. } => self.check_place_expression(resolver, *base),
             Expr::Field { .. } | Expr::Array(_) => true,

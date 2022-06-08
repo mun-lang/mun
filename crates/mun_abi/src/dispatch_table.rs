@@ -132,7 +132,7 @@ mod tests {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
         let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
-        let return_type = Some(&type_info);
+        let return_type = Some(type_info.id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
         let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
@@ -147,7 +147,7 @@ mod tests {
             assert_eq!(lhs.0, rhs.0);
             assert_eq!(lhs.1.name(), rhs.1.name());
             assert_eq!(lhs.1.signature.arg_types(), rhs.1.signature.arg_types());
-            assert_eq!(lhs.1.signature.return_type(), rhs.1.signature.return_type());
+            assert_eq!(lhs.1.signature.return_type, rhs.1.signature.return_type);
         }
     }
 
@@ -165,7 +165,7 @@ mod tests {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
         let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
-        let return_type = Some(&type_info);
+        let return_type = Some(type_info.id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
         let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
@@ -194,7 +194,7 @@ mod tests {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
         let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
-        let return_type = Some(&type_info);
+        let return_type = Some(type_info.id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
         let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
@@ -207,7 +207,7 @@ mod tests {
         for (lhs, rhs) in result.iter().zip(prototypes.iter()) {
             assert_eq!(lhs.name(), rhs.name());
             assert_eq!(lhs.signature.arg_types(), rhs.signature.arg_types());
-            assert_eq!(lhs.signature.return_type(), rhs.signature.return_type());
+            assert_eq!(lhs.signature.return_type, rhs.signature.return_type);
         }
     }
 
@@ -216,7 +216,7 @@ mod tests {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
         let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
-        let return_type = Some(&type_info);
+        let return_type = Some(type_info.id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
         let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
@@ -232,7 +232,7 @@ mod tests {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
         let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
-        let return_type = Some(&type_info);
+        let return_type = Some(type_info.id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
         let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
@@ -248,7 +248,7 @@ mod tests {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
         let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
-        let return_type = Some(&type_info);
+        let return_type = Some(type_info.id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
         let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
@@ -264,7 +264,7 @@ mod tests {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
         let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
-        let return_type = Some(&type_info);
+        let return_type = Some(type_info.id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
         let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
@@ -283,7 +283,7 @@ mod tests {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
         let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
-        let return_type = Some(&type_info);
+        let return_type = Some(type_info.id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
         let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
@@ -299,7 +299,7 @@ mod tests {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
         let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
-        let return_type = Some(&type_info);
+        let return_type = Some(type_info.id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
         let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 

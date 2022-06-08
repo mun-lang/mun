@@ -2,7 +2,7 @@ name: release
 on:
   push:
     branches:
-      - master
+      - main
       - release/*
 
 env:
@@ -30,7 +30,7 @@ jobs:
             artifacts: "mun libmun_runtime.dylib"
             RUSTFLAGS: "-Dwarnings"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
 

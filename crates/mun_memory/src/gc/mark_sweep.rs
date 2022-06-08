@@ -1,33 +1,77 @@
+use crate::gc::array::Array;
 use crate::{
     cast,
-    gc::{Event, GcPtr, GcRuntime, Observer, RawGcPtr, Stats, TypeTrace},
+    gc::{Event, GcPtr, GcRuntime, HasIndirectionPtr, Observer, RawGcPtr, Stats, TypeTrace},
     mapping::{self, FieldMapping, MemoryMapper},
-    ArrayMemoryLayout, ArrayType, CompositeType, HasCompileTimeMemoryLayout,
-    HasRuntimeMemoryLayout, StructType, TypeDesc,
+    type_info::{TypeInfo, TypeInfoData},
 };
 use mapping::{Conversion, Mapping};
-use parking_lot::RwLock;
-use std::alloc::Layout;
+use parking_lot::{RawRwLock, RwLock, RwLockReadGuard};
+use std::alloc::{Layout, LayoutError};
 use std::{
     collections::{HashMap, VecDeque},
-    hash::Hash,
     ops::Deref,
     pin::Pin,
     ptr::NonNull,
+    sync::Arc,
 };
 
+pub struct Trace {
+    obj: GcPtr,
+    ty: Arc<TypeInfo>,
+    index: usize,
+}
+
+impl Iterator for Trace {
+    type Item = GcPtr;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let struct_ty = self.ty.as_ref().as_struct()?;
+        let field_count = struct_ty.fields.len();
+        while self.index < field_count {
+            let index = self.index;
+            self.index += 1;
+
+            let field = &struct_ty.fields[index];
+            if let TypeInfoData::Struct(field_struct_ty) = &field.type_info.data {
+                if field_struct_ty.memory_kind == abi::StructMemoryKind::Gc {
+                    return Some(unsafe {
+                        *self
+                            .obj
+                            .deref::<u8>()
+                            .add(usize::from(field.offset))
+                            .cast::<GcPtr>()
+                    });
+                }
+            }
+        }
+        None
+    }
+}
+
+impl TypeTrace for Arc<TypeInfo> {
+    type Trace = Trace;
+
+    fn trace(&self, obj: GcPtr) -> Self::Trace {
+        Trace {
+            ty: self.clone(),
+            obj,
+            index: 0,
+        }
+    }
+}
+
 /// Implements a simple mark-sweep type garbage collector.
-#[derive(Debug)]
-pub struct MarkSweep<T, O>
+pub struct MarkSweep<O>
 where
     O: Observer<Event = Event>,
 {
-    objects: RwLock<HashMap<GcPtr, Pin<Box<ObjectInfo<T>>>>>,
+    objects: RwLock<HashMap<GcPtr, Pin<Box<ObjectInfo>>>>,
     observer: O,
     stats: RwLock<Stats>,
 }
 
-impl<T, O> Default for MarkSweep<T, O>
+impl<O> Default for MarkSweep<O>
 where
     O: Observer<Event = Event> + Default,
 {
@@ -40,9 +84,8 @@ where
     }
 }
 
-impl<T, O> MarkSweep<T, O>
+impl<O> MarkSweep<O>
 where
-    T: HasRuntimeMemoryLayout,
     O: Observer<Event = Event>,
 {
     /// Creates a `MarkSweep` memory collector with the specified `Observer`.
@@ -55,12 +98,10 @@ where
     }
 
     /// Logs an allocation
-    fn log_alloc(&self, handle: GcPtr) {
+    fn log_alloc(&self, handle: GcPtr, ty: &TypeInfo) {
         {
             let mut stats = self.stats.write();
-            let object_info: *const ObjectInfo<T> = handle.into();
-            let value_memory_layout = unsafe { (*object_info).ty.layout((*object_info).ptr) };
-            stats.allocated_memory += value_memory_layout.size();
+            stats.allocated_memory += ty.layout.size();
         }
 
         self.observer.event(Event::Allocation(handle));
@@ -72,55 +113,160 @@ where
     }
 }
 
-/// Allocates memory for an object.
-fn alloc_obj<T: HasCompileTimeMemoryLayout>(ty: T) -> Pin<Box<ObjectInfo<T>>> {
-    let ptr = NonNull::new(unsafe { std::alloc::alloc(ty.layout()) })
-        .expect("error allocating memory for type");
+fn alloc_obj(ty: Arc<TypeInfo>) -> Pin<Box<ObjectInfo>> {
+    let ptr = unsafe { std::alloc::alloc(ty.layout) };
     Box::pin(ObjectInfo {
-        ptr: ptr.cast(),
+        data: ObjectInfoData { ptr: ptr.cast() },
         ty,
         roots: 0,
         color: Color::White,
     })
 }
 
+/// An error that might occur when requesting memory layout of a type
+#[derive(Debug)]
+pub enum MemoryLayoutError {
+    /// An error that is returned when the memory requested is to large to deal with.
+    OutOfBounds,
+
+    /// An error that is returned by constructing a Layout
+    LayoutError(LayoutError),
+}
+
+impl From<LayoutError> for MemoryLayoutError {
+    fn from(err: LayoutError) -> Self {
+        MemoryLayoutError::LayoutError(err)
+    }
+}
+
+pub struct ArrayHandle<'gc> {
+    obj: *mut ObjectInfo,
+    lock: RwLockReadGuard<'gc, HashMap<GcPtr, Pin<Box<ObjectInfo>>>>,
+}
+
+pub struct ArrayHandleIter {
+    remaining: usize,
+    next: NonNull<u8>,
+    stride: usize,
+}
+
+impl<'gc> ArrayHandle<'gc> {
+    pub fn element_type(&self) -> Arc<TypeInfo> {
+        unsafe {
+            (*self.obj)
+                .ty
+                .as_array()
+                .expect("unable to determine element_type, type is not an array")
+                .element_ty
+                .clone()
+        }
+    }
+}
+
+impl<'gc> crate::gc::ArrayHandle for ArrayHandle<'gc> {
+    type Iterator = ArrayHandleIter;
+
+    fn length(&self) -> usize {
+        unsafe { (*(*self.obj).data.array).length }
+    }
+
+    fn capacity(&self) -> usize {
+        unsafe { (*(*self.obj).data.array).capacity }
+    }
+
+    fn elements(&self) -> Self::Iterator {
+        let length = unsafe { (*(*self.obj).data.array).length };
+        let next = unsafe { (*(*self.obj).data.array).data() };
+        let element_layout = unsafe {
+            (*self.obj)
+                .ty
+                .as_array()
+                .expect("not an array")
+                .element_ty
+                .layout
+        };
+        ArrayHandleIter {
+            remaining: length,
+            next,
+            stride: element_layout.pad_to_align().size(),
+        }
+    }
+}
+
+impl Iterator for ArrayHandleIter {
+    type Item = NonNull<u8>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.remaining > 0 {
+            let element = self.next;
+            self.remaining -= 1;
+            self.next = unsafe { NonNull::new_unchecked(self.next.as_ptr().add(self.stride)) };
+            Some(element)
+        } else {
+            None
+        }
+    }
+}
+
+/// Creates a layout describing the record for `n` instances of `layout`, with a suitable amount of
+/// padding between each to ensure that each instance is given its requested size an alignment.
+///
+/// Implementation taken from `Layout::repeat` (which is currently unstable)
+fn repeat_layout(layout: Layout, n: usize) -> Result<Layout, MemoryLayoutError> {
+    let len_rounded_up = layout.size().wrapping_add(layout.align()).wrapping_sub(1)
+        & !layout.align().wrapping_sub(1);
+    let padded_size = layout.size() + len_rounded_up.wrapping_sub(layout.align());
+    let alloc_size = padded_size
+        .checked_mul(n)
+        .ok_or(MemoryLayoutError::OutOfBounds)?;
+    Layout::from_size_align(alloc_size, layout.align()).map_err(Into::into)
+}
+
+/// Returns the amount of padding we must insert after `size` to ensure that the following address
+/// will satisfy `align` (measured in bytes).
+const fn padding_needed_for(size: usize, align: usize) -> usize {
+    let len_rounded_up = size.wrapping_add(align).wrapping_sub(1) & !align.wrapping_sub(1);
+    len_rounded_up.wrapping_sub(size)
+}
+
 /// Allocates memory for an array type with `length` elements. `array_ty` must be an array type.
-fn alloc_array<T: CompositeType>(ty: T, length: usize) -> Pin<Box<ObjectInfo<T>>>
-where
-    T::ArrayType: ArrayMemoryLayout,
-{
+fn alloc_array(ty: Arc<TypeInfo>, length: usize) -> Pin<Box<ObjectInfo>> {
     let array_ty = ty
         .as_array()
         .expect("array type doesnt have an element type");
 
     // Allocate memory for the array data
-    let layout = array_ty.layout(length);
-    let ptr = NonNull::new(unsafe { std::alloc::alloc(layout) })
-        .expect("error allocating memory for array");
+    let header_layout = Layout::new::<Array>();
+    let elements_layout = repeat_layout(array_ty.element_ty.layout.clone(), length)
+        .expect("unable to create a memory layout for array elemets");
+    let (layout, _) = header_layout
+        .extend(elements_layout)
+        .expect("unable to create memory layout for array");
 
-    // Initialize the memory
-    unsafe {
-        array_ty.init(
-            length,
-            std::slice::from_raw_parts_mut(ptr.as_ptr(), layout.size()),
-        )
-    };
+    let mut ptr: NonNull<Array> = NonNull::new(unsafe { std::alloc::alloc(layout).cast() })
+        .expect("error allocating memory for array");
+    let array = unsafe { ptr.as_mut() };
+    array.length = length;
+    array.capacity = length;
 
     Box::pin(ObjectInfo {
-        ptr: ptr.cast(),
+        data: ObjectInfoData {
+            array: ptr.as_ptr(),
+        },
         ty,
         roots: 0,
         color: Color::White,
     })
 }
 
-impl<T, O> GcRuntime<T> for MarkSweep<T, O>
+impl<'a, O> GcRuntime for &'a MarkSweep<O>
 where
-    T: Clone + HasCompileTimeMemoryLayout + CompositeType + HasRuntimeMemoryLayout,
     O: Observer<Event = Event>,
 {
-    fn alloc(&self, ty: T) -> GcPtr {
-        let object = alloc_obj(ty);
+    type Array = ArrayHandle<'a>;
+
+    fn alloc(&self, ty: &Arc<TypeInfo>) -> GcPtr {
+        let object = alloc_obj(ty.clone());
 
         // We want to return a pointer to the `ObjectInfo`, to be used as handle.
         let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
@@ -130,15 +276,12 @@ where
             objects.insert(handle, object);
         }
 
-        self.log_alloc(handle);
+        self.log_alloc(handle, ty);
         handle
     }
 
-    fn alloc_array(&self, ty: T, n: usize) -> GcPtr
-    where
-        T::ArrayType: ArrayMemoryLayout,
-    {
-        let object = alloc_array(ty, n);
+    fn alloc_array(&self, ty: &Arc<TypeInfo>, n: usize) -> GcPtr {
+        let object = alloc_array(ty.clone(), n);
 
         // We want to return a pointer to the `ObjectInfo`, to be used as handle.
         let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
@@ -148,25 +291,37 @@ where
             objects.insert(handle, object);
         }
 
-        self.log_alloc(handle);
+        self.log_alloc(handle, ty);
         handle
     }
 
-    fn ptr_type(&self, handle: GcPtr) -> T {
+    fn ptr_type(&self, handle: GcPtr) -> Arc<TypeInfo> {
         let _lock = self.objects.read();
 
         // Convert the handle to our internal representation
-        let object_info: *const ObjectInfo<T> = handle.into();
+        let object_info: *const ObjectInfo = handle.into();
 
         // Return the type of the object
         unsafe { (*object_info).ty.clone() }
+    }
+
+    fn array(&self, handle: GcPtr) -> Option<Self::Array> {
+        let lock = self.objects.read();
+        let obj: *mut ObjectInfo = handle.into();
+        unsafe {
+            if !(*obj).ty.is_array() {
+                return None;
+            }
+        }
+
+        Some(ArrayHandle { obj, lock })
     }
 
     fn root(&self, handle: GcPtr) {
         let _lock = self.objects.write();
 
         // Convert the handle to our internal representation
-        let object_info: *mut ObjectInfo<T> = handle.into();
+        let object_info: *mut ObjectInfo = handle.into();
 
         unsafe { (*object_info).roots += 1 };
     }
@@ -175,7 +330,7 @@ where
         let _lock = self.objects.write();
 
         // Convert the handle to our internal representation
-        let object_info: *mut ObjectInfo<T> = handle.into();
+        let object_info: *mut ObjectInfo = handle.into();
 
         unsafe { (*object_info).roots -= 1 };
     }
@@ -185,9 +340,8 @@ where
     }
 }
 
-impl<T, O> MarkSweep<T, O>
+impl<O> MarkSweep<O>
 where
-    T: TypeTrace + HasRuntimeMemoryLayout,
     O: Observer<Event = Event>,
 {
     /// Collects all memory that is no longer referenced by rooted objects. Returns `true` if memory
@@ -202,7 +356,7 @@ where
             .iter()
             .filter_map(|(_, obj)| {
                 if obj.roots > 0 {
-                    Some(obj.as_ref().get_ref() as *const _ as *mut ObjectInfo<T>)
+                    Some(obj.as_ref().get_ref() as *const _ as *mut ObjectInfo)
                 } else {
                     None
                 }
@@ -214,19 +368,16 @@ where
             let handle = (next as *const _ as RawGcPtr).into();
 
             // Trace all other objects
-            unsafe { next.as_ref() }
-                .expect("most be a valid ptr")
-                .ty
-                .trace(handle, |reference| {
-                    let ref_ptr = objects
-                        .get_mut(&reference)
-                        .expect("found invalid reference");
-                    if ref_ptr.color == Color::White {
-                        let ptr = ref_ptr.as_ref().get_ref() as *const _ as *mut ObjectInfo<T>;
-                        unsafe { (*ptr).color = Color::Gray };
-                        roots.push_back(ptr);
-                    }
-                });
+            for reference in unsafe { (*next).ty.trace(handle) } {
+                let ref_ptr = objects
+                    .get_mut(&reference)
+                    .expect("found invalid reference");
+                if ref_ptr.color == Color::White {
+                    let ptr = ref_ptr.as_ref().get_ref() as *const _ as *mut ObjectInfo;
+                    unsafe { (*ptr).color = Color::Gray };
+                    roots.push_back(ptr);
+                }
+            }
 
             // This object has been traced
             unsafe {
@@ -243,8 +394,8 @@ where
                 }
                 true
             } else {
-                let value_memory_layout = obj.value_layout();
-                unsafe { std::alloc::dealloc(obj.ptr.cast().as_ptr(), value_memory_layout) };
+                let value_memory_layout = obj.layout();
+                unsafe { std::alloc::dealloc(obj.data.ptr, value_memory_layout) };
                 self.observer.event(Event::Deallocation(*h));
                 {
                     dbg!(("dealloc", &value_memory_layout));
@@ -262,21 +413,11 @@ where
     }
 }
 
-impl<T, O> MemoryMapper<T> for MarkSweep<T, O>
+impl<O> MemoryMapper for MarkSweep<O>
 where
-    T: TypeDesc
-        + Clone
-        + HasCompileTimeMemoryLayout
-        + TypeTrace
-        + CompositeType
-        + Eq
-        + Hash
-        + HasRuntimeMemoryLayout,
-    T::ArrayType: ArrayType<T> + ArrayMemoryLayout,
-    T::StructType: StructType<T>,
     O: Observer<Event = Event>,
 {
-    fn map_memory(&self, mapping: Mapping<T, T>) -> Vec<GcPtr> {
+    fn map_memory(&self, mapping: Mapping) -> Vec<GcPtr> {
         let mut objects = self.objects.write();
 
         // Determine which types are still allocated with deleted types
@@ -296,7 +437,9 @@ where
             for object_info in objects.values_mut() {
                 if object_info.ty == old_ty {
                     object_info.set(ObjectInfo {
-                        ptr: object_info.ptr,
+                        data: ObjectInfoData {
+                            ptr: unsafe { object_info.data.ptr },
+                        },
                         roots: object_info.roots,
                         color: object_info.color,
                         ty: new_ty.clone(),
@@ -310,11 +453,9 @@ where
         for (old_ty, conversion) in mapping.conversions.iter() {
             for object_info in objects.values_mut() {
                 if object_info.ty == *old_ty {
-                    let src = object_info.ptr;
+                    let src = unsafe { NonNull::new_unchecked(object_info.data.ptr) };
                     let dest = unsafe {
-                        NonNull::new_unchecked(std::alloc::alloc_zeroed(
-                            HasCompileTimeMemoryLayout::layout(&conversion.new_ty),
-                        ))
+                        NonNull::new_unchecked(std::alloc::alloc_zeroed(conversion.new_ty.layout))
                     };
 
                     map_fields(
@@ -326,15 +467,10 @@ where
                         dest,
                     );
 
-                    unsafe {
-                        std::alloc::dealloc(
-                            src.as_ptr(),
-                            HasRuntimeMemoryLayout::layout(old_ty, src),
-                        )
-                    };
+                    unsafe { std::alloc::dealloc(src.as_ptr(), old_ty.layout) };
 
                     object_info.set(ObjectInfo {
-                        ptr: dest,
+                        data: ObjectInfoData { ptr: dest.as_ptr() },
                         roots: object_info.roots,
                         color: object_info.color,
                         ty: conversion.new_ty.clone(),
@@ -346,33 +482,25 @@ where
         // Retroactively store newly allocated objects
         // This cannot be done while mapping because we hold a mutable reference to objects
         for object in new_allocations {
+            let ty = object.ty.clone();
             // We want to return a pointer to the `ObjectInfo`, to
             // be used as handle.
             let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
             objects.insert(handle, object);
 
-            self.log_alloc(handle);
+            self.log_alloc(handle, &ty);
         }
 
         return deleted;
 
-        fn map_fields<T, O>(
-            gc: &MarkSweep<T, O>,
-            new_allocations: &mut Vec<Pin<Box<ObjectInfo<T>>>>,
-            conversions: &HashMap<T, Conversion<T>>,
-            mapping: &[FieldMapping<T>],
+        fn map_fields<O>(
+            gc: &MarkSweep<O>,
+            new_allocations: &mut Vec<Pin<Box<ObjectInfo>>>,
+            conversions: &HashMap<Arc<TypeInfo>, Conversion>,
+            mapping: &[FieldMapping],
             src: NonNull<u8>,
             dest: NonNull<u8>,
         ) where
-            T: TypeDesc
-                + Clone
-                + HasCompileTimeMemoryLayout
-                + TypeTrace
-                + CompositeType
-                + Eq
-                + Hash,
-            T::ArrayType: ArrayType<T> + ArrayMemoryLayout,
-            //T::StructType:<T>,
             O: Observer<Event = Event>,
         {
             for FieldMapping {
@@ -395,12 +523,12 @@ where
                             src as *mut u8
                         };
 
-                        if old_ty.is_struct() {
-                            debug_assert!(new_ty.is_struct());
+                        if old_ty.data.is_struct() {
+                            debug_assert!(new_ty.data.is_struct());
 
                             // When the name is the same, we are dealing with the same struct,
                             // but different internals
-                            let is_same_struct = old_ty.name() == new_ty.name();
+                            let is_same_struct = old_ty.name == new_ty.name;
 
                             // If the same struct changed, there must also be a conversion
                             let conversion = conversions.get(old_ty);
@@ -437,15 +565,15 @@ where
                                             conversions,
                                             &conversion.as_ref().unwrap().field_mapping,
                                             unsafe { NonNull::new_unchecked(field_src) },
-                                            object.ptr,
+                                            unsafe { NonNull::new_unchecked(field_dest) },
                                         );
                                     } else {
                                         // Zero initialize heap-allocated object
                                         unsafe {
                                             std::ptr::write_bytes(
-                                                (*object).ptr.as_ptr(),
+                                                (*object).data.ptr,
                                                 0,
-                                                new_ty.layout().size(),
+                                                new_ty.layout.size(),
                                             )
                                         };
                                     }
@@ -477,9 +605,9 @@ where
                                     // Zero-initialize heap-allocated object
                                     unsafe {
                                         std::ptr::write_bytes(
-                                            object.ptr.as_ptr(),
+                                            object.data.ptr,
                                             0,
-                                            new_ty.layout().size(),
+                                            new_ty.layout.size(),
                                         )
                                     };
 
@@ -497,7 +625,7 @@ where
                                 // Convert the handle to our internal representation
                                 // Safety: we already hold a write lock on `objects`, so
                                 // this is legal.
-                                let obj: *mut ObjectInfo<T> = field_handle.into();
+                                let obj: *mut ObjectInfo = field_handle.into();
                                 let obj = unsafe { &*obj };
 
                                 if is_same_struct {
@@ -509,7 +637,7 @@ where
                                             new_allocations,
                                             conversions,
                                             &conversion.as_ref().unwrap().field_mapping,
-                                            obj.ptr,
+                                            unsafe { NonNull::new_unchecked(obj.data.ptr) },
                                             unsafe { NonNull::new_unchecked(field_dest) },
                                         );
                                     } else {
@@ -519,9 +647,9 @@ where
                                         // Copy from heap-allocated struct to in-memory struct
                                         unsafe {
                                             std::ptr::copy_nonoverlapping(
-                                                obj.ptr.as_ptr(),
+                                                obj.data.ptr,
                                                 field_dest,
-                                                obj.ty.layout().size(),
+                                                obj.ty.layout.size(),
                                             )
                                         };
                                     }
@@ -530,8 +658,8 @@ where
                                 }
                             }
                         } else if !cast::try_cast_from_to(
-                            *old_ty.guid(),
-                            *new_ty.guid(),
+                            old_ty.id.clone(),
+                            new_ty.id.clone(),
                             unsafe { NonNull::new_unchecked(field_src) },
                             unsafe { NonNull::new_unchecked(field_dest) },
                         ) {
@@ -549,7 +677,7 @@ where
                             std::ptr::copy_nonoverlapping(
                                 field_src,
                                 field_dest,
-                                new_ty.layout().size(),
+                                new_ty.layout.size(),
                             )
                         };
                     }
@@ -563,11 +691,7 @@ where
 
                             // Zero-initialize heap-allocated object
                             unsafe {
-                                std::ptr::write_bytes(
-                                    object.ptr.as_ptr(),
-                                    0,
-                                    new_ty.layout().size(),
-                                )
+                                std::ptr::write_bytes(object.data.ptr, 0, new_ty.layout.size())
                             };
 
                             // Write handle to field
@@ -602,46 +726,62 @@ enum Color {
 
 /// An indirection table that stores the address to the actual memory, the type of the object and
 /// meta information.
-#[derive(Debug)]
 #[repr(C)]
-struct ObjectInfo<T> {
-    pub ptr: NonNull<u8>,
+struct ObjectInfo {
+    pub data: ObjectInfoData,
     pub roots: u32,
     pub color: Color,
-    pub ty: T,
+    pub ty: Arc<TypeInfo>,
 }
 
-impl<T: HasRuntimeMemoryLayout> ObjectInfo<T> {
-    /// Returns the memory layout of the value stored with this object
-    pub fn value_layout(&self) -> Layout {
-        unsafe { self.ty.layout(self.ptr) }
-    }
+#[repr(C)]
+union ObjectInfoData {
+    pub ptr: *mut u8,
+    pub array: *mut Array,
 }
 
 /// An `ObjectInfo` is thread-safe.
-unsafe impl<T> Send for ObjectInfo<T> {}
-unsafe impl<T> Sync for ObjectInfo<T> {}
+unsafe impl Send for ObjectInfo {}
+unsafe impl Sync for ObjectInfo {}
 
-impl<T> From<GcPtr> for *const ObjectInfo<T> {
+impl From<GcPtr> for *const ObjectInfo {
     fn from(ptr: GcPtr) -> Self {
         ptr.as_ptr() as Self
     }
 }
 
-impl<T> From<GcPtr> for *mut ObjectInfo<T> {
+impl From<GcPtr> for *mut ObjectInfo {
     fn from(ptr: GcPtr) -> Self {
         ptr.as_ptr() as Self
     }
 }
 
-impl<T> From<*const ObjectInfo<T>> for GcPtr {
-    fn from(info: *const ObjectInfo<T>) -> Self {
+impl From<*const ObjectInfo> for GcPtr {
+    fn from(info: *const ObjectInfo) -> Self {
         (info as RawGcPtr).into()
     }
 }
 
-impl<T> From<*mut ObjectInfo<T>> for GcPtr {
-    fn from(info: *mut ObjectInfo<T>) -> Self {
+impl From<*mut ObjectInfo> for GcPtr {
+    fn from(info: *mut ObjectInfo) -> Self {
         (info as RawGcPtr).into()
+    }
+}
+
+impl ObjectInfo {
+    /// Returns the layout of the data pointed to by data
+    pub fn layout(&self) -> Layout {
+        match &self.ty.data {
+            TypeInfoData::Struct(_) | TypeInfoData::Primitive => self.ty.layout,
+            TypeInfoData::Array(array) => {
+                let elem_count = unsafe { (*self.data.array).capacity };
+                let elem_layout = repeat_layout(array.element_ty.layout, elem_count)
+                    .expect("unable to determine layout of array elements");
+                let (layout, _) = Layout::new::<Array>()
+                    .extend(elem_layout)
+                    .expect("unable to determine layout of array");
+                layout
+            }
+        }
     }
 }

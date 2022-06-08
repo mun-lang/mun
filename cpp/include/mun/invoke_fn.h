@@ -33,26 +33,25 @@ InvokeResult<Output, Args...> invoke_fn(Runtime& runtime, std::string_view fn_na
 
     Error error;
     constexpr auto NUM_ARGS = sizeof...(Args);
-    if (auto fn_info = runtime.find_function_definition(fn_name, &error); error) {
+    if (auto fn_info = runtime.find_function_info(fn_name, &error); error) {
         std::cerr << "Failed to retrieve function info due to error: " << error.message()
                   << std::endl;
     } else if (!fn_info) {
         std::cerr << "Failed to obtain function '" << fn_name << "'" << std::endl;
     } else {
-        const auto& prototype = fn_info->prototype;
-        const auto& signature = prototype.signature;
-        if (signature.num_arg_types != NUM_ARGS) {
+        const auto arg_types = fn_info->argument_types();
+        if (arg_types.size() != NUM_ARGS) {
             std::cerr << "Invalid number of arguments. Expected: "
-                      << std::to_string(signature.num_arg_types)
-                      << ". Found: " << std::to_string(NUM_ARGS) << "." << std::endl;
+                      << std::to_string(arg_types.size()) << ". Found: " << std::to_string(NUM_ARGS)
+                      << "." << std::endl;
 
             return make_error(runtime, fn_name, args...);
         }
 
         if constexpr (NUM_ARGS > 0) {
-            const MunTypeInfo* const* arg_ptr = signature.arg_types;
+            const MunTypeInfoHandle* arg_ptr = arg_types.begin();
             const std::optional<std::pair<const char*, const char*>> return_type_diffs[] = {
-                reflection::equals_argument_type(**(arg_ptr++), args)...};
+                reflection::equals_argument_type(TypeInfo(*(arg_ptr++)), args)...};
 
             for (size_t idx = 0; idx < NUM_ARGS; ++idx) {
                 if (auto diff = return_type_diffs[idx]) {
@@ -66,26 +65,16 @@ InvokeResult<Output, Args...> invoke_fn(Runtime& runtime, std::string_view fn_na
             }
         }
 
-        if (signature.return_type) {
-            const auto& return_type = signature.return_type;
-            if (auto diff = reflection::equals_return_type<Output>(*return_type)) {
-                const auto& [expected, found] = *diff;
-                std::cerr << "Invalid return type. Expected: " << expected << ". Found: " << found
-                          << "." << std::endl;
-
-                return make_error(runtime, fn_name, args...);
-            }
-        } else if (!reflection::equal_types<void, Output>()) {
-            std::cerr << "Invalid return type. Expected: "
-                      << ReturnTypeReflection<void>::type_name()
-                      << ". Found: " << ReturnTypeReflection<Output>::type_name() << "."
-                      << std::endl;
+        if (auto diff = reflection::equals_return_type<Output>(fn_info->return_type())) {
+            const auto& [expected, found] = *diff;
+            std::cerr << "Invalid return type. Expected: " << expected << ". Found: " << found
+                      << "." << std::endl;
 
             return make_error(runtime, fn_name, args...);
         }
 
         auto fn = reinterpret_cast<typename Marshal<Output>::type(MUN_CALLTYPE*)(
-            typename Marshal<Args>::type...)>(const_cast<void*>(fn_info->fn_ptr));
+            typename Marshal<Args>::type...)>(const_cast<void*>(fn_info->function_pointer()));
         if constexpr (std::is_same_v<Output, void>) {
             fn(Marshal<Args>::to(args)...);
             return InvokeResult<Output, Args...>(std::monostate{});

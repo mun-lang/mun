@@ -1,39 +1,40 @@
-use crate::{
-    gc::{GcPtr, GcRuntime, HasIndirectionPtr, TypeTrace},
-    HasCompileTimeMemoryLayout,
-};
-use std::marker::PhantomData;
-use std::ptr::NonNull;
+use crate::gc::{GcPtr, GcRuntime, HasIndirectionPtr};
 use std::sync::{Arc, Weak};
 
 /// A `GcPtr` that automatically roots and unroots its internal `GcPtr`.
-pub struct GcRootPtr<T: HasCompileTimeMemoryLayout + TypeTrace, G: GcRuntime<T>> {
+pub struct GcRootPtr<G>
+where
+    for<'t> &'t G: GcRuntime,
+{
     handle: GcPtr,
     runtime: Weak<G>,
-    ty: PhantomData<T>,
 }
 
-impl<T: HasCompileTimeMemoryLayout + TypeTrace, G: GcRuntime<T>> Clone for GcRootPtr<T, G> {
+impl<G> Clone for GcRootPtr<G>
+where
+    for<'t> &'t G: GcRuntime,
+{
     fn clone(&self) -> Self {
         if let Some(runtime) = self.runtime.upgrade() {
-            runtime.root(self.handle)
+            runtime.as_ref().root(self.handle)
         }
         Self {
             handle: self.handle,
             runtime: self.runtime.clone(),
-            ty: PhantomData,
         }
     }
 }
 
-impl<T: HasCompileTimeMemoryLayout + TypeTrace, G: GcRuntime<T>> GcRootPtr<T, G> {
+impl<G> GcRootPtr<G>
+where
+    for<'t> &'t G: GcRuntime,
+{
     /// Constructs a new GCRootHandle from a runtime and a handle
     pub fn new(runtime: &Arc<G>, handle: GcPtr) -> Self {
-        runtime.root(handle);
+        runtime.as_ref().root(handle);
         Self {
             handle,
             runtime: Arc::downgrade(runtime),
-            ty: PhantomData,
         }
     }
 
@@ -53,24 +54,31 @@ impl<T: HasCompileTimeMemoryLayout + TypeTrace, G: GcRuntime<T>> GcRootPtr<T, G>
     }
 }
 
-impl<T: HasCompileTimeMemoryLayout + TypeTrace, G: GcRuntime<T>> From<GcRootPtr<T, G>> for GcPtr {
-    fn from(ptr: GcRootPtr<T, G>) -> Self {
+impl<G> From<GcRootPtr<G>> for GcPtr
+where
+    for<'t> &'t G: GcRuntime,
+{
+    fn from(ptr: GcRootPtr<G>) -> Self {
         ptr.handle
     }
 }
 
-impl<T: HasCompileTimeMemoryLayout + TypeTrace, G: GcRuntime<T>> Drop for GcRootPtr<T, G> {
+impl<G> Drop for GcRootPtr<G>
+where
+    for<'t> &'t G: GcRuntime,
+{
     fn drop(&mut self) {
         if let Some(runtime) = self.runtime.upgrade() {
-            runtime.unroot(self.handle)
+            runtime.as_ref().unroot(self.handle)
         }
     }
 }
 
-impl<T: HasCompileTimeMemoryLayout + TypeTrace, G: GcRuntime<T>> HasIndirectionPtr
-    for GcRootPtr<T, G>
+impl<G> HasIndirectionPtr for GcRootPtr<G>
+where
+    for<'t> &'t G: GcRuntime,
 {
-    unsafe fn deref<R: Sized>(&self) -> NonNull<R> {
+    unsafe fn deref<R: Sized>(&self) -> *const R {
         self.handle.deref()
     }
 }

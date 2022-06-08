@@ -1,47 +1,49 @@
 use crate::{
     diff::{diff, Diff, FieldDiff, FieldEditKind},
     gc::GcPtr,
-    CompositeType, HasCompileTimeMemoryLayout, StructMemoryLayout, StructType, TypeDesc,
+    type_info::TypeInfo,
+    TypeFields,
 };
 use std::{
     collections::{HashMap, HashSet},
-    hash::Hash,
+    sync::Arc,
 };
 
-pub struct Mapping<T: Eq + Hash, U: TypeDesc + HasCompileTimeMemoryLayout> {
-    pub deletions: HashSet<T>,
-    pub conversions: HashMap<T, Conversion<U>>,
-    pub identical: Vec<(T, T)>,
+pub struct Mapping {
+    pub deletions: HashSet<Arc<TypeInfo>>,
+    pub conversions: HashMap<Arc<TypeInfo>, Conversion>,
+    pub identical: Vec<(Arc<TypeInfo>, Arc<TypeInfo>)>,
 }
 
-pub struct Conversion<T: TypeDesc + HasCompileTimeMemoryLayout> {
-    pub field_mapping: Vec<FieldMapping<T>>,
-    pub new_ty: T,
+pub struct Conversion {
+    pub field_mapping: Vec<FieldMapping>,
+    pub new_ty: Arc<TypeInfo>,
 }
 
 /// Description of the mapping of a single field. When stored together with the new index, this
 /// provides all information necessary for a mapping function.
-pub struct FieldMapping<T: TypeDesc + HasCompileTimeMemoryLayout> {
-    pub new_ty: T,
+pub struct FieldMapping {
+    pub new_ty: Arc<TypeInfo>,
     pub new_offset: usize,
-    pub action: Action<T>,
+    pub action: Action,
 }
 
 /// The `Action` to take when mapping memory from A to B.
 #[derive(Eq, PartialEq)]
-pub enum Action<T: TypeDesc + HasCompileTimeMemoryLayout> {
-    Cast { old_offset: usize, old_ty: T },
-    Copy { old_offset: usize },
+pub enum Action {
+    Cast {
+        old_offset: usize,
+        old_ty: Arc<TypeInfo>,
+    },
+    Copy {
+        old_offset: usize,
+    },
     Insert,
 }
 
-impl<T> Mapping<T, T>
-where
-    T: TypeDesc + CompositeType + HasCompileTimeMemoryLayout + Clone + Eq + Hash,
-    T::StructType: StructType<T> + StructMemoryLayout,
-{
+impl Mapping {
     ///
-    pub fn new(old: &[T], new: &[T]) -> Self {
+    pub fn new(old: &[Arc<TypeInfo>], new: &[Arc<TypeInfo>]) -> Self {
         let diff = diff(old, new);
 
         let mut conversions = HashMap::new();
@@ -60,8 +62,8 @@ where
                     old_index,
                     new_index,
                 } => {
-                    let old_ty = unsafe { old.get_unchecked(*old_index).clone() };
-                    let new_ty = unsafe { new.get_unchecked(*new_index).clone() };
+                    let old_ty = unsafe { old.get_unchecked(*old_index) };
+                    let new_ty = unsafe { new.get_unchecked(*new_index) };
                     conversions.insert(old_ty.clone(), unsafe {
                         field_mapping(old_ty, new_ty, diff)
                     });
@@ -83,7 +85,7 @@ where
 
         // These candidates are used to collect a list of `new_index -> old_index` mappings for
         // identical types.
-        let mut new_candidates: HashSet<T> = new
+        let mut new_candidates: HashSet<_> = new
             .iter()
             // Filter non-struct types
             .filter(|ty| ty.is_struct())
@@ -92,7 +94,7 @@ where
             .cloned()
             .collect();
 
-        let mut old_candidates: HashSet<T> = old
+        let mut old_candidates: HashSet<_> = old
             .iter()
             // Filter non-struct types
             .filter(|ty| ty.is_struct())
@@ -142,16 +144,12 @@ where
 /// # Safety
 ///
 /// Expects the `diff` to be based on `old_ty` and `new_ty`. If not, it causes undefined behavior.
-pub unsafe fn field_mapping<T: Clone + TypeDesc + CompositeType + HasCompileTimeMemoryLayout>(
-    old_ty: T,
-    new_ty: T,
+pub unsafe fn field_mapping(
+    old_ty: &Arc<TypeInfo>,
+    new_ty: &Arc<TypeInfo>,
     diff: &[FieldDiff],
-) -> Conversion<T>
-where
-    T::StructType: StructType<T> + StructMemoryLayout,
-{
-    let old_struct = old_ty.as_struct().expect("old_ty must be a struct type");
-    let old_fields = old_struct.fields();
+) -> Conversion {
+    let old_fields = old_ty.fields();
 
     let deletions: HashSet<usize> = diff
         .iter()
@@ -239,10 +237,7 @@ where
         }
     }
 
-    let new_struct = new_ty.as_struct().expect("new_ty must be a struct type");
-    let new_fields = new_struct.fields();
-    let old_offsets = old_struct.offsets();
-    let new_offsets = new_struct.offsets();
+    let new_fields = new_ty.fields();
     Conversion {
         field_mapping: mapping
             .into_iter()
@@ -250,15 +245,18 @@ where
             .map(|(new_index, desc)| {
                 let old_offset = desc
                     .old_index
-                    .map(|idx| usize::from(*old_offsets.get_unchecked(idx)));
+                    .map(|idx| usize::from(old_fields.get_unchecked(idx).offset));
 
                 FieldMapping {
-                    new_ty: new_fields.get_unchecked(new_index).1.clone(),
-                    new_offset: usize::from(*new_offsets.get_unchecked(new_index)),
+                    new_ty: new_fields.get_unchecked(new_index).type_info.clone(),
+                    new_offset: usize::from(new_fields.get_unchecked(new_index).offset),
                     action: match desc.action {
                         ActionDesc::Cast => Action::Cast {
                             old_offset: old_offset.unwrap(),
-                            old_ty: old_fields.get_unchecked(desc.old_index.unwrap()).1.clone(),
+                            old_ty: old_fields
+                                .get_unchecked(desc.old_index.unwrap())
+                                .type_info
+                                .clone(),
                         },
                         ActionDesc::Copy => Action::Copy {
                             old_offset: old_offset.unwrap(),
@@ -268,15 +266,15 @@ where
                 }
             })
             .collect(),
-        new_ty,
+        new_ty: new_ty.clone(),
     }
 }
 
 /// A trait used to map allocated memory using type differences.
-pub trait MemoryMapper<T: Eq + Hash + TypeDesc + HasCompileTimeMemoryLayout> {
+pub trait MemoryMapper {
     /// Maps its allocated memory using the provided `mapping`.
     ///
     /// A `Vec<GcPtr>` is returned containing all objects of types that were deleted. The
     /// corresponding types have to remain in-memory until the objects have been deallocated.
-    fn map_memory(&self, mapping: Mapping<T, T>) -> Vec<GcPtr>;
+    fn map_memory(&self, mapping: Mapping) -> Vec<GcPtr>;
 }

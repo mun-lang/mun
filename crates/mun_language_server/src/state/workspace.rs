@@ -20,7 +20,7 @@ impl LanguageServerState {
                 Ok(package) => Some(package),
                 Err(err) => {
                     self.show_message(
-                        lsp_types::MessageType::Error,
+                        lsp_types::MessageType::ERROR,
                         format!("mun failed to load package: {:#}", err),
                     );
                     None

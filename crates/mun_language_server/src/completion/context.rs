@@ -47,7 +47,7 @@ impl<'a> CompletionContext<'a> {
             .token_at_offset(position.offset)
             .left_biased()?;
 
-        let scope = sema.scope_at_offset(&token.parent(), position.offset);
+        let scope = sema.scope_at_offset(&token.parent()?, position.offset);
 
         let mut context = Self {
             sema,

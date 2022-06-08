@@ -10,9 +10,9 @@
 //! this mode has all AST accessors.
 
 use crate::{
-    ast::{self, AstNode},
+    ast::{self, AstNode, AstToken},
     SyntaxKind::{self, *},
-    SyntaxNode,
+    SyntaxNode, SyntaxToken,
 };
 
 // ArgList
@@ -1770,5 +1770,86 @@ impl ast::LoopBodyOwner for WhileExpr {}
 impl WhileExpr {
     pub fn condition(&self) -> Option<Condition> {
         super::child_opt(self)
+    }
+}
+
+// IntNumber
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct IntNumber {
+    pub(crate) syntax: SyntaxToken,
+}
+impl std::fmt::Display for IntNumber {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(&self.syntax, f)
+    }
+}
+impl AstToken for IntNumber {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        kind == INT_NUMBER
+    }
+    fn cast(syntax: SyntaxToken) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(Self { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxToken {
+        &self.syntax
+    }
+}
+
+// FloatNumber
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct FloatNumber {
+    pub(crate) syntax: SyntaxToken,
+}
+impl std::fmt::Display for FloatNumber {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(&self.syntax, f)
+    }
+}
+impl AstToken for FloatNumber {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        kind == FLOAT_NUMBER
+    }
+    fn cast(syntax: SyntaxToken) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(Self { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxToken {
+        &self.syntax
+    }
+}
+
+// String
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct String {
+    pub(crate) syntax: SyntaxToken,
+}
+impl std::fmt::Display for String {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(&self.syntax, f)
+    }
+}
+impl AstToken for String {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        kind == STRING
+    }
+    fn cast(syntax: SyntaxToken) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(Self { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxToken {
+        &self.syntax
     }
 }

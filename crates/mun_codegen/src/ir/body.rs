@@ -1,10 +1,8 @@
 use super::MunArrayValue;
-use crate::module_group::ModuleGroup;
 use crate::{
     intrinsics,
-    ir::ty::HirTypeCache,
-    ir::types as ir,
-    ir::{dispatch_table::DispatchTable, type_table::TypeTable},
+    ir::{dispatch_table::DispatchTable, ty::HirTypeCache, type_table::TypeTable},
+    module_group::ModuleGroup,
     value::Global,
 };
 use hir::{
@@ -12,13 +10,14 @@ use hir::{
     Literal, LogicOp, Name, Ordering, Pat, PatId, Path, ResolveBitness, Resolver, Statement,
     TyKind, UnaryOp, ValueNs,
 };
-use inkwell::values::BasicMetadataValueEnum;
 use inkwell::{
     basic_block::BasicBlock,
     builder::Builder,
     context::Context,
-    values::{AggregateValueEnum, GlobalValue, PointerValue},
-    values::{BasicValueEnum, CallSiteValue, FloatValue, FunctionValue, IntValue, StructValue},
+    values::{
+        AggregateValueEnum, BasicMetadataValueEnum, BasicValueEnum, CallSiteValue, FloatValue,
+        FunctionValue, GlobalValue, IntValue, PointerValue, StructValue,
+    },
     AddressSpace, FloatPredicate, IntPredicate,
 };
 use std::{collections::HashMap, sync::Arc};
@@ -32,7 +31,7 @@ struct LoopInfo<'ink> {
 pub(crate) struct ExternalGlobals<'ink> {
     pub alloc_handle: Option<GlobalValue<'ink>>,
     pub dispatch_table: Option<GlobalValue<'ink>>,
-    pub type_table: Option<Global<'ink, [*const ir::TypeInfo<'ink>]>>,
+    pub type_table: Option<Global<'ink, [*const std::ffi::c_void]>>,
 }
 
 pub(crate) struct BodyIrGenerator<'db, 'ink, 't> {

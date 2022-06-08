@@ -9,9 +9,9 @@ fn main() {
     let lib_dir = env::args().nth(1).expect("Expected path to a Mun library.");
     println!("lib: {}", lib_dir);
 
-    let mut runtime = Runtime::builder(lib_dir)
-        .finish()
-        .expect("Failed to spawn Runtime");
+    // Safety: we assume here that the library passed on the commandline is safe.
+    let mut runtime =
+        unsafe { Runtime::builder(lib_dir).finish() }.expect("Failed to spawn Runtime");
 
     loop {
         let n: i64 = runtime
@@ -21,6 +21,8 @@ fn main() {
             .invoke("fibonacci", (n,))
             .unwrap_or_else(|e| e.wait(&mut runtime));
         println!("fibonacci({}) = {}", n, result);
-        runtime.update();
+
+        // Safety: we assume the updates are safe.
+        unsafe { runtime.update() };
     }
 }

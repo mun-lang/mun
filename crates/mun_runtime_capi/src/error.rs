@@ -1,45 +1,36 @@
 //! Exposes error reporting using the C ABI.
 
-use std::ffi::CString;
-use std::hash::Hash;
-use std::os::raw::c_char;
-use std::ptr;
+use std::{ffi::CString, os::raw::c_char, ptr};
 
-use crate::hub::HUB;
-use crate::{Token, TypedHandle};
-
-/// A C-style handle to an error.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, Hash, Eq, PartialEq)]
-pub struct ErrorHandle(Token);
+#[derive(Clone, Copy)]
+/// A C-style handle to an error message.
+///
+/// If the handle contains a non-null pointer, an error occurred.
+pub struct ErrorHandle(pub *const c_char);
 
-impl TypedHandle for ErrorHandle {
-    fn new(token: Token) -> Self {
-        Self(token)
-    }
-
-    fn token(&self) -> Token {
-        self.0
+impl ErrorHandle {
+    /// Constructs an `ErrorHandle` from the specified error message.
+    pub(crate) fn new<T: Into<Vec<u8>>>(error_message: T) -> Self {
+        let error_message = CString::new(error_message).expect("Invalid error message");
+        Self(CString::into_raw(error_message))
     }
 }
 
-/// Destructs the error corresponding to `error_handle`.
-#[no_mangle]
-pub extern "C" fn mun_error_destroy(error_handle: ErrorHandle) {
-    // If an error exists, destroy it
-    let _error = HUB.errors.unregister(error_handle);
+impl Default for ErrorHandle {
+    fn default() -> Self {
+        Self(ptr::null())
+    }
 }
 
-/// Retrieves the error message corresponding to `error_handle`. If the `error_handle` exists, a
-/// valid `char` pointer is returned, otherwise a null-pointer is returned.
+/// Destructs the error message corresponding to the specified handle.
+///
+/// # Safety
+///
+/// Only call this function on an ErrorHandle once.
 #[no_mangle]
-pub extern "C" fn mun_error_message(error_handle: ErrorHandle) -> *const c_char {
-    let errors = HUB.errors.get_data();
-    let error = match errors.get(&error_handle) {
-        Some(error) => error,
-        None => return ptr::null_mut(),
-    };
-
-    let message = format!("{}", error);
-    CString::new(message).unwrap().into_raw() as *const _
+pub unsafe extern "C" fn mun_error_destroy(error: ErrorHandle) {
+    if !error.0.is_null() {
+        let _drop = CString::from_raw(error.0 as *mut c_char);
+    }
 }

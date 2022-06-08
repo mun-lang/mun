@@ -1,19 +1,24 @@
+//! A [`StaticTypeMap`] is a map that maps from a type to a value.
+
 use parking_lot::ReentrantMutex;
 use std::any::TypeId;
 use std::cell::RefCell;
 use std::collections::HashMap;
 
+/// A map that stores static types.
 pub struct StaticTypeMap<T: 'static> {
     map: ReentrantMutex<RefCell<HashMap<TypeId, &'static T>>>,
 }
 
-impl<T: 'static> StaticTypeMap<T> {
-    pub fn new() -> Self {
+impl<T: 'static> Default for StaticTypeMap<T> {
+    fn default() -> Self {
         Self {
             map: ReentrantMutex::new(RefCell::new(HashMap::default())),
         }
     }
+}
 
+impl<T: 'static> StaticTypeMap<T> {
     /// Initialize static value corresponding to provided type.
     ///
     /// Initialized value will stay on heap until program terminated.

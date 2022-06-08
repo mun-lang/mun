@@ -1,30 +1,28 @@
-use super::util::*;
-use mun_memory::diff::{diff, Diff, FieldDiff, FieldEditKind};
+use std::sync::Arc;
 
-// TODO: Once we can generate `Guid`s based on the data layout, we can just directly check
-// `TypeInfo`s against each other.
-fn assert_eq_struct(result: &[TypeInfo], expected: &[TypeInfo]) {
+use crate::{diff::util::*, fake_struct};
+use mun_memory::{
+    diff::{diff, Diff, FieldDiff, FieldEditKind},
+    type_table::TypeTable,
+    TypeInfo,
+};
+
+fn assert_eq_struct(result: &[Arc<TypeInfo>], expected: &[Arc<TypeInfo>]) {
     assert_eq!(result.len(), expected.len());
-    for (lhs, rhs) in result.into_iter().zip(expected.into_iter()) {
-        assert_eq!(lhs.layout, rhs.layout);
-        assert_eq!(lhs.data, rhs.data);
+    for (lhs, rhs) in result.iter().zip(expected.iter()) {
+        assert_eq!(lhs, rhs);
     }
 }
 
 #[test]
 fn add() {
-    let int = TypeInfo::new_fundamental::<i64>();
-    let float = TypeInfo::new_fundamental::<f64>();
+    let type_table = TypeTable::default();
 
-    let struct1 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT1_GUID,
-        StructInfo::new(&[("a", &int), ("b", &float)]),
+    let struct1 = fake_struct!(type_table, "struct1",
+        "a" => i64, "b" => f64
     );
-    let struct2 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT2_GUID,
-        StructInfo::new(&[("c", &float), ("d", &int)]),
+    let struct2 = fake_struct!(type_table, "struct2",
+        "c" => f64, "d" => i64
     );
 
     let old = &[struct1.clone()];
@@ -32,53 +30,40 @@ fn add() {
 
     let diff = diff(old, new);
     assert_eq!(diff, vec![Diff::Insert { index: 1 }]);
-    assert_eq_struct(
-        &apply_diff(old, new, diff),
-        &vec![struct1.clone(), struct2.clone()],
-    );
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct1, struct2]);
 }
 
 #[test]
 fn remove() {
-    let int = TypeInfo::new_fundamental::<i64>();
-    let float = TypeInfo::new_fundamental::<f64>();
+    let type_table = TypeTable::default();
 
-    let struct1 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT1_GUID,
-        StructInfo::new(&[("a", &int), ("b", &float)]),
+    let struct1 = fake_struct!(type_table, "struct1",
+        "a" => i64, "b" => f64
     );
-    let struct2 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT2_GUID,
-        StructInfo::new(&[("c", &float), ("d", &int)]),
+    let struct2 = fake_struct!(type_table, "struct2",
+        "c" => f64, "d" => i64
     );
 
-    let old = &[struct1.clone(), struct2.clone()];
+    let old = &[struct1.clone(), struct2];
     let new = &[struct1.clone()];
 
     let diff = diff(old, new);
     assert_eq!(diff, vec![Diff::Delete { index: 1 },]);
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct1.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct1]);
 }
 
 #[test]
 fn replace() {
-    let int = TypeInfo::new_fundamental::<i64>();
-    let float = TypeInfo::new_fundamental::<f64>();
+    let type_table = TypeTable::default();
 
-    let struct1 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT1_GUID,
-        StructInfo::new(&[("a", &int), ("b", &float)]),
+    let struct1 = fake_struct!(type_table, "struct1",
+        "a" => i64, "b" => f64
     );
-    let struct2 = TypeInfo::new_struct(
-        STRUCT2_NAME,
-        STRUCT2_GUID,
-        StructInfo::new(&[("c", &float), ("d", &int)]),
+    let struct2 = fake_struct!(type_table, "struct2",
+        "c" => f64, "d" => i64
     );
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -86,23 +71,18 @@ fn replace() {
         diff,
         vec![Diff::Delete { index: 0 }, Diff::Insert { index: 0 }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
 fn swap() {
-    let int = TypeInfo::new_fundamental::<i64>();
-    let float = TypeInfo::new_fundamental::<f64>();
+    let type_table = TypeTable::default();
 
-    let struct1 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT1_GUID,
-        StructInfo::new(&[("a", &int), ("b", &float)]),
+    let struct1 = fake_struct!(type_table, "struct1",
+        "a" => i64, "b" => f64
     );
-    let struct2 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT2_GUID,
-        StructInfo::new(&[("c", &float), ("d", &int)]),
+    let struct2 = fake_struct!(type_table, "struct2",
+        "c" => f64, "d" => i64
     );
 
     let old = &[struct1.clone(), struct2.clone()];
@@ -116,29 +96,21 @@ fn swap() {
             new_index: 1
         }]
     );
-    assert_eq_struct(
-        &apply_diff(old, new, diff),
-        &vec![struct2.clone(), struct1.clone()],
-    );
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2, struct1]);
 }
 
 #[test]
 fn add_field1() {
-    let int = TypeInfo::new_fundamental::<i64>();
-    let float = TypeInfo::new_fundamental::<f64>();
+    let type_table = TypeTable::default();
 
-    let struct1 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT1_GUID,
-        StructInfo::new(&[("b", &int), ("c", &float)]),
+    let struct1 = fake_struct!(type_table, "struct1",
+        "b" => i64, "c" => f64
     );
-    let struct2 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT2_GUID,
-        StructInfo::new(&[("a", &int), ("b", &int), ("c", &float)]),
+    let struct2 = fake_struct!(type_table, "struct1",
+        "a" => i64, "b" => i64, "c" => f64
     );
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -150,26 +122,21 @@ fn add_field1() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
 fn add_field2() {
-    let int = TypeInfo::new_fundamental::<i64>();
-    let float = TypeInfo::new_fundamental::<f64>();
+    let type_table = TypeTable::default();
 
-    let struct1 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT1_GUID,
-        StructInfo::new(&[("a", &int), ("c", &float)]),
+    let struct1 = fake_struct!(type_table, "struct1",
+        "a" => i64, "c" => f64
     );
-    let struct2 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT2_GUID,
-        StructInfo::new(&[("a", &int), ("b", &float), ("c", &float)]),
+    let struct2 = fake_struct!(type_table, "struct1",
+        "a" => i64, "b" => f64, "c" => f64
     );
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -181,26 +148,21 @@ fn add_field2() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
 fn add_field3() {
-    let int = TypeInfo::new_fundamental::<i64>();
-    let float = TypeInfo::new_fundamental::<f64>();
+    let type_table = TypeTable::default();
 
-    let struct1 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT1_GUID,
-        StructInfo::new(&[("a", &int), ("b", &float)]),
+    let struct1 = fake_struct!(type_table, "struct1",
+        "a" => i64, "b" => f64
     );
-    let struct2 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT2_GUID,
-        StructInfo::new(&[("a", &int), ("b", &float), ("c", &float)]),
+    let struct2 = fake_struct!(type_table, "struct1",
+        "a" => i64, "b" => f64, "c" => f64
     );
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -212,22 +174,19 @@ fn add_field3() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
 fn remove_field1() {
-    let int = TypeInfo::new_fundamental::<i64>();
-    let float = TypeInfo::new_fundamental::<f64>();
+    let type_table = TypeTable::default();
 
-    let struct1 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT1_GUID,
-        StructInfo::new(&[("a", &float), ("b", &float), ("c", &int)]),
+    let struct1 = fake_struct!(type_table, "struct1",
+        "a" => f64, "b" => f64, "c" => i64
     );
-    let struct2 = TypeInfo::new_struct(STRUCT1_NAME, STRUCT2_GUID, StructInfo::new(&[("c", &int)]));
+    let struct2 = fake_struct!(type_table, "struct1", "c" => i64);
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -242,22 +201,19 @@ fn remove_field1() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
 fn remove_field2() {
-    let int = TypeInfo::new_fundamental::<i64>();
-    let float = TypeInfo::new_fundamental::<f64>();
+    let type_table = TypeTable::default();
 
-    let struct1 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT1_GUID,
-        StructInfo::new(&[("a", &float), ("b", &int), ("c", &float)]),
+    let struct1 = fake_struct!(type_table, "struct1",
+        "a" => f64, "b" => i64, "c" => f64
     );
-    let struct2 = TypeInfo::new_struct(STRUCT1_NAME, STRUCT2_GUID, StructInfo::new(&[("b", &int)]));
+    let struct2 = fake_struct!(type_table, "struct1", "b" => i64);
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -272,22 +228,19 @@ fn remove_field2() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
 fn remove_field3() {
-    let int = TypeInfo::new_fundamental::<i64>();
-    let float = TypeInfo::new_fundamental::<f64>();
+    let type_table = TypeTable::default();
 
-    let struct1 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT1_GUID,
-        StructInfo::new(&[("a", &int), ("b", &float), ("c", &float)]),
+    let struct1 = fake_struct!(type_table, "struct1",
+        "a" => i64, "b" => f64, "c" => f64
     );
-    let struct2 = TypeInfo::new_struct(STRUCT1_NAME, STRUCT2_GUID, StructInfo::new(&[("a", &int)]));
+    let struct2 = fake_struct!(type_table, "struct1", "a" => i64);
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -302,26 +255,21 @@ fn remove_field3() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
 fn swap_fields() {
-    let int = TypeInfo::new_fundamental::<i64>();
-    let float = TypeInfo::new_fundamental::<f64>();
+    let type_table = TypeTable::default();
 
-    let struct1 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT1_GUID,
-        StructInfo::new(&[("a", &float), ("b", &int), ("c", &float)]),
+    let struct1 = fake_struct!(type_table, "struct1",
+        "a" => f64, "b" => i64, "c" => f64
     );
-    let struct2 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT2_GUID,
-        StructInfo::new(&[("c", &float), ("a", &float), ("b", &int)]),
+    let struct2 = fake_struct!(type_table, "struct1",
+        "c" => f64, "a" => f64, "b" => i64
     );
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -337,26 +285,21 @@ fn swap_fields() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
 fn swap_fields2() {
-    let int = TypeInfo::new_fundamental::<i64>();
-    let float = TypeInfo::new_fundamental::<f64>();
+    let type_table = TypeTable::default();
 
-    let struct1 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT1_GUID,
-        StructInfo::new(&[("a", &float), ("b", &int), ("c", &float), ("d", &int)]),
+    let struct1 = fake_struct!(type_table, "struct1",
+        "a" => f64, "b" => i64, "c" => f64, "d" => i64
     );
-    let struct2 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT2_GUID,
-        StructInfo::new(&[("d", &int), ("c", &float), ("b", &int), ("a", &float)]),
+    let struct2 = fake_struct!(type_table, "struct1",
+        "d" => i64, "c" => f64, "b" => i64, "a" => f64
     );
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -384,26 +327,21 @@ fn swap_fields2() {
             new_index: 0
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
 fn cast_field() {
-    let int = TypeInfo::new_fundamental::<i64>();
-    let float = TypeInfo::new_fundamental::<f64>();
+    let type_table = TypeTable::default();
 
-    let struct1 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT1_GUID,
-        StructInfo::new(&[("a", &int), ("b", &float), ("c", &float)]),
+    let struct1 = fake_struct!(type_table, "struct1",
+        "a" => i64, "b" => f64, "c" => f64
     );
-    let struct2 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT2_GUID,
-        StructInfo::new(&[("a", &float), ("b", &int), ("c", &int)]),
+    let struct2 = fake_struct!(type_table, "struct1",
+        "a" => f64, "b" => i64, "c" => i64
     );
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -428,26 +366,21 @@ fn cast_field() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
 fn rename_field1() {
-    let int = TypeInfo::new_fundamental::<i64>();
-    let float = TypeInfo::new_fundamental::<f64>();
+    let type_table = TypeTable::default();
 
-    let struct1 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT1_GUID,
-        StructInfo::new(&[("a", &int), ("b", &float), ("c", &float)]),
+    let struct1 = fake_struct!(type_table, "struct1",
+        "a" => i64, "b" => f64, "c" => f64
     );
-    let struct2 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT2_GUID,
-        StructInfo::new(&[("a", &int), ("d", &float), ("c", &float)]),
+    let struct2 = fake_struct!(type_table, "struct1",
+        "a" => i64, "d" => f64, "c" => f64
     );
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -462,26 +395,21 @@ fn rename_field1() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }
 
 #[test]
 fn rename_field2() {
-    let int = TypeInfo::new_fundamental::<i64>();
-    let float = TypeInfo::new_fundamental::<f64>();
+    let type_table = TypeTable::default();
 
-    let struct1 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT1_GUID,
-        StructInfo::new(&[("a", &int), ("b", &float), ("c", &float)]),
+    let struct1 = fake_struct!(type_table, "struct1",
+        "a" => i64, "b" => f64, "c" => f64
     );
-    let struct2 = TypeInfo::new_struct(
-        STRUCT1_NAME,
-        STRUCT2_GUID,
-        StructInfo::new(&[("d", &int), ("e", &float), ("f", &float)]),
+    let struct2 = fake_struct!(type_table, "struct1",
+        "d" => i64, "e" => f64, "f" => f64
     );
 
-    let old = &[struct1.clone()];
+    let old = &[struct1];
     let new = &[struct2.clone()];
 
     let diff = diff(old, new);
@@ -506,5 +434,5 @@ fn rename_field2() {
             new_index: 0,
         }]
     );
-    assert_eq_struct(&apply_diff(old, new, diff), &vec![struct2.clone()]);
+    assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
 }

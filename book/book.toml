@@ -8,4 +8,5 @@ title = "The Mun Programming Language"
 [output.html]
 additional-css = ["theme/mun.css"]
 additional-js = ["theme/trailing_slash_hack.js"]
-git-repository-url = "https://github.com/mun-lang/mun/tree/master/book"
+git-repository-url = "https://github.com/mun-lang/mun/tree/main/book"
+edit-url-template = "https://github.com/mun-lang/mun/edit/main/book/{path}"

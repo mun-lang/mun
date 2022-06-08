@@ -1,9 +1,8 @@
-use crate::{HasStaticTypeInfo, TypeInfo};
+use crate::{HasStaticTypeInfo, TypeId, TypeInfo};
 use std::{
     ffi::{c_void, CStr, CString},
-    fmt::{self, Formatter},
     os::raw::c_char,
-    ptr, slice, str,
+    slice, str,
 };
 
 /// Represents a function definition. A function definition contains the name, type signature, and
@@ -35,9 +34,9 @@ pub struct FunctionPrototype {
 #[derive(Clone)]
 pub struct FunctionSignature {
     /// Argument types
-    pub(crate) arg_types: *const *const TypeInfo,
+    pub arg_types: *const TypeId,
     /// Optional return type
-    pub(crate) return_type: *const TypeInfo,
+    pub return_type: TypeId,
     /// Number of argument types
     pub num_arg_types: u16,
 }
@@ -45,7 +44,7 @@ pub struct FunctionSignature {
 /// Owned storage for C-style `FunctionDefinition`.
 pub struct FunctionDefinitionStorage {
     _name: CString,
-    _type_infos: Vec<&'static TypeInfo>,
+    _arg_types: Vec<TypeId>,
 }
 
 unsafe impl Send for FunctionDefinition {}
@@ -58,67 +57,32 @@ impl FunctionPrototype {
     }
 }
 
-impl fmt::Display for FunctionPrototype {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "fn {}(", self.name())?;
-        for (i, arg) in self.signature.arg_types().iter().enumerate() {
-            if i > 0 {
-                write!(f, ", ")?;
-            }
-            write!(f, "{}", arg)?;
-        }
-        write!(f, ")")?;
-        if let Some(ret_type) = self.signature.return_type() {
-            write!(f, "->{}", ret_type)?
-        }
-        Ok(())
-    }
-}
-
 unsafe impl Send for FunctionPrototype {}
 unsafe impl Sync for FunctionPrototype {}
 
 impl FunctionSignature {
     /// Returns the function's arguments' types.
-    pub fn arg_types(&self) -> &[&TypeInfo] {
+    pub fn arg_types(&self) -> &[TypeId] {
         if self.num_arg_types == 0 {
             &[]
         } else {
-            unsafe {
-                slice::from_raw_parts(
-                    self.arg_types.cast::<&TypeInfo>(),
-                    self.num_arg_types as usize,
-                )
-            }
+            unsafe { slice::from_raw_parts(self.arg_types, self.num_arg_types as usize) }
         }
     }
 
-    /// Returns the function's return type
-    pub fn return_type(&self) -> Option<&TypeInfo> {
-        unsafe { self.return_type.as_ref() }
-    }
-}
-
-impl fmt::Display for FunctionSignature {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "fn(")?;
-        for (i, arg) in self.arg_types().iter().enumerate() {
-            if i > 0 {
-                write!(f, ", ")?;
-            }
-            write!(f, "{}", arg)?;
+    /// Returns the function's return type.
+    pub fn return_type(&self) -> Option<TypeId> {
+        if self.return_type == <()>::type_info().id {
+            None
+        } else {
+            Some(self.return_type.clone())
         }
-        write!(f, ")")?;
-        if let Some(ret_type) = self.return_type() {
-            write!(f, ":{}", ret_type)?
-        }
-        Ok(())
     }
 }
 
 impl PartialEq for FunctionSignature {
     fn eq(&self, other: &Self) -> bool {
-        self.return_type() == other.return_type()
+        self.return_type == other.return_type
             && self.arg_types().len() == other.arg_types().len()
             && self
                 .arg_types()
@@ -139,26 +103,19 @@ impl FunctionDefinitionStorage {
     pub fn new_function(
         name: &str,
         args: &[&'static TypeInfo],
-        ret: Option<&'static TypeInfo>,
+        ret: &'static TypeInfo,
         fn_ptr: *const c_void,
     ) -> (FunctionDefinition, FunctionDefinitionStorage) {
         let name = CString::new(name).unwrap();
-        let type_infos = args.to_vec();
-
-        let num_arg_types = type_infos.len() as u16;
-        let return_type = if let Some(ty) = ret {
-            ty as *const _
-        } else {
-            ptr::null()
-        };
+        let arg_types: Vec<TypeId> = args.iter().map(|ty| ty.id.clone()).collect();
 
         let fn_info = FunctionDefinition {
             prototype: FunctionPrototype {
                 name: name.as_ptr(),
                 signature: FunctionSignature {
-                    arg_types: type_infos.as_ptr() as *const *const _,
-                    return_type,
-                    num_arg_types,
+                    arg_types: arg_types.as_ptr(),
+                    return_type: ret.id.clone(),
+                    num_arg_types: arg_types.len() as u16,
                 },
             },
             fn_ptr,
@@ -166,7 +123,7 @@ impl FunctionDefinitionStorage {
 
         let fn_storage = FunctionDefinitionStorage {
             _name: name,
-            _type_infos: type_infos,
+            _arg_types: arg_types,
         };
 
         (fn_info, fn_storage)
@@ -191,20 +148,7 @@ macro_rules! into_function_info_impl {
                     FunctionDefinitionStorage::new_function(
                         name.as_ref(),
                         &[$($T::type_info(),)*],
-                        Some($R::type_info()),
-                        self as *const std::ffi::c_void,
-                    )
-                }
-            }
-
-            impl<$($T: HasStaticTypeInfo,)*> IntoFunctionDefinition
-            for extern "C" fn($($T),*)
-            {
-                fn into<S: AsRef<str>>(self, name: S) -> (FunctionDefinition, FunctionDefinitionStorage) {
-                    FunctionDefinitionStorage::new_function(
-                        name.as_ref(),
-                        &[$($T::type_info(),)*],
-                        None,
+                        $R::type_info(),
                         self as *const std::ffi::c_void,
                     )
                 }
@@ -258,7 +202,7 @@ mod tests {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
         let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
-        let arg_types = &[&type_info];
+        let arg_types = &[type_info.id];
         let fn_signature = fake_fn_signature(arg_types, None);
 
         assert_eq!(fn_signature.arg_types(), arg_types);
@@ -267,7 +211,7 @@ mod tests {
     #[test]
     fn test_fn_signature_return_type_none() {
         let return_type = None;
-        let fn_signature = fake_fn_signature(&[], return_type);
+        let fn_signature = fake_fn_signature(&[], return_type.clone());
 
         assert_eq!(fn_signature.return_type(), return_type);
     }
@@ -277,8 +221,8 @@ mod tests {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
         let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
 
-        let return_type = Some(&type_info);
-        let fn_signature = fake_fn_signature(&[], return_type);
+        let return_type = Some(type_info.id);
+        let fn_signature = fake_fn_signature(&[], return_type.clone());
 
         assert_eq!(fn_signature.return_type(), return_type);
     }

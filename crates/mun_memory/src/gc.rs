@@ -1,9 +1,11 @@
+mod array;
 mod mark_sweep;
 mod ptr;
 mod root_ptr;
 
-use crate::{ArrayMemoryLayout, CompositeType};
-use std::marker::PhantomData;
+use crate::type_info::TypeInfo;
+use std::ptr::NonNull;
+use std::{marker::PhantomData, sync::Arc};
 
 pub use mark_sweep::MarkSweep;
 pub use ptr::{GcPtr, HasIndirectionPtr, RawGcPtr};
@@ -16,24 +18,42 @@ pub struct Stats {
 }
 
 /// A trait used to trace an object type.
-pub trait TypeTrace {
-    /// Calls the function `f` for every GcPtr stored in `obj`.
-    fn trace<F: FnMut(GcPtr)>(&self, obj: GcPtr, f: F);
+pub trait TypeTrace: Send + Sync {
+    type Trace: Iterator<Item = GcPtr>;
+
+    /// Returns an iterator to iterate over all GC objects that are referenced by the given object.
+    fn trace(&self, obj: GcPtr) -> Self::Trace;
+}
+
+/// A trait used to iterate over array elements
+pub trait ArrayHandle: Sized {
+    type Iterator: Iterator<Item = NonNull<u8>>;
+
+    /// Returns the length of the array
+    fn length(&self) -> usize;
+
+    /// Returns the capacity of the array
+    fn capacity(&self) -> usize;
+
+    /// Returns an iterator over the elements of the array
+    fn elements(&self) -> Self::Iterator;
 }
 
 /// An object that can be used to allocate and collect memory.
-pub trait GcRuntime<T>: Send + Sync {
-    /// Allocates an object of the given type returning a GcPtr
-    fn alloc(&self, ty: T) -> GcPtr;
+pub trait GcRuntime: Send + Sync {
+    type Array: ArrayHandle;
 
-    /// Allocates an array of the given type. `T` must be an array type.
-    fn alloc_array(&self, ty: T, n: usize) -> GcPtr
-    where
-        T: CompositeType,
-        T::ArrayType: ArrayMemoryLayout;
+    /// Allocates an object of the given type returning a GcPtr
+    fn alloc(&self, ty: &Arc<TypeInfo>) -> GcPtr;
+
+    /// Allocates an array of the given type. `ty` must be an array type.
+    fn alloc_array(&self, ty: &Arc<TypeInfo>, n: usize) -> GcPtr;
 
     /// Returns the type of the specified `obj`.
-    fn ptr_type(&self, obj: GcPtr) -> T;
+    fn ptr_type(&self, obj: GcPtr) -> Arc<TypeInfo>;
+
+    /// Returns array information of the specified handle
+    fn array(&self, handle: GcPtr) -> Option<Self::Array>;
 
     /// Roots the specified `obj`, which keeps it and objects it references alive. Objects marked
     /// as root, must call `unroot` before they can be collected. An object can be rooted multiple

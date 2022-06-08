@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "mun/runtime_capi.h"
+#include "mun/static_type_info.h"
 #include "mun/type_info.h"
 #include "mun/util.h"
 
@@ -21,8 +22,8 @@ struct RuntimeFunction {
     template <typename TRet, typename... TArgs>
     RuntimeFunction(std::string_view name, TRet(MUN_CALLTYPE* fn_ptr)(TArgs...))
         : name(name),
-          arg_types({arg_type_info<TArgs>()...}),
-          ret_type(return_type_info<TRet>()),
+          arg_types({StaticTypeInfo<TArgs>::id()...}),
+          ret_type(StaticTypeInfo<TRet>::id()),
           fn_ptr(reinterpret_cast<const void*>(fn_ptr)) {}
 
     RuntimeFunction(const RuntimeFunction&) = default;
@@ -31,8 +32,8 @@ struct RuntimeFunction {
     RuntimeFunction& operator=(RuntimeFunction&&) = default;
 
     std::string name;
-    std::vector<MunTypeInfo const*> arg_types;
-    std::optional<MunTypeInfo const*> ret_type;
+    std::vector<MunTypeId> arg_types;
+    MunTypeId ret_type;
     const void* fn_ptr;
 };
 }  // namespace mun

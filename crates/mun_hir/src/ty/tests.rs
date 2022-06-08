@@ -1346,11 +1346,11 @@ fn infer(content: &str) -> String {
 
             let (range, text) = (
                 src_ptr.value.range(),
-                node.text().to_string().replace("\n", " "),
+                node.text().to_string().replace('\n', " "),
             );
-            write!(
+            writeln!(
                 acc,
-                "{:?} '{}': {}\n",
+                "{:?} '{}': {}",
                 range,
                 ellipsize(text, 15),
                 ty.display(&db)
@@ -1362,7 +1362,7 @@ fn infer(content: &str) -> String {
     let mut diags = String::new();
 
     let mut diag_sink = DiagnosticSink::new(|diag| {
-        write!(diags, "{:?}: {}\n", diag.highlight_range(), diag.message()).unwrap();
+        writeln!(diags, "{:?}: {}", diag.highlight_range(), diag.message()).unwrap();
     });
 
     for package in Package::all(&db).iter() {

@@ -140,12 +140,11 @@ mod test {
     fn test_compute_source_relative_path() {
         let source_dir = Path::new("some_path/src");
         assert_eq!(
-            compute_source_relative_path(&source_dir, &source_dir.join("main.mun")).unwrap(),
+            compute_source_relative_path(source_dir, &source_dir.join("main.mun")).unwrap(),
             RelativePath::new("main.mun")
         );
         assert_eq!(
-            compute_source_relative_path(&source_dir, &source_dir.join("foo/bar/main.mun"))
-                .unwrap(),
+            compute_source_relative_path(source_dir, &source_dir.join("foo/bar/main.mun")).unwrap(),
             RelativePath::new("foo/bar/main.mun")
         );
     }

@@ -1,5 +1,7 @@
+use memory::TypeInfo;
+
 use crate::Runtime;
-use std::ptr::NonNull;
+use std::{ptr::NonNull, sync::Arc};
 
 /// Used to do value-to-value conversions that require runtime type information while consuming the
 /// input value.
@@ -22,12 +24,12 @@ pub trait Marshal<'t>: Sized {
     fn marshal_from_ptr<'r>(
         ptr: NonNull<Self::MunType>,
         runtime: &'r Runtime,
-        type_info: Option<&abi::TypeInfo>,
+        type_info: &Arc<TypeInfo>,
     ) -> Self
     where
         Self: 't,
         'r: 't;
 
     /// Marshals `value` to memory location `ptr` (i.e. Rust -> Mun).
-    fn marshal_to_ptr(value: Self, ptr: NonNull<Self::MunType>, type_info: Option<&abi::TypeInfo>);
+    fn marshal_to_ptr(value: Self, ptr: NonNull<Self::MunType>, type_info: &Arc<TypeInfo>);
 }

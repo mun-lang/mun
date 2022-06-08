@@ -26,11 +26,13 @@ fn test_abi_compatibility() {
     ));
 
     // Assert that all library functions are exposed
-    let lib = MunLibrary::new(driver.lib_path()).expect("Failed to load generated Mun library.");
+    // Safety: We compiled the code ourselves, therefor loading the library is safe
+    let lib = unsafe { MunLibrary::new(driver.lib_path()) }
+        .expect("Failed to load generated Mun library.");
 
-    assert_eq!(ABI_VERSION, lib.get_abi_version());
+    assert_eq!(ABI_VERSION, unsafe { lib.get_abi_version() });
 
-    let lib_info = lib.get_info();
+    let lib_info = unsafe { lib.get_info() };
 
     // Dependency compatibility
     assert_eq!(lib_info.num_dependencies, 0);
@@ -44,7 +46,7 @@ fn test_abi_compatibility() {
     assert_eq!(module_info.num_functions, 2);
 
     let fn_def = get_function_info(module_info, fn_name);
-    test_function_args(fn_def, &[(f64::type_name(), f64::type_guid())]);
+    test_function_args(fn_def, &[(f64::type_name(), f64::type_id())]);
     test_function_return_type_some::<i32>(fn_def);
 
     let fn_def2 = get_function_info(module_info, fn_name2);
@@ -78,31 +80,29 @@ fn test_abi_compatibility() {
             .functions()
             .iter()
             .find(|f| f.prototype.name() == fn_name)
-            .expect(&format!(
-                "Failed to retrieve function definition '{}'",
-                fn_name
-            ))
+            .unwrap_or_else(|| panic!("Failed to retrieve function definition '{}'", fn_name))
     }
 
-    fn test_function_args(fn_def: &abi::FunctionDefinition, args: &[(&str, abi::Guid)]) {
+    fn test_function_args(fn_def: &abi::FunctionDefinition, args: &[(&str, abi::TypeId)]) {
         assert_eq!(
             usize::from(fn_def.prototype.signature.num_arg_types),
             args.len()
         );
 
-        for (idx, (arg_name, arg_guid)) in args.iter().enumerate() {
+        for (idx, (_, arg_type_id)) in args.iter().enumerate() {
             let fn_arg_type = fn_def
                 .prototype
                 .signature
                 .arg_types()
                 .get(idx)
-                .expect(&format!(
-                    "Function '{}' should have an argument.",
-                    fn_def.prototype.name()
-                ));
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Function '{}' should have an argument.",
+                        fn_def.prototype.name()
+                    )
+                });
 
-            assert_eq!(fn_arg_type.guid, *arg_guid);
-            assert_eq!(fn_arg_type.name(), *arg_name);
+            assert_eq!(fn_arg_type, arg_type_id);
         }
     }
 
@@ -116,12 +116,13 @@ fn test_abi_compatibility() {
     }
 
     fn test_function_return_type_some<R: ReturnTypeReflection>(fn_def: &abi::FunctionDefinition) {
-        let fn_return_type = fn_def.prototype.signature.return_type().expect(&format!(
-            "Function '{}' should have a return type.",
-            fn_def.prototype.name()
-        ));
-        assert_eq!(fn_return_type.guid, R::type_guid());
-        assert_eq!(fn_return_type.name(), R::type_name());
+        let fn_return_type = fn_def.prototype.signature.return_type().unwrap_or_else(|| {
+            panic!(
+                "Function '{}' should have a return type.",
+                fn_def.prototype.name()
+            )
+        });
+        assert_eq!(fn_return_type, R::type_id());
     }
 
     fn test_struct_info<T: Sized, F: Sized + ReturnTypeReflection>(
@@ -134,7 +135,7 @@ fn test_abi_compatibility() {
             .types()
             .iter()
             .find(|ty| ty.name() == struct_name)
-            .expect(&format!("Failed to retrieve struct '{}'", struct_name));
+            .unwrap_or_else(|| panic!("Failed to retrieve struct '{}'", struct_name));
 
         assert_eq!(type_info.name(), struct_name);
         assert_eq!(type_info.size_in_bits(), 8 * mem::size_of::<T>());
@@ -153,8 +154,7 @@ fn test_abi_compatibility() {
             assert_eq!(lhs, *rhs);
         }
         for field_type in struct_info.field_types().iter() {
-            assert_eq!(field_type.guid, F::type_guid());
-            assert_eq!(field_type.name(), F::type_name());
+            assert_eq!(field_type.guid, F::type_id().guid);
         }
 
         let mut offset = 0;

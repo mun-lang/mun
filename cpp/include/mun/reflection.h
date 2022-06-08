@@ -10,57 +10,51 @@
 #include "mun/type_info.h"
 
 namespace mun {
-constexpr inline bool operator==(const MunGuid& lhs, const MunGuid& rhs) noexcept {
+constexpr inline bool operator==(const MunTypeId& lhs, const MunTypeId& rhs) noexcept {
     for (auto idx = 0; idx < 16; ++idx) {
-        if (lhs._0[idx] != rhs._0[idx]) {
+        if (lhs.guid._0[idx] != rhs.guid._0[idx]) {
             return false;
         }
     }
     return true;
 }
 
-constexpr inline bool operator!=(const MunGuid& lhs, const MunGuid& rhs) noexcept {
+constexpr inline bool operator!=(const MunTypeId& lhs, const MunTypeId& rhs) noexcept {
     return !(lhs == rhs);
 }
 
 template <typename T>
 struct ArgumentReflection {
-    static constexpr const char* type_name(const T&) noexcept { return TypeInfo<T>::Type.name; }
-    static constexpr MunGuid type_guid(const T&) noexcept { return TypeInfo<T>::Type.guid; }
+    static constexpr const char* type_name(const T&) noexcept { return StaticTypeInfo<T>::name(); }
+    static constexpr MunTypeId type_id(const T&) noexcept { return StaticTypeInfo<T>::id(); }
 };
 
 template <typename T>
 struct ReturnTypeReflection {
-    static constexpr const char* type_name() noexcept { return TypeInfo<T>::Type.name; }
-    static constexpr MunGuid type_guid() noexcept { return TypeInfo<T>::Type.guid; }
-};
-
-template <>
-struct ReturnTypeReflection<void> {
-    static constexpr const char* type_name() noexcept { return "core::empty"; }
-    static constexpr MunGuid type_guid() noexcept { return details::type_guid(type_name()); }
+    static constexpr const char* type_name() noexcept { return StaticTypeInfo<T>::name(); }
+    static constexpr MunTypeId type_id() noexcept { return StaticTypeInfo<T>::id(); }
 };
 
 namespace reflection {
 template <typename T, typename U>
 constexpr bool equal_types() noexcept {
-    return ReturnTypeReflection<T>::type_guid() == ReturnTypeReflection<U>::type_guid();
+    return ReturnTypeReflection<T>::type_id() == ReturnTypeReflection<U>::type_id();
 }
 
 template <typename Arg>
 inline std::optional<std::pair<const char*, const char*>> equals_argument_type(
-    const MunTypeInfo& type_info, const Arg& arg) noexcept {
-    if (type_info.guid == ArgumentReflection<Arg>::type_guid(arg)) {
+    const TypeInfo& type_info, const Arg& arg) noexcept {
+    if (type_info.id() == ArgumentReflection<Arg>::type_id(arg)) {
         return std::nullopt;
     } else {
         const auto expected_name = ArgumentReflection<Arg>::type_name(arg);
-        return std::make_pair(type_info.name, expected_name);
+        return std::make_pair(type_info.name().data(), expected_name);
     }
 }
 
 template <typename T>
 inline std::optional<std::pair<const char*, const char*>> equals_return_type(
-    const MunTypeInfo& type_info) noexcept;
+    const TypeInfo& type_info) noexcept;
 
 }  // namespace reflection
 
@@ -72,13 +66,13 @@ namespace mun {
 namespace reflection {
 template <typename T>
 std::optional<std::pair<const char*, const char*>> equals_return_type(
-    const MunTypeInfo& type_info) noexcept {
-    if (type_info.data.tag == MunTypeInfoData_Tag::Primitive) {
-        if (type_info.guid != ReturnTypeReflection<T>::type_guid()) {
-            return std::make_pair(type_info.name, ReturnTypeReflection<T>::type_name());
+    const TypeInfo& type_info) noexcept {
+    if (type_info.data().tag == MunTypeInfoData_Tag::Primitive) {
+        if (type_info.id() != ReturnTypeReflection<T>::type_id()) {
+            return std::make_pair(type_info.name().data(), ReturnTypeReflection<T>::type_name());
         }
     } else if (!reflection::equal_types<StructRef, T>()) {
-        return std::make_pair(type_info.name, ReturnTypeReflection<T>::type_name());
+        return std::make_pair(type_info.name().data(), ReturnTypeReflection<T>::type_name());
     }
 
     return std::nullopt;

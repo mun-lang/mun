@@ -1,4 +1,4 @@
-use crate::{DispatchTable, ModuleInfo};
+use crate::{DispatchTable, ModuleInfo, TypeLut};
 use std::{ffi::CStr, os::raw::c_char, slice, str};
 
 /// Represents an assembly declaration.
@@ -6,8 +6,10 @@ use std::{ffi::CStr, os::raw::c_char, slice, str};
 pub struct AssemblyInfo {
     /// Symbols of the top-level module
     pub symbols: ModuleInfo,
-    /// Dispatch table
+    /// Function dispatch table
     pub dispatch_table: DispatchTable,
+    /// Type lookup table
+    pub type_lut: TypeLut,
     /// Paths to assembly dependencies
     pub(crate) dependencies: *const *const c_char,
     /// Number of dependencies
@@ -35,7 +37,7 @@ unsafe impl Sync for AssemblyInfo {}
 #[cfg(test)]
 mod tests {
     use crate::test_utils::{
-        fake_assembly_info, fake_dispatch_table, fake_module_info, FAKE_DEPENDENCY,
+        fake_assembly_info, fake_dispatch_table, fake_module_info, fake_type_lut, FAKE_DEPENDENCY,
         FAKE_MODULE_PATH,
     };
     use std::ffi::CString;
@@ -46,10 +48,11 @@ mod tests {
         let module = fake_module_info(&module_path, &[], &[]);
 
         let dispatch_table = fake_dispatch_table(&[], &mut []);
+        let type_lut = fake_type_lut(&[], &mut [], &[]);
 
         let dependency = CString::new(FAKE_DEPENDENCY).expect("Invalid fake dependency.");
         let dependencies = &[dependency.as_ptr()];
-        let assembly = fake_assembly_info(module, dispatch_table, dependencies);
+        let assembly = fake_assembly_info(module, dispatch_table, type_lut, dependencies);
 
         assert_eq!(assembly.dependencies().count(), dependencies.len());
         for (lhs, rhs) in assembly.dependencies().zip([FAKE_DEPENDENCY].iter()) {

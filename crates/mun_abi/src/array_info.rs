@@ -1,16 +1,16 @@
-use crate::TypeInfo;
+use crate::TypeId;
 
 /// Represents an array declaration.
 #[repr(C)]
 #[derive(Debug)]
 pub struct ArrayInfo {
-    pub(crate) element_type: *const TypeInfo,
+    pub(crate) element_type: TypeId,
 }
 
 impl ArrayInfo {
     /// Returns the array's element type
-    pub fn element_type(&self) -> &TypeInfo {
-        unsafe { self.element_type.as_ref() }.expect("element_type can never be null")
+    pub fn element_type(&self) -> &TypeId {
+        &self.element_type
     }
 }
 

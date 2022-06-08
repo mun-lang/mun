@@ -84,7 +84,7 @@ pub struct TypeVariableTable {
 
 struct TypeVariableData {
     //    origin: TypeVariableOrigin,
-//    diverging: bool,
+    //    diverging: bool,
 }
 
 struct Instantiate {

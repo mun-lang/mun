@@ -9,7 +9,7 @@
 use crate::{
     parsing::ParseError,
     syntax_error::{SyntaxError, SyntaxErrorKind},
-    Parse, SmolStr, SyntaxKind, TextSize,
+    Parse, SyntaxKind, TextSize,
 };
 use rowan::{GreenNodeBuilder, Language};
 
@@ -59,14 +59,14 @@ impl SyntaxTreeBuilder {
 
     pub fn finish(self) -> Parse<SyntaxNode> {
         let (green, errors) = self.finish_raw();
-        let node = SyntaxNode::new_root(green);
         //        if cfg!(debug_assertions) {
+        //            let node = SyntaxNode::new_root(green);
         //            crate::validation::validate_block_structure(&node);
         //        }
-        Parse::new(node.green().clone(), errors)
+        Parse::new(green, errors)
     }
 
-    pub fn token(&mut self, kind: SyntaxKind, text: SmolStr) {
+    pub fn token(&mut self, kind: SyntaxKind, text: &str) {
         let kind = MunLanguage::kind_to_raw(kind);
         self.inner.token(kind, text)
     }

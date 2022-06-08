@@ -1,4 +1,5 @@
 use mun_test::CompileAndRunTestDriver;
+use std::io;
 
 #[macro_use]
 mod util;
@@ -162,8 +163,15 @@ fn error_assembly_not_linkable() {
     ",
         |builder| builder,
     );
-    assert!(
-        format!("{}", driver.unwrap_err()).contains("Failed to link due to missing dependencies.")
+    assert_eq!(
+        format!("{}", driver.unwrap_err()),
+        format!(
+            "{}",
+            io::Error::new(
+                io::ErrorKind::NotFound,
+                "Failed to link due to missing dependencies.\n- dependency".to_string(),
+            )
+        )
     );
 }
 

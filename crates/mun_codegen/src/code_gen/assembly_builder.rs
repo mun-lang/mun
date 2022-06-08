@@ -74,9 +74,13 @@ impl<'db, 'ink, 'ctx, 't> AssemblyBuilder<'db, 'ink, 'ctx, 't> {
         };
 
         // Build the set of dependencies
+        let direct_children = module_group
+            .iter()
+            .flat_map(|module| module.children(self.code_gen.db))
+            .collect();
         let dependencies = group_ir
             .referenced_modules
-            .iter()
+            .union(&direct_children)
             .filter_map(|&module| self.module_group_partition.group_for_module(module))
             .collect::<FxHashSet<_>>()
             .into_iter()
@@ -91,7 +95,8 @@ impl<'db, 'ink, 'ctx, 't> AssemblyBuilder<'db, 'ink, 'ctx, 't> {
         symbols::gen_reflection_ir(
             self.code_gen.db,
             &value_context,
-            &file.api,
+            &file.function_definitions,
+            &file.type_definitions,
             &group_ir.dispatch_table,
             &group_ir.type_table,
             &self.code_gen.hir_types,
