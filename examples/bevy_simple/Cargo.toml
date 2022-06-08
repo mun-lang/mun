@@ -1,0 +1,16 @@
+[package]
+name = "bevy_simple"
+version = "0.1.0"
+authors = []
+edition = "2021"
+description = "An example of how to insert the Mun runtime into a Bevy world object and utilize it inside of Bevy systems"
+
+[dependencies]
+mun_runtime = { path = "../../crates/mun_runtime", package = "mun_runtime" }
+ 
+
+[dependencies.bevy]
+version = "0.7"
+
+[workspace]
+
