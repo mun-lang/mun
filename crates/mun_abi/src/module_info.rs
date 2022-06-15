@@ -61,6 +61,7 @@ unsafe impl Sync for ModuleInfo {}
 
 #[cfg(test)]
 mod tests {
+    use crate::test_utils::fake_primitive_type_info;
     use crate::{
         test_utils::{
             fake_fn_prototype, fake_module_info, fake_struct_info, fake_type_info, FAKE_FN_NAME,
@@ -92,9 +93,9 @@ mod tests {
     #[test]
     fn test_module_info_types_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
+        let (_type_info, type_id) = fake_primitive_type_info(&type_name, 1, 1);
 
-        let return_type = Some(type_info.id);
+        let return_type = Some(type_id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
         let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
 
@@ -105,7 +106,7 @@ mod tests {
         let functions = &[fn_info];
 
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name");
-        let struct_info = fake_struct_info(&[], &[], &[], Default::default());
+        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], Default::default());
         let type_info = fake_type_info(&struct_name, 1, 1, TypeInfoData::Struct(struct_info));
         let types = [type_info];
 

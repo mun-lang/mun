@@ -1,9 +1,10 @@
-use crate::{HasStaticTypeInfo, TypeId, TypeInfo};
 use std::{
-    ffi::{c_void, CStr, CString},
+    ffi::{c_void, CStr},
     os::raw::c_char,
     slice, str,
 };
+
+use crate::{HasStaticTypeInfo, TypeId};
 
 /// Represents a function definition. A function definition contains the name, type signature, and
 /// a pointer to the implementation.
@@ -41,11 +42,11 @@ pub struct FunctionSignature {
     pub num_arg_types: u16,
 }
 
-/// Owned storage for C-style `FunctionDefinition`.
-pub struct FunctionDefinitionStorage {
-    _name: CString,
-    _arg_types: Vec<TypeId>,
-}
+// /// Owned storage for C-style `FunctionDefinition`.
+// pub struct FunctionDefinitionStorage {
+//     _name: CString,
+//     _arg_types: Vec<TypeId>,
+// }
 
 unsafe impl Send for FunctionDefinition {}
 unsafe impl Sync for FunctionDefinition {}
@@ -72,7 +73,7 @@ impl FunctionSignature {
 
     /// Returns the function's return type.
     pub fn return_type(&self) -> Option<TypeId> {
-        if self.return_type == <()>::type_info().id {
+        if <()>::type_info().is_instance_of(&self.return_type) {
             None
         } else {
             Some(self.return_type.clone())
@@ -96,90 +97,89 @@ impl Eq for FunctionSignature {}
 
 unsafe impl Send for FunctionSignature {}
 unsafe impl Sync for FunctionSignature {}
-
-impl FunctionDefinitionStorage {
-    /// Constructs a new `FunctionDefinition`, the data of which is stored in a
-    /// `FunctionDefinitionStorage`.
-    pub fn new_function(
-        name: &str,
-        args: &[&'static TypeInfo],
-        ret: &'static TypeInfo,
-        fn_ptr: *const c_void,
-    ) -> (FunctionDefinition, FunctionDefinitionStorage) {
-        let name = CString::new(name).unwrap();
-        let arg_types: Vec<TypeId> = args.iter().map(|ty| ty.id.clone()).collect();
-
-        let fn_info = FunctionDefinition {
-            prototype: FunctionPrototype {
-                name: name.as_ptr(),
-                signature: FunctionSignature {
-                    arg_types: arg_types.as_ptr(),
-                    return_type: ret.id.clone(),
-                    num_arg_types: arg_types.len() as u16,
-                },
-            },
-            fn_ptr,
-        };
-
-        let fn_storage = FunctionDefinitionStorage {
-            _name: name,
-            _arg_types: arg_types,
-        };
-
-        (fn_info, fn_storage)
-    }
-}
-
-/// A value-to-`FunctionDefinition` conversion that consumes the input value.
-pub trait IntoFunctionDefinition {
-    /// Performs the conversion.
-    fn into<S: AsRef<str>>(self, name: S) -> (FunctionDefinition, FunctionDefinitionStorage);
-}
-
-macro_rules! into_function_info_impl {
-    ($(
-        extern "C" fn($($T:ident),*) -> $R:ident;
-    )+) => {
-        $(
-            impl<$R: HasStaticTypeInfo, $($T: HasStaticTypeInfo,)*> IntoFunctionDefinition
-            for extern "C" fn($($T),*) -> $R
-            {
-                fn into<S: AsRef<str>>(self, name: S) -> (FunctionDefinition, FunctionDefinitionStorage) {
-                    FunctionDefinitionStorage::new_function(
-                        name.as_ref(),
-                        &[$($T::type_info(),)*],
-                        $R::type_info(),
-                        self as *const std::ffi::c_void,
-                    )
-                }
-            }
-        )+
-    }
-}
-
-into_function_info_impl! {
-    extern "C" fn() -> R;
-    extern "C" fn(A) -> R;
-    extern "C" fn(A, B) -> R;
-    extern "C" fn(A, B, C) -> R;
-    extern "C" fn(A, B, C, D) -> R;
-    extern "C" fn(A, B, C, D, E) -> R;
-    extern "C" fn(A, B, C, D, E, F) -> R;
-    extern "C" fn(A, B, C, D, E, F, G) -> R;
-    extern "C" fn(A, B, C, D, E, F, G, H) -> R;
-    extern "C" fn(A, B, C, D, E, F, G, H, I) -> R;
-    extern "C" fn(A, B, C, D, E, F, G, H, I, J) -> R;
-}
+//
+// impl FunctionDefinitionStorage {
+//     /// Constructs a new `FunctionDefinition`, the data of which is stored in a
+//     /// `FunctionDefinitionStorage`.
+//     pub fn new_function(
+//         name: &str,
+//         args: &[&'static TypeInfo],
+//         ret: &'static TypeInfo,
+//         fn_ptr: *const c_void,
+//     ) -> (FunctionDefinition, FunctionDefinitionStorage) {
+//         let name = CString::new(name).unwrap();
+//         let arg_types: Vec<TypeId> = args.iter().map(|ty| ty.id.clone()).collect();
+//
+//         let fn_info = FunctionDefinition {
+//             prototype: FunctionPrototype {
+//                 name: name.as_ptr(),
+//                 signature: FunctionSignature {
+//                     arg_types: arg_types.as_ptr(),
+//                     return_type: ret.id.clone(),
+//                     num_arg_types: arg_types.len() as u16,
+//                 },
+//             },
+//             fn_ptr,
+//         };
+//
+//         let fn_storage = FunctionDefinitionStorage {
+//             _name: name,
+//             _arg_types: arg_types,
+//         };
+//
+//         (fn_info, fn_storage)
+//     }
+// }
+//
+// /// A value-to-`FunctionDefinition` conversion that consumes the input value.
+// pub trait IntoFunctionDefinition {
+//     /// Performs the conversion.
+//     fn into<S: AsRef<str>>(self, name: S) -> (FunctionDefinition, FunctionDefinitionStorage);
+// }
+//
+// macro_rules! into_function_info_impl {
+//     ($(
+//         extern "C" fn($($T:ident),*) -> $R:ident;
+//     )+) => {
+//         $(
+//             impl<$R: HasStaticTypeInfo, $($T: HasStaticTypeInfo,)*> IntoFunctionDefinition
+//             for extern "C" fn($($T),*) -> $R
+//             {
+//                 fn into<S: AsRef<str>>(self, name: S) -> (FunctionDefinition, FunctionDefinitionStorage) {
+//                     FunctionDefinitionStorage::new_function(
+//                         name.as_ref(),
+//                         &[$($T::type_info(),)*],
+//                         $R::type_info(),
+//                         self as *const std::ffi::c_void,
+//                     )
+//                 }
+//             }
+//         )+
+//     }
+// }
+//
+// into_function_info_impl! {
+//     extern "C" fn() -> R;
+//     extern "C" fn(A) -> R;
+//     extern "C" fn(A, B) -> R;
+//     extern "C" fn(A, B, C) -> R;
+//     extern "C" fn(A, B, C, D) -> R;
+//     extern "C" fn(A, B, C, D, E) -> R;
+//     extern "C" fn(A, B, C, D, E, F) -> R;
+//     extern "C" fn(A, B, C, D, E, F, G) -> R;
+//     extern "C" fn(A, B, C, D, E, F, G, H) -> R;
+//     extern "C" fn(A, B, C, D, E, F, G, H, I) -> R;
+//     extern "C" fn(A, B, C, D, E, F, G, H, I, J) -> R;
+// }
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        test_utils::{
-            fake_fn_prototype, fake_fn_signature, fake_type_info, FAKE_FN_NAME, FAKE_TYPE_NAME,
-        },
-        TypeInfoData,
-    };
     use std::ffi::CString;
+
+    use crate::{
+        test_utils::fake_primitive_type_info,
+        test_utils::{fake_fn_prototype, fake_fn_signature, FAKE_FN_NAME, FAKE_TYPE_NAME},
+    };
 
     #[test]
     fn test_fn_prototype_name() {
@@ -200,9 +200,9 @@ mod tests {
     #[test]
     fn test_fn_signature_arg_types_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
+        let (_type_info, type_id) = fake_primitive_type_info(&type_name, 1, 1);
 
-        let arg_types = &[type_info.id];
+        let arg_types = &[type_id];
         let fn_signature = fake_fn_signature(arg_types, None);
 
         assert_eq!(fn_signature.arg_types(), arg_types);
@@ -219,9 +219,9 @@ mod tests {
     #[test]
     fn test_fn_signature_return_type_some() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
+        let (_type_info, type_id) = fake_primitive_type_info(&type_name, 1, 1);
 
-        let return_type = Some(type_info.id);
+        let return_type = Some(type_id);
         let fn_signature = fake_fn_signature(&[], return_type.clone());
 
         assert_eq!(fn_signature.return_type(), return_type);

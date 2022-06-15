@@ -1,5 +1,3 @@
-use crate::{static_type_map::StaticTypeMap, Guid, StructInfo, TypeId};
-use once_cell::sync::OnceCell;
 use std::fmt::Debug;
 use std::{
     convert::TryInto,
@@ -10,14 +8,17 @@ use std::{
     sync::Once,
 };
 
+use once_cell::sync::OnceCell;
+
+use crate::type_lut::PointerTypeId;
+use crate::{static_type_map::StaticTypeMap, Guid, StructInfo, TypeId};
+
 /// Represents the type declaration for a value type.
 ///
 /// TODO: add support for polymorphism, enumerations, type parameters, generic type definitions, and
 /// constructed generic types.
 #[repr(C)]
 pub struct TypeInfo {
-    /// Type ID
-    pub id: TypeId,
     /// Type name
     pub name: *const c_char,
     /// The exact size of the type in bits without any padding
@@ -31,7 +32,6 @@ pub struct TypeInfo {
 impl Debug for TypeInfo {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("TypeInfo")
-            .field("id", &self.id)
             .field("name", &self.name())
             .field("size_in_bits", &self.size_in_bits)
             .field("alignment", &self.alignment)
@@ -42,15 +42,37 @@ impl Debug for TypeInfo {
 
 /// Contains data specific to a group of types that illicit the same characteristics.
 #[repr(u8)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum TypeInfoData {
     /// Primitive types (i.e. `()`, `bool`, `float`, `int`, etc.)
-    Primitive,
+    Primitive(Guid),
     /// Struct types (i.e. record, tuple, or unit structs)
     Struct(StructInfo),
+    /// Pointer to another type
+    Pointer(PointerInfo),
+}
+
+/// Pointer type information
+#[repr(C)]
+#[derive(Debug, PartialEq, Eq)]
+pub struct PointerInfo {
+    /// The type to which this pointer points.
+    pub pointee: TypeId,
+    /// Whether or not the pointed to value is mutable or not
+    pub mutable: bool,
 }
 
 impl TypeInfo {
+    /// Returns true if this instance is an instance of the given `TypeId`.
+    pub fn is_instance_of(&self, type_id: &TypeId) -> bool {
+        match (&self.data, type_id) {
+            (TypeInfoData::Pointer(p1), TypeId::Pointer(p2)) => &p1.pointee == p2.pointee(),
+            (TypeInfoData::Struct(s), TypeId::Concrete(guid)) => &s.guid == guid,
+            (TypeInfoData::Primitive(guid), TypeId::Concrete(g)) => guid == g,
+            _ => false,
+        }
+    }
+
     /// Returns the type's name.
     pub fn name(&self) -> &str {
         unsafe { str::from_utf8_unchecked(CStr::from_ptr(self.name).to_bytes()) }
@@ -95,15 +117,13 @@ impl fmt::Display for TypeInfo {
 
 impl PartialEq for TypeInfo {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
+        self.size_in_bits == other.size_in_bits
+            && self.alignment == other.alignment
+            && self.data == other.data
     }
 }
 
-impl std::hash::Hash for TypeInfo {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.id.hash(state);
-    }
-}
+impl Eq for TypeInfo {}
 
 unsafe impl Send for TypeInfo {}
 unsafe impl Sync for TypeInfo {}
@@ -111,12 +131,17 @@ unsafe impl Sync for TypeInfo {}
 impl TypeInfoData {
     /// Returns whether this is a fundamental type.
     pub fn is_primitive(&self) -> bool {
-        matches!(self, TypeInfoData::Primitive)
+        matches!(self, TypeInfoData::Primitive(_))
     }
 
     /// Returns whether this is a struct type.
     pub fn is_struct(&self) -> bool {
         matches!(self, TypeInfoData::Struct(_))
+    }
+
+    /// Returns whether this is a pointer type.
+    pub fn is_pointer(&self) -> bool {
+        matches!(self, TypeInfoData::Pointer(_))
     }
 }
 
@@ -126,23 +151,54 @@ pub trait HasStaticTypeInfo {
     fn type_info() -> &'static TypeInfo;
 }
 
-/// A trait that defines that for a type we can statically return the name that would be used in a
-/// `TypeInfo`. This is useful for opaque types that we do not know the full details of but we could
-/// use it as a pointer type
-pub trait HasStaticTypeInfoName {
-    /// Returns the type info name for the type
+/// A trait that defines that for a type we can statically return a `TypeId`.
+pub trait HasStaticTypeId {
+    /// Returns a reference to the TypeInfo for the type
+    fn type_id() -> &'static TypeId;
+}
+
+/// A trait that defines that for a type we can statically return a type name.
+pub trait HasStaticTypeName {
+    /// Returns a reference to the TypeInfo for the type
     fn type_name() -> &'static CStr;
 }
 
-/// Implement HasStaticTypeInfoName for everything that can produce a type info.
-impl<T: HasStaticTypeInfo> HasStaticTypeInfoName for T {
+impl<T: HasStaticTypeInfo> HasStaticTypeName for T {
     fn type_name() -> &'static CStr {
-        unsafe { CStr::from_ptr(Self::type_info().name) }
+        unsafe { CStr::from_ptr(T::type_info().name) }
+    }
+}
+
+impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *const T {
+    fn type_id() -> &'static TypeId {
+        static VALUE: OnceCell<StaticTypeMap<TypeId>> = OnceCell::new();
+        let map = VALUE.get_or_init(Default::default);
+        &map.call_once::<T, _>(|| {
+            PointerTypeId {
+                pointee: T::type_id(),
+                mutable: false,
+            }
+            .into()
+        })
+    }
+}
+
+impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *mut T {
+    fn type_id() -> &'static TypeId {
+        static VALUE: OnceCell<StaticTypeMap<TypeId>> = OnceCell::new();
+        let map = VALUE.get_or_init(Default::default);
+        &map.call_once::<T, _>(|| {
+            PointerTypeId {
+                pointee: T::type_id(),
+                mutable: true,
+            }
+            .into()
+        })
     }
 }
 
 /// Every type that has at least a type name also has a valid pointer type name
-impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *const T {
+impl<T: HasStaticTypeId + HasStaticTypeName + 'static> HasStaticTypeInfo for *const T {
     fn type_info() -> &'static TypeInfo {
         static mut VALUE: Option<StaticTypeMap<(CString, TypeInfo)>> = None;
         static INIT: Once = Once::new();
@@ -155,14 +211,13 @@ impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *const T {
         };
 
         &map.call_once::<T, _>(|| {
-            let name =
-                CString::new(format!("*const {}", T::type_name().to_str().unwrap())).unwrap();
-            let guid = Guid::from(name.as_bytes());
+            let element_name = T::type_name();
+            let element_type_id = T::type_id();
+            let name = CString::new(format!("*const {}", element_name.to_str().expect("could not convert type name to utf-8 string"))).unwrap();
             let name_ptr = name.as_ptr();
             (
                 name,
                 TypeInfo {
-                    id: TypeId { guid },
                     name: name_ptr,
                     size_in_bits: (std::mem::size_of::<*const T>() * 8)
                         .try_into()
@@ -170,7 +225,10 @@ impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *const T {
                     alignment: (std::mem::align_of::<*const T>())
                         .try_into()
                         .expect("alignment of T is larger than the maximum allowed ABI size. Please file a bug."),
-                    data: TypeInfoData::Primitive,
+                    data: TypeInfoData::Pointer(PointerInfo {
+                        pointee: element_type_id.clone(),
+                        mutable: false
+                    }),
                 },
             )
         })
@@ -179,7 +237,7 @@ impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *const T {
 }
 
 /// Every type that has at least a type name also has a valid pointer type name
-impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *mut T {
+impl<T: HasStaticTypeId + HasStaticTypeName + 'static> HasStaticTypeInfo for *mut T {
     fn type_info() -> &'static TypeInfo {
         static mut VALUE: Option<StaticTypeMap<(CString, TypeInfo)>> = None;
         static INIT: Once = Once::new();
@@ -192,13 +250,13 @@ impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *mut T {
         };
 
         &map.call_once::<T, _>(|| {
-            let name = CString::new(format!("*mut {}", T::type_name().to_str().unwrap())).unwrap();
-            let guid = Guid::from(name.as_bytes());
+            let element_name = T::type_name();
+            let element_type_id = T::type_id();
+            let name = CString::new(format!("*mut {}", element_name.to_str().expect("could not convert type name to utf-8 string"))).unwrap();
             let name_ptr = name.as_ptr();
             (
                 name,
                 TypeInfo {
-                    id: TypeId { guid },
                     name: name_ptr,
                     size_in_bits: (std::mem::size_of::<*const T>() * 8)
                         .try_into()
@@ -206,11 +264,14 @@ impl<T: HasStaticTypeInfoName + 'static> HasStaticTypeInfo for *mut T {
                     alignment: (std::mem::align_of::<*const T>())
                         .try_into()
                         .expect("alignment of T is larger than the maximum allowed ABI size. Please file a bug."),
-                    data: TypeInfoData::Primitive,
+                    data: TypeInfoData::Pointer(PointerInfo {
+                        pointee: element_type_id.clone(),
+                        mutable: true
+                    }),
                 },
             )
         })
-        .1
+            .1
     }
 }
 
@@ -229,7 +290,6 @@ macro_rules! impl_primitive_type_info {
                         let guid = Guid::from(type_info_name.as_bytes());
 
                         TypeInfo {
-                            id: TypeId { guid },
                             name: type_info_name.as_ptr(),
                             size_in_bits: (std::mem::size_of::<$ty>() * 8)
                                 .try_into()
@@ -237,29 +297,26 @@ macro_rules! impl_primitive_type_info {
                             alignment: (std::mem::align_of::<$ty>())
                                 .try_into()
                                 .expect("alignment of T is larger than the maximum allowed ABI size. Please file a bug."),
-                            data: TypeInfoData::Primitive,
+                            data: TypeInfoData::Primitive(guid),
                         }
                     })
+                }
+            }
+
+            impl HasStaticTypeId for $ty {
+                fn type_id() -> &'static TypeId {
+                    const TYPE_ID: TypeId = TypeId::Concrete(Guid::from_str(concat!("core::", stringify!($ty))));
+                    &TYPE_ID
                 }
             }
         )+
     }
 }
 
-macro_rules! impl_has_type_info_name {
-    ($(
-        $ty:ty => $name:tt
-    ),+) => {
-        $(
-            impl crate::type_info::HasStaticTypeInfoName for $ty {
-                fn type_name() -> &'static std::ffi::CStr {
-                    static TYPE_INFO_NAME: once_cell::sync::OnceCell<std::ffi::CString> = once_cell::sync::OnceCell::new();
-                    let type_info_name: &'static std::ffi::CString = TYPE_INFO_NAME
-                        .get_or_init(|| std::ffi::CString::new($name).unwrap());
-                    type_info_name.as_ref()
-                }
-            }
-        )+
+impl HasStaticTypeId for std::ffi::c_void {
+    fn type_id() -> &'static TypeId {
+        const TYPE_ID: TypeId = TypeId::Concrete(Guid::from_str("core::void"));
+        &TYPE_ID
     }
 }
 
@@ -280,10 +337,28 @@ impl_primitive_type_info!(
     ()
 );
 
-impl_has_type_info_name!(
-    std::ffi::c_void => "core::void",
-    TypeInfo => "TypeInfo"
-);
+impl HasStaticTypeInfo for std::ffi::c_void {
+    fn type_info() -> &'static TypeInfo {
+        static TYPE_INFO: OnceCell<TypeInfo> = OnceCell::new();
+        TYPE_INFO.get_or_init(|| {
+            static TYPE_INFO_NAME: OnceCell<CString> = OnceCell::new();
+            let type_info_name: &'static CString = TYPE_INFO_NAME
+                .get_or_init(|| CString::new("core::void").unwrap());
+            let guid = Guid::from(type_info_name.as_bytes());
+
+            TypeInfo {
+                name: type_info_name.as_ptr(),
+                size_in_bits: (std::mem::size_of::<std::ffi::c_void>() * 8)
+                .try_into()
+                .expect("size of T is larger than the maximum allowed ABI size. Please file a bug."),
+                alignment: (std::mem::align_of::<std::ffi::c_void>())
+                .try_into()
+                .expect("alignment of T is larger than the maximum allowed ABI size. Please file a bug."),
+                data: TypeInfoData::Primitive(guid),
+            }
+        })
+    }
+}
 
 #[cfg(target_pointer_width = "64")]
 impl HasStaticTypeInfo for usize {
@@ -315,14 +390,19 @@ impl HasStaticTypeInfo for isize {
 
 #[cfg(test)]
 mod tests {
-    use super::{HasStaticTypeInfoName, TypeInfoData};
-    use crate::test_utils::{fake_struct_info, fake_type_info, FAKE_TYPE_NAME};
     use std::ffi::CString;
+
+    use crate::test_utils::{
+        fake_primitive_type_info, fake_struct_info, fake_type_info, FAKE_TYPE_NAME,
+    };
+    use crate::HasStaticTypeInfo;
+
+    use super::TypeInfoData;
 
     #[test]
     fn test_type_info_name() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
+        let (type_info, _type_id) = fake_primitive_type_info(&type_name, 1, 1);
 
         assert_eq!(type_info.name(), FAKE_TYPE_NAME);
     }
@@ -330,7 +410,7 @@ mod tests {
     #[test]
     fn test_type_info_size_alignment() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, 24, 8, TypeInfoData::Primitive);
+        let (type_info, _type_id) = fake_primitive_type_info(&type_name, 24, 8);
 
         assert_eq!(type_info.size_in_bits(), 24);
         assert_eq!(type_info.size_in_bytes(), 3);
@@ -340,7 +420,7 @@ mod tests {
     #[test]
     fn test_type_info_group_fundamental() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
+        let (type_info, _type_id) = fake_primitive_type_info(&type_name, 1, 1);
 
         assert!(type_info.data.is_primitive());
         assert!(!type_info.data.is_struct());
@@ -353,8 +433,13 @@ mod tests {
         let field_names = &[];
         let field_types = &[];
         let field_offsets = &[];
-        let struct_info =
-            fake_struct_info(field_names, field_types, field_offsets, Default::default());
+        let struct_info = fake_struct_info(
+            &type_name,
+            field_names,
+            field_types,
+            field_offsets,
+            Default::default(),
+        );
 
         let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Struct(struct_info));
 
@@ -365,20 +450,20 @@ mod tests {
     #[test]
     fn test_type_info_eq() {
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
+        let (type_info, _type_id) = fake_primitive_type_info(&type_name, 1, 1);
 
         assert_eq!(type_info, type_info);
     }
 
     #[test]
     fn test_ptr() {
-        let ty = <*const std::ffi::c_void>::type_name();
-        assert_eq!(ty.to_str().unwrap(), "*const core::void");
+        let ty = <*const std::ffi::c_void>::type_info();
+        assert_eq!(ty.name(), "*const core::void");
 
-        let ty = <*const *mut std::ffi::c_void>::type_name();
-        assert_eq!(ty.to_str().unwrap(), "*const *mut core::void");
+        let ty = <*const *mut std::ffi::c_void>::type_info();
+        assert_eq!(ty.name(), "*const *mut core::void");
 
-        let ty = <*const *const std::ffi::c_void>::type_name();
-        assert_eq!(ty.to_str().unwrap(), "*const *const core::void");
+        let ty = <*const *const std::ffi::c_void>::type_info();
+        assert_eq!(ty.name(), "*const *const core::void");
     }
 }

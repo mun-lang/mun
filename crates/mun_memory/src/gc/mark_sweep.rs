@@ -484,8 +484,8 @@ where
                                 }
                             }
                         } else if !cast::try_cast_from_to(
-                            old_ty.id.clone(),
-                            new_ty.id.clone(),
+                            old_ty.clone(),
+                            new_ty.clone(),
                             unsafe { NonNull::new_unchecked(field_src) },
                             unsafe { NonNull::new_unchecked(field_dest) },
                         ) {

@@ -1,7 +1,7 @@
+use crate::type_info::HasStaticTypeId;
 use crate::{
     AssemblyInfo, DispatchTable, FunctionDefinition, FunctionPrototype, FunctionSignature, Guid,
-    HasStaticTypeInfo, ModuleInfo, StructInfo, StructMemoryKind, TypeId, TypeInfo, TypeInfoData,
-    TypeLut,
+    ModuleInfo, StructInfo, StructMemoryKind, TypeId, TypeInfo, TypeInfoData, TypeLut,
 };
 use std::{
     ffi::{self, CStr},
@@ -10,9 +10,7 @@ use std::{
 
 pub(crate) const FAKE_TYPE_GUID: Guid =
     Guid([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
-pub(crate) const FAKE_TYPE_ID: TypeId = TypeId {
-    guid: FAKE_TYPE_GUID,
-};
+pub(crate) const FAKE_TYPE_ID: TypeId = TypeId::Concrete(FAKE_TYPE_GUID);
 pub(crate) const FAKE_DEPENDENCY: &str = "path/to/dependency.munlib";
 pub(crate) const FAKE_FIELD_NAME: &str = "field_name";
 pub(crate) const FAKE_FN_NAME: &str = "fn_name";
@@ -69,7 +67,7 @@ pub(crate) fn fake_fn_signature(
 ) -> FunctionSignature {
     FunctionSignature {
         arg_types: arg_types.as_ptr(),
-        return_type: return_type.unwrap_or_else(|| <()>::type_info().id.clone()),
+        return_type: return_type.unwrap_or_else(|| <()>::type_id().clone()),
         num_arg_types: arg_types.len() as u16,
     }
 }
@@ -100,6 +98,7 @@ pub(crate) fn fake_module_info(
 }
 
 pub(crate) fn fake_struct_info(
+    name: &CStr,
     field_names: &[*const c_char],
     field_types: &[TypeId],
     field_offsets: &[u16],
@@ -109,6 +108,7 @@ pub(crate) fn fake_struct_info(
     assert!(field_types.len() == field_offsets.len());
 
     StructInfo {
+        guid: Guid::from_cstr(name),
         field_names: field_names.as_ptr(),
         field_types: field_types.as_ptr(),
         field_offsets: field_offsets.as_ptr(),
@@ -124,12 +124,26 @@ pub(crate) fn fake_type_info(
     data: TypeInfoData,
 ) -> TypeInfo {
     TypeInfo {
-        id: TypeId {
-            guid: Guid::from(name.to_bytes()),
-        },
         name: name.as_ptr(),
         size_in_bits: size,
         alignment,
         data,
     }
+}
+
+pub(crate) fn fake_primitive_type_info(
+    name: &CStr,
+    size: u32,
+    alignment: u8,
+) -> (TypeInfo, TypeId) {
+    let guid = Guid::from(name.to_bytes());
+    (
+        TypeInfo {
+            name: name.as_ptr(),
+            size_in_bits: size,
+            alignment,
+            data: TypeInfoData::Primitive(guid.clone()),
+        },
+        guid.into(),
+    )
 }

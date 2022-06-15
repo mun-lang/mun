@@ -1,10 +1,13 @@
-use crate::TypeId;
 use std::{ffi::CStr, os::raw::c_char, slice, str};
+
+use crate::{Guid, TypeId};
 
 /// Represents a struct declaration.
 #[repr(C)]
 #[derive(Debug)]
 pub struct StructInfo {
+    /// The unique identifier of this struct
+    pub guid: Guid,
     /// Struct fields' names
     pub field_names: *const *const c_char,
     /// Struct fields' information
@@ -88,22 +91,44 @@ impl From<StructMemoryKind> for u64 {
     }
 }
 
+impl PartialEq for StructInfo {
+    fn eq(&self, other: &Self) -> bool {
+        self.guid == other.guid
+            && self.num_fields == other.num_fields
+            && self.field_types() == other.field_types()
+            && self
+                .field_names()
+                .zip(other.field_names())
+                .all(|(a, b)| a == b)
+            && self.field_offsets() == other.field_offsets()
+    }
+}
+
+impl Eq for StructInfo {}
+
 #[cfg(test)]
 mod tests {
-    use super::StructMemoryKind;
-    use crate::{
-        test_utils::{fake_struct_info, fake_type_info, FAKE_FIELD_NAME, FAKE_TYPE_NAME},
-        TypeInfoData,
-    };
     use std::ffi::CString;
+
+    use crate::test_utils::{
+        fake_primitive_type_info, fake_struct_info, FAKE_FIELD_NAME, FAKE_STRUCT_NAME,
+        FAKE_TYPE_NAME,
+    };
+
+    use super::StructMemoryKind;
 
     #[test]
     fn test_struct_info_fields_none() {
         let field_names = &[];
         let field_types = &[];
         let field_offsets = &[];
-        let struct_info =
-            fake_struct_info(field_names, field_types, field_offsets, Default::default());
+        let struct_info = fake_struct_info(
+            &CString::new(FAKE_STRUCT_NAME).unwrap(),
+            field_names,
+            field_types,
+            field_offsets,
+            Default::default(),
+        );
 
         assert_eq!(struct_info.field_names().count(), 0);
         assert_eq!(struct_info.field_types(), field_types);
@@ -112,15 +137,21 @@ mod tests {
 
     #[test]
     fn test_struct_info_fields_some() {
+        let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
         let field_name = CString::new(FAKE_FIELD_NAME).expect("Invalid fake field name.");
         let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let type_info = fake_type_info(&type_name, 1, 1, TypeInfoData::Primitive);
+        let (_type_info, type_id) = fake_primitive_type_info(&type_name, 1, 1);
 
         let field_names = &[field_name.as_ptr()];
-        let field_types = &[type_info.id];
+        let field_types = &[type_id];
         let field_offsets = &[1];
-        let struct_info =
-            fake_struct_info(field_names, field_types, field_offsets, Default::default());
+        let struct_info = fake_struct_info(
+            &struct_name,
+            field_names,
+            field_types,
+            field_offsets,
+            Default::default(),
+        );
 
         for (lhs, rhs) in struct_info.field_names().zip([FAKE_FIELD_NAME].iter()) {
             assert_eq!(lhs, *rhs)
@@ -131,16 +162,18 @@ mod tests {
 
     #[test]
     fn test_struct_info_memory_kind_gc() {
+        let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
         let struct_memory_kind = StructMemoryKind::Gc;
-        let struct_info = fake_struct_info(&[], &[], &[], struct_memory_kind);
+        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], struct_memory_kind);
 
         assert_eq!(struct_info.memory_kind, struct_memory_kind);
     }
 
     #[test]
     fn test_struct_info_memory_kind_value() {
+        let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
         let struct_memory_kind = StructMemoryKind::Value;
-        let struct_info = fake_struct_info(&[], &[], &[], struct_memory_kind);
+        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], struct_memory_kind);
 
         assert_eq!(struct_info.memory_kind, struct_memory_kind);
     }

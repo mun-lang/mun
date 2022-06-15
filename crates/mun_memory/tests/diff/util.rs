@@ -148,7 +148,7 @@ fn apply_mapping(old: &mut TypeInfo, new: &TypeInfo, mapping: &[FieldDiff]) {
 
             *old_struct = combined;
             old.layout = fake_layout(old_struct);
-            old.id.guid = struct_guid(&old.name, old_struct);
+            old_struct.guid = struct_guid(&old.name, old_struct.fields.iter());
         } else {
             unreachable!()
         }

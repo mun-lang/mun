@@ -1,26 +1,94 @@
-use crate::Guid;
-use itertools::izip;
 use std::ffi::CStr;
+use std::hash::{Hash, Hasher};
 use std::os::raw::c_char;
 use std::{ffi, fmt, slice, str};
 
-/// Represents a unique identifier for types. The runtime can use this to lookup the corresponding [`TypeInfo`].
+use itertools::izip;
+
+use crate::Guid;
+
+/// Represents a unique identifier for types. The runtime can use this to lookup the corresponding
+/// [`TypeInfo`]. A [`TypeId`] is a key for a [`TypeInfo`].
+///
+/// A [`TypeId`] only contains enough information to query the runtime for a concrete type.
 #[repr(C)]
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub struct TypeId {
-    /// The GUID of the type
-    pub guid: Guid,
+pub enum TypeId {
+    /// Represents a concrete type with a specific Guid
+    Concrete(Guid),
+
+    /// Represents a pointer to a type
+    Pointer(PointerTypeId),
 }
+
+/// Represents a pointer to another type.
+#[repr(C)]
+#[derive(Clone, Debug)]
+pub struct PointerTypeId {
+    /// The type to which this pointer points
+    pub pointee: *const TypeId,
+
+    /// Whether or not this pointer is mutable or not
+    pub mutable: bool,
+}
+
+impl Hash for PointerTypeId {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.pointee().hash(state);
+        self.mutable.hash(state);
+    }
+}
+
+impl PartialEq for PointerTypeId {
+    fn eq(&self, other: &Self) -> bool {
+        unsafe { *other.pointee == *self.pointee }
+    }
+}
+
+impl Eq for PointerTypeId {}
+
+unsafe impl Send for TypeId {}
+unsafe impl Sync for TypeId {}
 
 impl From<Guid> for TypeId {
     fn from(guid: Guid) -> Self {
-        TypeId { guid }
+        TypeId::Concrete(guid)
+    }
+}
+
+impl From<PointerTypeId> for TypeId {
+    fn from(pointer: PointerTypeId) -> Self {
+        TypeId::Pointer(pointer)
     }
 }
 
 impl fmt::Display for TypeId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.guid.fmt(f)
+        match self {
+            TypeId::Concrete(guid) => guid.fmt(f),
+            TypeId::Pointer(pointer) => pointer.fmt(f),
+        }
+    }
+}
+
+impl fmt::Display for PointerTypeId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.mutable {
+            write!(f, "*mut ")
+        } else {
+            write!(f, "*const ")
+        }?;
+        self.pointee().fmt(f)
+    }
+}
+
+impl PointerTypeId {
+    pub fn pointee(&self) -> &TypeId {
+        unsafe { self.pointee.as_ref() }.expect("pointee of pointer typeId is null")
+    }
+
+    pub fn is_mutable(&self) -> bool {
+        self.mutable
     }
 }
 
@@ -163,8 +231,9 @@ impl TypeLut {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_utils::{fake_type_lut, FAKE_TYPE_ID, FAKE_TYPE_NAME};
     use std::{ffi::CString, ptr};
+
+    use crate::test_utils::{fake_type_lut, FAKE_TYPE_ID, FAKE_TYPE_NAME};
 
     #[test]
     fn test_type_lut_iter_mut_none() {
