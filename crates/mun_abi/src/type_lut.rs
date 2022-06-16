@@ -1,5 +1,5 @@
 use std::ffi::CStr;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 use std::os::raw::c_char;
 use std::{ffi, fmt, slice, str};
 
@@ -13,56 +13,41 @@ use crate::Guid;
 /// A [`TypeId`] only contains enough information to query the runtime for a concrete type.
 #[repr(C)]
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub enum TypeId {
+pub enum TypeId<'a> {
     /// Represents a concrete type with a specific Guid
     Concrete(Guid),
 
     /// Represents a pointer to a type
-    Pointer(PointerTypeId),
+    Pointer(PointerTypeId<'a>),
 }
 
 /// Represents a pointer to another type.
 #[repr(C)]
-#[derive(Clone, Debug)]
-pub struct PointerTypeId {
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct PointerTypeId<'a> {
     /// The type to which this pointer points
-    pub pointee: *const TypeId,
+    pub pointee: &'a TypeId<'a>,
 
     /// Whether or not this pointer is mutable or not
     pub mutable: bool,
 }
 
-impl Hash for PointerTypeId {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.pointee().hash(state);
-        self.mutable.hash(state);
-    }
-}
+unsafe impl<'a> Send for TypeId<'a> {}
+unsafe impl<'a> Sync for TypeId<'a> {}
 
-impl PartialEq for PointerTypeId {
-    fn eq(&self, other: &Self) -> bool {
-        unsafe { *other.pointee == *self.pointee }
-    }
-}
-
-impl Eq for PointerTypeId {}
-
-unsafe impl Send for TypeId {}
-unsafe impl Sync for TypeId {}
-
-impl From<Guid> for TypeId {
+impl<'a> From<Guid> for TypeId<'a> {
     fn from(guid: Guid) -> Self {
         TypeId::Concrete(guid)
     }
 }
 
-impl From<PointerTypeId> for TypeId {
-    fn from(pointer: PointerTypeId) -> Self {
+impl<'a> From<PointerTypeId<'a>> for TypeId<'a> {
+    fn from(pointer: PointerTypeId<'a>) -> Self {
         TypeId::Pointer(pointer)
     }
 }
 
-impl fmt::Display for TypeId {
+impl<'a> fmt::Display for TypeId<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             TypeId::Concrete(guid) => guid.fmt(f),
@@ -71,24 +56,14 @@ impl fmt::Display for TypeId {
     }
 }
 
-impl fmt::Display for PointerTypeId {
+impl<'a> fmt::Display for PointerTypeId<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.mutable {
             write!(f, "*mut ")
         } else {
             write!(f, "*const ")
         }?;
-        self.pointee().fmt(f)
-    }
-}
-
-impl PointerTypeId {
-    pub fn pointee(&self) -> &TypeId {
-        unsafe { self.pointee.as_ref() }.expect("pointee of pointer typeId is null")
-    }
-
-    pub fn is_mutable(&self) -> bool {
-        self.mutable
+        self.pointee.fmt(f)
     }
 }
 
@@ -96,9 +71,9 @@ impl PointerTypeId {
 ///
 /// Type IDs and handles are stored separately for cache efficiency.
 #[repr(C)]
-pub struct TypeLut {
+pub struct TypeLut<'a> {
     /// Type IDs
-    pub(crate) type_ids: *const TypeId,
+    pub(crate) type_ids: *const TypeId<'a>,
     /// Type information handles
     pub(crate) type_handles: *mut *const ffi::c_void,
     /// Debug names
@@ -107,7 +82,7 @@ pub struct TypeLut {
     pub num_entries: u32,
 }
 
-impl TypeLut {
+impl<'a> TypeLut<'a> {
     /// Returns an iterator over pairs of type IDs and type handles.
     pub fn iter(&self) -> impl Iterator<Item = (&TypeId, &*const ffi::c_void, &str)> {
         let (type_ids, type_ptrs, type_names) = if self.num_entries != 0 {
@@ -162,7 +137,7 @@ impl TypeLut {
     }
 
     /// Returns type IDs.
-    pub fn type_ids(&self) -> &[TypeId] {
+    pub fn type_ids(&self) -> &[TypeId<'a>] {
         if self.num_entries == 0 {
             &[]
         } else {

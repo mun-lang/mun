@@ -18,7 +18,7 @@ use crate::{static_type_map::StaticTypeMap, Guid, StructInfo, TypeId};
 /// TODO: add support for polymorphism, enumerations, type parameters, generic type definitions, and
 /// constructed generic types.
 #[repr(C)]
-pub struct TypeInfo {
+pub struct TypeInfo<'a> {
     /// Type name
     pub name: *const c_char,
     /// The exact size of the type in bits without any padding
@@ -26,10 +26,10 @@ pub struct TypeInfo {
     /// The alignment of the type
     pub(crate) alignment: u8,
     /// Type group
-    pub data: TypeInfoData,
+    pub data: TypeInfoData<'a>,
 }
 
-impl Debug for TypeInfo {
+impl<'a> Debug for TypeInfo<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("TypeInfo")
             .field("name", &self.name())
@@ -43,30 +43,30 @@ impl Debug for TypeInfo {
 /// Contains data specific to a group of types that illicit the same characteristics.
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq)]
-pub enum TypeInfoData {
+pub enum TypeInfoData<'a> {
     /// Primitive types (i.e. `()`, `bool`, `float`, `int`, etc.)
     Primitive(Guid),
     /// Struct types (i.e. record, tuple, or unit structs)
-    Struct(StructInfo),
+    Struct(StructInfo<'a>),
     /// Pointer to another type
-    Pointer(PointerInfo),
+    Pointer(PointerInfo<'a>),
 }
 
 /// Pointer type information
 #[repr(C)]
 #[derive(Debug, PartialEq, Eq)]
-pub struct PointerInfo {
+pub struct PointerInfo<'a> {
     /// The type to which this pointer points.
-    pub pointee: TypeId,
+    pub pointee: TypeId<'a>,
     /// Whether or not the pointed to value is mutable or not
     pub mutable: bool,
 }
 
-impl TypeInfo {
+impl<'a> TypeInfo<'a> {
     /// Returns true if this instance is an instance of the given `TypeId`.
-    pub fn is_instance_of(&self, type_id: &TypeId) -> bool {
+    pub fn is_instance_of(&self, type_id: &TypeId<'a>) -> bool {
         match (&self.data, type_id) {
-            (TypeInfoData::Pointer(p1), TypeId::Pointer(p2)) => &p1.pointee == p2.pointee(),
+            (TypeInfoData::Pointer(p1), TypeId::Pointer(p2)) => &p1.pointee == p2.pointee,
             (TypeInfoData::Struct(s), TypeId::Concrete(guid)) => &s.guid == guid,
             (TypeInfoData::Primitive(guid), TypeId::Concrete(g)) => guid == g,
             _ => false,
@@ -109,13 +109,13 @@ impl TypeInfo {
     }
 }
 
-impl fmt::Display for TypeInfo {
+impl<'a> fmt::Display for TypeInfo<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name())
     }
 }
 
-impl PartialEq for TypeInfo {
+impl<'a> PartialEq for TypeInfo<'a> {
     fn eq(&self, other: &Self) -> bool {
         self.size_in_bits == other.size_in_bits
             && self.alignment == other.alignment
@@ -123,12 +123,12 @@ impl PartialEq for TypeInfo {
     }
 }
 
-impl Eq for TypeInfo {}
+impl<'a> Eq for TypeInfo<'a> {}
 
-unsafe impl Send for TypeInfo {}
-unsafe impl Sync for TypeInfo {}
+unsafe impl<'a> Send for TypeInfo<'a> {}
+unsafe impl<'a> Sync for TypeInfo<'a> {}
 
-impl TypeInfoData {
+impl<'a> TypeInfoData<'a> {
     /// Returns whether this is a fundamental type.
     pub fn is_primitive(&self) -> bool {
         matches!(self, TypeInfoData::Primitive(_))
@@ -148,13 +148,13 @@ impl TypeInfoData {
 /// A trait that defines that for a type we can statically return a `TypeInfo`.
 pub trait HasStaticTypeInfo {
     /// Returns a reference to the TypeInfo for the type
-    fn type_info() -> &'static TypeInfo;
+    fn type_info() -> &'static TypeInfo<'static>;
 }
 
 /// A trait that defines that for a type we can statically return a `TypeId`.
 pub trait HasStaticTypeId {
     /// Returns a reference to the TypeInfo for the type
-    fn type_id() -> &'static TypeId;
+    fn type_id() -> &'static TypeId<'static>;
 }
 
 /// A trait that defines that for a type we can statically return a type name.
@@ -170,7 +170,7 @@ impl<T: HasStaticTypeInfo> HasStaticTypeName for T {
 }
 
 impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *const T {
-    fn type_id() -> &'static TypeId {
+    fn type_id() -> &'static TypeId<'static> {
         static VALUE: OnceCell<StaticTypeMap<TypeId>> = OnceCell::new();
         let map = VALUE.get_or_init(Default::default);
         &map.call_once::<T, _>(|| {
@@ -184,7 +184,7 @@ impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *const T {
 }
 
 impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *mut T {
-    fn type_id() -> &'static TypeId {
+    fn type_id() -> &'static TypeId<'static> {
         static VALUE: OnceCell<StaticTypeMap<TypeId>> = OnceCell::new();
         let map = VALUE.get_or_init(Default::default);
         &map.call_once::<T, _>(|| {
@@ -199,7 +199,7 @@ impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *mut T {
 
 /// Every type that has at least a type name also has a valid pointer type name
 impl<T: HasStaticTypeId + HasStaticTypeName + 'static> HasStaticTypeInfo for *const T {
-    fn type_info() -> &'static TypeInfo {
+    fn type_info() -> &'static TypeInfo<'static> {
         static mut VALUE: Option<StaticTypeMap<(CString, TypeInfo)>> = None;
         static INIT: Once = Once::new();
 
@@ -238,7 +238,7 @@ impl<T: HasStaticTypeId + HasStaticTypeName + 'static> HasStaticTypeInfo for *co
 
 /// Every type that has at least a type name also has a valid pointer type name
 impl<T: HasStaticTypeId + HasStaticTypeName + 'static> HasStaticTypeInfo for *mut T {
-    fn type_info() -> &'static TypeInfo {
+    fn type_info() -> &'static TypeInfo<'static> {
         static mut VALUE: Option<StaticTypeMap<(CString, TypeInfo)>> = None;
         static INIT: Once = Once::new();
 
@@ -281,7 +281,7 @@ macro_rules! impl_primitive_type_info {
     ),+) => {
         $(
             impl HasStaticTypeInfo for $ty {
-                fn type_info() -> &'static TypeInfo {
+                fn type_info() -> &'static TypeInfo<'static> {
                     static TYPE_INFO: OnceCell<TypeInfo> = OnceCell::new();
                     TYPE_INFO.get_or_init(|| {
                         static TYPE_INFO_NAME: OnceCell<CString> = OnceCell::new();
@@ -304,7 +304,7 @@ macro_rules! impl_primitive_type_info {
             }
 
             impl HasStaticTypeId for $ty {
-                fn type_id() -> &'static TypeId {
+                fn type_id() -> &'static TypeId<'static> {
                     const TYPE_ID: TypeId = TypeId::Concrete(Guid::from_str(concat!("core::", stringify!($ty))));
                     &TYPE_ID
                 }
@@ -314,7 +314,7 @@ macro_rules! impl_primitive_type_info {
 }
 
 impl HasStaticTypeId for std::ffi::c_void {
-    fn type_id() -> &'static TypeId {
+    fn type_id() -> &'static TypeId<'static> {
         const TYPE_ID: TypeId = TypeId::Concrete(Guid::from_str("core::void"));
         &TYPE_ID
     }
@@ -338,7 +338,7 @@ impl_primitive_type_info!(
 );
 
 impl HasStaticTypeInfo for std::ffi::c_void {
-    fn type_info() -> &'static TypeInfo {
+    fn type_info() -> &'static TypeInfo<'static> {
         static TYPE_INFO: OnceCell<TypeInfo> = OnceCell::new();
         TYPE_INFO.get_or_init(|| {
             static TYPE_INFO_NAME: OnceCell<CString> = OnceCell::new();
@@ -362,28 +362,28 @@ impl HasStaticTypeInfo for std::ffi::c_void {
 
 #[cfg(target_pointer_width = "64")]
 impl HasStaticTypeInfo for usize {
-    fn type_info() -> &'static TypeInfo {
+    fn type_info() -> &'static TypeInfo<'static> {
         u64::type_info()
     }
 }
 
 #[cfg(target_pointer_width = "64")]
 impl HasStaticTypeInfo for isize {
-    fn type_info() -> &'static TypeInfo {
+    fn type_info() -> &'static TypeInfo<'static> {
         i64::type_info()
     }
 }
 
 #[cfg(target_pointer_width = "32")]
 impl HasStaticTypeInfo for usize {
-    fn type_info() -> &'static TypeInfo {
+    fn type_info() -> &'static TypeInfo<'static> {
         u32::type_info()
     }
 }
 
 #[cfg(target_pointer_width = "32")]
 impl HasStaticTypeInfo for isize {
-    fn type_info() -> &'static TypeInfo {
+    fn type_info() -> &'static TypeInfo<'static> {
         i32::type_info()
     }
 }

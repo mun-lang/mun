@@ -5,13 +5,13 @@ use crate::{Guid, TypeId};
 /// Represents a struct declaration.
 #[repr(C)]
 #[derive(Debug)]
-pub struct StructInfo {
+pub struct StructInfo<'a> {
     /// The unique identifier of this struct
     pub guid: Guid,
     /// Struct fields' names
     pub field_names: *const *const c_char,
     /// Struct fields' information
-    pub(crate) field_types: *const TypeId,
+    pub(crate) field_types: *const TypeId<'a>,
     /// Struct fields' offsets
     pub(crate) field_offsets: *const u16,
     // TODO: Field accessibility levels
@@ -38,7 +38,7 @@ pub enum StructMemoryKind {
     Value,
 }
 
-impl StructInfo {
+impl<'a> StructInfo<'a> {
     /// Returns the struct's field names.
     pub fn field_names(&self) -> impl Iterator<Item = &str> {
         let field_names = if self.num_fields == 0 {
@@ -53,7 +53,7 @@ impl StructInfo {
     }
 
     /// Returns the struct's field types.
-    pub fn field_types(&self) -> &[TypeId] {
+    pub fn field_types(&self) -> &[TypeId<'a>] {
         if self.num_fields == 0 {
             &[]
         } else {
@@ -91,7 +91,7 @@ impl From<StructMemoryKind> for u64 {
     }
 }
 
-impl PartialEq for StructInfo {
+impl<'a> PartialEq for StructInfo<'a> {
     fn eq(&self, other: &Self) -> bool {
         self.guid == other.guid
             && self.num_fields == other.num_fields
@@ -104,7 +104,7 @@ impl PartialEq for StructInfo {
     }
 }
 
-impl Eq for StructInfo {}
+impl<'a> Eq for StructInfo<'a> {}
 
 #[cfg(test)]
 mod tests {

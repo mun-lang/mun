@@ -18,12 +18,12 @@ pub(crate) const FAKE_MODULE_PATH: &str = "path::to::module";
 pub(crate) const FAKE_STRUCT_NAME: &str = "StructName";
 pub(crate) const FAKE_TYPE_NAME: &str = "TypeName";
 
-pub(crate) fn fake_assembly_info(
-    symbols: ModuleInfo,
-    dispatch_table: DispatchTable,
-    type_lut: TypeLut,
+pub(crate) fn fake_assembly_info<'a>(
+    symbols: ModuleInfo<'a>,
+    dispatch_table: DispatchTable<'a>,
+    type_lut: TypeLut<'a>,
     dependencies: &[*const c_char],
-) -> AssemblyInfo {
+) -> AssemblyInfo<'a> {
     AssemblyInfo {
         symbols,
         dispatch_table,
@@ -33,11 +33,11 @@ pub(crate) fn fake_assembly_info(
     }
 }
 
-pub(crate) fn fake_type_lut(
-    type_ids: &[TypeId],
+pub(crate) fn fake_type_lut<'a>(
+    type_ids: &[TypeId<'a>],
     type_handles: &mut [*const ffi::c_void],
     type_names: &[*const c_char],
-) -> TypeLut {
+) -> TypeLut<'a> {
     assert_eq!(type_ids.len(), type_handles.len());
 
     TypeLut {
@@ -48,10 +48,10 @@ pub(crate) fn fake_type_lut(
     }
 }
 
-pub(crate) fn fake_dispatch_table(
-    fn_prototypes: &[FunctionPrototype],
+pub(crate) fn fake_dispatch_table<'a>(
+    fn_prototypes: &[FunctionPrototype<'a>],
     fn_ptrs: &mut [*const ffi::c_void],
-) -> DispatchTable {
+) -> DispatchTable<'a> {
     assert_eq!(fn_prototypes.len(), fn_ptrs.len());
 
     DispatchTable {
@@ -61,10 +61,10 @@ pub(crate) fn fake_dispatch_table(
     }
 }
 
-pub(crate) fn fake_fn_signature(
-    arg_types: &[TypeId],
-    return_type: Option<TypeId>,
-) -> FunctionSignature {
+pub(crate) fn fake_fn_signature<'a>(
+    arg_types: &[TypeId<'a>],
+    return_type: Option<TypeId<'a>>,
+) -> FunctionSignature<'a> {
     FunctionSignature {
         arg_types: arg_types.as_ptr(),
         return_type: return_type.unwrap_or_else(|| <()>::type_id().clone()),
@@ -72,22 +72,22 @@ pub(crate) fn fake_fn_signature(
     }
 }
 
-pub(crate) fn fake_fn_prototype(
+pub(crate) fn fake_fn_prototype<'a>(
     name: &CStr,
-    arg_types: &[TypeId],
-    return_type: Option<TypeId>,
-) -> FunctionPrototype {
+    arg_types: &[TypeId<'a>],
+    return_type: Option<TypeId<'a>>,
+) -> FunctionPrototype<'a> {
     FunctionPrototype {
         name: name.as_ptr(),
         signature: fake_fn_signature(arg_types, return_type),
     }
 }
 
-pub(crate) fn fake_module_info(
+pub(crate) fn fake_module_info<'a>(
     path: &CStr,
-    functions: &[FunctionDefinition],
-    types: &[TypeInfo],
-) -> ModuleInfo {
+    functions: &[FunctionDefinition<'a>],
+    types: &[TypeInfo<'a>],
+) -> ModuleInfo<'a> {
     ModuleInfo {
         path: path.as_ptr(),
         functions: functions.as_ptr(),
@@ -97,13 +97,13 @@ pub(crate) fn fake_module_info(
     }
 }
 
-pub(crate) fn fake_struct_info(
+pub(crate) fn fake_struct_info<'a>(
     name: &CStr,
     field_names: &[*const c_char],
-    field_types: &[TypeId],
+    field_types: &[TypeId<'a>],
     field_offsets: &[u16],
     memory_kind: StructMemoryKind,
-) -> StructInfo {
+) -> StructInfo<'a> {
     assert!(field_names.len() == field_types.len());
     assert!(field_types.len() == field_offsets.len());
 
@@ -117,12 +117,12 @@ pub(crate) fn fake_struct_info(
     }
 }
 
-pub(crate) fn fake_type_info(
+pub(crate) fn fake_type_info<'a>(
     name: &CStr,
     size: u32,
     alignment: u8,
-    data: TypeInfoData,
-) -> TypeInfo {
+    data: TypeInfoData<'a>,
+) -> TypeInfo<'a> {
     TypeInfo {
         name: name.as_ptr(),
         size_in_bits: size,

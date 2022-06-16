@@ -137,7 +137,7 @@ impl TypeInfo {
         match &self.data {
             TypeInfoData::Primitive(_) => true,
             TypeInfoData::Struct(_) => true,
-            TypeInfoData::Pointer(_) => false
+            TypeInfoData::Pointer(_) => false,
         }
     }
 
@@ -146,7 +146,7 @@ impl TypeInfo {
         match &self.data {
             TypeInfoData::Primitive(g) => Some(g),
             TypeInfoData::Struct(s) => Some(&s.guid),
-            TypeInfoData::Pointer(_) => None
+            TypeInfoData::Pointer(_) => None,
         }
     }
 
@@ -178,10 +178,10 @@ impl TypeInfo {
     }
 
     /// Tries to convert from an `abi::TypeInfo`.
-    pub fn try_from_abi(
-        type_info: &abi::TypeInfo,
+    pub fn try_from_abi<'abi>(
+        type_info: &'abi abi::TypeInfo<'abi>,
         type_table: &TypeTable,
-    ) -> Result<TypeInfo, TryFromAbiError> {
+    ) -> Result<TypeInfo, TryFromAbiError<'abi>> {
         TypeInfoData::try_from_abi(&type_info.data, type_table).map(|data| TypeInfo {
             name: type_info.name().to_owned(),
             layout: Layout::from_size_align(type_info.size_in_bytes(), type_info.alignment())
@@ -214,10 +214,10 @@ impl TypeInfoData {
     }
 
     /// Tries to convert from an `abi::TypeInfoData`.
-    pub fn try_from_abi(
-        type_info_data: &abi::TypeInfoData,
+    pub fn try_from_abi<'abi>(
+        type_info_data: &'abi abi::TypeInfoData<'abi>,
         type_table: &TypeTable,
-    ) -> Result<TypeInfoData, TryFromAbiError> {
+    ) -> Result<TypeInfoData, TryFromAbiError<'abi>> {
         match type_info_data {
             abi::TypeInfoData::Primitive(guid) => Ok(TypeInfoData::Primitive(guid.clone())),
             abi::TypeInfoData::Struct(s) => {
@@ -239,10 +239,10 @@ impl StructInfo {
     }
 
     /// Tries to convert from an `abi::StructInfo`.
-    pub fn try_from_abi(
-        struct_info: &abi::StructInfo,
+    pub fn try_from_abi<'abi>(
+        struct_info: &'abi abi::StructInfo<'abi>,
         type_table: &TypeTable,
-    ) -> Result<StructInfo, TryFromAbiError> {
+    ) -> Result<StructInfo, TryFromAbiError<'abi>> {
         let fields: Result<Vec<FieldInfo>, TryFromAbiError> = izip!(
             struct_info.field_names(),
             struct_info.field_types(),
@@ -270,10 +270,10 @@ impl StructInfo {
 
 impl PointerInfo {
     /// Tries to convert from an `abi::PointerInfo`.
-    pub fn try_from_abi(
-        pointer_info: &abi::PointerInfo,
+    pub fn try_from_abi<'abi>(
+        pointer_info: &'abi abi::PointerInfo<'abi>,
         type_table: &TypeTable,
-    ) -> Result<PointerInfo, TryFromAbiError> {
+    ) -> Result<PointerInfo, TryFromAbiError<'abi>> {
         Ok(PointerInfo {
             pointee: type_table
                 .find_type_info_by_id(&pointer_info.pointee)

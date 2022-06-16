@@ -24,16 +24,10 @@ fn test_trace() {
     let mut type_table = TypeTable::default();
 
     let bar_type_info = fake_struct!(type_table, "core::Bar", "a" => i64);
-    type_table.insert_type(
-        &bar_type_info.as_struct().unwrap().guid.clone().into(),
-        bar_type_info.clone(),
-    );
+    type_table.insert_type(bar_type_info.clone());
 
     let foo_type_info = fake_struct!(type_table, "core::Foo", "bar" => Bar);
-    type_table.insert_type(
-        &bar_type_info.as_struct().unwrap().guid.clone().into(),
-        foo_type_info.clone(),
-    );
+    type_table.insert_type(foo_type_info.clone());
 
     let runtime = MarkSweep::<EventAggregator<Event>>::default();
     let mut foo_handle = runtime.alloc(&foo_type_info);
@@ -56,16 +50,10 @@ fn trace_collect() {
     let mut type_table = TypeTable::default();
 
     let bar_type_info = fake_struct!(type_table, "core::Bar", "a" => i64);
-    type_table.insert_type(
-        &bar_type_info.as_struct().unwrap().guid.clone().into(),
-        bar_type_info.clone(),
-    );
+    type_table.insert_type(bar_type_info.clone());
 
     let foo_type_info = fake_struct!(type_table, "core::Foo", "bar" => Bar);
-    type_table.insert_type(
-        &bar_type_info.as_struct().unwrap().guid.clone().into(),
-        foo_type_info.clone(),
-    );
+    type_table.insert_type(foo_type_info.clone());
 
     let runtime = Arc::new(MarkSweep::<EventAggregator<Event>>::default());
     let mut foo_ptr = GcRootPtr::new(&runtime, runtime.alloc(&foo_type_info));
@@ -102,16 +90,10 @@ fn trace_cycle() {
     let mut type_table = TypeTable::default();
 
     let bar_type_info = fake_struct!(type_table, "core::Bar", "a" => i64);
-    type_table.insert_type(
-        &bar_type_info.as_struct().unwrap().guid.clone().into(),
-        bar_type_info.clone(),
-    );
+    type_table.insert_type(bar_type_info.clone());
 
     let foo_type_info = fake_struct!(type_table, "core::Foo", "bar" => Bar);
-    type_table.insert_type(
-        &bar_type_info.as_struct().unwrap().guid.clone().into(),
-        foo_type_info.clone(),
-    );
+    type_table.insert_type(foo_type_info.clone());
 
     let runtime = Arc::new(MarkSweep::<EventAggregator<Event>>::default());
     let mut foo_ptr = GcRootPtr::new(&runtime, runtime.alloc(&foo_type_info));

@@ -1,3 +1,5 @@
+mod ir_type_builder;
+
 use crate::type_info::TypeInfoData;
 use crate::{
     ir::ty::HirTypeCache,
@@ -12,7 +14,7 @@ use crate::{
         AsValue, CanInternalize, Global, IrValueContext, IterAsIrValue, SizedValueType, Value,
     },
 };
-use abi::HasStaticTypeInfo;
+use abi::{HasStaticTypeId, HasStaticTypeInfo};
 use hir::HirDatabase;
 use inkwell::{attributes::Attribute, module::Linkage, types::AnyType};
 use std::convert::TryFrom;
@@ -35,7 +37,7 @@ fn gen_prototype_from_function<'ink>(
     // Get the `ir::TypeInfo` pointer for the return type of the function
     let fn_sig = function.ty(db).callable_sig(db).unwrap();
     let return_type = if fn_sig.ret().is_empty() {
-        <()>::type_info().id.clone().into()
+        <()>::type_id().clone().into()
     } else {
         ir::TypeId {
             guid: hir_types.type_info(fn_sig.ret()).guid,

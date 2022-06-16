@@ -3,20 +3,20 @@ use std::{ffi::CStr, os::raw::c_char, slice, str};
 
 /// Represents an assembly declaration.
 #[repr(C)]
-pub struct AssemblyInfo {
+pub struct AssemblyInfo<'a> {
     /// Symbols of the top-level module
-    pub symbols: ModuleInfo,
+    pub symbols: ModuleInfo<'a>,
     /// Function dispatch table
-    pub dispatch_table: DispatchTable,
+    pub dispatch_table: DispatchTable<'a>,
     /// Type lookup table
-    pub type_lut: TypeLut,
+    pub type_lut: TypeLut<'a>,
     /// Paths to assembly dependencies
     pub(crate) dependencies: *const *const c_char,
     /// Number of dependencies
     pub num_dependencies: u32,
 }
 
-impl AssemblyInfo {
+impl<'a> AssemblyInfo<'a> {
     /// Returns an iterator over the assembly's dependencies.
     pub fn dependencies(&self) -> impl Iterator<Item = &str> {
         let dependencies = if self.num_dependencies == 0 {
@@ -31,8 +31,8 @@ impl AssemblyInfo {
     }
 }
 
-unsafe impl Send for AssemblyInfo {}
-unsafe impl Sync for AssemblyInfo {}
+unsafe impl<'a> Send for AssemblyInfo<'a> {}
+unsafe impl<'a> Sync for AssemblyInfo<'a> {}
 
 #[cfg(test)]
 mod tests {

@@ -138,7 +138,7 @@ pub trait HasConstValue {
 pub struct IrTypeContext<'ink, 'a> {
     pub context: &'ink Context,
     pub target_data: &'a TargetData,
-    pub struct_types: &'a RefCell<HashMap<&'static str, StructType<'ink>>>,
+    pub struct_types: &'a <HashMap<&'static str, StructType<'ink>>>,
 }
 
 /// The context in which an `IrValue` exists.

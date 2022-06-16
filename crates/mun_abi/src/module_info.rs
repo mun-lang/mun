@@ -3,20 +3,20 @@ use std::{ffi::CStr, os::raw::c_char, slice, str};
 
 /// Represents a module declaration.
 #[repr(C)]
-pub struct ModuleInfo {
+pub struct ModuleInfo<'a> {
     /// Module path
     pub(crate) path: *const c_char,
     /// Module functions
-    pub(crate) functions: *const FunctionDefinition,
+    pub(crate) functions: *const FunctionDefinition<'a>,
     /// Module types
-    pub(crate) types: *const TypeInfo,
+    pub(crate) types: *const TypeInfo<'a>,
     /// Number of module functions
     pub num_functions: u32,
     /// Number of module types
     pub num_types: u32,
 }
 
-impl ModuleInfo {
+impl<'a> ModuleInfo<'a> {
     /// Returns the module's full path.
     pub fn path(&self) -> &str {
         unsafe { str::from_utf8_unchecked(CStr::from_ptr(self.path).to_bytes()) }
@@ -38,7 +38,7 @@ impl ModuleInfo {
     // }
 
     /// Returns the module's functions.
-    pub fn functions(&self) -> &[FunctionDefinition] {
+    pub fn functions(&self) -> &[FunctionDefinition<'a>] {
         if self.num_functions == 0 {
             &[]
         } else {
@@ -47,7 +47,7 @@ impl ModuleInfo {
     }
 
     /// Returns the module's types.
-    pub fn types(&self) -> &[TypeInfo] {
+    pub fn types(&self) -> &[TypeInfo<'a>] {
         if self.num_types == 0 {
             &[]
         } else {
@@ -56,8 +56,8 @@ impl ModuleInfo {
     }
 }
 
-unsafe impl Send for ModuleInfo {}
-unsafe impl Sync for ModuleInfo {}
+unsafe impl<'a> Send for ModuleInfo<'a> {}
+unsafe impl<'a> Sync for ModuleInfo<'a> {}
 
 #[cfg(test)]
 mod tests {

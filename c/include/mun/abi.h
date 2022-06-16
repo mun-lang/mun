@@ -43,13 +43,46 @@ typedef struct MunGuid {
 } MunGuid;
 
 /**
- * Represents a unique identifier for types. The runtime can use this to lookup the corresponding [`TypeInfo`].
+ * Represents a pointer to another type.
  */
-typedef struct MunTypeId {
+typedef struct MunPointerTypeId {
     /**
-     * The GUID of the type
+     * The type to which this pointer points
      */
-    struct MunGuid guid;
+    const struct MunTypeId *pointee;
+    /**
+     * Whether or not this pointer is mutable or not
+     */
+    bool mutable_;
+} MunPointerTypeId;
+
+/**
+ * Represents a unique identifier for types. The runtime can use this to lookup the corresponding
+ * [`TypeInfo`]. A [`TypeId`] is a key for a [`TypeInfo`].
+ *
+ * A [`TypeId`] only contains enough information to query the runtime for a concrete type.
+ */
+typedef enum MunTypeId_Tag {
+    /**
+     * Represents a concrete type with a specific Guid
+     */
+    Concrete,
+    /**
+     * Represents a pointer to a type
+     */
+    Pointer,
+} MunTypeId_Tag;
+
+typedef struct MunTypeId {
+    MunTypeId_Tag tag;
+    union {
+        struct {
+            struct MunGuid concrete;
+        };
+        struct {
+            struct MunPointerTypeId pointer;
+        };
+    };
 } MunTypeId;
 
 /**
@@ -107,6 +140,10 @@ typedef struct MunFunctionDefinition {
  */
 typedef struct MunStructInfo {
     /**
+     * The unique identifier of this struct
+     */
+    struct MunGuid guid;
+    /**
      * Struct fields' names
      */
     const char *const *field_names;
@@ -129,6 +166,20 @@ typedef struct MunStructInfo {
 } MunStructInfo;
 
 /**
+ * Pointer type information
+ */
+typedef struct MunPointerInfo {
+    /**
+     * The type to which this pointer points.
+     */
+    struct MunTypeId pointee;
+    /**
+     * Whether or not the pointed to value is mutable or not
+     */
+    bool mutable_;
+} MunPointerInfo;
+
+/**
  * Contains data specific to a group of types that illicit the same characteristics.
  */
 enum MunTypeInfoData_Tag
@@ -144,6 +195,10 @@ enum MunTypeInfoData_Tag
      * Struct types (i.e. record, tuple, or unit structs)
      */
     Struct,
+    /**
+     * Pointer to another type
+     */
+    Pointer,
 };
 #ifndef __cplusplus
 typedef uint8_t MunTypeInfoData_Tag;
@@ -152,8 +207,16 @@ typedef uint8_t MunTypeInfoData_Tag;
 typedef union MunTypeInfoData {
     MunTypeInfoData_Tag tag;
     struct {
+        MunTypeInfoData_Tag primitive_tag;
+        struct MunGuid primitive;
+    };
+    struct {
         MunTypeInfoData_Tag struct_tag;
         struct MunStructInfo struct_;
+    };
+    struct {
+        MunTypeInfoData_Tag pointer_tag;
+        struct MunPointerInfo pointer;
     };
 } MunTypeInfoData;
 
@@ -164,10 +227,6 @@ typedef union MunTypeInfoData {
  * constructed generic types.
  */
 typedef struct MunTypeInfo {
-    /**
-     * Type ID
-     */
-    struct MunTypeId id;
     /**
      * Type name
      */

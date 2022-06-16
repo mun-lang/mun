@@ -7,7 +7,7 @@ pub fn equals_return_type<T: ReturnTypeReflection>(
     type_info: &TypeInfo,
 ) -> Result<(), (&str, &str)> {
     match type_info.data {
-        TypeInfoData::Primitive => {
+        TypeInfoData::Primitive(_) => {
             if type_info.id != T::type_id() {
                 return Err((&type_info.name, T::type_name()));
             }

@@ -5,18 +5,20 @@ use std::{ffi::c_void, slice};
 ///
 /// Function signatures and pointers are stored separately for cache efficiency.
 #[repr(C)]
-pub struct DispatchTable {
+pub struct DispatchTable<'a> {
     /// Function signatures
-    pub(crate) prototypes: *const FunctionPrototype,
+    pub(crate) prototypes: *const FunctionPrototype<'a>,
     /// Function pointers
     pub(crate) fn_ptrs: *mut *const c_void,
     /// Number of functions
     pub num_entries: u32,
 }
 
-impl DispatchTable {
+impl<'a> DispatchTable<'a> {
     /// Returns an iterator over pairs of mutable function pointers and signatures.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&mut *const c_void, &FunctionPrototype)> {
+    pub fn iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = (&mut *const c_void, &FunctionPrototype<'a>)> {
         if self.num_entries == 0 {
             (&mut []).iter_mut().zip((&[]).iter())
         } else {
@@ -30,7 +32,7 @@ impl DispatchTable {
     }
 
     /// Returns an iterator over pairs of function pointers and signatures.
-    pub fn iter(&self) -> impl Iterator<Item = (&*const c_void, &FunctionPrototype)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&*const c_void, &FunctionPrototype<'a>)> {
         if self.num_entries == 0 {
             (&[]).iter().zip((&[]).iter())
         } else {
@@ -53,7 +55,7 @@ impl DispatchTable {
     }
 
     /// Returns function prototypes.
-    pub fn prototypes(&self) -> &[FunctionPrototype] {
+    pub fn prototypes(&self) -> &[FunctionPrototype<'a>] {
         if self.num_entries == 0 {
             &[]
         } else {
