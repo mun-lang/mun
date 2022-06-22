@@ -1,6 +1,5 @@
 use super::body::ExternalGlobals;
 use crate::module_group::ModuleGroup;
-use crate::type_info::TypeInfo;
 use crate::{
     code_gen::CodeGenContext,
     ir::body::BodyIrGenerator,
@@ -20,7 +19,7 @@ pub struct FileIr<'ink> {
     /// The `hir::Function`s that constitute the file's API.
     pub function_definitions: HashSet<hir::Function>,
     /// The types defined in this file
-    pub type_definitions: HashSet<TypeInfo>,
+    pub type_definitions: HashSet<hir::Ty>,
 }
 
 /// Generates IR for the specified file.
@@ -62,7 +61,7 @@ pub(crate) fn gen_file_ir<'db, 'ink>(
             }
         }
         if let ModuleDef::Struct(s) = def {
-            type_definitions.insert(hir_types.type_info(&s.ty(code_gen.db)));
+            type_definitions.insert(s.ty(code_gen.db));
         }
     }
 

@@ -54,7 +54,6 @@ pub struct PointerTypeId<'ink> {
 
 #[derive(AsValue)]
 pub struct TypeInfo<'ink> {
-    pub id: TypeId<'ink>,
     pub name: Value<'ink, *const u8>,
     pub size_in_bits: u32,
     pub alignment: u8,
@@ -64,7 +63,6 @@ pub struct TypeInfo<'ink> {
 #[derive(AsValue)]
 #[repr(u8)]
 pub enum TypeInfoData<'ink> {
-    Primitive,
     Struct(StructInfo<'ink>),
 }
 

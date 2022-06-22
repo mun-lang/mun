@@ -1,12 +1,3 @@
-use crate::{garbage_collector::GarbageCollector, DispatchTable};
-use anyhow::anyhow;
-use libloader::{MunLibrary, TempLibrary};
-use log::error;
-use memory::{
-    mapping::{Mapping, MemoryMapper},
-    type_table::TypeTable,
-    TryFromAbiError, TypeInfo,
-};
 use std::{
     collections::{HashMap, VecDeque},
     ffi::c_void,
@@ -14,11 +5,23 @@ use std::{
     sync::Arc,
 };
 
+use anyhow::anyhow;
+use log::error;
+
+use libloader::{MunLibrary, TempLibrary};
+use memory::{
+    mapping::{Mapping, MemoryMapper},
+    TryFromAbiError,
+    type_table::TypeTable, TypeInfo,
+};
+
+use crate::{DispatchTable, garbage_collector::GarbageCollector};
+
 /// An assembly is a hot reloadable compilation unit, consisting of one or more Mun modules.
 pub struct Assembly {
     library_path: PathBuf,
     library: TempLibrary,
-    info: abi::AssemblyInfo,
+    info: abi::AssemblyInfo<'static>,
     allocator: Arc<GarbageCollector>,
 }
 
@@ -56,20 +59,19 @@ impl Assembly {
         let allocator_ptr = Arc::into_raw(gc.clone()) as *mut std::ffi::c_void;
         library.set_allocator_handle(allocator_ptr);
 
-        let info = library.get_info();
         let assembly = Assembly {
+            info: library.get_info(),
             library_path: library_path.to_path_buf(),
             library: library.into_inner(),
-            info,
             allocator: gc,
         };
 
         Ok(assembly)
     }
 
-    fn link_all_types<'a>(
+    fn link_all_types<'abi>(
         type_table: &mut TypeTable,
-        to_link: impl Iterator<Item = (&'a abi::TypeId, &'a mut *const c_void, &'a str)>,
+        to_link: impl Iterator<Item = (&'abi abi::TypeId<'abi>, &'abi mut *const c_void, &'abi str)>,
     ) -> anyhow::Result<()> {
         // Try to link all LUT entries
         let mut failed_to_link = false;
@@ -93,9 +95,10 @@ impl Assembly {
     }
 
     /// Private implementation of runtime linking
-    fn link_all_functions<'a>(
-        dispatch_table: &mut DispatchTable,
-        to_link: impl Iterator<Item = (&'a mut *const c_void, &'a abi::FunctionPrototype)>,
+    fn link_all_functions<'abi>(
+        dispatch_table: &DispatchTable,
+        type_table: &TypeTable,
+        to_link: impl Iterator<Item = (&'abi mut *const c_void, &'abi abi::FunctionPrototype<'abi>)>,
     ) -> anyhow::Result<()> {
         let mut to_link: Vec<_> = to_link.collect();
 
@@ -108,17 +111,26 @@ impl Assembly {
             for (dispatch_ptr, fn_prototype) in to_link.into_iter() {
                 // Ensure that the function is in the runtime dispatch table
                 if let Some(fn_def) = dispatch_table.get_fn(fn_prototype.name()) {
-                    let type_ids = fn_def
-                        .prototype
-                        .signature
-                        .arg_types
-                        .iter()
-                        .map(|type_info| &type_info.id);
+                    let mut type_ids = fn_def.prototype.signature.arg_types.iter();
 
-                    // Ensure that the function's signature is the same.
-                    if !fn_prototype.signature.arg_types().iter().eq(type_ids) {
+                    if fn_def.prototype.signature.arg_types.len() != fn_prototype.signature.num_arg_types as usize {
+                        // TODO: Add more info here
                         return Err(anyhow!("Failed to link: function '{}' is missing. A function with the same name does exist, but the signatures do not match.", fn_prototype.name()));
-                        // (expected: {}, found: {}).", fn_prototype.name(), fn_prototype, fn_def.prototype));
+                    }
+
+                    // Check function arguments
+                    for fn_arg in fn_prototype.signature.arg_types().iter() {
+                        let ty = type_table.find_type_info_by_id(fn_arg);
+                        if ty.as_ref() != type_ids.next() {
+                            // TODO: Add more info here
+                            return Err(anyhow!("Failed to link: function '{}' is missing. A function with the same name does exist, but the signatures do not match.", fn_prototype.name()));
+                        }
+                    }
+
+                    // Check function return type
+                    if Some(&fn_def.prototype.signature.return_type) != type_table.find_type_info_by_id(&fn_prototype.signature.return_type).as_ref() {
+                        // TODO: Add more info here
+                        return Err(anyhow!("Failed to link: function '{}' is missing. A function with the same name does exist, but the signatures do not match.", fn_prototype.name()));
                     }
 
                     *dispatch_ptr = fn_def.fn_ptr;
@@ -193,12 +205,12 @@ impl Assembly {
 
         let functions_to_link = assemblies
             .into_iter()
-            .flat_map(|asm| asm.info.dispatch_table.iter_mut())
+            .flat_map(|asm| asm.info_mut().dispatch_table.iter_mut())
             // Only take signatures into account that do *not* yet have a function pointer assigned
             // by the compiler.
             .filter(|(ptr, _)| ptr.is_null());
 
-        Assembly::link_all_functions(&mut dispatch_table, functions_to_link)?;
+        Assembly::link_all_functions(&mut dispatch_table, &type_table, functions_to_link)?;
 
         Ok((dispatch_table, type_table))
     }
@@ -237,10 +249,10 @@ impl Assembly {
         while let Some(mut entry) = assemblies_to_link.pop_front() {
             let (ref old_assembly, ref mut new_assembly) = entry;
 
-            let new_path = new_assembly.info.symbols.path();
+            let new_path = new_assembly.info().symbols.path().to_owned();
 
             // Are there any dependencies that still need to be loaded?
-            if dependencies.contains_key(new_path) {
+            if dependencies.contains_key(&new_path) {
                 assemblies_to_link.push_back(entry);
 
                 continue;
@@ -250,12 +262,12 @@ impl Assembly {
                 old_assembly.map(|old_assembly| {
                     // Remove the old assemblies' types from the type table
                     let old_types = old_assembly
-                        .info
+                        .info()
                         .symbols
                         .types()
                         .iter()
                         .map(|type_info| {
-                            type_table.remove_type_by_id(&type_info.id).expect(
+                            type_table.remove_type_by_type_info(&type_info).expect(
                                 "All types from a loaded assembly must exist in the type table.",
                             )
                         })
@@ -285,7 +297,7 @@ impl Assembly {
             }
 
             let types_to_link = new_assembly
-                .info
+                .info_mut()
                 .type_lut
                 .iter_mut()
                 // Only take signatures into account that do *not* yet have a type handle assigned
@@ -310,7 +322,7 @@ impl Assembly {
             dispatch_table.insert_module(&new_assembly.info.symbols, &type_table);
 
             let functions_to_link = new_assembly
-                .info
+                .info_mut()
                 .dispatch_table
                 .iter_mut()
                 // Only take signatures into account that do *not* yet have a function pointer assigned
@@ -324,12 +336,12 @@ impl Assembly {
             //
             // Note that linking may fail because for instance functions remaining unlinked (missing)
             // or the signature of a function doesnt match.
-            Assembly::link_all_functions(&mut dispatch_table, functions_to_link)?;
+            Assembly::link_all_functions(&mut dispatch_table, &type_table, functions_to_link)?;
 
             // Remove this assembly from the dependencies
             dependencies
                 .values_mut()
-                .for_each(|dependencies| dependencies.retain(|path| path != new_path));
+                .for_each(|dependencies| dependencies.retain(|path| path != &new_path));
 
             // Remove assemblies that no longer have dependencies
             dependencies.retain(|_, dependencies| !dependencies.is_empty());
@@ -354,6 +366,13 @@ impl Assembly {
     /// Returns the assembly's information.
     pub fn info(&self) -> &abi::AssemblyInfo {
         &self.info
+    }
+
+    /// Returns the assembly's information.
+    pub fn info_mut(&mut self) -> &mut abi::AssemblyInfo
+    {
+        // HACK: We want to make sure that the assembly info never outlives self.
+        unsafe { std::mem::transmute(&mut self.info) }
     }
 
     /// Returns the path corresponding to the assembly's library.

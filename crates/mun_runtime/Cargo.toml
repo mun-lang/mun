@@ -25,6 +25,7 @@ once_cell = "1.4.0"
 parking_lot = "0.12.0"
 rustc-hash = "1.1"
 seq-macro = "0.3.0"
+ouroboros = "0.15.0"
 
 [dev-dependencies]
 compiler = { version="=0.3.0", path="../mun_compiler", package = "mun_compiler" }

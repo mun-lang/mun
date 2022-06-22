@@ -78,6 +78,15 @@ impl<'a> TypeInfo<'a> {
         unsafe { str::from_utf8_unchecked(CStr::from_ptr(self.name).to_bytes()) }
     }
 
+    /// Returns the GUID if this type represents a concrete type.
+    pub fn as_concrete(&self) -> Option<&Guid> {
+        match &self.data {
+            TypeInfoData::Primitive(guid) => Some(guid),
+            TypeInfoData::Struct(s) => Some(&s.guid),
+            TypeInfoData::Pointer(_) => None
+        }
+    }
+
     /// Retrieves the type's struct information, if available.
     pub fn as_struct(&self) -> Option<&StructInfo> {
         if let TypeInfoData::Struct(s) = &self.data {

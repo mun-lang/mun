@@ -1,14 +1,13 @@
 use crate::{
     garbage_collector::GcRootPtr,
     marshal::Marshal,
-    reflection::{equals_return_type, ArgumentReflection, ReturnTypeReflection},
+    reflection::{ArgumentReflection, ReturnTypeReflection},
     GarbageCollector, Runtime,
 };
 use memory::{
     gc::{GcPtr, GcRuntime, HasIndirectionPtr},
     TypeInfo,
 };
-use once_cell::sync::OnceCell;
 use std::{
     ptr::{self, NonNull},
     sync::Arc,
@@ -87,12 +86,12 @@ impl<'s> StructRef<'s> {
             )
         })?;
 
-        equals_return_type::<T>(&field_info.type_info).map_err(|(expected, found)| {
-            format!(
+        if !T::accepts_type(&field_info.type_info) {
+            return Err(format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
-                type_info.name, field_name, expected, found,
-            )
-        })?;
+                type_info.name, field_name, T::type_hint(), field_info.type_info.name,
+            ))
+        };
 
         // SAFETY: The offset in the ABI is always valid.
         let field_ptr =
@@ -126,12 +125,13 @@ impl<'s> StructRef<'s> {
             )
         })?;
 
-        if field_info.type_info.id != value.type_id(self.runtime) {
+        let value_type = value.type_info(self.runtime);
+        if field_info.type_info != value_type {
             return Err(format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
                 type_info.name,
                 field_name,
-                value.type_info(self.runtime).name,
+                value_type.name,
                 field_info.type_info
             ));
         }
@@ -162,12 +162,13 @@ impl<'s> StructRef<'s> {
             )
         })?;
 
-        if field_info.type_info.id != value.type_id(self.runtime) {
+        let value_type = value.type_info(self.runtime);
+        if field_info.type_info != value_type {
             return Err(format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
                 type_info.name,
                 field_name,
-                value.type_info(self.runtime).name,
+                value_type.name,
                 field_info.type_info
             ));
         }
@@ -246,17 +247,13 @@ impl<'s> Marshal<'s> for StructRef<'s> {
 }
 
 impl<'r> ReturnTypeReflection for StructRef<'r> {
-    fn type_name() -> &'static str {
-        "struct"
+    /// Returns true if this specified type can be stored in an instance of this type
+    fn accepts_type(ty: &Arc<TypeInfo>) -> bool {
+        ty.is_struct()
     }
 
-    fn type_id() -> abi::TypeId {
-        // TODO: Once `const_fn` lands, replace this with a const md5 hash
-        static GUID: OnceCell<abi::TypeId> = OnceCell::new();
-        GUID.get_or_init(|| {
-            abi::Guid::from(<Self as ReturnTypeReflection>::type_name().as_bytes()).into()
-        })
-        .clone()
+    fn type_hint() -> &'static str {
+        "struct"
     }
 }
 

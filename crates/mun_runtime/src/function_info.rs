@@ -1,5 +1,6 @@
-use memory::{type_table::TypeTable, TryFromAbiError, TypeInfo};
 use std::{ffi::c_void, sync::Arc};
+
+use memory::{type_table::TypeTable, TryFromAbiError, TypeInfo};
 
 /// A linked version of [`mun_abi::FunctionDefinition`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
 #[derive(Clone)]
@@ -15,10 +16,10 @@ unsafe impl Sync for FunctionDefinition {}
 
 impl FunctionDefinition {
     /// Tries to convert from an `abi::FunctionDefinition`.
-    pub fn try_from_abi(
-        fn_def: &abi::FunctionDefinition,
+    pub fn try_from_abi<'abi>(
+        fn_def: &'abi abi::FunctionDefinition<'abi>,
         type_table: &TypeTable,
-    ) -> Result<Self, TryFromAbiError> {
+    ) -> Result<Self, TryFromAbiError<'abi>> {
         let prototype = FunctionPrototype::try_from_abi(&fn_def.prototype, type_table)?;
 
         Ok(Self {
@@ -39,10 +40,10 @@ pub struct FunctionPrototype {
 
 impl FunctionPrototype {
     /// Tries to convert from an `abi::FunctionPrototype`.
-    pub fn try_from_abi(
-        fn_prototype: &abi::FunctionPrototype,
+    pub fn try_from_abi<'abi>(
+        fn_prototype: &'abi abi::FunctionPrototype<'abi>,
         type_table: &TypeTable,
-    ) -> Result<Self, TryFromAbiError> {
+    ) -> Result<Self, TryFromAbiError<'abi>> {
         let signature = FunctionSignature::try_from_abi(&fn_prototype.signature, type_table)?;
 
         Ok(Self {
@@ -63,10 +64,10 @@ pub struct FunctionSignature {
 
 impl FunctionSignature {
     /// Tries to convert from an `abi::FunctionSignature`.
-    pub fn try_from_abi(
-        fn_sig: &abi::FunctionSignature,
+    pub fn try_from_abi<'abi>(
+        fn_sig: &'abi abi::FunctionSignature<'abi>,
         type_table: &TypeTable,
-    ) -> Result<Self, TryFromAbiError> {
+    ) -> Result<Self, TryFromAbiError<'abi>> {
         let arg_types: Vec<Arc<TypeInfo>> = fn_sig
             .arg_types()
             .iter()

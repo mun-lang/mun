@@ -1,8 +1,8 @@
-mod temp_library;
-
 use std::{ffi::c_void, path::Path};
 
 pub use temp_library::TempLibrary;
+
+mod temp_library;
 
 pub struct MunLibrary(TempLibrary);
 
@@ -21,7 +21,7 @@ impl MunLibrary {
     /// executed when the library is unloaded.
     ///
     /// See [`libloading::Library::new`] for more information.
-    pub unsafe fn new(library_path: &Path) -> Result<Self, anyhow::Error> {
+    pub unsafe fn new<'a>(library_path: &Path) -> Result<Self, anyhow::Error> {
         // Although loading a library is technically unsafe, we assume here that this is not the
         // case for munlibs.
         let library = TempLibrary::new(library_path)?;
@@ -32,7 +32,7 @@ impl MunLibrary {
         let _get_abi_version_fn: libloading::Symbol<'_, extern "C" fn() -> u32> =
             library.library().get(abi::GET_VERSION_FN_NAME.as_bytes())?;
 
-        let _get_info_fn: libloading::Symbol<'_, extern "C" fn() -> abi::AssemblyInfo> =
+        let _get_info_fn: libloading::Symbol<'_, extern "C" fn() -> abi::AssemblyInfo<'a>> =
             library.library().get(abi::GET_INFO_FN_NAME.as_bytes())?;
 
         let _set_allocator_handle_fn: libloading::Symbol<'_, extern "C" fn(*mut c_void)> = library
@@ -68,8 +68,8 @@ impl MunLibrary {
     ///
     /// This operations executes a function in the munlib. There is no guarantee that the execution
     /// of the function wont result in undefined behavior.
-    pub unsafe fn get_info(&self) -> abi::AssemblyInfo {
-        let get_info_fn: libloading::Symbol<'_, extern "C" fn() -> abi::AssemblyInfo> = self
+    pub unsafe fn get_info(&self) -> abi::AssemblyInfo<'static> {
+        let get_info_fn: libloading::Symbol<extern "C" fn() -> abi::AssemblyInfo<'static>> = self
             .0
             .library()
             .get(abi::GET_INFO_FN_NAME.as_bytes())

@@ -1,45 +1,61 @@
-use std::collections::HashMap;
-use abi::{HasStaticTypeId, TypeId};
-use hir::{FloatBitness, HirDatabase, HirDisplay, Ty, TyKind};
+use std::cell::RefCell;
+use std::sync::Arc;
+
+use inkwell::module::Linkage;
+use inkwell::values::UnnamedAddress;
+use rustc_hash::FxHashMap;
+
 use crate::ir::types as ir;
-use crate::value::{Global, IrValueContext};
+use crate::type_info::{TypeId, TypeIdData};
+use crate::value::{AsValue, Global, IrValueContext};
 
 /// An object that constructs [`ir::TypeId`]s from various representations.
 ///
 /// This object also caches any types that are referenced by other `TypeId`s. Types that reference
 /// other types are for instance pointers or arrays.
-struct TypeIdBuilder<'ink, 'a> {
-    context: &'a IrValueContext<'ink, '_, '_>,
+pub struct TypeIdBuilder<'ink, 'a, 'b, 'c> {
+    context: &'a IrValueContext<'ink, 'b, 'c>,
 
-    /// A map of abi::TypeIds that have already have a global associated with it.
-    global_types: HashMap<abi::TypeId, Global<'ink, ir::TypeId<'ink>>>
+    /// A map of ir::TypeIds that have already have already been interned.
+    interned_types: RefCell<FxHashMap<Arc<TypeId>, Global<'ink, ir::TypeId<'ink>>>>,
 }
 
-impl TypeIdBuilder {
-    /// Constructs an [`ir::TypeId`] from a HIR type
-    pub fn construct_from_hir(&self, ty: &hir::Ty, db: &dyn HirDatabase) -> ir::TypeId {
-        match ty.interned() {
-            TyKind::Struct(_) => {}
-            TyKind::Float(f) => self.construct_from_hir_float(f, db),
-            TyKind::Int(_) => {}
-            TyKind::Bool => {}
-            TyKind::Tuple(_, _) => {}
-            _ => unimplemented!("{} unhandled", ty.display(db)),
+impl<'ink, 'a, 'b, 'c> TypeIdBuilder<'ink, 'a, 'b, 'c> {
+    pub fn new(context: &'a IrValueContext<'ink, 'b, 'c>) -> Self {
+        Self {
+            context,
+            interned_types: RefCell::new(Default::default())
         }
     }
 
-    /// Constructs a [`ir::TypeId`] from a HIR float type
-    pub fn construct_from_hir_float(&self, ty: &hir::FloatTy, db: &dyn HirDatabase) -> ir::TypeId {
-        match ty.bitness {
-            FloatBitness::X32 => self.construct_from_abi(f32::type_id()),
-            FloatBitness::X64 => self.construct_from_abi(f64::type_id()),
-        }
-    }
-
-    pub fn construct_from_abi<'abi>(&self, ty: &'abi abi::TypeId<'abi>) -> ir::TypeId {
-        match ty {
-            TypeId::Concrete(guid) => ir::TypeId::Concrete(guid.clone()),
-            TypeId::Pointer(p) => p.
+    /// Constructs an [`ir::TypeId`] from an internal TypeId.
+    pub fn construct_from_type_id(&self, type_id: &Arc<TypeId>) -> ir::TypeId<'ink> {
+        match &type_id.data {
+            TypeIdData::Concrete(guid) => ir::TypeId::Concrete(guid.clone()),
+            TypeIdData::Pointer(p) => {
+                let global = match {
+                    let borrow = self.interned_types.borrow();
+                    borrow.get(p.pointee.as_ref()).cloned()
+                } {
+                    Some(v) => v,
+                    None => {
+                        let pointee_ir_type_id = self.construct_from_type_id(&p.pointee);
+                        let global = pointee_ir_type_id.as_value(self.context).into_global(
+                            &type_id.name,
+                            self.context,
+                            true,
+                            Linkage::Private,
+                            Some(UnnamedAddress::Global),
+                        );
+                        self.interned_types.borrow_mut().insert(type_id.clone(), global);
+                        global
+                    }
+                };
+                ir::TypeId::Pointer(ir::PointerTypeId {
+                    pointee: global.as_value(self.context),
+                    mutable: p.mutable
+                })
+            }
         }
     }
 }

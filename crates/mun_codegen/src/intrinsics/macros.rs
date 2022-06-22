@@ -9,8 +9,8 @@ macro_rules! intrinsics{
                     fn prototype(&self, context: &Context, target: &TargetData) -> FunctionPrototype {
                         FunctionPrototype {
                             name: stringify!($name).to_owned(),
-                            arg_types: vec![$(<$arg as crate::type_info::HasStaticTypeInfo>::type_info(context, target)),*],
-                            ret_type: <$ret as crate::type_info::HasStaticReturnTypeInfo>::return_type_info(context, target)
+                            arg_types: vec![$(<$arg as crate::type_info::HasStaticTypeId>::type_id().clone()),*],
+                            ret_type: <$ret as crate::type_info::HasStaticTypeId>::type_id().clone()
                         }
                     }
 

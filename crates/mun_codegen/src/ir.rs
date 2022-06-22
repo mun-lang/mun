@@ -6,8 +6,6 @@ use inkwell::types::{
 };
 use inkwell::AddressSpace;
 
-use crate::type_info::TypeInfo;
-
 pub mod body;
 #[macro_use]
 pub(crate) mod dispatch_table;
@@ -189,13 +187,6 @@ pub trait IsPointerType<'ink> {
 impl<'ink, S: BasicType<'ink>, T: IsIrType<'ink, Type = S>> IsPointerType<'ink> for *const T {
     fn ir_type(context: &'ink Context, target: &TargetData) -> PointerType<'ink> {
         T::ir_type(context, target).ptr_type(AddressSpace::Generic)
-    }
-}
-
-// HACK: Manually add `*const TypeInfo`
-impl<'ink> IsPointerType<'ink> for *const TypeInfo {
-    fn ir_type(context: &'ink Context, _target: &TargetData) -> PointerType<'ink> {
-        context.i8_type().ptr_type(AddressSpace::Generic)
     }
 }
 

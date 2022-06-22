@@ -1,44 +1,20 @@
-use crate::{marshal::Marshal, Runtime, StructRef};
-use memory::{HasStaticTypeInfo, TypeInfo, TypeInfoData};
+use crate::{marshal::Marshal, Runtime};
+use memory::{HasStaticTypeInfo, TypeInfo};
 use std::sync::Arc;
-
-/// Returns whether the specified return type matches the `type_info`.
-pub fn equals_return_type<T: ReturnTypeReflection>(
-    type_info: &TypeInfo,
-) -> Result<(), (&str, &str)> {
-    match type_info.data {
-        TypeInfoData::Primitive(_) => {
-            if type_info.id != T::type_id() {
-                return Err((&type_info.name, T::type_name()));
-            }
-        }
-        TypeInfoData::Struct(_) => {
-            if <StructRef as ReturnTypeReflection>::type_id() != T::type_id() {
-                return Err(("struct", T::type_name()));
-            }
-        }
-    }
-    Ok(())
-}
 
 /// A type to emulate dynamic typing across compilation units for static types.
 pub trait ReturnTypeReflection: Sized {
-    /// Retrieves the type's `TypeId`.
-    fn type_id() -> abi::TypeId;
+    /// Returns true if this specified type can be stored in an instance `Self`.
+    fn accepts_type(ty: &Arc<TypeInfo>) -> bool;
 
-    /// Retrieves the type's name.
-    fn type_name() -> &'static str;
+    /// Returns a type hint to indicate the name of this type
+    fn type_hint() -> &'static str;
 }
 
 /// A type to emulate dynamic typing across compilation units for statically typed values.
 pub trait ArgumentReflection: Sized {
     /// Retrieves the argument's type information.
     fn type_info(&self, runtime: &Runtime) -> Arc<TypeInfo>;
-
-    /// Retrieves the argument's type ID.
-    fn type_id(&self, runtime: &Runtime) -> abi::TypeId {
-        self.type_info(runtime).id.clone()
-    }
 }
 
 macro_rules! impl_primitive_type {
@@ -51,12 +27,12 @@ macro_rules! impl_primitive_type {
             }
 
             impl ReturnTypeReflection for $ty {
-                fn type_id() -> abi::TypeId {
-                    <Self as abi::HasStaticTypeInfo>::type_info().id.clone()
+                fn accepts_type(ty: &Arc<TypeInfo>) -> bool {
+                    ty == <Self as HasStaticTypeInfo>::type_info()
                 }
 
-                fn type_name() -> &'static str {
-                    <Self as abi::HasStaticTypeInfo>::type_info().name()
+                fn type_hint() -> &'static str {
+                    &<Self as HasStaticTypeInfo>::type_info().name
                 }
             }
 
@@ -129,18 +105,18 @@ where
     }
 }
 
-impl<T> ReturnTypeReflection for *const T
-where
-    *const T: abi::HasStaticTypeInfo,
-{
-    fn type_id() -> abi::TypeId {
-        <Self as abi::HasStaticTypeInfo>::type_info().id.clone()
-    }
-
-    fn type_name() -> &'static str {
-        <Self as abi::HasStaticTypeInfo>::type_info().name()
-    }
-}
+// impl<T> ReturnTypeReflection for *const T
+// where
+//     *const T: abi::HasStaticTypeInfo,
+// {
+//     fn type_id() -> abi::TypeId {
+//         <Self as abi::HasStaticTypeInfo>::type_info().id.clone()
+//     }
+//
+//     fn type_name() -> &'static str {
+//         <Self as abi::HasStaticTypeInfo>::type_info().name()
+//     }
+// }
 
 impl<T> ArgumentReflection for *mut T
 where
@@ -151,15 +127,15 @@ where
     }
 }
 
-impl<T> ReturnTypeReflection for *mut T
-where
-    *mut T: abi::HasStaticTypeInfo,
-{
-    fn type_id() -> abi::TypeId {
-        <Self as abi::HasStaticTypeInfo>::type_info().id.clone()
-    }
-
-    fn type_name() -> &'static str {
-        <Self as abi::HasStaticTypeInfo>::type_info().name()
-    }
-}
+// impl<T> ReturnTypeReflection for *mut T
+// where
+//     *mut T: abi::HasStaticTypeInfo,
+// {
+//     fn type_id() -> abi::TypeId {
+//         <Self as abi::HasStaticTypeInfo>::type_info().id.clone()
+//     }
+//
+//     fn type_name() -> &'static str {
+//         <Self as abi::HasStaticTypeInfo>::type_info().name()
+//     }
+// }

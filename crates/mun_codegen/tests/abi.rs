@@ -1,8 +1,10 @@
-use abi::{StructMemoryKind, TypeInfoData, ABI_VERSION};
+use std::ffi::CStr;
+use std::mem;
+
+use abi::{HasStaticTypeId, HasStaticTypeName, StructMemoryKind, TypeInfoData, ABI_VERSION};
 use libloader::MunLibrary;
 use mun_test::CompileTestDriver;
 use runtime::ReturnTypeReflection;
-use std::mem;
 
 // TODO: add integration test for ModuleInfo's path
 #[test]
@@ -19,10 +21,6 @@ fn test_abi_compatibility() {
     pub struct {struct_name}(f64, f64);
     pub struct(value) {struct_name2} {{ a: i32, b: i32 }};
     "#,
-        fn_name = fn_name,
-        fn_name2 = fn_name2,
-        struct_name = struct_name,
-        struct_name2 = struct_name2,
     ));
 
     // Assert that all library functions are exposed
@@ -73,17 +71,22 @@ fn test_abi_compatibility() {
     );
 
     fn get_function_info<'m>(
-        module_info: &'m abi::ModuleInfo,
+        module_info: &'m abi::ModuleInfo<'m>,
         fn_name: &str,
-    ) -> &'m abi::FunctionDefinition {
+    ) -> &'m abi::FunctionDefinition<'m> {
         module_info
             .functions()
             .iter()
             .find(|f| f.prototype.name() == fn_name)
-            .unwrap_or_else(|| panic!("Failed to retrieve function definition '{}'", fn_name))
+            .unwrap_or_else(|| {
+                panic!("Failed to retrieve function definition '{}'", fn_name)
+            })
     }
 
-    fn test_function_args(fn_def: &abi::FunctionDefinition, args: &[(&str, abi::TypeId)]) {
+    fn test_function_args<'abi>(
+        fn_def: &'abi abi::FunctionDefinition<'abi>,
+        args: &[(&'abi CStr, &'abi abi::TypeId<'abi>)],
+    ) {
         assert_eq!(
             usize::from(fn_def.prototype.signature.num_arg_types),
             args.len()
@@ -102,7 +105,7 @@ fn test_abi_compatibility() {
                     )
                 });
 
-            assert_eq!(fn_arg_type, arg_type_id);
+            assert_eq!(fn_arg_type, *arg_type_id);
         }
     }
 
@@ -115,17 +118,17 @@ fn test_abi_compatibility() {
         );
     }
 
-    fn test_function_return_type_some<R: ReturnTypeReflection>(fn_def: &abi::FunctionDefinition) {
+    fn test_function_return_type_some<R: HasStaticTypeId>(fn_def: &abi::FunctionDefinition) {
         let fn_return_type = fn_def.prototype.signature.return_type().unwrap_or_else(|| {
             panic!(
                 "Function '{}' should have a return type.",
                 fn_def.prototype.name()
             )
         });
-        assert_eq!(fn_return_type, R::type_id());
+        assert_eq!(&fn_return_type, R::type_id());
     }
 
-    fn test_struct_info<T: Sized, F: Sized + ReturnTypeReflection>(
+    fn test_struct_info<T: Sized, F: Sized + HasStaticTypeId>(
         module_info: &abi::ModuleInfo,
         struct_name: &str,
         field_names: &[&str],
@@ -154,7 +157,7 @@ fn test_abi_compatibility() {
             assert_eq!(lhs, *rhs);
         }
         for field_type in struct_info.field_types().iter() {
-            assert_eq!(field_type.guid, F::type_id().guid);
+            assert_eq!(field_type, F::type_id());
         }
 
         let mut offset = 0;
