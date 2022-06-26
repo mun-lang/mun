@@ -1,4 +1,4 @@
-use std::hash::{Hash};
+use std::hash::Hash;
 use std::sync::{Arc, Once};
 
 use abi::static_type_map::StaticTypeMap;

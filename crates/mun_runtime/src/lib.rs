@@ -631,7 +631,8 @@ impl Runtime {
             return Err(InvokeErr {
                 msg: format!(
                     "unexpected return type, got '{}', expected '{}",
-                    &function_info.prototype.signature.return_type.name, ReturnType::type_hint()
+                    &function_info.prototype.signature.return_type.name,
+                    ReturnType::type_hint()
                 ),
                 function_name,
                 arguments,

@@ -1,6 +1,5 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1045
 expression: "\n    pub struct(value) Value(i32, i32);\n    pub struct(gc) Heap(f64, f64);\n\n    pub fn assign_value(a: Value, b: Value) -> Value {\n        a = b;\n        a\n    }\n\n    pub fn assign_heap(a: Heap, b: Heap) -> Heap {\n        a = b;\n        a\n    }\n    // TODO: Add errors\n    // a += b;\n    // a *= b;\n    // a -= b;\n    // a /= b;\n    // a %= b;\n    "
 ---
 ; == FILE IR (mod) =====================================
@@ -13,7 +12,7 @@ source_filename = "mod"
 
 @allocatorHandle = external global i8*
 @dispatchTable = external global %DispatchTable
-@global_type_lookup_table = external global [27 x i64*]
+@global_type_lookup_table = external global [4 x i64*]
 
 define %Value @assign_value(%Value %0, %Value %1) {
 body:
@@ -30,7 +29,7 @@ body:
   %deref2 = load %Value, %Value* %mem_ptr1, align 4
   %assign_value = call %Value @assign_value(%Value %deref, %Value %deref2)
   %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
-  %Value_ptr = load i64*, i64** getelementptr inbounds ([27 x i64*], [27 x i64*]* @global_type_lookup_table, i64 0, i64 15), align 8
+  %Value_ptr = load i64*, i64** getelementptr inbounds ([4 x i64*], [4 x i64*]* @global_type_lookup_table, i64 0, i64 1), align 8
   %type_info_ptr_to_i8_ptr = bitcast i64* %Value_ptr to i8*
   %allocator_handle = load i8*, i8** @allocatorHandle, align 8
   %new = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
@@ -52,6 +51,6 @@ source_filename = "group_name"
 %DispatchTable = type { i8** (i8*, i8*)* }
 
 @dispatchTable = global %DispatchTable zeroinitializer
-@global_type_lookup_table = global [27 x i64*] zeroinitializer
+@global_type_lookup_table = global [4 x i64*] zeroinitializer
 @allocatorHandle = unnamed_addr global i8* null
 

@@ -6,6 +6,8 @@ use inkwell::{attributes::Attribute, module::Linkage, types::AnyType};
 use hir::{HirDatabase, TyKind};
 use ir_type_builder::TypeIdBuilder;
 
+use crate::ir::ty::guid_from_struct;
+use crate::type_info::HasStaticTypeId;
 use crate::{
     ir::ty::HirTypeCache,
     ir::types as ir,
@@ -18,7 +20,6 @@ use crate::{
         AsValue, CanInternalize, Global, IrValueContext, IterAsIrValue, SizedValueType, Value,
     },
 };
-use crate::type_info::HasStaticTypeId;
 
 mod ir_type_builder;
 
@@ -139,7 +140,6 @@ fn get_type_definition_array<'ink, 'a>(
                         ir_type_builder,
                     )),
                 }
-
             }
             _ => unreachable!("unsupported export type"),
         })
@@ -204,6 +204,7 @@ fn gen_struct_info<'ink>(
         );
 
     ir::StructInfo {
+        guid: guid_from_struct(db, hir_struct),
         field_names,
         field_types,
         field_offsets,
@@ -239,7 +240,8 @@ fn get_function_definition_array<'ink, 'a>(
             value.set_linkage(Linkage::Private);
 
             // Generate the signature from the function
-            let prototype = gen_prototype_from_function(db, context, *f, hir_types, ir_type_builder);
+            let prototype =
+                gen_prototype_from_function(db, context, *f, hir_types, ir_type_builder);
             ir::FunctionDefinition {
                 prototype,
                 fn_ptr: Value::<*const fn()>::with_cast(
@@ -352,12 +354,23 @@ pub(super) fn gen_reflection_ir<'db, 'ink>(
     let ir_type_builder = TypeIdBuilder::new(context);
 
     let num_functions = function_definitions.len() as u32;
-    let functions =
-        get_function_definition_array(db, context, function_definitions.iter(), hir_types, &ir_type_builder);
+    let functions = get_function_definition_array(
+        db,
+        context,
+        function_definitions.iter(),
+        hir_types,
+        &ir_type_builder,
+    );
 
     // Get the TypeTable global
     let num_types = type_definitions.len() as u32;
-    let types = get_type_definition_array(db, context, type_definitions.iter().cloned(), hir_types, &ir_type_builder);
+    let types = get_type_definition_array(
+        db,
+        context,
+        type_definitions.iter().cloned(),
+        hir_types,
+        &ir_type_builder,
+    );
 
     // Construct the module info struct
     let module_info = ir::ModuleInfo {

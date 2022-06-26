@@ -1,6 +1,5 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1045
 expression: "\n    extern fn extern_fn() -> f32;\n\n    fn private_fn() -> f32 {\n        extern_fn()\n    }\n\n    pub fn main() -> f32 {\n        private_fn()\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
@@ -10,7 +9,7 @@ source_filename = "mod"
 %DispatchTable = type { float ()* }
 
 @dispatchTable = external global %DispatchTable
-@global_type_lookup_table = external global [3 x i64*]
+@global_type_lookup_table = external global [1 x i64*]
 
 define float @private_fn() {
 body:
@@ -32,5 +31,5 @@ source_filename = "group_name"
 %DispatchTable = type { float ()* }
 
 @dispatchTable = global %DispatchTable zeroinitializer
-@global_type_lookup_table = global [3 x i64*] zeroinitializer
+@global_type_lookup_table = global [1 x i64*] zeroinitializer
 

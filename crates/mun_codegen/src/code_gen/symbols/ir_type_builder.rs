@@ -24,7 +24,7 @@ impl<'ink, 'a, 'b, 'c> TypeIdBuilder<'ink, 'a, 'b, 'c> {
     pub fn new(context: &'a IrValueContext<'ink, 'b, 'c>) -> Self {
         Self {
             context,
-            interned_types: RefCell::new(Default::default())
+            interned_types: RefCell::new(Default::default()),
         }
     }
 
@@ -47,13 +47,15 @@ impl<'ink, 'a, 'b, 'c> TypeIdBuilder<'ink, 'a, 'b, 'c> {
                             Linkage::Private,
                             Some(UnnamedAddress::Global),
                         );
-                        self.interned_types.borrow_mut().insert(type_id.clone(), global);
+                        self.interned_types
+                            .borrow_mut()
+                            .insert(type_id.clone(), global);
                         global
                     }
                 };
                 ir::TypeId::Pointer(ir::PointerTypeId {
                     pointee: global.as_value(self.context),
-                    mutable: p.mutable
+                    mutable: p.mutable,
                 })
             }
         }

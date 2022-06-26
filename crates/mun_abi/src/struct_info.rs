@@ -26,6 +26,7 @@ pub struct StructInfo<'a> {
 /// Represents the kind of memory management a struct uses.
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum StructMemoryKind {
     /// A garbage collected struct is allocated on the heap and uses reference semantics when passed
     /// around.
@@ -105,6 +106,43 @@ impl<'a> PartialEq for StructInfo<'a> {
 }
 
 impl<'a> Eq for StructInfo<'a> {}
+
+#[cfg(feature = "serde")]
+impl<'a> serde::Serialize for StructInfo<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use itertools::Itertools;
+        use serde::ser::SerializeStruct;
+
+        let mut s = serializer.serialize_struct("StructInfo", 3)?;
+
+        #[derive(serde::Serialize)]
+        struct Field<'a> {
+            name: &'a str,
+            r#type: &'a TypeId<'a>,
+            offset: &'a u16,
+        }
+
+        s.serialize_field("guid", &self.guid)?;
+        s.serialize_field(
+            "fields",
+            &self
+                .field_names()
+                .zip(self.field_types())
+                .zip(self.field_offsets())
+                .map(|((name, ty), offset)| Field {
+                    name,
+                    r#type: ty,
+                    offset,
+                })
+                .collect_vec(),
+        )?;
+        s.serialize_field("memory_kind", &self.memory_kind)?;
+        s.end()
+    }
+}
 
 #[cfg(test)]
 mod tests {

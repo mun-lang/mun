@@ -1,5 +1,7 @@
-use crate::{DispatchTable, ModuleInfo, TypeLut};
+use itertools::Itertools;
 use std::{ffi::CStr, os::raw::c_char, slice, str};
+
+use crate::{DispatchTable, ModuleInfo, TypeLut};
 
 /// Represents an assembly declaration.
 #[repr(C)]
@@ -34,13 +36,31 @@ impl<'a> AssemblyInfo<'a> {
 unsafe impl<'a> Send for AssemblyInfo<'a> {}
 unsafe impl<'a> Sync for AssemblyInfo<'a> {}
 
+#[cfg(feature = "serde")]
+impl<'a> serde::Serialize for AssemblyInfo<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+
+        let mut s = serializer.serialize_struct("AssemblyInfo", 4)?;
+        s.serialize_field("symbols", &self.symbols)?;
+        s.serialize_field("dispatch_table", &self.dispatch_table)?;
+        s.serialize_field("type_lut", &self.type_lut)?;
+        s.serialize_field("dependencies", &self.dependencies().collect_vec())?;
+        s.end()
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use std::ffi::CString;
+
     use crate::test_utils::{
         fake_assembly_info, fake_dispatch_table, fake_module_info, fake_type_lut, FAKE_DEPENDENCY,
         FAKE_MODULE_PATH,
     };
-    use std::ffi::CString;
 
     #[test]
     fn test_assembly_info_dependencies() {

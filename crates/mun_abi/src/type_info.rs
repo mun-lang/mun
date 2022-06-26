@@ -40,9 +40,29 @@ impl<'a> Debug for TypeInfo<'a> {
     }
 }
 
+#[cfg(feature = "serde")]
+impl<'a> serde::Serialize for TypeInfo<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+
+        let mut s = serializer.serialize_struct("TypeInfo", 4)?;
+        s.serialize_field("name", self.name())?;
+        s.serialize_field("size_in_bits", &self.size_in_bits)?;
+        s.serialize_field("alignment", &self.alignment)?;
+        s.serialize_field("data", &self.data)?;
+        s.end()
+    }
+}
+
 /// Contains data specific to a group of types that illicit the same characteristics.
+/// TODO: Can we remove Primitive? It is never exposed through the ABI since its build in.
+/// TODO: Can we remove Pointer? There is never a declaration of a pointer in the ABI, only TypeId's
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum TypeInfoData<'a> {
     /// Primitive types (i.e. `()`, `bool`, `float`, `int`, etc.)
     Primitive(Guid),
@@ -55,6 +75,7 @@ pub enum TypeInfoData<'a> {
 /// Pointer type information
 #[repr(C)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct PointerInfo<'a> {
     /// The type to which this pointer points.
     pub pointee: TypeId<'a>,
@@ -83,7 +104,7 @@ impl<'a> TypeInfo<'a> {
         match &self.data {
             TypeInfoData::Primitive(guid) => Some(guid),
             TypeInfoData::Struct(s) => Some(&s.guid),
-            TypeInfoData::Pointer(_) => None
+            TypeInfoData::Pointer(_) => None,
         }
     }
 

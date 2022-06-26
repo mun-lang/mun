@@ -36,8 +36,8 @@ smallvec = { version = "1.6.1", features=["union"] }
 once_cell = "1.4.0"
 
 [dev-dependencies]
-abi = { path = "../mun_abi", package = "mun_abi" }
-insta = "1.12.0"
+abi = { path = "../mun_abi", package = "mun_abi", features=["serde"] }
+insta = { version="1.12.0", features = ["ron"]}
 libloader = { path = "../mun_libloader", package = "mun_libloader" }
 mun_test = { path = "../mun_test" }
 runtime = { path = "../mun_runtime", package = "mun_runtime" }

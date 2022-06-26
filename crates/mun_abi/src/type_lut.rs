@@ -11,8 +11,9 @@ use crate::Guid;
 /// [`TypeInfo`]. A [`TypeId`] is a key for a [`TypeInfo`].
 ///
 /// A [`TypeId`] only contains enough information to query the runtime for a concrete type.
-#[repr(C)]
+#[repr(u8)]
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum TypeId<'a> {
     /// Represents a concrete type with a specific Guid
     Concrete(Guid),
@@ -24,6 +25,7 @@ pub enum TypeId<'a> {
 /// Represents a pointer to another type.
 #[repr(C)]
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct PointerTypeId<'a> {
     /// The type to which this pointer points
     pub pointee: &'a TypeId<'a>,
@@ -201,6 +203,27 @@ impl<'a> TypeLut<'a> {
         type_names
             .iter()
             .map(|n| unsafe { str::from_utf8_unchecked(CStr::from_ptr(*n).to_bytes()) })
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'a> serde::Serialize for TypeLut<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeSeq;
+
+        let mut s = serializer.serialize_seq(Some(self.num_entries as usize))?;
+        for (ty, _, name) in self.iter() {
+            #[derive(serde::Serialize)]
+            struct Elem<'a> {
+                name: &'a str,
+                r#type: &'a TypeId<'a>,
+            }
+            s.serialize_element(&Elem { name, r#type: ty })?;
+        }
+        s.end()
     }
 }
 

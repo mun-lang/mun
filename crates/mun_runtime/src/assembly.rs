@@ -11,11 +11,11 @@ use log::error;
 use libloader::{MunLibrary, TempLibrary};
 use memory::{
     mapping::{Mapping, MemoryMapper},
-    TryFromAbiError,
-    type_table::TypeTable, TypeInfo,
+    type_table::TypeTable,
+    TryFromAbiError, TypeInfo,
 };
 
-use crate::{DispatchTable, garbage_collector::GarbageCollector};
+use crate::{garbage_collector::GarbageCollector, DispatchTable};
 
 /// An assembly is a hot reloadable compilation unit, consisting of one or more Mun modules.
 pub struct Assembly {
@@ -113,7 +113,9 @@ impl Assembly {
                 if let Some(fn_def) = dispatch_table.get_fn(fn_prototype.name()) {
                     let mut type_ids = fn_def.prototype.signature.arg_types.iter();
 
-                    if fn_def.prototype.signature.arg_types.len() != fn_prototype.signature.num_arg_types as usize {
+                    if fn_def.prototype.signature.arg_types.len()
+                        != fn_prototype.signature.num_arg_types as usize
+                    {
                         // TODO: Add more info here
                         return Err(anyhow!("Failed to link: function '{}' is missing. A function with the same name does exist, but the signatures do not match.", fn_prototype.name()));
                     }
@@ -128,7 +130,11 @@ impl Assembly {
                     }
 
                     // Check function return type
-                    if Some(&fn_def.prototype.signature.return_type) != type_table.find_type_info_by_id(&fn_prototype.signature.return_type).as_ref() {
+                    if Some(&fn_def.prototype.signature.return_type)
+                        != type_table
+                            .find_type_info_by_id(&fn_prototype.signature.return_type)
+                            .as_ref()
+                    {
                         // TODO: Add more info here
                         return Err(anyhow!("Failed to link: function '{}' is missing. A function with the same name does exist, but the signatures do not match.", fn_prototype.name()));
                     }
@@ -369,8 +375,7 @@ impl Assembly {
     }
 
     /// Returns the assembly's information.
-    pub fn info_mut(&mut self) -> &mut abi::AssemblyInfo
-    {
+    pub fn info_mut(&mut self) -> &mut abi::AssemblyInfo {
         // HACK: We want to make sure that the assembly info never outlives self.
         unsafe { std::mem::transmute(&mut self.info) }
     }

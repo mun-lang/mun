@@ -1,6 +1,5 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1045
 expression: "\n    struct(gc) Foo { a: i32, b: i32 };\n\n    pub fn foo() {\n        let a = Foo { a: 3, b: 4 };\n        a.b += 3;\n        let b = a;\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
@@ -12,14 +11,14 @@ source_filename = "mod"
 
 @allocatorHandle = external global i8*
 @dispatchTable = external global %DispatchTable
-@global_type_lookup_table = external global [6 x i64*]
+@global_type_lookup_table = external global [2 x i64*]
 
 define void @foo() {
 body:
   %b = alloca %Foo**, align 8
   %a = alloca %Foo**, align 8
   %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
-  %Foo_ptr = load i64*, i64** getelementptr inbounds ([6 x i64*], [6 x i64*]* @global_type_lookup_table, i64 0, i64 3), align 8
+  %Foo_ptr = load i64*, i64** getelementptr inbounds ([2 x i64*], [2 x i64*]* @global_type_lookup_table, i64 0, i64 0), align 8
   %type_info_ptr_to_i8_ptr = bitcast i64* %Foo_ptr to i8*
   %allocator_handle = load i8*, i8** @allocatorHandle, align 8
   %new = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
@@ -48,6 +47,6 @@ source_filename = "group_name"
 %DispatchTable = type { i8** (i8*, i8*)* }
 
 @dispatchTable = global %DispatchTable zeroinitializer
-@global_type_lookup_table = global [6 x i64*] zeroinitializer
+@global_type_lookup_table = global [2 x i64*] zeroinitializer
 @allocatorHandle = unnamed_addr global i8* null
 

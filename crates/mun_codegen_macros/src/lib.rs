@@ -560,6 +560,7 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
                         context: &crate::value::IrTypeContext<'ink, '_>
                     ) -> inkwell::types::StructType<'ink> {
                         use std::convert::TryFrom;
+                        use inkwell::types::AnyType;
 
                         let key = std::any::type_name::<#ident>();
                         if let Some(value) = context.struct_types.borrow().get(&key) {
@@ -569,6 +570,10 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
                         // Aliasing to make sure that all procedurally generated macros can use the
                         // same variable name.
                         let type_context = context;
+
+                        // Insert an opaque struct type to fix self referential types.
+                        let struct_ty = type_context.context.opaque_struct_type(&key);
+                        type_context.struct_types.borrow_mut().insert(key, struct_ty);
 
                         // The chunk size is the same as the tag's size
                         let chunk_ty = <#repr_ty>::get_ir_type(type_context);
@@ -600,9 +605,6 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
                             "Number of chunks is too large (max: `u32::max()`)"
                         );
 
-                        let struct_ty = type_context.context.opaque_struct_type(&key);
-                        type_context.struct_types.borrow_mut().insert(key, struct_ty);
-
                         struct_ty.set_body(&[
                             <[#repr_ty; 0]>::get_ir_type(type_context).into(),
                             chunk_ty.into(),
@@ -631,6 +633,7 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
                         context: &crate::value::IrTypeContext<'ink, '_>
                     ) -> Vec<crate::value::BytesOrPtr<'ink>> {
                         use crate::value::{AsBytesAndPtrs, BytesOrPtr};
+                        use inkwell::types::AnyType;
 
                         // Aliasing to make sure that all procedurally generated macros can use the
                         // same variable name.
@@ -669,6 +672,7 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
                     fn as_value(&self, context: &crate::value::IrValueContext<'ink, '_, '_>) -> crate::value::Value<'ink, Self> {
                         use crate::value::{AsBytesAndPtrs, BytesOrPtr};
                         use inkwell::values::BasicValueEnum;
+                        use inkwell::types::AnyType;
 
                         let field_bytes_and_ptrs =  self
                             .as_bytes_and_ptrs(context.type_context)

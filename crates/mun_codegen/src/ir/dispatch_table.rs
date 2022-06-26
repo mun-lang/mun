@@ -1,4 +1,5 @@
 use crate::module_group::ModuleGroup;
+use crate::type_info::{HasStaticTypeId, TypeId};
 use crate::{intrinsics::Intrinsic, ir::function, ir::ty::HirTypeCache};
 use hir::{Body, Expr, ExprId, HirDatabase, InferenceResult};
 use inkwell::values::CallableValue;
@@ -14,7 +15,6 @@ use std::{
     collections::{BTreeMap, HashMap},
     sync::Arc,
 };
-use crate::type_info::{HasStaticTypeId, TypeId};
 
 /// A dispatch table in IR is a struct that contains pointers to all functions that are called from
 /// code. In C terms it looks something like this:
@@ -103,7 +103,7 @@ impl<'ink> DispatchTable<'ink> {
         builder: &inkwell::builder::Builder<'ink>,
         intrinsic: &impl Intrinsic,
     ) -> CallableValue<'ink> {
-        let prototype = intrinsic.prototype(self.context, &self.target);
+        let prototype = intrinsic.prototype();
 
         // Get the index of the intrinsic
         let index = *self

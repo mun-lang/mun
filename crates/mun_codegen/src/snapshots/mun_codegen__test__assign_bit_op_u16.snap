@@ -1,13 +1,12 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1045
 expression: "\n    pub fn assign_bitand(a: u16, b: u16) -> u16 {\n        a &= b;\n        a\n    }\n    pub fn assign_bitor(a: u16, b: u16) -> u16 {\n        a |= b;\n        a\n    }\n    pub fn assign_bitxor(a: u16, b: u16) -> u16 {\n        a ^= b;\n        a\n    }\n                        "
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [9 x i64*]
+@global_type_lookup_table = external global [1 x i64*]
 
 define i16 @assign_bitand(i16 %0, i16 %1) {
 body:
@@ -31,5 +30,5 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [9 x i64*] zeroinitializer
+@global_type_lookup_table = global [1 x i64*] zeroinitializer
 

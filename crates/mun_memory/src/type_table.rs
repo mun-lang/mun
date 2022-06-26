@@ -125,24 +125,28 @@ impl TypeTable {
 
     /// Removes a type described by the given [`abi::TypeInfo`]. Returns `None` if this instance
     /// doesn't hold any type that matches `type_info`.
-    pub fn remove_type_by_type_info<'abi>(&mut self, type_info: &'abi abi::TypeInfo<'abi>) -> Option<Arc<TypeInfo>> {
+    pub fn remove_type_by_type_info<'abi>(
+        &mut self,
+        type_info: &'abi abi::TypeInfo<'abi>,
+    ) -> Option<Arc<TypeInfo>> {
         let (mut node, mut type_id) = match &type_info.data {
             abi::TypeInfoData::Primitive(guid) => return self.root_node.concrete.remove(guid),
             abi::TypeInfoData::Struct(s) => return self.root_node.concrete.remove(&s.guid),
-            abi::TypeInfoData::Pointer(p) => {
-                (if p.mutable {
+            abi::TypeInfoData::Pointer(p) => (
+                if p.mutable {
                     self.root_node.mutable_pointers.get_mut()?
                 } else {
                     self.root_node.non_mutable_pointers.get_mut()?
-                }, &p.pointee)
-            }
+                },
+                &p.pointee,
+            ),
         };
 
         loop {
             match type_id {
                 TypeId::Concrete(guid) => {
                     return node.concrete.remove(guid);
-                },
+                }
                 TypeId::Pointer(p) => {
                     node = if p.mutable {
                         node.mutable_pointers.get_mut()?

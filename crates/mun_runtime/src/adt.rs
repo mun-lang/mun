@@ -89,8 +89,11 @@ impl<'s> StructRef<'s> {
         if !T::accepts_type(&field_info.type_info) {
             return Err(format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
-                type_info.name, field_name, T::type_hint(), field_info.type_info.name,
-            ))
+                type_info.name,
+                field_name,
+                T::type_hint(),
+                field_info.type_info.name,
+            ));
         };
 
         // SAFETY: The offset in the ABI is always valid.
@@ -129,10 +132,7 @@ impl<'s> StructRef<'s> {
         if field_info.type_info != value_type {
             return Err(format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
-                type_info.name,
-                field_name,
-                value_type.name,
-                field_info.type_info
+                type_info.name, field_name, value_type.name, field_info.type_info
             ));
         }
 
@@ -166,10 +166,7 @@ impl<'s> StructRef<'s> {
         if field_info.type_info != value_type {
             return Err(format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
-                type_info.name,
-                field_name,
-                value_type.name,
-                field_info.type_info
+                type_info.name, field_name, value_type.name, field_info.type_info
             ));
         }
 

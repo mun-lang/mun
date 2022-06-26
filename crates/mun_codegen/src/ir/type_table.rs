@@ -1,15 +1,19 @@
+use std::collections::HashSet;
+use std::{collections::HashMap, convert::TryInto, sync::Arc};
+
+use inkwell::{
+    context::Context, module::Linkage, module::Module, types::ArrayType, values::PointerValue,
+};
+
+use hir::{Body, ExprId, HirDatabase, InferenceResult};
+
+use crate::type_info::TypeId;
 use crate::{
     ir::dispatch_table::{DispatchTable, FunctionPrototype},
     ir::ty::HirTypeCache,
     value::{Global, IrValueContext, IterAsIrValue, Value},
     ModuleGroup,
 };
-use hir::{Body, ExprId, HirDatabase, InferenceResult};
-use inkwell::{
-    context::Context, module::Linkage, module::Module, types::ArrayType, values::PointerValue,
-};
-use std::{collections::HashMap, convert::TryInto, mem, sync::Arc};
-use crate::type_info::TypeId;
 
 /// A type table in IR is a list of pointers to unique type information that are used to generate
 /// function and struct information.
@@ -94,7 +98,7 @@ pub(crate) struct TypeTableBuilder<'db, 'ink, 't> {
     value_context: &'t IrValueContext<'ink, 't, 't>,
     dispatch_table: &'t DispatchTable<'ink>,
     hir_types: &'t HirTypeCache<'db, 'ink>,
-    entries: Vec<Arc<TypeId>>,
+    entries: HashSet<Arc<TypeId>>,
     module_group: &'t ModuleGroup,
 }
 
@@ -103,12 +107,12 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
     pub(crate) fn new<'f>(
         db: &'db dyn HirDatabase,
         value_context: &'t IrValueContext<'ink, '_, '_>,
-        intrinsics: impl Iterator<Item = &'f FunctionPrototype>,
+        _intrinsics: impl Iterator<Item = &'f FunctionPrototype>,
         dispatch_table: &'t DispatchTable<'ink>,
         hir_types: &'t HirTypeCache<'db, 'ink>,
         module_group: &'t ModuleGroup,
     ) -> Self {
-        let mut builder = Self {
+        let builder = Self {
             db,
             value_context,
             dispatch_table,
@@ -131,7 +135,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
 
     /// Collects unique `TypeInfo` from the given `Ty`.
     fn collect_type(&mut self, type_info: Arc<TypeId>) {
-        self.entries.push(type_info);
+        self.entries.insert(type_info);
     }
 
     /// Collects unique `TypeInfo` from the specified expression and its sub-expressions.
@@ -193,7 +197,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
     /// Collects unique `TypeInfo` from the specified struct type.
     pub fn collect_struct(&mut self, hir_struct: hir::Struct) {
         let type_info = self.hir_types.type_id(&hir_struct.ty(self.db));
-        self.entries.push(type_info);
+        self.collect_type(type_info);
 
         let fields = hir_struct.fields(self.db);
         for field in fields.into_iter() {
@@ -202,9 +206,9 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
     }
 
     /// Constructs a `TypeTable` from all *used* types.
-    pub fn build(mut self) -> TypeTable<'ink> {
-        let mut entries = Vec::new();
-        mem::swap(&mut entries, &mut self.entries);
+    pub fn build(self) -> TypeTable<'ink> {
+        let mut entries = Vec::from_iter(self.entries.into_iter());
+        entries.sort_by(|a, b| a.name.cmp(&b.name));
 
         let type_info_to_index = entries
             .iter()

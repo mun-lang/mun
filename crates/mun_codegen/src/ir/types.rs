@@ -1,6 +1,10 @@
+#[cfg(test)]
+mod test;
+
 use crate::value::{
     AsValue, BytesOrPtr, IrTypeContext, IrValueContext, SizedValueType, TransparentValue, Value,
 };
+use abi::Guid;
 use itertools::Itertools;
 use mun_codegen_macros::AsValue;
 
@@ -41,6 +45,7 @@ impl<'ink> TransparentValue<'ink> for abi::StructMemoryKind {
 }
 
 #[derive(AsValue)]
+#[repr(u8)]
 pub enum TypeId<'ink> {
     Concrete(abi::Guid),
     Pointer(PointerTypeId<'ink>),
@@ -63,7 +68,15 @@ pub struct TypeInfo<'ink> {
 #[derive(AsValue)]
 #[repr(u8)]
 pub enum TypeInfoData<'ink> {
+    Primitive(Guid),
     Struct(StructInfo<'ink>),
+    Pointer(PointerInfo<'ink>),
+}
+
+#[derive(AsValue)]
+pub struct PointerInfo<'ink> {
+    pub pointee: TypeId<'ink>,
+    pub mutable: bool,
 }
 
 #[derive(AsValue)]
@@ -87,6 +100,7 @@ pub struct FunctionDefinition<'ink> {
 
 #[derive(AsValue)]
 pub struct StructInfo<'ink> {
+    pub guid: abi::Guid,
     pub field_names: Value<'ink, *const *const u8>,
     pub field_types: Value<'ink, *const TypeId<'ink>>,
     pub field_offsets: Value<'ink, *const u16>,

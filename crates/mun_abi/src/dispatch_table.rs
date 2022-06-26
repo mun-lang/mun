@@ -109,6 +109,20 @@ impl<'a> DispatchTable<'a> {
     }
 }
 
+#[cfg(feature = "serde")]
+impl<'a> serde::Serialize for DispatchTable<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+
+        let mut s = serializer.serialize_struct("DispatchTable", 1)?;
+        s.serialize_field("prototypes", self.prototypes())?;
+        s.end()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::test_utils::fake_primitive_type_info;

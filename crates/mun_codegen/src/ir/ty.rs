@@ -273,23 +273,23 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
                 }
             }
             TyKind::Bool => bool::type_id().clone(),
-            &TyKind::Struct(s) => {
-                self.struct_to_type_id
-                    .borrow_mut()
-                    .entry(s)
-                    .or_insert_with(|| {
-                        Arc::new(TypeId {
-                            name: s.full_name(self.db),
-                            data: TypeIdData::Concrete(guid_from_struct(self.db, s)),
-                        })
-                    }).clone()
-            }
+            &TyKind::Struct(s) => self
+                .struct_to_type_id
+                .borrow_mut()
+                .entry(s)
+                .or_insert_with(|| {
+                    Arc::new(TypeId {
+                        name: s.full_name(self.db),
+                        data: TypeIdData::Concrete(guid_from_struct(self.db, s)),
+                    })
+                })
+                .clone(),
             _ => unimplemented!("{} unhandled", ty.display(self.db)),
         }
     }
 }
 
-fn guid_from_struct(db: &dyn HirDatabase, s: hir::Struct) -> Guid {
+pub fn guid_from_struct(db: &dyn HirDatabase, s: hir::Struct) -> Guid {
     let name = s.full_name(db);
     let fields: Vec<String> = s
         .fields(db)

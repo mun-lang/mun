@@ -1,13 +1,12 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1045
 expression: "\n    pub fn fibonacci(n:i32) -> i32 {\n        let a = 0;\n        let b = 1;\n        let i = 1;\n        loop {\n            if i > n {\n                return a\n            }\n            let sum = a + b;\n            a = b;\n            b = sum;\n            i += 1;\n        }\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [2 x i64*]
+@global_type_lookup_table = external global [1 x i64*]
 
 define i32 @fibonacci(i32 %0) {
 body:
@@ -33,5 +32,5 @@ if_merge:                                         ; preds = %loop
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [2 x i64*] zeroinitializer
+@global_type_lookup_table = global [1 x i64*] zeroinitializer
 

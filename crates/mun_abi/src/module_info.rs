@@ -1,5 +1,6 @@
-use crate::{FunctionDefinition, TypeInfo};
 use std::{ffi::CStr, os::raw::c_char, slice, str};
+
+use crate::{FunctionDefinition, TypeInfo};
 
 /// Represents a module declaration.
 #[repr(C)]
@@ -59,8 +60,26 @@ impl<'a> ModuleInfo<'a> {
 unsafe impl<'a> Send for ModuleInfo<'a> {}
 unsafe impl<'a> Sync for ModuleInfo<'a> {}
 
+#[cfg(feature = "serde")]
+impl<'a> serde::Serialize for ModuleInfo<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+
+        let mut s = serializer.serialize_struct("ModuleInfo", 3)?;
+        s.serialize_field("path", self.path())?;
+        s.serialize_field("functions", self.functions())?;
+        s.serialize_field("types", self.types())?;
+        s.end()
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use std::{ffi::CString, ptr};
+
     use crate::test_utils::fake_primitive_type_info;
     use crate::{
         test_utils::{
@@ -69,7 +88,6 @@ mod tests {
         },
         FunctionDefinition, TypeInfo, TypeInfoData,
     };
-    use std::{ffi::CString, ptr};
 
     #[test]
     fn test_module_info_path() {

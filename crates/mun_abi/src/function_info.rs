@@ -98,6 +98,51 @@ impl<'a> Eq for FunctionSignature<'a> {}
 unsafe impl<'a> Send for FunctionSignature<'a> {}
 unsafe impl<'a> Sync for FunctionSignature<'a> {}
 
+#[cfg(feature = "serde")]
+impl<'a> serde::Serialize for FunctionDefinition<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+
+        let mut s = serializer.serialize_struct("FunctionDefinition", 1)?;
+        s.serialize_field("prototype", &self.prototype)?;
+        s.skip_field("fn_ptr")?;
+        s.end()
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'a> serde::Serialize for FunctionPrototype<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+
+        let mut s = serializer.serialize_struct("FunctionPrototype", 2)?;
+        s.serialize_field("name", self.name())?;
+        s.serialize_field("signature", &self.signature)?;
+        s.end()
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'a> serde::Serialize for FunctionSignature<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+
+        let mut s = serializer.serialize_struct("FunctionSignature", 2)?;
+        s.serialize_field("arg_types", self.arg_types())?;
+        s.serialize_field("return_type", &self.return_type())?;
+        s.end()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::ffi::CString;
