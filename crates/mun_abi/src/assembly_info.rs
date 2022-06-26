@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use std::{ffi::CStr, os::raw::c_char, slice, str};
 
 use crate::{DispatchTable, ModuleInfo, TypeLut};
@@ -43,6 +42,7 @@ impl<'a> serde::Serialize for AssemblyInfo<'a> {
         S: serde::Serializer,
     {
         use serde::ser::SerializeStruct;
+        use itertools::Itertools;
 
         let mut s = serializer.serialize_struct("AssemblyInfo", 4)?;
         s.serialize_field("symbols", &self.symbols)?;

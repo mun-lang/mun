@@ -117,7 +117,7 @@ impl Assembly {
                         != fn_prototype.signature.num_arg_types as usize
                     {
                         // TODO: Add more info here
-                        return Err(anyhow!("Failed to link: function '{}' is missing. A function with the same name does exist, but the signatures do not match.", fn_prototype.name()));
+                        return Err(anyhow!("Failed to link: function '{}' is missing. A function with the same name does exist, but the signatures do not match. The number of arguments don't match.", fn_prototype.name()));
                     }
 
                     // Check function arguments

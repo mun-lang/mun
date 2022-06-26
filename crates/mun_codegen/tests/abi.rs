@@ -11,7 +11,9 @@ fn test_abi_compatibility() {
     let driver = CompileTestDriver::from_file(&format!(
         r#"
     pub fn {fn_name}(_: f64) -> i32 {{ 0 }}
-    pub fn {fn_name2}() {{ }}
+    pub fn {fn_name2}() {{
+        let a = {struct_name}(1.0, 2.0);
+    }}
 
     pub struct {struct_name}(f64, f64);
     pub struct(value) {struct_name2} {{ a: i32, b: i32 }};
@@ -32,21 +34,21 @@ fn test_abi_compatibility() {
         functions: [
           FunctionDefinition(
             prototype: FunctionPrototype(
+              name: "bar",
+              signature: FunctionSignature(
+                arg_types: [],
+                return_type: None,
+              ),
+            ),
+          ),
+          FunctionDefinition(
+            prototype: FunctionPrototype(
               name: "foo",
               signature: FunctionSignature(
                 arg_types: [
                   Concrete("60db469c-3f59-4a25-47ad-349fd5922541"),
                 ],
                 return_type: Some(Concrete("17797a74-19d6-3217-d235-954317885bfa")),
-              ),
-            ),
-          ),
-          FunctionDefinition(
-            prototype: FunctionPrototype(
-              name: "bar",
-              signature: FunctionSignature(
-                arg_types: [],
-                return_type: None,
               ),
             ),
           ),
@@ -97,7 +99,30 @@ fn test_abi_compatibility() {
         ],
       ),
       dispatch_table: DispatchTable(
-        prototypes: [],
+        prototypes: [
+          FunctionPrototype(
+            name: "new",
+            signature: FunctionSignature(
+              arg_types: [
+                Pointer(PointerTypeId(
+                  pointee: Concrete("af39d38b-abb4-d6f6-4a2e-5cffe78b0981"),
+                  mutable: false,
+                )),
+                Pointer(PointerTypeId(
+                  pointee: Concrete("af39d38b-abb4-d6f6-4a2e-5cffe78b0981"),
+                  mutable: false,
+                )),
+              ],
+              return_type: Some(Pointer(PointerTypeId(
+                pointee: Pointer(PointerTypeId(
+                  pointee: Concrete("af39d38b-abb4-d6f6-4a2e-5cffe78b0981"),
+                  mutable: false,
+                )),
+                mutable: false,
+              ))),
+            ),
+          ),
+        ],
       ),
       type_lut: [
         Elem(
