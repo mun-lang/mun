@@ -169,7 +169,6 @@ pub(crate) mod tests {
         mun_string_destroy,
         runtime::{mun_runtime_get_function_info, RuntimeHandle},
         test_util::TestDriver,
-        type_info::mun_type_info_id,
     };
     use memory::HasStaticTypeInfo;
     use runtime::FunctionDefinition;

@@ -41,8 +41,8 @@ impl<'a> serde::Serialize for AssemblyInfo<'a> {
     where
         S: serde::Serializer,
     {
-        use serde::ser::SerializeStruct;
         use itertools::Itertools;
+        use serde::ser::SerializeStruct;
 
         let mut s = serializer.serialize_struct("AssemblyInfo", 4)?;
         s.serialize_field("symbols", &self.symbols)?;

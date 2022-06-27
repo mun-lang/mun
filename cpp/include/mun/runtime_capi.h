@@ -78,13 +78,53 @@ typedef struct MunGuid {
 } MunGuid;
 
 /**
- * Represents a unique identifier for types. The runtime can use this to lookup the corresponding [`TypeInfo`].
+ * Represents a pointer to another type.
  */
-typedef struct MunTypeId {
+typedef struct MunPointerTypeId {
     /**
-     * The GUID of the type
+     * The type to which this pointer points
      */
-    struct MunGuid guid;
+    const union MunTypeId *pointee;
+    /**
+     * Whether or not this pointer is mutable or not
+     */
+    bool mutable_;
+} MunPointerTypeId;
+
+/**
+ * Represents a unique identifier for types. The runtime can use this to lookup the corresponding
+ * [`TypeInfo`]. A [`TypeId`] is a key for a [`TypeInfo`].
+ *
+ * A [`TypeId`] only contains enough information to query the runtime for a concrete type.
+ */
+enum MunTypeId_Tag
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+    /**
+     * Represents a concrete type with a specific Guid
+     */
+    Concrete,
+    /**
+     * Represents a pointer to a type
+     */
+    Pointer,
+};
+#ifndef __cplusplus
+typedef uint8_t MunTypeId_Tag;
+#endif // __cplusplus
+
+typedef union MunTypeId {
+    MunTypeId_Tag tag;
+    struct {
+        MunTypeId_Tag concrete_tag;
+        struct MunGuid concrete;
+    };
+    struct {
+        MunTypeId_Tag pointer_tag;
+        struct MunPointerTypeId pointer;
+    };
 } MunTypeId;
 
 /**
@@ -94,11 +134,11 @@ typedef struct MunFunctionSignature {
     /**
      * Argument types
      */
-    const struct MunTypeId *arg_types;
+    const union MunTypeId *arg_types;
     /**
      * Optional return type
      */
-    struct MunTypeId return_type;
+    union MunTypeId return_type;
     /**
      * Number of argument types
      */
@@ -210,6 +250,13 @@ typedef struct MunStructInfoHandle {
 } MunStructInfoHandle;
 
 /**
+ * A pointer to another type.
+ */
+typedef struct MunPointerInfoData {
+    bool mutable_;
+} MunPointerInfoData;
+
+/**
  * An enum containing C-style handles a `TypeInfo`'s data.
  */
 enum MunTypeInfoData_Tag
@@ -220,11 +267,15 @@ enum MunTypeInfoData_Tag
     /**
      * Primitive types (i.e. `()`, `bool`, `float`, `int`, etc.)
      */
-    Primitive,
+    MunTypeInfoData_Primitive,
     /**
      * Struct types (i.e. record, tuple, or unit structs)
      */
-    Struct,
+    MunTypeInfoData_Struct,
+    /**
+     * A pointer type
+     */
+    MunTypeInfoData_Pointer,
 };
 #ifndef __cplusplus
 typedef uint8_t MunTypeInfoData_Tag;
@@ -233,8 +284,16 @@ typedef uint8_t MunTypeInfoData_Tag;
 typedef union MunTypeInfoData {
     MunTypeInfoData_Tag tag;
     struct {
+        MunTypeInfoData_Tag primitive_tag;
+        struct MunGuid primitive;
+    };
+    struct {
         MunTypeInfoData_Tag struct_tag;
         struct MunStructInfoHandle struct_;
+    };
+    struct {
+        MunTypeInfoData_Tag pointer_tag;
+        struct MunPointerInfoData pointer;
     };
 } MunTypeInfoData;
 
@@ -243,13 +302,17 @@ typedef union MunTypeInfoData {
  */
 typedef struct MunStructInfo {
     /**
+     * The unique identifier of this struct
+     */
+    struct MunGuid guid;
+    /**
      * Struct fields' names
      */
     const char *const *field_names;
     /**
      * Struct fields' information
      */
-    const struct MunTypeId *field_types;
+    const union MunTypeId *field_types;
     /**
      * Struct fields' offsets
      */
@@ -441,7 +504,7 @@ struct MunErrorHandle mun_runtime_get_type_info_by_name(struct MunRuntimeHandle 
  * an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
  */
 struct MunErrorHandle mun_runtime_get_type_info_by_id(struct MunRuntimeHandle runtime,
-                                                      const struct MunTypeId *type_id,
+                                                      const union MunTypeId *type_id,
                                                       bool *has_type_info,
                                                       struct MunTypeInfoHandle *type_info);
 
@@ -626,7 +689,7 @@ bool mun_type_info_increment_strong_count(struct MunTypeInfoHandle handle);
  * deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
  */
 struct MunErrorHandle mun_type_info_id(struct MunTypeInfoHandle type_info,
-                                       struct MunTypeId *type_id);
+                                       union MunTypeId *type_id);
 
 /**
  * Retrieves the type's name.

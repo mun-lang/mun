@@ -112,7 +112,7 @@ impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *mut T {
                 name: format!("*mut {}", &element_type_id.name),
                 data: TypeIdData::Pointer(PointerTypeId {
                     pointee: T::type_id().clone(),
-                    mutable: false,
+                    mutable: true,
                 }),
             })
         })

@@ -29,7 +29,7 @@ pub struct RuntimeOptions {
     ///
     /// If the [`num_functions`] fields is non-zero this field must contain a pointer to an array
     /// of [`abi::FunctionDefinition`]s.
-    pub functions: *const abi::FunctionDefinition,
+    pub functions: *const abi::FunctionDefinition<'static>,
 
     /// The number of functions in the [`functions`] array.
     pub num_functions: u32,
@@ -307,10 +307,7 @@ pub unsafe extern "C" fn mun_runtime_update(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        error::mun_error_destroy, test_invalid_runtime, test_util::TestDriver,
-        type_info::mun_type_info_id,
-    };
+    use crate::{error::mun_error_destroy, test_invalid_runtime, test_util::TestDriver};
     use std::{ffi::CString, mem::MaybeUninit, ptr};
 
     test_invalid_runtime!(
@@ -402,9 +399,7 @@ mod tests {
     fn test_runtime_create_invalid_user_function() {
         let lib_path = CString::new("some/path").expect("Invalid library path");
 
-        let type_id = abi::TypeId {
-            guid: abi::Guid([0u8; 16]),
-        };
+        let type_id = abi::TypeId::Concrete(abi::Guid([0u8; 16]));
         let functions = vec![abi::FunctionDefinition {
             prototype: abi::FunctionPrototype {
                 name: ptr::null(),
@@ -779,9 +774,7 @@ mod tests {
     "#,
         );
 
-        let type_id = abi::TypeId {
-            guid: abi::Guid([0; 16]),
-        };
+        let type_id = abi::TypeId::Concrete(abi::Guid([0; 16]));
         let handle = unsafe {
             mun_runtime_get_type_info_by_id(
                 driver.runtime,
@@ -808,9 +801,7 @@ mod tests {
     "#,
         );
 
-        let type_id = abi::TypeId {
-            guid: abi::Guid([0; 16]),
-        };
+        let type_id = abi::TypeId::Concrete(abi::Guid([0; 16]));
         let mut has_type_info = false;
         let handle = unsafe {
             mun_runtime_get_type_info_by_id(
@@ -838,9 +829,7 @@ mod tests {
     "#,
         );
 
-        let type_id = abi::TypeId {
-            guid: abi::Guid([0u8; 16]),
-        };
+        let type_id = abi::TypeId::Concrete(abi::Guid([0; 16]));
         let mut has_type_info = false;
         let mut type_info = MaybeUninit::uninit();
         let handle = unsafe {

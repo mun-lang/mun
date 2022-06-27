@@ -11,9 +11,15 @@
 
 namespace mun {
 constexpr inline bool operator==(const MunTypeId& lhs, const MunTypeId& rhs) noexcept {
-    for (auto idx = 0; idx < 16; ++idx) {
-        if (lhs.guid._0[idx] != rhs.guid._0[idx]) {
-            return false;
+    if (lhs.tag != rhs.tag) {
+        return false;
+    }
+
+    if (lhs.tag == MunTypeId_Tag::Concrete) {
+        for (auto idx = 0; idx < 16; ++idx) {
+            if (lhs.concrete._0[idx] != rhs.concrete._0[idx]) {
+                return false;
+            }
         }
     }
     return true;
@@ -67,7 +73,7 @@ namespace reflection {
 template <typename T>
 std::optional<std::pair<const char*, const char*>> equals_return_type(
     const TypeInfo& type_info) noexcept {
-    if (type_info.data().tag == MunTypeInfoData_Tag::Primitive) {
+    if (type_info.data().tag == MunTypeInfoData_Tag::MunTypeInfoData_Primitive) {
         if (type_info.id() != ReturnTypeReflection<T>::type_id()) {
             return std::make_pair(type_info.name().data(), ReturnTypeReflection<T>::type_name());
         }

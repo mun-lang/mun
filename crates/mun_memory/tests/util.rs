@@ -97,10 +97,10 @@ macro_rules! fake_struct {
             memory_kind: abi::StructMemoryKind::Gc,
         };
 
-        std::sync::Arc::new(mun_memory::TypeInfo {
+        mun_memory::TypeInfo::new_struct(
             name,
-            layout: crate::util::fake_layout(&struct_info),
-            data: mun_memory::TypeInfoData::Struct(struct_info),
-        })
+            crate::util::fake_layout(&struct_info),
+            struct_info,
+        )
     }};
 }

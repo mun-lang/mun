@@ -1,5 +1,5 @@
 use std::hash::{Hash, Hasher};
-use std::sync::Once;
+use std::sync::{Once, Weak};
 use std::{
     alloc::Layout,
     fmt::{self, Formatter},
@@ -7,6 +7,7 @@ use std::{
 };
 
 use itertools::izip;
+use parking_lot::RwLock;
 
 use abi::static_type_map::StaticTypeMap;
 use abi::{Guid, StructMemoryKind};
@@ -14,7 +15,7 @@ use abi::{Guid, StructMemoryKind};
 use crate::{type_table::TypeTable, TryFromAbiError, TypeFields};
 
 /// A linked version of [`mun_abi::TypeInfo`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug)]
 pub struct TypeInfo {
     /// Type name
     pub name: String,
@@ -23,7 +24,21 @@ pub struct TypeInfo {
     pub layout: Layout,
     /// Type group
     pub data: TypeInfoData,
+
+    /// The type of an immutable pointer to this type
+    immutable_pointer_type: RwLock<Weak<TypeInfo>>,
+
+    /// The type of a mutable pointer to this type
+    mutable_pointer_type: RwLock<Weak<TypeInfo>>,
 }
+
+impl PartialEq for TypeInfo {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.layout == other.layout && self.data == other.data
+    }
+}
+
+impl Eq for TypeInfo {}
 
 /// A linked version of [`mun_abi::TypeInfoData`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
 #[repr(u8)]
@@ -105,6 +120,36 @@ impl PartialEq for StructInfo {
 impl Eq for StructInfo {}
 
 impl TypeInfo {
+    /// Construct a new pointer type
+    pub fn new_pointer(pointee: Arc<TypeInfo>, mutable: bool) -> Arc<TypeInfo> {
+        Arc::new(TypeInfo {
+            name: format!(
+                "*{} {}",
+                if mutable { "mut" } else { "const" },
+                &pointee.name
+            ),
+            layout: Layout::new::<*const std::ffi::c_void>(),
+            data: PointerInfo { pointee, mutable }.into(),
+            immutable_pointer_type: Default::default(),
+            mutable_pointer_type: Default::default(),
+        })
+    }
+
+    /// Constructs a new struct type
+    pub fn new_struct(
+        name: impl Into<String>,
+        layout: Layout,
+        struct_info: StructInfo,
+    ) -> Arc<TypeInfo> {
+        Arc::new(TypeInfo {
+            name: name.into(),
+            layout,
+            data: TypeInfoData::Struct(struct_info),
+            immutable_pointer_type: Default::default(),
+            mutable_pointer_type: Default::default(),
+        })
+    }
+
     /// Returns true if this instance represents the TypeInfo of the given type.
     ///
     /// ```rust
@@ -193,7 +238,40 @@ impl TypeInfo {
                     )
                 }),
             data,
+            immutable_pointer_type: Default::default(),
+            mutable_pointer_type: Default::default(),
         })
+    }
+
+    /// Returns the type that represents a pointer to this type
+    pub(crate) fn pointer_type(self: &Arc<Self>, mutable: bool) -> Arc<TypeInfo> {
+        let cache_key = if mutable {
+            &self.mutable_pointer_type
+        } else {
+            &self.immutable_pointer_type
+        };
+
+        let read_lock = cache_key.read();
+
+        // Fast path, the type already exists, return it immediately.
+        if let Some(ty) = read_lock.upgrade() {
+            return ty;
+        }
+
+        drop(read_lock);
+
+        let mut write_lock = cache_key.write();
+
+        // Recheck if another thread acquired the write lock in the mean time
+        if let Some(ty) = write_lock.upgrade() {
+            return ty;
+        }
+
+        // Otherwise create the type and store it
+        let ty = TypeInfo::new_pointer(self.clone(), mutable);
+        *write_lock = Arc::downgrade(&ty);
+
+        ty
     }
 }
 
@@ -315,7 +393,9 @@ macro_rules! impl_primitive_type {
                                     name: type_info.name().to_owned(),
                                     layout:  Layout::from_size_align(type_info.size_in_bytes(), type_info.alignment())
                                         .expect("TypeInfo contains invalid size and alignment."),
-                                    data: TypeInfoData::Primitive(guid.clone())
+                                    data: TypeInfoData::Primitive(guid.clone()),
+                                    immutable_pointer_type: Default::default(),
+                                    mutable_pointer_type: Default::default(),
                                 })
                             }
                             _ => unreachable!("invalid primitive type")
@@ -360,22 +440,7 @@ impl<T: HasStaticTypeInfo + 'static> HasStaticTypeInfo for *mut T {
             VALUE.as_ref().unwrap()
         };
 
-        map.call_once::<T, _>(|| {
-            let element_type = T::type_info();
-            let name = format!("*mut {}", &element_type.name);
-            let size_in_bits = std::mem::size_of::<*mut T>();
-            let alignment = std::mem::align_of::<*mut T>();
-            Arc::new(TypeInfo {
-                name,
-                layout: Layout::from_size_align(size_in_bits, alignment)
-                    .expect("invalid layout for static type"),
-                data: PointerInfo {
-                    pointee: element_type.clone(),
-                    mutable: true,
-                }
-                .into(),
-            })
-        })
+        map.call_once::<T, _>(|| T::type_info().pointer_type(true))
     }
 }
 
@@ -392,21 +457,6 @@ impl<T: HasStaticTypeInfo + 'static> HasStaticTypeInfo for *const T {
             VALUE.as_ref().unwrap()
         };
 
-        map.call_once::<T, _>(|| {
-            let element_type = T::type_info();
-            let name = format!("*const {}", &element_type.name);
-            let size_in_bits = std::mem::size_of::<*mut T>();
-            let alignment = std::mem::align_of::<*mut T>();
-            Arc::new(TypeInfo {
-                name,
-                layout: Layout::from_size_align(size_in_bits, alignment)
-                    .expect("invalid layout for static type"),
-                data: PointerInfo {
-                    pointee: element_type.clone(),
-                    mutable: false,
-                }
-                .into(),
-            })
-        })
+        map.call_once::<T, _>(|| T::type_info().pointer_type(false))
     }
 }

@@ -77,32 +77,6 @@ pub unsafe extern "C" fn mun_type_info_increment_strong_count(handle: TypeInfoHa
     false
 }
 
-/// Retrieves the type's ID.
-///
-/// # Safety
-///
-/// This function results in undefined behavior if the passed in `TypeInfoHandle` has been
-/// deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
-#[no_mangle]
-pub unsafe extern "C" fn mun_type_info_id(
-    type_info: TypeInfoHandle,
-    type_id: *mut abi::TypeId,
-) -> ErrorHandle {
-    let type_info = match (type_info.0 as *const TypeInfo).as_ref() {
-        Some(type_info) => type_info,
-        None => return ErrorHandle::new("Invalid argument: 'type_info' is null pointer."),
-    };
-
-    let type_id = match type_id.as_mut() {
-        Some(type_id) => type_id,
-        None => return ErrorHandle::new("Invalid argument: 'type_id' is null pointer."),
-    };
-
-    *type_id = type_info.id.clone();
-
-    ErrorHandle::default()
-}
-
 /// Retrieves the type's name.
 ///
 /// # Safety
@@ -174,26 +148,43 @@ pub unsafe extern "C" fn mun_type_info_align(
 }
 
 /// An enum containing C-style handles a `TypeInfo`'s data.
+/// cbindgen:prefix-with-name=true
 #[repr(u8)]
 #[derive(Clone, Copy, Debug)]
 pub enum TypeInfoData {
     /// Primitive types (i.e. `()`, `bool`, `float`, `int`, etc.)
-    Primitive,
+    Primitive(abi::Guid),
     /// Struct types (i.e. record, tuple, or unit structs)
     Struct(StructInfoHandle),
+    /// A pointer type
+    Pointer(PointerInfoData),
+}
+
+/// A pointer to another type.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct PointerInfoData {
+    //pointee: TypeInfoHandle,
+    mutable: bool,
 }
 
 impl TypeInfoData {
     /// Whether the type is a primitive.
     #[cfg(test)]
     fn is_primitive(&self) -> bool {
-        matches!(*self, TypeInfoData::Primitive)
+        matches!(*self, TypeInfoData::Primitive(_))
     }
 
     /// Whether the type is a struct.
     #[cfg(test)]
     fn is_struct(&self) -> bool {
         matches!(*self, TypeInfoData::Struct(_))
+    }
+
+    /// Whether the type is a struct.
+    #[cfg(test)]
+    fn is_pointer(&self) -> bool {
+        matches!(*self, TypeInfoData::Pointer(_))
     }
 
     /// Returns the C-style handle to the struct information, if available.
@@ -230,9 +221,15 @@ pub unsafe extern "C" fn mun_type_info_data(
     };
 
     *type_info_data = match &type_info.data {
-        memory::TypeInfoData::Primitive => TypeInfoData::Primitive,
+        memory::TypeInfoData::Primitive(guid) => TypeInfoData::Primitive(guid.clone()),
         memory::TypeInfoData::Struct(s) => {
             TypeInfoData::Struct(StructInfoHandle(s as *const StructInfo as *const c_void))
+        }
+        memory::TypeInfoData::Pointer(pointer) => {
+            TypeInfoData::Pointer(PointerInfoData {
+                //pointee: TypeInfoHandle(Arc::into_raw(pointer.pointee.clone()) as _),
+                mutable: pointer.mutable,
+            })
         }
     };
 

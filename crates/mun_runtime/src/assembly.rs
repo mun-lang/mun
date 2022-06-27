@@ -5,7 +5,8 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
+use itertools::Itertools;
 use log::error;
 
 use libloader::{MunLibrary, TempLibrary};
@@ -109,37 +110,66 @@ impl Assembly {
 
             // Try to link outstanding entries
             for (dispatch_ptr, fn_prototype) in to_link.into_iter() {
+                // Get the types of the function arguments
+                let fn_proto_arg_type_infos = fn_prototype
+                    .signature
+                    .arg_types()
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, fn_arg_type_id)| {
+                        type_table
+                            .find_type_info_by_id(fn_arg_type_id)
+                            .ok_or_else(|| {
+                                anyhow!(
+                                    "could not resolve type of argument #{}: {}",
+                                    idx + 1,
+                                    fn_arg_type_id
+                                )
+                            })
+                    })
+                    .collect::<Result<Vec<_>, _>>()
+                    .with_context(|| {
+                        format!("failed to link function '{}'", fn_prototype.name())
+                    })?;
+
+                // Get the return type info
+                let fn_proto_ret_type_info = type_table
+                    .find_type_info_by_id(&fn_prototype.signature.return_type)
+                    .ok_or_else(|| {
+                        anyhow!(
+                            "could not resolve type of return type: {}",
+                            &fn_prototype.signature.return_type
+                        )
+                    })
+                    .with_context(|| {
+                        format!("failed to link function '{}'", fn_prototype.name())
+                    })?;
+
                 // Ensure that the function is in the runtime dispatch table
-                if let Some(fn_def) = dispatch_table.get_fn(fn_prototype.name()) {
-                    let mut type_ids = fn_def.prototype.signature.arg_types.iter();
-
-                    if fn_def.prototype.signature.arg_types.len()
-                        != fn_prototype.signature.num_arg_types as usize
+                if let Some(existing_fn_def) = dispatch_table.get_fn(fn_prototype.name()) {
+                    if fn_proto_arg_type_infos != existing_fn_def.prototype.signature.arg_types
+                        || fn_proto_ret_type_info != existing_fn_def.prototype.signature.return_type
                     {
-                        // TODO: Add more info here
-                        return Err(anyhow!("Failed to link: function '{}' is missing. A function with the same name does exist, but the signatures do not match. The number of arguments don't match.", fn_prototype.name()));
+                        let expected = fn_proto_arg_type_infos
+                            .iter()
+                            .map(|ty| ty.name.clone())
+                            .join(", ");
+                        let found = existing_fn_def
+                            .prototype
+                            .signature
+                            .arg_types
+                            .iter()
+                            .map(|ty| ty.name.clone())
+                            .join(", ");
+
+                        let fn_name = fn_prototype.name();
+                        return Err(anyhow!("a function with the same name does exist, but the signatures do not match.\nExpected:\n\tfn {fn_name}({expected}) -> {}\n\nFound:\n\tfn {fn_name}({found}) -> {}",
+                            &fn_proto_ret_type_info.name,
+                            &existing_fn_def.prototype.signature.return_type.name))
+                            .with_context(|| format!("failed to link function '{}'", fn_prototype.name()));
                     }
 
-                    // Check function arguments
-                    for fn_arg in fn_prototype.signature.arg_types().iter() {
-                        let ty = type_table.find_type_info_by_id(fn_arg);
-                        if ty.as_ref() != type_ids.next() {
-                            // TODO: Add more info here
-                            return Err(anyhow!("Failed to link: function '{}' is missing. A function with the same name does exist, but the signatures do not match.", fn_prototype.name()));
-                        }
-                    }
-
-                    // Check function return type
-                    if Some(&fn_def.prototype.signature.return_type)
-                        != type_table
-                            .find_type_info_by_id(&fn_prototype.signature.return_type)
-                            .as_ref()
-                    {
-                        // TODO: Add more info here
-                        return Err(anyhow!("Failed to link: function '{}' is missing. A function with the same name does exist, but the signatures do not match.", fn_prototype.name()));
-                    }
-
-                    *dispatch_ptr = fn_def.fn_ptr;
+                    *dispatch_ptr = existing_fn_def.fn_ptr;
                     retry = true;
                 } else {
                     failed_to_link.push((dispatch_ptr, fn_prototype));

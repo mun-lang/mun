@@ -60,7 +60,7 @@ public:
      */
     StructRef(const Runtime& runtime, MunGcPtr raw) noexcept
         : m_runtime(&runtime), m_handle(GcRootPtr(runtime, raw)) {
-        assert(runtime.ptr_type(raw).data().tag == MunTypeInfoData_Tag::Struct);
+        assert(runtime.ptr_type(raw).data().tag == MunTypeInfoData_Tag::MunTypeInfoData_Struct);
     }
 
     StructRef(const StructRef&) noexcept = default;

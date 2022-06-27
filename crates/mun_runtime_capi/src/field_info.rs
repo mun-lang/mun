@@ -132,9 +132,9 @@ mod tests {
         runtime::{mun_runtime_get_type_info_by_name, RuntimeHandle},
         struct_info::mun_struct_info_fields,
         test_util::TestDriver,
-        type_info::{mun_type_info_data, mun_type_info_id},
+        type_info::mun_type_info_data,
     };
-    use memory::HasStaticTypeInfo;
+    use memory::{HasStaticTypeInfo, TypeInfo};
     use std::{
         ffi::{CStr, CString},
         mem::MaybeUninit,
@@ -230,12 +230,8 @@ mod tests {
         let type_info = unsafe { mun_field_info_type(field_info) };
         assert_ne!(type_info.0, ptr::null());
 
-        let mut type_id = MaybeUninit::uninit();
-        let handle = unsafe { mun_type_info_id(type_info, type_id.as_mut_ptr()) };
-        assert_eq!(handle.0, ptr::null());
-
-        let type_id = unsafe { type_id.assume_init() };
-        assert_eq!(type_id, <i32>::type_info().id);
+        let type_info = unsafe { Arc::from_raw(type_info.0 as *const TypeInfo) };
+        assert_eq!(type_info, <i32>::type_info());
     }
 
     #[test]

@@ -7,24 +7,13 @@ namespace mun {
 namespace details {
 constexpr MunTypeId type_id(const char* type_name) noexcept {
     const auto hash = md5::compute(type_name);
-    return MunTypeId{MunGuid{
-        hash[0],
-        hash[1],
-        hash[2],
-        hash[3],
-        hash[4],
-        hash[5],
-        hash[6],
-        hash[7],
-        hash[8],
-        hash[9],
-        hash[10],
-        hash[11],
-        hash[12],
-        hash[13],
-        hash[14],
-        hash[15],
-    }};
+    const MunGuid guid{
+        hash[0], hash[1], hash[2],  hash[3],  hash[4],  hash[5],  hash[6],  hash[7],
+        hash[8], hash[9], hash[10], hash[11], hash[12], hash[13], hash[14], hash[15],
+    };
+    MunTypeId id { Concrete };
+    id.concrete = guid;
+    return id;
 }
 }  // namespace details
 

@@ -41,18 +41,6 @@ public:
     }
 
     /**
-     * @brief Retrieves the type's ID.
-     */
-    MunTypeId id() const noexcept {
-        MunTypeId id;
-
-        const auto error_handle = mun_type_info_id(m_handle, &id);
-        assert(error_handle._0 == nullptr);
-
-        return id;
-    }
-
-    /**
      * @brief Retrieves the type's name.
      */
     std::string_view name() const noexcept {
