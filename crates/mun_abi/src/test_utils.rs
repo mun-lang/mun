@@ -1,7 +1,8 @@
-use crate::type_info::HasStaticTypeId;
+use crate::type_id::HasStaticTypeId;
+use crate::type_id::TypeId;
 use crate::{
     AssemblyInfo, DispatchTable, FunctionDefinition, FunctionPrototype, FunctionSignature, Guid,
-    ModuleInfo, StructInfo, StructMemoryKind, TypeId, TypeInfo, TypeInfoData, TypeLut,
+    ModuleInfo, StructInfo, StructMemoryKind, TypeInfo, TypeInfoData, TypeLut,
 };
 use std::{
     ffi::{self, CStr},
@@ -129,21 +130,4 @@ pub(crate) fn fake_type_info<'a>(
         alignment,
         data,
     }
-}
-
-pub(crate) fn fake_primitive_type_info(
-    name: &CStr,
-    size: u32,
-    alignment: u8,
-) -> (TypeInfo, TypeId) {
-    let guid = Guid::from(name.to_bytes());
-    (
-        TypeInfo {
-            name: name.as_ptr(),
-            size_in_bits: size,
-            alignment,
-            data: TypeInfoData::Primitive(guid.clone()),
-        },
-        guid.into(),
-    )
 }

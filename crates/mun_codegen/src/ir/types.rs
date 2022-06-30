@@ -4,7 +4,6 @@ mod test;
 use crate::value::{
     AsValue, BytesOrPtr, IrTypeContext, IrValueContext, SizedValueType, TransparentValue, Value,
 };
-use abi::Guid;
 use itertools::Itertools;
 use mun_codegen_macros::AsValue;
 
@@ -68,15 +67,7 @@ pub struct TypeInfo<'ink> {
 #[derive(AsValue)]
 #[repr(u8)]
 pub enum TypeInfoData<'ink> {
-    Primitive(Guid),
     Struct(StructInfo<'ink>),
-    Pointer(PointerInfo<'ink>),
-}
-
-#[derive(AsValue)]
-pub struct PointerInfo<'ink> {
-    pub pointee: TypeId<'ink>,
-    pub mutable: bool,
 }
 
 #[derive(AsValue)]

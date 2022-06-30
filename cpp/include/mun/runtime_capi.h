@@ -681,17 +681,6 @@ bool mun_type_info_decrement_strong_count(struct MunTypeInfoHandle handle);
 bool mun_type_info_increment_strong_count(struct MunTypeInfoHandle handle);
 
 /**
- * Retrieves the type's ID.
- *
- * # Safety
- *
- * This function results in undefined behavior if the passed in `TypeInfoHandle` has been
- * deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
- */
-struct MunErrorHandle mun_type_info_id(struct MunTypeInfoHandle type_info,
-                                       union MunTypeId *type_id);
-
-/**
  * Retrieves the type's name.
  *
  * # Safety

@@ -1,6 +1,7 @@
 use std::{ffi::CStr, os::raw::c_char, slice, str};
 
-use crate::{Guid, TypeId};
+use crate::type_id::TypeId;
+use crate::Guid;
 
 /// Represents a struct declaration.
 #[repr(C)]
@@ -146,12 +147,10 @@ impl<'a> serde::Serialize for StructInfo<'a> {
 
 #[cfg(test)]
 mod tests {
+    use crate::type_id::HasStaticTypeId;
     use std::ffi::CString;
 
-    use crate::test_utils::{
-        fake_primitive_type_info, fake_struct_info, FAKE_FIELD_NAME, FAKE_STRUCT_NAME,
-        FAKE_TYPE_NAME,
-    };
+    use crate::test_utils::{fake_struct_info, FAKE_FIELD_NAME, FAKE_STRUCT_NAME};
 
     use super::StructMemoryKind;
 
@@ -177,11 +176,10 @@ mod tests {
     fn test_struct_info_fields_some() {
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
         let field_name = CString::new(FAKE_FIELD_NAME).expect("Invalid fake field name.");
-        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let (_type_info, type_id) = fake_primitive_type_info(&type_name, 1, 1);
+        let type_id = i32::type_id();
 
         let field_names = &[field_name.as_ptr()];
-        let field_types = &[type_id];
+        let field_types = &[type_id.clone()];
         let field_offsets = &[1];
         let struct_info = fake_struct_info(
             &struct_name,

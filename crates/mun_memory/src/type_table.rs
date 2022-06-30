@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use rustc_hash::FxHashMap;
 
-use abi::{Guid, TypeId};
+use abi::Guid;
 
 use crate::type_info::{HasStaticTypeInfo, TypeInfo};
 
@@ -24,8 +24,8 @@ impl TypeTable {
         type_id: &'abi abi::TypeId<'abi>,
     ) -> Option<Arc<TypeInfo>> {
         match type_id {
-            TypeId::Concrete(guid) => self.concrete.get(guid).cloned(),
-            TypeId::Pointer(p) => self
+            abi::TypeId::Concrete(guid) => self.concrete.get(guid).cloned(),
+            abi::TypeId::Pointer(p) => self
                 .find_type_info_by_id(p.pointee)
                 .map(|ty| ty.pointer_type(p.mutable)),
         }

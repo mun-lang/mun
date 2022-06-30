@@ -52,7 +52,7 @@ pub enum TypeInfoData {
     Pointer(PointerInfo),
 }
 
-/// A linked version of [`mun_abi::StructInfo`] that has resolved all occurrences of `TypeId` with `TypeInfo`.  
+/// A linked version of [`mun_abi::StructInfo`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
 #[derive(Clone, Debug)]
 pub struct StructInfo {
     /// The unique identifier of this struct
@@ -297,12 +297,8 @@ impl TypeInfoData {
         type_table: &TypeTable,
     ) -> Result<TypeInfoData, TryFromAbiError<'abi>> {
         match type_info_data {
-            abi::TypeInfoData::Primitive(guid) => Ok(TypeInfoData::Primitive(guid.clone())),
             abi::TypeInfoData::Struct(s) => {
                 StructInfo::try_from_abi(s, type_table).map(TypeInfoData::Struct)
-            }
-            abi::TypeInfoData::Pointer(p) => {
-                PointerInfo::try_from_abi(p, type_table).map(TypeInfoData::Pointer)
             }
         }
     }
@@ -346,21 +342,6 @@ impl StructInfo {
     }
 }
 
-impl PointerInfo {
-    /// Tries to convert from an `abi::PointerInfo`.
-    pub fn try_from_abi<'abi>(
-        pointer_info: &'abi abi::PointerInfo<'abi>,
-        type_table: &TypeTable,
-    ) -> Result<PointerInfo, TryFromAbiError<'abi>> {
-        Ok(PointerInfo {
-            pointee: type_table
-                .find_type_info_by_id(&pointer_info.pointee)
-                .ok_or_else(|| TryFromAbiError::UnknownTypeId(pointer_info.pointee.clone()))?,
-            mutable: pointer_info.mutable,
-        })
-    }
-}
-
 /// A linked version of a struct field.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FieldInfo {
@@ -386,20 +367,13 @@ macro_rules! impl_primitive_type {
                 fn type_info() -> &'static Arc<TypeInfo> {
                     static TYPE_INFO: once_cell::sync::OnceCell<Arc<TypeInfo>> = once_cell::sync::OnceCell::new();
                     TYPE_INFO.get_or_init(|| {
-                        let type_info = <$ty as abi::HasStaticTypeInfo>::type_info();
-                        match type_info.data {
-                            abi::TypeInfoData::Primitive(guid) => {
-                                Arc::new(TypeInfo {
-                                    name: type_info.name().to_owned(),
-                                    layout:  Layout::from_size_align(type_info.size_in_bytes(), type_info.alignment())
-                                        .expect("TypeInfo contains invalid size and alignment."),
-                                    data: TypeInfoData::Primitive(guid.clone()),
-                                    immutable_pointer_type: Default::default(),
-                                    mutable_pointer_type: Default::default(),
-                                })
-                            }
-                            _ => unreachable!("invalid primitive type")
-                        }
+                         Arc::new(TypeInfo {
+                            name: <$ty as abi::BuiltinType>::name().to_owned(),
+                            layout: Layout::new::<$ty>(),
+                            data: TypeInfoData::Primitive(<$ty as abi::BuiltinType>::guid().clone()),
+                            immutable_pointer_type: Default::default(),
+                            mutable_pointer_type: Default::default(),
+                        })
                     })
                 }
             }

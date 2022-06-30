@@ -1,73 +1,10 @@
 use std::ffi::CStr;
-use std::hash::Hash;
 use std::os::raw::c_char;
-use std::{ffi, fmt, slice, str};
+use std::{ffi, slice, str};
 
 use itertools::izip;
 
-use crate::Guid;
-
-/// Represents a unique identifier for types. The runtime can use this to lookup the corresponding
-/// [`TypeInfo`]. A [`TypeId`] is a key for a [`TypeInfo`].
-///
-/// A [`TypeId`] only contains enough information to query the runtime for a concrete type.
-#[repr(u8)]
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub enum TypeId<'a> {
-    /// Represents a concrete type with a specific Guid
-    Concrete(Guid),
-
-    /// Represents a pointer to a type
-    Pointer(PointerTypeId<'a>),
-}
-
-/// Represents a pointer to another type.
-#[repr(C)]
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct PointerTypeId<'a> {
-    /// The type to which this pointer points
-    pub pointee: &'a TypeId<'a>,
-
-    /// Whether or not this pointer is mutable or not
-    pub mutable: bool,
-}
-
-unsafe impl<'a> Send for TypeId<'a> {}
-unsafe impl<'a> Sync for TypeId<'a> {}
-
-impl<'a> From<Guid> for TypeId<'a> {
-    fn from(guid: Guid) -> Self {
-        TypeId::Concrete(guid)
-    }
-}
-
-impl<'a> From<PointerTypeId<'a>> for TypeId<'a> {
-    fn from(pointer: PointerTypeId<'a>) -> Self {
-        TypeId::Pointer(pointer)
-    }
-}
-
-impl<'a> fmt::Display for TypeId<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            TypeId::Concrete(guid) => guid.fmt(f),
-            TypeId::Pointer(pointer) => pointer.fmt(f),
-        }
-    }
-}
-
-impl<'a> fmt::Display for PointerTypeId<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.mutable {
-            write!(f, "*mut ")
-        } else {
-            write!(f, "*const ")
-        }?;
-        self.pointee.fmt(f)
-    }
-}
+use crate::type_id::TypeId;
 
 /// Represents a lookup table for type information. This is used for runtime linking.
 ///

@@ -164,6 +164,7 @@ pub unsafe extern "C" fn mun_function_info_return_type(
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use crate::type_info::mun_type_info_eq;
     use crate::{
         error::mun_error_destroy,
         mun_string_destroy,
@@ -381,13 +382,7 @@ pub(crate) mod tests {
         (0..arg_types.len).into_iter().for_each(|index| {
             let type_info = arg_types.get(index);
             assert_ne!(type_info.0, ptr::null());
-
-            let mut type_id = MaybeUninit::uninit();
-            let handle = unsafe { mun_type_info_id(type_info, type_id.as_mut_ptr()) };
-            assert_eq!(handle.0, ptr::null());
-
-            let type_id = unsafe { type_id.assume_init() };
-            assert_eq!(type_id, <i32>::type_info().id);
+            assert!(unsafe { mun_type_info_eq(type_info, i32::type_info().clone().into()) });
         })
     }
 
@@ -409,12 +404,7 @@ pub(crate) mod tests {
         let return_type = unsafe { mun_function_info_return_type(fn_info) };
         assert_ne!(return_type.0, ptr::null());
 
-        let mut type_id = MaybeUninit::uninit();
-        let handle = unsafe { mun_type_info_id(return_type, type_id.as_mut_ptr()) };
-        assert_eq!(handle.0, ptr::null());
-
-        let type_id = unsafe { type_id.assume_init() };
-        assert_eq!(type_id, <()>::type_info().id);
+        assert!(unsafe { mun_type_info_eq(return_type, <()>::type_info().clone().into()) });
     }
 
     #[test]
@@ -429,11 +419,6 @@ pub(crate) mod tests {
         let return_type = unsafe { mun_function_info_return_type(fn_info) };
         assert_ne!(return_type.0, ptr::null());
 
-        let mut type_id = MaybeUninit::uninit();
-        let handle = unsafe { mun_type_info_id(return_type, type_id.as_mut_ptr()) };
-        assert_eq!(handle.0, ptr::null());
-
-        let type_id = unsafe { type_id.assume_init() };
-        assert_eq!(type_id, <i32>::type_info().id);
+        assert!(unsafe { mun_type_info_eq(return_type, <i32>::type_info().clone().into()) });
     }
 }

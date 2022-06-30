@@ -126,6 +126,7 @@ pub unsafe extern "C" fn mun_field_info_span_destroy(span: FieldInfoSpan) -> boo
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::type_info::mun_type_info_eq;
     use crate::{
         error::mun_error_destroy,
         mun_string_destroy,
@@ -134,7 +135,7 @@ mod tests {
         test_util::TestDriver,
         type_info::mun_type_info_data,
     };
-    use memory::{HasStaticTypeInfo, TypeInfo};
+    use memory::HasStaticTypeInfo;
     use std::{
         ffi::{CStr, CString},
         mem::MaybeUninit,
@@ -229,9 +230,7 @@ mod tests {
         let field_info = get_first_field(driver.runtime, "Foo");
         let type_info = unsafe { mun_field_info_type(field_info) };
         assert_ne!(type_info.0, ptr::null());
-
-        let type_info = unsafe { Arc::from_raw(type_info.0 as *const TypeInfo) };
-        assert_eq!(type_info, <i32>::type_info());
+        assert!(unsafe { mun_type_info_eq(type_info, i32::type_info().clone().into()) });
     }
 
     #[test]

@@ -865,26 +865,6 @@ mod tests {
         };
         assert_eq!(handle.0, ptr::null());
         assert!(has_type_info);
-        let type_info = unsafe { type_info.assume_init() };
-
-        let mut type_id = MaybeUninit::uninit();
-        let handle = unsafe { mun_type_info_id(type_info, type_id.as_mut_ptr()) };
-        assert_eq!(handle.0, ptr::null());
-
-        let type_id = unsafe { type_id.assume_init() };
-        let mut has_type_info = false;
-        let mut type_info = MaybeUninit::uninit();
-        let handle = unsafe {
-            mun_runtime_get_type_info_by_id(
-                driver.runtime,
-                &type_id as *const abi::TypeId,
-                &mut has_type_info as *mut _,
-                type_info.as_mut_ptr(),
-            )
-        };
-        assert_eq!(handle.0, ptr::null());
-        assert!(has_type_info);
-        let _type_info = unsafe { type_info.assume_init() };
     }
 
     #[test]

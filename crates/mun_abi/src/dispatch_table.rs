@@ -125,8 +125,8 @@ impl<'a> serde::Serialize for DispatchTable<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_utils::fake_primitive_type_info;
-    use crate::test_utils::{fake_dispatch_table, fake_fn_prototype, FAKE_FN_NAME, FAKE_TYPE_NAME};
+    use crate::test_utils::{fake_dispatch_table, fake_fn_prototype, FAKE_FN_NAME};
+    use crate::type_id::HasStaticTypeId;
     use std::{ffi::CString, ptr};
 
     #[test]
@@ -141,8 +141,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_table_iter_mut_some() {
-        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let (_type_info, type_id) = fake_primitive_type_info(&type_name, 1, 1);
+        let type_id = i32::type_id().clone();
 
         let return_type = Some(type_id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -174,8 +173,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_table_ptrs_mut_some() {
-        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let (_type_info, type_id) = fake_primitive_type_info(&type_name, 1, 1);
+        let type_id = i32::type_id().clone();
 
         let return_type = Some(type_id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -203,8 +201,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_table_signatures_some() {
-        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let (_type_info, type_id) = fake_primitive_type_info(&type_name, 1, 1);
+        let type_id = i32::type_id().clone();
 
         let return_type = Some(type_id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
@@ -225,12 +222,10 @@ mod tests {
 
     #[test]
     fn test_dispatch_table_get_ptr_unchecked() {
-        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let (_type_info, type_id) = fake_primitive_type_info(&type_name, 1, 1);
+        let type_id = i32::type_id();
 
-        let return_type = Some(type_id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
+        let fn_prototype = fake_fn_prototype(&fn_name, &[], Some(type_id.clone()));
 
         let prototypes = &[fn_prototype];
         let fn_ptrs = &mut [ptr::null()];
@@ -241,12 +236,10 @@ mod tests {
 
     #[test]
     fn test_dispatch_table_get_ptr_none() {
-        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let (_type_info, type_id) = fake_primitive_type_info(&type_name, 1, 1);
+        let type_id = i32::type_id();
 
-        let return_type = Some(type_id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
+        let fn_prototype = fake_fn_prototype(&fn_name, &[], Some(type_id.clone()));
 
         let prototype = &[fn_prototype];
         let fn_ptrs = &mut [ptr::null()];
@@ -257,12 +250,10 @@ mod tests {
 
     #[test]
     fn test_dispatch_table_get_ptr_some() {
-        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let (_type_info, type_id) = fake_primitive_type_info(&type_name, 1, 1);
+        let type_id = i32::type_id();
 
-        let return_type = Some(type_id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
+        let fn_prototype = fake_fn_prototype(&fn_name, &[], Some(type_id.clone()));
 
         let prototypes = &[fn_prototype];
         let fn_ptrs = &mut [ptr::null()];
@@ -273,12 +264,10 @@ mod tests {
 
     #[test]
     fn test_dispatch_table_get_ptr_unchecked_mut() {
-        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let (_type_info, type_id) = fake_primitive_type_info(&type_name, 1, 1);
+        let type_id = i32::type_id();
 
-        let return_type = Some(type_id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
+        let fn_prototype = fake_fn_prototype(&fn_name, &[], Some(type_id.clone()));
 
         let prototypes = &[fn_prototype];
         let fn_ptrs = &mut [ptr::null()];
@@ -292,12 +281,10 @@ mod tests {
 
     #[test]
     fn test_dispatch_table_get_ptr_mut_none() {
-        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let (_type_info, type_id) = fake_primitive_type_info(&type_name, 1, 1);
+        let type_id = i32::type_id();
 
-        let return_type = Some(type_id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
+        let fn_prototype = fake_fn_prototype(&fn_name, &[], Some(type_id.clone()));
 
         let prototypes = &[fn_prototype];
         let fn_ptrs = &mut [ptr::null()];
@@ -308,12 +295,10 @@ mod tests {
 
     #[test]
     fn test_dispatch_table_get_ptr_mut_some() {
-        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let (_type_info, type_id) = fake_primitive_type_info(&type_name, 1, 1);
+        let type_id = i32::type_id();
 
-        let return_type = Some(type_id);
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
+        let fn_prototype = fake_fn_prototype(&fn_name, &[], Some(type_id.clone()));
 
         let prototypes = &[fn_prototype];
         let fn_ptrs = &mut [ptr::null()];

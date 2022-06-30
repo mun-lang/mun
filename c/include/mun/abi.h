@@ -49,7 +49,7 @@ typedef struct MunPointerTypeId {
     /**
      * The type to which this pointer points
      */
-    const struct MunTypeId *pointee;
+    const union MunTypeId *pointee;
     /**
      * Whether or not this pointer is mutable or not
      */
@@ -62,7 +62,11 @@ typedef struct MunPointerTypeId {
  *
  * A [`TypeId`] only contains enough information to query the runtime for a concrete type.
  */
-typedef enum MunTypeId_Tag {
+enum MunTypeId_Tag
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
     /**
      * Represents a concrete type with a specific Guid
      */
@@ -71,17 +75,20 @@ typedef enum MunTypeId_Tag {
      * Represents a pointer to a type
      */
     Pointer,
-} MunTypeId_Tag;
+};
+#ifndef __cplusplus
+typedef uint8_t MunTypeId_Tag;
+#endif // __cplusplus
 
-typedef struct MunTypeId {
+typedef union MunTypeId {
     MunTypeId_Tag tag;
-    union {
-        struct {
-            struct MunGuid concrete;
-        };
-        struct {
-            struct MunPointerTypeId pointer;
-        };
+    struct {
+        MunTypeId_Tag concrete_tag;
+        struct MunGuid concrete;
+    };
+    struct {
+        MunTypeId_Tag pointer_tag;
+        struct MunPointerTypeId pointer;
     };
 } MunTypeId;
 
@@ -92,11 +99,11 @@ typedef struct MunFunctionSignature {
     /**
      * Argument types
      */
-    const struct MunTypeId *arg_types;
+    const union MunTypeId *arg_types;
     /**
      * Optional return type
      */
-    struct MunTypeId return_type;
+    union MunTypeId return_type;
     /**
      * Number of argument types
      */
@@ -150,7 +157,7 @@ typedef struct MunStructInfo {
     /**
      * Struct fields' information
      */
-    const struct MunTypeId *field_types;
+    const union MunTypeId *field_types;
     /**
      * Struct fields' offsets
      */
@@ -166,20 +173,6 @@ typedef struct MunStructInfo {
 } MunStructInfo;
 
 /**
- * Pointer type information
- */
-typedef struct MunPointerInfo {
-    /**
-     * The type to which this pointer points.
-     */
-    struct MunTypeId pointee;
-    /**
-     * Whether or not the pointed to value is mutable or not
-     */
-    bool mutable_;
-} MunPointerInfo;
-
-/**
  * Contains data specific to a group of types that illicit the same characteristics.
  */
 enum MunTypeInfoData_Tag
@@ -188,17 +181,9 @@ enum MunTypeInfoData_Tag
 #endif // __cplusplus
  {
     /**
-     * Primitive types (i.e. `()`, `bool`, `float`, `int`, etc.)
-     */
-    Primitive,
-    /**
      * Struct types (i.e. record, tuple, or unit structs)
      */
     Struct,
-    /**
-     * Pointer to another type
-     */
-    Pointer,
 };
 #ifndef __cplusplus
 typedef uint8_t MunTypeInfoData_Tag;
@@ -207,16 +192,8 @@ typedef uint8_t MunTypeInfoData_Tag;
 typedef union MunTypeInfoData {
     MunTypeInfoData_Tag tag;
     struct {
-        MunTypeInfoData_Tag primitive_tag;
-        struct MunGuid primitive;
-    };
-    struct {
         MunTypeInfoData_Tag struct_tag;
         struct MunStructInfo struct_;
-    };
-    struct {
-        MunTypeInfoData_Tag pointer_tag;
-        struct MunPointerInfo pointer;
     };
 } MunTypeInfoData;
 
@@ -300,7 +277,7 @@ typedef struct MunTypeLut {
     /**
      * Type IDs
      */
-    const struct MunTypeId *type_ids;
+    const union MunTypeId *type_ids;
     /**
      * Type information handles
      */

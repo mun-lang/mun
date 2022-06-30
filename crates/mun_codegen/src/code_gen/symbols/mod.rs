@@ -2,6 +2,7 @@ use std::convert::TryFrom;
 use std::{collections::HashSet, ffi::CString};
 
 use inkwell::{attributes::Attribute, module::Linkage, types::AnyType};
+use itertools::Itertools;
 
 use hir::{HirDatabase, TyKind};
 use ir_type_builder::TypeIdBuilder;
@@ -111,6 +112,10 @@ fn get_type_definition_array<'ink, 'a>(
     ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
 ) -> Value<'ink, *const ir::TypeInfo<'ink>> {
     types
+        .sorted_by_cached_key(|type_info| match type_info.interned() {
+            TyKind::Struct(s) => s.full_name(db),
+            _ => unreachable!("unsupported export type"),
+        })
         .map(|type_info| match type_info.interned() {
             TyKind::Struct(s) => {
                 let inkwell_type = hir_types.get_struct_type(*s);

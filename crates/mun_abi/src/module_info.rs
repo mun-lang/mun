@@ -80,11 +80,11 @@ impl<'a> serde::Serialize for ModuleInfo<'a> {
 mod tests {
     use std::{ffi::CString, ptr};
 
-    use crate::test_utils::fake_primitive_type_info;
+    use crate::type_id::HasStaticTypeId;
     use crate::{
         test_utils::{
             fake_fn_prototype, fake_module_info, fake_struct_info, fake_type_info, FAKE_FN_NAME,
-            FAKE_MODULE_PATH, FAKE_STRUCT_NAME, FAKE_TYPE_NAME,
+            FAKE_MODULE_PATH, FAKE_STRUCT_NAME,
         },
         FunctionDefinition, TypeInfo, TypeInfoData,
     };
@@ -110,12 +110,9 @@ mod tests {
 
     #[test]
     fn test_module_info_types_some() {
-        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let (_type_info, type_id) = fake_primitive_type_info(&type_name, 1, 1);
-
-        let return_type = Some(type_id);
+        let type_id = i32::type_id();
         let fn_name = CString::new(FAKE_FN_NAME).expect("Invalid fake fn name.");
-        let fn_prototype = fake_fn_prototype(&fn_name, &[], return_type);
+        let fn_prototype = fake_fn_prototype(&fn_name, &[], Some(type_id.clone()));
 
         let fn_info = FunctionDefinition {
             prototype: fn_prototype,
@@ -152,14 +149,9 @@ mod tests {
             assert_eq!(lhs, rhs);
             assert_eq!(lhs.name(), rhs.name());
             assert_eq!(lhs.data.is_struct(), rhs.data.is_struct());
-            assert_eq!(lhs.data.is_primitive(), rhs.data.is_primitive());
-            if let TypeInfoData::Struct(lhs) = &lhs.data {
-                if let TypeInfoData::Struct(rhs) = &rhs.data {
-                    assert_eq!(lhs.field_types(), rhs.field_types());
-                } else {
-                    unreachable!()
-                }
-            }
+            let TypeInfoData::Struct(lhs) = &lhs.data;
+            let TypeInfoData::Struct(rhs) = &rhs.data;
+            assert_eq!(lhs.field_types(), rhs.field_types());
         }
     }
 }

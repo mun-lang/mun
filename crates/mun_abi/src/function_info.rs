@@ -1,10 +1,11 @@
+use crate::type_id::HasStaticTypeId;
 use std::{
     ffi::{c_void, CStr},
     os::raw::c_char,
     slice, str,
 };
 
-use crate::{HasStaticTypeInfo, TypeId};
+use crate::type_id::TypeId;
 
 /// Represents a function definition. A function definition contains the name, type signature, and
 /// a pointer to the implementation.
@@ -73,7 +74,7 @@ impl<'a> FunctionSignature<'a> {
 
     /// Returns the function's return type.
     pub fn return_type(&self) -> Option<TypeId<'a>> {
-        if <()>::type_info().is_instance_of(&self.return_type) {
+        if <()>::type_id() == &self.return_type {
             None
         } else {
             Some(self.return_type.clone())
@@ -147,10 +148,8 @@ impl<'a> serde::Serialize for FunctionSignature<'a> {
 mod tests {
     use std::ffi::CString;
 
-    use crate::{
-        test_utils::fake_primitive_type_info,
-        test_utils::{fake_fn_prototype, fake_fn_signature, FAKE_FN_NAME, FAKE_TYPE_NAME},
-    };
+    use crate::test_utils::{fake_fn_prototype, fake_fn_signature, FAKE_FN_NAME};
+    use crate::type_id::HasStaticTypeId;
 
     #[test]
     fn test_fn_prototype_name() {
@@ -170,10 +169,9 @@ mod tests {
 
     #[test]
     fn test_fn_signature_arg_types_some() {
-        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let (_type_info, type_id) = fake_primitive_type_info(&type_name, 1, 1);
+        let type_id = i32::type_id();
 
-        let arg_types = &[type_id];
+        let arg_types = &[type_id.clone()];
         let fn_signature = fake_fn_signature(arg_types, None);
 
         assert_eq!(fn_signature.arg_types(), arg_types);
@@ -189,10 +187,9 @@ mod tests {
 
     #[test]
     fn test_fn_signature_return_type_some() {
-        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
-        let (_type_info, type_id) = fake_primitive_type_info(&type_name, 1, 1);
+        let type_id = i32::type_id();
 
-        let return_type = Some(type_id);
+        let return_type = Some(type_id.clone());
         let fn_signature = fake_fn_signature(&[], return_type.clone());
 
         assert_eq!(fn_signature.return_type(), return_type);

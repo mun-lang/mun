@@ -33,7 +33,6 @@ fn abi_struct_sizes() {
     test_type_size::<abi::PointerTypeId, ir::PointerTypeId>(&type_context);
     test_type_size::<abi::TypeInfoData, ir::TypeInfoData>(&type_context);
     test_type_size::<abi::StructInfo, ir::StructInfo>(&type_context);
-    test_type_size::<abi::PointerInfo, ir::PointerInfo>(&type_context);
     test_type_size::<abi::TypeInfo, ir::TypeInfo>(&type_context);
     test_type_size::<abi::FunctionSignature, ir::FunctionSignature>(&type_context);
     test_type_size::<abi::FunctionPrototype, ir::FunctionPrototype>(&type_context);

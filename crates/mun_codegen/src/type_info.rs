@@ -38,9 +38,8 @@ macro_rules! impl_primitive_type_id {
                 fn type_id() -> &'static Arc<TypeId> {
                     static TYPE_INFO: once_cell::sync::OnceCell<Arc<TypeId>> = once_cell::sync::OnceCell::new();
                     TYPE_INFO.get_or_init(|| {
-                        let type_info = <$ty as abi::HasStaticTypeInfo>::type_info();
-                        let guid = type_info.as_concrete().expect("primitive must be concrete type").clone();
-                        let name = type_info.name().to_owned();
+                        let guid = <$ty as abi::BuiltinType>::guid().clone();
+                        let name = <$ty as abi::BuiltinType>::name().to_owned();
                         Arc::new(TypeId { name, data: TypeIdData::Concrete(guid) })
                     })
                 }

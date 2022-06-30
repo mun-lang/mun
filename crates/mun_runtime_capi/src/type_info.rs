@@ -21,6 +21,12 @@ impl TypeInfoHandle {
     }
 }
 
+impl From<Arc<TypeInfo>> for TypeInfoHandle {
+    fn from(ty: Arc<TypeInfo>) -> Self {
+        TypeInfoHandle(Arc::into_raw(ty) as _)
+    }
+}
+
 /// A C-style handle to an array of `TypeInfoHandle`s.
 #[repr(C)]
 pub struct TypeInfoSpan {
@@ -93,6 +99,16 @@ pub unsafe extern "C" fn mun_type_info_name(type_info: TypeInfoHandle) -> *const
     };
 
     CString::new(type_info.name.clone()).unwrap().into_raw() as *const _
+}
+
+/// Returns true if the specified type info handles describe the same type.
+///
+/// # Safety
+///
+/// This function results in undefined behavior if any of the the passed in `TypeInfoHandle` have
+/// been deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
+pub unsafe extern "C" fn mun_type_info_eq(a: TypeInfoHandle, b: TypeInfoHandle) -> bool {
+    (a.0 as *const TypeInfo).as_ref() == (b.0 as *const TypeInfo).as_ref()
 }
 
 /// Retrieves the type's size.
@@ -181,12 +197,6 @@ impl TypeInfoData {
         matches!(*self, TypeInfoData::Struct(_))
     }
 
-    /// Whether the type is a struct.
-    #[cfg(test)]
-    fn is_pointer(&self) -> bool {
-        matches!(*self, TypeInfoData::Pointer(_))
-    }
-
     /// Returns the C-style handle to the struct information, if available.
     #[cfg(test)]
     pub(crate) fn as_struct(&self) -> Option<StructInfoHandle> {
@@ -269,7 +279,6 @@ pub(crate) mod tests {
         runtime::{mun_runtime_get_type_info_by_name, RuntimeHandle},
         test_util::TestDriver,
     };
-    use memory::HasStaticTypeInfo;
     use std::{
         ffi::{CStr, CString},
         mem::{self, MaybeUninit},
@@ -359,58 +368,6 @@ pub(crate) mod tests {
         assert_eq!(Arc::strong_count(&type_info_arc), strong_count + 1);
 
         mem::forget(type_info_arc);
-    }
-
-    #[test]
-    fn test_type_info_id_invalid_type_info() {
-        let handle = unsafe { mun_type_info_id(TypeInfoHandle::null(), ptr::null_mut()) };
-        assert_ne!(handle.0, ptr::null());
-
-        let message = unsafe { CStr::from_ptr(handle.0) };
-        assert_eq!(
-            message.to_str().unwrap(),
-            "Invalid argument: 'type_info' is null pointer."
-        );
-
-        unsafe { mun_error_destroy(handle) };
-    }
-
-    #[test]
-    fn test_type_info_id_invalid_type_id() {
-        let driver = TestDriver::new(
-            r#"
-        pub fn main() -> i32 { 12345 }
-    "#,
-        );
-
-        let type_info = get_type_info_by_name(driver.runtime, "core::i32");
-        let handle = unsafe { mun_type_info_id(type_info, ptr::null_mut()) };
-        assert_ne!(handle.0, ptr::null());
-
-        let message = unsafe { CStr::from_ptr(handle.0) };
-        assert_eq!(
-            message.to_str().unwrap(),
-            "Invalid argument: 'type_id' is null pointer."
-        );
-
-        unsafe { mun_error_destroy(handle) };
-    }
-
-    #[test]
-    fn test_type_info_id() {
-        let driver = TestDriver::new(
-            r#"
-        pub fn main() -> i32 { 12345 }
-    "#,
-        );
-
-        let type_info = get_type_info_by_name(driver.runtime, "core::i32");
-        let mut type_id = MaybeUninit::uninit();
-        let handle = unsafe { mun_type_info_id(type_info, type_id.as_mut_ptr()) };
-        assert_eq!(handle.0, ptr::null());
-
-        let type_id = unsafe { type_id.assume_init() };
-        assert_eq!(type_id, <i32>::type_info().id);
     }
 
     #[test]
