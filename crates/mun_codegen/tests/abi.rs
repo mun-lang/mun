@@ -34,21 +34,21 @@ fn test_abi_compatibility() {
         functions: [
           FunctionDefinition(
             prototype: FunctionPrototype(
+              name: "bar",
+              signature: FunctionSignature(
+                arg_types: [],
+                return_type: None,
+              ),
+            ),
+          ),
+          FunctionDefinition(
+            prototype: FunctionPrototype(
               name: "foo",
               signature: FunctionSignature(
                 arg_types: [
                   Concrete("60db469c-3f59-4a25-47ad-349fd5922541"),
                 ],
                 return_type: Some(Concrete("17797a74-19d6-3217-d235-954317885bfa")),
-              ),
-            ),
-          ),
-          FunctionDefinition(
-            prototype: FunctionPrototype(
-              name: "bar",
-              signature: FunctionSignature(
-                arg_types: [],
-                return_type: None,
               ),
             ),
           ),

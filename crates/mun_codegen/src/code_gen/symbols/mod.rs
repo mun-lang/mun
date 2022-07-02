@@ -232,6 +232,7 @@ fn get_function_definition_array<'ink, 'a>(
 ) -> Global<'ink, [ir::FunctionDefinition<'ink>]> {
     let module = context.module;
     functions
+        .sorted_by_cached_key(|f| f.full_name(db).to_string())
         .map(|f| {
             let name = f.name(db).to_string();
 
