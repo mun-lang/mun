@@ -23,6 +23,11 @@ jobs:
         with:
           submodules: true
 
+      - name: Install alsa
+        run: |
+          sudo apt-get update
+          sudo apt-get install libasound2-dev
+
       - name: Install Rust (stable)
         uses: actions-rs/toolchain@v1
         with:
@@ -75,7 +80,7 @@ jobs:
           RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
         with:
           command: test
-          args: --workspace -- --nocapture
+          args: --workspace --examples -- --nocapture
 
   test-dependents:
     name: Test Mun Dependents (C++ & book)
