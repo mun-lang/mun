@@ -2,6 +2,7 @@
 members = [
     "crates/*",
 ]
+resolver = "2"
 
 [profile.dev]
 rpath = true
