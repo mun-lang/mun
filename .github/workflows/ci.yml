@@ -23,7 +23,7 @@ jobs:
         with:
           submodules: true
 
-      - name: Install alsa
+      - name: Install packages
         run: |
           sudo apt-get update
           sudo apt-get install libasound2-dev libudev-dev
@@ -64,6 +64,12 @@ jobs:
 
       - name: Install LLVM
         uses: ./.github/actions/install-llvm
+
+      - name: Install packages
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install libasound2-dev libudev-dev
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
