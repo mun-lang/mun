@@ -242,7 +242,7 @@ impl TypeInfo {
     }
 
     /// Returns the type that represents a pointer to this type
-    pub(crate) fn pointer_type(self: &Arc<Self>, mutable: bool) -> Arc<TypeInfo> {
+    pub fn pointer_type(self: &Arc<Self>, mutable: bool) -> Arc<TypeInfo> {
         let cache_key = if mutable {
             &self.mutable_pointer_type
         } else {

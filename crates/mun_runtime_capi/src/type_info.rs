@@ -1,7 +1,9 @@
 //! Exposes type information using the C ABI.
 
 use crate::{error::ErrorHandle, struct_info::StructInfoHandle};
-use memory::{StructInfo, TypeInfo};
+use memory::{HasStaticTypeInfo, StructInfo, TypeInfo};
+use std::mem::ManuallyDrop;
+use std::ops::Deref;
 use std::{
     ffi::{c_void, CString},
     os::raw::c_char,
@@ -107,8 +109,28 @@ pub unsafe extern "C" fn mun_type_info_name(type_info: TypeInfoHandle) -> *const
 ///
 /// This function results in undefined behavior if any of the the passed in `TypeInfoHandle` have
 /// been deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
+#[no_mangle]
 pub unsafe extern "C" fn mun_type_info_eq(a: TypeInfoHandle, b: TypeInfoHandle) -> bool {
     (a.0 as *const TypeInfo).as_ref() == (b.0 as *const TypeInfo).as_ref()
+}
+
+/// Returns the TypeInfoHandle of a pointer to the given TypeInfoHandle.
+///
+/// # Safety
+///
+/// This function results in undefined behavior if any of the the passed in `TypeInfoHandle` have
+/// been deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
+#[no_mangle]
+pub unsafe extern "C" fn mun_type_info_pointer_type(
+    handle: TypeInfoHandle,
+    mutable: bool,
+) -> TypeInfoHandle {
+    if handle.0.is_null() {
+        return TypeInfoHandle::null();
+    }
+
+    let type_info = ManuallyDrop::new(Arc::from_raw(handle.0 as *const TypeInfo));
+    type_info.deref().pointer_type(mutable).into()
 }
 
 /// Retrieves the type's size.
@@ -269,6 +291,53 @@ pub unsafe extern "C" fn mun_type_info_span_destroy(array_handle: TypeInfoSpan) 
     true
 }
 
+/// Types of primitives supported by Mun.
+/// cbindgen:prefix-with-name=true
+#[repr(u8)]
+#[derive(Clone, Copy)]
+#[allow(missing_docs)]
+pub enum PrimitiveType {
+    Bool,
+    U8,
+    U16,
+    U32,
+    U64,
+    U128,
+    I8,
+    I16,
+    I32,
+    I64,
+    I128,
+    F32,
+    F64,
+    Empty,
+    Void,
+}
+
+/// Returns a TypeInfoHandle that represents the specified primitive type.
+#[no_mangle]
+pub extern "C" fn mun_type_info_primitive(primitive_type: PrimitiveType) -> TypeInfoHandle {
+    match primitive_type {
+        PrimitiveType::Bool => bool::type_info(),
+        PrimitiveType::U8 => u8::type_info(),
+        PrimitiveType::U16 => u16::type_info(),
+        PrimitiveType::U32 => u32::type_info(),
+        PrimitiveType::U64 => u64::type_info(),
+        PrimitiveType::U128 => u128::type_info(),
+        PrimitiveType::I8 => i8::type_info(),
+        PrimitiveType::I16 => i16::type_info(),
+        PrimitiveType::I32 => i32::type_info(),
+        PrimitiveType::I64 => i64::type_info(),
+        PrimitiveType::I128 => i128::type_info(),
+        PrimitiveType::F32 => f32::type_info(),
+        PrimitiveType::F64 => f64::type_info(),
+        PrimitiveType::Empty => <()>::type_info(),
+        PrimitiveType::Void => <std::ffi::c_void>::type_info(),
+    }
+    .clone()
+    .into()
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
@@ -310,7 +379,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_type_info_decrement_strong_count_invalid_type_info() {
-        assert!(unsafe { mun_type_info_decrement_strong_count(TypeInfoHandle::null()) },);
+        assert!(!unsafe { mun_type_info_decrement_strong_count(TypeInfoHandle::null()) });
     }
 
     #[test]

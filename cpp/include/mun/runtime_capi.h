@@ -7,6 +7,34 @@
 #include <stdint.h>
 
 /**
+ * Types of primitives supported by Mun.
+ */
+enum MunPrimitiveType
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+    MunPrimitiveType_Bool,
+    MunPrimitiveType_U8,
+    MunPrimitiveType_U16,
+    MunPrimitiveType_U32,
+    MunPrimitiveType_U64,
+    MunPrimitiveType_U128,
+    MunPrimitiveType_I8,
+    MunPrimitiveType_I16,
+    MunPrimitiveType_I32,
+    MunPrimitiveType_I64,
+    MunPrimitiveType_I128,
+    MunPrimitiveType_F32,
+    MunPrimitiveType_F64,
+    MunPrimitiveType_Empty,
+    MunPrimitiveType_Void,
+};
+#ifndef __cplusplus
+typedef uint8_t MunPrimitiveType;
+#endif // __cplusplus
+
+/**
  * Represents the kind of memory management a struct uses.
  */
 enum MunStructMemoryKind
@@ -71,6 +99,64 @@ typedef void *const *MunRawGcPtr;
 typedef MunRawGcPtr MunGcPtr;
 
 /**
+ * Definition of an external function that is callable from Mun.
+ *
+ * The ownership of the contained TypeInfoHandles is considered to lie with this struct.
+ */
+typedef struct MunExternalFunctionDefinition {
+    /**
+     * The name of the function
+     */
+    const char *name;
+    /**
+     * The number of arguments of the function
+     */
+    uint32_t num_args;
+    /**
+     * The types of the arguments
+     */
+    const struct MunTypeInfoHandle *arg_types;
+    /**
+     * The type of the return type
+     */
+    struct MunTypeInfoHandle return_type;
+    /**
+     * Pointer to the function
+     */
+    const void *fn_ptr;
+} MunExternalFunctionDefinition;
+
+/**
+ * Options required to construct a [`RuntimeHandle`] through [`mun_runtime_create`]
+ *
+ * # Safety
+ *
+ * This struct contains raw pointers as parameters. Passing pointers to invalid data, will lead to
+ * undefined behavior.
+ */
+typedef struct MunRuntimeOptions {
+    /**
+     * Function definitions that should be inserted in the runtime before a mun library is loaded.
+     * This is useful to initialize `extern` functions used in a mun library.
+     *
+     * If the [`num_functions`] fields is non-zero this field must contain a pointer to an array
+     * of [`abi::FunctionDefinition`]s.
+     */
+    const struct MunExternalFunctionDefinition *functions;
+    /**
+     * The number of functions in the [`functions`] array.
+     */
+    uint32_t num_functions;
+} MunRuntimeOptions;
+
+/**
+ * A C-style handle to a `FunctionInfo`.
+ */
+typedef struct MunFunctionInfoHandle {
+    const void *_0;
+} MunFunctionInfoHandle;
+
+/**
  * Represents a globally unique identifier (GUID).
  */
 typedef struct MunGuid {
@@ -126,86 +212,6 @@ typedef union MunTypeId {
         struct MunPointerTypeId pointer;
     };
 } MunTypeId;
-
-/**
- * Represents a function signature.
- */
-typedef struct MunFunctionSignature {
-    /**
-     * Argument types
-     */
-    const union MunTypeId *arg_types;
-    /**
-     * Optional return type
-     */
-    union MunTypeId return_type;
-    /**
-     * Number of argument types
-     */
-    uint16_t num_arg_types;
-} MunFunctionSignature;
-
-/**
- * Represents a function prototype. A function prototype contains the name, type signature, but
- * not an implementation.
- */
-typedef struct MunFunctionPrototype {
-    /**
-     * Function name
-     */
-    const char *name;
-    /**
-     * The type signature of the function
-     */
-    struct MunFunctionSignature signature;
-} MunFunctionPrototype;
-
-/**
- * Represents a function definition. A function definition contains the name, type signature, and
- * a pointer to the implementation.
- *
- * `fn_ptr` can be used to call the declared function.
- */
-typedef struct MunFunctionDefinition {
-    /**
-     * Function prototype
-     */
-    struct MunFunctionPrototype prototype;
-    /**
-     * Function pointer
-     */
-    const void *fn_ptr;
-} MunFunctionDefinition;
-
-/**
- * Options required to construct a [`RuntimeHandle`] through [`mun_runtime_create`]
- *
- * # Safety
- *
- * This struct contains raw pointers as parameters. Passing pointers to invalid data, will lead to
- * undefined behavior.
- */
-typedef struct MunRuntimeOptions {
-    /**
-     * Function definitions that should be inserted in the runtime before a mun library is loaded.
-     * This is useful to initialize `extern` functions used in a mun library.
-     *
-     * If the [`num_functions`] fields is non-zero this field must contain a pointer to an array
-     * of [`abi::FunctionDefinition`]s.
-     */
-    const struct MunFunctionDefinition *functions;
-    /**
-     * The number of functions in the [`functions`] array.
-     */
-    uint32_t num_functions;
-} MunRuntimeOptions;
-
-/**
- * A C-style handle to a `FunctionInfo`.
- */
-typedef struct MunFunctionInfoHandle {
-    const void *_0;
-} MunFunctionInfoHandle;
 
 /**
  * A C-style handle to a `FieldInfo`.
@@ -693,6 +699,26 @@ bool mun_type_info_increment_strong_count(struct MunTypeInfoHandle handle);
 const char *mun_type_info_name(struct MunTypeInfoHandle type_info);
 
 /**
+ * Returns true if the specified type info handles describe the same type.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if any of the the passed in `TypeInfoHandle` have
+ * been deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
+ */
+bool mun_type_info_eq(struct MunTypeInfoHandle a, struct MunTypeInfoHandle b);
+
+/**
+ * Returns the TypeInfoHandle of a pointer to the given TypeInfoHandle.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if any of the the passed in `TypeInfoHandle` have
+ * been deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
+ */
+struct MunTypeInfoHandle mun_type_info_pointer_type(struct MunTypeInfoHandle handle, bool mutable_);
+
+/**
  * Retrieves the type's size.
  *
  * # Safety
@@ -734,6 +760,11 @@ struct MunErrorHandle mun_type_info_data(struct MunTypeInfoHandle type_info,
  * processes, will lead to undefined behavior.
  */
 bool mun_type_info_span_destroy(struct MunTypeInfoSpan array_handle);
+
+/**
+ * Returns a TypeInfoHandle that represents the specified primitive type.
+ */
+struct MunTypeInfoHandle mun_type_info_primitive(MunPrimitiveType primitive_type);
 
 #ifdef __cplusplus
 } // extern "C"

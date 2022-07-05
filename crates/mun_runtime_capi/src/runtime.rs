@@ -1,7 +1,8 @@
 //! Exposes the Mun runtime using the C ABI.
 
 use memory::type_table::TypeTable;
-use runtime::{FunctionDefinition, Runtime};
+use memory::TypeInfo;
+use runtime::{FunctionDefinition, FunctionPrototype, FunctionSignature, Runtime};
 use std::{
     ffi::{c_void, CStr},
     os::raw::c_char,
@@ -14,6 +15,28 @@ use crate::{error::ErrorHandle, function_info::FunctionInfoHandle, type_info::Ty
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct RuntimeHandle(pub *mut c_void);
+
+/// Definition of an external function that is callable from Mun.
+///
+/// The ownership of the contained TypeInfoHandles is considered to lie with this struct.
+#[repr(C)]
+#[derive(Clone)]
+pub struct ExternalFunctionDefinition {
+    /// The name of the function
+    pub name: *const c_char,
+
+    /// The number of arguments of the function
+    pub num_args: u32,
+
+    /// The types of the arguments
+    pub arg_types: *const TypeInfoHandle,
+
+    /// The type of the return type
+    pub return_type: TypeInfoHandle,
+
+    /// Pointer to the function
+    pub fn_ptr: *const c_void,
+}
 
 /// Options required to construct a [`RuntimeHandle`] through [`mun_runtime_create`]
 ///
@@ -29,7 +52,7 @@ pub struct RuntimeOptions {
     ///
     /// If the [`num_functions`] fields is non-zero this field must contain a pointer to an array
     /// of [`abi::FunctionDefinition`]s.
-    pub functions: *const abi::FunctionDefinition<'static>,
+    pub functions: *const ExternalFunctionDefinition,
 
     /// The number of functions in the [`functions`] array.
     pub num_functions: u32,
@@ -86,10 +109,70 @@ pub unsafe extern "C" fn mun_runtime_create(
     let user_functions =
         match std::slice::from_raw_parts(options.functions, options.num_functions as usize)
             .iter()
-            .map(|def| FunctionDefinition::try_from_abi(def, &type_table))
+            .map(|def| {
+                if def.name.is_null() {
+                    return Err(String::from(
+                        "Invalid function name: function name null pointer",
+                    ));
+                }
+
+                let name = match CStr::from_ptr(def.name).to_str() {
+                    Ok(path) => path,
+                    Err(e) => {
+                        return Err(format!(
+                            "Invalid function name: function name is not UTF-8 encoded: {}",
+                            e
+                        ));
+                    }
+                };
+
+                if def.return_type.0.is_null() {
+                    return Err(format!(
+                        "Invalid function '{}': 'return_type' is null pointer.",
+                        name
+                    ));
+                }
+
+                if def.num_args > 0 && def.arg_types.is_null() {
+                    return Err(format!(
+                        "Invalid function '{}': 'arg_types' is null pointer.",
+                        name
+                    ));
+                }
+
+                let arg_types: Vec<Arc<TypeInfo>> = if def.num_args > 0 {
+                    std::slice::from_raw_parts(def.arg_types, def.num_args as usize)
+                        .iter()
+                        .enumerate()
+                        .map(|(i, arg)| {
+                            if arg.0.is_null() {
+                                return Err(format!(
+                                    "Invalid function '{}': argument #{} is null pointer.",
+                                    name,
+                                    i + 1
+                                ));
+                            }
+                            Ok(Arc::from_raw(arg.0 as _))
+                        })
+                        .collect::<Result<_, _>>()?
+                } else {
+                    Vec::new()
+                };
+
+                Ok(FunctionDefinition {
+                    prototype: FunctionPrototype {
+                        name: name.to_owned(),
+                        signature: FunctionSignature {
+                            arg_types,
+                            return_type: Arc::from_raw(def.return_type.0 as _),
+                        },
+                    },
+                    fn_ptr: def.fn_ptr,
+                })
+            })
             .collect::<Result<_, _>>()
         {
-            Err(e) => return ErrorHandle::new(e.to_string()),
+            Err(e) => return ErrorHandle::new(e),
             Ok(user_functions) => user_functions,
         };
 
@@ -308,6 +391,7 @@ pub unsafe extern "C" fn mun_runtime_update(
 mod tests {
     use super::*;
     use crate::{error::mun_error_destroy, test_invalid_runtime, test_util::TestDriver};
+    use memory::HasStaticTypeInfo;
     use std::{ffi::CString, mem::MaybeUninit, ptr};
 
     test_invalid_runtime!(
@@ -401,16 +485,12 @@ mod tests {
     fn test_runtime_create_invalid_user_function() {
         let lib_path = CString::new("some/path").expect("Invalid library path");
 
-        let type_id = abi::TypeId::Concrete(abi::Guid([0u8; 16]));
-        let functions = vec![abi::FunctionDefinition {
-            prototype: abi::FunctionPrototype {
-                name: ptr::null(),
-                signature: abi::FunctionSignature {
-                    arg_types: ptr::null(),
-                    return_type: type_id.clone(),
-                    num_arg_types: 0,
-                },
-            },
+        let type_id = <()>::type_info().clone().into();
+        let functions = vec![ExternalFunctionDefinition {
+            name: ptr::null(),
+            arg_types: ptr::null(),
+            return_type: type_id,
+            num_args: 0,
             fn_ptr: ptr::null(),
         }];
 
@@ -428,7 +508,7 @@ mod tests {
         let message = unsafe { CStr::from_ptr(handle.0) };
         assert_eq!(
             message.to_str().unwrap(),
-            format!("unknown TypeId '{}'", type_id)
+            format!("Invalid function name: function name null pointer")
         );
 
         unsafe { mun_error_destroy(handle) };
