@@ -202,10 +202,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_function_info_decrement_strong_count_invalid_fn_info() {
-        assert_eq!(
-            unsafe { mun_function_info_decrement_strong_count(FunctionInfoHandle::null()) },
-            false
-        );
+        assert!(!unsafe { mun_function_info_decrement_strong_count(FunctionInfoHandle::null()) },);
     }
 
     #[test]
@@ -222,10 +219,7 @@ pub(crate) mod tests {
         let strong_count = Arc::strong_count(&fn_info_arc);
         assert!(strong_count > 0);
 
-        assert_eq!(
-            unsafe { mun_function_info_decrement_strong_count(fn_info) },
-            true
-        );
+        assert!(unsafe { mun_function_info_decrement_strong_count(fn_info) });
         assert_eq!(Arc::strong_count(&fn_info_arc), strong_count - 1);
 
         mem::forget(fn_info_arc);
@@ -233,10 +227,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_function_info_increment_strong_count_invalid_fn_info() {
-        assert_eq!(
-            unsafe { mun_function_info_increment_strong_count(FunctionInfoHandle::null()) },
-            false
-        );
+        assert!(!unsafe { mun_function_info_increment_strong_count(FunctionInfoHandle::null()) });
     }
 
     #[test]
@@ -253,10 +244,7 @@ pub(crate) mod tests {
         let strong_count = Arc::strong_count(&fn_info_arc);
         assert!(strong_count > 0);
 
-        assert_eq!(
-            unsafe { mun_function_info_increment_strong_count(fn_info) },
-            true
-        );
+        assert!(unsafe { mun_function_info_increment_strong_count(fn_info) });
         assert_eq!(Arc::strong_count(&fn_info_arc), strong_count + 1);
 
         mem::forget(fn_info_arc);

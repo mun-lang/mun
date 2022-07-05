@@ -68,13 +68,13 @@ fn trace_collect() {
     runtime.collect();
 
     // Drop foo
-    let foo = foo_ptr.unroot();
+    let foo_instance = foo_ptr.unroot();
 
     // Collect garbage, both foo and bar should be collected
     runtime.collect();
 
     let mut events = runtime.observer().take_all().into_iter();
-    assert_eq!(events.next(), Some(Event::Allocation(foo)));
+    assert_eq!(events.next(), Some(Event::Allocation(foo_instance)));
     assert_eq!(events.next(), Some(Event::Allocation(bar)));
     assert_eq!(events.next(), Some(Event::Start));
     assert_eq!(events.next(), Some(Event::End));
@@ -90,7 +90,7 @@ fn trace_cycle() {
     let mut type_table = TypeTable::default();
 
     let bar_type_info = fake_struct!(type_table, "core::Bar", "a" => i64);
-    type_table.insert_type(bar_type_info.clone());
+    type_table.insert_type(bar_type_info);
 
     let foo_type_info = fake_struct!(type_table, "core::Foo", "bar" => Bar);
     type_table.insert_type(foo_type_info.clone());

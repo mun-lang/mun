@@ -1,3 +1,5 @@
+#![allow(clippy::mutable_key_type)]
+
 use crate::{HasStaticTypeInfo, TypeInfo};
 use lazy_static::lazy_static;
 use std::{collections::HashMap, ptr::NonNull, sync::Arc};

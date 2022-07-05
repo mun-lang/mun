@@ -310,10 +310,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_type_info_decrement_strong_count_invalid_type_info() {
-        assert_eq!(
-            unsafe { mun_type_info_decrement_strong_count(TypeInfoHandle::null()) },
-            false
-        );
+        assert!(unsafe { mun_type_info_decrement_strong_count(TypeInfoHandle::null()) },);
     }
 
     #[test]
@@ -330,10 +327,7 @@ pub(crate) mod tests {
         let strong_count = Arc::strong_count(&type_info_arc);
         assert!(strong_count > 0);
 
-        assert_eq!(
-            unsafe { mun_type_info_decrement_strong_count(type_info) },
-            true
-        );
+        assert!(unsafe { mun_type_info_decrement_strong_count(type_info) });
         assert_eq!(Arc::strong_count(&type_info_arc), strong_count - 1);
 
         mem::forget(type_info_arc);
@@ -361,10 +355,7 @@ pub(crate) mod tests {
         let strong_count = Arc::strong_count(&type_info_arc);
         assert!(strong_count > 0);
 
-        assert_eq!(
-            unsafe { mun_type_info_increment_strong_count(type_info) },
-            true
-        );
+        assert!(unsafe { mun_type_info_increment_strong_count(type_info) },);
         assert_eq!(Arc::strong_count(&type_info_arc), strong_count + 1);
 
         mem::forget(type_info_arc);

@@ -170,7 +170,7 @@ mod tests {
         assert!(vfs.file_contents(file_id).is_some());
 
         // Modify the file contents, but dont actually modify it, should not trigger a change
-        assert_eq!(vfs.set_file_contents(&test_path, Some(vec![])), false);
+        assert!(vfs.set_file_contents(&test_path, Some(vec![])));
 
         // Actually modify the contents
         assert!(vfs.set_file_contents(&test_path, Some(vec![0])));

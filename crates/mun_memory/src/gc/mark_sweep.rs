@@ -323,6 +323,7 @@ where
 
         return deleted;
 
+        #[allow(clippy::mutable_key_type)]
         fn map_fields<O>(
             gc: &MarkSweep<O>,
             new_allocations: &mut Vec<Pin<Box<ObjectInfo>>>,

@@ -358,8 +358,10 @@ mod tests {
     fn test_runtime_create_invalid_functions() {
         let lib_path = CString::new("some/path").expect("Invalid library path");
 
-        let mut options = RuntimeOptions::default();
-        options.num_functions = 1;
+        let options = RuntimeOptions {
+            num_functions: 1,
+            ..Default::default()
+        };
 
         let handle = unsafe { mun_runtime_create(lib_path.into_raw(), options, ptr::null_mut()) };
         assert_ne!(handle.0, ptr::null());
@@ -412,9 +414,11 @@ mod tests {
             fn_ptr: ptr::null(),
         }];
 
-        let mut options = RuntimeOptions::default();
-        options.functions = functions.as_ptr();
-        options.num_functions = 1;
+        let options = RuntimeOptions {
+            functions: functions.as_ptr(),
+            num_functions: 1,
+            ..Default::default()
+        };
 
         let mut runtime = MaybeUninit::uninit();
         let handle =

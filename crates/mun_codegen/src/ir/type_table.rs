@@ -108,15 +108,6 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
         hir_types: &'t HirTypeCache<'db, 'ink>,
         module_group: &'t ModuleGroup,
     ) -> Self {
-        let builder = Self {
-            db,
-            value_context,
-            dispatch_table,
-            hir_types,
-            entries: Default::default(),
-            module_group,
-        };
-
         // for prototype in intrinsics {
         //     for arg_type in prototype.arg_types.iter() {
         //         builder.collect_type(arg_type.clone());
@@ -126,7 +117,14 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
         //     }
         // }
 
-        builder
+        Self {
+            db,
+            value_context,
+            dispatch_table,
+            hir_types,
+            entries: Default::default(),
+            module_group,
+        }
     }
 
     /// Collects unique `TypeInfo` from the given `Ty`.
