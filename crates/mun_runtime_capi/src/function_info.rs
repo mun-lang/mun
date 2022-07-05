@@ -164,12 +164,12 @@ pub unsafe extern "C" fn mun_function_info_return_type(
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::type_info::mun_type_info_eq;
     use crate::{
         error::mun_error_destroy,
         mun_string_destroy,
         runtime::{mun_runtime_get_function_info, RuntimeHandle},
         test_util::TestDriver,
+        type_info::mun_type_info_eq,
     };
     use memory::HasStaticTypeInfo;
     use runtime::FunctionDefinition;

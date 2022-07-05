@@ -21,7 +21,7 @@ impl MunLibrary {
     /// executed when the library is unloaded.
     ///
     /// See [`libloading::Library::new`] for more information.
-    pub unsafe fn new<'a>(library_path: &Path) -> Result<Self, anyhow::Error> {
+    pub unsafe fn new(library_path: &Path) -> Result<Self, anyhow::Error> {
         // Although loading a library is technically unsafe, we assume here that this is not the
         // case for munlibs.
         let library = TempLibrary::new(library_path)?;
@@ -32,7 +32,7 @@ impl MunLibrary {
         let _get_abi_version_fn: libloading::Symbol<'_, extern "C" fn() -> u32> =
             library.library().get(abi::GET_VERSION_FN_NAME.as_bytes())?;
 
-        let _get_info_fn: libloading::Symbol<'_, extern "C" fn() -> abi::AssemblyInfo<'a>> =
+        let _get_info_fn: libloading::Symbol<'_, extern "C" fn() -> abi::AssemblyInfo<'static>> =
             library.library().get(abi::GET_INFO_FN_NAME.as_bytes())?;
 
         let _set_allocator_handle_fn: libloading::Symbol<'_, extern "C" fn(*mut c_void)> = library

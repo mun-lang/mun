@@ -60,7 +60,7 @@ typedef struct MunPointerTypeId {
  * Represents a unique identifier for types. The runtime can use this to lookup the corresponding
  * [`TypeInfo`]. A [`TypeId`] is a key for a [`TypeInfo`].
  *
- * A [`TypeId`] only contains enough information to query the runtime for a concrete type.
+ * A [`TypeId`] only contains enough information to query the runtime for a [`TypeInfo`].
  */
 enum MunTypeId_Tag
 #ifdef __cplusplus

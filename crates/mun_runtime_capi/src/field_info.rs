@@ -126,7 +126,6 @@ pub unsafe extern "C" fn mun_field_info_span_destroy(span: FieldInfoSpan) -> boo
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::type_info::mun_type_info_eq;
     use crate::{
         error::mun_error_destroy,
         mun_string_destroy,
@@ -134,6 +133,7 @@ mod tests {
         struct_info::mun_struct_info_fields,
         test_util::TestDriver,
         type_info::mun_type_info_data,
+        type_info::mun_type_info_eq,
     };
     use memory::HasStaticTypeInfo;
     use std::{

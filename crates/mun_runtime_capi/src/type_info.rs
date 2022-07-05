@@ -231,7 +231,7 @@ pub unsafe extern "C" fn mun_type_info_data(
     };
 
     *type_info_data = match &type_info.data {
-        memory::TypeInfoData::Primitive(guid) => TypeInfoData::Primitive(guid.clone()),
+        memory::TypeInfoData::Primitive(guid) => TypeInfoData::Primitive(*guid),
         memory::TypeInfoData::Struct(s) => {
             TypeInfoData::Struct(StructInfoHandle(s as *const StructInfo as *const c_void))
         }

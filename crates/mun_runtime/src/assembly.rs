@@ -246,7 +246,7 @@ impl Assembly {
             // by the compiler.
             .filter(|(ptr, _)| ptr.is_null());
 
-        Assembly::link_all_functions(&mut dispatch_table, &type_table, functions_to_link)?;
+        Assembly::link_all_functions(&dispatch_table, &type_table, functions_to_link)?;
 
         Ok((dispatch_table, type_table))
     }
@@ -303,7 +303,7 @@ impl Assembly {
                         .types()
                         .iter()
                         .map(|type_info| {
-                            type_table.remove_type_by_type_info(&type_info).expect(
+                            type_table.remove_type_by_type_info(type_info).expect(
                                 "All types from a loaded assembly must exist in the type table.",
                             )
                         })
@@ -372,7 +372,7 @@ impl Assembly {
             //
             // Note that linking may fail because for instance functions remaining unlinked (missing)
             // or the signature of a function doesnt match.
-            Assembly::link_all_functions(&mut dispatch_table, &type_table, functions_to_link)?;
+            Assembly::link_all_functions(&dispatch_table, &type_table, functions_to_link)?;
 
             // Remove this assembly from the dependencies
             dependencies

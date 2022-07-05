@@ -1,13 +1,13 @@
-use std::cell::RefCell;
-use std::sync::Arc;
+use std::{cell::RefCell, sync::Arc};
 
-use inkwell::module::Linkage;
-use inkwell::values::UnnamedAddress;
+use inkwell::{module::Linkage, values::UnnamedAddress};
 use rustc_hash::FxHashMap;
 
-use crate::ir::types as ir;
-use crate::type_info::{TypeId, TypeIdData};
-use crate::value::{AsValue, Global, IrValueContext};
+use crate::{
+    ir::types as ir,
+    type_info::{TypeId, TypeIdData},
+    value::{AsValue, Global, IrValueContext},
+};
 
 /// An object that constructs [`ir::TypeId`]s from various representations.
 ///
@@ -31,7 +31,7 @@ impl<'ink, 'a, 'b, 'c> TypeIdBuilder<'ink, 'a, 'b, 'c> {
     /// Constructs an [`ir::TypeId`] from an internal TypeId.
     pub fn construct_from_type_id(&self, type_id: &Arc<TypeId>) -> ir::TypeId<'ink> {
         match &type_id.data {
-            TypeIdData::Concrete(guid) => ir::TypeId::Concrete(guid.clone()),
+            TypeIdData::Concrete(guid) => ir::TypeId::Concrete(*guid),
             TypeIdData::Pointer(p) => {
                 let global = match {
                     let borrow = self.interned_types.borrow();

@@ -44,7 +44,7 @@ fn gen_prototype_from_function<'ink>(
     let return_type = if fn_sig.ret().is_empty() {
         ir_type_builder.construct_from_type_id(<() as HasStaticTypeId>::type_id())
     } else {
-        ir_type_builder.construct_from_type_id(&hir_types.type_id(&fn_sig.ret()))
+        ir_type_builder.construct_from_type_id(&hir_types.type_id(fn_sig.ret()))
     };
 
     // Construct an array of pointers to `ir::TypeInfo`s for the arguments of the prototype
@@ -104,7 +104,7 @@ fn gen_prototype_from_dispatch_entry<'ink>(
 
 /// Construct a global that holds a reference to all types. e.g.:
 /// MunTypeInfo[] definitions = { ... }
-fn get_type_definition_array<'ink, 'a>(
+fn get_type_definition_array<'ink>(
     db: &dyn HirDatabase,
     context: &IrValueContext<'ink, '_, '_>,
     types: impl Iterator<Item = hir::Ty>,
@@ -232,7 +232,7 @@ fn get_function_definition_array<'ink, 'a>(
 ) -> Global<'ink, [ir::FunctionDefinition<'ink>]> {
     let module = context.module;
     functions
-        .sorted_by_cached_key(|f| f.full_name(db).to_string())
+        .sorted_by_cached_key(|f| f.full_name(db))
         .map(|f| {
             let name = f.name(db).to_string();
 

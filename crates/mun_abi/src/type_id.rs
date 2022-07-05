@@ -6,7 +6,7 @@ use std::fmt;
 /// Represents a unique identifier for types. The runtime can use this to lookup the corresponding
 /// [`TypeInfo`]. A [`TypeId`] is a key for a [`TypeInfo`].
 ///
-/// A [`TypeId`] only contains enough information to query the runtime for a concrete type.
+/// A [`TypeId`] only contains enough information to query the runtime for a [`TypeInfo`].
 #[repr(u8)]
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
@@ -76,7 +76,7 @@ impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *const T {
     fn type_id() -> &'static TypeId<'static> {
         static VALUE: OnceCell<StaticTypeMap<TypeId>> = OnceCell::new();
         let map = VALUE.get_or_init(Default::default);
-        &map.call_once::<T, _>(|| {
+        map.call_once::<T, _>(|| {
             PointerTypeId {
                 pointee: T::type_id(),
                 mutable: false,
@@ -90,7 +90,7 @@ impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *mut T {
     fn type_id() -> &'static TypeId<'static> {
         static VALUE: OnceCell<StaticTypeMap<TypeId>> = OnceCell::new();
         let map = VALUE.get_or_init(Default::default);
-        &map.call_once::<T, _>(|| {
+        map.call_once::<T, _>(|| {
             PointerTypeId {
                 pointee: T::type_id(),
                 mutable: true,

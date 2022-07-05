@@ -1,14 +1,13 @@
-use std::fmt::Debug;
 use std::{
     convert::TryInto,
     ffi::CStr,
+    fmt::Debug,
     fmt::{self, Formatter},
     os::raw::c_char,
     str,
 };
 
-use crate::type_id::TypeId;
-use crate::{Guid, StructInfo};
+use crate::{type_id::TypeId, Guid, StructInfo};
 
 /// Represents the type declaration for a value type.
 ///

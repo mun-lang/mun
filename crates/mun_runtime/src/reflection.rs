@@ -105,18 +105,18 @@ where
     }
 }
 
-// impl<T> ReturnTypeReflection for *const T
-// where
-//     *const T: abi::HasStaticTypeInfo,
-// {
-//     fn type_id() -> abi::TypeId {
-//         <Self as abi::HasStaticTypeInfo>::type_info().id.clone()
-//     }
-//
-//     fn type_name() -> &'static str {
-//         <Self as abi::HasStaticTypeInfo>::type_info().name()
-//     }
-// }
+impl<T> ReturnTypeReflection for *const T
+where
+    *const T: HasStaticTypeInfo,
+{
+    fn accepts_type(ty: &Arc<TypeInfo>) -> bool {
+        <*const T as HasStaticTypeInfo>::type_info() == ty
+    }
+
+    fn type_hint() -> &'static str {
+        &<*const T as HasStaticTypeInfo>::type_info().name
+    }
+}
 
 impl<T> ArgumentReflection for *mut T
 where
@@ -127,15 +127,15 @@ where
     }
 }
 
-// impl<T> ReturnTypeReflection for *mut T
-// where
-//     *mut T: abi::HasStaticTypeInfo,
-// {
-//     fn type_id() -> abi::TypeId {
-//         <Self as abi::HasStaticTypeInfo>::type_info().id.clone()
-//     }
-//
-//     fn type_name() -> &'static str {
-//         <Self as abi::HasStaticTypeInfo>::type_info().name()
-//     }
-// }
+impl<T> ReturnTypeReflection for *mut T
+where
+    *mut T: HasStaticTypeInfo,
+{
+    fn accepts_type(ty: &Arc<TypeInfo>) -> bool {
+        <*mut T as HasStaticTypeInfo>::type_info() == ty
+    }
+
+    fn type_hint() -> &'static str {
+        &<*mut T as HasStaticTypeInfo>::type_info().name
+    }
+}

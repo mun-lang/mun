@@ -43,12 +43,6 @@ pub struct FunctionSignature<'a> {
     pub num_arg_types: u16,
 }
 
-// /// Owned storage for C-style `FunctionDefinition`.
-// pub struct FunctionDefinitionStorage {
-//     _name: CString,
-//     _arg_types: Vec<TypeId>,
-// }
-
 unsafe impl<'a> Send for FunctionDefinition<'a> {}
 unsafe impl<'a> Sync for FunctionDefinition<'a> {}
 
@@ -84,13 +78,7 @@ impl<'a> FunctionSignature<'a> {
 
 impl<'a> PartialEq for FunctionSignature<'a> {
     fn eq(&self, other: &Self) -> bool {
-        self.return_type == other.return_type
-            && self.arg_types().len() == other.arg_types().len()
-            && self
-                .arg_types()
-                .iter()
-                .zip(other.arg_types().iter())
-                .all(|(a, b)| PartialEq::eq(a, b))
+        self.return_type() == other.return_type() && self.arg_types().eq(other.arg_types())
     }
 }
 

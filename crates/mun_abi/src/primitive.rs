@@ -2,7 +2,7 @@
 use crate::{Guid, HasStaticTypeId, TypeId};
 
 /// Defines functions for built-in types like f32, i32, etc.
-pub trait BuiltinType: HasStaticTypeId {
+pub trait PrimitiveType: HasStaticTypeId {
     /// Returns the name of the type
     fn name() -> &'static str;
 
@@ -10,7 +10,7 @@ pub trait BuiltinType: HasStaticTypeId {
     fn guid() -> &'static Guid;
 }
 
-macro_rules! define_builtins {
+macro_rules! define_primitives {
     ($($ty:ty => $name:literal),*) => {
         $(
             impl HasStaticTypeId for $ty {
@@ -20,7 +20,7 @@ macro_rules! define_builtins {
                 }
             }
 
-            impl BuiltinType for $ty {
+            impl PrimitiveType for $ty {
                 fn name() -> &'static str {
                     const TYPE_NAME: &str = $name;
                     TYPE_NAME
@@ -35,7 +35,7 @@ macro_rules! define_builtins {
     }
 }
 
-define_builtins! {
+define_primitives! {
     i8 => "core::i8",
     i16 => "core::i16",
     i32 => "core::i32",
@@ -54,7 +54,7 @@ define_builtins! {
 }
 
 #[cfg(target_pointer_width = "64")]
-impl BuiltinType for usize {
+impl PrimitiveType for usize {
     fn name() -> &'static str {
         u64::name()
     }
@@ -71,7 +71,7 @@ impl HasStaticTypeId for usize {
 }
 
 #[cfg(target_pointer_width = "64")]
-impl BuiltinType for isize {
+impl PrimitiveType for isize {
     fn name() -> &'static str {
         i64::name()
     }
@@ -88,7 +88,7 @@ impl HasStaticTypeId for isize {
 }
 
 #[cfg(target_pointer_width = "32")]
-impl BuiltinType for usize {
+impl PrimitiveType for usize {
     fn name() -> &'static str {
         u32::name()
     }
@@ -105,7 +105,7 @@ impl HasStaticTypeId for usize {
 }
 
 #[cfg(target_pointer_width = "32")]
-impl BuiltinType for isize {
+impl PrimitiveType for isize {
     fn name() -> &'static str {
         i32::name()
     }

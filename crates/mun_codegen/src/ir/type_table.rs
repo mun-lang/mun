@@ -1,5 +1,4 @@
-use std::collections::HashSet;
-use std::{collections::HashMap, convert::TryInto, sync::Arc};
+use std::{collections::HashMap, collections::HashSet, convert::TryInto, sync::Arc};
 
 use inkwell::{
     context::Context, module::Linkage, module::Module, types::ArrayType, values::PointerValue,
@@ -7,10 +6,10 @@ use inkwell::{
 
 use hir::{Body, ExprId, HirDatabase, InferenceResult};
 
-use crate::type_info::TypeId;
 use crate::{
     ir::dispatch_table::{DispatchTable, FunctionPrototype},
     ir::ty::HirTypeCache,
+    type_info::TypeId,
     value::{Global, IrValueContext, IterAsIrValue, Value},
     ModuleGroup,
 };
@@ -20,7 +19,7 @@ use crate::{
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct TypeTable<'ink> {
     entries: Vec<Arc<TypeId>>,
-    type_info_to_index: HashMap<Arc<TypeId>, usize>,
+    type_id_to_index: HashMap<Arc<TypeId>, usize>,
     table_type: ArrayType<'ink>,
 }
 
@@ -53,12 +52,9 @@ impl<'ink> TypeTable<'ink> {
     ) -> PointerValue<'ink> {
         let table_ref = table_ref.expect("no type table defined");
 
-        let index: u64 = (*self
-            .type_info_to_index
-            .get(type_info)
-            .expect("unknown type"))
-        .try_into()
-        .expect("too many types");
+        let index: u64 = (*self.type_id_to_index.get(type_info).expect("unknown type"))
+            .try_into()
+            .expect("too many types");
 
         let global_index = context.i64_type().const_zero();
         let array_index = context.i64_type().const_int(index as u64, false);
@@ -235,7 +231,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
 
         TypeTable {
             entries,
-            type_info_to_index,
+            type_id_to_index: type_info_to_index,
             table_type: type_info_ptrs.get_type(),
         }
     }

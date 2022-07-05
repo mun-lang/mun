@@ -1,5 +1,4 @@
-use std::sync::Arc;
-use std::{cell::RefCell, collections::HashMap};
+use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
 use inkwell::{
     context::Context,
@@ -15,8 +14,10 @@ use hir::{
     FloatBitness, HirDatabase, HirDisplay, IntBitness, ResolveBitness, Signedness, Ty, TyKind,
 };
 
-use crate::ir::IsIrType;
-use crate::type_info::{HasStaticTypeId, TypeId, TypeIdData};
+use crate::{
+    ir::IsIrType,
+    type_info::{HasStaticTypeId, TypeId, TypeIdData},
+};
 
 /// An object to cache and convert HIR types to Inkwell types.
 pub struct HirTypeCache<'db, 'ink> {

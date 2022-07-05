@@ -4,16 +4,14 @@
 //! Runtime.
 #![warn(missing_docs)]
 
-extern crate core;
-
 use std::ffi::CStr;
 use std::fmt;
 
 pub use assembly_info::AssemblyInfo;
-pub use builtin::BuiltinType;
 pub use dispatch_table::DispatchTable;
 pub use function_info::{FunctionDefinition, FunctionPrototype, FunctionSignature};
 pub use module_info::ModuleInfo;
+pub use primitive::PrimitiveType;
 pub use struct_info::{StructInfo, StructMemoryKind};
 pub use type_id::HasStaticTypeId;
 pub use type_id::{PointerTypeId, TypeId};
@@ -25,23 +23,15 @@ mod assembly_info;
 mod dispatch_table;
 mod function_info;
 mod module_info;
+mod primitive;
 pub mod static_type_map;
 mod struct_info;
 mod type_id;
 mod type_info;
 mod type_lut;
 
-mod builtin;
 #[cfg(test)]
 mod test_utils;
-
-/// The Mun ABI prelude
-///
-/// The *prelude* contains imports that are used almost every time.
-/// TODO: Is this still useful or should it be updated?
-pub mod prelude {
-    pub use crate::StructMemoryKind;
-}
 
 /// Defines the current ABI version
 #[allow(clippy::zero_prefixed_literal)]

@@ -1,16 +1,15 @@
-use std::hash::{Hash, Hasher};
-use std::sync::{Once, Weak};
 use std::{
     alloc::Layout,
     fmt::{self, Formatter},
+    hash::{Hash, Hasher},
     sync::Arc,
+    sync::{Once, Weak},
 };
 
 use itertools::izip;
 use parking_lot::RwLock;
 
-use abi::static_type_map::StaticTypeMap;
-use abi::{Guid, StructMemoryKind};
+use abi::{static_type_map::StaticTypeMap, Guid, StructMemoryKind};
 
 use crate::{type_table::TypeTable, TryFromAbiError, TypeFields};
 
@@ -19,7 +18,6 @@ use crate::{type_table::TypeTable, TryFromAbiError, TypeFields};
 pub struct TypeInfo {
     /// Type name
     pub name: String,
-    // TODO: Move layout to TypeInfoData
     /// The memory layout of the type
     pub layout: Layout,
     /// Type group
@@ -335,7 +333,7 @@ impl StructInfo {
         .collect();
 
         fields.map(|fields| StructInfo {
-            guid: struct_info.guid.clone(),
+            guid: struct_info.guid,
             fields,
             memory_kind: struct_info.memory_kind,
         })
@@ -368,9 +366,9 @@ macro_rules! impl_primitive_type {
                     static TYPE_INFO: once_cell::sync::OnceCell<Arc<TypeInfo>> = once_cell::sync::OnceCell::new();
                     TYPE_INFO.get_or_init(|| {
                          Arc::new(TypeInfo {
-                            name: <$ty as abi::BuiltinType>::name().to_owned(),
+                            name: <$ty as abi::PrimitiveType>::name().to_owned(),
                             layout: Layout::new::<$ty>(),
-                            data: TypeInfoData::Primitive(<$ty as abi::BuiltinType>::guid().clone()),
+                            data: TypeInfoData::Primitive(<$ty as abi::PrimitiveType>::guid().clone()),
                             immutable_pointer_type: Default::default(),
                             mutable_pointer_type: Default::default(),
                         })

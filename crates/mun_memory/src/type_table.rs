@@ -49,7 +49,7 @@ impl TypeTable {
             Some(guid) => {
                 self.type_name_to_type_info
                     .insert(type_info.name.clone(), type_info.clone());
-                self.concrete.insert(guid.clone(), type_info)
+                self.concrete.insert(*guid, type_info)
             }
         }
     }
@@ -97,6 +97,7 @@ impl Default for TypeTable {
             type_name_to_type_info: Default::default(),
         };
 
+        // Add all primitive types
         type_table.insert_static_type::<i8>();
         type_table.insert_static_type::<i16>();
         type_table.insert_static_type::<i32>();
@@ -112,11 +113,6 @@ impl Default for TypeTable {
         type_table.insert_static_type::<bool>();
         type_table.insert_static_type::<()>();
         type_table.insert_static_type::<std::ffi::c_void>();
-
-        // Types used by the FFI interface
-        // type_table.insert_type(<*const std::ffi::c_void>::type_info().clone());
-        // type_table.insert_type(<*mut std::ffi::c_void>::type_info().clone());
-        // type_table.insert_type(<*const *mut std::ffi::c_void>::type_info().clone());
 
         type_table
     }

@@ -10,25 +10,6 @@
 #include "mun/type_info.h"
 
 namespace mun {
-constexpr inline bool operator==(const MunTypeId& lhs, const MunTypeId& rhs) noexcept {
-    if (lhs.tag != rhs.tag) {
-        return false;
-    }
-
-    if (lhs.tag == MunTypeId_Tag::Concrete) {
-        for (auto idx = 0; idx < 16; ++idx) {
-            if (lhs.concrete._0[idx] != rhs.concrete._0[idx]) {
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
-constexpr inline bool operator!=(const MunTypeId& lhs, const MunTypeId& rhs) noexcept {
-    return !(lhs == rhs);
-}
-
 template <typename T>
 struct ArgumentReflection {
     static constexpr const char* type_name(const T&) noexcept { return StaticTypeInfo<T>::name(); }

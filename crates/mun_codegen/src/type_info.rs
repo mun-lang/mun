@@ -1,8 +1,9 @@
-use std::hash::Hash;
-use std::sync::{Arc, Once};
+use std::{
+    hash::Hash,
+    sync::{Arc, Once},
+};
 
-use abi::static_type_map::StaticTypeMap;
-use abi::{self, Guid};
+use abi::{self, static_type_map::StaticTypeMap, Guid};
 
 /// An owned version of a [`abi::TypeId`]. Using the `abi::TypeId` is cumbersome because it
 /// involves dealing with pointers. The `TypeId` introduced here owns all data it refers to, which
@@ -38,8 +39,8 @@ macro_rules! impl_primitive_type_id {
                 fn type_id() -> &'static Arc<TypeId> {
                     static TYPE_INFO: once_cell::sync::OnceCell<Arc<TypeId>> = once_cell::sync::OnceCell::new();
                     TYPE_INFO.get_or_init(|| {
-                        let guid = <$ty as abi::BuiltinType>::guid().clone();
-                        let name = <$ty as abi::BuiltinType>::name().to_owned();
+                        let guid = <$ty as abi::PrimitiveType>::guid().clone();
+                        let name = <$ty as abi::PrimitiveType>::name().to_owned();
                         Arc::new(TypeId { name, data: TypeIdData::Concrete(guid) })
                     })
                 }
