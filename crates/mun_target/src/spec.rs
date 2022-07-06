@@ -1,8 +1,10 @@
 mod apple_base;
+mod apple_sdk_base;
 mod linux_base;
 mod windows_msvc_base;
+
+use crate::abi::Endian;
 use crate::host_triple;
-use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash)]
 pub enum LinkerFlavor {
@@ -18,32 +20,14 @@ pub struct Target {
     /// Target triple to pass to LLVM
     pub llvm_target: String,
 
-    /// String to use as the `target_endian` `cfg` variable.
-    pub target_endian: String,
-
     /// String to use as the `target_pointer_width` `cfg` variable.
-    pub target_pointer_width: String,
+    pub pointer_width: u32,
 
-    /// Width of c_int type
-    pub target_c_int_width: String,
-
-    /// The name of the OS
-    pub target_os: String,
-
-    /// The name of the environment
-    pub target_env: String,
-
-    /// The name of the vendor
-    pub target_vendor: String,
-
-    /// The name of the architecture. For example "x86" or "x86_64"
+    /// The name of the architecture. For example "x86" or "x86_64", "arm", "aarch64"
     pub arch: String,
 
     /// [Data layout](http://llvm.org/docs/LangRef.html#data-layout) to pass to LLVM.
     pub data_layout: String,
-
-    /// Linker flavor
-    pub linker_flavor: LinkerFlavor,
 
     /// Optional settings
     pub options: TargetOptions,
@@ -54,6 +38,31 @@ pub struct Target {
 pub struct TargetOptions {
     /// True if this is a built-in target
     pub is_builtin: bool,
+
+    /// Used as the `target_endian` `cfg` variable. Defaults to little endian.
+    pub endian: Endian,
+
+    /// Width of c_int type
+    pub c_int_width: String,
+
+    /// The name of the OS
+    pub os: String,
+
+    /// The name of the environment
+    pub env: String,
+
+    /// ABI name to distinguish multiple ABIs on the same OS and architecture. For instance, `"eabi"`
+    /// or `"eabihf"`. Defaults to "".
+    pub abi: String,
+
+    /// The name of the vendor
+    pub vendor: String,
+
+    /// Linker flavor
+    pub linker_flavor: LinkerFlavor,
+
+    /// Linker arguments that are passed *before* any user-defined libraries.
+    pub pre_link_args: Vec<String>,
 
     /// Default CPU to pass to LLVM. Corresponds to `llc -mcpu=$cpu`. Defaults to "generic".
     pub cpu: String,
@@ -68,30 +77,33 @@ pub struct TargetOptions {
     /// Whether the target toolchain is like Windows
     pub is_like_windows: bool,
     pub is_like_msvc: bool,
+
+    /// Whether the target toolchain is like macOS's. Only useful for compiling against iOS/macOS,
+    /// in particular running dsymutil and some other stuff like `-dead_strip`. Defaults to false.
+    pub is_like_osx: bool,
 }
 
 impl Default for TargetOptions {
     fn default() -> Self {
         TargetOptions {
             is_builtin: false,
+            endian: Endian::Little,
+            c_int_width: "32".into(),
+            os: "none".into(),
+            env: "".into(),
+            abi: "".into(),
+            vendor: "unknown".into(),
+            linker_flavor: LinkerFlavor::Ld,
+            pre_link_args: vec![],
             cpu: "generic".to_string(),
             features: "".to_string(),
             dll_prefix: "lib".to_string(),
             is_like_windows: false,
             is_like_msvc: false,
+            is_like_osx: false,
         }
     }
 }
-#[derive(Error, Debug)]
-pub enum LoadTargetError {
-    #[error("target not found: {0}")]
-    BuiltinTargetNotFound(String),
-
-    #[error("{0}")]
-    Other(String),
-}
-
-pub type TargetResult = Result<Target, String>;
 
 macro_rules! supported_targets {
     ( $(($( $triple:literal, )+ $module:ident ),)+ ) => {
@@ -100,29 +112,18 @@ macro_rules! supported_targets {
         /// List of supported targets
         const TARGETS: &[&str] = &[$($($triple),+),+];
 
-        fn load_specific(target: &str) -> Result<Target, LoadTargetError> {
-            match target {
-                $(
-                    $($triple)|+ => {
-                        let mut t = $module::target()
-                            .map_err(LoadTargetError::Other)?;
-                        t.options.is_builtin = true;
-
-                        log::debug!("got builtin target: {:?}", t);
-                        Ok(t)
-                    },
-                )+
-                    _ => Err(LoadTargetError::BuiltinTargetNotFound(
-                        format!("Unable to find target: {}", target)))
-            }
+        fn load_specific(target: &str) -> Option<Target> {
+            let mut t = match target {
+                $( $($triple)|+ => $module::target(), )+
+                _ => return None,
+            };
+            t.options.is_builtin = true;
+            log::debug!("got builtin target: {:?}", t);
+            Some(t)
         }
 
-        pub fn get_targets() -> impl Iterator<Item = String> {
-            TARGETS.iter().filter_map(|t| -> Option<String> {
-                load_specific(t)
-                    .and(Ok(t.to_string()))
-                    .ok()
-            })
+        pub fn get_targets() -> impl Iterator<Item = &'static str> {
+            TARGETS.iter().copied()
         }
     }
 }
@@ -131,14 +132,16 @@ supported_targets!(
     ("x86_64-apple-darwin", x86_64_apple_darwin),
     ("x86_64-pc-windows-msvc", x86_64_pc_windows_msvc),
     ("x86_64-unknown-linux-gnu", x86_64_unknown_linux_gnu),
+    ("aarch64_apple_ios", aarch64_apple_ios),
+    ("aarch64_apple_ios_sim", aarch64_apple_ios_sim),
 );
 
 impl Target {
-    pub fn search(target_triple: &str) -> Result<Target, LoadTargetError> {
+    pub fn search(target_triple: &str) -> Option<Target> {
         load_specific(target_triple)
     }
 
-    pub fn host_target() -> Result<Target, LoadTargetError> {
+    pub fn host_target() -> Option<Target> {
         Self::search(host_triple())
     }
 }

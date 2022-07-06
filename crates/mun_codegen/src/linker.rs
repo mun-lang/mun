@@ -34,7 +34,7 @@ impl fmt::Display for LinkerError {
 }
 
 pub fn create_with_target(target: &spec::Target) -> Box<dyn Linker> {
-    match target.linker_flavor {
+    match target.options.linker_flavor {
         LinkerFlavor::Ld => Box::new(LdLinker::new(target)),
         LinkerFlavor::Ld64 => Box::new(Ld64Linker::new(target)),
         LinkerFlavor::Msvc => Box::new(MsvcLinker::new(target)),
@@ -52,9 +52,9 @@ struct LdLinker {
 }
 
 impl LdLinker {
-    fn new(_target: &spec::Target) -> Self {
+    fn new(target: &spec::Target) -> Self {
         LdLinker {
-            args: Vec::default(),
+            args: target.options.pre_link_args.clone(),
         }
     }
 }
@@ -93,13 +93,59 @@ impl Linker for LdLinker {
 
 struct Ld64Linker {
     args: Vec<String>,
+    target: spec::Target,
 }
 
 impl Ld64Linker {
     fn new(target: &spec::Target) -> Self {
+        let arch_name = target
+            .llvm_target
+            .split('-')
+            .next()
+            .expect("LLVM target must have a hyphen");
+
+        let mut args = target.options.pre_link_args.clone();
+        args.push(format!("-arch {}", arch_name));
+
         Ld64Linker {
-            args: vec![format!("-arch {}", &target.arch)],
+            args,
+            target: target.clone(),
         }
+    }
+
+    fn add_apple_sdk(&mut self) -> Result<(), LinkerError> {
+        let arch = &self.target.arch;
+        let os = &self.target.options.os;
+        let llvm_target = &self.target.llvm_target;
+
+        let sdk_name = match (arch.as_ref(), os.as_ref()) {
+            ("aarch64", "tvos") => "appletvos",
+            ("x86_64", "tvos") => "appletvsimulator",
+            ("arm", "ios") => "iphoneos",
+            ("aarch64", "ios") if llvm_target.contains("macabi") => "macosx",
+            ("aarch64", "ios") if llvm_target.ends_with("-simulator") => "iphonesimulator",
+            ("aarch64", "ios") => "iphoneos",
+            ("x86", "ios") => "iphonesimulator",
+            ("x86_64", "ios") if llvm_target.contains("macabi") => "macosx",
+            ("x86_64", "ios") => "iphonesimulator",
+            ("x86_64", "watchos") => "watchsimulator",
+            ("arm64_32", "watchos") => "watchos",
+            ("aarch64", "watchos") if llvm_target.ends_with("-simulator") => "watchsimulator",
+            ("aarch64", "watchos") => "watchos",
+            ("arm", "watchos") => "watchos",
+            (_, "macos") => "macosx",
+            _ => {
+                return Err(LinkerError::PlatformSdkMissing(format!(
+                    "unsupported arch `{}` for os `{}`",
+                    arch, os
+                )));
+            }
+        };
+
+        let sdk_root = get_apple_sdk_root(sdk_name).map_err(LinkerError::PlatformSdkMissing)?;
+        self.args.push(String::from("-L"));
+        self.args.push(format!("{}/usr/lib", sdk_root.display()));
+        Ok(())
     }
 }
 
@@ -127,9 +173,8 @@ impl Linker for Ld64Linker {
         // Link as dynamic library
         self.args.push("-dylib".to_owned());
 
-        let sdk_root = get_apple_sdk_root().map_err(LinkerError::PlatformSdkMissing)?;
-        self.args.push(format!("-L{}/usr/lib", sdk_root.display()));
-        self.args.push("-lsystem".to_owned());
+        self.add_apple_sdk()?;
+        self.args.push("-lSystem".to_owned());
 
         // Specify output path
         self.args.push("-o".to_owned());
@@ -155,9 +200,9 @@ struct MsvcLinker {
 }
 
 impl MsvcLinker {
-    fn new(_target: &spec::Target) -> Self {
+    fn new(target: &spec::Target) -> Self {
         MsvcLinker {
-            args: Vec::default(),
+            args: target.options.pre_link_args.clone(),
         }
     }
 }
