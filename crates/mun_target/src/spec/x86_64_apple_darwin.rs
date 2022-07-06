@@ -6,6 +6,7 @@ pub fn target() -> Target {
     // correctly, we do too.
     let arch = "x86_64";
     let llvm_target = super::apple_base::macos_llvm_target(arch);
+    let (major, minor) = super::apple_base::macos_deployment_target(arch);
 
     Target {
         llvm_target,
@@ -15,6 +16,7 @@ pub fn target() -> Target {
             .to_string(),
         options: TargetOptions {
             cpu: "core2".into(),
+            min_os_version: Some((major, minor, 0)),
             .. super::apple_base::opts("macos")
         },
     }

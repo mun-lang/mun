@@ -31,7 +31,7 @@ fn macos_default_deployment_target(arch: &str) -> (u32, u32) {
     }
 }
 
-fn macos_deployment_target(arch: &str) -> (u32, u32) {
+pub fn macos_deployment_target(arch: &str) -> (u32, u32) {
     deployment_target("MACOSX_DEPLOYMENT_TARGET")
         .unwrap_or_else(|| macos_default_deployment_target(arch))
 }
@@ -41,7 +41,7 @@ pub fn macos_llvm_target(arch: &str) -> String {
     format!("{}-apple-macosx{}.{}.0", arch, major, minor)
 }
 
-fn ios_deployment_target() -> (u32, u32) {
+pub fn ios_deployment_target() -> (u32, u32) {
     deployment_target("IPHONEOS_DEPLOYMENT_TARGET").unwrap_or((7, 0))
 }
 

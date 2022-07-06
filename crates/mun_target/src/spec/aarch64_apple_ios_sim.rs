@@ -8,6 +8,7 @@ pub fn target() -> Target {
     // MACH-O commands, so we do too.
     let arch = "arm64";
     let llvm_target = super::apple_base::ios_sim_llvm_target(arch);
+    let (major, minor) = super::apple_base::ios_deployment_target();
 
     Target {
         llvm_target,
@@ -16,6 +17,7 @@ pub fn target() -> Target {
         data_layout: "e-m:o-i64:64-i128:128-n32:64-S128".into(),
         options: TargetOptions {
             features: "+neon,+fp-armv8,+apple-a7".into(),
+            min_os_version: Some((major, minor, 0)),
             ..opts("ios", Arch::Arm64_sim)
         }
     }

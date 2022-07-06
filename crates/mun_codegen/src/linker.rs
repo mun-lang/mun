@@ -143,9 +143,31 @@ impl Ld64Linker {
         };
 
         let sdk_root = get_apple_sdk_root(sdk_name).map_err(LinkerError::PlatformSdkMissing)?;
-        self.args.push(String::from("-L"));
-        self.args.push(format!("{}/usr/lib", sdk_root.display()));
+        self.args.push(String::from("-syslibroot"));
+        self.args.push(format!("{}", sdk_root.display()));
         Ok(())
+    }
+
+    fn add_load_command(&mut self) {
+        let (major, minor, patch) = match self.target.options.min_os_version {
+            None => return,
+            Some(min) => min,
+        };
+
+        let arch = &self.target.arch;
+        let os = &self.target.options.os;
+
+        let load_command = match os.as_ref() {
+            "macos" => "-macosx_version_min",
+            "ios" | "watchos" | "tvos" => match arch.as_ref() {
+                "x86_64" => "-ios_simulator_version_min",
+                _ => "-iphoneos_version_min",
+            },
+            _ => unreachable!(),
+        };
+
+        self.args.push(load_command.to_string());
+        self.args.push(format!("{}.{}.{}", major, minor, patch));
     }
 }
 
@@ -184,6 +206,8 @@ impl Linker for Ld64Linker {
         // MacOS
         self.args.push("-install_name".to_owned());
         self.args.push(filename_str.to_owned());
+
+        self.add_load_command();
 
         Ok(())
     }

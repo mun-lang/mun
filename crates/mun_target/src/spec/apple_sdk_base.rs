@@ -1,6 +1,7 @@
 use crate::spec::TargetOptions;
 
 use Arch::*;
+
 #[allow(non_camel_case_types, dead_code)]
 #[derive(Copy, Clone)]
 pub enum Arch {

@@ -48,6 +48,9 @@ pub struct TargetOptions {
     /// The name of the OS
     pub os: String,
 
+    /// Minimum version of the OS to target
+    pub min_os_version: Option<(u32, u32, u32)>,
+
     /// The name of the environment
     pub env: String,
 
@@ -90,6 +93,7 @@ impl Default for TargetOptions {
             endian: Endian::Little,
             c_int_width: "32".into(),
             os: "none".into(),
+            min_os_version: None,
             env: "".into(),
             abi: "".into(),
             vendor: "unknown".into(),
@@ -130,10 +134,11 @@ macro_rules! supported_targets {
 
 supported_targets!(
     ("x86_64-apple-darwin", x86_64_apple_darwin),
+    ("x86_64-apple-ios", x86_64_apple_ios),
     ("x86_64-pc-windows-msvc", x86_64_pc_windows_msvc),
     ("x86_64-unknown-linux-gnu", x86_64_unknown_linux_gnu),
-    ("aarch64_apple_ios", aarch64_apple_ios),
-    ("aarch64_apple_ios_sim", aarch64_apple_ios_sim),
+    ("aarch64-apple-ios", aarch64_apple_ios),
+    ("aarch64-apple-ios-sim", aarch64_apple_ios_sim),
 );
 
 impl Target {
