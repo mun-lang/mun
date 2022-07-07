@@ -111,7 +111,17 @@ pub unsafe extern "C" fn mun_type_info_name(type_info: TypeInfoHandle) -> *const
 /// been deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_info_eq(a: TypeInfoHandle, b: TypeInfoHandle) -> bool {
-    (a.0 as *const TypeInfo).as_ref() == (b.0 as *const TypeInfo).as_ref()
+    let a = match (a.0 as *const TypeInfo).as_ref() {
+        None => return false,
+        Some(a) => a,
+    };
+
+    let b = match (b.0 as *const TypeInfo).as_ref() {
+        None => return false,
+        Some(b) => b,
+    };
+
+    a == b
 }
 
 /// Returns the TypeInfoHandle of a pointer to the given TypeInfoHandle.
@@ -656,5 +666,75 @@ pub(crate) mod tests {
 
         let arg_types = unsafe { arg_types.assume_init() };
         assert!(!unsafe { mun_type_info_span_destroy(arg_types) });
+    }
+
+    #[test]
+    fn test_type_info_primitive() {
+        let type_info_handle = mun_type_info_primitive(PrimitiveType::F32);
+        assert_ne!(type_info_handle.0, ptr::null());
+
+        let type_info: Arc<TypeInfo> = unsafe { Arc::from_raw(type_info_handle.0 as _) };
+        assert_eq!(&type_info, f32::type_info());
+    }
+
+    #[test]
+    fn test_type_info_pointer_type_invalid_pointer() {
+        let result = unsafe { mun_type_info_pointer_type(TypeInfoHandle::null(), true) };
+        assert_eq!(result.0, ptr::null());
+    }
+
+    #[test]
+    fn test_type_info_pointer_type() {
+        // Get the f32 type
+        let f32_type_info_handle = mun_type_info_primitive(PrimitiveType::F32);
+        assert_ne!(f32_type_info_handle.0, ptr::null());
+
+        // Create a mutable pointer to f32
+        let f32_pointer_type_info_handle =
+            unsafe { mun_type_info_pointer_type(f32_type_info_handle, true) };
+        assert_ne!(f32_pointer_type_info_handle.0, ptr::null());
+
+        // Verify that its the same type as the rust type
+        let f32_pointer_arc = unsafe { Arc::from_raw(f32_pointer_type_info_handle.0 as _) };
+        assert_eq!(&f32_pointer_arc, <*mut f32>::type_info());
+
+        // Create a const pointer to f32
+        let f32_pointer_type_info_handle =
+            unsafe { mun_type_info_pointer_type(f32_type_info_handle, false) };
+        assert_ne!(f32_pointer_type_info_handle.0, ptr::null());
+
+        // Verify that its the same type as the rust type
+        let f32_pointer_arc = unsafe { Arc::from_raw(f32_pointer_type_info_handle.0 as _) };
+        assert_eq!(&f32_pointer_arc, <*const f32>::type_info());
+
+        // Drop the f32 type
+        unsafe { mun_type_info_decrement_strong_count(f32_type_info_handle) };
+    }
+
+    #[test]
+    fn test_type_info_eq_invalid_ptr() {
+        let f32_type_info_handle = mun_type_info_primitive(PrimitiveType::F32);
+        assert_ne!(f32_type_info_handle.0, ptr::null());
+
+        assert!(!unsafe { mun_type_info_eq(TypeInfoHandle::null(), TypeInfoHandle::null()) });
+        assert!(!unsafe { mun_type_info_eq(f32_type_info_handle, TypeInfoHandle::null()) });
+        assert!(!unsafe { mun_type_info_eq(TypeInfoHandle::null(), f32_type_info_handle) });
+    }
+
+    #[test]
+    fn test_type_info_eq() {
+        let f32_type_info_handle = mun_type_info_primitive(PrimitiveType::F32);
+        assert_ne!(f32_type_info_handle.0, ptr::null());
+
+        let f32_type_info_handle_2 = mun_type_info_primitive(PrimitiveType::F32);
+        assert_ne!(f32_type_info_handle_2.0, ptr::null());
+
+        let f64_type_info_handle = mun_type_info_primitive(PrimitiveType::F64);
+        assert_ne!(f64_type_info_handle.0, ptr::null());
+
+        assert!(unsafe { mun_type_info_eq(f32_type_info_handle, f32_type_info_handle) });
+        assert!(unsafe { mun_type_info_eq(f32_type_info_handle, f32_type_info_handle_2) });
+        assert!(unsafe { mun_type_info_eq(f64_type_info_handle, f64_type_info_handle) });
+        assert!(!unsafe { mun_type_info_eq(f64_type_info_handle, f32_type_info_handle) });
     }
 }
