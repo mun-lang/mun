@@ -1,22 +1,23 @@
-use crate::{DispatchTable, ModuleInfo, TypeLut};
 use std::{ffi::CStr, os::raw::c_char, slice, str};
+
+use crate::{DispatchTable, ModuleInfo, TypeLut};
 
 /// Represents an assembly declaration.
 #[repr(C)]
-pub struct AssemblyInfo {
+pub struct AssemblyInfo<'a> {
     /// Symbols of the top-level module
-    pub symbols: ModuleInfo,
+    pub symbols: ModuleInfo<'a>,
     /// Function dispatch table
-    pub dispatch_table: DispatchTable,
+    pub dispatch_table: DispatchTable<'a>,
     /// Type lookup table
-    pub type_lut: TypeLut,
+    pub type_lut: TypeLut<'a>,
     /// Paths to assembly dependencies
     pub(crate) dependencies: *const *const c_char,
     /// Number of dependencies
     pub num_dependencies: u32,
 }
 
-impl AssemblyInfo {
+impl<'a> AssemblyInfo<'a> {
     /// Returns an iterator over the assembly's dependencies.
     pub fn dependencies(&self) -> impl Iterator<Item = &str> {
         let dependencies = if self.num_dependencies == 0 {
@@ -31,16 +32,35 @@ impl AssemblyInfo {
     }
 }
 
-unsafe impl Send for AssemblyInfo {}
-unsafe impl Sync for AssemblyInfo {}
+unsafe impl<'a> Send for AssemblyInfo<'a> {}
+unsafe impl<'a> Sync for AssemblyInfo<'a> {}
+
+#[cfg(feature = "serde")]
+impl<'a> serde::Serialize for AssemblyInfo<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use itertools::Itertools;
+        use serde::ser::SerializeStruct;
+
+        let mut s = serializer.serialize_struct("AssemblyInfo", 4)?;
+        s.serialize_field("symbols", &self.symbols)?;
+        s.serialize_field("dispatch_table", &self.dispatch_table)?;
+        s.serialize_field("type_lut", &self.type_lut)?;
+        s.serialize_field("dependencies", &self.dependencies().collect_vec())?;
+        s.end()
+    }
+}
 
 #[cfg(test)]
 mod tests {
+    use std::ffi::CString;
+
     use crate::test_utils::{
         fake_assembly_info, fake_dispatch_table, fake_module_info, fake_type_lut, FAKE_DEPENDENCY,
         FAKE_MODULE_PATH,
     };
-    use std::ffi::CString;
 
     #[test]
     fn test_assembly_info_dependencies() {

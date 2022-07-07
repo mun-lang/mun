@@ -1,6 +1,5 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1045
 expression: "\n    //- /mod.mun\n    pub fn main() -> i32 {\n        foo::get_value()\n    }\n\n    //- /foo.mun\n    pub(super) fn get_value() -> i32 {\n        3\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
@@ -10,7 +9,7 @@ source_filename = "mod"
 %DispatchTable = type { i32 ()* }
 
 @dispatchTable = external global %DispatchTable
-@global_type_lookup_table = external global [2 x i64*]
+@global_type_lookup_table = external global [1 x i64*]
 
 define i32 @main() {
 body:
@@ -26,7 +25,7 @@ source_filename = "group_name"
 %DispatchTable = type { i32 ()* }
 
 @dispatchTable = global %DispatchTable zeroinitializer
-@global_type_lookup_table = global [2 x i64*] zeroinitializer
+@global_type_lookup_table = global [1 x i64*] zeroinitializer
 
 ; == FILE IR (foo) =====================================
 ; ModuleID = 'foo'

@@ -1259,14 +1259,10 @@ fn infer(content: &str) -> String {
         .flat_map(|pkg| pkg.modules(&db))
         .flat_map(|module| module.declarations(&db))
     {
-        match item {
-            ModuleDef::Function(fun) => {
-                let source_map = fun.body_source_map(&db);
-                let infer_result = fun.infer(&db);
-
-                infer_def(infer_result, source_map);
-            }
-            _ => {}
+        if let ModuleDef::Function(fun) = item {
+            let source_map = fun.body_source_map(&db);
+            let infer_result = fun.infer(&db);
+            infer_def(infer_result, source_map);
         }
     }
 

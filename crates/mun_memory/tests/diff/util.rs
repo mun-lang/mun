@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use mun_memory::{
     diff::{myers, Diff, FieldDiff, FieldEditKind},
-    FieldInfo, TypeInfo, TypeInfoData,
+    FieldInfo, StructInfo, TypeInfo,
 };
 use std::sync::Arc;
 
@@ -41,7 +41,27 @@ pub(crate) fn apply_diff(
             } => {
                 let old_ty = unsafe { combined.get_unchecked_mut(*old_index) };
                 let new_ty = unsafe { new.get_unchecked(*new_index) };
-                apply_mapping(Arc::make_mut(old_ty), new_ty, diff);
+
+                let mut combined_struct_info = old_ty
+                    .as_struct()
+                    .expect("edit diffs can only be applied on structs")
+                    .clone();
+                let new_struct_info = new_ty
+                    .as_struct()
+                    .expect("edit diffs can only be applied on structs");
+
+                apply_struct_mapping(
+                    &old_ty.name,
+                    &mut combined_struct_info,
+                    new_struct_info,
+                    diff,
+                );
+
+                *old_ty = TypeInfo::new_struct(
+                    &old_ty.name,
+                    fake_layout(&combined_struct_info),
+                    combined_struct_info,
+                );
             }
             Diff::Move { old_index, .. } => {
                 combined.remove(*old_index);
@@ -68,91 +88,87 @@ pub(crate) fn apply_diff(
     combined
 }
 
-fn apply_mapping(old: &mut TypeInfo, new: &TypeInfo, mapping: &[FieldDiff]) {
-    if let TypeInfoData::Struct(old_struct) = &mut old.data {
-        if let TypeInfoData::Struct(new_struct) = &new.data {
-            let mut combined = old_struct.clone();
-            for diff in mapping.iter().rev() {
-                match diff {
-                    FieldDiff::Delete { index } => {
-                        combined.fields.remove(*index);
-                    }
-
-                    FieldDiff::Move { old_index, .. } => {
-                        combined.fields.remove(*old_index);
-                    }
-                    _ => (),
-                }
+fn apply_struct_mapping(
+    name: &str,
+    old_struct: &mut StructInfo,
+    new_struct: &StructInfo,
+    mapping: &[FieldDiff],
+) {
+    let mut combined = old_struct.clone();
+    for diff in mapping.iter().rev() {
+        match diff {
+            FieldDiff::Delete { index } => {
+                combined.fields.remove(*index);
             }
 
-            fn get_new_index(diff: &FieldDiff) -> usize {
-                match diff {
-                    FieldDiff::Insert { index } => *index,
-                    FieldDiff::Move { new_index, .. } => *new_index,
-                    _ => std::usize::MAX,
-                }
+            FieldDiff::Move { old_index, .. } => {
+                combined.fields.remove(*old_index);
             }
-
-            // Sort elements in ascending order of their insertion indices.
-            let mut additions: Vec<(usize, FieldInfo)> = mapping
-                .iter()
-                .filter_map(|diff| match diff {
-                    FieldDiff::Insert { index } => Some((
-                        *index,
-                        unsafe { new_struct.fields.get_unchecked(*index) }.clone(),
-                    )),
-                    FieldDiff::Move {
-                        old_index,
-                        new_index,
-                        ..
-                    } => Some((
-                        *new_index,
-                        unsafe { old_struct.fields.get_unchecked(*old_index) }.clone(),
-                    )),
-                    _ => None,
-                })
-                .collect();
-            additions.sort_by(|a, b| a.0.cmp(&b.0));
-
-            for (index, field) in additions {
-                combined.fields.insert(index, field);
-            }
-
-            fn edit_field(kind: &FieldEditKind, old_field: &mut FieldInfo, new_field: &FieldInfo) {
-                match *kind {
-                    FieldEditKind::ConvertType => old_field.type_info = new_field.type_info.clone(),
-                    FieldEditKind::Rename => old_field.name = new_field.name.to_owned(),
-                }
-            }
-
-            // Handle edits
-            for diff in mapping.iter() {
-                match diff {
-                    FieldDiff::Edit { index, kind } => edit_field(
-                        kind,
-                        unsafe { combined.fields.get_unchecked_mut(*index) },
-                        unsafe { new_struct.fields.get_unchecked(*index) },
-                    ),
-                    FieldDiff::Move {
-                        old_index,
-                        new_index,
-                        edit: Some(kind),
-                    } => edit_field(
-                        kind,
-                        unsafe { combined.fields.get_unchecked_mut(*old_index) },
-                        unsafe { new_struct.fields.get_unchecked(*new_index) },
-                    ),
-                    _ => (),
-                }
-            }
-
-            *old_struct = combined;
-            old.layout = fake_layout(old_struct);
-            old.id.guid = struct_guid(&old.name, old_struct);
-        } else {
-            unreachable!()
+            _ => (),
         }
-    } else {
-        unreachable!()
     }
+
+    fn get_new_index(diff: &FieldDiff) -> usize {
+        match diff {
+            FieldDiff::Insert { index } => *index,
+            FieldDiff::Move { new_index, .. } => *new_index,
+            _ => std::usize::MAX,
+        }
+    }
+
+    // Sort elements in ascending order of their insertion indices.
+    let mut additions: Vec<(usize, FieldInfo)> = mapping
+        .iter()
+        .filter_map(|diff| match diff {
+            FieldDiff::Insert { index } => Some((
+                *index,
+                unsafe { new_struct.fields.get_unchecked(*index) }.clone(),
+            )),
+            FieldDiff::Move {
+                old_index,
+                new_index,
+                ..
+            } => Some((
+                *new_index,
+                unsafe { old_struct.fields.get_unchecked(*old_index) }.clone(),
+            )),
+            _ => None,
+        })
+        .collect();
+    additions.sort_by(|a, b| a.0.cmp(&b.0));
+
+    for (index, field) in additions {
+        combined.fields.insert(index, field);
+    }
+
+    fn edit_field(kind: &FieldEditKind, old_field: &mut FieldInfo, new_field: &FieldInfo) {
+        match *kind {
+            FieldEditKind::ConvertType => old_field.type_info = new_field.type_info.clone(),
+            FieldEditKind::Rename => old_field.name = new_field.name.to_owned(),
+        }
+    }
+
+    // Handle edits
+    for diff in mapping.iter() {
+        match diff {
+            FieldDiff::Edit { index, kind } => edit_field(
+                kind,
+                unsafe { combined.fields.get_unchecked_mut(*index) },
+                unsafe { new_struct.fields.get_unchecked(*index) },
+            ),
+            FieldDiff::Move {
+                old_index,
+                new_index,
+                edit: Some(kind),
+            } => edit_field(
+                kind,
+                unsafe { combined.fields.get_unchecked_mut(*old_index) },
+                unsafe { new_struct.fields.get_unchecked(*new_index) },
+            ),
+            _ => (),
+        }
+    }
+
+    *old_struct = combined;
+    old_struct.guid = struct_guid(name, old_struct.fields.iter());
 }

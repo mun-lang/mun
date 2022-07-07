@@ -206,13 +206,13 @@ mod test {
 
     #[test]
     fn valid_module_name() {
-        assert_eq!(is_valid_module_name("foo"), true);
-        assert_eq!(is_valid_module_name("bar"), true);
-        assert_eq!(is_valid_module_name("foo_bar"), true);
-        assert_eq!(is_valid_module_name("3bar"), false);
-        assert_eq!(is_valid_module_name("bar3"), true);
-        assert_eq!(is_valid_module_name("foo-bar"), false);
-        assert_eq!(is_valid_module_name(""), false);
+        assert!(is_valid_module_name("foo"));
+        assert!(is_valid_module_name("bar"));
+        assert!(is_valid_module_name("foo_bar"));
+        assert!(!is_valid_module_name("3bar"));
+        assert!(is_valid_module_name("bar3"));
+        assert!(!is_valid_module_name("foo-bar"));
+        assert!(!is_valid_module_name(""));
     }
 
     #[test]

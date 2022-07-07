@@ -1,244 +1,120 @@
-use super::ir::IsIrType;
-use abi::Guid;
-use hir::HirDatabase;
-use inkwell::context::Context;
-use inkwell::targets::TargetData;
-use inkwell::types::AnyType;
-use std::hash::{Hash, Hasher};
+use std::{
+    hash::Hash,
+    sync::{Arc, Once},
+};
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum TypeInfoData {
-    Primitive,
-    Struct(hir::Struct),
-}
+use abi::{self, static_type_map::StaticTypeMap, Guid};
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct TypeSize {
-    // The size of the type in bits
-    pub bit_size: u64,
-
-    // The number of bytes required to store the type
-    pub store_size: u64,
-
-    // The number of bytes between successive object, including alignment and padding
-    pub alloc_size: u64,
-
-    // The alignment of the type
-    pub alignment: u32,
-}
-
-impl TypeSize {
-    pub fn from_ir_type<'ink>(ty: &impl AnyType<'ink>, target: &TargetData) -> Self {
-        Self {
-            bit_size: target.get_bit_size(ty),
-            store_size: target.get_store_size(ty),
-            alloc_size: target.get_abi_size(ty),
-            alignment: target.get_abi_alignment(ty),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Eq)]
-pub struct TypeInfo {
-    pub guid: Guid,
+/// An owned version of a [`abi::TypeId`]. Using the `abi::TypeId` is cumbersome because it
+/// involves dealing with pointers. The `TypeId` introduced here owns all data it refers to, which
+/// makes it easier to work with from rust.
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub struct TypeId {
     pub name: String,
-    pub size: TypeSize,
-    pub data: TypeInfoData,
+    pub data: TypeIdData,
 }
 
-impl Hash for TypeInfo {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write(&self.guid.0)
-    }
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub enum TypeIdData {
+    Concrete(Guid),
+    Pointer(PointerTypeId),
 }
 
-impl PartialEq for TypeInfo {
-    fn eq(&self, other: &Self) -> bool {
-        self.guid == other.guid
-    }
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub struct PointerTypeId {
+    pub pointee: Arc<TypeId>,
+    pub mutable: bool,
 }
 
-impl Ord for TypeInfo {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.guid.cmp(&other.guid)
-    }
+pub trait HasStaticTypeId {
+    fn type_id() -> &'static Arc<TypeId>;
 }
 
-impl PartialOrd for TypeInfo {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl TypeInfo {
-    pub fn new_primitive<S: AsRef<str>>(name: S, type_size: TypeSize) -> TypeInfo {
-        TypeInfo {
-            name: name.as_ref().to_string(),
-            guid: Guid::from(name.as_ref().as_bytes()),
-            size: type_size,
-            data: TypeInfoData::Primitive,
-        }
-    }
-
-    pub fn new_struct(db: &dyn HirDatabase, s: hir::Struct, type_size: TypeSize) -> TypeInfo {
-        let name = s.full_name(db);
-        let guid_string = {
-            let fields: Vec<String> = s
-                .fields(db)
-                .into_iter()
-                .map(|f| {
-                    let ty_string = f
-                        .ty(db)
-                        .guid_string(db)
-                        .expect("type should be convertible to a string");
-                    format!("{}: {}", f.name(db), ty_string)
-                })
-                .collect();
-
-            format!(
-                "struct {name}{{{fields}}}",
-                name = &name,
-                fields = fields.join(",")
-            )
-        };
-        Self {
-            guid: Guid::from(guid_string.as_bytes()),
-            name,
-            size: type_size,
-            data: TypeInfoData::Struct(s),
-        }
-    }
-}
-
-/// A trait that statically defines that a type can be used as an argument.
-pub trait HasStaticTypeInfo {
-    fn type_info(
-        context: &inkwell::context::Context,
-        target: &inkwell::targets::TargetData,
-    ) -> TypeInfo;
-}
-
-pub trait HasTypeInfo {
-    fn type_info(&self, context: &Context, target: &TargetData) -> TypeInfo;
-}
-
-impl<T: HasStaticTypeInfo> HasTypeInfo for T {
-    fn type_info(&self, context: &Context, target: &TargetData) -> TypeInfo {
-        T::type_info(context, target)
-    }
-}
-
-pub trait HasStaticTypeName {
-    fn type_name(context: &Context, target: &TargetData) -> String;
-}
-
-impl<T: HasStaticTypeInfo> HasStaticTypeName for T {
-    fn type_name(context: &Context, target: &TargetData) -> String {
-        T::type_info(context, target).name
-    }
-}
-
-macro_rules! impl_fundamental_static_type_info {
+macro_rules! impl_primitive_type_id {
     ($(
         $ty:ty
     ),+) => {
         $(
-            impl HasStaticTypeInfo for $ty {
-                fn type_info(context: &Context, target: &TargetData) -> TypeInfo {
-                    let ty = <$ty as IsIrType>::ir_type(context, target);
-                    TypeInfo::new_primitive(
-                        format!("core::{}", stringify!($ty)),
-                        TypeSize::from_ir_type(&ty, target)
-                    )
+            impl HasStaticTypeId for $ty {
+                fn type_id() -> &'static Arc<TypeId> {
+                    static TYPE_INFO: once_cell::sync::OnceCell<Arc<TypeId>> = once_cell::sync::OnceCell::new();
+                    TYPE_INFO.get_or_init(|| {
+                        let guid = <$ty as abi::PrimitiveType>::guid().clone();
+                        let name = <$ty as abi::PrimitiveType>::name().to_owned();
+                        Arc::new(TypeId { name, data: TypeIdData::Concrete(guid) })
+                    })
                 }
             }
         )+
     }
 }
 
-impl_fundamental_static_type_info!(
-    u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, bool
-);
+impl_primitive_type_id! {
+    i8,
+    i16,
+    i32,
+    i64,
+    i128,
+    isize,
+    u8,
+    u16,
+    u32,
+    u64,
+    u128,
+    usize,
+    f32,
+    f64,
+    bool,
+    (),
+    std::ffi::c_void
+}
 
-impl<T: HasStaticTypeName> HasStaticTypeInfo for *mut T {
-    fn type_info(context: &Context, target: &TargetData) -> TypeInfo {
-        let ty = context.ptr_sized_int_type(target, None);
-        TypeInfo::new_primitive(
-            format!("*mut {}", T::type_name(context, target)),
-            TypeSize::from_ir_type(&ty, target),
-        )
+impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *const T {
+    fn type_id() -> &'static Arc<TypeId> {
+        static mut VALUE: Option<StaticTypeMap<Arc<TypeId>>> = None;
+        static INIT: Once = Once::new();
+
+        let map = unsafe {
+            INIT.call_once(|| {
+                VALUE = Some(StaticTypeMap::default());
+            });
+            VALUE.as_ref().unwrap()
+        };
+
+        map.call_once::<T, _>(|| {
+            let element_type_id = T::type_id().clone();
+            Arc::new(TypeId {
+                name: format!("*const {}", &element_type_id.name),
+                data: TypeIdData::Pointer(PointerTypeId {
+                    pointee: T::type_id().clone(),
+                    mutable: false,
+                }),
+            })
+        })
     }
 }
 
-impl<T: HasStaticTypeName> HasStaticTypeInfo for *const T {
-    fn type_info(
-        context: &inkwell::context::Context,
-        target: &inkwell::targets::TargetData,
-    ) -> TypeInfo {
-        let ty = context.ptr_sized_int_type(target, None);
-        TypeInfo::new_primitive(
-            format!("*const {}", T::type_name(context, target)),
-            TypeSize::from_ir_type(&ty, target),
-        )
-    }
-}
+impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *mut T {
+    fn type_id() -> &'static Arc<TypeId> {
+        static mut VALUE: Option<StaticTypeMap<Arc<TypeId>>> = None;
+        static INIT: Once = Once::new();
 
-impl HasStaticTypeInfo for usize {
-    fn type_info(context: &Context, target: &TargetData) -> TypeInfo {
-        match target.get_pointer_byte_size(None) {
-            4 => <u32 as HasStaticTypeInfo>::type_info(context, target),
-            8 => <u64 as HasStaticTypeInfo>::type_info(context, target),
-            _ => unreachable!("unsupported pointer byte size"),
-        }
-    }
-}
+        let map = unsafe {
+            INIT.call_once(|| {
+                VALUE = Some(StaticTypeMap::default());
+            });
+            VALUE.as_ref().unwrap()
+        };
 
-impl HasStaticTypeInfo for isize {
-    fn type_info(context: &Context, target: &TargetData) -> TypeInfo {
-        match target.get_pointer_byte_size(None) {
-            4 => <i32 as HasStaticTypeInfo>::type_info(context, target),
-            8 => <i64 as HasStaticTypeInfo>::type_info(context, target),
-            _ => unreachable!("unsupported pointer byte size"),
-        }
-    }
-}
-
-impl HasStaticTypeName for TypeInfo {
-    fn type_name(_context: &Context, _target: &TargetData) -> String {
-        "TypeInfo".to_owned()
-    }
-}
-
-impl HasStaticTypeName for std::ffi::c_void {
-    fn type_name(_context: &Context, _target: &TargetData) -> String {
-        "core::void".to_owned()
-    }
-}
-
-/// A trait that statically defines that a type can be used as a return type for a function.
-pub trait HasStaticReturnTypeInfo {
-    fn return_type_info(context: &Context, target: &TargetData) -> Option<TypeInfo>;
-}
-
-/// A trait that defines that a type can be used as a return type for a function.
-pub trait HasReturnTypeInfo {
-    fn return_type_info(&self, context: &Context, target: &TargetData) -> Option<TypeInfo>;
-}
-
-impl<T: HasStaticReturnTypeInfo> HasReturnTypeInfo for T {
-    fn return_type_info(&self, context: &Context, target: &TargetData) -> Option<TypeInfo> {
-        T::return_type_info(context, target)
-    }
-}
-
-impl<T: HasStaticTypeInfo> HasStaticReturnTypeInfo for T {
-    fn return_type_info(context: &Context, target: &TargetData) -> Option<TypeInfo> {
-        Some(T::type_info(context, target))
-    }
-}
-
-impl HasStaticReturnTypeInfo for () {
-    fn return_type_info(_context: &Context, _target: &TargetData) -> Option<TypeInfo> {
-        None
+        map.call_once::<T, _>(|| {
+            let element_type_id = T::type_id().clone();
+            Arc::new(TypeId {
+                name: format!("*mut {}", &element_type_id.name),
+                data: TypeIdData::Pointer(PointerTypeId {
+                    pointee: T::type_id().clone(),
+                    mutable: true,
+                }),
+            })
+        })
     }
 }

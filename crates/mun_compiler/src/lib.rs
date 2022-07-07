@@ -130,10 +130,10 @@ mod test {
 
     #[test]
     fn test_is_source_file() {
-        assert_eq!(is_source_file("main.mun"), true);
-        assert_eq!(is_source_file("foo.mun"), true);
-        assert_eq!(is_source_file("foo/bar.mun"), true);
-        assert_eq!(is_source_file("foo/bar"), false);
+        assert!(is_source_file("main.mun"));
+        assert!(is_source_file("foo.mun"));
+        assert!(is_source_file("foo/bar.mun"));
+        assert!(!is_source_file("foo/bar"));
     }
 
     #[test]

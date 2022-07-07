@@ -67,6 +67,7 @@ fn build(project: &Path, args: &[&str]) {
 }
 
 /// Builds and runs an newly generated mun project
+#[allow(clippy::approx_constant)]
 fn build_and_run(project: &Path) {
     build(project, &[]);
 
