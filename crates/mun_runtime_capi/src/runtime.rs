@@ -482,7 +482,7 @@ mod tests {
     }
 
     #[test]
-    fn test_runtime_create_invalid_user_function() {
+    fn test_runtime_create_invalid_user_function_name() {
         let lib_path = CString::new("some/path").expect("Invalid library path");
 
         let type_id = <()>::type_info().clone().into();
@@ -509,6 +509,142 @@ mod tests {
         assert_eq!(
             message.to_str().unwrap(),
             format!("Invalid function name: function name null pointer")
+        );
+
+        unsafe { mun_error_destroy(handle) };
+    }
+
+    #[test]
+    fn test_runtime_create_invalid_user_function_name_encoding() {
+        let lib_path = CString::new("some/path").expect("Invalid library path");
+
+        let invalid_encoding = ['�', '\0'];
+        let type_id = <()>::type_info().clone().into();
+        let functions = vec![ExternalFunctionDefinition {
+            name: invalid_encoding.as_ptr() as *const _,
+            arg_types: ptr::null(),
+            return_type: type_id,
+            num_args: 0,
+            fn_ptr: ptr::null(),
+        }];
+
+        let options = RuntimeOptions {
+            functions: functions.as_ptr(),
+            num_functions: 1,
+            ..Default::default()
+        };
+
+        let mut runtime = MaybeUninit::uninit();
+        let handle =
+            unsafe { mun_runtime_create(lib_path.into_raw(), options, runtime.as_mut_ptr()) };
+        assert_ne!(handle.0, ptr::null());
+
+        let message = unsafe { CStr::from_ptr(handle.0) };
+        assert_eq!(
+            message.to_str().unwrap(),
+            format!("Invalid function name: function name is not UTF-8 encoded: invalid utf-8 sequence of 1 bytes from index 0")
+        );
+
+        unsafe { mun_error_destroy(handle) };
+    }
+
+    #[test]
+    fn test_runtime_create_invalid_user_function_return_type() {
+        let lib_path = CString::new("some/path").expect("Invalid library path");
+        let function_name = CString::new("foobar").unwrap();
+
+        let functions = vec![ExternalFunctionDefinition {
+            name: function_name.as_ptr(),
+            arg_types: ptr::null(),
+            return_type: TypeInfoHandle::null(),
+            num_args: 0,
+            fn_ptr: ptr::null(),
+        }];
+
+        let options = RuntimeOptions {
+            functions: functions.as_ptr(),
+            num_functions: 1,
+            ..Default::default()
+        };
+
+        let mut runtime = MaybeUninit::uninit();
+        let handle =
+            unsafe { mun_runtime_create(lib_path.into_raw(), options, runtime.as_mut_ptr()) };
+        assert_ne!(handle.0, ptr::null());
+
+        let message = unsafe { CStr::from_ptr(handle.0) };
+        assert_eq!(
+            message.to_str().unwrap(),
+            format!("Invalid function 'foobar': 'return_type' is null pointer.")
+        );
+
+        unsafe { mun_error_destroy(handle) };
+    }
+
+    #[test]
+    fn test_runtime_create_invalid_user_function_arg_types_ptr() {
+        let lib_path = CString::new("some/path").expect("Invalid library path");
+        let function_name = CString::new("foobar").unwrap();
+
+        let type_id = <()>::type_info().clone().into();
+        let functions = vec![ExternalFunctionDefinition {
+            name: function_name.as_ptr(),
+            arg_types: ptr::null(),
+            return_type: type_id,
+            num_args: 1,
+            fn_ptr: ptr::null(),
+        }];
+
+        let options = RuntimeOptions {
+            functions: functions.as_ptr(),
+            num_functions: 1,
+            ..Default::default()
+        };
+
+        let mut runtime = MaybeUninit::uninit();
+        let handle =
+            unsafe { mun_runtime_create(lib_path.into_raw(), options, runtime.as_mut_ptr()) };
+        assert_ne!(handle.0, ptr::null());
+
+        let message = unsafe { CStr::from_ptr(handle.0) };
+        assert_eq!(
+            message.to_str().unwrap(),
+            format!("Invalid function 'foobar': 'arg_types' is null pointer.")
+        );
+
+        unsafe { mun_error_destroy(handle) };
+    }
+
+    #[test]
+    fn test_runtime_create_invalid_user_function_arg_types() {
+        let lib_path = CString::new("some/path").expect("Invalid library path");
+        let function_name = CString::new("foobar").unwrap();
+        let arg_types = [TypeInfoHandle::null()];
+
+        let type_id = <()>::type_info().clone().into();
+        let functions = vec![ExternalFunctionDefinition {
+            name: function_name.as_ptr(),
+            arg_types: &arg_types as _,
+            return_type: type_id,
+            num_args: 1,
+            fn_ptr: ptr::null(),
+        }];
+
+        let options = RuntimeOptions {
+            functions: functions.as_ptr(),
+            num_functions: 1,
+            ..Default::default()
+        };
+
+        let mut runtime = MaybeUninit::uninit();
+        let handle =
+            unsafe { mun_runtime_create(lib_path.into_raw(), options, runtime.as_mut_ptr()) };
+        assert_ne!(handle.0, ptr::null());
+
+        let message = unsafe { CStr::from_ptr(handle.0) };
+        assert_eq!(
+            message.to_str().unwrap(),
+            format!("Invalid function 'foobar': argument #1 is null pointer.")
         );
 
         unsafe { mun_error_destroy(handle) };
