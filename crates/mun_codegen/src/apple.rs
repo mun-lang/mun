@@ -1,6 +1,6 @@
 use once_cell::sync::Lazy;
+use parking_lot::Mutex;
 use std::collections::HashMap;
-use std::sync::Mutex;
 use std::{
     env, io,
     path::{Path, PathBuf},
@@ -13,7 +13,7 @@ use std::{
 pub fn get_apple_sdk_root(sdk_name: &str) -> Result<PathBuf, String> {
     static SDK_PATH: Lazy<Mutex<HashMap<String, PathBuf>>> = Lazy::new(Default::default);
 
-    let mut lock = SDK_PATH.lock().expect("SDK_PATH mutex poisoned");
+    let mut lock = SDK_PATH.lock();
     if let Some(path) = lock.get(sdk_name) {
         return Ok(path.clone());
     }
