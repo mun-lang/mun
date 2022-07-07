@@ -222,7 +222,7 @@ impl TypeInfo {
 
     /// Tries to convert from an `abi::TypeInfo`.
     pub fn try_from_abi<'abi>(
-        type_info: &'abi abi::TypeInfo<'abi>,
+        type_info: &'abi abi::TypeDefinition<'abi>,
         type_table: &TypeTable,
     ) -> Result<TypeInfo, TryFromAbiError<'abi>> {
         TypeInfoData::try_from_abi(&type_info.data, type_table).map(|data| TypeInfo {
@@ -291,11 +291,11 @@ impl TypeInfoData {
 
     /// Tries to convert from an `abi::TypeInfoData`.
     pub fn try_from_abi<'abi>(
-        type_info_data: &'abi abi::TypeInfoData<'abi>,
+        type_info_data: &'abi abi::TypeDefinitionData<'abi>,
         type_table: &TypeTable,
     ) -> Result<TypeInfoData, TryFromAbiError<'abi>> {
         match type_info_data {
-            abi::TypeInfoData::Struct(s) => {
+            abi::TypeDefinitionData::Struct(s) => {
                 StructInfo::try_from_abi(s, type_table).map(TypeInfoData::Struct)
             }
         }
@@ -312,7 +312,7 @@ impl StructInfo {
 
     /// Tries to convert from an `abi::StructInfo`.
     pub fn try_from_abi<'abi>(
-        struct_info: &'abi abi::StructInfo<'abi>,
+        struct_info: &'abi abi::StructDefinition<'abi>,
         type_table: &TypeTable,
     ) -> Result<StructInfo, TryFromAbiError<'abi>> {
         let fields: Result<Vec<FieldInfo>, TryFromAbiError> = izip!(

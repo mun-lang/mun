@@ -69,7 +69,7 @@ impl TypeTable {
     /// doesn't hold any type that matches `type_info`.
     pub fn remove_type_by_type_info<'abi>(
         &mut self,
-        type_info: &'abi abi::TypeInfo<'abi>,
+        type_info: &'abi abi::TypeDefinition<'abi>,
     ) -> Option<Arc<TypeInfo>> {
         match type_info.as_concrete() {
             None => panic!("can only remove concrete types"),

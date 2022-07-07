@@ -31,9 +31,9 @@ fn abi_struct_sizes() {
     test_type_size::<abi::StructMemoryKind, abi::StructMemoryKind>(&type_context);
     test_type_size::<abi::TypeId, ir::TypeId>(&type_context);
     test_type_size::<abi::PointerTypeId, ir::PointerTypeId>(&type_context);
-    test_type_size::<abi::TypeInfoData, ir::TypeInfoData>(&type_context);
-    test_type_size::<abi::StructInfo, ir::StructInfo>(&type_context);
-    test_type_size::<abi::TypeInfo, ir::TypeInfo>(&type_context);
+    test_type_size::<abi::TypeDefinitionData, ir::TypeInfoData>(&type_context);
+    test_type_size::<abi::StructDefinition, ir::StructInfo>(&type_context);
+    test_type_size::<abi::TypeDefinition, ir::TypeInfo>(&type_context);
     test_type_size::<abi::FunctionSignature, ir::FunctionSignature>(&type_context);
     test_type_size::<abi::FunctionPrototype, ir::FunctionPrototype>(&type_context);
     test_type_size::<abi::ModuleInfo, ir::ModuleInfo>(&type_context);

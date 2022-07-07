@@ -1,6 +1,6 @@
 use std::{ffi::CStr, os::raw::c_char, slice, str};
 
-use crate::{FunctionDefinition, TypeInfo};
+use crate::{FunctionDefinition, TypeDefinition};
 
 /// Represents a module declaration.
 #[repr(C)]
@@ -10,7 +10,7 @@ pub struct ModuleInfo<'a> {
     /// Module functions
     pub(crate) functions: *const FunctionDefinition<'a>,
     /// Module types
-    pub(crate) types: *const TypeInfo<'a>,
+    pub(crate) types: *const TypeDefinition<'a>,
     /// Number of module functions
     pub num_functions: u32,
     /// Number of module types
@@ -48,7 +48,7 @@ impl<'a> ModuleInfo<'a> {
     }
 
     /// Returns the module's types.
-    pub fn types(&self) -> &[TypeInfo<'a>] {
+    pub fn types(&self) -> &[TypeDefinition<'a>] {
         if self.num_types == 0 {
             &[]
         } else {
@@ -83,10 +83,10 @@ mod tests {
     use crate::type_id::HasStaticTypeId;
     use crate::{
         test_utils::{
-            fake_fn_prototype, fake_module_info, fake_struct_info, fake_type_info, FAKE_FN_NAME,
-            FAKE_MODULE_PATH, FAKE_STRUCT_NAME,
+            fake_fn_prototype, fake_module_info, fake_struct_definition, fake_type_definition,
+            FAKE_FN_NAME, FAKE_MODULE_PATH, FAKE_STRUCT_NAME,
         },
-        FunctionDefinition, TypeInfo, TypeInfoData,
+        FunctionDefinition, TypeDefinition, TypeDefinitionData,
     };
 
     #[test]
@@ -121,8 +121,9 @@ mod tests {
         let functions = &[fn_info];
 
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name");
-        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], Default::default());
-        let type_info = fake_type_info(&struct_name, 1, 1, TypeInfoData::Struct(struct_info));
+        let struct_info = fake_struct_definition(&struct_name, &[], &[], &[], Default::default());
+        let type_info =
+            fake_type_definition(&struct_name, 1, 1, TypeDefinitionData::Struct(struct_info));
         let types = [type_info];
 
         let module_path = CString::new(FAKE_MODULE_PATH).expect("Invalid fake module path.");
@@ -143,14 +144,14 @@ mod tests {
             );
         }
 
-        let result_types: &[TypeInfo] = module.types();
+        let result_types: &[TypeDefinition] = module.types();
         assert_eq!(result_types.len(), types.len());
         for (lhs, rhs) in result_types.iter().zip(types.iter()) {
             assert_eq!(lhs, rhs);
             assert_eq!(lhs.name(), rhs.name());
             assert_eq!(lhs.data.is_struct(), rhs.data.is_struct());
-            let TypeInfoData::Struct(lhs) = &lhs.data;
-            let TypeInfoData::Struct(rhs) = &rhs.data;
+            let TypeDefinitionData::Struct(lhs) = &lhs.data;
+            let TypeDefinitionData::Struct(rhs) = &rhs.data;
             assert_eq!(lhs.field_types(), rhs.field_types());
         }
     }

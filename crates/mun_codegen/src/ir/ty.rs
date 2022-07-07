@@ -249,15 +249,16 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
     /// Returns a `TypeInfo` for the specified `ty`
     pub fn type_id(&self, ty: &Ty) -> Arc<TypeId> {
         match ty.interned() {
-            &TyKind::Float(ty) => match ty.bitness {
-                FloatBitness::X32 => f32::type_id().clone(),
-                FloatBitness::X64 => f64::type_id().clone(),
-            },
+            &TyKind::Float(ty) => {
+                let resolved_ty = ty.resolve(&self.db.target_data_layout());
+                match resolved_ty.bitness {
+                    FloatBitness::X32 => f32::type_id().clone(),
+                    FloatBitness::X64 => f64::type_id().clone(),
+                }
+            }
             &TyKind::Int(ty) => {
-                match (
-                    ty.signedness,
-                    ty.bitness.resolve(&self.db.target_data_layout()),
-                ) {
+                let resolved_ty = ty.resolve(&self.db.target_data_layout());
+                match (resolved_ty.signedness, resolved_ty.bitness) {
                     (Signedness::Signed, IntBitness::X8) => i8::type_id().clone(),
                     (Signedness::Signed, IntBitness::X16) => i16::type_id().clone(),
                     (Signedness::Signed, IntBitness::X32) => i32::type_id().clone(),

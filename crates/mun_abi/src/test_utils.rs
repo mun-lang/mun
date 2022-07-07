@@ -2,7 +2,7 @@ use crate::type_id::HasStaticTypeId;
 use crate::type_id::TypeId;
 use crate::{
     AssemblyInfo, DispatchTable, FunctionDefinition, FunctionPrototype, FunctionSignature, Guid,
-    ModuleInfo, StructInfo, StructMemoryKind, TypeInfo, TypeInfoData, TypeLut,
+    ModuleInfo, StructDefinition, StructMemoryKind, TypeDefinition, TypeDefinitionData, TypeLut,
 };
 use std::{
     ffi::{self, CStr},
@@ -87,7 +87,7 @@ pub(crate) fn fake_fn_prototype<'a>(
 pub(crate) fn fake_module_info<'a>(
     path: &CStr,
     functions: &[FunctionDefinition<'a>],
-    types: &[TypeInfo<'a>],
+    types: &[TypeDefinition<'a>],
 ) -> ModuleInfo<'a> {
     ModuleInfo {
         path: path.as_ptr(),
@@ -98,17 +98,17 @@ pub(crate) fn fake_module_info<'a>(
     }
 }
 
-pub(crate) fn fake_struct_info<'a>(
+pub(crate) fn fake_struct_definition<'a>(
     name: &CStr,
     field_names: &[*const c_char],
     field_types: &[TypeId<'a>],
     field_offsets: &[u16],
     memory_kind: StructMemoryKind,
-) -> StructInfo<'a> {
+) -> StructDefinition<'a> {
     assert!(field_names.len() == field_types.len());
     assert!(field_types.len() == field_offsets.len());
 
-    StructInfo {
+    StructDefinition {
         guid: Guid::from_cstr(name),
         field_names: field_names.as_ptr(),
         field_types: field_types.as_ptr(),
@@ -118,13 +118,13 @@ pub(crate) fn fake_struct_info<'a>(
     }
 }
 
-pub(crate) fn fake_type_info<'a>(
+pub(crate) fn fake_type_definition<'a>(
     name: &CStr,
     size: u32,
     alignment: u8,
-    data: TypeInfoData<'a>,
-) -> TypeInfo<'a> {
-    TypeInfo {
+    data: TypeDefinitionData<'a>,
+) -> TypeDefinition<'a> {
+    TypeDefinition {
         name: name.as_ptr(),
         size_in_bits: size,
         alignment,

@@ -6,7 +6,7 @@ use crate::Guid;
 /// Represents a struct declaration.
 #[repr(C)]
 #[derive(Debug)]
-pub struct StructInfo<'a> {
+pub struct StructDefinition<'a> {
     /// The unique identifier of this struct
     pub guid: Guid,
     /// Struct fields' names
@@ -40,7 +40,7 @@ pub enum StructMemoryKind {
     Value,
 }
 
-impl<'a> StructInfo<'a> {
+impl<'a> StructDefinition<'a> {
     /// Returns the struct's field names.
     pub fn field_names(&self) -> impl Iterator<Item = &str> {
         let field_names = if self.num_fields == 0 {
@@ -84,16 +84,7 @@ impl Default for StructMemoryKind {
     }
 }
 
-impl From<StructMemoryKind> for u64 {
-    fn from(kind: StructMemoryKind) -> Self {
-        match kind {
-            StructMemoryKind::Gc => 0,
-            StructMemoryKind::Value => 1,
-        }
-    }
-}
-
-impl<'a> PartialEq for StructInfo<'a> {
+impl<'a> PartialEq for StructDefinition<'a> {
     fn eq(&self, other: &Self) -> bool {
         self.guid == other.guid
             && self.num_fields == other.num_fields
@@ -106,10 +97,10 @@ impl<'a> PartialEq for StructInfo<'a> {
     }
 }
 
-impl<'a> Eq for StructInfo<'a> {}
+impl<'a> Eq for StructDefinition<'a> {}
 
 #[cfg(feature = "serde")]
-impl<'a> serde::Serialize for StructInfo<'a> {
+impl<'a> serde::Serialize for StructDefinition<'a> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -150,7 +141,7 @@ mod tests {
     use crate::type_id::HasStaticTypeId;
     use std::ffi::CString;
 
-    use crate::test_utils::{fake_struct_info, FAKE_FIELD_NAME, FAKE_STRUCT_NAME};
+    use crate::test_utils::{fake_struct_definition, FAKE_FIELD_NAME, FAKE_STRUCT_NAME};
 
     use super::StructMemoryKind;
 
@@ -159,7 +150,7 @@ mod tests {
         let field_names = &[];
         let field_types = &[];
         let field_offsets = &[];
-        let struct_info = fake_struct_info(
+        let struct_info = fake_struct_definition(
             &CString::new(FAKE_STRUCT_NAME).unwrap(),
             field_names,
             field_types,
@@ -181,7 +172,7 @@ mod tests {
         let field_names = &[field_name.as_ptr()];
         let field_types = &[type_id.clone()];
         let field_offsets = &[1];
-        let struct_info = fake_struct_info(
+        let struct_info = fake_struct_definition(
             &struct_name,
             field_names,
             field_types,
@@ -189,6 +180,7 @@ mod tests {
             Default::default(),
         );
 
+        assert_eq!(struct_info.num_fields(), 1);
         for (lhs, rhs) in struct_info.field_names().zip([FAKE_FIELD_NAME].iter()) {
             assert_eq!(lhs, *rhs)
         }
@@ -200,7 +192,7 @@ mod tests {
     fn test_struct_info_memory_kind_gc() {
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
         let struct_memory_kind = StructMemoryKind::Gc;
-        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], struct_memory_kind);
+        let struct_info = fake_struct_definition(&struct_name, &[], &[], &[], struct_memory_kind);
 
         assert_eq!(struct_info.memory_kind, struct_memory_kind);
     }
@@ -209,7 +201,7 @@ mod tests {
     fn test_struct_info_memory_kind_value() {
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name.");
         let struct_memory_kind = StructMemoryKind::Value;
-        let struct_info = fake_struct_info(&struct_name, &[], &[], &[], struct_memory_kind);
+        let struct_info = fake_struct_definition(&struct_name, &[], &[], &[], struct_memory_kind);
 
         assert_eq!(struct_info.memory_kind, struct_memory_kind);
     }

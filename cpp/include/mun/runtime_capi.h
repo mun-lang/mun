@@ -60,6 +60,11 @@ typedef uint8_t MunStructMemoryKind;
 #endif // __cplusplus
 
 /**
+ * A linked version of [`mun_abi::StructInfo`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
+ */
+typedef struct MunStructInfo MunStructInfo;
+
+/**
  * A C-style handle to an error message.
  *
  * If the handle contains a non-null pointer, an error occurred.
@@ -302,36 +307,6 @@ typedef union MunTypeInfoData {
         struct MunPointerInfoData pointer;
     };
 } MunTypeInfoData;
-
-/**
- * Represents a struct declaration.
- */
-typedef struct MunStructInfo {
-    /**
-     * The unique identifier of this struct
-     */
-    struct MunGuid guid;
-    /**
-     * Struct fields' names
-     */
-    const char *const *field_names;
-    /**
-     * Struct fields' information
-     */
-    const union MunTypeId *field_types;
-    /**
-     * Struct fields' offsets
-     */
-    const uint16_t *field_offsets;
-    /**
-     * Number of fields
-     */
-    uint16_t num_fields;
-    /**
-     * Struct memory kind
-     */
-    MunStructMemoryKind memory_kind;
-} MunStructInfo;
 
 #ifdef __cplusplus
 extern "C" {

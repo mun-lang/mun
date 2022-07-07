@@ -207,7 +207,7 @@ impl Assembly {
         let mut type_table = type_table.clone();
 
         // Collect all types that need to be loaded
-        let mut types_to_load: VecDeque<&abi::TypeInfo> = assemblies
+        let mut types_to_load: VecDeque<&abi::TypeDefinition> = assemblies
             .iter()
             .flat_map(|asm| asm.info().symbols.types().iter())
             .collect();
@@ -313,7 +313,7 @@ impl Assembly {
                 });
 
             // Collect all types that need to be loaded
-            let mut types_to_load: VecDeque<&abi::TypeInfo> =
+            let mut types_to_load: VecDeque<&abi::TypeDefinition> =
                 new_assembly.info.symbols.types().iter().collect();
 
             let mut new_types = Vec::with_capacity(types_to_load.len());

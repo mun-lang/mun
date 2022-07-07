@@ -145,7 +145,7 @@ typedef struct MunFunctionDefinition {
 /**
  * Represents a struct declaration.
  */
-typedef struct MunStructInfo {
+typedef struct MunStructDefinition {
     /**
      * The unique identifier of this struct
      */
@@ -170,12 +170,12 @@ typedef struct MunStructInfo {
      * Struct memory kind
      */
     MunStructMemoryKind memory_kind;
-} MunStructInfo;
+} MunStructDefinition;
 
 /**
  * Contains data specific to a group of types that illicit the same characteristics.
  */
-enum MunTypeInfoData_Tag
+enum MunTypeDefinitionData_Tag
 #ifdef __cplusplus
   : uint8_t
 #endif // __cplusplus
@@ -186,24 +186,32 @@ enum MunTypeInfoData_Tag
     Struct,
 };
 #ifndef __cplusplus
-typedef uint8_t MunTypeInfoData_Tag;
+typedef uint8_t MunTypeDefinitionData_Tag;
 #endif // __cplusplus
 
-typedef union MunTypeInfoData {
-    MunTypeInfoData_Tag tag;
+typedef union MunTypeDefinitionData {
+    MunTypeDefinitionData_Tag tag;
     struct {
-        MunTypeInfoData_Tag struct_tag;
-        struct MunStructInfo struct_;
+        MunTypeDefinitionData_Tag struct_tag;
+        struct MunStructDefinition struct_;
     };
-} MunTypeInfoData;
+} MunTypeDefinitionData;
 
 /**
- * Represents the type declaration for a value type.
+ * Represents the type declaration for a type that is exported by an assembly.
+ *
+ * When multiple Mun modules reference the same type, only one module exports the type; the module
+ * that contains the type definition. All the other Mun modules reference the type through a
+ * [`TypeId`].
+ *
+ * The modules that defines the type exports the data to reduce the filesize of the assemblies and
+ * to ensure only one definition exists. When linking all assemblies together the type definitions
+ * from all assemblies are loaded and the information is shared to modules that reference the type.
  *
  * TODO: add support for polymorphism, enumerations, type parameters, generic type definitions, and
- * constructed generic types.
+ *   constructed generic types.
  */
-typedef struct MunTypeInfo {
+typedef struct MunTypeDefinition {
     /**
      * Type name
      */
@@ -219,8 +227,8 @@ typedef struct MunTypeInfo {
     /**
      * Type group
      */
-    union MunTypeInfoData data;
-} MunTypeInfo;
+    union MunTypeDefinitionData data;
+} MunTypeDefinition;
 
 /**
  * Represents a module declaration.
@@ -237,7 +245,7 @@ typedef struct MunModuleInfo {
     /**
      * Module types
      */
-    const struct MunTypeInfo *types;
+    const struct MunTypeDefinition *types;
     /**
      * Number of module functions
      */

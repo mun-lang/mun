@@ -200,6 +200,35 @@ mod tests {
     }
 
     #[test]
+    fn test_type_lut_iter_none() {
+        let type_ids = &[];
+        let type_ptrs = &mut [];
+        let type_names = &[];
+        let type_lut = fake_type_lut(type_ids, type_ptrs, type_names);
+
+        let iter = type_ids.iter().zip(type_ptrs.iter_mut());
+        assert_eq!(type_lut.iter().count(), iter.count());
+    }
+
+    #[test]
+    fn test_type_lut_iter_some() {
+        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
+
+        let type_ids = &[FAKE_TYPE_ID];
+        let type_ptrs = &mut [ptr::null()];
+        let type_names = &[type_name.as_ptr()];
+        let type_lut = fake_type_lut(type_ids, type_ptrs, type_names);
+
+        let iter = type_ids.iter().zip(type_ptrs.iter_mut());
+        assert_eq!(type_lut.iter().count(), iter.len());
+
+        for (lhs, rhs) in type_lut.iter().zip(iter) {
+            assert_eq!(lhs.0, rhs.0);
+            assert_eq!(lhs.1, rhs.1);
+        }
+    }
+
+    #[test]
     fn test_type_lut_ptrs_mut_none() {
         let type_ids = &[];
         let type_ptrs = &mut [];

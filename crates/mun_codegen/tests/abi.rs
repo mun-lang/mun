@@ -54,7 +54,7 @@ fn test_abi_compatibility() {
           ),
         ],
         types: [
-          TypeInfo(
+          TypeDefinition(
             name: "Bar",
             size_in_bits: 64,
             alignment: 4,
@@ -75,7 +75,7 @@ fn test_abi_compatibility() {
               memory_kind: Value,
             )),
           ),
-          TypeInfo(
+          TypeDefinition(
             name: "Foo",
             size_in_bits: 128,
             alignment: 8,
