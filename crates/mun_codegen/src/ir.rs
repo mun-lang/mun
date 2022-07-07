@@ -190,14 +190,12 @@ impl<'ink, S: BasicType<'ink>, T: IsIrType<'ink, Type = S>> IsPointerType<'ink> 
     }
 }
 
-// HACK: Manually add `*const c_void`
 impl<'ink> IsPointerType<'ink> for *const std::ffi::c_void {
     fn ir_type(context: &'ink Context, _target: &TargetData) -> PointerType<'ink> {
         context.i8_type().ptr_type(AddressSpace::Generic)
     }
 }
 
-// HACK: Manually add `*mut c_void`
 impl<'ink> IsPointerType<'ink> for *mut std::ffi::c_void {
     fn ir_type(context: &'ink Context, _target: &TargetData) -> PointerType<'ink> {
         context.i8_type().ptr_type(AddressSpace::Generic)

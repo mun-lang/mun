@@ -130,12 +130,11 @@ struct Marshal<StructRef> {
 
     static StructRef copy_from(const type* ptr, const Runtime& runtime,
                                const TypeInfo& type_info) noexcept {
-        // Safety: `type_info_as_struct` is guaranteed to return a value for
-        // `StructRef`s.
         MunTypeInfoData type_data;
         auto err = mun_type_info_data(type_info.handle(), &type_data);
         assert(err._0 == nullptr);
 
+        // Safety: `mun_type_info_data` is guaranteed to return a value for `StructRef`s.
         MunStructMemoryKind memory_kind;
         err = mun_struct_info_memory_kind(type_data.struct_, &memory_kind);
         assert(err._0 == nullptr);
@@ -156,12 +155,11 @@ struct Marshal<StructRef> {
     }
 
     static void move_to(type value, type* ptr, const TypeInfo& type_info) noexcept {
-        // Safety: `type_info_as_struct` is guaranteed to return a value for
-        // `StructRef`s.
         MunTypeInfoData type_data;
         auto err = mun_type_info_data(type_info.handle(), &type_data);
         assert(err._0 == nullptr);
 
+        // Safety: `mun_type_info_data` is guaranteed to return a value for `StructRef`s.
         MunStructMemoryKind memory_kind;
         err = mun_struct_info_memory_kind(type_data.struct_, &memory_kind);
         assert(err._0 == nullptr);
@@ -176,12 +174,11 @@ struct Marshal<StructRef> {
 
     static StructRef swap_at(type value, type* ptr, const Runtime& runtime,
                              const TypeInfo& type_info) noexcept {
-        // Safety: `type_info_as_struct` is guaranteed to return a value for
-        // `StructRef`s.
         MunTypeInfoData type_data;
         auto err = mun_type_info_data(type_info.handle(), &type_data);
         assert(err._0 == nullptr);
 
+        // Safety: `mun_type_info_data` is guaranteed to return a value for `StructRef`s.
         MunStructMemoryKind memory_kind;
         err = mun_struct_info_memory_kind(type_data.struct_, &memory_kind);
         assert(err._0 == nullptr);
@@ -229,12 +226,11 @@ template <typename T>
 std::optional<T> StructRef::get(std::string_view field_name) const noexcept {
     const auto type_info = info();
 
-    // Safety: `type_info_as_struct` is guaranteed to return a value for
-    // `StructRef`s.
     MunTypeInfoData type_data;
     auto err = mun_type_info_data(type_info.handle(), &type_data);
     assert(err._0 == nullptr);
 
+    // Safety: `mun_type_info_data` is guaranteed to return a value for `StructRef`s.
     if (const auto field_info =
             details::find_field(type_info.name(), type_data.struct_, field_name);
         field_info.has_value()) {
@@ -260,12 +256,11 @@ template <typename T>
 std::optional<T> StructRef::replace(std::string_view field_name, T value) noexcept {
     const auto type_info = info();
 
-    // Safety: `type_info_as_struct` is guaranteed to return a value for
-    // `StructRef`s.
     MunTypeInfoData type_data;
     auto err = mun_type_info_data(type_info.handle(), &type_data);
     assert(err._0 == nullptr);
 
+    // Safety: `mun_type_info_data` is guaranteed to return a value for `StructRef`s.
     if (const auto field_info =
             details::find_field(type_info.name(), type_data.struct_, field_name);
         field_info.has_value()) {
@@ -291,12 +286,11 @@ template <typename T>
 bool StructRef::set(std::string_view field_name, T value) noexcept {
     const auto type_info = info();
 
-    // Safety: `type_info_as_struct` is guaranteed to return a value for
-    // `StructRef`s.
     MunTypeInfoData type_data;
     auto err = mun_type_info_data(type_info.handle(), &type_data);
     assert(err._0 == nullptr);
 
+    // Safety: `mun_type_info_data` is guaranteed to return a value for `StructRef`s.
     if (const auto field_info =
             details::find_field(type_info.name(), type_data.struct_, field_name);
         field_info.has_value()) {
