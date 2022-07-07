@@ -87,13 +87,6 @@ impl Default for StructMemoryKind {
 impl<'a> PartialEq for StructDefinition<'a> {
     fn eq(&self, other: &Self) -> bool {
         self.guid == other.guid
-            && self.num_fields == other.num_fields
-            && self.field_types() == other.field_types()
-            && self
-                .field_names()
-                .zip(other.field_names())
-                .all(|(a, b)| a == b)
-            && self.field_offsets() == other.field_offsets()
     }
 }
 
