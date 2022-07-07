@@ -22,7 +22,7 @@ pub trait TypeFields: Send + Sync {
 
 /// An error that can occur when trying to convert from an abi type to an internal type.
 #[derive(Debug, Error)]
-pub enum TryFromAbiError {
+pub enum TryFromAbiError<'a> {
     #[error("unknown TypeId '{0}'")]
-    UnknownTypeId(abi::TypeId),
+    UnknownTypeId(abi::TypeId<'a>),
 }

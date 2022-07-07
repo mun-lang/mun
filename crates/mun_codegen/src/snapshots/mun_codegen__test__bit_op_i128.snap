@@ -1,13 +1,12 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1045
 expression: "\n    pub fn not(a: i128) -> i128 { !a }\n    pub fn bitand(a: i128, b: i128) -> i128 { a & b }\n    pub fn bitor(a: i128, b: i128) -> i128 { a | b }\n    pub fn bitxor(a: i128, b: i128) -> i128 { a ^ b }\n                        "
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [11 x i64*]
+@global_type_lookup_table = external global [1 x i64*]
 
 define i128 @not(i128 %0) {
 body:
@@ -37,5 +36,5 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [11 x i64*] zeroinitializer
+@global_type_lookup_table = global [1 x i64*] zeroinitializer
 

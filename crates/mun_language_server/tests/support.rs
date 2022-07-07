@@ -109,13 +109,11 @@ impl Server {
     pub fn wait_until_workspace_is_loaded(self) -> Server {
         self.wait_for_message_cond(1, &|msg: &Message| match msg {
             Message::Notification(n) if n.method == "$/progress" => {
-                match n.clone().extract::<ProgressParams>("$/progress").unwrap() {
+                matches!(n.clone().extract::<ProgressParams>("$/progress").unwrap(),
                     ProgressParams {
                         token: lsp_types::ProgressToken::String(ref token),
                         value: ProgressParamsValue::WorkDone(WorkDoneProgress::End(_)),
-                    } if token == "mun/projects scanned" => true,
-                    _ => false,
-                }
+                    } if token == "mun/projects scanned")
             }
             _ => false,
         });

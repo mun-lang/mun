@@ -1,5 +1,6 @@
 use crate::module_group::ModuleGroup;
-use crate::{intrinsics::Intrinsic, ir::function, ir::ty::HirTypeCache, type_info::TypeInfo};
+use crate::type_info::{HasStaticTypeId, TypeId};
+use crate::{intrinsics::Intrinsic, ir::function, ir::ty::HirTypeCache};
 use hir::{Body, Expr, ExprId, HirDatabase, InferenceResult};
 use inkwell::values::CallableValue;
 use inkwell::{
@@ -49,8 +50,8 @@ pub struct DispatchTable<'ink> {
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct FunctionPrototype {
     pub name: String,
-    pub arg_types: Vec<TypeInfo>,
-    pub ret_type: Option<TypeInfo>,
+    pub arg_types: Vec<Arc<TypeId>>,
+    pub ret_type: Arc<TypeId>,
 }
 
 /// A `DispatchableFunction` is an entry in the dispatch table that may or may not be pointing to an
@@ -102,7 +103,7 @@ impl<'ink> DispatchTable<'ink> {
         builder: &inkwell::builder::Builder<'ink>,
         intrinsic: &impl Intrinsic,
     ) -> CallableValue<'ink> {
-        let prototype = intrinsic.prototype(self.context, &self.target);
+        let prototype = intrinsic.prototype();
 
         // Get the index of the intrinsic
         let index = *self
@@ -285,12 +286,12 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
             let arg_types = sig
                 .params()
                 .iter()
-                .map(|arg| self.hir_types.type_info(arg))
+                .map(|arg| self.hir_types.type_id(arg))
                 .collect();
             let ret_type = if !sig.ret().is_empty() {
-                Some(self.hir_types.type_info(sig.ret()))
+                self.hir_types.type_id(sig.ret())
             } else {
-                None
+                <()>::type_id().clone()
             };
 
             let prototype = FunctionPrototype {

@@ -1,6 +1,5 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1045
 expression: "\n    struct(value) Bar(f64, i32, bool, Foo);\n    struct(value) Foo { a: i32 };\n    struct(value) Baz;\n    pub fn foo() {\n        let a: Foo = Foo { a: 5 };\n        let b: Bar = Bar(1.23, a.a, true, a);\n        let c: Baz = Baz;\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
@@ -14,7 +13,7 @@ source_filename = "mod"
 
 @allocatorHandle = external global i8*
 @dispatchTable = external global %DispatchTable
-@global_type_lookup_table = external global [12 x i64*]
+@global_type_lookup_table = external global [6 x i64*]
 
 define void @foo() {
 body:
@@ -40,6 +39,6 @@ source_filename = "group_name"
 %DispatchTable = type { i8** (i8*, i8*)* }
 
 @dispatchTable = global %DispatchTable zeroinitializer
-@global_type_lookup_table = global [12 x i64*] zeroinitializer
+@global_type_lookup_table = global [6 x i64*] zeroinitializer
 @allocatorHandle = unnamed_addr global i8* null
 

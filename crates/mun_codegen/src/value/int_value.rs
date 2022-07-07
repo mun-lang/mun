@@ -42,7 +42,8 @@ impl_as_int_ir_value!(
     u8 => i8_type(),
     u16 => i16_type(),
     u32 => i32_type(),
-    u64 => i64_type()
+    u64 => i64_type(),
+    bool => bool_type()
 );
 
 impl<'ink> AsValue<'ink, u8> for u8 {
@@ -83,6 +84,15 @@ impl<'ink> AsValue<'ink, u64> for u64 {
 
 impl<'ink> AsValue<'ink, i8> for i8 {
     fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, i8> {
+        Value::from_raw(
+            <Self as SizedValueType>::get_ir_type(context.type_context)
+                .const_int(*self as u64, true),
+        )
+    }
+}
+
+impl<'ink> AsValue<'ink, bool> for bool {
+    fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, bool> {
         Value::from_raw(
             <Self as SizedValueType>::get_ir_type(context.type_context)
                 .const_int(*self as u64, true),
@@ -162,5 +172,11 @@ impl<'ink> AsBytesAndPtrs<'ink> for i32 {
 impl<'ink> AsBytesAndPtrs<'ink> for i64 {
     fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
         vec![bytemuck::cast_ref::<i64, [u8; 8]>(self).to_vec().into()]
+    }
+}
+
+impl<'ink> AsBytesAndPtrs<'ink> for bool {
+    fn as_bytes_and_ptrs(&self, _: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
+        vec![bytemuck::cast_ref::<bool, [u8; 1]>(self).to_vec().into()]
     }
 }

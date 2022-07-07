@@ -1,10 +1,13 @@
-use super::util::{EventAggregator, Trace};
-use crate::{assert_variant, fake_struct};
+use std::sync::Arc;
+
 use mun_memory::{
     gc::{Event, GcPtr, GcRootPtr, GcRuntime, HasIndirectionPtr, MarkSweep, TypeTrace},
     type_table::TypeTable,
 };
-use std::sync::Arc;
+
+use crate::{assert_variant, fake_struct};
+
+use super::util::{EventAggregator, Trace};
 
 struct FooObject {
     bar: GcPtr,
@@ -65,13 +68,13 @@ fn trace_collect() {
     runtime.collect();
 
     // Drop foo
-    let foo = foo_ptr.unroot();
+    let foo_instance = foo_ptr.unroot();
 
     // Collect garbage, both foo and bar should be collected
     runtime.collect();
 
     let mut events = runtime.observer().take_all().into_iter();
-    assert_eq!(events.next(), Some(Event::Allocation(foo)));
+    assert_eq!(events.next(), Some(Event::Allocation(foo_instance)));
     assert_eq!(events.next(), Some(Event::Allocation(bar)));
     assert_eq!(events.next(), Some(Event::Start));
     assert_eq!(events.next(), Some(Event::End));

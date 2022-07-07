@@ -1,20 +1,22 @@
-use abi::HasStaticTypeInfo;
+#![allow(clippy::mutable_key_type)]
+
+use crate::{HasStaticTypeInfo, TypeInfo};
 use lazy_static::lazy_static;
-use std::{collections::HashMap, ptr::NonNull};
+use std::{collections::HashMap, ptr::NonNull, sync::Arc};
 
 type CastFn = fn(NonNull<u8>, NonNull<u8>);
 
 macro_rules! insert_cast_fn {
     { $table:ident, $A:ty, $B:ty } => {
         $table.insert(
-            (<$A>::type_info().id.clone(), <$B>::type_info().id.clone()),
+            (<$A>::type_info().clone(), <$B>::type_info().clone()),
             cast_from_to::<$A, $B> as CastFn,
         )
     }
 }
 
 lazy_static! {
-    static ref CAST_FN_TABLE: HashMap<(abi::TypeId, abi::TypeId), CastFn> = {
+    static ref CAST_FN_TABLE: HashMap<(Arc<TypeInfo>, Arc<TypeInfo>), CastFn> = {
         let mut table = HashMap::new();
         insert_cast_fn!(table, f32, f64);
         insert_cast_fn!(table, i8, i16);
@@ -60,8 +62,8 @@ where
 }
 
 pub fn try_cast_from_to(
-    old_id: abi::TypeId,
-    new_id: abi::TypeId,
+    old_id: Arc<TypeInfo>,
+    new_id: Arc<TypeInfo>,
     src: NonNull<u8>,
     dest: NonNull<u8>,
 ) -> bool {
@@ -76,7 +78,7 @@ pub fn try_cast_from_to(
 #[cfg(test)]
 mod tests {
     use super::try_cast_from_to;
-    use abi::HasStaticTypeInfo;
+    use crate::HasStaticTypeInfo;
     use std::ptr::NonNull;
 
     fn assert_cast<A, B>(a: A, mut b: B)
@@ -85,8 +87,8 @@ mod tests {
         B: PartialEq + std::fmt::Debug + HasStaticTypeInfo,
     {
         assert!(try_cast_from_to(
-            A::type_info().id.clone(),
-            B::type_info().id.clone(),
+            A::type_info().clone(),
+            B::type_info().clone(),
             unsafe { NonNull::new_unchecked(&a as *const _ as *mut _) },
             unsafe { NonNull::new_unchecked(&mut b as *mut _) }.cast::<u8>(),
         ));
