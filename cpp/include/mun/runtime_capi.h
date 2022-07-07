@@ -1,8 +1,6 @@
 #ifndef MUN_RUNTIME_BINDINGS_H_
 #define MUN_RUNTIME_BINDINGS_H_
 
-/* Generated with cbindgen:0.23.0 */
-
 #include <stdbool.h>
 #include <stdint.h>
 
