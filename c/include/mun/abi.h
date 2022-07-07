@@ -1,8 +1,6 @@
 #ifndef MUN_ABI_H_
 #define MUN_ABI_H_
 
-/* Generated with cbindgen:0.23.0 */
-
 #include <stdint.h>
 
 /**
