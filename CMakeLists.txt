@@ -63,12 +63,12 @@ else ()
 endif ()
 
 set_target_properties(MunRuntime PROPERTIES
-    IMPORTED_LOCATION ${mun_library_dir}/${CMAKE_SHARED_LIBRARY_PREFIX}mun_runtime${CMAKE_SHARED_LIBRARY_SUFFIX}
+    IMPORTED_LOCATION ${mun_library_dir}/${CMAKE_SHARED_LIBRARY_PREFIX}munruntime${CMAKE_SHARED_LIBRARY_SUFFIX}
 )
 
 if (WIN32)
     set_target_properties(MunRuntime PROPERTIES
-        IMPORTED_IMPLIB ${mun_library_dir}/mun_runtime${CMAKE_SHARED_LIBRARY_SUFFIX}.lib
+        IMPORTED_IMPLIB ${mun_library_dir}/munruntime${CMAKE_SHARED_LIBRARY_SUFFIX}.lib
     )
 endif ()
 

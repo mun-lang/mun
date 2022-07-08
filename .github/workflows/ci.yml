@@ -116,14 +116,6 @@ jobs:
           components: rustfmt
 
       - uses: Swatinem/rust-cache@v1
-      
-      - name: Cargo clean mun_runtime (avoid duplicate)
-        uses: actions-rs/cargo@v1
-        env:
-          RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
-        with:
-          command: clean
-          args: -p mun_runtime
 
       - name: Cargo build
         uses: actions-rs/cargo@v1
