@@ -90,16 +90,8 @@ jobs:
 
   test-mdbook:
     name: Test mdbook
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     needs: check
-    strategy:
-      fail-fast: false
-      matrix:
-        os: ["ubuntu-latest", "windows-latest", "macOS-latest"]
-        include:
-          - RUSTFLAGS: "-Dwarnings"
-          - os: "windows-latest"
-            RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
     steps:
       - uses: actions/checkout@v3
         with:
@@ -126,7 +118,6 @@ jobs:
           args: -p mun_runtime
 
       - name: Install mdbook
-        if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: actions-rs/install@v0.1
         with:
           crate: mdbook
@@ -134,11 +125,9 @@ jobs:
           use-tool-cache: true
 
       - name: mdbook test
-        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: mdbook test book -L target/debug/deps
 
       - name: mdbook build
-        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: mdbook build book
 
   test-cpp:
