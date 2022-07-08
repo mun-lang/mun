@@ -115,8 +115,6 @@ jobs:
           override: true
           components: rustfmt
 
-      - uses: Swatinem/rust-cache@v1
-
       - name: Cargo build
         uses: actions-rs/cargo@v1
         env:
