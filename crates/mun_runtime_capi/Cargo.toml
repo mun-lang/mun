@@ -13,7 +13,7 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [lib]
-name = "munruntime"
+name = "mun_runtime"
 crate-type = ["cdylib"]
 
 [dependencies]
