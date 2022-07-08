@@ -391,12 +391,12 @@ fn marshal_struct() {
     let bool_data = TestData(true, false);
 
     // Verify that struct marshalling works for fundamental types
-    let mut foo: StructRef = driver
+    let mut foo_struct: StructRef = driver
         .runtime
         .invoke("foo_new", (int_data.0, bool_data.0))
         .unwrap();
-    test_field(&mut foo, &int_data, "a");
-    test_field(&mut foo, &bool_data, "b");
+    test_field(&mut foo_struct, &int_data, "a");
+    test_field(&mut foo_struct, &bool_data, "b");
 
     let mut bar: StructRef = driver
         .runtime
@@ -433,7 +433,7 @@ fn marshal_struct() {
     }
 
     // Verify that struct marshalling works for struct types
-    let mut baz: StructRef = driver.runtime.invoke("baz_new", (foo,)).unwrap();
+    let mut baz_struct: StructRef = driver.runtime.invoke("baz_new", (foo_struct,)).unwrap();
     let c1: StructRef = driver
         .runtime
         .invoke("foo_new", (int_data.0, bool_data.0))
@@ -442,7 +442,7 @@ fn marshal_struct() {
         .runtime
         .invoke("foo_new", (int_data.1, bool_data.1))
         .unwrap();
-    test_struct(&mut baz, c1, c2);
+    test_struct(&mut baz_struct, c1, c2);
 
     let mut qux: StructRef = driver.runtime.invoke("qux_new", (bar,)).unwrap();
     let c1: StructRef = driver
@@ -497,10 +497,10 @@ fn marshal_struct() {
     }
 
     // Verify that StructRef::get makes a shallow copy of a struct
-    let mut foo = baz.get::<StructRef>("0").unwrap();
-    let foo2 = baz.get::<StructRef>("0").unwrap();
-    test_shallow_copy(&mut foo, &foo2, &int_data, "a");
-    test_shallow_copy(&mut foo, &foo2, &bool_data, "b");
+    let mut foo_struct = baz_struct.get::<StructRef>("0").unwrap();
+    let foo_struct2 = baz_struct.get::<StructRef>("0").unwrap();
+    test_shallow_copy(&mut foo_struct, &foo_struct2, &int_data, "a");
+    test_shallow_copy(&mut foo_struct, &foo_struct2, &bool_data, "b");
 
     fn test_clone<
         't,
@@ -525,10 +525,10 @@ fn marshal_struct() {
     }
 
     // Verify that StructRef::clone returns a `StructRef` to the same memory
-    let mut foo = baz.get::<StructRef>("0").unwrap();
-    let foo2 = foo.clone();
-    test_clone(&mut foo, &foo2, &int_data, "a");
-    test_clone(&mut foo, &foo2, &bool_data, "b");
+    let mut foo_struct = baz_struct.get::<StructRef>("0").unwrap();
+    let foo_struct2 = foo_struct.clone();
+    test_clone(&mut foo_struct, &foo_struct2, &int_data, "a");
+    test_clone(&mut foo_struct, &foo_struct2, &bool_data, "b");
 
     let mut bar = qux.get::<StructRef>("0").unwrap();
 
@@ -545,7 +545,7 @@ fn marshal_struct() {
     assert!(bar_err.is_err());
 
     // Specify invalid return type
-    let bar_err: Result<i64, _> = driver.runtime.invoke("baz_new", (foo,));
+    let bar_err: Result<i64, _> = driver.runtime.invoke("baz_new", (foo_struct,));
     assert!(bar_err.is_err());
 
     // Pass invalid struct type
@@ -674,7 +674,7 @@ fn test_primitive_types() {
         assert_eq!(Ok(data.0), s.get::<T>(field_name));
     }
 
-    let mut foo: StructRef = driver
+    let mut foo_struct: StructRef = driver
         .runtime
         .invoke(
             "new_primitives",
@@ -684,18 +684,18 @@ fn test_primitive_types() {
         )
         .unwrap();
 
-    test_field(&mut foo, (1u8, 100u8), "a");
-    test_field(&mut foo, (2u16, 101u16), "b");
-    test_field(&mut foo, (3u32, 102u32), "c");
-    test_field(&mut foo, (4u64, 103u64), "d");
-    test_field(&mut foo, (5u128, 104u128), "e");
-    test_field(&mut foo, (6i8, 105i8), "f");
-    test_field(&mut foo, (7i16, 106i16), "g");
-    test_field(&mut foo, (8i32, 107i32), "h");
-    test_field(&mut foo, (9i64, 108i64), "i");
-    test_field(&mut foo, (10i128, 109i128), "j");
-    test_field(&mut foo, (11f32, 110f32), "k");
-    test_field(&mut foo, (12f64, 111f64), "l");
+    test_field(&mut foo_struct, (1u8, 100u8), "a");
+    test_field(&mut foo_struct, (2u16, 101u16), "b");
+    test_field(&mut foo_struct, (3u32, 102u32), "c");
+    test_field(&mut foo_struct, (4u64, 103u64), "d");
+    test_field(&mut foo_struct, (5u128, 104u128), "e");
+    test_field(&mut foo_struct, (6i8, 105i8), "f");
+    test_field(&mut foo_struct, (7i16, 106i16), "g");
+    test_field(&mut foo_struct, (8i32, 107i32), "h");
+    test_field(&mut foo_struct, (9i64, 108i64), "i");
+    test_field(&mut foo_struct, (10i128, 109i128), "j");
+    test_field(&mut foo_struct, (11f32, 110f32), "k");
+    test_field(&mut foo_struct, (12f64, 111f64), "l");
 }
 
 #[test]

@@ -1,13 +1,12 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1045
 expression: "\n    pub fn add(a: u8, b: u8) -> u8 { a + b }\n    pub fn subtract(a: u8, b: u8) -> u8 { a - b }\n    pub fn multiply(a: u8, b: u8) -> u8 { a * b }\n    pub fn divide(a: u8, b: u8) -> u8 { a / b }\n    pub fn remainder(a: u8, b: u8) -> u8 { a % b }\n                        "
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [15 x i64*]
+@global_type_lookup_table = external global [1 x i64*]
 
 define i8 @add(i8 %0, i8 %1) {
 body:
@@ -43,5 +42,5 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [15 x i64*] zeroinitializer
+@global_type_lookup_table = global [1 x i64*] zeroinitializer
 

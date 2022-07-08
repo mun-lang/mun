@@ -1,10 +1,36 @@
 #ifndef MUN_RUNTIME_BINDINGS_H_
 #define MUN_RUNTIME_BINDINGS_H_
 
-/* Generated with cbindgen:0.23.0 */
-
 #include <stdbool.h>
 #include <stdint.h>
+
+/**
+ * Types of primitives supported by Mun.
+ */
+enum MunPrimitiveType
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+    MunPrimitiveType_Bool,
+    MunPrimitiveType_U8,
+    MunPrimitiveType_U16,
+    MunPrimitiveType_U32,
+    MunPrimitiveType_U64,
+    MunPrimitiveType_U128,
+    MunPrimitiveType_I8,
+    MunPrimitiveType_I16,
+    MunPrimitiveType_I32,
+    MunPrimitiveType_I64,
+    MunPrimitiveType_I128,
+    MunPrimitiveType_F32,
+    MunPrimitiveType_F64,
+    MunPrimitiveType_Empty,
+    MunPrimitiveType_Void,
+};
+#ifndef __cplusplus
+typedef uint8_t MunPrimitiveType;
+#endif // __cplusplus
 
 /**
  * Represents the kind of memory management a struct uses.
@@ -30,6 +56,11 @@ enum MunStructMemoryKind
 #ifndef __cplusplus
 typedef uint8_t MunStructMemoryKind;
 #endif // __cplusplus
+
+/**
+ * A linked version of [`mun_abi::StructInfo`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
+ */
+typedef struct MunStructInfo MunStructInfo;
 
 /**
  * A C-style handle to an error message.
@@ -71,71 +102,32 @@ typedef void *const *MunRawGcPtr;
 typedef MunRawGcPtr MunGcPtr;
 
 /**
- * Represents a globally unique identifier (GUID).
+ * Definition of an external function that is callable from Mun.
+ *
+ * The ownership of the contained TypeInfoHandles is considered to lie with this struct.
  */
-typedef struct MunGuid {
-    uint8_t _0[16];
-} MunGuid;
-
-/**
- * Represents a unique identifier for types. The runtime can use this to lookup the corresponding [`TypeInfo`].
- */
-typedef struct MunTypeId {
+typedef struct MunExternalFunctionDefinition {
     /**
-     * The GUID of the type
-     */
-    struct MunGuid guid;
-} MunTypeId;
-
-/**
- * Represents a function signature.
- */
-typedef struct MunFunctionSignature {
-    /**
-     * Argument types
-     */
-    const struct MunTypeId *arg_types;
-    /**
-     * Optional return type
-     */
-    struct MunTypeId return_type;
-    /**
-     * Number of argument types
-     */
-    uint16_t num_arg_types;
-} MunFunctionSignature;
-
-/**
- * Represents a function prototype. A function prototype contains the name, type signature, but
- * not an implementation.
- */
-typedef struct MunFunctionPrototype {
-    /**
-     * Function name
+     * The name of the function
      */
     const char *name;
     /**
-     * The type signature of the function
+     * The number of arguments of the function
      */
-    struct MunFunctionSignature signature;
-} MunFunctionPrototype;
-
-/**
- * Represents a function definition. A function definition contains the name, type signature, and
- * a pointer to the implementation.
- *
- * `fn_ptr` can be used to call the declared function.
- */
-typedef struct MunFunctionDefinition {
+    uint32_t num_args;
     /**
-     * Function prototype
+     * The types of the arguments
      */
-    struct MunFunctionPrototype prototype;
+    const struct MunTypeInfoHandle *arg_types;
     /**
-     * Function pointer
+     * The type of the return type
+     */
+    struct MunTypeInfoHandle return_type;
+    /**
+     * Pointer to the function
      */
     const void *fn_ptr;
-} MunFunctionDefinition;
+} MunExternalFunctionDefinition;
 
 /**
  * Options required to construct a [`RuntimeHandle`] through [`mun_runtime_create`]
@@ -153,7 +145,7 @@ typedef struct MunRuntimeOptions {
      * If the [`num_functions`] fields is non-zero this field must contain a pointer to an array
      * of [`abi::FunctionDefinition`]s.
      */
-    const struct MunFunctionDefinition *functions;
+    const struct MunExternalFunctionDefinition *functions;
     /**
      * The number of functions in the [`functions`] array.
      */
@@ -166,6 +158,63 @@ typedef struct MunRuntimeOptions {
 typedef struct MunFunctionInfoHandle {
     const void *_0;
 } MunFunctionInfoHandle;
+
+/**
+ * Represents a globally unique identifier (GUID).
+ */
+typedef struct MunGuid {
+    uint8_t _0[16];
+} MunGuid;
+
+/**
+ * Represents a pointer to another type.
+ */
+typedef struct MunPointerTypeId {
+    /**
+     * The type to which this pointer points
+     */
+    const union MunTypeId *pointee;
+    /**
+     * Whether or not this pointer is mutable or not
+     */
+    bool mutable_;
+} MunPointerTypeId;
+
+/**
+ * Represents a unique identifier for types. The runtime can use this to lookup the corresponding
+ * [`TypeInfo`]. A [`TypeId`] is a key for a [`TypeInfo`].
+ *
+ * A [`TypeId`] only contains enough information to query the runtime for a [`TypeInfo`].
+ */
+enum MunTypeId_Tag
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+    /**
+     * Represents a concrete type with a specific Guid
+     */
+    Concrete,
+    /**
+     * Represents a pointer to a type
+     */
+    Pointer,
+};
+#ifndef __cplusplus
+typedef uint8_t MunTypeId_Tag;
+#endif // __cplusplus
+
+typedef union MunTypeId {
+    MunTypeId_Tag tag;
+    struct {
+        MunTypeId_Tag concrete_tag;
+        struct MunGuid concrete;
+    };
+    struct {
+        MunTypeId_Tag pointer_tag;
+        struct MunPointerTypeId pointer;
+    };
+} MunTypeId;
 
 /**
  * A C-style handle to a `FieldInfo`.
@@ -210,6 +259,13 @@ typedef struct MunStructInfoHandle {
 } MunStructInfoHandle;
 
 /**
+ * A pointer to another type.
+ */
+typedef struct MunPointerInfoData {
+    bool mutable_;
+} MunPointerInfoData;
+
+/**
  * An enum containing C-style handles a `TypeInfo`'s data.
  */
 enum MunTypeInfoData_Tag
@@ -220,11 +276,15 @@ enum MunTypeInfoData_Tag
     /**
      * Primitive types (i.e. `()`, `bool`, `float`, `int`, etc.)
      */
-    Primitive,
+    MunTypeInfoData_Primitive,
     /**
      * Struct types (i.e. record, tuple, or unit structs)
      */
-    Struct,
+    MunTypeInfoData_Struct,
+    /**
+     * A pointer type
+     */
+    MunTypeInfoData_Pointer,
 };
 #ifndef __cplusplus
 typedef uint8_t MunTypeInfoData_Tag;
@@ -233,36 +293,18 @@ typedef uint8_t MunTypeInfoData_Tag;
 typedef union MunTypeInfoData {
     MunTypeInfoData_Tag tag;
     struct {
+        MunTypeInfoData_Tag primitive_tag;
+        struct MunGuid primitive;
+    };
+    struct {
         MunTypeInfoData_Tag struct_tag;
         struct MunStructInfoHandle struct_;
     };
+    struct {
+        MunTypeInfoData_Tag pointer_tag;
+        struct MunPointerInfoData pointer;
+    };
 } MunTypeInfoData;
-
-/**
- * Represents a struct declaration.
- */
-typedef struct MunStructInfo {
-    /**
-     * Struct fields' names
-     */
-    const char *const *field_names;
-    /**
-     * Struct fields' information
-     */
-    const struct MunTypeId *field_types;
-    /**
-     * Struct fields' offsets
-     */
-    const uint16_t *field_offsets;
-    /**
-     * Number of fields
-     */
-    uint16_t num_fields;
-    /**
-     * Struct memory kind
-     */
-    MunStructMemoryKind memory_kind;
-} MunStructInfo;
 
 #ifdef __cplusplus
 extern "C" {
@@ -441,7 +483,7 @@ struct MunErrorHandle mun_runtime_get_type_info_by_name(struct MunRuntimeHandle 
  * an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
  */
 struct MunErrorHandle mun_runtime_get_type_info_by_id(struct MunRuntimeHandle runtime,
-                                                      const struct MunTypeId *type_id,
+                                                      const union MunTypeId *type_id,
                                                       bool *has_type_info,
                                                       struct MunTypeInfoHandle *type_info);
 
@@ -618,17 +660,6 @@ bool mun_type_info_decrement_strong_count(struct MunTypeInfoHandle handle);
 bool mun_type_info_increment_strong_count(struct MunTypeInfoHandle handle);
 
 /**
- * Retrieves the type's ID.
- *
- * # Safety
- *
- * This function results in undefined behavior if the passed in `TypeInfoHandle` has been
- * deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
- */
-struct MunErrorHandle mun_type_info_id(struct MunTypeInfoHandle type_info,
-                                       struct MunTypeId *type_id);
-
-/**
  * Retrieves the type's name.
  *
  * # Safety
@@ -639,6 +670,26 @@ struct MunErrorHandle mun_type_info_id(struct MunTypeInfoHandle type_info,
  * deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
  */
 const char *mun_type_info_name(struct MunTypeInfoHandle type_info);
+
+/**
+ * Returns true if the specified type info handles describe the same type.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if any of the the passed in `TypeInfoHandle` have
+ * been deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
+ */
+bool mun_type_info_eq(struct MunTypeInfoHandle a, struct MunTypeInfoHandle b);
+
+/**
+ * Returns the TypeInfoHandle of a pointer to the given TypeInfoHandle.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if any of the the passed in `TypeInfoHandle` have
+ * been deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
+ */
+struct MunTypeInfoHandle mun_type_info_pointer_type(struct MunTypeInfoHandle handle, bool mutable_);
 
 /**
  * Retrieves the type's size.
@@ -682,6 +733,11 @@ struct MunErrorHandle mun_type_info_data(struct MunTypeInfoHandle type_info,
  * processes, will lead to undefined behavior.
  */
 bool mun_type_info_span_destroy(struct MunTypeInfoSpan array_handle);
+
+/**
+ * Returns a TypeInfoHandle that represents the specified primitive type.
+ */
+struct MunTypeInfoHandle mun_type_info_primitive(MunPrimitiveType primitive_type);
 
 #ifdef __cplusplus
 } // extern "C"

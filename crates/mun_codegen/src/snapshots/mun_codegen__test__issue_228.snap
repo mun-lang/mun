@@ -1,13 +1,12 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1045
 expression: "\n    pub  fn fact(n: usize) -> usize {\n   \t    if n == 0 {return 1} else {n * (n-1)}\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [2 x i64*]
+@global_type_lookup_table = external global [1 x i64*]
 
 define i64 @fact(i64 %0) {
 body:
@@ -22,5 +21,5 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [2 x i64*] zeroinitializer
+@global_type_lookup_table = global [1 x i64*] zeroinitializer
 

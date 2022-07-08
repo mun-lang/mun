@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod test;
+
 use crate::value::{
     AsValue, BytesOrPtr, IrTypeContext, IrValueContext, SizedValueType, TransparentValue, Value,
 };
@@ -41,19 +44,20 @@ impl<'ink> TransparentValue<'ink> for abi::StructMemoryKind {
 }
 
 #[derive(AsValue)]
-pub struct TypeId {
-    pub guid: abi::Guid,
+#[repr(u8)]
+pub enum TypeId<'ink> {
+    Concrete(abi::Guid),
+    Pointer(PointerTypeId<'ink>),
 }
 
-impl From<abi::TypeId> for TypeId {
-    fn from(type_id: abi::TypeId) -> Self {
-        TypeId { guid: type_id.guid }
-    }
+#[derive(AsValue)]
+pub struct PointerTypeId<'ink> {
+    pub pointee: Value<'ink, *const TypeId<'ink>>,
+    pub mutable: bool,
 }
 
 #[derive(AsValue)]
 pub struct TypeInfo<'ink> {
-    pub id: TypeId,
     pub name: Value<'ink, *const u8>,
     pub size_in_bits: u32,
     pub alignment: u8,
@@ -63,14 +67,13 @@ pub struct TypeInfo<'ink> {
 #[derive(AsValue)]
 #[repr(u8)]
 pub enum TypeInfoData<'ink> {
-    Primitive,
     Struct(StructInfo<'ink>),
 }
 
 #[derive(AsValue)]
 pub struct FunctionSignature<'ink> {
-    pub arg_types: Value<'ink, *const TypeId>,
-    pub return_type: TypeId,
+    pub arg_types: Value<'ink, *const TypeId<'ink>>,
+    pub return_type: TypeId<'ink>,
     pub num_arg_types: u16,
 }
 
@@ -88,8 +91,9 @@ pub struct FunctionDefinition<'ink> {
 
 #[derive(AsValue)]
 pub struct StructInfo<'ink> {
+    pub guid: abi::Guid,
     pub field_names: Value<'ink, *const *const u8>,
-    pub field_types: Value<'ink, *const TypeId>,
+    pub field_types: Value<'ink, *const TypeId<'ink>>,
     pub field_offsets: Value<'ink, *const u16>,
     pub num_fields: u16,
     pub memory_kind: abi::StructMemoryKind,
@@ -113,7 +117,7 @@ pub struct DispatchTable<'ink> {
 
 #[derive(AsValue)]
 pub struct TypeLut<'ink> {
-    pub type_ids: Value<'ink, *const TypeId>,
+    pub type_ids: Value<'ink, *const TypeId<'ink>>,
     pub type_ptrs: Value<'ink, *mut *const std::ffi::c_void>,
     pub type_names: Value<'ink, *const *const u8>,
     pub num_entries: u32,

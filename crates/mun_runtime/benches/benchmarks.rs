@@ -211,7 +211,7 @@ pub fn set_struct_field_benchmark(c: &mut Criterion) {
     let rust_child = RustChild(-2.0, -1.0, 1.0, 2.0);
     let mut rust_child2 = rust_child.clone();
     let rust_child3 = RustChild {
-        0: 3.14,
+        0: std::f32::consts::PI,
         ..Default::default()
     };
     let mut rust_parent = RustParent {
@@ -230,7 +230,7 @@ pub fn set_struct_field_benchmark(c: &mut Criterion) {
             b.iter(|| {
                 for _ in 0..*i {
                     // TODO: Optimise `RefCell::borrow` cost for sequential marshalling
-                    gc_child.set("0", -3.14f32).unwrap();
+                    gc_child.set("0", -std::f32::consts::PI).unwrap();
                 }
             })
         });
@@ -239,7 +239,7 @@ pub fn set_struct_field_benchmark(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("rust fundamental", i), i, |b, i| {
             b.iter(|| {
                 for _ in 0..*i {
-                    rust_child2.0 = -3.14;
+                    rust_child2.0 = -std::f32::consts::PI;
                     black_box(&rust_child2);
                 }
             })

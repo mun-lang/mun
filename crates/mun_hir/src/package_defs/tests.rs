@@ -269,11 +269,10 @@ fn tree_for_module(
         match def {
             ItemDefinitionId::ModuleId(m) => {
                 if m.package == module.id.package
-                    && module
+                    && !module
                         .children(db)
                         .into_iter()
-                        .find(|child_id| child_id.id == *m)
-                        .is_none()
+                        .any(|child_id| child_id.id == *m)
                 {
                     let module: Module = (*m).into();
                     node.push(format!(

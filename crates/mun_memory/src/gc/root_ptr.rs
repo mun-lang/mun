@@ -40,6 +40,8 @@ impl<G: GcRuntime> GcRootPtr<G> {
     }
 
     /// Unroots the handle consuming self and returning the unrooted handle
+    /// TODO: Should this simply return nothing, since the returned handle may be collected at any
+    ///     time?
     pub fn unroot(self) -> GcPtr {
         self.handle
     }

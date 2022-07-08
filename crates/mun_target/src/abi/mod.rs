@@ -5,6 +5,8 @@ mod integer;
 mod size;
 
 use crate::spec::Target;
+use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 
 pub use align::Align;
 pub use integer::Integer;
@@ -176,24 +178,21 @@ impl TargetDataLayout {
         }
 
         // Perform consistency checks against the Target information.
-        let endian_str = match dl.endian {
-            Endian::Little => "little",
-            Endian::Big => "big",
-        };
-        if endian_str != target.target_endian {
+        if dl.endian != target.options.endian {
             return Err(format!(
                 "inconsistent target specification: \"data-layout\" claims \
                                 architecture is {}-endian, while \"target-endian\" is `{}`",
-                endian_str, target.target_endian
+                dl.endian, target.options.endian
             ));
         }
 
-        if dl.pointer_size.bits().to_string() != target.target_pointer_width {
+        let target_pointer_width: u64 = target.pointer_width.into();
+        if dl.pointer_size.bits() != target_pointer_width {
             return Err(format!(
                 "inconsistent target specification: \"data-layout\" claims \
                                 pointers are {}-bit, while \"target-pointer-width\" is `{}`",
                 dl.pointer_size.bits(),
-                target.target_pointer_width
+                target.pointer_width
             ));
         }
 
@@ -257,6 +256,33 @@ impl TargetDataLayout {
 pub enum Endian {
     Little,
     Big,
+}
+
+impl Endian {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Little => "little",
+            Self::Big => "big",
+        }
+    }
+}
+
+impl Display for Endian {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl FromStr for Endian {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "little" => Ok(Self::Little),
+            "big" => Ok(Self::Big),
+            _ => Err(format!(r#"unknown endian: "{}""#, s)),
+        }
+    }
 }
 
 /// A pair of alignments, ABI-mandated and preferred.

@@ -1,36 +1,18 @@
-use crate::Guid;
-use itertools::izip;
 use std::ffi::CStr;
 use std::os::raw::c_char;
-use std::{ffi, fmt, slice, str};
+use std::{ffi, slice, str};
 
-/// Represents a unique identifier for types. The runtime can use this to lookup the corresponding [`TypeInfo`].
-#[repr(C)]
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub struct TypeId {
-    /// The GUID of the type
-    pub guid: Guid,
-}
+use itertools::izip;
 
-impl From<Guid> for TypeId {
-    fn from(guid: Guid) -> Self {
-        TypeId { guid }
-    }
-}
-
-impl fmt::Display for TypeId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.guid.fmt(f)
-    }
-}
+use crate::type_id::TypeId;
 
 /// Represents a lookup table for type information. This is used for runtime linking.
 ///
 /// Type IDs and handles are stored separately for cache efficiency.
 #[repr(C)]
-pub struct TypeLut {
+pub struct TypeLut<'a> {
     /// Type IDs
-    pub(crate) type_ids: *const TypeId,
+    pub(crate) type_ids: *const TypeId<'a>,
     /// Type information handles
     pub(crate) type_handles: *mut *const ffi::c_void,
     /// Debug names
@@ -39,7 +21,7 @@ pub struct TypeLut {
     pub num_entries: u32,
 }
 
-impl TypeLut {
+impl<'a> TypeLut<'a> {
     /// Returns an iterator over pairs of type IDs and type handles.
     pub fn iter(&self) -> impl Iterator<Item = (&TypeId, &*const ffi::c_void, &str)> {
         let (type_ids, type_ptrs, type_names) = if self.num_entries != 0 {
@@ -94,7 +76,7 @@ impl TypeLut {
     }
 
     /// Returns type IDs.
-    pub fn type_ids(&self) -> &[TypeId] {
+    pub fn type_ids(&self) -> &[TypeId<'a>] {
         if self.num_entries == 0 {
             &[]
         } else {
@@ -161,10 +143,32 @@ impl TypeLut {
     }
 }
 
+#[cfg(feature = "serde")]
+impl<'a> serde::Serialize for TypeLut<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeSeq;
+
+        let mut s = serializer.serialize_seq(Some(self.num_entries as usize))?;
+        for (ty, _, name) in self.iter() {
+            #[derive(serde::Serialize)]
+            struct Elem<'a> {
+                name: &'a str,
+                r#type: &'a TypeId<'a>,
+            }
+            s.serialize_element(&Elem { name, r#type: ty })?;
+        }
+        s.end()
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::test_utils::{fake_type_lut, FAKE_TYPE_ID, FAKE_TYPE_NAME};
     use std::{ffi::CString, ptr};
+
+    use crate::test_utils::{fake_type_lut, FAKE_TYPE_ID, FAKE_TYPE_NAME};
 
     #[test]
     fn test_type_lut_iter_mut_none() {
@@ -190,6 +194,35 @@ mod tests {
         assert_eq!(type_lut.iter_mut().count(), iter.len());
 
         for (lhs, rhs) in type_lut.iter_mut().zip(iter) {
+            assert_eq!(lhs.0, rhs.0);
+            assert_eq!(lhs.1, rhs.1);
+        }
+    }
+
+    #[test]
+    fn test_type_lut_iter_none() {
+        let type_ids = &[];
+        let type_ptrs = &mut [];
+        let type_names = &[];
+        let type_lut = fake_type_lut(type_ids, type_ptrs, type_names);
+
+        let iter = type_ids.iter().zip(type_ptrs.iter_mut());
+        assert_eq!(type_lut.iter().count(), iter.count());
+    }
+
+    #[test]
+    fn test_type_lut_iter_some() {
+        let type_name = CString::new(FAKE_TYPE_NAME).expect("Invalid fake type name.");
+
+        let type_ids = &[FAKE_TYPE_ID];
+        let type_ptrs = &mut [ptr::null()];
+        let type_names = &[type_name.as_ptr()];
+        let type_lut = fake_type_lut(type_ids, type_ptrs, type_names);
+
+        let iter = type_ids.iter().zip(type_ptrs.iter_mut());
+        assert_eq!(type_lut.iter().count(), iter.len());
+
+        for (lhs, rhs) in type_lut.iter().zip(iter) {
             assert_eq!(lhs.0, rhs.0);
             assert_eq!(lhs.1, rhs.1);
         }

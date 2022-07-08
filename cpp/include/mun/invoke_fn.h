@@ -50,7 +50,7 @@ InvokeResult<Output, Args...> invoke_fn(Runtime& runtime, std::string_view fn_na
 
         if constexpr (NUM_ARGS > 0) {
             const MunTypeInfoHandle* arg_ptr = arg_types.begin();
-            const std::optional<std::pair<const char*, const char*>> return_type_diffs[] = {
+            const std::optional<std::pair<std::string, std::string>> return_type_diffs[] = {
                 reflection::equals_argument_type(TypeInfo(*(arg_ptr++)), args)...};
 
             for (size_t idx = 0; idx < NUM_ARGS; ++idx) {

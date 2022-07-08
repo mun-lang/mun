@@ -169,7 +169,7 @@ pub(crate) mod tests {
         mun_string_destroy,
         runtime::{mun_runtime_get_function_info, RuntimeHandle},
         test_util::TestDriver,
-        type_info::mun_type_info_id,
+        type_info::mun_type_info_eq,
     };
     use memory::HasStaticTypeInfo;
     use runtime::FunctionDefinition;
@@ -202,10 +202,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_function_info_decrement_strong_count_invalid_fn_info() {
-        assert_eq!(
-            unsafe { mun_function_info_decrement_strong_count(FunctionInfoHandle::null()) },
-            false
-        );
+        assert!(!unsafe { mun_function_info_decrement_strong_count(FunctionInfoHandle::null()) },);
     }
 
     #[test]
@@ -222,10 +219,7 @@ pub(crate) mod tests {
         let strong_count = Arc::strong_count(&fn_info_arc);
         assert!(strong_count > 0);
 
-        assert_eq!(
-            unsafe { mun_function_info_decrement_strong_count(fn_info) },
-            true
-        );
+        assert!(unsafe { mun_function_info_decrement_strong_count(fn_info) });
         assert_eq!(Arc::strong_count(&fn_info_arc), strong_count - 1);
 
         mem::forget(fn_info_arc);
@@ -233,10 +227,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_function_info_increment_strong_count_invalid_fn_info() {
-        assert_eq!(
-            unsafe { mun_function_info_increment_strong_count(FunctionInfoHandle::null()) },
-            false
-        );
+        assert!(!unsafe { mun_function_info_increment_strong_count(FunctionInfoHandle::null()) });
     }
 
     #[test]
@@ -253,10 +244,7 @@ pub(crate) mod tests {
         let strong_count = Arc::strong_count(&fn_info_arc);
         assert!(strong_count > 0);
 
-        assert_eq!(
-            unsafe { mun_function_info_increment_strong_count(fn_info) },
-            true
-        );
+        assert!(unsafe { mun_function_info_increment_strong_count(fn_info) });
         assert_eq!(Arc::strong_count(&fn_info_arc), strong_count + 1);
 
         mem::forget(fn_info_arc);
@@ -382,13 +370,7 @@ pub(crate) mod tests {
         (0..arg_types.len).into_iter().for_each(|index| {
             let type_info = arg_types.get(index);
             assert_ne!(type_info.0, ptr::null());
-
-            let mut type_id = MaybeUninit::uninit();
-            let handle = unsafe { mun_type_info_id(type_info, type_id.as_mut_ptr()) };
-            assert_eq!(handle.0, ptr::null());
-
-            let type_id = unsafe { type_id.assume_init() };
-            assert_eq!(type_id, <i32>::type_info().id);
+            assert!(unsafe { mun_type_info_eq(type_info, i32::type_info().clone().into()) });
         })
     }
 
@@ -410,12 +392,7 @@ pub(crate) mod tests {
         let return_type = unsafe { mun_function_info_return_type(fn_info) };
         assert_ne!(return_type.0, ptr::null());
 
-        let mut type_id = MaybeUninit::uninit();
-        let handle = unsafe { mun_type_info_id(return_type, type_id.as_mut_ptr()) };
-        assert_eq!(handle.0, ptr::null());
-
-        let type_id = unsafe { type_id.assume_init() };
-        assert_eq!(type_id, <()>::type_info().id);
+        assert!(unsafe { mun_type_info_eq(return_type, <()>::type_info().clone().into()) });
     }
 
     #[test]
@@ -430,11 +407,6 @@ pub(crate) mod tests {
         let return_type = unsafe { mun_function_info_return_type(fn_info) };
         assert_ne!(return_type.0, ptr::null());
 
-        let mut type_id = MaybeUninit::uninit();
-        let handle = unsafe { mun_type_info_id(return_type, type_id.as_mut_ptr()) };
-        assert_eq!(handle.0, ptr::null());
-
-        let type_id = unsafe { type_id.assume_init() };
-        assert_eq!(type_id, <i32>::type_info().id);
+        assert!(unsafe { mun_type_info_eq(return_type, <i32>::type_info().clone().into()) });
     }
 }

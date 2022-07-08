@@ -188,16 +188,19 @@ struct RuntimeOptions {
 inline std::optional<Runtime> make_runtime(std::string_view library_path,
                                            const RuntimeOptions& options = {},
                                            Error* out_error = nullptr) noexcept {
-    std::vector<MunFunctionDefinition> function_definitions(options.functions.size());
+    std::vector<MunExternalFunctionDefinition> function_definitions(options.functions.size());
     for (size_t i = 0; i < options.functions.size(); ++i) {
         auto& definition = function_definitions[i];
         const auto& func = options.functions[i];
-        definition = MunFunctionDefinition{
-            MunFunctionPrototype{
-                func.name.c_str(),
-                MunFunctionSignature{func.arg_types.data(), func.ret_type,
-                                     static_cast<uint16_t>(func.arg_types.size())}},
-            func.fn_ptr};
+        definition = MunExternalFunctionDefinition{
+            func.name.c_str(), static_cast<uint32_t>(func.arg_types.size()), func.arg_types.data(),
+            func.ret_type, func.fn_ptr};
+
+        // The MunExternalFunctionDefinition has ownership over the stored types
+        for (const auto& arg_type : func.arg_types) {
+            mun_type_info_increment_strong_count(arg_type);
+        }
+        mun_type_info_increment_strong_count(func.ret_type);
     }
 
     MunRuntimeOptions runtime_options;

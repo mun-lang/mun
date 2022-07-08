@@ -1,13 +1,12 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1045
 expression: "\n    pub fn foo(n:i32) -> i32 {\n        loop {\n            if n > 5 {\n                break n;\n            }\n            if n > 10 {\n                break 10;\n            }\n            n += 1;\n        }\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [2 x i64*]
+@global_type_lookup_table = external global [1 x i64*]
 
 define i32 @foo(i32 %0) {
 body:
@@ -38,5 +37,5 @@ if_merge6:                                        ; preds = %if_merge
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [2 x i64*] zeroinitializer
+@global_type_lookup_table = global [1 x i64*] zeroinitializer
 

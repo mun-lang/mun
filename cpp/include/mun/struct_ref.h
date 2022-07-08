@@ -18,16 +18,18 @@
 namespace mun {
 namespace details {
 inline std::optional<FieldInfo> find_field(std::string_view type_name,
-                                           const StructInfo& struct_info,
+                                           MunStructInfoHandle struct_info,
                                            std::string_view field_name) noexcept {
-    const auto fields = struct_info.fields();
+    MunFieldInfoSpan fields;
+    auto err = mun_struct_info_fields(struct_info, &fields);
+    assert(err._0 == nullptr);
 
-    const auto it = std::find_if(fields.begin(), fields.end(),
+    const auto it = std::find_if(fields.data, fields.data + fields.len,
                                  [field_name](const MunFieldInfoHandle& field_handle) {
-                                     const FieldInfo field_info(field_handle);
-                                     return field_info.name() == field_name;
+                                     return field_name == mun_field_info_name(field_handle);
                                  });
-    if (it == fields.end()) {
+
+    if (it == fields.data + fields.len) {
         std::cerr << "StructRef `" << type_name << "` does not contain field `" << field_name
                   << "`." << std::endl;
         return std::nullopt;
@@ -60,7 +62,7 @@ public:
      */
     StructRef(const Runtime& runtime, MunGcPtr raw) noexcept
         : m_runtime(&runtime), m_handle(GcRootPtr(runtime, raw)) {
-        assert(runtime.ptr_type(raw).data().tag == MunTypeInfoData_Tag::Struct);
+        assert(runtime.ptr_type(raw).is_struct());
     }
 
     StructRef(const StructRef&) noexcept = default;
@@ -128,12 +130,17 @@ struct Marshal<StructRef> {
 
     static StructRef copy_from(const type* ptr, const Runtime& runtime,
                                const TypeInfo& type_info) noexcept {
-        // Safety: `type_info_as_struct` is guaranteed to return a value for
-        // `StructRef`s.
-        const StructInfo struct_info(type_info.data().struct_);
+        MunTypeInfoData type_data;
+        auto err = mun_type_info_data(type_info.handle(), &type_data);
+        assert(err._0 == nullptr);
+
+        // Safety: `mun_type_info_data` is guaranteed to return a value for `StructRef`s.
+        MunStructMemoryKind memory_kind;
+        err = mun_struct_info_memory_kind(type_data.struct_, &memory_kind);
+        assert(err._0 == nullptr);
 
         MunGcPtr gc_handle;
-        if (struct_info.memory_kind() == MunStructMemoryKind::Value) {
+        if (memory_kind == MunStructMemoryKind::Value) {
             // Create a new managed object
             gc_handle = *runtime.gc_alloc(type_info);
 
@@ -148,10 +155,16 @@ struct Marshal<StructRef> {
     }
 
     static void move_to(type value, type* ptr, const TypeInfo& type_info) noexcept {
-        // Safety: `type_info_as_struct` is guaranteed to return a value for
-        // `StructRef`s.
-        const StructInfo struct_info(type_info.data().struct_);
-        if (struct_info.memory_kind() == MunStructMemoryKind::Value) {
+        MunTypeInfoData type_data;
+        auto err = mun_type_info_data(type_info.handle(), &type_data);
+        assert(err._0 == nullptr);
+
+        // Safety: `mun_type_info_data` is guaranteed to return a value for `StructRef`s.
+        MunStructMemoryKind memory_kind;
+        err = mun_struct_info_memory_kind(type_data.struct_, &memory_kind);
+        assert(err._0 == nullptr);
+
+        if (memory_kind == MunStructMemoryKind::Value) {
             // Copy the `struct(value)` into the old object
             std::memcpy(ptr, *value, type_info.size());
         } else {
@@ -161,12 +174,17 @@ struct Marshal<StructRef> {
 
     static StructRef swap_at(type value, type* ptr, const Runtime& runtime,
                              const TypeInfo& type_info) noexcept {
-        // Safety: `type_info_as_struct` is guaranteed to return a value for
-        // `StructRef`s.
-        const StructInfo struct_info(type_info.data().struct_);
+        MunTypeInfoData type_data;
+        auto err = mun_type_info_data(type_info.handle(), &type_data);
+        assert(err._0 == nullptr);
+
+        // Safety: `mun_type_info_data` is guaranteed to return a value for `StructRef`s.
+        MunStructMemoryKind memory_kind;
+        err = mun_struct_info_memory_kind(type_data.struct_, &memory_kind);
+        assert(err._0 == nullptr);
 
         MunGcPtr gc_handle;
-        if (struct_info.memory_kind() == MunStructMemoryKind::Value) {
+        if (memory_kind == MunStructMemoryKind::Value) {
             // Create a new managed object
             gc_handle = *runtime.gc_alloc(type_info);
 
@@ -192,31 +210,35 @@ namespace mun {
 
 template <>
 struct ArgumentReflection<StructRef> {
-    static const char* type_name(const StructRef& s) noexcept { return s.info().name().data(); }
-    static MunTypeId type_id(const StructRef& s) noexcept { return s.info().id(); }
+    static TypeInfo type_info(const StructRef& ref) noexcept { return ref.info(); }
 };
 
 template <>
 struct ReturnTypeReflection<StructRef> {
-    static constexpr const char* type_name() noexcept { return "struct"; }
-    static constexpr MunTypeId type_id() noexcept { return details::type_id(type_name()); }
+    static bool accepts_type(const TypeInfo& ty) noexcept { return ty.is_struct(); }
+    static std::string type_hint() {
+        using namespace std::string_literals;
+        return "struct"s;
+    }
 };
 
 template <typename T>
 std::optional<T> StructRef::get(std::string_view field_name) const noexcept {
     const auto type_info = info();
 
-    // Safety: `type_info_as_struct` is guaranteed to return a value for
-    // `StructRef`s.
-    const StructInfo struct_info(type_info.data().struct_);
-    if (const auto field_info = details::find_field(type_info.name(), struct_info, field_name)) {
-        if (auto diff = reflection::equals_return_type<T>(field_info->type())) {
-            const auto& [expected, found] = *diff;
+    MunTypeInfoData type_data;
+    auto err = mun_type_info_data(type_info.handle(), &type_data);
+    assert(err._0 == nullptr);
 
+    // Safety: `mun_type_info_data` is guaranteed to return a value for `StructRef`s.
+    if (const auto field_info =
+            details::find_field(type_info.name(), type_data.struct_, field_name);
+        field_info.has_value()) {
+        if (!ReturnTypeReflection<T>::accepts_type(field_info->type())) {
             std::cerr << "Mismatched types for `"
                       << details::format_struct_field(type_info.name(), field_name)
-                      << "`. Expected: `" << expected << "`. Found: `" << found << "`."
-                      << std::endl;
+                      << "`. Expected: `" << ReturnTypeReflection<T>::type_hint << "`. Found: `"
+                      << type_info.name() << "`." << std::endl;
 
             return std::nullopt;
         }
@@ -234,17 +256,19 @@ template <typename T>
 std::optional<T> StructRef::replace(std::string_view field_name, T value) noexcept {
     const auto type_info = info();
 
-    // Safety: `type_info_as_struct` is guaranteed to return a value for
-    // `StructRef`s.
-    const StructInfo struct_info(type_info.data().struct_);
-    if (const auto field_info = details::find_field(type_info.name(), struct_info, field_name)) {
-        if (auto diff = reflection::equals_return_type<T>(field_info->type())) {
-            const auto& [expected, found] = *diff;
+    MunTypeInfoData type_data;
+    auto err = mun_type_info_data(type_info.handle(), &type_data);
+    assert(err._0 == nullptr);
 
+    // Safety: `mun_type_info_data` is guaranteed to return a value for `StructRef`s.
+    if (const auto field_info =
+            details::find_field(type_info.name(), type_data.struct_, field_name);
+        field_info.has_value()) {
+        if (!ReturnTypeReflection<T>::accepts_type(field_info->type())) {
             std::cerr << "Mismatched types for `"
                       << details::format_struct_field(type_info.name(), field_name)
-                      << "`. Expected: `" << expected << "`. Found: `" << found << "`."
-                      << std::endl;
+                      << "`. Expected: `" << ReturnTypeReflection<T>::type_hint << "`. Found: `"
+                      << type_info.name() << "`." << std::endl;
 
             return std::nullopt;
         }
@@ -262,17 +286,19 @@ template <typename T>
 bool StructRef::set(std::string_view field_name, T value) noexcept {
     const auto type_info = info();
 
-    // Safety: `type_info_as_struct` is guaranteed to return a value for
-    // `StructRef`s.
-    const StructInfo struct_info(type_info.data().struct_);
-    if (const auto field_info = details::find_field(type_info.name(), struct_info, field_name)) {
-        if (auto diff = reflection::equals_return_type<T>(field_info->type())) {
-            const auto& [expected, found] = *diff;
+    MunTypeInfoData type_data;
+    auto err = mun_type_info_data(type_info.handle(), &type_data);
+    assert(err._0 == nullptr);
 
+    // Safety: `mun_type_info_data` is guaranteed to return a value for `StructRef`s.
+    if (const auto field_info =
+            details::find_field(type_info.name(), type_data.struct_, field_name);
+        field_info.has_value()) {
+        if (!ReturnTypeReflection<T>::accepts_type(field_info->type())) {
             std::cerr << "Mismatched types for `"
                       << details::format_struct_field(type_info.name(), field_name)
-                      << "`. Expected: `" << expected << "`. Found: `" << found << "`."
-                      << std::endl;
+                      << "`. Expected: `" << ReturnTypeReflection<T>::type_hint << "`. Found: `"
+                      << type_info.name() << "`." << std::endl;
 
             return false;
         }
