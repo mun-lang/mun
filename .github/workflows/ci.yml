@@ -123,7 +123,7 @@ jobs:
           RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
         with:
           command: build
-          args: -p mun_runtime -p mun_runtime_capi
+          args: -p mun -p mun_runtime -p mun_runtime_capi
           
       - name: Create build folder (debug)
         run: cmake -E make_directory ${{ runner.workspace }}/build/debug
