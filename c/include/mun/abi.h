@@ -1,8 +1,6 @@
 #ifndef MUN_ABI_H_
 #define MUN_ABI_H_
 
-/* Generated with cbindgen:0.23.0 */
-
 #include <stdint.h>
 
 /**
@@ -43,13 +41,71 @@ typedef struct MunGuid {
 } MunGuid;
 
 /**
- * Represents a unique identifier for types. The runtime can use this to lookup the corresponding [`TypeInfo`].
+ * Represents a pointer to another type.
  */
-typedef struct MunTypeId {
+typedef struct MunPointerTypeId {
     /**
-     * The GUID of the type
+     * The type to which this pointer points
      */
-    struct MunGuid guid;
+    const union MunTypeId *pointee;
+    /**
+     * Whether or not this pointer is mutable or not
+     */
+    bool mutable_;
+} MunPointerTypeId;
+
+/**
+ * Represents an array of a specific type.
+ */
+typedef struct MunArrayTypeId {
+    /**
+     * The element type of the array
+     */
+    const union MunTypeId *element;
+} MunArrayTypeId;
+
+/**
+ * Represents a unique identifier for types. The runtime can use this to lookup the corresponding
+ * [`TypeInfo`]. A [`TypeId`] is a key for a [`TypeInfo`].
+ *
+ * A [`TypeId`] only contains enough information to query the runtime for a [`TypeInfo`].
+ */
+enum MunTypeId_Tag
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+    /**
+     * Represents a concrete type with a specific Guid
+     */
+    Concrete,
+    /**
+     * Represents a pointer to a type
+     */
+    Pointer,
+    /**
+     * Represents an array of a specific type
+     */
+    Array,
+};
+#ifndef __cplusplus
+typedef uint8_t MunTypeId_Tag;
+#endif // __cplusplus
+
+typedef union MunTypeId {
+    MunTypeId_Tag tag;
+    struct {
+        MunTypeId_Tag concrete_tag;
+        struct MunGuid concrete;
+    };
+    struct {
+        MunTypeId_Tag pointer_tag;
+        struct MunPointerTypeId pointer;
+    };
+    struct {
+        MunTypeId_Tag array_tag;
+        struct MunArrayTypeId array;
+    };
 } MunTypeId;
 
 /**
@@ -59,11 +115,11 @@ typedef struct MunFunctionSignature {
     /**
      * Argument types
      */
-    const struct MunTypeId *arg_types;
+    const union MunTypeId *arg_types;
     /**
      * Optional return type
      */
-    struct MunTypeId return_type;
+    union MunTypeId return_type;
     /**
      * Number of argument types
      */
@@ -105,7 +161,11 @@ typedef struct MunFunctionDefinition {
 /**
  * Represents a struct declaration.
  */
-typedef struct MunStructInfo {
+typedef struct MunStructDefinition {
+    /**
+     * The unique identifier of this struct
+     */
+    struct MunGuid guid;
     /**
      * Struct fields' names
      */
@@ -113,7 +173,7 @@ typedef struct MunStructInfo {
     /**
      * Struct fields' information
      */
-    const struct MunTypeId *field_types;
+    const union MunTypeId *field_types;
     /**
      * Struct fields' offsets
      */
@@ -126,48 +186,48 @@ typedef struct MunStructInfo {
      * Struct memory kind
      */
     MunStructMemoryKind memory_kind;
-} MunStructInfo;
+} MunStructDefinition;
 
 /**
  * Contains data specific to a group of types that illicit the same characteristics.
  */
-enum MunTypeInfoData_Tag
+enum MunTypeDefinitionData_Tag
 #ifdef __cplusplus
   : uint8_t
 #endif // __cplusplus
  {
-    /**
-     * Primitive types (i.e. `()`, `bool`, `float`, `int`, etc.)
-     */
-    Primitive,
     /**
      * Struct types (i.e. record, tuple, or unit structs)
      */
     Struct,
 };
 #ifndef __cplusplus
-typedef uint8_t MunTypeInfoData_Tag;
+typedef uint8_t MunTypeDefinitionData_Tag;
 #endif // __cplusplus
 
-typedef union MunTypeInfoData {
-    MunTypeInfoData_Tag tag;
+typedef union MunTypeDefinitionData {
+    MunTypeDefinitionData_Tag tag;
     struct {
-        MunTypeInfoData_Tag struct_tag;
-        struct MunStructInfo struct_;
+        MunTypeDefinitionData_Tag struct_tag;
+        struct MunStructDefinition struct_;
     };
-} MunTypeInfoData;
+} MunTypeDefinitionData;
 
 /**
- * Represents the type declaration for a value type.
+ * Represents the type declaration for a type that is exported by an assembly.
+ *
+ * When multiple Mun modules reference the same type, only one module exports the type; the module
+ * that contains the type definition. All the other Mun modules reference the type through a
+ * [`TypeId`].
+ *
+ * The modules that defines the type exports the data to reduce the filesize of the assemblies and
+ * to ensure only one definition exists. When linking all assemblies together the type definitions
+ * from all assemblies are loaded and the information is shared to modules that reference the type.
  *
  * TODO: add support for polymorphism, enumerations, type parameters, generic type definitions, and
- * constructed generic types.
+ *   constructed generic types.
  */
-typedef struct MunTypeInfo {
-    /**
-     * Type ID
-     */
-    struct MunTypeId id;
+typedef struct MunTypeDefinition {
     /**
      * Type name
      */
@@ -183,8 +243,8 @@ typedef struct MunTypeInfo {
     /**
      * Type group
      */
-    union MunTypeInfoData data;
-} MunTypeInfo;
+    union MunTypeDefinitionData data;
+} MunTypeDefinition;
 
 /**
  * Represents a module declaration.
@@ -201,7 +261,7 @@ typedef struct MunModuleInfo {
     /**
      * Module types
      */
-    const struct MunTypeInfo *types;
+    const struct MunTypeDefinition *types;
     /**
      * Number of module functions
      */
@@ -241,7 +301,7 @@ typedef struct MunTypeLut {
     /**
      * Type IDs
      */
-    const struct MunTypeId *type_ids;
+    const union MunTypeId *type_ids;
     /**
      * Type information handles
      */

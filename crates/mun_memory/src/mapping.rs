@@ -42,7 +42,7 @@ pub enum Action {
 }
 
 impl Mapping {
-    ///
+    #[allow(clippy::mutable_key_type)]
     pub fn new(old: &[Arc<TypeInfo>], new: &[Arc<TypeInfo>]) -> Self {
         let diff = diff(old, new);
 

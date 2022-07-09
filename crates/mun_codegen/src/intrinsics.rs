@@ -9,7 +9,7 @@ mod macros;
 /// are mostly used internally.
 pub trait Intrinsic: Sync {
     /// Returns the prototype of the intrinsic
-    fn prototype(&self, context: &Context, target: &TargetData) -> FunctionPrototype;
+    fn prototype(&self) -> FunctionPrototype;
 
     /// Returns the IR type for the function
     fn ir_type<'ink>(&self, context: &'ink Context, target: &TargetData) -> FunctionType<'ink>;

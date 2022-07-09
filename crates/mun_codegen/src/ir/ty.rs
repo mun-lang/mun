@@ -1,8 +1,10 @@
 use crate::{
     ir::IsIrType,
-    type_info::{TypeInfo, TypeSize},
+    type_info::{HasStaticTypeId, TypeId, TypeIdData},
 };
-use hir::{FloatBitness, HirDatabase, HirDisplay, IntBitness, ResolveBitness, Ty, TyKind};
+use hir::{
+    FloatBitness, HirDatabase, HirDisplay, IntBitness, ResolveBitness, Signedness, Ty, TyKind,
+};
 use inkwell::types::PointerType;
 use inkwell::{
     context::Context,
@@ -12,7 +14,11 @@ use inkwell::{
     AddressSpace,
 };
 use smallvec::SmallVec;
-use std::{cell::RefCell, collections::HashMap};
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use abi::Guid;
 
 /// An object to cache and convert HIR types to Inkwell types.
 pub struct HirTypeCache<'db, 'ink> {
@@ -20,6 +26,8 @@ pub struct HirTypeCache<'db, 'ink> {
     db: &'db dyn HirDatabase,
     target_data: TargetData,
     types: RefCell<HashMap<hir::TyKind, StructType<'ink>>>,
+    array_ty_to_type_id: RefCell<HashMap<hir::TyKind, Arc<TypeId>>>,
+    struct_to_type_id: RefCell<HashMap<hir::Struct, Arc<TypeId>>>,
 }
 
 impl<'db, 'ink> HirTypeCache<'db, 'ink> {
@@ -30,6 +38,8 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
             db,
             target_data,
             types: RefCell::new(HashMap::default()),
+            struct_to_type_id: Default::default(),
+            array_ty_to_type_id: Default::default(),
         }
     }
 
@@ -289,40 +299,91 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
     }
 
     /// Returns a `TypeInfo` for the specified `ty`
-    pub fn type_info(&self, ty: &Ty) -> TypeInfo {
+    pub fn type_id(&self, ty: &Ty) -> Arc<TypeId> {
         match ty.interned() {
             &TyKind::Float(ty) => {
-                let ir_ty = self.get_float_type(ty);
-                let type_size = TypeSize::from_ir_type(&ir_ty, &self.target_data);
-                TypeInfo::new_primitive(
-                    format!("core::{}", ty.resolve(&self.db.target_data_layout())),
-                    type_size,
-                )
+                let resolved_ty = ty.resolve(&self.db.target_data_layout());
+                match resolved_ty.bitness {
+                    FloatBitness::X32 => f32::type_id().clone(),
+                    FloatBitness::X64 => f64::type_id().clone(),
+                }
             }
             &TyKind::Int(ty) => {
-                let ir_ty = self.get_int_type(ty);
-                let type_size = TypeSize::from_ir_type(&ir_ty, &self.target_data);
-                TypeInfo::new_primitive(
-                    format!("core::{}", ty.resolve(&self.db.target_data_layout())),
-                    type_size,
-                )
+                let resolved_ty = ty.resolve(&self.db.target_data_layout());
+                match (resolved_ty.signedness, resolved_ty.bitness) {
+                    (Signedness::Signed, IntBitness::X8) => i8::type_id().clone(),
+                    (Signedness::Signed, IntBitness::X16) => i16::type_id().clone(),
+                    (Signedness::Signed, IntBitness::X32) => i32::type_id().clone(),
+                    (Signedness::Signed, IntBitness::X64) => i64::type_id().clone(),
+                    (Signedness::Signed, IntBitness::X128) => i128::type_id().clone(),
+                    (Signedness::Unsigned, IntBitness::X8) => u8::type_id().clone(),
+                    (Signedness::Unsigned, IntBitness::X16) => u16::type_id().clone(),
+                    (Signedness::Unsigned, IntBitness::X32) => u32::type_id().clone(),
+                    (Signedness::Unsigned, IntBitness::X64) => u64::type_id().clone(),
+                    (Signedness::Unsigned, IntBitness::X128) => u128::type_id().clone(),
+                    (_, IntBitness::Xsize) => unreachable!(
+                        "after resolve there should no longer be an undefined size type"
+                    ),
+                }
             }
-            TyKind::Bool => {
-                let ir_ty = self.get_bool_type();
-                let type_size = TypeSize::from_ir_type(&ir_ty, &self.target_data);
-                TypeInfo::new_primitive("core::bool", type_size)
-            }
-            &TyKind::Struct(s) => {
-                let ir_ty = self.get_struct_type(s);
-                let type_size = TypeSize::from_ir_type(&ir_ty, &self.target_data);
-                TypeInfo::new_struct(self.db, s, type_size)
-            }
-            TyKind::Array(ty) => {
-                let ir_ty = self.get_array_type(ty);
-                let type_size = TypeSize::from_ir_type(&ir_ty, &self.target_data);
-                TypeInfo::new_array(self.db, ty.clone(), type_size)
+            TyKind::Bool => bool::type_id().clone(),
+            &TyKind::Struct(s) => self
+                .struct_to_type_id
+                .borrow_mut()
+                .entry(s)
+                .or_insert_with(|| {
+                    Arc::new(TypeId {
+                        name: s.full_name(self.db),
+                        data: TypeIdData::Concrete(guid_from_struct(self.db, s)),
+                    })
+                })
+                .clone(),
+            TyKind::Array(a) => {
+                {
+                    let read_only = self.array_ty_to_type_id.borrow();
+                    if let Some(a) = read_only.get(a.interned()) {
+                        return a.clone();
+                    }
+                }
+
+                let element_type_id = self.type_id(a);
+                let array_type_id = Arc::new(TypeId {
+                    name: format!("[{}]", &element_type_id.name),
+                    data: TypeIdData::Array(element_type_id),
+                });
+
+                let previous_entry = self
+                    .array_ty_to_type_id
+                    .borrow_mut()
+                    .insert(a.interned().clone(), array_type_id.clone());
+                if previous_entry.is_some() {
+                    panic!("array cyclic reference?");
+                }
+
+                array_type_id
             }
             _ => unimplemented!("{} unhandled", ty.display(self.db)),
         }
     }
+}
+
+pub fn guid_from_struct(db: &dyn HirDatabase, s: hir::Struct) -> Guid {
+    let name = s.full_name(db);
+    let fields: Vec<String> = s
+        .fields(db)
+        .into_iter()
+        .map(|f| {
+            let ty_string = f
+                .ty(db)
+                .guid_string(db)
+                .expect("type should be convertible to a string");
+            format!("{}: {}", f.name(db), ty_string)
+        })
+        .collect();
+
+    Guid::from_str(&format!(
+        "struct {name}{{{fields}}}",
+        name = &name,
+        fields = fields.join(",")
+    ))
 }

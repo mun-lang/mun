@@ -15,6 +15,7 @@ categories = ["game-development", "mun"]
 [dependencies]
 abi = { version = "=0.3.0", path = "../mun_abi", package = "mun_abi" }
 anyhow = "1.0"
+itertools = "0.10.3"
 libloader = { version = "=0.1.0", path = "../mun_libloader", package = "mun_libloader" }
 log = "0.4"
 md5 = "0.7.0"
@@ -29,7 +30,7 @@ seq-macro = "0.3.0"
 [dev-dependencies]
 compiler = { version="=0.3.0", path="../mun_compiler", package = "mun_compiler" }
 criterion = "0.3"
-mlua = { package ="mlua", version="0.7", default-features = false, features=["vendored", "luajit"]  }
+mlua = { package ="mlua", version="0.8", default-features = false, features=["vendored", "luajit"]  }
 mun_test = { path = "../mun_test" }
 tempfile = "3"
 termcolor = "1.1"

@@ -1,7 +1,6 @@
 #![allow(dead_code, unused_macros)]
 
 use mun_memory::gc::{self, GcPtr};
-use mun_memory::CompositeTypeKind;
 use parking_lot::Mutex;
 
 pub trait Trace {

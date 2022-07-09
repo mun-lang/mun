@@ -16,7 +16,7 @@ fn collect_intrinsic<'ink>(
     intrinsic: &impl Intrinsic,
     entries: &mut IntrinsicsMap<'ink>,
 ) {
-    let prototype = intrinsic.prototype(context, target);
+    let prototype = intrinsic.prototype();
     entries
         .entry(prototype)
         .or_insert_with(|| intrinsic.ir_type(context, target));

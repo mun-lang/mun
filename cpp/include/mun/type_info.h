@@ -11,6 +11,8 @@ namespace mun {
  * @brief A wrapper around a Mun type information handle.
  */
 class TypeInfo {
+    friend class StructInfo;
+
 public:
     /**
      * @brief Constructs type information from an instantiated `MunTypeInfoHandle`.
@@ -18,8 +20,10 @@ public:
     TypeInfo(MunTypeInfoHandle handle) noexcept : m_handle(handle) {}
 
     ~TypeInfo() noexcept {
-        mun_type_info_decrement_strong_count(m_handle);
-        m_handle._0 = nullptr;
+        if (m_handle._0 != nullptr) {
+            mun_type_info_decrement_strong_count(m_handle);
+            m_handle._0 = nullptr;
+        }
     }
 
     TypeInfo(const TypeInfo& other) noexcept : m_handle(other.m_handle) {
@@ -34,28 +38,50 @@ public:
         return *this;
     }
 
-    TypeInfo& operator=(TypeInfo&& other) {
+    TypeInfo& operator=(TypeInfo&& other) noexcept {
         m_handle = other.m_handle;
         other.m_handle._0 = nullptr;
         return *this;
     }
 
+    bool operator==(const TypeInfo& other) const {
+        return mun_type_info_eq(m_handle, other.m_handle);
+    }
+
     /**
-     * @brief Retrieves the type's ID.
+     * Returns true if this TypeInfo represents a struct.
      */
-    MunTypeId id() const noexcept {
-        MunTypeId id;
-
-        const auto error_handle = mun_type_info_id(m_handle, &id);
+    [[nodiscard]] bool is_struct() const noexcept {
+        MunTypeInfoData data;
+        const auto error_handle = mun_type_info_data(m_handle, &data);
         assert(error_handle._0 == nullptr);
+        return data.tag == MunTypeInfoData_Struct;
+    }
 
-        return id;
+    /**
+     * Returns true if this TypeInfo represents a pointer.
+     */
+    [[nodiscard]] bool is_pointer() const noexcept {
+        MunTypeInfoData data;
+        const auto error_handle = mun_type_info_data(m_handle, &data);
+        assert(error_handle._0 == nullptr);
+        return data.tag == MunTypeInfoData_Pointer;
+    }
+
+    /**
+     * Returns true if this TypeInfo represents a primitive.
+     */
+    [[nodiscard]] bool is_primitive() const noexcept {
+        MunTypeInfoData data;
+        const auto error_handle = mun_type_info_data(m_handle, &data);
+        assert(error_handle._0 == nullptr);
+        return data.tag == MunTypeInfoData_Primitive;
     }
 
     /**
      * @brief Retrieves the type's name.
      */
-    std::string_view name() const noexcept {
+    [[nodiscard]] std::string_view name() const noexcept {
         const auto ptr = mun_type_info_name(m_handle);
         assert(ptr);
         return ptr;
@@ -64,7 +90,7 @@ public:
     /**
      * @brief Retrieves the type's size in bytes.
      */
-    size_t size() const noexcept {
+    [[nodiscard]] size_t size() const noexcept {
         size_t size;
         const auto error_handle = mun_type_info_size(m_handle, &size);
         assert(error_handle._0 == nullptr);
@@ -74,7 +100,7 @@ public:
     /**
      * @brief Retrieves the type's alignment.
      */
-    size_t alignment() const noexcept {
+    [[nodiscard]] size_t alignment() const noexcept {
         size_t align;
         const auto error_handle = mun_type_info_align(m_handle, &align);
         assert(error_handle._0 == nullptr);
@@ -82,22 +108,9 @@ public:
     }
 
     /**
-     * @brief Retrieves the type's data.
-     *
-     * @details The returned data will only contain valid data as long as the type information
-     * object is in scope.
-     */
-    MunTypeInfoData data() const noexcept {
-        MunTypeInfoData data;
-        const auto error_handle = mun_type_info_data(m_handle, &data);
-        assert(error_handle._0 == nullptr);
-        return data;
-    }
-
-    /**
      * @brief Returns the type's handle.
      */
-    MunTypeInfoHandle handle() const noexcept { return m_handle; }
+    [[nodiscard]] MunTypeInfoHandle handle() const noexcept { return m_handle; }
 
 private:
     MunTypeInfoHandle m_handle;

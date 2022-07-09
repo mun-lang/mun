@@ -30,7 +30,7 @@ use std::{
     ffi,
     ffi::c_void,
     fmt::{Debug, Display, Formatter},
-    io, mem,
+    io,
     path::{Path, PathBuf},
     sync::{
         mpsc::{channel, Receiver},
@@ -49,7 +49,6 @@ pub use crate::{
     reflection::{ArgumentReflection, ReturnTypeReflection},
 };
 // Re-export some useful types so crates dont have to depend on mun_memory as well.
-use crate::reflection::equals_return_type;
 pub use memory::{FieldInfo, HasStaticTypeInfo, StructInfo, TypeFields, TypeInfo};
 
 /// Options for the construction of a [`Runtime`].
@@ -587,7 +586,7 @@ seq_macro::seq!(I in 0..N {
             }
 
             #(
-            if arg_types[I].id != self.I.type_id(runtime) {
+            if arg_types[I] != self.I.type_info(runtime) {
                 return Err(format!(
                     "Invalid argument type at index {}. Expected: {}. Found: {}.",
                     I,
@@ -655,13 +654,12 @@ impl Runtime {
         };
 
         // Validate the return type
-        if let Err((got, expected)) =
-            equals_return_type::<ReturnType>(&function_info.prototype.signature.return_type)
-        {
+        if !ReturnType::accepts_type(&function_info.prototype.signature.return_type) {
             return Err(InvokeErr {
                 msg: format!(
                     "unexpected return type, got '{}', expected '{}",
-                    expected, got
+                    &function_info.prototype.signature.return_type.name,
+                    ReturnType::type_hint()
                 ),
                 function_name,
                 arguments,

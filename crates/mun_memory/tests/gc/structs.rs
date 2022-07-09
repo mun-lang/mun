@@ -1,10 +1,13 @@
-use super::util::{EventAggregator, Trace};
-use crate::{assert_variant, fake_struct};
+use std::sync::Arc;
+
 use mun_memory::{
     gc::{Event, GcPtr, GcRootPtr, GcRuntime, HasIndirectionPtr, MarkSweep, TypeTrace},
     type_table::TypeTable,
 };
-use std::sync::Arc;
+
+use crate::{assert_variant, fake_struct};
+
+use super::util::{EventAggregator, Trace};
 
 struct FooObject {
     bar: GcPtr,
@@ -26,7 +29,7 @@ fn test_trace() {
     let foo_type_info = fake_struct!(type_table, "core::Foo", "bar" => Bar);
     type_table.insert_type(foo_type_info.clone());
 
-    let runtime = MarkSweep::<EventAggregator<Event>>::default();
+    let runtime = &MarkSweep::<EventAggregator<Event>>::default();
     let mut foo_handle = runtime.alloc(&foo_type_info);
     let bar_handle = runtime.alloc(&bar_type_info);
 
@@ -53,8 +56,8 @@ fn trace_collect() {
     type_table.insert_type(foo_type_info.clone());
 
     let runtime = Arc::new(MarkSweep::<EventAggregator<Event>>::default());
-    let mut foo_ptr = GcRootPtr::new(&runtime, runtime.alloc(&foo_type_info));
-    let bar = runtime.alloc(&bar_type_info);
+    let mut foo_ptr = GcRootPtr::new(&runtime, runtime.as_ref().alloc(&foo_type_info));
+    let bar = runtime.as_ref().alloc(&bar_type_info);
 
     // Assign bar to foo.bar
     unsafe {
@@ -65,13 +68,13 @@ fn trace_collect() {
     runtime.collect();
 
     // Drop foo
-    let foo = foo_ptr.unroot();
+    let foo_instance = foo_ptr.unroot();
 
     // Collect garbage, both foo and bar should be collected
     runtime.collect();
 
     let mut events = runtime.observer().take_all().into_iter();
-    assert_eq!(events.next(), Some(Event::Allocation(foo)));
+    assert_eq!(events.next(), Some(Event::Allocation(foo_instance)));
     assert_eq!(events.next(), Some(Event::Allocation(bar)));
     assert_eq!(events.next(), Some(Event::Start));
     assert_eq!(events.next(), Some(Event::End));
@@ -93,7 +96,7 @@ fn trace_cycle() {
     type_table.insert_type(foo_type_info.clone());
 
     let runtime = Arc::new(MarkSweep::<EventAggregator<Event>>::default());
-    let mut foo_ptr = GcRootPtr::new(&runtime, runtime.alloc(&foo_type_info));
+    let mut foo_ptr = GcRootPtr::new(&runtime, runtime.as_ref().alloc(&foo_type_info));
 
     // Assign foo to foo.bar
     unsafe {

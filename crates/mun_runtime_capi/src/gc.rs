@@ -7,6 +7,7 @@ use memory::TypeInfo;
 use runtime::Runtime;
 
 pub use memory::gc::GcPtr;
+use memory::gc::GcRuntime;
 
 /// Allocates an object in the runtime of the given `type_info`. If successful, `obj` is set,
 /// otherwise a non-zero error handle is returned.

@@ -2,7 +2,7 @@ language = "C"
 cpp_compat = true
 
 include_guard = "MUN_RUNTIME_BINDINGS_H_"
-include_version = true
+include_version = false
 sys_includes = ["stdbool.h", "stdint.h"]
 no_includes = true
 

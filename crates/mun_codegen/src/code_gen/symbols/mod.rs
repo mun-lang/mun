@@ -1,4 +1,14 @@
-use crate::type_info::TypeInfoData;
+use std::convert::TryFrom;
+use std::{collections::HashSet, ffi::CString};
+
+use inkwell::{attributes::Attribute, module::Linkage, types::AnyType};
+use itertools::Itertools;
+
+use hir::{HirDatabase, TyKind};
+use ir_type_builder::TypeIdBuilder;
+
+use crate::ir::ty::guid_from_struct;
+use crate::type_info::HasStaticTypeId;
 use crate::{
     ir::ty::HirTypeCache,
     ir::types as ir,
@@ -7,16 +17,12 @@ use crate::{
         function,
         type_table::TypeTable,
     },
-    type_info::TypeInfo,
     value::{
         AsValue, CanInternalize, Global, IrValueContext, IterAsIrValue, SizedValueType, Value,
     },
 };
-use abi::HasStaticTypeInfo;
-use hir::HirDatabase;
-use inkwell::{attributes::Attribute, module::Linkage, types::AnyType};
-use std::convert::TryFrom;
-use std::{collections::HashSet, ffi::CString};
+
+mod ir_type_builder;
 
 /// Construct a `MunFunctionPrototype` struct for the specified HIR function.
 fn gen_prototype_from_function<'ink>(
@@ -24,6 +30,7 @@ fn gen_prototype_from_function<'ink>(
     context: &IrValueContext<'ink, '_, '_>,
     function: hir::Function,
     hir_types: &HirTypeCache,
+    ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
 ) -> ir::FunctionPrototype<'ink> {
     let name = function.full_name(db);
 
@@ -35,20 +42,16 @@ fn gen_prototype_from_function<'ink>(
     // Get the `ir::TypeInfo` pointer for the return type of the function
     let fn_sig = function.ty(db).callable_sig(db).unwrap();
     let return_type = if fn_sig.ret().is_empty() {
-        <()>::type_info().id.clone().into()
+        ir_type_builder.construct_from_type_id(<() as HasStaticTypeId>::type_id())
     } else {
-        ir::TypeId {
-            guid: hir_types.type_info(fn_sig.ret()).guid,
-        }
+        ir_type_builder.construct_from_type_id(&hir_types.type_id(fn_sig.ret()))
     };
 
     // Construct an array of pointers to `ir::TypeInfo`s for the arguments of the prototype
     let arg_types = fn_sig
         .params()
         .iter()
-        .map(|ty| ir::TypeId {
-            guid: hir_types.type_info(ty).guid,
-        })
+        .map(|ty| ir_type_builder.construct_from_type_id(&hir_types.type_id(ty)))
         .into_const_private_pointer_or_null(format!("fn_sig::<{}>::arg_types", &name), context);
 
     ir::FunctionPrototype {
@@ -65,6 +68,7 @@ fn gen_prototype_from_function<'ink>(
 fn gen_prototype_from_dispatch_entry<'ink>(
     context: &IrValueContext<'ink, '_, '_>,
     function: &DispatchableFunction,
+    ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
 ) -> ir::FunctionPrototype<'ink> {
     // Internalize the name of the function prototype
     let name_str = CString::new(function.prototype.name.clone())
@@ -75,21 +79,14 @@ fn gen_prototype_from_dispatch_entry<'ink>(
         );
 
     // Get the `ir::TypeInfo` pointer for the return type of the function
-    let return_type = function
-        .prototype
-        .ret_type
-        .as_ref()
-        .map(|ty| ir::TypeId { guid: ty.guid })
-        .unwrap_or_else(|| <()>::type_info().id.clone().into());
+    let return_type = ir_type_builder.construct_from_type_id(&function.prototype.ret_type);
 
     // Construct an array of pointers to `ir::TypeInfo`s for the arguments of the prototype
     let arg_types = function
         .prototype
         .arg_types
         .iter()
-        .map(|type_info| ir::TypeId {
-            guid: type_info.guid,
-        })
+        .map(|type_info| ir_type_builder.construct_from_type_id(type_info))
         .into_const_private_pointer_or_null(
             format!("{}_param_types", function.prototype.name),
             context,
@@ -107,65 +104,51 @@ fn gen_prototype_from_dispatch_entry<'ink>(
 
 /// Construct a global that holds a reference to all types. e.g.:
 /// MunTypeInfo[] definitions = { ... }
-fn get_type_definition_array<'ink, 'a>(
+fn get_type_definition_array<'ink>(
     db: &dyn HirDatabase,
     context: &IrValueContext<'ink, '_, '_>,
-    types: impl Iterator<Item = &'a TypeInfo>,
+    types: impl Iterator<Item = hir::Ty>,
     hir_types: &HirTypeCache,
-) -> Value<'ink, *const ir::TypeInfo<'ink>> {
+    ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
+) -> Value<'ink, *const ir::TypeDefinition<'ink>> {
     types
-        .map(|type_info| ir::TypeInfo {
-            id: ir::TypeId {
-                guid: type_info.guid,
-            },
-            name: CString::new(type_info.name.clone())
-                .expect("typename is not a valid CString")
-                .intern(format!("type_info::<{}>::name", type_info.name), context)
-                .as_value(context),
-            size_in_bits: type_info
-                .size
-                .bit_size
-                .try_into()
-                .expect("could not convert size in bits to smaller size"),
-            alignment: type_info
-                .size
-                .alignment
-                .try_into()
-                .expect("could not convert alignment to smaller size"),
-            data: gen_type_info_data(db, &type_info.data, context, hir_types),
+        .sorted_by_cached_key(|type_info| match type_info.interned() {
+            TyKind::Struct(s) => s.full_name(db),
+            _ => unreachable!("unsupported export type"),
+        })
+        .map(|type_info| match type_info.interned() {
+            TyKind::Struct(s) => {
+                let inkwell_type = hir_types.get_struct_type(*s);
+                let struct_name = s.full_name(db);
+                ir::TypeDefinition {
+                    name: CString::new(struct_name.clone())
+                        .expect("typename is not a valid CString")
+                        .intern(format!("type_info::<{}>::name", struct_name), context)
+                        .as_value(context),
+                    size_in_bits: context
+                        .type_context
+                        .target_data
+                        .get_bit_size(&inkwell_type)
+                        .try_into()
+                        .expect("could not convert size in bits to smaller size"),
+                    alignment: context
+                        .type_context
+                        .target_data
+                        .get_abi_alignment(&inkwell_type)
+                        .try_into()
+                        .expect("could not convert alignment to smaller size"),
+                    data: ir::TypeDefinitionData::Struct(gen_struct_info(
+                        db,
+                        *s,
+                        context,
+                        hir_types,
+                        ir_type_builder,
+                    )),
+                }
+            }
+            _ => unreachable!("unsupported export type"),
         })
         .into_const_private_pointer_or_null("fn.get_info.types", context)
-}
-
-fn gen_type_info_data<'ink>(
-    db: &dyn HirDatabase,
-    data: &TypeInfoData,
-    context: &IrValueContext<'ink, '_, '_>,
-    hir_types: &HirTypeCache,
-) -> ir::TypeInfoData<'ink> {
-    match data {
-        TypeInfoData::Primitive => ir::TypeInfoData::Primitive,
-        TypeInfoData::Struct(s) => {
-            ir::TypeInfoData::Struct(gen_struct_info(db, *s, context, hir_types))
-        }
-        TypeInfoData::Array(a) => {
-            ir::TypeInfoData::Array(gen_array_info(db, a, context, hir_types))
-        }
-    }
-}
-
-fn gen_array_info<'ink>(
-    _db: &dyn HirDatabase,
-    element_ty: &hir::Ty,
-    _context: &IrValueContext<'ink, '_, '_>,
-    hir_types: &HirTypeCache,
-) -> ir::ArrayInfo {
-    let element_ty_info = hir_types.type_info(element_ty);
-    ir::ArrayInfo {
-        element_type: ir::TypeId {
-            guid: element_ty_info.guid,
-        },
-    }
 }
 
 fn gen_struct_info<'ink>(
@@ -173,7 +156,8 @@ fn gen_struct_info<'ink>(
     hir_struct: hir::Struct,
     context: &IrValueContext<'ink, '_, '_>,
     hir_types: &HirTypeCache,
-) -> ir::StructInfo<'ink> {
+    ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
+) -> ir::StructDefinition<'ink> {
     let struct_ir = hir_types.get_struct_type(hir_struct);
     let name = hir_struct.full_name(db);
     let fields = hir_struct.fields(db);
@@ -200,10 +184,8 @@ fn gen_struct_info<'ink>(
     let field_types = fields
         .iter()
         .map(|field| {
-            let field_type_info = hir_types.type_info(&field.ty(db));
-            ir::TypeId {
-                guid: field_type_info.guid,
-            }
+            let field_type_info = hir_types.type_id(&field.ty(db));
+            ir_type_builder.construct_from_type_id(&field_type_info)
         })
         .into_const_private_pointer_or_null(
             format!("struct_info::<{}>::field_types", name),
@@ -226,7 +208,8 @@ fn gen_struct_info<'ink>(
             context,
         );
 
-    ir::StructInfo {
+    ir::StructDefinition {
+        guid: guid_from_struct(db, hir_struct),
         field_names,
         field_types,
         field_offsets,
@@ -245,9 +228,11 @@ fn get_function_definition_array<'ink, 'a>(
     context: &IrValueContext<'ink, '_, '_>,
     functions: impl Iterator<Item = &'a hir::Function>,
     hir_types: &HirTypeCache,
+    ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
 ) -> Global<'ink, [ir::FunctionDefinition<'ink>]> {
     let module = context.module;
     functions
+        .sorted_by_cached_key(|f| f.full_name(db))
         .map(|f| {
             let name = f.name(db).to_string();
 
@@ -261,7 +246,8 @@ fn get_function_definition_array<'ink, 'a>(
             value.set_linkage(Linkage::Private);
 
             // Generate the signature from the function
-            let prototype = gen_prototype_from_function(db, context, *f, hir_types);
+            let prototype =
+                gen_prototype_from_function(db, context, *f, hir_types, ir_type_builder);
             ir::FunctionDefinition {
                 prototype,
                 fn_ptr: Value::<*const fn()>::with_cast(
@@ -281,6 +267,7 @@ fn get_function_definition_array<'ink, 'a>(
 fn gen_type_lut<'ink>(
     context: &IrValueContext<'ink, '_, '_>,
     type_table: &TypeTable,
+    ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
 ) -> ir::TypeLut<'ink> {
     let module = context.module;
 
@@ -288,7 +275,7 @@ fn gen_type_lut<'ink>(
     let type_ids = type_table
         .entries()
         .iter()
-        .map(|ty| ir::TypeId { guid: ty.guid })
+        .map(|ty| ir_type_builder.construct_from_type_id(ty))
         .into_const_private_pointer("fn.get_info.typeLut.typeIds", context);
 
     let type_names = type_table
@@ -326,6 +313,7 @@ fn gen_type_lut<'ink>(
 fn gen_dispatch_table<'ink>(
     context: &IrValueContext<'ink, '_, '_>,
     dispatch_table: &DispatchTable<'ink>,
+    ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
 ) -> ir::DispatchTable<'ink> {
     let module = context.module;
 
@@ -333,7 +321,7 @@ fn gen_dispatch_table<'ink>(
     let prototypes = dispatch_table
         .entries()
         .iter()
-        .map(|entry| gen_prototype_from_dispatch_entry(context, entry))
+        .map(|entry| gen_prototype_from_dispatch_entry(context, entry, ir_type_builder))
         .into_const_private_pointer("fn.get_info.dispatchTable.signatures", context);
 
     // Get the pointer to the global table (or nullptr if no global table was defined).
@@ -362,20 +350,33 @@ pub(super) fn gen_reflection_ir<'db, 'ink>(
     db: &'db dyn HirDatabase,
     context: &IrValueContext<'ink, '_, '_>,
     function_definitions: &HashSet<hir::Function>,
-    type_definitions: &HashSet<TypeInfo>,
+    type_definitions: &HashSet<hir::Ty>,
     dispatch_table: &DispatchTable<'ink>,
     type_table: &TypeTable<'ink>,
     hir_types: &HirTypeCache<'db, 'ink>,
     optimization_level: inkwell::OptimizationLevel,
     dependencies: Vec<String>,
 ) {
+    let ir_type_builder = TypeIdBuilder::new(context);
+
     let num_functions = function_definitions.len() as u32;
-    let functions =
-        get_function_definition_array(db, context, function_definitions.iter(), hir_types);
+    let functions = get_function_definition_array(
+        db,
+        context,
+        function_definitions.iter(),
+        hir_types,
+        &ir_type_builder,
+    );
 
     // Get the TypeTable global
     let num_types = type_definitions.len() as u32;
-    let types = get_type_definition_array(db, context, type_definitions.iter(), hir_types);
+    let types = get_type_definition_array(
+        db,
+        context,
+        type_definitions.iter().cloned(),
+        hir_types,
+        &ir_type_builder,
+    );
 
     // Construct the module info struct
     let module_info = ir::ModuleInfo {
@@ -390,9 +391,9 @@ pub(super) fn gen_reflection_ir<'db, 'ink>(
     };
 
     // Construct the dispatch table struct
-    let dispatch_table = gen_dispatch_table(context, dispatch_table);
+    let dispatch_table = gen_dispatch_table(context, dispatch_table, &ir_type_builder);
 
-    let type_lut = gen_type_lut(context, type_table);
+    let type_lut = gen_type_lut(context, type_table, &ir_type_builder);
 
     // Construct the actual `get_info` function
     gen_get_info_fn(

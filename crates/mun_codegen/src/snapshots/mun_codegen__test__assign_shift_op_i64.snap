@@ -1,13 +1,12 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1045
 expression: "\n    pub fn assign_leftshift(a: i64, b: i64) -> i64 {\n        a <<= b;\n        a\n    }\n    pub fn assign_rightshift(a: i64, b: i64) -> i64 {\n        a >>= b;\n        a\n    }\n                        "
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [6 x i64*]
+@global_type_lookup_table = external global [1 x i64*]
 
 define i64 @assign_leftshift(i64 %0, i64 %1) {
 body:
@@ -25,5 +24,5 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [6 x i64*] zeroinitializer
+@global_type_lookup_table = global [1 x i64*] zeroinitializer
 

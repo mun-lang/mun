@@ -2,7 +2,6 @@ use crate::garbage_collector::GcRootPtr;
 use crate::{ArgumentReflection, GarbageCollector, Marshal, ReturnTypeReflection, Runtime};
 use memory::gc::{ArrayHandle, GcPtr, GcRuntime, HasIndirectionPtr};
 use memory::TypeInfo;
-use once_cell::sync::OnceCell;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 use std::sync::Arc;
@@ -96,7 +95,7 @@ impl<'array, T: Marshal<'array> + 'array> ArrayRef<'array, T> {
             .as_ref()
             .array(self.raw.0)
             .expect("type of the array value must be an array");
-        let element_ty = handle.element_type();
+        let element_ty = handle.element_type().clone();
         let runtime = self.runtime;
         handle
             .elements()
@@ -105,18 +104,17 @@ impl<'array, T: Marshal<'array> + 'array> ArrayRef<'array, T> {
 }
 
 impl<'a, T: Marshal<'a> + ReturnTypeReflection> ReturnTypeReflection for ArrayRef<'a, T> {
-    fn type_id() -> abi::TypeId {
-        // TODO: Once `const_fn` lands, replace this with a const md5 hash
-        static GUID: OnceCell<abi::TypeId> = OnceCell::new();
-        GUID.get_or_init(|| {
-            abi::Guid::from(<Self as ReturnTypeReflection>::type_name().as_bytes()).into()
-        })
-        .clone()
+    fn accepts_type(ty: &Arc<TypeInfo>) -> bool {
+        if let Some(arr) = ty.as_array() {
+            T::accepts_type(&arr.element_ty)
+        } else {
+            false
+        }
     }
 
-    fn type_name() -> &'static str {
-        static NAME: OnceCell<String> = OnceCell::new();
-        NAME.get_or_init(|| format!("[{}]", T::type_name()))
+    fn type_hint() -> &'static str {
+        // TODO: Improve this
+        "array"
     }
 }
 
@@ -144,7 +142,7 @@ impl<'a, T: Marshal<'a> + 'a> Marshal<'a> for ArrayRef<'a, T> {
     fn marshal_from_ptr<'runtime>(
         ptr: NonNull<Self::MunType>,
         runtime: &'runtime Runtime,
-        type_info: &Arc<TypeInfo>,
+        _type_info: &Arc<TypeInfo>,
     ) -> Self
     where
         Self: 'a,
@@ -154,7 +152,7 @@ impl<'a, T: Marshal<'a> + 'a> Marshal<'a> for ArrayRef<'a, T> {
         ArrayRef::new(RawArray(handle), runtime)
     }
 
-    fn marshal_to_ptr(value: Self, mut ptr: NonNull<Self::MunType>, type_info: &Arc<TypeInfo>) {
+    fn marshal_to_ptr(value: Self, mut ptr: NonNull<Self::MunType>, _type_info: &Arc<TypeInfo>) {
         unsafe { *ptr.as_mut() = value.into_raw() };
     }
 }

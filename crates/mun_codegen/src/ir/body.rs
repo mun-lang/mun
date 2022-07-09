@@ -378,7 +378,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         let type_info_ptr = self.type_table.gen_type_info_lookup(
             self.context,
             &self.builder,
-            &self.hir_types.type_info(&hir_struct.ty(self.db)),
+            &self.hir_types.type_id(&hir_struct.ty(self.db)),
             self.external_globals.type_table,
         );
 
@@ -1415,7 +1415,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         let type_info_ptr = self.type_table.gen_type_info_lookup(
             self.context,
             &self.builder,
-            &self.hir_types.type_info(array_ty),
+            &self.hir_types.type_id(array_ty),
             self.external_globals.type_table,
         );
 

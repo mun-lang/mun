@@ -23,8 +23,10 @@ fn array_of_structs() {
     let driver = CompileAndRunTestDriver::new(
         r"
     pub struct Number { value: i32 };
+    pub struct(value) Value { value: i64, other: i64 };
 
     pub fn main() -> [Number] { [Number { value: 2351 }, Number { value: 18571 }] }
+    pub fn main_value() -> [Value] { [Value { value: 253, other: 1823512 }, Value { value: 123, other: 436501 }] }
     ",
         |builder| builder,
     )
@@ -35,6 +37,12 @@ fn array_of_structs() {
 
     assert_eq!(result.len(), 2);
     assert_eq!(number, 18571);
+
+    let result: ArrayRef<'_, StructRef> = driver.runtime.invoke("main_value", ()).unwrap();
+    let number: i64 = result.iter().nth(1).unwrap().get("value").unwrap();
+
+    assert_eq!(result.len(), 2);
+    assert_eq!(number, 123);
 }
 
 #[test]

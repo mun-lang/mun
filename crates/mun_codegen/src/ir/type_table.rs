@@ -1,22 +1,25 @@
-use crate::{
-    ir::dispatch_table::{DispatchTable, FunctionPrototype},
-    ir::ty::HirTypeCache,
-    type_info::{TypeInfo, TypeInfoData},
-    value::{Global, IrValueContext, IterAsIrValue, Value},
-    ModuleGroup,
-};
-use hir::{Body, ExprId, HirDatabase, InferenceResult};
+use std::{collections::HashMap, collections::HashSet, convert::TryInto, sync::Arc};
+
 use inkwell::{
     context::Context, module::Linkage, module::Module, types::ArrayType, values::PointerValue,
 };
-use std::{collections::HashMap, convert::TryInto, mem, sync::Arc};
+
+use hir::{Body, ExprId, HirDatabase, InferenceResult};
+
+use crate::{
+    ir::dispatch_table::{DispatchTable, FunctionPrototype},
+    ir::ty::HirTypeCache,
+    type_info::TypeId,
+    value::{Global, IrValueContext, IterAsIrValue, Value},
+    ModuleGroup,
+};
 
 /// A type table in IR is a list of pointers to unique type information that are used to generate
 /// function and struct information.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct TypeTable<'ink> {
-    entries: Vec<TypeInfo>,
-    type_info_to_index: HashMap<TypeInfo, usize>,
+    entries: Vec<Arc<TypeId>>,
+    type_id_to_index: HashMap<Arc<TypeId>, usize>,
     table_type: ArrayType<'ink>,
 }
 
@@ -25,7 +28,7 @@ impl<'ink> TypeTable<'ink> {
     pub(crate) const NAME: &'static str = "global_type_lookup_table";
 
     /// Returns a slice containing all types
-    pub fn entries(&self) -> &[TypeInfo] {
+    pub fn entries(&self) -> &[Arc<TypeId>] {
         &self.entries
     }
 
@@ -44,15 +47,14 @@ impl<'ink> TypeTable<'ink> {
         &self,
         context: &'ink Context,
         builder: &inkwell::builder::Builder<'ink>,
-        type_info: &TypeInfo,
+        type_info: &Arc<TypeId>,
         table_ref: Option<Global<'ink, [*const std::ffi::c_void]>>,
     ) -> PointerValue<'ink> {
         let table_ref = table_ref.expect("no type table defined");
 
-        let index: u64 = match self.type_info_to_index.get(type_info) {
-            None => panic!("unknown type {}", &type_info.name),
-            Some(&index) => index.try_into().expect("too many types"),
-        };
+        let index: u64 = (*self.type_id_to_index.get(type_info).expect("unknown type"))
+            .try_into()
+            .expect("too many types");
 
         let global_index = context.i64_type().const_zero();
         let array_index = context.i64_type().const_int(index as u64, false);
@@ -92,7 +94,7 @@ pub(crate) struct TypeTableBuilder<'db, 'ink, 't> {
     value_context: &'t IrValueContext<'ink, 't, 't>,
     dispatch_table: &'t DispatchTable<'ink>,
     hir_types: &'t HirTypeCache<'db, 'ink>,
-    entries: Vec<TypeInfo>,
+    entries: HashSet<Arc<TypeId>>,
     module_group: &'t ModuleGroup,
 }
 
@@ -101,39 +103,33 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
     pub(crate) fn new<'f>(
         db: &'db dyn HirDatabase,
         value_context: &'t IrValueContext<'ink, '_, '_>,
-        intrinsics: impl Iterator<Item = &'f FunctionPrototype>,
+        _intrinsics: impl Iterator<Item = &'f FunctionPrototype>,
         dispatch_table: &'t DispatchTable<'ink>,
         hir_types: &'t HirTypeCache<'db, 'ink>,
         module_group: &'t ModuleGroup,
     ) -> Self {
-        let mut builder = Self {
+        // for prototype in intrinsics {
+        //     for arg_type in prototype.arg_types.iter() {
+        //         builder.collect_type(arg_type.clone());
+        //     }
+        //     if let Some(ret_type) = prototype.ret_type.as_ref() {
+        //         builder.collect_type(ret_type.clone());
+        //     }
+        // }
+
+        Self {
             db,
             value_context,
             dispatch_table,
             hir_types,
             entries: Default::default(),
             module_group,
-        };
-
-        for prototype in intrinsics {
-            for arg_type in prototype.arg_types.iter() {
-                builder.collect_type(arg_type.clone());
-            }
-            if let Some(ret_type) = prototype.ret_type.as_ref() {
-                builder.collect_type(ret_type.clone());
-            }
         }
-
-        builder
     }
 
     /// Collects unique `TypeInfo` from the given `Ty`.
-    fn collect_type(&mut self, type_info: TypeInfo) {
-        if let TypeInfoData::Struct(hir_struct) = type_info.data {
-            self.collect_struct(hir_struct);
-        } else {
-            self.entries.push(type_info);
-        }
+    fn collect_type(&mut self, type_info: Arc<TypeId>) {
+        self.entries.insert(type_info);
     }
 
     /// Collects unique `TypeInfo` from the specified expression and its sub-expressions.
@@ -149,11 +145,8 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
                 Some(hir::CallableDef::Struct(_)) => (),
                 None => panic!("expected a callable expression"),
             }
-        }
-        // If the type of the expression is an array literal we will need to collect the element
-        // type, because `new_array` is called with the type.
-        else if let hir::Expr::Array(_) = expr {
-            self.collect_type(self.hir_types.type_info(&infer[expr_id]));
+        } else if let hir::Expr::Array(..) = expr {
+            self.collect_type(self.hir_types.type_id(&infer[expr_id]))
         }
 
         // Recurse further
@@ -166,13 +159,13 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
 
         // Collect argument types
         for ty in fn_sig.params().iter() {
-            self.collect_type(self.hir_types.type_info(ty));
+            self.collect_type(self.hir_types.type_id(ty));
         }
 
         // Collect return type
         let ret_ty = fn_sig.ret();
         if !ret_ty.is_empty() {
-            self.collect_type(self.hir_types.type_info(ret_ty));
+            self.collect_type(self.hir_types.type_id(ret_ty));
         }
     }
 
@@ -199,19 +192,19 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
 
     /// Collects unique `TypeInfo` from the specified struct type.
     pub fn collect_struct(&mut self, hir_struct: hir::Struct) {
-        let type_info = self.hir_types.type_info(&hir_struct.ty(self.db));
-        self.entries.push(type_info);
+        let type_info = self.hir_types.type_id(&hir_struct.ty(self.db));
+        self.collect_type(type_info);
 
         let fields = hir_struct.fields(self.db);
         for field in fields.into_iter() {
-            self.collect_type(self.hir_types.type_info(&field.ty(self.db)));
+            self.collect_type(self.hir_types.type_id(&field.ty(self.db)));
         }
     }
 
     /// Constructs a `TypeTable` from all *used* types.
-    pub fn build(mut self) -> TypeTable<'ink> {
-        let mut entries = Vec::new();
-        mem::swap(&mut entries, &mut self.entries);
+    pub fn build(self) -> TypeTable<'ink> {
+        let mut entries = Vec::from_iter(self.entries.into_iter());
+        entries.sort_by(|a, b| a.name.cmp(&b.name));
 
         let type_info_to_index = entries
             .iter()
@@ -238,7 +231,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
 
         TypeTable {
             entries,
-            type_info_to_index,
+            type_id_to_index: type_info_to_index,
             table_type: type_info_ptrs.get_type(),
         }
     }
