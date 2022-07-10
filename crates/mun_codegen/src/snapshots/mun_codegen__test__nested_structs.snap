@@ -1,5 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1080
 expression: "\n    pub struct(gc) GcStruct(f32, f32);\n    pub struct(value) ValueStruct(f32, f32);\n\n    pub struct(gc) GcWrapper(GcStruct, ValueStruct)\n    pub struct(value) ValueWrapper(GcStruct, ValueStruct);\n\n    pub fn new_gc_struct(a: f32, b: f32) -> GcStruct {\n        GcStruct(a, b)\n    }\n\n    pub fn new_value_struct(a: f32, b: f32) -> ValueStruct {\n        ValueStruct(a, b)\n    }\n\n    pub fn new_gc_wrapper(a: GcStruct, b: ValueStruct) -> GcWrapper {\n        GcWrapper(a, b)\n    }\n\n    pub fn new_value_wrapper(a: GcStruct, b: ValueStruct) -> ValueWrapper {\n        ValueWrapper(a, b)\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
@@ -24,11 +25,11 @@ body:
   %GcStruct_ptr = load i64*, i64** getelementptr inbounds ([5 x i64*], [5 x i64*]* @global_type_lookup_table, i64 0, i64 0), align 8
   %type_info_ptr_to_i8_ptr = bitcast i64* %GcStruct_ptr to i8*
   %allocator_handle = load i8*, i8** @allocatorHandle, align 8
-  %new = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
-  %GcStruct_ptr_ptr = bitcast i8** %new to %GcStruct**
-  %GcStruct_mem_ptr = load %GcStruct*, %GcStruct** %GcStruct_ptr_ptr, align 8
-  store %GcStruct %init3, %GcStruct* %GcStruct_mem_ptr, align 4
-  ret %GcStruct** %GcStruct_ptr_ptr
+  %ref = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
+  %"ref<GcStruct>" = bitcast i8** %ref to %GcStruct**
+  %"ref<GcStruct>->data" = load %GcStruct*, %GcStruct** %"ref<GcStruct>", align 8
+  store %GcStruct %init3, %GcStruct* %"ref<GcStruct>->data", align 4
+  ret %GcStruct** %"ref<GcStruct>"
 }
 
 define %ValueStruct @new_value_struct(float %0, float %1) {
@@ -45,11 +46,11 @@ body:
   %ValueStruct_ptr = load i64*, i64** getelementptr inbounds ([5 x i64*], [5 x i64*]* @global_type_lookup_table, i64 0, i64 2), align 8
   %type_info_ptr_to_i8_ptr = bitcast i64* %ValueStruct_ptr to i8*
   %allocator_handle = load i8*, i8** @allocatorHandle, align 8
-  %new = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
-  %ValueStruct_ptr_ptr = bitcast i8** %new to %ValueStruct**
-  %ValueStruct_mem_ptr = load %ValueStruct*, %ValueStruct** %ValueStruct_ptr_ptr, align 8
-  store %ValueStruct %new_value_struct, %ValueStruct* %ValueStruct_mem_ptr, align 4
-  ret %ValueStruct** %ValueStruct_ptr_ptr
+  %ref = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
+  %"ref<ValueStruct>" = bitcast i8** %ref to %ValueStruct**
+  %"ref<ValueStruct>->data" = load %ValueStruct*, %ValueStruct** %"ref<ValueStruct>", align 8
+  store %ValueStruct %new_value_struct, %ValueStruct* %"ref<ValueStruct>->data", align 4
+  ret %ValueStruct** %"ref<ValueStruct>"
 }
 
 define %GcWrapper** @new_gc_wrapper(%GcStruct** %0, %ValueStruct %1) {
@@ -62,17 +63,17 @@ body:
   %GcWrapper_ptr = load i64*, i64** getelementptr inbounds ([5 x i64*], [5 x i64*]* @global_type_lookup_table, i64 0, i64 1), align 8
   %type_info_ptr_to_i8_ptr = bitcast i64* %GcWrapper_ptr to i8*
   %allocator_handle = load i8*, i8** @allocatorHandle, align 8
-  %new = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
-  %GcWrapper_ptr_ptr = bitcast i8** %new to %GcWrapper**
-  %GcWrapper_mem_ptr = load %GcWrapper*, %GcWrapper** %GcWrapper_ptr_ptr, align 8
-  store %GcWrapper %init3, %GcWrapper* %GcWrapper_mem_ptr, align 8
-  ret %GcWrapper** %GcWrapper_ptr_ptr
+  %ref = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
+  %"ref<GcWrapper>" = bitcast i8** %ref to %GcWrapper**
+  %"ref<GcWrapper>->data" = load %GcWrapper*, %GcWrapper** %"ref<GcWrapper>", align 8
+  store %GcWrapper %init3, %GcWrapper* %"ref<GcWrapper>->data", align 8
+  ret %GcWrapper** %"ref<GcWrapper>"
 }
 
 define %GcWrapper** @new_gc_wrapper_wrapper(%GcStruct** %0, %ValueStruct** %1) {
 body:
-  %mem_ptr = load %ValueStruct*, %ValueStruct** %1, align 8
-  %deref = load %ValueStruct, %ValueStruct* %mem_ptr, align 4
+  %"->data" = load %ValueStruct*, %ValueStruct** %1, align 8
+  %deref = load %ValueStruct, %ValueStruct* %"->data", align 4
   %new_gc_wrapper = call %GcWrapper** @new_gc_wrapper(%GcStruct** %0, %ValueStruct %deref)
   ret %GcWrapper** %new_gc_wrapper
 }
@@ -88,18 +89,18 @@ body:
 
 define %ValueWrapper** @new_value_wrapper_wrapper(%GcStruct** %0, %ValueStruct** %1) {
 body:
-  %mem_ptr = load %ValueStruct*, %ValueStruct** %1, align 8
-  %deref = load %ValueStruct, %ValueStruct* %mem_ptr, align 4
+  %"->data" = load %ValueStruct*, %ValueStruct** %1, align 8
+  %deref = load %ValueStruct, %ValueStruct* %"->data", align 4
   %new_value_wrapper = call %ValueWrapper @new_value_wrapper(%GcStruct** %0, %ValueStruct %deref)
   %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
   %ValueWrapper_ptr = load i64*, i64** getelementptr inbounds ([5 x i64*], [5 x i64*]* @global_type_lookup_table, i64 0, i64 3), align 8
   %type_info_ptr_to_i8_ptr = bitcast i64* %ValueWrapper_ptr to i8*
   %allocator_handle = load i8*, i8** @allocatorHandle, align 8
-  %new = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
-  %ValueWrapper_ptr_ptr = bitcast i8** %new to %ValueWrapper**
-  %ValueWrapper_mem_ptr = load %ValueWrapper*, %ValueWrapper** %ValueWrapper_ptr_ptr, align 8
-  store %ValueWrapper %new_value_wrapper, %ValueWrapper* %ValueWrapper_mem_ptr, align 8
-  ret %ValueWrapper** %ValueWrapper_ptr_ptr
+  %ref = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
+  %"ref<ValueWrapper>" = bitcast i8** %ref to %ValueWrapper**
+  %"ref<ValueWrapper>->data" = load %ValueWrapper*, %ValueWrapper** %"ref<ValueWrapper>", align 8
+  store %ValueWrapper %new_value_wrapper, %ValueWrapper* %"ref<ValueWrapper>->data", align 8
+  ret %ValueWrapper** %"ref<ValueWrapper>"
 }
 
 ; == GROUP IR (mod) ====================================

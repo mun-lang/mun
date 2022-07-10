@@ -142,7 +142,8 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
             .get_basic_type(element_ty)
             .expect("could not convert array element type to basic type");
 
-        let array_value_type = self.context.struct_type(
+        // Fill the struct members
+        ir_ty.set_body(
             &[
                 length_ir_type.into(),
                 capacity_ir_type.into(),
@@ -151,11 +152,6 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
             false,
         );
 
-        let array_value_ptr_type = array_value_type.ptr_type(AddressSpace::Generic);
-
-        // Fill the struct members
-        ir_ty.set_body(&[/* value */ array_value_ptr_type.into()], false);
-
         ir_ty
     }
 
@@ -163,7 +159,9 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
     /// the heap so this will always be a pointer to an Array<Ty>.
     pub fn get_array_reference_type(&self, element_ty: &hir::Ty) -> PointerType<'ink> {
         let ir_ty = self.get_array_type(element_ty);
-        ir_ty.ptr_type(AddressSpace::Generic)
+        ir_ty
+            .ptr_type(AddressSpace::Generic)
+            .ptr_type(AddressSpace::Generic)
     }
 
     /// Returns the type of the struct that should be used for variables. Depending on the memory

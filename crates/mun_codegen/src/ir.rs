@@ -1,24 +1,28 @@
-use inkwell::context::Context;
-use inkwell::targets::TargetData;
-use inkwell::types::{
-    AnyType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType,
-    PointerType,
+use inkwell::{
+    context::Context,
+    targets::TargetData,
+    types::{
+        AnyType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType,
+        PointerType,
+    },
+    AddressSpace,
 };
-use inkwell::AddressSpace;
 
+mod array;
 pub mod body;
 #[macro_use]
 pub(crate) mod dispatch_table;
-mod array;
 pub mod file;
 pub(crate) mod file_group;
 pub mod function;
 mod intrinsics;
+mod reference;
 pub mod ty;
 pub(crate) mod type_table;
 pub mod types;
 
 use array::MunArrayValue;
+use reference::MunReferenceValue;
 
 /// Defines that a type has a static representation in inkwell
 pub trait IsIrType<'ink> {

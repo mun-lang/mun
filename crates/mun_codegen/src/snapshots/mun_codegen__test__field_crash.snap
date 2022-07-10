@@ -1,5 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1080
 expression: "\n    struct(gc) Foo { a: i32 };\n\n    pub fn main(c:i32) -> i32 {\n        let b = Foo { a: c + 5 }\n        b.a\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
@@ -25,15 +26,15 @@ body:
   %Foo_ptr = load i64*, i64** getelementptr inbounds ([2 x i64*], [2 x i64*]* @global_type_lookup_table, i64 0, i64 0), align 8
   %type_info_ptr_to_i8_ptr = bitcast i64* %Foo_ptr to i8*
   %allocator_handle = load i8*, i8** @allocatorHandle, align 8
-  %new = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
-  %Foo_ptr_ptr = bitcast i8** %new to %Foo**
-  %Foo_mem_ptr = load %Foo*, %Foo** %Foo_ptr_ptr, align 8
-  store %Foo %init, %Foo* %Foo_mem_ptr, align 4
-  store %Foo** %Foo_ptr_ptr, %Foo*** %b, align 8
-  %mem_ptr = load %Foo**, %Foo*** %b, align 8
-  %deref = load %Foo*, %Foo** %mem_ptr, align 8
-  %Foo.a_ptr = getelementptr inbounds %Foo, %Foo* %deref, i32 0, i32 0
-  %Foo.a = load i32, i32* %Foo.a_ptr, align 4
+  %ref = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
+  %"ref<Foo>" = bitcast i8** %ref to %Foo**
+  %"ref<Foo>->data" = load %Foo*, %Foo** %"ref<Foo>", align 8
+  store %Foo %init, %Foo* %"ref<Foo>->data", align 4
+  store %Foo** %"ref<Foo>", %Foo*** %b, align 8
+  %"b->data" = load %Foo**, %Foo*** %b, align 8
+  %deref = load %Foo*, %Foo** %"b->data", align 8
+  %"Foo->a" = getelementptr inbounds %Foo, %Foo* %deref, i32 0, i32 0
+  %Foo.a = load i32, i32* %"Foo->a", align 4
   ret i32 %Foo.a
 }
 

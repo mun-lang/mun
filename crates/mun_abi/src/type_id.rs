@@ -118,3 +118,44 @@ impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *mut T {
         })
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{ArrayTypeId, HasStaticTypeId, PointerTypeId, PrimitiveType, TypeId};
+
+    #[test]
+    fn display() {
+        assert_eq!(i32::type_id().to_string(), i32::guid().to_string());
+        assert_eq!(f64::type_id().to_string(), f64::guid().to_string());
+        assert_eq!(
+            std::ffi::c_void::type_id().to_string(),
+            std::ffi::c_void::guid().to_string()
+        );
+
+        let i32_type_id = i32::type_id();
+        assert_eq!(
+            TypeId::Pointer(PointerTypeId {
+                pointee: i32_type_id,
+                mutable: false
+            })
+            .to_string(),
+            format!("*const {}", i32::guid())
+        );
+        assert_eq!(
+            TypeId::Pointer(PointerTypeId {
+                pointee: i32_type_id,
+                mutable: true
+            })
+            .to_string(),
+            format!("*mut {}", i32::guid())
+        );
+
+        assert_eq!(
+            TypeId::Array(ArrayTypeId {
+                element: i32_type_id
+            })
+            .to_string(),
+            format!("[{}]", i32::guid())
+        );
+    }
+}

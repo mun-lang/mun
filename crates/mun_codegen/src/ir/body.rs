@@ -1,7 +1,7 @@
-use super::MunArrayValue;
 use crate::{
     intrinsics,
     ir::{dispatch_table::DispatchTable, ty::HirTypeCache, type_table::TypeTable},
+    ir::{MunArrayValue, MunReferenceValue},
     module_group::ModuleGroup,
     value::Global,
 };
@@ -391,14 +391,13 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
         let allocator_handle = self.get_allocator_handle_ptr();
 
-        // An object pointer adds an extra layer of indirection to allow for hot reloading. To
-        // make it struct type agnostic, it is stored in a `*const *mut std::ffi::c_void`.
-        let object_ptr = self
+        // Safety: we can be quite sure that the new intrinsic returns a reference.
+        let untyped_reference = self
             .builder
             .build_call(
                 new_fn_ptr,
                 &[type_info_ptr.into(), allocator_handle.into()],
-                "new",
+                "ref",
             )
             .try_as_basic_value()
             .left()
@@ -406,30 +405,26 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .into_pointer_value();
 
         // Cast the object pointer to the struct type
-        let struct_ptr_ptr = self
+        let typed_reference = self
             .builder
             .build_bitcast(
-                object_ptr,
+                untyped_reference,
                 struct_ir_ty
                     .ptr_type(AddressSpace::Generic)
                     .ptr_type(AddressSpace::Generic),
-                &format!("{}_ptr_ptr", hir_struct.name(self.db)),
+                &format!("ref<{}>", hir_struct.name(self.db)),
             )
             .into_pointer_value();
 
-        // Load the actual memory location of the struct
-        let mem_ptr = self
-            .builder
-            .build_load(
-                struct_ptr_ptr,
-                &format!("{}_mem_ptr", hir_struct.name(self.db)),
-            )
-            .into_pointer_value();
+        // Construct a reference of the object
+        let reference = MunReferenceValue::from_ptr(typed_reference, struct_ir_ty)
+            .expect("unable to construct mun reference type");
 
         // Store the struct value
-        self.builder.build_store(mem_ptr, struct_lit);
+        let struct_ptr = reference.get_data_ptr(&self.builder);
+        self.builder.build_store(struct_ptr, struct_lit);
 
-        struct_ptr_ptr.into()
+        reference.into()
     }
 
     /// Generates IR for a record literal, e.g. `Foo { a: 1.23, b: 4 }`
@@ -1334,7 +1329,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 .build_struct_gep(
                     receiver_ptr,
                     field_idx,
-                    &format!("{}.{}_ptr", hir_struct_name, name),
+                    &format!("{}->{}", hir_struct_name, name),
                 )
                 .unwrap_or_else(|_| {
                     panic!(
@@ -1387,7 +1382,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 .build_struct_gep(
                     receiver_ptr,
                     field_idx,
-                    &format!("{}.{}_ptr", hir_struct_name, name),
+                    &format!("{}->{}", hir_struct_name, name),
                 )
                 .unwrap_or_else(|_| {
                     panic!(
@@ -1444,7 +1439,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     length_value.into(),
                     allocator_handle.into(),
                 ],
-                "new_array",
+                "ref",
             )
             .try_as_basic_value()
             .left()
@@ -1452,23 +1447,27 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .into_pointer_value();
 
         // Cast the object pointer to the array struct type
+        let array_ty = self.hir_types.get_array_type(element_ty);
         let array_ptr = self
             .builder
             .build_bitcast(
                 untyped_array_ptr,
-                self.hir_types.get_array_reference_type(element_ty),
-                &format!("{}_array_ptr", element_ty.display(self.db)),
+                array_ty
+                    .ptr_type(AddressSpace::Generic)
+                    .ptr_type(AddressSpace::Generic),
+                &format!("ref<[{}]>", element_ty.display(self.db)),
             )
             .into_pointer_value();
 
-        let array = unsafe { MunArrayValue::from_ptr_unchecked(array_ptr) };
+        let array = MunArrayValue::from_ptr(array_ptr, array_ty)
+            .expect("unable to convert pointer to typed reference");
         let array_elements = array.get_elements(&self.builder);
         for (idx, expr) in exprs.iter().enumerate() {
             let element_ptr = unsafe {
                 self.builder.build_gep(
                     array_elements,
                     &[self.context.i64_type().const_int(idx as u64, false)],
-                    &format!("elem_{}_ptr", idx),
+                    &format!("{}[{}]", array_elements.get_name().to_string_lossy(), idx),
                 )
             };
 
@@ -1511,7 +1510,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             self.builder.build_gep(
                 elements,
                 &[index],
-                &format!("{}.idx_ptr", base.get_name().to_string_lossy()),
+                &format!("{}+index", elements.get_name().to_string_lossy()),
             )
         })
     }
@@ -1536,9 +1535,9 @@ fn deref_heap_value<'ink>(
     builder: &Builder<'ink>,
     value: BasicValueEnum<'ink>,
 ) -> BasicValueEnum<'ink> {
-    let mem_ptr = builder
-        .build_load(value.into_pointer_value(), "mem_ptr")
-        .into_pointer_value();
+    // Safety: we can assume that the input is a MunReferenceValue
+    let mem_ptr = unsafe { MunReferenceValue::from_ptr_unchecked(value.into_pointer_value()) }
+        .get_data_ptr(builder);
 
     builder.build_load(mem_ptr, "deref")
 }

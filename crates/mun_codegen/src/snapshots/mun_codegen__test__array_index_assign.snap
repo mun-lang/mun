@@ -8,7 +8,7 @@ expression: "\n    pub fn main() {\n        let a = [1,2,3,4,]\n        a[1] = 1
 source_filename = "mod"
 
 %DispatchTable = type { i8** (i8*, i64, i8*)* }
-%"[i32]" = type { { i64, i64, i32 }* }
+%"[i32]" = type { i64, i64, i32 }
 
 @allocatorHandle = external global i8*
 @dispatchTable = external global %DispatchTable
@@ -16,41 +16,37 @@ source_filename = "mod"
 
 define void @main() {
 body:
-  %a = alloca %"[i32]"*, align 8
+  %a = alloca %"[i32]"**, align 8
   %new_array_ptr = load i8** (i8*, i64, i8*)*, i8** (i8*, i64, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
   %"[core::i32]_ptr" = load i64*, i64** getelementptr inbounds ([1 x i64*], [1 x i64*]* @global_type_lookup_table, i64 0, i64 0), align 8
   %type_info_ptr_to_i8_ptr = bitcast i64* %"[core::i32]_ptr" to i8*
   %allocator_handle = load i8*, i8** @allocatorHandle, align 8
-  %new_array = call i8** %new_array_ptr(i8* %type_info_ptr_to_i8_ptr, i64 4, i8* %allocator_handle)
-  %i32_array_ptr = bitcast i8** %new_array to %"[i32]"*
-  %i32_array_ptr.value_ptr = getelementptr inbounds %"[i32]", %"[i32]"* %i32_array_ptr, i32 0, i32 0
-  %i32_array_ptr.value = load { i64, i64, i32 }*, { i64, i64, i32 }** %i32_array_ptr.value_ptr, align 8
-  %i32_array_ptr.elements_ptr = getelementptr inbounds { i64, i64, i32 }, { i64, i64, i32 }* %i32_array_ptr.value, i32 0, i32 2
-  %elem_0_ptr = getelementptr i32, i32* %i32_array_ptr.elements_ptr, i64 0
-  store i32 1, i32* %elem_0_ptr, align 4
-  %elem_1_ptr = getelementptr i32, i32* %i32_array_ptr.elements_ptr, i64 1
-  store i32 2, i32* %elem_1_ptr, align 4
-  %elem_2_ptr = getelementptr i32, i32* %i32_array_ptr.elements_ptr, i64 2
-  store i32 3, i32* %elem_2_ptr, align 4
-  %elem_3_ptr = getelementptr i32, i32* %i32_array_ptr.elements_ptr, i64 3
-  store i32 4, i32* %elem_3_ptr, align 4
-  %i32_array_ptr.value_ptr1 = getelementptr inbounds %"[i32]", %"[i32]"* %i32_array_ptr, i32 0, i32 0
-  %i32_array_ptr.value2 = load { i64, i64, i32 }*, { i64, i64, i32 }** %i32_array_ptr.value_ptr1, align 8
-  %i32_array_ptr.length_ptr = getelementptr inbounds { i64, i64, i32 }, { i64, i64, i32 }* %i32_array_ptr.value2, i32 0, i32 0
-  store i64 4, i64* %i32_array_ptr.length_ptr, align 4
-  store %"[i32]"* %i32_array_ptr, %"[i32]"** %a, align 8
-  %a3 = load %"[i32]"*, %"[i32]"** %a, align 8
-  %a3.value_ptr = getelementptr inbounds %"[i32]", %"[i32]"* %a3, i32 0, i32 0
-  %a3.value = load { i64, i64, i32 }*, { i64, i64, i32 }** %a3.value_ptr, align 8
-  %a3.elements_ptr = getelementptr inbounds { i64, i64, i32 }, { i64, i64, i32 }* %a3.value, i32 0, i32 2
-  %a3.idx_ptr = getelementptr i32, i32* %a3.elements_ptr, i32 1
-  %0 = load i32, i32* %a3.idx_ptr, align 4
-  %a4 = load %"[i32]"*, %"[i32]"** %a, align 8
-  %a4.value_ptr = getelementptr inbounds %"[i32]", %"[i32]"* %a4, i32 0, i32 0
-  %a4.value = load { i64, i64, i32 }*, { i64, i64, i32 }** %a4.value_ptr, align 8
-  %a4.elements_ptr = getelementptr inbounds { i64, i64, i32 }, { i64, i64, i32 }* %a4.value, i32 0, i32 2
-  %a4.idx_ptr = getelementptr i32, i32* %a4.elements_ptr, i32 1
-  store i32 100, i32* %a4.idx_ptr, align 4
+  %ref = call i8** %new_array_ptr(i8* %type_info_ptr_to_i8_ptr, i64 4, i8* %allocator_handle)
+  %"ref<[i32]>" = bitcast i8** %ref to %"[i32]"**
+  %"ref<[i32]>->data" = load %"[i32]"*, %"[i32]"** %"ref<[i32]>", align 8
+  %"ref<[i32]>->data->elements" = getelementptr inbounds %"[i32]", %"[i32]"* %"ref<[i32]>->data", i32 0, i32 2
+  %"ref<[i32]>->data->elements[0]" = getelementptr i32, i32* %"ref<[i32]>->data->elements", i64 0
+  store i32 1, i32* %"ref<[i32]>->data->elements[0]", align 4
+  %"ref<[i32]>->data->elements[1]" = getelementptr i32, i32* %"ref<[i32]>->data->elements", i64 1
+  store i32 2, i32* %"ref<[i32]>->data->elements[1]", align 4
+  %"ref<[i32]>->data->elements[2]" = getelementptr i32, i32* %"ref<[i32]>->data->elements", i64 2
+  store i32 3, i32* %"ref<[i32]>->data->elements[2]", align 4
+  %"ref<[i32]>->data->elements[3]" = getelementptr i32, i32* %"ref<[i32]>->data->elements", i64 3
+  store i32 4, i32* %"ref<[i32]>->data->elements[3]", align 4
+  %"ref<[i32]>->data1" = load %"[i32]"*, %"[i32]"** %"ref<[i32]>", align 8
+  %"ref<[i32]>->data1->length" = getelementptr inbounds %"[i32]", %"[i32]"* %"ref<[i32]>->data1", i32 0, i32 0
+  store i64 4, i64* %"ref<[i32]>->data1->length", align 4
+  store %"[i32]"** %"ref<[i32]>", %"[i32]"*** %a, align 8
+  %a2 = load %"[i32]"**, %"[i32]"*** %a, align 8
+  %"a2->data" = load %"[i32]"*, %"[i32]"** %a2, align 8
+  %"a2->data->elements" = getelementptr inbounds %"[i32]", %"[i32]"* %"a2->data", i32 0, i32 2
+  %"a2->data->elements+index" = getelementptr i32, i32* %"a2->data->elements", i32 1
+  %0 = load i32, i32* %"a2->data->elements+index", align 4
+  %a3 = load %"[i32]"**, %"[i32]"*** %a, align 8
+  %"a3->data" = load %"[i32]"*, %"[i32]"** %a3, align 8
+  %"a3->data->elements" = getelementptr inbounds %"[i32]", %"[i32]"* %"a3->data", i32 0, i32 2
+  %"a3->data->elements+index" = getelementptr i32, i32* %"a3->data->elements", i32 1
+  store i32 100, i32* %"a3->data->elements+index", align 4
   ret void
 }
 

@@ -8,7 +8,7 @@ expression: "\n    pub fn main() -> i8 {\n        let a = [1,2,3,4,]\n        a[
 source_filename = "mod"
 
 %DispatchTable = type { i8** (i8*, i64, i8*)* }
-%"[i8]" = type { { i64, i64, i8 }* }
+%"[i8]" = type { i64, i64, i8 }
 
 @allocatorHandle = external global i8*
 @dispatchTable = external global %DispatchTable
@@ -20,25 +20,24 @@ body:
   %"[core::i8]_ptr" = load i64*, i64** getelementptr inbounds ([2 x i64*], [2 x i64*]* @global_type_lookup_table, i64 0, i64 0), align 8
   %type_info_ptr_to_i8_ptr = bitcast i64* %"[core::i8]_ptr" to i8*
   %allocator_handle = load i8*, i8** @allocatorHandle, align 8
-  %new_array = call i8** %new_array_ptr(i8* %type_info_ptr_to_i8_ptr, i64 4, i8* %allocator_handle)
-  %i8_array_ptr = bitcast i8** %new_array to %"[i8]"*
-  %i8_array_ptr.value_ptr = getelementptr inbounds %"[i8]", %"[i8]"* %i8_array_ptr, i32 0, i32 0
-  %i8_array_ptr.value = load { i64, i64, i8 }*, { i64, i64, i8 }** %i8_array_ptr.value_ptr, align 8
-  %i8_array_ptr.elements_ptr = getelementptr inbounds { i64, i64, i8 }, { i64, i64, i8 }* %i8_array_ptr.value, i32 0, i32 2
-  store i8 1, i8* %i8_array_ptr.elements_ptr, align 1
-  %elem_1_ptr = getelementptr i8, i8* %i8_array_ptr.elements_ptr, i64 1
-  store i8 2, i8* %elem_1_ptr, align 1
-  %elem_2_ptr = getelementptr i8, i8* %i8_array_ptr.elements_ptr, i64 2
-  store i8 3, i8* %elem_2_ptr, align 1
-  %elem_3_ptr = getelementptr i8, i8* %i8_array_ptr.elements_ptr, i64 3
-  store i8 4, i8* %elem_3_ptr, align 1
-  %i8_array_ptr.value2 = load { i64, i64, i8 }*, { i64, i64, i8 }** %i8_array_ptr.value_ptr, align 8
-  %i8_array_ptr.length_ptr = getelementptr inbounds { i64, i64, i8 }, { i64, i64, i8 }* %i8_array_ptr.value2, i32 0, i32 0
-  store i64 4, i64* %i8_array_ptr.length_ptr, align 4
-  %a3.value = load { i64, i64, i8 }*, { i64, i64, i8 }** %i8_array_ptr.value_ptr, align 8
-  %a3.elements_ptr = getelementptr inbounds { i64, i64, i8 }, { i64, i64, i8 }* %a3.value, i32 0, i32 2
-  %a3.idx_ptr = getelementptr i8, i8* %a3.elements_ptr, i32 3
-  %0 = load i8, i8* %a3.idx_ptr, align 1
+  %ref = call i8** %new_array_ptr(i8* %type_info_ptr_to_i8_ptr, i64 4, i8* %allocator_handle)
+  %"ref<[i8]>" = bitcast i8** %ref to %"[i8]"**
+  %"ref<[i8]>->data" = load %"[i8]"*, %"[i8]"** %"ref<[i8]>", align 8
+  %"ref<[i8]>->data->elements" = getelementptr inbounds %"[i8]", %"[i8]"* %"ref<[i8]>->data", i32 0, i32 2
+  store i8 1, i8* %"ref<[i8]>->data->elements", align 1
+  %"ref<[i8]>->data->elements[1]" = getelementptr i8, i8* %"ref<[i8]>->data->elements", i64 1
+  store i8 2, i8* %"ref<[i8]>->data->elements[1]", align 1
+  %"ref<[i8]>->data->elements[2]" = getelementptr i8, i8* %"ref<[i8]>->data->elements", i64 2
+  store i8 3, i8* %"ref<[i8]>->data->elements[2]", align 1
+  %"ref<[i8]>->data->elements[3]" = getelementptr i8, i8* %"ref<[i8]>->data->elements", i64 3
+  store i8 4, i8* %"ref<[i8]>->data->elements[3]", align 1
+  %"ref<[i8]>->data1" = load %"[i8]"*, %"[i8]"** %"ref<[i8]>", align 8
+  %"ref<[i8]>->data1->length" = getelementptr inbounds %"[i8]", %"[i8]"* %"ref<[i8]>->data1", i32 0, i32 0
+  store i64 4, i64* %"ref<[i8]>->data1->length", align 4
+  %"a2->data" = load %"[i8]"*, %"[i8]"** %"ref<[i8]>", align 8
+  %"a2->data->elements" = getelementptr inbounds %"[i8]", %"[i8]"* %"a2->data", i32 0, i32 2
+  %"a2->data->elements+index" = getelementptr i8, i8* %"a2->data->elements", i32 3
+  %0 = load i8, i8* %"a2->data->elements+index", align 1
   ret i8 %0
 }
 
