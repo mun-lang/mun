@@ -25,6 +25,7 @@ use memory::{
 use mun_project::LOCKFILE_NAME;
 use notify::{RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
 use std::mem::ManuallyDrop;
+use std::ptr::NonNull;
 use std::{
     collections::{HashMap, VecDeque},
     ffi,
@@ -49,6 +50,7 @@ pub use crate::{
     reflection::{ArgumentReflection, ReturnTypeReflection},
 };
 // Re-export some useful types so crates dont have to depend on mun_memory as well.
+use crate::array::RawArray;
 pub use memory::{FieldInfo, HasStaticTypeInfo, StructInfo, TypeFields, TypeInfo};
 
 /// Options for the construction of a [`Runtime`].
@@ -471,6 +473,59 @@ impl Runtime {
     /// Returns statistics about the garbage collector.
     pub fn gc_stats(&self) -> gc::Stats {
         self.gc.as_ref().stats()
+    }
+
+    /// Constructs an array from an iterator
+    pub fn construct_array<'t, T: 't + Marshal<'t> + HasStaticTypeInfo, I: IntoIterator<Item = T>>(
+        &'t self,
+        iter: I,
+    ) -> ArrayRef<'t, T>
+    where
+        I::IntoIter: ExactSizeIterator,
+    {
+        let iter = iter.into_iter();
+        let element_type = T::type_info();
+        let array_type = element_type.array_type();
+        let array_capacity = iter
+            .size_hint()
+            .1
+            .expect("iterator doesnt return upper bound");
+        let raw_array_handle = self.gc.as_ref().alloc_array(&array_type, array_capacity);
+        let mut array_handle = self
+            .gc
+            .as_ref()
+            .array(raw_array_handle)
+            .expect("allocated array cant be accessed as array");
+
+        let mut element_ptr = array_handle.data().as_ptr();
+        let element_stride = array_handle.element_stride();
+        let mut size = 0;
+        for (idx, element) in iter.enumerate() {
+            debug_assert!(
+                idx < array_capacity,
+                "looks like the size_hint was not properly implemented"
+            );
+
+            // Safety: the element_ptr came from NonNull and is only moved forward.
+            T::marshal_to_ptr(
+                element,
+                unsafe { NonNull::new_unchecked(element_ptr).cast() },
+                element_type,
+            );
+
+            // Safety: we trust the element stride
+            element_ptr = unsafe { element_ptr.add(element_stride) };
+
+            // Count the number of elements written
+            size = idx + 1;
+        }
+
+        // Safety: we just initialized all the elements, so this operation is safe.
+        unsafe {
+            array_handle.set_length(size);
+        }
+
+        ArrayRef::new(RawArray(raw_array_handle), self)
     }
 }
 

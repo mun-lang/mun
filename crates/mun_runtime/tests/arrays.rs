@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use mun_runtime::{ArrayRef, StructRef};
 use mun_test::CompileAndRunTestDriver;
 
@@ -100,4 +101,16 @@ fn root_array() {
     assert_eq!(result.len(), 5);
     assert!(result.capacity() >= 5);
     assert_eq!(result.iter().collect::<Vec<_>>(), vec![5, 4, 3, 2, 1]);
+}
+
+#[test]
+fn construct_array_simple() {
+    let driver =
+        CompileAndRunTestDriver::new(r"", |builder| builder).expect("Failed to build test driver");
+
+    let test_data = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 147294028];
+    let array = driver.runtime.construct_array(test_data.iter().copied());
+    assert!(array.capacity() >= test_data.len());
+    assert_eq!(array.len(), test_data.len());
+    assert_eq!(array.iter().collect_vec(), test_data);
 }

@@ -9,7 +9,7 @@ use std::sync::Arc;
 /// Represents a Mun array pointer.
 #[repr(transparent)]
 #[derive(Clone)]
-pub struct RawArray(GcPtr);
+pub struct RawArray(pub(crate) GcPtr);
 
 impl RawArray {
     /// Returns a pointer to the array memory.
@@ -33,7 +33,7 @@ pub struct ArrayRef<'a, T> {
 
 impl<'array, T: Marshal<'array> + 'array> ArrayRef<'array, T> {
     /// Creates a `ArrayRef` that wraps a raw Mun struct.
-    fn new<'runtime>(raw: RawArray, runtime: &'runtime Runtime) -> Self
+    pub(crate) fn new<'runtime>(raw: RawArray, runtime: &'runtime Runtime) -> Self
     where
         'runtime: 'array,
     {

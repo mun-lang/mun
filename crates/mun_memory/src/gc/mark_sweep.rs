@@ -150,7 +150,26 @@ pub struct ArrayHandleIter {
     stride: usize,
 }
 
+/// Helper object to work with GcPtr that represents an array.
+///
+/// Arrays are stored in memory with a header which holds the length and capacity. The memory layout
+/// of an array looks like this in memory:
+///
+/// ```text
+/// object.data.array ───►┌──────────────┐
+///                       │ ArrayHeader  │
+///                       └─┬────────────┘
+///                         │ padding to align elements
+///                       ┌─┴────────────┐
+///                       │ element #1   │
+///                       └──────────────┘
+///                        :
+///                       ┌──────────────┐
+///                       │ element #n   │
+///                       └──────────────┘
+/// ```
 impl<'gc> ArrayHandle<'gc> {
+    /// Returns the type of the stored element.
     pub fn element_type(&self) -> &Arc<TypeInfo> {
         unsafe {
             &(*self.obj)
@@ -168,22 +187,48 @@ impl<'gc> ArrayHandle<'gc> {
         unsafe { &*(*self.obj).data.array }
     }
 
-    /// Returns a pointer to the data
-    pub fn data(&self) -> NonNull<u8> {
-        // Determine the offset of the data relative from the start of the array pointer. This
-        // the header and the extra alignment padding between the header and the data.
+    /// Sets the length of the array.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because the array elements might be left uninitialized.
+    pub unsafe fn set_length(&mut self, length: usize) {
+        let header = &mut *(*self.obj).data.array;
+        debug_assert!(header.capacity >= length);
+        header.length = length;
+    }
+
+    /// Returns the layout of an element stored in the array.
+    ///
+    /// Note that this may be different from the layout of the [`Self::element_type`]. If the
+    /// element type is a garbage collected type, the array stores references instead of raw
+    /// elements.
+    pub fn element_layout(&self) -> Layout {
         let element_ty = self.element_type();
-        let element_layout = if element_ty.is_stack_allocated() {
+        if element_ty.is_stack_allocated() {
             element_ty.layout
         } else {
             Layout::new::<GcPtr>()
-        };
+        }
+    }
+
+    /// Returns the stride in bytes between elements.
+    ///
+    /// The stride is determined by the size of [`Self::element_layout`] padded to alignment of
+    /// layout.
+    pub fn element_stride(&self) -> usize {
+        self.element_layout().pad_to_align().size()
+    }
+
+    /// Returns a pointer to the data.
+    pub fn data(&self) -> NonNull<u8> {
+        // Determine the offset of the data relative from the start of the array pointer. This
+        // the header and the extra alignment padding between the header and the data.
+        let element_layout = self.element_layout();
         let header_layout = Layout::new::<ArrayHeader>();
-        let padded_header_size = header_layout
-            .size()
-            .wrapping_add(element_layout.align())
-            .wrapping_sub(1)
-            & !element_layout.align().wrapping_sub(1);
+        let (_, padded_header_size) = header_layout
+            .extend(element_layout)
+            .expect("error creating combined layout of header and element");
 
         unsafe {
             NonNull::new_unchecked(((*self.obj).data.array as *mut u8).add(padded_header_size))
