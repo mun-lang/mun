@@ -5,18 +5,16 @@ use crate::{
 use hir::{
     FloatBitness, HirDatabase, HirDisplay, IntBitness, ResolveBitness, Signedness, Ty, TyKind,
 };
-use inkwell::types::PointerType;
 use inkwell::{
     context::Context,
     targets::TargetData,
     types::FunctionType,
+    types::PointerType,
     types::{BasicType, BasicTypeEnum, FloatType, IntType, StructType},
     AddressSpace,
 };
 use smallvec::SmallVec;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
 use abi::Guid;
 

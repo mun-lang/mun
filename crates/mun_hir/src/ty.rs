@@ -4,12 +4,12 @@ mod op;
 mod primitives;
 mod resolve;
 
-use crate::display::{HirDisplay, HirFormatter};
-use crate::ty::infer::InferTy;
-use crate::ty::lower::fn_sig_for_struct_constructor;
-use crate::HasVisibility;
-use crate::Visibility;
-use crate::{HirDatabase, Struct, StructMemoryKind, TypeAlias};
+use crate::{
+    display::{HirDisplay, HirFormatter},
+    ty::infer::InferTy,
+    ty::lower::fn_sig_for_struct_constructor,
+    HasVisibility, HirDatabase, Struct, StructMemoryKind, TypeAlias, Visibility,
+};
 pub(crate) use infer::infer_query;
 pub use infer::InferenceResult;
 pub(crate) use lower::{
@@ -18,10 +18,7 @@ pub(crate) use lower::{
 pub use primitives::{FloatTy, IntTy};
 pub use resolve::ResolveBitness;
 use smallvec::SmallVec;
-use std::iter::FromIterator;
-use std::ops::Deref;
-use std::sync::Arc;
-use std::{fmt, mem};
+use std::{fmt, iter::FromIterator, mem, ops::Deref, sync::Arc};
 
 #[cfg(test)]
 mod tests;
