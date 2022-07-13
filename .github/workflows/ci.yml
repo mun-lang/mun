@@ -86,7 +86,7 @@ jobs:
           RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
         with:
           command: test
-          args: --lib --bins --tests --examples -- --nocapture
+          args: --lib --bins --tests --examples --profile dev-ci -- --nocapture
 
   test-mdbook:
     name: Test mdbook
