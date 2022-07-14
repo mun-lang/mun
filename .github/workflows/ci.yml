@@ -79,7 +79,7 @@ jobs:
           components: rustfmt
 
       - uses: Swatinem/rust-cache@v1
-        if: matrix.os != "windows-latest"
+        if: matrix.os != 'windows-latest'
         
       - name: Cargo test
         uses: actions-rs/cargo@v1
