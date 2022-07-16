@@ -84,80 +84,24 @@ pub fn diff(old: &[Arc<TypeInfo>], new: &[Arc<TypeInfo>]) -> Vec<Diff> {
 
     // ASSUMPTION: `Primitive` types can never be converted to `Struct` types, hence they can be
     // compared separately.
-    let deleted_primitives = deletions
-        .iter()
-        .filter(|idx| unsafe { old.get_unchecked(**idx) }.is_primitive())
-        .cloned()
-        .collect();
     let deleted_structs = deletions
         .iter()
         .filter(|idx| unsafe { old.get_unchecked(**idx) }.is_struct())
         .cloned()
         .collect();
 
-    let inserted_primitives = insertions
-        .iter()
-        .filter(|idx| unsafe { new.get_unchecked(**idx) }.is_primitive())
-        .cloned()
-        .collect();
     let inserted_structs = insertions
         .iter()
         .filter(|idx| unsafe { new.get_unchecked(**idx) }.is_struct())
         .cloned()
         .collect();
 
-    append_primitive_mapping(
-        old,
-        new,
-        deleted_primitives,
-        inserted_primitives,
-        &mut mapping,
-    );
     append_struct_mapping(old, new, deleted_structs, inserted_structs, &mut mapping);
 
     mapping.shrink_to_fit();
     // Sort to guarantee order of execution when deleting and/or inserting
     mapping.sort();
     mapping
-}
-
-fn append_primitive_mapping(
-    old: &[Arc<TypeInfo>],
-    new: &[Arc<TypeInfo>],
-    deletions: Vec<usize>,
-    insertions: Vec<usize>,
-    mapping: &mut Vec<Diff>,
-) {
-    let mut insertions: Vec<Option<usize>> = insertions.into_iter().map(Some).collect();
-
-    // For all deletions,
-    #[allow(clippy::manual_flatten)]
-    'outer: for old_idx in deletions {
-        let old_ty = unsafe { old.get_unchecked(old_idx) };
-        // is there an insertion
-        for insertion in insertions.iter_mut() {
-            if let Some(new_idx) = insertion {
-                let new_ty = unsafe { new.get_unchecked(*new_idx) };
-                // with the same type `T`?
-                if *old_ty == *new_ty {
-                    // If so, then `Move` it.
-                    mapping.push(Diff::Move {
-                        old_index: old_idx,
-                        new_index: *new_idx,
-                    });
-                    *insertion = None;
-                    continue 'outer;
-                }
-            }
-        }
-        // If not, `Delete` it.
-        mapping.push(Diff::Delete { index: old_idx })
-    }
-
-    // If an insertion did not have a matching deletion, then `Insert` it.
-    for index in insertions.into_iter().flatten() {
-        mapping.push(Diff::Insert { index });
-    }
 }
 
 /// A helper struct to check equality between fields.
