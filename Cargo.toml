@@ -9,7 +9,3 @@ rpath = true
 
 [profile.release]
 rpath = true
-
-[profile.dev-ci]
-inherits = "dev"
-incremental = false
