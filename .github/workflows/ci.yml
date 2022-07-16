@@ -23,6 +23,11 @@ jobs:
         with:
           submodules: true
 
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install libasound2-dev libudev-dev
+
       - name: Install Rust (stable)
         uses: actions-rs/toolchain@v1
         with:
@@ -41,7 +46,7 @@ jobs:
           args: --all-targets
 
   test:
-    name: Test Mun
+    name: Test Rust
     runs-on: ${{ matrix.os }}
     needs: check
     strategy:
@@ -50,8 +55,47 @@ jobs:
         os: ["ubuntu-latest", "windows-latest", "macOS-latest"]
         include:
           - RUSTFLAGS: "-Dwarnings"
+            CARGO_INCREMENTAL: 1
           - os: "windows-latest"
             RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
+            CARGO_INCREMENTAL: 0
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Install LLVM
+        uses: ./.github/actions/install-llvm
+
+      - name: Install packages
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install libasound2-dev libudev-dev
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          override: true
+          components: rustfmt
+
+      - uses: Swatinem/rust-cache@v1
+        if: matrix.os != 'windows-latest'
+        
+      - name: Cargo test
+        uses: actions-rs/cargo@v1
+        env:
+          RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
+          CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
+        with:
+          command: test
+          args: --lib --bins --tests --examples -- --nocapture
+
+  test-mdbook:
+    name: Test mdbook
+    runs-on: ubuntu-latest
+    needs: check
     steps:
       - uses: actions/checkout@v3
         with:
@@ -68,17 +112,30 @@ jobs:
           components: rustfmt
 
       - uses: Swatinem/rust-cache@v1
-        
-      - name: Cargo test
+
+      - name: Cargo build
         uses: actions-rs/cargo@v1
         env:
           RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
         with:
-          command: test
-          args: --workspace -- --nocapture
+          command: build
+          args: -p mun_runtime
 
-  test-dependents:
-    name: Test Mun Dependents (C++ & book)
+      - name: Install mdbook
+        uses: actions-rs/install@v0.1
+        with:
+          crate: mdbook
+          version: 0.4.7
+          use-tool-cache: true
+
+      - name: mdbook test
+        run: mdbook test book -L target/debug/deps
+
+      - name: mdbook build
+        run: mdbook build book
+
+  test-cpp:
+    name: Test C++ Runtime
     runs-on: ${{ matrix.os }}
     needs: check
     strategy:
@@ -112,7 +169,7 @@ jobs:
           RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
         with:
           command: build
-          args: --workspace
+          args: -p mun -p mun_runtime_capi
           
       - name: Create build folder (debug)
         run: cmake -E make_directory ${{ runner.workspace }}/build/debug
@@ -128,37 +185,21 @@ jobs:
         working-directory: ${{ runner.workspace }}/build/release
         run: cmake -DCMAKE_BUILD_TYPE=Release -S ${{ github.workspace }} -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_binaries_path=${{ github.workspace }}/target/debug/ -Dmun_examples_path=${{ github.workspace }}/examples
 
-      - name: Build C++ (debug)
+      - name: Build (debug)
         working-directory: ${{ runner.workspace }}/build/debug
         run: cmake --build . --config Debug
         
-      - name: Build C++ (release)
+      - name: Build (release)
         working-directory: ${{ runner.workspace }}/build/release
         run: cmake --build . --config Release
 
-      - name: Test C++ (debug)
+      - name: Test (debug)
         working-directory: ${{ runner.workspace }}/build/debug
         run: ctest -C Debug
         
-      - name: Test C++ (release)
+      - name: Test (release)
         working-directory: ${{ runner.workspace }}/build/release
         run: ctest -C Release
-
-      - name: Install mdbook
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        uses: actions-rs/install@v0.1
-        with:
-          crate: mdbook
-          version: 0.4.7
-          use-tool-cache: true
-
-      - name: mdbook test
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: mdbook test book -L target/debug/deps
-
-      - name: mdbook build
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: mdbook build book
 
   style:
     name: Check Style
@@ -200,6 +241,11 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: true
+
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install libasound2-dev libudev-dev
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
