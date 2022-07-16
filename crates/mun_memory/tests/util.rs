@@ -2,7 +2,7 @@
 
 use std::alloc::Layout;
 
-use mun_memory::{FieldInfo, StructInfo, TypeInfo};
+use mun_memory::{FieldInfo, StructInfo, Type};
 
 /// Generates the Guid string for the struct.
 ///
@@ -27,17 +27,17 @@ fn struct_guid_string<'t>(name: &str, fields: impl Iterator<Item = &'t FieldInfo
     )
 }
 
-fn type_guid_string(type_info: &TypeInfo) -> String {
-    match &type_info.data {
+fn type_guid_string(type_info: &Type) -> String {
+    match type_info.data() {
         mun_memory::TypeInfoData::Struct(s) => {
             if s.memory_kind == abi::StructMemoryKind::Gc {
-                format!("struct {}", type_info.name)
+                format!("struct {}", type_info.name())
             } else {
-                struct_guid_string(&type_info.name, s.fields.iter())
+                struct_guid_string(&type_info.name(), s.fields.iter())
             }
         }
         mun_memory::TypeInfoData::Primitive(_) | mun_memory::TypeInfoData::Pointer(_) => {
-            type_info.name.clone()
+            type_info.name().to_owned()
         }
     }
 }
@@ -46,13 +46,13 @@ pub fn fake_layout(struct_info: &StructInfo) -> Layout {
     let size = struct_info
         .fields
         .iter()
-        .map(|field| field.type_info.layout.size())
+        .map(|field| field.type_info.layout().size())
         .sum();
 
     let alignment = struct_info
         .fields
         .iter()
-        .map(|field| field.type_info.layout.align())
+        .map(|field| field.type_info.layout().align())
         .max()
         .unwrap();
 
@@ -75,7 +75,7 @@ macro_rules! fake_struct {
             .iter()
             .map(|ty| {
                 let offset = total_size;
-                total_size += ty.layout.size();
+                total_size += ty.layout().size();
                 offset as u16
             })
             .collect();
@@ -97,7 +97,7 @@ macro_rules! fake_struct {
             memory_kind: abi::StructMemoryKind::Gc,
         };
 
-        mun_memory::TypeInfo::new_struct(
+        mun_memory::Type::new_struct(
             name,
             crate::util::fake_layout(&struct_info),
             struct_info,

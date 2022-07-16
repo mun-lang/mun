@@ -135,7 +135,7 @@ mod tests {
         type_info::mun_type_info_data,
         type_info::mun_type_info_eq,
     };
-    use memory::HasStaticTypeInfo;
+    use memory::HasStaticType;
     use std::{
         ffi::{CStr, CString},
         mem::MaybeUninit,

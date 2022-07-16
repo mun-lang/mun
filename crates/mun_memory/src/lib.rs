@@ -1,17 +1,17 @@
-pub use type_info::{FieldInfo, HasStaticTypeInfo, StructInfo, TypeInfo, TypeInfoData};
+pub use r#type::{FieldInfo, HasStaticType, StructInfo, Type, TypeInfoData};
 
 mod cast;
 pub mod diff;
 pub mod gc;
 pub mod mapping;
-mod type_info;
+mod r#type;
 pub mod type_table;
 use thiserror::Error;
 
 pub mod prelude {
     pub use crate::diff::{diff, Diff, FieldDiff, FieldEditKind};
     pub use crate::mapping::{Action, FieldMapping};
-    pub use crate::type_info::{StructInfo, TypeInfo, TypeInfoData};
+    pub use crate::r#type::{StructInfo, Type, TypeInfoData};
 }
 
 /// A trait used to obtain a type's fields.

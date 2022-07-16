@@ -1,6 +1,6 @@
 #![allow(clippy::mutable_key_type)]
 
-use crate::{HasStaticTypeInfo, TypeInfo};
+use crate::{HasStaticType, Type};
 use lazy_static::lazy_static;
 use std::{collections::HashMap, ptr::NonNull, sync::Arc};
 
@@ -16,7 +16,7 @@ macro_rules! insert_cast_fn {
 }
 
 lazy_static! {
-    static ref CAST_FN_TABLE: HashMap<(Arc<TypeInfo>, Arc<TypeInfo>), CastFn> = {
+    static ref CAST_FN_TABLE: HashMap<(Arc<Type>, Arc<Type>), CastFn> = {
         let mut table = HashMap::new();
         insert_cast_fn!(table, f32, f64);
         insert_cast_fn!(table, i8, i16);
@@ -62,8 +62,8 @@ where
 }
 
 pub fn try_cast_from_to(
-    old_id: Arc<TypeInfo>,
-    new_id: Arc<TypeInfo>,
+    old_id: Arc<Type>,
+    new_id: Arc<Type>,
     src: NonNull<u8>,
     dest: NonNull<u8>,
 ) -> bool {
@@ -78,13 +78,13 @@ pub fn try_cast_from_to(
 #[cfg(test)]
 mod tests {
     use super::try_cast_from_to;
-    use crate::HasStaticTypeInfo;
+    use crate::HasStaticType;
     use std::ptr::NonNull;
 
     fn assert_cast<A, B>(a: A, mut b: B)
     where
-        A: Copy + Into<B> + HasStaticTypeInfo,
-        B: PartialEq + std::fmt::Debug + HasStaticTypeInfo,
+        A: Copy + Into<B> + HasStaticType,
+        B: PartialEq + std::fmt::Debug + HasStaticType,
     {
         assert!(try_cast_from_to(
             A::type_info().clone(),

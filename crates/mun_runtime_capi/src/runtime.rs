@@ -1,7 +1,7 @@
 //! Exposes the Mun runtime using the C ABI.
 
 use memory::type_table::TypeTable;
-use memory::TypeInfo;
+use memory::Type;
 use runtime::{FunctionDefinition, FunctionPrototype, FunctionSignature, Runtime};
 use std::{
     ffi::{c_void, CStr},
@@ -140,7 +140,7 @@ pub unsafe extern "C" fn mun_runtime_create(
                     ));
                 }
 
-                let arg_types: Vec<Arc<TypeInfo>> = if def.num_args > 0 {
+                let arg_types: Vec<Arc<Type>> = if def.num_args > 0 {
                     std::slice::from_raw_parts(def.arg_types, def.num_args as usize)
                         .iter()
                         .enumerate()
@@ -391,7 +391,7 @@ pub unsafe extern "C" fn mun_runtime_update(
 mod tests {
     use super::*;
     use crate::{error::mun_error_destroy, test_invalid_runtime, test_util::TestDriver};
-    use memory::HasStaticTypeInfo;
+    use memory::HasStaticType;
     use std::{ffi::CString, mem::MaybeUninit, ptr};
 
     test_invalid_runtime!(

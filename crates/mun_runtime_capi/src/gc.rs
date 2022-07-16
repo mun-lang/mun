@@ -3,7 +3,7 @@
 use std::{ffi::c_void, sync::Arc};
 
 use crate::{error::ErrorHandle, runtime::RuntimeHandle, type_info::TypeInfoHandle};
-use memory::TypeInfo;
+use memory::Type;
 use runtime::Runtime;
 
 pub use memory::gc::GcPtr;
@@ -38,7 +38,7 @@ pub unsafe extern "C" fn mun_gc_alloc(
         None => return ErrorHandle::new("Invalid argument: 'obj' is null pointer."),
     };
 
-    let type_info = Arc::from_raw(type_info.0 as *const TypeInfo);
+    let type_info = Arc::from_raw(type_info.0 as *const Type);
 
     *obj = runtime.gc().alloc(&type_info);
 

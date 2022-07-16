@@ -4,7 +4,7 @@ use crate::{
     error::ErrorHandle,
     type_info::{TypeInfoHandle, TypeInfoSpan},
 };
-use memory::TypeInfo;
+use memory::Type;
 use runtime::FunctionDefinition;
 use std::{
     ffi::{c_void, CString},
@@ -123,7 +123,7 @@ pub unsafe extern "C" fn mun_function_info_argument_types(
     };
 
     let fn_sig = &fn_info.prototype.signature;
-    let mut types: Vec<*const TypeInfo> = fn_sig
+    let mut types: Vec<*const Type> = fn_sig
         .arg_types
         .iter()
         .map(|ty| Arc::into_raw(ty.clone()))
@@ -171,7 +171,7 @@ pub(crate) mod tests {
         test_util::TestDriver,
         type_info::mun_type_info_eq,
     };
-    use memory::HasStaticTypeInfo;
+    use memory::HasStaticType;
     use runtime::FunctionDefinition;
     use std::{
         ffi::{CStr, CString},

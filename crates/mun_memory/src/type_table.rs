@@ -4,17 +4,17 @@ use rustc_hash::FxHashMap;
 
 use abi::Guid;
 
-use crate::type_info::{HasStaticTypeInfo, TypeInfo};
+use crate::r#type::{HasStaticType, Type};
 
 #[derive(Clone)]
 pub struct TypeTable {
-    concrete: FxHashMap<Guid, Arc<TypeInfo>>,
-    type_name_to_type_info: FxHashMap<String, Arc<TypeInfo>>,
+    concrete: FxHashMap<Guid, Arc<Type>>,
+    type_name_to_type_info: FxHashMap<String, Arc<Type>>,
 }
 
 impl TypeTable {
     /// Returns the TypeInfo for the type with the given name.
-    pub fn find_type_info_by_name<S: AsRef<str>>(&self, name: S) -> Option<Arc<TypeInfo>> {
+    pub fn find_type_info_by_name<S: AsRef<str>>(&self, name: S) -> Option<Arc<Type>> {
         self.type_name_to_type_info.get(name.as_ref()).cloned()
     }
 
@@ -22,7 +22,7 @@ impl TypeTable {
     pub fn find_type_info_by_id<'abi>(
         &self,
         type_id: &'abi abi::TypeId<'abi>,
-    ) -> Option<Arc<TypeInfo>> {
+    ) -> Option<Arc<Type>> {
         match type_id {
             abi::TypeId::Concrete(guid) => self.concrete.get(guid).cloned(),
             abi::TypeId::Pointer(p) => self
@@ -35,7 +35,7 @@ impl TypeTable {
     ///
     /// If the type table already contained this `type_info`, the value is updated, and the old
     /// value is returned.
-    fn insert_static_type<T: HasStaticTypeInfo>(&mut self) -> Option<Arc<TypeInfo>> {
+    fn insert_static_type<T: HasStaticType>(&mut self) -> Option<Arc<Type>> {
         self.insert_type(T::type_info().clone())
     }
 
@@ -43,23 +43,23 @@ impl TypeTable {
     ///
     /// If the type table already contained this `type_info`, the value is updated, and the old
     /// value is returned.
-    pub fn insert_type(&mut self, type_info: Arc<TypeInfo>) -> Option<Arc<TypeInfo>> {
+    pub fn insert_type(&mut self, type_info: Arc<Type>) -> Option<Arc<Type>> {
         match type_info.as_concrete() {
             None => panic!("can only insert concrete types"),
             Some(guid) => {
                 self.type_name_to_type_info
-                    .insert(type_info.name.clone(), type_info.clone());
+                    .insert(type_info.name().to_owned(), type_info.clone());
                 self.concrete.insert(*guid, type_info)
             }
         }
     }
 
     /// Removes the specified TypeInfo from the lookup table.
-    pub fn remove_type(&mut self, ty: &TypeInfo) -> Option<Arc<TypeInfo>> {
+    pub fn remove_type(&mut self, ty: &Type) -> Option<Arc<Type>> {
         match ty.as_concrete() {
             None => panic!("can only remove concrete types"),
             Some(guid) => {
-                self.type_name_to_type_info.remove(&ty.name);
+                self.type_name_to_type_info.remove(ty.name());
                 self.concrete.remove(guid)
             }
         }
@@ -70,18 +70,18 @@ impl TypeTable {
     pub fn remove_type_by_type_info<'abi>(
         &mut self,
         type_info: &'abi abi::TypeDefinition<'abi>,
-    ) -> Option<Arc<TypeInfo>> {
+    ) -> Option<Arc<Type>> {
         match type_info.as_concrete() {
             None => panic!("can only remove concrete types"),
             Some(guid) => {
                 let ty = self.concrete.remove(guid)?;
-                self.type_name_to_type_info.remove(&ty.name)
+                self.type_name_to_type_info.remove(ty.name())
             }
         }
     }
 
     /// Removes and returns the `TypeInfo` corresponding to `name`, if it exists.
-    pub fn remove_type_by_name<S: AsRef<str>>(&mut self, name: S) -> Option<Arc<TypeInfo>> {
+    pub fn remove_type_by_name<S: AsRef<str>>(&mut self, name: S) -> Option<Arc<Type>> {
         if let Some(type_info) = self.type_name_to_type_info.remove(name.as_ref()) {
             self.remove_type(&type_info)
         } else {

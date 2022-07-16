@@ -1,7 +1,7 @@
 //! Exposes type information using the C ABI.
 
 use crate::{error::ErrorHandle, struct_info::StructInfoHandle};
-use memory::{HasStaticTypeInfo, StructInfo, TypeInfo};
+use memory::{HasStaticType, StructInfo, Type};
 use std::mem::ManuallyDrop;
 use std::ops::Deref;
 use std::{
@@ -23,8 +23,8 @@ impl TypeInfoHandle {
     }
 }
 
-impl From<Arc<TypeInfo>> for TypeInfoHandle {
-    fn from(ty: Arc<TypeInfo>) -> Self {
+impl From<Arc<Type>> for TypeInfoHandle {
+    fn from(ty: Arc<Type>) -> Self {
         TypeInfoHandle(Arc::into_raw(ty) as _)
     }
 }
@@ -45,7 +45,7 @@ impl TypeInfoSpan {
         if index < self.len {
             // SAFETY: Bounds checking was performed
             TypeInfoHandle(unsafe {
-                *(self.data as *const *const TypeInfo).add(index) as *const c_void
+                *(self.data as *const *const Type).add(index) as *const c_void
             })
         } else {
             TypeInfoHandle::null()
@@ -95,12 +95,14 @@ pub unsafe extern "C" fn mun_type_info_increment_strong_count(handle: TypeInfoHa
 /// deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_info_name(type_info: TypeInfoHandle) -> *const c_char {
-    let type_info = match (type_info.0 as *const TypeInfo).as_ref() {
+    let type_info = match (type_info.0 as *const Type).as_ref() {
         Some(type_info) => type_info,
         None => return ptr::null(),
     };
 
-    CString::new(type_info.name.clone()).unwrap().into_raw() as *const _
+    CString::new(type_info.name().to_owned())
+        .unwrap()
+        .into_raw() as *const _
 }
 
 /// Returns true if the specified type info handles describe the same type.
@@ -111,12 +113,12 @@ pub unsafe extern "C" fn mun_type_info_name(type_info: TypeInfoHandle) -> *const
 /// been deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_info_eq(a: TypeInfoHandle, b: TypeInfoHandle) -> bool {
-    let a = match (a.0 as *const TypeInfo).as_ref() {
+    let a = match (a.0 as *const Type).as_ref() {
         None => return false,
         Some(a) => a,
     };
 
-    let b = match (b.0 as *const TypeInfo).as_ref() {
+    let b = match (b.0 as *const Type).as_ref() {
         None => return false,
         Some(b) => b,
     };
@@ -139,7 +141,7 @@ pub unsafe extern "C" fn mun_type_info_pointer_type(
         return TypeInfoHandle::null();
     }
 
-    let type_info = ManuallyDrop::new(Arc::from_raw(handle.0 as *const TypeInfo));
+    let type_info = ManuallyDrop::new(Arc::from_raw(handle.0 as *const Type));
     type_info.deref().pointer_type(mutable).into()
 }
 
@@ -154,7 +156,7 @@ pub unsafe extern "C" fn mun_type_info_size(
     type_info: TypeInfoHandle,
     size: *mut usize,
 ) -> ErrorHandle {
-    let type_info = match (type_info.0 as *const TypeInfo).as_ref() {
+    let type_info = match (type_info.0 as *const Type).as_ref() {
         Some(type_info) => type_info,
         None => return ErrorHandle::new("Invalid argument: 'type_info' is null pointer."),
     };
@@ -164,7 +166,7 @@ pub unsafe extern "C" fn mun_type_info_size(
         None => return ErrorHandle::new("Invalid argument: 'size' is null pointer."),
     };
 
-    *size = type_info.layout.size();
+    *size = type_info.layout().size();
 
     ErrorHandle::default()
 }
@@ -180,7 +182,7 @@ pub unsafe extern "C" fn mun_type_info_align(
     type_info: TypeInfoHandle,
     align: *mut usize,
 ) -> ErrorHandle {
-    let type_info = match (type_info.0 as *const TypeInfo).as_ref() {
+    let type_info = match (type_info.0 as *const Type).as_ref() {
         Some(type_info) => type_info,
         None => return ErrorHandle::new("Invalid argument: 'type_info' is null pointer."),
     };
@@ -190,7 +192,7 @@ pub unsafe extern "C" fn mun_type_info_align(
         None => return ErrorHandle::new("Invalid argument: 'align' is null pointer."),
     };
 
-    *align = type_info.layout.align();
+    *align = type_info.layout().align();
 
     ErrorHandle::default()
 }
@@ -252,7 +254,7 @@ pub unsafe extern "C" fn mun_type_info_data(
     type_info: TypeInfoHandle,
     type_info_data: *mut TypeInfoData,
 ) -> ErrorHandle {
-    let type_info = match (type_info.0 as *const TypeInfo).as_ref() {
+    let type_info = match (type_info.0 as *const Type).as_ref() {
         Some(type_info) => type_info,
         None => return ErrorHandle::new("Invalid argument: 'type_info' is null pointer."),
     };
@@ -262,7 +264,7 @@ pub unsafe extern "C" fn mun_type_info_data(
         None => return ErrorHandle::new("Invalid argument: 'type_info_data' is null pointer."),
     };
 
-    *type_info_data = match &type_info.data {
+    *type_info_data = match type_info.data() {
         memory::TypeInfoData::Primitive(guid) => TypeInfoData::Primitive(*guid),
         memory::TypeInfoData::Struct(s) => {
             TypeInfoData::Struct(StructInfoHandle(s as *const StructInfo as *const c_void))
@@ -291,7 +293,7 @@ pub unsafe extern "C" fn mun_type_info_span_destroy(array_handle: TypeInfoSpan) 
         return false;
     }
 
-    let data = array_handle.data as *mut *const TypeInfo;
+    let data = array_handle.data as *mut *const Type;
     let types = Vec::from_raw_parts(data, array_handle.len, array_handle.len);
 
     types.into_iter().for_each(|ty| {
@@ -402,7 +404,7 @@ pub(crate) mod tests {
 
         let type_info = get_type_info_by_name(driver.runtime, "core::i32");
 
-        let type_info_arc = unsafe { Arc::from_raw(type_info.0 as *const TypeInfo) };
+        let type_info_arc = unsafe { Arc::from_raw(type_info.0 as *const Type) };
         let strong_count = Arc::strong_count(&type_info_arc);
         assert!(strong_count > 0);
 
@@ -430,7 +432,7 @@ pub(crate) mod tests {
 
         let type_info = get_type_info_by_name(driver.runtime, "Foo");
 
-        let type_info_arc = unsafe { Arc::from_raw(type_info.0 as *const TypeInfo) };
+        let type_info_arc = unsafe { Arc::from_raw(type_info.0 as *const Type) };
         let strong_count = Arc::strong_count(&type_info_arc);
         assert!(strong_count > 0);
 
@@ -673,7 +675,7 @@ pub(crate) mod tests {
         let type_info_handle = mun_type_info_primitive(PrimitiveType::F32);
         assert_ne!(type_info_handle.0, ptr::null());
 
-        let type_info: Arc<TypeInfo> = unsafe { Arc::from_raw(type_info_handle.0 as _) };
+        let type_info: Arc<Type> = unsafe { Arc::from_raw(type_info_handle.0 as _) };
         assert_eq!(&type_info, f32::type_info());
     }
 

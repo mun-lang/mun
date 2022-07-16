@@ -15,28 +15,28 @@ use crate::{type_table::TypeTable, TryFromAbiError, TypeFields};
 
 /// A linked version of [`mun_abi::TypeInfo`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
 #[derive(Debug)]
-pub struct TypeInfo {
+pub struct Type {
     /// Type name
-    pub name: String,
+    name: String,
     /// The memory layout of the type
-    pub layout: Layout,
+    layout: Layout,
     /// Type group
-    pub data: TypeInfoData,
+    data: TypeInfoData,
 
     /// The type of an immutable pointer to this type
-    immutable_pointer_type: RwLock<Weak<TypeInfo>>,
+    immutable_pointer_type: RwLock<Weak<Type>>,
 
     /// The type of a mutable pointer to this type
-    mutable_pointer_type: RwLock<Weak<TypeInfo>>,
+    mutable_pointer_type: RwLock<Weak<Type>>,
 }
 
-impl PartialEq for TypeInfo {
+impl PartialEq for Type {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name && self.layout == other.layout && self.data == other.data
     }
 }
 
-impl Eq for TypeInfo {}
+impl Eq for Type {}
 
 /// A linked version of [`mun_abi::TypeInfoData`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
 #[repr(u8)]
@@ -65,7 +65,7 @@ pub struct StructInfo {
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct PointerInfo {
     /// The type to which is pointed
-    pub pointee: Arc<TypeInfo>,
+    pub pointee: Arc<Type>,
     /// Whether or not the pointer is mutable
     pub mutable: bool,
 }
@@ -82,13 +82,13 @@ impl From<PointerInfo> for TypeInfoData {
     }
 }
 
-impl fmt::Display for TypeInfo {
+impl fmt::Display for Type {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)
     }
 }
 
-impl TypeFields for Arc<TypeInfo> {
+impl TypeFields for Arc<Type> {
     fn fields(&self) -> &[FieldInfo] {
         if let TypeInfoData::Struct(s) = &self.data {
             &s.fields
@@ -98,7 +98,7 @@ impl TypeFields for Arc<TypeInfo> {
     }
 }
 
-impl Hash for TypeInfo {
+impl Hash for Type {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.data.hash(state)
     }
@@ -117,10 +117,10 @@ impl PartialEq for StructInfo {
 }
 impl Eq for StructInfo {}
 
-impl TypeInfo {
+impl Type {
     /// Construct a new pointer type
-    pub fn new_pointer(pointee: Arc<TypeInfo>, mutable: bool) -> Arc<TypeInfo> {
-        Arc::new(TypeInfo {
+    pub fn new_pointer(pointee: Arc<Type>, mutable: bool) -> Arc<Type> {
+        Arc::new(Type {
             name: format!(
                 "*{} {}",
                 if mutable { "mut" } else { "const" },
@@ -138,8 +138,8 @@ impl TypeInfo {
         name: impl Into<String>,
         layout: Layout,
         struct_info: StructInfo,
-    ) -> Arc<TypeInfo> {
-        Arc::new(TypeInfo {
+    ) -> Arc<Type> {
+        Arc::new(Type {
             name: name.into(),
             layout,
             data: TypeInfoData::Struct(struct_info),
@@ -148,14 +148,24 @@ impl TypeInfo {
         })
     }
 
+    /// Returns the name of the type
+    pub fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    /// Returns the type layout
+    pub fn layout(&self) -> Layout {
+        self.layout
+    }
+
     /// Returns true if this instance represents the TypeInfo of the given type.
     ///
     /// ```rust
-    /// # use mun_memory::HasStaticTypeInfo;
+    /// # use mun_memory::HasStaticType;
     /// assert!(i64::type_info().equals::<i64>());
     /// assert!(!i64::type_info().equals::<f64>())
     /// ```
-    pub fn equals<T: HasStaticTypeInfo>(&self) -> bool {
+    pub fn equals<T: HasStaticType>(&self) -> bool {
         T::type_info().as_ref() == self
     }
 
@@ -172,6 +182,11 @@ impl TypeInfo {
     /// Returns whether this is a pointer type.
     pub fn is_pointer(&self) -> bool {
         self.data.is_pointer()
+    }
+
+    /// Returns the type data
+    pub fn data(&self) -> &TypeInfoData {
+        &self.data
     }
 
     /// Returns true if this type is a concrete type. This is the case for any type that doesn't
@@ -224,8 +239,8 @@ impl TypeInfo {
     pub fn try_from_abi<'abi>(
         type_info: &'abi abi::TypeDefinition<'abi>,
         type_table: &TypeTable,
-    ) -> Result<TypeInfo, TryFromAbiError<'abi>> {
-        TypeInfoData::try_from_abi(&type_info.data, type_table).map(|data| TypeInfo {
+    ) -> Result<Type, TryFromAbiError<'abi>> {
+        TypeInfoData::try_from_abi(&type_info.data, type_table).map(|data| Type {
             name: type_info.name().to_owned(),
             layout: Layout::from_size_align(type_info.size_in_bytes(), type_info.alignment())
                 .unwrap_or_else(|_| {
@@ -242,7 +257,7 @@ impl TypeInfo {
     }
 
     /// Returns the type that represents a pointer to this type
-    pub fn pointer_type(self: &Arc<Self>, mutable: bool) -> Arc<TypeInfo> {
+    pub fn pointer_type(self: &Arc<Self>, mutable: bool) -> Arc<Type> {
         let cache_key = if mutable {
             &self.mutable_pointer_type
         } else {
@@ -266,7 +281,7 @@ impl TypeInfo {
         }
 
         // Otherwise create the type and store it
-        let ty = TypeInfo::new_pointer(self.clone(), mutable);
+        let ty = Type::new_pointer(self.clone(), mutable);
         *write_lock = Arc::downgrade(&ty);
 
         ty
@@ -346,7 +361,7 @@ pub struct FieldInfo {
     /// The field's name
     pub name: String,
     /// The field's type
-    pub type_info: Arc<TypeInfo>,
+    pub type_info: Arc<Type>,
     /// The field's offset
     pub offset: u16,
     // TODO: Field accessibility levels
@@ -354,18 +369,18 @@ pub struct FieldInfo {
 }
 
 /// A trait that defines static type information for types that can provide it.
-pub trait HasStaticTypeInfo {
-    fn type_info() -> &'static Arc<TypeInfo>;
+pub trait HasStaticType {
+    fn type_info() -> &'static Arc<Type>;
 }
 
 macro_rules! impl_primitive_type {
     ($($ty:ty),+) => {
         $(
-            impl HasStaticTypeInfo for $ty {
-                fn type_info() -> &'static Arc<TypeInfo> {
-                    static TYPE_INFO: once_cell::sync::OnceCell<Arc<TypeInfo>> = once_cell::sync::OnceCell::new();
+            impl HasStaticType for $ty {
+                fn type_info() -> &'static Arc<Type> {
+                    static TYPE_INFO: once_cell::sync::OnceCell<Arc<Type>> = once_cell::sync::OnceCell::new();
                     TYPE_INFO.get_or_init(|| {
-                         Arc::new(TypeInfo {
+                         Arc::new(Type {
                             name: <$ty as abi::PrimitiveType>::name().to_owned(),
                             layout: Layout::new::<$ty>(),
                             data: TypeInfoData::Primitive(<$ty as abi::PrimitiveType>::guid().clone()),
@@ -400,9 +415,9 @@ impl_primitive_type!(
 );
 
 /// Every type that has at least a type name also has a valid pointer type name
-impl<T: HasStaticTypeInfo + 'static> HasStaticTypeInfo for *mut T {
-    fn type_info() -> &'static Arc<TypeInfo> {
-        static mut VALUE: Option<StaticTypeMap<Arc<TypeInfo>>> = None;
+impl<T: HasStaticType + 'static> HasStaticType for *mut T {
+    fn type_info() -> &'static Arc<Type> {
+        static mut VALUE: Option<StaticTypeMap<Arc<Type>>> = None;
         static INIT: Once = Once::new();
 
         let map = unsafe {
@@ -417,9 +432,9 @@ impl<T: HasStaticTypeInfo + 'static> HasStaticTypeInfo for *mut T {
 }
 
 /// Every type that has at least a type name also has a valid pointer type name
-impl<T: HasStaticTypeInfo + 'static> HasStaticTypeInfo for *const T {
-    fn type_info() -> &'static Arc<TypeInfo> {
-        static mut VALUE: Option<StaticTypeMap<Arc<TypeInfo>>> = None;
+impl<T: HasStaticType + 'static> HasStaticType for *const T {
+    fn type_info() -> &'static Arc<Type> {
+        static mut VALUE: Option<StaticTypeMap<Arc<Type>>> = None;
         static INIT: Once = Once::new();
 
         let map = unsafe {

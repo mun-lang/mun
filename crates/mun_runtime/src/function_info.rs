@@ -1,6 +1,6 @@
 use std::{ffi::c_void, sync::Arc};
 
-use memory::{type_table::TypeTable, TryFromAbiError, TypeInfo};
+use memory::{type_table::TypeTable, TryFromAbiError, Type};
 
 /// A linked version of [`mun_abi::FunctionDefinition`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
 #[derive(Clone)]
@@ -57,9 +57,9 @@ impl FunctionPrototype {
 #[derive(Clone)]
 pub struct FunctionSignature {
     /// Argument types
-    pub arg_types: Vec<Arc<TypeInfo>>,
+    pub arg_types: Vec<Arc<Type>>,
     /// Return type
-    pub return_type: Arc<TypeInfo>,
+    pub return_type: Arc<Type>,
 }
 
 impl FunctionSignature {
@@ -68,7 +68,7 @@ impl FunctionSignature {
         fn_sig: &'abi abi::FunctionSignature<'abi>,
         type_table: &TypeTable,
     ) -> Result<Self, TryFromAbiError<'abi>> {
-        let arg_types: Vec<Arc<TypeInfo>> = fn_sig
+        let arg_types: Vec<Arc<Type>> = fn_sig
             .arg_types()
             .iter()
             .map(|type_id| {
@@ -100,7 +100,7 @@ macro_rules! into_function_info_impl {
         extern "C" fn($($T:ident),*) -> $R:ident;
     )+) => {
         $(
-            impl<$R: memory::HasStaticTypeInfo, $($T: memory::HasStaticTypeInfo,)*> IntoFunctionDefinition
+            impl<$R: memory::HasStaticType, $($T: memory::HasStaticType,)*> IntoFunctionDefinition
             for extern "C" fn($($T),*) -> $R
             {
                 fn into<S: Into<String>>(self, name: S) -> FunctionDefinition {
@@ -109,8 +109,8 @@ macro_rules! into_function_info_impl {
                         prototype: FunctionPrototype {
                             name: name.into(),
                             signature: FunctionSignature {
-                                arg_types: vec![$(<$T as memory::HasStaticTypeInfo>::type_info().clone(),)*],
-                                return_type: <R as memory::HasStaticTypeInfo>::type_info().clone(),
+                                arg_types: vec![$(<$T as memory::HasStaticType>::type_info().clone(),)*],
+                                return_type: <R as memory::HasStaticType>::type_info().clone(),
                             }
                         }
                     }

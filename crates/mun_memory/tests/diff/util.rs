@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use mun_memory::{
     diff::{myers, Diff, FieldDiff, FieldEditKind},
-    FieldInfo, StructInfo, TypeInfo,
+    FieldInfo, StructInfo, Type,
 };
 use std::sync::Arc;
 
@@ -23,12 +23,8 @@ pub fn apply_myers_diff<T: Clone + Eq>(old: &[T], new: &[T], diff: Vec<myers::Di
     combined
 }
 
-pub(crate) fn apply_diff(
-    old: &[Arc<TypeInfo>],
-    new: &[Arc<TypeInfo>],
-    diff: Vec<Diff>,
-) -> Vec<Arc<TypeInfo>> {
-    let mut combined: Vec<Arc<TypeInfo>> = old.to_vec();
+pub(crate) fn apply_diff(old: &[Arc<Type>], new: &[Arc<Type>], diff: Vec<Diff>) -> Vec<Arc<Type>> {
+    let mut combined: Vec<Arc<Type>> = old.to_vec();
     for diff in diff.iter().rev() {
         match diff {
             Diff::Delete { index } => {
@@ -51,14 +47,14 @@ pub(crate) fn apply_diff(
                     .expect("edit diffs can only be applied on structs");
 
                 apply_struct_mapping(
-                    &old_ty.name,
+                    old_ty.name(),
                     &mut combined_struct_info,
                     new_struct_info,
                     diff,
                 );
 
-                *old_ty = TypeInfo::new_struct(
-                    &old_ty.name,
+                *old_ty = Type::new_struct(
+                    old_ty.name(),
                     fake_layout(&combined_struct_info),
                     combined_struct_info,
                 );

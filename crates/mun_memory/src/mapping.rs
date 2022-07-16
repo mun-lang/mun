@@ -1,7 +1,7 @@
 use crate::{
     diff::{diff, Diff, FieldDiff, FieldEditKind},
     gc::GcPtr,
-    type_info::TypeInfo,
+    r#type::Type,
     TypeFields,
 };
 use std::{
@@ -10,20 +10,20 @@ use std::{
 };
 
 pub struct Mapping {
-    pub deletions: HashSet<Arc<TypeInfo>>,
-    pub conversions: HashMap<Arc<TypeInfo>, Conversion>,
-    pub identical: Vec<(Arc<TypeInfo>, Arc<TypeInfo>)>,
+    pub deletions: HashSet<Arc<Type>>,
+    pub conversions: HashMap<Arc<Type>, Conversion>,
+    pub identical: Vec<(Arc<Type>, Arc<Type>)>,
 }
 
 pub struct Conversion {
     pub field_mapping: Vec<FieldMapping>,
-    pub new_ty: Arc<TypeInfo>,
+    pub new_ty: Arc<Type>,
 }
 
 /// Description of the mapping of a single field. When stored together with the new index, this
 /// provides all information necessary for a mapping function.
 pub struct FieldMapping {
-    pub new_ty: Arc<TypeInfo>,
+    pub new_ty: Arc<Type>,
     pub new_offset: usize,
     pub action: Action,
 }
@@ -33,7 +33,7 @@ pub struct FieldMapping {
 pub enum Action {
     Cast {
         old_offset: usize,
-        old_ty: Arc<TypeInfo>,
+        old_ty: Arc<Type>,
     },
     Copy {
         old_offset: usize,
@@ -43,7 +43,7 @@ pub enum Action {
 
 impl Mapping {
     #[allow(clippy::mutable_key_type)]
-    pub fn new(old: &[Arc<TypeInfo>], new: &[Arc<TypeInfo>]) -> Self {
+    pub fn new(old: &[Arc<Type>], new: &[Arc<Type>]) -> Self {
         let diff = diff(old, new);
 
         let mut conversions = HashMap::new();
@@ -88,7 +88,7 @@ impl Mapping {
         let mut new_candidates: HashSet<_> = new
             .iter()
             // Filter non-struct types
-            .filter(|ty| ty.data.is_struct())
+            .filter(|ty| ty.is_struct())
             // Filter inserted structs
             .filter(|ty| !insertions.contains(*ty))
             .cloned()
@@ -97,7 +97,7 @@ impl Mapping {
         let mut old_candidates: HashSet<_> = old
             .iter()
             // Filter non-struct types
-            .filter(|ty| ty.data.is_struct())
+            .filter(|ty| ty.is_struct())
             // Filter deleted structs
             .filter(|ty| !deletions.contains(*ty))
             // Filter edited types
@@ -145,8 +145,8 @@ impl Mapping {
 ///
 /// Expects the `diff` to be based on `old_ty` and `new_ty`. If not, it causes undefined behavior.
 pub unsafe fn field_mapping(
-    old_ty: &Arc<TypeInfo>,
-    new_ty: &Arc<TypeInfo>,
+    old_ty: &Arc<Type>,
+    new_ty: &Arc<Type>,
     diff: &[FieldDiff],
 ) -> Conversion {
     let old_fields = old_ty.fields();

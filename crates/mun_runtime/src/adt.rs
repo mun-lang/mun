@@ -6,7 +6,7 @@ use crate::{
 };
 use memory::{
     gc::{GcPtr, GcRuntime, HasIndirectionPtr},
-    TypeInfo,
+    Type,
 };
 use std::{
     ptr::{self, NonNull},
@@ -53,7 +53,7 @@ impl<'s> StructRef<'s> {
     }
 
     /// Returns the type information of the struct.
-    pub fn type_info(&self) -> Arc<TypeInfo> {
+    pub fn type_info(&self) -> Arc<Type> {
         self.runtime.gc.ptr_type(self.raw.0)
     }
 
@@ -82,17 +82,18 @@ impl<'s> StructRef<'s> {
         let field_info = struct_info.find_field_by_name(field_name).ok_or_else(|| {
             format!(
                 "Struct `{}` does not contain field `{}`.",
-                type_info.name, field_name
+                type_info.name(),
+                field_name
             )
         })?;
 
         if !T::accepts_type(&field_info.type_info) {
             return Err(format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
-                type_info.name,
+                type_info.name(),
                 field_name,
                 T::type_hint(),
-                field_info.type_info.name,
+                field_info.type_info.name(),
             ));
         };
 
@@ -124,7 +125,8 @@ impl<'s> StructRef<'s> {
         let field_info = struct_info.find_field_by_name(field_name).ok_or_else(|| {
             format!(
                 "Struct `{}` does not contain field `{}`.",
-                type_info.name, field_name
+                type_info.name(),
+                field_name
             )
         })?;
 
@@ -132,7 +134,10 @@ impl<'s> StructRef<'s> {
         if field_info.type_info != value_type {
             return Err(format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
-                type_info.name, field_name, value_type.name, field_info.type_info
+                type_info.name(),
+                field_name,
+                value_type.name(),
+                field_info.type_info
             ));
         }
 
@@ -158,7 +163,8 @@ impl<'s> StructRef<'s> {
         let field_info = struct_info.find_field_by_name(field_name).ok_or_else(|| {
             format!(
                 "Struct `{}` does not contain field `{}`.",
-                type_info.name, field_name
+                type_info.name(),
+                field_name
             )
         })?;
 
@@ -166,7 +172,10 @@ impl<'s> StructRef<'s> {
         if field_info.type_info != value_type {
             return Err(format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
-                type_info.name, field_name, value_type.name, field_info.type_info
+                type_info.name(),
+                field_name,
+                value_type.name(),
+                field_info.type_info
             ));
         }
 
@@ -179,7 +188,7 @@ impl<'s> StructRef<'s> {
 }
 
 impl<'r> ArgumentReflection for StructRef<'r> {
-    fn type_info(&self, _runtime: &Runtime) -> Arc<TypeInfo> {
+    fn type_info(&self, _runtime: &Runtime) -> Arc<Type> {
         self.type_info()
     }
 }
@@ -201,7 +210,7 @@ impl<'s> Marshal<'s> for StructRef<'s> {
     fn marshal_from_ptr<'r>(
         ptr: NonNull<Self::MunType>,
         runtime: &'r Runtime,
-        type_info: &Arc<TypeInfo>,
+        type_info: &Arc<Type>,
     ) -> StructRef<'s>
     where
         Self: 's,
@@ -219,7 +228,7 @@ impl<'s> Marshal<'s> for StructRef<'s> {
             // Construct
             let src = ptr.cast::<u8>().as_ptr() as *const _;
             let dest = unsafe { gc_handle.deref_mut::<u8>() };
-            unsafe { ptr::copy_nonoverlapping(src, dest, type_info.layout.size()) };
+            unsafe { ptr::copy_nonoverlapping(src, dest, type_info.layout().size()) };
 
             gc_handle
         } else {
@@ -230,12 +239,16 @@ impl<'s> Marshal<'s> for StructRef<'s> {
         StructRef::new(RawStruct(gc_handle), runtime)
     }
 
-    fn marshal_to_ptr(value: Self, mut ptr: NonNull<Self::MunType>, type_info: &Arc<TypeInfo>) {
+    fn marshal_to_ptr(value: Self, mut ptr: NonNull<Self::MunType>, type_info: &Arc<Type>) {
         let struct_info = type_info.as_struct().unwrap();
         if struct_info.memory_kind == abi::StructMemoryKind::Value {
             let dest = ptr.cast::<u8>().as_ptr();
             unsafe {
-                ptr::copy_nonoverlapping(value.into_raw().get_ptr(), dest, type_info.layout.size())
+                ptr::copy_nonoverlapping(
+                    value.into_raw().get_ptr(),
+                    dest,
+                    type_info.layout().size(),
+                )
             };
         } else {
             unsafe { *ptr.as_mut() = value.into_raw() };
@@ -245,7 +258,7 @@ impl<'s> Marshal<'s> for StructRef<'s> {
 
 impl<'r> ReturnTypeReflection for StructRef<'r> {
     /// Returns true if this specified type can be stored in an instance of this type
-    fn accepts_type(ty: &Arc<TypeInfo>) -> bool {
+    fn accepts_type(ty: &Arc<Type>) -> bool {
         ty.is_struct()
     }
 

@@ -13,7 +13,7 @@ use libloader::{MunLibrary, TempLibrary};
 use memory::{
     mapping::{Mapping, MemoryMapper},
     type_table::TypeTable,
-    TryFromAbiError, TypeInfo,
+    TryFromAbiError, Type,
 };
 
 use crate::{garbage_collector::GarbageCollector, DispatchTable};
@@ -152,20 +152,20 @@ impl Assembly {
                     {
                         let expected = fn_proto_arg_type_infos
                             .iter()
-                            .map(|ty| ty.name.clone())
+                            .map(|ty| ty.name().to_owned())
                             .join(", ");
                         let found = existing_fn_def
                             .prototype
                             .signature
                             .arg_types
                             .iter()
-                            .map(|ty| ty.name.clone())
+                            .map(|ty| ty.name().to_owned())
                             .join(", ");
 
                         let fn_name = fn_prototype.name();
                         return Err(anyhow!("a function with the same name does exist, but the signatures do not match.\nExpected:\n\tfn {fn_name}({expected}) -> {}\n\nFound:\n\tfn {fn_name}({found}) -> {}",
-                            &fn_proto_ret_type_info.name,
-                            &existing_fn_def.prototype.signature.return_type.name))
+                            fn_proto_ret_type_info.name(),
+                            existing_fn_def.prototype.signature.return_type.name()))
                             .with_context(|| format!("failed to link function '{}'", fn_prototype.name()));
                     }
 
@@ -214,7 +214,7 @@ impl Assembly {
 
         // Load all types
         while let Some(type_info) = types_to_load.pop_front() {
-            match TypeInfo::try_from_abi(type_info, &type_table) {
+            match Type::try_from_abi(type_info, &type_table) {
                 Ok(type_info) => {
                     assert!(type_table.insert_type(Arc::new(type_info)).is_none())
                 }
@@ -294,23 +294,22 @@ impl Assembly {
                 continue;
             }
 
-            let old_types: Option<(&Assembly, Vec<Arc<TypeInfo>>)> =
-                old_assembly.map(|old_assembly| {
-                    // Remove the old assemblies' types from the type table
-                    let old_types = old_assembly
-                        .info()
-                        .symbols
-                        .types()
-                        .iter()
-                        .map(|type_info| {
-                            type_table.remove_type_by_type_info(type_info).expect(
-                                "All types from a loaded assembly must exist in the type table.",
-                            )
-                        })
-                        .collect();
+            let old_types: Option<(&Assembly, Vec<Arc<Type>>)> = old_assembly.map(|old_assembly| {
+                // Remove the old assemblies' types from the type table
+                let old_types = old_assembly
+                    .info()
+                    .symbols
+                    .types()
+                    .iter()
+                    .map(|type_info| {
+                        type_table.remove_type_by_type_info(type_info).expect(
+                            "All types from a loaded assembly must exist in the type table.",
+                        )
+                    })
+                    .collect();
 
-                    (old_assembly, old_types)
-                });
+                (old_assembly, old_types)
+            });
 
             // Collect all types that need to be loaded
             let mut types_to_load: VecDeque<&abi::TypeDefinition> =
@@ -320,7 +319,7 @@ impl Assembly {
 
             // Load all types, retrying types that depend on other unloaded types within the module
             while let Some(type_info) = types_to_load.pop_front() {
-                match TypeInfo::try_from_abi(type_info, &type_table) {
+                match Type::try_from_abi(type_info, &type_table) {
                     Ok(type_info) => {
                         let type_info = Arc::new(type_info);
                         new_types.push(type_info.clone());
