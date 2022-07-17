@@ -1,8 +1,9 @@
 //! Exposes Mun garbage collection.
 
 use std::{ffi::c_void, sync::Arc};
+use capi_utils::error::ErrorHandle;
 
-use crate::{error::ErrorHandle, runtime::RuntimeHandle, type_info::TypeInfoHandle};
+use crate::{runtime::RuntimeHandle, type_info::TypeInfoHandle};
 use memory::Type;
 use runtime::Runtime;
 
@@ -161,7 +162,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        error::mun_error_destroy, runtime::mun_runtime_get_type_info_by_name, test_invalid_runtime,
+        runtime::mun_runtime_get_type_info_by_name, test_invalid_runtime,
         test_util::TestDriver,
     };
     use std::{
@@ -169,6 +170,7 @@ mod tests {
         mem::{self, MaybeUninit},
         ptr,
     };
+    use capi_utils::error::mun_error_destroy;
 
     test_invalid_runtime!(
         gc_alloc(TypeInfoHandle::null(), ptr::null_mut()),

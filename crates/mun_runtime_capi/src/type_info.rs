@@ -1,7 +1,7 @@
 //! Exposes type information using the C ABI.
 
-use crate::{error::ErrorHandle, struct_info::StructInfoHandle};
-use memory::{HasStaticType, StructInfo, Type};
+use crate::struct_info::StructInfoHandle;
+use memory::{HasStaticType, Type};
 use std::mem::ManuallyDrop;
 use std::ops::Deref;
 use std::{
@@ -10,6 +10,7 @@ use std::{
     ptr,
     sync::Arc,
 };
+use capi_utils::error::ErrorHandle;
 
 /// A C-style handle to a `TypeInfo`.
 #[repr(C)]
@@ -23,8 +24,8 @@ impl TypeInfoHandle {
     }
 }
 
-impl From<Arc<Type>> for TypeInfoHandle {
-    fn from(ty: Arc<Type>) -> Self {
+impl From<Type> for TypeInfoHandle {
+    fn from(ty: Type) -> Self {
         TypeInfoHandle(Arc::into_raw(ty) as _)
     }
 }
@@ -265,11 +266,11 @@ pub unsafe extern "C" fn mun_type_info_data(
     };
 
     *type_info_data = match type_info.data() {
-        memory::TypeInfoData::Primitive(guid) => TypeInfoData::Primitive(*guid),
-        memory::TypeInfoData::Struct(s) => {
+        memory::TypeInnerData::Primitive(guid) => TypeInfoData::Primitive(*guid),
+        memory::TypeInnerData::Struct(s) => {
             TypeInfoData::Struct(StructInfoHandle(s as *const StructInfo as *const c_void))
         }
-        memory::TypeInfoData::Pointer(pointer) => {
+        memory::TypeInnerData::Pointer(pointer) => {
             TypeInfoData::Pointer(PointerInfoData {
                 //pointee: TypeInfoHandle(Arc::into_raw(pointer.pointee.clone()) as _),
                 mutable: pointer.mutable,
@@ -303,60 +304,12 @@ pub unsafe extern "C" fn mun_type_info_span_destroy(array_handle: TypeInfoSpan) 
     true
 }
 
-/// Types of primitives supported by Mun.
-/// cbindgen:prefix-with-name=true
-#[repr(u8)]
-#[derive(Clone, Copy)]
-#[allow(missing_docs)]
-pub enum PrimitiveType {
-    Bool,
-    U8,
-    U16,
-    U32,
-    U64,
-    U128,
-    I8,
-    I16,
-    I32,
-    I64,
-    I128,
-    F32,
-    F64,
-    Empty,
-    Void,
-}
-
-/// Returns a TypeInfoHandle that represents the specified primitive type.
-#[no_mangle]
-pub extern "C" fn mun_type_info_primitive(primitive_type: PrimitiveType) -> TypeInfoHandle {
-    match primitive_type {
-        PrimitiveType::Bool => bool::type_info(),
-        PrimitiveType::U8 => u8::type_info(),
-        PrimitiveType::U16 => u16::type_info(),
-        PrimitiveType::U32 => u32::type_info(),
-        PrimitiveType::U64 => u64::type_info(),
-        PrimitiveType::U128 => u128::type_info(),
-        PrimitiveType::I8 => i8::type_info(),
-        PrimitiveType::I16 => i16::type_info(),
-        PrimitiveType::I32 => i32::type_info(),
-        PrimitiveType::I64 => i64::type_info(),
-        PrimitiveType::I128 => i128::type_info(),
-        PrimitiveType::F32 => f32::type_info(),
-        PrimitiveType::F64 => f64::type_info(),
-        PrimitiveType::Empty => <()>::type_info(),
-        PrimitiveType::Void => <std::ffi::c_void>::type_info(),
-    }
-    .clone()
-    .into()
-}
-
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
     use crate::function_info::mun_function_info_argument_types;
     use crate::function_info::tests::get_fake_function_info;
     use crate::{
-        error::mun_error_destroy,
         runtime::{mun_runtime_get_type_info_by_name, RuntimeHandle},
         test_util::TestDriver,
     };
@@ -365,6 +318,7 @@ pub(crate) mod tests {
         mem::{self, MaybeUninit},
         sync::Arc,
     };
+    use capi_utils::error::mun_error_destroy;
 
     pub(crate) fn get_type_info_by_name<T: Into<Vec<u8>>>(
         runtime: RuntimeHandle,
@@ -675,7 +629,7 @@ pub(crate) mod tests {
         let type_info_handle = mun_type_info_primitive(PrimitiveType::F32);
         assert_ne!(type_info_handle.0, ptr::null());
 
-        let type_info: Arc<Type> = unsafe { Arc::from_raw(type_info_handle.0 as _) };
+        let type_info: Type = unsafe { Arc::from_raw(type_info_handle.0 as _) };
         assert_eq!(&type_info, f32::type_info());
     }
 

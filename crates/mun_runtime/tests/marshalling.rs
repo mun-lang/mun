@@ -410,9 +410,9 @@ fn marshal_struct() {
             .type_info()
             .as_struct()
             .unwrap()
-            .fields
+            .fields()
             .iter()
-            .map(|field| field.name.clone())
+            .map(|field| field.name().to_owned())
             .collect();
 
         let int_value = c2.get::<i64>(&field_names[0]);

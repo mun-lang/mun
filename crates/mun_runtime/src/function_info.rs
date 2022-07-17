@@ -1,4 +1,4 @@
-use std::{ffi::c_void, sync::Arc};
+use std::{ffi::c_void};
 
 use memory::{type_table::TypeTable, TryFromAbiError, Type};
 
@@ -57,9 +57,9 @@ impl FunctionPrototype {
 #[derive(Clone)]
 pub struct FunctionSignature {
     /// Argument types
-    pub arg_types: Vec<Arc<Type>>,
+    pub arg_types: Vec<Type>,
     /// Return type
-    pub return_type: Arc<Type>,
+    pub return_type: Type,
 }
 
 impl FunctionSignature {
@@ -68,7 +68,7 @@ impl FunctionSignature {
         fn_sig: &'abi abi::FunctionSignature<'abi>,
         type_table: &TypeTable,
     ) -> Result<Self, TryFromAbiError<'abi>> {
-        let arg_types: Vec<Arc<Type>> = fn_sig
+        let arg_types: Vec<Type> = fn_sig
             .arg_types()
             .iter()
             .map(|type_id| {

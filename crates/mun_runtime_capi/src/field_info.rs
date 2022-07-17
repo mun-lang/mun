@@ -1,6 +1,6 @@
 //! Exposes field information using the C ABI.
 
-use crate::{error::ErrorHandle, type_info::TypeInfoHandle};
+use crate::type_info::TypeInfoHandle;
 use memory::FieldInfo;
 use std::{
     ffi::{c_void, CString},
@@ -8,6 +8,7 @@ use std::{
     ptr,
     sync::Arc,
 };
+use capi_utils::error::ErrorHandle;
 
 /// A C-style handle to a `FieldInfo`.
 #[repr(C)]
@@ -127,8 +128,6 @@ pub unsafe extern "C" fn mun_field_info_span_destroy(span: FieldInfoSpan) -> boo
 mod tests {
     use super::*;
     use crate::{
-        error::mun_error_destroy,
-        mun_string_destroy,
         runtime::{mun_runtime_get_type_info_by_name, RuntimeHandle},
         struct_info::mun_struct_info_fields,
         test_util::TestDriver,
@@ -141,6 +140,8 @@ mod tests {
         mem::MaybeUninit,
         slice,
     };
+    use capi_utils::error::mun_error_destroy;
+    use mun_capi_utils::mun_string_destroy;
 
     fn get_first_field<T: Into<Vec<u8>>>(runtime: RuntimeHandle, type_name: T) -> FieldInfoHandle {
         let type_name = CString::new(type_name).expect("Invalid type name");

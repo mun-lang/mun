@@ -2,28 +2,24 @@ use crate::{
     diff::{diff, Diff, FieldDiff, FieldEditKind},
     gc::GcPtr,
     r#type::Type,
-    TypeFields,
 };
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::collections::{HashMap, HashSet};
 
 pub struct Mapping {
-    pub deletions: HashSet<Arc<Type>>,
-    pub conversions: HashMap<Arc<Type>, Conversion>,
-    pub identical: Vec<(Arc<Type>, Arc<Type>)>,
+    pub deletions: HashSet<Type>,
+    pub conversions: HashMap<Type, Conversion>,
+    pub identical: Vec<(Type, Type)>,
 }
 
 pub struct Conversion {
     pub field_mapping: Vec<FieldMapping>,
-    pub new_ty: Arc<Type>,
+    pub new_ty: Type,
 }
 
 /// Description of the mapping of a single field. When stored together with the new index, this
 /// provides all information necessary for a mapping function.
 pub struct FieldMapping {
-    pub new_ty: Arc<Type>,
+    pub new_ty: Type,
     pub new_offset: usize,
     pub action: Action,
 }
@@ -31,19 +27,14 @@ pub struct FieldMapping {
 /// The `Action` to take when mapping memory from A to B.
 #[derive(Eq, PartialEq)]
 pub enum Action {
-    Cast {
-        old_offset: usize,
-        old_ty: Arc<Type>,
-    },
-    Copy {
-        old_offset: usize,
-    },
+    Cast { old_offset: usize, old_ty: Type },
+    Copy { old_offset: usize },
     Insert,
 }
 
 impl Mapping {
     #[allow(clippy::mutable_key_type)]
-    pub fn new(old: &[Arc<Type>], new: &[Arc<Type>]) -> Self {
+    pub fn new(old: &[Type], new: &[Type]) -> Self {
         let diff = diff(old, new);
 
         let mut conversions = HashMap::new();
@@ -144,12 +135,11 @@ impl Mapping {
 /// # Safety
 ///
 /// Expects the `diff` to be based on `old_ty` and `new_ty`. If not, it causes undefined behavior.
-pub unsafe fn field_mapping(
-    old_ty: &Arc<Type>,
-    new_ty: &Arc<Type>,
-    diff: &[FieldDiff],
-) -> Conversion {
-    let old_fields = old_ty.fields();
+pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) -> Conversion {
+    let old_fields = old_ty
+        .as_struct()
+        .map(|s| s.fields().iter().collect())
+        .unwrap_or_else(Vec::new);
 
     let deletions: HashSet<usize> = diff
         .iter()
@@ -237,7 +227,7 @@ pub unsafe fn field_mapping(
         }
     }
 
-    let new_fields = new_ty.fields();
+    let new_fields = new_ty.as_struct().map(|s| Vec::from_iter(s.fields().iter())).unwrap_or_else(Vec::new);
     Conversion {
         field_mapping: mapping
             .into_iter()
@@ -245,17 +235,17 @@ pub unsafe fn field_mapping(
             .map(|(new_index, desc)| {
                 let old_offset = desc
                     .old_index
-                    .map(|idx| usize::from(old_fields.get_unchecked(idx).offset));
+                    .map(|idx| usize::from(old_fields.get_unchecked(idx).offset()));
 
                 FieldMapping {
-                    new_ty: new_fields.get_unchecked(new_index).type_info.clone(),
-                    new_offset: usize::from(new_fields.get_unchecked(new_index).offset),
+                    new_ty: new_fields.get_unchecked(new_index).ty(),
+                    new_offset: usize::from(new_fields.get_unchecked(new_index).offset()),
                     action: match desc.action {
                         ActionDesc::Cast => Action::Cast {
                             old_offset: old_offset.unwrap(),
                             old_ty: old_fields
                                 .get_unchecked(desc.old_index.unwrap())
-                                .type_info
+                                .ty()
                                 .clone(),
                         },
                         ActionDesc::Copy => Action::Copy {

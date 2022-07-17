@@ -11,12 +11,11 @@ use std::{
     ops::Deref,
     pin::Pin,
     ptr::NonNull,
-    sync::Arc,
 };
 
 pub struct Trace {
     obj: GcPtr,
-    ty: Arc<Type>,
+    ty: Type,
     index: usize,
 }
 
@@ -24,20 +23,21 @@ impl Iterator for Trace {
     type Item = GcPtr;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let struct_ty = self.ty.as_ref().as_struct()?;
-        let field_count = struct_ty.fields.len();
+        let struct_ty = self.ty.as_struct()?;
+        let fields = struct_ty.fields();
+        let field_count = fields.len();
         while self.index < field_count {
             let index = self.index;
             self.index += 1;
 
-            let field = &struct_ty.fields[index];
-            if let Some(field_struct_ty) = &field.type_info.as_struct() {
-                if field_struct_ty.memory_kind == abi::StructMemoryKind::Gc {
+            let field = fields.get(index).unwrap();
+            if let Some(field_struct_ty) = &field.ty().as_struct() {
+                if field_struct_ty.is_gc_struct() {
                     return Some(unsafe {
                         *self
                             .obj
                             .deref::<u8>()
-                            .add(usize::from(field.offset))
+                            .add(usize::from(field.offset()))
                             .cast::<GcPtr>()
                     });
                 }
@@ -47,7 +47,7 @@ impl Iterator for Trace {
     }
 }
 
-impl TypeTrace for Arc<Type> {
+impl TypeTrace for Type {
     type Trace = Trace;
 
     fn trace(&self, obj: GcPtr) -> Self::Trace {
@@ -112,7 +112,7 @@ where
     }
 }
 
-fn alloc_obj(ty: Arc<Type>) -> Pin<Box<ObjectInfo>> {
+fn alloc_obj(ty: Type) -> Pin<Box<ObjectInfo>> {
     let ptr = unsafe { std::alloc::alloc(ty.layout()) };
     Box::pin(ObjectInfo {
         ptr,
@@ -126,7 +126,7 @@ impl<O> GcRuntime for MarkSweep<O>
 where
     O: Observer<Event = Event>,
 {
-    fn alloc(&self, ty: &Arc<Type>) -> GcPtr {
+    fn alloc(&self, ty: &Type) -> GcPtr {
         let object = alloc_obj(ty.clone());
 
         // We want to return a pointer to the `ObjectInfo`, to be used as handle.
@@ -141,7 +141,7 @@ where
         handle
     }
 
-    fn ptr_type(&self, handle: GcPtr) -> Arc<Type> {
+    fn ptr_type(&self, handle: GcPtr) -> Type {
         let _lock = self.objects.read();
 
         // Convert the handle to our internal representation
@@ -327,7 +327,7 @@ where
         fn map_fields<O>(
             gc: &MarkSweep<O>,
             new_allocations: &mut Vec<Pin<Box<ObjectInfo>>>,
-            conversions: &HashMap<Arc<Type>, Conversion>,
+            conversions: &HashMap<Type, Conversion>,
             mapping: &[FieldMapping],
             src: NonNull<u8>,
             dest: NonNull<u8>,
@@ -557,7 +557,7 @@ struct ObjectInfo {
     pub ptr: *mut u8,
     pub roots: u32,
     pub color: Color,
-    pub ty: Arc<Type>,
+    pub ty: Type,
 }
 
 /// An `ObjectInfo` is thread-safe.

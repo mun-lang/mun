@@ -1,7 +1,6 @@
 //! Exposes function information using the C ABI.
 
 use crate::{
-    error::ErrorHandle,
     type_info::{TypeInfoHandle, TypeInfoSpan},
 };
 use memory::Type;
@@ -13,6 +12,7 @@ use std::{
     ptr,
     sync::Arc,
 };
+use capi_utils::error::ErrorHandle;
 
 /// A C-style handle to a `FunctionInfo`.
 #[repr(C)]
@@ -165,8 +165,6 @@ pub unsafe extern "C" fn mun_function_info_return_type(
 pub(crate) mod tests {
     use super::*;
     use crate::{
-        error::mun_error_destroy,
-        mun_string_destroy,
         runtime::{mun_runtime_get_function_info, RuntimeHandle},
         test_util::TestDriver,
         type_info::mun_type_info_eq,
@@ -178,6 +176,8 @@ pub(crate) mod tests {
         mem::{self, MaybeUninit},
         sync::Arc,
     };
+    use capi_utils::error::mun_error_destroy;
+    use mun_capi_utils::mun_string_destroy;
 
     pub(crate) fn get_fake_function_info<T: Into<Vec<u8>>>(
         runtime: RuntimeHandle,

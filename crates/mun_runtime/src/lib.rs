@@ -46,7 +46,7 @@ pub use crate::{
     reflection::{ArgumentReflection, ReturnTypeReflection},
 };
 // Re-export some useful types so crates dont have to depend on mun_memory as well.
-pub use memory::{FieldInfo, HasStaticType, StructInfo, Type, TypeFields};
+pub use memory::{FieldInfo, HasStaticType, StructType, PointerType, Type, Field};
 
 /// Options for the construction of a [`Runtime`].
 pub struct RuntimeOptions {
@@ -73,8 +73,8 @@ unsafe fn get_allocator(alloc_handle: *mut ffi::c_void) -> Arc<GarbageCollector>
 /// # Safety
 ///
 /// The type handle must have been returned from a call to [`Arc<TypeInfo>::into_raw`][into_raw].
-unsafe fn get_type_info(type_handle: *const ffi::c_void) -> Arc<Type> {
-    Arc::from_raw(type_handle as *const Type)
+unsafe fn get_type_info(type_handle: *const ffi::c_void) -> Type {
+    Type::from_raw(type_handle)
 }
 
 extern "C" fn new(
@@ -298,12 +298,12 @@ impl Runtime {
     }
 
     /// Retrieves the type definition corresponding to `type_name`, if available.
-    pub fn get_type_info_by_name(&self, type_name: &str) -> Option<Arc<Type>> {
+    pub fn get_type_info_by_name(&self, type_name: &str) -> Option<Type> {
         self.type_table.find_type_info_by_name(type_name)
     }
 
     /// Retrieve the type information corresponding to the `type_id`, if available.
-    pub fn get_type_info_by_id(&self, type_id: &abi::TypeId) -> Option<Arc<Type>> {
+    pub fn get_type_info_by_id(&self, type_id: &abi::TypeId) -> Option<Type> {
         self.type_table.find_type_info_by_id(type_id)
     }
 

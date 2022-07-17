@@ -8,8 +8,9 @@ use std::{
     os::raw::c_char,
     sync::Arc,
 };
+use capi_utils::error::ErrorHandle;
 
-use crate::{error::ErrorHandle, function_info::FunctionInfoHandle, type_info::TypeInfoHandle};
+use crate::{function_info::FunctionInfoHandle, type_info::TypeInfoHandle};
 
 /// A C-style handle to a runtime.
 #[repr(C)]
@@ -140,7 +141,7 @@ pub unsafe extern "C" fn mun_runtime_create(
                     ));
                 }
 
-                let arg_types: Vec<Arc<Type>> = if def.num_args > 0 {
+                let arg_types: Vec<Type> = if def.num_args > 0 {
                     std::slice::from_raw_parts(def.arg_types, def.num_args as usize)
                         .iter()
                         .enumerate()
@@ -390,9 +391,10 @@ pub unsafe extern "C" fn mun_runtime_update(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{error::mun_error_destroy, test_invalid_runtime, test_util::TestDriver};
+    use crate::{test_invalid_runtime, test_util::TestDriver};
     use memory::HasStaticType;
     use std::{ffi::CString, mem::MaybeUninit, ptr};
+    use capi_utils::error::mun_error_destroy;
 
     test_invalid_runtime!(
         runtime_get_function_info(ptr::null(), ptr::null_mut(), ptr::null_mut()),

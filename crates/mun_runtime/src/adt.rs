@@ -53,7 +53,7 @@ impl<'s> StructRef<'s> {
     }
 
     /// Returns the type information of the struct.
-    pub fn type_info(&self) -> Arc<Type> {
+    pub fn type_info(&self) -> Type {
         self.runtime.gc.ptr_type(self.raw.0)
     }
 
@@ -79,7 +79,7 @@ impl<'s> StructRef<'s> {
         // Safety: `as_struct` is guaranteed to return `Some` for `StructRef`s.
         let struct_info = type_info.as_struct().unwrap();
 
-        let field_info = struct_info.find_field_by_name(field_name).ok_or_else(|| {
+        let field_info = struct_info.fields().find_by_name(field_name).ok_or_else(|| {
             format!(
                 "Struct `{}` does not contain field `{}`.",
                 type_info.name(),
@@ -87,23 +87,23 @@ impl<'s> StructRef<'s> {
             )
         })?;
 
-        if !T::accepts_type(&field_info.type_info) {
+        if !T::accepts_type(&field_info.ty()) {
             return Err(format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
                 type_info.name(),
                 field_name,
                 T::type_hint(),
-                field_info.type_info.name(),
+                field_info.ty().name(),
             ));
         };
 
         // SAFETY: The offset in the ABI is always valid.
         let field_ptr =
-            unsafe { self.get_field_ptr_unchecked::<T::MunType>(usize::from(field_info.offset)) };
+            unsafe { self.get_field_ptr_unchecked::<T::MunType>(usize::from(field_info.offset())) };
         Ok(Marshal::marshal_from_ptr(
             field_ptr,
             self.runtime,
-            &field_info.type_info,
+            &field_info.ty(),
         ))
     }
 
@@ -122,7 +122,7 @@ impl<'s> StructRef<'s> {
         // Safety: `as_struct` is guaranteed to return `Some` for `StructRef`s.
         let struct_info = type_info.as_struct().unwrap();
 
-        let field_info = struct_info.find_field_by_name(field_name).ok_or_else(|| {
+        let field_info = struct_info.fields().find_by_name(field_name).ok_or_else(|| {
             format!(
                 "Struct `{}` does not contain field `{}`.",
                 type_info.name(),
@@ -131,21 +131,21 @@ impl<'s> StructRef<'s> {
         })?;
 
         let value_type = value.type_info(self.runtime);
-        if field_info.type_info != value_type {
+        if field_info.ty() != value_type {
             return Err(format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
                 type_info.name(),
                 field_name,
                 value_type.name(),
-                field_info.type_info
+                field_info.ty()
             ));
         }
 
         // SAFETY: The offset in the ABI is always valid.
         let field_ptr =
-            unsafe { self.get_field_ptr_unchecked::<T::MunType>(usize::from(field_info.offset)) };
-        let old = Marshal::marshal_from_ptr(field_ptr, self.runtime, &field_info.type_info);
-        Marshal::marshal_to_ptr(value, field_ptr, &field_info.type_info);
+            unsafe { self.get_field_ptr_unchecked::<T::MunType>(usize::from(field_info.offset())) };
+        let old = Marshal::marshal_from_ptr(field_ptr, self.runtime, &field_info.ty());
+        Marshal::marshal_to_ptr(value, field_ptr, &field_info.ty());
         Ok(old)
     }
 
@@ -160,7 +160,7 @@ impl<'s> StructRef<'s> {
         // Safety: `as_struct` is guaranteed to return `Some` for `StructRef`s.
         let struct_info = type_info.as_struct().unwrap();
 
-        let field_info = struct_info.find_field_by_name(field_name).ok_or_else(|| {
+        let field_info = struct_info.fields().find_by_name(field_name).ok_or_else(|| {
             format!(
                 "Struct `{}` does not contain field `{}`.",
                 type_info.name(),
@@ -169,26 +169,26 @@ impl<'s> StructRef<'s> {
         })?;
 
         let value_type = value.type_info(self.runtime);
-        if field_info.type_info != value_type {
+        if field_info.ty() != value_type {
             return Err(format!(
                 "Mismatched types for `{}::{}`. Expected: `{}`. Found: `{}`.",
                 type_info.name(),
                 field_name,
                 value_type.name(),
-                field_info.type_info
+                field_info.ty()
             ));
         }
 
         // SAFETY: The offset in the ABI is always valid.
         let field_ptr =
-            unsafe { self.get_field_ptr_unchecked::<T::MunType>(usize::from(field_info.offset)) };
-        Marshal::marshal_to_ptr(value, field_ptr, &field_info.type_info);
+            unsafe { self.get_field_ptr_unchecked::<T::MunType>(usize::from(field_info.offset())) };
+        Marshal::marshal_to_ptr(value, field_ptr, &field_info.ty());
         Ok(())
     }
 }
 
 impl<'r> ArgumentReflection for StructRef<'r> {
-    fn type_info(&self, _runtime: &Runtime) -> Arc<Type> {
+    fn type_info(&self, _runtime: &Runtime) -> Type {
         self.type_info()
     }
 }
@@ -210,7 +210,7 @@ impl<'s> Marshal<'s> for StructRef<'s> {
     fn marshal_from_ptr<'r>(
         ptr: NonNull<Self::MunType>,
         runtime: &'r Runtime,
-        type_info: &Arc<Type>,
+        type_info: &Type,
     ) -> StructRef<'s>
     where
         Self: 's,
@@ -219,7 +219,7 @@ impl<'s> Marshal<'s> for StructRef<'s> {
         let struct_info = type_info.as_struct().unwrap();
 
         // Copy the contents of the struct based on what kind of pointer we are dealing with
-        let gc_handle = if struct_info.memory_kind == abi::StructMemoryKind::Value {
+        let gc_handle = if struct_info.is_value_struct() {
             // For a value struct, `ptr` points to a struct value.
 
             // Create a new object using the runtime's intrinsic
@@ -239,9 +239,9 @@ impl<'s> Marshal<'s> for StructRef<'s> {
         StructRef::new(RawStruct(gc_handle), runtime)
     }
 
-    fn marshal_to_ptr(value: Self, mut ptr: NonNull<Self::MunType>, type_info: &Arc<Type>) {
+    fn marshal_to_ptr(value: Self, mut ptr: NonNull<Self::MunType>, type_info: &Type) {
         let struct_info = type_info.as_struct().unwrap();
-        if struct_info.memory_kind == abi::StructMemoryKind::Value {
+        if struct_info.is_value_struct() {
             let dest = ptr.cast::<u8>().as_ptr();
             unsafe {
                 ptr::copy_nonoverlapping(
@@ -258,7 +258,7 @@ impl<'s> Marshal<'s> for StructRef<'s> {
 
 impl<'r> ReturnTypeReflection for StructRef<'r> {
     /// Returns true if this specified type can be stored in an instance of this type
-    fn accepts_type(ty: &Arc<Type>) -> bool {
+    fn accepts_type(ty: &Type) -> bool {
         ty.is_struct()
     }
 

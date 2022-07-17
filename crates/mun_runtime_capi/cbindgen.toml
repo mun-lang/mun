@@ -15,4 +15,5 @@ prefix = "Mun"
 
 [parse]
 parse_deps = true
-include = ["mun_abi", "mun_memory", "mun_runtime"]
+include = ["mun_abi", "mun_memory", "mun_runtime", "mun_capi_utils"]
+extra_bindings = ["mun_memory", "mun_capi_utils"]

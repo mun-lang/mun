@@ -2,7 +2,7 @@
 
 use crate::{HasStaticType, Type};
 use lazy_static::lazy_static;
-use std::{collections::HashMap, ptr::NonNull, sync::Arc};
+use std::{collections::HashMap, ptr::NonNull};
 
 type CastFn = fn(NonNull<u8>, NonNull<u8>);
 
@@ -16,7 +16,7 @@ macro_rules! insert_cast_fn {
 }
 
 lazy_static! {
-    static ref CAST_FN_TABLE: HashMap<(Arc<Type>, Arc<Type>), CastFn> = {
+    static ref CAST_FN_TABLE: HashMap<(Type, Type), CastFn> = {
         let mut table = HashMap::new();
         insert_cast_fn!(table, f32, f64);
         insert_cast_fn!(table, i8, i16);
@@ -62,8 +62,8 @@ where
 }
 
 pub fn try_cast_from_to(
-    old_id: Arc<Type>,
-    new_id: Arc<Type>,
+    old_id: Type,
+    new_id: Type,
     src: NonNull<u8>,
     dest: NonNull<u8>,
 ) -> bool {

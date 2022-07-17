@@ -1,4 +1,6 @@
-pub use r#type::{FieldInfo, HasStaticType, StructInfo, Type, TypeInfoData};
+extern crate core;
+
+pub use r#type::{FieldInfo, HasStaticType, StructType, PointerType, TypeKind, Type, Field, StructTypeBuilder};
 
 mod cast;
 pub mod diff;
@@ -11,13 +13,7 @@ use thiserror::Error;
 pub mod prelude {
     pub use crate::diff::{diff, Diff, FieldDiff, FieldEditKind};
     pub use crate::mapping::{Action, FieldMapping};
-    pub use crate::r#type::{StructInfo, Type, TypeInfoData};
-}
-
-/// A trait used to obtain a type's fields.
-pub trait TypeFields: Send + Sync {
-    /// Returns the type's fields.
-    fn fields(&self) -> &[FieldInfo];
+    pub use crate::r#type::{StructType, PointerType, Type, TypeKind, Field};
 }
 
 /// An error that can occur when trying to convert from an abi type to an internal type.

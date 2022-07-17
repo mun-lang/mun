@@ -68,7 +68,7 @@ typedef struct MunStructInfo MunStructInfo;
  * If the handle contains a non-null pointer, an error occurred.
  */
 typedef struct MunErrorHandle {
-    const char *_0;
+    const char *error_string;
 } MunErrorHandle;
 
 /**
@@ -306,29 +306,55 @@ typedef union MunTypeInfoData {
     };
 } MunTypeInfoData;
 
+/**
+ * A [`Type`] holds information about a mun type.
+ */
+typedef struct MunType {
+    const void *_0;
+    const void *_1;
+} MunType;
+
+/**
+ * Additional information of a pointer [`Type`].
+ *
+ * Ownership of this type lies with the [`Type`] that created this instance. As long as the
+ * original type is not released through [`mun_type_release`] this type stays alive.
+ */
+typedef struct MunPointerType {
+    const void *_0;
+    const void *_1;
+} MunPointerType;
+
+/**
+ * An enum that defines the kind of type.
+ */
+enum MunTypeKind_Tag
+#ifdef __cplusplus
+  : uint8_t
+#endif // __cplusplus
+ {
+    Primitive,
+    Pointer,
+};
+#ifndef __cplusplus
+typedef uint8_t MunTypeKind_Tag;
+#endif // __cplusplus
+
+typedef union MunTypeKind {
+    MunTypeKind_Tag tag;
+    struct {
+        MunTypeKind_Tag primitive_tag;
+        struct MunGuid primitive;
+    };
+    struct {
+        MunTypeKind_Tag pointer_tag;
+        struct MunPointerType pointer;
+    };
+} MunTypeKind;
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
-
-/**
- * Deallocates a string that was allocated by the runtime.
- *
- * # Safety
- *
- * This function receives a raw pointer as parameter. Only when the argument is not a null pointer,
- * its content will be deallocated. Passing pointers to invalid data or memory allocated by other
- * processes, will lead to undefined behavior.
- */
-void mun_string_destroy(const char *string);
-
-/**
- * Destructs the error message corresponding to the specified handle.
- *
- * # Safety
- *
- * Only call this function on an ErrorHandle once.
- */
-void mun_error_destroy(struct MunErrorHandle error);
 
 /**
  * Allocates an object in the runtime of the given `type_info`. If successful, `obj` is set,
@@ -735,9 +761,119 @@ struct MunErrorHandle mun_type_info_data(struct MunTypeInfoHandle type_info,
 bool mun_type_info_span_destroy(struct MunTypeInfoSpan array_handle);
 
 /**
- * Returns a TypeInfoHandle that represents the specified primitive type.
+ * Deallocates a string that was allocated by the runtime.
+ *
+ * # Safety
+ *
+ * This function receives a raw pointer as parameter. Only when the argument is not a null pointer,
+ * its content will be deallocated. Passing pointers to invalid data or memory allocated by other
+ * processes, will lead to undefined behavior.
  */
-struct MunTypeInfoHandle mun_type_info_primitive(MunPrimitiveType primitive_type);
+void mun_string_destroy(const char *string);
+
+/**
+ * Destructs the error message corresponding to the specified handle.
+ *
+ * # Safety
+ *
+ * Only call this function on an ErrorHandle once.
+ */
+void mun_error_destroy(struct MunErrorHandle error);
+
+uintptr_t hello_world(void);
+
+/**
+ * Notifies the runtime that the specified type is no longer used. Any use of the type after
+ * calling this function results in undefined behavior.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `Type` has been deallocated in a
+ * previous call to [`mun_type_release`].
+ */
+struct MunErrorHandle mun_type_release(struct MunType ty);
+
+/**
+ * Increments the usage count of the specified type.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `Type` has been deallocated in a
+ * previous call to [`mun_type_release`].
+ */
+struct MunErrorHandle mun_type_add_reference(struct MunType ty);
+
+/**
+ * Retrieves the type's name.
+ *
+ * # Safety
+ *
+ * The caller is responsible for calling `mun_string_destroy` on the return pointer - if it is not
+ * null.
+ *
+ * This function results in undefined behavior if the passed in `Type` has been deallocated in a
+ * previous call to [`mun_type_release`].
+ */
+const char *mun_type_name(struct MunType ty);
+
+/**
+ * Compares two different Types. Returns `true` if the two types are equal. If either of the two
+ * types is invalid because for instance it contains null pointers this function returns `false`.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `Type`s have been deallocated in a
+ * previous call to [`mun_type_release`].
+ */
+bool mun_type_equal(struct MunType a, struct MunType b);
+
+/**
+ * Returns the storage size required for a type. The storage size does not include any padding to
+ * align the size. Call [`mun_type_alignment`] to request the alignment of the type.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `Type`s have been deallocated in a
+ * previous call to [`mun_type_release`].
+ */
+struct MunErrorHandle mun_type_size(struct MunType ty, uintptr_t *size);
+
+/**
+ * Returns the alignment requirements of the type.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `Type`s have been deallocated in a
+ * previous call to [`mun_type_release`].
+ */
+struct MunErrorHandle mun_type_alignment(struct MunType ty, uintptr_t *align);
+
+/**
+ * Returns a new [`Type`] that is a pointer to the specified type.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `Type`s have been deallocated in a
+ * previous call to [`mun_type_release`].
+ */
+struct MunErrorHandle mun_type_pointer_type(struct MunType ty,
+                                            bool mutable_,
+                                            struct MunType *pointer_ty);
+
+/**
+ * Returns information about what kind of type this is.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `Type`s have been deallocated in a
+ * previous call to [`mun_type_release`].
+ */
+struct MunErrorHandle mun_type_kind(struct MunType ty, union MunTypeKind *kind);
+
+/**
+ * Returns a [`Type`] that represents the specified primitive type.
+ */
+struct MunType mun_type_primitive(MunPrimitiveType primitive_type);
 
 #ifdef __cplusplus
 } // extern "C"
