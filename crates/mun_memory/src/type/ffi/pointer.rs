@@ -22,7 +22,7 @@ impl<'t> From<super::super::PointerType<'t>> for PointerType {
 }
 
 impl PointerType {
-    /// Returns the store associated with the Type or
+    /// Returns the store associated with the Type
     unsafe fn store(&self) -> Result<&Arc<TypeStore>, String> {
         match (self.1 as *const Arc<TypeStore>).as_ref() {
             Some(store) => Ok(store),
@@ -30,7 +30,7 @@ impl PointerType {
         }
     }
 
-    /// Returns the store associated with the Type or
+    /// Returns the pointer ino associated with the Type
     unsafe fn inner(&self) -> Result<&PointerInfo, String> {
         match (self.0 as *const PointerInfo).as_ref() {
             Some(store) => Ok(store),
@@ -39,7 +39,7 @@ impl PointerType {
     }
 
     /// Converts from C FFI type to a Rust type.
-    pub unsafe fn to_rust(&self) -> Result<super::super::PointerType<'_>, String> {
+    unsafe fn to_rust(&self) -> Result<super::super::PointerType<'_>, String> {
         match (
             (self.0 as *const PointerInfo).as_ref(),
             (self.1 as *const Arc<TypeStore>).as_ref(),

@@ -1,18 +1,25 @@
 //! Defines an FFI compatible type interface
 
-mod pointer;
-mod primitive;
-
-use crate::r#type::ffi::pointer::PointerType;
-use crate::r#type::{PointerType as RustPointerType, TypeInner, TypeInnerData, TypeStore};
-use abi::Guid;
-use capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
+use std::ops::Deref;
 use std::ptr::NonNull;
 use std::{
     ffi::c_void, ffi::CString, mem::ManuallyDrop, os::raw::c_char, ptr, sync::atomic::Ordering,
     sync::Arc,
 };
-use std::ops::Deref;
+
+use abi::Guid;
+use capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
+use r#pointer::PointerType;
+use r#struct::StructType;
+
+use crate::r#type::{
+    PointerType as RustPointerType, StructType as RustStructType, TypeInner, TypeInnerData,
+    TypeStore,
+};
+
+mod pointer;
+mod primitive;
+mod r#struct;
 
 /// A [`Type`] holds information about a mun type.
 #[repr(C)]
@@ -179,6 +186,7 @@ pub unsafe extern "C" fn mun_type_pointer_type(
 pub enum TypeKind {
     Primitive(Guid),
     Pointer(PointerType),
+    Struct(StructType),
 }
 
 /// Returns information about what kind of type this is.
@@ -202,7 +210,13 @@ pub unsafe extern "C" fn mun_type_kind(ty: Type, kind: *mut TypeKind) -> ErrorHa
             }
             .into(),
         ),
-        TypeInnerData::Struct(_) => todo!(),
+        TypeInnerData::Struct(_) => TypeKind::Struct(
+            RustStructType {
+                inner: p,
+                store: ManuallyDrop::deref(&store),
+            }
+            .into(),
+        ),
         TypeInnerData::Uninitialized => unreachable!(),
     };
 
@@ -211,19 +225,22 @@ pub unsafe extern "C" fn mun_type_kind(ty: Type, kind: *mut TypeKind) -> ErrorHa
 
 #[cfg(test)]
 mod test {
+    use std::ffi::{c_void, CStr, CString};
+    use std::mem::MaybeUninit;
+    use std::ptr;
+
+    use capi_utils::{assert_error, mun_string_destroy};
+
+    use crate::r#type::ffi::{
+        mun_type_add_reference, mun_type_alignment, mun_type_pointer_type, mun_type_size,
+    };
+    use crate::HasStaticType;
+
     use super::{
         mun_type_equal, mun_type_name, mun_type_release,
         primitive::{mun_type_primitive, PrimitiveType},
         Type,
     };
-    use crate::r#type::ffi::{
-        mun_type_add_reference, mun_type_alignment, mun_type_pointer_type, mun_type_size,
-    };
-    use crate::HasStaticType;
-    use capi_utils::{assert_error, mun_string_destroy};
-    use std::ffi::{c_void, CStr, CString};
-    use std::mem::MaybeUninit;
-    use std::ptr;
 
     const FFI_TYPE_NULL_INNER: Type = Type(ptr::null(), 0xDEAD as *const c_void);
     const FFI_TYPE_NULL_STORE: Type = Type(0xDEAD as *const c_void, ptr::null());
