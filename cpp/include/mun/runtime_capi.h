@@ -57,6 +57,8 @@ enum MunStructMemoryKind
 typedef uint8_t MunStructMemoryKind;
 #endif // __cplusplus
 
+typedef struct MunArc_TypeStore MunArc_TypeStore;
+
 /**
  * A linked version of [`mun_abi::StructInfo`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
  */
@@ -326,6 +328,14 @@ typedef struct MunPointerType {
 } MunPointerType;
 
 /**
+ * Reference information of a struct
+ */
+typedef struct MunStructType {
+    const struct MunStructInfo *inner;
+    const struct MunArc_TypeStore *store;
+} MunStructType;
+
+/**
  * An enum that defines the kind of type.
  */
 enum MunTypeKind_Tag
@@ -335,6 +345,7 @@ enum MunTypeKind_Tag
  {
     Primitive,
     Pointer,
+    Struct,
 };
 #ifndef __cplusplus
 typedef uint8_t MunTypeKind_Tag;
@@ -350,7 +361,33 @@ typedef union MunTypeKind {
         MunTypeKind_Tag pointer_tag;
         struct MunPointerType pointer;
     };
+    struct {
+        MunTypeKind_Tag struct_tag;
+        struct MunStructType struct_;
+    };
 } MunTypeKind;
+
+/**
+ * Information of a field of a struct [`Type`].
+ *
+ * Ownership of this type lies with the [`Type`] that created this instance. As long as the
+ * original type is not released through [`mun_type_release`] this type stays alive.
+ */
+typedef struct MunField {
+    const void *_0;
+    const void *_1;
+} MunField;
+
+/**
+ * An array of [`Field`]s.
+ *
+ * This is backed by a dynamically allocated array. Ownership is transferred via this struct
+ * and its contents must be destroyed with [`mun_fields_destroy`].
+ */
+typedef struct MunFields {
+    const struct MunField *fields;
+    uintptr_t count;
+} MunFields;
 
 #ifdef __cplusplus
 extern "C" {
@@ -874,6 +911,47 @@ struct MunErrorHandle mun_type_kind(struct MunType ty, union MunTypeKind *kind);
  * Returns a [`Type`] that represents the specified primitive type.
  */
 struct MunType mun_type_primitive(MunPrimitiveType primitive_type);
+
+/**
+ * Returns the globally unique identifier (GUID) of the struct.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `StructType` has been deallocated
+ * by a previous call to [`mun_type_release`].
+ */
+struct MunErrorHandle mun_struct_type_guid(struct MunStructType ty, struct MunGuid *guid);
+
+/**
+ * Returns the type of memory management to apply for the struct.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `StructType` has been deallocated
+ * by a previous call to [`mun_type_release`].
+ */
+struct MunErrorHandle mun_struct_type_memory_kind(struct MunStructType ty,
+                                                  MunStructMemoryKind *memory_kind);
+
+/**
+ * Destroys the contents of a [`Fields`] struct.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `Fields` has been deallocated
+ * by a previous call to [`mun_fields_destroy`].
+ */
+struct MunErrorHandle mun_fields_destroy(struct MunFields fields);
+
+/**
+ * Retrieves all the fields of the specified struct type.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `StructType` has been deallocated
+ * by a previous call to [`mun_type_release`].
+ */
+struct MunErrorHandle mun_struct_type_fields(struct MunStructType ty, struct MunFields *fields);
 
 #ifdef __cplusplus
 } // extern "C"

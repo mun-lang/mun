@@ -210,9 +210,9 @@ pub unsafe extern "C" fn mun_type_kind(ty: Type, kind: *mut TypeKind) -> ErrorHa
             }
             .into(),
         ),
-        TypeInnerData::Struct(_) => TypeKind::Struct(
+        TypeInnerData::Struct(s) => TypeKind::Struct(
             RustStructType {
-                inner: p,
+                inner: s,
                 store: ManuallyDrop::deref(&store),
             }
             .into(),

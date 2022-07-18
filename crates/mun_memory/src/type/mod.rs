@@ -827,7 +827,7 @@ impl StructTypeBuilder {
                         offset: offset.try_into().expect("offset is too large!"),
                     }
                 })),
-                memory_kind: Default::default(),
+                memory_kind: self.memory_kind,
             }
             .into(),
         )

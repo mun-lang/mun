@@ -108,8 +108,8 @@ mod test {
         let ty = pointer_ty.assume_init();
 
         let mut ty_kind = MaybeUninit::uninit();
-        assert!(unsafe { mun_type_kind(ty, ty_kind.as_mut_ptr()) }.is_ok());
-        let pointer_ty = match unsafe { ty_kind.assume_init() } {
+        assert!(mun_type_kind(ty, ty_kind.as_mut_ptr()).is_ok());
+        let pointer_ty = match ty_kind.assume_init() {
             TypeKind::Pointer(p) => p,
             _ => panic!("invalid type kind for pointer")
         };
