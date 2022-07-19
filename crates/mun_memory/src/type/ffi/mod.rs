@@ -12,10 +12,7 @@ use capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
 use r#pointer::PointerType;
 use r#struct::StructType;
 
-use crate::r#type::{
-    PointerType as RustPointerType, StructType as RustStructType, TypeInner, TypeInnerData,
-    TypeStore,
-};
+use crate::r#type::{PointerInfo, StructInfo, TypeInner, TypeInnerData, TypeStore};
 
 mod pointer;
 mod primitive;
@@ -29,7 +26,10 @@ pub struct Type(*const c_void, *const c_void);
 impl From<super::Type> for Type {
     fn from(ty: crate::Type) -> Self {
         let ty = ManuallyDrop::new(ty);
-        Type(ty.inner.as_ptr() as *const _, Arc::as_ptr(&ty.store).cast())
+        Type(
+            ty.inner.as_ptr() as *const _,
+            Arc::as_ptr(&ty.store) as *const _,
+        )
     }
 }
 
@@ -203,20 +203,14 @@ pub unsafe extern "C" fn mun_type_kind(ty: Type, kind: *mut TypeKind) -> ErrorHa
 
     *kind = match &inner.data {
         TypeInnerData::Primitive(guid) => TypeKind::Primitive(*guid),
-        TypeInnerData::Pointer(p) => TypeKind::Pointer(
-            RustPointerType {
-                inner: p,
-                store: ManuallyDrop::deref(&store),
-            }
-            .into(),
-        ),
-        TypeInnerData::Struct(s) => TypeKind::Struct(
-            RustStructType {
-                inner: s,
-                store: ManuallyDrop::deref(&store),
-            }
-            .into(),
-        ),
+        TypeInnerData::Pointer(pointer) => TypeKind::Pointer(PointerType(
+            (pointer as *const PointerInfo).cast(),
+            Arc::as_ptr(ManuallyDrop::deref(&store)) as *const _,
+        )),
+        TypeInnerData::Struct(s) => TypeKind::Struct(StructType(
+            (s as *const StructInfo).cast(),
+            Arc::as_ptr(ManuallyDrop::deref(&store)) as *const _,
+        )),
         TypeInnerData::Uninitialized => unreachable!(),
     };
 

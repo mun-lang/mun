@@ -1,9 +1,7 @@
 pub mod myers;
 
 use crate::r#type::Field;
-use crate::{
-    r#type::{ Type},
-};
+use crate::r#type::Type;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FieldEditKind {

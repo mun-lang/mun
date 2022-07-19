@@ -79,13 +79,16 @@ impl<'s> StructRef<'s> {
         // Safety: `as_struct` is guaranteed to return `Some` for `StructRef`s.
         let struct_info = type_info.as_struct().unwrap();
 
-        let field_info = struct_info.fields().find_by_name(field_name).ok_or_else(|| {
-            format!(
-                "Struct `{}` does not contain field `{}`.",
-                type_info.name(),
-                field_name
-            )
-        })?;
+        let field_info = struct_info
+            .fields()
+            .find_by_name(field_name)
+            .ok_or_else(|| {
+                format!(
+                    "Struct `{}` does not contain field `{}`.",
+                    type_info.name(),
+                    field_name
+                )
+            })?;
 
         if !T::accepts_type(&field_info.ty()) {
             return Err(format!(
@@ -122,13 +125,16 @@ impl<'s> StructRef<'s> {
         // Safety: `as_struct` is guaranteed to return `Some` for `StructRef`s.
         let struct_info = type_info.as_struct().unwrap();
 
-        let field_info = struct_info.fields().find_by_name(field_name).ok_or_else(|| {
-            format!(
-                "Struct `{}` does not contain field `{}`.",
-                type_info.name(),
-                field_name
-            )
-        })?;
+        let field_info = struct_info
+            .fields()
+            .find_by_name(field_name)
+            .ok_or_else(|| {
+                format!(
+                    "Struct `{}` does not contain field `{}`.",
+                    type_info.name(),
+                    field_name
+                )
+            })?;
 
         let value_type = value.type_info(self.runtime);
         if field_info.ty() != value_type {
@@ -160,13 +166,16 @@ impl<'s> StructRef<'s> {
         // Safety: `as_struct` is guaranteed to return `Some` for `StructRef`s.
         let struct_info = type_info.as_struct().unwrap();
 
-        let field_info = struct_info.fields().find_by_name(field_name).ok_or_else(|| {
-            format!(
-                "Struct `{}` does not contain field `{}`.",
-                type_info.name(),
-                field_name
-            )
-        })?;
+        let field_info = struct_info
+            .fields()
+            .find_by_name(field_name)
+            .ok_or_else(|| {
+                format!(
+                    "Struct `{}` does not contain field `{}`.",
+                    type_info.name(),
+                    field_name
+                )
+            })?;
 
         let value_type = value.type_info(self.runtime);
         if field_info.ty() != value_type {

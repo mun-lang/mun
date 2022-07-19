@@ -46,7 +46,7 @@ pub use crate::{
     reflection::{ArgumentReflection, ReturnTypeReflection},
 };
 // Re-export some useful types so crates dont have to depend on mun_memory as well.
-pub use memory::{FieldInfo, HasStaticType, StructType, PointerType, Type, Field};
+pub use memory::{Field, FieldInfo, HasStaticType, PointerType, StructType, Type};
 
 /// Options for the construction of a [`Runtime`].
 pub struct RuntimeOptions {

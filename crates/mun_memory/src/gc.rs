@@ -3,7 +3,7 @@ mod ptr;
 mod root_ptr;
 
 use crate::r#type::Type;
-use std::{marker::PhantomData};
+use std::marker::PhantomData;
 
 pub use mark_sweep::MarkSweep;
 pub use ptr::{GcPtr, HasIndirectionPtr, RawGcPtr};

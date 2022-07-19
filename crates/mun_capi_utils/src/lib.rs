@@ -1,7 +1,4 @@
-use std::{
-    ffi::CString,
-    os::raw::c_char
-};
+use std::{ffi::CString, os::raw::c_char};
 
 pub mod error;
 

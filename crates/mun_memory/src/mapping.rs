@@ -227,7 +227,10 @@ pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) ->
         }
     }
 
-    let new_fields = new_ty.as_struct().map(|s| Vec::from_iter(s.fields().iter())).unwrap_or_else(Vec::new);
+    let new_fields = new_ty
+        .as_struct()
+        .map(|s| Vec::from_iter(s.fields().iter()))
+        .unwrap_or_else(Vec::new);
     Conversion {
         field_mapping: mapping
             .into_iter()

@@ -122,6 +122,12 @@ pub struct Type {
 
     /// A [`Type`] holds a strong reference to its data store. This ensure that the data is never
     /// deleted before this instance is destroyed.
+    ///
+    /// This has to be here because we store [`Type`] instances globally both in Rust and
+    /// potentially als over FFI. Since the static destruction order is not completely guarenteed
+    /// the store might be deallocated before the last type is deallocated. Keeping a reference to
+    /// the store in this instance ensures that the data is kept alive until the last `Type` is
+    /// dropped.
     store: Arc<TypeStore>,
 }
 
@@ -249,11 +255,7 @@ impl TypeInner {
         }
 
         // Otherwise create the type and store it
-        let name = format!(
-            "*{} {}",
-            if mutable { "mut" } else { "const" },
-            self.name
-        );
+        let name = format!("*{} {}", if mutable { "mut" } else { "const" }, self.name);
 
         let ty = store.allocate(
             name,

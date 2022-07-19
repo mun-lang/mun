@@ -1,11 +1,9 @@
 //! Exposes struct information using the C ABI.
 
-use crate::{
-    field_info::{FieldInfoHandle, FieldInfoSpan},
-};
+use crate::field_info::{FieldInfoHandle, FieldInfoSpan};
+use capi_utils::error::ErrorHandle;
 use memory::FieldInfo;
 use std::{ffi::c_void, mem, ptr};
-use capi_utils::error::ErrorHandle;
 
 /// A C-style handle to a `StructInfo`.
 #[repr(C)]
@@ -97,8 +95,8 @@ mod tests {
         test_util::TestDriver,
         type_info::{mun_type_info_data, tests::get_type_info_by_name},
     };
-    use std::{ffi::CStr, mem::MaybeUninit, ptr, slice};
     use capi_utils::error::mun_error_destroy;
+    use std::{ffi::CStr, mem::MaybeUninit, ptr, slice};
 
     fn get_struct_info_by_name<T: Into<Vec<u8>>>(
         runtime: RuntimeHandle,

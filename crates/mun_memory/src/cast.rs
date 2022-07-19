@@ -61,12 +61,7 @@ where
     unsafe { *dest.cast::<B>().as_mut() = value.into() };
 }
 
-pub fn try_cast_from_to(
-    old_id: Type,
-    new_id: Type,
-    src: NonNull<u8>,
-    dest: NonNull<u8>,
-) -> bool {
+pub fn try_cast_from_to(old_id: Type, new_id: Type, src: NonNull<u8>, dest: NonNull<u8>) -> bool {
     if let Some(cast_fn) = CAST_FN_TABLE.get(&(old_id, new_id)) {
         cast_fn(src, dest);
         true

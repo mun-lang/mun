@@ -1,8 +1,13 @@
-use super::Type;
-use crate::r#type::{PointerInfo, Type as RustType, TypeStore};
-use capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
+use std::ffi::c_void;
+use std::mem::ManuallyDrop;
+use std::ops::Deref;
 use std::sync::Arc;
-use std::{ffi::c_void};
+
+use capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
+
+use crate::r#type::{PointerInfo, Type as RustType, TypeStore};
+
+use super::Type;
 
 /// Additional information of a pointer [`Type`].
 ///
@@ -10,24 +15,25 @@ use std::{ffi::c_void};
 /// original type is not released through [`mun_type_release`] this type stays alive.
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct PointerType(*const c_void, *const c_void);
+pub struct PointerType(pub(super) *const c_void, pub(super) *const c_void);
 
 impl<'t> From<super::super::PointerType<'t>> for PointerType {
     fn from(ty: super::super::PointerType<'t>) -> Self {
         PointerType(
             (ty.inner as *const PointerInfo).cast(),
-            (ty.store as *const Arc<TypeStore>).cast(),
+            (&ty.store as *const &Arc<TypeStore>).cast(),
         )
     }
 }
 
 impl PointerType {
-    /// Returns the store associated with the Type
-    unsafe fn store(&self) -> Result<&Arc<TypeStore>, String> {
-        match (self.1 as *const Arc<TypeStore>).as_ref() {
-            Some(store) => Ok(store),
-            None => Err(String::from("PointerType contains invalid pointer")),
+    /// Returns the store associated with this instance
+    unsafe fn store(&self) -> Result<ManuallyDrop<Arc<TypeStore>>, String> {
+        if self.1.is_null() {
+            return Err(String::from("Field contains invalid pointer"));
         }
+
+        Ok(ManuallyDrop::new(Arc::from_raw(self.1 as *const TypeStore)))
     }
 
     /// Returns the pointer ino associated with the Type
@@ -64,11 +70,7 @@ pub unsafe extern "C" fn mun_pointer_type_pointee(
     let store = mun_error_try!(ty.store());
     let ty = mun_error_try!(ty.inner());
     let pointee = try_deref_mut!(pointee);
-    *pointee = RustType {
-        inner: ty.pointee,
-        store: store.clone(),
-    }
-    .into();
+    *pointee = RustType::new_unchecked(ty.pointee, ManuallyDrop::deref(&store).clone()).into();
     ErrorHandle::default()
 }
 
@@ -90,16 +92,21 @@ pub unsafe extern "C" fn mun_pointer_is_mutable(
 
 #[cfg(test)]
 mod test {
+    use std::mem::MaybeUninit;
+    use std::ptr;
+
+    use capi_utils::assert_error;
+
+    use crate::r#type::ffi::pointer::{
+        mun_pointer_is_mutable, mun_pointer_type_pointee, PointerType,
+    };
+    use crate::r#type::ffi::{mun_type_equal, mun_type_kind, TypeKind};
+
     use super::super::{
         mun_type_pointer_type, mun_type_release,
         primitive::{mun_type_primitive, PrimitiveType},
         Type,
     };
-    use crate::r#type::ffi::pointer::{mun_pointer_is_mutable, mun_pointer_type_pointee, PointerType};
-    use std::mem::MaybeUninit;
-    use std::ptr;
-    use capi_utils::assert_error;
-    use crate::r#type::ffi::{mun_type_equal, mun_type_kind, TypeKind};
 
     /// Returns the pointer type of the specified type. Asserts if that fails.
     unsafe fn pointer_type(ty: Type, mutable: bool) -> (Type, PointerType) {
@@ -111,7 +118,7 @@ mod test {
         assert!(mun_type_kind(ty, ty_kind.as_mut_ptr()).is_ok());
         let pointer_ty = match ty_kind.assume_init() {
             TypeKind::Pointer(p) => p,
-            _ => panic!("invalid type kind for pointer")
+            _ => panic!("invalid type kind for pointer"),
         };
 
         (ty, pointer_ty)
@@ -123,7 +130,7 @@ mod test {
         let (ffi_f32_ptr, ptr_info) = unsafe { pointer_type(ffi_f32, true) };
 
         let mut pointee_ty = MaybeUninit::uninit();
-        assert!(unsafe { mun_pointer_type_pointee(ptr_info, pointee_ty.as_mut_ptr() )}.is_ok());
+        assert!(unsafe { mun_pointer_type_pointee(ptr_info, pointee_ty.as_mut_ptr()) }.is_ok());
         let pointee_ty = unsafe { pointee_ty.assume_init() };
 
         assert!(unsafe { mun_type_equal(pointee_ty, ffi_f32) });
@@ -136,7 +143,12 @@ mod test {
     #[test]
     fn test_mun_pointer_type_pointee_invalid_null() {
         let mut pointee_ty = MaybeUninit::uninit();
-        assert_error!(unsafe { mun_pointer_type_pointee(PointerType(ptr::null(), ptr::null()), pointee_ty.as_mut_ptr()) });
+        assert_error!(unsafe {
+            mun_pointer_type_pointee(
+                PointerType(ptr::null(), ptr::null()),
+                pointee_ty.as_mut_ptr(),
+            )
+        });
 
         let ffi_f32 = mun_type_primitive(PrimitiveType::F32);
         let (ffi_f32_ptr, ptr_info) = unsafe { pointer_type(ffi_f32, true) };
@@ -153,12 +165,16 @@ mod test {
         let (ffi_f32_mutable_ptr, mutable_ptr_info) = unsafe { pointer_type(ffi_f32, true) };
 
         let mut is_mutable = MaybeUninit::uninit();
-        assert!(unsafe { mun_pointer_is_mutable(immutable_ptr_info, is_mutable.as_mut_ptr() )}.is_ok());
+        assert!(
+            unsafe { mun_pointer_is_mutable(immutable_ptr_info, is_mutable.as_mut_ptr()) }.is_ok()
+        );
         let is_mutable = unsafe { is_mutable.assume_init() };
         assert!(!is_mutable);
 
         let mut is_mutable = MaybeUninit::uninit();
-        assert!(unsafe { mun_pointer_is_mutable(mutable_ptr_info, is_mutable.as_mut_ptr() )}.is_ok());
+        assert!(
+            unsafe { mun_pointer_is_mutable(mutable_ptr_info, is_mutable.as_mut_ptr()) }.is_ok()
+        );
         let is_mutable = unsafe { is_mutable.assume_init() };
         assert!(is_mutable);
 
@@ -170,7 +186,12 @@ mod test {
     #[test]
     fn test_mun_pointer_type_is_mutable_invalid_null() {
         let mut is_mutable = MaybeUninit::uninit();
-        assert_error!(unsafe { mun_pointer_is_mutable(PointerType(ptr::null(), ptr::null()), is_mutable.as_mut_ptr()) });
+        assert_error!(unsafe {
+            mun_pointer_is_mutable(
+                PointerType(ptr::null(), ptr::null()),
+                is_mutable.as_mut_ptr(),
+            )
+        });
 
         let ffi_f32 = mun_type_primitive(PrimitiveType::F32);
         let (ffi_f32_ptr, ptr_info) = unsafe { pointer_type(ffi_f32, true) };

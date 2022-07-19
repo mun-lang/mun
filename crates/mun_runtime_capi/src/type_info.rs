@@ -1,6 +1,7 @@
 //! Exposes type information using the C ABI.
 
 use crate::struct_info::StructInfoHandle;
+use capi_utils::error::ErrorHandle;
 use memory::{HasStaticType, Type};
 use std::mem::ManuallyDrop;
 use std::ops::Deref;
@@ -10,7 +11,6 @@ use std::{
     ptr,
     sync::Arc,
 };
-use capi_utils::error::ErrorHandle;
 
 /// A C-style handle to a `TypeInfo`.
 #[repr(C)]
@@ -313,12 +313,12 @@ pub(crate) mod tests {
         runtime::{mun_runtime_get_type_info_by_name, RuntimeHandle},
         test_util::TestDriver,
     };
+    use capi_utils::error::mun_error_destroy;
     use std::{
         ffi::{CStr, CString},
         mem::{self, MaybeUninit},
         sync::Arc,
     };
-    use capi_utils::error::mun_error_destroy;
 
     pub(crate) fn get_type_info_by_name<T: Into<Vec<u8>>>(
         runtime: RuntimeHandle,

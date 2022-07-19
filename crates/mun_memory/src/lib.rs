@@ -1,6 +1,8 @@
 extern crate core;
 
-pub use r#type::{FieldInfo, HasStaticType, StructType, PointerType, TypeKind, Type, Field, StructTypeBuilder};
+pub use r#type::{
+    Field, FieldInfo, HasStaticType, PointerType, StructType, StructTypeBuilder, Type, TypeKind,
+};
 
 mod cast;
 pub mod diff;
@@ -13,7 +15,7 @@ use thiserror::Error;
 pub mod prelude {
     pub use crate::diff::{diff, Diff, FieldDiff, FieldEditKind};
     pub use crate::mapping::{Action, FieldMapping};
-    pub use crate::r#type::{StructType, PointerType, Type, TypeKind, Field};
+    pub use crate::r#type::{Field, PointerType, StructType, Type, TypeKind};
 }
 
 /// An error that can occur when trying to convert from an abi type to an internal type.

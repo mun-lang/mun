@@ -302,8 +302,9 @@ impl Assembly {
             });
 
             // Collect all types that need to be loaded
-            let (updated_type_table, new_types) = Type::try_from_abi(new_assembly.info.symbols.types(), type_table)
-                .map_err(|e| anyhow::anyhow!("failed to load assembly types: {}", e))?;
+            let (updated_type_table, new_types) =
+                Type::try_from_abi(new_assembly.info.symbols.types(), type_table)
+                    .map_err(|e| anyhow::anyhow!("failed to load assembly types: {}", e))?;
             type_table = updated_type_table;
 
             // Load all types, retrying types that depend on other unloaded types within the module

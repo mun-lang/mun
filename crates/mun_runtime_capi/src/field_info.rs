@@ -1,6 +1,7 @@
 //! Exposes field information using the C ABI.
 
 use crate::type_info::TypeInfoHandle;
+use capi_utils::error::ErrorHandle;
 use memory::FieldInfo;
 use std::{
     ffi::{c_void, CString},
@@ -8,7 +9,6 @@ use std::{
     ptr,
     sync::Arc,
 };
-use capi_utils::error::ErrorHandle;
 
 /// A C-style handle to a `FieldInfo`.
 #[repr(C)]
@@ -134,14 +134,14 @@ mod tests {
         type_info::mun_type_info_data,
         type_info::mun_type_info_eq,
     };
+    use capi_utils::error::mun_error_destroy;
     use memory::HasStaticType;
+    use mun_capi_utils::mun_string_destroy;
     use std::{
         ffi::{CStr, CString},
         mem::MaybeUninit,
         slice,
     };
-    use capi_utils::error::mun_error_destroy;
-    use mun_capi_utils::mun_string_destroy;
 
     fn get_first_field<T: Into<Vec<u8>>>(runtime: RuntimeHandle, type_name: T) -> FieldInfoHandle {
         let type_name = CString::new(type_name).expect("Invalid type name");

@@ -1,7 +1,7 @@
 //! Exposes error reporting using the C ABI.
 
-use std::{ffi::CString, os::raw::c_char, ptr};
 use std::ffi::CStr;
+use std::{ffi::CString, os::raw::c_char, ptr};
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -88,7 +88,7 @@ macro_rules! try_deref_mut {
                 return ErrorHandle::new(concat!(stringify!($expr), " must not be null"));
             }
         }
-    }
+    };
 }
 
 #[macro_export]
@@ -97,5 +97,5 @@ macro_rules! assert_error {
         let err = $expr;
         assert!(err.is_err());
         unsafe { $crate::mun_string_destroy(err.0) };
-    }
+    };
 }

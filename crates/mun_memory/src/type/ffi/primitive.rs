@@ -1,7 +1,4 @@
-use crate::{
-    r#type::ffi::Type,
-    HasStaticType
-};
+use crate::{r#type::ffi::Type, HasStaticType};
 
 /// Types of primitives supported by Mun.
 /// cbindgen:prefix-with-name=true
@@ -52,10 +49,13 @@ pub extern "C" fn mun_type_primitive(primitive_type: PrimitiveType) -> Type {
 
 #[cfg(test)]
 mod test {
-    use std::mem::MaybeUninit;
-    use crate::HasStaticType;
+    use super::{
+        mun_type_primitive,
+        PrimitiveType::{self, *},
+    };
     use crate::r#type::ffi::{mun_type_kind, TypeKind};
-    use super::{mun_type_primitive, PrimitiveType::{self, *}};
+    use crate::HasStaticType;
+    use std::mem::MaybeUninit;
 
     #[test]
     fn test_primitives() {

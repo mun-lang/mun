@@ -1,5 +1,6 @@
 //! Exposes the Mun runtime using the C ABI.
 
+use capi_utils::error::ErrorHandle;
 use memory::type_table::TypeTable;
 use memory::Type;
 use runtime::{FunctionDefinition, FunctionPrototype, FunctionSignature, Runtime};
@@ -8,7 +9,6 @@ use std::{
     os::raw::c_char,
     sync::Arc,
 };
-use capi_utils::error::ErrorHandle;
 
 use crate::{function_info::FunctionInfoHandle, type_info::TypeInfoHandle};
 
@@ -392,9 +392,9 @@ pub unsafe extern "C" fn mun_runtime_update(
 mod tests {
     use super::*;
     use crate::{test_invalid_runtime, test_util::TestDriver};
+    use capi_utils::error::mun_error_destroy;
     use memory::HasStaticType;
     use std::{ffi::CString, mem::MaybeUninit, ptr};
-    use capi_utils::error::mun_error_destroy;
 
     test_invalid_runtime!(
         runtime_get_function_info(ptr::null(), ptr::null_mut(), ptr::null_mut()),

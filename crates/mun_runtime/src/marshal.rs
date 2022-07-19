@@ -1,7 +1,7 @@
 use memory::Type;
 
 use crate::Runtime;
-use std::{ptr::NonNull};
+use std::ptr::NonNull;
 
 /// Used to do value-to-value conversions that require runtime type information while consuming the
 /// input value.

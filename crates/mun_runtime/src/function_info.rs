@@ -1,4 +1,4 @@
-use std::{ffi::c_void};
+use std::ffi::c_void;
 
 use memory::{type_table::TypeTable, TryFromAbiError, Type};
 
