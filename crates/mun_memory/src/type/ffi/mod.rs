@@ -1,18 +1,18 @@
-//! Defines an FFI compatible type interface
+#![allow(dead_code)]
 
-use std::ops::Deref;
-use std::ptr::NonNull;
+//! Defines an FFI compatible type interface for type information.
+
 use std::{
-    ffi::c_void, ffi::CString, mem::ManuallyDrop, os::raw::c_char, ptr, sync::atomic::Ordering,
-    sync::Arc,
+    ffi::c_void, ffi::CString, mem::ManuallyDrop, ops::Deref, os::raw::c_char, ptr, ptr::NonNull,
+    sync::atomic::Ordering, sync::Arc,
 };
 
 use abi::Guid;
 use capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
-use r#pointer::PointerType;
-use r#struct::StructType;
+pub use r#pointer::PointerType;
+pub use r#struct::{Field, Fields, StructType};
 
-use crate::r#type::{PointerInfo, StructInfo, TypeInner, TypeInnerData, TypeStore};
+use crate::r#type::{PointerInfo, StructData, TypeData, TypeDataKind, TypeDataStore};
 
 mod pointer;
 mod primitive;
@@ -35,24 +35,26 @@ impl From<super::Type> for Type {
 
 impl Type {
     /// Returns the store associated with the Type or
-    unsafe fn store(&self) -> Result<ManuallyDrop<Arc<TypeStore>>, String> {
+    unsafe fn store(&self) -> Result<ManuallyDrop<Arc<TypeDataStore>>, String> {
         if self.1.is_null() {
             return Err(String::from("Type contains invalid pointer"));
         }
 
-        Ok(ManuallyDrop::new(Arc::from_raw(self.1 as *const TypeStore)))
+        Ok(ManuallyDrop::new(Arc::from_raw(
+            self.1 as *const TypeDataStore,
+        )))
     }
 
     /// Returns the store associated with the Type or
-    unsafe fn inner(&self) -> Result<&TypeInner, String> {
-        (self.0 as *const TypeInner)
+    unsafe fn inner(&self) -> Result<&TypeData, String> {
+        (self.0 as *const TypeData)
             .as_ref()
             .ok_or_else(|| String::from("Type contains invalid pointer"))
     }
 
     /// Converts this FFI type into an owned Rust type. This transfers the ownership from the FFI
     /// type back to Rust.
-    unsafe fn to_owned(self) -> Result<super::Type, String> {
+    pub unsafe fn to_owned(self) -> Result<super::Type, String> {
         if self.0.is_null() {
             return Err(String::from("Type contains invalid pointer"));
         }
@@ -65,6 +67,11 @@ impl Type {
             inner: NonNull::new_unchecked(self.0 as *mut _),
             store: Arc::from_raw(self.1 as *const _),
         })
+    }
+
+    /// Returns an invalid Type
+    pub const fn null() -> Self {
+        Self(ptr::null(), ptr::null())
     }
 }
 
@@ -202,18 +209,59 @@ pub unsafe extern "C" fn mun_type_kind(ty: Type, kind: *mut TypeKind) -> ErrorHa
     let inner = mun_error_try!(ty.inner());
 
     *kind = match &inner.data {
-        TypeInnerData::Primitive(guid) => TypeKind::Primitive(*guid),
-        TypeInnerData::Pointer(pointer) => TypeKind::Pointer(PointerType(
+        TypeDataKind::Primitive(guid) => TypeKind::Primitive(*guid),
+        TypeDataKind::Pointer(pointer) => TypeKind::Pointer(PointerType(
             (pointer as *const PointerInfo).cast(),
             Arc::as_ptr(ManuallyDrop::deref(&store)) as *const _,
         )),
-        TypeInnerData::Struct(s) => TypeKind::Struct(StructType(
-            (s as *const StructInfo).cast(),
+        TypeDataKind::Struct(s) => TypeKind::Struct(StructType(
+            (s as *const StructData).cast(),
             Arc::as_ptr(ManuallyDrop::deref(&store)) as *const _,
         )),
-        TypeInnerData::Uninitialized => unreachable!(),
+        TypeDataKind::Uninitialized => unreachable!(),
     };
 
+    ErrorHandle::default()
+}
+
+/// An array of [`Type`]s.
+///
+/// This is backed by a dynamically allocated array. Ownership is transferred via this struct
+/// and its contents must be destroyed with [`mun_types_destroy`].
+#[repr(C)]
+pub struct Types {
+    pub types: *const Type,
+    pub count: usize,
+}
+
+impl From<Vec<Type>> for Types {
+    fn from(mut vec: Vec<Type>) -> Self {
+        vec.shrink_to_fit();
+        let vec = ManuallyDrop::new(vec);
+        Types {
+            types: if vec.is_empty() {
+                ptr::null()
+            } else {
+                vec.as_ptr()
+            },
+            count: vec.len(),
+        }
+    }
+}
+
+/// Destroys the contents of a [`Types`] struct.
+///
+/// # Safety
+///
+/// This function results in undefined behavior if the passed in `Types` has been deallocated
+/// by a previous call to [`mun_types_destroy`].
+#[no_mangle]
+pub unsafe extern "C" fn mun_types_destroy(types: Types) -> ErrorHandle {
+    if types.types.is_null() && types.count > 0 {
+        return ErrorHandle::new("Fields contains invalid pointer");
+    } else if types.count > 0 {
+        let _ = Vec::from_raw_parts(types.types as *mut Type, types.count, types.count);
+    }
     ErrorHandle::default()
 }
 
@@ -223,11 +271,13 @@ mod test {
     use std::mem::MaybeUninit;
     use std::ptr;
 
+    use crate::ffi::{mun_types_destroy, Types};
     use capi_utils::{assert_error, mun_string_destroy};
 
     use crate::r#type::ffi::{
         mun_type_add_reference, mun_type_alignment, mun_type_pointer_type, mun_type_size,
     };
+    use crate::r#type::Fields;
     use crate::HasStaticType;
 
     use super::{
@@ -393,5 +443,33 @@ mod test {
         let ffi_u64 = mun_type_primitive(PrimitiveType::U64);
         assert_error!(unsafe { mun_type_pointer_type(ffi_u64, true, ptr::null_mut()) });
         unsafe { mun_type_release(ffi_u64) };
+    }
+
+    #[test]
+    fn test_mun_types_destroy() {
+        let types: Types = [i32::type_info().clone(), f32::type_info().clone()]
+            .iter()
+            .map(|ty| ty.clone().into())
+            .collect::<Vec<_>>()
+            .into();
+        assert!(unsafe { mun_types_destroy(types) }.is_ok());
+    }
+
+    #[test]
+    fn test_mun_types_destroy_invalid_ptr() {
+        let types = Types {
+            types: ptr::null(),
+            count: 1,
+        };
+        assert_error!(unsafe { mun_types_destroy(types) });
+    }
+
+    #[test]
+    fn test_mun_types_destroy_empty() {
+        let types = Types {
+            types: ptr::null(),
+            count: 0,
+        };
+        assert!(unsafe { mun_types_destroy(types) }.is_ok());
     }
 }

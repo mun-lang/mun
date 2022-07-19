@@ -238,6 +238,9 @@ impl Assembly {
 
         Assembly::link_all_functions(&dispatch_table, &type_table, functions_to_link)?;
 
+        // Collect remaining types
+        Type::collect_unreferenced_type_data();
+
         Ok((dispatch_table, type_table))
     }
 
@@ -371,6 +374,9 @@ impl Assembly {
             let new_path = new_assembly.library_path.clone();
             linked_assemblies.insert(new_path, new_assembly);
         }
+
+        // Collect types
+        Type::collect_unreferenced_type_data();
 
         Ok((dispatch_table, type_table))
     }

@@ -1,18 +1,20 @@
-use std::ffi::{c_void, CString};
-use std::mem::ManuallyDrop;
-use std::ops::Deref;
-use std::os::raw::c_char;
-use std::ptr;
-use std::sync::Arc;
+use std::{
+    ffi::{c_void, CString},
+    mem::ManuallyDrop,
+    ops::Deref,
+    os::raw::c_char,
+    ptr,
+    sync::Arc,
+};
 
 use abi::Guid;
 use capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
 
-use crate::r#type::ffi::Type;
-use crate::r#type::{StructInfo, TypeStore};
-use crate::FieldInfo;
-
-use super::super::{StructType as RustStructType, Type as RustType};
+use crate::{
+    r#type::ffi::Type,
+    r#type::{StructData, StructType as RustStructType, Type as RustType, TypeDataStore},
+    FieldData,
+};
 
 /// Additional information of a struct [`Type`].
 ///
@@ -25,16 +27,16 @@ pub struct StructType(pub(super) *const c_void, pub(super) *const c_void);
 impl<'t> From<RustStructType<'t>> for StructType {
     fn from(ty: RustStructType<'t>) -> Self {
         StructType(
-            (ty.inner as *const StructInfo).cast(),
-            (&ty.store as *const &Arc<TypeStore>).cast(),
+            (ty.inner as *const StructData).cast(),
+            (&ty.store as *const &Arc<TypeDataStore>).cast(),
         )
     }
 }
 
 impl StructType {
     /// Returns the struct info associated with the Type
-    unsafe fn inner(&self) -> Result<&StructInfo, String> {
-        match (self.0 as *const StructInfo).as_ref() {
+    unsafe fn inner(&self) -> Result<&StructData, String> {
+        match (self.0 as *const StructData).as_ref() {
             Some(store) => Ok(store),
             None => Err(String::from("PointerType contains invalid pointer")),
         }
@@ -78,8 +80,8 @@ pub unsafe extern "C" fn mun_struct_type_memory_kind(
 /// and its contents must be destroyed with [`mun_fields_destroy`].
 #[repr(C)]
 pub struct Fields {
-    fields: *const Field,
-    count: usize,
+    pub fields: *const Field,
+    pub count: usize,
 }
 
 /// Destroys the contents of a [`Fields`] struct.
@@ -117,7 +119,7 @@ pub unsafe extern "C" fn mun_struct_type_fields(
         inner
             .fields
             .iter()
-            .map(|field| Field((field as *const FieldInfo).cast(), ty.1)),
+            .map(|field| Field((field as *const FieldData).cast(), ty.1)),
     );
 
     // Ensures that the length and the capacity are the same
@@ -148,17 +150,19 @@ pub struct Field(*const c_void, *const c_void);
 
 impl Field {
     /// Returns the store associated with this instance
-    unsafe fn store(&self) -> Result<ManuallyDrop<Arc<TypeStore>>, String> {
+    unsafe fn store(&self) -> Result<ManuallyDrop<Arc<TypeDataStore>>, String> {
         if self.1.is_null() {
             return Err(String::from("Field contains invalid pointer"));
         }
 
-        Ok(ManuallyDrop::new(Arc::from_raw(self.1 as *const TypeStore)))
+        Ok(ManuallyDrop::new(Arc::from_raw(
+            self.1 as *const TypeDataStore,
+        )))
     }
 
     /// Returns the field info associated with this instance
-    unsafe fn inner(&self) -> Result<&FieldInfo, String> {
-        match (self.0 as *const FieldInfo).as_ref() {
+    unsafe fn inner(&self) -> Result<&FieldData, String> {
+        match (self.0 as *const FieldData).as_ref() {
             Some(info) => Ok(info),
             None => Err(String::from("Field contains invalid pointer")),
         }

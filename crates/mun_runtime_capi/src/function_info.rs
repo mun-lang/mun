@@ -1,12 +1,11 @@
 //! Exposes function information using the C ABI.
 
-use crate::type_info::{TypeInfoHandle, TypeInfoSpan};
 use capi_utils::error::ErrorHandle;
-use memory::Type;
+use capi_utils::{mun_error_try, try_deref_mut};
+use memory::ffi::{Type, Types};
 use runtime::FunctionDefinition;
 use std::{
     ffi::{c_void, CString},
-    mem,
     os::raw::c_char,
     ptr,
     sync::Arc,
@@ -108,36 +107,20 @@ pub unsafe extern "C" fn mun_function_info_name(fn_info: FunctionInfoHandle) -> 
 #[no_mangle]
 pub unsafe extern "C" fn mun_function_info_argument_types(
     fn_info: FunctionInfoHandle,
-    arg_types: *mut TypeInfoSpan,
+    arg_types: *mut Types,
 ) -> ErrorHandle {
-    let fn_info = match (fn_info.0 as *const FunctionDefinition).as_ref() {
-        Some(fn_info) => fn_info,
-        None => return ErrorHandle::new("Invalid argument: 'fn_info' is null pointer."),
-    };
-
-    let arg_types = match arg_types.as_mut() {
-        Some(arg_types) => arg_types,
-        None => return ErrorHandle::new("Invalid argument: 'arg_types' is null pointer."),
-    };
-
-    let fn_sig = &fn_info.prototype.signature;
-    let mut types: Vec<*const Type> = fn_sig
+    let fn_info = mun_error_try!((fn_info.0 as *const FunctionDefinition)
+        .as_ref()
+        .ok_or("FunctionInfoHandle contains invalid pointer"));
+    let arg_types = try_deref_mut!(arg_types);
+    *arg_types = fn_info
+        .prototype
+        .signature
         .arg_types
         .iter()
-        .map(|ty| Arc::into_raw(ty.clone()))
-        .collect();
-
-    arg_types.data = if !types.is_empty() {
-        types.shrink_to_fit();
-        types.as_ptr() as *const _
-    } else {
-        ptr::null()
-    };
-    arg_types.len = types.len();
-
-    // Move ownership to caller
-    mem::forget(types);
-
+        .map(|ty| ty.clone().into())
+        .collect::<Vec<_>>()
+        .into();
     ErrorHandle::default()
 }
 
@@ -150,13 +133,14 @@ pub unsafe extern "C" fn mun_function_info_argument_types(
 #[no_mangle]
 pub unsafe extern "C" fn mun_function_info_return_type(
     fn_info: FunctionInfoHandle,
-) -> TypeInfoHandle {
-    let fn_info = match (fn_info.0 as *const FunctionDefinition).as_ref() {
-        Some(fn_info) => fn_info,
-        None => return TypeInfoHandle::null(),
-    };
-
-    TypeInfoHandle(Arc::into_raw(fn_info.prototype.signature.return_type.clone()) as *const c_void)
+    ty: *mut Type,
+) -> ErrorHandle {
+    let fn_info = mun_error_try!((fn_info.0 as *const FunctionDefinition)
+        .as_ref()
+        .ok_or("FunctionInfoHandle contains invalid pointer"));
+    let ty = try_deref_mut!(ty);
+    *ty = fn_info.prototype.signature.return_type.clone().into();
+    ErrorHandle::default()
 }
 
 #[cfg(test)]
@@ -165,15 +149,16 @@ pub(crate) mod tests {
     use crate::{
         runtime::{mun_runtime_get_function_info, RuntimeHandle},
         test_util::TestDriver,
-        type_info::mun_type_info_eq,
     };
     use capi_utils::error::mun_error_destroy;
+    use capi_utils::{assert_error, mun_string_destroy};
+    use memory::ffi::mun_type_equal;
     use memory::HasStaticType;
-    use mun_capi_utils::mun_string_destroy;
     use runtime::FunctionDefinition;
     use std::{
         ffi::{CStr, CString},
         mem::{self, MaybeUninit},
+        slice,
         sync::Arc,
     };
 
@@ -341,12 +326,13 @@ pub(crate) mod tests {
 
         let fn_info = get_fake_function_info(driver.runtime, "main");
         let mut arg_types = MaybeUninit::uninit();
-        let handle = unsafe { mun_function_info_argument_types(fn_info, arg_types.as_mut_ptr()) };
-        assert_eq!(handle.0, ptr::null());
-
+        assert!(
+            unsafe { mun_function_info_argument_types(fn_info, arg_types.as_mut_ptr()) }.is_ok()
+        );
         let arg_types = unsafe { arg_types.assume_init() };
-        assert_eq!(arg_types.data, ptr::null());
-        assert_eq!(arg_types.len, 0);
+
+        assert_eq!(arg_types.types, ptr::null());
+        assert_eq!(arg_types.count, 0);
     }
 
     #[test]
@@ -359,23 +345,25 @@ pub(crate) mod tests {
 
         let fn_info = get_fake_function_info(driver.runtime, "add");
         let mut arg_types = MaybeUninit::uninit();
-        let handle = unsafe { mun_function_info_argument_types(fn_info, arg_types.as_mut_ptr()) };
-        assert_eq!(handle.0, ptr::null());
+        assert!(
+            unsafe { mun_function_info_argument_types(fn_info, arg_types.as_mut_ptr()) }.is_ok()
+        );
 
         let arg_types = unsafe { arg_types.assume_init() };
-        assert_eq!(arg_types.len, 2);
+        assert_eq!(arg_types.count, 2);
 
-        (0..arg_types.len).into_iter().for_each(|index| {
-            let type_info = arg_types.get(index);
-            assert_ne!(type_info.0, ptr::null());
-            assert!(unsafe { mun_type_info_eq(type_info, i32::type_info().clone().into()) });
-        })
+        let arg_types = unsafe { slice::from_raw_parts(arg_types.types, arg_types.count) };
+
+        for arg_type in arg_types {
+            assert!(unsafe { mun_type_equal(*arg_type, i32::type_info().clone().into()) });
+        }
     }
 
     #[test]
     fn test_function_info_return_type_invalid_fn_info() {
-        let return_type = unsafe { mun_function_info_return_type(FunctionInfoHandle::null()) };
-        assert_eq!(return_type.0, ptr::null());
+        assert_error!(unsafe {
+            mun_function_info_return_type(FunctionInfoHandle::null(), ptr::null_mut())
+        });
     }
 
     #[test]
@@ -387,10 +375,14 @@ pub(crate) mod tests {
         );
 
         let fn_info = get_fake_function_info(driver.runtime, "main");
-        let return_type = unsafe { mun_function_info_return_type(fn_info) };
-        assert_ne!(return_type.0, ptr::null());
 
-        assert!(unsafe { mun_type_info_eq(return_type, <()>::type_info().clone().into()) });
+        let mut return_type = MaybeUninit::uninit();
+        assert!(
+            unsafe { mun_function_info_return_type(fn_info, return_type.as_mut_ptr()) }.is_ok()
+        );
+        let return_type = unsafe { return_type.assume_init() };
+
+        assert!(unsafe { mun_type_equal(return_type, <()>::type_info().clone().into()) });
     }
 
     #[test]
@@ -402,9 +394,12 @@ pub(crate) mod tests {
         );
 
         let fn_info = get_fake_function_info(driver.runtime, "main");
-        let return_type = unsafe { mun_function_info_return_type(fn_info) };
-        assert_ne!(return_type.0, ptr::null());
+        let mut return_type = MaybeUninit::uninit();
+        assert!(
+            unsafe { mun_function_info_return_type(fn_info, return_type.as_mut_ptr()) }.is_ok()
+        );
+        let return_type = unsafe { return_type.assume_init() };
 
-        assert!(unsafe { mun_type_info_eq(return_type, <i32>::type_info().clone().into()) });
+        assert!(unsafe { mun_type_equal(return_type, <i32>::type_info().clone().into()) });
     }
 }

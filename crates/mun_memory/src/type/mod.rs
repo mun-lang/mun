@@ -1,4 +1,15 @@
-mod ffi;
+//! Type information in Mun is stored globally. This allows type information to be stored easily.
+//!
+//! A type is referred to with [`Type`]. A `Type` holds a reference to the underlying data which is
+//! managed by the runtime. `Type`s can be freely created through a [`StructTypeBuilder`], via
+//! [`HasStaticType`] or by querying other types ([`Type::pointer_type`] for instance). Cloning a
+//! [`Type`] is a cheap operation.
+//!
+//! Type information is stored globally on the heap and is freed when no longer referenced by a
+//! `Type`. However, since `Type`s can reference each other a garbage collection algorithm is used
+//! to clean up unreferenced type information. See [`Type::collect_unreferenced_types()`].
+
+pub mod ffi;
 
 use std::{
     alloc::Layout,
@@ -20,19 +31,83 @@ use abi::{self, static_type_map::StaticTypeMap};
 
 use crate::{type_table::TypeTable, TryFromAbiError};
 
-static GLOBAL_TYPE_STORE: Lazy<Arc<TypeStore>> = Lazy::new(Default::default);
+static GLOBAL_TYPE_STORE: Lazy<Arc<TypeDataStore>> = Lazy::new(Default::default);
 
-#[no_mangle]
-pub extern "C" fn hello_world() -> usize {
-    3
-}
-
+/// A type store holds a list of interconnected [`TypeData`]s. Type information can contain cycles
+/// so the `TypeData`s refer to each other via pointers. The `TypeDataStore` owns the heap allocated
+/// `TypeData` instances.
+///
+/// By calling [`TypeDataStore::collect_garbage`] types that are no longer referenced by [`Type`]s
+/// are removed.
 #[derive(Default)]
-struct TypeStore {
-    types: Mutex<VecDeque<Box<TypeInner>>>,
+struct TypeDataStore {
+    types: Mutex<VecDeque<Box<TypeData>>>,
 }
 
-impl TypeStore {
+/// Result information after a call to [`TypeDataStore::collect_garbage`].
+#[derive(Clone, Debug)]
+pub struct TypeCollectionStats {
+    pub collected_types: usize,
+    pub remaining_types: usize,
+}
+
+impl TypeDataStore {
+    /// Called to collect types that are no longer externally referenced.
+    pub fn collect_garbage(&self) -> TypeCollectionStats {
+        let mut lock = self.types.lock();
+
+        // Reset all mark flags.
+        let mut queue = VecDeque::new();
+        for ty in lock.iter_mut() {
+            ty.marked = ty.external_references.load(Ordering::Acquire) > 0;
+            queue.push_back(unsafe { NonNull::new_unchecked(Box::as_mut(ty) as *mut TypeData) });
+        }
+
+        // Trace all types
+        while let Some(ty) = queue.pop_back() {
+            let ty = unsafe { ty.as_ref() };
+            match &ty.data {
+                TypeDataKind::Struct(s) => {
+                    for field in s.fields.iter() {
+                        let mut field_ty = field.type_info;
+                        let field_ty = unsafe { field_ty.as_mut() };
+                        if !field_ty.marked {
+                            field_ty.marked = true;
+                            queue.push_back(field.type_info);
+                        }
+                    }
+                }
+                TypeDataKind::Pointer(p) => {
+                    let mut pointee = p.pointee;
+                    let pointee = unsafe { pointee.as_mut() };
+                    if !pointee.marked {
+                        pointee.marked = true;
+                        queue.push_back(p.pointee);
+                    }
+                }
+                TypeDataKind::Primitive(_) | TypeDataKind::Uninitialized => {}
+            }
+        }
+
+        // Iterate over all objects and remove the ones that are no longer referenced
+        let mut types_removed = 0;
+        let mut index = 0;
+        while index < lock.len() {
+            let ty = &(&*lock)[index];
+            if !ty.marked {
+                lock.swap_remove_back(index);
+                types_removed += 1;
+            } else {
+                index += 1;
+            }
+        }
+
+        TypeCollectionStats {
+            collected_types: types_removed,
+            remaining_types: lock.len(),
+        }
+    }
+
     /// Tries to convert multiple [`abi::TypeDefinition`] to internal type representations. If
     /// the conversion succeeds an updated [`TypeTable`] is returned
     pub fn try_from_abi<'abi>(
@@ -51,7 +126,7 @@ impl TypeStore {
                 type_def.name().to_owned(),
                 Layout::from_size_align(type_def.size_in_bytes(), type_def.alignment())
                     .expect("invalid abi type definition layout"),
-                TypeInnerData::Uninitialized,
+                TypeDataKind::Uninitialized,
                 &mut entries,
             );
             type_table.insert_concrete_type(type_def.as_concrete().clone(), ty.clone());
@@ -66,7 +141,7 @@ impl TypeStore {
             let inner_ty = unsafe { ty.inner.as_mut() };
             let type_data = match &type_def.data {
                 abi::TypeDefinitionData::Struct(s) => {
-                    StructInfo::try_from_abi(s, &type_table)?.into()
+                    StructData::try_from_abi(s, &type_table)?.into()
                 }
             };
             inner_ty.data = type_data;
@@ -79,16 +154,17 @@ impl TypeStore {
         self: &Arc<Self>,
         name: impl Into<String>,
         layout: Layout,
-        data: TypeInnerData,
-        entries: &mut MutexGuard<'_, RawMutex, VecDeque<Box<TypeInner>>>,
+        data: TypeDataKind,
+        entries: &mut MutexGuard<'_, RawMutex, VecDeque<Box<TypeData>>>,
     ) -> Type {
-        entries.push_back(Box::new(TypeInner {
+        entries.push_back(Box::new(TypeData {
             name: name.into(),
             layout,
             data,
             external_references: AtomicUsize::new(0),
             immutable_pointer_type: Default::default(),
             mutable_pointer_type: Default::default(),
+            marked: false,
         }));
 
         // Safety: get a TypeInner with a 'static lifetime. This is safe because of the nature of
@@ -96,7 +172,7 @@ impl TypeStore {
         // as it lives.
         let entry = unsafe {
             NonNull::new_unchecked(
-                entries.back().expect("didnt insert").deref() as *const TypeInner as *mut _,
+                entries.back().expect("didnt insert").deref() as *const TypeData as *mut _,
             )
         };
 
@@ -109,16 +185,17 @@ impl TypeStore {
         self: &Arc<Self>,
         name: impl Into<String>,
         layout: Layout,
-        data: TypeInnerData,
+        data: TypeDataKind,
     ) -> Type {
         let mut entries = self.types.lock();
         self.allocate_inner(name, layout, data, &mut entries)
     }
 }
 
-/// A linked version of [`mun_abi::TypeInfo`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
+/// A reference to internally stored type information. A `Type` can be used to query information,
+/// construct other types, or store type information for later use.
 pub struct Type {
-    inner: NonNull<TypeInner>,
+    inner: NonNull<TypeData>,
 
     /// A [`Type`] holds a strong reference to its data store. This ensure that the data is never
     /// deleted before this instance is destroyed.
@@ -128,7 +205,7 @@ pub struct Type {
     /// the store might be deallocated before the last type is deallocated. Keeping a reference to
     /// the store in this instance ensures that the data is kept alive until the last `Type` is
     /// dropped.
-    store: Arc<TypeStore>,
+    store: Arc<TypeDataStore>,
 }
 
 impl Type {
@@ -138,17 +215,18 @@ impl Type {
     ///
     /// The pointer pointed to by `inner` might be invalid, in which case this method will cause
     /// undefined behavior.
-    unsafe fn new_unchecked(mut inner: NonNull<TypeInner>, store: Arc<TypeStore>) -> Self {
+    unsafe fn new_unchecked(mut inner: NonNull<TypeData>, store: Arc<TypeDataStore>) -> Self {
         // Increment the external reference count
         inner
             .as_mut()
             .external_references
-            .fetch_add(1, Ordering::Relaxed);
+            .fetch_add(1, Ordering::AcqRel);
 
         Self { inner, store }
     }
 }
 
+// Types can safely be used across multiple threads.
 unsafe impl Send for Type {}
 unsafe impl Sync for Type {}
 
@@ -166,14 +244,9 @@ impl Display for Type {
 
 impl Clone for Type {
     fn clone(&self) -> Self {
-        // As explained in the [Boost documentation][1], Increasing the
-        // reference counter can always be done with memory_order_relaxed: New
-        // references to an object can only be formed from an existing
-        // reference, and passing an existing reference from one thread to
-        // another must already provide any required synchronization.
         self.inner()
             .external_references
-            .fetch_add(1, Ordering::Relaxed);
+            .fetch_add(1, Ordering::AcqRel);
 
         Self {
             store: self.store.clone(),
@@ -203,7 +276,8 @@ impl Hash for Type {
     }
 }
 
-pub struct TypeInner {
+/// Stores type information for a particular type as well as references to related types.
+pub struct TypeData {
     /// Type name
     name: String,
 
@@ -211,21 +285,28 @@ pub struct TypeInner {
     layout: Layout,
 
     /// Type group
-    data: TypeInnerData,
+    data: TypeDataKind,
 
-    /// Holds the number of external (non-cyclic) references
+    /// Holds the number of external (non-cyclic) references. Basically the number of [`Type`]
+    /// instances pointing to this instance.
+    ///
+    /// Note that if this ever reaches zero is doesnt mean its no longer used because it can still
+    /// be referenced by other types.
     external_references: AtomicUsize,
 
     /// The type of an immutable pointer to this type
-    immutable_pointer_type: RwLock<Option<NonNull<TypeInner>>>,
+    immutable_pointer_type: RwLock<Option<NonNull<TypeData>>>,
 
     /// The type of a mutable pointer to this type
-    mutable_pointer_type: RwLock<Option<NonNull<TypeInner>>>,
+    mutable_pointer_type: RwLock<Option<NonNull<TypeData>>>,
+
+    /// True if this type has been marked as alive (only valid for GC).
+    marked: bool,
 }
 
-impl TypeInner {
+impl TypeData {
     /// Returns the type that represents a pointer to this type
-    fn pointer_type(&self, mutable: bool, store: &Arc<TypeStore>) -> Type {
+    fn pointer_type(&self, mutable: bool, store: &Arc<TypeDataStore>) -> Type {
         let cache_key = if mutable {
             &self.mutable_pointer_type
         } else {
@@ -272,24 +353,24 @@ impl TypeInner {
     }
 }
 
-impl PartialEq for TypeInner {
+impl PartialEq for TypeData {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name && self.layout == other.layout && self.data == other.data
     }
 }
 
-impl Eq for TypeInner {}
+impl Eq for TypeData {}
 
-unsafe impl Send for TypeInner {}
-unsafe impl Sync for TypeInner {}
+unsafe impl Send for TypeData {}
+unsafe impl Sync for TypeData {}
 
 /// A linked version of [`mun_abi::TypeInfoData`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-enum TypeInnerData {
+enum TypeDataKind {
     /// Primitive types (i.e. `()`, `bool`, `float`, `int`, etc.)
     Primitive(abi::Guid),
     /// Struct types (i.e. record, tuple, or unit structs)
-    Struct(StructInfo),
+    Struct(StructData),
     /// A pointer to another type
     Pointer(PointerInfo),
     /// Indicates that the type has been allocated but it has not yet been initialized,
@@ -309,11 +390,11 @@ pub enum TypeKind<'t> {
 
 /// A linked version of [`mun_abi::StructInfo`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
 #[derive(Clone, Debug)]
-struct StructInfo {
+struct StructData {
     /// The unique identifier of this struct
     pub guid: abi::Guid,
     /// Struct fields
-    pub fields: Vec<FieldInfo>,
+    pub fields: Vec<FieldData>,
     /// Struct memory kind
     pub memory_kind: abi::StructMemoryKind,
 }
@@ -322,8 +403,8 @@ struct StructInfo {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct StructType<'t> {
-    inner: &'t StructInfo,
-    store: &'t Arc<TypeStore>,
+    inner: &'t StructData,
+    store: &'t Arc<TypeDataStore>,
 }
 
 impl<'t> StructType<'t> {
@@ -363,8 +444,8 @@ impl<'t> StructType<'t> {
 /// A collection of fields of a struct
 #[derive(Copy, Clone)]
 pub struct Fields<'t> {
-    inner: &'t StructInfo,
-    store: &'t Arc<TypeStore>,
+    inner: &'t StructData,
+    store: &'t Arc<TypeDataStore>,
 }
 
 impl<'t> Fields<'t> {
@@ -409,8 +490,8 @@ impl<'t> IntoIterator for Fields<'t> {
 }
 
 pub struct FieldsIterator<'t> {
-    iter: std::slice::Iter<'t, FieldInfo>,
-    store: &'t Arc<TypeStore>,
+    iter: std::slice::Iter<'t, FieldData>,
+    store: &'t Arc<TypeDataStore>,
 }
 
 impl<'t> Iterator for FieldsIterator<'t> {
@@ -428,7 +509,7 @@ impl<'t> Iterator for FieldsIterator<'t> {
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 struct PointerInfo {
     /// The type to which is pointed
-    pub pointee: NonNull<TypeInner>,
+    pub pointee: NonNull<TypeData>,
     /// Whether or not the pointer is mutable
     pub mutable: bool,
 }
@@ -437,7 +518,7 @@ struct PointerInfo {
 #[derive(Copy, Clone)]
 pub struct PointerType<'t> {
     inner: &'t PointerInfo,
-    store: &'t Arc<TypeStore>,
+    store: &'t Arc<TypeDataStore>,
 }
 
 impl<'t> PointerType<'t> {
@@ -458,38 +539,44 @@ impl<'t> PointerType<'t> {
     }
 }
 
-impl From<StructInfo> for TypeInnerData {
-    fn from(s: StructInfo) -> Self {
-        TypeInnerData::Struct(s)
+impl From<StructData> for TypeDataKind {
+    fn from(s: StructData) -> Self {
+        TypeDataKind::Struct(s)
     }
 }
 
-impl From<PointerInfo> for TypeInnerData {
+impl From<PointerInfo> for TypeDataKind {
     fn from(p: PointerInfo) -> Self {
-        TypeInnerData::Pointer(p)
+        TypeDataKind::Pointer(p)
     }
 }
 
-impl Hash for TypeInner {
+impl Hash for TypeData {
     fn hash<H: Hasher>(&self, state: &mut H) {
         Hash::hash(&self.data, state);
     }
 }
 
-impl Hash for StructInfo {
+impl Hash for StructData {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.guid.hash(state)
     }
 }
 
-impl PartialEq for StructInfo {
+impl PartialEq for StructData {
     fn eq(&self, other: &Self) -> bool {
         self.guid == other.guid
     }
 }
-impl Eq for StructInfo {}
+impl Eq for StructData {}
 
 impl Type {
+    /// Collects all data related to types that are no longer referenced by a [`Type`]. Returns
+    /// the number of types that were removed.
+    pub fn collect_unreferenced_type_data() -> TypeCollectionStats {
+        GLOBAL_TYPE_STORE.collect_garbage()
+    }
+
     /// Constructs a new struct type
     pub fn new_struct(
         name: impl Into<String>,
@@ -501,11 +588,11 @@ impl Type {
         GLOBAL_TYPE_STORE.allocate(
             name,
             layout,
-            StructInfo {
+            StructData {
                 guid,
                 fields: fields
                     .into_iter()
-                    .map(|(name, ty, offset)| FieldInfo {
+                    .map(|(name, ty, offset)| FieldData {
                         name,
                         type_info: ty.inner,
                         offset,
@@ -518,7 +605,7 @@ impl Type {
     }
 
     /// Returns a reference to the [`TypeInner`]
-    fn inner(&self) -> &TypeInner {
+    fn inner(&self) -> &TypeData {
         // Safety: taking the reference is always ok because the garbage collector ensures that as
         // long as self (Type) exists the inner stays alive.
         unsafe { self.inner.as_ref() }
@@ -563,16 +650,16 @@ impl Type {
     /// Returns the kind of the type
     pub fn kind(&self) -> TypeKind<'_> {
         match &self.inner().data {
-            TypeInnerData::Primitive(guid) => TypeKind::Primitive(guid),
-            TypeInnerData::Struct(s) => TypeKind::Struct(StructType {
+            TypeDataKind::Primitive(guid) => TypeKind::Primitive(guid),
+            TypeDataKind::Struct(s) => TypeKind::Struct(StructType {
                 inner: s,
                 store: &self.store,
             }),
-            TypeInnerData::Pointer(p) => TypeKind::Pointer(PointerType {
+            TypeDataKind::Pointer(p) => TypeKind::Pointer(PointerType {
                 inner: p,
                 store: &self.store,
             }),
-            TypeInnerData::Uninitialized => {
+            TypeDataKind::Uninitialized => {
                 unreachable!("should never be able to query the kind of an uninitialized type")
             }
         }
@@ -669,13 +756,13 @@ impl Type {
     }
 }
 
-impl StructInfo {
+impl StructData {
     /// Tries to convert from an `abi::StructInfo`.
     fn try_from_abi<'abi>(
         struct_info: &'abi abi::StructDefinition<'abi>,
         type_table: &TypeTable,
-    ) -> Result<StructInfo, TryFromAbiError<'abi>> {
-        let fields: Result<Vec<FieldInfo>, TryFromAbiError> = izip!(
+    ) -> Result<StructData, TryFromAbiError<'abi>> {
+        let fields: Result<Vec<FieldData>, TryFromAbiError> = izip!(
             struct_info.field_names(),
             struct_info.field_types(),
             struct_info.field_offsets()
@@ -684,7 +771,7 @@ impl StructInfo {
             type_table
                 .find_type_info_by_id(type_id)
                 .ok_or_else(|| TryFromAbiError::UnknownTypeId(type_id.clone()))
-                .map(|type_info| FieldInfo {
+                .map(|type_info| FieldData {
                     name: name.to_owned(),
                     type_info: type_info.inner,
                     offset: *offset,
@@ -692,7 +779,7 @@ impl StructInfo {
         })
         .collect();
 
-        fields.map(|fields| StructInfo {
+        fields.map(|fields| StructData {
             guid: struct_info.guid,
             fields,
             memory_kind: struct_info.memory_kind,
@@ -702,11 +789,11 @@ impl StructInfo {
 
 /// A linked version of a struct field.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct FieldInfo {
+pub struct FieldData {
     /// The field's name
     pub name: String,
     /// The field's type
-    pub type_info: NonNull<TypeInner>,
+    pub type_info: NonNull<TypeData>,
     /// The field's offset
     pub offset: u16,
     // TODO: Field accessibility levels
@@ -715,8 +802,8 @@ pub struct FieldInfo {
 
 #[derive(Copy, Clone)]
 pub struct Field<'t> {
-    inner: &'t FieldInfo,
-    store: &'t Arc<TypeStore>,
+    inner: &'t FieldData,
+    store: &'t Arc<TypeDataStore>,
 }
 
 impl<'t> Field<'t> {
@@ -820,10 +907,10 @@ impl StructTypeBuilder {
         GLOBAL_TYPE_STORE.allocate(
             self.name,
             self.layout,
-            StructInfo {
+            StructData {
                 guid,
                 fields: Vec::from_iter(self.fields.into_iter().map(|(name, ty, offset)| {
-                    FieldInfo {
+                    FieldData {
                         name,
                         type_info: ty.inner,
                         offset: offset.try_into().expect("offset is too large!"),
@@ -889,7 +976,7 @@ macro_rules! impl_primitive_type {
                          GLOBAL_TYPE_STORE.allocate(
                              <$ty as abi::PrimitiveType>::name(),
                              Layout::new::<$ty>(),
-                             TypeInnerData::Primitive(<$ty as abi::PrimitiveType>::guid().clone())
+                             TypeDataKind::Primitive(<$ty as abi::PrimitiveType>::guid().clone())
                          )
                     })
                 }

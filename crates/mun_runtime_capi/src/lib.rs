@@ -7,13 +7,8 @@
 pub mod gc;
 pub mod runtime;
 
-pub mod field_info;
 pub mod function_info;
-pub mod struct_info;
-pub mod type_info;
 
 #[macro_use]
 #[cfg(test)]
 mod test_util;
-
-use std::{ffi::CString, os::raw::c_char};

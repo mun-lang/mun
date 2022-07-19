@@ -85,7 +85,19 @@ macro_rules! try_deref_mut {
         match ($expr).as_mut() {
             Some(val) => val,
             None => {
-                return ErrorHandle::new(concat!(stringify!($expr), " must not be null"));
+                return ErrorHandle::new(concat!("'", stringify!($expr), "' must not be null"));
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! try_deref {
+    ($expr:expr $(,)?) => {
+        match ($expr).as_ref() {
+            Some(val) => val,
+            None => {
+                return ErrorHandle::new(concat!("'", stringify!($expr), "' must not be null"));
             }
         }
     };

@@ -1,8 +1,13 @@
 extern crate core;
 
 pub use r#type::{
-    Field, FieldInfo, HasStaticType, PointerType, StructType, StructTypeBuilder, Type, TypeKind,
+    Field, FieldData, HasStaticType, PointerType, StructType, StructTypeBuilder, Type,
+    TypeCollectionStats, TypeKind,
 };
+
+pub mod ffi {
+    pub use super::r#type::ffi::*;
+}
 
 mod cast;
 pub mod diff;

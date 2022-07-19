@@ -1,21 +1,39 @@
 //! Exposes the Mun runtime using the C ABI.
 
 use capi_utils::error::ErrorHandle;
+use capi_utils::{mun_error_try, try_convert_c_string, try_deref, try_deref_mut};
+use memory::ffi::Type;
 use memory::type_table::TypeTable;
-use memory::Type;
+use memory::Type as RustType;
 use runtime::{FunctionDefinition, FunctionPrototype, FunctionSignature, Runtime};
+use std::mem::ManuallyDrop;
+use std::ops::Deref;
 use std::{
     ffi::{c_void, CStr},
     os::raw::c_char,
     sync::Arc,
 };
 
-use crate::{function_info::FunctionInfoHandle, type_info::TypeInfoHandle};
+use crate::function_info::FunctionInfoHandle;
 
 /// A C-style handle to a runtime.
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct RuntimeHandle(pub *mut c_void);
+
+impl RuntimeHandle {
+    pub unsafe fn inner(&self) -> Result<&Runtime, String> {
+        (self.0 as *mut Runtime)
+            .as_ref()
+            .ok_or_else(|| String::from("RuntimeHandle is null pointer."))
+    }
+
+    pub unsafe fn inner_mut(&self) -> Result<&mut Runtime, String> {
+        (self.0 as *mut Runtime)
+            .as_mut()
+            .ok_or_else(|| String::from("RuntimeHandle is null pointer."))
+    }
+}
 
 /// Definition of an external function that is callable from Mun.
 ///
@@ -30,10 +48,10 @@ pub struct ExternalFunctionDefinition {
     pub num_args: u32,
 
     /// The types of the arguments
-    pub arg_types: *const TypeInfoHandle,
+    pub arg_types: *const Type,
 
     /// The type of the return type
-    pub return_type: TypeInfoHandle,
+    pub return_type: Type,
 
     /// Pointer to the function
     pub fn_ptr: *const c_void,
@@ -87,95 +105,76 @@ pub unsafe extern "C" fn mun_runtime_create(
     handle: *mut RuntimeHandle,
 ) -> ErrorHandle {
     if library_path.is_null() {
-        return ErrorHandle::new("Invalid argument: 'library_path' is null pointer.");
+        return ErrorHandle::new("invalid argument: 'library_path' is null pointer.");
     }
 
     if options.num_functions > 0 && options.functions.is_null() {
-        return ErrorHandle::new("Invalid argument: 'functions' is null pointer.");
+        return ErrorHandle::new("invalid argument: 'functions' is null pointer.");
     }
 
     let library_path = match CStr::from_ptr(library_path).to_str() {
         Ok(path) => path,
         Err(_) => {
-            return ErrorHandle::new("Invalid argument: 'library_path' is not UTF-8 encoded.");
+            return ErrorHandle::new("invalid argument: 'library_path' is not UTF-8 encoded.");
         }
     };
 
     let handle = match handle.as_mut() {
         Some(handle) => handle,
-        None => return ErrorHandle::new("Invalid argument: 'handle' is null pointer."),
+        None => return ErrorHandle::new("invalid argument: 'handle' is null pointer."),
     };
 
     let type_table = TypeTable::default();
-    let user_functions =
-        match std::slice::from_raw_parts(options.functions, options.num_functions as usize)
-            .iter()
-            .map(|def| {
-                if def.name.is_null() {
-                    return Err(String::from(
-                        "Invalid function name: function name null pointer",
-                    ));
-                }
+    let user_functions = mun_error_try!(std::slice::from_raw_parts(
+        options.functions,
+        options.num_functions as usize
+    )
+    .iter()
+    .map(|def| {
+        let name =
+            try_convert_c_string(def.name).map_err(|e| format!("invalid function name: {e}"))?;
+        let return_type = ManuallyDrop::new(
+            def.return_type
+                .to_owned()
+                .map_err(|e| format!("invalid function '{name}': 'return_type': {e}"))?,
+        )
+        .deref()
+        .clone();
 
-                let name = match CStr::from_ptr(def.name).to_str() {
-                    Ok(path) => path,
-                    Err(e) => {
-                        return Err(format!(
-                            "Invalid function name: function name is not UTF-8 encoded: {}",
-                            e
-                        ));
-                    }
-                };
+        if def.num_args > 0 && def.arg_types.is_null() {
+            return Err(format!(
+                "invalid function '{}': 'arg_types' is null pointer.",
+                name
+            ));
+        }
 
-                if def.return_type.0.is_null() {
-                    return Err(format!(
-                        "Invalid function '{}': 'return_type' is null pointer.",
-                        name
-                    ));
-                }
-
-                if def.num_args > 0 && def.arg_types.is_null() {
-                    return Err(format!(
-                        "Invalid function '{}': 'arg_types' is null pointer.",
-                        name
-                    ));
-                }
-
-                let arg_types: Vec<Type> = if def.num_args > 0 {
-                    std::slice::from_raw_parts(def.arg_types, def.num_args as usize)
-                        .iter()
-                        .enumerate()
-                        .map(|(i, arg)| {
-                            if arg.0.is_null() {
-                                return Err(format!(
-                                    "Invalid function '{}': argument #{} is null pointer.",
-                                    name,
-                                    i + 1
-                                ));
-                            }
-                            Ok(Arc::from_raw(arg.0 as _))
-                        })
-                        .collect::<Result<_, _>>()?
-                } else {
-                    Vec::new()
-                };
-
-                Ok(FunctionDefinition {
-                    prototype: FunctionPrototype {
-                        name: name.to_owned(),
-                        signature: FunctionSignature {
-                            arg_types,
-                            return_type: Arc::from_raw(def.return_type.0 as _),
-                        },
-                    },
-                    fn_ptr: def.fn_ptr,
+        let arg_types: Vec<_> = if def.num_args > 0 {
+            std::slice::from_raw_parts(def.arg_types, def.num_args as usize)
+                .iter()
+                .enumerate()
+                .map(|(i, arg)| -> Result<RustType, String> {
+                    let ty = (*arg).to_owned().map_err(|e| {
+                        format!("invalid function '{}': argument #{}: {}", name, i + 1, e)
+                    })?;
+                    Ok(ManuallyDrop::new(ty.to_owned()).deref().clone())
                 })
-            })
-            .collect::<Result<_, _>>()
-        {
-            Err(e) => return ErrorHandle::new(e),
-            Ok(user_functions) => user_functions,
+                .collect::<Result<_, _>>()?
+        } else {
+            Vec::new()
         };
+
+        Ok(FunctionDefinition {
+            prototype: FunctionPrototype {
+                name: name.to_owned(),
+                signature: FunctionSignature {
+                    arg_types,
+                    return_type,
+                },
+            },
+            fn_ptr: def.fn_ptr,
+        })
+    })
+    .collect::<Result<_, _>>());
 
     let runtime_options = runtime::RuntimeOptions {
         library_path: library_path.into(),
@@ -200,9 +199,8 @@ pub extern "C" fn mun_runtime_destroy(handle: RuntimeHandle) {
     }
 }
 
-/// Retrieves the [`FunctionDefinition`] for `fn_name` from the runtime corresponding to `handle`.
-/// If successful, `has_fn_info` and `fn_info` are set, otherwise a non-zero error handle is
-/// returned.
+/// Retrieves the [`FunctionDefinition`] for `fn_name` from the `runtime`. If successful,
+/// `has_fn_info` and `fn_info` are set, otherwise a non-zero error handle is returned.
 ///
 /// If a non-zero error handle is returned, it must be manually destructed using
 /// [`mun_error_destroy`].
@@ -213,38 +211,18 @@ pub extern "C" fn mun_runtime_destroy(handle: RuntimeHandle) {
 /// an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
 #[no_mangle]
 pub unsafe extern "C" fn mun_runtime_get_function_info(
-    handle: RuntimeHandle,
+    runtime: RuntimeHandle,
     fn_name: *const c_char,
     has_fn_info: *mut bool,
     fn_info: *mut FunctionInfoHandle,
 ) -> ErrorHandle {
-    let runtime = match (handle.0 as *mut Runtime).as_ref() {
-        Some(runtime) => runtime,
-        None => return ErrorHandle::new("Invalid argument: 'runtime' is null pointer."),
-    };
-
-    if fn_name.is_null() {
-        return ErrorHandle::new("Invalid argument: 'fn_name' is null pointer.");
-    }
-
-    let fn_name = match CStr::from_ptr(fn_name).to_str() {
-        Ok(name) => name,
-        Err(_) => {
-            return ErrorHandle::new("Invalid argument: 'fn_name' is not UTF-8 encoded.");
-        }
-    };
-
-    let has_fn_info = match has_fn_info.as_mut() {
-        Some(has_info) => has_info,
-        None => return ErrorHandle::new("Invalid argument: 'has_fn_info' is null pointer."),
-    };
-
-    let fn_info = match fn_info.as_mut() {
-        Some(fn_info) => fn_info,
-        None => return ErrorHandle::new("Invalid argument: 'fn_info' is null pointer."),
-    };
-
-    match runtime.get_function_definition(fn_name) {
+    let runtime = mun_error_try!(runtime.inner());
+    let name = mun_error_try!(
+        try_convert_c_string(fn_name).map_err(|e| format!("invalid 'fn_name': {e}"))
+    );
+    let has_fn_info = try_deref_mut!(has_fn_info);
+    let fn_info = try_deref_mut!(fn_info);
+    match runtime.get_function_definition(name) {
         Some(info) => {
             *has_fn_info = true;
             fn_info.0 = Arc::into_raw(info) as *const c_void;
@@ -271,36 +249,18 @@ pub unsafe extern "C" fn mun_runtime_get_type_info_by_name(
     runtime: RuntimeHandle,
     type_name: *const c_char,
     has_type_info: *mut bool,
-    type_info: *mut TypeInfoHandle,
+    type_info: *mut Type,
 ) -> ErrorHandle {
-    let runtime = match (runtime.0 as *mut Runtime).as_ref() {
-        Some(runtime) => runtime,
-        None => return ErrorHandle::new("Invalid argument: 'runtime' is null pointer."),
-    };
-
-    if type_name.is_null() {
-        return ErrorHandle::new("Invalid argument: 'type_name' is null pointer.");
-    }
-
-    let type_name = match CStr::from_ptr(type_name).to_str() {
-        Ok(name) => name,
-        Err(_) => return ErrorHandle::new("Invalid argument: 'type_name' is not UTF-8 encoded."),
-    };
-
-    let has_type_info = match has_type_info.as_mut() {
-        Some(has_type) => has_type,
-        None => return ErrorHandle::new("Invalid argument: 'has_type_info' is null pointer."),
-    };
-
-    let type_info = match type_info.as_mut() {
-        Some(type_info) => type_info,
-        None => return ErrorHandle::new("Invalid argument: 'type_info' is null pointer."),
-    };
-
+    let runtime = mun_error_try!(runtime.inner());
+    let type_name = mun_error_try!(
+        try_convert_c_string(type_name).map_err(|e| format!("invalid 'type_name': {e}"))
+    );
+    let has_type_info = try_deref_mut!(has_type_info);
+    let type_info = try_deref_mut!(type_info);
     match runtime.get_type_info_by_name(type_name) {
         Some(info) => {
             *has_type_info = true;
-            type_info.0 = Arc::into_raw(info) as *const c_void;
+            *type_info = info.into();
         }
         None => *has_type_info = false,
     }
@@ -324,34 +284,17 @@ pub unsafe extern "C" fn mun_runtime_get_type_info_by_id(
     runtime: RuntimeHandle,
     type_id: *const abi::TypeId,
     has_type_info: *mut bool,
-    type_info: *mut TypeInfoHandle,
+    type_info: *mut Type,
 ) -> ErrorHandle {
-    let runtime = match (runtime.0 as *mut Runtime).as_ref() {
-        Some(runtime) => runtime,
-        None => return ErrorHandle::new("Invalid argument: 'runtime' is null pointer."),
-    };
-
-    let type_id = match type_id.as_ref() {
-        Some(type_id) => type_id,
-        None => {
-            return ErrorHandle::new("Invalid argument: 'type_id' is null pointer.");
-        }
-    };
-
-    let has_type_info = match has_type_info.as_mut() {
-        Some(has_type) => has_type,
-        None => return ErrorHandle::new("Invalid argument: 'has_type_info' is null pointer."),
-    };
-
-    let type_info = match type_info.as_mut() {
-        Some(type_info) => type_info,
-        None => return ErrorHandle::new("Invalid argument: 'type_info' is null pointer."),
-    };
+    let runtime = mun_error_try!(runtime.inner());
+    let type_id = try_deref!(type_id);
+    let has_type_info = try_deref_mut!(has_type_info);
+    let type_info = try_deref_mut!(type_info);
 
     match runtime.get_type_info_by_id(type_id) {
         Some(info) => {
             *has_type_info = true;
-            type_info.0 = Arc::into_raw(info) as *const c_void;
+            *type_info = info.into();
         }
         None => *has_type_info = false,
     }
@@ -371,19 +314,11 @@ pub unsafe extern "C" fn mun_runtime_get_type_info_by_id(
 /// an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
 #[no_mangle]
 pub unsafe extern "C" fn mun_runtime_update(
-    handle: RuntimeHandle,
+    runtime: RuntimeHandle,
     updated: *mut bool,
 ) -> ErrorHandle {
-    let runtime = match (handle.0 as *mut Runtime).as_mut() {
-        Some(runtime) => runtime,
-        None => return ErrorHandle::new("Invalid argument: 'runtime' is null pointer."),
-    };
-
-    let updated = match updated.as_mut() {
-        Some(updated) => updated,
-        None => return ErrorHandle::new("Invalid argument: 'updated' is null pointer."),
-    };
-
+    let runtime = mun_error_try!(runtime.inner_mut());
+    let updated = try_deref_mut!(updated);
     *updated = runtime.update();
     ErrorHandle::default()
 }
@@ -558,7 +493,7 @@ mod tests {
         let functions = vec![ExternalFunctionDefinition {
             name: function_name.as_ptr(),
             arg_types: ptr::null(),
-            return_type: TypeInfoHandle::null(),
+            return_type: Type::null(),
             num_args: 0,
             fn_ptr: ptr::null(),
         }];
@@ -621,7 +556,7 @@ mod tests {
     fn test_runtime_create_invalid_user_function_arg_types() {
         let lib_path = CString::new("some/path").expect("Invalid library path");
         let function_name = CString::new("foobar").unwrap();
-        let arg_types = [TypeInfoHandle::null()];
+        let arg_types = [Type::null()];
 
         let type_id = <()>::type_info().clone().into();
         let functions = vec![ExternalFunctionDefinition {

@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
 
-use crate::r#type::{PointerInfo, Type as RustType, TypeStore};
+use crate::r#type::{PointerInfo, Type as RustType, TypeDataStore};
 
 use super::Type;
 
@@ -21,19 +21,21 @@ impl<'t> From<super::super::PointerType<'t>> for PointerType {
     fn from(ty: super::super::PointerType<'t>) -> Self {
         PointerType(
             (ty.inner as *const PointerInfo).cast(),
-            (&ty.store as *const &Arc<TypeStore>).cast(),
+            (&ty.store as *const &Arc<TypeDataStore>).cast(),
         )
     }
 }
 
 impl PointerType {
     /// Returns the store associated with this instance
-    unsafe fn store(&self) -> Result<ManuallyDrop<Arc<TypeStore>>, String> {
+    unsafe fn store(&self) -> Result<ManuallyDrop<Arc<TypeDataStore>>, String> {
         if self.1.is_null() {
             return Err(String::from("Field contains invalid pointer"));
         }
 
-        Ok(ManuallyDrop::new(Arc::from_raw(self.1 as *const TypeStore)))
+        Ok(ManuallyDrop::new(Arc::from_raw(
+            self.1 as *const TypeDataStore,
+        )))
     }
 
     /// Returns the pointer ino associated with the Type
@@ -48,7 +50,7 @@ impl PointerType {
     unsafe fn to_rust(&self) -> Result<super::super::PointerType<'_>, String> {
         match (
             (self.0 as *const PointerInfo).as_ref(),
-            (self.1 as *const Arc<TypeStore>).as_ref(),
+            (self.1 as *const Arc<TypeDataStore>).as_ref(),
         ) {
             (Some(inner), Some(store)) => Ok(super::super::PointerType { inner, store }),
             _ => Err(String::from("PointerType contains invalid pointer")),
