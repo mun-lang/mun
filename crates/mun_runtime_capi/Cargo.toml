@@ -20,7 +20,8 @@ crate-type = ["cdylib"]
 abi = { version = "=0.3.0", path = "../mun_abi", package = "mun_abi" }
 memory = { version = "=0.2.0", path = "../mun_memory", package = "mun_memory" }
 runtime = { version = "=0.3.0", path = "../mun_runtime", package = "mun_runtime" }
-capi_utils = { version = "=0.1.0", path = "../mun_capi_utils", package = "mun_capi_utils"}
+capi_utils = { version = "=0.1.0", path = "../mun_capi_utils", package = "mun_capi_utils", features=["insta"]}
+insta = { version = "1.12.0", features=["ron"] }
 
 [dev-dependencies]
 compiler = { path="../mun_compiler", package = "mun_compiler" }

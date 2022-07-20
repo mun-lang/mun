@@ -50,12 +50,12 @@ pub extern "C" fn mun_type_primitive(primitive_type: PrimitiveType) -> Type {
 #[cfg(test)]
 mod test {
     use super::{
+        super::{mun_type_kind, TypeKind},
         mun_type_primitive,
         PrimitiveType::{self, *},
     };
-    use crate::r#type::ffi::{mun_type_kind, TypeKind};
     use crate::HasStaticType;
-    use std::mem::MaybeUninit;
+    use capi_utils::assert_getter1;
 
     #[test]
     fn test_primitives() {
@@ -78,9 +78,8 @@ mod test {
         fn test_primitive<T: HasStaticType>(primitive_type: PrimitiveType) {
             let ffi_ty = mun_type_primitive(primitive_type);
 
-            let mut ffi_kind = MaybeUninit::uninit();
-            assert!(unsafe { mun_type_kind(ffi_ty, ffi_kind.as_mut_ptr()) }.is_ok());
-            let guid = match unsafe { ffi_kind.assume_init() } {
+            assert_getter1!(mun_type_kind(ffi_ty, ffi_kind));
+            let guid = match ffi_kind {
                 TypeKind::Primitive(guid) => guid,
                 _ => panic!("invalid type kind for primitive"),
             };

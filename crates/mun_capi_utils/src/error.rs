@@ -85,7 +85,11 @@ macro_rules! try_deref_mut {
         match ($expr).as_mut() {
             Some(val) => val,
             None => {
-                return ErrorHandle::new(concat!("'", stringify!($expr), "' must not be null"));
+                return ErrorHandle::new(concat!(
+                    "invalid argument '",
+                    stringify!($expr),
+                    "': null pointer"
+                ));
             }
         }
     };
@@ -97,7 +101,11 @@ macro_rules! try_deref {
         match ($expr).as_ref() {
             Some(val) => val,
             None => {
-                return ErrorHandle::new(concat!("'", stringify!($expr), "' must not be null"));
+                return ErrorHandle::new(concat!(
+                    "invalid argument '",
+                    stringify!($expr),
+                    "': null pointer"
+                ));
             }
         }
     };
@@ -109,5 +117,25 @@ macro_rules! assert_error {
         let err = $expr;
         assert!(err.is_err());
         unsafe { $crate::mun_string_destroy(err.0) };
+    };
+}
+
+#[cfg(feature = "insta")]
+#[macro_export]
+macro_rules! assert_error_snapshot {
+    ($expr:expr, @$snapshot:literal) => {
+        let error_handle = $expr;
+        let expr = match unsafe {error_handle.err() } {
+            Some(err) => {
+                let err_str: String = err.to_str().unwrap().to_owned();
+                unsafe { $crate::mun_string_destroy(error_handle.0) };
+                err_str
+            },
+            None => panic!("expected an error")
+        };
+        let name = stringify!($expr);
+        insta::assert_ron_snapshot!(
+            expr, @$snapshot
+        );
     };
 }

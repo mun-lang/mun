@@ -37,7 +37,7 @@ impl Type {
     /// Returns the store associated with the Type or
     unsafe fn store(&self) -> Result<ManuallyDrop<Arc<TypeDataStore>>, String> {
         if self.1.is_null() {
-            return Err(String::from("Type contains invalid pointer"));
+            return Err(String::from("null pointer"));
         }
 
         Ok(ManuallyDrop::new(Arc::from_raw(
@@ -49,18 +49,22 @@ impl Type {
     unsafe fn inner(&self) -> Result<&TypeData, String> {
         (self.0 as *const TypeData)
             .as_ref()
-            .ok_or_else(|| String::from("Type contains invalid pointer"))
+            .ok_or_else(|| String::from("null pointer"))
     }
 
     /// Converts this FFI type into an owned Rust type. This transfers the ownership from the FFI
     /// type back to Rust.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that self contains valid pointers.
     pub unsafe fn to_owned(self) -> Result<super::Type, String> {
         if self.0.is_null() {
-            return Err(String::from("Type contains invalid pointer"));
+            return Err(String::from("null pointer"));
         }
 
         if self.1.is_null() {
-            return Err(String::from("Type contains invalid pointer"));
+            return Err(String::from("null pointer"));
         }
 
         Ok(super::Type {
@@ -85,7 +89,9 @@ impl Type {
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_release(ty: Type) -> ErrorHandle {
     // Transfer ownership to Rust and immediately drop the instance
-    let _ = mun_error_try!(ty.to_owned());
+    let _ = mun_error_try!(ty
+        .to_owned()
+        .map_err(|e| format!("invalid argument 'ty': {e}")));
 
     ErrorHandle::default()
 }
@@ -98,8 +104,12 @@ pub unsafe extern "C" fn mun_type_release(ty: Type) -> ErrorHandle {
 /// previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_add_reference(ty: Type) -> ErrorHandle {
-    let store = mun_error_try!(ty.store());
-    let inner = mun_error_try!(ty.inner());
+    let store = mun_error_try!(ty
+        .store()
+        .map_err(|e| format!("invalid argument 'ty': {e}")));
+    let inner = mun_error_try!(ty
+        .inner()
+        .map_err(|e| format!("invalid argument 'ty': {e}")));
 
     // Release the references owned by the type
     inner.external_references.fetch_add(1, Ordering::Relaxed);
@@ -118,11 +128,13 @@ pub unsafe extern "C" fn mun_type_add_reference(ty: Type) -> ErrorHandle {
 /// This function results in undefined behavior if the passed in `Type` has been deallocated in a
 /// previous call to [`mun_type_release`].
 #[no_mangle]
-pub unsafe extern "C" fn mun_type_name(ty: Type) -> *const c_char {
-    match ty.inner() {
-        Ok(inner) => CString::new(inner.name.clone()).unwrap().into_raw() as *const _,
-        Err(_) => ptr::null(),
-    }
+pub unsafe extern "C" fn mun_type_name(ty: Type, name: *mut *const c_char) -> ErrorHandle {
+    let inner = mun_error_try!(ty
+        .inner()
+        .map_err(|e| format!("invalid argument 'ty': {e}")));
+    let name = try_deref_mut!(name);
+    *name = CString::new(inner.name.clone()).unwrap().into_raw();
+    ErrorHandle::default()
 }
 
 /// Compares two different Types. Returns `true` if the two types are equal. If either of the two
@@ -150,7 +162,9 @@ pub unsafe extern "C" fn mun_type_equal(a: Type, b: Type) -> bool {
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_size(ty: Type, size: *mut usize) -> ErrorHandle {
     let size = try_deref_mut!(size);
-    let inner = mun_error_try!(ty.inner());
+    let inner = mun_error_try!(ty
+        .inner()
+        .map_err(|e| format!("invalid argument 'ty': {e}")));
     *size = inner.layout.size();
     ErrorHandle::default()
 }
@@ -164,7 +178,9 @@ pub unsafe extern "C" fn mun_type_size(ty: Type, size: *mut usize) -> ErrorHandl
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_alignment(ty: Type, align: *mut usize) -> ErrorHandle {
     let align = try_deref_mut!(align);
-    let inner = mun_error_try!(ty.inner());
+    let inner = mun_error_try!(ty
+        .inner()
+        .map_err(|e| format!("invalid argument 'ty': {e}")));
     *align = inner.layout.align();
     ErrorHandle::default()
 }
@@ -182,8 +198,12 @@ pub unsafe extern "C" fn mun_type_pointer_type(
     pointer_ty: *mut Type,
 ) -> ErrorHandle {
     let pointer_ty = try_deref_mut!(pointer_ty);
-    let store = mun_error_try!(ty.store());
-    let inner = mun_error_try!(ty.inner());
+    let store = mun_error_try!(ty
+        .store()
+        .map_err(|e| format!("invalid argument 'ty': {e}")));
+    let inner = mun_error_try!(ty
+        .inner()
+        .map_err(|e| format!("invalid argument 'ty': {e}")));
     *pointer_ty = inner.pointer_type(mutable, &store).into();
     ErrorHandle::default()
 }
@@ -205,8 +225,12 @@ pub enum TypeKind {
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_kind(ty: Type, kind: *mut TypeKind) -> ErrorHandle {
     let kind = try_deref_mut!(kind);
-    let store = mun_error_try!(ty.store());
-    let inner = mun_error_try!(ty.inner());
+    let store = mun_error_try!(ty
+        .store()
+        .map_err(|e| format!("invalid argument 'ty': {e}")));
+    let inner = mun_error_try!(ty
+        .inner()
+        .map_err(|e| format!("invalid argument 'ty': {e}")));
 
     *kind = match &inner.data {
         TypeDataKind::Primitive(guid) => TypeKind::Primitive(*guid),
@@ -225,6 +249,9 @@ pub unsafe extern "C" fn mun_type_kind(ty: Type, kind: *mut TypeKind) -> ErrorHa
 }
 
 /// An array of [`Type`]s.
+///
+/// The `Types` struct owns the `Type`s it references. Ownership of the `Type` can be shared by
+/// calling [`mun_type_add_reference`].
 ///
 /// This is backed by a dynamically allocated array. Ownership is transferred via this struct
 /// and its contents must be destroyed with [`mun_types_destroy`].
@@ -258,9 +285,15 @@ impl From<Vec<Type>> for Types {
 #[no_mangle]
 pub unsafe extern "C" fn mun_types_destroy(types: Types) -> ErrorHandle {
     if types.types.is_null() && types.count > 0 {
-        return ErrorHandle::new("Fields contains invalid pointer");
+        return ErrorHandle::new("invalid argument 'types': null pointer");
     } else if types.count > 0 {
-        let _ = Vec::from_raw_parts(types.types as *mut Type, types.count, types.count);
+        let types = Vec::from_raw_parts(types.types as *mut Type, types.count, types.count);
+        for ty in types.into_iter() {
+            // Take ownership of the stored type and drop it
+            drop(mun_error_try!(ty
+                .to_owned()
+                .map_err(|e| format!("fields contain invalid type: {e}"))));
+        }
     }
     ErrorHandle::default()
 }
@@ -272,12 +305,13 @@ mod test {
     use std::ptr;
 
     use crate::ffi::{mun_types_destroy, Types};
-    use capi_utils::{assert_error, mun_string_destroy};
+    use capi_utils::{
+        assert_error, assert_error_snapshot, assert_getter1, assert_getter2, mun_string_destroy,
+    };
 
     use crate::r#type::ffi::{
         mun_type_add_reference, mun_type_alignment, mun_type_pointer_type, mun_type_size,
     };
-    use crate::r#type::Fields;
     use crate::HasStaticType;
 
     use super::{
@@ -324,8 +358,8 @@ mod test {
         let ffi_f32 = mun_type_primitive(PrimitiveType::F32);
         let ffi_empty = mun_type_primitive(PrimitiveType::Empty);
 
-        let f32_name = unsafe { mun_type_name(ffi_f32) };
-        let empty_name = unsafe { mun_type_name(ffi_empty) };
+        assert_getter1!(mun_type_name(ffi_f32, f32_name));
+        assert_getter1!(mun_type_name(ffi_empty, empty_name));
 
         assert_eq!(
             unsafe { CStr::from_ptr(f32_name) },
@@ -344,7 +378,19 @@ mod test {
 
     #[test]
     fn test_mun_type_name_invalid_type() {
-        assert!(unsafe { mun_type_name(FFI_TYPE_NULL) }.is_null());
+        let mut name = MaybeUninit::uninit();
+        assert_error_snapshot!(
+            unsafe { mun_type_name(FFI_TYPE_NULL, name.as_mut_ptr()) },
+            @r###""invalid argument \'ty\': null pointer""###
+        );
+
+        let ffi_i8 = mun_type_primitive(PrimitiveType::I8);
+        assert_error_snapshot!(
+            unsafe { mun_type_name(ffi_i8, ptr::null_mut()) },
+            @r###""invalid argument \'name\': null pointer""###
+        );
+
+        unsafe { mun_type_release(ffi_i8) };
     }
 
     #[test]
@@ -408,10 +454,17 @@ mod test {
     #[test]
     fn test_mun_type_alignment_invalid_null() {
         let mut size = MaybeUninit::uninit();
-        assert_error!(unsafe { mun_type_alignment(FFI_TYPE_NULL, size.as_mut_ptr()) });
+        assert_error_snapshot!(
+            unsafe { mun_type_alignment(FFI_TYPE_NULL, size.as_mut_ptr()) },
+            @r###""invalid argument \'ty\': null pointer""###
+        );
 
         let ffi_i8 = mun_type_primitive(PrimitiveType::I8);
-        assert_error!(unsafe { mun_type_alignment(ffi_i8, ptr::null_mut()) });
+        assert_error_snapshot!(
+            unsafe { mun_type_alignment(ffi_i8, ptr::null_mut()) },
+            @r###""invalid argument \'align\': null pointer""###
+        );
+
         unsafe { mun_type_release(ffi_i8) };
     }
 
@@ -419,11 +472,8 @@ mod test {
     fn test_mun_type_pointer_type() {
         let ffi_u64 = mun_type_primitive(PrimitiveType::U64);
 
-        let mut ffi_u64_pointer = MaybeUninit::uninit();
-        assert!(
-            unsafe { mun_type_pointer_type(ffi_u64, true, ffi_u64_pointer.as_mut_ptr()) }.is_ok()
-        );
-        let rust_u64_pointer = unsafe { ffi_u64_pointer.assume_init().to_owned() }.unwrap();
+        assert_getter2!(mun_type_pointer_type(ffi_u64, true, ffi_u64_pointer));
+        let rust_u64_pointer = unsafe { ffi_u64_pointer.to_owned() }.unwrap();
         let pointer_info = rust_u64_pointer
             .as_pointer()
             .expect("type is not a pointer");
@@ -436,12 +486,16 @@ mod test {
     #[test]
     fn test_mun_type_pointer_type_invalid_null() {
         let mut ffi_u64_pointer = MaybeUninit::uninit();
-        assert_error!(unsafe {
-            mun_type_pointer_type(FFI_TYPE_NULL, true, ffi_u64_pointer.as_mut_ptr())
-        });
+        assert_error_snapshot!(
+            unsafe { mun_type_pointer_type(FFI_TYPE_NULL, true, ffi_u64_pointer.as_mut_ptr()) },
+            @r###""invalid argument \'ty\': null pointer""###
+        );
 
         let ffi_u64 = mun_type_primitive(PrimitiveType::U64);
-        assert_error!(unsafe { mun_type_pointer_type(ffi_u64, true, ptr::null_mut()) });
+        assert_error_snapshot!(
+            unsafe { mun_type_pointer_type(ffi_u64, true, ptr::null_mut()) },
+            @r###""invalid argument \'pointer_ty\': null pointer""###
+        );
         unsafe { mun_type_release(ffi_u64) };
     }
 

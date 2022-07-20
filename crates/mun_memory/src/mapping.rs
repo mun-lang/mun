@@ -238,18 +238,15 @@ pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) ->
             .map(|(new_index, desc)| {
                 let old_offset = desc
                     .old_index
-                    .map(|idx| usize::from(old_fields.get_unchecked(idx).offset()));
+                    .map(|idx| old_fields.get_unchecked(idx).offset());
 
                 FieldMapping {
                     new_ty: new_fields.get_unchecked(new_index).ty(),
-                    new_offset: usize::from(new_fields.get_unchecked(new_index).offset()),
+                    new_offset: new_fields.get_unchecked(new_index).offset(),
                     action: match desc.action {
                         ActionDesc::Cast => Action::Cast {
                             old_offset: old_offset.unwrap(),
-                            old_ty: old_fields
-                                .get_unchecked(desc.old_index.unwrap())
-                                .ty()
-                                .clone(),
+                            old_ty: old_fields.get_unchecked(desc.old_index.unwrap()).ty(),
                         },
                         ActionDesc::Copy => Action::Copy {
                             old_offset: old_offset.unwrap(),

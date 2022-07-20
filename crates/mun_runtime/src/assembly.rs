@@ -319,7 +319,7 @@ impl Assembly {
                 // by the compiler.
                 .filter(|(_, ptr, _)| ptr.is_null());
 
-            Assembly::link_all_types(&mut type_table, types_to_link)?;
+            Assembly::link_all_types(&type_table, types_to_link)?;
 
             // Memory map allocated object
             if let Some((old_assembly, old_types)) = old_types {

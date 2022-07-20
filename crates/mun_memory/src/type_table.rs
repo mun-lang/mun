@@ -41,7 +41,7 @@ impl TypeTable {
     pub fn insert_type(&mut self, type_info: Type) -> Option<Type> {
         match type_info.as_concrete() {
             None => panic!("can only insert concrete types"),
-            Some(guid) => self.insert_concrete_type(guid.clone(), type_info),
+            Some(guid) => self.insert_concrete_type(*guid, type_info),
         }
     }
 

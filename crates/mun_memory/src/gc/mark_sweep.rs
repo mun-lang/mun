@@ -34,11 +34,7 @@ impl Iterator for Trace {
             if let Some(field_struct_ty) = &field.ty().as_struct() {
                 if field_struct_ty.is_gc_struct() {
                     return Some(unsafe {
-                        *self
-                            .obj
-                            .deref::<u8>()
-                            .add(usize::from(field.offset()))
-                            .cast::<GcPtr>()
+                        *self.obj.deref::<u8>().add(field.offset()).cast::<GcPtr>()
                     });
                 }
             }

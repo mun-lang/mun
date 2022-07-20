@@ -1,6 +1,8 @@
 use std::ffi::c_void;
+use std::ptr;
+use std::sync::Arc;
 
-use memory::{type_table::TypeTable, TryFromAbiError, Type};
+use memory::{type_table::TypeTable, HasStaticType, TryFromAbiError, Type};
 
 /// A linked version of [`mun_abi::FunctionDefinition`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
 #[derive(Clone)]
@@ -9,6 +11,18 @@ pub struct FunctionDefinition {
     pub prototype: FunctionPrototype,
     /// Function pointer
     pub fn_ptr: *const c_void,
+}
+
+impl FunctionDefinition {
+    /// Creates a builder to easily create a new `FunctionDefinition`.
+    pub fn builder(name: impl Into<String>) -> FunctionDefinitionBuilder {
+        FunctionDefinitionBuilder {
+            name: name.into(),
+            arg_types: vec![],
+            return_type: <()>::type_info().clone(),
+            fn_ptr: ptr::null(),
+        }
+    }
 }
 
 unsafe impl Send for FunctionDefinition {}
@@ -132,4 +146,55 @@ into_function_info_impl! {
     extern "C" fn(A, B, C, D, E, F, G, H) -> R;
     extern "C" fn(A, B, C, D, E, F, G, H, I) -> R;
     extern "C" fn(A, B, C, D, E, F, G, H, I, J) -> R;
+}
+
+/// A helper struct to ergonomically build functions.
+#[derive(Debug)]
+pub struct FunctionDefinitionBuilder {
+    name: String,
+    arg_types: Vec<Type>,
+    return_type: Type,
+    fn_ptr: *const c_void,
+}
+
+impl FunctionDefinitionBuilder {
+    /// Adds an argument
+    pub fn add_argument(mut self, arg: Type) -> Self {
+        self.arg_types.push(arg);
+        self
+    }
+
+    /// Adds arguments
+    pub fn add_arguments(mut self, iter: impl IntoIterator<Item = Type>) -> Self {
+        for arg in iter.into_iter() {
+            self.arg_types.push(arg);
+        }
+        self
+    }
+
+    /// Sets the return type
+    pub fn set_return_type(mut self, ty: Type) -> Self {
+        self.return_type = ty;
+        self
+    }
+
+    /// Sets the function pointer
+    pub fn set_ptr(mut self, ptr: *const c_void) -> Self {
+        self.fn_ptr = ptr;
+        self
+    }
+
+    /// Construct the [`FunctionDefinition`]
+    pub fn finish(self) -> Arc<FunctionDefinition> {
+        Arc::new(FunctionDefinition {
+            prototype: FunctionPrototype {
+                name: self.name,
+                signature: FunctionSignature {
+                    arg_types: self.arg_types,
+                    return_type: self.return_type,
+                },
+            },
+            fn_ptr: self.fn_ptr,
+        })
+    }
 }

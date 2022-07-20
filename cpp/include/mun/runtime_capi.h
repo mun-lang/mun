@@ -57,12 +57,12 @@ enum MunStructMemoryKind
 typedef uint8_t MunStructMemoryKind;
 #endif // __cplusplus
 
-typedef struct MunArc_TypeStore MunArc_TypeStore;
+typedef struct MunArc_TypeDataStore MunArc_TypeDataStore;
 
 /**
  * A linked version of [`mun_abi::StructInfo`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
  */
-typedef struct MunStructInfo MunStructInfo;
+typedef struct MunStructData MunStructData;
 
 /**
  * A C-style handle to an error message.
@@ -76,16 +76,17 @@ typedef struct MunErrorHandle {
 /**
  * A C-style handle to a runtime.
  */
-typedef struct MunRuntimeHandle {
+typedef struct MunRuntime {
     void *_0;
-} MunRuntimeHandle;
+} MunRuntime;
 
 /**
- * A C-style handle to a `TypeInfo`.
+ * A [`Type`] holds information about a mun type.
  */
-typedef struct MunTypeInfoHandle {
+typedef struct MunType {
     const void *_0;
-} MunTypeInfoHandle;
+    const void *_1;
+} MunType;
 
 /**
  * A `RawGcPtr` is an unsafe version of a `GcPtr`. It represents the raw internal pointer
@@ -120,11 +121,11 @@ typedef struct MunExternalFunctionDefinition {
     /**
      * The types of the arguments
      */
-    const struct MunTypeInfoHandle *arg_types;
+    const struct MunType *arg_types;
     /**
      * The type of the return type
      */
-    struct MunTypeInfoHandle return_type;
+    struct MunType return_type;
     /**
      * Pointer to the function
      */
@@ -155,11 +156,17 @@ typedef struct MunRuntimeOptions {
 } MunRuntimeOptions;
 
 /**
- * A C-style handle to a `FunctionInfo`.
+ * Describes a `Function` accessible from a Mun [`super::runtime::Runtime`].
+ *
+ * An instance of `Function` shares ownership of the underlying data. To create a copy of the
+ * `Function` object call [`mun_function_add_reference`] to make sure the number of references to
+ * the data is properly tracked. Calling [`mun_function_release`] signals the runtime that the data
+ * is no longer referenced through the specified object. When all references are released the
+ * underlying data is deallocated.
  */
-typedef struct MunFunctionInfoHandle {
+typedef struct MunFunction {
     const void *_0;
-} MunFunctionInfoHandle;
+} MunFunction;
 
 /**
  * Represents a globally unique identifier (GUID).
@@ -219,102 +226,18 @@ typedef union MunTypeId {
 } MunTypeId;
 
 /**
- * A C-style handle to a `FieldInfo`.
+ * An array of [`Type`]s.
+ *
+ * The `Types` struct owns the `Type`s it references. Ownership of the `Type` can be shared by
+ * calling [`mun_type_add_reference`].
+ *
+ * This is backed by a dynamically allocated array. Ownership is transferred via this struct
+ * and its contents must be destroyed with [`mun_types_destroy`].
  */
-typedef struct MunFieldInfoHandle {
-    const void *_0;
-} MunFieldInfoHandle;
-
-/**
- * A C-style handle to an array of `FieldInfoHandle`s.
- */
-typedef struct MunFieldInfoSpan {
-    /**
-     * Pointer to the start of the array buffer
-     */
-    const struct MunFieldInfoHandle *data;
-    /**
-     * Length of the array (and capacity)
-     */
-    uintptr_t len;
-} MunFieldInfoSpan;
-
-/**
- * A C-style handle to an array of `TypeInfoHandle`s.
- */
-typedef struct MunTypeInfoSpan {
-    /**
-     * Pointer to the start of the array buffer
-     */
-    const struct MunTypeInfoHandle *data;
-    /**
-     * Length of the array (and capacity)
-     */
-    uintptr_t len;
-} MunTypeInfoSpan;
-
-/**
- * A C-style handle to a `StructInfo`.
- */
-typedef struct MunStructInfoHandle {
-    const void *_0;
-} MunStructInfoHandle;
-
-/**
- * A pointer to another type.
- */
-typedef struct MunPointerInfoData {
-    bool mutable_;
-} MunPointerInfoData;
-
-/**
- * An enum containing C-style handles a `TypeInfo`'s data.
- */
-enum MunTypeInfoData_Tag
-#ifdef __cplusplus
-  : uint8_t
-#endif // __cplusplus
- {
-    /**
-     * Primitive types (i.e. `()`, `bool`, `float`, `int`, etc.)
-     */
-    MunTypeInfoData_Primitive,
-    /**
-     * Struct types (i.e. record, tuple, or unit structs)
-     */
-    MunTypeInfoData_Struct,
-    /**
-     * A pointer type
-     */
-    MunTypeInfoData_Pointer,
-};
-#ifndef __cplusplus
-typedef uint8_t MunTypeInfoData_Tag;
-#endif // __cplusplus
-
-typedef union MunTypeInfoData {
-    MunTypeInfoData_Tag tag;
-    struct {
-        MunTypeInfoData_Tag primitive_tag;
-        struct MunGuid primitive;
-    };
-    struct {
-        MunTypeInfoData_Tag struct_tag;
-        struct MunStructInfoHandle struct_;
-    };
-    struct {
-        MunTypeInfoData_Tag pointer_tag;
-        struct MunPointerInfoData pointer;
-    };
-} MunTypeInfoData;
-
-/**
- * A [`Type`] holds information about a mun type.
- */
-typedef struct MunType {
-    const void *_0;
-    const void *_1;
-} MunType;
+typedef struct MunTypes {
+    const struct MunType *types;
+    uintptr_t count;
+} MunTypes;
 
 /**
  * Additional information of a pointer [`Type`].
@@ -331,8 +254,8 @@ typedef struct MunPointerType {
  * Reference information of a struct
  */
 typedef struct MunStructType {
-    const struct MunStructInfo *inner;
-    const struct MunArc_TypeStore *store;
+    const struct MunStructData *inner;
+    const struct MunArc_TypeDataStore *store;
 } MunStructType;
 
 /**
@@ -394,7 +317,7 @@ extern "C" {
 #endif // __cplusplus
 
 /**
- * Allocates an object in the runtime of the given `type_info`. If successful, `obj` is set,
+ * Allocates an object in the runtime of the given `ty`. If successful, `obj` is set,
  * otherwise a non-zero error handle is returned.
  *
  * If a non-zero error handle is returned, it must be manually destructed using
@@ -405,13 +328,11 @@ extern "C" {
  * This function receives raw pointers as parameters. If any of the arguments is a null pointer,
  * an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
  */
-struct MunErrorHandle mun_gc_alloc(struct MunRuntimeHandle runtime,
-                                   struct MunTypeInfoHandle type_info,
-                                   MunGcPtr *obj);
+struct MunErrorHandle mun_gc_alloc(struct MunRuntime runtime, struct MunType ty, MunGcPtr *obj);
 
 /**
- * Retrieves the `type_info` for the specified `obj` from the runtime. If successful, `type_info`
- * is set, otherwise a non-zero error handle is returned.
+ * Retrieves the `ty` for the specified `obj` from the runtime. If successful, `ty` is set,
+ * otherwise a non-zero error handle is returned.
  *
  * If a non-zero error handle is returned, it must be manually destructed using
  * [`mun_error_destroy`].
@@ -421,9 +342,7 @@ struct MunErrorHandle mun_gc_alloc(struct MunRuntimeHandle runtime,
  * This function receives raw pointers as parameters. If any of the arguments is a null pointer,
  * an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
  */
-struct MunErrorHandle mun_gc_ptr_type(struct MunRuntimeHandle handle,
-                                      MunGcPtr obj,
-                                      struct MunTypeInfoHandle *type_info);
+struct MunErrorHandle mun_gc_ptr_type(struct MunRuntime runtime, MunGcPtr obj, struct MunType *ty);
 
 /**
  * Roots the specified `obj`, which keeps it and objects it references alive. Objects marked as
@@ -440,7 +359,7 @@ struct MunErrorHandle mun_gc_ptr_type(struct MunRuntimeHandle handle,
  * This function receives raw pointers as parameters. If any of the arguments is a null pointer,
  * an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
  */
-struct MunErrorHandle mun_gc_root(struct MunRuntimeHandle handle, MunGcPtr obj);
+struct MunErrorHandle mun_gc_root(struct MunRuntime runtime, MunGcPtr obj);
 
 /**
  * Unroots the specified `obj`, potentially allowing it and objects it references to be
@@ -456,7 +375,7 @@ struct MunErrorHandle mun_gc_root(struct MunRuntimeHandle handle, MunGcPtr obj);
  * This function receives raw pointers as parameters. If any of the arguments is a null pointer,
  * an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
  */
-struct MunErrorHandle mun_gc_unroot(struct MunRuntimeHandle handle, MunGcPtr obj);
+struct MunErrorHandle mun_gc_unroot(struct MunRuntime runtime, MunGcPtr obj);
 
 /**
  * Collects all memory that is no longer referenced by rooted objects. If successful, `reclaimed`
@@ -471,7 +390,7 @@ struct MunErrorHandle mun_gc_unroot(struct MunRuntimeHandle handle, MunGcPtr obj
  * This function receives raw pointers as parameters. If any of the arguments is a null pointer,
  * an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
  */
-struct MunErrorHandle mun_gc_collect(struct MunRuntimeHandle handle, bool *reclaimed);
+struct MunErrorHandle mun_gc_collect(struct MunRuntime runtime, bool *reclaimed);
 
 /**
  * Constructs a new runtime that loads the library at `library_path` and its dependencies. If
@@ -489,17 +408,16 @@ struct MunErrorHandle mun_gc_collect(struct MunRuntimeHandle handle, bool *recla
  */
 struct MunErrorHandle mun_runtime_create(const char *library_path,
                                          struct MunRuntimeOptions options,
-                                         struct MunRuntimeHandle *handle);
+                                         struct MunRuntime *handle);
 
 /**
  * Destructs the runtime corresponding to `handle`.
  */
-void mun_runtime_destroy(struct MunRuntimeHandle handle);
+struct MunErrorHandle mun_runtime_destroy(struct MunRuntime runtime);
 
 /**
- * Retrieves the [`FunctionDefinition`] for `fn_name` from the runtime corresponding to `handle`.
- * If successful, `has_fn_info` and `fn_info` are set, otherwise a non-zero error handle is
- * returned.
+ * Retrieves the [`FunctionDefinition`] for `fn_name` from the `runtime`. If successful,
+ * `has_fn_info` and `fn_info` are set, otherwise a non-zero error handle is returned.
  *
  * If a non-zero error handle is returned, it must be manually destructed using
  * [`mun_error_destroy`].
@@ -509,10 +427,10 @@ void mun_runtime_destroy(struct MunRuntimeHandle handle);
  * This function receives raw pointers as parameters. If any of the arguments is a null pointer,
  * an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
  */
-struct MunErrorHandle mun_runtime_get_function_info(struct MunRuntimeHandle handle,
-                                                    const char *fn_name,
-                                                    bool *has_fn_info,
-                                                    struct MunFunctionInfoHandle *fn_info);
+struct MunErrorHandle mun_runtime_find_function_definition(struct MunRuntime runtime,
+                                                           const char *fn_name,
+                                                           bool *has_fn_info,
+                                                           struct MunFunction *fn_info);
 
 /**
  * Retrieves the type information corresponding to the specified `type_name` from the runtime.
@@ -527,10 +445,10 @@ struct MunErrorHandle mun_runtime_get_function_info(struct MunRuntimeHandle hand
  * This function receives raw pointers as parameters. If any of the arguments is a null pointer,
  * an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
  */
-struct MunErrorHandle mun_runtime_get_type_info_by_name(struct MunRuntimeHandle runtime,
+struct MunErrorHandle mun_runtime_get_type_info_by_name(struct MunRuntime runtime,
                                                         const char *type_name,
                                                         bool *has_type_info,
-                                                        struct MunTypeInfoHandle *type_info);
+                                                        struct MunType *type_info);
 
 /**
  * Retrieves the type information corresponding to the specified `type_id` from the runtime. If
@@ -545,10 +463,10 @@ struct MunErrorHandle mun_runtime_get_type_info_by_name(struct MunRuntimeHandle 
  * This function receives raw pointers as parameters. If any of the arguments is a null pointer,
  * an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
  */
-struct MunErrorHandle mun_runtime_get_type_info_by_id(struct MunRuntimeHandle runtime,
+struct MunErrorHandle mun_runtime_get_type_info_by_id(struct MunRuntime runtime,
                                                       const union MunTypeId *type_id,
                                                       bool *has_type_info,
-                                                      struct MunTypeInfoHandle *type_info);
+                                                      struct MunType *type_info);
 
 /**
  * Updates the runtime corresponding to `handle`. If successful, `updated` is set, otherwise a
@@ -562,75 +480,31 @@ struct MunErrorHandle mun_runtime_get_type_info_by_id(struct MunRuntimeHandle ru
  * This function receives raw pointers as parameters. If any of the arguments is a null pointer,
  * an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
  */
-struct MunErrorHandle mun_runtime_update(struct MunRuntimeHandle handle, bool *updated);
+struct MunErrorHandle mun_runtime_update(struct MunRuntime runtime, bool *updated);
 
 /**
- * Retrieves the field's name.
- *
- * # Safety
- *
- * The caller is responsible for calling `mun_string_destroy` on the return pointer - if it is not null.
- *
- * This function might result in undefined behavior if the [`crate::TypeInfoHandle`] associated
- * with this `FieldInfoHandle` has been deallocated.
- */
-const char *mun_field_info_name(struct MunFieldInfoHandle field_info);
-
-/**
- * Retrieves the field's type.
- *
- * # Safety
- *
- * This method is considered unsafe because the passed `field_info` might have been deallocated by
- * a call to [`mun_type_info_decrement_strong_count`] of the type that contains this field.
- */
-struct MunTypeInfoHandle mun_field_info_type(struct MunFieldInfoHandle field_info);
-
-/**
- * Retrieves the field's offset.
- *
- * # Safety
- *
- * This method is considered unsafe because the passed `field_info` might have been deallocated by
- * a call to [`mun_type_info_decrement_strong_count`] of the type that contains this field.
- */
-struct MunErrorHandle mun_field_info_offset(struct MunFieldInfoHandle field_info,
-                                            uint16_t *field_offset);
-
-/**
- * Deallocates a span of `FieldInfo`s that was allocated by the runtime.
- *
- * Deallocating span only deallocates the data allocated for the span. Deallocating a span will not
- * deallocate the FieldInfo's it references. `FieldInfo`s are destroyed when the top-level
- * `TypeInfo` is destroyed.
- *
- * # Safety
- *
- * This function receives a span as parameter. Only when the spans data pointer is not null, is the
- * content deallocated. Passing pointers to invalid data of memory allocated by other processes,
- * will lead to undefined behavior.
- */
-bool mun_field_info_span_destroy(struct MunFieldInfoSpan span);
-
-/**
- * Decrements the strong count of the `Arc<FunctionDefinition>` associated with `handle`.
+ * Notifies the runtime an additional references exists to the function. This ensures that the data
+ * is kept alive even if [`mun_function_release`] is called for the existing references. Only
+ * after all references have been released can the underlying data be deallocated.
  *
  * # Safety
  *
  * This function might be unsafe if the underlying data has already been deallocated by a previous
- * call to [`mun_function_info_decrement_strong_count`].
+ * call to [`mun_function_release`].
  */
-bool mun_function_info_decrement_strong_count(struct MunFunctionInfoHandle fn_info);
+struct MunErrorHandle mun_function_add_reference(struct MunFunction function);
 
 /**
- * Increments the strong count of the `Arc<FunctionDefinition>` associated with `handle`.
+ * Notifies the runtime that one of the references to the function is no longer in use. The data
+ * may not immediately be destroyed. Only after all references have been released can the
+ * underlying data be deallocated.
  *
  * # Safety
  *
  * This function might be unsafe if the underlying data has been deallocated by a previous call
- * to [`mun_function_info_decrement_strong_count`].
+ * to [`mun_function_release`].
  */
-bool mun_function_info_increment_strong_count(struct MunFunctionInfoHandle fn_info);
+struct MunErrorHandle mun_function_release(struct MunFunction function);
 
 /**
  * Retrieves the function's function pointer.
@@ -638,164 +512,50 @@ bool mun_function_info_increment_strong_count(struct MunFunctionInfoHandle fn_in
  * # Safety
  *
  * This function might be unsafe if the underlying data has been deallocated by a previous call
- * to [`mun_function_info_decrement_strong_count`].
+ * to [`mun_function_release`].
  */
-const void *mun_function_info_fn_ptr(struct MunFunctionInfoHandle fn_info);
+struct MunErrorHandle mun_function_fn_ptr(struct MunFunction function, const void **ptr);
 
 /**
  * Retrieves the function's name.
  *
+ * If the function is successful, the caller is responsible for calling [`mun_string_destroy`] on
+ * the return pointer.
+ *
  * # Safety
  *
- * The caller is responsible for calling `mun_string_destroy` on the return pointer - if it is not null.
- *
  * This function might be unsafe if the underlying data has been deallocated by a previous call
- * to [`mun_function_info_decrement_strong_count`].
+ * to [`mun_function_release`].
  */
-const char *mun_function_info_name(struct MunFunctionInfoHandle fn_info);
+struct MunErrorHandle mun_function_name(struct MunFunction function, const char **name);
 
 /**
  * Retrieves the function's argument types.
  *
+ * If successful, ownership of the [`Types`] is transferred to the caller. It must be deallocated
+ * with a call to [`mun_types_destroy`].
+ *
  * # Safety
  *
- * If a non-null handle is returned, the caller is responsible for calling
- * `mun_type_info_span_destroy` on the returned handle.
  *
  * This function might be unsafe if the underlying data has been deallocated by a previous call
- * to [`mun_function_info_decrement_strong_count`].
+ * to [`mun_function_release`].
  */
-struct MunErrorHandle mun_function_info_argument_types(struct MunFunctionInfoHandle fn_info,
-                                                       struct MunTypeInfoSpan *arg_types);
+struct MunErrorHandle mun_function_argument_types(struct MunFunction function,
+                                                  struct MunTypes *arg_types);
 
 /**
  * Retrieves the function's return type.
  *
+ * Ownership of the [`Type`] is transferred to the called. It must be released with a call to
+ * [`mun_type_release`].
+ *
  * # Safety
  *
  * This function might be unsafe if the underlying data has been deallocated by a previous call
- * to [`mun_function_info_decrement_strong_count`].
+ * to [`mun_function_release`].
  */
-struct MunTypeInfoHandle mun_function_info_return_type(struct MunFunctionInfoHandle fn_info);
-
-/**
- * Retrieves information about the struct's fields.
- *
- * # Safety
- *
- * The caller is responsible for calling `mun_field_info_span_destroy` on the returned span.
- *
- * This function might result in undefined behavior if the [`crate::TypeInfoHandle`] associated
- * with this `StructInfoHandle` has been deallocated.
- */
-struct MunErrorHandle mun_struct_info_fields(struct MunStructInfoHandle struct_info,
-                                             struct MunFieldInfoSpan *field_info_span);
-
-/**
- * Retrieves the struct's memory kind.
- *
- * # Safety
- *
- * This function might result in undefined behavior if the [`crate::TypeInfoHandle`] associated
- * with this `StructInfoHandle` has been deallocated.
- */
-struct MunErrorHandle mun_struct_info_memory_kind(struct MunStructInfoHandle struct_info,
-                                                  MunStructMemoryKind *memory_kind);
-
-/**
- * Decrements the strong count of the `Arc<TypeInfo>` associated with `handle`.
- *
- * # Safety
- *
- * This function results in undefined behavior if the passed in `TypeInfoHandle` has already been
- * deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
- */
-bool mun_type_info_decrement_strong_count(struct MunTypeInfoHandle handle);
-
-/**
- * Increments the strong count of the `Arc<TypeInfo>` associated with `handle`.
- *
- * # Safety
- *
- * This function results in undefined behavior if the passed in `TypeInfoHandle` has already been
- * deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
- */
-bool mun_type_info_increment_strong_count(struct MunTypeInfoHandle handle);
-
-/**
- * Retrieves the type's name.
- *
- * # Safety
- *
- * The caller is responsible for calling `mun_string_destroy` on the return pointer - if it is not null.
- *
- * This function results in undefined behavior if the passed in `TypeInfoHandle` has been
- * deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
- */
-const char *mun_type_info_name(struct MunTypeInfoHandle type_info);
-
-/**
- * Returns true if the specified type info handles describe the same type.
- *
- * # Safety
- *
- * This function results in undefined behavior if any of the the passed in `TypeInfoHandle` have
- * been deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
- */
-bool mun_type_info_eq(struct MunTypeInfoHandle a, struct MunTypeInfoHandle b);
-
-/**
- * Returns the TypeInfoHandle of a pointer to the given TypeInfoHandle.
- *
- * # Safety
- *
- * This function results in undefined behavior if any of the the passed in `TypeInfoHandle` have
- * been deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
- */
-struct MunTypeInfoHandle mun_type_info_pointer_type(struct MunTypeInfoHandle handle, bool mutable_);
-
-/**
- * Retrieves the type's size.
- *
- * # Safety
- *
- * This function results in undefined behavior if the passed in `TypeInfoHandle` has been
- * deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
- */
-struct MunErrorHandle mun_type_info_size(struct MunTypeInfoHandle type_info, uintptr_t *size);
-
-/**
- * Retrieves the type's alignment.
- *
- * # Safety
- *
- * This function results in undefined behavior if the passed in `TypeInfoHandle` has been
- * deallocated in a previous call to [`mun_type_info_decrement_strong_count`].
- */
-struct MunErrorHandle mun_type_info_align(struct MunTypeInfoHandle type_info, uintptr_t *align);
-
-/**
- * Retrieves the type's data.
- *
- * # Safety
- *
- * The original `TypeInfoHandle` needs to stay alive as long as the `TypeInfoData` lives. The
- * `TypeInfoData` is destroyed at the same time as the `TypeInfo`. A `TypeInfo` might be destroyed
- * through a call to [`mun_type_info_decrement_strong_count`].
- */
-struct MunErrorHandle mun_type_info_data(struct MunTypeInfoHandle type_info,
-                                         union MunTypeInfoData *type_info_data);
-
-/**
- * Deallocates an span of `TypeInfo` that was allocated by the runtime.
- *
- * # Safety
- *
- * This function receives a span as parameter. Only when the spans data pointer is not null, its
- * content will be deallocated. Passing pointers to invalid data or memory allocated by other
- * processes, will lead to undefined behavior.
- */
-bool mun_type_info_span_destroy(struct MunTypeInfoSpan array_handle);
+struct MunErrorHandle mun_function_return_type(struct MunFunction function, struct MunType *ty);
 
 /**
  * Deallocates a string that was allocated by the runtime.
@@ -816,8 +576,6 @@ void mun_string_destroy(const char *string);
  * Only call this function on an ErrorHandle once.
  */
 void mun_error_destroy(struct MunErrorHandle error);
-
-uintptr_t hello_world(void);
 
 /**
  * Notifies the runtime that the specified type is no longer used. Any use of the type after
@@ -851,7 +609,7 @@ struct MunErrorHandle mun_type_add_reference(struct MunType ty);
  * This function results in undefined behavior if the passed in `Type` has been deallocated in a
  * previous call to [`mun_type_release`].
  */
-const char *mun_type_name(struct MunType ty);
+struct MunErrorHandle mun_type_name(struct MunType ty, const char **name);
 
 /**
  * Compares two different Types. Returns `true` if the two types are equal. If either of the two
@@ -908,6 +666,16 @@ struct MunErrorHandle mun_type_pointer_type(struct MunType ty,
 struct MunErrorHandle mun_type_kind(struct MunType ty, union MunTypeKind *kind);
 
 /**
+ * Destroys the contents of a [`Types`] struct.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `Types` has been deallocated
+ * by a previous call to [`mun_types_destroy`].
+ */
+struct MunErrorHandle mun_types_destroy(struct MunTypes types);
+
+/**
  * Returns a [`Type`] that represents the specified primitive type.
  */
 struct MunType mun_type_primitive(MunPrimitiveType primitive_type);
@@ -952,6 +720,38 @@ struct MunErrorHandle mun_fields_destroy(struct MunFields fields);
  * by a previous call to [`mun_type_release`].
  */
 struct MunErrorHandle mun_struct_type_fields(struct MunStructType ty, struct MunFields *fields);
+
+/**
+ * Returns the name of the field in the parent struct. Ownership of the name is transferred and
+ * must be destroyed with [`mun_string_destroy`]. If this function fails a nullptr is returned.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `Field` has been deallocated
+ * by a previous call to [`mun_type_release`].
+ */
+struct MunErrorHandle mun_field_name(struct MunField field, const char **name);
+
+/**
+ * Returns the type of the field. Ownership of the returned [`Type`] is transferred and must be
+ * released with a call to [`mun_type_release`].
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `Field` has been deallocated
+ * by a previous call to [`mun_type_release`].
+ */
+struct MunErrorHandle mun_field_type(struct MunField field, struct MunType *ty);
+
+/**
+ * Returns the offset of the field in bytes from the start of the parent struct.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `Field` has been deallocated
+ * by a previous call to [`mun_type_release`].
+ */
+struct MunErrorHandle mun_field_offset(struct MunField field, uintptr_t *offset);
 
 #ifdef __cplusplus
 } // extern "C"

@@ -38,7 +38,7 @@ impl StructType {
     unsafe fn inner(&self) -> Result<&StructData, String> {
         match (self.0 as *const StructData).as_ref() {
             Some(store) => Ok(store),
-            None => Err(String::from("PointerType contains invalid pointer")),
+            None => Err(String::from("null pointer")),
         }
     }
 }
@@ -51,9 +51,11 @@ impl StructType {
 /// by a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_struct_type_guid(ty: StructType, guid: *mut Guid) -> ErrorHandle {
-    let ty = mun_error_try!(ty.inner());
+    let ty = mun_error_try!(ty
+        .inner()
+        .map_err(|e| format!("invalid argument 'ty': {e}")));
     let guid = try_deref_mut!(guid);
-    *guid = ty.guid.clone();
+    *guid = ty.guid;
     ErrorHandle::default()
 }
 
@@ -68,7 +70,9 @@ pub unsafe extern "C" fn mun_struct_type_memory_kind(
     ty: StructType,
     memory_kind: *mut abi::StructMemoryKind,
 ) -> ErrorHandle {
-    let ty = mun_error_try!(ty.inner());
+    let ty = mun_error_try!(ty
+        .inner()
+        .map_err(|e| format!("invalid argument 'ty': {e}")));
     let memory_kind = try_deref_mut!(memory_kind);
     *memory_kind = ty.memory_kind;
     ErrorHandle::default()
@@ -111,7 +115,9 @@ pub unsafe extern "C" fn mun_struct_type_fields(
     ty: StructType,
     fields: *mut Fields,
 ) -> ErrorHandle {
-    let inner = mun_error_try!(ty.inner());
+    let inner = mun_error_try!(ty
+        .inner()
+        .map_err(|e| format!("invalid argument 'ty': {e}")));
     let fields = try_deref_mut!(fields);
 
     // Get all fields
@@ -152,7 +158,7 @@ impl Field {
     /// Returns the store associated with this instance
     unsafe fn store(&self) -> Result<ManuallyDrop<Arc<TypeDataStore>>, String> {
         if self.1.is_null() {
-            return Err(String::from("Field contains invalid pointer"));
+            return Err(String::from("null pointer"));
         }
 
         Ok(ManuallyDrop::new(Arc::from_raw(
@@ -164,7 +170,7 @@ impl Field {
     unsafe fn inner(&self) -> Result<&FieldData, String> {
         match (self.0 as *const FieldData).as_ref() {
             Some(info) => Ok(info),
-            None => Err(String::from("Field contains invalid pointer")),
+            None => Err(String::from("null pointer")),
         }
     }
 }
@@ -178,7 +184,9 @@ impl Field {
 /// by a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_field_name(field: Field, name: *mut *const c_char) -> ErrorHandle {
-    let inner = mun_error_try!(field.inner());
+    let inner = mun_error_try!(field
+        .inner()
+        .map_err(|e| format!("invalid argument 'ty': {e}")));
     let name = try_deref_mut!(name);
     *name = CString::new(inner.name.clone()).unwrap().into_raw() as *const _;
     ErrorHandle::default()
@@ -193,8 +201,12 @@ pub unsafe extern "C" fn mun_field_name(field: Field, name: *mut *const c_char) 
 /// by a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_field_type(field: Field, ty: *mut Type) -> ErrorHandle {
-    let inner = mun_error_try!(field.inner());
-    let store = mun_error_try!(field.store());
+    let inner = mun_error_try!(field
+        .inner()
+        .map_err(|e| format!("invalid argument 'ty': {e}")));
+    let store = mun_error_try!(field
+        .store()
+        .map_err(|e| format!("invalid argument 'ty': {e}")));
     let ty = try_deref_mut!(ty);
     *ty = RustType::new_unchecked(inner.type_info, ManuallyDrop::deref(&store).clone()).into();
     ErrorHandle::default()
@@ -208,7 +220,9 @@ pub unsafe extern "C" fn mun_field_type(field: Field, ty: *mut Type) -> ErrorHan
 /// by a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_field_offset(field: Field, offset: *mut usize) -> ErrorHandle {
-    let inner = mun_error_try!(field.inner());
+    let inner = mun_error_try!(field
+        .inner()
+        .map_err(|e| format!("invalid argument 'ty': {e}")));
     let offset = try_deref_mut!(offset);
     *offset = inner.offset as usize;
     ErrorHandle::default()
@@ -219,24 +233,20 @@ mod test {
     use std::ffi::CStr;
     use std::{mem::MaybeUninit, ptr, slice};
 
-    use capi_utils::{assert_error, mun_string_destroy};
+    use capi_utils::{assert_error_snapshot, assert_getter1, mun_string_destroy};
 
-    use crate::r#type::ffi::r#struct::mun_field_type;
-    use crate::{
-        r#type::ffi::{mun_type_kind, mun_type_release},
-        HasStaticType, StructTypeBuilder,
-    };
+    use crate::{HasStaticType, StructTypeBuilder};
 
     use super::{
-        super::{Type, TypeKind},
-        mun_field_name, mun_field_offset, mun_fields_destroy, mun_struct_type_fields,
-        mun_struct_type_guid, mun_struct_type_memory_kind, Field, StructType,
+        super::{mun_type_kind, mun_type_release, Type, TypeKind},
+        mun_field_name, mun_field_offset, mun_field_type, mun_fields_destroy,
+        mun_struct_type_fields, mun_struct_type_guid, mun_struct_type_memory_kind, Field,
+        StructType,
     };
 
     unsafe fn struct_type(ty: Type) -> (Type, StructType) {
-        let mut ty_kind = MaybeUninit::uninit();
-        assert!(mun_type_kind(ty, ty_kind.as_mut_ptr()).is_ok());
-        let pointer_ty = match ty_kind.assume_init() {
+        assert_getter1!(mun_type_kind(ty, ty_kind));
+        let pointer_ty = match ty_kind {
             TypeKind::Struct(p) => p,
             _ => panic!("invalid type kind for struct"),
         };
@@ -253,10 +263,7 @@ mod test {
         let guid = rust_ty.as_struct().unwrap().guid().clone();
         let (ty, struct_ty) = unsafe { struct_type(rust_ty.into()) };
 
-        let mut ffi_guid = MaybeUninit::uninit();
-        assert!(unsafe { mun_struct_type_guid(struct_ty, ffi_guid.as_mut_ptr()) }.is_ok());
-        let ffi_guid = unsafe { ffi_guid.assume_init() };
-
+        assert_getter1!(mun_struct_type_guid(struct_ty, ffi_guid));
         assert_eq!(ffi_guid, guid);
 
         assert!(unsafe { mun_type_release(ty) }.is_ok());
@@ -265,16 +272,22 @@ mod test {
     #[test]
     fn test_mun_struct_type_guid_invalid_null() {
         let mut guid = MaybeUninit::uninit();
-        assert_error!(unsafe {
-            mun_struct_type_guid(StructType(ptr::null(), ptr::null()), guid.as_mut_ptr())
-        });
+        assert_error_snapshot!(
+            unsafe {
+                mun_struct_type_guid(StructType(ptr::null(), ptr::null()), guid.as_mut_ptr())
+            },
+            @r###""invalid argument \'ty\': null pointer""###
+        );
 
         let ty = StructTypeBuilder::new("Foo")
             .add_field("foo", i32::type_info().clone())
             .finish()
             .into();
         let (ty, struct_ty) = unsafe { struct_type(ty) };
-        assert_error!(unsafe { mun_struct_type_guid(struct_ty, ptr::null_mut()) });
+        assert_error_snapshot!(
+            unsafe { mun_struct_type_guid(struct_ty, ptr::null_mut()) },
+            @r###""invalid argument \'guid\': null pointer""###
+        );
 
         assert!(unsafe { mun_type_release(ty) }.is_ok());
     }
@@ -288,13 +301,8 @@ mod test {
 
         let (ty, struct_ty) = unsafe { struct_type(rust_ty.into()) };
 
-        let mut memory_lind = MaybeUninit::uninit();
-        assert!(
-            unsafe { mun_struct_type_memory_kind(struct_ty, memory_lind.as_mut_ptr()) }.is_ok()
-        );
-        let memory_lind = unsafe { memory_lind.assume_init() };
-
-        assert_eq!(memory_lind, abi::StructMemoryKind::Value);
+        assert_getter1!(mun_struct_type_memory_kind(struct_ty, memory_kind));
+        assert_eq!(memory_kind, abi::StructMemoryKind::Value);
 
         assert!(unsafe { mun_type_release(ty) }.is_ok());
     }
@@ -302,19 +310,23 @@ mod test {
     #[test]
     fn test_mun_struct_type_memory_kind_invalid_null() {
         let mut memory_kind = MaybeUninit::uninit();
-        assert_error!(unsafe {
+        assert_error_snapshot!(unsafe {
             mun_struct_type_memory_kind(
                 StructType(ptr::null(), ptr::null()),
                 memory_kind.as_mut_ptr(),
-            )
-        });
+            )},
+            @r###""invalid argument \'ty\': null pointer""###
+        );
 
         let ty = StructTypeBuilder::new("Foo")
             .add_field("foo", i32::type_info().clone())
             .finish()
             .into();
         let (_ty, struct_ty) = unsafe { struct_type(ty) };
-        assert_error!(unsafe { mun_struct_type_memory_kind(struct_ty, ptr::null_mut()) });
+        assert_error_snapshot!(
+            unsafe { mun_struct_type_memory_kind(struct_ty, ptr::null_mut()) },
+            @r###""invalid argument \'memory_kind\': null pointer""###
+        );
     }
 
     #[test]
@@ -330,26 +342,15 @@ mod test {
             )
         };
 
-        let mut fields = MaybeUninit::uninit();
-        assert!(
-            unsafe { mun_struct_type_fields(struct_with_fields_struct, fields.as_mut_ptr()) }
-                .is_ok()
-        );
-        let fields = unsafe { fields.assume_init() };
+        assert_getter1!(mun_struct_type_fields(struct_with_fields_struct, fields));
         assert_eq!(fields.count, 2);
 
         let fields_slice = unsafe { slice::from_raw_parts(fields.fields, fields.count) };
 
-        let mut field_name = MaybeUninit::uninit();
-        let mut field_offset = MaybeUninit::uninit();
-        let mut field_type = MaybeUninit::uninit();
-        assert!(unsafe { mun_field_name(fields_slice[0], field_name.as_mut_ptr()) }.is_ok());
-        assert!(unsafe { mun_field_offset(fields_slice[0], field_offset.as_mut_ptr()) }.is_ok());
-        assert!(unsafe { mun_field_type(fields_slice[0], field_type.as_mut_ptr()) }.is_ok());
-        let field_name = unsafe { field_name.assume_init() };
-        let field_offset = unsafe { field_offset.assume_init() };
-        let field_type =
-            unsafe { field_type.assume_init().to_owned() }.expect("unable to convert to rust");
+        assert_getter1!(mun_field_name(fields_slice[0], field_name));
+        assert_getter1!(mun_field_offset(fields_slice[0], field_offset));
+        assert_getter1!(mun_field_type(fields_slice[0], field_type));
+        let field_type = unsafe { field_type.to_owned() }.expect("unable to convert to rust");
 
         assert_eq!(unsafe { CStr::from_ptr(field_name) }.to_str(), Ok("foo"));
         assert_eq!(field_offset, 0);
@@ -365,11 +366,7 @@ mod test {
         let (empty_struct, empty_struct_struct) =
             unsafe { struct_type(StructTypeBuilder::new("EmptyStruct").finish().into()) };
 
-        let mut fields = MaybeUninit::uninit();
-        assert!(
-            unsafe { mun_struct_type_fields(empty_struct_struct, fields.as_mut_ptr()) }.is_ok()
-        );
-        let fields = unsafe { fields.assume_init() };
+        assert_getter1!(mun_struct_type_fields(empty_struct_struct, fields));
         assert_eq!(fields.count, 0);
         assert!(fields.fields.is_null());
         assert!(unsafe { mun_fields_destroy(fields) }.is_ok());
@@ -382,29 +379,36 @@ mod test {
         let mut name = MaybeUninit::uninit();
         let mut offset = MaybeUninit::uninit();
         let mut field_type = MaybeUninit::uninit();
-        assert_error!(unsafe {
+        assert_error_snapshot!(unsafe {
             mun_field_name(Field(ptr::null(), ptr::null()), name.as_mut_ptr())
-        });
-        assert_error!(unsafe {
+        }, @r###""invalid argument \'ty\': null pointer""###);
+        assert_error_snapshot!(unsafe {
             mun_field_offset(Field(ptr::null(), ptr::null()), offset.as_mut_ptr())
-        });
-        assert_error!(unsafe {
+        }, @r###""invalid argument \'ty\': null pointer""###);
+        assert_error_snapshot!(unsafe {
             mun_field_type(Field(ptr::null(), ptr::null()), field_type.as_mut_ptr())
-        });
+        }, @r###""invalid argument \'ty\': null pointer""###);
 
         let ty = StructTypeBuilder::new("Foo")
             .add_field("foo", i32::type_info().clone())
             .finish()
             .into();
         let (ty, struct_ty) = unsafe { struct_type(ty) };
-        let mut fields = MaybeUninit::uninit();
-        assert!(unsafe { mun_struct_type_fields(struct_ty, fields.as_mut_ptr()) }.is_ok());
-        let fields = unsafe { fields.assume_init() };
+        assert_getter1!(mun_struct_type_fields(struct_ty, fields));
         assert!(!fields.fields.is_null());
 
-        assert_error!(unsafe { mun_field_name(*fields.fields, ptr::null_mut()) });
-        assert_error!(unsafe { mun_field_offset(*fields.fields, ptr::null_mut()) });
-        assert_error!(unsafe { mun_field_type(*fields.fields, ptr::null_mut()) });
+        assert_error_snapshot!(
+            unsafe { mun_field_name(*fields.fields, ptr::null_mut()) },
+            @r###""invalid argument \'name\': null pointer""###
+        );
+        assert_error_snapshot!(
+            unsafe { mun_field_offset(*fields.fields, ptr::null_mut()) },
+            @r###""invalid argument \'offset\': null pointer""###
+        );
+        assert_error_snapshot!(
+            unsafe { mun_field_type(*fields.fields, ptr::null_mut()) },
+            @r###""invalid argument \'ty\': null pointer""###
+        );
 
         assert!(unsafe { mun_fields_destroy(fields) }.is_ok());
         assert!(unsafe { mun_type_release(ty) }.is_ok());

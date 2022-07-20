@@ -87,6 +87,20 @@ impl TypeDataStore {
                 }
                 TypeDataKind::Primitive(_) | TypeDataKind::Uninitialized => {}
             }
+
+            // Iterate over the indirections. This is an interesting case safety wise, because at
+            // this very moment another thread might be accessing this as well. However this is safe
+            // because we use `allocate_into` to allocate the values.
+            for indirection in [&ty.mutable_pointer_type, &ty.immutable_pointer_type] {
+                let read_lock = indirection.read();
+                if let &Some(mut indirection_ref) = read_lock.deref() {
+                    let reference = unsafe { indirection_ref.as_mut() };
+                    if !reference.marked {
+                        reference.marked = true;
+                        queue.push_back(indirection_ref);
+                    }
+                }
+            }
         }
 
         // Iterate over all objects and remove the ones that are no longer referenced
@@ -129,7 +143,7 @@ impl TypeDataStore {
                 TypeDataKind::Uninitialized,
                 &mut entries,
             );
-            type_table.insert_concrete_type(type_def.as_concrete().clone(), ty.clone());
+            type_table.insert_concrete_type(*type_def.as_concrete(), ty.clone());
             types.push(ty.clone());
             definition_and_type.push((type_def, ty));
         }
@@ -178,6 +192,24 @@ impl TypeDataStore {
 
         // Safety: this operation is safe, because we currently own the instance and the lock.
         unsafe { Type::new_unchecked(entry, self.clone()) }
+    }
+
+    /// Special case allocation method that acquires the creation lock and with the lock held,
+    /// writes the result to a location in memory. This ensure that the garbage collector sees
+    /// both the allocation and the store as one atomic operation. This is required when allocating
+    /// indirections because if the two operations would be seperate the GC might deallocate the
+    /// type before the type is assigned.
+    fn allocate_into(
+        self: &Arc<Self>,
+        name: impl Into<String>,
+        layout: Layout,
+        data: TypeDataKind,
+        into: &mut NonNull<TypeData>,
+    ) -> Type {
+        let mut entries = self.types.lock();
+        let ty = self.allocate_inner(name, layout, data, &mut entries);
+        *into = ty.inner;
+        ty
     }
 
     /// Allocates a new type instance
@@ -319,7 +351,7 @@ impl TypeData {
             // Fast path, the type already exists, return it immediately.
             if let Some(ty) = read_lock.deref().as_ref() {
                 return Type {
-                    inner: ty.clone(),
+                    inner: *ty,
                     store: store.clone(),
                 };
             }
@@ -330,7 +362,7 @@ impl TypeData {
         // Recheck if another thread acquired the write lock in the mean time
         if let Some(ty) = write_lock.deref() {
             return Type {
-                inner: ty.clone(),
+                inner: *ty,
                 store: store.clone(),
             };
         }
@@ -338,7 +370,8 @@ impl TypeData {
         // Otherwise create the type and store it
         let name = format!("*{} {}", if mutable { "mut" } else { "const" }, self.name);
 
-        let ty = store.allocate(
+        *write_lock = Some(NonNull::dangling());
+        let ty = store.allocate_into(
             name,
             Layout::new::<*const std::ffi::c_void>(),
             PointerInfo {
@@ -346,8 +379,9 @@ impl TypeData {
                 mutable,
             }
             .into(),
+            // Safe because we ensure that write_lock is Some above.
+            unsafe { write_lock.as_mut().unwrap_unchecked() },
         );
-        *write_lock = Some(ty.inner);
 
         ty
     }
@@ -950,7 +984,7 @@ fn build_type_guid_string(ty: &Type) -> String {
                 format!("struct {}", ty.name())
             } else {
                 build_struct_guid_string(
-                    &ty.name(),
+                    ty.name(),
                     s.fields()
                         .iter()
                         .map(|f| (f.name(), Cow::Owned(f.ty()), f.offset())),

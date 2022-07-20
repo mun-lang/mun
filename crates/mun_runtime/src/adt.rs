@@ -101,8 +101,7 @@ impl<'s> StructRef<'s> {
         };
 
         // SAFETY: The offset in the ABI is always valid.
-        let field_ptr =
-            unsafe { self.get_field_ptr_unchecked::<T::MunType>(usize::from(field_info.offset())) };
+        let field_ptr = unsafe { self.get_field_ptr_unchecked::<T::MunType>(field_info.offset()) };
         Ok(Marshal::marshal_from_ptr(
             field_ptr,
             self.runtime,
@@ -148,8 +147,7 @@ impl<'s> StructRef<'s> {
         }
 
         // SAFETY: The offset in the ABI is always valid.
-        let field_ptr =
-            unsafe { self.get_field_ptr_unchecked::<T::MunType>(usize::from(field_info.offset())) };
+        let field_ptr = unsafe { self.get_field_ptr_unchecked::<T::MunType>(field_info.offset()) };
         let old = Marshal::marshal_from_ptr(field_ptr, self.runtime, &field_info.ty());
         Marshal::marshal_to_ptr(value, field_ptr, &field_info.ty());
         Ok(old)
@@ -189,8 +187,7 @@ impl<'s> StructRef<'s> {
         }
 
         // SAFETY: The offset in the ABI is always valid.
-        let field_ptr =
-            unsafe { self.get_field_ptr_unchecked::<T::MunType>(usize::from(field_info.offset())) };
+        let field_ptr = unsafe { self.get_field_ptr_unchecked::<T::MunType>(field_info.offset()) };
         Marshal::marshal_to_ptr(value, field_ptr, &field_info.ty());
         Ok(())
     }

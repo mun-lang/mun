@@ -7,7 +7,7 @@
 pub mod gc;
 pub mod runtime;
 
-pub mod function_info;
+pub mod function;
 
 #[macro_use]
 #[cfg(test)]
