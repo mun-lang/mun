@@ -9,10 +9,10 @@ use std::{
 
 use abi::Guid;
 use capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
-pub use r#pointer::PointerType;
-pub use r#struct::{Field, Fields, StructType};
+pub use r#pointer::PointerInfo;
+pub use r#struct::{Field, Fields, StructInfo};
 
-use crate::r#type::{PointerInfo, StructData, TypeData, TypeDataKind, TypeDataStore};
+use crate::r#type::{PointerData, StructData, TypeData, TypeDataKind, TypeDataStore};
 
 mod pointer;
 mod primitive;
@@ -212,8 +212,8 @@ pub unsafe extern "C" fn mun_type_pointer_type(
 #[repr(u8)]
 pub enum TypeKind {
     Primitive(Guid),
-    Pointer(PointerType),
-    Struct(StructType),
+    Pointer(r#pointer::PointerInfo),
+    Struct(r#struct::StructInfo),
 }
 
 /// Returns information about what kind of type this is.
@@ -234,11 +234,11 @@ pub unsafe extern "C" fn mun_type_kind(ty: Type, kind: *mut TypeKind) -> ErrorHa
 
     *kind = match &inner.data {
         TypeDataKind::Primitive(guid) => TypeKind::Primitive(*guid),
-        TypeDataKind::Pointer(pointer) => TypeKind::Pointer(PointerType(
-            (pointer as *const PointerInfo).cast(),
+        TypeDataKind::Pointer(pointer) => TypeKind::Pointer(PointerInfo(
+            (pointer as *const PointerData).cast(),
             Arc::as_ptr(ManuallyDrop::deref(&store)) as *const _,
         )),
-        TypeDataKind::Struct(s) => TypeKind::Struct(StructType(
+        TypeDataKind::Struct(s) => TypeKind::Struct(StructInfo(
             (s as *const StructData).cast(),
             Arc::as_ptr(ManuallyDrop::deref(&store)) as *const _,
         )),

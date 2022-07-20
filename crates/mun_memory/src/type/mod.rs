@@ -374,7 +374,7 @@ impl TypeData {
         let ty = store.allocate_into(
             name,
             Layout::new::<*const std::ffi::c_void>(),
-            PointerInfo {
+            PointerData {
                 pointee: self.into(),
                 mutable,
             }
@@ -406,7 +406,7 @@ enum TypeDataKind {
     /// Struct types (i.e. record, tuple, or unit structs)
     Struct(StructData),
     /// A pointer to another type
-    Pointer(PointerInfo),
+    Pointer(PointerData),
     /// Indicates that the type has been allocated but it has not yet been initialized,
     /// this indicates that it still needs to be properly initialized.
     Uninitialized,
@@ -541,7 +541,7 @@ impl<'t> Iterator for FieldsIterator<'t> {
 
 /// A linked version of [`mun_abi::PointerInfo`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-struct PointerInfo {
+struct PointerData {
     /// The type to which is pointed
     pub pointee: NonNull<TypeData>,
     /// Whether or not the pointer is mutable
@@ -551,7 +551,7 @@ struct PointerInfo {
 /// Reference information of a pointer
 #[derive(Copy, Clone)]
 pub struct PointerType<'t> {
-    inner: &'t PointerInfo,
+    inner: &'t PointerData,
     store: &'t Arc<TypeDataStore>,
 }
 
@@ -579,8 +579,8 @@ impl From<StructData> for TypeDataKind {
     }
 }
 
-impl From<PointerInfo> for TypeDataKind {
-    fn from(p: PointerInfo) -> Self {
+impl From<PointerData> for TypeDataKind {
+    fn from(p: PointerData) -> Self {
         TypeDataKind::Pointer(p)
     }
 }

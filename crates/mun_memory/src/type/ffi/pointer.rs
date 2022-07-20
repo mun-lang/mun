@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
 
-use crate::r#type::{PointerInfo, Type as RustType, TypeDataStore};
+use crate::r#type::{PointerData, Type as RustType, TypeDataStore};
 
 use super::Type;
 
@@ -15,18 +15,18 @@ use super::Type;
 /// original type is not released through [`mun_type_release`] this type stays alive.
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct PointerType(pub(super) *const c_void, pub(super) *const c_void);
+pub struct PointerInfo(pub(super) *const c_void, pub(super) *const c_void);
 
-impl<'t> From<super::super::PointerType<'t>> for PointerType {
+impl<'t> From<super::super::PointerType<'t>> for PointerInfo {
     fn from(ty: super::super::PointerType<'t>) -> Self {
-        PointerType(
-            (ty.inner as *const PointerInfo).cast(),
+        PointerInfo(
+            (ty.inner as *const PointerData).cast(),
             (&ty.store as *const &Arc<TypeDataStore>).cast(),
         )
     }
 }
 
-impl PointerType {
+impl PointerInfo {
     /// Returns the store associated with this instance
     unsafe fn store(&self) -> Result<ManuallyDrop<Arc<TypeDataStore>>, String> {
         if self.1.is_null() {
@@ -39,8 +39,8 @@ impl PointerType {
     }
 
     /// Returns the pointer ino associated with the Type
-    unsafe fn inner(&self) -> Result<&PointerInfo, String> {
-        match (self.0 as *const PointerInfo).as_ref() {
+    unsafe fn inner(&self) -> Result<&PointerData, String> {
+        match (self.0 as *const PointerData).as_ref() {
             Some(store) => Ok(store),
             None => Err(String::from("null pointer")),
         }
@@ -49,7 +49,7 @@ impl PointerType {
     /// Converts from C FFI type to a Rust type.
     unsafe fn to_rust<'a>(self) -> Result<super::super::PointerType<'a>, String> {
         match (
-            (self.0 as *const PointerInfo).as_ref(),
+            (self.0 as *const PointerData).as_ref(),
             (self.1 as *const Arc<TypeDataStore>).as_ref(),
         ) {
             (Some(inner), Some(store)) => Ok(super::super::PointerType { inner, store }),
@@ -66,7 +66,7 @@ impl PointerType {
 /// This function results in undefined behavior if the passed in `PointerType` has been deallocated
 /// by a previous call to [`mun_type_release`].
 pub unsafe extern "C" fn mun_pointer_type_pointee(
-    ty: PointerType,
+    ty: PointerInfo,
     pointee: *mut Type,
 ) -> ErrorHandle {
     let store = mun_error_try!(ty
@@ -87,7 +87,7 @@ pub unsafe extern "C" fn mun_pointer_type_pointee(
 /// This function results in undefined behavior if the passed in `PointerType` has been deallocated
 /// by a previous call to [`mun_type_release`].
 pub unsafe extern "C" fn mun_pointer_is_mutable(
-    ty: PointerType,
+    ty: PointerInfo,
     mutable: *mut bool,
 ) -> ErrorHandle {
     let ty = mun_error_try!(ty
@@ -107,13 +107,13 @@ mod test {
 
     use super::super::{
         mun_type_equal, mun_type_kind, mun_type_pointer_type, mun_type_release,
-        pointer::{mun_pointer_is_mutable, mun_pointer_type_pointee, PointerType},
+        pointer::{mun_pointer_is_mutable, mun_pointer_type_pointee, PointerInfo},
         primitive::{mun_type_primitive, PrimitiveType},
         Type, TypeKind,
     };
 
     /// Returns the pointer type of the specified type. Asserts if that fails.
-    unsafe fn pointer_type(ty: Type, mutable: bool) -> (Type, PointerType) {
+    unsafe fn pointer_type(ty: Type, mutable: bool) -> (Type, PointerInfo) {
         assert_getter2!(mun_type_pointer_type(ty, mutable, ptr_ty));
 
         assert_getter1!(mun_type_kind(ptr_ty, ty_kind));
@@ -144,7 +144,7 @@ mod test {
         assert_error_snapshot!(
             unsafe {
                 mun_pointer_type_pointee(
-                    PointerType(ptr::null(), ptr::null()),
+                    PointerInfo(ptr::null(), ptr::null()),
                     pointee_ty.as_mut_ptr(),
                 )
             },
@@ -185,7 +185,7 @@ mod test {
         assert_error_snapshot!(
             unsafe {
                 mun_pointer_is_mutable(
-                    PointerType(ptr::null(), ptr::null()),
+                    PointerInfo(ptr::null(), ptr::null()),
                     is_mutable.as_mut_ptr(),
                 )
             },

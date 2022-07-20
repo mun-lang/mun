@@ -57,13 +57,6 @@ enum MunStructMemoryKind
 typedef uint8_t MunStructMemoryKind;
 #endif // __cplusplus
 
-typedef struct MunArc_TypeDataStore MunArc_TypeDataStore;
-
-/**
- * A linked version of [`mun_abi::StructInfo`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
- */
-typedef struct MunStructData MunStructData;
-
 /**
  * A C-style handle to an error message.
  *
@@ -245,18 +238,21 @@ typedef struct MunTypes {
  * Ownership of this type lies with the [`Type`] that created this instance. As long as the
  * original type is not released through [`mun_type_release`] this type stays alive.
  */
-typedef struct MunPointerType {
+typedef struct MunPointerInfo {
     const void *_0;
     const void *_1;
-} MunPointerType;
+} MunPointerInfo;
 
 /**
- * Reference information of a struct
+ * Additional information of a struct [`Type`].
+ *
+ * Ownership of this type lies with the [`Type`] that created this instance. As long as the
+ * original type is not released through [`mun_type_release`] this type stays alive.
  */
-typedef struct MunStructType {
-    const struct MunStructData *inner;
-    const struct MunArc_TypeDataStore *store;
-} MunStructType;
+typedef struct MunStructInfo {
+    const void *_0;
+    const void *_1;
+} MunStructInfo;
 
 /**
  * An enum that defines the kind of type.
@@ -282,11 +278,11 @@ typedef union MunTypeKind {
     };
     struct {
         MunTypeKind_Tag pointer_tag;
-        struct MunPointerType pointer;
+        struct MunPointerInfo pointer;
     };
     struct {
         MunTypeKind_Tag struct_tag;
-        struct MunStructType struct_;
+        struct MunStructInfo struct_;
     };
 } MunTypeKind;
 
@@ -688,7 +684,7 @@ struct MunType mun_type_primitive(MunPrimitiveType primitive_type);
  * This function results in undefined behavior if the passed in `StructType` has been deallocated
  * by a previous call to [`mun_type_release`].
  */
-struct MunErrorHandle mun_struct_type_guid(struct MunStructType ty, struct MunGuid *guid);
+struct MunErrorHandle mun_struct_type_guid(struct MunStructInfo ty, struct MunGuid *guid);
 
 /**
  * Returns the type of memory management to apply for the struct.
@@ -698,7 +694,7 @@ struct MunErrorHandle mun_struct_type_guid(struct MunStructType ty, struct MunGu
  * This function results in undefined behavior if the passed in `StructType` has been deallocated
  * by a previous call to [`mun_type_release`].
  */
-struct MunErrorHandle mun_struct_type_memory_kind(struct MunStructType ty,
+struct MunErrorHandle mun_struct_type_memory_kind(struct MunStructInfo ty,
                                                   MunStructMemoryKind *memory_kind);
 
 /**
@@ -719,7 +715,7 @@ struct MunErrorHandle mun_fields_destroy(struct MunFields fields);
  * This function results in undefined behavior if the passed in `StructType` has been deallocated
  * by a previous call to [`mun_type_release`].
  */
-struct MunErrorHandle mun_struct_type_fields(struct MunStructType ty, struct MunFields *fields);
+struct MunErrorHandle mun_struct_type_fields(struct MunStructInfo ty, struct MunFields *fields);
 
 /**
  * Returns the name of the field in the parent struct. Ownership of the name is transferred and

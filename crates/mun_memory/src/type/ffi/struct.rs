@@ -22,18 +22,18 @@ use crate::{
 /// original type is not released through [`mun_type_release`] this type stays alive.
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct StructType(pub(super) *const c_void, pub(super) *const c_void);
+pub struct StructInfo(pub(super) *const c_void, pub(super) *const c_void);
 
-impl<'t> From<RustStructType<'t>> for StructType {
+impl<'t> From<RustStructType<'t>> for StructInfo {
     fn from(ty: RustStructType<'t>) -> Self {
-        StructType(
+        StructInfo(
             (ty.inner as *const StructData).cast(),
             (&ty.store as *const &Arc<TypeDataStore>).cast(),
         )
     }
 }
 
-impl StructType {
+impl StructInfo {
     /// Returns the struct info associated with the Type
     unsafe fn inner(&self) -> Result<&StructData, String> {
         match (self.0 as *const StructData).as_ref() {
@@ -50,7 +50,7 @@ impl StructType {
 /// This function results in undefined behavior if the passed in `StructType` has been deallocated
 /// by a previous call to [`mun_type_release`].
 #[no_mangle]
-pub unsafe extern "C" fn mun_struct_type_guid(ty: StructType, guid: *mut Guid) -> ErrorHandle {
+pub unsafe extern "C" fn mun_struct_type_guid(ty: StructInfo, guid: *mut Guid) -> ErrorHandle {
     let ty = mun_error_try!(ty
         .inner()
         .map_err(|e| format!("invalid argument 'ty': {e}")));
@@ -67,7 +67,7 @@ pub unsafe extern "C" fn mun_struct_type_guid(ty: StructType, guid: *mut Guid) -
 /// by a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_struct_type_memory_kind(
-    ty: StructType,
+    ty: StructInfo,
     memory_kind: *mut abi::StructMemoryKind,
 ) -> ErrorHandle {
     let ty = mun_error_try!(ty
@@ -112,7 +112,7 @@ pub unsafe extern "C" fn mun_fields_destroy(fields: Fields) -> ErrorHandle {
 /// by a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_struct_type_fields(
-    ty: StructType,
+    ty: StructInfo,
     fields: *mut Fields,
 ) -> ErrorHandle {
     let inner = mun_error_try!(ty
@@ -241,10 +241,10 @@ mod test {
         super::{mun_type_kind, mun_type_release, Type, TypeKind},
         mun_field_name, mun_field_offset, mun_field_type, mun_fields_destroy,
         mun_struct_type_fields, mun_struct_type_guid, mun_struct_type_memory_kind, Field,
-        StructType,
+        StructInfo,
     };
 
-    unsafe fn struct_type(ty: Type) -> (Type, StructType) {
+    unsafe fn struct_type(ty: Type) -> (Type, StructInfo) {
         assert_getter1!(mun_type_kind(ty, ty_kind));
         let pointer_ty = match ty_kind {
             TypeKind::Struct(p) => p,
@@ -274,7 +274,7 @@ mod test {
         let mut guid = MaybeUninit::uninit();
         assert_error_snapshot!(
             unsafe {
-                mun_struct_type_guid(StructType(ptr::null(), ptr::null()), guid.as_mut_ptr())
+                mun_struct_type_guid(StructInfo(ptr::null(), ptr::null()), guid.as_mut_ptr())
             },
             @r###""invalid argument \'ty\': null pointer""###
         );
@@ -312,7 +312,7 @@ mod test {
         let mut memory_kind = MaybeUninit::uninit();
         assert_error_snapshot!(unsafe {
             mun_struct_type_memory_kind(
-                StructType(ptr::null(), ptr::null()),
+                StructInfo(ptr::null(), ptr::null()),
                 memory_kind.as_mut_ptr(),
             )},
             @r###""invalid argument \'ty\': null pointer""###
