@@ -12,21 +12,21 @@ enum MunPrimitiveType
   : uint8_t
 #endif // __cplusplus
  {
-    MunPrimitiveType_Bool,
-    MunPrimitiveType_U8,
-    MunPrimitiveType_U16,
-    MunPrimitiveType_U32,
-    MunPrimitiveType_U64,
-    MunPrimitiveType_U128,
-    MunPrimitiveType_I8,
-    MunPrimitiveType_I16,
-    MunPrimitiveType_I32,
-    MunPrimitiveType_I64,
-    MunPrimitiveType_I128,
-    MunPrimitiveType_F32,
-    MunPrimitiveType_F64,
-    MunPrimitiveType_Empty,
-    MunPrimitiveType_Void,
+    MUN_PRIMITIVE_TYPE_BOOL,
+    MUN_PRIMITIVE_TYPE_U8,
+    MUN_PRIMITIVE_TYPE_U16,
+    MUN_PRIMITIVE_TYPE_U32,
+    MUN_PRIMITIVE_TYPE_U64,
+    MUN_PRIMITIVE_TYPE_U128,
+    MUN_PRIMITIVE_TYPE_I8,
+    MUN_PRIMITIVE_TYPE_I16,
+    MUN_PRIMITIVE_TYPE_I32,
+    MUN_PRIMITIVE_TYPE_I64,
+    MUN_PRIMITIVE_TYPE_I128,
+    MUN_PRIMITIVE_TYPE_F32,
+    MUN_PRIMITIVE_TYPE_F64,
+    MUN_PRIMITIVE_TYPE_EMPTY,
+    MUN_PRIMITIVE_TYPE_VOID,
 };
 #ifndef __cplusplus
 typedef uint8_t MunPrimitiveType;
@@ -44,14 +44,14 @@ enum MunStructMemoryKind
      * A garbage collected struct is allocated on the heap and uses reference semantics when passed
      * around.
      */
-    Gc,
+    MUN_STRUCT_MEMORY_KIND_GC,
     /**
      * A value struct is allocated on the stack and uses value semantics when passed around.
      *
      * NOTE: When a value struct is used in an external API, a wrapper is created that _pins_ the
      * value on the heap. The heap-allocated value needs to be *manually deallocated*!
      */
-    Value,
+    MUN_STRUCT_MEMORY_KIND_VALUE,
 };
 #ifndef __cplusplus
 typedef uint8_t MunStructMemoryKind;
@@ -203,11 +203,11 @@ enum MunTypeId_Tag
     /**
      * Represents a concrete type with a specific Guid
      */
-    Concrete,
+    MUN_TYPE_ID_CONCRETE,
     /**
      * Represents a pointer to a type
      */
-    Pointer,
+    MUN_TYPE_ID_POINTER,
 };
 #ifndef __cplusplus
 typedef uint8_t MunTypeId_Tag;
@@ -266,9 +266,9 @@ enum MunTypeKind_Tag
   : uint8_t
 #endif // __cplusplus
  {
-    Primitive,
-    Pointer,
-    Struct,
+    MUN_TYPE_KIND_PRIMITIVE,
+    MUN_TYPE_KIND_POINTER,
+    MUN_TYPE_KIND_STRUCT,
 };
 #ifndef __cplusplus
 typedef uint8_t MunTypeKind_Tag;

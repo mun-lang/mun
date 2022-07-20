@@ -10,8 +10,10 @@ line_length = 100
 tab_width = 4
 
 [export]
-include = ["StructInfo"]
 prefix = "Mun"
+
+[enum]
+rename_variants = "QualifiedScreamingSnakeCase"
 
 [parse]
 parse_deps = true

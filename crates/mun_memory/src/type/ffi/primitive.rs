@@ -1,7 +1,6 @@
 use crate::{r#type::ffi::Type, HasStaticType};
 
 /// Types of primitives supported by Mun.
-/// cbindgen:prefix-with-name=true
 #[repr(u8)]
 #[derive(Clone, Copy)]
 #[allow(missing_docs)]
