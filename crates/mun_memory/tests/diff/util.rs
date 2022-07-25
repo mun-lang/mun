@@ -110,9 +110,16 @@ fn apply_struct_mapping(
 
     fn get_new_index(diff: &FieldDiff) -> usize {
         match diff {
-            FieldDiff::Insert { index } => *index,
+            FieldDiff::Insert { index, .. } => *index,
             FieldDiff::Move { new_index, .. } => *new_index,
             _ => std::usize::MAX,
+        }
+    }
+
+    fn edit_field(kind: &FieldEditKind, old_field: &mut FieldInfo, new_field: &FieldInfo) {
+        match *kind {
+            FieldEditKind::ChangedTyped => old_field.type_info = new_field.type_info.clone(),
+            FieldEditKind::RenamedField => old_field.name = new_field.name.to_owned(),
         }
     }
 
@@ -120,7 +127,21 @@ fn apply_struct_mapping(
     let mut additions: Vec<(usize, FieldInfo)> = mapping
         .iter()
         .filter_map(|diff| match diff {
-            FieldDiff::Insert { index } => Some((
+            FieldDiff::Edit {
+                old_type,
+                new_type,
+                old_index: Some(old_index),
+                new_index,
+                kind,
+            } => {
+                let old_field = unsafe { combined.fields.get_unchecked_mut(*old_index) };
+                let new_field = unsafe { new_struct.fields.get_unchecked(*new_index) };
+
+                edit_field(kind, old_field, new_field);
+
+                Some((*new_index, old_field.clone()))
+            }
+            FieldDiff::Insert { index, .. } => Some((
                 *index,
                 unsafe { new_struct.fields.get_unchecked(*index) }.clone(),
             )),
@@ -141,31 +162,21 @@ fn apply_struct_mapping(
         combined.fields.insert(index, field);
     }
 
-    fn edit_field(kind: &FieldEditKind, old_field: &mut FieldInfo, new_field: &FieldInfo) {
-        match *kind {
-            FieldEditKind::ConvertType => old_field.type_info = new_field.type_info.clone(),
-            FieldEditKind::Rename => old_field.name = new_field.name.to_owned(),
-        }
-    }
-
     // Handle edits
     for diff in mapping.iter() {
-        match diff {
-            FieldDiff::Edit { index, kind } => edit_field(
+        if let FieldDiff::Edit {
+            old_type,
+            new_type,
+            old_index: None,
+            new_index,
+            kind,
+        } = diff
+        {
+            edit_field(
                 kind,
-                unsafe { combined.fields.get_unchecked_mut(*index) },
-                unsafe { new_struct.fields.get_unchecked(*index) },
-            ),
-            FieldDiff::Move {
-                old_index,
-                new_index,
-                edit: Some(kind),
-            } => edit_field(
-                kind,
-                unsafe { combined.fields.get_unchecked_mut(*old_index) },
+                unsafe { combined.fields.get_unchecked_mut(*new_index) },
                 unsafe { new_struct.fields.get_unchecked(*new_index) },
-            ),
-            _ => (),
+            );
         }
     }
 

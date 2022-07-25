@@ -7,25 +7,29 @@ use crate::{
     TypeFields,
 };
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum FieldEditKind {
-    ConvertType,
-    Rename,
+    ChangedTyped,
+    RenamedField,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FieldDiff {
     Insert {
         index: usize,
+        new_type: Arc<TypeInfo>,
     },
     Edit {
-        index: usize,
+        old_type: Arc<TypeInfo>,
+        new_type: Arc<TypeInfo>,
+        old_index: Option<usize>,
+        new_index: usize,
         kind: FieldEditKind,
     },
     Move {
+        ty: Arc<TypeInfo>,
         old_index: usize,
         new_index: usize,
-        edit: Option<FieldEditKind>,
     },
     Delete {
         index: usize,
@@ -76,26 +80,24 @@ impl PartialOrd for Diff {
     }
 }
 
-/// Given an `old` and a `new` set of types, calculates the difference.
+/// Given an `old` and a `new` set of types, calculates the difference for structs.
 pub fn diff(old: &[Arc<TypeInfo>], new: &[Arc<TypeInfo>]) -> Vec<Diff> {
     let diff = myers::diff(old, new);
-    let mut mapping: Vec<Diff> = Vec::with_capacity(diff.len());
     let (deletions, insertions) = myers::split_diff(&diff);
 
-    // ASSUMPTION: `Primitive` types can never be converted to `Struct` types, hence they can be
-    // compared separately.
     let deleted_structs = deletions
         .iter()
-        .filter(|idx| unsafe { old.get_unchecked(**idx) }.is_struct())
+        .filter(|idx| old.get(**idx).expect("Type must exist.").is_struct())
         .cloned()
         .collect();
 
     let inserted_structs = insertions
         .iter()
-        .filter(|idx| unsafe { new.get_unchecked(**idx) }.is_struct())
+        .filter(|idx| new.get(**idx).expect("Type must exist.").is_struct())
         .cloned()
         .collect();
 
+    let mut mapping: Vec<Diff> = Vec::with_capacity(diff.len());
     append_struct_mapping(old, new, deleted_structs, inserted_structs, &mut mapping);
 
     mapping.shrink_to_fit();
@@ -108,7 +110,7 @@ pub fn diff(old: &[Arc<TypeInfo>], new: &[Arc<TypeInfo>]) -> Vec<Diff> {
 #[derive(Eq, PartialEq)]
 struct UniqueFieldInfo<'a> {
     name: &'a str,
-    type_info: &'a TypeInfo,
+    type_info: &'a Arc<TypeInfo>,
 }
 
 impl<'a> From<&'a FieldInfo> for UniqueFieldInfo<'a> {
@@ -146,8 +148,9 @@ fn append_struct_mapping(
     let mut myers_lengths: Vec<usize> = insertions
         .iter()
         .flat_map(|new_idx| {
-            let new_ty = unsafe { new.get_unchecked(*new_idx) };
-            let new_fields = unsafe { new_fields.get_unchecked(*new_idx) };
+            let new_ty = new.get(*new_idx).expect("Type must exist.");
+            let new_fields = new_fields.get(*new_idx).expect("Fields must exist.");
+
             deletions
                 .iter()
                 .map(|old_idx| {
@@ -257,23 +260,28 @@ fn append_struct_mapping(
 fn field_diff<'a, 'b>(old: &[UniqueFieldInfo<'a>], new: &[UniqueFieldInfo<'b>]) -> Vec<FieldDiff> {
     let diff = myers::diff(old, new);
     let (deletions, insertions) = myers::split_diff(&diff);
-    let mut insertions: Vec<Option<usize>> = insertions.into_iter().map(Some).collect();
+    let mut insertions: Vec<Option<(usize, &UniqueFieldInfo)>> = insertions
+        .into_iter()
+        .map(|idx| {
+            let new_ty = new.get(idx).expect("New type must exist.");
+            Some((idx, new_ty))
+        })
+        .collect();
 
     let mut mapping = Vec::with_capacity(diff.len());
     // For all deletions,
     #[allow(clippy::manual_flatten)]
     'outer: for old_idx in deletions {
-        let old_ty = unsafe { old.get_unchecked(old_idx) };
+        let old_ty = old.get(old_idx).expect("Old type must exist.");
         // is there an insertion with the same name and type `T`?
         for insertion in insertions.iter_mut() {
-            if let Some(new_idx) = insertion {
-                let new_ty = unsafe { new.get_unchecked(*new_idx) };
-                if *old_ty == *new_ty {
+            if let Some((new_idx, new_ty)) = insertion {
+                if *old_ty == **new_ty {
                     // If so, move it.
                     mapping.push(FieldDiff::Move {
+                        ty: old_ty.type_info.clone(),
                         old_index: old_idx,
                         new_index: *new_idx,
-                        edit: None,
                     });
                     *insertion = None;
                     continue 'outer;
@@ -282,22 +290,21 @@ fn field_diff<'a, 'b>(old: &[UniqueFieldInfo<'a>], new: &[UniqueFieldInfo<'b>]) 
         }
         // Else, is there an insertion with the same name but different type `T`?
         for insertion in insertions.iter_mut() {
-            if let Some(new_idx) = insertion {
-                let new_ty = unsafe { new.get_unchecked(*new_idx) };
+            if let Some((new_idx, new_ty)) = insertion {
                 if old_ty.name == new_ty.name {
                     // If so,
-                    mapping.push(if old_idx == *new_idx {
+                    mapping.push({
                         // convert the type in-place.
                         FieldDiff::Edit {
-                            index: old_idx,
-                            kind: FieldEditKind::ConvertType,
-                        }
-                    } else {
-                        // convert the type and move it.
-                        FieldDiff::Move {
-                            old_index: old_idx,
+                            old_type: old_ty.type_info.clone(),
+                            new_type: new_ty.type_info.clone(),
+                            old_index: if old_idx != *new_idx {
+                                Some(old_idx)
+                            } else {
+                                None
+                            },
                             new_index: *new_idx,
-                            edit: Some(FieldEditKind::ConvertType),
+                            kind: FieldEditKind::ChangedTyped,
                         }
                     });
                     *insertion = None;
@@ -309,18 +316,18 @@ fn field_diff<'a, 'b>(old: &[UniqueFieldInfo<'a>], new: &[UniqueFieldInfo<'b>]) 
         // As there can be multiple fields with the same type, we want to find the closest one.
         let mut closest = None;
         for (insert_idx, insertion) in insertions.iter_mut().enumerate() {
-            if let Some(new_idx) = insertion {
-                let new_ty = unsafe { new.get_unchecked(*new_idx) };
+            if let Some((new_idx, new_ty)) = insertion {
                 if old_ty.type_info == new_ty.type_info {
                     let diff = old_idx.max(*new_idx) - old_idx.min(*new_idx);
                     // If so, select the closest candidate.
-                    if let Some((closest_idx, closest_diff)) = &mut closest {
+                    if let Some((closest_idx, closest_ty, closest_diff)) = &mut closest {
                         if diff < *closest_diff {
                             *closest_idx = *new_idx;
+                            *closest_ty = new_ty.type_info.clone();
                             *closest_diff = diff;
                         }
                     } else {
-                        closest = Some((insert_idx, diff));
+                        closest = Some((insert_idx, new_ty.type_info.clone(), diff));
                     }
 
                     // Terminate early if we managed to find the optimal solution (i.e. the field's
@@ -332,22 +339,22 @@ fn field_diff<'a, 'b>(old: &[UniqueFieldInfo<'a>], new: &[UniqueFieldInfo<'b>]) 
             }
         }
         // If there is one, use the closest match
-        if let Some((closest_idx, _)) = closest {
-            let new_idx = unsafe { insertions.get_unchecked_mut(closest_idx) }
+        if let Some((closest_idx, closest_type, _)) = closest {
+            let (new_idx, _) = unsafe { insertions.get_unchecked_mut(closest_idx) }
                 .take()
                 .unwrap();
-            mapping.push(if old_idx == new_idx {
+            mapping.push({
                 // rename the field in-place.
                 FieldDiff::Edit {
-                    index: old_idx,
-                    kind: FieldEditKind::Rename,
-                }
-            } else {
-                // move and rename the field.
-                FieldDiff::Move {
-                    old_index: old_idx,
+                    old_type: old_ty.type_info.clone(),
+                    new_type: closest_type,
+                    old_index: if old_idx != new_idx {
+                        Some(old_idx)
+                    } else {
+                        None
+                    },
                     new_index: new_idx,
-                    edit: Some(FieldEditKind::Rename),
+                    kind: FieldEditKind::RenamedField,
                 }
             });
             continue 'outer;
@@ -357,8 +364,11 @@ fn field_diff<'a, 'b>(old: &[UniqueFieldInfo<'a>], new: &[UniqueFieldInfo<'b>]) 
     }
 
     // If an insertion did not have a matching deletion, then insert it.
-    for index in insertions.into_iter().flatten() {
-        mapping.push(FieldDiff::Insert { index });
+    for (index, new_type) in insertions.into_iter().flatten() {
+        mapping.push(FieldDiff::Insert {
+            index,
+            new_type: new_type.type_info.clone(),
+        });
     }
 
     mapping.shrink_to_fit();

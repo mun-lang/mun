@@ -4,7 +4,7 @@ use crate::{diff::util::*, fake_struct};
 use mun_memory::{
     diff::{diff, Diff, FieldDiff, FieldEditKind},
     type_table::TypeTable,
-    TypeInfo,
+    HasStaticTypeInfo, TypeInfo,
 };
 
 fn assert_eq_struct(result: &[Arc<TypeInfo>], expected: &[Arc<TypeInfo>]) {
@@ -117,7 +117,10 @@ fn add_field1() {
     assert_eq!(
         diff,
         vec![Diff::Edit {
-            diff: vec![FieldDiff::Insert { index: 0 }],
+            diff: vec![FieldDiff::Insert {
+                index: 0,
+                new_type: i64::type_info().clone(),
+            }],
             old_index: 0,
             new_index: 0,
         }]
@@ -143,7 +146,10 @@ fn add_field2() {
     assert_eq!(
         diff,
         vec![Diff::Edit {
-            diff: vec![FieldDiff::Insert { index: 1 }],
+            diff: vec![FieldDiff::Insert {
+                index: 1,
+                new_type: f64::type_info().clone()
+            }],
             old_index: 0,
             new_index: 0,
         }]
@@ -169,7 +175,10 @@ fn add_field3() {
     assert_eq!(
         diff,
         vec![Diff::Edit {
-            diff: vec![FieldDiff::Insert { index: 2 }],
+            diff: vec![FieldDiff::Insert {
+                index: 2,
+                new_type: f64::type_info().clone()
+            }],
             old_index: 0,
             new_index: 0,
         }]
@@ -277,9 +286,9 @@ fn swap_fields() {
         diff,
         vec![Diff::Edit {
             diff: vec![FieldDiff::Move {
+                ty: f64::type_info().clone(),
                 old_index: 2,
                 new_index: 0,
-                edit: None,
             },],
             old_index: 0,
             new_index: 0,
@@ -308,19 +317,19 @@ fn swap_fields2() {
         vec![Diff::Edit {
             diff: vec![
                 FieldDiff::Move {
+                    ty: f64::type_info().clone(),
                     old_index: 0,
                     new_index: 3,
-                    edit: None,
                 },
                 FieldDiff::Move {
+                    ty: i64::type_info().clone(),
                     old_index: 1,
                     new_index: 2,
-                    edit: None,
                 },
                 FieldDiff::Move {
+                    ty: f64::type_info().clone(),
                     old_index: 2,
                     new_index: 1,
-                    edit: None,
                 }
             ],
             old_index: 0,
@@ -350,16 +359,25 @@ fn cast_field() {
         vec![Diff::Edit {
             diff: vec![
                 FieldDiff::Edit {
-                    index: 0,
-                    kind: FieldEditKind::ConvertType,
+                    old_type: i64::type_info().clone(),
+                    new_type: f64::type_info().clone(),
+                    old_index: None,
+                    new_index: 0,
+                    kind: FieldEditKind::ChangedTyped,
                 },
                 FieldDiff::Edit {
-                    index: 1,
-                    kind: FieldEditKind::ConvertType,
+                    old_type: f64::type_info().clone(),
+                    new_type: i64::type_info().clone(),
+                    old_index: None,
+                    new_index: 1,
+                    kind: FieldEditKind::ChangedTyped,
                 },
                 FieldDiff::Edit {
-                    index: 2,
-                    kind: FieldEditKind::ConvertType,
+                    old_type: f64::type_info().clone(),
+                    new_type: i64::type_info().clone(),
+                    old_index: None,
+                    new_index: 2,
+                    kind: FieldEditKind::ChangedTyped,
                 }
             ],
             old_index: 0,
@@ -388,8 +406,11 @@ fn rename_field1() {
         diff,
         vec![Diff::Edit {
             diff: vec![FieldDiff::Edit {
-                index: 1,
-                kind: FieldEditKind::Rename,
+                old_type: f64::type_info().clone(),
+                new_type: f64::type_info().clone(),
+                old_index: None,
+                new_index: 1,
+                kind: FieldEditKind::RenamedField,
             }],
             old_index: 0,
             new_index: 0,
@@ -418,16 +439,25 @@ fn rename_field2() {
         vec![Diff::Edit {
             diff: vec![
                 FieldDiff::Edit {
-                    index: 0,
-                    kind: FieldEditKind::Rename,
+                    old_type: i64::type_info().clone(),
+                    new_type: i64::type_info().clone(),
+                    old_index: None,
+                    new_index: 0,
+                    kind: FieldEditKind::RenamedField,
                 },
                 FieldDiff::Edit {
-                    index: 1,
-                    kind: FieldEditKind::Rename,
+                    old_type: f64::type_info().clone(),
+                    new_type: f64::type_info().clone(),
+                    old_index: None,
+                    new_index: 1,
+                    kind: FieldEditKind::RenamedField,
                 },
                 FieldDiff::Edit {
-                    index: 2,
-                    kind: FieldEditKind::Rename,
+                    old_type: f64::type_info().clone(),
+                    new_type: f64::type_info().clone(),
+                    old_index: None,
+                    new_index: 2,
+                    kind: FieldEditKind::RenamedField,
                 }
             ],
             old_index: 0,
