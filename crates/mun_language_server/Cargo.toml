@@ -33,7 +33,7 @@ mun_diagnostics = { version = "=0.1.0", path = "../mun_diagnostics" }
 crossbeam-channel = "0.5.0"
 parking_lot = "0.12.0"
 paths = { version = "=0.1.0", path="../mun_paths", package="mun_paths"}
-ra_ap_text_edit="0.0.121"
+ra_ap_text_edit="0.0.122"
 
 [dev-dependencies]
 tempdir = "0.3.7"
