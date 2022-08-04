@@ -34,9 +34,13 @@ pub struct FieldMapping {
 /// The `Action` to take when mapping memory from A to B.
 #[derive(Debug, Eq, PartialEq)]
 pub enum Action {
-    Cast {
-        old_offset: usize,
+    ArrayFromValue {
         old_ty: Arc<TypeInfo>,
+        old_offset: usize,
+    },
+    Cast {
+        old_ty: Arc<TypeInfo>,
+        old_offset: usize,
     },
     Copy {
         old_offset: usize,
@@ -328,7 +332,7 @@ fn resolve_primitive_edit(
         crate::TypeInfoData::Struct(_) => Action::ZeroInitialize,
         crate::TypeInfoData::Pointer(_) => unreachable!(),
         crate::TypeInfoData::Array(new_array) => {
-            resolve_primitive_to_array_edit(old_ty, new_array, kind)
+            resolve_primitive_to_array_edit(old_ty, old_offset, new_array)
         }
     }
 }
@@ -343,19 +347,22 @@ fn resolve_primitive_to_primitive_edit(
         Action::Copy { old_offset }
     } else {
         Action::Cast {
-            old_offset,
             old_ty: old_ty.clone(),
+            old_offset,
         }
     }
 }
 
 fn resolve_primitive_to_array_edit(
     old_ty: &Arc<TypeInfo>,
+    old_offset: usize,
     array_info: &ArrayInfo,
-    kind: FieldEditKind,
 ) -> Action {
     if *array_info.element_ty == **old_ty {
-        todo!()
+        Action::ArrayFromValue {
+            old_ty: old_ty.clone(),
+            old_offset,
+        }
     } else {
         todo!()
     }

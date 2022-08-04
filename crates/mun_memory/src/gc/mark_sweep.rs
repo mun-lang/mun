@@ -8,6 +8,7 @@ use crate::{
 use mapping::{Conversion, Mapping};
 use parking_lot::{RwLock, RwLockReadGuard};
 use std::alloc::{Layout, LayoutError};
+use std::ops::DerefMut;
 use std::{
     collections::{HashMap, VecDeque},
     ops::Deref,
@@ -599,6 +600,35 @@ where
                 let field_dest = unsafe { get_field_ptr(dest, *new_offset) };
 
                 match action {
+                    mapping::Action::ArrayFromValue { old_ty, old_offset } => {
+                        // Initialize the array with a single value
+                        let mut object = alloc_array(new_ty.clone(), 1);
+
+                        // SAFETY: We already own a lock at this point, so it's safe to create a temporary ArrayHandle
+                        let dummy = RwLock::new(Default::default());
+                        let array_handle = ArrayHandle {
+                            obj: object.as_mut().deref_mut() as *mut ObjectInfo,
+                            _lock: dummy.read(),
+                        };
+
+                        // Copy old value into array
+                        unsafe {
+                            std::ptr::copy_nonoverlapping(
+                                get_field_ptr(src, *old_offset).as_ptr(),
+                                array_handle.data().as_ptr(),
+                                old_ty.layout.size(),
+                            )
+                        };
+
+                        // We want to return a pointer to the `ObjectInfo`, to be used as handle.
+                        let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
+
+                        // Write handle to field
+                        let mut field_handle = field_dest.cast::<GcPtr>();
+                        unsafe { *field_handle.as_mut() = handle };
+
+                        new_allocations.push(object);
+                    }
                     mapping::Action::Cast { old_offset, old_ty } => {
                         if !cast::try_cast_from_to(
                             old_ty.clone(),

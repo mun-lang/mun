@@ -1,4 +1,4 @@
-use mun_runtime::StructRef;
+use mun_runtime::{ArrayRef, StructRef};
 use mun_test::CompileAndRunTestDriver;
 use std::sync::Arc;
 
@@ -636,6 +636,70 @@ fn map_struct_all() {
         foo_struct.as_ref(&driver.runtime).get::<i32>("f").unwrap(),
         0
     );
+}
+
+#[test]
+fn map_primitive_to_array() {
+    let mut driver = CompileAndRunTestDriver::new(
+        r#"
+        pub struct Foo {
+            a: i32,
+            b: f64,
+            c: f64,
+            d: i32,
+        }
+
+        pub fn foo_new(a: i32, b: f64, c: f64, d: i32) -> Foo {
+            Foo { a, b, c, d }
+        }
+    "#,
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
+
+    let a = 5i32;
+    let b = 1.0f64;
+    let c = 3.0f64;
+    let d = -1i32;
+    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
+    let foo_struct = foo_struct.root();
+
+    driver.update(
+        "mod.mun",
+        r#"
+        pub struct Foo {
+            a: i32,
+            b: [f64],
+            c: f64,
+            d: [i32],
+        }
+    "#,
+    );
+    assert_eq!(
+        foo_struct.as_ref(&driver.runtime).get::<i32>("a").unwrap(),
+        a
+    );
+
+    let b_array = foo_struct
+        .as_ref(&driver.runtime)
+        .get::<ArrayRef<'_, f64>>("b")
+        .unwrap();
+
+    assert_eq!(b_array.iter().count(), 1);
+    assert_eq!(b_array.iter().next().expect("Array must have a value."), b);
+
+    assert_eq!(
+        foo_struct.as_ref(&driver.runtime).get::<f64>("c").unwrap(),
+        c
+    );
+
+    let d_array = foo_struct
+        .as_ref(&driver.runtime)
+        .get::<ArrayRef<'_, i32>>("d")
+        .unwrap();
+
+    assert_eq!(d_array.iter().count(), 1);
+    assert_eq!(d_array.iter().next().expect("Array must have a value."), d);
 }
 
 #[test]
