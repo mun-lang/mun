@@ -34,6 +34,7 @@ pub struct FieldMapping {
 /// The `Action` to take when mapping memory from A to B.
 #[derive(Debug, Eq, PartialEq)]
 pub enum Action {
+    ArrayAlloc,
     ArrayFromValue {
         old_ty: Arc<TypeInfo>,
         old_offset: usize,
@@ -229,6 +230,8 @@ pub unsafe fn field_mapping(
                 *index,
                 if new_type.is_struct() && !new_type.is_stack_allocated() {
                     Action::StructAlloc
+                } else if new_type.is_array() {
+                    Action::ArrayAlloc
                 } else {
                     Action::ZeroInitialize
                 },
@@ -364,7 +367,7 @@ fn resolve_primitive_to_array_edit(
             old_offset,
         }
     } else {
-        todo!()
+        Action::ArrayAlloc
     }
 }
 

@@ -600,6 +600,19 @@ where
                 let field_dest = unsafe { get_field_ptr(dest, *new_offset) };
 
                 match action {
+                    mapping::Action::ArrayAlloc => {
+                        // Initialize the array with no values
+                        let object = alloc_array(new_ty.clone(), 0);
+
+                        // We want to return a pointer to the `ObjectInfo`, to be used as handle.
+                        let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
+
+                        // Write handle to field
+                        let mut field_handle = field_dest.cast::<GcPtr>();
+                        unsafe { *field_handle.as_mut() = handle };
+
+                        new_allocations.push(object);
+                    }
                     mapping::Action::ArrayFromValue { old_ty, old_offset } => {
                         // Initialize the array with a single value
                         let mut object = alloc_array(new_ty.clone(), 1);
