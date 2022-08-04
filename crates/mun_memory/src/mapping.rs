@@ -384,7 +384,7 @@ fn resolve_struct_edit(
         }
         crate::TypeInfoData::Pointer(_) => unreachable!(),
         crate::TypeInfoData::Array(new_array) => {
-            resolve_struct_to_array_edit(old_ty, new_array, kind)
+            resolve_struct_to_array_edit(old_ty, new_array, old_offset)
         }
     }
 }
@@ -443,12 +443,15 @@ fn resolve_struct_to_struct_edit(
 fn resolve_struct_to_array_edit(
     old_ty: &Arc<TypeInfo>,
     array_info: &ArrayInfo,
-    kind: FieldEditKind,
+    old_offset: usize,
 ) -> Action {
     if *array_info.element_ty == **old_ty {
-        todo!()
+        Action::ArrayFromValue {
+            old_ty: old_ty.clone(),
+            old_offset,
+        }
     } else {
-        todo!()
+        Action::ArrayAlloc
     }
 }
 
@@ -460,7 +463,7 @@ fn resolve_pointer_edit(old_ty: &Arc<TypeInfo>, new_ty: &TypeInfo, kind: FieldEd
 fn resolve_array_edit(old_array: &ArrayInfo, new_ty: &TypeInfo, kind: FieldEditKind) -> Action {
     match &new_ty.data {
         crate::TypeInfoData::Primitive(_) => {
-            resolve_array_to_pritimive_edit(old_array, new_ty, kind)
+            resolve_array_to_primitive_edit(old_array, new_ty, kind)
         }
         crate::TypeInfoData::Struct(_) => resolve_array_to_struct_edit(old_array, new_ty, kind),
         crate::TypeInfoData::Pointer(_) => unreachable!(),
@@ -470,7 +473,7 @@ fn resolve_array_edit(old_array: &ArrayInfo, new_ty: &TypeInfo, kind: FieldEditK
     }
 }
 
-fn resolve_array_to_pritimive_edit(
+fn resolve_array_to_primitive_edit(
     old_array: &ArrayInfo,
     new_ty: &TypeInfo,
     kind: FieldEditKind,
