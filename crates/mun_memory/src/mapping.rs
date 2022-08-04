@@ -1,7 +1,7 @@
 use abi::Guid;
 
 use crate::{
-    diff::{diff, Diff, FieldDiff, FieldEditKind},
+    diff::{diff, Diff, FieldDiff},
     gc::GcPtr,
     type_info::{ArrayInfo, TypeInfo},
     TypeFields,
@@ -46,7 +46,13 @@ pub enum Action {
     Copy {
         old_offset: usize,
     },
+    CopyFromArray {
+        old_offset: usize,
+    },
     CopyGcPtr {
+        old_offset: usize,
+    },
+    CopyGcPtrFromArray {
         old_offset: usize,
     },
     StructAlloc,
@@ -214,17 +220,14 @@ pub unsafe fn field_mapping(
                 new_type,
                 old_index,
                 new_index,
-                kind,
+                ..
             } => old_index.map(|old_index| {
                 let old_offset = old_fields
                     .get(old_index)
                     .map(|field| usize::from(field.offset))
                     .expect("The old field must exist.");
 
-                (
-                    *new_index,
-                    resolve_edit(old_type, new_type, old_offset, *kind),
-                )
+                (*new_index, resolve_edit(old_type, new_type, old_offset))
             }),
             FieldDiff::Insert { index, new_type } => Some((
                 *index,
@@ -272,7 +275,7 @@ pub unsafe fn field_mapping(
             new_type,
             old_index: None,
             new_index,
-            kind,
+            ..
         } = diff
         {
             let old_offset = old_fields
@@ -281,7 +284,7 @@ pub unsafe fn field_mapping(
                 .expect("The old field must exist.");
 
             let action = mapping.get_mut(*new_index).unwrap();
-            *action = resolve_edit(old_type, new_type, old_offset, *kind);
+            *action = resolve_edit(old_type, new_type, old_offset);
         }
     }
 
@@ -305,19 +308,14 @@ pub unsafe fn field_mapping(
     }
 }
 
-pub fn resolve_edit(
-    old_ty: &Arc<TypeInfo>,
-    new_ty: &TypeInfo,
-    old_offset: usize,
-    kind: FieldEditKind,
-) -> Action {
+pub fn resolve_edit(old_ty: &Arc<TypeInfo>, new_ty: &TypeInfo, old_offset: usize) -> Action {
     match &old_ty.data {
         crate::TypeInfoData::Primitive(old_guid) => {
-            resolve_primitive_edit(old_ty, new_ty, old_guid, old_offset, kind)
+            resolve_primitive_edit(old_ty, new_ty, old_guid, old_offset)
         }
-        crate::TypeInfoData::Struct(_) => resolve_struct_edit(old_ty, new_ty, old_offset, kind),
-        crate::TypeInfoData::Pointer(_) => resolve_pointer_edit(old_ty, new_ty, kind),
-        crate::TypeInfoData::Array(old_array) => resolve_array_edit(old_array, new_ty, kind),
+        crate::TypeInfoData::Struct(_) => resolve_struct_edit(old_ty, new_ty, old_offset),
+        crate::TypeInfoData::Pointer(_) => resolve_pointer_edit(old_ty, new_ty),
+        crate::TypeInfoData::Array(old_array) => resolve_array_edit(old_array, new_ty, old_offset),
     }
 }
 
@@ -326,7 +324,6 @@ fn resolve_primitive_edit(
     new_ty: &TypeInfo,
     old_guid: &Guid,
     old_offset: usize,
-    kind: FieldEditKind,
 ) -> Action {
     match &new_ty.data {
         crate::TypeInfoData::Primitive(new_guid) => {
@@ -371,17 +368,10 @@ fn resolve_primitive_to_array_edit(
     }
 }
 
-fn resolve_struct_edit(
-    old_ty: &Arc<TypeInfo>,
-    new_ty: &TypeInfo,
-    old_offset: usize,
-    kind: FieldEditKind,
-) -> Action {
+fn resolve_struct_edit(old_ty: &Arc<TypeInfo>, new_ty: &TypeInfo, old_offset: usize) -> Action {
     match &new_ty.data {
         crate::TypeInfoData::Primitive(_) => Action::ZeroInitialize,
-        crate::TypeInfoData::Struct(_) => {
-            resolve_struct_to_struct_edit(old_ty, new_ty, old_offset, kind)
-        }
+        crate::TypeInfoData::Struct(_) => resolve_struct_to_struct_edit(old_ty, new_ty, old_offset),
         crate::TypeInfoData::Pointer(_) => unreachable!(),
         crate::TypeInfoData::Array(new_array) => {
             resolve_struct_to_array_edit(old_ty, new_array, old_offset)
@@ -393,7 +383,6 @@ fn resolve_struct_to_struct_edit(
     old_ty: &Arc<TypeInfo>,
     new_ty: &TypeInfo,
     old_offset: usize,
-    kind: FieldEditKind,
 ) -> Action {
     // ASSUMPTION: When the name is the same, we are dealing with the same struct,
     // but different internals
@@ -455,53 +444,53 @@ fn resolve_struct_to_array_edit(
     }
 }
 
-fn resolve_pointer_edit(old_ty: &Arc<TypeInfo>, new_ty: &TypeInfo, kind: FieldEditKind) -> Action {
+fn resolve_pointer_edit(_old_ty: &Arc<TypeInfo>, _new_ty: &TypeInfo) -> Action {
     // Not supported in the language - yet
     unreachable!()
 }
 
-fn resolve_array_edit(old_array: &ArrayInfo, new_ty: &TypeInfo, kind: FieldEditKind) -> Action {
+fn resolve_array_edit(old_array: &ArrayInfo, new_ty: &TypeInfo, old_offset: usize) -> Action {
     match &new_ty.data {
         crate::TypeInfoData::Primitive(_) => {
-            resolve_array_to_primitive_edit(old_array, new_ty, kind)
+            resolve_array_to_primitive_edit(old_array, new_ty, old_offset)
         }
-        crate::TypeInfoData::Struct(_) => resolve_array_to_struct_edit(old_array, new_ty, kind),
+        crate::TypeInfoData::Struct(_) => {
+            resolve_array_to_struct_edit(old_array, new_ty, old_offset)
+        }
         crate::TypeInfoData::Pointer(_) => unreachable!(),
-        crate::TypeInfoData::Array(new_array) => {
-            resolve_array_to_array_edit(old_array, new_array, kind)
-        }
+        crate::TypeInfoData::Array(new_array) => resolve_array_to_array_edit(old_array, new_array),
     }
 }
 
 fn resolve_array_to_primitive_edit(
     old_array: &ArrayInfo,
     new_ty: &TypeInfo,
-    kind: FieldEditKind,
+    old_offset: usize,
 ) -> Action {
     if *old_array.element_ty == *new_ty {
-        todo!()
+        Action::CopyFromArray { old_offset }
     } else {
-        todo!()
+        Action::ZeroInitialize
     }
 }
 
 fn resolve_array_to_struct_edit(
     old_array: &ArrayInfo,
     new_ty: &TypeInfo,
-    kind: FieldEditKind,
+    old_offset: usize,
 ) -> Action {
     if *old_array.element_ty == *new_ty {
-        todo!()
+        if new_ty.is_stack_allocated() {
+            Action::CopyFromArray { old_offset }
+        } else {
+            Action::CopyGcPtrFromArray { old_offset }
+        }
     } else {
-        todo!()
+        Action::StructAlloc
     }
 }
 
-fn resolve_array_to_array_edit(
-    old_array: &ArrayInfo,
-    new_array: &ArrayInfo,
-    kind: FieldEditKind,
-) -> Action {
+fn resolve_array_to_array_edit(old_array: &ArrayInfo, new_array: &ArrayInfo) -> Action {
     todo!()
 }
 

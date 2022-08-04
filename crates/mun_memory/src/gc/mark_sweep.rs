@@ -661,6 +661,31 @@ where
                             )
                         };
                     }
+                    mapping::Action::CopyFromArray { old_offset } => {
+                        let field_handle =
+                            unsafe { *get_field_ptr(src, *old_offset).cast::<GcPtr>().as_ref() };
+
+                        // Convert the handle to our internal representation
+                        // Safety: we already hold a write lock on `objects`, so
+                        // this is legal.
+                        let obj: *mut ObjectInfo = field_handle.into();
+
+                        // SAFETY: We already own a lock at this point, so it's safe to create a temporary ArrayHandle
+                        let dummy = RwLock::new(Default::default());
+                        let array_handle = ArrayHandle {
+                            obj,
+                            _lock: dummy.read(),
+                        };
+
+                        // Copy old value into array
+                        unsafe {
+                            std::ptr::copy_nonoverlapping(
+                                array_handle.data().as_ptr(),
+                                field_dest.as_ptr(),
+                                new_ty.layout.size(),
+                            )
+                        };
+                    }
                     mapping::Action::CopyGcPtr { old_offset } => {
                         let field_src = unsafe { get_field_ptr(src, *old_offset) }.cast::<GcPtr>();
                         let mut field_dest = field_dest.cast::<GcPtr>();
@@ -668,6 +693,31 @@ where
                         unsafe {
                             *field_dest.as_mut() = *field_src.as_ref();
                         }
+                    }
+                    mapping::Action::CopyGcPtrFromArray { old_offset } => {
+                        let field_handle =
+                            unsafe { *get_field_ptr(src, *old_offset).cast::<GcPtr>().as_ref() };
+
+                        // Convert the handle to our internal representation
+                        // Safety: we already hold a write lock on `objects`, so
+                        // this is legal.
+                        let obj: *mut ObjectInfo = field_handle.into();
+
+                        // SAFETY: We already own a lock at this point, so it's safe to create a temporary ArrayHandle
+                        let dummy = RwLock::new(Default::default());
+                        let array_handle = ArrayHandle {
+                            obj,
+                            _lock: dummy.read(),
+                        };
+
+                        // Copy old value into array
+                        unsafe {
+                            std::ptr::copy_nonoverlapping(
+                                array_handle.data().as_ptr(),
+                                field_dest.as_ptr(),
+                                Layout::new::<GcPtr>().size(),
+                            )
+                        };
                     }
                     mapping::Action::StructAlloc => {
                         let object = alloc_zeroed_obj(new_ty.clone());
