@@ -39,21 +39,23 @@ pub enum Action {
         old_ty: Arc<TypeInfo>,
         old_offset: usize,
     },
+    ArrayMap {
+        element_action: Box<Action>,
+        old_offset: usize,
+    },
     Cast {
         old_ty: Arc<TypeInfo>,
         old_offset: usize,
     },
     Copy {
         old_offset: usize,
+        /// Size in bytes
+        size: usize,
     },
-    CopyFromArray {
+    ElementFromArray {
         old_offset: usize,
-    },
-    CopyGcPtr {
-        old_offset: usize,
-    },
-    CopyGcPtrFromArray {
-        old_offset: usize,
+        /// Size in bytes
+        element_size: usize,
     },
     StructAlloc,
     StructMapFromGc {
@@ -197,14 +199,13 @@ pub unsafe fn field_mapping(
             if deletions.contains(&idx) {
                 None
             } else {
-                Some(if old_field.type_info.is_stack_allocated() {
-                    Action::Copy {
-                        old_offset: usize::from(old_field.offset),
-                    }
-                } else {
-                    Action::CopyGcPtr {
-                        old_offset: usize::from(old_field.offset),
-                    }
+                Some(Action::Copy {
+                    old_offset: usize::from(old_field.offset),
+                    size: if old_field.type_info.is_stack_allocated() {
+                        old_field.type_info.layout.size()
+                    } else {
+                        std::mem::size_of::<GcPtr>()
+                    },
                 })
             }
         })
@@ -251,10 +252,13 @@ pub unsafe fn field_mapping(
 
                 Some((
                     *new_index,
-                    if ty.is_stack_allocated() {
-                        Action::Copy { old_offset }
-                    } else {
-                        Action::CopyGcPtr { old_offset }
+                    Action::Copy {
+                        old_offset,
+                        size: if ty.is_stack_allocated() {
+                            ty.layout.size()
+                        } else {
+                            std::mem::size_of::<GcPtr>()
+                        },
                     },
                 ))
             }
@@ -344,7 +348,10 @@ fn resolve_primitive_to_primitive_edit(
     new_guid: &Guid,
 ) -> Action {
     if *old_guid == *new_guid {
-        Action::Copy { old_offset }
+        Action::Copy {
+            old_offset,
+            size: old_ty.layout.size(),
+        }
     } else {
         Action::Cast {
             old_ty: old_ty.clone(),
@@ -421,8 +428,10 @@ fn resolve_struct_to_struct_edit(
     } else {
         // struct(gc) -> struct(gc)
         if is_same_struct {
-            println!("gc -> gc");
-            Action::CopyGcPtr { old_offset }
+            Action::Copy {
+                old_offset,
+                size: std::mem::size_of::<GcPtr>(),
+            }
         } else {
             Action::StructAlloc
         }
@@ -458,7 +467,9 @@ fn resolve_array_edit(old_array: &ArrayInfo, new_ty: &TypeInfo, old_offset: usiz
             resolve_array_to_struct_edit(old_array, new_ty, old_offset)
         }
         crate::TypeInfoData::Pointer(_) => unreachable!(),
-        crate::TypeInfoData::Array(new_array) => resolve_array_to_array_edit(old_array, new_array),
+        crate::TypeInfoData::Array(new_array) => {
+            resolve_array_to_array_edit(old_array, new_array, old_offset)
+        }
     }
 }
 
@@ -468,7 +479,10 @@ fn resolve_array_to_primitive_edit(
     old_offset: usize,
 ) -> Action {
     if *old_array.element_ty == *new_ty {
-        Action::CopyFromArray { old_offset }
+        Action::ElementFromArray {
+            old_offset,
+            element_size: old_array.element_ty.layout.size(),
+        }
     } else {
         Action::ZeroInitialize
     }
@@ -480,18 +494,39 @@ fn resolve_array_to_struct_edit(
     old_offset: usize,
 ) -> Action {
     if *old_array.element_ty == *new_ty {
-        if new_ty.is_stack_allocated() {
-            Action::CopyFromArray { old_offset }
-        } else {
-            Action::CopyGcPtrFromArray { old_offset }
+        Action::ElementFromArray {
+            old_offset,
+            element_size: if new_ty.is_stack_allocated() {
+                old_array.element_ty.layout.size()
+            } else {
+                std::mem::size_of::<GcPtr>()
+            },
         }
     } else {
         Action::StructAlloc
     }
 }
 
-fn resolve_array_to_array_edit(old_array: &ArrayInfo, new_array: &ArrayInfo) -> Action {
-    todo!()
+fn resolve_array_to_array_edit(
+    old_array: &ArrayInfo,
+    new_array: &ArrayInfo,
+    old_offset: usize,
+) -> Action {
+    if *old_array.element_ty == *new_array.element_ty {
+        Action::Copy {
+            old_offset,
+            size: std::mem::size_of::<GcPtr>(),
+        }
+    } else {
+        Action::ArrayMap {
+            element_action: Box::new(resolve_edit(
+                &old_array.element_ty,
+                &new_array.element_ty,
+                0,
+            )),
+            old_offset,
+        }
+    }
 }
 
 /// A trait used to map allocated memory using type differences.

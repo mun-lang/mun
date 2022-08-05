@@ -1,17 +1,18 @@
-use crate::gc::array::ArrayHeader;
 use crate::{
     cast,
-    gc::{Event, GcPtr, GcRuntime, HasIndirectionPtr, Observer, RawGcPtr, Stats, TypeTrace},
+    gc::{
+        array::ArrayHeader, ArrayHandle as GcArrayHandle, Event, GcPtr, GcRuntime,
+        HasIndirectionPtr, Observer, RawGcPtr, Stats, TypeTrace,
+    },
     mapping::{self, FieldMapping, MemoryMapper},
     type_info::{TypeInfo, TypeInfoData},
 };
 use mapping::{Conversion, Mapping};
 use parking_lot::{RwLock, RwLockReadGuard};
-use std::alloc::{Layout, LayoutError};
-use std::ops::DerefMut;
 use std::{
+    alloc::{Layout, LayoutError},
     collections::{HashMap, VecDeque},
-    ops::Deref,
+    ops::{Deref, DerefMut},
     pin::Pin,
     ptr::NonNull,
     sync::Arc,
@@ -539,7 +540,7 @@ where
                         NonNull::new_unchecked(std::alloc::alloc_zeroed(conversion.new_ty.layout))
                     };
 
-                    map_fields(
+                    map_struct(
                         self,
                         &mut new_allocations,
                         &mapping.conversions,
@@ -574,8 +575,257 @@ where
 
         return deleted;
 
+        unsafe fn get_field_ptr(struct_ptr: NonNull<u8>, offset: usize) -> NonNull<u8> {
+            let mut ptr = struct_ptr.as_ptr() as usize;
+            ptr += offset;
+            NonNull::new_unchecked(ptr as *mut u8)
+        }
+
+        fn map_type<O: Observer<Event = Event>>(
+            gc: &MarkSweep<O>,
+            new_allocations: &mut Vec<Pin<Box<ObjectInfo>>>,
+            conversions: &HashMap<Arc<TypeInfo>, Conversion>,
+            src: NonNull<u8>,
+            dest: NonNull<u8>,
+            action: &mapping::Action,
+            new_ty: &Arc<TypeInfo>,
+        ) {
+            match action {
+                mapping::Action::ArrayAlloc => {
+                    // Initialize the array with no values
+                    let object = alloc_array(new_ty.clone(), 0);
+
+                    // We want to return a pointer to the `ObjectInfo`, to be used as handle.
+                    let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
+
+                    // Write handle to field
+                    let mut dest_handle = dest.cast::<GcPtr>();
+                    unsafe { *dest_handle.as_mut() = handle };
+
+                    new_allocations.push(object);
+                }
+                mapping::Action::ArrayFromValue { old_ty, old_offset } => {
+                    // Initialize the array with a single value
+                    let mut object = alloc_array(new_ty.clone(), 1);
+
+                    // SAFETY: We already own a lock at this point, so it's safe to create a temporary ArrayHandle
+                    let dummy = RwLock::new(Default::default());
+                    let array_handle = ArrayHandle {
+                        obj: object.as_mut().deref_mut() as *mut ObjectInfo,
+                        _lock: dummy.read(),
+                    };
+
+                    // Copy old value into array
+                    unsafe {
+                        std::ptr::copy_nonoverlapping(
+                            get_field_ptr(src, *old_offset).as_ptr(),
+                            array_handle.data().as_ptr(),
+                            old_ty.layout.size(),
+                        )
+                    };
+
+                    // We want to return a pointer to the `ObjectInfo`, to be used as handle.
+                    let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
+
+                    // Write handle to field
+                    let mut dest_handle = dest.cast::<GcPtr>();
+                    unsafe { *dest_handle.as_mut() = handle };
+
+                    new_allocations.push(object);
+                }
+                mapping::Action::ArrayMap {
+                    element_action,
+                    old_offset,
+                } => {
+                    println!("element_action: {:?}", element_action);
+
+                    let src_handle =
+                        unsafe { *get_field_ptr(src, *old_offset).cast::<GcPtr>().as_ref() };
+
+                    // Convert the handle to our internal representation
+                    // Safety: we already hold a write lock on `objects`, so
+                    // this is legal.
+                    let src_obj: *mut ObjectInfo = src_handle.into();
+
+                    // SAFETY: We already own a lock at this point, so it's safe to create a temporary ArrayHandle
+                    let dummy = RwLock::new(Default::default());
+                    let src_array = ArrayHandle {
+                        obj: src_obj,
+                        _lock: dummy.read(),
+                    };
+
+                    // Initialize the array
+                    let mut object = alloc_array(new_ty.clone(), src_array.length());
+
+                    // SAFETY: We already own a lock at this point, so it's safe to create a temporary ArrayHandle
+                    let dest_array = ArrayHandle {
+                        obj: object.as_mut().deref_mut() as *mut ObjectInfo,
+                        _lock: dummy.read(),
+                    };
+
+                    // Map array elements
+                    src_array
+                        .elements()
+                        .zip(dest_array.elements())
+                        .for_each(|(src, dest)| {
+                            map_type(
+                                gc,
+                                new_allocations,
+                                conversions,
+                                src,
+                                dest,
+                                element_action,
+                                &new_ty.as_array().expect("Must be an array.").element_ty,
+                            )
+                        });
+
+                    // We want to return a pointer to the `ObjectInfo`, to be used as handle.
+                    let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
+
+                    // Write handle to field
+                    let mut dest_handle = dest.cast::<GcPtr>();
+                    unsafe { *dest_handle.as_mut() = handle };
+
+                    new_allocations.push(object);
+                }
+                mapping::Action::Cast { old_offset, old_ty } => {
+                    if !cast::try_cast_from_to(
+                        old_ty.clone(),
+                        new_ty.clone(),
+                        unsafe { get_field_ptr(src, *old_offset) },
+                        dest,
+                    ) {
+                        // Failed to cast. Use the previously zero-initialized value instead
+                    }
+                }
+                mapping::Action::Copy {
+                    old_offset,
+                    size: size_in_bytes,
+                } => {
+                    unsafe {
+                        std::ptr::copy_nonoverlapping(
+                            get_field_ptr(src, *old_offset).as_ptr(),
+                            dest.as_ptr(),
+                            *size_in_bytes,
+                        )
+                    };
+                }
+                mapping::Action::ElementFromArray {
+                    old_offset,
+                    element_size,
+                } => {
+                    let src_handle =
+                        unsafe { *get_field_ptr(src, *old_offset).cast::<GcPtr>().as_ref() };
+
+                    // Convert the handle to our internal representation
+                    // Safety: we already hold a write lock on `objects`, so
+                    // this is legal.
+                    let obj: *mut ObjectInfo = src_handle.into();
+
+                    // SAFETY: We already own a lock at this point, so it's safe to create a temporary ArrayHandle
+                    let dummy = RwLock::new(Default::default());
+                    let array_handle = ArrayHandle {
+                        obj,
+                        _lock: dummy.read(),
+                    };
+
+                    if array_handle.header().length > 0 {
+                        // Copy old value into array
+                        unsafe {
+                            std::ptr::copy_nonoverlapping(
+                                array_handle.data().as_ptr(),
+                                dest.as_ptr(),
+                                *element_size,
+                            )
+                        };
+                    } else {
+                        // zero initialize
+                    }
+                }
+                mapping::Action::StructAlloc => {
+                    let object = alloc_zeroed_obj(new_ty.clone());
+
+                    // We want to return a pointer to the `ObjectInfo`, to be used as handle.
+                    let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
+
+                    // Write handle to field
+                    let mut dest_handle = dest.cast::<GcPtr>();
+                    unsafe { *dest_handle.as_mut() = handle };
+
+                    new_allocations.push(object);
+                }
+                mapping::Action::StructMapFromGc { old_ty, old_offset } => {
+                    let conversion = conversions
+                        .get(old_ty)
+                        .expect("If the struct changed, there must also be a conversion.");
+
+                    let src_handle =
+                        unsafe { *get_field_ptr(src, *old_offset).cast::<GcPtr>().as_ref() };
+
+                    // Convert the handle to our internal representation
+                    // Safety: we already hold a write lock on `objects`, so
+                    // this is legal.
+                    let obj: *mut ObjectInfo = src_handle.into();
+                    let obj = unsafe { &*obj };
+
+                    // Map heap-allocated struct to in-memory struct
+                    map_struct(
+                        gc,
+                        new_allocations,
+                        conversions,
+                        &conversion.field_mapping,
+                        unsafe { NonNull::new_unchecked(obj.data.ptr) },
+                        dest,
+                    );
+                }
+                mapping::Action::StructMapFromValue { old_ty, old_offset } => {
+                    let object = alloc_uninit_obj(new_ty.clone());
+
+                    let conversion = conversions
+                        .get(old_ty)
+                        .expect("If the struct changed, there must also be a conversion.");
+
+                    // Map in-memory struct to heap-allocated struct
+                    map_struct(
+                        gc,
+                        new_allocations,
+                        conversions,
+                        &conversion.field_mapping,
+                        unsafe { get_field_ptr(src, *old_offset) },
+                        unsafe { NonNull::new_unchecked(object.data.ptr) },
+                    );
+
+                    // We want to return a pointer to the `ObjectInfo`, to be used as handle.
+                    let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
+
+                    // Write handle to field
+                    let mut dest_handle = dest.cast::<GcPtr>();
+                    unsafe { *dest_handle.as_mut() = handle };
+
+                    new_allocations.push(object);
+                }
+                mapping::Action::StructMapInPlace { old_ty, old_offset } => {
+                    let conversion = conversions
+                        .get(old_ty)
+                        .expect("If the struct changed, there must also be a conversion.");
+
+                    map_struct(
+                        gc,
+                        new_allocations,
+                        conversions,
+                        &conversion.field_mapping,
+                        unsafe { get_field_ptr(src, *old_offset) },
+                        dest,
+                    );
+                }
+                mapping::Action::ZeroInitialize => {
+                    // Use previously zero-initialized memory
+                }
+            }
+        }
+
         #[allow(clippy::mutable_key_type)]
-        fn map_fields<O>(
+        fn map_struct<O>(
             gc: &MarkSweep<O>,
             new_allocations: &mut Vec<Pin<Box<ObjectInfo>>>,
             conversions: &HashMap<Arc<TypeInfo>, Conversion>,
@@ -591,214 +841,16 @@ where
                 action,
             } in mapping.iter()
             {
-                unsafe fn get_field_ptr(struct_ptr: NonNull<u8>, offset: usize) -> NonNull<u8> {
-                    let mut ptr = struct_ptr.as_ptr() as usize;
-                    ptr += offset;
-                    NonNull::new_unchecked(ptr as *mut u8)
-                }
-
                 let field_dest = unsafe { get_field_ptr(dest, *new_offset) };
-
-                match action {
-                    mapping::Action::ArrayAlloc => {
-                        // Initialize the array with no values
-                        let object = alloc_array(new_ty.clone(), 0);
-
-                        // We want to return a pointer to the `ObjectInfo`, to be used as handle.
-                        let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
-
-                        // Write handle to field
-                        let mut field_handle = field_dest.cast::<GcPtr>();
-                        unsafe { *field_handle.as_mut() = handle };
-
-                        new_allocations.push(object);
-                    }
-                    mapping::Action::ArrayFromValue { old_ty, old_offset } => {
-                        // Initialize the array with a single value
-                        let mut object = alloc_array(new_ty.clone(), 1);
-
-                        // SAFETY: We already own a lock at this point, so it's safe to create a temporary ArrayHandle
-                        let dummy = RwLock::new(Default::default());
-                        let array_handle = ArrayHandle {
-                            obj: object.as_mut().deref_mut() as *mut ObjectInfo,
-                            _lock: dummy.read(),
-                        };
-
-                        // Copy old value into array
-                        unsafe {
-                            std::ptr::copy_nonoverlapping(
-                                get_field_ptr(src, *old_offset).as_ptr(),
-                                array_handle.data().as_ptr(),
-                                old_ty.layout.size(),
-                            )
-                        };
-
-                        // We want to return a pointer to the `ObjectInfo`, to be used as handle.
-                        let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
-
-                        // Write handle to field
-                        let mut field_handle = field_dest.cast::<GcPtr>();
-                        unsafe { *field_handle.as_mut() = handle };
-
-                        new_allocations.push(object);
-                    }
-                    mapping::Action::Cast { old_offset, old_ty } => {
-                        if !cast::try_cast_from_to(
-                            old_ty.clone(),
-                            new_ty.clone(),
-                            unsafe { get_field_ptr(src, *old_offset) },
-                            field_dest,
-                        ) {
-                            // Failed to cast. Use the previously zero-initialized value instead
-                        }
-                    }
-                    mapping::Action::Copy { old_offset } => {
-                        unsafe {
-                            std::ptr::copy_nonoverlapping(
-                                get_field_ptr(src, *old_offset).as_ptr(),
-                                field_dest.as_ptr(),
-                                new_ty.layout.size(),
-                            )
-                        };
-                    }
-                    mapping::Action::CopyFromArray { old_offset } => {
-                        let field_handle =
-                            unsafe { *get_field_ptr(src, *old_offset).cast::<GcPtr>().as_ref() };
-
-                        // Convert the handle to our internal representation
-                        // Safety: we already hold a write lock on `objects`, so
-                        // this is legal.
-                        let obj: *mut ObjectInfo = field_handle.into();
-
-                        // SAFETY: We already own a lock at this point, so it's safe to create a temporary ArrayHandle
-                        let dummy = RwLock::new(Default::default());
-                        let array_handle = ArrayHandle {
-                            obj,
-                            _lock: dummy.read(),
-                        };
-
-                        // Copy old value into array
-                        unsafe {
-                            std::ptr::copy_nonoverlapping(
-                                array_handle.data().as_ptr(),
-                                field_dest.as_ptr(),
-                                new_ty.layout.size(),
-                            )
-                        };
-                    }
-                    mapping::Action::CopyGcPtr { old_offset } => {
-                        let field_src = unsafe { get_field_ptr(src, *old_offset) }.cast::<GcPtr>();
-                        let mut field_dest = field_dest.cast::<GcPtr>();
-
-                        unsafe {
-                            *field_dest.as_mut() = *field_src.as_ref();
-                        }
-                    }
-                    mapping::Action::CopyGcPtrFromArray { old_offset } => {
-                        let field_handle =
-                            unsafe { *get_field_ptr(src, *old_offset).cast::<GcPtr>().as_ref() };
-
-                        // Convert the handle to our internal representation
-                        // Safety: we already hold a write lock on `objects`, so
-                        // this is legal.
-                        let obj: *mut ObjectInfo = field_handle.into();
-
-                        // SAFETY: We already own a lock at this point, so it's safe to create a temporary ArrayHandle
-                        let dummy = RwLock::new(Default::default());
-                        let array_handle = ArrayHandle {
-                            obj,
-                            _lock: dummy.read(),
-                        };
-
-                        // Copy old value into array
-                        unsafe {
-                            std::ptr::copy_nonoverlapping(
-                                array_handle.data().as_ptr(),
-                                field_dest.as_ptr(),
-                                Layout::new::<GcPtr>().size(),
-                            )
-                        };
-                    }
-                    mapping::Action::StructAlloc => {
-                        let object = alloc_zeroed_obj(new_ty.clone());
-
-                        // We want to return a pointer to the `ObjectInfo`, to be used as handle.
-                        let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
-
-                        // Write handle to field
-                        let mut field_handle = field_dest.cast::<GcPtr>();
-                        unsafe { *field_handle.as_mut() = handle };
-
-                        new_allocations.push(object);
-                    }
-                    mapping::Action::StructMapFromGc { old_ty, old_offset } => {
-                        let conversion = conversions
-                            .get(old_ty)
-                            .expect("If the struct changed, there must also be a conversion.");
-
-                        let field_handle =
-                            unsafe { *get_field_ptr(src, *old_offset).cast::<GcPtr>().as_ref() };
-
-                        // Convert the handle to our internal representation
-                        // Safety: we already hold a write lock on `objects`, so
-                        // this is legal.
-                        let obj: *mut ObjectInfo = field_handle.into();
-                        let obj = unsafe { &*obj };
-
-                        // Map heap-allocated struct to in-memory struct
-                        map_fields(
-                            gc,
-                            new_allocations,
-                            conversions,
-                            &conversion.field_mapping,
-                            unsafe { NonNull::new_unchecked(obj.data.ptr) },
-                            field_dest,
-                        );
-                    }
-                    mapping::Action::StructMapFromValue { old_ty, old_offset } => {
-                        let object = alloc_uninit_obj(new_ty.clone());
-
-                        let conversion = conversions
-                            .get(old_ty)
-                            .expect("If the struct changed, there must also be a conversion.");
-
-                        // Map in-memory struct to heap-allocated struct
-                        map_fields(
-                            gc,
-                            new_allocations,
-                            conversions,
-                            &conversion.field_mapping,
-                            unsafe { get_field_ptr(src, *old_offset) },
-                            unsafe { NonNull::new_unchecked(object.data.ptr) },
-                        );
-
-                        // We want to return a pointer to the `ObjectInfo`, to be used as handle.
-                        let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
-
-                        // Write handle to field
-                        let mut field_handle = field_dest.cast::<GcPtr>();
-                        unsafe { *field_handle.as_mut() = handle };
-
-                        new_allocations.push(object);
-                    }
-                    mapping::Action::StructMapInPlace { old_ty, old_offset } => {
-                        let conversion = conversions
-                            .get(old_ty)
-                            .expect("If the struct changed, there must also be a conversion.");
-
-                        map_fields(
-                            gc,
-                            new_allocations,
-                            conversions,
-                            &conversion.field_mapping,
-                            unsafe { get_field_ptr(src, *old_offset) },
-                            field_dest,
-                        );
-                    }
-                    mapping::Action::ZeroInitialize => {
-                        // Use previously zero-initialized memory
-                    }
-                }
+                map_type(
+                    gc,
+                    new_allocations,
+                    conversions,
+                    src,
+                    field_dest,
+                    action,
+                    new_ty,
+                );
             }
         }
     }

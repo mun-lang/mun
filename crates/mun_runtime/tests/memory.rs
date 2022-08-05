@@ -639,6 +639,299 @@ fn map_struct_all() {
 }
 
 #[test]
+fn map_array_to_array_different_primitive_to_primitive() {
+    let mut driver = CompileAndRunTestDriver::new(
+        r#"
+        pub struct Foo {
+            a: i32,
+            b: [i32],
+            c: f32,
+        }
+
+        pub fn foo_new(a: i32, b: i32, c: f32) -> Foo {
+            Foo { a, b: [b, a, b], c }
+        }
+    "#,
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
+
+    let a = 5i32;
+    let b = 1i32;
+    let c = 3.0f32;
+    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct = foo_struct.root();
+
+    driver.update(
+        "mod.mun",
+        r#"
+        pub struct Foo {
+            a: i32,
+            b: [i64],
+            c: f32,
+        }
+    "#,
+    );
+    assert_eq!(
+        foo_struct.as_ref(&driver.runtime).get::<i32>("a").unwrap(),
+        a
+    );
+
+    let b_array = foo_struct
+        .as_ref(&driver.runtime)
+        .get::<ArrayRef<'_, i64>>("b")
+        .unwrap();
+
+    assert_eq!(b_array.iter().count(), 3);
+
+    b_array
+        .iter()
+        .zip([b, a, b].into_iter())
+        .for_each(|(lhs, rhs)| {
+            assert_eq!(lhs, rhs.into());
+        });
+
+    assert_eq!(
+        foo_struct.as_ref(&driver.runtime).get::<f32>("c").unwrap(),
+        c
+    );
+}
+
+#[test]
+fn map_array_to_array_different_primitive_to_array_different() {
+    let mut driver = CompileAndRunTestDriver::new(
+        r#"
+        pub struct Foo {
+            a: i32,
+            b: [i32],
+            c: f32,
+        }
+
+        pub fn foo_new(a: i32, b: i32, c: f32) -> Foo {
+            Foo { a, b: [b, a, b], c }
+        }
+    "#,
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
+
+    let a = 5i32;
+    let b = 1i32;
+    let c = 3.0f32;
+    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct = foo_struct.root();
+
+    driver.update(
+        "mod.mun",
+        r#"
+        pub struct Foo {
+            a: i32,
+            b: [[i64]],
+            c: f32,
+        }
+    "#,
+    );
+    assert_eq!(
+        foo_struct.as_ref(&driver.runtime).get::<i32>("a").unwrap(),
+        a
+    );
+
+    let b_array = foo_struct
+        .as_ref(&driver.runtime)
+        .get::<ArrayRef<'_, ArrayRef<'_, i64>>>("b")
+        .unwrap();
+
+    assert_eq!(b_array.iter().count(), 3);
+
+    b_array.iter().for_each(|iter| {
+        assert_eq!(iter.iter().count(), 0);
+    });
+
+    assert_eq!(
+        foo_struct.as_ref(&driver.runtime).get::<f32>("c").unwrap(),
+        c
+    );
+}
+
+#[test]
+fn map_array_to_array_different_primitive_to_array_same() {
+    let mut driver = CompileAndRunTestDriver::new(
+        r#"
+        pub struct Foo {
+            a: i32,
+            b: [i32],
+            c: f32,
+        }
+
+        pub fn foo_new(a: i32, b: i32, c: f32) -> Foo {
+            Foo { a, b: [b, a, b], c }
+        }
+    "#,
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
+
+    let a = 5i32;
+    let b = 1i32;
+    let c = 3.0f32;
+    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct = foo_struct.root();
+
+    driver.update(
+        "mod.mun",
+        r#"
+        pub struct Foo {
+            a: i32,
+            b: [[i32]],
+            c: f32,
+        }
+    "#,
+    );
+    assert_eq!(
+        foo_struct.as_ref(&driver.runtime).get::<i32>("a").unwrap(),
+        a
+    );
+
+    let b_array = foo_struct
+        .as_ref(&driver.runtime)
+        .get::<ArrayRef<'_, ArrayRef<'_, i32>>>("b")
+        .unwrap();
+
+    assert_eq!(b_array.iter().count(), 3);
+
+    b_array
+        .iter()
+        .zip([b, a, b].into_iter())
+        .for_each(|(lhs, rhs)| {
+            assert_eq!(lhs.iter().count(), 1);
+            assert_eq!(lhs.iter().next().expect("Array must have a value."), rhs);
+        });
+
+    assert_eq!(
+        foo_struct.as_ref(&driver.runtime).get::<f32>("c").unwrap(),
+        c
+    );
+}
+
+#[test]
+fn map_array_to_array_same_primitive() {
+    let mut driver = CompileAndRunTestDriver::new(
+        r#"
+        pub struct Foo {
+            a: i32,
+            b: [f64],
+            c: f64,
+        }
+
+        pub fn foo_new(a: i32, b: f64, c: f64) -> Foo {
+            Foo { a, b: [b], c }
+        }
+    "#,
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
+
+    let a = 5i32;
+    let b = 1.0f64;
+    let c = 3.0f64;
+    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct = foo_struct.root();
+
+    driver.update(
+        "mod.mun",
+        r#"
+        pub struct Foo {
+            a: i64,
+            b: [f64],
+            c: f64,
+        }
+    "#,
+    );
+    assert_eq!(
+        foo_struct.as_ref(&driver.runtime).get::<i64>("a").unwrap(),
+        i64::from(a)
+    );
+
+    let b_array = foo_struct
+        .as_ref(&driver.runtime)
+        .get::<ArrayRef<'_, f64>>("b")
+        .unwrap();
+
+    assert_eq!(b_array.iter().count(), 1);
+    assert_eq!(b_array.iter().next().expect("Array must have a value."), b);
+
+    assert_eq!(
+        foo_struct.as_ref(&driver.runtime).get::<f64>("c").unwrap(),
+        c
+    );
+}
+
+#[test]
+fn map_array_to_array_same_struct() {
+    let mut driver = CompileAndRunTestDriver::new(
+        r#"
+        pub struct Bar(f64);
+
+        pub struct Foo {
+            a: i32,
+            b: [Bar],
+            c: f64,
+        }
+
+        pub fn foo_new(a: i32, b: f64, c: f64) -> Foo {
+            Foo { a, b: [Bar(b)], c }
+        }
+    "#,
+        |builder| builder,
+    )
+    .expect("Failed to build test driver");
+
+    let a = 5i32;
+    let b = 1.0f64;
+    let c = 3.0f64;
+    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct = foo_struct.root();
+
+    driver.update(
+        "mod.mun",
+        r#"
+        pub struct Bar(f64);
+
+        pub struct Foo {
+            a: i64,
+            b: [Bar],
+            c: f64,
+        }
+    "#,
+    );
+    assert_eq!(
+        foo_struct.as_ref(&driver.runtime).get::<i64>("a").unwrap(),
+        i64::from(a)
+    );
+
+    let b_array = foo_struct
+        .as_ref(&driver.runtime)
+        .get::<ArrayRef<'_, StructRef>>("b")
+        .unwrap();
+
+    assert_eq!(b_array.iter().count(), 1);
+    assert_eq!(
+        b_array
+            .iter()
+            .next()
+            .expect("Array must have a value.")
+            .get::<f64>("0")
+            .unwrap(),
+        b
+    );
+
+    assert_eq!(
+        foo_struct.as_ref(&driver.runtime).get::<f64>("c").unwrap(),
+        c
+    );
+}
+
+#[test]
 fn map_array_to_primitive_different_type() {
     let mut driver = CompileAndRunTestDriver::new(
         r#"
