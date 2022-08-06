@@ -35,4 +35,4 @@ tempfile = "3.1"
 mun_skeptic = { path = "../mun_skeptic" }
 
 [build-dependencies]
-mun_skeptic = { version = "=0.1.0", path = "../mun_skeptic" }
+mun_skeptic = { path = "../mun_skeptic" }
