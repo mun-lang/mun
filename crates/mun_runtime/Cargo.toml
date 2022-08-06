@@ -20,6 +20,7 @@ libloader = { version = "=0.1.0", path = "../mun_libloader", package = "mun_libl
 log = "0.4"
 md5 = "0.7.0"
 memory = { version = "=0.2.0", path = "../mun_memory", package = "mun_memory" }
+capi_utils = { version = "=0.1.0", path = "../mun_capi_utils", package = "mun_capi_utils" }
 mun_project = { version = "=0.1.0", path = "../mun_project" }
 notify = "4.0.12"
 once_cell = "1.4.0"

@@ -1,7 +1,7 @@
 use super::util::EventAggregator;
 use mun_memory::{
     gc::{Event, GcRootPtr, GcRuntime, MarkSweep},
-    HasStaticTypeInfo,
+    HasStaticType,
 };
 use std::sync::Arc;
 

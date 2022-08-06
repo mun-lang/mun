@@ -2,7 +2,7 @@ use crate::{
     cast,
     gc::{Event, GcPtr, GcRuntime, HasIndirectionPtr, Observer, RawGcPtr, Stats, TypeTrace},
     mapping::{self, FieldMapping, MemoryMapper},
-    type_info::{TypeInfo, TypeInfoData},
+    r#type::Type,
 };
 use mapping::{Conversion, Mapping};
 use parking_lot::RwLock;
@@ -11,12 +11,11 @@ use std::{
     ops::Deref,
     pin::Pin,
     ptr::NonNull,
-    sync::Arc,
 };
 
 pub struct Trace {
     obj: GcPtr,
-    ty: Arc<TypeInfo>,
+    ty: Type,
     index: usize,
 }
 
@@ -24,21 +23,18 @@ impl Iterator for Trace {
     type Item = GcPtr;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let struct_ty = self.ty.as_ref().as_struct()?;
-        let field_count = struct_ty.fields.len();
+        let struct_ty = self.ty.as_struct()?;
+        let fields = struct_ty.fields();
+        let field_count = fields.len();
         while self.index < field_count {
             let index = self.index;
             self.index += 1;
 
-            let field = &struct_ty.fields[index];
-            if let TypeInfoData::Struct(field_struct_ty) = &field.type_info.data {
-                if field_struct_ty.memory_kind == abi::StructMemoryKind::Gc {
+            let field = fields.get(index).unwrap();
+            if let Some(field_struct_ty) = &field.ty().as_struct() {
+                if field_struct_ty.is_gc_struct() {
                     return Some(unsafe {
-                        *self
-                            .obj
-                            .deref::<u8>()
-                            .add(usize::from(field.offset))
-                            .cast::<GcPtr>()
+                        *self.obj.deref::<u8>().add(field.offset()).cast::<GcPtr>()
                     });
                 }
             }
@@ -47,7 +43,7 @@ impl Iterator for Trace {
     }
 }
 
-impl TypeTrace for Arc<TypeInfo> {
+impl TypeTrace for Type {
     type Trace = Trace;
 
     fn trace(&self, obj: GcPtr) -> Self::Trace {
@@ -97,10 +93,10 @@ where
     }
 
     /// Logs an allocation
-    fn log_alloc(&self, handle: GcPtr, ty: &TypeInfo) {
+    fn log_alloc(&self, handle: GcPtr, ty: &Type) {
         {
             let mut stats = self.stats.write();
-            stats.allocated_memory += ty.layout.size();
+            stats.allocated_memory += ty.layout().size();
         }
 
         self.observer.event(Event::Allocation(handle));
@@ -112,8 +108,8 @@ where
     }
 }
 
-fn alloc_obj(ty: Arc<TypeInfo>) -> Pin<Box<ObjectInfo>> {
-    let ptr = unsafe { std::alloc::alloc(ty.layout) };
+fn alloc_obj(ty: Type) -> Pin<Box<ObjectInfo>> {
+    let ptr = unsafe { std::alloc::alloc(ty.layout()) };
     Box::pin(ObjectInfo {
         ptr,
         ty,
@@ -126,7 +122,7 @@ impl<O> GcRuntime for MarkSweep<O>
 where
     O: Observer<Event = Event>,
 {
-    fn alloc(&self, ty: &Arc<TypeInfo>) -> GcPtr {
+    fn alloc(&self, ty: &Type) -> GcPtr {
         let object = alloc_obj(ty.clone());
 
         // We want to return a pointer to the `ObjectInfo`, to be used as handle.
@@ -141,7 +137,7 @@ where
         handle
     }
 
-    fn ptr_type(&self, handle: GcPtr) -> Arc<TypeInfo> {
+    fn ptr_type(&self, handle: GcPtr) -> Type {
         let _lock = self.objects.read();
 
         // Convert the handle to our internal representation
@@ -228,11 +224,11 @@ where
                 }
                 true
             } else {
-                unsafe { std::alloc::dealloc(obj.ptr, obj.ty.layout) };
+                unsafe { std::alloc::dealloc(obj.ptr, obj.ty.layout()) };
                 self.observer.event(Event::Deallocation(*h));
                 {
                     let mut stats = self.stats.write();
-                    stats.allocated_memory -= obj.ty.layout.size();
+                    stats.allocated_memory -= obj.ty.layout().size();
                 }
                 false
             }
@@ -285,7 +281,7 @@ where
                 if object_info.ty == *old_ty {
                     let src = unsafe { NonNull::new_unchecked(object_info.ptr) };
                     let dest = unsafe {
-                        NonNull::new_unchecked(std::alloc::alloc_zeroed(conversion.new_ty.layout))
+                        NonNull::new_unchecked(std::alloc::alloc_zeroed(conversion.new_ty.layout()))
                     };
 
                     map_fields(
@@ -297,7 +293,7 @@ where
                         dest,
                     );
 
-                    unsafe { std::alloc::dealloc(src.as_ptr(), old_ty.layout) };
+                    unsafe { std::alloc::dealloc(src.as_ptr(), old_ty.layout()) };
 
                     object_info.set(ObjectInfo {
                         ptr: dest.as_ptr(),
@@ -327,7 +323,7 @@ where
         fn map_fields<O>(
             gc: &MarkSweep<O>,
             new_allocations: &mut Vec<Pin<Box<ObjectInfo>>>,
-            conversions: &HashMap<Arc<TypeInfo>, Conversion>,
+            conversions: &HashMap<Type, Conversion>,
             mapping: &[FieldMapping],
             src: NonNull<u8>,
             dest: NonNull<u8>,
@@ -354,12 +350,12 @@ where
                             src as *mut u8
                         };
 
-                        if old_ty.data.is_struct() {
-                            debug_assert!(new_ty.data.is_struct());
+                        if old_ty.is_struct() {
+                            debug_assert!(new_ty.is_struct());
 
                             // When the name is the same, we are dealing with the same struct,
                             // but different internals
-                            let is_same_struct = old_ty.name == new_ty.name;
+                            let is_same_struct = old_ty.name() == new_ty.name();
 
                             // If the same struct changed, there must also be a conversion
                             let conversion = conversions.get(old_ty);
@@ -404,7 +400,7 @@ where
                                             std::ptr::write_bytes(
                                                 (*object).ptr,
                                                 0,
-                                                new_ty.layout.size(),
+                                                new_ty.layout().size(),
                                             )
                                         };
                                     }
@@ -435,7 +431,7 @@ where
 
                                     // Zero-initialize heap-allocated object
                                     unsafe {
-                                        std::ptr::write_bytes(object.ptr, 0, new_ty.layout.size())
+                                        std::ptr::write_bytes(object.ptr, 0, new_ty.layout().size())
                                     };
 
                                     // Write handle to field
@@ -476,7 +472,7 @@ where
                                             std::ptr::copy_nonoverlapping(
                                                 obj.ptr,
                                                 field_dest,
-                                                obj.ty.layout.size(),
+                                                obj.ty.layout().size(),
                                             )
                                         };
                                     }
@@ -504,7 +500,7 @@ where
                             std::ptr::copy_nonoverlapping(
                                 field_src,
                                 field_dest,
-                                new_ty.layout.size(),
+                                new_ty.layout().size(),
                             )
                         };
                     }
@@ -517,7 +513,7 @@ where
                             let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
 
                             // Zero-initialize heap-allocated object
-                            unsafe { std::ptr::write_bytes(object.ptr, 0, new_ty.layout.size()) };
+                            unsafe { std::ptr::write_bytes(object.ptr, 0, new_ty.layout().size()) };
 
                             // Write handle to field
                             let field_dest = field_dest.cast::<GcPtr>();
@@ -557,7 +553,7 @@ struct ObjectInfo {
     pub ptr: *mut u8,
     pub roots: u32,
     pub color: Color,
-    pub ty: Arc<TypeInfo>,
+    pub ty: Type,
 }
 
 /// An `ObjectInfo` is thread-safe.

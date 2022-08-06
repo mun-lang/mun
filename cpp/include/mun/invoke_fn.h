@@ -33,8 +33,8 @@ InvokeResult<Output, Args...> invoke_fn(Runtime& runtime, std::string_view fn_na
 
     Error error;
     constexpr auto NUM_ARGS = sizeof...(Args);
-    if (auto fn_info = runtime.find_function_info(fn_name, &error); error) {
-        std::cerr << "Failed to retrieve function info due to error: " << error.message()
+    if (auto fn_info = runtime.find_function_info(fn_name, &error); error.is_error()) {
+        std::cerr << "Failed to retrieve function info due to error: " << error.message().value()
                   << std::endl;
     } else if (!fn_info) {
         std::cerr << "Failed to obtain function '" << fn_name << "'" << std::endl;
@@ -49,9 +49,9 @@ InvokeResult<Output, Args...> invoke_fn(Runtime& runtime, std::string_view fn_na
         }
 
         if constexpr (NUM_ARGS > 0) {
-            const MunTypeInfoHandle* arg_ptr = arg_types.begin();
+            auto arg_it = arg_types.begin();
             const std::optional<std::pair<std::string, std::string>> return_type_diffs[] = {
-                reflection::equals_argument_type(TypeInfo(*(arg_ptr++)), args)...};
+                reflection::equals_argument_type(*(arg_it++), args)...};
 
             for (size_t idx = 0; idx < NUM_ARGS; ++idx) {
                 if (auto diff = return_type_diffs[idx]) {

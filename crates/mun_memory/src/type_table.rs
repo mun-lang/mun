@@ -1,28 +1,23 @@
-use std::sync::Arc;
-
 use rustc_hash::FxHashMap;
 
 use abi::Guid;
 
-use crate::type_info::{HasStaticTypeInfo, TypeInfo};
+use crate::r#type::{HasStaticType, Type};
 
 #[derive(Clone)]
 pub struct TypeTable {
-    concrete: FxHashMap<Guid, Arc<TypeInfo>>,
-    type_name_to_type_info: FxHashMap<String, Arc<TypeInfo>>,
+    concrete: FxHashMap<Guid, Type>,
+    type_name_to_type_info: FxHashMap<String, Type>,
 }
 
 impl TypeTable {
     /// Returns the TypeInfo for the type with the given name.
-    pub fn find_type_info_by_name<S: AsRef<str>>(&self, name: S) -> Option<Arc<TypeInfo>> {
+    pub fn find_type_info_by_name<S: AsRef<str>>(&self, name: S) -> Option<Type> {
         self.type_name_to_type_info.get(name.as_ref()).cloned()
     }
 
     /// Returns the [`TypeInfo`] referenced by the given [`abi::TypeId`].
-    pub fn find_type_info_by_id<'abi>(
-        &self,
-        type_id: &'abi abi::TypeId<'abi>,
-    ) -> Option<Arc<TypeInfo>> {
+    pub fn find_type_info_by_id<'abi>(&self, type_id: &'abi abi::TypeId<'abi>) -> Option<Type> {
         match type_id {
             abi::TypeId::Concrete(guid) => self.concrete.get(guid).cloned(),
             abi::TypeId::Pointer(p) => self
@@ -35,7 +30,7 @@ impl TypeTable {
     ///
     /// If the type table already contained this `type_info`, the value is updated, and the old
     /// value is returned.
-    fn insert_static_type<T: HasStaticTypeInfo>(&mut self) -> Option<Arc<TypeInfo>> {
+    fn insert_static_type<T: HasStaticType>(&mut self) -> Option<Type> {
         self.insert_type(T::type_info().clone())
     }
 
@@ -43,23 +38,29 @@ impl TypeTable {
     ///
     /// If the type table already contained this `type_info`, the value is updated, and the old
     /// value is returned.
-    pub fn insert_type(&mut self, type_info: Arc<TypeInfo>) -> Option<Arc<TypeInfo>> {
+    pub fn insert_type(&mut self, type_info: Type) -> Option<Type> {
         match type_info.as_concrete() {
             None => panic!("can only insert concrete types"),
-            Some(guid) => {
-                self.type_name_to_type_info
-                    .insert(type_info.name.clone(), type_info.clone());
-                self.concrete.insert(*guid, type_info)
-            }
+            Some(guid) => self.insert_concrete_type(*guid, type_info),
         }
     }
 
+    /// Inserts the concrete `Type` into the type table.
+    ///
+    /// If the type table already contained this `type_info`, the value is updated, and the old
+    /// value is returned.
+    pub fn insert_concrete_type(&mut self, guid: Guid, ty: Type) -> Option<Type> {
+        self.type_name_to_type_info
+            .insert(ty.name().to_owned(), ty.clone());
+        self.concrete.insert(guid, ty)
+    }
+
     /// Removes the specified TypeInfo from the lookup table.
-    pub fn remove_type(&mut self, ty: &TypeInfo) -> Option<Arc<TypeInfo>> {
+    pub fn remove_type(&mut self, ty: &Type) -> Option<Type> {
         match ty.as_concrete() {
             None => panic!("can only remove concrete types"),
             Some(guid) => {
-                self.type_name_to_type_info.remove(&ty.name);
+                self.type_name_to_type_info.remove(ty.name());
                 self.concrete.remove(guid)
             }
         }
@@ -70,18 +71,13 @@ impl TypeTable {
     pub fn remove_type_by_type_info<'abi>(
         &mut self,
         type_info: &'abi abi::TypeDefinition<'abi>,
-    ) -> Option<Arc<TypeInfo>> {
-        match type_info.as_concrete() {
-            None => panic!("can only remove concrete types"),
-            Some(guid) => {
-                let ty = self.concrete.remove(guid)?;
-                self.type_name_to_type_info.remove(&ty.name)
-            }
-        }
+    ) -> Option<Type> {
+        let ty = self.concrete.remove(type_info.as_concrete())?;
+        self.type_name_to_type_info.remove(ty.name())
     }
 
     /// Removes and returns the `TypeInfo` corresponding to `name`, if it exists.
-    pub fn remove_type_by_name<S: AsRef<str>>(&mut self, name: S) -> Option<Arc<TypeInfo>> {
+    pub fn remove_type_by_name<S: AsRef<str>>(&mut self, name: S) -> Option<Type> {
         if let Some(type_info) = self.type_name_to_type_info.remove(name.as_ref()) {
             self.remove_type(&type_info)
         } else {

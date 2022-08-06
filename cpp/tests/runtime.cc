@@ -14,10 +14,10 @@ TEST_CASE("runtime can be constructed", "[runtime]") {
     mun::Error err;
     if (auto runtime =
             mun::make_runtime(get_munlib_path("fibonacci/target/mod.munlib"), {}, &err)) {
-        REQUIRE(!err);
+        REQUIRE(err.is_ok());
     } else {
-        REQUIRE(err);
-        FAIL(err.message());
+        REQUIRE(err.is_error());
+        FAIL(err.message().value());
     }
 }
 
@@ -25,18 +25,18 @@ TEST_CASE("runtime can find `FunctionInfo`", "[runtime]") {
     mun::Error err;
     if (auto runtime =
             mun::make_runtime(get_munlib_path("fibonacci/target/mod.munlib"), {}, &err)) {
-        REQUIRE(!err);
+        REQUIRE(err.is_ok());
         REQUIRE(runtime.has_value());
 
         if (auto function_info = runtime->find_function_info("fibonacci", &err)) {
-            REQUIRE(!err);
+            REQUIRE(err.is_ok());
         } else {
-            REQUIRE(err);
-            FAIL(err.message());
+            REQUIRE(err.is_error());
+            FAIL(err.message().value());
         }
     } else {
-        REQUIRE(err);
-        FAIL(err.message());
+        REQUIRE(err.is_error());
+        FAIL(err.message().value());
     }
 }
 
@@ -45,23 +45,23 @@ TEST_CASE("runtime can update", "[runtime]") {
     mun::Error err;
     if (auto runtime =
             mun::make_runtime(get_munlib_path("fibonacci/target/mod.munlib"), {}, &err)) {
-        REQUIRE(!err);
+        REQUIRE(err.is_ok());
 
         runtime->update(&err);
-        if (err) {
-            FAIL(err.message());
+        if (err.is_error()) {
+            FAIL(err.message().value());
         }
-        REQUIRE(!err);
+        REQUIRE(err.is_ok());
     } else {
-        REQUIRE(err);
-        FAIL(err.message());
+        REQUIRE(err.is_error());
+        FAIL(err.message().value());
     }
 }
 
 TEST_CASE("runtime can garbage collect", "[runtime]") {
     mun::Error err;
     if (auto runtime = mun::make_runtime(get_munlib_path("marshal/target/mod.munlib"), {}, &err)) {
-        REQUIRE(!err);
+        REQUIRE(err.is_ok());
         {
             auto res = mun::invoke_fn<mun::StructRef>(*runtime, "new_bool", true, false);
             REQUIRE(res.is_ok());
@@ -69,7 +69,7 @@ TEST_CASE("runtime can garbage collect", "[runtime]") {
         }
         REQUIRE(runtime->gc_collect());
     } else {
-        REQUIRE(err);
-        FAIL(err.message());
+        REQUIRE(err.is_error());
+        FAIL(err.message().value());
     }
 }

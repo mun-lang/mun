@@ -1,11 +1,10 @@
 use crate::{marshal::Marshal, Runtime};
-use memory::{HasStaticTypeInfo, TypeInfo};
-use std::sync::Arc;
+use memory::{HasStaticType, Type};
 
 /// A type to emulate dynamic typing across compilation units for static types.
 pub trait ReturnTypeReflection: Sized {
     /// Returns true if this specified type can be stored in an instance `Self`.
-    fn accepts_type(ty: &Arc<TypeInfo>) -> bool;
+    fn accepts_type(ty: &Type) -> bool;
 
     /// Returns a type hint to indicate the name of this type
     fn type_hint() -> &'static str;
@@ -14,25 +13,25 @@ pub trait ReturnTypeReflection: Sized {
 /// A type to emulate dynamic typing across compilation units for statically typed values.
 pub trait ArgumentReflection: Sized {
     /// Retrieves the argument's type information.
-    fn type_info(&self, runtime: &Runtime) -> Arc<TypeInfo>;
+    fn type_info(&self, runtime: &Runtime) -> Type;
 }
 
 macro_rules! impl_primitive_type {
     ($($ty:ty),+) => {
         $(
             impl ArgumentReflection for $ty {
-                fn type_info(&self, _runtime: &Runtime) -> Arc<TypeInfo> {
-                    <Self as HasStaticTypeInfo>::type_info().clone()
+                fn type_info(&self, _runtime: &Runtime) -> Type {
+                    <Self as HasStaticType>::type_info().clone()
                 }
             }
 
             impl ReturnTypeReflection for $ty {
-                fn accepts_type(ty: &Arc<TypeInfo>) -> bool {
-                    ty == <Self as HasStaticTypeInfo>::type_info()
+                fn accepts_type(ty: &Type) -> bool {
+                    ty == <Self as HasStaticType>::type_info()
                 }
 
                 fn type_hint() -> &'static str {
-                    &<Self as HasStaticTypeInfo>::type_info().name
+                    <Self as HasStaticType>::type_info().name()
                 }
             }
 
@@ -54,7 +53,7 @@ macro_rules! impl_primitive_type {
                 fn marshal_from_ptr<'r>(
                     ptr: std::ptr::NonNull<Self::MunType>,
                     _runtime: &'r Runtime,
-                    _type_info: &Arc<TypeInfo>,
+                    _type_info: &Type,
                 ) -> Self
                 where
                     Self: 't,
@@ -68,7 +67,7 @@ macro_rules! impl_primitive_type {
                 fn marshal_to_ptr(
                     value: Self,
                     mut ptr: std::ptr::NonNull<Self::MunType>,
-                    _type_info: &Arc<TypeInfo>,
+                    _type_info: &Type,
                 ) {
                     unsafe { *ptr.as_mut() = value };
                 }
@@ -98,44 +97,44 @@ impl_primitive_type!(
 
 impl<T> ArgumentReflection for *const T
 where
-    *const T: HasStaticTypeInfo,
+    *const T: HasStaticType,
 {
-    fn type_info(&self, _runtime: &Runtime) -> Arc<TypeInfo> {
-        <Self as HasStaticTypeInfo>::type_info().clone()
+    fn type_info(&self, _runtime: &Runtime) -> Type {
+        <Self as HasStaticType>::type_info().clone()
     }
 }
 
 impl<T> ReturnTypeReflection for *const T
 where
-    *const T: HasStaticTypeInfo,
+    *const T: HasStaticType,
 {
-    fn accepts_type(ty: &Arc<TypeInfo>) -> bool {
-        <*const T as HasStaticTypeInfo>::type_info() == ty
+    fn accepts_type(ty: &Type) -> bool {
+        <*const T as HasStaticType>::type_info() == ty
     }
 
     fn type_hint() -> &'static str {
-        &<*const T as HasStaticTypeInfo>::type_info().name
+        <*const T as HasStaticType>::type_info().name()
     }
 }
 
 impl<T> ArgumentReflection for *mut T
 where
-    *mut T: HasStaticTypeInfo,
+    *mut T: HasStaticType,
 {
-    fn type_info(&self, _runtime: &Runtime) -> Arc<TypeInfo> {
-        <Self as HasStaticTypeInfo>::type_info().clone()
+    fn type_info(&self, _runtime: &Runtime) -> Type {
+        <Self as HasStaticType>::type_info().clone()
     }
 }
 
 impl<T> ReturnTypeReflection for *mut T
 where
-    *mut T: HasStaticTypeInfo,
+    *mut T: HasStaticType,
 {
-    fn accepts_type(ty: &Arc<TypeInfo>) -> bool {
-        <*mut T as HasStaticTypeInfo>::type_info() == ty
+    fn accepts_type(ty: &Type) -> bool {
+        <*mut T as HasStaticType>::type_info() == ty
     }
 
     fn type_hint() -> &'static str {
-        &<*mut T as HasStaticTypeInfo>::type_info().name
+        <*mut T as HasStaticType>::type_info().name()
     }
 }

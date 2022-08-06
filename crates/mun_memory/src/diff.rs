@@ -1,11 +1,6 @@
 pub mod myers;
 
-use std::sync::Arc;
-
-use crate::{
-    type_info::{FieldInfo, TypeInfo},
-    TypeFields,
-};
+use crate::{r#type::Field, r#type::Type};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FieldEditKind {
@@ -77,7 +72,7 @@ impl PartialOrd for Diff {
 }
 
 /// Given an `old` and a `new` set of types, calculates the difference.
-pub fn diff(old: &[Arc<TypeInfo>], new: &[Arc<TypeInfo>]) -> Vec<Diff> {
+pub fn diff(old: &[Type], new: &[Type]) -> Vec<Diff> {
     let diff = myers::diff(old, new);
     let mut mapping: Vec<Diff> = Vec::with_capacity(diff.len());
     let (deletions, insertions) = myers::split_diff(&diff);
@@ -86,23 +81,23 @@ pub fn diff(old: &[Arc<TypeInfo>], new: &[Arc<TypeInfo>]) -> Vec<Diff> {
     // compared separately.
     let deleted_primitives = deletions
         .iter()
-        .filter(|idx| unsafe { old.get_unchecked(**idx) }.data.is_primitive())
+        .filter(|idx| unsafe { old.get_unchecked(**idx) }.is_primitive())
         .cloned()
         .collect();
     let deleted_structs = deletions
         .iter()
-        .filter(|idx| unsafe { old.get_unchecked(**idx) }.data.is_struct())
+        .filter(|idx| unsafe { old.get_unchecked(**idx) }.is_struct())
         .cloned()
         .collect();
 
     let inserted_primitives = insertions
         .iter()
-        .filter(|idx| unsafe { new.get_unchecked(**idx) }.data.is_primitive())
+        .filter(|idx| unsafe { new.get_unchecked(**idx) }.is_primitive())
         .cloned()
         .collect();
     let inserted_structs = insertions
         .iter()
-        .filter(|idx| unsafe { new.get_unchecked(**idx) }.data.is_struct())
+        .filter(|idx| unsafe { new.get_unchecked(**idx) }.is_struct())
         .cloned()
         .collect();
 
@@ -122,8 +117,8 @@ pub fn diff(old: &[Arc<TypeInfo>], new: &[Arc<TypeInfo>]) -> Vec<Diff> {
 }
 
 fn append_primitive_mapping(
-    old: &[Arc<TypeInfo>],
-    new: &[Arc<TypeInfo>],
+    old: &[Type],
+    new: &[Type],
     deletions: Vec<usize>,
     insertions: Vec<usize>,
     mapping: &mut Vec<Diff>,
@@ -164,14 +159,14 @@ fn append_primitive_mapping(
 #[derive(Eq, PartialEq)]
 struct UniqueFieldInfo<'a> {
     name: &'a str,
-    type_info: &'a TypeInfo,
+    type_info: Type,
 }
 
-impl<'a> From<&'a FieldInfo> for UniqueFieldInfo<'a> {
-    fn from(other: &'a FieldInfo) -> Self {
+impl<'a> From<Field<'a>> for UniqueFieldInfo<'a> {
+    fn from(other: Field<'a>) -> Self {
         Self {
-            name: &other.name,
-            type_info: &other.type_info,
+            name: other.name(),
+            type_info: other.ty(),
         }
     }
 }
@@ -180,20 +175,28 @@ impl<'a> From<&'a FieldInfo> for UniqueFieldInfo<'a> {
 /// for `insertions` into the `new` slice of types, appends the corresponding `Diff` mapping
 /// for all
 fn append_struct_mapping(
-    old: &[Arc<TypeInfo>],
-    new: &[Arc<TypeInfo>],
+    old: &[Type],
+    new: &[Type],
     deletions: Vec<usize>,
     insertions: Vec<usize>,
     mapping: &mut Vec<Diff>,
 ) {
     let old_fields: Vec<Vec<UniqueFieldInfo>> = old
         .iter()
-        .map(|ty| ty.fields().iter().map(UniqueFieldInfo::from).collect())
+        .map(|ty| {
+            ty.as_struct()
+                .map(|s| s.fields().iter().map(UniqueFieldInfo::from).collect())
+                .unwrap_or_else(Vec::new)
+        })
         .collect();
 
     let new_fields: Vec<Vec<UniqueFieldInfo>> = new
         .iter()
-        .map(|ty| ty.fields().iter().map(UniqueFieldInfo::from).collect())
+        .map(|ty| {
+            ty.as_struct()
+                .map(|s| s.fields().iter().map(UniqueFieldInfo::from).collect())
+                .unwrap_or_else(Vec::new)
+        })
         .collect();
 
     let num_deleted = deletions.len();
@@ -221,7 +224,7 @@ fn append_struct_mapping(
                     // let min = new_fields.len() + old_fields.len();
 
                     // If the type's name is equal
-                    if old_ty.name == new_ty.name || length == 0 {
+                    if old_ty.name() == new_ty.name() || length == 0 {
                         // TODO: Potentially we want to retain an X% for types with equal names,
                         // whilst allowing types with different names to be modified for up to Y%.
                         length

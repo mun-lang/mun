@@ -13,7 +13,7 @@ use libloader::{MunLibrary, TempLibrary};
 use memory::{
     mapping::{Mapping, MemoryMapper},
     type_table::TypeTable,
-    TryFromAbiError, TypeInfo,
+    Type,
 };
 
 use crate::{garbage_collector::GarbageCollector, DispatchTable};
@@ -71,15 +71,15 @@ impl Assembly {
     }
 
     fn link_all_types<'abi>(
-        type_table: &mut TypeTable,
+        type_table: &TypeTable,
         to_link: impl Iterator<Item = (&'abi abi::TypeId<'abi>, &'abi mut *const c_void, &'abi str)>,
     ) -> anyhow::Result<()> {
         // Try to link all LUT entries
         let mut failed_to_link = false;
         for (type_id, type_info_ptr, debug_name) in to_link {
             // Ensure that the function is in the runtime dispatch table
-            if let Some(type_info) = type_table.find_type_info_by_id(type_id) {
-                *type_info_ptr = Arc::into_raw(type_info) as *const c_void;
+            if let Some(ty) = type_table.find_type_info_by_id(type_id) {
+                *type_info_ptr = Type::into_raw(ty);
             } else {
                 dbg!(debug_name);
                 failed_to_link = true;
@@ -152,20 +152,20 @@ impl Assembly {
                     {
                         let expected = fn_proto_arg_type_infos
                             .iter()
-                            .map(|ty| ty.name.clone())
+                            .map(|ty| ty.name().to_owned())
                             .join(", ");
                         let found = existing_fn_def
                             .prototype
                             .signature
                             .arg_types
                             .iter()
-                            .map(|ty| ty.name.clone())
+                            .map(|ty| ty.name().to_owned())
                             .join(", ");
 
                         let fn_name = fn_prototype.name();
                         return Err(anyhow!("a function with the same name does exist, but the signatures do not match.\nExpected:\n\tfn {fn_name}({expected}) -> {}\n\nFound:\n\tfn {fn_name}({found}) -> {}",
-                            &fn_proto_ret_type_info.name,
-                            &existing_fn_def.prototype.signature.return_type.name))
+                            fn_proto_ret_type_info.name(),
+                            existing_fn_def.prototype.signature.return_type.name()))
                             .with_context(|| format!("failed to link function '{}'", fn_prototype.name()));
                     }
 
@@ -203,24 +203,14 @@ impl Assembly {
     ) -> anyhow::Result<(DispatchTable, TypeTable)> {
         let mut assemblies: Vec<&'a mut _> = assemblies.collect();
 
-        // Clone the type table, such that we can roll back if linking fails
-        let mut type_table = type_table.clone();
-
-        // Collect all types that need to be loaded
-        let mut types_to_load: VecDeque<&abi::TypeDefinition> = assemblies
-            .iter()
-            .flat_map(|asm| asm.info().symbols.types().iter())
-            .collect();
-
-        // Load all types
-        while let Some(type_info) = types_to_load.pop_front() {
-            match TypeInfo::try_from_abi(type_info, &type_table) {
-                Ok(type_info) => {
-                    assert!(type_table.insert_type(Arc::new(type_info)).is_none())
-                }
-                Err(TryFromAbiError::UnknownTypeId(_)) => types_to_load.push_back(type_info),
-            }
-        }
+        // Load all types, this creates a new type table that contains the types loaded
+        let (type_table, _) = Type::try_from_abi(
+            assemblies
+                .iter()
+                .flat_map(|asm| asm.info().symbols.types().iter()),
+            type_table.clone(),
+        )
+        .map_err(|e| anyhow::anyhow!("failed to link types from assembly: {}", e))?;
 
         let types_to_link = assemblies
             .iter_mut()
@@ -229,7 +219,7 @@ impl Assembly {
             // by the compiler.
             .filter(|(_, ptr, _)| ptr.is_null());
 
-        Assembly::link_all_types(&mut type_table, types_to_link)?;
+        Assembly::link_all_types(&type_table, types_to_link)?;
 
         // Clone the dispatch table, such that we can roll back if linking fails
         let mut dispatch_table = dispatch_table.clone();
@@ -247,6 +237,9 @@ impl Assembly {
             .filter(|(ptr, _)| ptr.is_null());
 
         Assembly::link_all_functions(&dispatch_table, &type_table, functions_to_link)?;
+
+        // Collect remaining types
+        Type::collect_unreferenced_type_data();
 
         Ok((dispatch_table, type_table))
     }
@@ -294,44 +287,30 @@ impl Assembly {
                 continue;
             }
 
-            let old_types: Option<(&Assembly, Vec<Arc<TypeInfo>>)> =
-                old_assembly.map(|old_assembly| {
-                    // Remove the old assemblies' types from the type table
-                    let old_types = old_assembly
-                        .info()
-                        .symbols
-                        .types()
-                        .iter()
-                        .map(|type_info| {
-                            type_table.remove_type_by_type_info(type_info).expect(
-                                "All types from a loaded assembly must exist in the type table.",
-                            )
-                        })
-                        .collect();
+            let old_types: Option<(&Assembly, Vec<Type>)> = old_assembly.map(|old_assembly| {
+                // Remove the old assemblies' types from the type table
+                let old_types = old_assembly
+                    .info()
+                    .symbols
+                    .types()
+                    .iter()
+                    .map(|type_info| {
+                        type_table.remove_type_by_type_info(type_info).expect(
+                            "All types from a loaded assembly must exist in the type table.",
+                        )
+                    })
+                    .collect();
 
-                    (old_assembly, old_types)
-                });
+                (old_assembly, old_types)
+            });
 
             // Collect all types that need to be loaded
-            let mut types_to_load: VecDeque<&abi::TypeDefinition> =
-                new_assembly.info.symbols.types().iter().collect();
-
-            let mut new_types = Vec::with_capacity(types_to_load.len());
+            let (updated_type_table, new_types) =
+                Type::try_from_abi(new_assembly.info.symbols.types(), type_table)
+                    .map_err(|e| anyhow::anyhow!("failed to load assembly types: {}", e))?;
+            type_table = updated_type_table;
 
             // Load all types, retrying types that depend on other unloaded types within the module
-            while let Some(type_info) = types_to_load.pop_front() {
-                match TypeInfo::try_from_abi(type_info, &type_table) {
-                    Ok(type_info) => {
-                        let type_info = Arc::new(type_info);
-                        new_types.push(type_info.clone());
-                        assert!(type_table.insert_type(type_info).is_none());
-                    }
-                    Err(TryFromAbiError::UnknownTypeId(_)) => {
-                        types_to_load.push_back(type_info);
-                    }
-                }
-            }
-
             let types_to_link = new_assembly
                 .info_mut()
                 .type_lut
@@ -340,7 +319,7 @@ impl Assembly {
                 // by the compiler.
                 .filter(|(_, ptr, _)| ptr.is_null());
 
-            Assembly::link_all_types(&mut type_table, types_to_link)?;
+            Assembly::link_all_types(&type_table, types_to_link)?;
 
             // Memory map allocated object
             if let Some((old_assembly, old_types)) = old_types {
@@ -395,6 +374,9 @@ impl Assembly {
             let new_path = new_assembly.library_path.clone();
             linked_assemblies.insert(new_path, new_assembly);
         }
+
+        // Collect types
+        Type::collect_unreferenced_type_data();
 
         Ok((dispatch_table, type_table))
     }
