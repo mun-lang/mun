@@ -14,8 +14,6 @@ namespace mun {
  * on a moved `Type` will result in an assertion.
  */
 class Type {
-    friend class StructType;
-
 public:
     /**
      * @brief Constructs type information from an instantiated `MunType`.
