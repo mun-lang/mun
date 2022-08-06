@@ -425,6 +425,7 @@ struct MunErrorHandle mun_runtime_destroy(struct MunRuntime runtime);
  */
 struct MunErrorHandle mun_runtime_find_function_definition(struct MunRuntime runtime,
                                                            const char *fn_name,
+                                                           uintptr_t fn_name_len,
                                                            bool *has_fn_info,
                                                            struct MunFunction *fn_info);
 
@@ -696,6 +697,22 @@ struct MunErrorHandle mun_struct_type_guid(struct MunStructInfo ty, struct MunGu
  */
 struct MunErrorHandle mun_struct_type_memory_kind(struct MunStructInfo ty,
                                                   MunStructMemoryKind *memory_kind);
+
+/**
+ * Retrieves the field with the given name.
+ *
+ * The name can be passed as a non nul-terminated string it must be UTF-8 encoded.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `Fields` has been deallocated
+ * by a previous call to [`mun_fields_destroy`].
+ */
+struct MunErrorHandle mun_fields_find_by_name(struct MunFields fields,
+                                              const char *name,
+                                              uintptr_t len,
+                                              bool *has_field,
+                                              struct MunField *field);
 
 /**
  * Destroys the contents of a [`Fields`] struct.

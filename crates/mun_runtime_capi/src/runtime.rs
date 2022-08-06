@@ -5,7 +5,7 @@ use capi_utils::{
 };
 use memory::{ffi::Type, type_table::TypeTable, Type as RustType};
 use runtime::{FunctionDefinition, FunctionPrototype, FunctionSignature};
-use std::{ffi::c_void, mem::ManuallyDrop, ops::Deref, os::raw::c_char};
+use std::{ffi::c_void, mem::ManuallyDrop, ops::Deref, os::raw::c_char, slice};
 
 use crate::function::Function;
 
@@ -176,7 +176,7 @@ pub unsafe extern "C" fn mun_runtime_create(
 
     let runtime = match runtime::Runtime::new(runtime_options) {
         Ok(runtime) => runtime,
-        Err(e) => return ErrorHandle::new(e.to_string()),
+        Err(e) => return ErrorHandle::new(format!("{:?}", e)),
     };
 
     handle.0 = Box::into_raw(Box::new(runtime)) as *mut _;
@@ -207,15 +207,21 @@ pub extern "C" fn mun_runtime_destroy(runtime: Runtime) -> ErrorHandle {
 pub unsafe extern "C" fn mun_runtime_find_function_definition(
     runtime: Runtime,
     fn_name: *const c_char,
+    fn_name_len: usize,
     has_fn_info: *mut bool,
     fn_info: *mut Function,
 ) -> ErrorHandle {
     let runtime = mun_error_try!(runtime
         .inner()
         .map_err(|e| format!("invalid argument 'runtime': {e}")));
-    let name = mun_error_try!(
-        try_convert_c_string(fn_name).map_err(|e| format!("invalid argument 'fn_name': {e}"))
-    );
+    if fn_name.is_null() {
+        return ErrorHandle::new("invalid argument 'fn_name': null pointer");
+    }
+    let name = mun_error_try!(std::str::from_utf8(slice::from_raw_parts(
+        fn_name as *const u8,
+        fn_name_len
+    ))
+    .map_err(|_| String::from("invalid argument 'fn_name': invalid UTF-8 encoded")));
     let has_fn_info = try_deref_mut!(has_fn_info);
     let fn_info = try_deref_mut!(fn_info);
     match runtime.get_function_definition(name) {
@@ -327,12 +333,12 @@ mod tests {
     use super::*;
     use crate::{test_invalid_runtime, test_util::TestDriver};
     use capi_utils::error::mun_error_destroy;
-    use capi_utils::{assert_error_snapshot, assert_getter1, assert_getter2};
+    use capi_utils::{assert_error_snapshot, assert_getter1, assert_getter2, assert_getter3};
     use memory::HasStaticType;
     use std::{ffi::CString, mem::MaybeUninit, ptr};
 
     test_invalid_runtime!(
-        runtime_find_function_definition(ptr::null(), ptr::null_mut(), ptr::null_mut()),
+        runtime_find_function_definition(ptr::null(), 0, ptr::null_mut(), ptr::null_mut()),
         runtime_get_type_info_by_name(ptr::null(), ptr::null_mut(), ptr::null_mut()),
         runtime_get_type_info_by_id(ptr::null(), ptr::null_mut(), ptr::null_mut()),
         runtime_update(ptr::null_mut())
@@ -537,6 +543,7 @@ mod tests {
                 mun_runtime_find_function_definition(
                     driver.runtime,
                     ptr::null(),
+                    0,
                     ptr::null_mut(),
                     ptr::null_mut(),
                 )
@@ -559,6 +566,7 @@ mod tests {
                 mun_runtime_find_function_definition(
                     driver.runtime,
                     invalid_encoding.as_ptr() as *const _,
+                    3,
                     ptr::null_mut(),
                     ptr::null_mut(),
                 )
@@ -581,6 +589,7 @@ mod tests {
                 mun_runtime_find_function_definition(
                     driver.runtime,
                     fn_name.as_ptr(),
+                    fn_name.as_bytes().len(),
                     ptr::null_mut(),
                     ptr::null_mut(),
                 )
@@ -604,6 +613,7 @@ mod tests {
                 mun_runtime_find_function_definition(
                     driver.runtime,
                     fn_name.as_ptr(),
+                    fn_name.as_bytes().len(),
                     has_fn_info.as_mut_ptr(),
                     ptr::null_mut(),
                 )
@@ -621,9 +631,10 @@ mod tests {
         );
 
         let fn_name = CString::new("add").expect("Invalid function name");
-        assert_getter2!(mun_runtime_find_function_definition(
+        assert_getter3!(mun_runtime_find_function_definition(
             driver.runtime,
             fn_name.as_ptr(),
+            fn_name.as_bytes().len(),
             has_fn_info,
             _fn_definition,
         ));
@@ -639,9 +650,10 @@ mod tests {
         );
 
         let fn_name = CString::new("main").expect("Invalid function name");
-        assert_getter2!(mun_runtime_find_function_definition(
+        assert_getter3!(mun_runtime_find_function_definition(
             driver.runtime,
             fn_name.as_ptr(),
+            fn_name.as_bytes().len(),
             has_fn_info,
             _fn_definition,
         ));

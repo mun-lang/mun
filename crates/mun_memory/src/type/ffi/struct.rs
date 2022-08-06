@@ -3,7 +3,7 @@ use std::{
     mem::ManuallyDrop,
     ops::Deref,
     os::raw::c_char,
-    ptr,
+    ptr, slice,
     sync::Arc,
 };
 
@@ -83,9 +83,56 @@ pub unsafe extern "C" fn mun_struct_type_memory_kind(
 /// This is backed by a dynamically allocated array. Ownership is transferred via this struct
 /// and its contents must be destroyed with [`mun_fields_destroy`].
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct Fields {
     pub fields: *const Field,
     pub count: usize,
+}
+
+/// Retrieves the field with the given name.
+///
+/// The name can be passed as a non nul-terminated string it must be UTF-8 encoded.
+///
+/// # Safety
+///
+/// This function results in undefined behavior if the passed in `Fields` has been deallocated
+/// by a previous call to [`mun_fields_destroy`].
+#[no_mangle]
+pub unsafe extern "C" fn mun_fields_find_by_name(
+    fields: Fields,
+    name: *const c_char,
+    len: usize,
+    has_field: *mut bool,
+    field: *mut Field,
+) -> ErrorHandle {
+    if field.is_null() {
+        return ErrorHandle::new("invalid argument 'field': null pointer");
+    }
+    if name.is_null() {
+        return ErrorHandle::new("invalid argument 'name': null pointer");
+    };
+    let has_field = try_deref_mut!(has_field);
+    let field = try_deref_mut!(field);
+    let name = std::str::from_utf8_unchecked(slice::from_raw_parts(name as *const u8, len));
+
+    *has_field = false;
+
+    if fields.fields.is_null() && fields.count == 0 {
+        return ErrorHandle::default();
+    } else if fields.fields.is_null() {
+        return ErrorHandle::new("invalid argument 'fields': invalid pointer");
+    }
+
+    let fields = slice::from_raw_parts(fields.fields, fields.count);
+    for f in fields {
+        let field_inner = mun_error_try!(f.inner());
+        if field_inner.name == name {
+            *field = *f;
+            *has_field = true;
+            break;
+        }
+    }
+    ErrorHandle::default()
 }
 
 /// Destroys the contents of a [`Fields`] struct.
@@ -230,17 +277,18 @@ pub unsafe extern "C" fn mun_field_offset(field: Field, offset: *mut usize) -> E
 
 #[cfg(test)]
 mod test {
-    use std::ffi::CStr;
+    use std::ffi::{CStr, CString};
     use std::{mem::MaybeUninit, ptr, slice};
 
-    use capi_utils::{assert_error_snapshot, assert_getter1, mun_string_destroy};
+    use capi_utils::{assert_error_snapshot, assert_getter1, assert_getter3, mun_string_destroy};
 
+    use crate::r#type::ffi::r#struct::mun_fields_find_by_name;
     use crate::{HasStaticType, StructTypeBuilder};
 
     use super::{
         super::{mun_type_kind, mun_type_release, Type, TypeKind},
         mun_field_name, mun_field_offset, mun_field_type, mun_fields_destroy,
-        mun_struct_type_fields, mun_struct_type_guid, mun_struct_type_memory_kind, Field,
+        mun_struct_type_fields, mun_struct_type_guid, mun_struct_type_memory_kind, Field, Fields,
         StructInfo,
     };
 
@@ -372,6 +420,75 @@ mod test {
         assert!(unsafe { mun_fields_destroy(fields) }.is_ok());
 
         assert!(unsafe { mun_type_release(empty_struct) }.is_ok());
+    }
+
+    #[test]
+    fn test_mun_fields_find_by_name() {
+        let (_foo_type, foo_struct) = unsafe {
+            struct_type(
+                StructTypeBuilder::new("Foo")
+                    .add_field("hello", i32::type_info().clone())
+                    .finish()
+                    .into(),
+            )
+        };
+
+        assert_getter1!(mun_struct_type_fields(foo_struct, fields));
+
+        let hello_str = CString::new("hello").unwrap();
+        let world_str = CString::new("world").unwrap();
+
+        assert_getter3!(mun_fields_find_by_name(
+            fields,
+            hello_str.as_c_str().as_ptr(),
+            hello_str.as_bytes().len(),
+            has_field,
+            _hello_field
+        ));
+        assert!(has_field);
+
+        assert_getter3!(mun_fields_find_by_name(
+            fields,
+            world_str.as_c_str().as_ptr(),
+            world_str.as_bytes().len(),
+            has_field,
+            _world_field
+        ));
+        assert!(!has_field);
+
+        assert_getter3!(mun_fields_find_by_name(
+            Fields {
+                fields: ptr::null(),
+                count: 0
+            },
+            world_str.as_c_str().as_ptr(),
+            world_str.as_bytes().len(),
+            has_field,
+            _world_field
+        ));
+        assert!(!has_field);
+    }
+
+    #[test]
+    fn test_mun_fields_find_by_name_invalid() {
+        let (_empty_struct, empty_struct_struct) =
+            unsafe { struct_type(StructTypeBuilder::new("EmptyStruct").finish().into()) };
+
+        let name = CString::new("hello").unwrap();
+
+        assert_getter1!(mun_struct_type_fields(empty_struct_struct, fields));
+
+        let mut has_field = MaybeUninit::uninit();
+        let mut found_field = MaybeUninit::uninit();
+        assert_error_snapshot!(unsafe {
+            mun_fields_find_by_name(Fields { fields: ptr::null(), count: 10}, name.as_c_str().as_ptr(), name.as_bytes().len(), has_field.as_mut_ptr(), found_field.as_mut_ptr())
+        }, @r###""invalid argument \'fields\': invalid pointer""###);
+        assert_error_snapshot!(unsafe {
+            mun_fields_find_by_name(fields, ptr::null(), 0, has_field.as_mut_ptr(), found_field.as_mut_ptr())
+        }, @r###""invalid argument \'name\': null pointer""###);
+        assert_error_snapshot!(unsafe {
+            mun_fields_find_by_name(fields, name.as_c_str().as_ptr(), name.as_bytes().len(), has_field.as_mut_ptr(), ptr::null_mut())
+        }, @r###""invalid argument \'field\': null pointer""###);
     }
 
     #[test]

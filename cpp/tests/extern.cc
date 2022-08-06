@@ -19,7 +19,7 @@ TEST_CASE("functions must be inserted into the runtime", "[extern]") {
     mun::Error err;
     auto runtime = mun::make_runtime(get_munlib_path("extern/target/mod.munlib"), options, &err);
     REQUIRE(!runtime);
-    REQUIRE(err);
+    REQUIRE(err.is_error());
 }
 
 TEST_CASE("function must have correct signature", "[extern]") {
@@ -29,7 +29,7 @@ TEST_CASE("function must have correct signature", "[extern]") {
     mun::Error err;
     auto runtime = mun::make_runtime(get_munlib_path("extern/target/mod.munlib"), options, &err);
     REQUIRE(!runtime);
-    REQUIRE(err);
+    REQUIRE(err.is_error());
 }
 
 TEST_CASE("functions can be inserted into the runtime", "[extern]") {
@@ -39,8 +39,8 @@ TEST_CASE("functions can be inserted into the runtime", "[extern]") {
     mun::Error err;
     auto runtime = mun::make_runtime(get_munlib_path("extern/target/mod.munlib"), options, &err);
     if (!runtime) {
-        REQUIRE(err);
-        FAIL(err.message());
+        REQUIRE(err.is_error());
+        FAIL(err.message().value());
     }
 
     REQUIRE(mun::invoke_fn<uint32_t, uint32_t, uint32_t>(*runtime, "main", 90, 2648).unwrap() ==

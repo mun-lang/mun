@@ -62,3 +62,16 @@ macro_rules! assert_getter2 {
         )+
     };
 }
+
+#[macro_export]
+macro_rules! assert_getter3 {
+    ($fun:ident ( $handle:expr, $arg1:expr, $arg2:expr, $($arg:ident),+ $(,)?)) => {
+        $(
+            let mut $arg = std::mem::MaybeUninit::uninit();
+        )+
+        assert!(unsafe { $fun($handle, $arg1, $arg2, $($arg.as_mut_ptr()),+) }.is_ok());
+        $(
+            let $arg = unsafe { $arg.assume_init() };
+        )+
+    };
+}

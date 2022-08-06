@@ -204,15 +204,16 @@ pub(crate) mod tests {
 
     #[test]
     fn test_function_release_strong_count() {
-        let function: Function = runtime::FunctionDefinition::builder("foo").finish().into();
+        let function = runtime::FunctionDefinition::builder("foo").finish();
+        let ffi_function: Function = function.clone().into();
 
         let fn_def = ManuallyDrop::new(unsafe {
-            Arc::from_raw(function.0 as *const runtime::FunctionDefinition)
+            Arc::from_raw(ffi_function.0 as *const runtime::FunctionDefinition)
         });
         let strong_count = Arc::strong_count(&fn_def);
         assert!(strong_count > 0);
 
-        assert!(unsafe { mun_function_release(function) }.is_ok());
+        assert!(unsafe { mun_function_release(ffi_function) }.is_ok());
 
         // This works because the Arc is not shared between threads because it's local to the
         // runtime created in this test

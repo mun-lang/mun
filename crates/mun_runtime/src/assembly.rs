@@ -129,7 +129,7 @@ impl Assembly {
                     })
                     .collect::<Result<Vec<_>, _>>()
                     .with_context(|| {
-                        format!("failed to link function '{}'", fn_prototype.name())
+                        format!("failed to link function '{}' b", fn_prototype.name())
                     })?;
 
                 // Get the return type info
@@ -142,7 +142,7 @@ impl Assembly {
                         )
                     })
                     .with_context(|| {
-                        format!("failed to link function '{}'", fn_prototype.name())
+                        format!("failed to link function '{}' c", fn_prototype.name())
                     })?;
 
                 // Ensure that the function is in the runtime dispatch table
@@ -166,7 +166,7 @@ impl Assembly {
                         return Err(anyhow!("a function with the same name does exist, but the signatures do not match.\nExpected:\n\tfn {fn_name}({expected}) -> {}\n\nFound:\n\tfn {fn_name}({found}) -> {}",
                             fn_proto_ret_type_info.name(),
                             existing_fn_def.prototype.signature.return_type.name()))
-                            .with_context(|| format!("failed to link function '{}'", fn_prototype.name()));
+                            .with_context(|| format!("failed to link function '{}' a", fn_prototype.name()));
                     }
 
                     *dispatch_ptr = existing_fn_def.fn_ptr;
