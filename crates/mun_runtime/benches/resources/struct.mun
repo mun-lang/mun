@@ -1,8 +1,8 @@
-struct(gc) GcParent {
+pub struct(gc) GcParent {
     child: GcChild
 }
 
-struct(gc) ValueParent {
+pub struct(gc) ValueParent {
     child: ValueChild
 }
 

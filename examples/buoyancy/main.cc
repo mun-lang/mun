@@ -10,7 +10,7 @@ void log_f32(float value) { std::cout << std::to_string(value) << std::endl; }
 // How to run?
 // 1. On the CLI, navigate to the `example-cpp` directory.
 // 2. Run the compiler daemon from the CLI:
-//    `/path/to/mun build resources/buoyancy.mun --watch`
+//    `/path/to/mun build --manifest-path examples/buoyancy/mun.toml --watch`
 // 3. Run the application from the CLI:
 //    `main /path/to/buoyancy.munlib`
 int main(int argc, char* argv[]) {
@@ -35,21 +35,20 @@ int main(int argc, char* argv[]) {
             std::this_thread::sleep_until(previous + FRAME_TIME);
 
             const auto now = clock_t::now();
-            const auto elapsed =
-                std::chrono::duration_cast<fsec_t>(now - previous);
+            const auto elapsed = std::chrono::duration_cast<fsec_t>(now - previous);
 
             mun::invoke_fn<void>(*runtime, "sim_update", ctx, elapsed.count()).wait();
             previous = now;
 
             mun::Error update_error;
-            if (!runtime->update(&update_error) && update_error) {
+            if (!runtime->update(&update_error) && update_error.is_error()) {
                 std::cerr << "Failed to update runtime due to error: "
-                          << update_error.message() << std::endl;
+                          << update_error.message().value() << std::endl;
             }
         }
     }
 
-    std::cerr << "Failed to construct Mun runtime due to error: "
-              << error.message() << std::endl;
+    std::cerr << "Failed to construct Mun runtime due to error: " << error.message().value()
+              << std::endl;
     return 2;
 }

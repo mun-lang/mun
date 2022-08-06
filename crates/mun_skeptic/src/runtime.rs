@@ -29,6 +29,7 @@ impl TestMode {
 }
 
 /// Run a Mun test with the specified `code`.
+#[allow(clippy::let_unit_value)]
 pub fn run_test(code: &str, mode: TestMode) {
     // Construct a temporary path to store the output files
     let out_dir = tempdir::TempDir::new("mun_test_")
