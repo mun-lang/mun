@@ -1,7 +1,10 @@
 //! Exposes error reporting using the C ABI.
 
-use std::ffi::CStr;
-use std::{ffi::CString, os::raw::c_char, ptr};
+use std::{
+    ffi::{CStr, CString},
+    os::raw::c_char,
+    ptr,
+};
 
 #[repr(C)]
 #[derive(Clone, Copy)]

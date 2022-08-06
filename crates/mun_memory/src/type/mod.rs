@@ -322,7 +322,7 @@ pub struct TypeData {
     /// Holds the number of external (non-cyclic) references. Basically the number of [`Type`]
     /// instances pointing to this instance.
     ///
-    /// Note that if this ever reaches zero is doesnt mean its no longer used because it can still
+    /// Note that if this ever reaches zero is doesn't mean it's no longer used because it can still
     /// be referenced by other types.
     external_references: AtomicUsize,
 

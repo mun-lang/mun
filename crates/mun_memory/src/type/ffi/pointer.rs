@@ -1,7 +1,4 @@
-use std::ffi::c_void;
-use std::mem::ManuallyDrop;
-use std::ops::Deref;
-use std::sync::Arc;
+use std::{ffi::c_void, mem::ManuallyDrop, ops::Deref, sync::Arc};
 
 use capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
 

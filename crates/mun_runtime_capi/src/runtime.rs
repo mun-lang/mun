@@ -1,14 +1,11 @@
 //! Exposes the Mun runtime using the C ABI.
 
-use capi_utils::error::ErrorHandle;
-use capi_utils::{mun_error_try, try_convert_c_string, try_deref, try_deref_mut};
-use memory::ffi::Type;
-use memory::type_table::TypeTable;
-use memory::Type as RustType;
+use capi_utils::{
+    error::ErrorHandle, mun_error_try, try_convert_c_string, try_deref, try_deref_mut,
+};
+use memory::{ffi::Type, type_table::TypeTable, Type as RustType};
 use runtime::{FunctionDefinition, FunctionPrototype, FunctionSignature};
-use std::mem::ManuallyDrop;
-use std::ops::Deref;
-use std::{ffi::c_void, os::raw::c_char};
+use std::{ffi::c_void, mem::ManuallyDrop, ops::Deref, os::raw::c_char};
 
 use crate::function::Function;
 

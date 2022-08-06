@@ -1,6 +1,4 @@
-use std::ffi::c_void;
-use std::ptr;
-use std::sync::Arc;
+use std::{ffi::c_void, ptr, sync::Arc};
 
 use memory::{type_table::TypeTable, HasStaticType, TryFromAbiError, Type};
 

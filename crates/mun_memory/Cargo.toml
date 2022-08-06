@@ -20,9 +20,9 @@ once_cell = "1.4.0"
 parking_lot = "0.12.0"
 rustc-hash = "1.1"
 thiserror = "1.0.19"
-capi_utils = { version ="=0.1.0", path = "../mun_capi_utils", package="mun_capi_utils" }
+capi_utils = { version = "=0.1.0", path = "../mun_capi_utils", package= "mun_capi_utils" }
 
 [dev-dependencies]
 paste = "1.0"
-capi_utils = { version ="=0.1.0", path = "../mun_capi_utils", package="mun_capi_utils", features=["insta"] }
-insta = { version ="1.12.0", features=["ron"]}
+capi_utils = { version = "=0.1.0", path = "../mun_capi_utils", package= "mun_capi_utils", features = ["insta"] }
+insta = { version = "1.12.0", features = ["ron"]}
