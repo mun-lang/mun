@@ -1,4 +1,5 @@
 use crate::apple::get_apple_sdk_root;
+use mun_abi as abi;
 use mun_target::spec;
 use mun_target::spec::LinkerFlavor;
 use std::fmt;

@@ -10,7 +10,9 @@ use std::sync::Arc;
 /// on changes to source files. Although the code generation cache is pretty granular there is still
 /// a benefit to not having to recompile assemblies if not required.
 #[salsa::query_group(CodeGenDatabaseStorage)]
-pub trait CodeGenDatabase: hir::HirDatabase + hir::Upcast<dyn hir::HirDatabase> {
+pub trait CodeGenDatabase:
+    mun_hir::HirDatabase + mun_hir::Upcast<dyn mun_hir::HirDatabase>
+{
     /// Set the optimization level used to generate assemblies
     #[salsa::input]
     fn optimization_level(&self) -> inkwell::OptimizationLevel;

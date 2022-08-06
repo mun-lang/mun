@@ -2,7 +2,7 @@ use crate::{
     ast::{self, child_opt, AstNode, NameOwner},
     SyntaxKind, SyntaxNode, TokenText, T,
 };
-use abi::StructMemoryKind;
+use mun_abi::StructMemoryKind;
 use rowan::{GreenNodeData, GreenTokenData, NodeOrToken};
 use std::borrow::Cow;
 use text_size::TextRange;

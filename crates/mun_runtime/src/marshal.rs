@@ -1,4 +1,4 @@
-use memory::Type;
+use mun_memory::Type;
 
 use crate::Runtime;
 use std::ptr::NonNull;

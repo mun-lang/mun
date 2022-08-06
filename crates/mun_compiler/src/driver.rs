@@ -5,12 +5,12 @@ use crate::{
     compute_source_relative_path, db::CompilerDatabase, ensure_package_output_dir, is_source_file,
     PathOrInline, RelativePath,
 };
-use hir::{
+use mun_codegen::{AssemblyIr, CodeGenDatabase, ModuleGroup, TargetAssembly};
+use mun_hir::{
     AstDatabase, DiagnosticSink, FileId, Module, PackageSet, SourceDatabase, SourceRoot,
     SourceRootId, Upcast,
 };
-use mun_codegen::{AssemblyIr, CodeGenDatabase, ModuleGroup, TargetAssembly};
-use paths::RelativePathBuf;
+use mun_paths::RelativePathBuf;
 
 mod config;
 mod display_color;
@@ -210,7 +210,7 @@ impl Driver {
         let emit_colors = display_color.should_enable();
         let mut has_error = false;
 
-        for package in hir::Package::all(self.db.upcast()) {
+        for package in mun_hir::Package::all(self.db.upcast()) {
             for module in package.modules(self.db.upcast()) {
                 if let Some(file_id) = module.file_id(self.db.upcast()) {
                     let parse = self.db.parse(file_id);
@@ -327,7 +327,7 @@ impl Driver {
         let _lock = self.acquire_filesystem_output_lock();
 
         // Create a copy of all current files
-        for package in hir::Package::all(self.db.upcast()) {
+        for package in mun_hir::Package::all(self.db.upcast()) {
             for module in package.modules(self.db.upcast()) {
                 if self.emit_ir {
                     self.write_assembly_ir(module)?;
@@ -414,7 +414,7 @@ impl Driver {
     }
 
     /// Generates IR for the specified module and stores it in the output location.
-    fn write_assembly_ir(&mut self, module: hir::Module) -> Result<(), anyhow::Error> {
+    fn write_assembly_ir(&mut self, module: mun_hir::Module) -> Result<(), anyhow::Error> {
         log::trace!("writing assembly IR for {:?}", module);
 
         // Find the module group to which the module belongs

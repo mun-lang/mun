@@ -3,10 +3,10 @@ use annotate_snippets::{
     display_list::FormatOptions,
     snippet::{Annotation, AnnotationType, Slice, Snippet, SourceAnnotation},
 };
-use hir::{line_index::LineIndex, FileId, HirDatabase};
 use mun_diagnostics::DiagnosticForWith;
+use mun_hir::{line_index::LineIndex, FileId, HirDatabase};
+use mun_paths::RelativePathBuf;
 use mun_syntax::SyntaxError;
-use paths::RelativePathBuf;
 use std::{collections::HashMap, sync::Arc};
 
 /// Writes the specified syntax error to the output stream.
@@ -56,7 +56,7 @@ pub(crate) fn emit_syntax_error(
 
 /// Emits all diagnostics that are a result of HIR validation.
 pub(crate) fn emit_hir_diagnostic(
-    diagnostic: &dyn hir::Diagnostic,
+    diagnostic: &dyn mun_hir::Diagnostic,
     db: &impl HirDatabase,
     file_id: FileId,
     display_colors: bool,

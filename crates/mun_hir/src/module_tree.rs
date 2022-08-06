@@ -6,7 +6,7 @@ use crate::{
     DefDatabase, FileId, Name, PackageId, SourceDatabase, Visibility,
 };
 use itertools::Itertools;
-use paths::RelativePath;
+use mun_paths::RelativePath;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 

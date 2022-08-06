@@ -1,4 +1,4 @@
-use compiler::{Config, DisplayColor, Driver, PathOrInline, RelativePathBuf};
+use mun_compiler::{Config, DisplayColor, Driver, PathOrInline, RelativePathBuf};
 use std::{ffi::CString, io::stderr, path::Path, ptr};
 
 use crate::runtime::{mun_runtime_create, mun_runtime_destroy, Runtime, RuntimeOptions};

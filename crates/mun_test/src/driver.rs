@@ -1,5 +1,5 @@
-use compiler::{Config, DisplayColor, Driver, PathOrInline, RelativePathBuf};
-use runtime::{Runtime, RuntimeBuilder};
+use mun_compiler::{Config, DisplayColor, Driver, PathOrInline, RelativePathBuf};
+use mun_runtime::{Runtime, RuntimeBuilder};
 use std::{
     path::{Path, PathBuf},
     thread::sleep,
@@ -32,7 +32,7 @@ impl CompileTestDriver {
 
         // Write the contents of the fixture to a temporary directory
         let temp_source_dir = tempfile::TempDir::new().unwrap();
-        for entry in hir::fixture::Fixture::parse(text) {
+        for entry in mun_hir::fixture::Fixture::parse(text) {
             let path = entry.relative_path.to_path(temp_source_dir.path());
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
             std::fs::write(&path, entry.text).unwrap();
@@ -91,7 +91,7 @@ impl CompileTestDriver {
 
     /// Updates the text of the Mun source and ensures that the generated assembly has been
     /// recompiled.
-    pub fn update(&mut self, path: impl AsRef<paths::RelativePath>, text: &str) {
+    pub fn update(&mut self, path: impl AsRef<mun_paths::RelativePath>, text: &str) {
         self.driver.set_file_text(path, text).unwrap();
 
         let compiler_errors = self
@@ -177,7 +177,7 @@ impl CompileAndRunTestDriver {
     /// A reference to the borrowed `runtime` is used as an argument to allow moving of the
     /// existing borrow inside the update function. This obviates the necessity for `update` to use
     /// the `Runtime`.
-    pub fn update(&mut self, path: impl AsRef<paths::RelativePath>, text: &str) {
+    pub fn update(&mut self, path: impl AsRef<mun_paths::RelativePath>, text: &str) {
         self.driver.update(path, text);
 
         let start_time = Instant::now();

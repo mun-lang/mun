@@ -13,5 +13,5 @@ keywords = ["game", "hot-reloading", "language", "mun", "diagnostics"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-mun_hir = { version = "=0.3.0", path="../mun_hir", package="mun_hir" }
+mun_hir = { version = "=0.3.0", path = "../mun_hir" }
 mun_syntax = { version = "=0.3.0", path = "../mun_syntax" }

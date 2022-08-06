@@ -151,7 +151,7 @@ fn lower_use_tree(
     }
 }
 
-/// Constructs a `hir::Path` from an `ast::Path` and an optional prefix.
+/// Constructs a `mun_hir::Path` from an `ast::Path` and an optional prefix.
 fn convert_path(prefix: Option<Path>, path: &ast::Path) -> Option<Path> {
     let prefix = if let Some(qualifier) = path.qualifier() {
         Some(convert_path(prefix, &qualifier)?)

@@ -1,6 +1,6 @@
 use crate::MANIFEST_FILENAME;
 use anyhow::bail;
-use paths::{AbsPath, AbsPathBuf};
+use mun_paths::{AbsPath, AbsPathBuf};
 use rustc_hash::FxHashSet;
 use std::{convert::TryFrom, fs::read_dir, io};
 

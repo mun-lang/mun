@@ -16,10 +16,10 @@ use crate::{
     ty::InferenceResult,
     AstIdMap, Body, ExprScopes, FileId, PackageId, PackageSet, Struct, TypeAlias,
 };
+use mun_paths::RelativePathBuf;
 use mun_syntax::{ast, Parse, SourceFile};
 use mun_target::abi;
 use mun_target::spec::Target;
-use paths::RelativePathBuf;
 use std::sync::Arc;
 
 // TODO(bas): In the future maybe move this to a seperate crate (mun_db?)

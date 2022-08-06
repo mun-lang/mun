@@ -17,8 +17,8 @@ use crate::{
     FilePosition,
 };
 use context::CompletionContext;
-use hir::semantics::ScopeDef;
 pub use item::{CompletionItem, CompletionItemKind, CompletionKind};
+use mun_hir::semantics::ScopeDef;
 
 /// This is the main entry point for computing completions. This is a two step process.
 ///
@@ -71,7 +71,7 @@ impl Completions {
     }
 
     /// Adds a completion item for a field
-    fn add_field(&mut self, ctx: &CompletionContext, field: hir::Field) {
+    fn add_field(&mut self, ctx: &CompletionContext, field: mun_hir::Field) {
         let item = render_field(RenderContext::new(ctx), field);
         self.add(item);
     }

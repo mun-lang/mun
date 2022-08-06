@@ -1,5 +1,5 @@
-use compiler::{Config, DisplayColor, Driver, OptimizationLevel, PathOrInline};
 use mlua::Lua;
+use mun_compiler::{Config, DisplayColor, Driver, OptimizationLevel, PathOrInline};
 use mun_runtime::Runtime;
 use std::path::{Path, PathBuf};
 use wasmer::{Instance, Module, Store};

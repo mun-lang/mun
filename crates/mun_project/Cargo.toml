@@ -19,4 +19,4 @@ serde_derive = "1.0"
 toml = "0.5"
 semver = { version = "1.0", features = ["serde"] }
 anyhow = "1.0"
-paths = { version="=0.1.0", path="../mun_paths", package="mun_paths" }
+mun_paths = { version="=0.1.0", path="../mun_paths" }
