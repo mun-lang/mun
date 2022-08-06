@@ -23,7 +23,7 @@ mod r#struct;
 #[derive(Copy, Clone)]
 pub struct Type(*const c_void, *const c_void);
 
-impl From<super::Type> for Type {
+impl From<crate::Type> for Type {
     fn from(ty: crate::Type) -> Self {
         let ty = ManuallyDrop::new(ty);
         Type(

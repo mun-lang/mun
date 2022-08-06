@@ -33,18 +33,15 @@ public:
         }
     }
 
-    template <typename U, typename std::enable_if<std::is_base_of_v<Type, U>>::type>
-    Type(const U& other) noexcept : m_handle(other.m_handle) {
+    Type(const Type& other) noexcept : m_handle(other.m_handle) {
         MUN_ASSERT(mun_type_add_reference(m_handle));
     }
 
-    template <typename U, typename std::enable_if<std::is_base_of_v<Type, U>>::type>
-    constexpr Type(U&& other) noexcept : m_handle(other.m_handle) {
+    constexpr Type(Type&& other) noexcept : m_handle(other.m_handle) {
         other.m_handle._0 = nullptr;
     }
 
-    template <typename U, typename std::enable_if<std::is_base_of_v<Type, U>>::type>
-    Type& operator=(const U& other) {
+    Type& operator=(const Type& other) {
         if (other.m_handle._0 != nullptr) {
             MUN_ASSERT(mun_type_add_reference(other.m_handle));
         }
@@ -54,8 +51,7 @@ public:
         m_handle = other.m_handle;
     }
 
-    template <typename U, typename std::enable_if<std::is_base_of_v<Type, U>>::type>
-    constexpr Type& operator=(U&& other) noexcept {
+    constexpr Type& operator=(Type&& other) noexcept {
         m_handle = other.m_handle;
         other.m_handle._0 = nullptr;
         return *this;

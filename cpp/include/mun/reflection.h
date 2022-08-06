@@ -21,7 +21,16 @@ struct ReturnTypeReflection {
     static bool accepts_type(const Type& ty) noexcept {
         return StaticTypeInfo<T>::type_info() == ty;
     }
-    static std::string_view type_hint() { return StaticTypeInfo<T>::type_info().name(); }
+    static std::string type_hint() { return StaticTypeInfo<T>::type_info().name(); }
+};
+
+template <>
+struct ReturnTypeReflection<void> {
+    static bool accepts_type(const Type& ty) noexcept {
+        return StaticTypeInfo<void>::type_info() == ty ||
+               StaticTypeInfo<std::tuple<>>::type_info() == ty;
+    }
+    static std::string type_hint() { return StaticTypeInfo<void>::type_info().name(); }
 };
 
 namespace reflection {
