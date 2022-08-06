@@ -547,6 +547,7 @@ pub trait InvokeArgs {
 // Implement `InvokeTraits` for tuples up to and including 20 elements
 seq_macro::seq!(N in 0..=20 {#(
 seq_macro::seq!(I in 0..N {
+    #[allow(clippy::extra_unused_lifetimes)]
     impl<'arg, #(T~I: ArgumentReflection + Marshal<'arg>,)*> InvokeArgs for (#(T~I,)*) {
         #[allow(unused_variables)]
         fn can_invoke<'runtime>(&self, runtime: &'runtime Runtime, signature: &FunctionSignature) -> Result<(), String> {
