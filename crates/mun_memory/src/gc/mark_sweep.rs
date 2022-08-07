@@ -115,13 +115,8 @@ where
     }
 }
 
-fn alloc_zeroed_obj(ty: Arc<TypeInfo>) -> Pin<Box<ObjectInfo>> {
+fn alloc_struct(ty: Arc<TypeInfo>) -> Pin<Box<ObjectInfo>> {
     let ptr = unsafe { std::alloc::alloc_zeroed(ty.layout) };
-    unsafe { alloc_in_place_obj(ty, ptr) }
-}
-
-fn alloc_uninit_obj(ty: Arc<TypeInfo>) -> Pin<Box<ObjectInfo>> {
-    let ptr = unsafe { std::alloc::alloc(ty.layout) };
     unsafe { alloc_in_place_obj(ty, ptr) }
 }
 
@@ -323,8 +318,9 @@ fn alloc_array(ty: Arc<TypeInfo>, length: usize) -> Pin<Box<ObjectInfo>> {
         .extend(elements_layout)
         .expect("unable to create memory layout for array");
 
-    let mut ptr: NonNull<ArrayHeader> = NonNull::new(unsafe { std::alloc::alloc(layout).cast() })
-        .expect("error allocating memory for array");
+    let mut ptr: NonNull<ArrayHeader> =
+        NonNull::new(unsafe { std::alloc::alloc_zeroed(layout).cast() })
+            .expect("error allocating memory for array");
     let array = unsafe { ptr.as_mut() };
     array.length = length;
     array.capacity = length;
@@ -346,7 +342,7 @@ where
     type Array = ArrayHandle<'a>;
 
     fn alloc(&self, ty: &Arc<TypeInfo>) -> GcPtr {
-        let object = alloc_zeroed_obj(ty.clone());
+        let object = alloc_struct(ty.clone());
         let size = object.layout().size();
 
         // We want to return a pointer to the `ObjectInfo`, to be used as handle.
@@ -604,7 +600,10 @@ where
 
                     new_allocations.push(object);
                 }
-                mapping::Action::ArrayFromValue { old_ty, old_offset } => {
+                mapping::Action::ArrayFromValue {
+                    element_action,
+                    old_offset,
+                } => {
                     // Initialize the array with a single value
                     let mut object = alloc_array(new_ty.clone(), 1);
 
@@ -615,14 +614,16 @@ where
                         _lock: dummy.read(),
                     };
 
-                    // Copy old value into array
-                    unsafe {
-                        std::ptr::copy_nonoverlapping(
-                            get_field_ptr(src, *old_offset).as_ptr(),
-                            array_handle.data().as_ptr(),
-                            old_ty.layout.size(),
-                        )
-                    };
+                    // Map single element to array
+                    map_type(
+                        gc,
+                        new_allocations,
+                        conversions,
+                        unsafe { get_field_ptr(src, *old_offset) },
+                        array_handle.data(),
+                        element_action,
+                        &new_ty.as_array().expect("Must be an array.").element_ty,
+                    );
 
                     // We want to return a pointer to the `ObjectInfo`, to be used as handle.
                     let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
@@ -655,11 +656,11 @@ where
                     };
 
                     // Initialize the array
-                    let mut object = alloc_array(new_ty.clone(), src_array.length());
-
+                    let mut array = alloc_array(new_ty.clone(), src_array.length());
+                    println!("array: {:?}", array.ty);
                     // SAFETY: We already own a lock at this point, so it's safe to create a temporary ArrayHandle
                     let dest_array = ArrayHandle {
-                        obj: object.as_mut().deref_mut() as *mut ObjectInfo,
+                        obj: array.as_mut().deref_mut() as *mut ObjectInfo,
                         _lock: dummy.read(),
                     };
 
@@ -680,13 +681,13 @@ where
                         });
 
                     // We want to return a pointer to the `ObjectInfo`, to be used as handle.
-                    let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
+                    let handle = (array.as_ref().deref() as *const _ as RawGcPtr).into();
 
                     // Write handle to field
                     let mut dest_handle = dest.cast::<GcPtr>();
                     unsafe { *dest_handle.as_mut() = handle };
 
-                    new_allocations.push(object);
+                    new_allocations.push(array);
                 }
                 mapping::Action::Cast { old_offset, old_ty } => {
                     if !cast::try_cast_from_to(
@@ -711,8 +712,8 @@ where
                     };
                 }
                 mapping::Action::ElementFromArray {
+                    element_action,
                     old_offset,
-                    element_size,
                 } => {
                     let src_handle =
                         unsafe { *get_field_ptr(src, *old_offset).cast::<GcPtr>().as_ref() };
@@ -730,20 +731,22 @@ where
                     };
 
                     if array_handle.header().length > 0 {
-                        // Copy old value into array
-                        unsafe {
-                            std::ptr::copy_nonoverlapping(
-                                array_handle.data().as_ptr(),
-                                dest.as_ptr(),
-                                *element_size,
-                            )
-                        };
+                        // Map single element from array
+                        map_type(
+                            gc,
+                            new_allocations,
+                            conversions,
+                            array_handle.data(),
+                            dest,
+                            element_action,
+                            new_ty,
+                        )
                     } else {
                         // zero initialize
                     }
                 }
                 mapping::Action::StructAlloc => {
-                    let object = alloc_zeroed_obj(new_ty.clone());
+                    let object = alloc_struct(new_ty.clone());
 
                     // We want to return a pointer to the `ObjectInfo`, to be used as handle.
                     let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
@@ -755,9 +758,10 @@ where
                     new_allocations.push(object);
                 }
                 mapping::Action::StructMapFromGc { old_ty, old_offset } => {
-                    let conversion = conversions
-                        .get(old_ty)
-                        .expect("If the struct changed, there must also be a conversion.");
+                    let conversion = conversions.get(old_ty).expect(&format!(
+                        "If the struct changed, there must also be a conversion for type: {:#?}.",
+                        old_ty,
+                    ));
 
                     let src_handle =
                         unsafe { *get_field_ptr(src, *old_offset).cast::<GcPtr>().as_ref() };
@@ -779,11 +783,12 @@ where
                     );
                 }
                 mapping::Action::StructMapFromValue { old_ty, old_offset } => {
-                    let object = alloc_uninit_obj(new_ty.clone());
+                    let object = alloc_struct(new_ty.clone());
 
-                    let conversion = conversions
-                        .get(old_ty)
-                        .expect("If the struct changed, there must also be a conversion.");
+                    let conversion = conversions.get(old_ty).expect(&format!(
+                        "If the struct changed, there must also be a conversion for type: {:#?}.",
+                        old_ty,
+                    ));
 
                     // Map in-memory struct to heap-allocated struct
                     map_struct(
@@ -805,9 +810,10 @@ where
                     new_allocations.push(object);
                 }
                 mapping::Action::StructMapInPlace { old_ty, old_offset } => {
-                    let conversion = conversions
-                        .get(old_ty)
-                        .expect("If the struct changed, there must also be a conversion.");
+                    let conversion = conversions.get(old_ty).expect(&format!(
+                        "If the struct changed, there must also be a conversion for type: {:#?}.",
+                        old_ty,
+                    ));
 
                     map_struct(
                         gc,

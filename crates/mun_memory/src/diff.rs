@@ -273,7 +273,7 @@ fn field_diff<'a, 'b>(old: &[UniqueFieldInfo<'a>], new: &[UniqueFieldInfo<'b>]) 
     #[allow(clippy::manual_flatten)]
     'outer: for old_idx in deletions {
         let old_ty = old.get(old_idx).expect("Old type must exist.");
-        // is there an insertion with the same name and type `T`?
+        // is there an insertion with the same field name and type `T`?
         for insertion in insertions.iter_mut() {
             if let Some((new_idx, new_ty)) = insertion {
                 if *old_ty == **new_ty {
@@ -288,7 +288,7 @@ fn field_diff<'a, 'b>(old: &[UniqueFieldInfo<'a>], new: &[UniqueFieldInfo<'b>]) 
                 }
             }
         }
-        // Else, is there an insertion with the same name but different type `T`?
+        // Else, is there an insertion with the same field name but different type `T`?
         for insertion in insertions.iter_mut() {
             if let Some((new_idx, new_ty)) = insertion {
                 if old_ty.name == new_ty.name {
