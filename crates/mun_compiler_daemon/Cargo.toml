@@ -1,6 +1,6 @@
 [package]
 name = "mun_compiler_daemon"
-version = "0.3.0"
+version = "0.4.0-dev"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 description = "Functionality for continuously monitoring Mun source files for changes and triggering recompilation"
