@@ -1,6 +1,6 @@
 [package]
 name = "mun_project"
-version = "0.1.0"
+version = "0.4.0-dev"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 description = "Provides convenience structures for Mun projects"
