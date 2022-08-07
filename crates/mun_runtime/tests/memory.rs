@@ -1349,7 +1349,15 @@ fn map_array_to_array_different_struct_to_struct() {
     let foo_struct = foo_struct.root();
 
     println!(
-        "before: {:?}",
+        "b before: {:?}",
+        foo_struct
+            .as_ref(&driver.runtime)
+            .get::<ArrayRef<'_, StructRef>>("b")
+            .unwrap()
+            .type_info()
+    );
+    println!(
+        "c before: {:?}",
         foo_struct
             .as_ref(&driver.runtime)
             .get::<ArrayRef<'_, StructRef>>("c")
@@ -1372,7 +1380,15 @@ fn map_array_to_array_different_struct_to_struct() {
     "#,
     );
     println!(
-        "after: {:?}",
+        "b after: {:?}",
+        foo_struct
+            .as_ref(&driver.runtime)
+            .get::<ArrayRef<'_, StructRef>>("b")
+            .unwrap()
+            .type_info()
+    );
+    println!(
+        "c after: {:?}",
         foo_struct
             .as_ref(&driver.runtime)
             .get::<ArrayRef<'_, StructRef>>("c")
