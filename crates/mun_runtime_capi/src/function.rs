@@ -222,7 +222,9 @@ pub(crate) mod tests {
 
     #[test]
     fn test_function_add_reference_strong_count() {
-        let function: Function = mun_runtime::FunctionDefinition::builder("foo").finish().into();
+        let function: Function = mun_runtime::FunctionDefinition::builder("foo")
+            .finish()
+            .into();
 
         let fn_info_arc = ManuallyDrop::new(unsafe {
             Arc::from_raw(function.0 as *const mun_runtime::FunctionDefinition)
@@ -239,7 +241,9 @@ pub(crate) mod tests {
 
     #[test]
     fn test_function_invalid_fn_info() {
-        let function = mun_runtime::FunctionDefinition::builder("foo").finish().into();
+        let function = mun_runtime::FunctionDefinition::builder("foo")
+            .finish()
+            .into();
 
         let mut ptr = MaybeUninit::uninit();
         assert_error_snapshot!(
@@ -268,7 +272,9 @@ pub(crate) mod tests {
 
     #[test]
     fn test_function_name_invalid_fn_info() {
-        let function = mun_runtime::FunctionDefinition::builder("foo").finish().into();
+        let function = mun_runtime::FunctionDefinition::builder("foo")
+            .finish()
+            .into();
 
         let mut ptr = MaybeUninit::uninit();
         assert_error_snapshot!(
@@ -283,7 +289,9 @@ pub(crate) mod tests {
 
     #[test]
     fn test_function_name() {
-        let function = mun_runtime::FunctionDefinition::builder("foo").finish().into();
+        let function = mun_runtime::FunctionDefinition::builder("foo")
+            .finish()
+            .into();
 
         assert_getter1!(mun_function_name(function, name));
         assert_ne!(name, ptr::null());
@@ -297,7 +305,9 @@ pub(crate) mod tests {
 
     #[test]
     fn test_function_argument_types_invalid_fn_info() {
-        let function = mun_runtime::FunctionDefinition::builder("foo").finish().into();
+        let function = mun_runtime::FunctionDefinition::builder("foo")
+            .finish()
+            .into();
 
         let mut ptr = MaybeUninit::uninit();
         assert_error_snapshot!(unsafe {
@@ -312,7 +322,9 @@ pub(crate) mod tests {
 
     #[test]
     fn test_function_argument_types_none() {
-        let function = mun_runtime::FunctionDefinition::builder("foo").finish().into();
+        let function = mun_runtime::FunctionDefinition::builder("foo")
+            .finish()
+            .into();
 
         assert_getter1!(mun_function_argument_types(function, arg_types));
         assert_eq!(arg_types.types, ptr::null());
@@ -343,7 +355,9 @@ pub(crate) mod tests {
 
     #[test]
     fn test_function_return_type_invalid_fn_info() {
-        let function = mun_runtime::FunctionDefinition::builder("foo").finish().into();
+        let function = mun_runtime::FunctionDefinition::builder("foo")
+            .finish()
+            .into();
 
         let mut ptr = MaybeUninit::uninit();
         assert_error_snapshot!(
@@ -358,7 +372,9 @@ pub(crate) mod tests {
 
     #[test]
     fn test_function_return_type_none() {
-        let function = mun_runtime::FunctionDefinition::builder("foo").finish().into();
+        let function = mun_runtime::FunctionDefinition::builder("foo")
+            .finish()
+            .into();
 
         assert_getter1!(mun_function_return_type(function, return_type));
 

@@ -1,13 +1,13 @@
 //! Exposes the Mun runtime using the C ABI.
 
+use crate::function::Function;
+use mun_abi as abi;
 use mun_capi_utils::{
     error::ErrorHandle, mun_error_try, try_convert_c_string, try_deref, try_deref_mut,
 };
 use mun_memory::{ffi::Type, type_table::TypeTable, Type as RustType};
 use mun_runtime::{FunctionDefinition, FunctionPrototype, FunctionSignature};
 use std::{ffi::c_void, mem::ManuallyDrop, ops::Deref, os::raw::c_char, slice};
-use crate::function::Function;
-use mun_abi as abi;
 
 /// A C-style handle to a runtime.
 #[repr(C)]

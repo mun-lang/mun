@@ -280,8 +280,10 @@ mod test {
     use std::ffi::{CStr, CString};
     use std::{mem::MaybeUninit, ptr, slice};
 
-    use mun_capi_utils::{assert_error_snapshot, assert_getter1, assert_getter3, mun_string_destroy};
     use mun_abi as abi;
+    use mun_capi_utils::{
+        assert_error_snapshot, assert_getter1, assert_getter3, mun_string_destroy,
+    };
 
     use crate::r#type::ffi::r#struct::mun_fields_find_by_name;
     use crate::{HasStaticType, StructTypeBuilder};

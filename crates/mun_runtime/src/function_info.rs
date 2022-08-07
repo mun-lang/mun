@@ -1,7 +1,7 @@
 use std::{ffi::c_void, ptr, sync::Arc};
 
-use mun_memory::{type_table::TypeTable, HasStaticType, TryFromAbiError, Type};
 use mun_abi as abi;
+use mun_memory::{type_table::TypeTable, HasStaticType, TryFromAbiError, Type};
 
 /// A linked version of [`mun_abi::FunctionDefinition`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
 #[derive(Clone)]

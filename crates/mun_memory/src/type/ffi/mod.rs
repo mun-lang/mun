@@ -7,7 +7,7 @@ use std::{
     sync::atomic::Ordering, sync::Arc,
 };
 
-use mun_abi::{Guid};
+use mun_abi::Guid;
 use mun_capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
 pub use r#pointer::PointerInfo;
 pub use r#struct::{Field, Fields, StructInfo};
