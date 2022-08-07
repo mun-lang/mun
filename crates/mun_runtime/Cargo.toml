@@ -29,7 +29,7 @@ seq-macro = "0.3.0"
 
 [dev-dependencies]
 bevy = { version = "0.8", default-features = false }
-mun_compiler = { version="=0.3.0", path="../mun_compiler" }
+mun_compiler = { version= "=0.4.0-dev", path="../mun_compiler" }
 criterion = "0.3"
 mlua = { version="0.8", default-features = false, features=["vendored", "luajit"]  }
 mun_test = { path = "../mun_test" }
