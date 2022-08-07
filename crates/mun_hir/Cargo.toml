@@ -15,7 +15,7 @@ categories = ["game-development", "mun"]
 [dependencies]
 salsa = "0.16.1"
 mun_syntax = { version = "=0.4.0-dev", path = "../mun_syntax" }
-mun_target = { version = "=0.3.0", path = "../mun_target" }
+mun_target = { version = "=0.4.0-dev", path = "../mun_target" }
 mun_paths = { version= "=0.4.0-dev", path="../mun_paths" }
 rustc-hash = "1.1"
 once_cell = "1.4.0"
