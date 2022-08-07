@@ -51,6 +51,7 @@ pub use crate::{
 };
 // Re-export some useful types so crates dont have to depend on mun_memory as well.
 use crate::array::RawArray;
+use memory::gc::Array;
 pub use memory::{Field, FieldData, HasStaticType, PointerType, StructType, Type};
 
 /// Options for the construction of a [`Runtime`].
@@ -117,7 +118,7 @@ extern "C" fn new_array(
 
     let handle = allocator.as_ref().alloc_array(&type_info, length);
 
-    handle.into()
+    handle.as_raw().into()
 }
 
 /// A builder for the [`Runtime`].
@@ -472,7 +473,7 @@ impl Runtime {
 
     /// Returns statistics about the garbage collector.
     pub fn gc_stats(&self) -> gc::Stats {
-        self.gc.as_ref().stats()
+        self.gc.stats()
     }
 
     /// Constructs an array from an iterator
@@ -490,12 +491,7 @@ impl Runtime {
             .size_hint()
             .1
             .expect("iterator doesnt return upper bound");
-        let raw_array_handle = self.gc.as_ref().alloc_array(&array_type, array_capacity);
-        let mut array_handle = self
-            .gc
-            .as_ref()
-            .array(raw_array_handle)
-            .expect("allocated array cant be accessed as array");
+        let mut array_handle = self.gc.alloc_array(&array_type, array_capacity);
 
         let mut element_ptr = array_handle.data().as_ptr();
         let element_stride = array_handle.element_stride();
@@ -525,7 +521,7 @@ impl Runtime {
             array_handle.set_length(size);
         }
 
-        ArrayRef::new(RawArray(raw_array_handle), self)
+        ArrayRef::new(RawArray(array_handle.as_raw()), self)
     }
 }
 

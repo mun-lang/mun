@@ -1,6 +1,6 @@
 use crate::garbage_collector::GcRootPtr;
 use crate::{ArgumentReflection, GarbageCollector, Marshal, ReturnTypeReflection, Runtime};
-use memory::gc::{ArrayHandle, GcPtr, GcRuntime, HasIndirectionPtr};
+use memory::gc::{Array, GcPtr, GcRuntime, HasIndirectionPtr};
 use memory::Type;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
@@ -56,7 +56,7 @@ impl<'array, T: Marshal<'array> + 'array> ArrayRef<'array, T> {
 
     /// Returns the type information of the array.
     pub fn type_info(&self) -> Type {
-        self.runtime.gc.as_ref().ptr_type(self.raw.0)
+        self.runtime.gc.ptr_type(self.raw.0)
     }
 
     /// Returns the number of elements stored in the array
@@ -168,7 +168,7 @@ pub struct RootedArray<T> {
 impl<T> RootedArray<T> {
     /// Creates a `RootedArray` that wraps a raw Mun struct.
     fn new(gc: &Arc<GarbageCollector>, raw: RawArray) -> Self {
-        assert!(gc.as_ref().ptr_type(raw.0).is_array());
+        assert!(gc.ptr_type(raw.0).is_array());
         Self {
             handle: GcRootPtr::new(gc, raw.0),
             _data: Default::default(),

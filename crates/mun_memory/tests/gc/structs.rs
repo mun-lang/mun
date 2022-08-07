@@ -29,7 +29,7 @@ fn test_trace() {
     let foo_type_info = fake_struct!(type_table, "core::Foo", "bar" => Bar);
     type_table.insert_type(foo_type_info.clone());
 
-    let runtime = &MarkSweep::<EventAggregator<Event>>::default();
+    let runtime = MarkSweep::<EventAggregator<Event>>::default();
     let mut foo_handle = runtime.alloc(&foo_type_info);
     let bar_handle = runtime.alloc(&bar_type_info);
 
@@ -56,8 +56,8 @@ fn trace_collect() {
     type_table.insert_type(foo_type_info.clone());
 
     let runtime = Arc::new(MarkSweep::<EventAggregator<Event>>::default());
-    let mut foo_ptr = GcRootPtr::new(&runtime, runtime.as_ref().alloc(&foo_type_info));
-    let bar = runtime.as_ref().alloc(&bar_type_info);
+    let mut foo_ptr = GcRootPtr::new(&runtime, runtime.alloc(&foo_type_info));
+    let bar = runtime.alloc(&bar_type_info);
 
     // Assign bar to foo.bar
     unsafe {
@@ -96,7 +96,7 @@ fn trace_cycle() {
     type_table.insert_type(foo_type_info.clone());
 
     let runtime = Arc::new(MarkSweep::<EventAggregator<Event>>::default());
-    let mut foo_ptr = GcRootPtr::new(&runtime, runtime.as_ref().alloc(&foo_type_info));
+    let mut foo_ptr = GcRootPtr::new(&runtime, runtime.alloc(&foo_type_info));
 
     // Assign foo to foo.bar
     unsafe {

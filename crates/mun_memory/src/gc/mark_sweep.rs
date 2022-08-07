@@ -1,4 +1,5 @@
 use crate::gc::array::ArrayHeader;
+use crate::gc::Array as GcArray;
 use crate::{
     cast,
     gc::{Event, GcPtr, GcRuntime, HasIndirectionPtr, Observer, RawGcPtr, Stats, TypeTrace},
@@ -7,7 +8,7 @@ use crate::{
     TypeKind,
 };
 use mapping::{Conversion, Mapping};
-use parking_lot::{RwLock, RwLockReadGuard};
+use parking_lot::RwLock;
 use std::alloc::{Layout, LayoutError};
 use std::{
     collections::{HashMap, VecDeque},
@@ -111,7 +112,7 @@ where
 }
 
 fn alloc_obj(ty: Type) -> Pin<Box<ObjectInfo>> {
-    let ptr = unsafe { std::alloc::alloc(ty.layout()) };
+    let ptr = unsafe { std::alloc::alloc(ty.value_layout()) };
     Box::pin(ObjectInfo {
         data: ObjectInfoData { ptr: ptr.cast() },
         ty,
@@ -136,17 +137,6 @@ impl From<LayoutError> for MemoryLayoutError {
     }
 }
 
-pub struct ArrayHandle<'gc> {
-    obj: *mut ObjectInfo,
-    _lock: RwLockReadGuard<'gc, HashMap<GcPtr, Pin<Box<ObjectInfo>>>>,
-}
-
-pub struct ArrayHandleIter {
-    remaining: usize,
-    next: NonNull<u8>,
-    stride: usize,
-}
-
 /// Helper object to work with GcPtr that represents an array.
 ///
 /// Arrays are stored in memory with a header which holds the length and capacity. The memory layout
@@ -165,23 +155,32 @@ pub struct ArrayHandleIter {
 ///                       │ element #n   │
 ///                       └──────────────┘
 /// ```
-impl<'gc> ArrayHandle<'gc> {
-    /// Returns the type of the stored element.
-    pub fn element_type(&self) -> Type {
-        unsafe {
-            (*self.obj)
-                .ty
-                .as_array()
-                .expect("unable to determine element_type, type is not an array")
-                .element_type()
-        }
-    }
+pub struct ArrayHandle {
+    /// Pointer to the object handle.
+    obj: NonNull<ObjectInfo>,
+}
 
+/// An iterator implementation.
+///
+/// TODO: Note that this iterator is highly non-thread safe. Any operation that modifies the
+/// original array could case undefined behavior.
+pub struct ArrayHandleIter {
+    /// Pointer to the next element
+    next: NonNull<u8>,
+
+    /// The number of remaning elements in the iterator.
+    remaining: usize,
+
+    /// The number of bytes to skip to get to the next element
+    stride: usize,
+}
+
+impl ArrayHandle {
     /// Returns a reference to the header
     pub fn header(&self) -> &ArrayHeader {
         // Safety: Safe because at the moment we have a reference to the object which cannot be
         // modified. Also we can be sure this is an array at this point.
-        unsafe { &*(*self.obj).data.array }
+        unsafe { &*self.obj.as_ref().data.array }
     }
 
     /// Sets the length of the array.
@@ -190,7 +189,7 @@ impl<'gc> ArrayHandle<'gc> {
     ///
     /// This function is unsafe because the array elements might be left uninitialized.
     pub unsafe fn set_length(&mut self, length: usize) {
-        let header = &mut *(*self.obj).data.array;
+        let header = &mut *self.obj.as_mut().data.array;
         debug_assert!(header.capacity >= length);
         header.length = length;
     }
@@ -201,12 +200,7 @@ impl<'gc> ArrayHandle<'gc> {
     /// element type is a garbage collected type, the array stores references instead of raw
     /// elements.
     pub fn element_layout(&self) -> Layout {
-        let element_ty = self.element_type();
-        if element_ty.is_stack_allocated() {
-            element_ty.layout()
-        } else {
-            Layout::new::<GcPtr>()
-        }
+        self.element_type().reference_layout()
     }
 
     /// Returns the stride in bytes between elements.
@@ -228,13 +222,27 @@ impl<'gc> ArrayHandle<'gc> {
             .expect("error creating combined layout of header and element");
 
         unsafe {
-            NonNull::new_unchecked(((*self.obj).data.array as *mut u8).add(padded_header_size))
+            NonNull::new_unchecked(
+                (self.obj.as_ref().data.array as *mut u8).add(padded_header_size),
+            )
         }
     }
 }
 
-impl<'gc> crate::gc::ArrayHandle for ArrayHandle<'gc> {
+impl GcArray for ArrayHandle {
     type Iterator = ArrayHandleIter;
+
+    fn as_raw(&self) -> GcPtr {
+        self.obj.into()
+    }
+
+    fn element_type(&self) -> Type {
+        let array_ty = &unsafe { self.obj.as_ref() }.ty;
+        array_ty
+            .as_array()
+            .expect("unable to determine element_type, type is not an array")
+            .element_type()
+    }
 
     fn length(&self) -> usize {
         self.header().length
@@ -248,11 +256,7 @@ impl<'gc> crate::gc::ArrayHandle for ArrayHandle<'gc> {
         let length = self.length();
         let next = self.data();
         let element_ty = self.element_type();
-        let element_layout = if element_ty.is_stack_allocated() {
-            element_ty.layout()
-        } else {
-            Layout::new::<GcPtr>()
-        };
+        let element_layout = element_ty.reference_layout();
         ArrayHandleIter {
             remaining: length,
             next,
@@ -298,11 +302,7 @@ fn alloc_array(ty: Type, length: usize) -> Pin<Box<ObjectInfo>> {
 
     // Allocate memory for the array data
     let header_layout = Layout::new::<ArrayHeader>();
-    let element_ty_layout = if array_ty.element_type().is_stack_allocated() {
-        array_ty.element_type().layout()
-    } else {
-        Layout::new::<GcPtr>()
-    };
+    let element_ty_layout = array_ty.element_type().reference_layout();
     let elements_layout = repeat_layout(element_ty_layout, length)
         .expect("unable to create a memory layout for array elemets");
     let (layout, _) = header_layout
@@ -325,11 +325,11 @@ fn alloc_array(ty: Type, length: usize) -> Pin<Box<ObjectInfo>> {
     })
 }
 
-impl<'a, O> GcRuntime for &'a MarkSweep<O>
+impl<O> GcRuntime for MarkSweep<O>
 where
     O: Observer<Event = Event>,
 {
-    type Array = ArrayHandle<'a>;
+    type Array = ArrayHandle;
 
     fn alloc(&self, ty: &Type) -> GcPtr {
         let object = alloc_obj(ty.clone());
@@ -347,7 +347,7 @@ where
         handle
     }
 
-    fn alloc_array(&self, ty: &Type, n: usize) -> GcPtr {
+    fn alloc_array(&self, ty: &Type, n: usize) -> Self::Array {
         let object = alloc_array(ty.clone(), n);
         let size = object.layout().size();
 
@@ -360,7 +360,9 @@ where
         }
 
         self.log_alloc(handle, size);
-        handle
+        ArrayHandle {
+            obj: unsafe { NonNull::new_unchecked(handle.into()) },
+        }
     }
 
     fn ptr_type(&self, handle: GcPtr) -> Type {
@@ -374,15 +376,16 @@ where
     }
 
     fn array(&self, handle: GcPtr) -> Option<Self::Array> {
-        let lock = self.objects.read();
-        let obj: *mut ObjectInfo = handle.into();
+        let _lock = self.objects.read();
+        let obj: NonNull<ObjectInfo> =
+            NonNull::new(handle.into()).expect("cannot have a null handle here");
         unsafe {
-            if !(*obj).ty.is_array() {
+            if !obj.as_ref().ty.is_array() {
                 return None;
             }
         }
 
-        Some(ArrayHandle { obj, _lock: lock })
+        Some(ArrayHandle { obj })
     }
 
     fn root(&self, handle: GcPtr) {
@@ -523,7 +526,9 @@ where
                 if object_info.ty == *old_ty {
                     let src = unsafe { NonNull::new_unchecked(object_info.data.ptr) };
                     let dest = unsafe {
-                        NonNull::new_unchecked(std::alloc::alloc_zeroed(conversion.new_ty.layout()))
+                        NonNull::new_unchecked(std::alloc::alloc_zeroed(
+                            conversion.new_ty.value_layout(),
+                        ))
                     };
 
                     map_fields(
@@ -535,7 +540,7 @@ where
                         dest,
                     );
 
-                    unsafe { std::alloc::dealloc(src.as_ptr(), old_ty.layout()) };
+                    unsafe { std::alloc::dealloc(src.as_ptr(), old_ty.value_layout()) };
 
                     object_info.set(ObjectInfo {
                         data: ObjectInfoData { ptr: dest.as_ptr() },
@@ -602,8 +607,8 @@ where
                             // If the same struct changed, there must also be a conversion
                             let conversion = conversions.get(old_ty);
 
-                            if old_ty.is_stack_allocated() {
-                                if new_ty.is_stack_allocated() {
+                            if old_ty.is_value_type() {
+                                if new_ty.is_value_type() {
                                     // struct(value) -> struct(value)
                                     if is_same_struct {
                                         // Map in-memory struct to in-memory struct
@@ -642,7 +647,7 @@ where
                                             std::ptr::write_bytes(
                                                 (*object).data.ptr,
                                                 0,
-                                                new_ty.layout().size(),
+                                                new_ty.value_layout().size(),
                                             )
                                         };
                                     }
@@ -653,7 +658,7 @@ where
 
                                     new_allocations.push(object);
                                 }
-                            } else if !new_ty.is_stack_allocated() {
+                            } else if !new_ty.is_value_type() {
                                 // struct(gc) -> struct(gc)
                                 let field_src = field_src.cast::<GcPtr>();
                                 let field_dest = field_dest.cast::<GcPtr>();
@@ -676,7 +681,7 @@ where
                                         std::ptr::write_bytes(
                                             object.data.ptr,
                                             0,
-                                            new_ty.layout().size(),
+                                            new_ty.value_layout().size(),
                                         )
                                     };
 
@@ -718,7 +723,7 @@ where
                                             std::ptr::copy_nonoverlapping(
                                                 obj.data.ptr,
                                                 field_dest,
-                                                obj.ty.layout().size(),
+                                                obj.ty.value_layout().size(),
                                             )
                                         };
                                     }
@@ -746,12 +751,12 @@ where
                             std::ptr::copy_nonoverlapping(
                                 field_src,
                                 field_dest,
-                                new_ty.layout().size(),
+                                new_ty.value_layout().size(),
                             )
                         };
                     }
                     mapping::Action::Insert => {
-                        if !new_ty.is_stack_allocated() {
+                        if !new_ty.is_value_type() {
                             let object = alloc_obj(new_ty.clone());
 
                             // We want to return a pointer to the `ObjectInfo`, to be used as
@@ -760,7 +765,11 @@ where
 
                             // Zero-initialize heap-allocated object
                             unsafe {
-                                std::ptr::write_bytes(object.data.ptr, 0, new_ty.layout().size())
+                                std::ptr::write_bytes(
+                                    object.data.ptr,
+                                    0,
+                                    new_ty.value_layout().size(),
+                                )
                             };
 
                             // Write handle to field
@@ -837,14 +846,22 @@ impl From<*mut ObjectInfo> for GcPtr {
     }
 }
 
+impl From<NonNull<ObjectInfo>> for GcPtr {
+    fn from(info: NonNull<ObjectInfo>) -> Self {
+        (info.as_ptr() as RawGcPtr).into()
+    }
+}
+
 impl ObjectInfo {
     /// Returns the layout of the data pointed to by data
     pub fn layout(&self) -> Layout {
         match self.ty.kind() {
-            TypeKind::Struct(_) | TypeKind::Primitive(_) | TypeKind::Pointer(_) => self.ty.layout(),
+            TypeKind::Struct(_) | TypeKind::Primitive(_) | TypeKind::Pointer(_) => {
+                self.ty.value_layout()
+            }
             TypeKind::Array(array) => {
                 let elem_count = unsafe { (*self.data.array).capacity };
-                let elem_layout = repeat_layout(array.element_type().layout(), elem_count)
+                let elem_layout = repeat_layout(array.element_type().value_layout(), elem_count)
                     .expect("unable to determine layout of array elements");
                 let (layout, _) = Layout::new::<ArrayHeader>()
                     .extend(elem_layout)

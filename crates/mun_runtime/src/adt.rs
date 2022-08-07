@@ -54,7 +54,7 @@ impl<'s> StructRef<'s> {
 
     /// Returns the type information of the struct.
     pub fn type_info(&self) -> Type {
-        self.runtime.gc.as_ref().ptr_type(self.raw.0)
+        self.runtime.gc.ptr_type(self.raw.0)
     }
 
     /// Returns the struct's field at the specified `offset`.
@@ -234,7 +234,7 @@ impl<'s> Marshal<'s> for StructRef<'s> {
             // Construct
             let src = ptr.cast::<u8>().as_ptr() as *const _;
             let dest = unsafe { gc_handle.deref_mut::<u8>() };
-            unsafe { ptr::copy_nonoverlapping(src, dest, type_info.layout().size()) };
+            unsafe { ptr::copy_nonoverlapping(src, dest, type_info.value_layout().size()) };
 
             gc_handle
         } else {
@@ -253,7 +253,7 @@ impl<'s> Marshal<'s> for StructRef<'s> {
                 ptr::copy_nonoverlapping(
                     value.into_raw().get_ptr(),
                     dest,
-                    type_info.layout().size(),
+                    type_info.value_layout().size(),
                 )
             };
         } else {
@@ -283,7 +283,7 @@ pub struct RootedStruct {
 impl RootedStruct {
     /// Creates a `RootedStruct` that wraps a raw Mun struct.
     fn new(gc: &Arc<GarbageCollector>, raw: RawStruct) -> Self {
-        assert!(gc.as_ref().ptr_type(raw.0).is_struct());
+        assert!(gc.ptr_type(raw.0).is_struct());
         Self {
             handle: GcRootPtr::new(gc, raw.0),
         }

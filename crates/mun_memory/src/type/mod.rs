@@ -11,6 +11,7 @@
 
 pub mod ffi;
 
+use std::ffi::c_void;
 use std::{
     alloc::Layout,
     borrow::Cow,
@@ -741,9 +742,40 @@ impl Type {
         self.inner().name.as_str()
     }
 
-    /// Returns the type layout
-    pub fn layout(&self) -> Layout {
+    /// Returns the memory layout of the data of the type. This is the layout of the memory when
+    /// stored on the stack or in the heap.
+    pub fn value_layout(&self) -> Layout {
         self.inner().layout
+    }
+
+    /// Returns the layout of the type when being referenced.
+    pub fn reference_layout(&self) -> Layout {
+        if self.is_reference_type() {
+            // Reference types are always stored as pointers to an GC object
+            Layout::new::<*const c_void>()
+        } else {
+            self.value_layout()
+        }
+    }
+
+    /// Returns true if the type is a reference type. Variables of reference types store references
+    /// to their data (objects), while variables of value types directly contain their data.
+    pub fn is_reference_type(&self) -> bool {
+        match self.kind() {
+            TypeKind::Primitive(_) | TypeKind::Pointer(_) => false,
+            TypeKind::Array(_) => true,
+            TypeKind::Struct(s) => s.is_gc_struct(),
+        }
+    }
+
+    /// Returns true if the type is a value type. Variables of reference types store references to
+    /// their data (objects), while variables of value types directly contain their data.
+    pub fn is_value_type(&self) -> bool {
+        match self.kind() {
+            TypeKind::Primitive(_) | TypeKind::Pointer(_) => false,
+            TypeKind::Array(_) => true,
+            TypeKind::Struct(s) => s.is_gc_struct(),
+        }
     }
 
     /// Returns true if this instance represents the TypeInfo of the given type.
@@ -841,15 +873,6 @@ impl Type {
             Some(a)
         } else {
             None
-        }
-    }
-
-    /// Returns whether the type is allocated on the stack.
-    pub fn is_stack_allocated(&self) -> bool {
-        match self.kind() {
-            TypeKind::Primitive(_) | TypeKind::Pointer(_) => true,
-            TypeKind::Struct(s) => s.is_value_struct(),
-            TypeKind::Array(_) => false,
         }
     }
 
@@ -1013,8 +1036,8 @@ impl StructTypeBuilder {
 
     /// Adds a field to the struct
     pub fn add_field(mut self, name: impl Into<String>, ty: Type) -> Self {
-        let field_layout = if ty.is_stack_allocated() {
-            ty.layout()
+        let field_layout = if ty.is_value_type() {
+            ty.value_layout()
         } else {
             Layout::new::<std::ffi::c_void>()
         };

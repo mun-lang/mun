@@ -4,7 +4,7 @@ use std::sync::{Arc, Weak};
 /// A `GcPtr` that automatically roots and unroots its internal `GcPtr`.
 pub struct GcRootPtr<G>
 where
-    for<'t> &'t G: GcRuntime,
+    G: GcRuntime,
 {
     handle: GcPtr,
     runtime: Weak<G>,
@@ -12,7 +12,7 @@ where
 
 impl<G> Clone for GcRootPtr<G>
 where
-    for<'t> &'t G: GcRuntime,
+    G: GcRuntime,
 {
     fn clone(&self) -> Self {
         if let Some(runtime) = self.runtime.upgrade() {
@@ -27,7 +27,7 @@ where
 
 impl<G> GcRootPtr<G>
 where
-    for<'t> &'t G: GcRuntime,
+    G: GcRuntime,
 {
     /// Constructs a new GCRootHandle from a runtime and a handle
     pub fn new(runtime: &Arc<G>, handle: GcPtr) -> Self {
@@ -58,7 +58,7 @@ where
 
 impl<G> From<GcRootPtr<G>> for GcPtr
 where
-    for<'t> &'t G: GcRuntime,
+    G: GcRuntime,
 {
     fn from(ptr: GcRootPtr<G>) -> Self {
         ptr.handle
@@ -67,7 +67,7 @@ where
 
 impl<G> Drop for GcRootPtr<G>
 where
-    for<'t> &'t G: GcRuntime,
+    G: GcRuntime,
 {
     fn drop(&mut self) {
         if let Some(runtime) = self.runtime.upgrade() {
@@ -78,7 +78,7 @@ where
 
 impl<G> HasIndirectionPtr for GcRootPtr<G>
 where
-    for<'t> &'t G: GcRuntime,
+    G: GcRuntime,
 {
     unsafe fn deref<R: Sized>(&self) -> *const R {
         self.handle.deref()
