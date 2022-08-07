@@ -52,6 +52,16 @@ pub struct TypeCollectionStats {
     pub remaining_types: usize,
 }
 
+/// A status stored with every [`TypeData`] which stores the current usage of the `TypeData`.
+/// Initially, types are marked as `Initializing` which indicates that they should not 'yet'
+/// participate in garbage-collection.
+#[derive(Eq, PartialEq)]
+enum Mark {
+    Used,
+    Unused,
+    Initializing,
+}
+
 impl TypeDataStore {
     /// Called to collect types that are no longer externally referenced.
     pub fn collect_garbage(&self) -> TypeCollectionStats {
@@ -60,8 +70,16 @@ impl TypeDataStore {
         // Reset all mark flags.
         let mut queue = VecDeque::new();
         for ty in lock.iter_mut() {
-            ty.marked = ty.external_references.load(Ordering::Acquire) > 0;
-            queue.push_back(unsafe { NonNull::new_unchecked(Box::as_mut(ty) as *mut TypeData) });
+            if ty.mark != Mark::Initializing {
+                if ty.external_references.load(Ordering::Acquire) > 0 {
+                    ty.mark = Mark::Used;
+                    queue.push_back(unsafe {
+                        NonNull::new_unchecked(Box::as_mut(ty) as *mut TypeData)
+                    });
+                } else {
+                    ty.mark = Mark::Unused
+                };
+            }
         }
 
         // Trace all types
@@ -72,8 +90,8 @@ impl TypeDataStore {
                     for field in s.fields.iter() {
                         let mut field_ty = field.type_info;
                         let field_ty = unsafe { field_ty.as_mut() };
-                        if !field_ty.marked {
-                            field_ty.marked = true;
+                        if field_ty.mark == Mark::Unused {
+                            field_ty.mark = Mark::Used;
                             queue.push_back(field.type_info);
                         }
                     }
@@ -81,16 +99,16 @@ impl TypeDataStore {
                 TypeDataKind::Pointer(p) => {
                     let mut pointee = p.pointee;
                     let pointee = unsafe { pointee.as_mut() };
-                    if !pointee.marked {
-                        pointee.marked = true;
+                    if pointee.mark == Mark::Unused {
+                        pointee.mark = Mark::Used;
                         queue.push_back(p.pointee);
                     }
                 }
                 TypeDataKind::Array(a) => {
                     let mut element_ty = a.element_ty;
                     let element_ty = unsafe { element_ty.as_mut() };
-                    if !element_ty.marked {
-                        element_ty.marked = true;
+                    if element_ty.mark == Mark::Unused {
+                        element_ty.mark = Mark::Used;
                         queue.push_back(a.element_ty);
                     }
                 }
@@ -108,8 +126,8 @@ impl TypeDataStore {
                 let read_lock = indirection.read();
                 if let &Some(mut indirection_ref) = read_lock.deref() {
                     let reference = unsafe { indirection_ref.as_mut() };
-                    if !reference.marked {
-                        reference.marked = true;
+                    if reference.mark == Mark::Unused {
+                        reference.mark = Mark::Used;
                         queue.push_back(indirection_ref);
                     }
                 }
@@ -121,7 +139,7 @@ impl TypeDataStore {
         let mut index = 0;
         while index < lock.len() {
             let ty = &(&*lock)[index];
-            if !ty.marked {
+            if ty.mark == Mark::Unused {
                 lock.swap_remove_back(index);
                 types_removed += 1;
             } else {
@@ -174,6 +192,11 @@ impl TypeDataStore {
                 }
             };
             inner_ty.data = type_data;
+
+            // Mark the entry as used. This should be safe because the `type_table` also still holds
+            // a strong reference to the type. After that type is potentially dropped (after this
+            // function returns) all values has already been initialized.
+            inner_ty.mark = Mark::Used;
         }
 
         Ok((type_table, types))
@@ -194,7 +217,7 @@ impl TypeDataStore {
             immutable_pointer_type: Default::default(),
             mutable_pointer_type: Default::default(),
             array_type: Default::default(),
-            marked: false,
+            mark: Mark::Initializing,
         }));
 
         // Safety: get a TypeInner with a 'static lifetime. This is safe because of the nature of
@@ -210,26 +233,21 @@ impl TypeDataStore {
         unsafe { Type::new_unchecked(entry, self.clone()) }
     }
 
-    /// Special case allocation method that acquires the creation lock and with the lock held,
-    /// writes the result to a location in memory. This ensure that the garbage collector sees
-    /// both the allocation and the store as one atomic operation. This is required when allocating
-    /// indirections because if the two operations would be seperate the GC might deallocate the
-    /// type before the type is assigned.
-    fn allocate_into(
+    /// Allocates a new type instance
+    pub fn allocate(
         self: &Arc<Self>,
         name: impl Into<String>,
         layout: Layout,
         data: TypeDataKind,
-        into: &mut NonNull<TypeData>,
     ) -> Type {
         let mut entries = self.types.lock();
-        let ty = self.allocate_inner(name, layout, data, &mut entries);
-        *into = ty.inner;
+        let mut ty = self.allocate_inner(name, layout, data, &mut entries);
+        unsafe { ty.inner.as_mut() }.mark = Mark::Used;
         ty
     }
 
-    /// Allocates a new type instance
-    pub fn allocate(
+    /// Allocates a new type instance but keeps it in an uninitialized state.
+    pub fn allocate_uninitialized(
         self: &Arc<Self>,
         name: impl Into<String>,
         layout: Layout,
@@ -351,8 +369,8 @@ pub struct TypeData {
     /// The type of an array of this type
     array_type: RwLock<Option<NonNull<TypeData>>>,
 
-    /// True if this type has been marked as alive (only valid for GC).
-    marked: bool,
+    /// The state of instance with regards to its usage.
+    mark: Mark,
 }
 
 impl TypeData {
@@ -376,31 +394,37 @@ impl TypeData {
             }
         }
 
-        let mut write_lock = cache_key.write();
-
-        // Recheck if another thread acquired the write lock in the mean time
-        if let Some(ty) = write_lock.deref() {
-            return Type {
-                inner: *ty,
-                store: store.clone(),
-            };
-        }
-
-        // Otherwise create the type and store it
-        let name = format!("*{} {}", if mutable { "mut" } else { "const" }, self.name);
-
-        *write_lock = Some(NonNull::dangling());
-        let ty = store.allocate_into(
-            name,
+        // No type is currently stored, allocate a new one.
+        let mut ty = store.allocate_uninitialized(
+            format!("*{} {}", if mutable { "mut" } else { "const" }, self.name),
             Layout::new::<*const std::ffi::c_void>(),
             PointerData {
                 pointee: self.into(),
                 mutable,
             }
             .into(),
-            // Safe because we ensure that write_lock is Some above.
-            unsafe { write_lock.as_mut().unwrap_unchecked() },
         );
+
+        // Acquire the write lock
+        let mut write_lock = cache_key.write();
+
+        // Get the reference to the inner data, we need this to mark it properly.
+        let inner = unsafe { ty.inner.as_mut() };
+
+        // Recheck if another thread acquired the write lock in the mean time
+        if let Some(element_ty) = write_lock.deref() {
+            inner.mark = Mark::Used;
+            return Type {
+                inner: *element_ty,
+                store: store.clone(),
+            };
+        }
+
+        // We store the reference to the array type in the current type. After which we mark the
+        // type as used. This ensures that the garbage collector never removes the type from under
+        // our noses.
+        *write_lock = Some(ty.inner);
+        inner.mark = Mark::Used;
 
         ty
     }
@@ -421,30 +445,36 @@ impl TypeData {
             }
         }
 
-        let mut write_lock = cache_key.write();
-
-        // Recheck if another thread acquired the write lock in the mean time
-        if let Some(ty) = write_lock.deref() {
-            return Type {
-                inner: *ty,
-                store: store.clone(),
-            };
-        }
-
-        // Otherwise create the type and store it
-        let name = format!("[{}]", self.name);
-
-        *write_lock = Some(NonNull::dangling());
-        let ty = store.allocate_into(
-            name,
+        // No type is currently stored, allocate a new one.
+        let mut ty = store.allocate_uninitialized(
+            format!("[{}]", self.name),
             Layout::new::<*const std::ffi::c_void>(),
             ArrayData {
                 element_ty: self.into(),
             }
             .into(),
-            // Safe because we ensure that write_lock is Some above.
-            unsafe { write_lock.as_mut().unwrap_unchecked() },
         );
+
+        // Acquire the write lock
+        let mut write_lock = cache_key.write();
+
+        // Get the reference to the inner data, we need this to mark it properly.
+        let inner = unsafe { ty.inner.as_mut() };
+
+        // Recheck if another thread acquired the write lock in the mean time
+        if let Some(element_ty) = write_lock.deref() {
+            inner.mark = Mark::Used;
+            return Type {
+                inner: *element_ty,
+                store: store.clone(),
+            };
+        }
+
+        // We store the reference to the array type in the current type. After which we mark the
+        // type as used. This ensures that the garbage collector never removes the type from under
+        // our noses.
+        *write_lock = Some(ty.inner);
+        inner.mark = Mark::Used;
 
         ty
     }
