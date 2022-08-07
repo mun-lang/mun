@@ -1,6 +1,6 @@
 [package]
 name = "mun_runtime"
-version = "0.3.0"
+version = "0.4.0-dev"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 description = "A runtime for hot reloading and invoking Mun from Rust"
