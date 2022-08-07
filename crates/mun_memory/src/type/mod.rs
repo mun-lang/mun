@@ -711,19 +711,20 @@ impl Type {
         fields: impl IntoIterator<Item = (String, Type, u16)>,
         memory_kind: abi::StructMemoryKind,
     ) -> Type {
+        let fields = fields
+            .into_iter()
+            .map(|(name, ty, offset)| FieldData {
+                name,
+                type_info: ty.inner,
+                offset,
+            })
+            .collect::<Vec<_>>();
         GLOBAL_TYPE_STORE.allocate(
             name,
             layout,
             StructData {
                 guid,
-                fields: fields
-                    .into_iter()
-                    .map(|(name, ty, offset)| FieldData {
-                        name,
-                        type_info: ty.inner,
-                        offset,
-                    })
-                    .collect(),
+                fields,
                 memory_kind,
             }
             .into(),
@@ -772,9 +773,9 @@ impl Type {
     /// their data (objects), while variables of value types directly contain their data.
     pub fn is_value_type(&self) -> bool {
         match self.kind() {
-            TypeKind::Primitive(_) | TypeKind::Pointer(_) => false,
-            TypeKind::Array(_) => true,
-            TypeKind::Struct(s) => s.is_gc_struct(),
+            TypeKind::Primitive(_) | TypeKind::Pointer(_) => true,
+            TypeKind::Array(_) => false,
+            TypeKind::Struct(s) => s.is_value_struct(),
         }
     }
 
@@ -1076,21 +1077,14 @@ impl StructTypeBuilder {
             abi::Guid::from_str(&guid_string)
         };
 
-        GLOBAL_TYPE_STORE.allocate(
+        Type::new_struct(
             self.name,
             self.layout,
-            StructData {
-                guid,
-                fields: Vec::from_iter(self.fields.into_iter().map(|(name, ty, offset)| {
-                    FieldData {
-                        name,
-                        type_info: ty.inner,
-                        offset: offset.try_into().expect("offset is too large!"),
-                    }
-                })),
-                memory_kind: self.memory_kind,
-            }
-            .into(),
+            guid,
+            self.fields
+                .into_iter()
+                .map(|(name, ty, offset)| (name, ty, offset.try_into().expect("offset too large"))),
+            self.memory_kind,
         )
     }
 }

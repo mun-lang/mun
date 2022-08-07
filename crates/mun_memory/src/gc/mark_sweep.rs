@@ -2,7 +2,7 @@ use crate::gc::array::ArrayHeader;
 use crate::gc::Array as GcArray;
 use crate::{
     cast,
-    gc::{Event, GcPtr, GcRuntime, HasIndirectionPtr, Observer, RawGcPtr, Stats, TypeTrace},
+    gc::{Event, GcPtr, GcRuntime, Observer, RawGcPtr, Stats, TypeTrace},
     mapping::{self, FieldMapping, MemoryMapper},
     r#type::Type,
     TypeKind,
@@ -10,6 +10,7 @@ use crate::{
 use mapping::{Conversion, Mapping};
 use parking_lot::RwLock;
 use std::alloc::{Layout, LayoutError};
+use std::borrow::Cow;
 use std::{
     collections::{HashMap, VecDeque},
     ops::Deref,
@@ -17,33 +18,149 @@ use std::{
     ptr::NonNull,
 };
 
+/// An object that enables tracing all reference types from another object.
 pub struct Trace {
-    obj: GcPtr,
-    ty: Type,
-    index: usize,
+    stack: VecDeque<CompositeTrace>,
+}
+
+impl Trace {
+    fn new(obj: NonNull<ObjectInfo>) -> Trace {
+        let mut trace = Trace {
+            stack: Default::default(),
+        };
+        let obj_ref = unsafe { obj.as_ref() };
+        match obj_ref.ty.kind() {
+            TypeKind::Primitive(_) | TypeKind::Pointer(_) => {}
+            TypeKind::Struct(_) => {
+                trace.stack.push_back(CompositeTrace::Struct(StructTrace {
+                    struct_ptr: unsafe { obj_ref.data.ptr },
+                    struct_type: obj_ref.ty.clone(),
+                    field_index: 0,
+                }));
+            }
+            TypeKind::Array(arr) => {
+                let array_handle = ArrayHandle { obj };
+                trace.stack.push_back(CompositeTrace::Array(ArrayTrace {
+                    iter: array_handle.elements(),
+                    element_ty: arr.element_type(),
+                }));
+            }
+        }
+        trace
+    }
 }
 
 impl Iterator for Trace {
     type Item = GcPtr;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let struct_ty = self.ty.as_struct()?;
-        let fields = struct_ty.fields();
-        let field_count = fields.len();
-        while self.index < field_count {
-            let index = self.index;
-            self.index += 1;
+        loop {
+            let top_stack = self.stack.back_mut()?;
+            let event = match top_stack {
+                CompositeTrace::Struct(s) => s.next(),
+                CompositeTrace::Array(a) => a.next(),
+            };
 
-            let field = fields.get(index).unwrap();
-            if let Some(field_struct_ty) = &field.ty().as_struct() {
-                if field_struct_ty.is_gc_struct() {
-                    return Some(unsafe {
-                        *self.obj.deref::<u8>().add(field.offset()).cast::<GcPtr>()
-                    });
+            match event {
+                None => {
+                    self.stack.pop_back();
+                }
+                Some(TraceEvent::Reference(r)) => return Some(r.into()),
+                Some(TraceEvent::InlineStruct(s)) => {
+                    self.stack.push_back(CompositeTrace::Struct(s))
                 }
             }
         }
+    }
+}
+
+/// An object that enables iterating over a composite value stored somewhere in memory.
+enum CompositeTrace {
+    /// A struct
+    Struct(StructTrace),
+
+    /// An array
+    Array(ArrayTrace),
+}
+
+enum TraceEvent {
+    Reference(NonNull<ObjectInfo>),
+    InlineStruct(StructTrace),
+}
+
+impl TraceEvent {
+    /// Construct a new `TraceEvent` based on the type of data stored at the specified location.
+    pub fn new(ptr: NonNull<u8>, ty: Cow<'_, Type>) -> Option<TraceEvent> {
+        match ty.kind() {
+            TypeKind::Primitive(_) | TypeKind::Pointer(_) => None,
+            TypeKind::Struct(s) => {
+                return if s.is_gc_struct() {
+                    let deref_ptr = unsafe { ptr.cast::<NonNull<ObjectInfo>>().as_ref() };
+                    Some(TraceEvent::Reference(*deref_ptr))
+                } else {
+                    Some(TraceEvent::InlineStruct(StructTrace {
+                        struct_ptr: ptr.cast(),
+                        struct_type: ty.into_owned(),
+                        field_index: 0,
+                    }))
+                }
+            }
+            TypeKind::Array(_) => Some(TraceEvent::Reference(ptr.cast())),
+        }
+    }
+}
+
+/// A struct that enables iterating over all GC references in a struct. Structs can be stored inline
+/// or on the heap. This struct supports both.
+struct StructTrace {
+    struct_ptr: NonNull<u8>,
+    struct_type: Type,
+    field_index: usize,
+}
+
+impl Iterator for StructTrace {
+    type Item = TraceEvent;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let struct_ty = self.struct_type.as_struct()?;
+        let fields = struct_ty.fields();
+        let field_count = fields.len();
+        while self.field_index < field_count {
+            let index = self.field_index;
+            self.field_index += 1;
+
+            let field = fields.get(index).unwrap();
+            let field_ty = field.ty();
+            let field_ptr =
+                unsafe { NonNull::new_unchecked(self.struct_ptr.as_ptr().add(field.offset())) };
+
+            if let Some(event) = TraceEvent::new(field_ptr, Cow::Owned(field_ty)) {
+                return Some(event);
+            }
+        }
         None
+    }
+}
+
+/// A struct that enables iterating over all GC references in a struct.
+///
+/// TODO: if the element type doesnt contain any references its a bit of a waste to iterate over all
+/// elements.
+struct ArrayTrace {
+    iter: ArrayHandleIter,
+    element_ty: Type,
+}
+
+impl Iterator for ArrayTrace {
+    type Item = TraceEvent;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(event) = TraceEvent::new(self.iter.next()?, Cow::Borrowed(&self.element_ty))
+            {
+                break Some(event);
+            }
+        }
     }
 }
 
@@ -51,11 +168,8 @@ impl TypeTrace for Type {
     type Trace = Trace;
 
     fn trace(&self, obj: GcPtr) -> Self::Trace {
-        Trace {
-            ty: self.clone(),
-            obj,
-            index: 0,
-        }
+        let obj = NonNull::new(obj.as_ptr() as *mut ObjectInfo).expect("invalid gc ptr");
+        Trace::new(obj)
     }
 }
 
@@ -112,9 +226,10 @@ where
 }
 
 fn alloc_obj(ty: Type) -> Pin<Box<ObjectInfo>> {
-    let ptr = unsafe { std::alloc::alloc(ty.value_layout()) };
+    let ptr = NonNull::new(unsafe { std::alloc::alloc(ty.value_layout()) })
+        .expect("failed to allocate memory for new object");
     Box::pin(ObjectInfo {
-        data: ObjectInfoData { ptr: ptr.cast() },
+        data: ObjectInfoData { ptr },
         ty,
         roots: 0,
         color: Color::White,
@@ -160,27 +275,12 @@ pub struct ArrayHandle {
     obj: NonNull<ObjectInfo>,
 }
 
-/// An iterator implementation.
-///
-/// TODO: Note that this iterator is highly non-thread safe. Any operation that modifies the
-/// original array could case undefined behavior.
-pub struct ArrayHandleIter {
-    /// Pointer to the next element
-    next: NonNull<u8>,
-
-    /// The number of remaning elements in the iterator.
-    remaining: usize,
-
-    /// The number of bytes to skip to get to the next element
-    stride: usize,
-}
-
 impl ArrayHandle {
     /// Returns a reference to the header
     pub fn header(&self) -> &ArrayHeader {
         // Safety: Safe because at the moment we have a reference to the object which cannot be
         // modified. Also we can be sure this is an array at this point.
-        unsafe { &*self.obj.as_ref().data.array }
+        unsafe { self.obj.as_ref().data.array.as_ref() }
     }
 
     /// Sets the length of the array.
@@ -189,7 +289,7 @@ impl ArrayHandle {
     ///
     /// This function is unsafe because the array elements might be left uninitialized.
     pub unsafe fn set_length(&mut self, length: usize) {
-        let header = &mut *self.obj.as_mut().data.array;
+        let header = self.obj.as_mut().data.array.as_mut();
         debug_assert!(header.capacity >= length);
         header.length = length;
     }
@@ -223,7 +323,8 @@ impl ArrayHandle {
 
         unsafe {
             NonNull::new_unchecked(
-                (self.obj.as_ref().data.array as *mut u8).add(padded_header_size),
+                (self.obj.as_ref().data.array.as_ptr().cast::<u8>() as *mut u8)
+                    .add(padded_header_size),
             )
         }
     }
@@ -263,6 +364,21 @@ impl GcArray for ArrayHandle {
             stride: element_layout.pad_to_align().size(),
         }
     }
+}
+
+/// An iterator implementation.
+///
+/// TODO: Note that this iterator is highly non-thread safe. Any operation that modifies the
+/// original array could case undefined behavior.
+pub struct ArrayHandleIter {
+    /// Pointer to the next element
+    next: NonNull<u8>,
+
+    /// The number of remaning elements in the iterator.
+    remaining: usize,
+
+    /// The number of bytes to skip to get to the next element
+    stride: usize,
 }
 
 impl Iterator for ArrayHandleIter {
@@ -316,9 +432,7 @@ fn alloc_array(ty: Type, length: usize) -> Pin<Box<ObjectInfo>> {
     array.capacity = length;
 
     Box::pin(ObjectInfo {
-        data: ObjectInfoData {
-            array: ptr.as_ptr(),
-        },
+        data: ObjectInfoData { array: ptr },
         ty,
         roots: 0,
         color: Color::White,
@@ -466,10 +580,9 @@ where
                 true
             } else {
                 let value_memory_layout = obj.layout();
-                unsafe { std::alloc::dealloc(obj.data.ptr, value_memory_layout) };
+                unsafe { std::alloc::dealloc(obj.data.ptr.as_mut(), value_memory_layout) };
                 self.observer.event(Event::Deallocation(*h));
                 {
-                    dbg!(("dealloc", &value_memory_layout));
                     let mut stats = self.stats.write();
                     stats.allocated_memory -= value_memory_layout.size();
                 }
@@ -524,7 +637,7 @@ where
         for (old_ty, conversion) in mapping.conversions.iter() {
             for object_info in objects.values_mut() {
                 if object_info.ty == *old_ty {
-                    let src = unsafe { NonNull::new_unchecked(object_info.data.ptr) };
+                    let src = unsafe { object_info.data.ptr };
                     let dest = unsafe {
                         NonNull::new_unchecked(std::alloc::alloc_zeroed(
                             conversion.new_ty.value_layout(),
@@ -543,7 +656,7 @@ where
                     unsafe { std::alloc::dealloc(src.as_ptr(), old_ty.value_layout()) };
 
                     object_info.set(ObjectInfo {
-                        data: ObjectInfoData { ptr: dest.as_ptr() },
+                        data: ObjectInfoData { ptr: dest },
                         roots: object_info.roots,
                         color: object_info.color,
                         ty: conversion.new_ty.clone(),
@@ -625,7 +738,7 @@ where
                                     }
                                 } else {
                                     // struct(value) -> struct(gc)
-                                    let object = alloc_obj(new_ty.clone());
+                                    let mut object = alloc_obj(new_ty.clone());
 
                                     // We want to return a pointer to the `ObjectInfo`, to be used as handle.
                                     let handle =
@@ -645,7 +758,7 @@ where
                                         // Zero initialize heap-allocated object
                                         unsafe {
                                             std::ptr::write_bytes(
-                                                (*object).data.ptr,
+                                                (*object).data.ptr.as_mut(),
                                                 0,
                                                 new_ty.value_layout().size(),
                                             )
@@ -669,7 +782,7 @@ where
                                         *field_dest = *field_src;
                                     }
                                 } else {
-                                    let object = alloc_obj(new_ty.clone());
+                                    let mut object = alloc_obj(new_ty.clone());
 
                                     // We want to return a pointer to the `ObjectInfo`, to
                                     // be used as handle.
@@ -679,7 +792,7 @@ where
                                     // Zero-initialize heap-allocated object
                                     unsafe {
                                         std::ptr::write_bytes(
-                                            object.data.ptr,
+                                            object.data.ptr.as_mut(),
                                             0,
                                             new_ty.value_layout().size(),
                                         )
@@ -700,7 +813,7 @@ where
                                 // Safety: we already hold a write lock on `objects`, so
                                 // this is legal.
                                 let obj: *mut ObjectInfo = field_handle.into();
-                                let obj = unsafe { &*obj };
+                                let obj = unsafe { &mut *obj };
 
                                 if is_same_struct {
                                     if obj.ty == *old_ty {
@@ -711,7 +824,9 @@ where
                                             new_allocations,
                                             conversions,
                                             &conversion.as_ref().unwrap().field_mapping,
-                                            unsafe { NonNull::new_unchecked(obj.data.ptr) },
+                                            unsafe {
+                                                NonNull::new_unchecked(obj.data.ptr.as_mut())
+                                            },
                                             unsafe { NonNull::new_unchecked(field_dest) },
                                         );
                                     } else {
@@ -721,7 +836,7 @@ where
                                         // Copy from heap-allocated struct to in-memory struct
                                         unsafe {
                                             std::ptr::copy_nonoverlapping(
-                                                obj.data.ptr,
+                                                obj.data.ptr.as_mut(),
                                                 field_dest,
                                                 obj.ty.value_layout().size(),
                                             )
@@ -757,7 +872,7 @@ where
                     }
                     mapping::Action::Insert => {
                         if !new_ty.is_value_type() {
-                            let object = alloc_obj(new_ty.clone());
+                            let mut object = alloc_obj(new_ty.clone());
 
                             // We want to return a pointer to the `ObjectInfo`, to be used as
                             // handle.
@@ -766,7 +881,7 @@ where
                             // Zero-initialize heap-allocated object
                             unsafe {
                                 std::ptr::write_bytes(
-                                    object.data.ptr,
+                                    object.data.ptr.as_mut(),
                                     0,
                                     new_ty.value_layout().size(),
                                 )
@@ -814,8 +929,8 @@ struct ObjectInfo {
 
 #[repr(C)]
 union ObjectInfoData {
-    pub ptr: *mut u8,
-    pub array: *mut ArrayHeader,
+    pub ptr: NonNull<u8>,
+    pub array: NonNull<ArrayHeader>,
 }
 
 /// An `ObjectInfo` is thread-safe.
@@ -860,7 +975,7 @@ impl ObjectInfo {
                 self.ty.value_layout()
             }
             TypeKind::Array(array) => {
-                let elem_count = unsafe { (*self.data.array).capacity };
+                let elem_count = unsafe { self.data.array.as_ref().capacity };
                 let elem_layout = repeat_layout(array.element_type().value_layout(), elem_count)
                     .expect("unable to determine layout of array elements");
                 let (layout, _) = Layout::new::<ArrayHeader>()
