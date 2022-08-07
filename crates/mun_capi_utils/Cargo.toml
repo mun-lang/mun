@@ -1,0 +1,16 @@
+[package]
+name = "mun_capi_utils"
+version = "0.1.0"
+edition = "2021"
+authors = ["The Mun Team <team@mun-lang.org>"]
+description = "Common functionality between C api crates."
+documentation = "https://docs.mun-lang.org/v0.3"
+readme = "README.md"
+homepage = "https://mun-lang.org"
+repository = "https://github.com/mun-lang/mun"
+license = "MIT OR Apache-2.0"
+keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
+categories = ["game-development", "mun"]
+
+[dependencies]
+insta = { version ="1.12.0", features=["ron"], optional=true}

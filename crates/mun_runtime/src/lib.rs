@@ -51,7 +51,8 @@ pub use crate::{
 };
 // Re-export some useful types so crates dont have to depend on mun_memory as well.
 use crate::array::RawArray;
-pub use memory::{FieldInfo, HasStaticTypeInfo, StructInfo, TypeFields, TypeInfo};
+use memory::gc::Array;
+pub use memory::{Field, FieldData, HasStaticType, PointerType, StructType, Type};
 
 /// Options for the construction of a [`Runtime`].
 pub struct RuntimeOptions {
@@ -78,8 +79,8 @@ unsafe fn get_allocator(alloc_handle: *mut ffi::c_void) -> Arc<GarbageCollector>
 /// # Safety
 ///
 /// The type handle must have been returned from a call to [`Arc<TypeInfo>::into_raw`][into_raw].
-unsafe fn get_type_info(type_handle: *const ffi::c_void) -> Arc<TypeInfo> {
-    Arc::from_raw(type_handle as *const TypeInfo)
+unsafe fn get_type_info(type_handle: *const ffi::c_void) -> Type {
+    Type::from_raw(type_handle)
 }
 
 extern "C" fn new(
@@ -117,7 +118,7 @@ extern "C" fn new_array(
 
     let handle = allocator.as_ref().alloc_array(&type_info, length);
 
-    handle.into()
+    handle.as_raw().into()
 }
 
 /// A builder for the [`Runtime`].
@@ -327,12 +328,12 @@ impl Runtime {
     }
 
     /// Retrieves the type definition corresponding to `type_name`, if available.
-    pub fn get_type_info_by_name(&self, type_name: &str) -> Option<Arc<TypeInfo>> {
+    pub fn get_type_info_by_name(&self, type_name: &str) -> Option<Type> {
         self.type_table.find_type_info_by_name(type_name)
     }
 
     /// Retrieve the type information corresponding to the `type_id`, if available.
-    pub fn get_type_info_by_id(&self, type_id: &abi::TypeId) -> Option<Arc<TypeInfo>> {
+    pub fn get_type_info_by_id(&self, type_id: &abi::TypeId) -> Option<Type> {
         self.type_table.find_type_info_by_id(type_id)
     }
 
@@ -472,11 +473,11 @@ impl Runtime {
 
     /// Returns statistics about the garbage collector.
     pub fn gc_stats(&self) -> gc::Stats {
-        self.gc.as_ref().stats()
+        self.gc.stats()
     }
 
     /// Constructs an array from an iterator
-    pub fn construct_array<'t, T: 't + Marshal<'t> + HasStaticTypeInfo, I: IntoIterator<Item = T>>(
+    pub fn construct_array<'t, T: 't + Marshal<'t> + HasStaticType, I: IntoIterator<Item = T>>(
         &'t self,
         iter: I,
     ) -> ArrayRef<'t, T>
@@ -490,12 +491,7 @@ impl Runtime {
             .size_hint()
             .1
             .expect("iterator doesnt return upper bound");
-        let raw_array_handle = self.gc.as_ref().alloc_array(&array_type, array_capacity);
-        let mut array_handle = self
-            .gc
-            .as_ref()
-            .array(raw_array_handle)
-            .expect("allocated array cant be accessed as array");
+        let mut array_handle = self.gc.alloc_array(&array_type, array_capacity);
 
         let mut element_ptr = array_handle.data().as_ptr();
         let element_stride = array_handle.element_stride();
@@ -525,7 +521,7 @@ impl Runtime {
             array_handle.set_length(size);
         }
 
-        ArrayRef::new(RawArray(raw_array_handle), self)
+        ArrayRef::new(RawArray(array_handle.as_raw()), self)
     }
 }
 
@@ -629,6 +625,7 @@ pub trait InvokeArgs {
 // Implement `InvokeTraits` for tuples up to and including 20 elements
 seq_macro::seq!(N in 0..=20 {#(
 seq_macro::seq!(I in 0..N {
+    #[allow(clippy::extra_unused_lifetimes)]
     impl<'arg, #(T~I: ArgumentReflection + Marshal<'arg>,)*> InvokeArgs for (#(T~I,)*) {
         #[allow(unused_variables)]
         fn can_invoke<'runtime>(&self, runtime: &'runtime Runtime, signature: &FunctionSignature) -> Result<(), String> {
@@ -645,8 +642,8 @@ seq_macro::seq!(I in 0..N {
                 return Err(format!(
                     "Invalid argument type at index {}. Expected: {}. Found: {}.",
                     I,
-                    self.I.type_info(runtime).name,
-                    arg_types[I].name,
+                    self.I.type_info(runtime).name(),
+                    arg_types[I].name(),
                 ));
             }
             )*
@@ -713,7 +710,7 @@ impl Runtime {
             return Err(InvokeErr {
                 msg: format!(
                     "unexpected return type, got '{}', expected '{}",
-                    &function_info.prototype.signature.return_type.name,
+                    &function_info.prototype.signature.return_type.name(),
                     ReturnType::type_hint()
                 ),
                 function_name,

@@ -58,7 +58,7 @@ pub fn start(args: Args) -> anyhow::Result<ExitStatus> {
     } else {
         return Err(anyhow!(
             "Only native Mun return types are supported for entry points. Found: {}",
-            return_type.name
+            return_type.name()
         ));
     };
     Ok(ExitStatus::Success)

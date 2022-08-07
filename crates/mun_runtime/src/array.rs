@@ -1,7 +1,7 @@
 use crate::garbage_collector::GcRootPtr;
 use crate::{ArgumentReflection, GarbageCollector, Marshal, ReturnTypeReflection, Runtime};
-use memory::gc::{ArrayHandle, GcPtr, GcRuntime, HasIndirectionPtr};
-use memory::TypeInfo;
+use memory::gc::{Array, GcPtr, GcRuntime, HasIndirectionPtr};
+use memory::Type;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 use std::sync::Arc;
@@ -55,8 +55,8 @@ impl<'array, T: Marshal<'array> + 'array> ArrayRef<'array, T> {
     }
 
     /// Returns the type information of the array.
-    pub fn type_info(&self) -> Arc<TypeInfo> {
-        self.runtime.gc.as_ref().ptr_type(self.raw.0)
+    pub fn type_info(&self) -> Type {
+        self.runtime.gc.ptr_type(self.raw.0)
     }
 
     /// Returns the number of elements stored in the array
@@ -95,7 +95,7 @@ impl<'array, T: Marshal<'array> + 'array> ArrayRef<'array, T> {
             .as_ref()
             .array(self.raw.0)
             .expect("type of the array value must be an array");
-        let element_ty = handle.element_type().clone();
+        let element_ty = handle.element_type();
         let runtime = self.runtime;
         handle
             .elements()
@@ -104,9 +104,9 @@ impl<'array, T: Marshal<'array> + 'array> ArrayRef<'array, T> {
 }
 
 impl<'a, T: Marshal<'a> + ReturnTypeReflection> ReturnTypeReflection for ArrayRef<'a, T> {
-    fn accepts_type(ty: &Arc<TypeInfo>) -> bool {
+    fn accepts_type(ty: &Type) -> bool {
         if let Some(arr) = ty.as_array() {
-            T::accepts_type(&arr.element_ty)
+            T::accepts_type(&arr.element_type())
         } else {
             false
         }
@@ -119,7 +119,7 @@ impl<'a, T: Marshal<'a> + ReturnTypeReflection> ReturnTypeReflection for ArrayRe
 }
 
 impl<'a, T: Marshal<'a> + ArgumentReflection + 'a> ArgumentReflection for ArrayRef<'a, T> {
-    fn type_info(&self, _runtime: &Runtime) -> Arc<TypeInfo> {
+    fn type_info(&self, _runtime: &Runtime) -> Type {
         self.type_info()
     }
 }
@@ -142,7 +142,7 @@ impl<'a, T: Marshal<'a> + 'a> Marshal<'a> for ArrayRef<'a, T> {
     fn marshal_from_ptr<'runtime>(
         ptr: NonNull<Self::MunType>,
         runtime: &'runtime Runtime,
-        _type_info: &Arc<TypeInfo>,
+        _type_info: &Type,
     ) -> Self
     where
         Self: 'a,
@@ -152,7 +152,7 @@ impl<'a, T: Marshal<'a> + 'a> Marshal<'a> for ArrayRef<'a, T> {
         ArrayRef::new(RawArray(handle), runtime)
     }
 
-    fn marshal_to_ptr(value: Self, mut ptr: NonNull<Self::MunType>, _type_info: &Arc<TypeInfo>) {
+    fn marshal_to_ptr(value: Self, mut ptr: NonNull<Self::MunType>, _type_info: &Type) {
         unsafe { *ptr.as_mut() = value.into_raw() };
     }
 }
@@ -168,7 +168,7 @@ pub struct RootedArray<T> {
 impl<T> RootedArray<T> {
     /// Creates a `RootedArray` that wraps a raw Mun struct.
     fn new(gc: &Arc<GarbageCollector>, raw: RawArray) -> Self {
-        assert!(gc.as_ref().ptr_type(raw.0).is_array());
+        assert!(gc.ptr_type(raw.0).is_array());
         Self {
             handle: GcRootPtr::new(gc, raw.0),
             _data: Default::default(),

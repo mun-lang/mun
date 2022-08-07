@@ -1,32 +1,29 @@
-use abi::{Guid, StructMemoryKind};
+use abi::Guid;
 
 use crate::{
     diff::{diff, Diff, FieldDiff},
     gc::GcPtr,
-    type_info::{ArrayInfo, TypeInfo},
-    TypeFields,
+    r#type::Type,
+    ArrayType, TypeKind,
 };
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::collections::{HashMap, HashSet};
 
 pub struct Mapping {
-    pub deletions: HashSet<Arc<TypeInfo>>,
-    pub conversions: HashMap<Arc<TypeInfo>, Conversion>,
-    pub identical: Vec<(Arc<TypeInfo>, Arc<TypeInfo>)>,
+    pub deletions: HashSet<Type>,
+    pub conversions: HashMap<Type, Conversion>,
+    pub identical: Vec<(Type, Type)>,
 }
 
 pub struct Conversion {
     pub field_mapping: Vec<FieldMapping>,
-    pub new_ty: Arc<TypeInfo>,
+    pub new_ty: Type,
 }
 
 /// Description of the mapping of a single field. When stored together with the new index, this
 /// provides all information necessary for a mapping function.
 #[derive(Debug)]
 pub struct FieldMapping {
-    pub new_ty: Arc<TypeInfo>,
+    pub new_ty: Type,
     pub new_offset: usize,
     pub action: Action,
 }
@@ -44,7 +41,7 @@ pub enum Action {
         old_offset: usize,
     },
     Cast {
-        old_ty: Arc<TypeInfo>,
+        old_ty: Type,
         old_offset: usize,
     },
     Copy {
@@ -58,15 +55,15 @@ pub enum Action {
     },
     StructAlloc,
     StructMapFromGc {
-        old_ty: Arc<TypeInfo>,
+        old_ty: Type,
         old_offset: usize,
     },
     StructMapFromValue {
-        old_ty: Arc<TypeInfo>,
+        old_ty: Type,
         old_offset: usize,
     },
     StructMapInPlace {
-        old_ty: Arc<TypeInfo>,
+        old_ty: Type,
         old_offset: usize,
     },
     ZeroInitialize,
@@ -74,7 +71,7 @@ pub enum Action {
 
 impl Mapping {
     #[allow(clippy::mutable_key_type)]
-    pub fn new(old: &[Arc<TypeInfo>], new: &[Arc<TypeInfo>]) -> Self {
+    pub fn new(old: &[Type], new: &[Type]) -> Self {
         let diff = diff(old, new);
 
         let mut conversions = HashMap::new();
@@ -173,12 +170,11 @@ impl Mapping {
 /// # Safety
 ///
 /// Expects the `diff` to be based on `old_ty` and `new_ty`. If not, it causes undefined behavior.
-pub unsafe fn field_mapping(
-    old_ty: &Arc<TypeInfo>,
-    new_ty: &Arc<TypeInfo>,
-    diff: &[FieldDiff],
-) -> Conversion {
-    let old_fields = old_ty.fields();
+pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) -> Conversion {
+    let old_fields = old_ty
+        .as_struct()
+        .map(|s| s.fields().iter().collect())
+        .unwrap_or_else(Vec::new);
 
     let deletions: HashSet<usize> = diff
         .iter()
@@ -199,12 +195,8 @@ pub unsafe fn field_mapping(
                 None
             } else {
                 Some(Action::Copy {
-                    old_offset: usize::from(old_field.offset),
-                    size: if old_field.type_info.is_stack_allocated() {
-                        old_field.type_info.layout.size()
-                    } else {
-                        std::mem::size_of::<GcPtr>()
-                    },
+                    old_offset: usize::from(old_field.offset()),
+                    size: old_field.ty().reference_layout().size(),
                 })
             }
         })
@@ -224,14 +216,14 @@ pub unsafe fn field_mapping(
             } => old_index.map(|old_index| {
                 let old_offset = old_fields
                     .get(old_index)
-                    .map(|field| usize::from(field.offset))
+                    .map(|field| usize::from(field.offset()))
                     .expect("The old field must exist.");
                 println!("EDIT");
                 (*new_index, resolve_edit(old_type, new_type, old_offset))
             }),
             FieldDiff::Insert { index, new_type } => Some((
                 *index,
-                if new_type.is_struct() && !new_type.is_stack_allocated() {
+                if new_type.is_struct() && !new_type.is_value_type() {
                     Action::StructAlloc
                 } else if new_type.is_array() {
                     Action::ArrayAlloc
@@ -246,18 +238,14 @@ pub unsafe fn field_mapping(
             } => {
                 let old_offset = old_fields
                     .get(*old_index)
-                    .map(|field| usize::from(field.offset))
+                    .map(|field| usize::from(field.offset()))
                     .expect("Old field must exist.");
 
                 Some((
                     *new_index,
                     Action::Copy {
                         old_offset,
-                        size: if ty.is_stack_allocated() {
-                            ty.layout.size()
-                        } else {
-                            std::mem::size_of::<GcPtr>()
-                        },
+                        size: ty.reference_layout().size(),
                     },
                 ))
             }
@@ -283,7 +271,7 @@ pub unsafe fn field_mapping(
         {
             let old_offset = old_fields
                 .get(*new_index)
-                .map(|field| usize::from(field.offset))
+                .map(|field| usize::from(field.offset()))
                 .expect("The old field must exist.");
 
             let action = mapping.get_mut(*new_index).unwrap();
@@ -291,7 +279,10 @@ pub unsafe fn field_mapping(
         }
     }
 
-    let new_fields = new_ty.fields();
+    let new_fields = new_ty
+        .as_struct()
+        .map(|s| Vec::from_iter(s.fields().iter()))
+        .unwrap_or_else(Vec::new);
     Conversion {
         field_mapping: mapping
             .into_iter()
@@ -301,8 +292,8 @@ pub unsafe fn field_mapping(
                     .get(new_index)
                     .expect(format!("New field at index: '{}' must exist.", new_index).as_str());
                 FieldMapping {
-                    new_ty: new_field.type_info.clone(),
-                    new_offset: usize::from(new_field.offset),
+                    new_ty: new_field.ty(),
+                    new_offset: usize::from(new_field.offset()),
                     action: action,
                 }
             })
@@ -311,43 +302,43 @@ pub unsafe fn field_mapping(
     }
 }
 
-pub fn resolve_edit(old_ty: &Arc<TypeInfo>, new_ty: &TypeInfo, old_offset: usize) -> Action {
-    match &old_ty.data {
-        crate::TypeInfoData::Primitive(old_guid) => {
+pub fn resolve_edit(old_ty: &Type, new_ty: &Type, old_offset: usize) -> Action {
+    match &old_ty.kind() {
+        TypeKind::Primitive(old_guid) => {
             resolve_primitive_edit(old_ty, new_ty, old_guid, old_offset)
         }
-        crate::TypeInfoData::Struct(_) => resolve_struct_edit(old_ty, new_ty, old_offset),
-        crate::TypeInfoData::Pointer(_) => resolve_pointer_edit(old_ty, new_ty),
-        crate::TypeInfoData::Array(old_array) => resolve_array_edit(old_array, new_ty, old_offset),
+        TypeKind::Struct(_) => resolve_struct_edit(old_ty, new_ty, old_offset),
+        TypeKind::Pointer(_) => resolve_pointer_edit(old_ty, new_ty),
+        TypeKind::Array(old_array) => resolve_array_edit(old_array, new_ty, old_offset),
     }
 }
 
 fn resolve_primitive_edit(
-    old_ty: &Arc<TypeInfo>,
-    new_ty: &TypeInfo,
+    old_ty: &Type,
+    new_ty: &Type,
     old_guid: &Guid,
     old_offset: usize,
 ) -> Action {
-    match &new_ty.data {
-        crate::TypeInfoData::Primitive(new_guid) => {
+    match &new_ty.kind() {
+        TypeKind::Primitive(new_guid) => {
             resolve_primitive_to_primitive_edit(old_ty, old_guid, old_offset, new_guid)
         }
-        crate::TypeInfoData::Struct(s) => {
-            if s.memory_kind == StructMemoryKind::Value {
+        TypeKind::Struct(s) => {
+            if s.is_value_struct() {
                 Action::ZeroInitialize
             } else {
                 Action::StructAlloc
             }
         }
-        crate::TypeInfoData::Pointer(_) => unreachable!(),
-        crate::TypeInfoData::Array(new_array) => {
+        TypeKind::Pointer(_) => unreachable!(),
+        TypeKind::Array(new_array) => {
             resolve_primitive_to_array_edit(old_ty, new_array, old_offset)
         }
     }
 }
 
 fn resolve_primitive_to_primitive_edit(
-    old_ty: &Arc<TypeInfo>,
+    old_ty: &Type,
     old_guid: &Guid,
     old_offset: usize,
     new_guid: &Guid,
@@ -355,7 +346,7 @@ fn resolve_primitive_to_primitive_edit(
     if *old_guid == *new_guid {
         Action::Copy {
             old_offset,
-            size: old_ty.layout.size(),
+            size: old_ty.value_layout().size(),
         }
     } else {
         Action::Cast {
@@ -366,49 +357,39 @@ fn resolve_primitive_to_primitive_edit(
 }
 
 fn resolve_primitive_to_array_edit(
-    old_ty: &Arc<TypeInfo>,
-    new_array: &ArrayInfo,
+    old_ty: &Type,
+    new_array: &ArrayType,
     old_offset: usize,
 ) -> Action {
     Action::ArrayFromValue {
-        element_action: Box::new(resolve_edit(old_ty, &new_array.element_ty, 0)),
+        element_action: Box::new(resolve_edit(old_ty, &new_array.element_type(), 0)),
         old_offset,
     }
 }
 
-fn resolve_struct_edit(old_ty: &Arc<TypeInfo>, new_ty: &TypeInfo, old_offset: usize) -> Action {
-    match &new_ty.data {
-        crate::TypeInfoData::Primitive(_) => Action::ZeroInitialize,
-        crate::TypeInfoData::Struct(_) => resolve_struct_to_struct_edit(old_ty, new_ty, old_offset),
-        crate::TypeInfoData::Pointer(_) => unreachable!(),
-        crate::TypeInfoData::Array(new_array) => {
-            resolve_struct_to_array_edit(old_ty, new_array, old_offset)
-        }
+fn resolve_struct_edit(old_ty: &Type, new_ty: &Type, old_offset: usize) -> Action {
+    match &new_ty.kind() {
+        TypeKind::Primitive(_) => Action::ZeroInitialize,
+        TypeKind::Struct(_) => resolve_struct_to_struct_edit(old_ty, new_ty, old_offset),
+        TypeKind::Pointer(_) => unreachable!(),
+        TypeKind::Array(new_array) => resolve_struct_to_array_edit(old_ty, new_array, old_offset),
     }
 }
 
-fn resolve_struct_to_struct_edit(
-    old_ty: &Arc<TypeInfo>,
-    new_ty: &TypeInfo,
-    old_offset: usize,
-) -> Action {
+fn resolve_struct_to_struct_edit(old_ty: &Type, new_ty: &Type, old_offset: usize) -> Action {
     // Early opt-out for when we are recursively resolving types (e.g. for arrays)
-    if **old_ty == *new_ty {
+    if *old_ty == *new_ty {
         return Action::Copy {
             old_offset: old_offset,
-            size: if old_ty.is_stack_allocated() {
-                old_ty.layout.size()
-            } else {
-                std::mem::size_of::<GcPtr>()
-            },
+            size: old_ty.reference_layout().size(),
         };
     }
 
     // ASSUMPTION: When the name is the same, we are dealing with the same struct,
     // but different internals
-    let is_same_struct = old_ty.name == new_ty.name;
+    let is_same_struct = old_ty.name() == new_ty.name();
 
-    if old_ty.is_stack_allocated() && new_ty.is_stack_allocated() {
+    if old_ty.is_value_type() && new_ty.is_value_type() {
         // struct(value) -> struct(value)
         if is_same_struct {
             Action::StructMapInPlace {
@@ -418,7 +399,7 @@ fn resolve_struct_to_struct_edit(
         } else {
             Action::ZeroInitialize
         }
-    } else if old_ty.is_stack_allocated() {
+    } else if old_ty.is_value_type() {
         // struct(value) -> struct(gc)
         if is_same_struct {
             Action::StructMapFromValue {
@@ -428,7 +409,7 @@ fn resolve_struct_to_struct_edit(
         } else {
             Action::StructAlloc
         }
-    } else if new_ty.is_stack_allocated() {
+    } else if new_ty.is_value_type() {
         // struct(gc) -> struct(value)
         if is_same_struct {
             Action::StructMapFromGc {
@@ -451,65 +432,51 @@ fn resolve_struct_to_struct_edit(
     }
 }
 
-fn resolve_struct_to_array_edit(
-    old_ty: &Arc<TypeInfo>,
-    new_array: &ArrayInfo,
-    old_offset: usize,
-) -> Action {
+fn resolve_struct_to_array_edit(old_ty: &Type, new_array: &ArrayType, old_offset: usize) -> Action {
     Action::ArrayFromValue {
-        element_action: Box::new(resolve_edit(old_ty, &new_array.element_ty, 0)),
+        element_action: Box::new(resolve_edit(old_ty, &new_array.element_type(), 0)),
         old_offset,
     }
 }
 
-fn resolve_pointer_edit(_old_ty: &Arc<TypeInfo>, _new_ty: &TypeInfo) -> Action {
+fn resolve_pointer_edit(_old_ty: &Type, _new_ty: &Type) -> Action {
     // Not supported in the language - yet
     unreachable!()
 }
 
-fn resolve_array_edit(old_array: &ArrayInfo, new_ty: &TypeInfo, old_offset: usize) -> Action {
-    match &new_ty.data {
-        crate::TypeInfoData::Primitive(_) => {
-            resolve_array_to_primitive_edit(old_array, new_ty, old_offset)
-        }
-        crate::TypeInfoData::Struct(_) => {
-            resolve_array_to_struct_edit(old_array, new_ty, old_offset)
-        }
-        crate::TypeInfoData::Pointer(_) => unreachable!(),
-        crate::TypeInfoData::Array(new_array) => {
-            resolve_array_to_array_edit(old_array, new_array, old_offset)
-        }
+fn resolve_array_edit(old_array: &ArrayType, new_ty: &Type, old_offset: usize) -> Action {
+    match &new_ty.kind() {
+        TypeKind::Primitive(_) => resolve_array_to_primitive_edit(old_array, new_ty, old_offset),
+        TypeKind::Struct(_) => resolve_array_to_struct_edit(old_array, new_ty, old_offset),
+        TypeKind::Pointer(_) => unreachable!(),
+        TypeKind::Array(new_array) => resolve_array_to_array_edit(old_array, new_array, old_offset),
     }
 }
 
 fn resolve_array_to_primitive_edit(
-    old_array: &ArrayInfo,
-    new_ty: &TypeInfo,
+    old_array: &ArrayType,
+    new_ty: &Type,
     old_offset: usize,
 ) -> Action {
     Action::ElementFromArray {
         old_offset,
-        element_action: Box::new(resolve_edit(&old_array.element_ty, new_ty, 0)),
+        element_action: Box::new(resolve_edit(&old_array.element_type(), new_ty, 0)),
     }
 }
 
-fn resolve_array_to_struct_edit(
-    old_array: &ArrayInfo,
-    new_ty: &TypeInfo,
-    old_offset: usize,
-) -> Action {
+fn resolve_array_to_struct_edit(old_array: &ArrayType, new_ty: &Type, old_offset: usize) -> Action {
     Action::ElementFromArray {
         old_offset,
-        element_action: Box::new(resolve_edit(&old_array.element_ty, new_ty, 0)),
+        element_action: Box::new(resolve_edit(&old_array.element_type(), new_ty, 0)),
     }
 }
 
 fn resolve_array_to_array_edit(
-    old_array: &ArrayInfo,
-    new_array: &ArrayInfo,
+    old_array: &ArrayType,
+    new_array: &ArrayType,
     old_offset: usize,
 ) -> Action {
-    if *old_array.element_ty == *new_array.element_ty {
+    if old_array.element_type() == new_array.element_type() {
         println!("THE SAME");
         Action::Copy {
             old_offset,
@@ -519,8 +486,8 @@ fn resolve_array_to_array_edit(
         println!("ARRAY MAP");
         Action::ArrayMap {
             element_action: Box::new(resolve_edit(
-                &old_array.element_ty,
-                &new_array.element_ty,
+                &old_array.element_type(),
+                &new_array.element_type(),
                 0,
             )),
             old_offset,

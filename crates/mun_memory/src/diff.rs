@@ -1,11 +1,6 @@
 pub mod myers;
 
-use std::sync::Arc;
-
-use crate::{
-    type_info::{FieldInfo, TypeInfo},
-    TypeFields,
-};
+use crate::{r#type::Field, r#type::Type};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum FieldEditKind {
@@ -17,17 +12,17 @@ pub enum FieldEditKind {
 pub enum FieldDiff {
     Insert {
         index: usize,
-        new_type: Arc<TypeInfo>,
+        new_type: Type,
     },
     Edit {
-        old_type: Arc<TypeInfo>,
-        new_type: Arc<TypeInfo>,
+        old_type: Type,
+        new_type: Type,
         old_index: Option<usize>,
         new_index: usize,
         kind: FieldEditKind,
     },
     Move {
-        ty: Arc<TypeInfo>,
+        ty: Type,
         old_index: usize,
         new_index: usize,
     },
@@ -80,8 +75,8 @@ impl PartialOrd for Diff {
     }
 }
 
-/// Given an `old` and a `new` set of types, calculates the difference for structs.
-pub fn diff(old: &[Arc<TypeInfo>], new: &[Arc<TypeInfo>]) -> Vec<Diff> {
+/// Given an `old` and a `new` set of types, calculates the difference.
+pub fn diff(old: &[Type], new: &[Type]) -> Vec<Diff> {
     let diff = myers::diff(old, new);
     let (deletions, insertions) = myers::split_diff(&diff);
 
@@ -110,14 +105,14 @@ pub fn diff(old: &[Arc<TypeInfo>], new: &[Arc<TypeInfo>]) -> Vec<Diff> {
 #[derive(Eq, PartialEq)]
 struct UniqueFieldInfo<'a> {
     name: &'a str,
-    type_info: &'a Arc<TypeInfo>,
+    type_info: Type,
 }
 
-impl<'a> From<&'a FieldInfo> for UniqueFieldInfo<'a> {
-    fn from(other: &'a FieldInfo) -> Self {
+impl<'a> From<Field<'a>> for UniqueFieldInfo<'a> {
+    fn from(other: Field<'a>) -> Self {
         Self {
-            name: &other.name,
-            type_info: &other.type_info,
+            name: other.name(),
+            type_info: other.ty(),
         }
     }
 }
@@ -126,20 +121,28 @@ impl<'a> From<&'a FieldInfo> for UniqueFieldInfo<'a> {
 /// for `insertions` into the `new` slice of types, appends the corresponding `Diff` mapping
 /// for all
 fn append_struct_mapping(
-    old: &[Arc<TypeInfo>],
-    new: &[Arc<TypeInfo>],
+    old: &[Type],
+    new: &[Type],
     deletions: Vec<usize>,
     insertions: Vec<usize>,
     mapping: &mut Vec<Diff>,
 ) {
     let old_fields: Vec<Vec<UniqueFieldInfo>> = old
         .iter()
-        .map(|ty| ty.fields().iter().map(UniqueFieldInfo::from).collect())
+        .map(|ty| {
+            ty.as_struct()
+                .map(|s| s.fields().iter().map(UniqueFieldInfo::from).collect())
+                .unwrap_or_else(Vec::new)
+        })
         .collect();
 
     let new_fields: Vec<Vec<UniqueFieldInfo>> = new
         .iter()
-        .map(|ty| ty.fields().iter().map(UniqueFieldInfo::from).collect())
+        .map(|ty| {
+            ty.as_struct()
+                .map(|s| s.fields().iter().map(UniqueFieldInfo::from).collect())
+                .unwrap_or_else(Vec::new)
+        })
         .collect();
 
     let num_deleted = deletions.len();
@@ -168,7 +171,7 @@ fn append_struct_mapping(
                     // let min = new_fields.len() + old_fields.len();
 
                     // If the type's name is equal
-                    if old_ty.name == new_ty.name || length == 0 {
+                    if old_ty.name() == new_ty.name() || length == 0 {
                         // TODO: Potentially we want to retain an X% for types with equal names,
                         // whilst allowing types with different names to be modified for up to Y%.
                         length

@@ -199,3 +199,34 @@ fn arg_missing_bug() {
     );
     driver.unwrap();
 }
+
+#[test]
+fn cyclic_struct() {
+    let driver = CompileAndRunTestDriver::new(
+        r"
+        pub struct Foo {
+            foo: Foo
+        }
+
+        pub struct FooBar {
+            bar: BarFoo
+        }
+
+        pub struct BarFoo {
+            foo: FooBar
+        }
+        ",
+        |builder| builder,
+    )
+    .unwrap();
+
+    let foo_ty = driver.runtime.get_type_info_by_name("Foo").unwrap();
+    let foo_foo_ty = foo_ty
+        .as_struct()
+        .unwrap()
+        .fields()
+        .find_by_name("foo")
+        .unwrap()
+        .ty();
+    assert_eq!(foo_foo_ty, foo_ty);
+}

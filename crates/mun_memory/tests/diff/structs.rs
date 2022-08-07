@@ -1,13 +1,11 @@
-use std::sync::Arc;
-
 use crate::{diff::util::*, fake_struct};
 use mun_memory::{
     diff::{diff, Diff, FieldDiff, FieldEditKind},
     type_table::TypeTable,
-    HasStaticTypeInfo, TypeInfo,
+    HasStaticType, Type,
 };
 
-fn assert_eq_struct(result: &[Arc<TypeInfo>], expected: &[Arc<TypeInfo>]) {
+fn assert_eq_struct(result: &[Type], expected: &[Type]) {
     assert_eq!(result.len(), expected.len());
     for (lhs, rhs) in result.iter().zip(expected.iter()) {
         assert_eq!(lhs, rhs);

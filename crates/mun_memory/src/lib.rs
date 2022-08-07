@@ -1,23 +1,26 @@
-pub use type_info::{FieldInfo, HasStaticTypeInfo, StructInfo, TypeInfo, TypeInfoData};
+extern crate core;
+
+pub use r#type::{
+    ArrayType, Field, FieldData, HasStaticType, PointerType, StructType, StructTypeBuilder, Type,
+    TypeCollectionStats, TypeKind,
+};
+
+pub mod ffi {
+    pub use super::r#type::ffi::*;
+}
 
 mod cast;
 pub mod diff;
 pub mod gc;
 pub mod mapping;
-mod type_info;
+mod r#type;
 pub mod type_table;
 use thiserror::Error;
 
 pub mod prelude {
     pub use crate::diff::{diff, Diff, FieldDiff, FieldEditKind};
     pub use crate::mapping::{Action, FieldMapping};
-    pub use crate::type_info::{StructInfo, TypeInfo, TypeInfoData};
-}
-
-/// A trait used to obtain a type's fields.
-pub trait TypeFields: Send + Sync {
-    /// Returns the type's fields.
-    fn fields(&self) -> &[FieldInfo];
+    pub use crate::r#type::{Field, PointerType, StructType, Type, TypeKind};
 }
 
 /// An error that can occur when trying to convert from an abi type to an internal type.

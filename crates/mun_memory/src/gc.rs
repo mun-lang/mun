@@ -3,9 +3,9 @@ mod mark_sweep;
 mod ptr;
 mod root_ptr;
 
-use crate::type_info::TypeInfo;
+use crate::r#type::Type;
+use std::marker::PhantomData;
 use std::ptr::NonNull;
-use std::{marker::PhantomData, sync::Arc};
 
 pub use mark_sweep::MarkSweep;
 pub use ptr::{GcPtr, HasIndirectionPtr, RawGcPtr};
@@ -26,8 +26,14 @@ pub trait TypeTrace: Send + Sync {
 }
 
 /// A trait used to iterate over array elements
-pub trait ArrayHandle: Sized {
+pub trait Array: Sized {
     type Iterator: Iterator<Item = NonNull<u8>>;
+
+    /// Returns the raw GC ptr of the array
+    fn as_raw(&self) -> GcPtr;
+
+    /// Returns the type of an element
+    fn element_type(&self) -> Type;
 
     /// Returns the length of the array
     fn length(&self) -> usize;
@@ -41,16 +47,16 @@ pub trait ArrayHandle: Sized {
 
 /// An object that can be used to allocate and collect memory.
 pub trait GcRuntime: Send + Sync {
-    type Array: ArrayHandle;
+    type Array: Array;
 
     /// Allocates an object of the given type returning a GcPtr
-    fn alloc(&self, ty: &Arc<TypeInfo>) -> GcPtr;
+    fn alloc(&self, ty: &Type) -> GcPtr;
 
     /// Allocates an array of the given type. `ty` must be an array type.
-    fn alloc_array(&self, ty: &Arc<TypeInfo>, n: usize) -> GcPtr;
+    fn alloc_array(&self, ty: &Type, n: usize) -> Self::Array;
 
     /// Returns the type of the specified `obj`.
-    fn ptr_type(&self, obj: GcPtr) -> Arc<TypeInfo>;
+    fn ptr_type(&self, obj: GcPtr) -> Type;
 
     /// Returns array information of the specified handle
     fn array(&self, handle: GcPtr) -> Option<Self::Array>;

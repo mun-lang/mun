@@ -1,6 +1,5 @@
 use mun_runtime::{ArrayRef, StructRef};
 use mun_test::CompileAndRunTestDriver;
-use std::sync::Arc;
 
 #[macro_use]
 mod util;
@@ -2544,14 +2543,11 @@ fn test_type_table() {
         .type_info()
         .as_struct()
         .expect("is not a struct?")
-        .find_field_by_name("bar")
+        .fields()
+        .find_by_name("bar")
         .expect("could not find `bar` field")
-        .type_info
-        .clone();
+        .ty();
 
     // These types should be equal
     assert_eq!(foo_bar_field_type, bar_type);
-
-    // In fact the pointers should be equal!
-    assert!(Arc::ptr_eq(&foo_bar_field_type, &bar_type));
 }

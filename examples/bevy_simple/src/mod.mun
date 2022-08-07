@@ -1,0 +1,1 @@
+pub fn mun_func() -> usize { 42 }

@@ -6,10 +6,10 @@
 #include <string_view>
 
 #include "mun/error.h"
-#include "mun/function_info.h"
+#include "mun/function.h"
 #include "mun/runtime_capi.h"
 #include "mun/runtime_function.h"
-#include "mun/type_info.h"
+#include "mun/type.h"
 
 namespace mun {
 
@@ -26,9 +26,9 @@ class Runtime {
 
     /** Constructs a runtime from an instantiated `MunRuntimeHandle`.
      *
-     * \param handle a runtime handle
+     * \param handle a runtime type_handle
      */
-    Runtime(MunRuntimeHandle handle) noexcept : m_handle(handle) {}
+    Runtime(MunRuntime handle) noexcept : m_handle(handle) {}
 
 public:
     /** Move constructs a runtime
@@ -47,19 +47,20 @@ public:
      * \param out_error a pointer that will optionally return an error
      * \return possibly, the desired `MunFunctionDefinition` struct
      */
-    std::optional<FunctionInfo> find_function_info(std::string_view fn_name,
-                                                   Error* out_error = nullptr) noexcept {
+    std::optional<Function> find_function_info(std::string_view fn_name,
+                                               Error* out_error = nullptr) noexcept {
         bool has_fn;
-        MunFunctionInfoHandle fn_info;
-        if (auto error =
-                Error(mun_runtime_get_function_info(m_handle, fn_name.data(), &has_fn, &fn_info))) {
+        MunFunction fn_info;
+        if (auto error = Error(mun_runtime_find_function_definition(
+                m_handle, fn_name.data(), fn_name.size(), &has_fn, &fn_info));
+            error.is_error()) {
             if (out_error) {
                 *out_error = std::move(error);
             }
             return std::nullopt;
         }
 
-        return has_fn ? std::make_optional(std::move(fn_info)) : std::nullopt;
+        return has_fn ? std::make_optional(Function(fn_info)) : std::nullopt;
     }
 
     /**
@@ -69,12 +70,13 @@ public:
      *
      * \param type_info the type to allocate
      * \param out_error a pointer to fill with a potential error
-     * \return potentially, the handle of an allocated object
+     * \return potentially, the type_handle of an allocated object
      */
-    std::optional<MunGcPtr> gc_alloc(const TypeInfo& type_info,
+    std::optional<MunGcPtr> gc_alloc(const Type& type_info,
                                      Error* out_error = nullptr) const noexcept {
         MunGcPtr obj;
-        if (auto error = Error(mun_gc_alloc(m_handle, type_info.handle(), &obj))) {
+        if (auto error = Error(mun_gc_alloc(m_handle, type_info.type_handle(), &obj));
+            error.is_error()) {
             if (out_error) {
                 *out_error = std::move(error);
             }
@@ -91,9 +93,7 @@ public:
      */
     bool gc_collect() const noexcept {
         bool reclaimed;
-        auto error_handle = mun_gc_collect(m_handle, &reclaimed);
-        assert(error_handle._0 == nullptr);
-
+        MUN_ASSERT(mun_gc_collect(m_handle, &reclaimed));
         return reclaimed;
     }
 
@@ -105,14 +105,11 @@ public:
      * be collected. An object can be rooted multiple times, but you must make
      * sure to call `mun_gc_unroot` an equal number of times before the object
      * can be collected. If successful, `obj` has been rooted, otherwise a
-     * non-zero error handle is returned.
+     * non-zero error type_handle is returned.
      *
-     * \param obj a garbage collection handle
+     * \param obj a garbage collection type_handle
      */
-    void gc_root_ptr(MunGcPtr obj) const noexcept {
-        const auto error_handle = mun_gc_root(m_handle, obj);
-        assert(error_handle._0 == nullptr);
-    }
+    void gc_root_ptr(MunGcPtr obj) const noexcept { MUN_ASSERT(mun_gc_root(m_handle, obj)); }
 
     /**
      * Unroots the specified `obj`, potentially allowing it and objects it
@@ -122,24 +119,20 @@ public:
      * `gc_unroot_ptr` the same number of times as `gc_root_ptr` was called
      * before the object can be collected.
      *
-     * \param obj a garbage collection handle
+     * \param obj a garbage collection type_handle
      */
-    void gc_unroot_ptr(MunGcPtr obj) const noexcept {
-        const auto error_handle = mun_gc_unroot(m_handle, obj);
-        assert(error_handle._0 == nullptr);
-    }
+    void gc_unroot_ptr(MunGcPtr obj) const noexcept { MUN_ASSERT(mun_gc_unroot(m_handle, obj)); }
 
     /**
      * Retrieves the type information for the specified `obj`.
      *
-     * \param obj a garbage collection handle
-     * \return the handle's type information
+     * \param obj a garbage collection type_handle
+     * \return the type_handle's type information
      */
-    TypeInfo ptr_type(MunGcPtr obj) const noexcept {
-        MunTypeInfoHandle type_handle;
-        const auto error_handle = mun_gc_ptr_type(m_handle, obj, &type_handle);
-        assert(error_handle._0 == nullptr);
-        return TypeInfo(type_handle);
+    Type ptr_type(MunGcPtr obj) const noexcept {
+        MunType type_handle;
+        MUN_ASSERT(mun_gc_ptr_type(m_handle, obj, &type_handle));
+        return Type(type_handle);
     }
 
     /** Checks for updates to hot reloadable assemblies.
@@ -149,7 +142,7 @@ public:
      */
     bool update(Error* out_error = nullptr) {
         bool updated;
-        if (auto error = Error(mun_runtime_update(m_handle, &updated))) {
+        if (auto error = Error(mun_runtime_update(m_handle, &updated)); error.is_error()) {
             if (out_error) {
                 *out_error = std::move(error);
             }
@@ -159,7 +152,7 @@ public:
     }
 
 private:
-    MunRuntimeHandle m_handle;
+    MunRuntime m_handle;
 };
 
 struct RuntimeOptions {
@@ -194,13 +187,13 @@ inline std::optional<Runtime> make_runtime(std::string_view library_path,
         const auto& func = options.functions[i];
         definition = MunExternalFunctionDefinition{
             func.name.c_str(), static_cast<uint32_t>(func.arg_types.size()), func.arg_types.data(),
-            func.ret_type, func.fn_ptr};
+            func.ret_type.type_handle(), func.fn_ptr};
 
         // The MunExternalFunctionDefinition has ownership over the stored types
         for (const auto& arg_type : func.arg_types) {
-            mun_type_info_increment_strong_count(arg_type);
+            MUN_ASSERT(mun_type_add_reference(arg_type));
         }
-        mun_type_info_increment_strong_count(func.ret_type);
+        MUN_ASSERT(mun_type_add_reference(func.ret_type.type_handle()));
     }
 
     MunRuntimeOptions runtime_options;
@@ -208,8 +201,9 @@ inline std::optional<Runtime> make_runtime(std::string_view library_path,
         function_definitions.empty() ? nullptr : function_definitions.data();
     runtime_options.num_functions = static_cast<uint32_t>(function_definitions.size());
 
-    MunRuntimeHandle handle;
-    if (auto error = Error(mun_runtime_create(library_path.data(), runtime_options, &handle))) {
+    MunRuntime handle;
+    if (auto error = Error(mun_runtime_create(library_path.data(), runtime_options, &handle));
+        error.is_error()) {
         if (out_error) {
             *out_error = std::move(error);
         }
