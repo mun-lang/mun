@@ -1,6 +1,6 @@
 [package]
 name = "mun_capi_utils"
-version = "0.1.0"
+version = "0.4.0-dev"
 edition = "2021"
 authors = ["The Mun Team <team@mun-lang.org>"]
 description = "Common functionality between C api crates."

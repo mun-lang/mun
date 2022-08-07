@@ -18,7 +18,7 @@ anyhow = "1.0"
 itertools = "0.10.3"
 mun_libloader = { version = "=0.1.0", path = "../mun_libloader" }
 log = "0.4"
-mun_capi_utils = { version = "=0.1.0", path = "../mun_capi_utils"}
+mun_capi_utils = { version = "=0.4.0-dev", path = "../mun_capi_utils"}
 mun_memory = { version = "=0.2.0", path = "../mun_memory" }
 mun_project = { version = "=0.4.0-dev", path = "../mun_project" }
 notify = "4.0.12"
