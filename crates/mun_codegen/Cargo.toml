@@ -14,7 +14,7 @@ categories = ["Game development", "Mun"]
 
 [dependencies]
 rustc-hash = "1.1.0"
-mun_abi = { version = "=0.3.0", path = "../mun_abi" }
+mun_abi = { version = "=0.4.0-dev", path = "../mun_abi" }
 bytemuck = "1.4.1"
 mun_hir = { version = "=0.3.0", path = "../mun_hir" }
 itertools = "0.10.3"

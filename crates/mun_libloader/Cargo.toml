@@ -13,7 +13,7 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-mun_abi = { version = "=0.3.0", path = "../mun_abi" }
+mun_abi = { version = "=0.4.0-dev", path = "../mun_abi" }
 anyhow = "1.0"
 libloading = "0.7"
 tempfile = "3"
