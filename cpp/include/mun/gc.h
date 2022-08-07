@@ -11,10 +11,10 @@ class Runtime;
 class GcRootPtr {
 public:
     /** Constructs a rooted garbage collection pointer from the provided raw
-     * garbage collection handle.
+     * garbage collection type_handle.
      *
      * \param runtime a reference to a runtime
-     * \param obj a garbage collected object handle
+     * \param obj a garbage collected object type_handle
      * \return a rooted garbage collection pointer
     .*/
     GcRootPtr(const Runtime& runtime, MunGcPtr obj) noexcept : m_ptr(obj), m_runtime(&runtime) {
@@ -59,16 +59,16 @@ public:
     /** Destructs the `GcRootPtr`, unrooting the underlying `GcPtr`. */
     ~GcRootPtr() noexcept { unroot(); }
 
-    /** Retrieves the raw garbage collection handle of this instance.
+    /** Retrieves the raw garbage collection type_handle of this instance.
      *
-     * \return a raw garbage collection handle
+     * \return a raw garbage collection type_handle
      */
-    MunGcPtr handle() const noexcept { return m_ptr; }
+    [[nodiscard]] constexpr MunGcPtr handle() const noexcept { return m_ptr; }
 
     /** Unroots the underlying `GcPtr`, returning the underlying garbage
-     * collection handle.
+     * collection type_handle.
      *
-     * \return a raw garbage collection handle
+     * \return a raw garbage collection type_handle
      */
     MunGcPtr unroot() noexcept {
         const auto ptr = m_ptr;

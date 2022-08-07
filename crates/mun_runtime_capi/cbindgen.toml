@@ -10,9 +10,12 @@ line_length = 100
 tab_width = 4
 
 [export]
-include = ["StructInfo"]
 prefix = "Mun"
+
+[enum]
+rename_variants = "QualifiedScreamingSnakeCase"
 
 [parse]
 parse_deps = true
-include = ["mun_abi", "mun_memory", "mun_runtime"]
+include = ["mun_abi", "mun_memory", "mun_runtime", "mun_capi_utils"]
+extra_bindings = ["mun_memory", "mun_capi_utils"]

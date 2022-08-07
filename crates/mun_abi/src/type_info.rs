@@ -85,9 +85,9 @@ impl<'a> TypeDefinition<'a> {
     }
 
     /// Returns the GUID if this type represents a concrete type.
-    pub fn as_concrete(&self) -> Option<&Guid> {
+    pub fn as_concrete(&self) -> &Guid {
         match &self.data {
-            TypeDefinitionData::Struct(s) => Some(&s.guid),
+            TypeDefinitionData::Struct(s) => &s.guid,
         }
     }
 

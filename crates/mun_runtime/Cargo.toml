@@ -18,8 +18,8 @@ anyhow = "1.0"
 itertools = "0.10.3"
 libloader = { version = "=0.1.0", path = "../mun_libloader", package = "mun_libloader" }
 log = "0.4"
-md5 = "0.7.0"
 memory = { version = "=0.2.0", path = "../mun_memory", package = "mun_memory" }
+capi_utils = { version = "=0.1.0", path = "../mun_capi_utils", package = "mun_capi_utils" }
 mun_project = { version = "=0.1.0", path = "../mun_project" }
 notify = "4.0.12"
 once_cell = "1.4.0"
@@ -28,14 +28,14 @@ rustc-hash = "1.1"
 seq-macro = "0.3.0"
 
 [dev-dependencies]
-bevy = "0.8"
+bevy = { version = "0.8", default-features = false }
 compiler = { version="=0.3.0", path="../mun_compiler", package = "mun_compiler" }
 criterion = "0.3"
 mlua = { package ="mlua", version="0.8", default-features = false, features=["vendored", "luajit"]  }
 mun_test = { path = "../mun_test" }
 tempfile = "3"
 termcolor = "1.1"
-wasmer = "2.2.1"
+wasmer = { version = "2.2.1", default-features = false, features = ["sys-default"] }
 
 [[bench]]
 name = "benchmarks"
