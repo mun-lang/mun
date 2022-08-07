@@ -14,7 +14,7 @@ categories = ["game-development", "mun"]
 
 [dependencies]
 anyhow = "1.0.31"
-mun_codegen = { version = "=0.3.0", path="../mun_codegen" }
+mun_codegen = { version = "=0.4.0-dev", path="../mun_codegen" }
 mun_syntax = { version = "=0.4.0-dev", path="../mun_syntax" }
 mun_hir = { version= "=0.4.0-dev", path="../mun_hir" }
 mun_paths = { version= "=0.4.0-dev", path="../mun_paths" }
