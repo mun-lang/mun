@@ -1347,23 +1347,6 @@ fn map_array_to_array_different_struct_to_struct() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, d)).unwrap();
     let foo_struct = foo_struct.root();
 
-    println!(
-        "b before: {:?}",
-        foo_struct
-            .as_ref(&driver.runtime)
-            .get::<ArrayRef<'_, StructRef>>("b")
-            .unwrap()
-            .type_info()
-    );
-    println!(
-        "c before: {:?}",
-        foo_struct
-            .as_ref(&driver.runtime)
-            .get::<ArrayRef<'_, StructRef>>("c")
-            .unwrap()
-            .type_info()
-    );
-
     driver.update(
         "mod.mun",
         r#"
@@ -1378,22 +1361,7 @@ fn map_array_to_array_different_struct_to_struct() {
         }
     "#,
     );
-    println!(
-        "b after: {:?}",
-        foo_struct
-            .as_ref(&driver.runtime)
-            .get::<ArrayRef<'_, StructRef>>("b")
-            .unwrap()
-            .type_info()
-    );
-    println!(
-        "c after: {:?}",
-        foo_struct
-            .as_ref(&driver.runtime)
-            .get::<ArrayRef<'_, StructRef>>("c")
-            .unwrap()
-            .type_info()
-    );
+
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<i32>("a").unwrap(),
         a

@@ -1,8 +1,9 @@
 use crate::{diff::util::*, fake_struct};
+use abi::StructMemoryKind;
 use mun_memory::{
     diff::{diff, Diff, FieldDiff, FieldEditKind},
     type_table::TypeTable,
-    HasStaticType, Type,
+    HasStaticType, StructTypeBuilder, Type,
 };
 
 fn assert_eq_struct(result: &[Type], expected: &[Type]) {
@@ -383,6 +384,23 @@ fn cast_field() {
         }]
     );
     assert_eq_struct(&apply_diff(old, new, diff), &[struct2]);
+}
+
+#[test]
+fn equality_value_struct() {
+    let i32_struct_array = StructTypeBuilder::new("struct1")
+        .set_memory_kind(StructMemoryKind::Value)
+        .add_field("a", i32::type_info().clone())
+        .finish()
+        .array_type();
+
+    let i64_struct_array = StructTypeBuilder::new("struct1")
+        .set_memory_kind(StructMemoryKind::Value)
+        .add_field("a", i64::type_info().clone())
+        .finish()
+        .array_type();
+
+    assert_ne!(i32_struct_array, i64_struct_array);
 }
 
 #[test]

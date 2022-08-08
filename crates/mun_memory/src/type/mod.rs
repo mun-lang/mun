@@ -286,7 +286,12 @@ impl Debug for Type {
 
 impl Display for Type {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        std::fmt::Display::fmt(&self.name(), f)
+        match self.kind() {
+            TypeKind::Primitive(_) => std::fmt::Display::fmt(self.name(), f),
+            TypeKind::Struct(s) => std::fmt::Display::fmt(&s, f),
+            TypeKind::Pointer(p) => std::fmt::Display::fmt(&p, f),
+            TypeKind::Array(a) => std::fmt::Display::fmt(&a, f),
+        }
     }
 }
 
@@ -542,6 +547,19 @@ impl<'t> StructType<'t> {
     }
 }
 
+impl<'t> Display for StructType<'t> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_fmt(format_args!(
+            "struct({}) {{",
+            if self.is_gc_struct() { "gc" } else { "value" },
+        ))?;
+        self.fields().iter().try_for_each(|field| {
+            f.write_fmt(format_args!("{}: {}, ", field.name(), field.ty()))
+        })?;
+        f.write_str("}")
+    }
+}
+
 /// A collection of fields of a struct
 #[derive(Copy, Clone)]
 pub struct Fields<'t> {
@@ -640,6 +658,16 @@ impl<'t> PointerType<'t> {
     }
 }
 
+impl<'t> Display for PointerType<'t> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_fmt(format_args!(
+            "*{} {}",
+            if self.is_mutable() { "mut" } else { "const" },
+            self.pointee()
+        ))
+    }
+}
+
 impl Hash for StructData {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.guid.hash(state)
@@ -671,6 +699,14 @@ impl<'t> ArrayType<'t> {
     pub fn element_type(&self) -> Type {
         // Safety: this operation is safe due to the lifetime constraints on this type
         unsafe { Type::new_unchecked(self.inner.element_ty, self.store.clone()) }
+    }
+}
+
+impl<'t> Display for ArrayType<'t> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str("[")?;
+        std::fmt::Display::fmt(&self.element_type(), f)?;
+        f.write_str("]")
     }
 }
 

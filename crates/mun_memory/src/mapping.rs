@@ -10,11 +10,11 @@ use std::collections::{HashMap, HashSet};
 
 pub struct Mapping {
     pub deletions: HashSet<Type>,
-    pub conversions: HashMap<Type, Conversion>,
+    pub struct_mappings: HashMap<Type, StructMapping>,
     pub identical: Vec<(Type, Type)>,
 }
 
-pub struct Conversion {
+pub struct StructMapping {
     pub field_mapping: Vec<FieldMapping>,
     pub new_ty: Type,
 }
@@ -156,7 +156,7 @@ impl Mapping {
 
         Self {
             deletions,
-            conversions,
+            struct_mappings: conversions,
             identical,
         }
     }
@@ -170,7 +170,7 @@ impl Mapping {
 /// # Safety
 ///
 /// Expects the `diff` to be based on `old_ty` and `new_ty`. If not, it causes undefined behavior.
-pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) -> Conversion {
+pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) -> StructMapping {
     let old_fields = old_ty
         .as_struct()
         .map(|s| s.fields().iter().collect())
@@ -283,7 +283,7 @@ pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) ->
         .as_struct()
         .map(|s| Vec::from_iter(s.fields().iter()))
         .unwrap_or_else(Vec::new);
-    Conversion {
+    StructMapping {
         field_mapping: mapping
             .into_iter()
             .enumerate()
@@ -376,7 +376,7 @@ fn resolve_struct_edit(old_ty: &Type, new_ty: &Type, old_offset: usize) -> Actio
     }
 }
 
-fn resolve_struct_to_struct_edit(old_ty: &Type, new_ty: &Type, old_offset: usize) -> Action {
+pub fn resolve_struct_to_struct_edit(old_ty: &Type, new_ty: &Type, old_offset: usize) -> Action {
     // Early opt-out for when we are recursively resolving types (e.g. for arrays)
     if *old_ty == *new_ty {
         return Action::Copy {
