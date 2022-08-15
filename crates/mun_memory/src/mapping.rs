@@ -31,41 +31,40 @@ pub struct FieldMapping {
 /// The `Action` to take when mapping memory from A to B.
 #[derive(Debug, Eq, PartialEq)]
 pub enum Action {
+    /// Allocate a new array.
     ArrayAlloc,
+    /// Allocate a new array and initialize it with a single value.
     ArrayFromValue {
         element_action: Box<Action>,
         old_offset: usize,
     },
+    /// Allocate a new array and map values from an old array.
     ArrayMap {
         element_action: Box<Action>,
         old_offset: usize,
     },
-    Cast {
-        old_ty: Type,
-        old_offset: usize,
-    },
+    /// Cast a primitive type.
+    Cast { old_ty: Type, old_offset: usize },
+    /// Copy bytes.
     Copy {
         old_offset: usize,
         /// Size in bytes
         size: usize,
     },
+    /// Replace an array with its element type, copying its first element - if any.
     ElementFromArray {
         element_action: Box<Action>,
         old_offset: usize,
     },
+    /// Allocate a new struct and ensure zero-initalization.
     StructAlloc,
-    StructMapFromGc {
-        old_ty: Type,
-        old_offset: usize,
-    },
-    StructMapFromValue {
-        old_ty: Type,
-        old_offset: usize,
-    },
-    StructMapInPlace {
-        old_ty: Type,
-        old_offset: usize,
-    },
+    /// Allocate a new struct and map from a heap-allocated struct.
+    StructMapFromGc { old_ty: Type, old_offset: usize },
+    /// Allocate a new struct and map from a value struct.
+    StructMapFromValue { old_ty: Type, old_offset: usize },
+    /// Map a value struct in-place.
+    StructMapInPlace { old_ty: Type, old_offset: usize },
+    /// Ensure the memory is zero-initialized.
     ZeroInitialize,
 }
 
