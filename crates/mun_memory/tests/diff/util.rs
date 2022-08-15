@@ -122,11 +122,10 @@ fn apply_struct_mapping(
         .iter()
         .filter_map(|diff| match diff {
             FieldDiff::Edit {
-                old_type,
-                new_type,
                 old_index: Some(old_index),
                 new_index,
                 kind,
+                ..
             } => {
                 let combined = fields.get_mut(*old_index).unwrap();
                 let new_field = new_struct.fields().get(*new_index).unwrap();
@@ -159,11 +158,10 @@ fn apply_struct_mapping(
     // Handle edits
     for diff in mapping.iter() {
         if let FieldDiff::Edit {
-            old_type,
-            new_type,
             old_index: None,
             new_index,
             kind,
+            ..
         } = diff
         {
             edit_field(

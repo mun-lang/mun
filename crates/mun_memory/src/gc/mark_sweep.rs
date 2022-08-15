@@ -693,7 +693,7 @@ where
                 let old_element_ty = ty;
                 if let Some(conversion) = mapping.struct_mappings.get(&old_element_ty) {
                     let mut new_ty = conversion.new_ty.clone();
-                    while let Some(_) = stack.pop() {
+                    while stack.pop().is_some() {
                         new_ty = new_ty.array_type();
                     }
 
@@ -757,7 +757,7 @@ where
             let src_array = ArrayHandle { obj: src_object };
 
             // Initialize the array
-            let new_header = array_header(&new_ty, src_array.length());
+            let new_header = array_header(new_ty, src_array.length());
 
             let mut dest_obj = ObjectInfo {
                 data: ObjectInfoData { array: new_header },
@@ -853,21 +853,27 @@ where
                     element_action,
                     old_offset,
                 } => {
+                    let src_ptr = unsafe { get_field_ptr(src, *old_offset) };
+
                     // Safety: we already hold a write lock on `objects`, so this is legal.
-                    let src_obj = unsafe {
-                        *get_field_ptr(src, *old_offset)
-                            .cast::<NonNull<ObjectInfo>>()
-                            .as_ref()
-                    };
+                    let src_obj = unsafe { *src_ptr.cast::<NonNull<ObjectInfo>>().as_ref() };
 
                     map_array(
                         gc,
                         new_allocations,
                         conversions,
                         src_obj,
-                        &element_action,
+                        element_action,
                         new_ty,
                     );
+
+                    unsafe {
+                        std::ptr::copy_nonoverlapping(
+                            src_ptr.as_ptr(),
+                            dest.as_ptr(),
+                            std::mem::size_of::<GcPtr>(),
+                        )
+                    };
                 }
                 mapping::Action::Cast { old_offset, old_ty } => {
                     if !cast::try_cast_from_to(
@@ -932,10 +938,12 @@ where
                     new_allocations.push(object);
                 }
                 mapping::Action::StructMapFromGc { old_ty, old_offset } => {
-                    let conversion = conversions.get(old_ty).expect(&format!(
+                    let conversion = conversions.get(old_ty).unwrap_or_else(|| {
+                        panic!(
                         "If the struct changed, there must also be a conversion for type: {:#?}.",
                         old_ty,
-                    ));
+                    )
+                    });
 
                     // Safety: we already hold a write lock on `objects`, so this is legal.
                     let object = unsafe {
@@ -958,10 +966,12 @@ where
                 mapping::Action::StructMapFromValue { old_ty, old_offset } => {
                     let object = alloc_struct(new_ty.clone());
 
-                    let conversion = conversions.get(old_ty).expect(&format!(
+                    let conversion = conversions.get(old_ty).unwrap_or_else(|| {
+                        panic!(
                         "If the struct changed, there must also be a conversion for type: {:#?}.",
                         old_ty,
-                    ));
+                    )
+                    });
 
                     // Map in-memory struct to heap-allocated struct
                     map_struct(
@@ -984,10 +994,12 @@ where
                     new_allocations.push(object);
                 }
                 mapping::Action::StructMapInPlace { old_ty, old_offset } => {
-                    let conversion = conversions.get(old_ty).expect(&format!(
+                    let conversion = conversions.get(old_ty).unwrap_or_else(|| {
+                        panic!(
                         "If the struct changed, there must also be a conversion for type: {:#?}.",
                         old_ty,
-                    ));
+                    )
+                    });
 
                     map_struct(
                         gc,

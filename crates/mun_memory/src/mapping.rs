@@ -181,7 +181,7 @@ pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) ->
         .filter_map(|diff| match diff {
             FieldDiff::Delete { index } => Some(*index),
             FieldDiff::Move { old_index, .. } => Some(*old_index),
-            FieldDiff::Edit { old_index, .. } => old_index.clone(),
+            FieldDiff::Edit { old_index, .. } => *old_index,
             FieldDiff::Insert { .. } => None,
         })
         .collect();
@@ -195,7 +195,7 @@ pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) ->
                 None
             } else {
                 Some(Action::Copy {
-                    old_offset: usize::from(old_field.offset()),
+                    old_offset: old_field.offset(),
                     size: old_field.ty().reference_layout().size(),
                 })
             }
@@ -216,9 +216,8 @@ pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) ->
             } => old_index.map(|old_index| {
                 let old_offset = old_fields
                     .get(old_index)
-                    .map(|field| usize::from(field.offset()))
+                    .map(|field| field.offset())
                     .expect("The old field must exist.");
-                println!("EDIT");
                 (*new_index, resolve_edit(old_type, new_type, old_offset))
             }),
             FieldDiff::Insert { index, new_type } => Some((
@@ -238,7 +237,7 @@ pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) ->
             } => {
                 let old_offset = old_fields
                     .get(*old_index)
-                    .map(|field| usize::from(field.offset()))
+                    .map(|field| field.offset())
                     .expect("Old field must exist.");
 
                 Some((
@@ -271,7 +270,7 @@ pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) ->
         {
             let old_offset = old_fields
                 .get(*new_index)
-                .map(|field| usize::from(field.offset()))
+                .map(|field| field.offset())
                 .expect("The old field must exist.");
 
             let action = mapping.get_mut(*new_index).unwrap();
@@ -290,11 +289,11 @@ pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) ->
             .map(|(new_index, action)| {
                 let new_field = new_fields
                     .get(new_index)
-                    .expect(format!("New field at index: '{}' must exist.", new_index).as_str());
+                    .unwrap_or_else(|| panic!("New field at index: '{}' must exist.", new_index));
                 FieldMapping {
                     new_ty: new_field.ty(),
-                    new_offset: usize::from(new_field.offset()),
-                    action: action,
+                    new_offset: new_field.offset(),
+                    action,
                 }
             })
             .collect(),
@@ -380,7 +379,7 @@ pub fn resolve_struct_to_struct_edit(old_ty: &Type, new_ty: &Type, old_offset: u
     // Early opt-out for when we are recursively resolving types (e.g. for arrays)
     if *old_ty == *new_ty {
         return Action::Copy {
-            old_offset: old_offset,
+            old_offset,
             size: old_ty.reference_layout().size(),
         };
     }
@@ -476,20 +475,16 @@ fn resolve_array_to_array_edit(
     new_array: &ArrayType,
     old_offset: usize,
 ) -> Action {
-    if old_array.element_type() == new_array.element_type() {
-        println!("THE SAME");
+    let old_element_type = old_array.element_type();
+    let new_element_type = new_array.element_type();
+    if old_element_type == new_element_type {
         Action::Copy {
             old_offset,
             size: std::mem::size_of::<GcPtr>(),
         }
     } else {
-        println!("ARRAY MAP");
         Action::ArrayMap {
-            element_action: Box::new(resolve_edit(
-                &old_array.element_type(),
-                &new_array.element_type(),
-                0,
-            )),
+            element_action: Box::new(resolve_edit(&old_element_type, &new_element_type, 0)),
             old_offset,
         }
     }
