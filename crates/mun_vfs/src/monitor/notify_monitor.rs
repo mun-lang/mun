@@ -1,8 +1,8 @@
 use super::{Monitor, MonitorConfig, MonitorDirectories, MonitorEntry, MonitorMessage};
 use crate::{AbsPath, AbsPathBuf};
 use crossbeam_channel::{never, select, unbounded, Receiver, Sender};
-use notify::{RecommendedWatcher, RecursiveMode, Watcher};
-use std::{convert::TryFrom, thread};
+use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
+use std::{convert::TryFrom, thread, time::Duration};
 use walkdir::WalkDir;
 
 /// A message that can be sent from the "foreground" to the background thread.
@@ -142,11 +142,14 @@ impl NotifyThread {
         self.watcher = None;
         if !config.watch.is_empty() {
             let (watcher_sender, watcher_receiver) = unbounded();
-            let watcher = log_notify_error(RecommendedWatcher::new(move |event| {
-                watcher_sender
-                    .send(event)
-                    .expect("unable to send notify event over channel")
-            }));
+            let watcher = log_notify_error(RecommendedWatcher::new(
+                move |event| {
+                    watcher_sender
+                        .send(event)
+                        .expect("unable to send notify event over channel")
+                },
+                Config::default().with_poll_interval(Duration::from_millis(250)),
+            ));
             self.watcher = watcher.map(|it| (it, watcher_receiver));
         }
 
