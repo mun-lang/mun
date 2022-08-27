@@ -14,7 +14,6 @@ categories = ["game-development", "mun"]
 
 [dependencies]
 log = "0.4.8"
-thiserror = "1.0.19"
 
 [dev-dependencies]
 insta = "1.12.0"
