@@ -16,7 +16,7 @@ mod reflection;
 use anyhow::Result;
 use dispatch_table::DispatchTable;
 use garbage_collector::GarbageCollector;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use memory::{
     gc::{self, GcRuntime},
     type_table::TypeTable,
