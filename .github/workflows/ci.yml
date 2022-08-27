@@ -9,6 +9,7 @@ on:
 
 env:
   RUSTFLAGS: -Dwarnings
+  CARGO_TERM_COLOR: always
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -83,14 +84,25 @@ jobs:
       - uses: Swatinem/rust-cache@v1
         if: matrix.os != 'windows-latest'
         
-      - name: Cargo test
+      - name: Doctests
         uses: actions-rs/cargo@v1
         env:
           RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
           CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
         with:
           command: test
-          args: --lib --bins --tests --examples -- --nocapture
+          args: --doc --all-features
+
+      - name: Install latest nextest release
+        uses: taiki-e/install-action@nextest
+      - name: Test with latest nextest release
+        uses: actions-rs/cargo@v1
+        env:
+          RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
+          CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
+        with:
+          command: nextest
+          args: run --all-features --profile ci
 
   test-mdbook:
     name: Test mdbook
