@@ -16,7 +16,7 @@ mod reflection;
 use anyhow::Result;
 use dispatch_table::DispatchTable;
 use garbage_collector::GarbageCollector;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use memory::{
     gc::{self, GcRuntime},
     type_table::TypeTable,
@@ -379,6 +379,7 @@ impl Runtime {
             )
         }
 
+        let mut requires_relink = false;
         while let Ok(event) = self.watcher_rx.try_recv() {
             if let Some(path) = event.path {
                 let op = event.op.expect("Invalid event.");
@@ -390,18 +391,7 @@ impl Runtime {
                     if op.contains(notify::op::REMOVE) {
                         debug!("Lockfile deleted");
 
-                        match relink_assemblies(self) {
-                            Ok((dispatch_table, type_table)) => {
-                                info!("Succesfully reloaded assemblies.");
-
-                                self.dispatch_table = dispatch_table;
-                                self.type_table = type_table;
-                                self.assemblies_to_relink.clear();
-
-                                return true;
-                            }
-                            Err(e) => error!("Failed to relink assemblies, due to {}.", e),
-                        }
+                        requires_relink = true;
                     }
                 } else {
                     let path = path.canonicalize().unwrap_or_else(|_| {
@@ -416,10 +406,31 @@ impl Runtime {
                         } else {
                             self.renamed_files.insert(cookie, path);
                         }
-                    } else if op.contains(notify::op::WRITE) {
+                    } else if op.intersects(
+                        notify::op::CREATE | notify::op::WRITE | notify::op::CLOSE_WRITE,
+                    ) {
                         // TODO: don't overwrite existing
                         self.assemblies_to_relink.push_back((path.clone(), path));
                     }
+                }
+            }
+        }
+
+        if requires_relink {
+            if self.assemblies_to_relink.is_empty() {
+                debug!("The compiler didn't write a munlib.");
+            } else {
+                match relink_assemblies(self) {
+                    Ok((dispatch_table, type_table)) => {
+                        info!("Succesfully reloaded assemblies.");
+
+                        self.dispatch_table = dispatch_table;
+                        self.type_table = type_table;
+                        self.assemblies_to_relink.clear();
+
+                        return true;
+                    }
+                    Err(e) => error!("Failed to relink assemblies, due to {}.", e),
                 }
             }
         }

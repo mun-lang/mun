@@ -327,15 +327,15 @@ fn map_struct_cast_fields1() {
     );
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<u16>("0").unwrap(),
-        a.into()
+        u16::from(a)
     );
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<i32>("1").unwrap(),
-        b.into()
+        i32::from(b)
     );
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<u64>("2").unwrap(),
-        c.into()
+        u64::from(c)
     );
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<i128>("3").unwrap(),
@@ -343,7 +343,7 @@ fn map_struct_cast_fields1() {
     );
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<f64>("4").unwrap(),
-        e.into()
+        f64::from(e)
     );
 }
 
@@ -625,7 +625,7 @@ fn map_struct_all() {
     );
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<i64>("d").unwrap(),
-        d.into()
+        i64::from(d)
     );
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<i32>("e").unwrap(),

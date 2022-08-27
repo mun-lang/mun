@@ -15,6 +15,7 @@ categories = ["Game development", "Mun"]
 [dependencies]
 rustc-hash = "1.1.0"
 abi = { version = "=0.3.0", path = "../mun_abi", package = "mun_abi" }
+apple-codesign = "0.17.0"
 bytemuck = "1.4.1"
 hir = { version = "=0.3.0", path = "../mun_hir", package = "mun_hir" }
 itertools = "0.10.3"
