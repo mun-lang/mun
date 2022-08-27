@@ -9,10 +9,10 @@ use std::{
 
 use abi::Guid;
 use capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
+pub use r#array::ArrayInfo;
 pub use r#pointer::PointerInfo;
 pub use r#struct::{Field, Fields, StructInfo};
 
-use crate::r#type::ffi::array::ArrayInfo;
 use crate::r#type::{ArrayData, PointerData, StructData, TypeData, TypeDataKind, TypeDataStore};
 
 mod array;
@@ -210,6 +210,25 @@ pub unsafe extern "C" fn mun_type_pointer_type(
     ErrorHandle::default()
 }
 
+/// Returns a new [`Type`] that is an array of the specified type.
+///
+/// # Safety
+///
+/// This function results in undefined behavior if the passed in `Type`s have been deallocated in a
+/// previous call to [`mun_type_release`].
+#[no_mangle]
+pub unsafe extern "C" fn mun_type_array_type(ty: Type, array_ty: *mut Type) -> ErrorHandle {
+    let array_ty = try_deref_mut!(array_ty);
+    let store = mun_error_try!(ty
+        .store()
+        .map_err(|e| format!("invalid argument 'ty': {e}")));
+    let inner = mun_error_try!(ty
+        .inner()
+        .map_err(|e| format!("invalid argument 'ty': {e}")));
+    *array_ty = inner.array_type(&store).into();
+    ErrorHandle::default()
+}
+
 /// An enum that defines the kind of type.
 #[repr(u8)]
 pub enum TypeKind {
@@ -317,7 +336,8 @@ mod test {
     };
 
     use crate::r#type::ffi::{
-        mun_type_add_reference, mun_type_alignment, mun_type_pointer_type, mun_type_size,
+        mun_type_add_reference, mun_type_alignment, mun_type_array_type, mun_type_pointer_type,
+        mun_type_size,
     };
     use crate::HasStaticType;
 
@@ -502,6 +522,34 @@ mod test {
         assert_error_snapshot!(
             unsafe { mun_type_pointer_type(ffi_u64, true, ptr::null_mut()) },
             @r###""invalid argument \'pointer_ty\': null pointer""###
+        );
+        unsafe { mun_type_release(ffi_u64) };
+    }
+
+    #[test]
+    fn test_mun_type_array_type() {
+        let ffi_u64 = mun_type_primitive(PrimitiveType::U64);
+
+        assert_getter1!(mun_type_array_type(ffi_u64, ffi_u64_array));
+        let rust_u64_array = unsafe { ffi_u64_array.to_owned() }.unwrap();
+        let array_info = rust_u64_array.as_array().expect("type is not an array");
+        assert_eq!(&array_info.element_type(), u64::type_info());
+
+        unsafe { mun_type_release(ffi_u64) };
+    }
+
+    #[test]
+    fn test_mun_type_array_type_invalid_null() {
+        let mut ffi_u64_array = MaybeUninit::uninit();
+        assert_error_snapshot!(
+            unsafe { mun_type_array_type(FFI_TYPE_NULL, ffi_u64_array.as_mut_ptr()) },
+            @r###""invalid argument \'ty\': null pointer""###
+        );
+
+        let ffi_u64 = mun_type_primitive(PrimitiveType::U64);
+        assert_error_snapshot!(
+            unsafe { mun_type_array_type(ffi_u64, ptr::null_mut()) },
+            @r###""invalid argument \'array_ty\': null pointer""###
         );
         unsafe { mun_type_release(ffi_u64) };
     }

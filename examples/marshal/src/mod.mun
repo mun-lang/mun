@@ -101,3 +101,7 @@ pub fn new_gc_wrapper(a: GcStruct, b: ValueStruct) -> GcWrapper {
 pub fn new_value_wrapper(a: GcStruct, b: ValueStruct) -> ValueWrapper {
     ValueWrapper(a, b)
 }
+
+pub fn new_array_i32(a: i32, b: i32, c: i32) -> [i32] {
+    [a,b,c]
+}
