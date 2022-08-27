@@ -32,8 +32,8 @@ mun_syntax = { version = "=0.4.0-dev", path = "../mun_syntax" }
 mun_diagnostics = { version = "=0.4.0-dev", path = "../mun_diagnostics" }
 crossbeam-channel = "0.5.0"
 parking_lot = "0.12.0"
-mun_paths = { version = "=0.4.0-dev", path="../mun_paths" }
-ra_ap_text_edit="0.0.123"
+paths = { version = "=0.4.0-dev", path="../mun_paths" }
+ra_ap_text_edit="0.0.126"
 
 [dev-dependencies]
 tempdir = "0.3.7"
