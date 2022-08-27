@@ -490,7 +490,7 @@ impl Runtime {
         let array_capacity = iter
             .size_hint()
             .1
-            .expect("iterator doesnt return upper bound");
+            .expect("iterator doesn't return upper bound");
         let mut array_handle = self.gc.alloc_array(&array_type, array_capacity);
 
         let mut element_ptr = array_handle.data().as_ptr();

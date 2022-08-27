@@ -21,8 +21,8 @@ pub mod ty;
 pub(crate) mod type_table;
 pub mod types;
 
-use array::MunArrayValue;
-use reference::MunReferenceValue;
+use array::RuntimeArrayValue;
+use reference::RuntimeReferenceValue;
 
 /// Defines that a type has a static representation in inkwell
 pub trait IsIrType<'ink> {

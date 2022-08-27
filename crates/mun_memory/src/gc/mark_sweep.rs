@@ -144,8 +144,8 @@ impl Iterator for StructTrace {
 
 /// A struct that enables iterating over all GC references in a struct.
 ///
-/// TODO: if the element type doesnt contain any references its a bit of a waste to iterate over all
-/// elements.
+/// TODO: if the element type doesnt contain any references it's a bit of a waste to iterate over
+/// all elements.
 struct ArrayTrace {
     iter: ArrayHandleIter,
     element_ty: Type,
@@ -369,7 +369,7 @@ impl GcArray for ArrayHandle {
 /// An iterator implementation.
 ///
 /// TODO: Note that this iterator is highly non-thread safe. Any operation that modifies the
-/// original array could case undefined behavior.
+/// original array could cause undefined behavior.
 pub struct ArrayHandleIter {
     /// Pointer to the next element
     next: NonNull<u8>,
@@ -397,7 +397,7 @@ impl Iterator for ArrayHandleIter {
 }
 
 /// Creates a layout describing the record for `n` instances of `layout`, with a suitable amount of
-/// padding between each to ensure that each instance is given its requested size an alignment.
+/// padding between each to ensure that each instance is given its requested size and alignment.
 ///
 /// Implementation taken from `Layout::repeat` (which is currently unstable)
 fn repeat_layout(layout: Layout, n: usize) -> Result<Layout, MemoryLayoutError> {
