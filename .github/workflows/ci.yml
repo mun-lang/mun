@@ -95,6 +95,10 @@ jobs:
 
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
+
+      - run: Get-PSDrive
+        if: matrix.os == 'windows-latest'
+
       - name: Test with latest nextest release
         uses: actions-rs/cargo@v1
         env:
