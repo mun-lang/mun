@@ -18,6 +18,6 @@ mun_codegen = { version = "=0.3.0", path = "../mun_codegen" }
 mun_compiler = { version = "=0.3.0", path = "../mun_compiler" }
 mun_project = { version = "=0.1.0", path = "../mun_project" }
 mun_hir = { version = "=0.3.0", path = "../mun_hir" }
-notify = "4.0"
+notify = "5.0"
 ctrlc = "3.1"
 log = "0.4"
