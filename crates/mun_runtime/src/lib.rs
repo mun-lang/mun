@@ -22,7 +22,7 @@ use memory::{
     type_table::TypeTable,
 };
 use mun_project::LOCKFILE_NAME;
-use notify::{RawEvent, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{event::ModifyKind, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::{
     collections::{HashMap, VecDeque},
     ffi,
@@ -163,8 +163,8 @@ pub struct Runtime {
     dispatch_table: DispatchTable,
     type_table: TypeTable,
     watcher: RecommendedWatcher,
-    watcher_rx: Receiver<RawEvent>,
-    renamed_files: HashMap<u32, PathBuf>,
+    watcher_rx: Receiver<notify::Result<Event>>,
+    renamed_files: HashMap<usize, PathBuf>,
     gc: Arc<GarbageCollector>,
 }
 
@@ -206,7 +206,9 @@ impl Runtime {
             dispatch_table.insert_fn(fn_def.prototype.name.clone(), Arc::new(fn_def));
         });
 
-        let watcher: RecommendedWatcher = Watcher::new_raw(tx)?;
+        let watcher: RecommendedWatcher = notify::recommended_watcher(move |res| {
+            tx.send(res).expect("Failed to send filesystem event.")
+        })?;
         let mut runtime = Runtime {
             assemblies: HashMap::new(),
             assemblies_to_relink: VecDeque::new(),
@@ -379,46 +381,49 @@ impl Runtime {
             )
         }
 
-        while let Ok(event) = self.watcher_rx.try_recv() {
-            if let Some(path) = event.path {
-                let op = event.op.expect("Invalid event.");
-
+        while let Ok(Ok(event)) = self.watcher_rx.try_recv() {
+            for path in event.paths {
                 if is_lockfile(&path) {
-                    if op.contains(notify::op::CREATE) {
-                        debug!("Lockfile created");
-                    }
-                    if op.contains(notify::op::REMOVE) {
-                        debug!("Lockfile deleted");
+                    match event.kind {
+                        EventKind::Create(_) => debug!("Lockfile created"),
+                        EventKind::Remove(_) => {
+                            debug!("Lockfile deleted");
 
-                        match relink_assemblies(self) {
-                            Ok((dispatch_table, type_table)) => {
-                                info!("Succesfully reloaded assemblies.");
+                            match relink_assemblies(self) {
+                                Ok((dispatch_table, type_table)) => {
+                                    info!("Succesfully reloaded assemblies.");
 
-                                self.dispatch_table = dispatch_table;
-                                self.type_table = type_table;
-                                self.assemblies_to_relink.clear();
+                                    self.dispatch_table = dispatch_table;
+                                    self.type_table = type_table;
+                                    self.assemblies_to_relink.clear();
 
-                                return true;
+                                    return true;
+                                }
+                                Err(e) => error!("Failed to relink assemblies, due to {}.", e),
                             }
-                            Err(e) => error!("Failed to relink assemblies, due to {}.", e),
                         }
+                        _ => (),
                     }
                 } else {
                     let path = path.canonicalize().unwrap_or_else(|_| {
                         panic!("Failed to canonicalize path: {}.", path.to_string_lossy())
                     });
 
-                    if op.contains(notify::op::RENAME) {
-                        let cookie = event.cookie.expect("Invalid RENAME event.");
-                        if let Some(old_path) = self.renamed_files.remove(&cookie) {
-                            self.assemblies_to_relink.push_back((old_path, path));
-                        // on_file_changed(self, &old_path, &path);
-                        } else {
-                            self.renamed_files.insert(cookie, path);
+                    match event.kind {
+                        EventKind::Modify(ModifyKind::Name(_)) => {
+                            let tracker = event.attrs.tracker().expect("Invalid RENAME event.");
+                            if let Some(old_path) = self.renamed_files.remove(&tracker) {
+                                self.assemblies_to_relink.push_back((old_path, path));
+                                // on_file_changed(self, &old_path, &path);
+                            } else {
+                                self.renamed_files.insert(tracker, path);
+                            }
                         }
-                    } else if op.contains(notify::op::WRITE) {
-                        // TODO: don't overwrite existing
-                        self.assemblies_to_relink.push_back((path.clone(), path));
+                        EventKind::Modify(_) => {
+                            // TODO: don't overwrite existing
+                            self.assemblies_to_relink.push_back((path.clone(), path));
+                        }
+                        _ => (),
                     }
                 }
             }
