@@ -382,6 +382,7 @@ impl Runtime {
             )
         }
 
+        let mut requires_relink = false;
         while let Ok(Ok(event)) = self.watcher_rx.try_recv() {
             for path in event.paths {
                 if is_lockfile(&path) {
@@ -390,18 +391,7 @@ impl Runtime {
                         EventKind::Remove(_) => {
                             debug!("Lockfile deleted");
 
-                            match relink_assemblies(self) {
-                                Ok((dispatch_table, type_table)) => {
-                                    info!("Succesfully reloaded assemblies.");
-
-                                    self.dispatch_table = dispatch_table;
-                                    self.type_table = type_table;
-                                    self.assemblies_to_relink.clear();
-
-                                    return true;
-                                }
-                                Err(e) => error!("Failed to relink assemblies, due to {}.", e),
-                            }
+                            requires_relink = true;
                         }
                         _ => (),
                     }
@@ -426,6 +416,25 @@ impl Runtime {
                         }
                         _ => (),
                     }
+                }
+            }
+        }
+
+        if requires_relink {
+            if self.assemblies_to_relink.is_empty() {
+                debug!("The compiler didn't write a munlib.");
+            } else {
+                match relink_assemblies(self) {
+                    Ok((dispatch_table, type_table)) => {
+                        info!("Succesfully reloaded assemblies.");
+
+                        self.dispatch_table = dispatch_table;
+                        self.type_table = type_table;
+                        self.assemblies_to_relink.clear();
+
+                        return true;
+                    }
+                    Err(e) => error!("Failed to relink assemblies, due to {}.", e),
                 }
             }
         }

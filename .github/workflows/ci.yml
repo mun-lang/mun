@@ -91,10 +91,14 @@ jobs:
           CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
         with:
           command: test
-          args: --doc --all-features
+          args: --doc --all-features --profile min-artifact-size-debug
 
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
+
+      - run: Get-PSDrive
+        if: matrix.os == 'windows-latest'
+
       - name: Test with latest nextest release
         uses: actions-rs/cargo@v1
         env:
@@ -102,7 +106,7 @@ jobs:
           CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
         with:
           command: nextest
-          args: run --all-features --profile ci
+          args: run --all-features --profile ci --cargo-profile min-artifact-size-debug
 
   test-mdbook:
     name: Test mdbook

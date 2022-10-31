@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Mac M1 Support [#](https://github.com/mun-lang/mun/pull/444)
+
 ### Changed
 
 - Reduce workspace target folder size from 10.9 GB to 10.6 GB
