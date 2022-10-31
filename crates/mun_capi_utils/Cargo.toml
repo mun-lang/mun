@@ -13,4 +13,4 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-insta = { version ="1.12.0", features=["ron"], optional=true}
+insta = { version = "1.12.0", default-features = false, features = ["ron"], optional = true }

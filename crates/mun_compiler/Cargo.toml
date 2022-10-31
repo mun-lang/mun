@@ -13,19 +13,19 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-anyhow = "1.0.31"
-mun_codegen = { version = "=0.3.0", path="../mun_codegen" }
-mun_syntax = { version = "=0.3.0", path="../mun_syntax" }
-hir = { version="=0.3.0", path="../mun_hir", package="mun_hir" }
-paths = { version="=0.1.0", path="../mun_paths", package="mun_paths"}
-mun_target = { version = "=0.3.0", path="../mun_target" }
+hir = { version = "=0.3.0", path = "../mun_hir", package = "mun_hir" }
+mun_codegen = { version = "=0.3.0", path = "../mun_codegen" }
+mun_syntax = { version = "=0.3.0", path = "../mun_syntax" }
+mun_target = { version = "=0.3.0", path = "../mun_target" }
 mun_project = { version = "=0.1.0", path = "../mun_project" }
 mun_diagnostics = { version = "=0.1.0", path = "../mun_diagnostics" }
-annotate-snippets = { version = "0.9.0", features = ["color"] }
-yansi-term = "0.1.2"
-walkdir = "2.3"
-log = "0.4"
-lockfile = "0.3.0"
+paths = { version = "=0.1.0", path = "../mun_paths", package = "mun_paths"}
+annotate-snippets = { version = "0.9.0", default-features = false, features = ["color"] }
+anyhow = { version = "1.0.31", default-features = false }
+lockfile = { version = "0.4.0", default-features = false }
+log = { version = "0.4", default-features = false }
+walkdir = { version = "2.3", default-features = false }
+yansi-term = { version = "0.1.2", default-features = false }
 
 [dev-dependencies]
-insta = "1.12.0"
+insta = { version = "1.12.0", default-features = false }

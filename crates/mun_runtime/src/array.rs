@@ -1,7 +1,11 @@
-use crate::garbage_collector::GcRootPtr;
-use crate::{ArgumentReflection, GarbageCollector, Marshal, ReturnTypeReflection, Runtime};
-use memory::gc::{Array, GcPtr, GcRuntime, HasIndirectionPtr};
-use memory::Type;
+use crate::{
+    garbage_collector::GcRootPtr, ArgumentReflection, GarbageCollector, Marshal,
+    ReturnTypeReflection, Runtime,
+};
+use memory::{
+    gc::{Array, GcPtr, GcRuntime, HasIndirectionPtr},
+    Type,
+};
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 use std::sync::Arc;

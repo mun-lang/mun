@@ -14,6 +14,6 @@ categories = ["game-development", "mun"]
 
 [dependencies]
 abi = { version = "=0.3.0", path = "../mun_abi", package = "mun_abi" }
-anyhow = "1.0"
-libloading = "0.7"
-tempfile = "3"
+anyhow = { version = "1.0", default-features = false, features = ["std"] }
+libloading = { version = "0.7", default-features = false }
+tempfile = { version = "3", default-features = false }

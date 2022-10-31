@@ -13,10 +13,8 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["api-bindings", "game-development", "mun"]
 
 [dependencies]
-md5 = "0.7.0"
 once_cell = "1.4.0"
-itertools = "0.10.3"
-parking_lot = "0.12.0"
-static_type_map = "0.5.2"
-extendhash = "1.0.9"
-serde = { version="1.0.137", optional = true}
+itertools = { version = "0.10.3", default-features = false }
+parking_lot = { version = "0.12.0", default-features = false }
+extendhash = { version = "1.0.9", default-features = false }
+serde = { version = "1.0.137", default-features = false, optional = true }
