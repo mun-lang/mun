@@ -62,25 +62,25 @@ impl salsa::Database for AnalysisDatabase {
 
 impl Upcast<dyn mun_hir::AstDatabase> for AnalysisDatabase {
     fn upcast(&self) -> &(dyn mun_hir::AstDatabase + 'static) {
-        &*self
+        self
     }
 }
 
 impl Upcast<dyn mun_hir::SourceDatabase> for AnalysisDatabase {
     fn upcast(&self) -> &(dyn mun_hir::SourceDatabase + 'static) {
-        &*self
+        self
     }
 }
 
 impl Upcast<dyn mun_hir::DefDatabase> for AnalysisDatabase {
     fn upcast(&self) -> &(dyn mun_hir::DefDatabase + 'static) {
-        &*self
+        self
     }
 }
 
 impl Upcast<dyn mun_hir::HirDatabase> for AnalysisDatabase {
     fn upcast(&self) -> &(dyn mun_hir::HirDatabase + 'static) {
-        &*self
+        self
     }
 }
 

@@ -110,7 +110,7 @@ impl Path {
 fn lower_use_tree(
     prefix: Option<Path>,
     tree: &ast::UseTree,
-    cb: &mut dyn FnMut(Path, &ast::UseTree, bool, Option<ImportAlias>),
+    cb: &mut impl FnMut(Path, &ast::UseTree, bool, Option<ImportAlias>),
 ) {
     if let Some(use_tree_list) = tree.use_tree_list() {
         let prefix = match tree.path() {
