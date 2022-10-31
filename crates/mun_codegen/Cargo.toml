@@ -13,30 +13,30 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["Game development", "Mun"]
 
 [dependencies]
-rustc-hash = "1.1.0"
 abi = { version = "=0.3.0", path = "../mun_abi", package = "mun_abi" }
-bytemuck = "1.4.1"
+anyhow = { version = "1.0.31", default-features = false, features = ["std"] }
+array-init = { version = "2.0.0", default-features = false }
+by_address = { version = "1.0.4", default-features = false }
+bytemuck = { version = "1.4.1", default-features = false }
 hir = { version = "=0.3.0", path = "../mun_hir", package = "mun_hir" }
-itertools = "0.10.3"
+inkwell = { version = "=0.1.0-beta.4", default-features = false, features = ["llvm12-0", "no-libffi-linking", "target-x86", "target-aarch64"] }
+itertools = { version = "0.10.3", default-features = false }
 mun_codegen_macros = { version = "=0.1.0", path = "../mun_codegen_macros", package = "mun_codegen_macros" }
 mun_target = { version = "=0.3.0", path = "../mun_target" }
-lld_rs = "120.0.1"
-anyhow = "1.0.31"
-thiserror = "1.0.19"
-salsa = "0.16.1"
-array-init="2.0.0"
-tempfile = "3"
-paste = "1.0.7"
-parking_lot = "0.12.0"
-inkwell = { version = "=0.1.0-beta.4", features = ["llvm12-0", "no-libffi-linking"]}
-by_address = "1.0.4"
-paths = { version="=0.1.0", path="../mun_paths", package="mun_paths"}
-smallvec = { version = "1.6.1", features=["union"] }
-once_cell = "1.4.0"
+once_cell = { version = "1.4.0", default-features = false }
+lld_rs = { version = "120.0.1", default-features = false }
+parking_lot = { version = "0.12.0", default-features = false }
+paste = { version = "1.0.7", default-features = false }
+paths = { version="=0.1.0", path = "../mun_paths", package="mun_paths" }
+rustc-hash = { version = "1.1.0", default-features = false }
+salsa = { version = "0.16.1", default-features = false }
+smallvec = { version = "1.6.1", features = ["union"], default-features = false }
+tempfile = { version = "3", default-features = false }
+thiserror = { version = "1.0.19", default-features = false }
 
 [dev-dependencies]
-abi = { path = "../mun_abi", package = "mun_abi", features=["serde"] }
-insta = { version="1.12.0", features = ["ron"]}
+abi = { path = "../mun_abi", package = "mun_abi", features = ["serde"] }
+insta = { version = "1.12.0", default-features = false, features = ["ron"] }
 libloader = { path = "../mun_libloader", package = "mun_libloader" }
 mun_test = { path = "../mun_test" }
 runtime = { path = "../mun_runtime", package = "mun_runtime" }
