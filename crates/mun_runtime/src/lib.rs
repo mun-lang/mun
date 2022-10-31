@@ -389,7 +389,7 @@ impl Runtime {
                         EventKind::Create(_) => debug!("Lockfile created"),
                         EventKind::Remove(_) => {
                             debug!("Lockfile deleted");
-                            
+
                             requires_relink = true;
                         }
                         _ => (),
