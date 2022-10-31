@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Mac M1 Support [#](https://github.com/mun-lang/mun/pull/444)
 
+### Changed
+
+- Reduce workspace target folder size from 10.9 GB to 10.6 GB
+- Reduce workspace build dependencies from 296 to 270
+- Reduce workspace dev dependencies from 502 to 496
+
 ## [0.3.0] - 2021-04-12
 
 The third Mun release includes big usability improvements; multi-file projects, a language server with diagnostics and autocompletion, and improvements to robustness and developer workflow to name a few.
