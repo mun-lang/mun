@@ -1,7 +1,7 @@
 use crate::db::AnalysisDatabase;
 use crate::FilePosition;
-use hir::semantics::{Semantics, SemanticsScope};
-use hir::AstDatabase;
+use mun_hir::semantics::{Semantics, SemanticsScope};
+use mun_hir::AstDatabase;
 use mun_syntax::{ast, utils::find_node_at_offset, AstNode, SyntaxNode, TextRange, TextSize};
 use ra_ap_text_edit::Indel;
 

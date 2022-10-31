@@ -1,6 +1,6 @@
 //! A `ModuleGroup` describes a grouping of modules that together form an assembly.
 
-use hir::{HasVisibility, HirDatabase};
+use mun_hir::{HasVisibility, HirDatabase};
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
@@ -8,9 +8,9 @@ use std::iter::FromIterator;
 /// A `ModuleGroup` describes a grouping of modules
 #[derive(Clone, Eq, Debug)]
 pub struct ModuleGroup {
-    ordered_modules: Vec<hir::Module>,
-    modules: FxHashSet<hir::Module>,
-    includes_entire_subtree: FxHashMap<hir::Module, bool>,
+    ordered_modules: Vec<mun_hir::Module>,
+    modules: FxHashSet<mun_hir::Module>,
+    includes_entire_subtree: FxHashMap<mun_hir::Module, bool>,
     pub name: String,
 }
 
@@ -32,7 +32,7 @@ impl ModuleGroup {
     pub fn new(
         db: &dyn HirDatabase,
         name: String,
-        modules: impl IntoIterator<Item = hir::Module>,
+        modules: impl IntoIterator<Item = mun_hir::Module>,
     ) -> Self {
         let modules = FxHashSet::from_iter(modules);
         let includes_entire_subtree = modules
@@ -48,7 +48,7 @@ impl ModuleGroup {
             })
             .collect();
 
-        let mut ordered_modules: Vec<hir::Module> = modules.iter().copied().collect();
+        let mut ordered_modules: Vec<mun_hir::Module> = modules.iter().copied().collect();
         ordered_modules.sort();
 
         Self {
@@ -60,23 +60,23 @@ impl ModuleGroup {
     }
 
     /// Constructs a new module group from a single module
-    pub fn from_single_module(db: &dyn HirDatabase, module: hir::Module) -> Self {
+    pub fn from_single_module(db: &dyn HirDatabase, module: mun_hir::Module) -> Self {
         Self::new(db, module.full_name(db), vec![module])
     }
 
-    /// Returns true if the specified `hir::Module` is part of this group.
-    pub fn contains(&self, module: hir::Module) -> bool {
+    /// Returns true if the specified `mun_hir::Module` is part of this group.
+    pub fn contains(&self, module: mun_hir::Module) -> bool {
         self.modules.contains(&module)
     }
 
     /// Returns an iterator over all modules in the group
-    pub fn iter(&self) -> impl Iterator<Item = hir::Module> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = mun_hir::Module> + '_ {
         self.ordered_modules.iter().copied()
     }
 
     /// Returns true if the specified function should be exported from the module group. This
     /// indicates that when queried the resulting assembly will expose this function.
-    pub fn should_export_fn(&self, db: &dyn HirDatabase, function: hir::Function) -> bool {
+    pub fn should_export_fn(&self, db: &dyn HirDatabase, function: mun_hir::Function) -> bool {
         // If the function is not defined in the module group we should definitely not export it.
         if !self.modules.contains(&function.module(db)) {
             return false;
@@ -85,10 +85,10 @@ impl ModuleGroup {
         let vis = function.visibility(db);
         match vis {
             // If the function is publicly accessible it must always be exported
-            hir::Visibility::Public => true,
+            mun_hir::Visibility::Public => true,
 
             // The function is visible from the specified module and all child modules.
-            hir::Visibility::Module(visible_mod) => {
+            mun_hir::Visibility::Module(visible_mod) => {
                 // If the modules is contained within `includes_entire_subtree` it is included in
                 // the module group.
                 self.includes_entire_subtree
@@ -104,19 +104,26 @@ impl ModuleGroup {
 
     /// Returns true if the specified function should be included in the dispatch table of this
     /// module group if it is used from within this module group.
-    pub fn should_runtime_link_fn(&self, db: &dyn HirDatabase, function: hir::Function) -> bool {
+    pub fn should_runtime_link_fn(
+        &self,
+        db: &dyn HirDatabase,
+        function: mun_hir::Function,
+    ) -> bool {
         function.is_extern(db) || !self.modules.contains(&function.module(db))
     }
 
-    /// Returns the `hir::FileId`s that are included in this module group.
-    pub fn files<'s>(&'s self, db: &'s dyn HirDatabase) -> impl Iterator<Item = hir::FileId> + 's {
+    /// Returns the `mun_hir::FileId`s that are included in this module group.
+    pub fn files<'s>(
+        &'s self,
+        db: &'s dyn HirDatabase,
+    ) -> impl Iterator<Item = mun_hir::FileId> + 's {
         self.ordered_modules
             .iter()
             .filter_map(move |module| module.file_id(db))
     }
 
     /// Returns the filename for this module group
-    pub fn relative_file_path(&self) -> paths::RelativePathBuf {
-        paths::RelativePathBuf::from(self.name.replace("::", "$"))
+    pub fn relative_file_path(&self) -> mun_paths::RelativePathBuf {
+        mun_paths::RelativePathBuf::from(self.name.replace("::", "$"))
     }
 }

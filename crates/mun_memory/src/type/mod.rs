@@ -27,7 +27,7 @@ use itertools::izip;
 use once_cell::sync::Lazy;
 use parking_lot::{lock_api::MutexGuard, Mutex, RawMutex, RwLock};
 
-use abi::{self, static_type_map::StaticTypeMap};
+use mun_abi::{self as abi, static_type_map::StaticTypeMap};
 
 use crate::{type_table::TypeTable, TryFromAbiError};
 

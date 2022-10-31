@@ -15,7 +15,7 @@ pub use self::{
     tokens::*,
     traits::*,
 };
-pub use abi::StructMemoryKind;
+pub use mun_abi::StructMemoryKind;
 
 use std::marker::PhantomData;
 

@@ -1,40 +1,40 @@
 use crate::Config;
-use hir::{salsa, HirDatabase, Upcast};
 use mun_codegen::{CodeGenDatabase, CodeGenDatabaseStorage};
+use mun_hir::{salsa, HirDatabase, Upcast};
 
 /// A compiler database is a salsa database that enables increment compilation.
 #[salsa::database(
-    hir::SourceDatabaseStorage,
-    hir::InternDatabaseStorage,
-    hir::AstDatabaseStorage,
-    hir::DefDatabaseStorage,
-    hir::HirDatabaseStorage,
+    mun_hir::SourceDatabaseStorage,
+    mun_hir::InternDatabaseStorage,
+    mun_hir::AstDatabaseStorage,
+    mun_hir::DefDatabaseStorage,
+    mun_hir::HirDatabaseStorage,
     CodeGenDatabaseStorage
 )]
 pub struct CompilerDatabase {
     storage: salsa::Storage<Self>,
 }
 
-impl Upcast<dyn hir::AstDatabase> for CompilerDatabase {
-    fn upcast(&self) -> &(dyn hir::AstDatabase + 'static) {
+impl Upcast<dyn mun_hir::AstDatabase> for CompilerDatabase {
+    fn upcast(&self) -> &(dyn mun_hir::AstDatabase + 'static) {
         &*self
     }
 }
 
-impl Upcast<dyn hir::SourceDatabase> for CompilerDatabase {
-    fn upcast(&self) -> &(dyn hir::SourceDatabase + 'static) {
+impl Upcast<dyn mun_hir::SourceDatabase> for CompilerDatabase {
+    fn upcast(&self) -> &(dyn mun_hir::SourceDatabase + 'static) {
         &*self
     }
 }
 
-impl Upcast<dyn hir::DefDatabase> for CompilerDatabase {
-    fn upcast(&self) -> &(dyn hir::DefDatabase + 'static) {
+impl Upcast<dyn mun_hir::DefDatabase> for CompilerDatabase {
+    fn upcast(&self) -> &(dyn mun_hir::DefDatabase + 'static) {
         &*self
     }
 }
 
-impl Upcast<dyn hir::HirDatabase> for CompilerDatabase {
-    fn upcast(&self) -> &(dyn hir::HirDatabase + 'static) {
+impl Upcast<dyn mun_hir::HirDatabase> for CompilerDatabase {
+    fn upcast(&self) -> &(dyn mun_hir::HirDatabase + 'static) {
         &*self
     }
 }

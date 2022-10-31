@@ -11,14 +11,18 @@ pub struct ModuleGroupId(usize);
 #[derive(Default, PartialEq, Eq, Clone, Debug)]
 pub struct ModulePartition {
     groups: Vec<ModuleGroup>,
-    module_to_group: FxHashMap<hir::Module, ModuleGroupId>,
-    file_to_group: FxHashMap<hir::FileId, ModuleGroupId>,
+    module_to_group: FxHashMap<mun_hir::Module, ModuleGroupId>,
+    file_to_group: FxHashMap<mun_hir::FileId, ModuleGroupId>,
 }
 
 impl ModulePartition {
     /// Adds a new group of modules to the partition. This function panics if a module is added
     /// twice in different groups.
-    pub fn add_group(&mut self, db: &dyn hir::HirDatabase, group: ModuleGroup) -> ModuleGroupId {
+    pub fn add_group(
+        &mut self,
+        db: &dyn mun_hir::HirDatabase,
+        group: ModuleGroup,
+    ) -> ModuleGroupId {
         let id = ModuleGroupId(self.groups.len());
         for module in group.iter() {
             if self.module_to_group.insert(module, id).is_some() {
@@ -36,12 +40,12 @@ impl ModulePartition {
     }
 
     /// Returns the group to which the specified module belongs.
-    pub fn group_for_module(&self, module: hir::Module) -> Option<ModuleGroupId> {
+    pub fn group_for_module(&self, module: mun_hir::Module) -> Option<ModuleGroupId> {
         self.module_to_group.get(&module).copied()
     }
 
     /// Returns the group to which the specified module belongs.
-    pub fn group_for_file(&self, file: hir::FileId) -> Option<ModuleGroupId> {
+    pub fn group_for_file(&self, file: mun_hir::FileId) -> Option<ModuleGroupId> {
         self.file_to_group.get(&file).copied()
     }
 
@@ -65,7 +69,7 @@ impl Index<ModuleGroupId> for ModulePartition {
 /// Builds a module partition from the contents of the database
 pub(crate) fn build_partition(db: &dyn CodeGenDatabase) -> Arc<ModulePartition> {
     let mut partition = ModulePartition::default();
-    for module in hir::Package::all(db.upcast())
+    for module in mun_hir::Package::all(db.upcast())
         .into_iter()
         .flat_map(|package| package.modules(db.upcast()))
     {

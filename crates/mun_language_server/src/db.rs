@@ -1,7 +1,7 @@
 #![allow(clippy::enum_variant_names)] // This is a HACK because we use salsa
 
 use crate::cancelation::Canceled;
-use hir::{HirDatabase, Upcast};
+use mun_hir::{HirDatabase, Upcast};
 use mun_target::spec::Target;
 use salsa::{Database, Durability, Snapshot};
 use std::panic;
@@ -18,11 +18,11 @@ use std::panic;
 /// With this struct we can reuse a lot of functionality from the compiler which should provide a
 /// better user experience.
 #[salsa::database(
-    hir::SourceDatabaseStorage,
-    hir::DefDatabaseStorage,
-    hir::HirDatabaseStorage,
-    hir::AstDatabaseStorage,
-    hir::InternDatabaseStorage
+    mun_hir::SourceDatabaseStorage,
+    mun_hir::DefDatabaseStorage,
+    mun_hir::HirDatabaseStorage,
+    mun_hir::AstDatabaseStorage,
+    mun_hir::InternDatabaseStorage
 )]
 pub(crate) struct AnalysisDatabase {
     storage: salsa::Storage<Self>,
@@ -60,26 +60,26 @@ impl salsa::Database for AnalysisDatabase {
     }
 }
 
-impl Upcast<dyn hir::AstDatabase> for AnalysisDatabase {
-    fn upcast(&self) -> &(dyn hir::AstDatabase + 'static) {
+impl Upcast<dyn mun_hir::AstDatabase> for AnalysisDatabase {
+    fn upcast(&self) -> &(dyn mun_hir::AstDatabase + 'static) {
         &*self
     }
 }
 
-impl Upcast<dyn hir::SourceDatabase> for AnalysisDatabase {
-    fn upcast(&self) -> &(dyn hir::SourceDatabase + 'static) {
+impl Upcast<dyn mun_hir::SourceDatabase> for AnalysisDatabase {
+    fn upcast(&self) -> &(dyn mun_hir::SourceDatabase + 'static) {
         &*self
     }
 }
 
-impl Upcast<dyn hir::DefDatabase> for AnalysisDatabase {
-    fn upcast(&self) -> &(dyn hir::DefDatabase + 'static) {
+impl Upcast<dyn mun_hir::DefDatabase> for AnalysisDatabase {
+    fn upcast(&self) -> &(dyn mun_hir::DefDatabase + 'static) {
         &*self
     }
 }
 
-impl Upcast<dyn hir::HirDatabase> for AnalysisDatabase {
-    fn upcast(&self) -> &(dyn hir::HirDatabase + 'static) {
+impl Upcast<dyn mun_hir::HirDatabase> for AnalysisDatabase {
+    fn upcast(&self) -> &(dyn mun_hir::HirDatabase + 'static) {
         &*self
     }
 }

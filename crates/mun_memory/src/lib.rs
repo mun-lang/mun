@@ -15,6 +15,7 @@ pub mod gc;
 pub mod mapping;
 mod r#type;
 pub mod type_table;
+use mun_abi as abi;
 use thiserror::Error;
 
 pub mod prelude {

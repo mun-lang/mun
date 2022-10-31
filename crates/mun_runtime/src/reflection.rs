@@ -1,5 +1,5 @@
 use crate::{marshal::Marshal, Runtime};
-use memory::{HasStaticType, Type};
+use mun_memory::{HasStaticType, Type};
 
 /// A type to emulate dynamic typing across compilation units for static types.
 pub trait ReturnTypeReflection: Sized {

@@ -1,6 +1,6 @@
 [package]
 name = "mun_skeptic"
-version = "0.1.0"
+version = "0.4.0-dev"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 description = "Provides the ability to test Mun code snippets in an mdbook"
@@ -15,10 +15,10 @@ categories = ["game-development", "mun"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-mun_compiler = { version = "=0.3.0", path = "../mun_compiler" }
-mun_runtime = { version = "=0.3.0", path = "../mun_runtime" }
 bytecount = { version = "0.6.2", default-features = false }
 itertools = { version = "0.10.0", default-features = false }
 mdbook = { version = "0.4.7", default-features = false }
 pulldown-cmark = { version = "0.9.1", default-features = false }
+mun_compiler = { version = "=0.4.0-dev", path = "../mun_compiler" }
+mun_runtime = { version = "=0.4.0-dev", path = "../mun_runtime" }
 tempdir = { version = "0.3.7", default-features = false }

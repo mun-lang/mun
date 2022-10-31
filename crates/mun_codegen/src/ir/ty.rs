@@ -9,8 +9,8 @@ use inkwell::{
 };
 use smallvec::SmallVec;
 
-use abi::Guid;
-use hir::{
+use mun_abi::Guid;
+use mun_hir::{
     FloatBitness, HirDatabase, HirDisplay, IntBitness, ResolveBitness, Signedness, Ty, TyKind,
 };
 
@@ -24,8 +24,8 @@ pub struct HirTypeCache<'db, 'ink> {
     context: &'ink Context,
     db: &'db dyn HirDatabase,
     target_data: TargetData,
-    types: RefCell<HashMap<hir::Ty, StructType<'ink>>>,
-    struct_to_type_id: RefCell<HashMap<hir::Struct, Arc<TypeId>>>,
+    types: RefCell<HashMap<mun_hir::Ty, StructType<'ink>>>,
+    struct_to_type_id: RefCell<HashMap<mun_hir::Struct, Arc<TypeId>>>,
 }
 
 impl<'db, 'ink> HirTypeCache<'db, 'ink> {
@@ -41,7 +41,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
     }
 
     /// Returns the type of the specified floating-point type
-    pub fn get_float_type(&self, ty: hir::FloatTy) -> FloatType<'ink> {
+    pub fn get_float_type(&self, ty: mun_hir::FloatTy) -> FloatType<'ink> {
         match ty.bitness {
             FloatBitness::X64 => self.context.f64_type(),
             FloatBitness::X32 => self.context.f32_type(),
@@ -49,7 +49,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
     }
 
     /// Returns the type of the specified integer type
-    pub fn get_int_type(&self, ty: hir::IntTy) -> IntType<'ink> {
+    pub fn get_int_type(&self, ty: mun_hir::IntTy) -> IntType<'ink> {
         match ty.bitness {
             IntBitness::X128 => self.context.i128_type(),
             IntBitness::X64 => self.context.i64_type(),
@@ -66,9 +66,9 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
     }
 
     /// Returns the type of the specified integer type
-    pub fn get_struct_type(&self, struct_ty: hir::Struct) -> StructType<'ink> {
-        // TODO: This assumes the contents of the hir::Struct does not change. It definitely does
-        //  between compilations. We have to have a way to uniquely identify the `hir::Struct` and
+    pub fn get_struct_type(&self, struct_ty: mun_hir::Struct) -> StructType<'ink> {
+        // TODO: This assumes the contents of the mun_hir::Struct does not change. It definitely does
+        //  between compilations. We have to have a way to uniquely identify the `mun_hir::Struct` and
         //  its contents.
 
         let ty = Ty::struct_ty(struct_ty);
@@ -100,10 +100,10 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
     }
 
     /// Returns the type of the struct that should be used for variables.
-    pub fn get_struct_reference_type(&self, struct_ty: hir::Struct) -> BasicTypeEnum<'ink> {
+    pub fn get_struct_reference_type(&self, struct_ty: mun_hir::Struct) -> BasicTypeEnum<'ink> {
         let ir_ty = self.get_struct_type(struct_ty);
         match struct_ty.data(self.db.upcast()).memory_kind {
-            hir::StructMemoryKind::Gc => {
+            mun_hir::StructMemoryKind::Gc => {
                 // GC values are pointers to pointers
                 // struct Foo {}
                 // Foo**
@@ -112,7 +112,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
                     .ptr_type(AddressSpace::Generic)
                     .into()
             }
-            hir::StructMemoryKind::Value => {
+            mun_hir::StructMemoryKind::Value => {
                 // Value structs are passed as values
                 ir_ty.into()
             }
@@ -121,7 +121,10 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
 
     /// Returns the type of the struct that should be used in the public API. In the public API we
     /// don't deal with value types, only with pointers.
-    pub fn get_public_struct_reference_type(&self, struct_ty: hir::Struct) -> BasicTypeEnum<'ink> {
+    pub fn get_public_struct_reference_type(
+        &self,
+        struct_ty: mun_hir::Struct,
+    ) -> BasicTypeEnum<'ink> {
         let ir_ty = self.get_struct_type(struct_ty);
 
         // GC values are pointers to pointers
@@ -136,7 +139,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
     }
 
     /// Returns the type of the specified function definition
-    pub fn get_function_type(&self, ty: hir::Function) -> FunctionType<'ink> {
+    pub fn get_function_type(&self, ty: mun_hir::Function) -> FunctionType<'ink> {
         let ty = self.db.callable_sig(ty.into());
         let param_tys: Vec<_> = ty
             .params()
@@ -160,7 +163,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
 
     /// Returns the type of a specified function definition that is callable from the outside of the
     /// Mun code. This function should be C ABI compatible.
-    pub fn get_public_function_type(&self, ty: hir::Function) -> FunctionType<'ink> {
+    pub fn get_public_function_type(&self, ty: mun_hir::Function) -> FunctionType<'ink> {
         let ty = self.db.callable_sig(ty.into());
         let param_tys: Vec<_> = ty
             .params()
@@ -184,7 +187,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
 
     /// Returns the inkwell type of the specified HIR type as a basic value. If the type cannot be
     /// represented as a basic type enum, `None` is returned.
-    pub fn get_basic_type(&self, ty: &hir::Ty) -> Option<BasicTypeEnum<'ink>> {
+    pub fn get_basic_type(&self, ty: &mun_hir::Ty) -> Option<BasicTypeEnum<'ink>> {
         match ty.interned() {
             TyKind::Tuple(_, substs) => Some(self.get_tuple_type(substs).into()),
             TyKind::Float(float_ty) => Some(self.get_float_type(*float_ty).into()),
@@ -198,7 +201,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
     /// Returns the inkwell type of the specified HIR type as a basic value that is usable from the
     /// public API. Internally this means that struct types are always pointers. If the type cannot
     /// be represented as a basic type enum, `None` is returned.
-    pub fn get_public_basic_type(&self, ty: &hir::Ty) -> Option<BasicTypeEnum<'ink>> {
+    pub fn get_public_basic_type(&self, ty: &mun_hir::Ty) -> Option<BasicTypeEnum<'ink>> {
         match ty.interned() {
             TyKind::Tuple(_, substs) => Some(self.get_tuple_type(substs).into()),
             TyKind::Float(float_ty) => Some(self.get_float_type(*float_ty).into()),
@@ -211,13 +214,13 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
 
     /// Returns the inkwell type of the specified HIR type. If the type cannot be represented as an
     /// inkwell type, `None` is returned.
-    pub fn get_any_type(&self, ty: &hir::Ty) -> Option<AnyTypeEnum<'ink>> {
+    pub fn get_any_type(&self, ty: &mun_hir::Ty) -> Option<AnyTypeEnum<'ink>> {
         match ty.interned() {
             TyKind::Tuple(_, substs) => Some(self.get_tuple_type(substs).into()),
             TyKind::Float(float_ty) => Some(self.get_float_type(*float_ty).into()),
             TyKind::Int(int_ty) => Some(self.get_int_type(*int_ty).into()),
             TyKind::Struct(struct_ty) => Some(self.get_struct_type(*struct_ty).into()),
-            TyKind::FnDef(hir::CallableDef::Function(fn_ty), type_params) => {
+            TyKind::FnDef(mun_hir::CallableDef::Function(fn_ty), type_params) => {
                 if !type_params.is_empty() {
                     unimplemented!("cannot yet deal with type parameters in functions");
                 }
@@ -291,7 +294,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
     }
 }
 
-pub fn guid_from_struct(db: &dyn HirDatabase, s: hir::Struct) -> Guid {
+pub fn guid_from_struct(db: &dyn HirDatabase, s: mun_hir::Struct) -> Guid {
     let name = s.full_name(db);
     let fields: Vec<String> = s
         .fields(db)

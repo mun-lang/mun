@@ -1,6 +1,6 @@
 use std::{ffi::c_void, mem::ManuallyDrop, ops::Deref, sync::Arc};
 
-use capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
+use mun_capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
 
 use crate::r#type::{PointerData, Type as RustType, TypeDataStore};
 
@@ -100,7 +100,7 @@ mod test {
     use std::mem::MaybeUninit;
     use std::ptr;
 
-    use capi_utils::{assert_error_snapshot, assert_getter1, assert_getter2};
+    use mun_capi_utils::{assert_error_snapshot, assert_getter1, assert_getter2};
 
     use super::super::{
         mun_type_equal, mun_type_kind, mun_type_pointer_type, mun_type_release,

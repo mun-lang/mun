@@ -4,8 +4,8 @@ pub use monitor::{
     Monitor, MonitorConfig, MonitorDirectories, MonitorEntry, MonitorMessage, NotifyMonitor,
 };
 
+use mun_paths::{AbsPath, AbsPathBuf};
 use path_interner::PathInterner;
-use paths::{AbsPath, AbsPathBuf};
 
 mod monitor;
 mod path_interner;

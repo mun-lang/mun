@@ -1,6 +1,6 @@
 use super::LanguageServerState;
 use crate::{change::AnalysisChange, config::FilesWatcher};
-use paths::{AbsPathBuf, RelativePath};
+use mun_paths::{AbsPathBuf, RelativePath};
 use std::{
     convert::{TryFrom, TryInto},
     sync::Arc,
@@ -16,16 +16,18 @@ impl LanguageServerState {
             .clone()
             .into_iter()
             .flatten()
-            .filter_map(|project| match project::Package::from_file(&project.path) {
-                Ok(package) => Some(package),
-                Err(err) => {
-                    self.show_message(
-                        lsp_types::MessageType::ERROR,
-                        format!("mun failed to load package: {:#}", err),
-                    );
-                    None
-                }
-            })
+            .filter_map(
+                |project| match mun_project::Package::from_file(&project.path) {
+                    Ok(package) => Some(package),
+                    Err(err) => {
+                        self.show_message(
+                            lsp_types::MessageType::ERROR,
+                            format!("mun failed to load package: {:#}", err),
+                        );
+                        None
+                    }
+                },
+            )
             .collect::<Vec<_>>();
 
         // If these packages are the same as the ones we already had, there is little to do.
@@ -69,7 +71,7 @@ impl LanguageServerState {
                     .source_directory()
                     .try_into()
                     .expect("could not convert package root to absolute path");
-                vfs::MonitorEntry::Directories(vfs::MonitorDirectories {
+                mun_vfs::MonitorEntry::Directories(mun_vfs::MonitorDirectories {
                     extensions: vec!["mun".to_owned()],
                     include: vec![source_dir],
                     exclude: vec![],
@@ -77,7 +79,7 @@ impl LanguageServerState {
             })
             .collect::<Vec<_>>();
 
-        let monitor_config = vfs::MonitorConfig {
+        let monitor_config = mun_vfs::MonitorConfig {
             watch: match self.config.watcher {
                 FilesWatcher::Client => vec![],
                 FilesWatcher::Notify => (0..entries_to_load.len()).into_iter().collect(),
@@ -88,9 +90,9 @@ impl LanguageServerState {
         self.vfs_monitor.set_config(monitor_config);
 
         // Create the set of packages
-        let mut package_set = hir::PackageSet::default();
+        let mut package_set = mun_hir::PackageSet::default();
         for (idx, _package) in packages.iter().enumerate() {
-            package_set.add_package(hir::SourceRootId(idx as u32));
+            package_set.add_package(mun_hir::SourceRootId(idx as u32));
         }
         change.set_packages(package_set);
 
@@ -103,9 +105,9 @@ impl LanguageServerState {
     }
 
     /// Recomputes all the source roots based on the `packages`
-    pub(crate) fn recompute_source_roots(&self) -> Vec<hir::SourceRoot> {
+    pub(crate) fn recompute_source_roots(&self) -> Vec<mun_hir::SourceRoot> {
         // Iterate over all sources and see to which package they belong
-        let mut source_roots = vec![hir::SourceRoot::default(); self.packages.len()];
+        let mut source_roots = vec![mun_hir::SourceRoot::default(); self.packages.len()];
 
         // Source directories
         let source_dirs = self
@@ -132,7 +134,7 @@ impl LanguageServerState {
                             .map(|relative| (index, relative))
                     })
             {
-                source_roots[idx].insert_file(hir::FileId(file_id.0), relative_path);
+                source_roots[idx].insert_file(mun_hir::FileId(file_id.0), relative_path);
             }
         }
 

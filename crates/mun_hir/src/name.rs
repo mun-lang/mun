@@ -1,7 +1,7 @@
 use mun_syntax::{ast, SmolStr};
 use std::fmt;
 
-/// `Name` is a wrapper around string, which is used in hir for both references
+/// `Name` is a wrapper around string, which is used in mun_hir for both references
 /// and declarations.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Name(Repr);

@@ -10,11 +10,11 @@ use lsp_server::{ReqQueue, Response};
 use lsp_types::{
     notification::Notification, notification::PublishDiagnostics, PublishDiagnosticsParams,
 };
+use mun_paths::AbsPathBuf;
+use mun_vfs::VirtualFileSystem;
 use parking_lot::RwLock;
-use paths::AbsPathBuf;
 use rustc_hash::FxHashSet;
 use std::{ops::Deref, sync::Arc, time::Instant};
-use vfs::VirtualFileSystem;
 
 mod protocol;
 mod utils;
@@ -30,7 +30,7 @@ pub(crate) enum Task {
 
 #[derive(Debug)]
 pub(crate) enum Event {
-    Vfs(vfs::MonitorMessage),
+    Vfs(mun_vfs::MonitorMessage),
     Task(Task),
     Lsp(lsp_server::Message),
 }
@@ -61,10 +61,10 @@ pub(crate) struct LanguageServerState {
     pub vfs: Arc<RwLock<VirtualFileSystem>>,
 
     /// The vfs monitor
-    pub vfs_monitor: Box<dyn vfs::Monitor>,
+    pub vfs_monitor: Box<dyn mun_vfs::Monitor>,
 
     /// The receiver of vfs monitor messages
-    pub vfs_monitor_receiver: Receiver<vfs::MonitorMessage>,
+    pub vfs_monitor_receiver: Receiver<mun_vfs::MonitorMessage>,
 
     /// Documents that are currently kept in memory from the client
     pub open_docs: FxHashSet<AbsPathBuf>,
@@ -73,7 +73,7 @@ pub(crate) struct LanguageServerState {
     pub analysis: Analysis,
 
     /// All the packages known to the server
-    pub packages: Arc<Vec<project::Package>>,
+    pub packages: Arc<Vec<mun_project::Package>>,
 
     /// True if the client requested that we shut down
     pub shutdown_requested: bool,
@@ -88,19 +88,19 @@ pub(crate) struct LanguageServerSnapshot {
     pub analysis: AnalysisSnapshot,
 
     /// All the packages known to the server
-    pub packages: Arc<Vec<project::Package>>,
+    pub packages: Arc<Vec<mun_project::Package>>,
 }
 
 impl LanguageServerState {
     pub fn new(sender: Sender<lsp_server::Message>, config: Config) -> Self {
         // Construct the virtual filesystem monitor
-        let (vfs_monitor_sender, vfs_monitor_receiver) = unbounded::<vfs::MonitorMessage>();
-        let vfs_monitor: vfs::NotifyMonitor = vfs::Monitor::new(Box::new(move |msg| {
+        let (vfs_monitor_sender, vfs_monitor_receiver) = unbounded::<mun_vfs::MonitorMessage>();
+        let vfs_monitor: mun_vfs::NotifyMonitor = mun_vfs::Monitor::new(Box::new(move |msg| {
             vfs_monitor_sender
                 .send(msg)
                 .expect("error sending vfs monitor message to foreground")
         }));
-        let vfs_monitor = Box::new(vfs_monitor) as Box<dyn vfs::Monitor>;
+        let vfs_monitor = Box::new(vfs_monitor) as Box<dyn mun_vfs::Monitor>;
 
         // Construct a task channel
         let (task_sender, task_receiver) = unbounded();
@@ -200,10 +200,10 @@ impl LanguageServerState {
 
     /// Handles a change to the underlying virtual file system.
     #[allow(clippy::unnecessary_wraps)]
-    fn handle_vfs_task(&mut self, mut task: vfs::MonitorMessage) -> anyhow::Result<()> {
+    fn handle_vfs_task(&mut self, mut task: mun_vfs::MonitorMessage) -> anyhow::Result<()> {
         loop {
             match task {
-                vfs::MonitorMessage::Progress { total, done } => {
+                mun_vfs::MonitorMessage::Progress { total, done } => {
                     let progress_state = if done == 0 {
                         Progress::Begin
                     } else if done < total {
@@ -218,7 +218,7 @@ impl LanguageServerState {
                         Some(Progress::fraction(done, total)),
                     )
                 }
-                vfs::MonitorMessage::Loaded { files } => {
+                mun_vfs::MonitorMessage::Loaded { files } => {
                     let vfs = &mut *self.vfs.write();
                     for (path, contents) in files {
                         vfs.set_file_contents(&path, contents);
@@ -240,7 +240,7 @@ impl LanguageServerState {
 fn handle_diagnostics(state: LanguageServerSnapshot, sender: Sender<Task>) -> anyhow::Result<()> {
     // Iterate over all files
     for (idx, _package) in state.packages.iter().enumerate() {
-        let package_id = hir::PackageId(idx as u32);
+        let package_id = mun_hir::PackageId(idx as u32);
 
         // Get all the files
         let files = state.analysis.package_source_files(package_id)?;
@@ -350,7 +350,7 @@ impl LanguageServerState {
             let text = String::from_utf8(bytes).ok().map(Arc::from);
 
             // Notify the database about this change
-            analysis_change.change_file(hir::FileId(file.file_id.0), text);
+            analysis_change.change_file(mun_hir::FileId(file.file_id.0), text);
         }
 
         // If an entry was created or deleted we have to recreate all source roots

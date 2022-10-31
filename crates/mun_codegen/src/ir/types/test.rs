@@ -1,4 +1,5 @@
 use inkwell::types::AnyType;
+use mun_abi as abi;
 use std::cell::RefCell;
 use std::mem;
 

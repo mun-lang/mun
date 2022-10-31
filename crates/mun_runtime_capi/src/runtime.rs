@@ -1,13 +1,13 @@
 //! Exposes the Mun runtime using the C ABI.
 
-use capi_utils::{
+use crate::function::Function;
+use mun_abi as abi;
+use mun_capi_utils::{
     error::ErrorHandle, mun_error_try, try_convert_c_string, try_deref, try_deref_mut,
 };
-use memory::{ffi::Type, type_table::TypeTable, Type as RustType};
-use runtime::{FunctionDefinition, FunctionPrototype, FunctionSignature};
+use mun_memory::{ffi::Type, type_table::TypeTable, Type as RustType};
+use mun_runtime::{FunctionDefinition, FunctionPrototype, FunctionSignature};
 use std::{ffi::c_void, mem::ManuallyDrop, ops::Deref, os::raw::c_char, slice};
-
-use crate::function::Function;
 
 /// A C-style handle to a runtime.
 #[repr(C)]
@@ -19,9 +19,9 @@ impl Runtime {
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the internal pointers point to a valid [`runtime::Runtime`].
-    pub(crate) unsafe fn inner(&self) -> Result<&runtime::Runtime, &'static str> {
-        (self.0 as *mut runtime::Runtime)
+    /// The caller must ensure that the internal pointers point to a valid [`mun_runtime::Runtime`].
+    pub(crate) unsafe fn inner(&self) -> Result<&mun_runtime::Runtime, &'static str> {
+        (self.0 as *mut mun_runtime::Runtime)
             .as_ref()
             .ok_or("null pointer")
     }
@@ -31,9 +31,9 @@ impl Runtime {
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the internal pointers point to a valid [`runtime::Runtime`].
-    pub unsafe fn inner_mut(&self) -> Result<&mut runtime::Runtime, &'static str> {
-        (self.0 as *mut runtime::Runtime)
+    /// The caller must ensure that the internal pointers point to a valid [`mun_runtime::Runtime`].
+    pub unsafe fn inner_mut(&self) -> Result<&mut mun_runtime::Runtime, &'static str> {
+        (self.0 as *mut mun_runtime::Runtime)
             .as_mut()
             .ok_or("null pointer")
     }
@@ -168,13 +168,13 @@ pub unsafe extern "C" fn mun_runtime_create(
     })
     .collect::<Result<_, _>>());
 
-    let runtime_options = runtime::RuntimeOptions {
+    let runtime_options = mun_runtime::RuntimeOptions {
         library_path: library_path.into(),
         user_functions,
         type_table,
     };
 
-    let runtime = match runtime::Runtime::new(runtime_options) {
+    let runtime = match mun_runtime::Runtime::new(runtime_options) {
         Ok(runtime) => runtime,
         Err(e) => return ErrorHandle::new(format!("{:?}", e)),
     };
@@ -332,9 +332,9 @@ pub unsafe extern "C" fn mun_runtime_update(runtime: Runtime, updated: *mut bool
 mod tests {
     use super::*;
     use crate::{test_invalid_runtime, test_util::TestDriver};
-    use capi_utils::error::mun_error_destroy;
-    use capi_utils::{assert_error_snapshot, assert_getter1, assert_getter2, assert_getter3};
-    use memory::HasStaticType;
+    use mun_capi_utils::error::mun_error_destroy;
+    use mun_capi_utils::{assert_error_snapshot, assert_getter1, assert_getter2, assert_getter3};
+    use mun_memory::HasStaticType;
     use std::{ffi::CString, mem::MaybeUninit, ptr};
 
     test_invalid_runtime!(

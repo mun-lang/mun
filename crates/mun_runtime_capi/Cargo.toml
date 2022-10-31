@@ -1,6 +1,6 @@
 [package]
 name = "mun_runtime_capi"
-version = "0.3.0"
+version = "0.4.0-dev"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 description = "Provides a C API for the Mun runtime"
@@ -17,13 +17,13 @@ name = "mun_runtime"
 crate-type = ["cdylib"]
 
 [dependencies]
-abi = { version = "=0.3.0", path = "../mun_abi", package = "mun_abi" }
-capi_utils = { version = "=0.1.0", path = "../mun_capi_utils", package = "mun_capi_utils", features = ["insta"] }
-memory = { version = "=0.2.0", path = "../mun_memory", package = "mun_memory" }
-runtime = { version = "=0.3.0", path = "../mun_runtime", package = "mun_runtime" }
+mun_abi = { version = "=0.4.0-dev", path = "../mun_abi" }
+mun_memory = { version = "=0.4.0-dev", path = "../mun_memory" }
+mun_runtime = { version = "=0.4.0-dev", path = "../mun_runtime" }
+mun_capi_utils = { version = "=0.4.0-dev", path = "../mun_capi_utils", features=["insta"]}
 insta = { version = "1.12.0", default-features = false, features = ["ron"] }
 
 [dev-dependencies]
-compiler = { path="../mun_compiler", package = "mun_compiler" }
+mun_compiler = { path="../mun_compiler" }
 paste = { version = "1.0", default-features = false }
 tempfile = { version = "3", default-features = false }

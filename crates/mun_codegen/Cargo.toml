@@ -1,6 +1,6 @@
 [package]
 name = "mun_codegen"
-version = "0.3.0"
+version = "0.4.0-dev"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 description = "LLVM IR code generation for Mun"
@@ -13,22 +13,22 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["Game development", "Mun"]
 
 [dependencies]
-abi = { version = "=0.3.0", path = "../mun_abi", package = "mun_abi" }
+mun_abi = { version = "=0.4.0-dev", path = "../mun_abi" }
 anyhow = { version = "1.0.31", default-features = false, features = ["std"] }
 apple-codesign = { version = "0.20.0", default-features = false }
 array-init = { version = "2.0.0", default-features = false }
 by_address = { version = "1.0.4", default-features = false }
 bytemuck = { version = "1.4.1", default-features = false }
-hir = { version = "=0.3.0", path = "../mun_hir", package = "mun_hir" }
+mun_hir = { version = "=0.4.0-dev", path = "../mun_hir" }
 inkwell = { version = "=0.1.0-beta.4", default-features = false, features = ["llvm12-0", "no-libffi-linking", "target-x86", "target-aarch64"] }
 itertools = { version = "0.10.3", default-features = false }
-mun_codegen_macros = { version = "=0.1.0", path = "../mun_codegen_macros", package = "mun_codegen_macros" }
-mun_target = { version = "=0.3.0", path = "../mun_target" }
+mun_codegen_macros = { version = "=0.4.0-dev", path = "../mun_codegen_macros" }
+mun_target = { version = "=0.4.0-dev", path = "../mun_target" }
 once_cell = { version = "1.4.0", default-features = false }
 lld_rs = { version = "120.0.1", default-features = false }
 parking_lot = { version = "0.12.0", default-features = false }
 paste = { version = "1.0.7", default-features = false }
-paths = { version="=0.1.0", path = "../mun_paths", package="mun_paths" }
+mun_paths = { version= "=0.4.0-dev", path="../mun_paths"}
 rustc-hash = { version = "1.1.0", default-features = false }
 salsa = { version = "0.16.1", default-features = false }
 smallvec = { version = "1.6.1", features = ["union"], default-features = false }
@@ -36,8 +36,8 @@ tempfile = { version = "3", default-features = false }
 thiserror = { version = "1.0.19", default-features = false }
 
 [dev-dependencies]
-abi = { path = "../mun_abi", package = "mun_abi", features = ["serde"] }
+mun_abi = { path = "../mun_abi", features = ["serde"] }
 insta = { version = "1.12.0", default-features = false, features = ["ron"] }
-libloader = { path = "../mun_libloader", package = "mun_libloader" }
+mun_libloader = { path = "../mun_libloader" }
 mun_test = { path = "../mun_test" }
-runtime = { path = "../mun_runtime", package = "mun_runtime" }
+mun_runtime = { path = "../mun_runtime" }

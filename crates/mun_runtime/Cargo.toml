@@ -1,6 +1,6 @@
 [package]
 name = "mun_runtime"
-version = "0.3.0"
+version = "0.4.0-dev"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 description = "A runtime for hot reloading and invoking Mun from Rust"
@@ -13,11 +13,11 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-abi = { version = "=0.3.0", path = "../mun_abi", package = "mun_abi" }
-capi_utils = { version = "=0.1.0", path = "../mun_capi_utils", package = "mun_capi_utils" }
-libloader = { version = "=0.1.0", path = "../mun_libloader", package = "mun_libloader" }
-memory = { version = "=0.2.0", path = "../mun_memory", package = "mun_memory" }
-mun_project = { version = "=0.1.0", path = "../mun_project" }
+mun_abi = { version = "=0.4.0-dev", path = "../mun_abi" }
+mun_libloader = { version = "=0.4.0-dev", path = "../mun_libloader" }
+mun_capi_utils = { version = "=0.4.0-dev", path = "../mun_capi_utils"}
+mun_memory = { version = "=0.4.0-dev", path = "../mun_memory" }
+mun_project = { version = "=0.4.0-dev", path = "../mun_project" }
 anyhow = { version = "1.0", default-features = false }
 itertools = { version = "0.10.3", default-features = false, features = ["use_alloc"] }
 log = { version = "0.4", default-features = false }
@@ -28,7 +28,7 @@ rustc-hash = { version = "1.1", default-features = false }
 seq-macro = { version = "0.3.0", default-features = false }
 
 [dev-dependencies]
-compiler = { version = "=0.3.0", path = "../mun_compiler", package = "mun_compiler" }
+mun_compiler = { path="../mun_compiler" }
 mun_test = { path = "../mun_test" }
 bevy = { version = "0.8", default-features = false }
 criterion = { version = "0.4", default-features = false }

@@ -1,5 +1,5 @@
-use paths::AbsPathBuf;
-use project::ProjectManifest;
+use mun_paths::AbsPathBuf;
+use mun_project::ProjectManifest;
 
 /// The configuration used by the language server.
 #[derive(Debug, Clone)]

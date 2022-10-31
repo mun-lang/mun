@@ -4,11 +4,6 @@ use crate::{
     module_group::ModuleGroup,
     value::Global,
 };
-use hir::{
-    ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDatabase, HirDisplay, InferenceResult,
-    Literal, LogicOp, Name, Ordering, Pat, PatId, Path, ResolveBitness, Resolver, Statement,
-    TyKind, UnaryOp, ValueNs,
-};
 use inkwell::{
     basic_block::BasicBlock,
     builder::Builder,
@@ -18,6 +13,12 @@ use inkwell::{
         FunctionValue, GlobalValue, IntValue, PointerValue, StructValue,
     },
     AddressSpace, FloatPredicate, IntPredicate,
+};
+use mun_abi as abi;
+use mun_hir::{
+    ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, HirDatabase, HirDisplay, InferenceResult,
+    Literal, LogicOp, Name, Ordering, Pat, PatId, Path, ResolveBitness, Resolver, Statement,
+    TyKind, UnaryOp, ValueNs,
 };
 use std::{collections::HashMap, sync::Arc};
 
@@ -43,12 +44,12 @@ pub(crate) struct BodyIrGenerator<'db, 'ink, 't> {
     pat_to_param: HashMap<PatId, inkwell::values::BasicValueEnum<'ink>>,
     pat_to_local: HashMap<PatId, inkwell::values::PointerValue<'ink>>,
     pat_to_name: HashMap<PatId, String>,
-    function_map: &'t HashMap<hir::Function, FunctionValue<'ink>>,
+    function_map: &'t HashMap<mun_hir::Function, FunctionValue<'ink>>,
     dispatch_table: &'t DispatchTable<'ink>,
     type_table: &'t TypeTable<'ink>,
     hir_types: &'t HirTypeCache<'db, 'ink>,
     active_loop: Option<LoopInfo<'ink>>,
-    hir_function: hir::Function,
+    hir_function: mun_hir::Function,
     external_globals: ExternalGlobals<'ink>,
     module_group: &'t ModuleGroup,
 }
@@ -58,8 +59,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
     pub fn new(
         context: &'ink Context,
         db: &'db dyn HirDatabase,
-        function: (hir::Function, FunctionValue<'ink>),
-        function_map: &'t HashMap<hir::Function, FunctionValue<'ink>>,
+        function: (mun_hir::Function, FunctionValue<'ink>),
+        function_map: &'t HashMap<mun_hir::Function, FunctionValue<'ink>>,
         dispatch_table: &'t DispatchTable<'ink>,
         type_table: &'t TypeTable<'ink>,
         external_globals: ExternalGlobals<'ink>,
@@ -68,7 +69,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
     ) -> Self {
         let (hir_function, ir_function) = function;
 
-        // Get the type information from the `hir::Function`
+        // Get the type information from the `mun_hir::Function`
         let body = hir_function.body(db);
         let infer = hir_function.infer(db);
 
@@ -190,7 +191,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 self.builder.build_return(None);
             } else if let Some(value) = ret_value {
                 let ret_value = if let Some(hir_struct) = fn_ret_type.as_struct() {
-                    if hir_struct.data(self.db.upcast()).memory_kind == hir::StructMemoryKind::Value
+                    if hir_struct.data(self.db.upcast()).memory_kind
+                        == mun_hir::StructMemoryKind::Value
                     {
                         self.gen_struct_alloc_on_heap(hir_struct, value.into_struct_value())
                     } else {
@@ -214,7 +216,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 tail,
             } => self.gen_block(expr, statements, *tail),
             Expr::Path(ref p) => {
-                let resolver = hir::resolver_for_expr(self.db.upcast(), self.body.owner(), expr);
+                let resolver =
+                    mun_hir::resolver_for_expr(self.db.upcast(), self.body.owner(), expr);
                 Some(self.gen_path_expr(p, expr, &resolver))
             }
             Expr::Literal(lit) => Some(self.gen_literal(lit, expr)),
@@ -229,7 +232,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             } => {
                 // Get the callable definition from the map
                 match self.infer[*callee].as_callable_def() {
-                    Some(hir::CallableDef::Function(def)) => {
+                    Some(mun_hir::CallableDef::Function(def)) => {
                         // Get all the arguments
                         let args: Vec<BasicMetadataValueEnum> = args
                             .iter()
@@ -242,7 +245,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                             // If the called function is a void function it doesn't return anything.
                             // If this method (`gen_expr`) returns None we assume the return value
                             // is `never`. We return a const unit struct here to ensure that at
-                            // least something is returned. This matches with the hir where a
+                            // least something is returned. This matches with the mun_hir where a
                             // `nothing` is returned instead of a `never`.
                             //
                             // This unit value will also be optimized out.
@@ -251,7 +254,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                                 _ => Some(self.context.const_struct(&[], false).into()),
                             })
                     }
-                    Some(hir::CallableDef::Struct(_)) => Some(self.gen_named_tuple_lit(expr, args)),
+                    Some(mun_hir::CallableDef::Struct(_)) => {
+                        Some(self.gen_named_tuple_lit(expr, args))
+                    }
                     None => panic!("expected a callable expression"),
                 }
             }
@@ -285,11 +290,11 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
                 let context = self.context;
                 let ir_ty = match ty.resolve(&self.db.target_data_layout()).bitness {
-                    hir::IntBitness::X8 => context.i8_type().const_int(v.value as u64, false),
-                    hir::IntBitness::X16 => context.i16_type().const_int(v.value as u64, false),
-                    hir::IntBitness::X32 => context.i32_type().const_int(v.value as u64, false),
-                    hir::IntBitness::X64 => context.i64_type().const_int(v.value as u64, false),
-                    hir::IntBitness::X128 => {
+                    mun_hir::IntBitness::X8 => context.i8_type().const_int(v.value as u64, false),
+                    mun_hir::IntBitness::X16 => context.i16_type().const_int(v.value as u64, false),
+                    mun_hir::IntBitness::X32 => context.i32_type().const_int(v.value as u64, false),
+                    mun_hir::IntBitness::X64 => context.i64_type().const_int(v.value as u64, false),
+                    mun_hir::IntBitness::X128 => {
                         context.i128_type().const_int_arbitrary_precision(&unsafe {
                             std::mem::transmute::<u128, [u64; 2]>(v.value)
                         })
@@ -309,8 +314,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
                 let context = self.context;
                 let ir_ty = match ty.bitness.resolve(&self.db.target_data_layout()) {
-                    hir::FloatBitness::X32 => context.f32_type().const_float(v.value),
-                    hir::FloatBitness::X64 => context.f64_type().const_float(v.value),
+                    mun_hir::FloatBitness::X32 => context.f32_type().const_float(v.value),
+                    mun_hir::FloatBitness::X64 => context.f64_type().const_float(v.value),
                 };
 
                 ir_ty.into()
@@ -337,7 +342,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
     /// Allocate a struct literal either on the stack or the heap based on the type of the struct.
     fn gen_struct_alloc(
         &mut self,
-        hir_struct: hir::Struct,
+        hir_struct: mun_hir::Struct,
         args: Vec<BasicValueEnum<'ink>>,
     ) -> BasicValueEnum<'ink> {
         // Construct the struct literal
@@ -352,8 +357,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         let struct_lit = value.into_struct_value();
 
         match hir_struct.data(self.db.upcast()).memory_kind {
-            hir::StructMemoryKind::Value => struct_lit.into(),
-            hir::StructMemoryKind::Gc => {
+            mun_hir::StructMemoryKind::Value => struct_lit.into(),
+            mun_hir::StructMemoryKind::Gc => {
                 // TODO: Root memory in GC
                 self.gen_struct_alloc_on_heap(hir_struct, struct_lit)
             }
@@ -362,7 +367,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
     fn gen_struct_alloc_on_heap(
         &mut self,
-        hir_struct: hir::Struct,
+        hir_struct: mun_hir::Struct,
         struct_lit: StructValue,
     ) -> BasicValueEnum<'ink> {
         let struct_ir_ty = self.hir_types.get_struct_type(hir_struct);
@@ -439,7 +444,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
     fn gen_record_lit(
         &mut self,
         type_expr: ExprId,
-        fields: &[hir::RecordLitField],
+        fields: &[mun_hir::RecordLitField],
     ) -> BasicValueEnum<'ink> {
         let struct_ty = self.infer[type_expr].clone();
         let hir_struct = struct_ty.as_struct().unwrap(); // Can only really get here if the type is a struct
@@ -590,7 +595,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
     ) -> BasicValueEnum<'ink> {
         let ty = &self.infer[expr];
         if let Some(s) = ty.as_struct() {
-            if s.data(self.db.upcast()).memory_kind == hir::StructMemoryKind::Gc {
+            if s.data(self.db.upcast()).memory_kind == mun_hir::StructMemoryKind::Gc {
                 return deref_heap_value(&self.builder, value);
             }
         }
@@ -633,7 +638,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             TyKind::Float(_) => self.gen_binary_op_float(lhs, rhs, op),
             TyKind::Int(ty) => self.gen_binary_op_int(lhs, rhs, op, ty.signedness),
             TyKind::Struct(s) => {
-                if s.data(self.db.upcast()).memory_kind == hir::StructMemoryKind::Value {
+                if s.data(self.db.upcast()).memory_kind == mun_hir::StructMemoryKind::Value {
                     self.gen_binary_op_value_struct(lhs, rhs, op)
                 } else {
                     self.gen_binary_op_heap_struct(lhs, rhs, op)
@@ -679,7 +684,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         &mut self,
         expr: ExprId,
         op: UnaryOp,
-        signedness: hir::Signedness,
+        signedness: mun_hir::Signedness,
     ) -> Option<BasicValueEnum<'ink>> {
         let value: IntValue = self
             .gen_expr(expr)
@@ -688,7 +693,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .into_int_value();
         match op {
             UnaryOp::Neg => {
-                if signedness == hir::Signedness::Signed {
+                if signedness == mun_hir::Signedness::Signed {
                     Some(self.builder.build_int_neg(value, "neg").into())
                 } else {
                     unimplemented!("Operator {:?} is not implemented for unsigned integer", op)
@@ -740,7 +745,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             }
             BinaryOp::LogicOp(op) => Some(self.gen_logic_bin_op(lhs, rhs, op).into()),
             BinaryOp::CmpOp(op) => Some(
-                self.gen_cmp_bin_op_int(lhs, rhs, op, hir::Signedness::Unsigned)
+                self.gen_cmp_bin_op_int(lhs, rhs, op, mun_hir::Signedness::Unsigned)
                     .into(),
             ),
         }
@@ -811,7 +816,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         lhs_expr: ExprId,
         rhs_expr: ExprId,
         op: BinaryOp,
-        signedness: hir::Signedness,
+        signedness: mun_hir::Signedness,
     ) -> Option<BasicValueEnum<'ink>> {
         let lhs = self
             .gen_expr(lhs_expr)
@@ -921,7 +926,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         lhs: IntValue<'ink>,
         rhs: IntValue<'ink>,
         op: CmpOp,
-        signedness: hir::Signedness,
+        signedness: mun_hir::Signedness,
     ) -> IntValue<'ink> {
         let (name, predicate) = match op {
             CmpOp::Eq { negated: false } => ("eq", IntPredicate::EQ),
@@ -932,8 +937,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             } => (
                 "lesseq",
                 match signedness {
-                    hir::Signedness::Signed => IntPredicate::SLE,
-                    hir::Signedness::Unsigned => IntPredicate::ULE,
+                    mun_hir::Signedness::Signed => IntPredicate::SLE,
+                    mun_hir::Signedness::Unsigned => IntPredicate::ULE,
                 },
             ),
             CmpOp::Ord {
@@ -942,8 +947,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             } => (
                 "less",
                 match signedness {
-                    hir::Signedness::Signed => IntPredicate::SLT,
-                    hir::Signedness::Unsigned => IntPredicate::ULT,
+                    mun_hir::Signedness::Signed => IntPredicate::SLT,
+                    mun_hir::Signedness::Unsigned => IntPredicate::ULT,
                 },
             ),
             CmpOp::Ord {
@@ -952,8 +957,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             } => (
                 "greatereq",
                 match signedness {
-                    hir::Signedness::Signed => IntPredicate::SGE,
-                    hir::Signedness::Unsigned => IntPredicate::UGE,
+                    mun_hir::Signedness::Signed => IntPredicate::SGE,
+                    mun_hir::Signedness::Unsigned => IntPredicate::UGE,
                 },
             ),
             CmpOp::Ord {
@@ -962,8 +967,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             } => (
                 "greater",
                 match signedness {
-                    hir::Signedness::Signed => IntPredicate::SGT,
-                    hir::Signedness::Unsigned => IntPredicate::UGT,
+                    mun_hir::Signedness::Signed => IntPredicate::SGT,
+                    mun_hir::Signedness::Unsigned => IntPredicate::UGT,
                 },
             ),
         };
@@ -976,19 +981,23 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         lhs: IntValue<'ink>,
         rhs: IntValue<'ink>,
         op: ArithOp,
-        signedness: hir::Signedness,
+        signedness: mun_hir::Signedness,
     ) -> IntValue<'ink> {
         match op {
             ArithOp::Add => self.builder.build_int_add(lhs, rhs, "add"),
             ArithOp::Subtract => self.builder.build_int_sub(lhs, rhs, "sub"),
             ArithOp::Divide => match signedness {
-                hir::Signedness::Signed => self.builder.build_int_signed_div(lhs, rhs, "div"),
-                hir::Signedness::Unsigned => self.builder.build_int_unsigned_div(lhs, rhs, "div"),
+                mun_hir::Signedness::Signed => self.builder.build_int_signed_div(lhs, rhs, "div"),
+                mun_hir::Signedness::Unsigned => {
+                    self.builder.build_int_unsigned_div(lhs, rhs, "div")
+                }
             },
             ArithOp::Multiply => self.builder.build_int_mul(lhs, rhs, "mul"),
             ArithOp::Remainder => match signedness {
-                hir::Signedness::Signed => self.builder.build_int_signed_rem(lhs, rhs, "rem"),
-                hir::Signedness::Unsigned => self.builder.build_int_unsigned_rem(lhs, rhs, "rem"),
+                mun_hir::Signedness::Signed => self.builder.build_int_signed_rem(lhs, rhs, "rem"),
+                mun_hir::Signedness::Unsigned => {
+                    self.builder.build_int_unsigned_rem(lhs, rhs, "rem")
+                }
             },
             ArithOp::LeftShift => self.builder.build_left_shift(lhs, rhs, "left_shift"),
             ArithOp::RightShift => {
@@ -1041,7 +1050,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         let body = self.body.clone();
         match &body[expr] {
             Expr::Path(ref p) => {
-                let resolver = hir::resolver_for_expr(self.db.upcast(), self.body.owner(), expr);
+                let resolver =
+                    mun_hir::resolver_for_expr(self.db.upcast(), self.body.owner(), expr);
                 self.gen_path_place_expr(p, expr, &resolver)
             }
             Expr::Field {
@@ -1065,14 +1075,14 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
     /// Returns true if a call to the specified function should be looked up in the dispatch table;
     /// if false is returned the function should be called directly.
-    fn should_use_dispatch_table(&self, function: hir::Function) -> bool {
+    fn should_use_dispatch_table(&self, function: mun_hir::Function) -> bool {
         self.module_group.should_runtime_link_fn(self.db, function)
     }
 
     /// Generates IR for a function call.
     fn gen_call(
         &mut self,
-        function: hir::Function,
+        function: mun_hir::Function,
         args: &[BasicMetadataValueEnum<'ink>],
     ) -> CallSiteValue<'ink> {
         if self.should_use_dispatch_table(function) {
@@ -1087,7 +1097,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         } else {
             let llvm_function = self.function_map.get(&function).unwrap_or_else(|| {
                 panic!(
-                    "missing function value for hir function: '{}'",
+                    "missing function value for mun_hir function: '{}'",
                     function.name(self.db),
                 )
             });

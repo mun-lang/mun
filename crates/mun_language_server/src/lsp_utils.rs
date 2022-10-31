@@ -1,5 +1,5 @@
 use crate::from_lsp;
-use hir::line_index::LineIndex;
+use mun_hir::line_index::LineIndex;
 
 /// Given a set of text document changes apply them to the given string.
 pub(crate) fn apply_document_changes(

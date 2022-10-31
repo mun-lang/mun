@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use paths::RelativePathBuf;
+use mun_paths::RelativePathBuf;
 
 const DEFAULT_FILE_NAME: &str = "mod.mun";
 const META_LINE: &str = "//-";

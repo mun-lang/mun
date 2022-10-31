@@ -6,9 +6,9 @@ pub mod diagnostics;
 mod diagnostics_snippets;
 mod driver;
 
-pub use hir::FileId;
+pub use mun_hir::FileId;
+pub use mun_paths::{RelativePath, RelativePathBuf};
 pub use mun_target::spec::Target;
-pub use paths::{RelativePath, RelativePathBuf};
 use std::path::{Path, PathBuf};
 
 pub use crate::driver::DisplayColor;
