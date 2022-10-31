@@ -84,14 +84,14 @@ jobs:
       - uses: Swatinem/rust-cache@v1
         if: matrix.os != 'windows-latest'
         
-#      - name: Doctests
-#        uses: actions-rs/cargo@v1
-#        env:
-#          RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
-#          CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
-#        with:
-#          command: test
-#          args: --doc --all-features
+      - name: Doctests
+        uses: actions-rs/cargo@v1
+        env:
+          RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
+          CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
+        with:
+          command: test
+          args: --doc --all-features --profile min-artifact-size-debug
 
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
@@ -106,7 +106,7 @@ jobs:
           CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
         with:
           command: nextest
-          args: run --all-features --profile ci
+          args: run --all-features --profile ci --cargo-profile min-artifact-size-debug
 
   test-mdbook:
     name: Test mdbook
