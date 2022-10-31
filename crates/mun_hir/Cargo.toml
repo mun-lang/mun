@@ -13,20 +13,20 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-salsa = "0.16.1"
 mun_syntax = { version = "=0.4.0-dev", path = "../mun_syntax" }
 mun_target = { version = "=0.4.0-dev", path = "../mun_target" }
 mun_paths = { version= "=0.4.0-dev", path="../mun_paths" }
-rustc-hash = "1.1"
-once_cell = "1.4.0"
-ena = "0.14"
-drop_bomb = "0.1.4"
-either = "1.5.3"
-itertools = "0.10.0"
-smallvec = { version = "1.6.1", features=["union"] }
+drop_bomb = { version = "0.1.4", default-features = false }
+either = { version = "1.5.3", default-features = false }
+ena = { version = "0.14", default-features = false }
+itertools = { version = "0.10.0", default-features = false }
+once_cell = { version = "1.4.0", default-features = false }
+rustc-hash = { version = "1.1", default-features = false }
+salsa = { version = "0.16.1", default-features = false }
+smallvec = { version = "1.6.1", features = ["union"], default-features = false }
 
 [dev-dependencies]
-insta = "1.12.0"
-text_trees = "0.1.2"
-parking_lot = "0.12.0"
 mun_test = { path = "../mun_test" }
+insta = { version = "1.12.0", default-features = false }
+parking_lot = { version = "0.12.0", default-features = false }
+text_trees = { version = "0.1.2", default-features = false }

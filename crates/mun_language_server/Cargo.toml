@@ -13,30 +13,30 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-rustc-hash="1.1.0"
-lsp-types = "0.93.0"
-lsp-server = "0.6.0"
-log = "0.4"
-serde = "1.0"
-serde_json = "1.0"
-serde_derive = "1.0"
-anyhow = "1.0"
-thiserror = "1.0.19"
-salsa = "0.16.1"
 mun_hir = { version = "=0.4.0-dev", path="../mun_hir" }
-threadpool="1.8.1"
 mun_vfs = { version = "=0.4.0-dev", path = "../mun_vfs" }
 mun_project = { version = "=0.4.0-dev", path = "../mun_project" }
 mun_target = { version = "=0.4.0-dev", path = "../mun_target" }
 mun_syntax = { version = "=0.4.0-dev", path = "../mun_syntax" }
 mun_diagnostics = { version = "=0.4.0-dev", path = "../mun_diagnostics" }
-crossbeam-channel = "0.5.0"
-parking_lot = "0.12.0"
 mun_paths = { version = "=0.4.0-dev", path="../mun_paths" }
-ra_ap_text_edit = "0.0.126"
+anyhow = { version = "1.0", default-features = false }
+crossbeam-channel = { version = "0.5.0", default-features = false }
+log = { version = "0.4", default-features = false }
+lsp-types = { version = "0.93.0", default-features = false }
+lsp-server = { version = "0.6.0", default-features = false }
+parking_lot = { version = "0.12.0", default-features = false }
+ra_ap_text_edit = { version = "0.0.137", default-features = false }
+rustc-hash = { version = "1.1.0", default-features = false }
+salsa = { version = "0.16.1", default-features = false }
+serde = { version = "1.0", default-features = false }
+serde_derive = { version = "1.0", default-features = false }
+serde_json = { version = "1.0", default-features = false }
+thiserror = { version = "1.0.19", default-features = false }
+threadpool = { version = "1.8.1", default-features = false }
 
 [dev-dependencies]
-tempdir = "0.3.7"
 mun_test = { path = "../mun_test"}
-insta = "1.12.0"
-itertools = "0.10.0"
+insta = { version = "1.12.0", default-features = false }
+itertools = { version = "0.10.0", default-features = false }
+tempdir = { version = "0.3.7", default-features = false }

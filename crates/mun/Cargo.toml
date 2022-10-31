@@ -14,10 +14,10 @@ categories = ["command-line-interface", "game-development", "mun"]
 default-run = "mun"
 
 [dependencies]
-anyhow = "1.0.31"
-clap = { version = "3.1.18", features=["derive"] }
-log = "0.4"
-pretty_env_logger = "0.4"
+anyhow = { version = "1.0.31", default-features = false }
+clap = { version = "3.1.18", default-features = false, features = ["std", "derive"] }
+log = { version = "0.4", default-features = false }
+pretty_env_logger = { version = "0.4", default-features = false }
 mun_abi = { version = "=0.4.0-dev", path = "../mun_abi" }
 mun_compiler = { version = "=0.4.0-dev", path = "../mun_compiler" }
 mun_compiler_daemon = { version = "=0.4.0-dev", path = "../mun_compiler_daemon" }

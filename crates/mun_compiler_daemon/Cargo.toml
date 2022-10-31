@@ -13,11 +13,11 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-anyhow = "1.0.31"
+anyhow = { version = "1.0.31", default-features = false }
+ctrlc = { version = "3.1", default-features = false }
+log = { version = "0.4", default-features = false }
 mun_codegen = { version = "=0.4.0-dev", path = "../mun_codegen" }
 mun_compiler = { version = "=0.4.0-dev", path = "../mun_compiler" }
 mun_project = { version = "=0.4.0-dev", path = "../mun_project" }
 mun_hir = { version = "=0.4.0-dev", path = "../mun_hir" }
-notify = "4.0"
-ctrlc = "3.1"
-log = "0.4"
+notify = { version = "4.0", default-features = false }

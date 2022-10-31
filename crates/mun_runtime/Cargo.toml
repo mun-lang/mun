@@ -14,27 +14,27 @@ categories = ["game-development", "mun"]
 
 [dependencies]
 mun_abi = { version = "=0.4.0-dev", path = "../mun_abi" }
-anyhow = "1.0"
-itertools = "0.10.3"
 mun_libloader = { version = "=0.4.0-dev", path = "../mun_libloader" }
-log = "0.4"
 mun_capi_utils = { version = "=0.4.0-dev", path = "../mun_capi_utils"}
 mun_memory = { version = "=0.4.0-dev", path = "../mun_memory" }
 mun_project = { version = "=0.4.0-dev", path = "../mun_project" }
-notify = "4.0.12"
-once_cell = "1.4.0"
-parking_lot = "0.12.0"
-rustc-hash = "1.1"
-seq-macro = "0.3.0"
+anyhow = { version = "1.0", default-features = false }
+itertools = { version = "0.10.3", default-features = false, features = ["use_alloc"] }
+log = { version = "0.4", default-features = false }
+notify = "5.0.0"
+once_cell = { version = "1.4.0", default-features = false }
+parking_lot = { version = "0.12.0", default-features = false }
+rustc-hash = { version = "1.1", default-features = false }
+seq-macro = { version = "0.3.0", default-features = false }
 
 [dev-dependencies]
-bevy = { version = "0.8", default-features = false }
-mun_compiler = { version= "=0.4.0-dev", path="../mun_compiler" }
-criterion = "0.3"
-mlua = { version="0.8", default-features = false, features=["vendored", "luajit"]  }
+mun_compiler = { path="../mun_compiler" }
 mun_test = { path = "../mun_test" }
-tempfile = "3"
-termcolor = "1.1"
+bevy = { version = "0.8", default-features = false }
+criterion = { version = "0.4", default-features = false }
+mlua = { package = "mlua", version = "0.8", default-features = false, features = ["vendored", "luajit"] }
+tempfile = { version = "3", default-features = false }
+termcolor = { version = "1.1", default-features = false }
 wasmer = { version = "2.2.1", default-features = false, features = ["sys-default"] }
 
 [[bench]]

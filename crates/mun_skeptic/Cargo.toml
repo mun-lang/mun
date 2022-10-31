@@ -15,10 +15,10 @@ categories = ["game-development", "mun"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bytecount = { version = "0.6.2", default-features = false }
+itertools = { version = "0.10.0", default-features = false }
 mdbook = { version = "0.4.7", default-features = false }
 pulldown-cmark = { version = "0.9.1", default-features = false }
-bytecount = "0.6.2"
-itertools = "0.10.0"
-mun_runtime = { version = "=0.4.0-dev", path = "../mun_runtime" }
 mun_compiler = { version = "=0.4.0-dev", path = "../mun_compiler" }
-tempdir = "0.3.7"
+mun_runtime = { version = "=0.4.0-dev", path = "../mun_runtime" }
+tempdir = { version = "0.3.7", default-features = false }

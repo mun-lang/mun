@@ -13,4 +13,4 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-relative-path = "1.2"
+relative-path = { version = "1.2", default-features = false }

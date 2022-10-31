@@ -13,10 +13,10 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-anyhow = "1.0"
 mun_compiler = { version = "=0.4.0-dev", path = "../mun_compiler" }
 mun_runtime = { version = "=0.4.0-dev", path = "../mun_runtime" }
 mun_hir = { version = "=0.4.0-dev", path = "../mun_hir" }
 mun_paths = { version = "=0.4.0-dev", path = "../mun_paths" }
-tempfile = "3"
-itertools = "0.10.3"
+anyhow = { version = "1.0", default-features = false }
+itertools = { version = "0.10.3", default-features = false }
+tempfile = { version = "3", default-features = false }
