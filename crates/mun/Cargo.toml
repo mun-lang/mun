@@ -15,7 +15,7 @@ default-run = "mun"
 
 [dependencies]
 anyhow = { version = "1.0.31", default-features = false }
-clap = { version = "3.1.18", default-features = false, features = ["std", "derive"] }
+clap = { version = "4.0.18", default-features = false, features = ["std", "derive"] }
 log = { version = "0.4", default-features = false }
 pretty_env_logger = { version = "0.4", default-features = false }
 mun_abi = { version = "=0.4.0-dev", path = "../mun_abi" }
