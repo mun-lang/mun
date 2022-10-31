@@ -1,21 +1,28 @@
 use abi::Guid;
 
 use crate::{
-    diff::{diff, Diff, FieldDiff},
+    diff::{compute_struct_diff, FieldDiff, StructDiff},
     gc::GcPtr,
     r#type::Type,
     ArrayType, TypeKind,
 };
 use std::collections::{HashMap, HashSet};
 
+/// The type mapping needed to convert an old into a new set of unique and ordered values.
 pub struct Mapping {
+    /// The types that were deleted
     pub deletions: HashSet<Type>,
+    /// The mappings of structs whose fields changed
     pub struct_mappings: HashMap<Type, StructMapping>,
+    /// The types that didn't change
     pub identical: Vec<(Type, Type)>,
 }
 
+/// The struct mapping needed to convert an old into a new struct of unique and ordered fields.
 pub struct StructMapping {
+    /// The field mappings for each original struct field
     pub field_mapping: Vec<FieldMapping>,
+    /// The new struct type
     pub new_ty: Type,
 }
 
@@ -52,6 +59,7 @@ pub enum Action {
         size: usize,
     },
     /// Replace an array with its element type, copying its first element - if any.
+    /// Otherwise, zero initialize the element.
     ElementFromArray {
         element_action: Box<Action>,
         old_offset: usize,
@@ -71,7 +79,7 @@ pub enum Action {
 impl Mapping {
     #[allow(clippy::mutable_key_type)]
     pub fn new(old: &[Type], new: &[Type]) -> Self {
-        let diff = diff(old, new);
+        let diff = compute_struct_diff(old, new);
 
         let mut conversions = HashMap::new();
         let mut deletions = HashSet::new();
@@ -81,30 +89,25 @@ impl Mapping {
 
         for diff in diff.iter() {
             match diff {
-                Diff::Delete { index } => {
-                    deletions.insert(old.get(*index).expect("Old type must exist.").clone());
+                StructDiff::Delete { ty, .. } => {
+                    deletions.insert(ty.clone());
                 }
-                Diff::Edit {
+                StructDiff::Edit {
                     diff,
-                    old_index,
-                    new_index,
+                    old_ty,
+                    new_ty,
+                    ..
                 } => {
-                    let old_ty = old.get(*old_index).expect("Old type must exist.");
-                    let new_ty = new.get(*new_index).expect("New type must exist.");
                     conversions.insert(old_ty.clone(), unsafe {
                         field_mapping(old_ty, new_ty, diff)
                     });
                 }
-                Diff::Insert { index } => {
-                    insertions.insert(new.get(*index).expect("New type must exist.").clone());
+                StructDiff::Insert { ty, .. } => {
+                    insertions.insert(ty.clone());
                 }
-                Diff::Move {
-                    old_index,
-                    new_index,
-                } => identical.push((
-                    old.get(*old_index).expect("Old type must exist.").clone(),
-                    new.get(*new_index).expect("New type must exist.").clone(),
-                )),
+                StructDiff::Move { old_ty, new_ty, .. } => {
+                    identical.push((old_ty.clone(), new_ty.clone()))
+                }
             }
         }
 

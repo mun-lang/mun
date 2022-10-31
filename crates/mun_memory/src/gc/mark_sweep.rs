@@ -226,7 +226,7 @@ where
     }
 }
 
-fn alloc_struct(ty: Type) -> Pin<Box<ObjectInfo>> {
+fn alloc_obj(ty: Type) -> Pin<Box<ObjectInfo>> {
     let ptr = NonNull::new(unsafe { std::alloc::alloc_zeroed(ty.value_layout()) })
         .expect("failed to allocate memory for new object");
     Box::pin(ObjectInfo {
@@ -455,7 +455,9 @@ where
     type Array = ArrayHandle;
 
     fn alloc(&self, ty: &Type) -> GcPtr {
-        let object = alloc_struct(ty.clone());
+        assert!(ty.is_concrete());
+
+        let object = alloc_obj(ty.clone());
         let size = object.layout().size();
 
         // We want to return a pointer to the `ObjectInfo`, to be used as handle.
@@ -926,7 +928,7 @@ where
                     }
                 }
                 mapping::Action::StructAlloc => {
-                    let object = alloc_struct(new_ty.clone());
+                    let object = alloc_obj(new_ty.clone());
 
                     // We want to return a pointer to the `ObjectInfo`, to be used as handle.
                     let handle = (object.as_ref().deref() as *const _ as RawGcPtr).into();
@@ -964,7 +966,7 @@ where
                     );
                 }
                 mapping::Action::StructMapFromValue { old_ty, old_offset } => {
-                    let object = alloc_struct(new_ty.clone());
+                    let object = alloc_obj(new_ty.clone());
 
                     let conversion = conversions.get(old_ty).unwrap_or_else(|| {
                         panic!(

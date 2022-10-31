@@ -1,19 +1,21 @@
 use std::convert::{TryFrom, TryInto};
 
+/// The difference of one type when comparing an old and new ordered set.
 #[derive(Debug, Eq, PartialEq)]
-pub enum Diff {
-    Insert { index: usize },
-    Delete { index: usize },
+pub enum Diff<T> {
+    Insert { index: usize, ty: T },
+    Delete { index: usize, ty: T },
 }
 
-pub fn diff<T: Eq>(old: &[T], new: &[T]) -> Vec<Diff> {
+/// Computes the difference in ordering and uniqueness of values between and old and new set.
+pub fn compute_diff<T: Clone + Eq>(old: &[T], new: &[T]) -> Vec<Diff<T>> {
     let mut diff = Vec::new();
     diff_impl(&mut diff, old, new, 0, 0);
     diff
 }
 
-fn diff_impl<T: Eq>(
-    diff: &mut Vec<Diff>,
+fn diff_impl<T: Clone + Eq>(
+    diff: &mut Vec<Diff<T>>,
     old: &[T],
     new: &[T],
     offset_old: usize,
@@ -127,20 +129,23 @@ fn diff_impl<T: Eq>(
             }
         }
     } else if num_old > 0 {
-        for idx in 0..num_old {
+        old.iter().cloned().enumerate().for_each(|(idx, ty)| {
             diff.push(Diff::Delete {
                 index: offset_old + idx,
+                ty,
             });
-        }
+        });
     } else {
-        for idx in 0..num_new {
+        new.iter().cloned().enumerate().for_each(|(idx, ty)| {
             diff.push(Diff::Insert {
                 index: offset_new + idx,
-            })
-        }
+                ty,
+            });
+        });
     }
 }
 
+/// Calculates the Myer's difference length between an old and new set based on ordering and uniqueness.
 pub fn diff_length<T: Eq>(old: &[T], new: &[T]) -> usize {
     let num_old = old.len();
     assert!(
@@ -186,18 +191,32 @@ pub fn diff_length<T: Eq>(old: &[T], new: &[T]) -> usize {
     unreachable!()
 }
 
-pub fn split_diff(diff: &[Diff]) -> (Vec<usize>, Vec<usize>) {
+/// A change consisting of an index and element.
+#[derive(Debug, Eq, PartialEq)]
+pub struct Change<T> {
+    pub index: usize,
+    pub element: T,
+}
+
+/// Splits a slice of [`Diff`] into inserted and deleted entries, respectively.
+pub fn split_diff<T: Clone>(diff: &[Diff<T>]) -> (Vec<Change<T>>, Vec<Change<T>>) {
     let deletions = diff
         .iter()
         .filter_map(|diff| match diff {
-            Diff::Delete { index } => Some(*index),
+            Diff::Delete { index, ty } => Some(Change {
+                index: *index,
+                element: ty.clone(),
+            }),
             _ => None,
         })
         .collect();
     let insertions = diff
         .iter()
         .filter_map(|diff| match diff {
-            Diff::Insert { index } => Some(*index),
+            Diff::Insert { index, ty } => Some(Change {
+                index: *index,
+                element: ty.clone(),
+            }),
             _ => None,
         })
         .collect();
