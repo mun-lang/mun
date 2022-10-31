@@ -54,7 +54,7 @@ mod test {
         PrimitiveType::{self, *},
     };
     use crate::HasStaticType;
-    use capi_utils::assert_getter1;
+    use mun_capi_utils::assert_getter1;
 
     #[test]
     fn test_primitives() {

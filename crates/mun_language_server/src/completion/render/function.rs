@@ -1,12 +1,12 @@
 use super::{CompletionItem, CompletionKind, RenderContext};
 use crate::SymbolKind;
-use hir::HirDisplay;
+use mun_hir::HirDisplay;
 
 /// Similar to [`Render<'a>`] but used to render a completion item for a function
 pub(super) struct FunctionRender<'a> {
     ctx: RenderContext<'a>,
     name: String,
-    func: hir::Function,
+    func: mun_hir::Function,
 }
 
 impl<'a> FunctionRender<'a> {
@@ -14,7 +14,7 @@ impl<'a> FunctionRender<'a> {
     pub fn new(
         ctx: RenderContext<'a>,
         local_name: Option<String>,
-        func: hir::Function,
+        func: mun_hir::Function,
     ) -> Option<FunctionRender<'a>> {
         let name = local_name.unwrap_or_else(|| func.name(ctx.db()).to_string());
 

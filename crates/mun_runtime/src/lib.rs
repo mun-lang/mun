@@ -17,7 +17,8 @@ use anyhow::Result;
 use dispatch_table::DispatchTable;
 use garbage_collector::GarbageCollector;
 use log::{debug, error, info};
-use memory::{
+use mun_abi as abi;
+use mun_memory::{
     gc::{self, GcRuntime},
     type_table::TypeTable,
 };
@@ -46,7 +47,7 @@ pub use crate::{
     reflection::{ArgumentReflection, ReturnTypeReflection},
 };
 // Re-export some useful types so crates dont have to depend on mun_memory as well.
-pub use memory::{Field, FieldData, HasStaticType, PointerType, StructType, Type};
+pub use mun_memory::{Field, FieldData, HasStaticType, PointerType, StructType, Type};
 
 /// Options for the construction of a [`Runtime`].
 pub struct RuntimeOptions {

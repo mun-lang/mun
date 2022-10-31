@@ -2,8 +2,8 @@ use crate::{
     intrinsics::{self, Intrinsic},
     ir::dispatch_table::FunctionPrototype,
 };
-use hir::{Body, Expr, ExprId, HirDatabase, InferenceResult, ValueNs};
 use inkwell::{context::Context, targets::TargetData, types::FunctionType};
+use mun_hir::{Body, Expr, ExprId, HirDatabase, InferenceResult, ValueNs};
 use std::{collections::BTreeMap, sync::Arc};
 
 // Use a `BTreeMap` to guarantee deterministically ordered output
@@ -39,12 +39,12 @@ fn collect_expr<'db, 'ink>(
     // If this expression is a call, store it in the dispatch table
     if let Expr::Call { callee, .. } = expr {
         match infer[*callee].as_callable_def() {
-            Some(hir::CallableDef::Struct(_)) => {
+            Some(mun_hir::CallableDef::Struct(_)) => {
                 collect_intrinsic(context, target, &intrinsics::new, intrinsics);
                 // self.collect_intrinsic(module, entries, &intrinsics::drop);
                 *needs_alloc = true;
             }
-            Some(hir::CallableDef::Function(_)) => (),
+            Some(mun_hir::CallableDef::Function(_)) => (),
             None => panic!("expected a callable expression"),
         }
     }
@@ -56,7 +56,7 @@ fn collect_expr<'db, 'ink>(
     }
 
     if let Expr::Path(path) = expr {
-        let resolver = hir::resolver_for_expr(db.upcast(), body.owner(), expr_id);
+        let resolver = mun_hir::resolver_for_expr(db.upcast(), body.owner(), expr_id);
         if let Some((ValueNs::StructId(_), _)) =
             resolver.resolve_path_as_value_fully(db.upcast(), path)
         {

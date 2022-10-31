@@ -4,16 +4,16 @@ use super::{CompletionContext, CompletionItem, CompletionItemKind};
 use crate::completion::CompletionKind;
 use crate::{db::AnalysisDatabase, SymbolKind};
 use function::FunctionRender;
-use hir::{semantics::ScopeDef, HirDisplay};
+use mun_hir::{semantics::ScopeDef, HirDisplay};
 
-pub(super) fn render_field(ctx: RenderContext, field: hir::Field) -> CompletionItem {
+pub(super) fn render_field(ctx: RenderContext, field: mun_hir::Field) -> CompletionItem {
     Render::new(ctx).render_field(field)
 }
 
 pub(super) fn render_fn(
     ctx: RenderContext,
     local_name: Option<String>,
-    func: hir::Function,
+    func: mun_hir::Function,
 ) -> Option<CompletionItem> {
     Some(FunctionRender::new(ctx, local_name, func)?.render())
 }
@@ -57,7 +57,7 @@ impl<'a> Render<'a> {
         local_name: String,
         resolution: &ScopeDef,
     ) -> Option<CompletionItem> {
-        use hir::ModuleDef::*;
+        use mun_hir::ModuleDef::*;
 
         let completion_kind = match resolution {
             ScopeDef::ModuleDef(PrimitiveType(..)) => CompletionKind::BuiltinType,
@@ -97,7 +97,7 @@ impl<'a> Render<'a> {
     }
 
     /// Constructs a `CompletionItem` for a field.
-    fn render_field(&mut self, field: hir::Field) -> CompletionItem {
+    fn render_field(&mut self, field: mun_hir::Field) -> CompletionItem {
         let name = field.name(self.ctx.db());
         CompletionItem::builder(CompletionKind::Reference, name.to_string())
             .kind(SymbolKind::Field)

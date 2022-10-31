@@ -1,5 +1,5 @@
 use super::{CompletionContext, Completions};
-use hir::Upcast;
+use mun_hir::Upcast;
 
 /// Complete dot accesses, i.e. fields. Adds `CompletionItems` to `result.
 pub(super) fn complete_dot(result: &mut Completions, ctx: &CompletionContext) {

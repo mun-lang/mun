@@ -8,8 +8,8 @@ use crate::{
     code_gen::CodeGenContext,
     value::{IrTypeContext, IrValueContext},
 };
-use hir::{HasVisibility, ModuleDef};
 use inkwell::{module::Module, types::PointerType, values::UnnamedAddress, AddressSpace};
+use mun_hir::{HasVisibility, ModuleDef};
 use rustc_hash::FxHashSet;
 use std::collections::BTreeMap;
 
@@ -26,7 +26,7 @@ pub struct FileGroupIr<'ink> {
     /// The allocator handle, if it exists
     pub(crate) allocator_handle_type: Option<PointerType<'ink>>,
     /// The modules that contain code that was referenced from this group of modules
-    pub(crate) referenced_modules: FxHashSet<hir::Module>,
+    pub(crate) referenced_modules: FxHashSet<mun_hir::Module>,
 }
 
 /// Generates IR that is shared among the group's files.

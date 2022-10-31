@@ -9,8 +9,9 @@ use anyhow::{anyhow, Context};
 use itertools::Itertools;
 use log::error;
 
-use libloader::{MunLibrary, TempLibrary};
-use memory::{
+use mun_abi as abi;
+use mun_libloader::{MunLibrary, TempLibrary};
+use mun_memory::{
     mapping::{Mapping, MemoryMapper},
     type_table::TypeTable,
     Type,

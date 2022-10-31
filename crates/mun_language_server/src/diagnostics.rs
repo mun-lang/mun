@@ -1,6 +1,6 @@
 use crate::db::AnalysisDatabase;
-use hir::{AstDatabase, InFile, ModuleId, PackageId, SourceDatabase};
 use mun_diagnostics::DiagnosticForWith;
+use mun_hir::{AstDatabase, InFile, ModuleId, PackageId, SourceDatabase};
 use mun_syntax::{Location, TextRange};
 use std::cell::RefCell;
 
@@ -28,7 +28,7 @@ fn location_to_range(location: Location) -> TextRange {
 }
 
 /// Computes all the diagnostics for the specified file.
-pub(crate) fn diagnostics(db: &AnalysisDatabase, file_id: hir::FileId) -> Vec<Diagnostic> {
+pub(crate) fn diagnostics(db: &AnalysisDatabase, file_id: mun_hir::FileId) -> Vec<Diagnostic> {
     let mut result = Vec::new();
 
     // Add all syntax errors
@@ -41,7 +41,7 @@ pub(crate) fn diagnostics(db: &AnalysisDatabase, file_id: hir::FileId) -> Vec<Di
 
     // Add all HIR diagnostics
     let result = RefCell::new(result);
-    let mut sink = hir::diagnostics::DiagnosticSink::new(|d| {
+    let mut sink = mun_hir::diagnostics::DiagnosticSink::new(|d| {
         result.borrow_mut().push(d.with_diagnostic(db, |d| {
             Diagnostic {
                 message: format!("{}\n{}", d.title(), d.footer().join("\n"))
@@ -67,7 +67,7 @@ pub(crate) fn diagnostics(db: &AnalysisDatabase, file_id: hir::FileId) -> Vec<Di
             package: package_id,
             local_id,
         };
-        hir::Module::from(module_id).diagnostics(db, &mut sink);
+        mun_hir::Module::from(module_id).diagnostics(db, &mut sink);
     }
     drop(sink);
 

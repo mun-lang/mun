@@ -40,3 +40,6 @@ CMakeSettings.json
 *.munlib
 **/target/*
 build/
+
+.idea
+cmake-build-*/

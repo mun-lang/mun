@@ -1,13 +1,13 @@
 //! Exposes Mun garbage collection.
 
-use capi_utils::error::ErrorHandle;
-use capi_utils::{mun_error_try, try_deref_mut};
+use mun_capi_utils::error::ErrorHandle;
+use mun_capi_utils::{mun_error_try, try_deref_mut};
 use std::mem::ManuallyDrop;
 
 use crate::runtime::Runtime;
-use memory::ffi::Type;
+use mun_memory::ffi::Type;
 
-pub use memory::gc::GcPtr;
+pub use mun_memory::gc::GcPtr;
 
 /// Allocates an object in the runtime of the given `ty`. If successful, `obj` is set,
 /// otherwise a non-zero error handle is returned.
@@ -123,15 +123,15 @@ pub unsafe extern "C" fn mun_gc_collect(runtime: Runtime, reclaimed: *mut bool) 
 
 #[cfg(test)]
 mod tests {
-    use memory::ffi::{mun_type_equal, Type};
-    use memory::gc::{HasIndirectionPtr, RawGcPtr};
+    use mun_memory::ffi::{mun_type_equal, Type};
+    use mun_memory::gc::{HasIndirectionPtr, RawGcPtr};
 
     use super::*;
     use crate::{
         runtime::mun_runtime_get_type_info_by_name, test_invalid_runtime, test_util::TestDriver,
     };
-    use capi_utils::error::mun_error_destroy;
-    use capi_utils::{assert_error_snapshot, assert_getter1, assert_getter2};
+    use mun_capi_utils::error::mun_error_destroy;
+    use mun_capi_utils::{assert_error_snapshot, assert_getter1, assert_getter2};
     use std::{
         ffi::CString,
         mem::{self},

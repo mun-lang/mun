@@ -22,7 +22,7 @@ pub enum TypeRef {
 }
 
 impl TypeRef {
-    /// Converts an `ast::TypeRef` to a `hir::TypeRef`.
+    /// Converts an `ast::TypeRef` to a `mun_hir::TypeRef`.
     pub fn from_ast(node: ast::TypeRef) -> Self {
         match node.kind() {
             ast::TypeRefKind::NeverType(..) => TypeRef::Never,

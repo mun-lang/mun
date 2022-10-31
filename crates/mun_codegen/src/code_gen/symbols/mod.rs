@@ -4,8 +4,8 @@ use std::{collections::HashSet, ffi::CString};
 use inkwell::{attributes::Attribute, module::Linkage, types::AnyType};
 use itertools::Itertools;
 
-use hir::{HirDatabase, TyKind};
 use ir_type_builder::TypeIdBuilder;
+use mun_hir::{HirDatabase, TyKind};
 
 use crate::ir::ty::guid_from_struct;
 use crate::type_info::HasStaticTypeId;
@@ -21,6 +21,7 @@ use crate::{
         AsValue, CanInternalize, Global, IrValueContext, IterAsIrValue, SizedValueType, Value,
     },
 };
+use mun_abi as abi;
 
 mod ir_type_builder;
 
@@ -28,7 +29,7 @@ mod ir_type_builder;
 fn gen_prototype_from_function<'ink>(
     db: &dyn HirDatabase,
     context: &IrValueContext<'ink, '_, '_>,
-    function: hir::Function,
+    function: mun_hir::Function,
     hir_types: &HirTypeCache,
     ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
 ) -> ir::FunctionPrototype<'ink> {
@@ -107,7 +108,7 @@ fn gen_prototype_from_dispatch_entry<'ink>(
 fn get_type_definition_array<'ink>(
     db: &dyn HirDatabase,
     context: &IrValueContext<'ink, '_, '_>,
-    types: impl Iterator<Item = hir::Ty>,
+    types: impl Iterator<Item = mun_hir::Ty>,
     hir_types: &HirTypeCache,
     ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
 ) -> Value<'ink, *const ir::TypeInfo<'ink>> {
@@ -153,7 +154,7 @@ fn get_type_definition_array<'ink>(
 
 fn gen_struct_info<'ink>(
     db: &dyn HirDatabase,
-    hir_struct: hir::Struct,
+    hir_struct: mun_hir::Struct,
     context: &IrValueContext<'ink, '_, '_>,
     hir_types: &HirTypeCache,
     ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
@@ -226,7 +227,7 @@ fn gen_struct_info<'ink>(
 fn get_function_definition_array<'ink, 'a>(
     db: &dyn HirDatabase,
     context: &IrValueContext<'ink, '_, '_>,
-    functions: impl Iterator<Item = &'a hir::Function>,
+    functions: impl Iterator<Item = &'a mun_hir::Function>,
     hir_types: &HirTypeCache,
     ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
 ) -> Global<'ink, [ir::FunctionDefinition<'ink>]> {
@@ -349,8 +350,8 @@ fn gen_dispatch_table<'ink>(
 pub(super) fn gen_reflection_ir<'db, 'ink>(
     db: &'db dyn HirDatabase,
     context: &IrValueContext<'ink, '_, '_>,
-    function_definitions: &HashSet<hir::Function>,
-    type_definitions: &HashSet<hir::Ty>,
+    function_definitions: &HashSet<mun_hir::Function>,
+    type_definitions: &HashSet<mun_hir::Ty>,
     dispatch_table: &DispatchTable<'ink>,
     type_table: &TypeTable<'ink>,
     hir_types: &HirTypeCache<'db, 'ink>,
