@@ -4,6 +4,7 @@ use crate::{
     ModuleGroupId,
 };
 use anyhow::anyhow;
+use apple_codesign::{SigningSettings, UnifiedSigner};
 use inkwell::context::Context;
 use std::{path::Path, sync::Arc};
 use tempfile::NamedTempFile;
@@ -105,6 +106,14 @@ pub(crate) fn build_target_assembly(
     obj_file
         .into_shared_object(file.path())
         .expect("could not link object file");
+
+    let target = db.target();
+    if target.options.is_like_osx {
+        let signer = UnifiedSigner::new(SigningSettings::default());
+        signer
+            .sign_path_in_place(file.path())
+            .expect("Failed to sign shared object");
+    }
 
     Arc::new(TargetAssembly { file })
 }

@@ -7,6 +7,7 @@ pub fn opts(os: &'static str) -> TargetOptions {
         vendor: "apple".into(),
         linker_flavor: LinkerFlavor::Ld64,
         dll_prefix: "lib".to_string(),
+        is_like_osx: os == "macos",
         ..Default::default()
     }
 }

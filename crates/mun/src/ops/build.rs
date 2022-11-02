@@ -2,13 +2,12 @@ use std::env;
 use std::path::{Path, PathBuf};
 
 use anyhow::anyhow;
-use clap::ArgEnum;
 use mun_compiler::{Config, DisplayColor, Target};
 use mun_project::MANIFEST_FILENAME;
 
 use crate::ExitStatus;
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ArgEnum)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, clap::ValueEnum)]
 pub enum UseColor {
     Disable,
     Enable,
@@ -26,7 +25,7 @@ pub struct Args {
     opt_level: u8,
 
     /// Use color in output
-    #[clap(long, arg_enum)]
+    #[clap(long, value_enum)]
     color: Option<UseColor>,
 
     /// Emits IR instead of a *.munlib
@@ -38,7 +37,7 @@ pub struct Args {
     watch: bool,
 
     /// Target for machine code
-    #[clap(long, parse(try_from_str=parse_target_triple))]
+    #[clap(long, value_parser=parse_target_triple)]
     target: Option<Target>,
 }
 

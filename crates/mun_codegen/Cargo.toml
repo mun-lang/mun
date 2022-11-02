@@ -15,6 +15,7 @@ categories = ["Game development", "Mun"]
 [dependencies]
 mun_abi = { version = "=0.4.0-dev", path = "../mun_abi" }
 anyhow = { version = "1.0.31", default-features = false, features = ["std"] }
+apple-codesign = { version = "0.20.0", default-features = false }
 array-init = { version = "2.0.0", default-features = false }
 by_address = { version = "1.0.4", default-features = false }
 bytemuck = { version = "1.4.1", default-features = false }
