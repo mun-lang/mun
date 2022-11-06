@@ -17,7 +17,7 @@ TEST_CASE("functions must be inserted into the runtime", "[extern]") {
     mun::RuntimeOptions options;
 
     mun::Error err;
-    auto runtime = mun::make_runtime(get_munlib_path("extern/target/mod.munlib"), options, &err);
+    auto runtime = mun::make_runtime(get_munlib_path("mun-mun-extern/target/mod.munlib"), options, &err);
     REQUIRE(!runtime);
     REQUIRE(err.is_error());
 }
@@ -27,7 +27,7 @@ TEST_CASE("function must have correct signature", "[extern]") {
     options.functions.emplace_back(mun::RuntimeFunction("extern_fn", some_function));
 
     mun::Error err;
-    auto runtime = mun::make_runtime(get_munlib_path("extern/target/mod.munlib"), options, &err);
+    auto runtime = mun::make_runtime(get_munlib_path("mun-mun-extern/target/mod.munlib"), options, &err);
     REQUIRE(!runtime);
     REQUIRE(err.is_error());
 }
@@ -37,7 +37,7 @@ TEST_CASE("functions can be inserted into the runtime", "[extern]") {
     options.functions.emplace_back(mun::RuntimeFunction("extern_fn", internal_function));
 
     mun::Error err;
-    auto runtime = mun::make_runtime(get_munlib_path("extern/target/mod.munlib"), options, &err);
+    auto runtime = mun::make_runtime(get_munlib_path("mun-extern/target/mod.munlib"), options, &err);
     if (!runtime) {
         REQUIRE(err.is_error());
         FAIL(err.message().value());

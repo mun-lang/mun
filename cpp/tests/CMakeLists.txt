@@ -37,12 +37,12 @@ file(TO_CMAKE_PATH ${mun_examples_path} mun_examples_path)
 
 # Find all mun files
 set(mun_folder ${CMAKE_CURRENT_SOURCE_DIR}/..)
-file(GLOB_RECURSE mun_test_files RELATIVE ${mun_examples_path} ${mun_examples_path}/*.toml)
+file(GLOB_RECURSE mun_project_manifests RELATIVE ${mun_examples_path} ${mun_examples_path}/mun.toml)
 set(mun_tests)
 
-foreach (mun_file ${mun_test_files})
-    get_filename_component(mun_file_dir ${mun_file} DIRECTORY)
-    set(abs_package_dir ${mun_examples_path}/${mun_file_dir})
+foreach (mun_project_manifest ${mun_project_manifests})
+    get_filename_component(mun_project_manifest_dir ${mun_project_manifest} DIRECTORY)
+    set(abs_package_dir ${mun_examples_path}/${mun_project_manifest_dir})
     set(abs_toml_file ${abs_package_dir}/mun.toml)
     set(mun_executable_file mod.munlib)
     set(mun_executable_path ${abs_package_dir}/target/${mun_executable_file})

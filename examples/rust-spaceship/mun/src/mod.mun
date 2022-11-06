@@ -1,0 +1,275 @@
+// Extern functions
+
+extern fn sin(number: f32) -> f32;
+
+extern fn cos(number: f32) -> f32;
+
+extern fn dbg(number: f32);
+
+extern fn degrees_to_radians(degrees: f32) -> f32;
+
+extern fn sqrt(value: f32) -> f32;
+
+extern fn game_area_width() -> f32;
+
+extern fn game_area_height() -> f32;
+
+// Globals
+
+fn spaceship_speed_max() -> f32 { 3.0 }
+
+fn spaceship_speed_increase() -> f32 { 0.5 }
+
+fn spaceship_speed_decrease() -> f32 { 0.05 }
+
+fn spaceship_radius() -> f32 { 6.0 }
+
+fn rotating_speed() -> f32 { 5.0 }
+
+fn hot_reload_token() -> u8 { 2 }
+
+fn asteroid_speed(size: u8) -> f32 {
+    if size == 3 {
+        1.0
+    }
+    else if size == 2 {
+        2.0
+    }
+    else {
+        10.0
+    }
+}
+
+fn asteroid_radius(size: u8) -> f32 {
+    if size == 3 {
+        15.0
+    }
+    else if size == 2 {
+        8.0
+    }
+    else {
+        5.0
+    }
+}
+
+fn rocket_radius() -> f32 { 2.0 }
+
+fn rocket_speed() -> f32 { 5.0 }
+
+fn rocket_spawn_time() -> u8 { 10 }
+
+fn rocket_life_time() -> u8 { 100 }
+
+pub fn initial_asteroids_amount() -> i32 { 4 }
+
+pub fn max_rockets_amount() -> usize { 5 }
+
+// Helper functions
+
+fn sqr(value: f32) -> f32 {
+    value * value
+}
+
+// Structs and their functions
+
+pub struct Vec2 {
+    x: f32,
+    y: f32,
+}
+
+pub fn new_vec2(x: f32, y: f32) -> Vec2 {
+    Vec2 {x: x, y: y}
+}
+
+fn rotate_vec2(vec2: Vec2, degrees: f32) -> Vec2 {
+    Vec2 {
+        x: vec2.x * cos(degrees) - vec2.y * sin(degrees),
+        y: vec2.x * sin(degrees) + vec2.y * cos(degrees)
+    }
+}
+
+pub struct Object {
+    position: Vec2,
+    angle: f32,
+    speed: f32,
+    radius: f32
+}
+
+fn new_object(position: Vec2, angle: f32, speed: f32, radius: f32) -> Object {
+    Object {position: position, angle: angle, speed: speed, radius: radius}
+}
+
+fn move_object(object: Object){
+    let moving_vector = rotate_vec2(Vec2 {x: 0.0, y: -object.speed}, degrees_to_radians(object.angle));
+
+    object.position = Vec2 {x: object.position.x + moving_vector.x, y: object.position.y + moving_vector.y};
+
+    if object.position.x < 0.0 {
+        object.position.x = game_area_width();
+    } else if object.position.x > game_area_width() {
+        object.position.x = 0.0;
+    }
+
+    if object.position.y < 0.0 {
+        object.position.y = game_area_height();
+    } else if object.position.y > game_area_height() {
+        object.position.y = 0.0;
+    }
+}
+
+pub fn object_collide(first_object: Object, second_object: Object) -> bool {
+    if (sqrt(sqr(first_object.position.x - second_object.position.x) + sqr(first_object.position.y - second_object.position.y)) - first_object.radius - second_object.radius) > 0.0 {
+        false
+    } else {
+        true
+    }
+}
+
+pub struct Asteroid {
+    object: Object,
+    size: u8,
+    need_to_destroy: bool
+}
+
+pub fn new_asteroid(position: Vec2, angle: f32, size: u8) -> Asteroid {
+    Asteroid {
+        object: new_object(position, angle, asteroid_speed(size), asteroid_radius(size)),
+        size: size,
+        need_to_destroy: false
+    }
+}
+
+pub fn update_asteroid(asteroid: Asteroid) {
+    move_object(asteroid.object);
+}
+
+pub struct Rocket {
+    object: Object,
+    life_timer: u8,
+    need_to_destroy: bool,
+}
+
+pub fn new_rocket(position: Vec2, angle: f32) -> Rocket {
+    Rocket {
+        object: new_object(position, angle, rocket_speed(), rocket_radius()),
+        life_timer: 0,
+        need_to_destroy: false
+    }
+}
+
+pub fn update_rocket(rocket: Rocket) {
+    move_object(rocket.object);
+
+    rocket.life_timer += 1;
+
+    if rocket.life_timer >= rocket_life_time() {
+        rocket.need_to_destroy = true
+    }
+}
+
+pub struct Spaceship {
+    object: Object,
+}
+
+pub fn new_spaceship(position: Vec2, angle: f32) -> Spaceship {
+    Spaceship {
+        object: new_object(position, angle, spaceship_speed_max(), spaceship_radius()),
+    }
+}
+
+pub struct GameStruct {
+    spaceship: Spaceship,
+    spawn_new_rocket: bool,
+    spawn_rocket_timer: u8,
+    spawn_new_asteroids: bool,
+    token: u8
+}
+
+pub fn new_game_struct() -> GameStruct {
+    GameStruct {
+        spaceship: new_spaceship( Vec2 {x: game_area_width() / 2.0 , y: game_area_height()}, 0.0 ),
+        spawn_new_rocket: false,
+        spawn_rocket_timer: 0,
+        spawn_new_asteroids: true,
+        token: hot_reload_token()
+    }
+}
+
+pub struct PlayerInput {
+    up: bool,
+    left: bool,
+    right: bool,
+    shoot: bool,
+}
+
+pub fn new_player_input() -> PlayerInput {
+    PlayerInput {
+        up: false,
+        left: false,
+        right: false,
+        shoot: false,
+    }
+}
+
+pub fn update(game_struct: GameStruct, player_input: PlayerInput) {
+    if game_struct.token != hot_reload_token() {
+        // We can't just use here new_game_struct() or new_player_input()
+        // because of hotreload constrains
+
+        game_struct.spaceship = new_spaceship( Vec2 {x: game_area_width() / 2.0 , y: game_area_height() / 2.0}, 0.0 );
+        game_struct.spawn_new_rocket = false;
+        game_struct.spawn_rocket_timer = 0;
+        game_struct.spawn_new_asteroids = true;
+        game_struct.token = hot_reload_token();
+
+        player_input.up = false
+        player_input.left = false
+        player_input.right = false
+        player_input.shoot = false
+    }
+
+    // Shooting
+
+    if player_input.shoot == true {
+        if game_struct.spawn_rocket_timer >= rocket_spawn_time() {
+            game_struct.spawn_rocket_timer = 0;
+            game_struct.spawn_new_rocket = true;
+        }
+    }
+
+    game_struct.spawn_rocket_timer += 1;
+
+    // Thrust
+
+    if player_input.up {
+        if game_struct.spaceship.object.speed < spaceship_speed_max() {
+            game_struct.spaceship.object.speed += spaceship_speed_increase();
+        }
+    } else {
+        if game_struct.spaceship.object.speed > 0.0 {
+            game_struct.spaceship.object.speed -= spaceship_speed_decrease();
+        }
+    }
+
+    if game_struct.spaceship.object.speed > 0.0 {
+        move_object(game_struct.spaceship.object);
+    }
+
+    // Rotating
+
+    if player_input.left {
+        game_struct.spaceship.object.angle -= rotating_speed();
+    }
+
+    if player_input.right {
+        game_struct.spaceship.object.angle += rotating_speed();
+    }
+
+    if game_struct.spaceship.object.angle > 360.0 {
+        game_struct.spaceship.object.angle = 0.0
+    }
+
+    if game_struct.spaceship.object.angle < -360.0 {
+        game_struct.spaceship.object.angle = 0.0
+    }
+}

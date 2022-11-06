@@ -13,7 +13,7 @@ inline std::string get_munlib_path(std::string_view name) {
 TEST_CASE("runtime can be constructed", "[runtime]") {
     mun::Error err;
     if (auto runtime =
-            mun::make_runtime(get_munlib_path("fibonacci/target/mod.munlib"), {}, &err)) {
+            mun::make_runtime(get_munlib_path("fibonacci/mun/target/mod.munlib"), {}, &err)) {
         REQUIRE(err.is_ok());
     } else {
         REQUIRE(err.is_error());
@@ -24,7 +24,7 @@ TEST_CASE("runtime can be constructed", "[runtime]") {
 TEST_CASE("runtime can find `FunctionInfo`", "[runtime]") {
     mun::Error err;
     if (auto runtime =
-            mun::make_runtime(get_munlib_path("fibonacci/target/mod.munlib"), {}, &err)) {
+            mun::make_runtime(get_munlib_path("fibonacci/mun/target/mod.munlib"), {}, &err)) {
         REQUIRE(err.is_ok());
         REQUIRE(runtime.has_value());
 
@@ -44,7 +44,7 @@ TEST_CASE("runtime can find `FunctionInfo`", "[runtime]") {
 TEST_CASE("runtime can update", "[runtime]") {
     mun::Error err;
     if (auto runtime =
-            mun::make_runtime(get_munlib_path("fibonacci/target/mod.munlib"), {}, &err)) {
+            mun::make_runtime(get_munlib_path("fibonacci/mun/target/mod.munlib"), {}, &err)) {
         REQUIRE(err.is_ok());
 
         runtime->update(&err);
@@ -60,7 +60,7 @@ TEST_CASE("runtime can update", "[runtime]") {
 
 TEST_CASE("runtime can garbage collect", "[runtime]") {
     mun::Error err;
-    if (auto runtime = mun::make_runtime(get_munlib_path("marshal/target/mod.munlib"), {}, &err)) {
+    if (auto runtime = mun::make_runtime(get_munlib_path("mun-marshal/target/mod.munlib"), {}, &err)) {
         REQUIRE(err.is_ok());
         {
             auto res = mun::invoke_fn<mun::StructRef>(*runtime, "new_bool", true, false);

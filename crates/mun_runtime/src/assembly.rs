@@ -77,12 +77,11 @@ impl Assembly {
     ) -> anyhow::Result<()> {
         // Try to link all LUT entries
         let mut failed_to_link = false;
-        for (type_id, type_info_ptr, debug_name) in to_link {
+        for (type_id, type_info_ptr, _debug_name) in to_link {
             // Ensure that the function is in the runtime dispatch table
             if let Some(ty) = type_table.find_type_info_by_id(type_id) {
                 *type_info_ptr = Type::into_raw(ty);
             } else {
-                dbg!(debug_name);
                 failed_to_link = true;
             }
         }
