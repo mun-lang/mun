@@ -83,7 +83,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v1
         if: matrix.os != 'windows-latest'
-        
+
       - name: Doctests
         uses: actions-rs/cargo@v1
         env:
@@ -141,7 +141,7 @@ jobs:
         uses: actions-rs/install@v0.1
         with:
           crate: mdbook
-          version: 0.4.7
+          version: 0.4.21
           use-tool-cache: true
 
       - name: mdbook test
@@ -186,17 +186,17 @@ jobs:
         with:
           command: build
           args: -p mun -p mun_runtime_capi
-          
+
       - name: Create build folder (debug)
         run: cmake -E make_directory ${{ runner.workspace }}/build/debug
-        
+
       - name: Create build folder (release)
         run: cmake -E make_directory ${{ runner.workspace }}/build/release
 
       - name: Configure cmake (debug)
         working-directory: ${{ runner.workspace }}/build/debug
         run: cmake -DCMAKE_BUILD_TYPE=Debug -S ${{ github.workspace }} -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_binaries_path=${{ github.workspace }}/target/debug/ -Dmun_examples_path=${{ github.workspace }}/examples
-      
+
       - name: Configure cmake (release)
         working-directory: ${{ runner.workspace }}/build/release
         run: cmake -DCMAKE_BUILD_TYPE=Release -S ${{ github.workspace }} -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_binaries_path=${{ github.workspace }}/target/debug/ -Dmun_examples_path=${{ github.workspace }}/examples
@@ -204,7 +204,7 @@ jobs:
       - name: Build (debug)
         working-directory: ${{ runner.workspace }}/build/debug
         run: cmake --build . --config Debug
-        
+
       - name: Build (release)
         working-directory: ${{ runner.workspace }}/build/release
         run: cmake --build . --config Release
@@ -212,7 +212,7 @@ jobs:
       - name: Test (debug)
         working-directory: ${{ runner.workspace }}/build/debug
         run: ctest -C Debug
-        
+
       - name: Test (release)
         working-directory: ${{ runner.workspace }}/build/release
         run: ctest -C Release

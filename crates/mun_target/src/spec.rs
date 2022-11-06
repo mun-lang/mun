@@ -14,7 +14,7 @@ pub enum LinkerFlavor {
 
 /// Everything Mun knows about a target.
 /// Every field must be specified, there are no default values.
-#[derive(PartialEq, Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Target {
     /// Target triple to pass to LLVM
     pub llvm_target: String,
@@ -33,7 +33,7 @@ pub struct Target {
 }
 
 /// Optional aspects of target specification.
-#[derive(PartialEq, Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TargetOptions {
     /// True if this is a built-in target
     pub is_builtin: bool,

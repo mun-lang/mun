@@ -3,7 +3,7 @@ use semver::Version;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Package {
     // The manifest of the package
     manifest: Manifest,

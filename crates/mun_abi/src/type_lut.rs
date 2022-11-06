@@ -34,7 +34,7 @@ impl<'a> TypeLut<'a> {
 
             (type_ids.iter(), ptrs.iter(), type_names.iter())
         } else {
-            ((&[]).iter(), (&[]).iter(), (&[]).iter())
+            (([]).iter(), ([]).iter(), ([]).iter())
         };
 
         izip!(type_ids, type_ptrs, type_names).map(|(id, ptr, type_name)| {
@@ -56,7 +56,7 @@ impl<'a> TypeLut<'a> {
 
             (type_ids.iter(), ptrs.iter_mut(), type_names.iter())
         } else {
-            ((&[]).iter(), (&mut []).iter_mut(), (&[]).iter())
+            (([]).iter(), ([]).iter_mut(), ([]).iter())
         };
 
         izip!(type_ids, type_ptrs, type_names).map(|(id, ptr, type_name)| {

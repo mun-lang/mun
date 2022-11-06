@@ -5,20 +5,20 @@ use std::str::FromStr;
 mod toml;
 
 /// Contains all information of a package. Usually this information is read from a mun.toml file.
-#[derive(PartialEq, Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Manifest {
     package_id: PackageId,
     metadata: ManifestMetadata,
 }
 
 /// General metadata for a package.
-#[derive(PartialEq, Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ManifestMetadata {
     pub authors: Vec<String>,
 }
 
 /// Unique identifier of a package and version
-#[derive(PartialEq, Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PackageId {
     name: String,
     version: semver::Version,
