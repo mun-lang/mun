@@ -217,50 +217,51 @@ fn append_struct_mapping(
 
     let mut used_deletions = vec![false; deletions.len()];
     let mut used_insertions = vec![false; insertions.len()];
-    myers_lengths.into_iter().for_each(
-        |LengthDescription {
-             deletion_idx,
-             insertion_idx,
-             old_index,
-             new_index,
-             old_ty,
-             new_ty,
-             length,
-             old_fields,
-             new_fields,
-         }| {
-            // Skip marked fields
-            if !used_deletions[deletion_idx] && !used_insertions[insertion_idx] {
-                used_deletions[deletion_idx] = true;
-                used_insertions[insertion_idx] = true;
+    for LengthDescription {
+        deletion_idx,
+        insertion_idx,
+        old_index,
+        new_index,
+        old_ty,
+        new_ty,
+        length,
+        old_fields,
+        new_fields,
+    } in myers_lengths
+    {
+        // Skip marked fields
+        if used_deletions[deletion_idx] || used_insertions[insertion_idx] {
+            continue;
+        }
 
-                // If there is no difference between the old and new fields
-                mapping.push(if length == 0 {
-                    // Move the struct
-                    StructDiff::Move {
-                        old_index,
-                        new_index,
-                        old_ty,
-                        new_ty,
-                    }
-                } else {
-                    // ASSUMPTION: Don't use recursion, because all types are individually checked for
-                    // differences.
-                    // TODO: Support value struct vs heap struct?
-                    let diff = field_diff(old_fields, new_fields);
+        used_deletions[deletion_idx] = true;
+        used_insertions[insertion_idx] = true;
 
-                    // Edit the struct, potentially moving it in the process.
-                    StructDiff::Edit {
-                        diff,
-                        old_index,
-                        new_index,
-                        old_ty,
-                        new_ty,
-                    }
-                });
+        // If there is no difference between the old and new fields
+        mapping.push(if length == 0 {
+            // Move the struct
+            StructDiff::Move {
+                old_index,
+                new_index,
+                old_ty,
+                new_ty,
             }
-        },
-    );
+        } else {
+            // ASSUMPTION: Don't use recursion, because all types are individually checked for
+            // differences.
+            // TODO: Support value struct vs heap struct?
+            let diff = field_diff(old_fields, new_fields);
+
+            // Edit the struct, potentially moving it in the process.
+            StructDiff::Edit {
+                diff,
+                old_index,
+                new_index,
+                old_ty,
+                new_ty,
+            }
+        });
+    }
 
     // Any remaining unused deletions must have been deleted.
     used_deletions
