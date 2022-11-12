@@ -106,7 +106,7 @@ impl<'db> Semantics<'db> {
         let mut cache = self.source_to_definition_cache.borrow_mut();
         let mut context = SourceToDefContext {
             db: self.db,
-            cache: &mut *cache,
+            cache: &mut cache,
         };
         f(&mut context)
     }

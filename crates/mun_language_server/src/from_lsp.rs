@@ -57,6 +57,6 @@ pub(crate) fn file_position(
 ) -> anyhow::Result<FilePosition> {
     let file_id = file_id(snapshot, &text_document_position.text_document.uri)?;
     let line_index = snapshot.analysis.file_line_index(file_id)?;
-    let offset = offset(&*line_index, text_document_position.position);
+    let offset = offset(&line_index, text_document_position.position);
     Ok(FilePosition { file_id, offset })
 }

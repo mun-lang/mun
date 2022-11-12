@@ -143,7 +143,7 @@ pub trait HirDatabase: DefDatabase + Upcast<dyn DefDatabase> {
 
 fn parse_query(db: &dyn AstDatabase, file_id: FileId) -> Parse<SourceFile> {
     let text = db.file_text(file_id);
-    SourceFile::parse(&*text)
+    SourceFile::parse(&text)
 }
 
 fn line_index_query(db: &dyn SourceDatabase, file_id: FileId) -> Arc<LineIndex> {
