@@ -1,6 +1,8 @@
-# Bevy example
+# Spaceship example
 
-A simple example to show how to use Mun with [Bevy](https://bevyengine.org/).
+A simple game example
+
+![](screenshot.png)
 
 ### How to run?
 
