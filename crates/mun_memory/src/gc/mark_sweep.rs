@@ -285,7 +285,6 @@ where
                     };
 
                     map_fields(
-                        self,
                         &mut new_allocations,
                         &mapping.conversions,
                         &conversion.field_mapping,
@@ -320,16 +319,13 @@ where
         return deleted;
 
         #[allow(clippy::mutable_key_type)]
-        fn map_fields<O>(
-            gc: &MarkSweep<O>,
+        fn map_fields(
             new_allocations: &mut Vec<Pin<Box<ObjectInfo>>>,
             conversions: &HashMap<Type, Conversion>,
             mapping: &[FieldMapping],
             src: NonNull<u8>,
             dest: NonNull<u8>,
-        ) where
-            O: Observer<Event = Event>,
-        {
+        ) {
             for FieldMapping {
                 new_ty,
                 new_offset,
@@ -366,7 +362,6 @@ where
                                     if is_same_struct {
                                         // Map in-memory struct to in-memory struct
                                         map_fields(
-                                            gc,
                                             new_allocations,
                                             conversions,
                                             &conversion.as_ref().unwrap().field_mapping,
@@ -387,7 +382,6 @@ where
                                     if is_same_struct {
                                         // Map in-memory struct to heap-allocated struct
                                         map_fields(
-                                            gc,
                                             new_allocations,
                                             conversions,
                                             &conversion.as_ref().unwrap().field_mapping,
@@ -398,7 +392,7 @@ where
                                         // Zero initialize heap-allocated object
                                         unsafe {
                                             std::ptr::write_bytes(
-                                                (*object).ptr,
+                                                object.ptr,
                                                 0,
                                                 new_ty.layout().size(),
                                             )
@@ -456,7 +450,6 @@ where
                                         // The object still needs to be mapped
                                         // Map heap-allocated struct to in-memory struct
                                         map_fields(
-                                            gc,
                                             new_allocations,
                                             conversions,
                                             &conversion.as_ref().unwrap().field_mapping,

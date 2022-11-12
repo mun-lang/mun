@@ -46,7 +46,7 @@ fn terminal_support_ansi() -> bool {
 fn cmd_supports_ansi() -> bool {
     // Run `ver` program to find out Windows version
     Command::new("cmd")
-        .args(&["/C", "ver"])
+        .args(["/C", "ver"])
         .output()
         .map_or(false, |output| {
             String::from_utf8(output.stdout).map_or(false, |windows_version| {
