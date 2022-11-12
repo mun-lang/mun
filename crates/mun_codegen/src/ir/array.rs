@@ -1,4 +1,4 @@
-//! Defines a helper struct `MunArrayValue` which wraps an inkwell value and represents a pointer to
+//! Defines a helper struct `RuntimeArrayValue` which wraps an inkwell value and represents a pointer to
 //! a heap allocated Mun array struct.
 //!
 //! Mun arrays are represented on the heap as:
@@ -16,7 +16,7 @@
 //! }
 //! ```
 
-use crate::ir::reference::MunReferenceValue;
+use crate::ir::reference::RuntimeReferenceValue;
 use inkwell::builder::Builder;
 use inkwell::types::{BasicTypeEnum, IntType, StructType};
 use inkwell::values::{BasicValueEnum, IntValue, PointerValue};
@@ -24,20 +24,20 @@ use std::ffi::CStr;
 
 /// A helper struct that wraps a PointerValue which points to an in memory Mun array value.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
-pub struct MunArrayValue<'ink>(MunReferenceValue<'ink>);
+pub struct RuntimeArrayValue<'ink>(RuntimeReferenceValue<'ink>);
 
-impl<'ink> MunArrayValue<'ink> {
-    /// Constructs a new `MunArrayValue` from a reference pointer to a specific array type.
+impl<'ink> RuntimeArrayValue<'ink> {
+    /// Constructs a new `RuntimeArrayValue` from a reference pointer to a specific array type.
     ///
     /// The pointer passed must be of type `**ArrayValueT`.
     pub fn from_ptr(ptr: PointerValue<'ink>, array_type: StructType<'ink>) -> Result<Self, String> {
-        MunReferenceValue::from_ptr(ptr, array_type).map(Self)
+        RuntimeReferenceValue::from_ptr(ptr, array_type).map(Self)
     }
 
     /// Constructs a new instance from an inkwell PointerValue without checking if this is actually
     /// a pointer to an array.
     pub unsafe fn from_ptr_unchecked(ptr: PointerValue<'ink>) -> Self {
-        Self(MunReferenceValue::from_ptr_unchecked(ptr))
+        Self(RuntimeReferenceValue::from_ptr_unchecked(ptr))
     }
 
     /// Returns the name of the array
@@ -108,14 +108,14 @@ impl<'ink> MunArrayValue<'ink> {
     }
 }
 
-impl<'ink> From<MunArrayValue<'ink>> for BasicValueEnum<'ink> {
-    fn from(value: MunArrayValue<'ink>) -> Self {
+impl<'ink> From<RuntimeArrayValue<'ink>> for BasicValueEnum<'ink> {
+    fn from(value: RuntimeArrayValue<'ink>) -> Self {
         value.0.into()
     }
 }
 
-impl<'ink> From<MunArrayValue<'ink>> for PointerValue<'ink> {
-    fn from(value: MunArrayValue<'ink>) -> Self {
+impl<'ink> From<RuntimeArrayValue<'ink>> for PointerValue<'ink> {
+    fn from(value: RuntimeArrayValue<'ink>) -> Self {
         value.0.into()
     }
 }

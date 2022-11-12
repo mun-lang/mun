@@ -76,6 +76,15 @@ public:
     }
 
     /**
+     * Returns true if this TypeInfo represents an array.
+     */
+    [[nodiscard]] bool is_array() const noexcept {
+        MunTypeKind type_kind;
+        MUN_ASSERT(mun_type_kind(m_handle, &type_kind));
+        return type_kind.tag == MUN_TYPE_KIND_ARRAY;
+    }
+
+    /**
      * Returns true if this TypeInfo represents a primitive.
      */
     [[nodiscard]] bool is_primitive() const noexcept {

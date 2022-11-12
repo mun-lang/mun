@@ -1,7 +1,7 @@
 use crate::{
     intrinsics,
     ir::{dispatch_table::DispatchTable, ty::HirTypeCache, type_table::TypeTable},
-    ir::{MunArrayValue, MunReferenceValue},
+    ir::{RuntimeArrayValue, RuntimeReferenceValue},
     module_group::ModuleGroup,
     value::Global,
 };
@@ -391,7 +391,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
         let allocator_handle = self.get_allocator_handle_ptr();
 
-        // Safety: we can be quite sure that the new intrinsic returns a reference.
+        // Safety: we can be sure that the new intrinsic returns a reference.
         let untyped_reference = self
             .builder
             .build_call(
@@ -417,7 +417,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .into_pointer_value();
 
         // Construct a reference of the object
-        let reference = MunReferenceValue::from_ptr(typed_reference, struct_ir_ty)
+        let reference = RuntimeReferenceValue::from_ptr(typed_reference, struct_ir_ty)
             .expect("unable to construct mun reference type");
 
         // Store the struct value
@@ -1395,7 +1395,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
     /// Generates code to construct an array literal at runtime. Returns `None` if the code
     /// generation for the array literal never returns.
-    fn gen_array(&mut self, expr: ExprId, exprs: &[ExprId]) -> Option<MunArrayValue<'ink>> {
+    fn gen_array(&mut self, expr: ExprId, exprs: &[ExprId]) -> Option<RuntimeArrayValue<'ink>> {
         let array_ty = &self.infer[expr];
         let element_ty = array_ty
             .as_array()
@@ -1459,7 +1459,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             )
             .into_pointer_value();
 
-        let array = MunArrayValue::from_ptr(array_ptr, array_ty)
+        let array = RuntimeArrayValue::from_ptr(array_ptr, array_ty)
             .expect("unable to convert pointer to typed reference");
         let array_elements = array.get_elements(&self.builder);
         for (idx, expr) in exprs.iter().enumerate() {
@@ -1501,8 +1501,10 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         base: ExprId,
         index: ExprId,
     ) -> Option<PointerValue<'ink>> {
-        let base =
-            unsafe { MunArrayValue::from_ptr_unchecked(self.gen_expr(base)?.into_pointer_value()) };
+        // Safety: place expression can only be generated if the base expression is an array.
+        let base = unsafe {
+            RuntimeArrayValue::from_ptr_unchecked(self.gen_expr(base)?.into_pointer_value())
+        };
         let index = self.gen_expr(index)?.into_int_value();
 
         let elements = base.get_elements(&self.builder);
@@ -1535,8 +1537,8 @@ fn deref_heap_value<'ink>(
     builder: &Builder<'ink>,
     value: BasicValueEnum<'ink>,
 ) -> BasicValueEnum<'ink> {
-    // Safety: we can assume that the input is a MunReferenceValue
-    let mem_ptr = unsafe { MunReferenceValue::from_ptr_unchecked(value.into_pointer_value()) }
+    // Safety: we can assume that the input is a RuntimeReferenceValue
+    let mem_ptr = unsafe { RuntimeReferenceValue::from_ptr_unchecked(value.into_pointer_value()) }
         .get_data_ptr(builder);
 
     builder.build_load(mem_ptr, "deref")

@@ -19,13 +19,13 @@ use std::ffi::CStr;
 /// This enables the runtime to modify the contents of the object without having to modify the
 /// references that point to it.
 ///
-/// The `MunReferenceValue` stores the indirection as `**T` (a pointer to a pointer to `T`), where
-/// T is the type of the object stored on the heap.
+/// The `RuntimeReferenceValue` stores the indirection as `**T` (a pointer to a pointer to `T`),
+/// where T is the type of the object stored on the heap.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
-pub struct MunReferenceValue<'ink>(PointerValue<'ink>);
+pub struct RuntimeReferenceValue<'ink>(PointerValue<'ink>);
 
-impl<'ink> MunReferenceValue<'ink> {
-    /// Constructs a new `MunReferenceValue` from a reference pointer to a specific type.
+impl<'ink> RuntimeReferenceValue<'ink> {
+    /// Constructs a new `RuntimeReferenceValue` from a reference pointer to a specific type.
     ///
     /// The pointer passed must be of type `**T`.
     pub fn from_ptr(
@@ -83,14 +83,14 @@ impl<'ink> MunReferenceValue<'ink> {
     }
 }
 
-impl<'ink> From<MunReferenceValue<'ink>> for BasicValueEnum<'ink> {
-    fn from(value: MunReferenceValue<'ink>) -> Self {
+impl<'ink> From<RuntimeReferenceValue<'ink>> for BasicValueEnum<'ink> {
+    fn from(value: RuntimeReferenceValue<'ink>) -> Self {
         value.0.into()
     }
 }
 
-impl<'ink> From<MunReferenceValue<'ink>> for PointerValue<'ink> {
-    fn from(value: MunReferenceValue<'ink>) -> Self {
+impl<'ink> From<RuntimeReferenceValue<'ink>> for PointerValue<'ink> {
+    fn from(value: RuntimeReferenceValue<'ink>) -> Self {
         value.0
     }
 }
