@@ -3,11 +3,6 @@ use std::{env, path::PathBuf};
 use bevy::prelude::*;
 use mun_runtime::Runtime as MunRuntime;
 
-// How to run?
-// 1. On the CLI, navigate to the `examples/bevy_simple` directory.
-// 2. Run the compiler daemon from the CLI: `/path/to/mun build --watch`
-// 3. Run the application from the CLI: cargo run --example bevy_simple -- target/mod.munlib
-
 // Minimal Bevy application that demonstrates how to insert the Mun runtime into a Bevy world object and
 // utilizes the Mun runtime inside of Bevy systems.
 fn main() {

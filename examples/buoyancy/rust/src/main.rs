@@ -5,10 +5,6 @@ extern "C" fn log_f32(value: f32) {
     println!("{}", value);
 }
 
-// How to run?
-// 1. On the CLI, navigate to the `crates/mun_runtime/examples` directory.
-// 2. Run the compiler daemon from the CLI: `/path/to/mun build resources/buoyancy.mun --watch`
-// 3. Run the application from the CLI: cargo run --example buoyancy -- buoyancy.munlib
 fn main() {
     let lib_dir = env::args().nth(1).expect("Expected path to a Mun library.");
 

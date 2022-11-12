@@ -1,0 +1,193 @@
+extern fn rand_f32() -> f32;
+
+pub struct(value) Vec2 {
+    x: f32,
+    y: f32,
+}
+
+struct Ball {
+    pos: Vec2,
+    vel: Vec2,
+    colliding: bool,
+}
+
+pub struct Paddle {
+    pos: Vec2,
+    score: u32,
+    move_up: bool,
+    move_down: bool,
+}
+
+pub struct PongState {
+    ball: Ball,
+    paddle_left: Paddle,
+    paddle_right: Paddle,
+    token: u32,
+}
+
+pub fn ball_radius() -> f32 { 10.0 }
+pub fn ball_tolerance() -> f32 { 0.01 }
+fn ball_hit_modifier() -> f32 { 1.1 }
+
+pub fn paddle_width() -> f32 { 10.0 }
+pub fn paddle_height() -> f32 { 100.0 }
+fn paddle_inset() -> f32 { 30.0 }
+fn paddle_speed() -> f32 { 6.0 }
+
+fn screen_width() -> f32 { 800.0 }
+fn screen_height() -> f32 { 600.0 }
+
+fn score_inset() -> f32 { 10.0 }
+
+pub fn left_score_pos() -> Vec2 {
+    Vec2 {
+        x: screen_width() / 4.0,
+        y: score_inset(),
+    }
+}
+
+pub fn right_score_pos() -> Vec2 {
+    Vec2 {
+        x: screen_width() / 4.0 * 3.0,
+        y: score_inset(),
+    }
+}
+
+fn new_ball() -> Ball {
+    let vel_x = rand_f32() * 2.0 + 3.0;
+    let vel_y = rand_f32() * 2.0 + 1.5;
+    let signed = rand_f32() < 0.5;
+
+    Ball {
+        pos: Vec2 {
+            x: (screen_width() - ball_radius()) / 2.0,
+            y: (screen_height() - ball_radius()) / 2.0,
+        },
+        vel: Vec2 {
+            x: if signed { -vel_x } else { vel_x },
+            y: vel_y,
+        },
+        colliding: false,
+    }
+}
+
+fn new_paddle(pos: Vec2) -> Paddle {
+    Paddle {
+        pos,
+        score: 0,
+        move_up: false,
+        move_down: false,
+    }
+}
+
+
+pub fn new_state() -> PongState {
+    let pos_y = (screen_height() - paddle_height()) / 2.0;
+    PongState {
+        ball: new_ball(),
+        paddle_left: new_paddle(Vec2 {
+            x: paddle_inset(),
+            y: pos_y,
+        }),
+        paddle_right: new_paddle(Vec2 {
+            x: screen_width() - paddle_width() - paddle_inset(),
+            y: pos_y,
+        }),
+        token: 0,
+    }
+}
+
+fn reset(state: PongState) {
+    let new = new_state();
+    state.ball = new.ball;
+    state.paddle_left.pos = new.paddle_left.pos;
+    state.paddle_right.pos = new.paddle_right.pos;
+}
+
+fn intersects(ball: Ball, paddle: Paddle) -> bool {
+    if ball.pos.y + ball_radius() < paddle.pos.y {
+        return false;
+    }
+
+    if ball.pos.y - ball_radius() > paddle.pos.y + paddle_height() {
+        return false;
+    }
+
+    if ball.pos.x - ball_radius() > paddle.pos.x + paddle_width() {
+        return false;
+    }
+
+    if ball.pos.x + ball_radius() < paddle.pos.x {
+        return false;
+    }
+
+    true
+}
+
+fn handle_ball(state: PongState) {
+    let ball = state.ball;
+    let left = state.paddle_left;
+    let right = state.paddle_right;
+
+    if intersects(ball, left) || intersects(ball, right) {
+        if !ball.colliding {
+            let modifier = ball_hit_modifier();
+            ball.vel.x *= -modifier;
+            ball.vel.y *= modifier;
+            ball.colliding = true;
+        }
+    } else {
+        ball.colliding = false;
+    }
+
+    if ball.pos.y <= ball_radius() {
+        ball.vel.y *= -1.0;
+    }
+
+    if ball.pos.y >= screen_height() - ball_radius() {
+        ball.vel.y *= -1.0;
+    }
+
+    if ball.pos.x < -2.0 * ball_radius() {
+        right.score += 1;
+        reset(state);
+        return;
+    }
+
+    if ball.pos.x > screen_width() {
+        left.score += 1;
+        reset(state);
+        return;
+    }
+
+    ball.pos.x += ball.vel.x;
+    ball.pos.y += ball.vel.y;
+}
+
+fn move_paddle_up(paddle: Paddle) {
+    paddle.pos.y -= paddle_speed();
+    if paddle.pos.y < 0.0 {
+        paddle.pos.y = 0.0;
+    }
+}
+
+fn move_paddle_down(paddle: Paddle) {
+    paddle.pos.y += paddle_speed();
+    if paddle.pos.y > screen_height() - paddle_height() {
+        paddle.pos.y = screen_height() - paddle_height();
+    }
+}
+
+fn handle_paddle(paddle: Paddle) {
+    if paddle.move_up && !paddle.move_down {
+        move_paddle_up(paddle);
+    } else if !paddle.move_up && paddle.move_down {
+        move_paddle_down(paddle);
+    }
+}
+
+pub fn update(state: PongState) {
+    handle_ball(state);
+    handle_paddle(state.paddle_left);
+    handle_paddle(state.paddle_right);
+}
