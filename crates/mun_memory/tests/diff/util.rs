@@ -1,42 +1,40 @@
 #![allow(dead_code)]
 
 use mun_memory::{
-    diff::{myers, Diff, FieldDiff, FieldEditKind},
+    diff::{myers, FieldDiff, FieldEditKind, StructDiff},
     Field, StructType, StructTypeBuilder, Type,
 };
 use std::collections::VecDeque;
 
-pub fn apply_myers_diff<T: Clone + Eq>(old: &[T], new: &[T], diff: Vec<myers::Diff>) -> Vec<T> {
+pub fn apply_myers_diff<T: Clone + Eq>(old: &[T], diff: Vec<myers::Diff<T>>) -> Vec<T> {
     let mut combined: Vec<_> = old.to_vec();
     for diff in diff.iter().rev() {
-        if let myers::Diff::Delete { index } = diff {
+        if let myers::Diff::Delete { index, .. } = diff {
             combined.remove(*index);
         }
     }
     for diff in diff {
-        if let myers::Diff::Insert { index } = diff {
-            let value = unsafe { new.get_unchecked(index) };
-            combined.insert(index, value.clone());
+        if let myers::Diff::Insert { index, ty } = diff {
+            combined.insert(index, ty);
         }
     }
     combined
 }
 
-pub(crate) fn apply_diff(old: &[Type], new: &[Type], diff: Vec<Diff>) -> Vec<Type> {
+pub(crate) fn apply_diff(old: &[Type], diff: Vec<StructDiff>) -> Vec<Type> {
     let mut combined: Vec<Type> = old.to_vec();
     for diff in diff.iter().rev() {
         match diff {
-            Diff::Delete { index } => {
+            StructDiff::Delete { index, .. } => {
                 combined.remove(*index);
             }
-            Diff::Edit {
+            StructDiff::Edit {
                 diff,
                 old_index,
-                new_index,
+                old_ty,
+                new_ty,
+                ..
             } => {
-                let old_ty = unsafe { combined.get_unchecked_mut(*old_index) };
-                let new_ty = unsafe { new.get_unchecked(*new_index) };
-
                 let combined_struct_info = old_ty
                     .as_struct()
                     .expect("edit diffs can only be applied on structs")
@@ -45,14 +43,15 @@ pub(crate) fn apply_diff(old: &[Type], new: &[Type], diff: Vec<Diff>) -> Vec<Typ
                     .as_struct()
                     .expect("edit diffs can only be applied on structs");
 
-                *old_ty = apply_struct_mapping(
+                let combined_ty = unsafe { combined.get_unchecked_mut(*old_index) };
+                *combined_ty = apply_struct_mapping(
                     old_ty.name(),
                     combined_struct_info,
                     new_struct_info,
                     diff,
                 );
             }
-            Diff::Move { old_index, .. } => {
+            StructDiff::Move { old_index, .. } => {
                 combined.remove(*old_index);
             }
             _ => (),
@@ -60,16 +59,13 @@ pub(crate) fn apply_diff(old: &[Type], new: &[Type], diff: Vec<Diff>) -> Vec<Typ
     }
     for diff in diff {
         match diff {
-            Diff::Insert { index } => {
-                let new_ty = unsafe { new.get_unchecked(index) };
-                combined.insert(index, (*new_ty).clone());
+            StructDiff::Insert { index, ty } => {
+                combined.insert(index, ty);
             }
-            Diff::Move {
-                old_index,
-                new_index,
+            StructDiff::Move {
+                new_index, old_ty, ..
             } => {
-                let old_ty = unsafe { old.get_unchecked(old_index) };
-                combined.insert(new_index, (*old_ty).clone());
+                combined.insert(new_index, old_ty);
             }
             _ => (),
         }
@@ -104,9 +100,16 @@ fn apply_struct_mapping(
 
     fn get_new_index(diff: &FieldDiff) -> usize {
         match diff {
-            FieldDiff::Insert { index } => *index,
+            FieldDiff::Insert { index, .. } => *index,
             FieldDiff::Move { new_index, .. } => *new_index,
             _ => std::usize::MAX,
+        }
+    }
+
+    fn edit_field(kind: &FieldEditKind, old_field: &mut (String, Type), new_field: Field) {
+        match *kind {
+            FieldEditKind::ChangedTyped => old_field.1 = new_field.ty(),
+            FieldEditKind::RenamedField => old_field.0 = new_field.name().to_owned(),
         }
     }
 
@@ -114,7 +117,20 @@ fn apply_struct_mapping(
     let mut additions: Vec<_> = mapping
         .iter()
         .filter_map(|diff| match diff {
-            FieldDiff::Insert { index } => {
+            FieldDiff::Edit {
+                old_index: Some(old_index),
+                new_index,
+                kind,
+                ..
+            } => {
+                let combined = fields.get_mut(*old_index).unwrap();
+                let new_field = new_struct.fields().get(*new_index).unwrap();
+
+                edit_field(kind, combined, new_field);
+
+                Some((*new_index, combined.clone()))
+            }
+            FieldDiff::Insert { index, .. } => {
                 let new_field = new_struct.fields().get(*index).unwrap();
                 Some((*index, (new_field.name().to_owned(), new_field.ty())))
             }
@@ -135,31 +151,20 @@ fn apply_struct_mapping(
         fields.insert(index, field);
     }
 
-    fn edit_field(kind: &FieldEditKind, old_field: &mut (String, Type), new_field: Field) {
-        match *kind {
-            FieldEditKind::ConvertType => old_field.1 = new_field.ty(),
-            FieldEditKind::Rename => old_field.0 = new_field.name().to_owned(),
-        }
-    }
-
     // Handle edits
     for diff in mapping.iter() {
-        match diff {
-            FieldDiff::Edit { index, kind } => edit_field(
+        if let FieldDiff::Edit {
+            old_index: None,
+            new_index,
+            kind,
+            ..
+        } = diff
+        {
+            edit_field(
                 kind,
-                &mut fields[*index],
-                new_struct.fields().get(*index).unwrap(),
-            ),
-            FieldDiff::Move {
-                old_index,
-                new_index,
-                edit: Some(kind),
-            } => edit_field(
-                kind,
-                &mut fields[*old_index],
+                fields.get_mut(*new_index).unwrap(),
                 new_struct.fields().get(*new_index).unwrap(),
-            ),
-            _ => (),
+            );
         }
     }
 

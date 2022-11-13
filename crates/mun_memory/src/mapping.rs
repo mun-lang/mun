@@ -1,23 +1,34 @@
+use abi::Guid;
+
 use crate::{
-    diff::{diff, Diff, FieldDiff, FieldEditKind},
+    diff::{compute_struct_diff, FieldDiff, StructDiff},
     gc::GcPtr,
     r#type::Type,
+    ArrayType, TypeKind,
 };
 use std::collections::{HashMap, HashSet};
 
+/// The type mapping needed to convert an old into a new set of unique and ordered values.
 pub struct Mapping {
+    /// The types that were deleted
     pub deletions: HashSet<Type>,
-    pub conversions: HashMap<Type, Conversion>,
+    /// The mappings of structs whose fields changed
+    pub struct_mappings: HashMap<Type, StructMapping>,
+    /// The types that didn't change
     pub identical: Vec<(Type, Type)>,
 }
 
-pub struct Conversion {
+/// The struct mapping needed to convert an old into a new struct of unique and ordered fields.
+pub struct StructMapping {
+    /// The field mappings for each original struct field
     pub field_mapping: Vec<FieldMapping>,
+    /// The new struct type
     pub new_ty: Type,
 }
 
 /// Description of the mapping of a single field. When stored together with the new index, this
 /// provides all information necessary for a mapping function.
+#[derive(Debug)]
 pub struct FieldMapping {
     pub new_ty: Type,
     pub new_offset: usize,
@@ -25,17 +36,50 @@ pub struct FieldMapping {
 }
 
 /// The `Action` to take when mapping memory from A to B.
-#[derive(Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Action {
-    Cast { old_offset: usize, old_ty: Type },
-    Copy { old_offset: usize },
-    Insert,
+    /// Allocate a new array.
+    ArrayAlloc,
+    /// Allocate a new array and initialize it with a single value.
+    ArrayFromValue {
+        element_action: Box<Action>,
+        old_offset: usize,
+    },
+    /// Allocate a new array and map values from an old array.
+    ArrayMap {
+        element_action: Box<Action>,
+        old_offset: usize,
+    },
+    /// Cast a primitive type.
+    Cast { old_ty: Type, old_offset: usize },
+    /// Copy bytes.
+    Copy {
+        old_offset: usize,
+        /// Size in bytes
+        size: usize,
+    },
+    /// Replace an array with its element type, copying its first element - if any.
+    /// Otherwise, zero initialize the element.
+    ElementFromArray {
+        element_action: Box<Action>,
+        old_offset: usize,
+    },
+    /// Allocate a new struct and ensure zero-initalization.
+    StructAlloc,
+    /// Allocate a new struct and map from a heap-allocated struct.
+    StructMapFromGc { old_ty: Type, old_offset: usize },
+    /// Allocate a new struct and map from a value struct.
+    StructMapFromValue { old_ty: Type, old_offset: usize },
+    /// Map a value struct in-place.
+    StructMapInPlace { old_ty: Type, old_offset: usize },
+    /// Ensure the memory is zero-initialized.
+    ZeroInitialize,
 }
 
 impl Mapping {
     #[allow(clippy::mutable_key_type)]
     pub fn new(old: &[Type], new: &[Type]) -> Self {
-        let diff = diff(old, new);
+        let diff = compute_struct_diff(old, new);
 
         let mut conversions = HashMap::new();
         let mut deletions = HashSet::new();
@@ -45,32 +89,25 @@ impl Mapping {
 
         for diff in diff.iter() {
             match diff {
-                Diff::Delete { index } => {
-                    deletions.insert(unsafe { old.get_unchecked(*index).clone() });
+                StructDiff::Delete { ty, .. } => {
+                    deletions.insert(ty.clone());
                 }
-                Diff::Edit {
+                StructDiff::Edit {
                     diff,
-                    old_index,
-                    new_index,
+                    old_ty,
+                    new_ty,
+                    ..
                 } => {
-                    let old_ty = unsafe { old.get_unchecked(*old_index) };
-                    let new_ty = unsafe { new.get_unchecked(*new_index) };
                     conversions.insert(old_ty.clone(), unsafe {
                         field_mapping(old_ty, new_ty, diff)
                     });
                 }
-                Diff::Insert { index } => {
-                    insertions.insert(unsafe { new.get_unchecked(*index).clone() });
+                StructDiff::Insert { ty, .. } => {
+                    insertions.insert(ty.clone());
                 }
-                Diff::Move {
-                    old_index,
-                    new_index,
-                } => identical.push(unsafe {
-                    (
-                        old.get_unchecked(*old_index).clone(),
-                        new.get_unchecked(*new_index).clone(),
-                    )
-                }),
+                StructDiff::Move { old_ty, new_ty, .. } => {
+                    identical.push((old_ty.clone(), new_ty.clone()))
+                }
             }
         }
 
@@ -121,7 +158,7 @@ impl Mapping {
 
         Self {
             deletions,
-            conversions,
+            struct_mappings: conversions,
             identical,
         }
     }
@@ -135,7 +172,7 @@ impl Mapping {
 /// # Safety
 ///
 /// Expects the `diff` to be based on `old_ty` and `new_ty`. If not, it causes undefined behavior.
-pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) -> Conversion {
+pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) -> StructMapping {
     let old_fields = old_ty
         .as_struct()
         .map(|s| s.fields().iter().collect())
@@ -146,31 +183,22 @@ pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) ->
         .filter_map(|diff| match diff {
             FieldDiff::Delete { index } => Some(*index),
             FieldDiff::Move { old_index, .. } => Some(*old_index),
-            FieldDiff::Edit { .. } | FieldDiff::Insert { .. } => None,
+            FieldDiff::Edit { old_index, .. } => *old_index,
+            FieldDiff::Insert { .. } => None,
         })
         .collect();
 
-    struct FieldMappingDesc {
-        old_index: Option<usize>,
-        action: ActionDesc,
-    }
-
-    #[derive(PartialEq)]
-    enum ActionDesc {
-        Cast,
-        Copy,
-        Insert,
-    }
-
     // Add mappings for all `old_fields`, unless they were deleted or moved.
-    let mut mapping: Vec<FieldMappingDesc> = (0..old_fields.len())
-        .filter_map(|idx| {
+    let mut mapping: Vec<Action> = old_fields
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, old_field)| {
             if deletions.contains(&idx) {
                 None
             } else {
-                Some(FieldMappingDesc {
-                    old_index: Some(idx),
-                    action: ActionDesc::Copy,
+                Some(Action::Copy {
+                    old_offset: old_field.offset(),
+                    size: old_field.ty().reference_layout().size(),
                 })
             }
         })
@@ -178,34 +206,51 @@ pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) ->
 
     // Sort elements in ascending order of their insertion indices to guarantee that insertions
     // don't offset "later" insertions.
-    let mut additions: Vec<(usize, FieldMappingDesc)> = diff
+    let mut additions: Vec<(usize, Action)> = diff
         .iter()
         .filter_map(|diff| match diff {
-            FieldDiff::Insert { index } => Some((
+            FieldDiff::Edit {
+                old_type,
+                new_type,
+                old_index,
+                new_index,
+                ..
+            } => old_index.map(|old_index| {
+                let old_offset = old_fields
+                    .get(old_index)
+                    .map(|field| field.offset())
+                    .expect("The old field must exist.");
+                (*new_index, resolve_edit(old_type, new_type, old_offset))
+            }),
+            FieldDiff::Insert { index, new_type } => Some((
                 *index,
-                FieldMappingDesc {
-                    old_index: None,
-                    action: ActionDesc::Insert,
+                if new_type.is_struct() && !new_type.is_value_type() {
+                    Action::StructAlloc
+                } else if new_type.is_array() {
+                    Action::ArrayAlloc
+                } else {
+                    Action::ZeroInitialize
                 },
             )),
             FieldDiff::Move {
+                ty,
                 old_index,
                 new_index,
-                edit,
-            } => Some((
-                *new_index,
-                FieldMappingDesc {
-                    old_index: Some(*old_index),
-                    action: edit.as_ref().map_or(ActionDesc::Copy, |kind| {
-                        if *kind == FieldEditKind::ConvertType {
-                            ActionDesc::Cast
-                        } else {
-                            ActionDesc::Copy
-                        }
-                    }),
-                },
-            )),
-            FieldDiff::Delete { .. } | FieldDiff::Edit { .. } => None,
+            } => {
+                let old_offset = old_fields
+                    .get(*old_index)
+                    .map(|field| field.offset())
+                    .expect("Old field must exist.");
+
+                Some((
+                    *new_index,
+                    Action::Copy {
+                        old_offset,
+                        size: ty.reference_layout().size(),
+                    },
+                ))
+            }
+            FieldDiff::Delete { .. } => None,
         })
         .collect();
     additions.sort_by(|a, b| a.0.cmp(&b.0));
@@ -215,15 +260,23 @@ pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) ->
         mapping.insert(new_index, map);
     }
 
-    // Set the action for edited fields.
+    // Modify the action for edited fields.
     for diff in diff.iter() {
-        if let FieldDiff::Edit { index, kind } = diff {
-            let map = mapping.get_mut(*index).unwrap();
-            map.action = if *kind == FieldEditKind::ConvertType {
-                ActionDesc::Cast
-            } else {
-                ActionDesc::Copy
-            };
+        if let FieldDiff::Edit {
+            old_type,
+            new_type,
+            old_index: None,
+            new_index,
+            ..
+        } = diff
+        {
+            let old_offset = old_fields
+                .get(*new_index)
+                .map(|field| field.offset())
+                .expect("The old field must exist.");
+
+            let action = mapping.get_mut(*new_index).unwrap();
+            *action = resolve_edit(old_type, new_type, old_offset);
         }
     }
 
@@ -231,32 +284,211 @@ pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) ->
         .as_struct()
         .map(|s| Vec::from_iter(s.fields().iter()))
         .unwrap_or_else(Vec::new);
-    Conversion {
+    StructMapping {
         field_mapping: mapping
             .into_iter()
             .enumerate()
-            .map(|(new_index, desc)| {
-                let old_offset = desc
-                    .old_index
-                    .map(|idx| old_fields.get_unchecked(idx).offset());
-
+            .map(|(new_index, action)| {
+                let new_field = new_fields
+                    .get(new_index)
+                    .unwrap_or_else(|| panic!("New field at index: '{}' must exist.", new_index));
                 FieldMapping {
-                    new_ty: new_fields.get_unchecked(new_index).ty(),
-                    new_offset: new_fields.get_unchecked(new_index).offset(),
-                    action: match desc.action {
-                        ActionDesc::Cast => Action::Cast {
-                            old_offset: old_offset.unwrap(),
-                            old_ty: old_fields.get_unchecked(desc.old_index.unwrap()).ty(),
-                        },
-                        ActionDesc::Copy => Action::Copy {
-                            old_offset: old_offset.unwrap(),
-                        },
-                        ActionDesc::Insert => Action::Insert,
-                    },
+                    new_ty: new_field.ty(),
+                    new_offset: new_field.offset(),
+                    action,
                 }
             })
             .collect(),
         new_ty: new_ty.clone(),
+    }
+}
+
+pub fn resolve_edit(old_ty: &Type, new_ty: &Type, old_offset: usize) -> Action {
+    match &old_ty.kind() {
+        TypeKind::Primitive(old_guid) => {
+            resolve_primitive_edit(old_ty, new_ty, old_guid, old_offset)
+        }
+        TypeKind::Struct(_) => resolve_struct_edit(old_ty, new_ty, old_offset),
+        TypeKind::Pointer(_) => resolve_pointer_edit(old_ty, new_ty),
+        TypeKind::Array(old_array) => resolve_array_edit(old_array, new_ty, old_offset),
+    }
+}
+
+fn resolve_primitive_edit(
+    old_ty: &Type,
+    new_ty: &Type,
+    old_guid: &Guid,
+    old_offset: usize,
+) -> Action {
+    match &new_ty.kind() {
+        TypeKind::Primitive(new_guid) => {
+            resolve_primitive_to_primitive_edit(old_ty, old_guid, old_offset, new_guid)
+        }
+        TypeKind::Struct(s) => {
+            if s.is_value_struct() {
+                Action::ZeroInitialize
+            } else {
+                Action::StructAlloc
+            }
+        }
+        TypeKind::Pointer(_) => unreachable!(),
+        TypeKind::Array(new_array) => {
+            resolve_primitive_to_array_edit(old_ty, new_array, old_offset)
+        }
+    }
+}
+
+fn resolve_primitive_to_primitive_edit(
+    old_ty: &Type,
+    old_guid: &Guid,
+    old_offset: usize,
+    new_guid: &Guid,
+) -> Action {
+    if *old_guid == *new_guid {
+        Action::Copy {
+            old_offset,
+            size: old_ty.value_layout().size(),
+        }
+    } else {
+        Action::Cast {
+            old_ty: old_ty.clone(),
+            old_offset,
+        }
+    }
+}
+
+fn resolve_primitive_to_array_edit(
+    old_ty: &Type,
+    new_array: &ArrayType,
+    old_offset: usize,
+) -> Action {
+    Action::ArrayFromValue {
+        element_action: Box::new(resolve_edit(old_ty, &new_array.element_type(), 0)),
+        old_offset,
+    }
+}
+
+fn resolve_struct_edit(old_ty: &Type, new_ty: &Type, old_offset: usize) -> Action {
+    match &new_ty.kind() {
+        TypeKind::Primitive(_) => Action::ZeroInitialize,
+        TypeKind::Struct(_) => resolve_struct_to_struct_edit(old_ty, new_ty, old_offset),
+        TypeKind::Pointer(_) => unreachable!(),
+        TypeKind::Array(new_array) => resolve_struct_to_array_edit(old_ty, new_array, old_offset),
+    }
+}
+
+pub fn resolve_struct_to_struct_edit(old_ty: &Type, new_ty: &Type, old_offset: usize) -> Action {
+    // Early opt-out for when we are recursively resolving types (e.g. for arrays)
+    if *old_ty == *new_ty {
+        return Action::Copy {
+            old_offset,
+            size: old_ty.reference_layout().size(),
+        };
+    }
+
+    // ASSUMPTION: When the name is the same, we are dealing with the same struct,
+    // but different internals
+    let is_same_struct = old_ty.name() == new_ty.name();
+
+    if old_ty.is_value_type() && new_ty.is_value_type() {
+        // struct(value) -> struct(value)
+        if is_same_struct {
+            Action::StructMapInPlace {
+                old_ty: old_ty.clone(),
+                old_offset,
+            }
+        } else {
+            Action::ZeroInitialize
+        }
+    } else if old_ty.is_value_type() {
+        // struct(value) -> struct(gc)
+        if is_same_struct {
+            Action::StructMapFromValue {
+                old_ty: old_ty.clone(),
+                old_offset,
+            }
+        } else {
+            Action::StructAlloc
+        }
+    } else if new_ty.is_value_type() {
+        // struct(gc) -> struct(value)
+        if is_same_struct {
+            Action::StructMapFromGc {
+                old_ty: old_ty.clone(),
+                old_offset,
+            }
+        } else {
+            Action::ZeroInitialize
+        }
+    } else {
+        // struct(gc) -> struct(gc)
+        if is_same_struct {
+            Action::Copy {
+                old_offset,
+                size: std::mem::size_of::<GcPtr>(),
+            }
+        } else {
+            Action::StructAlloc
+        }
+    }
+}
+
+fn resolve_struct_to_array_edit(old_ty: &Type, new_array: &ArrayType, old_offset: usize) -> Action {
+    Action::ArrayFromValue {
+        element_action: Box::new(resolve_edit(old_ty, &new_array.element_type(), 0)),
+        old_offset,
+    }
+}
+
+fn resolve_pointer_edit(_old_ty: &Type, _new_ty: &Type) -> Action {
+    // Not supported in the language - yet
+    unreachable!()
+}
+
+fn resolve_array_edit(old_array: &ArrayType, new_ty: &Type, old_offset: usize) -> Action {
+    match &new_ty.kind() {
+        TypeKind::Primitive(_) => resolve_array_to_primitive_edit(old_array, new_ty, old_offset),
+        TypeKind::Struct(_) => resolve_array_to_struct_edit(old_array, new_ty, old_offset),
+        TypeKind::Pointer(_) => unreachable!(),
+        TypeKind::Array(new_array) => resolve_array_to_array_edit(old_array, new_array, old_offset),
+    }
+}
+
+fn resolve_array_to_primitive_edit(
+    old_array: &ArrayType,
+    new_ty: &Type,
+    old_offset: usize,
+) -> Action {
+    Action::ElementFromArray {
+        old_offset,
+        element_action: Box::new(resolve_edit(&old_array.element_type(), new_ty, 0)),
+    }
+}
+
+fn resolve_array_to_struct_edit(old_array: &ArrayType, new_ty: &Type, old_offset: usize) -> Action {
+    Action::ElementFromArray {
+        old_offset,
+        element_action: Box::new(resolve_edit(&old_array.element_type(), new_ty, 0)),
+    }
+}
+
+fn resolve_array_to_array_edit(
+    old_array: &ArrayType,
+    new_array: &ArrayType,
+    old_offset: usize,
+) -> Action {
+    let old_element_type = old_array.element_type();
+    let new_element_type = new_array.element_type();
+    if old_element_type == new_element_type {
+        Action::Copy {
+            old_offset,
+            size: std::mem::size_of::<GcPtr>(),
+        }
+    } else {
+        Action::ArrayMap {
+            element_action: Box::new(resolve_edit(&old_element_type, &new_element_type, 0)),
+            old_offset,
+        }
     }
 }
 

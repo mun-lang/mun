@@ -18,7 +18,7 @@ pub mod type_table;
 use thiserror::Error;
 
 pub mod prelude {
-    pub use crate::diff::{diff, Diff, FieldDiff, FieldEditKind};
+    pub use crate::diff::{compute_struct_diff, FieldDiff, FieldEditKind, StructDiff};
     pub use crate::mapping::{Action, FieldMapping};
     pub use crate::r#type::{Field, PointerType, StructType, Type, TypeKind};
 }
