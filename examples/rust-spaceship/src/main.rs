@@ -212,15 +212,21 @@ impl State for SpaceshipGame {
         }
 
         // Rockets update
-        for index in 0..self.rockets.len() {
-            let _: () = self
+        let rockets = self.mun_runtime.construct_typed_array(
+            &self
                 .mun_runtime
-                .invoke(
-                    "update_rocket",
-                    (self.rockets[index].as_ref(&self.mun_runtime),),
-                )
-                .unwrap();
-        }
+                .get_type_info_by_name("Rocket")
+                .expect("could not find Rocket type"),
+            self.rockets
+                .iter()
+                .map(|rocket| rocket.as_ref(&self.mun_runtime)),
+        );
+
+        let _: () = self
+            .mun_runtime
+            .invoke("update_rockets", (rockets, self.rockets.len()))
+            .unwrap();
+
         // Delete rockets
         self.rockets.retain(|rocket| {
             !rocket
@@ -230,15 +236,20 @@ impl State for SpaceshipGame {
         });
 
         // Asteroids update
-        for index in 0..self.asteroids.len() {
-            let _: () = self
+        let asteroids = self.mun_runtime.construct_typed_array(
+            &self
                 .mun_runtime
-                .invoke(
-                    "update_asteroid",
-                    (self.asteroids[index].as_ref(&self.mun_runtime),),
-                )
-                .unwrap();
-        }
+                .get_type_info_by_name("Asteroid")
+                .expect("could not find Asteroid type"),
+            self.asteroids
+                .iter()
+                .map(|asteroid| asteroid.as_ref(&self.mun_runtime)),
+        );
+
+        let _: () = self
+            .mun_runtime
+            .invoke("update_asteroids", (asteroids, self.asteroids.len()))
+            .unwrap();
 
         let mut new_asteroids: Vec<StructRef> = Vec::new();
 

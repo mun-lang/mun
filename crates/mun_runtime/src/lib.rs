@@ -490,6 +490,59 @@ impl Runtime {
         self.gc.stats()
     }
 
+    /// Constructs an array with a predefined element type.
+    pub fn construct_typed_array<
+        't,
+        T: 't + Marshal<'t> + ArgumentReflection,
+        I: IntoIterator<Item = T>,
+    >(
+        &'t self,
+        element_type: &Type,
+        iter: I,
+    ) -> ArrayRef<'t, T>
+    where
+        I::IntoIter: ExactSizeIterator,
+    {
+        let iter = iter.into_iter();
+        let array_type = element_type.array_type();
+        let array_capacity = iter
+            .size_hint()
+            .1
+            .expect("iterator doesn't return upper bound");
+        let mut array_handle = self.gc.alloc_array(&array_type, array_capacity);
+
+        let mut element_ptr = array_handle.data().as_ptr();
+        let element_stride = array_handle.element_stride();
+        let mut size = 0;
+        for (idx, element) in iter.enumerate() {
+            debug_assert!(
+                idx < array_capacity,
+                "looks like the size_hint was not properly implemented"
+            );
+            assert_eq!(&element.type_info(self), element_type);
+
+            // Safety: the element_ptr came from NonNull and is only moved forward.
+            T::marshal_to_ptr(
+                element,
+                unsafe { NonNull::new_unchecked(element_ptr).cast() },
+                element_type,
+            );
+
+            // Safety: we trust the element stride
+            element_ptr = unsafe { element_ptr.add(element_stride) };
+
+            // Count the number of elements written
+            size = idx + 1;
+        }
+
+        // Safety: we just initialized all the elements, so this operation is safe.
+        unsafe {
+            array_handle.set_length(size);
+        }
+
+        ArrayRef::new(RawArray(array_handle.as_raw()), self)
+    }
+
     /// Constructs an array from an iterator
     pub fn construct_array<'t, T: 't + Marshal<'t> + HasStaticType, I: IntoIterator<Item = T>>(
         &'t self,
@@ -648,7 +701,7 @@ seq_macro::seq!(I in 0..N {
             // Ensure the number of arguments match
             #[allow(clippy::len_zero)]
             if N != arg_types.len() {
-                return Err(format!("Invalid return type. Expected: {}. Found: {}", N, arg_types.len()))
+                return Err(format!("Invalid argument count. Expected {} arguments, got {}", arg_types.len(), N))
             }
 
             #(
