@@ -79,7 +79,7 @@ jobs:
         with:
           profile: minimal
           override: true
-          components: rustfmt
+          components: rustfmt, llvm-tools-preview
 
       - uses: Swatinem/rust-cache@v1
         if: matrix.os != 'windows-latest'
@@ -93,6 +93,9 @@ jobs:
           command: test
           args: --doc --all-features --profile min-artifact-size-debug
 
+      - name: Install latest llvm-cov release
+        uses: taiki-e/install-action@cargo-llvm-cov
+
       - name: Install latest nextest release
         uses: taiki-e/install-action@nextest
 
@@ -105,8 +108,15 @@ jobs:
           RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
           CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
         with:
-          command: nextest
-          args: run --all-features --profile ci --cargo-profile min-artifact-size-debug
+          command: llvm-cov
+          args: --all-features --workspace --lcov --output-path lcov.info --profile ci
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: lcov.info
+          name: ${{ matrix.os }}
+          fail_ci_if_error: true
 
   test-mdbook:
     name: Test mdbook
@@ -249,36 +259,3 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features
-
-  tarpaulin:
-    runs-on: ubuntu-latest
-    needs: check
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: true
-
-      - name: Install packages
-        run: |
-          sudo apt-get update
-          sudo apt-get install libasound2-dev libudev-dev
-
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          override: true
-          components: rustfmt
-
-      - uses: Swatinem/rust-cache@v1
-
-      - name: Install LLVM
-        uses: ./.github/actions/install-llvm
-
-      - name: Run cargo-tarpaulin
-        uses: actions-rs/tarpaulin@v0.1
-
-      - uses: codecov/codecov-action@v3
-        with:
-          file: ${{ steps.coverage.outputs.report }}
-          name: ${{ matrix.os }}
