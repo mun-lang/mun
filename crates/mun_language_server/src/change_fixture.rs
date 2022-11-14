@@ -1,5 +1,5 @@
 use crate::change::AnalysisChange;
-use hir::fixture::Fixture;
+use mun_hir::fixture::Fixture;
 use mun_syntax::{TextRange, TextSize};
 use std::sync::Arc;
 
@@ -8,8 +8,8 @@ pub const CURSOR_MARKER: &str = "$0";
 /// A `ChangeFixture` is an extended [`Fixture`] that can be used to construct an entire
 /// [`AnalysisDatabase`] with. It can also optionally contain a cursor indicated by `$0`.
 pub struct ChangeFixture {
-    pub file_position: Option<(hir::FileId, RangeOrOffset)>,
-    pub files: Vec<hir::FileId>,
+    pub file_position: Option<(mun_hir::FileId, RangeOrOffset)>,
+    pub files: Vec<mun_hir::FileId>,
     pub change: AnalysisChange,
 }
 
@@ -18,10 +18,10 @@ impl ChangeFixture {
         let fixture = Fixture::parse(fixture);
 
         let mut change = AnalysisChange::default();
-        let mut source_root = hir::SourceRoot::default();
-        let mut package_set = hir::PackageSet::default();
+        let mut source_root = mun_hir::SourceRoot::default();
+        let mut package_set = mun_hir::PackageSet::default();
 
-        let mut file_id = hir::FileId(0);
+        let mut file_id = mun_hir::FileId(0);
         let mut file_position = None;
         let mut files = Vec::new();
 
@@ -44,7 +44,7 @@ impl ChangeFixture {
             file_id.0 += 1;
         }
 
-        package_set.add_package(hir::SourceRootId(0));
+        package_set.add_package(mun_hir::SourceRootId(0));
 
         change.set_roots(vec![source_root]);
         change.set_packages(package_set);

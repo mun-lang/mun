@@ -3,10 +3,10 @@
 
 use crate::state::LanguageServerSnapshot;
 use crate::FilePosition;
-use hir::line_index::LineIndex;
 use lsp_types::Url;
+use mun_hir::line_index::LineIndex;
+use mun_paths::AbsPathBuf;
 use mun_syntax::{TextRange, TextSize};
-use paths::AbsPathBuf;
 use std::convert::TryFrom;
 
 /// Converts the specified `uri` to an absolute path. Returns an error if the url could not be
@@ -18,24 +18,24 @@ pub(crate) fn abs_path(uri: &Url) -> anyhow::Result<AbsPathBuf> {
         .ok_or_else(|| anyhow::anyhow!("invalid uri: {}", uri))
 }
 
-/// Returns the `hir::FileId` associated with the given `Url`.
+/// Returns the `mun_hir::FileId` associated with the given `Url`.
 pub(crate) fn file_id(
     snapshot: &LanguageServerSnapshot,
     url: &lsp_types::Url,
-) -> anyhow::Result<hir::FileId> {
+) -> anyhow::Result<mun_hir::FileId> {
     abs_path(url).and_then(|path| {
         snapshot
             .vfs
             .read()
             .file_id(&path)
             .ok_or_else(|| anyhow::anyhow!("url does not refer to a file: {}", url))
-            .map(|id| hir::FileId(id.0))
+            .map(|id| mun_hir::FileId(id.0))
     })
 }
 
 /// Converts the specified offset to our own `TextSize` structure
 pub(crate) fn offset(line_index: &LineIndex, position: lsp_types::Position) -> TextSize {
-    let line_col = hir::line_index::LineCol {
+    let line_col = mun_hir::line_index::LineCol {
         line: position.line as u32,
         col_utf16: position.character as u32,
     };
@@ -57,6 +57,6 @@ pub(crate) fn file_position(
 ) -> anyhow::Result<FilePosition> {
     let file_id = file_id(snapshot, &text_document_position.text_document.uri)?;
     let line_index = snapshot.analysis.file_line_index(file_id)?;
-    let offset = offset(&*line_index, text_document_position.position);
+    let offset = offset(&line_index, text_document_position.position);
     Ok(FilePosition { file_id, offset })
 }

@@ -1,0 +1,9 @@
+[package]
+name = "pong"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mun_runtime = { path="../../crates/mun_runtime" }
+ggez = {version = "0.6" }
+rand = "0.8"

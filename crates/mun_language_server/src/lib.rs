@@ -4,9 +4,9 @@ use serde::{de::DeserializeOwned, Serialize};
 
 pub use config::{Config, FilesWatcher};
 pub use main_loop::main_loop;
+use mun_paths::AbsPathBuf;
+use mun_project::ProjectManifest;
 use mun_syntax::{TextRange, TextSize};
-use paths::AbsPathBuf;
-use project::ProjectManifest;
 pub(crate) use state::LanguageServerState;
 pub(crate) use symbol_kind::SymbolKind;
 
@@ -32,14 +32,14 @@ mod to_lsp;
 /// Represents a position in a file
 #[derive(Clone, Copy, Debug)]
 pub struct FilePosition {
-    pub file_id: hir::FileId,
+    pub file_id: mun_hir::FileId,
     pub offset: TextSize,
 }
 
 /// Represents a range of text in a file.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct FileRange {
-    pub file_id: hir::FileId,
+    pub file_id: mun_hir::FileId,
     pub range: TextRange,
 }
 

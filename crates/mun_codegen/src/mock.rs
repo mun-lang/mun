@@ -2,19 +2,19 @@ use crate::{
     db::{CodeGenDatabase, CodeGenDatabaseStorage},
     OptimizationLevel,
 };
-use hir::{FileId, HirDatabase, SourceDatabase, SourceRoot, SourceRootId};
+use mun_hir::{FileId, HirDatabase, SourceDatabase, SourceRoot, SourceRootId};
+use mun_paths::RelativePathBuf;
 use mun_target::spec::Target;
 use parking_lot::Mutex;
-use paths::RelativePathBuf;
 use std::sync::Arc;
 
 /// A mock implementation of the IR database. It can be used to set up a simple test case.
 #[salsa::database(
-    hir::SourceDatabaseStorage,
-    hir::AstDatabaseStorage,
-    hir::InternDatabaseStorage,
-    hir::DefDatabaseStorage,
-    hir::HirDatabaseStorage,
+    mun_hir::SourceDatabaseStorage,
+    mun_hir::AstDatabaseStorage,
+    mun_hir::InternDatabaseStorage,
+    mun_hir::DefDatabaseStorage,
+    mun_hir::HirDatabaseStorage,
     CodeGenDatabaseStorage
 )]
 pub(crate) struct MockDatabase {
@@ -31,31 +31,31 @@ impl salsa::Database for MockDatabase {
     }
 }
 
-impl hir::Upcast<dyn hir::AstDatabase> for MockDatabase {
-    fn upcast(&self) -> &(dyn hir::AstDatabase + 'static) {
+impl mun_hir::Upcast<dyn mun_hir::AstDatabase> for MockDatabase {
+    fn upcast(&self) -> &(dyn mun_hir::AstDatabase + 'static) {
         &*self
     }
 }
 
-impl hir::Upcast<dyn hir::SourceDatabase> for MockDatabase {
-    fn upcast(&self) -> &(dyn hir::SourceDatabase + 'static) {
+impl mun_hir::Upcast<dyn mun_hir::SourceDatabase> for MockDatabase {
+    fn upcast(&self) -> &(dyn mun_hir::SourceDatabase + 'static) {
         &*self
     }
 }
 
-impl hir::Upcast<dyn hir::DefDatabase> for MockDatabase {
-    fn upcast(&self) -> &(dyn hir::DefDatabase + 'static) {
+impl mun_hir::Upcast<dyn mun_hir::DefDatabase> for MockDatabase {
+    fn upcast(&self) -> &(dyn mun_hir::DefDatabase + 'static) {
         &*self
     }
 }
 
-impl hir::Upcast<dyn hir::HirDatabase> for MockDatabase {
-    fn upcast(&self) -> &(dyn hir::HirDatabase + 'static) {
+impl mun_hir::Upcast<dyn mun_hir::HirDatabase> for MockDatabase {
+    fn upcast(&self) -> &(dyn mun_hir::HirDatabase + 'static) {
         &*self
     }
 }
 
-impl hir::Upcast<dyn CodeGenDatabase> for MockDatabase {
+impl mun_hir::Upcast<dyn CodeGenDatabase> for MockDatabase {
     fn upcast(&self) -> &(dyn CodeGenDatabase + 'static) {
         &*self
     }
@@ -90,7 +90,7 @@ impl MockDatabase {
 
         db.set_source_root(source_root_id, Arc::new(source_root));
 
-        let mut packages = hir::PackageSet::default();
+        let mut packages = mun_hir::PackageSet::default();
         packages.add_package(source_root_id);
         db.set_packages(Arc::new(packages));
 

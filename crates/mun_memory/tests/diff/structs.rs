@@ -1,5 +1,5 @@
 use crate::{diff::util::*, fake_struct};
-use abi::StructMemoryKind;
+use mun_abi::StructMemoryKind;
 use mun_memory::{
     diff::{compute_struct_diff, FieldDiff, FieldEditKind, StructDiff},
     type_table::TypeTable,

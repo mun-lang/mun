@@ -327,15 +327,15 @@ fn map_struct_cast_fields1() {
     );
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<u16>("0").unwrap(),
-        a.into()
+        u16::from(a)
     );
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<i32>("1").unwrap(),
-        b.into()
+        i32::from(b)
     );
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<u64>("2").unwrap(),
-        c.into()
+        u64::from(c)
     );
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<i128>("3").unwrap(),
@@ -343,7 +343,7 @@ fn map_struct_cast_fields1() {
     );
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<f64>("4").unwrap(),
-        e.into()
+        f64::from(e)
     );
 }
 
@@ -625,7 +625,7 @@ fn map_struct_all() {
     );
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<i64>("d").unwrap(),
-        d.into()
+        i64::from(d)
     );
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<i32>("e").unwrap(),
@@ -687,7 +687,7 @@ fn map_array_to_array_different_array_to_primitive_different() {
         .iter()
         .zip([b, a, b].into_iter())
         .for_each(|(lhs, rhs)| {
-            assert_eq!(lhs, rhs.into());
+            assert_eq!(lhs, rhs as i64);
         });
 
     assert_eq!(
@@ -819,7 +819,7 @@ fn map_array_to_array_different_array_to_struct_different() {
             .iter()
             .zip([b, a, b].into_iter())
             .for_each(|(lhs, rhs)| {
-                assert_eq!(lhs.get::<i64>("0").unwrap(), rhs.into());
+                assert_eq!(lhs.get::<i64>("0").unwrap(), rhs as i64);
             });
     }
 
@@ -956,7 +956,7 @@ fn map_array_to_array_different_primitive_to_array_different() {
             assert_eq!(lhs.iter().count(), 1);
             assert_eq!(
                 lhs.iter().next().expect("Array must have a value."),
-                rhs.into()
+                rhs as i64
             );
         });
 
@@ -1076,7 +1076,7 @@ fn map_array_to_array_different_primitive_to_primitive() {
         .iter()
         .zip([b, a, b].into_iter())
         .for_each(|(lhs, rhs)| {
-            assert_eq!(lhs, rhs.into());
+            assert_eq!(lhs, rhs as i64);
         });
 
     assert_eq!(
@@ -1220,7 +1220,7 @@ fn map_array_to_array_different_struct_to_array_different() {
                         .expect("Array must have a value.")
                         .get::<i64>("0")
                         .unwrap(),
-                    rhs.into()
+                    rhs as i64
                 );
             });
     }
@@ -1380,7 +1380,7 @@ fn map_array_to_array_different_struct_to_struct() {
             .zip([b, a, b].into_iter())
             .for_each(|(lhs, rhs)| {
                 // println!("struct type: {:?}", lhs.type_info());
-                assert_eq!(lhs.get::<i64>("0").unwrap(), rhs.into());
+                assert_eq!(lhs.get::<i64>("0").unwrap(), rhs as i64);
             });
     }
 
@@ -1661,14 +1661,14 @@ fn map_array_to_struct_different() {
         .get::<StructRef>("b")
         .unwrap();
 
-    assert_eq!(bar_struct.get::<f64>("0").unwrap(), b.into());
+    assert_eq!(bar_struct.get::<f64>("0").unwrap(), b as f64);
 
     let baz_struct = foo_struct
         .as_ref(&driver.runtime)
         .get::<StructRef>("c")
         .unwrap();
 
-    assert_eq!(baz_struct.get::<i64>("0").unwrap(), c.into());
+    assert_eq!(baz_struct.get::<i64>("0").unwrap(), c as i64);
 
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<f64>("d").unwrap(),
@@ -1858,7 +1858,7 @@ fn map_primitive_to_array_different() {
     assert_eq!(b_array.iter().count(), 1);
     assert_eq!(
         b_array.iter().next().expect("Array must have a value."),
-        b.into()
+        b as f64
     );
 
     assert_eq!(
@@ -1874,7 +1874,7 @@ fn map_primitive_to_array_different() {
     assert_eq!(d_array.iter().count(), 1);
     assert_eq!(
         d_array.iter().next().expect("Array must have a value."),
-        d.into()
+        d as i64
     );
 }
 
@@ -1999,7 +1999,7 @@ fn map_struct_to_array_different() {
             .expect("Array must have a value.")
             .get::<f64>("0")
             .unwrap(),
-        b.into()
+        b as f64
     );
 
     assert_eq!(

@@ -75,7 +75,7 @@ impl Module {
         if let Some(file_id) = self.file_id(db) {
             let item_tree = db.item_tree(file_id);
             for diagnostics in item_tree.diagnostics.iter() {
-                diagnostics.add_to(db, &*item_tree, sink);
+                diagnostics.add_to(db, &item_tree, sink);
             }
         }
 

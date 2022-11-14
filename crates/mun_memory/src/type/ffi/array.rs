@@ -1,6 +1,6 @@
 use crate::ffi::Type;
 use crate::r#type::{ArrayData, Type as RustType, TypeDataStore};
-use capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
+use mun_capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
 use std::ffi::c_void;
 use std::mem::ManuallyDrop;
 use std::ops::Deref;
@@ -75,7 +75,7 @@ mod test {
         mun_type_array_type, mun_type_equal, mun_type_kind, mun_type_release, Type, TypeKind,
     };
     use crate::r#type::ffi::primitive::{mun_type_primitive, PrimitiveType};
-    use capi_utils::{assert_error_snapshot, assert_getter1};
+    use mun_capi_utils::{assert_error_snapshot, assert_getter1};
     use std::{mem::MaybeUninit, ptr};
 
     /// Returns the array type of the specified type. Asserts if that fails.

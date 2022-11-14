@@ -1,4 +1,4 @@
-use paths::{RelativePath, RelativePathBuf};
+use mun_paths::{RelativePath, RelativePathBuf};
 use rustc_hash::FxHashMap;
 
 /// `FileId` is an integer which uniquely identifies a file. File paths are messy and

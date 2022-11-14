@@ -9,8 +9,9 @@ use anyhow::{anyhow, Context};
 use itertools::Itertools;
 use log::error;
 
-use libloader::{MunLibrary, TempLibrary};
-use memory::{
+use mun_abi as abi;
+use mun_libloader::{MunLibrary, TempLibrary};
+use mun_memory::{
     mapping::{Mapping, MemoryMapper},
     type_table::TypeTable,
     Type,
@@ -76,12 +77,11 @@ impl Assembly {
     ) -> anyhow::Result<()> {
         // Try to link all LUT entries
         let mut failed_to_link = false;
-        for (type_id, type_info_ptr, debug_name) in to_link {
+        for (type_id, type_info_ptr, _debug_name) in to_link {
             // Ensure that the function is in the runtime dispatch table
             if let Some(ty) = type_table.find_type_info_by_id(type_id) {
                 *type_info_ptr = Type::into_raw(ty);
             } else {
-                dbg!(debug_name);
                 failed_to_link = true;
             }
         }

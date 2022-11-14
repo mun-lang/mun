@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Once},
 };
 
-use abi::{self, static_type_map::StaticTypeMap, Guid};
+use mun_abi::{self as abi, static_type_map::StaticTypeMap, Guid};
 
 /// An owned version of a [`abi::TypeId`]. Using the `abi::TypeId` is cumbersome because it
 /// involves dealing with pointers. The `TypeId` introduced here owns all data it refers to, which

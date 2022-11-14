@@ -3,8 +3,7 @@ mod apple_sdk_base;
 mod linux_base;
 mod windows_msvc_base;
 
-use crate::abi::Endian;
-use crate::host_triple;
+use crate::{abi::Endian, host_triple};
 
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash)]
 pub enum LinkerFlavor {
@@ -15,7 +14,7 @@ pub enum LinkerFlavor {
 
 /// Everything Mun knows about a target.
 /// Every field must be specified, there are no default values.
-#[derive(PartialEq, Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Target {
     /// Target triple to pass to LLVM
     pub llvm_target: String,
@@ -34,7 +33,7 @@ pub struct Target {
 }
 
 /// Optional aspects of target specification.
-#[derive(PartialEq, Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TargetOptions {
     /// True if this is a built-in target
     pub is_builtin: bool,
@@ -137,6 +136,7 @@ supported_targets!(
     ("x86_64-apple-ios", x86_64_apple_ios),
     ("x86_64-pc-windows-msvc", x86_64_pc_windows_msvc),
     ("x86_64-unknown-linux-gnu", x86_64_unknown_linux_gnu),
+    ("aarch64-apple-darwin", aarch64_apple_darwin),
     ("aarch64-apple-ios", aarch64_apple_ios),
     ("aarch64-apple-ios-sim", aarch64_apple_ios_sim),
 );

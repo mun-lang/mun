@@ -5,10 +5,10 @@ use crate::{
     mock::MockDatabase,
     CodeGenDatabase,
 };
-use hir::{
+use inkwell::{context::Context, OptimizationLevel};
+use mun_hir::{
     diagnostics::DiagnosticSink, with_fixture::WithFixture, HirDatabase, SourceDatabase, Upcast,
 };
-use inkwell::{context::Context, OptimizationLevel};
 use mun_target::spec::Target;
 use std::cell::RefCell;
 
@@ -1032,7 +1032,7 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
             diag.message()
         ));
     });
-    for module in hir::Package::all(db.upcast())
+    for module in mun_hir::Package::all(db.upcast())
         .into_iter()
         .flat_map(|package| package.modules(db.upcast()))
     {

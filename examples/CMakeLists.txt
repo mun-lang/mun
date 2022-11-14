@@ -1,1 +1,1 @@
-add_subdirectory(buoyancy)
+add_subdirectory(buoyancy/cpp)

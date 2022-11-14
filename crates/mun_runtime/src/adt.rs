@@ -4,7 +4,7 @@ use crate::{
     reflection::{ArgumentReflection, ReturnTypeReflection},
     GarbageCollector, Runtime,
 };
-use memory::{
+use mun_memory::{
     gc::{GcPtr, GcRuntime, HasIndirectionPtr},
     Type,
 };

@@ -1,3 +1,4 @@
+use mun_abi as abi;
 use std::{ffi::c_void, path::Path};
 
 pub use temp_library::TempLibrary;

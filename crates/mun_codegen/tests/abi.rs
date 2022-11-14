@@ -1,4 +1,5 @@
-use libloader::MunLibrary;
+use mun_abi as abi;
+use mun_libloader::MunLibrary;
 use mun_test::CompileTestDriver;
 
 // TODO: add integration test for ModuleInfo's path

@@ -7,7 +7,7 @@ pub struct CodeGenContext<'db, 'ink> {
     pub context: &'ink Context,
 
     /// The Salsa HIR database
-    pub db: &'db dyn hir::HirDatabase,
+    pub db: &'db dyn mun_hir::HirDatabase,
 
     /// A mapping from Rust types' full path (without lifetime) to inkwell types
     pub rust_types: RefCell<HashMap<&'static str, StructType<'ink>>>,

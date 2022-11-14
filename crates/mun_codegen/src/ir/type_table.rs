@@ -4,7 +4,7 @@ use inkwell::{
     context::Context, module::Linkage, module::Module, types::ArrayType, values::PointerValue,
 };
 
-use hir::{Body, ExprId, HirDatabase, InferenceResult};
+use mun_hir::{Body, ExprId, HirDatabase, InferenceResult};
 
 use crate::{
     ir::dispatch_table::{DispatchTable, FunctionPrototype},
@@ -137,15 +137,15 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
         let expr = &body[expr_id];
 
         // If this expression is a call, store it in the dispatch table
-        if let hir::Expr::Call { callee, .. } = expr {
+        if let mun_hir::Expr::Call { callee, .. } = expr {
             match infer[*callee].as_callable_def() {
-                Some(hir::CallableDef::Function(hir_fn)) => {
+                Some(mun_hir::CallableDef::Function(hir_fn)) => {
                     self.maybe_collect_fn_signature(hir_fn);
                 }
-                Some(hir::CallableDef::Struct(_)) => (),
+                Some(mun_hir::CallableDef::Struct(_)) => (),
                 None => panic!("expected a callable expression"),
             }
-        } else if let hir::Expr::Array(..) = expr {
+        } else if let mun_hir::Expr::Array(..) = expr {
             self.collect_type(self.hir_types.type_id(&infer[expr_id]))
         }
 
@@ -154,7 +154,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
     }
 
     /// Collects `TypeInfo` from types in the signature of a function
-    pub fn collect_fn_signature(&mut self, hir_fn: hir::Function) {
+    pub fn collect_fn_signature(&mut self, hir_fn: mun_hir::Function) {
         let fn_sig = hir_fn.ty(self.db).callable_sig(self.db).unwrap();
 
         // Collect argument types
@@ -170,7 +170,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
     }
 
     /// Collects `TypeInfo` from types in the signature of a function if it's exposed externally.
-    pub fn maybe_collect_fn_signature(&mut self, hir_fn: hir::Function) {
+    pub fn maybe_collect_fn_signature(&mut self, hir_fn: mun_hir::Function) {
         // If a function is externally visible or contained in the dispatch table, record the types
         // of the signature
         if self.module_group.should_export_fn(self.db, hir_fn)
@@ -181,7 +181,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
     }
 
     /// Collects unique `TypeInfo` from the specified function signature and body.
-    pub fn collect_fn(&mut self, hir_fn: hir::Function) {
+    pub fn collect_fn(&mut self, hir_fn: mun_hir::Function) {
         self.maybe_collect_fn_signature(hir_fn);
 
         // Collect used types from body
@@ -191,7 +191,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
     }
 
     /// Collects unique `TypeInfo` from the specified struct type.
-    pub fn collect_struct(&mut self, hir_struct: hir::Struct) {
+    pub fn collect_struct(&mut self, hir_struct: mun_hir::Struct) {
         let type_info = self.hir_types.type_id(&hir_struct.ty(self.db));
         self.collect_type(type_info);
 

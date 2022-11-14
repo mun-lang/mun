@@ -7,8 +7,8 @@ use std::{
     sync::Arc,
 };
 
-use abi::Guid;
-use capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
+use mun_abi::{self as abi, Guid};
+use mun_capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
 
 use crate::{
     r#type::ffi::Type,
@@ -280,7 +280,10 @@ mod test {
     use std::ffi::{CStr, CString};
     use std::{mem::MaybeUninit, ptr, slice};
 
-    use capi_utils::{assert_error_snapshot, assert_getter1, assert_getter3, mun_string_destroy};
+    use mun_abi as abi;
+    use mun_capi_utils::{
+        assert_error_snapshot, assert_getter1, assert_getter3, mun_string_destroy,
+    };
 
     use crate::r#type::ffi::r#struct::mun_fields_find_by_name;
     use crate::{HasStaticType, StructTypeBuilder};

@@ -15,7 +15,7 @@ inline std::string get_munlib_path(std::string_view name) {
     TEST_CASE("function can marshal " #ty, "[marshal]") {                                    \
         mun::Error err;                                                                      \
         if (auto runtime =                                                                   \
-                mun::make_runtime(get_munlib_path("marshal/target/mod.munlib"), {}, &err)) { \
+                mun::make_runtime(get_munlib_path("mun-marshal/target/mod.munlib"), {}, &err)) { \
             REQUIRE(err.is_ok());                                                            \
                                                                                              \
             const ty a = (lhs), b = (rhs);                                                   \
@@ -30,7 +30,7 @@ inline std::string get_munlib_path(std::string_view name) {
     TEST_CASE("struct can get, set, and replace " #ty, "[marshal]") {                        \
         mun::Error err;                                                                      \
         if (auto runtime =                                                                   \
-                mun::make_runtime(get_munlib_path("marshal/target/mod.munlib"), {}, &err)) { \
+                mun::make_runtime(get_munlib_path("mun-marshal/target/mod.munlib"), {}, &err)) { \
             REQUIRE(err.is_ok());                                                            \
                                                                                              \
             const ty a = (lhs), b = (rhs);                                                   \
@@ -94,7 +94,7 @@ TEST_MARSHALLING(uint64_t, 1, 64, 1 + 64);
 
 TEST_CASE("struct can get, set, and replace struct", "[marshal]") {
     mun::Error err;
-    if (auto runtime = mun::make_runtime(get_munlib_path("marshal/target/mod.munlib"), {}, &err)) {
+    if (auto runtime = mun::make_runtime(get_munlib_path("mun-marshal/target/mod.munlib"), {}, &err)) {
         REQUIRE(err.is_ok());
 
         float a = -3.14f, b = 6.28f;

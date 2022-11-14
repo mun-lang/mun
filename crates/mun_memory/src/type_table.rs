@@ -1,6 +1,6 @@
 use rustc_hash::FxHashMap;
 
-use abi::Guid;
+use mun_abi::{self as abi, Guid};
 
 use crate::r#type::{HasStaticType, Type};
 

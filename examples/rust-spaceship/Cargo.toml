@@ -1,0 +1,10 @@
+[package]
+name = "spaceship"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mun_runtime = { path="../../crates/mun_runtime" }
+rand = "0.8"
+tetra = { version = "0.7", features=["sdl2_bundled"] }
+

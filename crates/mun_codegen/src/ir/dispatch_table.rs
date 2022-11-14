@@ -1,7 +1,6 @@
 use crate::module_group::ModuleGroup;
 use crate::type_info::{HasStaticTypeId, TypeId};
 use crate::{intrinsics::Intrinsic, ir::function, ir::ty::HirTypeCache};
-use hir::{Body, Expr, ExprId, HirDatabase, InferenceResult};
 use inkwell::values::CallableValue;
 use inkwell::{
     context::Context,
@@ -10,6 +9,7 @@ use inkwell::{
     types::{BasicTypeEnum, FunctionType},
     values::BasicValueEnum,
 };
+use mun_hir::{Body, Expr, ExprId, HirDatabase, InferenceResult};
 use rustc_hash::FxHashSet;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -35,7 +35,7 @@ pub struct DispatchTable<'ink> {
     // The target for which to create the dispatch table
     target: TargetData,
     // This contains the function that map to the DispatchTable struct fields
-    function_to_idx: HashMap<hir::Function, usize>,
+    function_to_idx: HashMap<mun_hir::Function, usize>,
     // Prototype to function index
     prototype_to_idx: HashMap<FunctionPrototype, usize>,
     // This contains an ordered list of all the function in the dispatch table
@@ -55,16 +55,16 @@ pub struct FunctionPrototype {
 }
 
 /// A `DispatchableFunction` is an entry in the dispatch table that may or may not be pointing to an
-/// existing hir function.
+/// existing mun_hir function.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct DispatchableFunction {
     pub prototype: FunctionPrototype,
-    pub hir: Option<hir::Function>,
+    pub mun_hir: Option<mun_hir::Function>,
 }
 
 impl<'ink> DispatchTable<'ink> {
     /// Returns whether the `DispatchTable` contains the specified `function`.
-    pub fn contains(&self, function: hir::Function) -> bool {
+    pub fn contains(&self, function: mun_hir::Function) -> bool {
         self.function_to_idx.contains_key(&function)
     }
 
@@ -81,7 +81,7 @@ impl<'ink> DispatchTable<'ink> {
         db: &dyn HirDatabase,
         table_ref: Option<inkwell::values::GlobalValue<'ink>>,
         builder: &inkwell::builder::Builder<'ink>,
-        function: hir::Function,
+        function: mun_hir::Function,
     ) -> CallableValue<'ink> {
         let function_name = function.name(db).to_string();
 
@@ -171,7 +171,7 @@ pub(crate) struct DispatchTableBuilder<'db, 'ink, 't> {
     // Converts HIR ty's to inkwell types
     hir_types: &'t HirTypeCache<'db, 'ink>,
     // This contains the functions that map to the DispatchTable struct fields
-    function_to_idx: HashMap<hir::Function, usize>,
+    function_to_idx: HashMap<mun_hir::Function, usize>,
     // Prototype to function index
     prototype_to_idx: HashMap<FunctionPrototype, usize>,
     // These are *all* called functions in the modules
@@ -183,7 +183,7 @@ pub(crate) struct DispatchTableBuilder<'db, 'ink, 't> {
     // The group of modules for which the dispatch table is being build
     module_group: &'t ModuleGroup,
     // The set of modules that is referenced
-    referenced_modules: FxHashSet<hir::Module>,
+    referenced_modules: FxHashSet<mun_hir::Module>,
 }
 
 struct TypedDispatchableFunction<'ink> {
@@ -226,7 +226,7 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
                 table.entries.push(TypedDispatchableFunction {
                     function: DispatchableFunction {
                         prototype: prototype.clone(),
-                        hir: None,
+                        mun_hir: None,
                     },
                     ir_type: *ir_type,
                 });
@@ -254,7 +254,7 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
         // If this expression is a call, store it in the dispatch table
         if let Expr::Call { callee, .. } = expr {
             match infer[*callee].as_callable_def() {
-                Some(hir::CallableDef::Function(def)) => {
+                Some(mun_hir::CallableDef::Function(def)) => {
                     if self.module_group.should_runtime_link_fn(self.db, def) {
                         let fn_module = def.module(self.db);
                         if !def.is_extern(self.db) && !self.module_group.contains(fn_module) {
@@ -263,7 +263,7 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
                         self.collect_fn_def(def);
                     }
                 }
-                Some(hir::CallableDef::Struct(_)) => (),
+                Some(mun_hir::CallableDef::Struct(_)) => (),
                 None => panic!("expected a callable expression"),
             }
         }
@@ -274,7 +274,7 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
 
     /// Collects function call expression from the given expression.
     #[allow(clippy::map_entry)]
-    pub fn collect_fn_def(&mut self, function: hir::Function) {
+    pub fn collect_fn_def(&mut self, function: mun_hir::Function) {
         self.ensure_table_ref();
 
         // If the function is not yet contained in the table, add it
@@ -303,7 +303,7 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
             self.entries.push(TypedDispatchableFunction {
                 function: DispatchableFunction {
                     prototype: prototype.clone(),
-                    hir: Some(function),
+                    mun_hir: Some(function),
                 },
                 ir_type,
             });
@@ -322,7 +322,7 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
     /// # Parameters
     /// * **functions**: Mapping of *defined* Mun functions to their respective IR values.
     /// Returns the `DispatchTable` and a set of dependencies for the module.
-    pub fn build(self) -> (DispatchTable<'ink>, FxHashSet<hir::Module>) {
+    pub fn build(self) -> (DispatchTable<'ink>, FxHashSet<mun_hir::Module>) {
         // Construct the table body from all the entries in the dispatch table
         let table_body: Vec<BasicTypeEnum> = self
             .entries
@@ -343,7 +343,7 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
                 .map(|(i, entry)| {
                     let function_type = table_body[i].into_pointer_type();
                     // Find the associated IR function if it exists
-                    match entry.function.hir {
+                    match entry.function.mun_hir {
                         // Case external function: Convert to typed null for the given function
                         None => function_type.const_null(),
                         // Case external function, or function from another module

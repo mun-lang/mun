@@ -660,7 +660,6 @@ where
                     };
 
                     map_struct(
-                        self,
                         &mut new_allocations,
                         &mapping.struct_mappings,
                         &conversion.field_mapping,
@@ -710,7 +709,6 @@ where
                             resolve_struct_to_struct_edit(&old_element_ty, &new_element_ty, 0);
 
                         map_array(
-                            self,
                             &mut new_allocations,
                             &mapping.struct_mappings,
                             unsafe {
@@ -748,8 +746,7 @@ where
             NonNull::new_unchecked(ptr as *mut u8)
         }
 
-        fn map_array<O: Observer<Event = Event>>(
-            gc: &MarkSweep<O>,
+        fn map_array(
             new_allocations: &mut Vec<Pin<Box<ObjectInfo>>>,
             conversions: &HashMap<Type, StructMapping>,
             mut src_object: NonNull<ObjectInfo>,
@@ -778,7 +775,6 @@ where
                 .zip(dest_array.elements())
                 .for_each(|(src, dest)| {
                     map_type(
-                        gc,
                         new_allocations,
                         conversions,
                         src,
@@ -795,8 +791,7 @@ where
             };
         }
 
-        fn map_type<O: Observer<Event = Event>>(
-            gc: &MarkSweep<O>,
+        fn map_type(
             new_allocations: &mut Vec<Pin<Box<ObjectInfo>>>,
             conversions: &HashMap<Type, StructMapping>,
             src: NonNull<u8>,
@@ -833,7 +828,6 @@ where
 
                     // Map single element to array
                     map_type(
-                        gc,
                         new_allocations,
                         conversions,
                         unsafe { get_field_ptr(src, *old_offset) },
@@ -861,7 +855,6 @@ where
                     let src_obj = unsafe { *src_ptr.cast::<NonNull<ObjectInfo>>().as_ref() };
 
                     map_array(
-                        gc,
                         new_allocations,
                         conversions,
                         src_obj,
@@ -915,7 +908,6 @@ where
                     if array_handle.header().length > 0 {
                         // Map single element from array
                         map_type(
-                            gc,
                             new_allocations,
                             conversions,
                             array_handle.data(),
@@ -956,7 +948,6 @@ where
 
                     // Map heap-allocated struct to in-memory struct
                     map_struct(
-                        gc,
                         new_allocations,
                         conversions,
                         &conversion.field_mapping,
@@ -977,7 +968,6 @@ where
 
                     // Map in-memory struct to heap-allocated struct
                     map_struct(
-                        gc,
                         new_allocations,
                         conversions,
                         &conversion.field_mapping,
@@ -1004,7 +994,6 @@ where
                     });
 
                     map_struct(
-                        gc,
                         new_allocations,
                         conversions,
                         &conversion.field_mapping,
@@ -1019,16 +1008,13 @@ where
         }
 
         #[allow(clippy::mutable_key_type)]
-        fn map_struct<O>(
-            gc: &MarkSweep<O>,
+        fn map_struct(
             new_allocations: &mut Vec<Pin<Box<ObjectInfo>>>,
             conversions: &HashMap<Type, StructMapping>,
             mapping: &[FieldMapping],
             src: NonNull<u8>,
             dest: NonNull<u8>,
-        ) where
-            O: Observer<Event = Event>,
-        {
+        ) {
             for FieldMapping {
                 new_ty,
                 new_offset,
@@ -1037,7 +1023,6 @@ where
             {
                 let field_dest = unsafe { get_field_ptr(dest, *new_offset) };
                 map_type(
-                    gc,
                     new_allocations,
                     conversions,
                     src,

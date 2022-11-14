@@ -1,5 +1,6 @@
 use crate::function_info::FunctionDefinition;
-use memory::type_table::TypeTable;
+use mun_abi as abi;
+use mun_memory::type_table::TypeTable;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 

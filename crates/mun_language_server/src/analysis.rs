@@ -2,7 +2,7 @@ use crate::{
     cancelation::Canceled, change::AnalysisChange, completion, db::AnalysisDatabase, diagnostics,
     diagnostics::Diagnostic, file_structure, FilePosition,
 };
-use hir::{line_index::LineIndex, AstDatabase, SourceDatabase};
+use mun_hir::{line_index::LineIndex, AstDatabase, SourceDatabase};
 use mun_syntax::SourceFile;
 use salsa::{ParallelDatabase, Snapshot};
 use std::sync::Arc;
@@ -50,17 +50,20 @@ pub struct AnalysisSnapshot {
 
 impl AnalysisSnapshot {
     /// Returns the syntax tree of the file.
-    pub fn parse(&self, file_id: hir::FileId) -> Cancelable<SourceFile> {
+    pub fn parse(&self, file_id: mun_hir::FileId) -> Cancelable<SourceFile> {
         self.with_db(|db| db.parse(file_id).tree())
     }
 
     /// Computes the set of diagnostics for the given file.
-    pub fn diagnostics(&self, file_id: hir::FileId) -> Cancelable<Vec<Diagnostic>> {
+    pub fn diagnostics(&self, file_id: mun_hir::FileId) -> Cancelable<Vec<Diagnostic>> {
         self.with_db(|db| diagnostics::diagnostics(db, file_id))
     }
 
     /// Returns all the source files of the given package
-    pub fn package_source_files(&self, package_id: hir::PackageId) -> Cancelable<Vec<hir::FileId>> {
+    pub fn package_source_files(
+        &self,
+        package_id: mun_hir::PackageId,
+    ) -> Cancelable<Vec<mun_hir::FileId>> {
         self.with_db(|db| {
             let packages = db.packages();
             let source_root = db.source_root(packages[package_id].source_root);
@@ -69,14 +72,14 @@ impl AnalysisSnapshot {
     }
 
     /// Returns the line index for the specified file
-    pub fn file_line_index(&self, file_id: hir::FileId) -> Cancelable<Arc<LineIndex>> {
+    pub fn file_line_index(&self, file_id: mun_hir::FileId) -> Cancelable<Arc<LineIndex>> {
         self.with_db(|db| db.line_index(file_id))
     }
 
     /// Returns a tree structure of the symbols of a file.
     pub fn file_structure(
         &self,
-        file_id: hir::FileId,
+        file_id: mun_hir::FileId,
     ) -> Cancelable<Vec<file_structure::StructureNode>> {
         self.with_db(|db| file_structure::file_structure(&db.parse(file_id).tree()))
     }

@@ -7,8 +7,8 @@ use crate::{
     ir::{function, type_table::TypeTable},
     value::Global,
 };
-use hir::{HasVisibility, ModuleDef};
 use inkwell::module::Module;
+use mun_hir::{HasVisibility, ModuleDef};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 /// The IR generated for a single source file.
@@ -16,10 +16,10 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 pub struct FileIr<'ink> {
     /// The LLVM module that contains the IR
     pub llvm_module: Module<'ink>,
-    /// The `hir::Function`s that constitute the file's API.
-    pub function_definitions: HashSet<hir::Function>,
+    /// The `mun_hir::Function`s that constitute the file's API.
+    pub function_definitions: HashSet<mun_hir::Function>,
     /// The types defined in this file
-    pub type_definitions: HashSet<hir::Ty>,
+    pub type_definitions: HashSet<mun_hir::Ty>,
 }
 
 /// Generates IR for the specified file.
@@ -124,7 +124,7 @@ pub(crate) fn gen_file_ir<'db, 'ink>(
     }
 
     // Filter private methods
-    let function_definitions: HashSet<hir::Function> = functions
+    let function_definitions: HashSet<mun_hir::Function> = functions
         .keys()
         .copied()
         .filter(|&f| module_group.should_export_fn(code_gen.db, f))

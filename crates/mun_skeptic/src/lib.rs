@@ -155,7 +155,7 @@ fn extract_tests_from_string(markdown: &str, file_stem: &str) -> Vec<Test> {
                     }
                     buf.push(text.into_string());
                 } else if let Block::Header(ref mut buf) = block {
-                    buf.push_str(&*text);
+                    buf.push_str(&text);
                 }
             }
             _ => (),

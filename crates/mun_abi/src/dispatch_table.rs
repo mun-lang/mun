@@ -20,7 +20,7 @@ impl<'a> DispatchTable<'a> {
         &mut self,
     ) -> impl Iterator<Item = (&mut *const c_void, &FunctionPrototype<'a>)> {
         if self.num_entries == 0 {
-            (&mut []).iter_mut().zip((&[]).iter())
+            ([]).iter_mut().zip(([]).iter())
         } else {
             let ptrs =
                 unsafe { slice::from_raw_parts_mut(self.fn_ptrs, self.num_entries as usize) };
@@ -34,7 +34,7 @@ impl<'a> DispatchTable<'a> {
     /// Returns an iterator over pairs of function pointers and signatures.
     pub fn iter(&self) -> impl Iterator<Item = (&*const c_void, &FunctionPrototype<'a>)> {
         if self.num_entries == 0 {
-            (&[]).iter().zip((&[]).iter())
+            ([]).iter().zip(([]).iter())
         } else {
             let ptrs =
                 unsafe { slice::from_raw_parts_mut(self.fn_ptrs, self.num_entries as usize) };

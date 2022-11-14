@@ -16,10 +16,10 @@ use crate::{
     ty::InferenceResult,
     AstIdMap, Body, ExprScopes, FileId, PackageId, PackageSet, Struct, TypeAlias,
 };
+use mun_paths::RelativePathBuf;
 use mun_syntax::{ast, Parse, SourceFile};
 use mun_target::abi;
 use mun_target::spec::Target;
-use paths::RelativePathBuf;
 use std::sync::Arc;
 
 // TODO(bas): In the future maybe move this to a seperate crate (mun_db?)
@@ -143,7 +143,7 @@ pub trait HirDatabase: DefDatabase + Upcast<dyn DefDatabase> {
 
 fn parse_query(db: &dyn AstDatabase, file_id: FileId) -> Parse<SourceFile> {
     let text = db.file_text(file_id);
-    SourceFile::parse(&*text)
+    SourceFile::parse(&text)
 }
 
 fn line_index_query(db: &dyn SourceDatabase, file_id: FileId) -> Arc<LineIndex> {

@@ -1,6 +1,6 @@
 [package]
 name = "mun_language_server"
-version = "0.1.0"
+version = "0.4.0-dev"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 description = "Provides a language server protocol server for the Mun language"
@@ -13,20 +13,20 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-hir = { version = "=0.3.0", path="../mun_hir", package="mun_hir" }
-mun_diagnostics = { version = "=0.1.0", path = "../mun_diagnostics" }
-mun_syntax = { version = "=0.3.0", path = "../mun_syntax" }
-mun_target = { version = "=0.3.0", path = "../mun_target" }
-paths = { version = "=0.1.0", path="../mun_paths", package="mun_paths"}
-project = { version = "=0.1.0", path = "../mun_project", package="mun_project" }
-vfs = { version = "=0.1.0", path = "../mun_vfs", package="mun_vfs" }
+mun_hir = { version = "=0.4.0-dev", path="../mun_hir" }
+mun_vfs = { version = "=0.4.0-dev", path = "../mun_vfs" }
+mun_project = { version = "=0.4.0-dev", path = "../mun_project" }
+mun_target = { version = "=0.4.0-dev", path = "../mun_target" }
+mun_syntax = { version = "=0.4.0-dev", path = "../mun_syntax" }
+mun_diagnostics = { version = "=0.4.0-dev", path = "../mun_diagnostics" }
+mun_paths = { version = "=0.4.0-dev", path="../mun_paths" }
 anyhow = { version = "1.0", default-features = false }
 crossbeam-channel = { version = "0.5.0", default-features = false }
 log = { version = "0.4", default-features = false }
 lsp-types = { version = "0.93.0", default-features = false }
 lsp-server = { version = "0.6.0", default-features = false }
 parking_lot = { version = "0.12.0", default-features = false }
-ra_ap_text_edit = { version = "0.0.137", default-features = false }
+ra_ap_text_edit = { version = "0.0.138", default-features = false }
 rustc-hash = { version = "1.1.0", default-features = false }
 salsa = { version = "0.16.1", default-features = false }
 serde = { version = "1.0", default-features = false }

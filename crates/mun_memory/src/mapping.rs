@@ -1,4 +1,4 @@
-use abi::Guid;
+use mun_abi::Guid;
 
 use crate::{
     diff::{compute_struct_diff, FieldDiff, StructDiff},

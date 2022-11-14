@@ -22,7 +22,7 @@ pub enum TypeRef {
     Error,
 }
 
-#[derive(Default, Debug, Eq, PartialEq, Clone)]
+#[derive(Default, Debug, Eq, PartialEq)]
 pub struct TypeRefSourceMap {
     type_ref_map: FxHashMap<AstPtr<ast::TypeRef>, LocalTypeRefId>,
     type_ref_map_back: ArenaMap<LocalTypeRefId, AstPtr<ast::TypeRef>>,

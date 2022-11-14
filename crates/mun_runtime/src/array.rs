@@ -2,7 +2,7 @@ use crate::{
     garbage_collector::GcRootPtr, ArgumentReflection, GarbageCollector, Marshal,
     ReturnTypeReflection, Runtime,
 };
-use memory::{
+use mun_memory::{
     gc::{Array, GcPtr, GcRuntime, HasIndirectionPtr},
     Type,
 };

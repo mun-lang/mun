@@ -4,7 +4,7 @@ use crate::{FileId, HirDatabase, IntTy, Name, Ty};
 use mun_syntax::{ast, AstPtr, SmolStr, SyntaxNode, SyntaxNodePtr, TextRange};
 use std::{any::Any, fmt};
 
-/// Diagnostic defines hir API for errors and warnings.
+/// Diagnostic defines mun_hir API for errors and warnings.
 ///
 /// It is used as a `dyn` object, which you can downcast to concrete diagnostics. DiagnosticSink
 /// are structured, meaning that they include rich information which can be used by IDE to create
@@ -39,10 +39,11 @@ impl dyn Diagnostic {
 }
 
 type DiagnosticCallback<'a> = Box<dyn FnMut(&dyn Diagnostic) -> Result<(), ()> + 'a>;
+type DefaultDiagnosticsCallback<'a> = Box<dyn FnMut(&dyn Diagnostic) + 'a>;
 
 pub struct DiagnosticSink<'a> {
     callbacks: Vec<DiagnosticCallback<'a>>,
-    default_callback: Box<dyn FnMut(&dyn Diagnostic) + 'a>,
+    default_callback: DefaultDiagnosticsCallback<'a>,
 }
 
 impl<'a> DiagnosticSink<'a> {
