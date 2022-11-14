@@ -1,6 +1,6 @@
 # extern crate mun_runtime;
 use mun_runtime::{Runtime, StructRef};
-use std::{cell::RefCell, env, rc::Rc};
+use std::env;
 
 fn main() {
     let lib_path = env::args().nth(1).expect("Expected path to a Mun library.");
