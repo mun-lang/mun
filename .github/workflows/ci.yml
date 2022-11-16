@@ -109,7 +109,7 @@ jobs:
           CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
         with:
           command: llvm-cov
-          args: --all-features --workspace --lcov --output-path lcov.info --profile ci
+          args: nextest --all-features --workspace --lcov --output-path lcov.info --profile ci
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
