@@ -91,7 +91,7 @@ jobs:
           CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
         with:
           command: test
-          args: --doc --all-features --profile min-artifact-size-debug
+          args: --doc --all-features --profile llvm-cov-target
 
       - name: Install latest llvm-cov release
         uses: taiki-e/install-action@cargo-llvm-cov
