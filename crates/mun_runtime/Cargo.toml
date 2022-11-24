@@ -34,7 +34,7 @@ criterion = { version = "0.4", default-features = false }
 mlua = { package = "mlua", version = "0.8", default-features = false, features = ["vendored", "luajit"] }
 tempfile = { version = "3", default-features = false }
 termcolor = { version = "1.1", default-features = false }
-wasmer = { version = "2.2.1", default-features = false, features = ["sys-default"] }
+wasmer = { version = "3.0.1", default-features = false, features = ["sys-default"] }
 
 [[bench]]
 name = "benchmarks"
