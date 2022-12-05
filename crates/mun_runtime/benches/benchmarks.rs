@@ -10,8 +10,8 @@ pub fn fibonacci_benchmark(c: &mut Criterion) {
     // Perform setup (not part of the benchmark)
     let runtime = util::runtime_from_file("fibonacci.mun");
     let lua = util::lua_from_file("fibonacci.lua");
-    let wasm_store = Store::default();
-    let wasm = util::wasmer_from_file(&wasm_store, "fibonacci.wasm");
+    let mut wasm_store = Store::default();
+    let wasm = util::wasmer_from_file(&mut wasm_store, "fibonacci.wasm");
     let wasm_func = wasm.exports.get_function("main").unwrap();
 
     let mut group = c.benchmark_group("fibonacci");
@@ -41,7 +41,9 @@ pub fn fibonacci_benchmark(c: &mut Criterion) {
         // Run Wasm fibonacci
         group.bench_with_input(BenchmarkId::new("wasm", i), i, |b, i| {
             b.iter(|| {
-                wasm_func.call(&[(*i as i32).into()]).unwrap();
+                wasm_func
+                    .call(&mut wasm_store, &[(*i as i32).into()])
+                    .unwrap();
             })
         });
     }
@@ -75,8 +77,8 @@ pub fn empty_benchmark(c: &mut Criterion) {
     // Perform setup (not part of the benchmark)
     let runtime = util::runtime_from_file("empty.mun");
     let lua = util::lua_from_file("empty.lua");
-    let wasm_store = Store::default();
-    let wasm = util::wasmer_from_file(&wasm_store, "empty.wasm");
+    let mut wasm_store = Store::default();
+    let wasm = util::wasmer_from_file(&mut wasm_store, "empty.wasm");
     let wasm_func = wasm.exports.get_function("empty").unwrap();
 
     let mut group = c.benchmark_group("empty");
@@ -94,7 +96,7 @@ pub fn empty_benchmark(c: &mut Criterion) {
         })
     });
     group.bench_function("wasm", |b| {
-        b.iter(|| wasm_func.call(&[black_box(20i64).into()]))
+        b.iter(|| wasm_func.call(&mut wasm_store, &[black_box(20i64).into()]))
     });
 
     group.finish();
