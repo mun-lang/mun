@@ -1,7 +1,7 @@
 ---
 source: crates/mun_codegen/src/test.rs
 assertion_line: 1062
-expression: "\n    pub  fn fact(n: usize) -> usize {\n   \t    if n == 0 {return 1} else {return n * (n-1)}\n   \t    return 2;\n    }\n    "
+expression: "\n    pub fn issue() -> i32 {\n        loop {\n        }\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
@@ -9,13 +9,12 @@ source_filename = "mod"
 
 @global_type_lookup_table = external global [1 x i64*]
 
-define i64 @fact(i64 %0) {
+define i32 @issue() {
 body:
-  %eq = icmp eq i64 %0, 0
-  %sub = sub i64 %0, 1
-  %mul = mul i64 %0, %sub
-  %common.ret.op = select i1 %eq, i64 1, i64 %mul
-  ret i64 %common.ret.op
+  br label %loop
+
+loop:                                             ; preds = %loop, %body
+  br label %loop
 }
 
 ; == GROUP IR (mod) ====================================

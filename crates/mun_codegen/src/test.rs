@@ -588,6 +588,21 @@ fn fibonacci_loop() {
 }
 
 #[test]
+fn loop_issue_llvm13() {
+    // A bug was surfaced by switching to LLVM13. When using a loop in code an exit block was
+    // generated which didnt have a predecessor (because nobody jumped to it), this caused LLVM13
+    // to crash.
+    test_snapshot(
+        r#"
+    pub fn issue() -> i32 {
+        loop {
+        }
+    }
+    "#,
+    )
+}
+
+#[test]
 fn shadowing() {
     test_snapshot(
         r#"
@@ -1023,7 +1038,9 @@ fn test_snapshot_with_optimization(text: &str, opt: OptimizationLevel) {
             let file_ir = gen_file_ir(&code_gen, &group_ir, module_group);
 
             let group_ir = group_ir.llvm_module.print_to_string().to_string();
+            // println!("=== GROUP IR:\n {} ",&group_ir);
             let file_ir = file_ir.llvm_module.print_to_string().to_string();
+            // println!("=== FILE IR:\n {} ",&file_ir);
 
             // To ensure that we test symbol generation
             let module_builder = AssemblyBuilder::new(&code_gen, &module_parition, module_group_id);

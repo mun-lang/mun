@@ -22,8 +22,10 @@ use mun_hir::{
 };
 use std::{collections::HashMap, sync::Arc};
 
+type BreakSources<'ink> = Vec<Option<(BasicValueEnum<'ink>, BasicBlock<'ink>)>>;
+
 struct LoopInfo<'ink> {
-    break_values: Vec<(BasicValueEnum<'ink>, BasicBlock<'ink>)>,
+    break_values: BreakSources<'ink>,
     exit_block: BasicBlock<'ink>,
 }
 
@@ -1151,7 +1153,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 .expect("programmer error, then_block is invalid");
             self.builder.position_at_end(else_block);
             let result_ir = self.gen_expr(*else_branch);
-            if !self.infer[*else_branch].is_never() {
+            if result_ir.is_some() {
                 self.builder.build_unconditional_branch(merge_block);
             }
             Some((result_ir, self.builder.get_insert_block().unwrap()))
@@ -1174,6 +1176,13 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 Some(then_block_ir)
             }
         } else if let Some((else_block_ir, _else_block)) = else_ir_and_block {
+            // If both the then and the else block never return, the entire if statement will never
+            // return. Therefor we have to remove the merge block because it has no predecessor.
+            if else_block_ir.is_none() {
+                merge_block
+                    .remove_from_function()
+                    .expect("merge block must have a parent")
+            }
             else_block_ir
         } else {
             Some(self.gen_empty())
@@ -1202,15 +1211,33 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         _expr: ExprId,
         break_expr: Option<ExprId>,
     ) -> Option<BasicValueEnum<'ink>> {
-        let break_value = break_expr.and_then(|expr| self.gen_expr(expr));
-        let loop_info = self.active_loop.as_mut().unwrap();
-        if let Some(break_value) = break_value {
-            loop_info
-                .break_values
-                .push((break_value, self.builder.get_insert_block().unwrap()));
-        }
-        self.builder
-            .build_unconditional_branch(loop_info.exit_block);
+        match break_expr {
+            Some(expr) => {
+                // There is an expression
+                // e.g. break x;
+                // Turn that expression into IR.
+                let break_value = self.gen_expr(expr);
+
+                // If the expression never returns, we can stop what we're doing.
+                if let Some(break_value) = break_value {
+                    let loop_info = self.active_loop.as_mut().unwrap();
+                    loop_info.break_values.push(Some((
+                        break_value,
+                        self.builder.get_insert_block().unwrap(),
+                    )));
+                    self.builder
+                        .build_unconditional_branch(loop_info.exit_block);
+                }
+            }
+            None => {
+                // If the break expression doesnt contain a break statement. Add a none to the
+                // break values.
+                let loop_info = self.active_loop.as_mut().unwrap();
+                loop_info.break_values.push(None);
+                self.builder
+                    .build_unconditional_branch(loop_info.exit_block);
+            }
+        };
         None
     }
 
@@ -1220,7 +1247,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         exit_block: BasicBlock<'ink>,
     ) -> (
         BasicBlock<'ink>,
-        Vec<(BasicValueEnum<'ink>, BasicBlock<'ink>)>,
+        BreakSources<'ink>,
         Option<BasicValueEnum<'ink>>,
     ) {
         // Build a new loop info struct
@@ -1302,17 +1329,29 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             self.builder.build_unconditional_branch(loop_block);
         }
 
-        // Move the builder to the exit block
-        self.builder.position_at_end(exit_block);
-
         if !break_values.is_empty() {
-            let (value, _) = break_values.first().unwrap();
-            let phi = self.builder.build_phi(value.get_type(), "exit");
-            for (value, block) in break_values {
-                phi.add_incoming(&[(&value, block)])
+            // Move the builder to the exit block
+            self.builder.position_at_end(exit_block);
+
+            // If the break values contain values, (so there where `break x;` statements), generate
+            // a phi value. This then assumes that all breaks had values.
+            if let Some(Some((value, _))) = break_values.first() {
+                let phi = self.builder.build_phi(value.get_type(), "exit");
+                for (value, block) in break_values.into_iter().map(Option::unwrap) {
+                    phi.add_incoming(&[(&value, block)])
+                }
+                Some(phi.as_basic_value())
+            } else {
+                // Otherwise, in the case of `break;` (without an expression) the return value is
+                // just empty.
+                Some(self.gen_empty())
             }
-            Some(phi.as_basic_value())
         } else {
+            // Not a single code entry point jumped to the exit block through a break. Therefor we
+            // can completely remove the exit block since it doesnt have a predecessor.
+            exit_block
+                .remove_from_function()
+                .expect("the exit block must have a parent");
             None
         }
     }
