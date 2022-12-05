@@ -14,28 +14,21 @@
 
 [build-badge]: https://img.shields.io/github/workflow/status/mun-lang/mun/CI
 [build]: https://github.com/mun-lang/mun/actions
-
 [crates-badge]: https://img.shields.io/crates/v/mun.svg
 [crates]: https://crates.io/crates/mun/
-
 [coverage-badge]: https://img.shields.io/codecov/c/github/mun-lang/mun.svg
 [coverage]: https://codecov.io/gh/mun-lang/mun
-
 [docs-main-badge]: https://img.shields.io/badge/docs-main-blue.svg
 [docs-main]: https://docs.mun-lang.org/
-
 [docs-v0.3-badge]: https://img.shields.io/badge/docs-v0.3-blue.svg
 [docs-v0.3]: https://docs.mun-lang.org/v0.3/
-
 [licence-badge]: https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue
 [license]: COPYRIGHT
-
 [discord-badge]: https://img.shields.io/discord/602227728480993281.svg?logo=discord
 [discord]: https://discord.gg/SfvvcCU
-
 [lines-of-code-badge]: https://tokei.rs/b1/github/mun-lang/mun?category=code
 
-*Mun* is a programming language empowering creation through iteration.
+_Mun_ is a programming language empowering creation through iteration.
 
 ## Features
 
@@ -65,8 +58,8 @@
 - **Cross compilation** - The Mun compiler is able to compile to all supported
   target platforms from any supported compiler platform.
 
-- **Powerful IDE integration** - The Mun language and compiler framework are 
-  designed to support source code queries, allowing for powerful IDE 
+- **Powerful IDE integration** - The Mun language and compiler framework are
+  designed to support source code queries, allowing for powerful IDE
   integrations such as code completion and refactoring tools.
 
 ## Example
@@ -147,8 +140,8 @@ Windows (64-bit only).
 
 Make sure you have the following dependencies installed on you machine:
 
-* [Rust](https://www.rust-lang.org/tools/install)
-* [LLVM 11](https://docs.mun-lang.org/ch04-02-building-llvm.html)
+- [Rust](https://www.rust-lang.org/tools/install)
+- [LLVM 11](https://docs.mun-lang.org/dev/02-building-llvm.html)
 
 Clone the source code, including all submodules:
 
@@ -164,6 +157,7 @@ cargo build --release
 ```
 
 ## Language server
+
 Mun contains support for the lsp protocol, start the executable using:
 
 ```bash
@@ -178,6 +172,7 @@ To run in [Visual Studio Code](https://code.visualstudio.com/). Use the followin
 [VS code extension](https://github.com/mun-lang/vscode-extension).
 
 ### Vim/Neovim
+
 Use a language server plugin (or built-in lsp support of neovim), for example using [coc.nvim](https://github.com/neoclide/coc.nvim).
 
 Paste the following config into your `:CocConfig`, replace the `command`, with the correct path to the mun executable.
@@ -223,7 +218,7 @@ to call the above script to ensure you locally use the latest version.
 After generating the custom minified Highlight.js, to build the book, type:
 
 ```
-$ mdbook build 
+$ mdbook build
 ```
 
 The output will be in the book subdirectory. To view the book, open it in your
@@ -253,9 +248,9 @@ provided library path.
 
 The Mun Runtime is licensed under either of
 
- * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
-   http://www.apache.org/licenses/LICENSE-2.0)
- * MIT license ([LICENSE-MIT](LICENSE-MIT) or
-   http://opensource.org/licenses/MIT)
- 
- at your option.
+- Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
+  http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or
+  http://opensource.org/licenses/MIT)
+
+at your option.
