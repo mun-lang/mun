@@ -1,3 +1,9 @@
+> **Warning**
+>
+> Array functionality is still very basic as you cannot resize arrays (incl. pushing elements) at runtime.
+> You can only get, set, and replace array elements.
+> Future releases of Mun will extend this functionality.
+
 ## Dynamically Sized Arrays
 
 In Mun, the default array type is dynamically sized and heap-allocated.

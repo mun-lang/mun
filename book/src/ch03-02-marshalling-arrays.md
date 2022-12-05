@@ -1,3 +1,9 @@
+> **Warning**
+>
+> Array functionality is still very basic as you cannot resize arrays (incl. pushing elements) at runtime.
+> You can only get, set, and replace array elements.
+> Future releases of Mun will extend this functionality.
+
 ## Marshalling Arrays
 
 When embedding Mun in other languages, you will probably want to marshal arrays to and from another language.
