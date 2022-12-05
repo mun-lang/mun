@@ -38,7 +38,7 @@ jobs:
       - name: Install LLVM
         uses: ./.github/actions/install-llvm
 
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
 
       - name: Cargo check
         uses: actions-rs/cargo@v1
@@ -81,7 +81,7 @@ jobs:
           override: true
           components: rustfmt
 
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
         if: matrix.os != 'windows-latest'
 
       - name: Doctests
@@ -127,7 +127,7 @@ jobs:
           override: true
           components: rustfmt
 
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
 
       - name: Cargo build
         uses: actions-rs/cargo@v1
@@ -177,7 +177,7 @@ jobs:
           override: true
           components: rustfmt
 
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
 
       - name: Cargo build
         uses: actions-rs/cargo@v1
@@ -233,7 +233,7 @@ jobs:
           override: true
           components: clippy, rustfmt
 
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
 
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
@@ -270,7 +270,7 @@ jobs:
           override: true
           components: rustfmt
 
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
 
       - name: Install LLVM
         uses: ./.github/actions/install-llvm
