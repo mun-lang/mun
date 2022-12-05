@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Mac M1 Support [#](https://github.com/mun-lang/mun/pull/444)
+- Upgraded to LLVM 13 [#](https://github.com/mun-lang/mun/pull/491) 
 
 ### Changed
 
