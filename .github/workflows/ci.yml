@@ -53,11 +53,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-20.04", "windows-latest", "macOS-latest"]
+        os: [ "ubuntu-20.04", "windows-latest", "macOS-latest" ]
         include:
           - RUSTFLAGS: "-Dwarnings"
+            CARGO_INCREMENTAL: 1
           - os: "windows-latest"
             RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
+            CARGO_INCREMENTAL: 0
     steps:
       - uses: actions/checkout@v3
         with:
@@ -92,6 +94,7 @@ jobs:
         uses: actions-rs/cargo@v1
         env:
           RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
+          CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
         with:
           command: llvm-cov
           args: nextest --all-features --workspace --lcov --output-path lcov.info --profile ci
