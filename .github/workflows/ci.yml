@@ -106,6 +106,7 @@ jobs:
   doctest:
     name: Doctest Rust
     needs: check
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
