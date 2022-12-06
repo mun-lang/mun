@@ -1,6 +1,7 @@
 /.vscode
 **/*.rs.bk
 Cargo.lock
+yarn.lock
 
 ## CLion specific:
 
