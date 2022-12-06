@@ -42,7 +42,7 @@ export async function execute(cmd) {
             const downloadLocation = await tc.downloadTool(downloadUrl);
 
             core.info("Succesfully downloaded LLVM release, extracting...")
-            const llvmPath = path.resolve("llvm");
+            const llvmPath = "C:\\llvm";
             const _7zPath = path.join(__dirname, '..', 'externals', '7zr.exe');
             let attempt = 1;
             while (true) {
