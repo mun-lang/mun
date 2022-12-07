@@ -1,6 +1,6 @@
 #include <mun/mun.h>
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 #include <sstream>
 
 /// Returns the absolute path to the munlib with the specified name
