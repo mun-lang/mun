@@ -96,7 +96,7 @@ jobs:
           RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
           CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
           # Disable generating debug info, we don't need it here anyway and its only using disk space
-          CARGO_PROFILE_DEV_DEBUG: 0
+          CARGO_PROFILE_DEBUG_DEBUG: 0
         with:
           command: llvm-cov
           args: nextest --all-features --workspace --lcov --output-path lcov.info --profile ci
@@ -149,7 +149,7 @@ jobs:
           RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
           CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
           # Disable generating debug info, we don't need it here anyway and its only using disk space
-          CARGO_PROFILE_DEV_DEBUG: 0
+          CARGO_PROFILE_DEBUG_DEBUG: 0
         with:
           command: test
           args: --doc --all-features
