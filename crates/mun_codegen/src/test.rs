@@ -632,6 +632,7 @@ fn loop_issue_llvm13() {
     // generated which didnt have a predecessor (because nobody jumped to it), this caused LLVM13
     // to crash.
     test_snapshot(
+        "loop_issue_llvm13",
         r#"
     pub fn issue() -> i32 {
         loop {
