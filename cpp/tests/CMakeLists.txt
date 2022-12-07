@@ -3,6 +3,16 @@ include(ExternalProject)
 set(mun_executable_url "" CACHE FILEPATH "URL to an archive on the web containing the Mun executable. This is required for building the Mun tests.")
 set(mun_examples_path "${CMAKE_SOURCE_DIR}/examples" CACHE FILEPATH "Location of Mun examples. This is required for building the Mun tests.")
 
+Include(FetchContent)
+
+FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG        v3.2.0 # or a later release
+)
+
+FetchContent_MakeAvailable(Catch2)
+
 add_executable(mun_executable IMPORTED)
 if (mun_binaries_path)
     set_target_properties(mun_executable PROPERTIES IMPORTED_LOCATION ${mun_binaries_path}/mun${CMAKE_EXECUTABLE_SUFFIX})
@@ -59,14 +69,13 @@ add_custom_target(mun_test_munlibs ALL
 
 # Add the tests
 add_executable(MunRuntimeTests
-    catch_main.cc
     marshal.cc
     runtime.cc
     extern.cc
 )
 
-target_include_directories(MunRuntimeTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/catch2/single_include ${mun_folder}/include)
-target_link_libraries(MunRuntimeTests MunRuntime)
+target_include_directories(MunRuntimeTests PRIVATE ${mun_folder}/include)
+target_link_libraries(MunRuntimeTests PRIVATE MunRuntime Catch2::Catch2WithMain)
 add_dependencies(MunRuntimeTests mun_test_munlibs)
 target_compile_definitions(MunRuntimeTests PRIVATE -DMUN_TEST_DIR="${mun_examples_path}/")
 set_property(TARGET MunRuntimeTests PROPERTY CXX_STANDARD 17)
@@ -76,6 +85,6 @@ add_custom_command(TARGET MunRuntimeTests POST_BUILD
         $<TARGET_FILE:MunRuntime>
         $<TARGET_FILE_DIR:MunRuntimeTests>)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/catch2/contrib")
+include(CTest)
 include(Catch)
 catch_discover_tests(MunRuntimeTests)
