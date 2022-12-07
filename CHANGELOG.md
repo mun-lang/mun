@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Switch to LLVM code coverage instead of using Tarpaulin [#478](https://github.com/mun-lang/mun/pull/478)
 - Bump LLVM from 12 to 13 [#491](https://github.com/mun-lang/mun/pull/491)
 - Reduce workspace target folder size from 10.9 GB to 10.6 GB
 - Reduce workspace build dependencies from 296 to 270
