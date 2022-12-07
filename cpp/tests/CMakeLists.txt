@@ -69,13 +69,11 @@ add_custom_target(mun_test_munlibs ALL
 
 # Add the tests
 add_executable(MunRuntimeTests
-#    catch_main.cc
     marshal.cc
     runtime.cc
     extern.cc
 )
 
-# target_include_directories(MunRuntimeTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/catch2/single_include ${mun_folder}/include)
 target_include_directories(MunRuntimeTests PRIVATE ${mun_folder}/include)
 target_link_libraries(MunRuntimeTests PRIVATE MunRuntime Catch2::Catch2WithMain)
 add_dependencies(MunRuntimeTests mun_test_munlibs)
