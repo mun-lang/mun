@@ -1499,7 +1499,7 @@ async function execute(cmd) {
             let llvmPath = await execute("brew --prefix llvm@13");
             core.addPath(`${llvmPath}/bin`)
         } else if (isWindows) {
-            const downloadUrl = "https://github.com/mun-lang/llvm-package-windows/releases/download/v13.0.0/llvm-13.0.0-windows-x64-msvc16-mt.7z"
+            const downloadUrl = "https://github.com/mun-lang/llvm-package-windows/releases/download/v13.0.1/llvm-13.0.1-windows-x64-msvc16-mt.7z"
             core.info(`downloading LLVM from '${downloadUrl}'`)
             const downloadLocation = await tc.downloadTool(downloadUrl);
 
