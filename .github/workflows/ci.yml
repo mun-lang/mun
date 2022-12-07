@@ -57,9 +57,17 @@ jobs:
         include:
           - RUSTFLAGS: "-Dwarnings"
             CARGO_INCREMENTAL: 1
+            CARGO_TARGET_DIR: "target"
           - os: "windows-latest"
             RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
             CARGO_INCREMENTAL: 0
+            CARGO_TARGET_DIR: "C:\\cargo-target-dir"
+    env:
+      RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
+      CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
+      # Disable generating debug info, we don't need it here anyway and its only using disk space
+      CARGO_PROFILE_DEV_DEBUG: 0
+      CARGO_TARGET_DIR: ${{ matrix.CARGO_TARGET_DIR }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -92,11 +100,6 @@ jobs:
 
       - name: Test with latest nextest release
         uses: actions-rs/cargo@v1
-        env:
-          RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
-          CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
-          # Disable generating debug info, we don't need it here anyway and its only using disk space
-          CARGO_PROFILE_DEBUG_DEBUG: 0
         with:
           command: llvm-cov
           args: nextest --all-features --workspace --lcov --output-path lcov.info --profile ci
@@ -122,6 +125,11 @@ jobs:
           - os: "windows-latest"
             RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
             CARGO_INCREMENTAL: 0
+    env:
+      RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
+      CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
+      # Disable generating debug info, we don't need it here anyway and its only using disk space
+      CARGO_PROFILE_DEV_DEBUG: 0
     steps:
       - uses: actions/checkout@v3
         with:
@@ -145,11 +153,6 @@ jobs:
 
       - name: Doctests
         uses: actions-rs/cargo@v1
-        env:
-          RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
-          CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
-          # Disable generating debug info, we don't need it here anyway and its only using disk space
-          CARGO_PROFILE_DEBUG_DEBUG: 0
         with:
           command: test
           args: --doc --all-features
