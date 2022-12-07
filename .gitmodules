@@ -2,6 +2,3 @@
 	path = book/vendor/highlight.js
 	url = https://github.com/mun-lang/highlight.js.git
 	branch = add-mun
-[submodule "cpp/tests/catch2"]
-	path = cpp/tests/catch2
-	url = https://github.com/catchorg/Catch2.git

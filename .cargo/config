@@ -3,10 +3,3 @@
 gen-syntax        = "run --package tools --bin tools -- gen-syntax"
 gen-runtime-capi  = "run --package tools --bin tools -- gen-runtime-capi"
 gen-abi           = "run --package tools --bin tools -- gen-abi"
-
-[profile.min-artifact-size-debug]
-inherits = "dev"
-
-# disable debug symbols for all packages except this one
-[profile.min-artifact-size-debug.package."*"]
-debug = false

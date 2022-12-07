@@ -1,5 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1062
 expression: "\n    pub fn main(a:i32) -> i32 {\n        if a > 4 {\n            return a;\n        }\n        a - 1\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
@@ -11,14 +12,9 @@ source_filename = "mod"
 define i32 @main(i32 %0) {
 body:
   %greater = icmp sgt i32 %0, 4
-  br i1 %greater, label %then, label %if_merge
-
-then:                                             ; preds = %body
-  ret i32 %0
-
-if_merge:                                         ; preds = %body
   %sub = sub i32 %0, 1
-  ret i32 %sub
+  %common.ret.op = select i1 %greater, i32 %0, i32 %sub
+  ret i32 %common.ret.op
 }
 
 ; == GROUP IR (mod) ====================================

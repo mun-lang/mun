@@ -1,5 +1,5 @@
 use inkwell::builder::Builder;
-use inkwell::types::{AnyType, BasicType, BasicTypeEnum};
+use inkwell::types::{BasicType, BasicTypeEnum};
 use inkwell::values::{BasicValueEnum, PointerValue};
 use inkwell::AddressSpace;
 use std::ffi::CStr;

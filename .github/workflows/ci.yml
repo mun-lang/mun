@@ -18,7 +18,7 @@ concurrency:
 jobs:
   check:
     name: Check
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:
@@ -53,13 +53,83 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-20.04", "windows-latest", "macOS-latest"]
+        os: ["ubuntu-latest", "windows-latest", "macOS-latest"]
+        include:
+          - RUSTFLAGS: "-Dwarnings"
+            CARGO_INCREMENTAL: 1
+            CARGO_TARGET_DIR: "target"
+          - os: "windows-latest"
+            RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
+            CARGO_INCREMENTAL: 0
+            CARGO_TARGET_DIR: "C:\\cargo-target-dir"
+    env:
+      RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
+      CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
+      # Disable generating debug info, we don't need it here anyway and its only using disk space
+      CARGO_PROFILE_DEV_DEBUG: 0
+      CARGO_TARGET_DIR: ${{ matrix.CARGO_TARGET_DIR }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Install LLVM
+        uses: ./.github/actions/install-llvm
+
+      - name: Install packages
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install libasound2-dev libudev-dev
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          override: true
+          components: rustfmt, llvm-tools-preview
+
+      - uses: Swatinem/rust-cache@v2
+        if: matrix.os != 'windows-latest'
+
+      - name: Install latest llvm-cov release
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Install latest nextest release
+        uses: taiki-e/install-action@nextest
+
+      - name: Test with latest nextest release
+        uses: actions-rs/cargo@v1
+        with:
+          command: llvm-cov
+          args: nextest --all-features --workspace --lcov --output-path lcov.info --profile ci
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: lcov.info
+          name: ${{ matrix.os }}
+          fail_ci_if_error: true
+
+  doctest:
+    name: Doctest Rust
+    needs: check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ "ubuntu-latest", "windows-latest", "macOS-latest" ]
         include:
           - RUSTFLAGS: "-Dwarnings"
             CARGO_INCREMENTAL: 1
           - os: "windows-latest"
             RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
             CARGO_INCREMENTAL: 0
+    env:
+      RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
+      CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
+      # Disable generating debug info, we don't need it here anyway and its only using disk space
+      CARGO_PROFILE_DEV_DEBUG: 0
     steps:
       - uses: actions/checkout@v3
         with:
@@ -78,39 +148,18 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          override: true
-          components: rustfmt
 
       - uses: Swatinem/rust-cache@v2
-        if: matrix.os != 'windows-latest'
 
       - name: Doctests
         uses: actions-rs/cargo@v1
-        env:
-          RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
-          CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
         with:
           command: test
-          args: --doc --all-features --profile min-artifact-size-debug
-
-      - name: Install latest nextest release
-        uses: taiki-e/install-action@nextest
-
-      - run: Get-PSDrive
-        if: matrix.os == 'windows-latest'
-
-      - name: Test with latest nextest release
-        uses: actions-rs/cargo@v1
-        env:
-          RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
-          CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
-        with:
-          command: nextest
-          args: run --all-features --profile ci --cargo-profile min-artifact-size-debug
+          args: --doc --all-features
 
   test-mdbook:
     name: Test mdbook
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: check
     steps:
       - uses: actions/checkout@v3
@@ -157,7 +206,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-20.04", "windows-latest", "macOS-latest"]
+        os: ["ubuntu-latest", "windows-latest", "macOS-latest"]
         include:
           - RUSTFLAGS: "-Dwarnings"
           - os: "windows-latest"
@@ -219,7 +268,7 @@ jobs:
 
   style:
     name: Check Style
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: check
     steps:
       - uses: actions/checkout@v3
@@ -249,36 +298,3 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features
-
-  tarpaulin:
-    runs-on: ubuntu-20.04
-    needs: check
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: true
-
-      - name: Install packages
-        run: |
-          sudo apt-get update
-          sudo apt-get install libasound2-dev libudev-dev
-
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          override: true
-          components: rustfmt
-
-      - uses: Swatinem/rust-cache@v2
-
-      - name: Install LLVM
-        uses: ./.github/actions/install-llvm
-
-      - name: Run cargo-tarpaulin
-        uses: actions-rs/tarpaulin@v0.1
-
-      - uses: codecov/codecov-action@v3
-        with:
-          file: ${{ steps.coverage.outputs.report }}
-          name: ${{ matrix.os }}
