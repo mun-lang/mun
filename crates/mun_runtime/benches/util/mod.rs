@@ -43,9 +43,9 @@ pub fn lua_from_file<P: AsRef<Path>>(p: P) -> Lua {
     lua
 }
 
-pub fn wasmer_from_file<P: AsRef<Path>>(store: &Store, p: P) -> Instance {
+pub fn wasmer_from_file<P: AsRef<Path>>(store: &mut Store, p: P) -> Instance {
     let wasm_content = std::fs::read(compute_resource_path(p)).unwrap();
     let import_objects = wasmer::imports! {};
     let module = Module::new(store, &wasm_content).unwrap();
-    Instance::new(&module, &import_objects).unwrap()
+    Instance::new(store, &module, &import_objects).unwrap()
 }
