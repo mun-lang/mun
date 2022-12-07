@@ -20,12 +20,12 @@ array-init = { version = "2.0.0", default-features = false }
 by_address = { version = "1.0.4", default-features = false }
 bytemuck = { version = "1.4.1", default-features = false }
 mun_hir = { version = "=0.4.0-dev", path = "../mun_hir" }
-inkwell = { version = "=0.1.0-beta.5", default-features = false, features = ["llvm12-0", "no-libffi-linking", "target-x86", "target-aarch64"] }
+inkwell = { version = "=0.1.0-beta.5", default-features = false, features = ["llvm13-0", "no-libffi-linking", "target-x86", "target-aarch64"] }
 itertools = { version = "0.10.3", default-features = false }
 mun_codegen_macros = { version = "=0.4.0-dev", path = "../mun_codegen_macros" }
 mun_target = { version = "=0.4.0-dev", path = "../mun_target" }
 once_cell = { version = "1.4.0", default-features = false }
-lld_rs = { version = "120.0.1", default-features = false }
+lld_rs = { version = "130.0.0", default-features = false }
 parking_lot = { version = "0.12.0", default-features = false }
 paste = { version = "1.0.7", default-features = false }
 mun_paths = { version= "=0.4.0-dev", path="../mun_paths"}

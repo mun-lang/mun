@@ -1,5 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1062
 expression: "\n    pub  fn fact(n: usize) -> usize {\n   \t    if n == 0 {return 1} else {n * (n-1)}\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
@@ -13,8 +14,8 @@ body:
   %eq = icmp eq i64 %0, 0
   %sub = sub i64 %0, 1
   %mul = mul i64 %0, %sub
-  %merge = select i1 %eq, i64 1, i64 %mul
-  ret i64 %merge
+  %common.ret.op = select i1 %eq, i64 1, i64 %mul
+  ret i64 %common.ret.op
 }
 
 ; == GROUP IR (mod) ====================================
