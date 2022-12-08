@@ -55,6 +55,16 @@ typedef struct MunPointerTypeId {
 } MunPointerTypeId;
 
 /**
+ * Represents an array of a specific type.
+ */
+typedef struct MunArrayTypeId {
+    /**
+     * The element type of the array
+     */
+    const union MunTypeId *element;
+} MunArrayTypeId;
+
+/**
  * Represents a unique identifier for types. The runtime can use this to lookup the corresponding
  * [`TypeInfo`]. A [`TypeId`] is a key for a [`TypeInfo`].
  *
@@ -73,6 +83,10 @@ enum MunTypeId_Tag
      * Represents a pointer to a type
      */
     Pointer,
+    /**
+     * Represents an array of a specific type
+     */
+    Array,
 };
 #ifndef __cplusplus
 typedef uint8_t MunTypeId_Tag;
@@ -87,6 +101,10 @@ typedef union MunTypeId {
     struct {
         MunTypeId_Tag pointer_tag;
         struct MunPointerTypeId pointer;
+    };
+    struct {
+        MunTypeId_Tag array_tag;
+        struct MunArrayTypeId array;
     };
 } MunTypeId;
 

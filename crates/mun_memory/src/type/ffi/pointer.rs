@@ -62,6 +62,7 @@ impl PointerInfo {
 ///
 /// This function results in undefined behavior if the passed in `PointerType` has been deallocated
 /// by a previous call to [`mun_type_release`].
+#[no_mangle]
 pub unsafe extern "C" fn mun_pointer_type_pointee(
     ty: PointerInfo,
     pointee: *mut Type,
@@ -83,6 +84,7 @@ pub unsafe extern "C" fn mun_pointer_type_pointee(
 ///
 /// This function results in undefined behavior if the passed in `PointerType` has been deallocated
 /// by a previous call to [`mun_type_release`].
+#[no_mangle]
 pub unsafe extern "C" fn mun_pointer_is_mutable(
     ty: PointerInfo,
     mutable: *mut bool,

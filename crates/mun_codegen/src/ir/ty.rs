@@ -1,15 +1,3 @@
-use std::{cell::RefCell, collections::HashMap, sync::Arc};
-
-use inkwell::{
-    context::Context,
-    targets::TargetData,
-    types::FunctionType,
-    types::{AnyTypeEnum, BasicType, BasicTypeEnum, FloatType, IntType, StructType},
-    AddressSpace,
-};
-use smallvec::SmallVec;
-
-use mun_abi::Guid;
 use mun_hir::{
     FloatBitness, HirDatabase, HirDisplay, IntBitness, ResolveBitness, Signedness, Ty, TyKind,
 };
@@ -18,13 +6,27 @@ use crate::{
     ir::IsIrType,
     type_info::{HasStaticTypeId, TypeId, TypeIdData},
 };
+use inkwell::types::AnyTypeEnum;
+use inkwell::{
+    context::Context,
+    targets::TargetData,
+    types::FunctionType,
+    types::PointerType,
+    types::{BasicType, BasicTypeEnum, FloatType, IntType, StructType},
+    AddressSpace,
+};
+use smallvec::SmallVec;
+use std::{cell::RefCell, collections::HashMap, sync::Arc};
+
+use mun_abi::Guid;
 
 /// An object to cache and convert HIR types to Inkwell types.
 pub struct HirTypeCache<'db, 'ink> {
     context: &'ink Context,
     db: &'db dyn HirDatabase,
     target_data: TargetData,
-    types: RefCell<HashMap<mun_hir::Ty, StructType<'ink>>>,
+    types: RefCell<HashMap<mun_hir::TyKind, StructType<'ink>>>,
+    array_ty_to_type_id: RefCell<HashMap<mun_hir::TyKind, Arc<TypeId>>>,
     struct_to_type_id: RefCell<HashMap<mun_hir::Struct, Arc<TypeId>>>,
 }
 
@@ -37,6 +39,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
             target_data,
             types: RefCell::new(HashMap::default()),
             struct_to_type_id: Default::default(),
+            array_ty_to_type_id: Default::default(),
         }
     }
 
@@ -56,7 +59,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
             IntBitness::X32 => self.context.i32_type(),
             IntBitness::X16 => self.context.i16_type(),
             IntBitness::X8 => self.context.i8_type(),
-            IntBitness::Xsize => usize::ir_type(self.context, &self.target_data),
+            IntBitness::Xsize => self.get_usize_type(),
         }
     }
 
@@ -65,13 +68,18 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
         self.context.bool_type()
     }
 
+    /// Returns the type for usize. The size of the type depends on the target architecture.
+    pub fn get_usize_type(&self) -> IntType<'ink> {
+        usize::ir_type(self.context, &self.target_data)
+    }
+
     /// Returns the type of the specified integer type
     pub fn get_struct_type(&self, struct_ty: mun_hir::Struct) -> StructType<'ink> {
         // TODO: This assumes the contents of the mun_hir::Struct does not change. It definitely does
         //  between compilations. We have to have a way to uniquely identify the `mun_hir::Struct` and
         //  its contents.
 
-        let ty = Ty::struct_ty(struct_ty);
+        let ty = TyKind::Struct(struct_ty);
 
         // Get the type from the cache
         if let Some(ir_ty) = self.types.borrow().get(&ty) {
@@ -99,6 +107,66 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
         ir_ty
     }
 
+    /// Returns the IR type of the specified array type.
+    pub fn get_array_type(&self, element_ty: &Ty) -> StructType<'ink> {
+        // Get the type from the cache
+        let ty = TyKind::Array(element_ty.clone());
+        if let Some(ir_ty) = self.types.borrow().get(&ty) {
+            return *ir_ty;
+        };
+
+        // Opaquely construct the array struct type and store it in the cache
+        let ir_ty = self
+            .context
+            .opaque_struct_type(&format!("[{}]", element_ty.display(self.db)));
+        self.types.borrow_mut().insert(ty, ir_ty);
+
+        // Mun Arrays are represented as:
+        //
+        // ```c
+        // struct Obj {
+        //     ArrayValueT *value;
+        //     ...
+        // }
+        //
+        // struct ArrayValueT {
+        //     usize_t len;
+        //     usize_t capacity;
+        //     T elements[capacity];
+        // }
+        // ```
+
+        let length_ir_type = self.context.ptr_sized_int_type(&self.target_data, None);
+        let capacity_ir_type = self.context.ptr_sized_int_type(&self.target_data, None);
+        let element_ir_type = self
+            .get_basic_type(element_ty)
+            .expect("could not convert array element type to basic type");
+
+        // Fill the struct members
+        ir_ty.set_body(
+            &[
+                length_ir_type.into(),
+                capacity_ir_type.into(),
+                element_ir_type,
+            ],
+            false,
+        );
+
+        ir_ty
+    }
+
+    /// Returns the type of an array that should be used for variables. Arrays are always stored on
+    /// the heap so this will always be a pointer to an Array<Ty>.
+    pub fn get_array_reference_type(&self, element_ty: &Ty) -> PointerType<'ink> {
+        let ir_ty = self.get_array_type(element_ty);
+        ir_ty
+            .ptr_type(AddressSpace::Generic)
+            .ptr_type(AddressSpace::Generic)
+    }
+
+    /// Returns the type of the struct that should be used for variables. Depending on the memory
+    /// type of the struct this is either a pointer to a GCHandle which holds a pointer to a struct,
+    /// or, in case of a value struct, the struct type itself.
     /// Returns the type of the struct that should be used for variables.
     pub fn get_struct_reference_type(&self, struct_ty: mun_hir::Struct) -> BasicTypeEnum<'ink> {
         let ir_ty = self.get_struct_type(struct_ty);
@@ -194,6 +262,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
             TyKind::Int(int_ty) => Some(self.get_int_type(*int_ty).into()),
             TyKind::Struct(struct_ty) => Some(self.get_struct_reference_type(*struct_ty)),
             TyKind::Bool => Some(self.get_bool_type().into()),
+            TyKind::Array(element_ty) => Some(self.get_array_reference_type(element_ty).into()),
             _ => None,
         }
     }
@@ -208,6 +277,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
             TyKind::Int(int_ty) => Some(self.get_int_type(*int_ty).into()),
             TyKind::Struct(struct_ty) => Some(self.get_public_struct_reference_type(*struct_ty)),
             TyKind::Bool => Some(self.get_bool_type().into()),
+            TyKind::Array(element_ty) => Some(self.get_array_reference_type(element_ty).into()),
             _ => None,
         }
     }
@@ -227,6 +297,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
                 Some(self.get_function_type(*fn_ty).into())
             }
             TyKind::Bool => Some(self.get_bool_type().into()),
+            TyKind::Array(element_ty) => Some(self.get_array_reference_type(element_ty).into()),
             _ => None,
         }
     }
@@ -289,6 +360,30 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
                     })
                 })
                 .clone(),
+            TyKind::Array(a) => {
+                {
+                    let read_only = self.array_ty_to_type_id.borrow();
+                    if let Some(a) = read_only.get(a.interned()) {
+                        return a.clone();
+                    }
+                }
+
+                let element_type_id = self.type_id(a);
+                let array_type_id = Arc::new(TypeId {
+                    name: format!("[{}]", &element_type_id.name),
+                    data: TypeIdData::Array(element_type_id),
+                });
+
+                let previous_entry = self
+                    .array_ty_to_type_id
+                    .borrow_mut()
+                    .insert(a.interned().clone(), array_type_id.clone());
+                if previous_entry.is_some() {
+                    panic!("array cyclic reference?");
+                }
+
+                array_type_id
+            }
             _ => unimplemented!("{} unhandled", ty.display(self.db)),
         }
     }

@@ -111,7 +111,7 @@ fn get_type_definition_array<'ink>(
     types: impl Iterator<Item = mun_hir::Ty>,
     hir_types: &HirTypeCache,
     ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
-) -> Value<'ink, *const ir::TypeInfo<'ink>> {
+) -> Value<'ink, *const ir::TypeDefinition<'ink>> {
     types
         .sorted_by_cached_key(|type_info| match type_info.interned() {
             TyKind::Struct(s) => s.full_name(db),
@@ -121,7 +121,7 @@ fn get_type_definition_array<'ink>(
             TyKind::Struct(s) => {
                 let inkwell_type = hir_types.get_struct_type(*s);
                 let struct_name = s.full_name(db);
-                ir::TypeInfo {
+                ir::TypeDefinition {
                     name: CString::new(struct_name.clone())
                         .expect("typename is not a valid CString")
                         .intern(format!("type_info::<{}>::name", struct_name), context)
@@ -138,7 +138,7 @@ fn get_type_definition_array<'ink>(
                         .get_abi_alignment(&inkwell_type)
                         .try_into()
                         .expect("could not convert alignment to smaller size"),
-                    data: ir::TypeInfoData::Struct(gen_struct_info(
+                    data: ir::TypeDefinitionData::Struct(gen_struct_info(
                         db,
                         *s,
                         context,
@@ -158,7 +158,7 @@ fn gen_struct_info<'ink>(
     context: &IrValueContext<'ink, '_, '_>,
     hir_types: &HirTypeCache,
     ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
-) -> ir::StructInfo<'ink> {
+) -> ir::StructDefinition<'ink> {
     let struct_ir = hir_types.get_struct_type(hir_struct);
     let name = hir_struct.full_name(db);
     let fields = hir_struct.fields(db);
@@ -209,7 +209,7 @@ fn gen_struct_info<'ink>(
             context,
         );
 
-    ir::StructInfo {
+    ir::StructDefinition {
         guid: guid_from_struct(db, hir_struct),
         field_names,
         field_types,

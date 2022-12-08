@@ -5,7 +5,7 @@ use mun_capi_utils::{mun_error_try, try_deref_mut};
 use std::mem::ManuallyDrop;
 
 use crate::runtime::Runtime;
-use mun_memory::ffi::Type;
+use mun_memory::{ffi::Type, gc::GcRuntime};
 
 pub use mun_memory::gc::GcPtr;
 

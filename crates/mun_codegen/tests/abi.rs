@@ -14,6 +14,7 @@ fn test_abi_compatibility() {
     pub fn {fn_name}(_: f64) -> i32 {{ 0 }}
     pub fn {fn_name2}() {{
         let a = {struct_name}(1.0, 2.0);
+        let b = [1,2,3]
     }}
 
     pub struct {struct_name}(f64, f64);
@@ -123,6 +124,29 @@ fn test_abi_compatibility() {
               ))),
             ),
           ),
+          FunctionPrototype(
+            name: "new_array",
+            signature: FunctionSignature(
+              arg_types: [
+                Pointer(PointerTypeId(
+                  pointee: Concrete("af39d38b-abb4-d6f6-4a2e-5cffe78b0981"),
+                  mutable: false,
+                )),
+                Concrete("a6e76720-d18b-1a71-601f-1e07bb354071"),
+                Pointer(PointerTypeId(
+                  pointee: Concrete("af39d38b-abb4-d6f6-4a2e-5cffe78b0981"),
+                  mutable: true,
+                )),
+              ],
+              return_type: Some(Pointer(PointerTypeId(
+                pointee: Pointer(PointerTypeId(
+                  pointee: Concrete("af39d38b-abb4-d6f6-4a2e-5cffe78b0981"),
+                  mutable: true,
+                )),
+                mutable: false,
+              ))),
+            ),
+          ),
         ],
       ),
       type_lut: [
@@ -133,6 +157,12 @@ fn test_abi_compatibility() {
         Elem(
           name: "Foo",
           type: Concrete("9fe596c7-9975-0310-0084-6f4e4d5b7be2"),
+        ),
+        Elem(
+          name: "[core::i32]",
+          type: Array(ArrayTypeId(
+            element: Concrete("17797a74-19d6-3217-d235-954317885bfa"),
+          )),
         ),
         Elem(
           name: "core::f64",

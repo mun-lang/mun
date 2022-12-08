@@ -2,6 +2,7 @@ macro_rules! intrinsics{
     ($($(#[$attr:meta])* pub fn $name:ident($($arg_name:ident:$arg:ty),+) -> $ret:ty;)+) => {
         $(
             paste::item! {
+                #[allow(non_camel_case_types)]
                 pub struct [<Intrinsic $name>];
             }
             paste::item! {

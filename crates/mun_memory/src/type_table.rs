@@ -23,6 +23,9 @@ impl TypeTable {
             abi::TypeId::Pointer(p) => self
                 .find_type_info_by_id(p.pointee)
                 .map(|ty| ty.pointer_type(p.mutable)),
+            abi::TypeId::Array(a) => self
+                .find_type_info_by_id(a.element)
+                .map(|ty| ty.array_type()),
         }
     }
 

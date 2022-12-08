@@ -1,6 +1,7 @@
 use crate::{
     intrinsics,
     ir::{dispatch_table::DispatchTable, ty::HirTypeCache, type_table::TypeTable},
+    ir::{RuntimeArrayValue, RuntimeReferenceValue},
     module_group::ModuleGroup,
     value::Global,
 };
@@ -275,6 +276,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 expr: receiver_expr,
                 name,
             } => self.gen_field(expr, *receiver_expr, name),
+            Expr::Array(exprs) => self.gen_array(expr, exprs).map(Into::into),
+            Expr::Index { base, index } => self.gen_index(expr, *base, *index),
             _ => unimplemented!("unimplemented expr type {:?}", &body[expr]),
         }
     }
@@ -393,22 +396,15 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             "type_info_ptr_to_i8_ptr",
         );
 
-        let allocator_handle = self.builder.build_load(
-            self.external_globals
-                .alloc_handle
-                .expect("no allocator handle was specified, this is required for structs")
-                .as_pointer_value(),
-            "allocator_handle",
-        );
+        let allocator_handle = self.get_allocator_handle_ptr();
 
-        // An object pointer adds an extra layer of indirection to allow for hot reloading. To
-        // make it struct type agnostic, it is stored in a `*const *mut std::ffi::c_void`.
-        let object_ptr = self
+        // Safety: we can be sure that the new intrinsic returns a reference.
+        let untyped_reference = self
             .builder
             .build_call(
                 new_fn_ptr,
                 &[type_info_ptr.into(), allocator_handle.into()],
-                "new",
+                "ref",
             )
             .try_as_basic_value()
             .left()
@@ -416,30 +412,26 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .into_pointer_value();
 
         // Cast the object pointer to the struct type
-        let struct_ptr_ptr = self
+        let typed_reference = self
             .builder
             .build_bitcast(
-                object_ptr,
+                untyped_reference,
                 struct_ir_ty
                     .ptr_type(AddressSpace::Generic)
                     .ptr_type(AddressSpace::Generic),
-                &format!("{}_ptr_ptr", hir_struct.name(self.db)),
+                &format!("ref<{}>", hir_struct.name(self.db)),
             )
             .into_pointer_value();
 
-        // Load the actual memory location of the struct
-        let mem_ptr = self
-            .builder
-            .build_load(
-                struct_ptr_ptr,
-                &format!("{}_mem_ptr", hir_struct.name(self.db)),
-            )
-            .into_pointer_value();
+        // Construct a reference of the object
+        let reference = RuntimeReferenceValue::from_ptr(typed_reference, struct_ir_ty)
+            .expect("unable to construct mun reference type");
 
         // Store the struct value
-        self.builder.build_store(mem_ptr, struct_lit);
+        let struct_ptr = reference.get_data_ptr(&self.builder);
+        self.builder.build_store(struct_ptr, struct_lit);
 
-        struct_ptr_ptr.into()
+        reference.into()
     }
 
     /// Generates IR for a record literal, e.g. `Foo { a: 1.23, b: 4 }`
@@ -741,7 +733,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     Some(op) => self.gen_arith_bin_op_bool(lhs, rhs, op),
                     None => rhs,
                 };
-                let place = self.gen_place_expr(lhs_expr);
+                let place = self.gen_place_expr(lhs_expr)?;
                 self.builder.build_store(place, rhs);
                 Some(self.gen_empty())
             }
@@ -804,7 +796,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     Some(op) => self.gen_arith_bin_op_float(lhs, rhs, op),
                     None => rhs,
                 };
-                let place = self.gen_place_expr(lhs_expr);
+                let place = self.gen_place_expr(lhs_expr)?;
                 self.builder.build_store(place, rhs);
                 Some(self.gen_empty())
             }
@@ -840,7 +832,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     Some(op) => self.gen_arith_bin_op_int(lhs, rhs, op, signedness),
                     None => rhs,
                 };
-                let place = self.gen_place_expr(lhs_expr);
+                let place = self.gen_place_expr(lhs_expr)?;
                 self.builder.build_store(place, rhs);
                 Some(self.gen_empty())
             }
@@ -869,7 +861,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     ),
                     None => rhs,
                 };
-                let place = self.gen_place_expr(lhs_expr);
+                let place = self.gen_place_expr(lhs_expr)?;
                 self.builder.build_store(place, rhs);
                 Some(self.gen_empty())
             }
@@ -898,7 +890,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     ),
                     None => rhs,
                 };
-                let place = self.gen_place_expr(lhs_expr);
+                let place = self.gen_place_expr(lhs_expr)?;
                 self.builder.build_store(place, rhs);
                 Some(self.gen_empty())
             }
@@ -1048,18 +1040,19 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
     /// Given an expression generate code that results in a memory address that can be used for
     /// other place operations.
-    fn gen_place_expr(&mut self, expr: ExprId) -> PointerValue<'ink> {
+    fn gen_place_expr(&mut self, expr: ExprId) -> Option<PointerValue<'ink>> {
         let body = self.body.clone();
         match &body[expr] {
             Expr::Path(ref p) => {
                 let resolver =
                     mun_hir::resolver_for_expr(self.db.upcast(), self.body.owner(), expr);
-                self.gen_path_place_expr(p, expr, &resolver)
+                Some(self.gen_path_place_expr(p, expr, &resolver))
             }
             Expr::Field {
                 expr: receiver_expr,
                 name,
             } => self.gen_place_field(expr, *receiver_expr, name),
+            Expr::Index { base, index } => self.gen_place_index(expr, *base, *index),
             _ => unreachable!("invalid place expression"),
         }
     }
@@ -1069,8 +1062,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
     fn is_place_expr(&self, expr: ExprId) -> bool {
         let body = self.body.clone();
         match &body[expr] {
-            Expr::Path(..) => true,
+            Expr::Path(..) | Expr::Array(_) => true,
             Expr::Field { expr, .. } => self.is_place_expr(*expr),
+            Expr::Index { base, .. } => self.is_place_expr(*base),
             _ => false,
         }
     }
@@ -1375,7 +1369,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
         let field_ir_name = &format!("{}.{}", hir_struct_name, name);
         if self.is_place_expr(receiver_expr) {
-            let receiver_ptr = self.gen_place_expr(receiver_expr);
+            let receiver_ptr = self.gen_place_expr(receiver_expr)?;
             let receiver_ptr = self
                 .opt_deref_value(receiver_expr, receiver_ptr.into())
                 .into_pointer_value();
@@ -1384,7 +1378,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 .build_struct_gep(
                     receiver_ptr,
                     field_idx,
-                    &format!("{}.{}_ptr", hir_struct_name, name),
+                    &format!("{}->{}", hir_struct_name, name),
                 )
                 .unwrap_or_else(|_| {
                     panic!(
@@ -1416,7 +1410,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         _expr: ExprId,
         receiver_expr: ExprId,
         name: &Name,
-    ) -> PointerValue<'ink> {
+    ) -> Option<PointerValue<'ink>> {
         let hir_struct = self.infer[receiver_expr]
             .as_struct()
             .expect("expected a struct");
@@ -1428,22 +1422,161 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .expect("expected a struct field")
             .index(self.db);
 
-        let receiver_ptr = self.gen_place_expr(receiver_expr);
+        let receiver_ptr = self.gen_place_expr(receiver_expr)?;
         let receiver_ptr = self
             .opt_deref_value(receiver_expr, receiver_ptr.into())
             .into_pointer_value();
-        self.builder
-            .build_struct_gep(
-                receiver_ptr,
-                field_idx,
-                &format!("{}.{}_ptr", hir_struct_name, name),
-            )
-            .unwrap_or_else(|_| {
-                panic!(
-                    "could not get pointer to field `{}::{}` at index {}",
-                    hir_struct_name, name, field_idx
+        Some(
+            self.builder
+                .build_struct_gep(
+                    receiver_ptr,
+                    field_idx,
+                    &format!("{}->{}", hir_struct_name, name),
                 )
-            })
+                .unwrap_or_else(|_| {
+                    panic!(
+                        "could not get pointer to field `{}::{}` at index {}",
+                        hir_struct_name, name, field_idx
+                    )
+                }),
+        )
+    }
+
+    /// Generates code to construct an array literal at runtime. Returns `None` if the code
+    /// generation for the array literal never returns.
+    fn gen_array(&mut self, expr: ExprId, exprs: &[ExprId]) -> Option<RuntimeArrayValue<'ink>> {
+        let array_ty = &self.infer[expr];
+        let element_ty = array_ty
+            .as_array()
+            .expect("the type of an array literal expression must be an Array");
+
+        let new_array_fn_ptr = self.dispatch_table.gen_intrinsic_lookup(
+            self.external_globals.dispatch_table,
+            &self.builder,
+            &intrinsics::new_array,
+        );
+
+        let type_info_ptr = self.type_table.gen_type_info_lookup(
+            self.context,
+            &self.builder,
+            &self.hir_types.type_id(array_ty),
+            self.external_globals.type_table,
+        );
+
+        // HACK: We should be able to use pointers for built-in struct types like `TypeInfo` in intrinsics
+        let type_info_ptr = self.builder.build_bitcast(
+            type_info_ptr,
+            self.context.i8_type().ptr_type(AddressSpace::Generic),
+            "type_info_ptr_to_i8_ptr",
+        );
+
+        let allocator_handle = self.get_allocator_handle_ptr();
+
+        let length_value = self
+            .hir_types
+            .get_usize_type()
+            .const_int(exprs.len() as u64, false);
+
+        // An object pointer adds an extra layer of indirection to allow for hot reloading. To
+        // make it struct type agnostic, it is stored in a `*const *mut std::ffi::c_void`.
+        let untyped_array_ptr = self
+            .builder
+            .build_call(
+                new_array_fn_ptr,
+                &[
+                    type_info_ptr.into(),
+                    length_value.into(),
+                    allocator_handle.into(),
+                ],
+                "ref",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        // Cast the object pointer to the array struct type
+        let array_ty = self.hir_types.get_array_type(element_ty);
+        let array_ptr = self
+            .builder
+            .build_bitcast(
+                untyped_array_ptr,
+                array_ty
+                    .ptr_type(AddressSpace::Generic)
+                    .ptr_type(AddressSpace::Generic),
+                &format!("ref<[{}]>", element_ty.display(self.db)),
+            )
+            .into_pointer_value();
+
+        let array = RuntimeArrayValue::from_ptr(array_ptr, array_ty)
+            .expect("unable to convert pointer to typed reference");
+        let array_elements = array.get_elements(&self.builder);
+        for (idx, expr) in exprs.iter().enumerate() {
+            let element_ptr = unsafe {
+                self.builder.build_gep(
+                    array_elements,
+                    &[self.context.i64_type().const_int(idx as u64, false)],
+                    &format!("{}[{}]", array_elements.get_name().to_string_lossy(), idx),
+                )
+            };
+
+            let expr_value = self.gen_expr(*expr)?;
+            self.builder.build_store(element_ptr, expr_value);
+        }
+
+        // Once all values have been stored in the array, update the length of the array
+        let length = array.length_ty().const_int(exprs.len() as u64, false);
+        let array_length_ptr = array.get_length_ptr(&self.builder);
+        self.builder.build_store(array_length_ptr, length);
+
+        Some(array)
+    }
+
+    /// Generates an index into an array
+    fn gen_index(
+        &mut self,
+        expr: ExprId,
+        base: ExprId,
+        index: ExprId,
+    ) -> Option<BasicValueEnum<'ink>> {
+        let element_ptr = self.gen_place_index(expr, base, index)?;
+        Some(self.builder.build_load(element_ptr, ""))
+    }
+
+    /// Generates an index into an array
+    fn gen_place_index(
+        &mut self,
+        _expr: ExprId,
+        base: ExprId,
+        index: ExprId,
+    ) -> Option<PointerValue<'ink>> {
+        // Safety: place expression can only be generated if the base expression is an array.
+        let base = unsafe {
+            RuntimeArrayValue::from_ptr_unchecked(self.gen_expr(base)?.into_pointer_value())
+        };
+        let index = self.gen_expr(index)?.into_int_value();
+
+        let elements = base.get_elements(&self.builder);
+        Some(unsafe {
+            self.builder.build_gep(
+                elements,
+                &[index],
+                &format!("{}+index", elements.get_name().to_string_lossy()),
+            )
+        })
+    }
+
+    /// Returns a pointer to the allocator handle
+    fn get_allocator_handle_ptr(&self) -> PointerValue<'ink> {
+        self.builder
+            .build_load(
+                self.external_globals
+                    .alloc_handle
+                    .expect("no allocator handle was specified, this is required for structs")
+                    .as_pointer_value(),
+                "allocator_handle",
+            )
+            .into_pointer_value()
     }
 }
 
@@ -1453,9 +1586,9 @@ fn deref_heap_value<'ink>(
     builder: &Builder<'ink>,
     value: BasicValueEnum<'ink>,
 ) -> BasicValueEnum<'ink> {
-    let mem_ptr = builder
-        .build_load(value.into_pointer_value(), "mem_ptr")
-        .into_pointer_value();
+    // Safety: we can assume that the input is a RuntimeReferenceValue
+    let mem_ptr = unsafe { RuntimeReferenceValue::from_ptr_unchecked(value.into_pointer_value()) }
+        .get_data_ptr(builder);
 
     builder.build_load(mem_ptr, "deref")
 }

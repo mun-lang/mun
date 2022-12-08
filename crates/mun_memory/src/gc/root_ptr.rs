@@ -2,15 +2,21 @@ use crate::gc::{GcPtr, GcRuntime, HasIndirectionPtr};
 use std::sync::{Arc, Weak};
 
 /// A `GcPtr` that automatically roots and unroots its internal `GcPtr`.
-pub struct GcRootPtr<G: GcRuntime> {
+pub struct GcRootPtr<G>
+where
+    G: GcRuntime,
+{
     handle: GcPtr,
     runtime: Weak<G>,
 }
 
-impl<G: GcRuntime> Clone for GcRootPtr<G> {
+impl<G> Clone for GcRootPtr<G>
+where
+    G: GcRuntime,
+{
     fn clone(&self) -> Self {
         if let Some(runtime) = self.runtime.upgrade() {
-            runtime.root(self.handle)
+            runtime.as_ref().root(self.handle)
         }
         Self {
             handle: self.handle,
@@ -19,10 +25,13 @@ impl<G: GcRuntime> Clone for GcRootPtr<G> {
     }
 }
 
-impl<G: GcRuntime> GcRootPtr<G> {
+impl<G> GcRootPtr<G>
+where
+    G: GcRuntime,
+{
     /// Constructs a new GCRootHandle from a runtime and a handle
     pub fn new(runtime: &Arc<G>, handle: GcPtr) -> Self {
-        runtime.root(handle);
+        runtime.as_ref().root(handle);
         Self {
             handle,
             runtime: Arc::downgrade(runtime),
@@ -47,21 +56,30 @@ impl<G: GcRuntime> GcRootPtr<G> {
     }
 }
 
-impl<G: GcRuntime> From<GcRootPtr<G>> for GcPtr {
+impl<G> From<GcRootPtr<G>> for GcPtr
+where
+    G: GcRuntime,
+{
     fn from(ptr: GcRootPtr<G>) -> Self {
         ptr.handle
     }
 }
 
-impl<G: GcRuntime> Drop for GcRootPtr<G> {
+impl<G> Drop for GcRootPtr<G>
+where
+    G: GcRuntime,
+{
     fn drop(&mut self) {
         if let Some(runtime) = self.runtime.upgrade() {
-            runtime.unroot(self.handle)
+            runtime.as_ref().unroot(self.handle)
         }
     }
 }
 
-impl<G: GcRuntime> HasIndirectionPtr for GcRootPtr<G> {
+impl<G> HasIndirectionPtr for GcRootPtr<G>
+where
+    G: GcRuntime,
+{
     unsafe fn deref<R: Sized>(&self) -> *const R {
         self.handle.deref()
     }

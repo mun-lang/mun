@@ -1,29 +1,28 @@
 use crate::{
     arena::map::ArenaMap,
     arena::{Arena, Idx},
+    code_model::src::HasSource,
     code_model::DefWithBody,
+    diagnostics::DiagnosticSink,
+    ids::{DefWithBodyId, Lookup},
+    in_file::InFile,
+    name::AsName,
+    primitive_type::{PrimitiveFloat, PrimitiveInt},
+    type_ref::{LocalTypeRefId, TypeRef, TypeRefMap, TypeRefMapBuilder, TypeRefSourceMap},
     DefDatabase, FileId, HirDatabase, Name, Path,
 };
 
-//pub use mun_syntax::ast::PrefixOp as UnaryOp;
-use crate::code_model::src::HasSource;
-use crate::name::AsName;
-use crate::type_ref::{LocalTypeRefId, TypeRef, TypeRefBuilder, TypeRefMap, TypeRefSourceMap};
 use either::Either;
 pub use mun_syntax::ast::PrefixOp as UnaryOp;
-use mun_syntax::ast::{ArgListOwner, BinOp, LoopBodyOwner, NameOwner, TypeAscriptionOwner};
-use mun_syntax::{ast, AstNode, AstPtr};
+use mun_syntax::{
+    ast,
+    ast::{ArgListOwner, BinOp, LoopBodyOwner, NameOwner, TypeAscriptionOwner},
+    AstNode, AstPtr,
+};
 use rustc_hash::FxHashMap;
-use std::ops::Index;
-use std::sync::Arc;
+use std::{borrow::Cow, ops::Index, str::FromStr, sync::Arc};
 
 pub use self::scope::ExprScopes;
-use crate::diagnostics::DiagnosticSink;
-use crate::ids::{DefWithBodyId, Lookup};
-use crate::in_file::InFile;
-use crate::primitive_type::{PrimitiveFloat, PrimitiveInt};
-use std::borrow::Cow;
-use std::str::FromStr;
 
 pub(crate) mod scope;
 pub(crate) mod validator;
@@ -198,7 +197,7 @@ impl BodySourceMap {
     }
 
     pub fn field_syntax(&self, expr: ExprId, field: usize) -> RecordPtr {
-        self.field_map[&(expr, field)]
+        self.field_map[&(expr, field)].clone()
     }
 }
 
@@ -293,6 +292,10 @@ pub enum Expr {
         rhs: ExprId,
         op: Option<BinaryOp>,
     },
+    Index {
+        base: ExprId,
+        index: ExprId,
+    },
     Block {
         statements: Vec<Statement>,
         tail: Option<ExprId>,
@@ -319,6 +322,7 @@ pub enum Expr {
         expr: ExprId,
         name: Name,
     },
+    Array(Vec<ExprId>),
     Literal(Literal),
 }
 
@@ -432,6 +436,15 @@ impl Expr {
                     f(*expr);
                 }
             }
+            Expr::Index { base, index } => {
+                f(*base);
+                f(*index);
+            }
+            Expr::Array(exprs) => {
+                for expr in exprs {
+                    f(*expr);
+                }
+            }
         }
     }
 }
@@ -460,7 +473,7 @@ pub(crate) struct ExprCollector<'a> {
     params: Vec<(PatId, LocalTypeRefId)>,
     body_expr: Option<ExprId>,
     ret_type: Option<LocalTypeRefId>,
-    type_ref_builder: TypeRefBuilder,
+    type_ref_builder: TypeRefMapBuilder,
     current_file_id: FileId,
     diagnostics: Vec<ExprDiagnostic>,
 }
@@ -476,7 +489,7 @@ impl<'a> ExprCollector<'a> {
             params: Vec::new(),
             body_expr: None,
             ret_type: None,
-            type_ref_builder: TypeRefBuilder::default(),
+            type_ref_builder: TypeRefMap::builder(),
             current_file_id: file_id,
             diagnostics: Vec::new(),
         }
@@ -484,7 +497,7 @@ impl<'a> ExprCollector<'a> {
 
     fn alloc_pat(&mut self, pat: Pat, ptr: PatPtr) -> PatId {
         let id = self.pats.alloc(pat);
-        self.source_map.pat_map.insert(ptr, id);
+        self.source_map.pat_map.insert(ptr.clone(), id);
         self.source_map
             .pat_map_back
             .insert(id, InFile::new(self.current_file_id, ptr));
@@ -494,7 +507,7 @@ impl<'a> ExprCollector<'a> {
     fn alloc_expr(&mut self, expr: Expr, ptr: AstPtr<ast::Expr>) -> ExprId {
         let ptr = Either::Left(ptr);
         let id = self.exprs.alloc(expr);
-        self.source_map.expr_map.insert(ptr, id);
+        self.source_map.expr_map.insert(ptr.clone(), id);
         self.source_map
             .expr_map_back
             .insert(id, InFile::new(self.current_file_id, ptr));
@@ -504,7 +517,7 @@ impl<'a> ExprCollector<'a> {
     fn alloc_expr_field_shorthand(&mut self, expr: Expr, ptr: RecordPtr) -> ExprId {
         let ptr = Either::Right(ptr);
         let id = self.exprs.alloc(expr);
-        self.source_map.expr_map.insert(ptr, id);
+        self.source_map.expr_map.insert(ptr.clone(), id);
         self.source_map
             .expr_map_back
             .insert(id, InFile::new(self.current_file_id, ptr));
@@ -852,6 +865,15 @@ impl<'a> ExprCollector<'a> {
                     Vec::new()
                 };
                 self.alloc_expr(Expr::Call { callee, args }, syntax_ptr)
+            }
+            ast::ExprKind::ArrayExpr(e) => {
+                let exprs = e.exprs().map(|expr| self.collect_expr(expr)).collect();
+                self.alloc_expr(Expr::Array(exprs), syntax_ptr)
+            }
+            ast::ExprKind::IndexExpr(e) => {
+                let base = self.collect_expr_opt(e.base());
+                let index = self.collect_expr_opt(e.index());
+                self.alloc_expr(Expr::Index { base, index }, syntax_ptr)
             }
         }
     }

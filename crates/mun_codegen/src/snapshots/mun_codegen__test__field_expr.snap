@@ -1,5 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
+assertion_line: 1080
 expression: "\n    pub struct(value) Bar(f64, Foo);\n    pub struct(value) Foo { a: i32 };\n\n    fn bar_1(bar: Bar) -> Foo {\n        bar.1\n    }\n\n    fn foo_a(foo: Foo) -> i32 {\n        foo.a\n    }\n\n    pub fn bar_1_foo_a(bar: Bar) -> i32 {\n        foo_a(bar_1(bar))\n    }\n\n    pub fn main() -> i32 {\n        let a: Foo = Foo { a: 5 };\n        let b: Bar = Bar(1.23, a);\n        let aa_lhs = a.a + 2;\n        let aa_rhs = 2 + a.a;\n        aa_lhs + aa_rhs\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
@@ -38,8 +39,8 @@ body:
 
 define i32 @bar_1_foo_a_wrapper(%Bar** %0) {
 body:
-  %mem_ptr = load %Bar*, %Bar** %0, align 8
-  %deref = load %Bar, %Bar* %mem_ptr, align 8
+  %"->data" = load %Bar*, %Bar** %0, align 8
+  %deref = load %Bar, %Bar* %"->data", align 8
   %bar_1_foo_a = call i32 @bar_1_foo_a(%Bar %deref)
   ret i32 %bar_1_foo_a
 }

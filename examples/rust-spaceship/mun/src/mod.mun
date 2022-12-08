@@ -139,8 +139,12 @@ pub fn new_asteroid(position: Vec2, angle: f32, size: u8) -> Asteroid {
     }
 }
 
-pub fn update_asteroid(asteroid: Asteroid) {
-    move_object(asteroid.object);
+pub fn update_asteroids(asteroids: [Asteroid], num_asteroids: usize) {
+    let i = 0;
+    while(i < num_asteroids) {
+        move_object(asteroids[i].object);
+        i += 1;
+    }
 }
 
 pub struct Rocket {
@@ -157,13 +161,19 @@ pub fn new_rocket(position: Vec2, angle: f32) -> Rocket {
     }
 }
 
-pub fn update_rocket(rocket: Rocket) {
-    move_object(rocket.object);
+pub fn update_rockets(rockets: [Rocket], num_rockets: usize) {
+    let i = 0;
+    while(i < num_rockets) {
+        let rocket = rockets[i]
+        i += 1;
 
-    rocket.life_timer += 1;
+        move_object(rocket.object);
 
-    if rocket.life_timer >= rocket_life_time() {
-        rocket.need_to_destroy = true
+        rocket.life_timer += 1;
+
+        if rocket.life_timer >= rocket_life_time() {
+            rocket.need_to_destroy = true
+        }
     }
 }
 

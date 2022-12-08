@@ -1,9 +1,11 @@
+mod array;
 mod mark_sweep;
 mod ptr;
 mod root_ptr;
 
 use crate::r#type::Type;
 use std::marker::PhantomData;
+use std::ptr::NonNull;
 
 pub use mark_sweep::MarkSweep;
 pub use ptr::{GcPtr, HasIndirectionPtr, RawGcPtr};
@@ -23,13 +25,41 @@ pub trait TypeTrace: Send + Sync {
     fn trace(&self, obj: GcPtr) -> Self::Trace;
 }
 
+/// A trait used to iterate over array elements
+pub trait Array: Sized {
+    type Iterator: Iterator<Item = NonNull<u8>>;
+
+    /// Returns the raw GC ptr of the array
+    fn as_raw(&self) -> GcPtr;
+
+    /// Returns the type of an element
+    fn element_type(&self) -> Type;
+
+    /// Returns the length of the array
+    fn length(&self) -> usize;
+
+    /// Returns the capacity of the array
+    fn capacity(&self) -> usize;
+
+    /// Returns an iterator over the elements of the array
+    fn elements(&self) -> Self::Iterator;
+}
+
 /// An object that can be used to allocate and collect memory.
 pub trait GcRuntime: Send + Sync {
+    type Array: Array;
+
     /// Allocates an object of the given type returning a GcPtr
     fn alloc(&self, ty: &Type) -> GcPtr;
 
+    /// Allocates an array of the given type. `ty` must be an array type.
+    fn alloc_array(&self, ty: &Type, n: usize) -> Self::Array;
+
     /// Returns the type of the specified `obj`.
     fn ptr_type(&self, obj: GcPtr) -> Type;
+
+    /// Returns array information of the specified handle
+    fn array(&self, handle: GcPtr) -> Option<Self::Array>;
 
     /// Roots the specified `obj`, which keeps it and objects it references alive. Objects marked
     /// as root, must call `unroot` before they can be collected. An object can be rooted multiple

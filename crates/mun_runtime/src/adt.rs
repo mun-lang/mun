@@ -234,7 +234,7 @@ impl<'s> Marshal<'s> for StructRef<'s> {
             // Construct
             let src = ptr.cast::<u8>().as_ptr() as *const _;
             let dest = unsafe { gc_handle.deref_mut::<u8>() };
-            unsafe { ptr::copy_nonoverlapping(src, dest, type_info.layout().size()) };
+            unsafe { ptr::copy_nonoverlapping(src, dest, type_info.value_layout().size()) };
 
             gc_handle
         } else {
@@ -253,7 +253,7 @@ impl<'s> Marshal<'s> for StructRef<'s> {
                 ptr::copy_nonoverlapping(
                     value.into_raw().get_ptr(),
                     dest,
-                    type_info.layout().size(),
+                    type_info.value_layout().size(),
                 )
             };
         } else {

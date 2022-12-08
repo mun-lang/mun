@@ -4,8 +4,8 @@ use crate::{
     ids::{Lookup, StructId},
     name::AsName,
     name_resolution::Namespace,
-    ty::lower::LowerBatchResult,
-    type_ref::{LocalTypeRefId, TypeRefBuilder, TypeRefMap, TypeRefSourceMap},
+    ty::lower::LowerTyMap,
+    type_ref::{LocalTypeRefId, TypeRefMap, TypeRefSourceMap},
     DefDatabase, DiagnosticSink, FileId, HasVisibility, HirDatabase, Name, Ty, Visibility,
 };
 use mun_syntax::{
@@ -119,7 +119,7 @@ impl Struct {
         db.type_for_def(self.into(), Namespace::Types).0
     }
 
-    pub fn lower(self, db: &dyn HirDatabase) -> Arc<LowerBatchResult> {
+    pub fn lower(self, db: &dyn HirDatabase) -> Arc<LowerTyMap> {
         db.lower_struct(self)
     }
 
@@ -195,7 +195,7 @@ impl StructData {
             .map(|s| s.kind())
             .unwrap_or_default();
 
-        let mut type_ref_builder = TypeRefBuilder::default();
+        let mut type_ref_builder = TypeRefMap::builder();
         let (fields, kind) = match src.kind() {
             ast::StructKind::Record(r) => {
                 let fields = r

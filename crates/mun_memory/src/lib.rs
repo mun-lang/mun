@@ -1,7 +1,7 @@
 extern crate core;
 
 pub use r#type::{
-    Field, FieldData, HasStaticType, PointerType, StructType, StructTypeBuilder, Type,
+    ArrayType, Field, FieldData, HasStaticType, PointerType, StructType, StructTypeBuilder, Type,
     TypeCollectionStats, TypeKind,
 };
 
@@ -19,7 +19,7 @@ use mun_abi as abi;
 use thiserror::Error;
 
 pub mod prelude {
-    pub use crate::diff::{diff, Diff, FieldDiff, FieldEditKind};
+    pub use crate::diff::{compute_struct_diff, FieldDiff, FieldEditKind, StructDiff};
     pub use crate::mapping::{Action, FieldMapping};
     pub use crate::r#type::{Field, PointerType, StructType, Type, TypeKind};
 }

@@ -18,6 +18,7 @@ pub struct TypeId {
 pub enum TypeIdData {
     Concrete(Guid),
     Pointer(PointerTypeId),
+    Array(Arc<TypeId>),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
@@ -86,7 +87,7 @@ impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *const T {
             Arc::new(TypeId {
                 name: format!("*const {}", &element_type_id.name),
                 data: TypeIdData::Pointer(PointerTypeId {
-                    pointee: T::type_id().clone(),
+                    pointee: element_type_id,
                     mutable: false,
                 }),
             })
@@ -111,7 +112,7 @@ impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *mut T {
             Arc::new(TypeId {
                 name: format!("*mut {}", &element_type_id.name),
                 data: TypeIdData::Pointer(PointerTypeId {
-                    pointee: T::type_id().clone(),
+                    pointee: element_type_id,
                     mutable: true,
                 }),
             })

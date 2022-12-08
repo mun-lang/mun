@@ -183,6 +183,16 @@ typedef struct MunPointerTypeId {
 } MunPointerTypeId;
 
 /**
+ * Represents an array of a specific type.
+ */
+typedef struct MunArrayTypeId {
+    /**
+     * The element type of the array
+     */
+    const union MunTypeId *element;
+} MunArrayTypeId;
+
+/**
  * Represents a unique identifier for types. The runtime can use this to lookup the corresponding
  * [`TypeInfo`]. A [`TypeId`] is a key for a [`TypeInfo`].
  *
@@ -201,6 +211,10 @@ enum MunTypeId_Tag
      * Represents a pointer to a type
      */
     MUN_TYPE_ID_POINTER,
+    /**
+     * Represents an array of a specific type
+     */
+    MUN_TYPE_ID_ARRAY,
 };
 #ifndef __cplusplus
 typedef uint8_t MunTypeId_Tag;
@@ -215,6 +229,10 @@ typedef union MunTypeId {
     struct {
         MunTypeId_Tag pointer_tag;
         struct MunPointerTypeId pointer;
+    };
+    struct {
+        MunTypeId_Tag array_tag;
+        struct MunArrayTypeId array;
     };
 } MunTypeId;
 
@@ -255,6 +273,17 @@ typedef struct MunStructInfo {
 } MunStructInfo;
 
 /**
+ * Additional information of an array [`Type`].
+ *
+ * Ownership of this type lies with the [`Type`] that created this instance. As long as the
+ * original type is not released through [`mun_type_release`] this type stays alive.
+ */
+typedef struct MunArrayInfo {
+    const void *_0;
+    const void *_1;
+} MunArrayInfo;
+
+/**
  * An enum that defines the kind of type.
  */
 enum MunTypeKind_Tag
@@ -265,6 +294,7 @@ enum MunTypeKind_Tag
     MUN_TYPE_KIND_PRIMITIVE,
     MUN_TYPE_KIND_POINTER,
     MUN_TYPE_KIND_STRUCT,
+    MUN_TYPE_KIND_ARRAY,
 };
 #ifndef __cplusplus
 typedef uint8_t MunTypeKind_Tag;
@@ -283,6 +313,10 @@ typedef union MunTypeKind {
     struct {
         MunTypeKind_Tag struct_tag;
         struct MunStructInfo struct_;
+    };
+    struct {
+        MunTypeKind_Tag array_tag;
+        struct MunArrayInfo array;
     };
 } MunTypeKind;
 
@@ -653,6 +687,16 @@ struct MunErrorHandle mun_type_pointer_type(struct MunType ty,
                                             struct MunType *pointer_ty);
 
 /**
+ * Returns a new [`Type`] that is an array of the specified type.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `Type`s have been deallocated in a
+ * previous call to [`mun_type_release`].
+ */
+struct MunErrorHandle mun_type_array_type(struct MunType ty, struct MunType *array_ty);
+
+/**
  * Returns information about what kind of type this is.
  *
  * # Safety
@@ -671,6 +715,39 @@ struct MunErrorHandle mun_type_kind(struct MunType ty, union MunTypeKind *kind);
  * by a previous call to [`mun_types_destroy`].
  */
 struct MunErrorHandle mun_types_destroy(struct MunTypes types);
+
+/**
+ * Returns the type of the elements stored in this type. Ownership is transferred if this function
+ * returns successfully.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `ArrayInfo` has been deallocated
+ * by a previous call to [`mun_type_release`].
+ */
+struct MunErrorHandle mun_array_type_element_type(struct MunArrayInfo ty,
+                                                  struct MunType *element_ty);
+
+/**
+ * Returns the type that this instance points to. Ownership is transferred if this function returns
+ * successfully.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `PointerType` has been deallocated
+ * by a previous call to [`mun_type_release`].
+ */
+struct MunErrorHandle mun_pointer_type_pointee(struct MunPointerInfo ty, struct MunType *pointee);
+
+/**
+ * Returns true if this is a mutable pointer.
+ *
+ * # Safety
+ *
+ * This function results in undefined behavior if the passed in `PointerType` has been deallocated
+ * by a previous call to [`mun_type_release`].
+ */
+struct MunErrorHandle mun_pointer_is_mutable(struct MunPointerInfo ty, bool *mutable_);
 
 /**
  * Returns a [`Type`] that represents the specified primitive type.

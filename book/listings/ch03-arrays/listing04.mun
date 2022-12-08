@@ -1,0 +1,19 @@
+pub fn generate() -> [u64] {
+    [5, 4, 3, 2, 1]
+}
+
+pub fn add_one(array: [u64], len: usize) -> [u64] {
+    let idx = 0;
+    loop {
+        array[idx] += 1;
+        idx += 1;
+
+        if idx >= len {
+            break array
+        }
+    }
+}
+
+fn main() {
+    add_one(generate(), 5);
+}

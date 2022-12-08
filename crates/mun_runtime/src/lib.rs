@@ -8,6 +8,7 @@ mod assembly;
 #[macro_use]
 mod garbage_collector;
 mod adt;
+mod array;
 mod dispatch_table;
 mod function_info;
 mod marshal;
@@ -19,7 +20,7 @@ use garbage_collector::GarbageCollector;
 use log::{debug, error, info};
 use mun_abi as abi;
 use mun_memory::{
-    gc::{self, GcRuntime},
+    gc::{self, Array, GcRuntime},
     type_table::TypeTable,
 };
 use mun_project::LOCKFILE_NAME;
@@ -29,8 +30,10 @@ use std::{
     ffi,
     ffi::c_void,
     fmt::{Debug, Display, Formatter},
-    io, mem,
+    io,
+    mem::ManuallyDrop,
     path::{Path, PathBuf},
+    ptr::NonNull,
     sync::{
         mpsc::{channel, Receiver},
         Arc,
@@ -39,6 +42,7 @@ use std::{
 
 pub use crate::{
     adt::{RootedStruct, StructRef},
+    array::{ArrayRef, RootedArray},
     assembly::Assembly,
     function_info::{
         FunctionDefinition, FunctionPrototype, FunctionSignature, IntoFunctionDefinition,
@@ -47,6 +51,7 @@ pub use crate::{
     reflection::{ArgumentReflection, ReturnTypeReflection},
 };
 // Re-export some useful types so crates dont have to depend on mun_memory as well.
+use crate::array::RawArray;
 pub use mun_memory::{Field, FieldData, HasStaticType, PointerType, StructType, Type};
 
 /// Options for the construction of a [`Runtime`].
@@ -84,22 +89,36 @@ extern "C" fn new(
 ) -> *const *mut ffi::c_void {
     // SAFETY: The runtime always constructs and uses `Arc<TypeInfo>::into_raw` to set the type
     // type handles in the type LUT.
-    let type_info = unsafe { get_type_info(type_handle) };
+    let type_info = ManuallyDrop::new(unsafe { get_type_info(type_handle) });
 
     // Safety: `new` is only called from within Mun assemblies' core logic, so we are guaranteed
     // that the `Runtime` and its `GarbageCollector` still exist if this function is called, and
     // will continue to do so for the duration of this function.
-    let allocator = unsafe { get_allocator(alloc_handle) };
+    let allocator = ManuallyDrop::new(unsafe { get_allocator(alloc_handle) });
+
     // Safety: the Mun Compiler guarantees that `new` is never called with `ptr::null()`.
-    let handle = allocator.alloc(&type_info);
-
-    // Prevent destruction of the allocator
-    mem::forget(allocator);
-
-    // Prevent destruction of the type info
-    mem::forget(type_info);
+    let handle = allocator.as_ref().alloc(&type_info);
 
     handle.into()
+}
+
+extern "C" fn new_array(
+    type_handle: *const ffi::c_void,
+    length: usize,
+    alloc_handle: *mut ffi::c_void,
+) -> *const *mut ffi::c_void {
+    // SAFETY: The runtime always constructs and uses `Arc<TypeInfo>::into_raw` to set the type
+    // type handles in the type LUT.
+    let type_info = ManuallyDrop::new(unsafe { get_type_info(type_handle) });
+
+    // Safety: `new` is only called from within Mun assemblies' core logic, so we are guaranteed
+    // that the `Runtime` and its `GarbageCollector` still exist if this function is called, and
+    // will continue to do so for the duration of this function.
+    let allocator = ManuallyDrop::new(unsafe { get_allocator(alloc_handle) });
+
+    let handle = allocator.as_ref().alloc_array(&type_info, length);
+
+    handle.as_raw().into()
 }
 
 /// A builder for the [`Runtime`].
@@ -201,6 +220,16 @@ impl Runtime {
         options.user_functions.push(IntoFunctionDefinition::into(
             new as extern "C" fn(*const ffi::c_void, *mut ffi::c_void) -> *const *mut ffi::c_void,
             "new",
+        ));
+
+        options.user_functions.push(IntoFunctionDefinition::into(
+            new_array
+                as extern "C" fn(
+                    *const ffi::c_void,
+                    usize,
+                    *mut ffi::c_void,
+                ) -> *const *mut ffi::c_void,
+            "new_array",
         ));
 
         options.user_functions.into_iter().for_each(|fn_def| {
@@ -446,7 +475,7 @@ impl Runtime {
     ///
     /// We cannot return an `Arc` here, because the lifetime of data contained in `GarbageCollector`
     /// is dependent on the `Runtime`.
-    pub fn gc(&self) -> &dyn GcRuntime {
+    pub fn gc(&self) -> &GarbageCollector {
         self.gc.as_ref()
     }
 
@@ -459,6 +488,107 @@ impl Runtime {
     /// Returns statistics about the garbage collector.
     pub fn gc_stats(&self) -> gc::Stats {
         self.gc.stats()
+    }
+
+    /// Constructs an array with a predefined element type.
+    pub fn construct_typed_array<
+        't,
+        T: 't + Marshal<'t> + ArgumentReflection,
+        I: IntoIterator<Item = T>,
+    >(
+        &'t self,
+        element_type: &Type,
+        iter: I,
+    ) -> ArrayRef<'t, T>
+    where
+        I::IntoIter: ExactSizeIterator,
+    {
+        let iter = iter.into_iter();
+        let array_type = element_type.array_type();
+        let array_capacity = iter
+            .size_hint()
+            .1
+            .expect("iterator doesn't return upper bound");
+        let mut array_handle = self.gc.alloc_array(&array_type, array_capacity);
+
+        let mut element_ptr = array_handle.data().as_ptr();
+        let element_stride = array_handle.element_stride();
+        let mut size = 0;
+        for (idx, element) in iter.enumerate() {
+            debug_assert!(
+                idx < array_capacity,
+                "looks like the size_hint was not properly implemented"
+            );
+            assert_eq!(&element.type_info(self), element_type);
+
+            // Safety: the element_ptr came from NonNull and is only moved forward.
+            T::marshal_to_ptr(
+                element,
+                unsafe { NonNull::new_unchecked(element_ptr).cast() },
+                element_type,
+            );
+
+            // Safety: we trust the element stride
+            element_ptr = unsafe { element_ptr.add(element_stride) };
+
+            // Count the number of elements written
+            size = idx + 1;
+        }
+
+        // Safety: we just initialized all the elements, so this operation is safe.
+        unsafe {
+            array_handle.set_length(size);
+        }
+
+        ArrayRef::new(RawArray(array_handle.as_raw()), self)
+    }
+
+    /// Constructs an array from an iterator
+    pub fn construct_array<'t, T: 't + Marshal<'t> + HasStaticType, I: IntoIterator<Item = T>>(
+        &'t self,
+        iter: I,
+    ) -> ArrayRef<'t, T>
+    where
+        I::IntoIter: ExactSizeIterator,
+    {
+        let iter = iter.into_iter();
+        let element_type = T::type_info();
+        let array_type = element_type.array_type();
+        let array_capacity = iter
+            .size_hint()
+            .1
+            .expect("iterator doesn't return upper bound");
+        let mut array_handle = self.gc.alloc_array(&array_type, array_capacity);
+
+        let mut element_ptr = array_handle.data().as_ptr();
+        let element_stride = array_handle.element_stride();
+        let mut size = 0;
+        for (idx, element) in iter.enumerate() {
+            debug_assert!(
+                idx < array_capacity,
+                "looks like the size_hint was not properly implemented"
+            );
+
+            // Safety: the element_ptr came from NonNull and is only moved forward.
+            T::marshal_to_ptr(
+                element,
+                unsafe { NonNull::new_unchecked(element_ptr).cast() },
+                element_type,
+            );
+
+            // Safety: we trust the element stride
+            element_ptr = unsafe { element_ptr.add(element_stride) };
+
+            // Count the number of elements written
+            size = idx + 1;
+        }
+
+        // Safety: we just initialized all the elements, so this operation is safe.
+        unsafe {
+            array_handle.set_length(size);
+        }
+
+        ArrayRef::new(RawArray(array_handle.as_raw()), self)
     }
 }
 
@@ -571,7 +701,7 @@ seq_macro::seq!(I in 0..N {
             // Ensure the number of arguments match
             #[allow(clippy::len_zero)]
             if N != arg_types.len() {
-                return Err(format!("Invalid return type. Expected: {}. Found: {}", N, arg_types.len()))
+                return Err(format!("Invalid argument count. Expected {} arguments, got {}", arg_types.len(), N))
             }
 
             #(

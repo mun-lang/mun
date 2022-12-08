@@ -7,7 +7,8 @@ impl<'a> InferenceResultBuilder<'a> {
     pub(super) fn check_place_expression(&mut self, resolver: &Resolver, expr: ExprId) -> bool {
         match &self.body[expr] {
             Expr::Path(p) => self.check_place_path(resolver, p),
-            Expr::Field { .. } => true,
+            Expr::Index { base, .. } => self.check_place_expression(resolver, *base),
+            Expr::Field { .. } | Expr::Array(_) => true,
             _ => false,
         }
     }

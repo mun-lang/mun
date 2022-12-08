@@ -38,7 +38,7 @@ impl<'a> StructValidator<'a> {
 
         let field_types = public_fields.map(|(_, field_data)| {
             let type_ref = field_data.type_ref;
-            let ty = Ty::from_hir(self.db, &resolver, struct_data.type_ref_map(), type_ref).ty;
+            let (ty, _) = Ty::from_hir(self.db, &resolver, struct_data.type_ref_map(), type_ref);
             (ty, type_ref)
         });
 

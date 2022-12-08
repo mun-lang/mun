@@ -1,11 +1,11 @@
 use super::{
-    AsValue, ConcreteValueType, IrTypeContext, IrValueContext, PointerValueType, SizedValueType,
-    Value, ValueType,
+    AsValue, ConcreteValueType, IrTypeContext, IrValueContext, SizedValueType, Value, ValueType,
 };
-use crate::value::AddressableType;
+use crate::value::{
+    AddressableType, AddressableTypeValue, AsBytesAndPtrs, AsValueInto, BytesOrPtr, HasConstValue,
+};
 use inkwell::{
     module::Linkage,
-    types::PointerType,
     values::{BasicValueEnum, UnnamedAddress},
     AddressSpace,
 };
@@ -46,29 +46,6 @@ impl<'ink, T: ?Sized> Global<'ink, T> {
             value,
             data: Default::default(),
         }
-    }
-}
-
-impl<'ink, T: ?Sized> ConcreteValueType<'ink> for *const Global<'ink, T> {
-    type Value = inkwell::values::PointerValue<'ink>;
-}
-
-impl<'ink, T: PointerValueType<'ink> + ?Sized> SizedValueType<'ink> for *const Global<'ink, T> {
-    fn get_ir_type(context: &IrTypeContext<'ink, '_>) -> <Self::Value as ValueType<'ink>>::Type {
-        T::get_ptr_type(context, None)
-    }
-}
-
-impl<'ink, T: PointerValueType<'ink> + ?Sized> PointerValueType<'ink> for *const Global<'ink, T> {
-    fn get_ptr_type(
-        context: &IrTypeContext<'ink, '_>,
-        address_space: Option<AddressSpace>,
-    ) -> PointerType<'ink> {
-        debug_assert!(
-            address_space.is_none() || address_space == Some(AddressSpace::Generic),
-            "Globals can only live in generic address space"
-        );
-        T::get_ptr_type(context, None)
     }
 }
 
@@ -148,5 +125,50 @@ where
 impl<'ink, T: ?Sized> From<Global<'ink, T>> for inkwell::values::PointerValue<'ink> {
     fn from(global: Global<'ink, T>) -> Self {
         global.value.as_pointer_value()
+    }
+}
+
+impl<'ink, T> ConcreteValueType<'ink> for Global<'ink, T> {
+    type Value = inkwell::values::PointerValue<'ink>;
+}
+
+impl<'ink, T: SizedValueType<'ink>> SizedValueType<'ink> for Global<'ink, T>
+where
+    <<T as ConcreteValueType<'ink>>::Value as ValueType<'ink>>::Type: AddressableTypeValue<'ink>,
+{
+    fn get_ir_type(
+        context: &IrTypeContext<'ink, '_>,
+    ) -> <<Self as ConcreteValueType<'ink>>::Value as ValueType<'ink>>::Type {
+        <T as SizedValueType>::get_ir_type(context).ptr_type(AddressSpace::Generic)
+    }
+}
+
+impl<'ink, T> HasConstValue for Global<'ink, T> {
+    fn has_const_value() -> bool {
+        false
+    }
+}
+
+impl<'ink, T> AsBytesAndPtrs<'ink> for Global<'ink, T> {
+    fn as_bytes_and_ptrs(&self, _context: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
+        vec![BytesOrPtr::UntypedPtr(self.value.as_pointer_value())]
+    }
+}
+
+impl<'ink, T> AsValueInto<'ink, BasicValueEnum<'ink>> for Global<'ink, T> {
+    fn as_value_into(
+        &self,
+        _context: &IrValueContext<'ink, '_, '_>,
+    ) -> inkwell::values::BasicValueEnum<'ink> {
+        self.value.as_pointer_value().into()
+    }
+}
+
+impl<'ink, T> AsValueInto<'ink, inkwell::values::PointerValue<'ink>> for Global<'ink, T> {
+    fn as_value_into(
+        &self,
+        _context: &IrValueContext<'ink, '_, '_>,
+    ) -> inkwell::values::PointerValue<'ink> {
+        self.value.as_pointer_value()
     }
 }

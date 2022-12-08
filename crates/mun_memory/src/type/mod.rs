@@ -11,6 +11,7 @@
 
 pub mod ffi;
 
+use std::ffi::c_void;
 use std::{
     alloc::Layout,
     borrow::Cow,
@@ -51,6 +52,16 @@ pub struct TypeCollectionStats {
     pub remaining_types: usize,
 }
 
+/// A status stored with every [`TypeData`] which stores the current usage of the `TypeData`.
+/// Initially, types are marked as `Initializing` which indicates that they should not 'yet'
+/// participate in garbage-collection.
+#[derive(Eq, PartialEq)]
+enum Mark {
+    Used,
+    Unused,
+    Initializing,
+}
+
 impl TypeDataStore {
     /// Called to collect types that are no longer externally referenced.
     pub fn collect_garbage(&self) -> TypeCollectionStats {
@@ -59,8 +70,16 @@ impl TypeDataStore {
         // Reset all mark flags.
         let mut queue = VecDeque::new();
         for ty in lock.iter_mut() {
-            ty.marked = ty.external_references.load(Ordering::Acquire) > 0;
-            queue.push_back(unsafe { NonNull::new_unchecked(Box::as_mut(ty) as *mut TypeData) });
+            if ty.mark != Mark::Initializing {
+                if ty.external_references.load(Ordering::Acquire) > 0 {
+                    ty.mark = Mark::Used;
+                    queue.push_back(unsafe {
+                        NonNull::new_unchecked(Box::as_mut(ty) as *mut TypeData)
+                    });
+                } else {
+                    ty.mark = Mark::Unused
+                };
+            }
         }
 
         // Trace all types
@@ -71,8 +90,8 @@ impl TypeDataStore {
                     for field in s.fields.iter() {
                         let mut field_ty = field.type_info;
                         let field_ty = unsafe { field_ty.as_mut() };
-                        if !field_ty.marked {
-                            field_ty.marked = true;
+                        if field_ty.mark == Mark::Unused {
+                            field_ty.mark = Mark::Used;
                             queue.push_back(field.type_info);
                         }
                     }
@@ -80,9 +99,17 @@ impl TypeDataStore {
                 TypeDataKind::Pointer(p) => {
                     let mut pointee = p.pointee;
                     let pointee = unsafe { pointee.as_mut() };
-                    if !pointee.marked {
-                        pointee.marked = true;
+                    if pointee.mark == Mark::Unused {
+                        pointee.mark = Mark::Used;
                         queue.push_back(p.pointee);
+                    }
+                }
+                TypeDataKind::Array(a) => {
+                    let mut element_ty = a.element_ty;
+                    let element_ty = unsafe { element_ty.as_mut() };
+                    if element_ty.mark == Mark::Unused {
+                        element_ty.mark = Mark::Used;
+                        queue.push_back(a.element_ty);
                     }
                 }
                 TypeDataKind::Primitive(_) | TypeDataKind::Uninitialized => {}
@@ -91,12 +118,16 @@ impl TypeDataStore {
             // Iterate over the indirections. This is an interesting case safety wise, because at
             // this very moment another thread might be accessing this as well. However this is safe
             // because we use `allocate_into` to allocate the values.
-            for indirection in [&ty.mutable_pointer_type, &ty.immutable_pointer_type] {
+            for indirection in [
+                &ty.mutable_pointer_type,
+                &ty.immutable_pointer_type,
+                &ty.array_type,
+            ] {
                 let read_lock = indirection.read();
                 if let &Some(mut indirection_ref) = read_lock.deref() {
                     let reference = unsafe { indirection_ref.as_mut() };
-                    if !reference.marked {
-                        reference.marked = true;
+                    if reference.mark == Mark::Unused {
+                        reference.mark = Mark::Used;
                         queue.push_back(indirection_ref);
                     }
                 }
@@ -108,7 +139,7 @@ impl TypeDataStore {
         let mut index = 0;
         while index < lock.len() {
             let ty = &(&*lock)[index];
-            if !ty.marked {
+            if ty.mark == Mark::Unused {
                 lock.swap_remove_back(index);
                 types_removed += 1;
             } else {
@@ -148,6 +179,8 @@ impl TypeDataStore {
             definition_and_type.push((type_def, ty));
         }
 
+        std::mem::drop(entries);
+
         // Next, initialize the types.
         for (type_def, mut ty) in definition_and_type {
             // Safety: we are modifying the inner data of the type here. At this point this is safe
@@ -159,6 +192,11 @@ impl TypeDataStore {
                 }
             };
             inner_ty.data = type_data;
+
+            // Mark the entry as used. This should be safe because the `type_table` also still holds
+            // a strong reference to the type. After that type is potentially dropped (after this
+            // function returns) all values has already been initialized.
+            inner_ty.mark = Mark::Used;
         }
 
         Ok((type_table, types))
@@ -178,7 +216,8 @@ impl TypeDataStore {
             external_references: AtomicUsize::new(0),
             immutable_pointer_type: Default::default(),
             mutable_pointer_type: Default::default(),
-            marked: false,
+            array_type: Default::default(),
+            mark: Mark::Initializing,
         }));
 
         // Safety: get a TypeInner with a 'static lifetime. This is safe because of the nature of
@@ -194,26 +233,21 @@ impl TypeDataStore {
         unsafe { Type::new_unchecked(entry, self.clone()) }
     }
 
-    /// Special case allocation method that acquires the creation lock and with the lock held,
-    /// writes the result to a location in memory. This ensure that the garbage collector sees
-    /// both the allocation and the store as one atomic operation. This is required when allocating
-    /// indirections because if the two operations would be seperate the GC might deallocate the
-    /// type before the type is assigned.
-    fn allocate_into(
+    /// Allocates a new type instance
+    pub fn allocate(
         self: &Arc<Self>,
         name: impl Into<String>,
         layout: Layout,
         data: TypeDataKind,
-        into: &mut NonNull<TypeData>,
     ) -> Type {
         let mut entries = self.types.lock();
-        let ty = self.allocate_inner(name, layout, data, &mut entries);
-        *into = ty.inner;
+        let mut ty = self.allocate_inner(name, layout, data, &mut entries);
+        unsafe { ty.inner.as_mut() }.mark = Mark::Used;
         ty
     }
 
-    /// Allocates a new type instance
-    pub fn allocate(
+    /// Allocates a new type instance but keeps it in an uninitialized state.
+    pub fn allocate_uninitialized(
         self: &Arc<Self>,
         name: impl Into<String>,
         layout: Layout,
@@ -270,7 +304,12 @@ impl Debug for Type {
 
 impl Display for Type {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        std::fmt::Display::fmt(&self.name(), f)
+        match self.kind() {
+            TypeKind::Primitive(_) => std::fmt::Display::fmt(self.name(), f),
+            TypeKind::Struct(s) => std::fmt::Display::fmt(&s, f),
+            TypeKind::Pointer(p) => std::fmt::Display::fmt(&p, f),
+            TypeKind::Array(a) => std::fmt::Display::fmt(&a, f),
+        }
     }
 }
 
@@ -332,8 +371,11 @@ pub struct TypeData {
     /// The type of a mutable pointer to this type
     mutable_pointer_type: RwLock<Option<NonNull<TypeData>>>,
 
-    /// True if this type has been marked as alive (only valid for GC).
-    marked: bool,
+    /// The type of an array of this type
+    array_type: RwLock<Option<NonNull<TypeData>>>,
+
+    /// The state of instance with regards to its usage.
+    mark: Mark,
 }
 
 impl TypeData {
@@ -357,31 +399,87 @@ impl TypeData {
             }
         }
 
-        let mut write_lock = cache_key.write();
-
-        // Recheck if another thread acquired the write lock in the mean time
-        if let Some(ty) = write_lock.deref() {
-            return Type {
-                inner: *ty,
-                store: store.clone(),
-            };
-        }
-
-        // Otherwise create the type and store it
-        let name = format!("*{} {}", if mutable { "mut" } else { "const" }, self.name);
-
-        *write_lock = Some(NonNull::dangling());
-        let ty = store.allocate_into(
-            name,
+        // No type is currently stored, allocate a new one.
+        let mut ty = store.allocate_uninitialized(
+            format!("*{} {}", if mutable { "mut" } else { "const" }, self.name),
             Layout::new::<*const std::ffi::c_void>(),
             PointerData {
                 pointee: self.into(),
                 mutable,
             }
             .into(),
-            // Safe because we ensure that write_lock is Some above.
-            unsafe { write_lock.as_mut().unwrap_unchecked() },
         );
+
+        // Acquire the write lock
+        let mut write_lock = cache_key.write();
+
+        // Get the reference to the inner data, we need this to mark it properly.
+        let inner = unsafe { ty.inner.as_mut() };
+
+        // Recheck if another thread acquired the write lock in the mean time
+        if let Some(element_ty) = write_lock.deref() {
+            inner.mark = Mark::Used;
+            return Type {
+                inner: *element_ty,
+                store: store.clone(),
+            };
+        }
+
+        // We store the reference to the array type in the current type. After which we mark the
+        // type as used. This ensures that the garbage collector never removes the type from under
+        // our noses.
+        *write_lock = Some(ty.inner);
+        inner.mark = Mark::Used;
+
+        ty
+    }
+
+    /// Returns the type that represents a pointer to this type
+    fn array_type(&self, store: &Arc<TypeDataStore>) -> Type {
+        let cache_key = &self.array_type;
+
+        {
+            let read_lock = cache_key.read();
+
+            // Fast path, the type already exists, return it immediately.
+            if let Some(ty) = read_lock.deref().as_ref() {
+                return Type {
+                    inner: *ty,
+                    store: store.clone(),
+                };
+            }
+        }
+
+        // No type is currently stored, allocate a new one.
+        let mut ty = store.allocate_uninitialized(
+            format!("[{}]", self.name),
+            Layout::new::<*const std::ffi::c_void>(),
+            ArrayData {
+                element_ty: self.into(),
+            }
+            .into(),
+        );
+
+        // Acquire the write lock
+        let mut write_lock = cache_key.write();
+
+        // Get the reference to the inner data, we need this to mark it properly.
+        let inner = unsafe { ty.inner.as_mut() };
+
+        // Recheck if another thread acquired the write lock in the mean time
+        if let Some(element_ty) = write_lock.deref() {
+            inner.mark = Mark::Used;
+            return Type {
+                inner: *element_ty,
+                store: store.clone(),
+            };
+        }
+
+        // We store the reference to the array type in the current type. After which we mark the
+        // type as used. This ensures that the garbage collector never removes the type from under
+        // our noses.
+        *write_lock = Some(ty.inner);
+        inner.mark = Mark::Used;
 
         ty
     }
@@ -407,6 +505,8 @@ enum TypeDataKind {
     Struct(StructData),
     /// A pointer to another type
     Pointer(PointerData),
+    /// An array
+    Array(ArrayData),
     /// Indicates that the type has been allocated but it has not yet been initialized,
     /// this indicates that it still needs to be properly initialized.
     Uninitialized,
@@ -420,6 +520,8 @@ pub enum TypeKind<'t> {
     Struct(StructType<'t>),
     /// A pointer to another type
     Pointer(PointerType<'t>),
+    /// An array of values
+    Array(ArrayType<'t>),
 }
 
 /// A linked version of [`mun_abi::StructInfo`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
@@ -472,6 +574,19 @@ impl<'t> StructType<'t> {
             inner: self.inner,
             store: self.store,
         }
+    }
+}
+
+impl<'t> Display for StructType<'t> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_fmt(format_args!(
+            "struct({}) {{",
+            if self.is_gc_struct() { "gc" } else { "value" },
+        ))?;
+        self.fields().iter().try_for_each(|field| {
+            f.write_fmt(format_args!("{}: {}, ", field.name(), field.ty()))
+        })?;
+        f.write_str("}")
     }
 }
 
@@ -573,21 +688,13 @@ impl<'t> PointerType<'t> {
     }
 }
 
-impl From<StructData> for TypeDataKind {
-    fn from(s: StructData) -> Self {
-        TypeDataKind::Struct(s)
-    }
-}
-
-impl From<PointerData> for TypeDataKind {
-    fn from(p: PointerData) -> Self {
-        TypeDataKind::Pointer(p)
-    }
-}
-
-impl Hash for TypeData {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        Hash::hash(&self.data, state);
+impl<'t> Display for PointerType<'t> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_fmt(format_args!(
+            "*{} {}",
+            if self.is_mutable() { "mut" } else { "const" },
+            self.pointee()
+        ))
     }
 }
 
@@ -604,6 +711,59 @@ impl PartialEq for StructData {
 }
 impl Eq for StructData {}
 
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+struct ArrayData {
+    pub element_ty: NonNull<TypeData>,
+}
+
+/// Reference information of an array
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ArrayType<'t> {
+    inner: &'t ArrayData,
+    store: &'t Arc<TypeDataStore>,
+}
+
+impl<'t> ArrayType<'t> {
+    /// Returns the type of elements this array stores
+    pub fn element_type(&self) -> Type {
+        // Safety: this operation is safe due to the lifetime constraints on this type
+        unsafe { Type::new_unchecked(self.inner.element_ty, self.store.clone()) }
+    }
+}
+
+impl<'t> Display for ArrayType<'t> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str("[")?;
+        std::fmt::Display::fmt(&self.element_type(), f)?;
+        f.write_str("]")
+    }
+}
+
+impl From<StructData> for TypeDataKind {
+    fn from(s: StructData) -> Self {
+        TypeDataKind::Struct(s)
+    }
+}
+
+impl From<PointerData> for TypeDataKind {
+    fn from(p: PointerData) -> Self {
+        TypeDataKind::Pointer(p)
+    }
+}
+
+impl From<ArrayData> for TypeDataKind {
+    fn from(a: ArrayData) -> Self {
+        TypeDataKind::Array(a)
+    }
+}
+
+impl Hash for TypeData {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        Hash::hash(&self.data, state);
+    }
+}
+
 impl Type {
     /// Collects all data related to types that are no longer referenced by a [`Type`]. Returns
     /// the number of types that were removed.
@@ -619,19 +779,20 @@ impl Type {
         fields: impl IntoIterator<Item = (String, Type, u16)>,
         memory_kind: abi::StructMemoryKind,
     ) -> Type {
+        let fields = fields
+            .into_iter()
+            .map(|(name, ty, offset)| FieldData {
+                name,
+                type_info: ty.inner,
+                offset,
+            })
+            .collect::<Vec<_>>();
         GLOBAL_TYPE_STORE.allocate(
             name,
             layout,
             StructData {
                 guid,
-                fields: fields
-                    .into_iter()
-                    .map(|(name, ty, offset)| FieldData {
-                        name,
-                        type_info: ty.inner,
-                        offset,
-                    })
-                    .collect(),
+                fields,
                 memory_kind,
             }
             .into(),
@@ -650,9 +811,40 @@ impl Type {
         self.inner().name.as_str()
     }
 
-    /// Returns the type layout
-    pub fn layout(&self) -> Layout {
+    /// Returns the memory layout of the data of the type. This is the layout of the memory when
+    /// stored on the stack or in the heap.
+    pub fn value_layout(&self) -> Layout {
         self.inner().layout
+    }
+
+    /// Returns the layout of the type when being referenced.
+    pub fn reference_layout(&self) -> Layout {
+        if self.is_reference_type() {
+            // Reference types are always stored as pointers to an GC object
+            Layout::new::<*const c_void>()
+        } else {
+            self.value_layout()
+        }
+    }
+
+    /// Returns true if the type is a reference type. Variables of reference types store references
+    /// to their data (objects), while variables of value types directly contain their data.
+    pub fn is_reference_type(&self) -> bool {
+        match self.kind() {
+            TypeKind::Primitive(_) | TypeKind::Pointer(_) => false,
+            TypeKind::Array(_) => true,
+            TypeKind::Struct(s) => s.is_gc_struct(),
+        }
+    }
+
+    /// Returns true if the type is a value type. Variables of reference types store references to
+    /// their data (objects), while variables of value types directly contain their data.
+    pub fn is_value_type(&self) -> bool {
+        match self.kind() {
+            TypeKind::Primitive(_) | TypeKind::Pointer(_) => true,
+            TypeKind::Array(_) => false,
+            TypeKind::Struct(s) => s.is_value_struct(),
+        }
     }
 
     /// Returns true if this instance represents the TypeInfo of the given type.
@@ -681,6 +873,11 @@ impl Type {
         matches!(self.kind(), TypeKind::Pointer(_))
     }
 
+    /// Returns whether this is an array type.
+    pub fn is_array(&self) -> bool {
+        matches!(self.kind(), TypeKind::Array(_))
+    }
+
     /// Returns the kind of the type
     pub fn kind(&self) -> TypeKind<'_> {
         match &self.inner().data {
@@ -691,6 +888,10 @@ impl Type {
             }),
             TypeDataKind::Pointer(p) => TypeKind::Pointer(PointerType {
                 inner: p,
+                store: &self.store,
+            }),
+            TypeDataKind::Array(a) => TypeKind::Array(ArrayType {
+                inner: a,
                 store: &self.store,
             }),
             TypeDataKind::Uninitialized => {
@@ -704,7 +905,7 @@ impl Type {
     pub fn is_concrete(&self) -> bool {
         match self.kind() {
             TypeKind::Primitive(_) | TypeKind::Struct(_) => true,
-            TypeKind::Pointer(_) => false,
+            TypeKind::Pointer(_) | TypeKind::Array(_) => false,
         }
     }
 
@@ -713,7 +914,7 @@ impl Type {
         match self.kind() {
             TypeKind::Primitive(g) => Some(g),
             TypeKind::Struct(s) => Some(s.guid()),
-            TypeKind::Pointer(_) => None,
+            TypeKind::Pointer(_) | TypeKind::Array(_) => None,
         }
     }
 
@@ -735,11 +936,12 @@ impl Type {
         }
     }
 
-    /// Returns whether the type is allocated on the stack.
-    pub fn is_stack_allocated(&self) -> bool {
-        match self.kind() {
-            TypeKind::Primitive(_) | TypeKind::Pointer(_) => true,
-            TypeKind::Struct(s) => s.is_value_struct(),
+    /// Retrieves the type's array information, if available.
+    pub fn as_array(&self) -> Option<ArrayType<'_>> {
+        if let TypeKind::Array(a) = self.kind() {
+            Some(a)
+        } else {
+            None
         }
     }
 
@@ -755,6 +957,11 @@ impl Type {
     /// Returns the type that represents a pointer to this type
     pub fn pointer_type(&self, mutable: bool) -> Type {
         self.inner().pointer_type(mutable, &self.store)
+    }
+
+    /// Returns the type that represents an array to this type
+    pub fn array_type(&self) -> Type {
+        self.inner().array_type(&self.store)
     }
 
     /// Consumes the `Type`, returning a wrapped raw pointer.
@@ -898,8 +1105,8 @@ impl StructTypeBuilder {
 
     /// Adds a field to the struct
     pub fn add_field(mut self, name: impl Into<String>, ty: Type) -> Self {
-        let field_layout = if ty.is_stack_allocated() {
-            ty.layout()
+        let field_layout = if ty.is_value_type() {
+            ty.value_layout()
         } else {
             Layout::new::<std::ffi::c_void>()
         };
@@ -938,21 +1145,14 @@ impl StructTypeBuilder {
             abi::Guid::from_str(&guid_string)
         };
 
-        GLOBAL_TYPE_STORE.allocate(
+        Type::new_struct(
             self.name,
             self.layout,
-            StructData {
-                guid,
-                fields: Vec::from_iter(self.fields.into_iter().map(|(name, ty, offset)| {
-                    FieldData {
-                        name,
-                        type_info: ty.inner,
-                        offset: offset.try_into().expect("offset is too large!"),
-                    }
-                })),
-                memory_kind: self.memory_kind,
-            }
-            .into(),
+            guid,
+            self.fields
+                .into_iter()
+                .map(|(name, ty, offset)| (name, ty, offset.try_into().expect("offset too large"))),
+            self.memory_kind,
         )
     }
 }
@@ -991,7 +1191,7 @@ fn build_type_guid_string(ty: &Type) -> String {
                 )
             }
         }
-        TypeKind::Primitive(_) | TypeKind::Pointer(_) => ty.name().to_owned(),
+        TypeKind::Array(_) | TypeKind::Primitive(_) | TypeKind::Pointer(_) => ty.name().to_owned(),
     }
 }
 

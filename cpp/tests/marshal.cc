@@ -2,6 +2,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <sstream>
+#include <vector>
 
 /// Returns the absolute path to the munlib with the specified name
 inline std::string get_munlib_path(std::string_view name) {
@@ -224,5 +225,28 @@ TEST_CASE("struct can get, set, and replace struct", "[marshal]") {
     } else {
         REQUIRE(err.is_error());
         FAIL(err.message().value());
+    }
+}
+
+TEST_CASE("can fetch array type", "[marshal]") {
+    mun::Error err;
+    if (auto runtime = mun::make_runtime(get_munlib_path("marshal/target/mod.munlib"), {}, &err)) {
+        REQUIRE(err.is_ok());
+
+        auto array_res = mun::invoke_fn<mun::ArrayRef<int32_t>>(*runtime, "new_array_i32", 1, 2, 3);
+        REQUIRE(array_res.is_ok());
+        auto array = array_res.unwrap();
+
+        REQUIRE(array.size() == 3);
+        REQUIRE(array.capacity() >= 3);
+
+        REQUIRE(array.at(0) == 1);
+        REQUIRE(array.at(1) == 2);
+        REQUIRE(array.at(2) == 3);
+        REQUIRE_THROWS(array.at(3));
+
+        std::vector<int32_t> vec;
+        vec.assign(array.begin(), array.end());
+        REQUIRE(vec == std::vector<int32_t>({1,2,3}));
     }
 }

@@ -2,7 +2,8 @@
 mod test;
 
 use crate::value::{
-    AsValue, BytesOrPtr, IrTypeContext, IrValueContext, SizedValueType, TransparentValue, Value,
+    AsValue, BytesOrPtr, Global, IrTypeContext, IrValueContext, SizedValueType, TransparentValue,
+    Value,
 };
 use itertools::Itertools;
 use mun_abi as abi;
@@ -49,26 +50,32 @@ impl<'ink> TransparentValue<'ink> for abi::StructMemoryKind {
 pub enum TypeId<'ink> {
     Concrete(abi::Guid),
     Pointer(PointerTypeId<'ink>),
+    Array(ArrayTypeId<'ink>),
 }
 
 #[derive(AsValue)]
 pub struct PointerTypeId<'ink> {
-    pub pointee: Value<'ink, *const TypeId<'ink>>,
+    pub pointee: Global<'ink, TypeId<'ink>>,
     pub mutable: bool,
 }
 
 #[derive(AsValue)]
-pub struct TypeInfo<'ink> {
+pub struct ArrayTypeId<'ink> {
+    pub element: Global<'ink, TypeId<'ink>>,
+}
+
+#[derive(AsValue)]
+pub struct TypeDefinition<'ink> {
     pub name: Value<'ink, *const u8>,
     pub size_in_bits: u32,
     pub alignment: u8,
-    pub data: TypeInfoData<'ink>,
+    pub data: TypeDefinitionData<'ink>,
 }
 
 #[derive(AsValue)]
 #[repr(u8)]
-pub enum TypeInfoData<'ink> {
-    Struct(StructInfo<'ink>),
+pub enum TypeDefinitionData<'ink> {
+    Struct(StructDefinition<'ink>),
 }
 
 #[derive(AsValue)]
@@ -91,7 +98,7 @@ pub struct FunctionDefinition<'ink> {
 }
 
 #[derive(AsValue)]
-pub struct StructInfo<'ink> {
+pub struct StructDefinition<'ink> {
     pub guid: abi::Guid,
     pub field_names: Value<'ink, *const *const u8>,
     pub field_types: Value<'ink, *const TypeId<'ink>>,
@@ -104,7 +111,7 @@ pub struct StructInfo<'ink> {
 pub struct ModuleInfo<'ink> {
     pub path: Value<'ink, *const u8>,
     pub functions: Value<'ink, *const FunctionDefinition<'ink>>,
-    pub types: Value<'ink, *const TypeInfo<'ink>>,
+    pub types: Value<'ink, *const TypeDefinition<'ink>>,
     pub num_functions: u32,
     pub num_types: u32,
 }

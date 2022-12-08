@@ -1,0 +1,53 @@
+---
+source: crates/mun_codegen/src/test.rs
+assertion_line: 1080
+expression: "\n    pub fn main() -> i8 {\n        let a = [1,2,3,4,]\n        a[3]\n    }\n    "
+---
+; == FILE IR (mod) =====================================
+; ModuleID = 'mod'
+source_filename = "mod"
+
+%DispatchTable = type { i8** (i8*, i64, i8*)* }
+%"[i8]" = type { i64, i64, i8 }
+
+@allocatorHandle = external global i8*
+@dispatchTable = external global %DispatchTable
+@global_type_lookup_table = external global [2 x i64*]
+
+define i8 @main() {
+body:
+  %new_array_ptr = load i8** (i8*, i64, i8*)*, i8** (i8*, i64, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
+  %"[core::i8]_ptr" = load i64*, i64** getelementptr inbounds ([2 x i64*], [2 x i64*]* @global_type_lookup_table, i64 0, i64 0), align 8
+  %type_info_ptr_to_i8_ptr = bitcast i64* %"[core::i8]_ptr" to i8*
+  %allocator_handle = load i8*, i8** @allocatorHandle, align 8
+  %ref = call i8** %new_array_ptr(i8* %type_info_ptr_to_i8_ptr, i64 4, i8* %allocator_handle)
+  %"ref<[i8]>" = bitcast i8** %ref to %"[i8]"**
+  %"ref<[i8]>->data" = load %"[i8]"*, %"[i8]"** %"ref<[i8]>", align 8
+  %"ref<[i8]>->data->elements" = getelementptr inbounds %"[i8]", %"[i8]"* %"ref<[i8]>->data", i32 0, i32 2
+  store i8 1, i8* %"ref<[i8]>->data->elements", align 1
+  %"ref<[i8]>->data->elements[1]" = getelementptr i8, i8* %"ref<[i8]>->data->elements", i64 1
+  store i8 2, i8* %"ref<[i8]>->data->elements[1]", align 1
+  %"ref<[i8]>->data->elements[2]" = getelementptr i8, i8* %"ref<[i8]>->data->elements", i64 2
+  store i8 3, i8* %"ref<[i8]>->data->elements[2]", align 1
+  %"ref<[i8]>->data->elements[3]" = getelementptr i8, i8* %"ref<[i8]>->data->elements", i64 3
+  store i8 4, i8* %"ref<[i8]>->data->elements[3]", align 1
+  %"ref<[i8]>->data1" = load %"[i8]"*, %"[i8]"** %"ref<[i8]>", align 8
+  %"ref<[i8]>->data1->length" = getelementptr inbounds %"[i8]", %"[i8]"* %"ref<[i8]>->data1", i32 0, i32 0
+  store i64 4, i64* %"ref<[i8]>->data1->length", align 4
+  %"a2->data" = load %"[i8]"*, %"[i8]"** %"ref<[i8]>", align 8
+  %"a2->data->elements" = getelementptr inbounds %"[i8]", %"[i8]"* %"a2->data", i32 0, i32 2
+  %"a2->data->elements+index" = getelementptr i8, i8* %"a2->data->elements", i32 3
+  %0 = load i8, i8* %"a2->data->elements+index", align 1
+  ret i8 %0
+}
+
+; == GROUP IR (mod) ====================================
+; ModuleID = 'group_name'
+source_filename = "group_name"
+
+%DispatchTable = type { i8** (i8*, i64, i8*)* }
+
+@dispatchTable = global %DispatchTable zeroinitializer
+@global_type_lookup_table = global [2 x i64*] zeroinitializer
+@allocatorHandle = unnamed_addr global i8* null
+

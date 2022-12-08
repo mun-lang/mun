@@ -188,7 +188,7 @@ impl<'a> InferenceResultBuilder<'a> {
     /// be resolved an error is emitted and `Ty::Error` is returned.
     fn resolve_type(&mut self, type_ref: LocalTypeRefId) -> Ty {
         // Try to resolve the type from the Hir
-        let result = Ty::from_hir(
+        let (ty, diagnostics) = Ty::from_hir(
             self.db,
             // FIXME use right resolver for block
             &self.resolver,
@@ -197,7 +197,7 @@ impl<'a> InferenceResultBuilder<'a> {
         );
 
         // Convert the diagnostics from resolving the type reference
-        for diag in result.diagnostics {
+        for diag in diagnostics {
             let diag = match diag {
                 LowerDiagnostic::UnresolvedType { id } => {
                     InferenceDiagnostic::UnresolvedType { id }
@@ -208,7 +208,7 @@ impl<'a> InferenceResultBuilder<'a> {
             self.diagnostics.push(diag);
         }
 
-        result.ty
+        ty
     }
 }
 
@@ -478,7 +478,39 @@ impl<'a> InferenceResultBuilder<'a> {
                         }
                     },
                 }
-            } //            Expr::Block { statements: _, tail: _ } => {}
+            }
+            Expr::Array(array) => {
+                let elem_ty = match expected.ty.interned() {
+                    TyKind::Array(elem_ty) => elem_ty.clone(),
+                    _ => self.type_variables.new_type_var(),
+                };
+
+                for expr in array.iter() {
+                    self.infer_expr_coerce(*expr, &Expectation::has_type(elem_ty.clone()));
+                }
+
+                TyKind::Array(elem_ty).intern()
+            }
+            Expr::Index { base, index } => {
+                let elem_ty = if expected.ty.is_unknown() {
+                    self.type_variables.new_type_var()
+                } else {
+                    expected.ty.clone()
+                };
+
+                let base_ty = self.infer_expr(
+                    *base,
+                    &Expectation::has_type(TyKind::Array(elem_ty).intern()),
+                );
+
+                let inner_ty = self.type_variables.new_integer_var();
+                let _index_expr = self.infer_expr(*index, &Expectation::has_type(inner_ty));
+
+                match base_ty.interned() {
+                    TyKind::Array(ty) => ty.clone(),
+                    _ => self.error_type(),
+                }
+            }
         };
 
         let ty = self.resolve_ty_as_far_as_possible(ty);

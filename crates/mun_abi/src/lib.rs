@@ -14,7 +14,7 @@ pub use module_info::ModuleInfo;
 pub use primitive::PrimitiveType;
 pub use struct_info::{StructDefinition, StructMemoryKind};
 pub use type_id::HasStaticTypeId;
-pub use type_id::{PointerTypeId, TypeId};
+pub use type_id::{ArrayTypeId, PointerTypeId, TypeId};
 pub use type_info::{HasStaticTypeName, TypeDefinition, TypeDefinitionData};
 pub use type_lut::TypeLut;
 

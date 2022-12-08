@@ -163,9 +163,9 @@ impl Assembly {
                             .join(", ");
 
                         let fn_name = fn_prototype.name();
-                        return Err(anyhow!("a function with the same name does exist, but the signatures do not match.\nExpected:\n\tfn {fn_name}({expected}) -> {}\n\nFound:\n\tfn {fn_name}({found}) -> {}",
-                            fn_proto_ret_type_info.name(),
-                            existing_fn_def.prototype.signature.return_type.name()))
+                        return Err(anyhow!("a function with the same name does exist, but the signatures do not match.\nExpected:\n\tfn {fn_name}({expected}) -> {}\n\nFunction that exists:\n\tfn {fn_name}({found}) -> {}",
+                            &fn_proto_ret_type_info.name(),
+                            &existing_fn_def.prototype.signature.return_type.name()))
                             .with_context(|| format!("failed to link function '{}'", fn_prototype.name()));
                     }
 
@@ -181,14 +181,19 @@ impl Assembly {
         }
 
         if !to_link.is_empty() {
+            let mut missing_functions = vec![];
             for (_, fn_prototype) in to_link {
                 error!(
                     "Failed to link: function `{}` is missing.",
                     fn_prototype.name()
                 );
+                missing_functions.push(format!("- {}", fn_prototype.name()));
             }
 
-            return Err(anyhow!("Failed to link due to missing dependencies."));
+            return Err(anyhow!(
+                "Failed to link due to missing dependencies.\n{}",
+                missing_functions.join("\n")
+            ));
         }
 
         Ok(())

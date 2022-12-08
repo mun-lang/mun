@@ -16,6 +16,9 @@ pub enum TypeId<'a> {
 
     /// Represents a pointer to a type
     Pointer(PointerTypeId<'a>),
+
+    /// Represents an array of a specific type
+    Array(ArrayTypeId<'a>),
 }
 
 /// Represents a pointer to another type.
@@ -28,6 +31,15 @@ pub struct PointerTypeId<'a> {
 
     /// Whether or not this pointer is mutable or not
     pub mutable: bool,
+}
+
+/// Represents an array of a specific type.
+#[repr(C)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct ArrayTypeId<'a> {
+    /// The element type of the array
+    pub element: &'a TypeId<'a>,
 }
 
 unsafe impl<'a> Send for TypeId<'a> {}
@@ -51,6 +63,7 @@ impl<'a> fmt::Display for TypeId<'a> {
         match self {
             TypeId::Concrete(guid) => guid.fmt(f),
             TypeId::Pointer(pointer) => pointer.fmt(f),
+            TypeId::Array(array) => array.fmt(f),
         }
     }
 }
@@ -63,6 +76,12 @@ impl<'a> fmt::Display for PointerTypeId<'a> {
             write!(f, "*const ")
         }?;
         self.pointee.fmt(f)
+    }
+}
+
+impl<'a> fmt::Display for ArrayTypeId<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[{}]", &self.element)
     }
 }
 
@@ -97,5 +116,46 @@ impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *mut T {
             }
             .into()
         })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{ArrayTypeId, HasStaticTypeId, PointerTypeId, PrimitiveType, TypeId};
+
+    #[test]
+    fn display() {
+        assert_eq!(i32::type_id().to_string(), i32::guid().to_string());
+        assert_eq!(f64::type_id().to_string(), f64::guid().to_string());
+        assert_eq!(
+            std::ffi::c_void::type_id().to_string(),
+            std::ffi::c_void::guid().to_string()
+        );
+
+        let i32_type_id = i32::type_id();
+        assert_eq!(
+            TypeId::Pointer(PointerTypeId {
+                pointee: i32_type_id,
+                mutable: false
+            })
+            .to_string(),
+            format!("*const {}", i32::guid())
+        );
+        assert_eq!(
+            TypeId::Pointer(PointerTypeId {
+                pointee: i32_type_id,
+                mutable: true
+            })
+            .to_string(),
+            format!("*mut {}", i32::guid())
+        );
+
+        assert_eq!(
+            TypeId::Array(ArrayTypeId {
+                element: i32_type_id
+            })
+            .to_string(),
+            format!("[{}]", i32::guid())
+        );
     }
 }

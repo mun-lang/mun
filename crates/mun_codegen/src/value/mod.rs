@@ -174,7 +174,7 @@ pub trait SizedValueType<'ink>: ConcreteValueType<'ink> + Sized {
 }
 
 /// A trait that returns the pointer type of the specified value.
-pub trait PointerValueType<'ink>: ConcreteValueType<'ink> {
+pub trait PointerValueType<'ink> {
     /// Returns the pointer type of the value
     fn get_ptr_type(
         context: &IrTypeContext<'ink, '_>,

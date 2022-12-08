@@ -145,6 +145,8 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
                 Some(mun_hir::CallableDef::Struct(_)) => (),
                 None => panic!("expected a callable expression"),
             }
+        } else if let mun_hir::Expr::Array(..) = expr {
+            self.collect_type(self.hir_types.type_id(&infer[expr_id]))
         }
 
         // Recurse further

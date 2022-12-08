@@ -4,12 +4,12 @@ mod op;
 mod primitives;
 mod resolve;
 
-use crate::display::{HirDisplay, HirFormatter};
-use crate::ty::infer::InferTy;
-use crate::ty::lower::fn_sig_for_struct_constructor;
-use crate::HasVisibility;
-use crate::Visibility;
-use crate::{HirDatabase, Struct, StructMemoryKind, TypeAlias};
+use crate::{
+    display::{HirDisplay, HirFormatter},
+    ty::infer::InferTy,
+    ty::lower::fn_sig_for_struct_constructor,
+    HasVisibility, HirDatabase, Struct, StructMemoryKind, TypeAlias, Visibility,
+};
 pub(crate) use infer::infer_query;
 pub use infer::InferenceResult;
 pub(crate) use lower::{
@@ -18,9 +18,7 @@ pub(crate) use lower::{
 pub use primitives::{FloatTy, IntTy};
 pub use resolve::ResolveBitness;
 use smallvec::SmallVec;
-use std::ops::Deref;
-use std::sync::Arc;
-use std::{fmt, mem};
+use std::{fmt, iter::FromIterator, mem, ops::Deref, sync::Arc};
 
 #[cfg(test)]
 mod tests;
@@ -66,6 +64,9 @@ pub enum TyKind {
     /// let bar = foo; // bar: function() -> number {foo}
     /// ```
     FnDef(CallableDef, Substitution),
+
+    /// An dynamically sized array type
+    Array(Ty),
 
     /// A placeholder for a type which could not be computed; this is propagated to avoid useless
     /// error messages. Doubles as a placeholder where type variables are inserted before type
@@ -146,6 +147,14 @@ impl Ty {
         }
     }
 
+    /// If this type represents an array type, returns a reference to the element type.
+    pub fn as_array(&self) -> Option<&Ty> {
+        match self.interned() {
+            TyKind::Array(element_ty) => Some(element_ty),
+            _ => None,
+        }
+    }
+
     /// Returns true if this type represents the empty tuple type
     pub fn is_empty(&self) -> bool {
         matches!(self.interned(), TyKind::Tuple(0, _))
@@ -154,20 +163,6 @@ impl Ty {
     /// Returns true if this type represents the never type
     pub fn is_never(&self) -> bool {
         matches!(self.interned(), TyKind::Never)
-    }
-
-    /// Returns true if these types represent the same type based on their outer type.
-    pub fn equals_ctor(&self, other: &Ty) -> bool {
-        match (self.interned(), other.interned()) {
-            (TyKind::Struct(a), TyKind::Struct(b)) => a == b,
-            (TyKind::Float(a), TyKind::Float(b)) => a == b,
-            (TyKind::Int(a), TyKind::Int(b)) => a == b,
-            (TyKind::Bool, TyKind::Bool) | (TyKind::Never, TyKind::Never) => true,
-            (TyKind::Tuple(_, a), TyKind::Tuple(_, b)) => a == b,
-            (TyKind::TypeAlias(a), TyKind::TypeAlias(b)) => a == b,
-            (TyKind::FnDef(a, _), TyKind::FnDef(b, _)) => a == b,
-            _ => false,
-        }
     }
 
     /// Returns the callable definition for the given expression or `None` if the type does not
@@ -220,6 +215,7 @@ impl Ty {
             TyKind::Bool => Some("core::bool".to_string()),
             TyKind::Float(ty) => Some(format!("core::{}", ty.as_str())),
             TyKind::Int(ty) => Some(format!("core::{}", ty.as_str())),
+            TyKind::Array(ty) => Some(format!("[{}]", ty.display(db))),
             _ => None,
         }
     }
@@ -251,6 +247,20 @@ impl Ty {
             _ => None,
         }
     }
+
+    /// Returns true if the other type has the same type constructor
+    pub fn equals_ctor(&self, other: &Ty) -> bool {
+        match (self.interned(), other.interned()) {
+            (TyKind::Struct(s1), TyKind::Struct(s2)) => s1 == s2,
+            (TyKind::Tuple(_, substs1), TyKind::Tuple(_, substs2)) => substs1 == substs2,
+            (TyKind::Array(_), TyKind::Array(_)) => true,
+            (TyKind::Float(f1), TyKind::Float(f2)) => f1 == f2,
+            (TyKind::Int(i1), TyKind::Int(i2)) => i1 == i2,
+            (TyKind::FnDef(def, _), TyKind::FnDef(def2, _)) => def == def2,
+            (TyKind::Bool, TyKind::Bool) => true,
+            _ => false,
+        }
+    }
 }
 
 /// A list of substitutions for generic parameters.
@@ -275,6 +285,21 @@ impl Substitution {
     /// Returns a reference to the interned types of this instance
     pub fn interned(&self) -> &[Ty] {
         &self.0
+    }
+
+    /// Assumes this instance has a single element and returns it. Panics if this instance doesnt
+    /// contain exactly one element.
+    pub fn as_single(&self) -> &Ty {
+        if self.0.len() != 1 {
+            panic!("expected substs of len 1, got {:?}", self);
+        }
+        &self.0[0]
+    }
+}
+
+impl FromIterator<Ty> for Substitution {
+    fn from_iter<T: IntoIterator<Item = Ty>>(iter: T) -> Self {
+        Self(iter.into_iter().collect())
     }
 }
 
@@ -373,6 +398,7 @@ impl HirDisplay for Ty {
                 f.write_joined(sig.params(), ", ")?;
                 write!(f, ") -> {}", sig.ret().display(f.db))
             }
+            TyKind::Array(elem_ty) => write!(f, "[{}]", elem_ty.display(f.db)),
             TyKind::Unknown => write!(f, "{{unknown}}"),
         }
     }
@@ -408,8 +434,8 @@ pub trait TypeWalk {
 
 impl TypeWalk for Ty {
     fn walk(&self, f: &mut impl FnMut(&Ty)) {
-        #[allow(clippy::match_single_binding)]
         match self.interned() {
+            TyKind::Array(elem_ty) => f(elem_ty),
             _ => {
                 if let Some(substs) = self.type_parameters() {
                     substs.walk(f)
@@ -420,8 +446,8 @@ impl TypeWalk for Ty {
     }
 
     fn walk_mut(&mut self, f: &mut impl FnMut(&mut Ty)) {
-        #[allow(clippy::match_single_binding)]
         match self.interned_mut() {
+            TyKind::Array(elem_ty) => f(elem_ty),
             _ => {
                 if let Some(substs) = self.type_parameters_mut() {
                     substs.walk_mut(f)
