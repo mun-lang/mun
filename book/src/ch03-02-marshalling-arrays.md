@@ -24,7 +24,7 @@ Listing 3-5 shows how to _marshal_ `array` instances from Mun to Rust and vice v
 
 The API of `ArrayRef` contains two other methods for interacting with its data: `capacity` and `len`; respectively for retrieving the array's capacity and length:
 
-```rust,no_run,noplaypen
+```rust,no_run,noplaypen,ignore
 {{#include ../listings/ch03-arrays/listing05.rs:13:16}}
 }
 ```
@@ -33,6 +33,6 @@ The API of `ArrayRef` contains two other methods for interacting with its data: 
 
 To obtain an iterator over the `ArrayRef` instance's elements, you can call the `iter` function, which returns an `impl Iterator`:
 
-```rust,no_run,noplaypen
+```rust,no_run,noplaypen,ignore
 {{#include ../listings/ch03-arrays/listing05.rs:18:22}}
 ```

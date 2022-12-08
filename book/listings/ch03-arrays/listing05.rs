@@ -10,7 +10,7 @@ fn main() {
     let mut runtime = unsafe { builder.finish() }
         .expect("Failed to spawn Runtime");
 
-    let input = ArrayRef<'_, u64> = runtime.invoke("generate", ()).unwrap();
+    let input: ArrayRef<'_, u64> = runtime.invoke("generate", ()).unwrap();
 
     assert_eq!(input.len(), 5);
     assert!(input.capacity() >= 5);
