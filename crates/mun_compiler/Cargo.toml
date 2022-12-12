@@ -13,13 +13,13 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-mun_codegen = { version = "=0.4.0-dev", path="../mun_codegen" }
-mun_syntax = { version = "=0.4.0-dev", path="../mun_syntax" }
-mun_hir = { version= "=0.4.0-dev", path="../mun_hir" }
-mun_paths = { version= "=0.4.0-dev", path="../mun_paths" }
-mun_target = { version = "=0.4.0-dev", path="../mun_target" }
-mun_project = { version = "=0.4.0-dev", path = "../mun_project" }
-mun_diagnostics = { version = "=0.4.0-dev", path = "../mun_diagnostics" }
+mun_codegen = { version = "0.4.0-dev", path="../mun_codegen" }
+mun_syntax = { version = "0.4.0-dev", path="../mun_syntax" }
+mun_hir = { version = "0.4.0-dev", path="../mun_hir" }
+mun_paths = { version = "0.4.0-dev", path="../mun_paths" }
+mun_target = { version = "0.4.0-dev", path="../mun_target" }
+mun_project = { version = "0.4.0-dev", path = "../mun_project" }
+mun_diagnostics = { version = "0.4.0-dev", path = "../mun_diagnostics" }
 annotate-snippets = { version = "0.9.0", default-features = false, features = ["color"] }
 anyhow = { version = "1.0.31", default-features = false }
 lockfile = { version = "0.4.0", default-features = false }

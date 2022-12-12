@@ -13,11 +13,11 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-mun_abi = { version = "=0.4.0-dev", path = "../mun_abi" }
-mun_libloader = { version = "=0.4.0-dev", path = "../mun_libloader" }
-mun_capi_utils = { version = "=0.4.0-dev", path = "../mun_capi_utils"}
-mun_memory = { version = "=0.4.0-dev", path = "../mun_memory" }
-mun_project = { version = "=0.4.0-dev", path = "../mun_project" }
+mun_abi = { version = "0.4.0-dev", path = "../mun_abi" }
+mun_libloader = { version = "0.4.0-dev", path = "../mun_libloader" }
+mun_capi_utils = { version = "0.4.0-dev", path = "../mun_capi_utils"}
+mun_memory = { version = "0.4.0-dev", path = "../mun_memory" }
+mun_project = { version = "0.4.0-dev", path = "../mun_project" }
 anyhow = { version = "1.0", default-features = false }
 itertools = { version = "0.10.3", default-features = false, features = ["use_alloc"] }
 log = { version = "0.4", default-features = false }
