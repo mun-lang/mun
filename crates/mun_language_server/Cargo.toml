@@ -20,7 +20,7 @@ mun_target = { version = "0.4.0", path = "../mun_target" }
 mun_syntax = { version = "0.4.0", path = "../mun_syntax" }
 mun_diagnostics = { version = "0.4.0", path = "../mun_diagnostics" }
 mun_paths = { version = "0.4.0", path="../mun_paths" }
-anyhow = { version = "1.0", default-features = false }
+anyhow = { version = "1.0", default-features = false, features=["std"] }
 crossbeam-channel = { version = "0.5.0", default-features = false }
 log = { version = "0.4", default-features = false }
 lsp-types = { version = "0.93.0", default-features = false }
