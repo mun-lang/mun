@@ -1,4 +1,5 @@
 # Changelog
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
@@ -6,18 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2022-12-12
+
 ### Added
 
+- `Clone` trait implementation to `RootedStruct` [#323](https://github.com/mun-lang/mun/pull/323)
+- Private function leak validation [#338](https://github.com/mun-lang/mun/pull/338)
+- Dynamically-sized arrays [#341](https://github.com/mun-lang/mun/pull/341)
+- Private struct type leak validation [#344](https://github.com/mun-lang/mun/pull/344)
+- Mun logo [#355](https://github.com/mun-lang/mun/pull/355)
+- `Send` trait implementation to Mun `Runtime` [#370](https://github.com/mun-lang/mun/pull/370)
+- Use static-crt on Windows [#376](https://github.com/mun-lang/mun/pull/376)
+- Link type information when loading Mun library [#377](https://github.com/mun-lang/mun/pull/377)
+- Indirect types to Mun ABI [#415](https://github.com/mun-lang/mun/pull/415)
+- `Type` API to mitigate cyclic type references [#427](https://github.com/mun-lang/mun/pull/427)
 - Mac M1 Support [#444](https://github.com/mun-lang/mun/pull/444)
-
+- Bevy example [#475](https://github.com/mun-lang/mun/pull/475)
 
 ### Changed
 
+- Bump Rust from 1.50.0 to 1.65.0
+  [#325](https://github.com/mun-lang/mun/pull/325)
+  [#327](https://github.com/mun-lang/mun/pull/327)
+  [#334](https://github.com/mun-lang/mun/pull/334)
+  [#346](https://github.com/mun-lang/mun/pull/346)
+  [#350](https://github.com/mun-lang/mun/pull/350)
+  [#357](https://github.com/mun-lang/mun/pull/357)
+  [#360](https://github.com/mun-lang/mun/pull/360)
+  [#369](https://github.com/mun-lang/mun/pull/369)
+  [#378](https://github.com/mun-lang/mun/pull/378)
+  [#406](https://github.com/mun-lang/mun/pull/406)
+  [#432](https://github.com/mun-lang/mun/pull/432)
+  [#474](https://github.com/mun-lang/mun/pull/474)
+  [#477](https://github.com/mun-lang/mun/pull/477)
+- Simplified invoke syntax [#347](https://github.com/mun-lang/mun/pull/347)
+- Bump LLVM from 11 to 13
+  [#351](https://github.com/mun-lang/mun/pull/351)
+  [#491](https://github.com/mun-lang/mun/pull/491)
+- Move Mun runtime FFI submodule to monorepo [#352](https://github.com/mun-lang/mun/pull/352)
+- Bump Rust to 2021 edition [#367](https://github.com/mun-lang/mun/pull/367)
+- Move Mun ABI submodule to monorepo [#404](https://github.com/mun-lang/mun/pull/404)
+- Performance optimisations [#405](https://github.com/mun-lang/mun/pull/405)
+- Reduce workspace target folder size from 10.9 GB to 10.6 GB [#457](https://github.com/mun-lang/mun/pull/457)
+- Reduce workspace build dependencies from 296 to 270 [#457](https://github.com/mun-lang/mun/pull/457)
+- Reduce workspace dev dependencies from 502 to 496 [#457](https://github.com/mun-lang/mun/pull/457)
+- Move Rust examples submodule to monorepo [#475](https://github.com/mun-lang/mun/pull/475)
 - Switch to LLVM code coverage instead of using Tarpaulin [#478](https://github.com/mun-lang/mun/pull/478)
-- Bump LLVM from 12 to 13 [#491](https://github.com/mun-lang/mun/pull/491)
-- Reduce workspace target folder size from 10.9 GB to 10.6 GB
-- Reduce workspace build dependencies from 296 to 270
-- Reduce workspace dev dependencies from 502 to 496
+
+### Removed
+
+- Move `lld-rs` to separate repository [#373](https://github.com/mun-lang/mun/pull/373)
+- Unused dependencies [#435](https://github.com/mun-lang/mun/pull/435)
+
+### Fixed
+
+- Typos in documentation [#340](https://github.com/mun-lang/mun/pull/340) [#348](https://github.com/mun-lang/mun/pull/348)
+- Type inference problem for resolved types [#358](https://github.com/mun-lang/mun/pull/358)
+- Mac OS Big Sur sdkroot [#362](https://github.com/mun-lang/mun/pull/362)
+- Missing closing brace of `error_block` [#364](https://github.com/mun-lang/mun/pull/364)
+- Missing semicolon in declaration recovery set [#365](https://github.com/mun-lang/mun/pull/365)
+- C API link in book [#372](https://github.com/mun-lang/mun/pull/372)
+- Multi-threaded `cargo test` [#407](https://github.com/mun-lang/mun/pull/407)
 
 ## [0.3.0] - 2021-04-12
 
@@ -33,7 +83,7 @@ Special thanks to @emi2k01, @tdejager, @ethanboxx, @sinato, @dependabot, @legend
 - describe how to install/build LLVM [#304](https://github.com/mun-lang/mun/pull/304)
 - runtime linking [#300](https://github.com/mun-lang/mun/pull/300)
 - implements incremental file updates [#298](https://github.com/mun-lang/mun/pull/298)
-- adds document symbol provider  [#297](https://github.com/mun-lang/mun/pull/297)
+- adds document symbol provider [#297](https://github.com/mun-lang/mun/pull/297)
 - add option to emit IR [#296](https://github.com/mun-lang/mun/pull/296)
 - integrated new vfs [#294](https://github.com/mun-lang/mun/pull/294)
 - adds lsp document symbol provider [#293](https://github.com/mun-lang/mun/pull/293)
@@ -75,7 +125,7 @@ Special thanks to @emi2k01, @tdejager, @ethanboxx, @sinato, @dependabot, @legend
 
 ### Removed
 
-- removed async code and switched to lsp_server  [#295](https://github.com/mun-lang/mun/pull/295)
+- removed async code and switched to lsp_server [#295](https://github.com/mun-lang/mun/pull/295)
 
 ### Fixed
 
@@ -85,7 +135,6 @@ Special thanks to @emi2k01, @tdejager, @ethanboxx, @sinato, @dependabot, @legend
 - fix broken book link and CoC link [#284](https://github.com/mun-lang/mun/pull/284)
 - 7zip issues [#280](https://github.com/mun-lang/mun/pull/280)
 - dont run mun tests on CI [#278](https://github.com/mun-lang/mun/pull/278)
-
 
 ## [0.2.1] - 2020-07-08
 
@@ -209,6 +258,7 @@ In addition, there were a lot of bug fixes.
 ## [0.1.0] - 2019-11-11
 
 ### Added
+
 - Support all fundamental types as return types when starting a Mun library from the CLI [#45](https://github.com/mun-lang/mun/pull/45)
 - `return` expressions [#38](https://github.com/mun-lang/mun/pull/38)
 - Statically link against liblld instead of spawning as process [#37](https://github.com/mun-lang/mun/pull/37)
@@ -238,5 +288,3 @@ In addition, there were a lot of bug fixes.
 - Runtime builder [#6](https://github.com/mun-lang/mun/pull/6)
 - Detection of duplicate definition names [#5](https://github.com/mun-lang/mun/pull/5)
 - badges & licenses [#1](https://github.com/mun-lang/mun/pull/1)
-
-
