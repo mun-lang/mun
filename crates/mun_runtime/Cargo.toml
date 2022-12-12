@@ -1,6 +1,6 @@
 [package]
 name = "mun_runtime"
-version = "0.4.0-dev"
+version = "0.4.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 description = "A runtime for hot reloading and invoking Mun from Rust"
@@ -13,11 +13,11 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-mun_abi = { version = "0.4.0-dev", path = "../mun_abi" }
-mun_libloader = { version = "0.4.0-dev", path = "../mun_libloader" }
-mun_capi_utils = { version = "0.4.0-dev", path = "../mun_capi_utils"}
-mun_memory = { version = "0.4.0-dev", path = "../mun_memory" }
-mun_project = { version = "0.4.0-dev", path = "../mun_project" }
+mun_abi = { version = "0.4.0", path = "../mun_abi" }
+mun_libloader = { version = "0.4.0", path = "../mun_libloader" }
+mun_capi_utils = { version = "0.4.0", path = "../mun_capi_utils"}
+mun_memory = { version = "0.4.0", path = "../mun_memory" }
+mun_project = { version = "0.4.0", path = "../mun_project" }
 anyhow = { version = "1.0", default-features = false }
 itertools = { version = "0.10.3", default-features = false, features = ["use_alloc"] }
 log = { version = "0.4", default-features = false }
