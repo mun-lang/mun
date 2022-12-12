@@ -48,7 +48,7 @@ jobs:
         with:
           delete-branch: true
           base: "main"
-          title: "Bump Version after Release"
+          title: "chore: bump version after release"
           body: |
             Bump version after release
             This PR has been auto-generated

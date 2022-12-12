@@ -44,7 +44,7 @@ jobs:
         with:
           delete-branch: true
           base: "main"
-          title: "Preparing Next Release"
+          title: "chore: prepare next release"
           body: |
             Preparing next release
             This PR has been auto-generated
