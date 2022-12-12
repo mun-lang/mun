@@ -1,6 +1,6 @@
 [package]
 name = "mun_hir"
-version = "0.4.0-dev"
+version = "0.4.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 description = "Provides high-level intermediate representation of Mun code"
@@ -13,9 +13,9 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-mun_syntax = { version = "0.4.0-dev", path = "../mun_syntax" }
-mun_target = { version = "0.4.0-dev", path = "../mun_target" }
-mun_paths = { version = "0.4.0-dev", path="../mun_paths" }
+mun_syntax = { version = "0.4.0", path = "../mun_syntax" }
+mun_target = { version = "0.4.0", path = "../mun_target" }
+mun_paths = { version = "0.4.0", path="../mun_paths" }
 drop_bomb = { version = "0.1.4", default-features = false }
 either = { version = "1.5.3", default-features = false }
 ena = { version = "0.14", default-features = false }
