@@ -11,3 +11,8 @@ publish = "book/"
   from = "/v0.3/*"
   to = "https://release-v0-3.docs.mun-lang.org/:splat"
   status = 200
+
+[[redirects]]
+  from = "/v0.4/*"
+  to = "https://release-v0-4.docs.mun-lang.org/:splat"
+  status = 200
