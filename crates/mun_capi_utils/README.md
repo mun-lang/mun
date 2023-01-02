@@ -6,13 +6,13 @@
 [![Build Status][build-badge]][build]
 [![Crates.io][crates-badge]][crates]
 [![docs main][docs-main-badge]][docs-main]
-[![docs v0.4][docs-v0.4-badge]][docs-v0.4]
+[![docs v0.3][docs-v0.3-badge]][docs-v0.3]
 [![MIT/Apache][licence-badge]][license]
 [![Join us on Discord][discord-badge]][discord]
 [![codecov][coverage-badge]][coverage]
 ![Lines of Code][lines-of-code-badge]
 
-[build-badge]: https://img.shields.io/github/actions/workflow/status/mun-lang/mun/ci.yml?branch=main
+[build-badge]: https://img.shields.io/github/workflow/status/mun-lang/mun/CI
 [build]: https://github.com/mun-lang/mun/actions
 [crates-badge]: https://img.shields.io/crates/v/mun.svg
 [crates]: https://crates.io/crates/mun/
@@ -20,8 +20,8 @@
 [coverage]: https://codecov.io/gh/mun-lang/mun
 [docs-main-badge]: https://img.shields.io/badge/docs-main-blue.svg
 [docs-main]: https://docs.mun-lang.org/
-[docs-v0.4-badge]: https://img.shields.io/badge/docs-v0.4-blue.svg
-[docs-v0.4]: https://docs.mun-lang.org/v0.4/
+[docs-v0.3-badge]: https://img.shields.io/badge/docs-v0.3-blue.svg
+[docs-v0.3]: https://docs.mun-lang.org/v0.3/
 [licence-badge]: https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue
 [license]: COPYRIGHT
 [discord-badge]: https://img.shields.io/discord/602227728480993281.svg?logo=discord
@@ -141,7 +141,7 @@ Windows (64-bit only).
 Make sure you have the following dependencies installed on you machine:
 
 * [Rust](https://www.rust-lang.org/tools/install)
-* [LLVM 13](https://docs.mun-lang.org/dev/02-building-llvm.html)
+* [LLVM 13](https://docs.mun-lang.org/ch04-02-building-llvm.html)
 
 Clone the source code, including all submodules:
 

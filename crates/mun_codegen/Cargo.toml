@@ -4,7 +4,7 @@ version = "0.4.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 description = "LLVM IR code generation for Mun"
-documentation = "https://docs.mun-lang.org/v0.3"
+documentation = "https://docs.mun-lang.org/v0.4"
 readme = "README.md"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
@@ -15,7 +15,7 @@ categories = ["Game development", "Mun"]
 [dependencies]
 mun_abi = { version = "0.4.0", path = "../mun_abi" }
 anyhow = { version = "1.0.31", default-features = false, features = ["std"] }
-apple-codesign = { version = "0.20.0", default-features = false }
+apple-codesign = { version = "0.22.0", default-features = false }
 array-init = { version = "2.0.0", default-features = false }
 by_address = { version = "1.0.4", default-features = false }
 bytemuck = { version = "1.4.1", default-features = false }

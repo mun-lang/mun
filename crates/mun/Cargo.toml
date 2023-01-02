@@ -4,7 +4,7 @@ version = "0.4.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 description = "Command-line interface for compiling, monitoring and running Mun code"
-documentation = "https://docs.mun-lang.org/v0.3"
+documentation = "https://docs.mun-lang.org/v0.4"
 readme = "README.md"
 homepage = "https://mun-lang.org"
 repository = "https://github.com/mun-lang/mun"
@@ -32,7 +32,7 @@ features = ["precommit-hook", "run-cargo-test", "run-cargo-fmt", "run-cargo-clip
 
 [dev-dependencies]
 tempfile = "3.1"
-mun_skeptic = { path = "../mun_skeptic" }
+mun_skeptic = { path = "../mun_skeptic", version = "0.4.0" }
 
 [build-dependencies]
-mun_skeptic = { path = "../mun_skeptic" }
+mun_skeptic = { path = "../mun_skeptic", version = "0.4.0" }
