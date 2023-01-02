@@ -12,7 +12,7 @@
 [![codecov][coverage-badge]][coverage]
 ![Lines of Code][lines-of-code-badge]
 
-[build-badge]: https://img.shields.io/github/workflow/status/mun-lang/mun/CI
+[build-badge]: https://img.shields.io/github/actions/workflow/status/mun-lang/mun/ci.yml?branch=main
 [build]: https://github.com/mun-lang/mun/actions
 [crates-badge]: https://img.shields.io/crates/v/mun.svg
 [crates]: https://crates.io/crates/mun/
