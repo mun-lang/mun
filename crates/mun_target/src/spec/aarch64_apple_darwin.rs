@@ -1,22 +1,19 @@
 use crate::spec::{Target, TargetOptions};
+use crate::spec::apple_base::{Arch, macos_llvm_target};
 
 pub fn target() -> Target {
-    // Clang automatically chooses a more specific target based on
-    // MACOSX_DEPLOYMENT_TARGET.  To enable cross-language LTO to work
-    // correctly, we do too.
-    let arch = "arm64";
-    let llvm_target = super::apple_base::ios_llvm_target(arch);
-    let (major, minor) = super::apple_base::macos_deployment_target(arch);
+    let arch = Arch::Arm64;
 
     Target {
-        llvm_target,
+        // Clang automatically chooses a more specific target based on MACOSX_DEPLOYMENT_TARGET.
+        // To enable cross-language LTO to work correctly, we do too.
+        llvm_target: macos_llvm_target(arch).into(),
         pointer_width: 64,
-        arch: "aarch64".into(),
+        arch: arch.target_arch()    ,
         data_layout: "e-m:o-i64:64-i128:128-n32:64-S128".into(),
         options: TargetOptions {
             cpu: "apple-a14".into(),
-            min_os_version: Some((major, minor, 0)),
-            .. super::apple_base::opts("macos")
+            .. super::apple_base::opts("macos", arch)
         },
     }
 }

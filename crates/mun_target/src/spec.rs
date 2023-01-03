@@ -1,9 +1,9 @@
 mod apple_base;
-mod apple_sdk_base;
 mod linux_base;
 mod windows_msvc_base;
 
 use crate::{abi::Endian, host_triple};
+use std::borrow::Cow;
 
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash)]
 pub enum LinkerFlavor {
@@ -17,16 +17,16 @@ pub enum LinkerFlavor {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Target {
     /// Target triple to pass to LLVM
-    pub llvm_target: String,
+    pub llvm_target: Cow<'static, str>,
 
     /// String to use as the `target_pointer_width` `cfg` variable.
     pub pointer_width: u32,
 
     /// The name of the architecture. For example "x86" or "x86_64", "arm", "aarch64"
-    pub arch: String,
+    pub arch: Cow<'static, str>,
 
     /// [Data layout](http://llvm.org/docs/LangRef.html#data-layout) to pass to LLVM.
-    pub data_layout: String,
+    pub data_layout: Cow<'static, str>,
 
     /// Optional settings
     pub options: TargetOptions,
@@ -47,9 +47,6 @@ pub struct TargetOptions {
     /// The name of the OS
     pub os: String,
 
-    /// Minimum version of the OS to target
-    pub min_os_version: Option<(u32, u32, u32)>,
-
     /// The name of the environment
     pub env: String,
 
@@ -64,7 +61,7 @@ pub struct TargetOptions {
     pub linker_flavor: LinkerFlavor,
 
     /// Linker arguments that are passed *before* any user-defined libraries.
-    pub pre_link_args: Vec<String>,
+    pub pre_link_args: Vec<Cow<'static, str>>,
 
     /// Default CPU to pass to LLVM. Corresponds to `llc -mcpu=$cpu`. Defaults to "generic".
     pub cpu: String,
@@ -92,7 +89,6 @@ impl Default for TargetOptions {
             endian: Endian::Little,
             c_int_width: "32".into(),
             os: "none".into(),
-            min_os_version: None,
             env: "".into(),
             abi: "".into(),
             vendor: "unknown".into(),
