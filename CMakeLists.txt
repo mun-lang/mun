@@ -1,12 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(MunRuntime VERSION 0.1.0 LANGUAGES C CXX)
-
-option(mun_build_examples "Build all of Mun's own examples." OFF)
-option(mun_build_tests "Build all of Mun's own tests." OFF)
-set(mun_binaries_path "" CACHE FILEPATH "Location of a local directory containing the Mun libraries and executable.")
-set(mun_library_url "" CACHE FILEPATH "URL to an archive on the web containing the Mun libraries.")
-
-set(cpp_source_dir ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
+project(MunRuntime VERSION 0.4.0 LANGUAGES C CXX)
 
 # Determine platform (32/64)
 if (${CMAKE_SIZEOF_VOID_P} EQUAL 8)
@@ -15,26 +8,38 @@ else ()
     set(X86 ON)
 endif ()
 
-add_library(MunRuntime SHARED IMPORTED GLOBAL)
-
-set_target_properties(MunRuntime PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES
-        "${cpp_source_dir}/include"
-)
-
 if (X64)
     if (WIN32)
-        set(mun_os win64)
+        set(mun_os windows-x86_64)
+        set(archive_ext zip)
     elseif (UNIX AND NOT APPLE)
-        set(mun_os linux64)
+        set(mun_os linux-x86_64)
+        set(archive_ext tar.xz)
     elseif (UNIX AND APPLE)
-        set(mun_os osx64)
+        set(mun_os macos-x86_64)
+        set(archive_ext tar.xz)
     else ()
         message(ERROR "Unsupported operating system.")
     endif ()
 else ()
     message(ERROR "Only 64-bit operating systems are supported at present.")
 endif ()
+
+set(mun_library_url_latest "https://github.com/mun-lang/mun/releases/download/v${CMAKE_PROJECT_VERSION}/mun_runtime-${mun_os}-${CMAKE_PROJECT_VERSION}.${archive_ext}")
+
+option(mun_build_examples "Build all of Mun's own examples." OFF)
+option(mun_build_tests "Build all of Mun's own tests." OFF)
+set(mun_binaries_path "" CACHE FILEPATH "Location of a local directory containing the Mun libraries and executable.")
+set(mun_library_url ${mun_library_url_latest} CACHE STRING "URL to an archive on the web containing the Mun libraries.")
+
+set(cpp_source_dir ${CMAKE_CURRENT_SOURCE_DIR}/cpp)
+
+add_library(MunRuntime SHARED IMPORTED GLOBAL)
+
+set_target_properties(MunRuntime PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES
+        "${cpp_source_dir}/include"
+)
 
 include(ExternalProject)
 
