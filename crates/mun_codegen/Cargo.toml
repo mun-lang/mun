@@ -25,7 +25,7 @@ itertools = { version = "0.10.3", default-features = false }
 mun_codegen_macros = { version = "0.4.0", path = "../mun_codegen_macros" }
 mun_target = { version = "0.4.0", path = "../mun_target" }
 once_cell = { version = "1.4.0", default-features = false }
-lld_rs = { version = "140.0.0", default-features = false, git="https://github.com/mun-lang/lld-rs.git", branch="bump/llvm_14" }
+lld_rs = { version = "140.0.0", default-features = false }
 parking_lot = { version = "0.12.0", default-features = false }
 paste = { version = "1.0.7", default-features = false }
 mun_paths = { version = "0.4.0", path="../mun_paths"}
