@@ -4,15 +4,17 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "package": "ncc build index.js -o dist"
+    "package": "ncc build index.js -o dist --source-map"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@actions/core": "^1.9.1",
-    "@actions/exec": "^1.0.4",
-    "@actions/tool-cache": "^1.6.1",
-    "@zeit/ncc": "^0.22.3"
+    "@actions/core": "^1.10.0",
+    "@actions/exec": "^1.1.1",
+    "@actions/tool-cache": "^2.0.1"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.36.0"
   }
 }

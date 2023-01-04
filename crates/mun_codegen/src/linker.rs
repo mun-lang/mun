@@ -2,6 +2,7 @@ use crate::apple::get_apple_sdk_root;
 use mun_abi as abi;
 use mun_target::spec;
 use mun_target::spec::LinkerFlavor;
+use std::borrow::Cow;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
@@ -55,7 +56,13 @@ struct LdLinker {
 impl LdLinker {
     fn new(target: &spec::Target) -> Self {
         LdLinker {
-            args: target.options.pre_link_args.clone(),
+            args: target
+                .options
+                .pre_link_args
+                .iter()
+                .cloned()
+                .map(Cow::into_owned)
+                .collect(),
         }
     }
 }
@@ -99,14 +106,13 @@ struct Ld64Linker {
 
 impl Ld64Linker {
     fn new(target: &spec::Target) -> Self {
-        let arch_name = target
-            .llvm_target
-            .split('-')
-            .next()
-            .expect("LLVM target must have a hyphen");
-
-        let mut args = target.options.pre_link_args.clone();
-        args.push(format!("-arch {}", arch_name));
+        let args = target
+            .options
+            .pre_link_args
+            .iter()
+            .cloned()
+            .map(Cow::into_owned)
+            .collect();
 
         Ld64Linker {
             args,
@@ -148,28 +154,6 @@ impl Ld64Linker {
         self.args.push(format!("{}", sdk_root.display()));
         Ok(())
     }
-
-    fn add_load_command(&mut self) {
-        let (major, minor, patch) = match self.target.options.min_os_version {
-            None => return,
-            Some(min) => min,
-        };
-
-        let arch = &self.target.arch;
-        let os = &self.target.options.os;
-
-        let load_command = match os.as_ref() {
-            "macos" => "-macosx_version_min",
-            "ios" | "watchos" | "tvos" => match arch.as_ref() {
-                "x86_64" => "-ios_simulator_version_min",
-                _ => "-iphoneos_version_min",
-            },
-            _ => unreachable!(),
-        };
-
-        self.args.push(load_command.to_string());
-        self.args.push(format!("{}.{}.{}", major, minor, patch));
-    }
 }
 
 impl Linker for Ld64Linker {
@@ -208,8 +192,6 @@ impl Linker for Ld64Linker {
         self.args.push("-install_name".to_owned());
         self.args.push(filename_str.to_owned());
 
-        self.add_load_command();
-
         Ok(())
     }
 
@@ -227,7 +209,13 @@ struct MsvcLinker {
 impl MsvcLinker {
     fn new(target: &spec::Target) -> Self {
         MsvcLinker {
-            args: target.options.pre_link_args.clone(),
+            args: target
+                .options
+                .pre_link_args
+                .iter()
+                .cloned()
+                .map(Cow::into_owned)
+                .collect(),
         }
     }
 }

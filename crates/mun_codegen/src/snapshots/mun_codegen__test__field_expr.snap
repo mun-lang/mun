@@ -1,6 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1080
+assertion_line: 1153
 expression: "\n    pub struct(value) Bar(f64, Foo);\n    pub struct(value) Foo { a: i32 };\n\n    fn bar_1(bar: Bar) -> Foo {\n        bar.1\n    }\n\n    fn foo_a(foo: Foo) -> i32 {\n        foo.a\n    }\n\n    pub fn bar_1_foo_a(bar: Bar) -> i32 {\n        foo_a(bar_1(bar))\n    }\n\n    pub fn main() -> i32 {\n        let a: Foo = Foo { a: 5 };\n        let b: Bar = Bar(1.23, a);\n        let aa_lhs = a.a + 2;\n        let aa_rhs = 2 + a.a;\n        aa_lhs + aa_rhs\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
@@ -18,7 +18,7 @@ source_filename = "mod"
 define %Foo @bar_1(%Bar %0) {
 body:
   %.fca.1.0.extract = extractvalue %Bar %0, 1, 0
-  %Bar.1.fca.0.insert = insertvalue %Foo undef, i32 %.fca.1.0.extract, 0
+  %Bar.1.fca.0.insert = insertvalue %Foo poison, i32 %.fca.1.0.extract, 0
   ret %Foo %Bar.1.fca.0.insert
 }
 

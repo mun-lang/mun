@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Bump LLVM from 13 to 14 [#495](https://github.com/mun-lang/mun/pull/495)
+
 ## [0.4.0] - 2022-12-12
 
 ### Added
