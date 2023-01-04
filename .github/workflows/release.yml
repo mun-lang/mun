@@ -9,7 +9,6 @@ env:
   RUSTFLAGS: -Dwarnings
 
 jobs:
-
   artifacts:
     name: Artifacts
     runs-on: ${{ matrix.config.os }}
@@ -18,15 +17,15 @@ jobs:
       matrix:
         config:
           - os: "ubuntu-latest"
-            dir: linux64
+            dir: linux-x86_64
             artifacts: "mun libmun_runtime.so"
             RUSTFLAGS: "-Dwarnings"
           - os: "windows-latest"
-            dir: win64
+            dir: windows-x86_64
             artifacts: "mun.exe mun_runtime.dll mun_runtime.dll.lib"
             RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
           - os: "macOS-latest"
-            dir: osx64
+            dir: macos-x86_64
             artifacts: "mun libmun_runtime.dylib"
             RUSTFLAGS: "-Dwarnings"
     steps:
@@ -66,10 +65,7 @@ jobs:
             os.rename(src, dst)
         shell: python
 
-      - name: Shorten commit SHA
-        run: echo "COMMIT_SHA=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
-
       - uses: actions/upload-artifact@master
         with:
-          name: ${{ matrix.config.dir }}-${{ env['COMMIT_SHA'] }}
+          name: ${{ matrix.config.dir }}
           path: ${{ matrix.config.dir }}
