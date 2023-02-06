@@ -91,7 +91,7 @@ impl CompileTestDriver {
 
     /// Updates the text of the Mun source and ensures that the generated assembly has been
     /// recompiled.
-    pub fn update(&mut self, path: impl AsRef<mun_paths::RelativePath>, text: &str) {
+    pub fn update_file(&mut self, path: impl AsRef<mun_paths::RelativePath>, text: &str) {
         self.driver.set_file_text(path, text).unwrap();
 
         let compiler_errors = self
@@ -177,8 +177,8 @@ impl CompileAndRunTestDriver {
     /// A reference to the borrowed `runtime` is used as an argument to allow moving of the
     /// existing borrow inside the update function. This obviates the necessity for `update` to use
     /// the `Runtime`.
-    pub fn update(&mut self, path: impl AsRef<mun_paths::RelativePath>, text: &str) {
-        self.driver.update(path, text);
+    pub fn update_file(&mut self, path: impl AsRef<mun_paths::RelativePath>, text: &str) {
+        self.driver.update_file(path, text);
 
         let start_time = Instant::now();
 

@@ -9,6 +9,7 @@ use crate::{
 use std::collections::{HashMap, HashSet};
 
 /// The type mapping needed to convert an old into a new set of unique and ordered values.
+#[derive(Debug)]
 pub struct Mapping {
     /// The types that were deleted
     pub deletions: HashSet<Type>,
@@ -19,6 +20,7 @@ pub struct Mapping {
 }
 
 /// The struct mapping needed to convert an old into a new struct of unique and ordered fields.
+#[derive(Debug)]
 pub struct StructMapping {
     /// The field mappings for each original struct field
     pub field_mapping: Vec<FieldMapping>,
