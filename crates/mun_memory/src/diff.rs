@@ -291,7 +291,7 @@ fn append_struct_mapping(
 }
 
 /// Given an `old` and a `new` set of fields, calculates the difference.
-fn field_diff<'a, 'b>(old: &[UniqueFieldInfo<'a>], new: &[UniqueFieldInfo<'b>]) -> Vec<FieldDiff> {
+fn field_diff(old: &[UniqueFieldInfo<'_>], new: &[UniqueFieldInfo<'_>]) -> Vec<FieldDiff> {
     let diff = myers::compute_diff(old, new);
     let (deletions, insertions) = myers::split_diff(&diff);
     let mut insertions: Vec<Option<Change<UniqueFieldInfo>>> =

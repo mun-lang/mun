@@ -64,8 +64,7 @@ impl UnifyValue for TypeVarValue {
             // We should never equate two type variables, both of which have
             // known types. Instead, we recursively equate those types.
             (TypeVarValue::Known(t1), TypeVarValue::Known(t2)) => panic!(
-                "equating two type variables, both of which have known types: {:?} and {:?}",
-                t1, t2
+                "equating two type variables, both of which have known types: {t1:?} and {t2:?}"
             ),
 
             // If one side is known, prefer that one.

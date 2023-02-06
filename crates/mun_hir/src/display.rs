@@ -26,7 +26,7 @@ impl<'a, 'b> HirFormatter<'a, 'b> {
         let mut first = true;
         for e in iter {
             if !first {
-                write!(self, "{}", sep)?;
+                write!(self, "{sep}")?;
             }
             first = false;
             e.hir_fmt(self)?;

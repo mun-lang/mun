@@ -76,8 +76,7 @@ impl<'ink> AsValue<'ink, u32> for u32 {
 impl<'ink> AsValue<'ink, u64> for u64 {
     fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, u64> {
         Value::from_raw(
-            <Self as SizedValueType>::get_ir_type(context.type_context)
-                .const_int(*self as u64, false),
+            <Self as SizedValueType>::get_ir_type(context.type_context).const_int(*self, false),
         )
     }
 }

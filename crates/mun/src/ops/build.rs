@@ -43,7 +43,7 @@ pub struct Args {
 
 fn parse_target_triple(target_triple: &str) -> Result<Target, String> {
     Target::search(target_triple)
-        .ok_or_else(|| format!("could not find target for '{}'", target_triple))
+        .ok_or_else(|| format!("could not find target for '{target_triple}'"))
 }
 
 /// This method is invoked when the executable is run with the `build` argument indicating that a

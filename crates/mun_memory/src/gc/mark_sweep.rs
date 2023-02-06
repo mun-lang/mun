@@ -934,8 +934,7 @@ where
                 mapping::Action::StructMapFromGc { old_ty, old_offset } => {
                     let conversion = conversions.get(old_ty).unwrap_or_else(|| {
                         panic!(
-                        "If the struct changed, there must also be a conversion for type: {:#?}.",
-                        old_ty,
+                        "If the struct changed, there must also be a conversion for type: {old_ty:#?}.",
                     )
                     });
 
@@ -961,8 +960,7 @@ where
 
                     let conversion = conversions.get(old_ty).unwrap_or_else(|| {
                         panic!(
-                        "If the struct changed, there must also be a conversion for type: {:#?}.",
-                        old_ty,
+                        "If the struct changed, there must also be a conversion for type: {old_ty:#?}.",
                     )
                     });
 
@@ -988,8 +986,7 @@ where
                 mapping::Action::StructMapInPlace { old_ty, old_offset } => {
                     let conversion = conversions.get(old_ty).unwrap_or_else(|| {
                         panic!(
-                        "If the struct changed, there must also be a conversion for type: {:#?}.",
-                        old_ty,
+                        "If the struct changed, there must also be a conversion for type: {old_ty:#?}.",
                     )
                     });
 

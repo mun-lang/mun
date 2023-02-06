@@ -30,8 +30,8 @@ pub struct FileGroupIr<'ink> {
 }
 
 /// Generates IR that is shared among the group's files.
-pub(crate) fn gen_file_group_ir<'db, 'ink>(
-    code_gen: &CodeGenContext<'db, 'ink>,
+pub(crate) fn gen_file_group_ir<'ink>(
+    code_gen: &CodeGenContext<'_, 'ink>,
     module_group: &ModuleGroup,
 ) -> FileGroupIr<'ink> {
     let llvm_module = code_gen.context.create_module("group_name");

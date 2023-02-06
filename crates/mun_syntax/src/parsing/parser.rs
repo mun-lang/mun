@@ -118,7 +118,7 @@ impl<'t> Parser<'t> {
 
     /// Consume the next token if `kind` matches.
     pub(crate) fn bump(&mut self, kind: SyntaxKind) {
-        assert!(self.eat(kind), "kind != {:?}", kind);
+        assert!(self.eat(kind), "kind != {kind:?}");
     }
 
     /// Advances the parser by one token with composite puncts handled
@@ -222,7 +222,7 @@ impl<'t> Parser<'t> {
         if self.eat(kind) {
             return true;
         }
-        self.error(format!("expected {:?}", kind));
+        self.error(format!("expected {kind:?}"));
         false
     }
 }

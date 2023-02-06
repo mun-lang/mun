@@ -135,8 +135,7 @@ pub unsafe extern "C" fn mun_runtime_create(
 
         if def.num_args > 0 && def.arg_types.is_null() {
             return Err(format!(
-                "invalid function '{}': 'arg_types' is null pointer.",
-                name
+                "invalid function '{name}': 'arg_types' is null pointer."
             ));
         }
 
@@ -176,7 +175,7 @@ pub unsafe extern "C" fn mun_runtime_create(
 
     let runtime = match mun_runtime::Runtime::new(runtime_options) {
         Ok(runtime) => runtime,
-        Err(e) => return ErrorHandle::new(format!("{:?}", e)),
+        Err(e) => return ErrorHandle::new(format!("{e:?}")),
     };
 
     handle.0 = Box::into_raw(Box::new(runtime)) as *mut _;
@@ -189,7 +188,7 @@ pub extern "C" fn mun_runtime_destroy(runtime: Runtime) -> ErrorHandle {
     if runtime.0.is_null() {
         return ErrorHandle::new("invalid argument 'runtime': null pointer");
     }
-    let _runtime = unsafe { Box::from_raw(runtime.0) };
+    let _runtime = unsafe { Box::from_raw(runtime.0 as *mut Runtime) };
     ErrorHandle::default()
 }
 
@@ -412,7 +411,6 @@ mod tests {
         let options = RuntimeOptions {
             functions: functions.as_ptr(),
             num_functions: 1,
-            ..Default::default()
         };
 
         let mut handle = MaybeUninit::uninit();
@@ -439,7 +437,6 @@ mod tests {
         let options = RuntimeOptions {
             functions: functions.as_ptr(),
             num_functions: 1,
-            ..Default::default()
         };
 
         let mut handle = MaybeUninit::uninit();
@@ -465,7 +462,6 @@ mod tests {
         let options = RuntimeOptions {
             functions: functions.as_ptr(),
             num_functions: 1,
-            ..Default::default()
         };
 
         let mut handle = MaybeUninit::uninit();
@@ -492,7 +488,6 @@ mod tests {
         let options = RuntimeOptions {
             functions: functions.as_ptr(),
             num_functions: 1,
-            ..Default::default()
         };
 
         let mut handle = MaybeUninit::uninit();
@@ -520,7 +515,6 @@ mod tests {
         let options = RuntimeOptions {
             functions: functions.as_ptr(),
             num_functions: 1,
-            ..Default::default()
         };
 
         let mut handle = MaybeUninit::uninit();

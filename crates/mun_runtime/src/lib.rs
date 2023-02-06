@@ -675,11 +675,7 @@ impl<'name, T: InvokeArgs> InvokeErr<'name, T> {
 /// implemented for tuples up to and including 20 elements.
 pub trait InvokeArgs {
     /// Determines whether the specified function can be called with these arguments
-    fn can_invoke<'runtime>(
-        &self,
-        runtime: &'runtime Runtime,
-        signature: &FunctionSignature,
-    ) -> Result<(), String>;
+    fn can_invoke(&self, runtime: &Runtime, signature: &FunctionSignature) -> Result<(), String>;
 
     /// Calls the specified function with these function arguments
     ///
@@ -695,7 +691,7 @@ seq_macro::seq!(I in 0..N {
     #[allow(clippy::extra_unused_lifetimes)]
     impl<'arg, #(T~I: ArgumentReflection + Marshal<'arg>,)*> InvokeArgs for (#(T~I,)*) {
         #[allow(unused_variables)]
-        fn can_invoke<'runtime>(&self, runtime: &'runtime Runtime, signature: &FunctionSignature) -> Result<(), String> {
+        fn can_invoke(&self, runtime: &Runtime, signature: &FunctionSignature) -> Result<(), String> {
             let arg_types = &signature.arg_types;
 
             // Ensure the number of arguments match
@@ -745,10 +741,7 @@ impl Runtime {
     {
         // Get the function information from the runtime
         let function_info = match self.get_function_definition(function_name).ok_or_else(|| {
-            format!(
-                "failed to obtain function '{}', no such function exists.",
-                function_name
-            )
+            format!("failed to obtain function '{function_name}', no such function exists.")
         }) {
             Ok(function_info) => function_info,
             Err(msg) => {

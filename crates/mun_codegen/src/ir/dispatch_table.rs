@@ -131,17 +131,14 @@ impl<'ink> DispatchTable<'ink> {
             .build_struct_gep(
                 table_ref.as_pointer_value(),
                 index as u32,
-                &format!("{0}_ptr_ptr", function_name),
+                &format!("{function_name}_ptr_ptr"),
             )
             .unwrap_or_else(|_| {
-                panic!(
-                    "could not get {} (index: {}) from dispatch table",
-                    function_name, index
-                )
+                panic!("could not get {function_name} (index: {index}) from dispatch table")
             });
 
         builder
-            .build_load(ptr_to_function_ptr, &format!("{0}_ptr", function_name))
+            .build_load(ptr_to_function_ptr, &format!("{function_name}_ptr"))
             .into_pointer_value()
             .try_into()
             .expect("Pointer value is not a valid function pointer.")

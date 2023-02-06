@@ -701,7 +701,7 @@ fn test_primitive_types() {
 #[test]
 fn can_add_external_without_return() {
     extern "C" fn foo(a: i32) {
-        println!("{}", a);
+        println!("{a}");
     }
 
     let driver = CompileAndRunTestDriver::new(

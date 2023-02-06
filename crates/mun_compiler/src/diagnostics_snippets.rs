@@ -51,7 +51,7 @@ pub(crate) fn emit_syntax_error(
         },
     };
     let dl = DisplayList::from(snippet);
-    write!(writer, "{}", dl)
+    write!(writer, "{dl}")
 }
 
 /// Emits all diagnostics that are a result of HIR validation.
@@ -195,5 +195,5 @@ fn emit_diagnostic(
 
     // Build a display list and emit to the writer
     let dl = DisplayList::from(snippet);
-    write!(writer, "{}", dl)
+    write!(writer, "{dl}")
 }

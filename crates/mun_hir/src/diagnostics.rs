@@ -502,7 +502,7 @@ impl Diagnostic for MissingFields {
         use std::fmt::Write;
         let mut message = "missing record fields:\n".to_string();
         for field in &self.field_names {
-            writeln!(message, "- {}", field).unwrap();
+            writeln!(message, "- {field}").unwrap();
         }
         message
     }

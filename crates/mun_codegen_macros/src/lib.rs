@@ -372,10 +372,7 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
             let repr_ty = if let Some(ident) = repr_ty {
                 let repr_ty = ident.to_string();
                 if !SUPPORTED_TAG_SIZES.contains(&repr_ty.as_str()) {
-                    eprintln!(
-                        "`repr({})` is not supported by the `AsValue` macro.",
-                        repr_ty
-                    );
+                    eprintln!("`repr({repr_ty})` is not supported by the `AsValue` macro.");
                 }
 
                 quote! {
@@ -480,7 +477,7 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
                         let field_mappings = v.fields.iter().enumerate().map(|(idx, f)| {
                             let name = f.ident.as_ref().map(|i| quote! { #i }).unwrap_or_else(|| {
                                 // If this is a tuple struct, map the index to an alias (e.g. 0: t0)
-                                let concatenated = format!("t{}", idx);
+                                let concatenated = format!("t{idx}");
                                 let local = Ident::new(&concatenated, Span::call_site());
                                 let idx = Index::from(idx);
                                 quote! { #idx: #local }
@@ -492,7 +489,7 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
                         let field_bytes_and_ptrs = v.fields.iter().enumerate().map(|(idx, f)| {
                             let name = f.ident.as_ref().map(|i| quote! { #i }).unwrap_or_else(|| {
                                 // If this is a tuple struct, map the use an alias (e.g. t0 for 0)
-                                let concatenated = format!("t{}", idx);
+                                let concatenated = format!("t{idx}");
                                 let local = Ident::new(&concatenated, Span::call_site());
                                 quote! { #local }
                             });

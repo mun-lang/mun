@@ -186,18 +186,14 @@ impl Server {
         self.client.sender.send(r.into()).unwrap();
         while let Some(msg) = self.recv() {
             match msg {
-                Message::Request(req) => panic!(
-                    "did not expect a request as a response to a request: {:?}",
-                    req
-                ),
+                Message::Request(req) => {
+                    panic!("did not expect a request as a response to a request: {req:?}")
+                }
                 Message::Notification(_) => (),
                 Message::Response(res) => {
                     assert_eq!(res.id, id);
                     if let Some(err) = res.error {
-                        panic!(
-                            "received error response as a response to a request: {:#?}",
-                            err
-                        );
+                        panic!("received error response as a response to a request: {err:#?}");
                     }
                     return res.result.unwrap();
                 }

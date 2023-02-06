@@ -124,7 +124,7 @@ fn get_type_definition_array<'ink>(
                 ir::TypeDefinition {
                     name: CString::new(struct_name.clone())
                         .expect("typename is not a valid CString")
-                        .intern(format!("type_info::<{}>::name", struct_name), context)
+                        .intern(format!("type_info::<{struct_name}>::name"), context)
                         .as_value(context),
                     size_in_bits: context
                         .type_context
@@ -170,16 +170,10 @@ fn gen_struct_info<'ink>(
         .map(|(idx, field)| {
             CString::new(field.name(db).to_string())
                 .expect("field name is not a valid CString")
-                .intern(
-                    format!("struct_info::<{}>::field_names.{}", name, idx),
-                    context,
-                )
+                .intern(format!("struct_info::<{name}>::field_names.{idx}"), context)
                 .as_value(context)
         })
-        .into_const_private_pointer_or_null(
-            format!("struct_info::<{}>::field_names", name),
-            context,
-        );
+        .into_const_private_pointer_or_null(format!("struct_info::<{name}>::field_names"), context);
 
     // Construct an array of field types (or null if there are no fields)
     let field_types = fields
@@ -188,10 +182,7 @@ fn gen_struct_info<'ink>(
             let field_type_info = hir_types.type_id(&field.ty(db));
             ir_type_builder.construct_from_type_id(&field_type_info)
         })
-        .into_const_private_pointer_or_null(
-            format!("struct_info::<{}>::field_types", name),
-            context,
-        );
+        .into_const_private_pointer_or_null(format!("struct_info::<{name}>::field_types"), context);
 
     // Construct an array of field offsets (or null if there are no fields)
     let field_offsets = fields
@@ -205,7 +196,7 @@ fn gen_struct_info<'ink>(
                 .unwrap() as u16
         })
         .into_const_private_pointer_or_null(
-            format!("struct_info::<{}>::field_offsets", name),
+            format!("struct_info::<{name}>::field_offsets"),
             context,
         );
 
@@ -240,7 +231,7 @@ fn get_function_definition_array<'ink, 'a>(
             // Get the function from the cloned module and modify the linkage of the function.
             let value = module
                 // If a wrapper function exists, use that (required for struct types)
-                .get_function(&format!("{}_wrapper", name))
+                .get_function(&format!("{name}_wrapper"))
                 // Otherwise, use the normal function
                 .or_else(|| module.get_function(&name))
                 .unwrap();
@@ -500,7 +491,7 @@ fn gen_get_info_fn<'ink>(
             .map(|(idx, name)| {
                 CString::new(name.as_str())
                     .expect("could not convert dependency name to string")
-                    .intern(format!("dependency{}", idx), context)
+                    .intern(format!("dependency{idx}"), context)
                     .as_value(context)
             })
             .into_const_private_pointer_or_null("dependencies", context)

@@ -107,17 +107,17 @@ fn trace_cycle() {
     runtime.collect();
 
     // Drop foo
-    let foo = foo_ptr.unroot();
+    let unrooted_foo = foo_ptr.unroot();
 
     // Collect garbage, foo should be collected
     runtime.collect();
 
     let mut events = runtime.observer().take_all().into_iter();
-    assert_eq!(events.next(), Some(Event::Allocation(foo)));
+    assert_eq!(events.next(), Some(Event::Allocation(unrooted_foo)));
     assert_eq!(events.next(), Some(Event::Start));
     assert_eq!(events.next(), Some(Event::End));
     assert_eq!(events.next(), Some(Event::Start));
-    assert_eq!(events.next(), Some(Event::Deallocation(foo)));
+    assert_eq!(events.next(), Some(Event::Deallocation(unrooted_foo)));
     assert_eq!(events.next(), Some(Event::End));
     assert_eq!(events.next(), None);
 }

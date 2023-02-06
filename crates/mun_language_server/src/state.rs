@@ -214,7 +214,7 @@ impl LanguageServerState {
                     self.report_progress(
                         "projects scanned",
                         progress_state,
-                        Some(format!("{}/{}", done, total)),
+                        Some(format!("{done}/{total}")),
                         Some(Progress::fraction(done, total)),
                     )
                 }

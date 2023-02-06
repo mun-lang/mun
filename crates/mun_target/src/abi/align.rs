@@ -26,10 +26,10 @@ impl Align {
             bytes >>= 1;
         }
         if bytes != 1 {
-            return Err(format!("`{}` is not a power of 2", align));
+            return Err(format!("`{align}` is not a power of 2"));
         }
         if pow2 > 29 {
-            return Err(format!("`{}` is too large", align));
+            return Err(format!("`{align}` is too large"));
         }
 
         Ok(Align { pow2 })

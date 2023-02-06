@@ -135,9 +135,9 @@ fn extract_tests_from_string(markdown: &str, file_stem: &str) -> Vec<Test> {
                 let code_block_info = parse_code_block_info(info);
                 if let Block::Code(buf) = mem::replace(&mut block, Block::None) {
                     let name = if let Some(ref section) = section {
-                        format!("{}_sect_{}_line_{}", file_stem, section, code_block_start)
+                        format!("{file_stem}_sect_{section}_line_{code_block_start}")
                     } else {
-                        format!("{}_line_{}", file_stem, code_block_start)
+                        format!("{file_stem}_line_{code_block_start}")
                     };
                     tests.push(Test {
                         name,
@@ -269,7 +269,7 @@ fn emit_test_runner(test: &Test) -> io::Result<String> {
         writeln!(s, "#[ignore]")?;
     }
     writeln!(s, "#[test] fn {}() {{", test.name)?;
-    writeln!(s, "    let s = &r####\"\n{}\"####;", test_text)?;
+    writeln!(s, "    let s = &r####\"\n{test_text}\"####;")?;
 
     let mode = match (test.no_run, test.compile_fail) {
         (_, true) => "ShouldNotCompile",
@@ -279,8 +279,7 @@ fn emit_test_runner(test: &Test) -> io::Result<String> {
 
     writeln!(
         s,
-        "    mun_skeptic::runtime::run_test(\n        s,\n        mun_skeptic::runtime::TestMode::{});",
-        mode
+        "    mun_skeptic::runtime::run_test(\n        s,\n        mun_skeptic::runtime::TestMode::{mode});"
     )?;
     writeln!(s, "}}")?;
     writeln!(s)?;

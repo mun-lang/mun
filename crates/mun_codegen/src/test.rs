@@ -943,15 +943,10 @@ fn incremental_compilation() {
             db.target_assembly(module_group_id);
         });
         assert!(
-            format!("{:?}", events).contains("package_defs"),
-            "{:#?}",
-            events
+            format!("{events:?}").contains("package_defs"),
+            "{events:#?}"
         );
-        assert!(
-            format!("{:?}", events).contains("assembly"),
-            "{:#?}",
-            events
-        );
+        assert!(format!("{events:?}").contains("assembly"), "{events:#?}");
     }
 
     db.set_optimization_level(OptimizationLevel::Aggressive);
@@ -960,17 +955,12 @@ fn incremental_compilation() {
         let events = db.log_executed(|| {
             db.target_assembly(module_group_id);
         });
-        println!("events: {:?}", events);
+        println!("events: {events:?}");
         assert!(
-            !format!("{:?}", events).contains("package_defs"),
-            "{:#?}",
-            events
+            !format!("{events:?}").contains("package_defs"),
+            "{events:#?}"
         );
-        assert!(
-            format!("{:?}", events).contains("assembly"),
-            "{:#?}",
-            events
-        );
+        assert!(format!("{events:?}").contains("assembly"), "{events:#?}");
     }
 
     // TODO: Try to disconnect `group_ir` and `file_ir`
@@ -1088,7 +1078,7 @@ fn test_snapshot_unoptimized(name: &str, text: &str) {
 }
 
 fn test_snapshot_with_optimization(name: &str, text: &str, opt: OptimizationLevel) {
-    let mut db = MockDatabase::with_files(&text);
+    let mut db = MockDatabase::with_files(text);
     db.set_optimization_level(opt);
     db.set_target(Target::host_target().unwrap());
 

@@ -24,10 +24,10 @@ fn collect_intrinsic<'ink>(
 
 /// Iterates over all expressions and stores information on which intrinsics they use in `entries`.
 #[allow(clippy::too_many_arguments)]
-fn collect_expr<'db, 'ink>(
+fn collect_expr<'ink>(
     context: &'ink Context,
     target: &TargetData,
-    db: &'db dyn HirDatabase,
+    db: &'_ dyn HirDatabase,
     intrinsics: &mut IntrinsicsMap<'ink>,
     needs_alloc: &mut bool,
     expr_id: ExprId,
@@ -87,10 +87,10 @@ fn collect_expr<'db, 'ink>(
 }
 
 /// Collects all intrinsics from the specified `body`.
-pub fn collect_fn_body<'db, 'ink>(
+pub fn collect_fn_body<'ink>(
     context: &'ink Context,
     target: TargetData,
-    db: &'db dyn HirDatabase,
+    db: &dyn HirDatabase,
     intrinsics: &mut IntrinsicsMap<'ink>,
     needs_alloc: &mut bool,
     body: &Arc<Body>,

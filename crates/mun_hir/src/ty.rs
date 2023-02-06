@@ -191,7 +191,7 @@ impl Ty {
                 let name = s.name(db).to_string();
 
                 Some(if s.data(db.upcast()).memory_kind == StructMemoryKind::Gc {
-                    format!("struct {}", name)
+                    format!("struct {name}")
                 } else {
                     let fields: Vec<String> = s
                         .fields(db)
@@ -291,7 +291,7 @@ impl Substitution {
     /// contain exactly one element.
     pub fn as_single(&self) -> &Ty {
         if self.0.len() != 1 {
-            panic!("expected substs of len 1, got {:?}", self);
+            panic!("expected substs of len 1, got {self:?}");
         }
         &self.0[0]
     }
@@ -364,8 +364,8 @@ impl HirDisplay for Ty {
     fn hir_fmt(&self, f: &mut HirFormatter) -> fmt::Result {
         match self.interned() {
             TyKind::Struct(s) => write!(f, "{}", s.name(f.db)),
-            TyKind::Float(ty) => write!(f, "{}", ty),
-            TyKind::Int(ty) => write!(f, "{}", ty),
+            TyKind::Float(ty) => write!(f, "{ty}"),
+            TyKind::Int(ty) => write!(f, "{ty}"),
             TyKind::Bool => write!(f, "bool"),
             TyKind::Tuple(_, elems) => {
                 write!(f, "(")?;
@@ -385,7 +385,7 @@ impl HirDisplay for Ty {
             &TyKind::FnDef(CallableDef::Function(def), _) => {
                 let sig = fn_sig_for_fn(f.db, def);
                 let name = def.name(f.db);
-                write!(f, "function {}", name)?;
+                write!(f, "function {name}")?;
                 write!(f, "(")?;
                 f.write_joined(sig.params(), ", ")?;
                 write!(f, ") -> {}", sig.ret().display(f.db))
@@ -393,7 +393,7 @@ impl HirDisplay for Ty {
             &TyKind::FnDef(CallableDef::Struct(def), _) => {
                 let sig = fn_sig_for_struct_constructor(f.db, def);
                 let name = def.name(f.db);
-                write!(f, "ctor {}", name)?;
+                write!(f, "ctor {name}")?;
                 write!(f, "(")?;
                 f.write_joined(sig.params(), ", ")?;
                 write!(f, ") -> {}", sig.ret().display(f.db))

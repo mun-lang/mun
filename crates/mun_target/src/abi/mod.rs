@@ -75,20 +75,14 @@ impl TargetDataLayout {
         // Parse an address space index from a string.
         let parse_address_space = |s: &str, cause: &str| {
             s.parse::<u32>().map_err(|err| {
-                format!(
-                    "invalid address space `{}` for `{}` in \"data-layout\": {}",
-                    s, cause, err
-                )
+                format!("invalid address space `{s}` for `{cause}` in \"data-layout\": {err}")
             })
         };
 
         // Parse a bit count from a string.
         let parse_bits = |s: &str, kind: &str, cause: &str| {
             s.parse::<u64>().map_err(|err| {
-                format!(
-                    "invalid {} `{}` for `{}` in \"data-layout\": {}",
-                    kind, s, cause, err
-                )
+                format!("invalid {kind} `{s}` for `{cause}` in \"data-layout\": {err}")
             })
         };
 
@@ -99,16 +93,12 @@ impl TargetDataLayout {
         let align = |s: &[&str], cause: &str| {
             if s.is_empty() {
                 return Err(format!(
-                    "missing alignment for `{}` in \"data-layout\"",
-                    cause
+                    "missing alignment for `{cause}` in \"data-layout\""
                 ));
             }
             let align_from_bits = |bits| {
                 Align::from_bits(bits).map_err(|err| {
-                    format!(
-                        "invalid alignment for `{}` in \"data-layout\": {}",
-                        cause, err
-                    )
+                    format!("invalid alignment for `{cause}` in \"data-layout\": {err}")
                 })
             };
             let abi = parse_bits(s[0], "alignment", cause)?;
@@ -225,7 +215,7 @@ impl TargetDataLayout {
             16 => I16,
             32 => I32,
             64 => I64,
-            bits => panic!("ptr_sized_integer: unknown pointer bit size {}", bits),
+            bits => panic!("ptr_sized_integer: unknown pointer bit size {bits}"),
         }
     }
 
@@ -280,7 +270,7 @@ impl FromStr for Endian {
         match s {
             "little" => Ok(Self::Little),
             "big" => Ok(Self::Big),
-            _ => Err(format!(r#"unknown endian: "{}""#, s)),
+            _ => Err(format!(r#"unknown endian: "{s}""#)),
         }
     }
 }

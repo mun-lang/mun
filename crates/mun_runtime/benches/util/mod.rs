@@ -24,7 +24,7 @@ pub fn runtime_from_file<P: AsRef<Path>>(p: P) -> Runtime {
         .emit_diagnostics_to_string(DisplayColor::Disable)
         .unwrap()
     {
-        panic!("compiler errors..\n{}", errors);
+        panic!("compiler errors..\n{errors}");
     }
 
     let out_path = driver.assembly_output_path_from_file(file_id);
@@ -46,6 +46,6 @@ pub fn lua_from_file<P: AsRef<Path>>(p: P) -> Lua {
 pub fn wasmer_from_file<P: AsRef<Path>>(store: &mut Store, p: P) -> Instance {
     let wasm_content = std::fs::read(compute_resource_path(p)).unwrap();
     let import_objects = wasmer::imports! {};
-    let module = Module::new(store, &wasm_content).unwrap();
+    let module = Module::new(store, wasm_content).unwrap();
     Instance::new(store, &module, &import_objects).unwrap()
 }

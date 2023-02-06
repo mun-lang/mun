@@ -54,7 +54,7 @@ pub fn run_test(code: &str, mode: TestMode) {
         .expect("error emitting errors");
     match (compiler_errors, mode.should_compile()) {
         (Some(errors), true) => {
-            panic!("code contains compiler errors:\n{}", errors);
+            panic!("code contains compiler errors:\n{errors}");
         }
         (None, false) => {
             panic!("Code that should have caused the error compiled successfully");

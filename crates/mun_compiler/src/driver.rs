@@ -433,7 +433,7 @@ impl Driver {
             .with_extension(AssemblyIr::EXTENSION);
 
         // Write to disk
-        assembly_ir.copy_to(&assembly_path)?;
+        assembly_ir.copy_to(assembly_path)?;
 
         Ok(())
     }
