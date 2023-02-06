@@ -23,9 +23,8 @@ fn check_package_defs_does_not_change() {
             db.package_defs(PackageId(0));
         });
         assert!(
-            format!("{:?}", events).contains("package_defs"),
-            "{:#?}",
-            events
+            format!("{events:?}").contains("package_defs"),
+            "{events:#?}"
         )
     }
     db.set_file_text(
@@ -44,9 +43,8 @@ fn check_package_defs_does_not_change() {
             db.package_defs(PackageId(0));
         });
         assert!(
-            !format!("{:?}", events).contains("package_defs"),
-            "{:#?}",
-            events
+            !format!("{events:?}").contains("package_defs"),
+            "{events:#?}"
         )
     }
 }

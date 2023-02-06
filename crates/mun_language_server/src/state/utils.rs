@@ -38,7 +38,7 @@ impl LanguageServerState {
             (0.0..=1.0).contains(&f);
             (f * 100.0) as u32
         });
-        let token = lsp_types::ProgressToken::String(format!("mun/{}", title));
+        let token = lsp_types::ProgressToken::String(format!("mun/{title}"));
         let work_done_progress = match state {
             Progress::Begin => {
                 self.send_request::<lsp_types::request::WorkDoneProgressCreate>(

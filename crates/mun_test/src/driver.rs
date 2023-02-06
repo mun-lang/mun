@@ -45,7 +45,7 @@ impl CompileTestDriver {
             .emit_diagnostics_to_string(DisplayColor::Disable)
             .expect("could not create diagnostics")
         {
-            panic!("compiler errors:\n{}", compiler_errors)
+            panic!("compiler errors:\n{compiler_errors}")
         }
 
         driver.write_all_assemblies(true).unwrap();
@@ -75,7 +75,7 @@ impl CompileTestDriver {
             .emit_diagnostics_to_string(DisplayColor::Disable)
             .expect("could not generate compiler diagnostics")
         {
-            panic!("compiler errors:\n{}", compiler_errors)
+            panic!("compiler errors:\n{compiler_errors}")
         }
 
         driver.write_all_assemblies(true).unwrap();
@@ -99,7 +99,7 @@ impl CompileTestDriver {
             .emit_diagnostics_to_string(DisplayColor::Disable)
             .expect("error creating diagnostics");
         if let Some(compiler_errors) = compiler_errors {
-            panic!("compiler errors:\n{}", compiler_errors)
+            panic!("compiler errors:\n{compiler_errors}")
         }
         self.driver.write_all_assemblies(true).unwrap();
     }

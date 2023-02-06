@@ -285,42 +285,42 @@ fn tree_for_module(
                 let func: Function = (*f).into();
                 let name = func.name(db);
                 if is_local {
-                    node.push(format!("fn {}", name));
+                    node.push(format!("fn {name}"));
                 } else {
                     let fully_qualified_name = format!(
                         "{}::{}",
                         fully_qualified_module_path(db, func.module(db)),
                         name
                     );
-                    node.push(format!("use fn {}", fully_qualified_name));
+                    node.push(format!("use fn {fully_qualified_name}"));
                 }
             }
             ItemDefinitionId::StructId(s) => {
                 let strukt: Struct = (*s).into();
                 let name = strukt.name(db);
                 if is_local {
-                    node.push(format!("struct {}", name));
+                    node.push(format!("struct {name}"));
                 } else {
                     let fully_qualified_name = format!(
                         "{}::{}",
                         fully_qualified_module_path(db, strukt.module(db)),
                         name
                     );
-                    node.push(format!("use struct {}", fully_qualified_name));
+                    node.push(format!("use struct {fully_qualified_name}"));
                 }
             }
             ItemDefinitionId::TypeAliasId(alias) => {
                 let alias: TypeAlias = (*alias).into();
                 let name = alias.name(db);
                 if is_local {
-                    node.push(format!("type {}", name));
+                    node.push(format!("type {name}"));
                 } else {
                     let fully_qualified_name = format!(
                         "{}::{}",
                         fully_qualified_module_path(db, alias.module(db)),
                         name
                     );
-                    node.push(format!("use type {}", fully_qualified_name));
+                    node.push(format!("use type {fully_qualified_name}"));
                 }
             }
             ItemDefinitionId::PrimitiveType(_) => {}

@@ -36,8 +36,8 @@ pub(crate) fn file_id(
 /// Converts the specified offset to our own `TextSize` structure
 pub(crate) fn offset(line_index: &LineIndex, position: lsp_types::Position) -> TextSize {
     let line_col = mun_hir::line_index::LineCol {
-        line: position.line as u32,
-        col_utf16: position.character as u32,
+        line: position.line,
+        col_utf16: position.character,
     };
     line_index.offset(line_col)
 }

@@ -49,7 +49,7 @@ impl<'db, 'diag, DB: mun_hir::HirDatabase> MissingFields<'db, 'diag, DB> {
         let missing_fields = diag
             .field_names
             .iter()
-            .map(|n| format!("`{}`", n))
+            .map(|n| format!("`{n}`"))
             .collect::<Vec<String>>()
             .join(", ");
 

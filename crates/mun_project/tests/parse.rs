@@ -6,7 +6,7 @@ use std::str::FromStr;
 #[test]
 fn manifest_from_file() {
     let manifest_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/resources/mun.toml");
-    let manifest = Manifest::from_file(&manifest_path).expect("could not load manifest");
+    let manifest = Manifest::from_file(manifest_path).expect("could not load manifest");
     assert_eq!(manifest.metadata().authors, vec!["Mun Team"]);
     assert_eq!(manifest.version(), &Version::from_str("0.2.0").unwrap());
     assert_eq!(manifest.name(), "test");

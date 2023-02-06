@@ -1367,7 +1367,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .expect("expected a struct field")
             .index(self.db);
 
-        let field_ir_name = &format!("{}.{}", hir_struct_name, name);
+        let field_ir_name = &format!("{hir_struct_name}.{name}");
         if self.is_place_expr(receiver_expr) {
             let receiver_ptr = self.gen_place_expr(receiver_expr)?;
             let receiver_ptr = self
@@ -1378,12 +1378,11 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 .build_struct_gep(
                     receiver_ptr,
                     field_idx,
-                    &format!("{}->{}", hir_struct_name, name),
+                    &format!("{hir_struct_name}->{name}"),
                 )
                 .unwrap_or_else(|_| {
                     panic!(
-                        "could not get pointer to field `{}::{}` at index {}",
-                        hir_struct_name, name, field_idx
+                        "could not get pointer to field `{hir_struct_name}::{name}` at index {field_idx}"
                     )
                 });
             Some(self.builder.build_load(field_ptr, field_ir_name))
@@ -1396,8 +1395,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     .build_extract_value(receiver_struct, field_idx, field_ir_name)
                     .ok_or_else(|| {
                         format!(
-                            "could not extract field {} (index: {}) from struct {}",
-                            name, field_idx, hir_struct_name
+                            "could not extract field {name} (index: {field_idx}) from struct {hir_struct_name}"
                         )
                     })
                     .unwrap(),
@@ -1431,12 +1429,11 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 .build_struct_gep(
                     receiver_ptr,
                     field_idx,
-                    &format!("{}->{}", hir_struct_name, name),
+                    &format!("{hir_struct_name}->{name}"),
                 )
                 .unwrap_or_else(|_| {
                     panic!(
-                        "could not get pointer to field `{}::{}` at index {}",
-                        hir_struct_name, name, field_idx
+                        "could not get pointer to field `{hir_struct_name}::{name}` at index {field_idx}"
                     )
                 }),
         )

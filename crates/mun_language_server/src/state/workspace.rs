@@ -17,12 +17,12 @@ impl LanguageServerState {
             .into_iter()
             .flatten()
             .filter_map(
-                |project| match mun_project::Package::from_file(&project.path) {
+                |project| match mun_project::Package::from_file(project.path) {
                     Ok(package) => Some(package),
                     Err(err) => {
                         self.show_message(
                             lsp_types::MessageType::ERROR,
-                            format!("mun failed to load package: {:#}", err),
+                            format!("mun failed to load package: {err:#}"),
                         );
                         None
                     }

@@ -118,7 +118,7 @@ fn kind_by_prefix(text: &str) -> CommentKind {
             return *kind;
         }
     }
-    panic!("bad comment text: {:?}", text)
+    panic!("bad comment text: {text:?}")
 }
 
 fn prefix_by_kind(kind: CommentKind) -> &'static str {

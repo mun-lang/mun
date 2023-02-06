@@ -95,8 +95,8 @@ impl Module {
         let module_tree = db.module_tree(self.id.package);
         module_tree[self.id.local_id]
             .children
-            .iter()
-            .map(|(_, local_id)| Module {
+            .values()
+            .map(|local_id| Module {
                 id: ModuleId {
                     package: self.id.package,
                     local_id: *local_id,

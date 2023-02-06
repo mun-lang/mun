@@ -22,14 +22,14 @@ pub enum LinkerError {
 impl fmt::Display for LinkerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
-            LinkerError::LinkError(e) => write!(f, "{}", e),
+            LinkerError::LinkError(e) => write!(f, "{e}"),
             LinkerError::PathError(path) => write!(
                 f,
                 "path contains invalid UTF-8 characters: {}",
                 path.display()
             ),
             LinkerError::PlatformSdkMissing(err) => {
-                write!(f, "could not find platform sdk: {}", err)
+                write!(f, "could not find platform sdk: {err}")
             }
         }
     }
@@ -143,8 +143,7 @@ impl Ld64Linker {
             (_, "macos") => "macosx",
             _ => {
                 return Err(LinkerError::PlatformSdkMissing(format!(
-                    "unsupported arch `{}` for os `{}`",
-                    arch, os
+                    "unsupported arch `{arch}` for os `{os}`"
                 )));
             }
         };
@@ -246,8 +245,8 @@ impl Linker for MsvcLinker {
             .push(format!("/EXPORT:{}", abi::GET_VERSION_FN_NAME));
         self.args
             .push(format!("/EXPORT:{}", abi::SET_ALLOCATOR_HANDLE_FN_NAME));
-        self.args.push(format!("/IMPLIB:{}", dll_lib_path_str));
-        self.args.push(format!("/OUT:{}", dll_path_str));
+        self.args.push(format!("/IMPLIB:{dll_lib_path_str}"));
+        self.args.push(format!("/OUT:{dll_path_str}"));
         Ok(())
     }
 

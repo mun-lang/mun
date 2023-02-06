@@ -50,7 +50,7 @@ fn format_mod_item(out: &mut String, tree: &ItemTree, item: ModItem) -> fmt::Res
     }
 
     for line in children.lines() {
-        write!(out, "\n> {}", line)?;
+        write!(out, "\n> {line}")?;
     }
 
     Ok(())

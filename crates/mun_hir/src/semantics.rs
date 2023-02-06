@@ -132,7 +132,7 @@ impl<'db> Semantics<'db> {
                 self.source_file_to_file
                     .borrow()
                     .keys()
-                    .map(|it| format!("{:?}", it))
+                    .map(|it| format!("{it:?}"))
                     .collect::<Vec<_>>()
                     .join(", ")
             )

@@ -34,12 +34,12 @@ fn gc_trace() {
     let value: StructRef = runtime.invoke("new_foo", ()).unwrap();
     let value = value.root();
 
-    assert_eq!(runtime.gc_collect(), false);
+    assert!(!runtime.gc_collect());
     assert!(runtime.gc_stats().allocated_memory > 0);
 
     drop(value);
 
-    assert_eq!(runtime.gc_collect(), true);
+    assert!(runtime.gc_collect());
     assert_eq!(runtime.gc_stats().allocated_memory, 0);
 }
 
@@ -233,8 +233,8 @@ fn map_struct_remove_field2() {
     let a = 1.0f64;
     let b = 5i64;
     let c = 3.0f64;
-    let foo: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
-    let foo = foo.root();
+    let result: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let rooted_result = result.root();
 
     driver.update(
         "mod.mun",
@@ -244,7 +244,13 @@ fn map_struct_remove_field2() {
         }
     "#,
     );
-    assert_eq!(foo.as_ref(&driver.runtime).get::<i64>("b").unwrap(), b);
+    assert_eq!(
+        rooted_result
+            .as_ref(&driver.runtime)
+            .get::<i64>("b")
+            .unwrap(),
+        b
+    );
 }
 
 #[test]
@@ -309,7 +315,7 @@ fn map_struct_cast_fields1() {
     let b = -2i16;
     let c = 3u32;
     let d = -4i64;
-    let e = 3.14f32;
+    let e = 3.1f32;
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c, d, e)).unwrap();
     let foo_struct = foo_struct.root();
 
@@ -2135,7 +2141,7 @@ fn nested_structs() {
     )
     .expect("Failed to build test driver");
 
-    let a = -3.14f32;
+    let a = -3.1f32;
     let b = 6.18f32;
     let gc_struct: StructRef = driver.runtime.invoke("new_gc_struct", (a, b)).unwrap();
     let value_struct: StructRef = driver.runtime.invoke("new_value_struct", (a, b)).unwrap();

@@ -207,7 +207,7 @@ fn add_field3() {
             }],
             old_index: 0,
             new_index: 0,
-            old_ty: struct1.clone(),
+            old_ty: struct1,
             new_ty: struct2.clone()
         }]
     );

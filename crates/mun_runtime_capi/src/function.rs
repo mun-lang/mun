@@ -205,7 +205,7 @@ pub(crate) mod tests {
     #[test]
     fn test_function_release_strong_count() {
         let function = mun_runtime::FunctionDefinition::builder("foo").finish();
-        let ffi_function: Function = function.clone().into();
+        let ffi_function: Function = function.into();
 
         let fn_def = ManuallyDrop::new(unsafe {
             Arc::from_raw(ffi_function.0 as *const mun_runtime::FunctionDefinition)

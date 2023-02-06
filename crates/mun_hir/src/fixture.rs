@@ -38,7 +38,7 @@ impl Fixture {
         let default_start = if text.contains(META_LINE) {
             None
         } else {
-            Some(format!("{} /{}", META_LINE, DEFAULT_FILE_NAME))
+            Some(format!("{META_LINE} /{DEFAULT_FILE_NAME}"))
         };
 
         for (idx, line) in default_start
@@ -50,11 +50,9 @@ impl Fixture {
             if line.contains(META_LINE) {
                 assert!(
                     line.starts_with(META_LINE),
-                    "Metadata line {} has invalid indentation. \
+                    "Metadata line {idx} has invalid indentation. \
                      All metadata lines need to have the same indentation \n\
-                     The offending line: {:?}",
-                    idx,
-                    line
+                     The offending line: {line:?}"
                 );
             }
 
@@ -171,7 +169,7 @@ mod test {
     #[test]
     fn single_fixture() {
         assert_eq!(
-            Fixture::parse(format!("{} /foo.mun\nfn hello_world() {{}}", META_LINE)),
+            Fixture::parse(format!("{META_LINE} /foo.mun\nfn hello_world() {{}}")),
             vec![Fixture {
                 relative_path: RelativePathBuf::from("foo.mun"),
                 text: "fn hello_world() {}\n".to_owned()

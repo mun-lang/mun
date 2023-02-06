@@ -57,7 +57,7 @@ impl<'ink> TypeTable<'ink> {
             .expect("too many types");
 
         let global_index = context.i64_type().const_zero();
-        let array_index = context.i64_type().const_int(index as u64, false);
+        let array_index = context.i64_type().const_int(index, false);
 
         let ptr_to_type_info_ptr = unsafe {
             builder.build_gep(

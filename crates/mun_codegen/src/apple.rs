@@ -80,6 +80,6 @@ fn find_apple_sdk_root(sdk_name: &str) -> Result<PathBuf, String> {
 
     match res {
         Ok(output) => Ok(PathBuf::from(output.trim())),
-        Err(e) => Err(format!("failed to get SDK path: {}", e)),
+        Err(e) => Err(format!("failed to get SDK path: {e}")),
     }
 }

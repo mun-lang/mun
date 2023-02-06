@@ -33,31 +33,31 @@ impl salsa::Database for MockDatabase {
 
 impl mun_hir::Upcast<dyn mun_hir::AstDatabase> for MockDatabase {
     fn upcast(&self) -> &(dyn mun_hir::AstDatabase + 'static) {
-        &*self
+        self
     }
 }
 
 impl mun_hir::Upcast<dyn mun_hir::SourceDatabase> for MockDatabase {
     fn upcast(&self) -> &(dyn mun_hir::SourceDatabase + 'static) {
-        &*self
+        self
     }
 }
 
 impl mun_hir::Upcast<dyn mun_hir::DefDatabase> for MockDatabase {
     fn upcast(&self) -> &(dyn mun_hir::DefDatabase + 'static) {
-        &*self
+        self
     }
 }
 
 impl mun_hir::Upcast<dyn mun_hir::HirDatabase> for MockDatabase {
     fn upcast(&self) -> &(dyn mun_hir::HirDatabase + 'static) {
-        &*self
+        self
     }
 }
 
 impl mun_hir::Upcast<dyn CodeGenDatabase> for MockDatabase {
     fn upcast(&self) -> &(dyn CodeGenDatabase + 'static) {
-        &*self
+        self
     }
 }
 

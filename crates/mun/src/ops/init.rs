@@ -33,15 +33,14 @@ pub fn create_project(create_in: &Path, project_name: &str) -> Result<ExitStatus
         let manifest_path = create_in.join("mun.toml");
 
         write(
-            &manifest_path,
+            manifest_path,
             format!(
                 // @TODO. Nothing is done yet to find out who the author is.
                 r#"[package]
-name="{}"
+name="{project_name}"
 authors=[]
 version="0.1.0"
 "#,
-                project_name,
             ),
         )?;
     }
@@ -52,14 +51,14 @@ version="0.1.0"
         let main_file_path = src_path.join("mod.mun");
 
         write(
-            &main_file_path,
+            main_file_path,
             r#"pub fn main() -> f64 {
     3.14159
 }
 "#,
         )?;
     }
-    println!("Created `{}` package", project_name);
+    println!("Created `{project_name}` package");
     Ok(ExitStatus::Success)
 }
 

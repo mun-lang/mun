@@ -311,7 +311,7 @@ mod test {
             .add_field("foo", i32::type_info().clone())
             .finish();
 
-        let guid = rust_ty.as_struct().unwrap().guid().clone();
+        let guid = *rust_ty.as_struct().unwrap().guid();
         let (ty, struct_ty) = unsafe { struct_type(rust_ty.into()) };
 
         assert_getter1!(mun_struct_type_guid(struct_ty, ffi_guid));

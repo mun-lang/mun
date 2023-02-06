@@ -291,7 +291,7 @@ pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) ->
             .map(|(new_index, action)| {
                 let new_field = new_fields
                     .get(new_index)
-                    .unwrap_or_else(|| panic!("New field at index: '{}' must exist.", new_index));
+                    .unwrap_or_else(|| panic!("New field at index: '{new_index}' must exist."));
                 FieldMapping {
                     new_ty: new_field.ty(),
                     new_offset: new_field.offset(),

@@ -30,13 +30,13 @@ fn arrays_are_collected() {
     )
     .expect("Failed to build test driver");
 
-    assert_eq!(driver.runtime.gc_collect(), false);
+    assert!(!driver.runtime.gc_collect());
     let _: () = driver
         .runtime
         .invoke("main", ())
         .expect("error invoking main function");
-    assert_eq!(driver.runtime.gc_collect(), true);
-    assert_eq!(driver.runtime.gc_collect(), false);
+    assert!(driver.runtime.gc_collect());
+    assert!(!driver.runtime.gc_collect());
 }
 
 #[test]

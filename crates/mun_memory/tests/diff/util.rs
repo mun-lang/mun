@@ -37,8 +37,7 @@ pub(crate) fn apply_diff(old: &[Type], diff: Vec<StructDiff>) -> Vec<Type> {
             } => {
                 let combined_struct_info = old_ty
                     .as_struct()
-                    .expect("edit diffs can only be applied on structs")
-                    .clone();
+                    .expect("edit diffs can only be applied on structs");
                 let new_struct_info = new_ty
                     .as_struct()
                     .expect("edit diffs can only be applied on structs");
