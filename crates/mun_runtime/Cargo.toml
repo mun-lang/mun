@@ -18,7 +18,6 @@ mun_libloader = { version = "0.4.0", path = "../mun_libloader" }
 mun_capi_utils = { version = "0.4.0", path = "../mun_capi_utils"}
 mun_memory = { version = "0.4.0", path = "../mun_memory" }
 mun_project = { version = "0.4.0", path = "../mun_project" }
-anyhow = { version = "1.0", default-features = false }
 itertools = { version = "0.10.3", default-features = false, features = ["use_alloc"] }
 log = { version = "0.4", default-features = false }
 notify = "5.0.0"
@@ -26,6 +25,7 @@ once_cell = { version = "1.4.0", default-features = false }
 parking_lot = { version = "0.12.0", default-features = false }
 rustc-hash = { version = "1.1", default-features = false }
 seq-macro = { version = "0.3.0", default-features = false }
+thiserror = { version = "1.0.38", default-features = false }
 
 [dev-dependencies]
 mun_compiler = { path="../mun_compiler" }

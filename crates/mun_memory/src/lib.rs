@@ -16,7 +16,6 @@ pub mod mapping;
 mod r#type;
 pub mod type_table;
 use mun_abi as abi;
-use thiserror::Error;
 
 pub mod prelude {
     pub use crate::diff::{compute_struct_diff, FieldDiff, FieldEditKind, StructDiff};
@@ -25,7 +24,7 @@ pub mod prelude {
 }
 
 /// An error that can occur when trying to convert from an abi type to an internal type.
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum TryFromAbiError<'a> {
     #[error("unknown TypeId '{0}'")]
     UnknownTypeId(abi::TypeId<'a>),
