@@ -341,6 +341,7 @@ fn gen_dispatch_table<'ink>(
 pub(super) fn gen_reflection_ir<'db, 'ink>(
     db: &'db dyn HirDatabase,
     context: &IrValueContext<'ink, '_, '_>,
+    module_name: &str,
     function_definitions: &HashSet<mun_hir::Function>,
     type_definitions: &HashSet<mun_hir::Ty>,
     dispatch_table: &DispatchTable<'ink>,
@@ -372,7 +373,7 @@ pub(super) fn gen_reflection_ir<'db, 'ink>(
 
     // Construct the module info struct
     let module_info = ir::ModuleInfo {
-        path: CString::new("")
+        path: CString::new(module_name)
             .unwrap()
             .intern("module_info::path", context)
             .as_value(context),

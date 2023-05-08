@@ -32,7 +32,7 @@ fn test_abi_compatibility() {
     @r###"
     AssemblyInfo(
       symbols: ModuleInfo(
-        path: "",
+        path: "mod",
         functions: [
           FunctionDefinition(
             prototype: FunctionPrototype(
