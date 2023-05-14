@@ -1,5 +1,5 @@
 use mun_compiler::{Config, DisplayColor, Driver, PathOrInline, RelativePathBuf};
-use mun_runtime::{Runtime, RuntimeBuilder};
+use mun_runtime::{InitError, Runtime, RuntimeBuilder};
 use std::{
     path::{Path, PathBuf},
     thread::sleep,
@@ -144,7 +144,7 @@ impl CompileAndRunTestDriver {
     pub fn from_fixture(
         fixture: &str,
         config_fn: impl FnOnce(RuntimeBuilder) -> RuntimeBuilder,
-    ) -> Result<Self, anyhow::Error> {
+    ) -> Result<Self, InitError> {
         let driver = CompileTestDriver::from_fixture(fixture);
         let builder = Runtime::builder(driver.lib_path());
 
@@ -160,7 +160,7 @@ impl CompileAndRunTestDriver {
     pub fn new(
         text: &str,
         config_fn: impl FnOnce(RuntimeBuilder) -> RuntimeBuilder,
-    ) -> Result<Self, anyhow::Error> {
+    ) -> Result<Self, InitError> {
         let driver = CompileTestDriver::from_file(text);
         let builder = Runtime::builder(driver.lib_path());
 
