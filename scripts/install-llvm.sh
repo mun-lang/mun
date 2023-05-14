@@ -36,4 +36,4 @@ apt-get update
 apt download libclang-rt-$LLVM_VERSION-dev && dpkg --force-all -i libclang-rt-$LLVM_VERSION-dev*
 
 # Install required packages
-apt-get install -y llvm-$LLVM_VERSION llvm-$LLVM_VERSION-* liblld-$LLVM_VERSION* libpolly-$LLVM_VERSION-dev
+apt-get -f install -y llvm-$LLVM_VERSION llvm-$LLVM_VERSION-* liblld-$LLVM_VERSION* libpolly-$LLVM_VERSION-dev
