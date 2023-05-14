@@ -95,6 +95,7 @@ impl<'db, 'ink, 'ctx, 't> AssemblyBuilder<'db, 'ink, 'ctx, 't> {
         symbols::gen_reflection_ir(
             self.code_gen.db,
             &value_context,
+            &module_group.name,
             &file.function_definitions,
             &file.type_definitions,
             &group_ir.dispatch_table,
