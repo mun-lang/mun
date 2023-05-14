@@ -73,14 +73,14 @@ jobs:
         with:
           submodules: true
 
-      - name: Install LLVM
-        uses: ./.github/actions/install-llvm
-
       - name: Install packages
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install libasound2-dev libudev-dev
+
+      - name: Install LLVM
+        uses: ./.github/actions/install-llvm
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
@@ -118,7 +118,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ "ubuntu-latest", "windows-latest", "macOS-latest" ]
+        os: ["ubuntu-latest", "windows-latest", "macOS-latest"]
         include:
           - RUSTFLAGS: "-Dwarnings"
             CARGO_INCREMENTAL: 1
