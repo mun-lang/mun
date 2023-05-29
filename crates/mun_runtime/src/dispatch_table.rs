@@ -16,6 +16,11 @@ impl DispatchTable {
         self.functions.get(fn_path).map(Clone::clone)
     }
 
+    /// Retrieves the name of all available functions.
+    pub fn get_fn_names(&self) -> Vec<&str> {
+        self.functions.keys().map(|key| key.as_str()).collect()
+    }
+
     /// Inserts the `fn_info` for `fn_path` into the dispatch table.
     ///
     /// If the dispatch table already contained this `fn_path`, the value is updated, and the old

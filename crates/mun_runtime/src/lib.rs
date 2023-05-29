@@ -13,6 +13,7 @@ mod dispatch_table;
 mod function_info;
 mod marshal;
 mod reflection;
+mod utils;
 
 use assembly::LoadError;
 use dispatch_table::DispatchTable;
@@ -26,6 +27,7 @@ use mun_memory::{
 use mun_project::LOCKFILE_NAME;
 use notify::{event::ModifyKind, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::{
+    cmp,
     collections::{BTreeMap, HashMap, VecDeque},
     ffi,
     ffi::c_void,
@@ -336,6 +338,27 @@ impl Runtime {
     pub fn get_function_definition(&self, function_name: &str) -> Option<Arc<FunctionDefinition>> {
         // TODO: Verify that when someone tries to invoke a non-public function, it should fail.
         self.dispatch_table.get_fn(function_name)
+    }
+
+    /// For a given fn_name, find the most similar name in fn_names
+    fn find_best_match_for_fn_name(&self, fn_name: &str, fn_names: &[&str]) -> Option<String> {
+        // As a loose rule to avoid the obviously incorrect suggestions, it takes
+        // an optional limit for the maximum allowable edit distance, which defaults
+        // to one-third of the given word.
+        let max_dist = cmp::max(fn_name.len(), 3) / 3;
+
+        let found_match = fn_names
+            .iter()
+            .filter_map(|&name| {
+                let dist = utils::lev_distance(fn_name, name);
+                if dist <= max_dist {
+                    Some((name, dist))
+                } else {
+                    None
+                }
+            })
+            .min_by(|(_, dist1), (_, dist2)| dist1.cmp(dist2));
+        found_match.map(|(closest_name, _)| closest_name.to_string())
     }
 
     /// Retrieves the type definition corresponding to `type_name`, if available.
@@ -754,11 +777,20 @@ impl Runtime {
         }) {
             Ok(function_info) => function_info,
             Err(msg) => {
+                let available_names = self.dispatch_table.get_fn_names();
+                let suggested_name =
+                    self.find_best_match_for_fn_name(function_name, &available_names);
+
+                let suggested_message = suggested_name.map_or_else(
+                    || msg.clone(),
+                    |name| format!("{msg} There is a function with a similar name: {name}"),
+                );
+
                 return Err(InvokeErr {
-                    msg,
+                    msg: suggested_message,
                     function_name,
                     arguments,
-                })
+                });
             }
         };
 
