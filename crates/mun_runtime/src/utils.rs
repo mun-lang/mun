@@ -29,3 +29,32 @@ pub fn lev_distance(a: &str, b: &str) -> usize {
     }
     dcol[t_last + 1]
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::utils::lev_distance;
+
+    #[test]
+    fn distance_exists() {
+        const FIRST_STRING: &str = "foo";
+        const SECOND_STRING: &str = "zbar";
+        const EXPECTED_DISTANCE: usize = 4;
+        assert_eq!(lev_distance(FIRST_STRING, SECOND_STRING), EXPECTED_DISTANCE)
+    }
+
+    #[test]
+    fn empty_string() {
+        const FIRST_STRING: &str = "calculate";
+        const SECOND_STRING: &str = "";
+        const EXPECTED_DISTANCE: usize = FIRST_STRING.len();
+        assert_eq!(lev_distance(FIRST_STRING, SECOND_STRING), EXPECTED_DISTANCE)
+    }
+
+    #[test]
+    fn distance_is_zero() {
+        const FIRST_STRING: &str = "calculate";
+        const SECOND_STRING: &str = "calculate";
+        const EXPECTED_DISTANCE: usize = 0;
+        assert_eq!(lev_distance(FIRST_STRING, SECOND_STRING), EXPECTED_DISTANCE)
+    }
+}
