@@ -341,7 +341,11 @@ impl Runtime {
     }
 
     /// For a given fn_name, find the most similar name in fn_names
-    fn find_best_match_for_fn_name(&self, fn_name: &str, fn_names: &[&str]) -> Option<String> {
+    fn find_best_match_for_fn_name<'a>(
+        &self,
+        fn_name: &'a str,
+        fn_names: &[&'a str],
+    ) -> Option<&'a str> {
         // As a loose rule to avoid the obviously incorrect suggestions, it takes
         // an optional limit for the maximum allowable edit distance, which defaults
         // to one-third of the given word.
@@ -358,7 +362,7 @@ impl Runtime {
                 }
             })
             .min_by(|(_, dist1), (_, dist2)| dist1.cmp(dist2));
-        found_match.map(|(closest_name, _)| closest_name.to_string())
+        found_match.map(|(closest_name, _)| closest_name)
     }
 
     /// Retrieves the type definition corresponding to `type_name`, if available.
