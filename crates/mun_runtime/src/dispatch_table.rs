@@ -17,8 +17,8 @@ impl DispatchTable {
     }
 
     /// Retrieves the name of all available functions.
-    pub fn get_fn_names(&self) -> Vec<&str> {
-        self.functions.keys().map(|key| key.as_str()).collect()
+    pub fn get_fn_names(&self) -> impl Iterator<Item = &str> {
+        self.functions.keys().map(|key| key.as_str())
     }
 
     /// Inserts the `fn_info` for `fn_path` into the dispatch table.

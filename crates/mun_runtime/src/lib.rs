@@ -344,16 +344,16 @@ impl Runtime {
     fn find_best_match_for_fn_name<'a>(
         &self,
         fn_name: &'a str,
-        fn_names: &[&'a str],
+        fn_names: impl Iterator<Item = &'a str>,
+        dist: Option<usize>,
     ) -> Option<&'a str> {
         // As a loose rule to avoid the obviously incorrect suggestions, it takes
         // an optional limit for the maximum allowable edit distance, which defaults
         // to one-third of the given word.
-        let max_dist = cmp::max(fn_name.len(), 3) / 3;
+        let max_dist = dist.unwrap_or_else(|| cmp::max(fn_name.len(), 3) / 3);
 
         let found_match = fn_names
-            .iter()
-            .filter_map(|&name| {
+            .filter_map(|name| {
                 let dist = utils::lev_distance(fn_name, name);
                 if dist <= max_dist {
                     Some((name, dist))
@@ -783,7 +783,7 @@ impl Runtime {
             Err(msg) => {
                 let available_names = self.dispatch_table.get_fn_names();
                 let suggested_name =
-                    self.find_best_match_for_fn_name(function_name, &available_names);
+                    self.find_best_match_for_fn_name(function_name, available_names, None);
 
                 let suggested_message = suggested_name.map_or_else(
                     || msg.clone(),
