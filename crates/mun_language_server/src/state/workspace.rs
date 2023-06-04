@@ -42,7 +42,7 @@ impl LanguageServerState {
                     .iter()
                     .map(|package| format!("{}/**/*.mun", package.source_directory().display()))
                     .map(|glob_pattern| lsp_types::FileSystemWatcher {
-                        glob_pattern,
+                        glob_pattern: lsp_types::GlobPattern::String(glob_pattern),
                         kind: None,
                     })
                     .collect(),
