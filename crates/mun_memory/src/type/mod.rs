@@ -946,7 +946,7 @@ impl Type {
     }
 
     /// Tries to convert multiple [`abi::TypeDefinition`] to internal type representations. If
-    /// the conversion succeeds an updated [`TypeTable`] is returned
+    /// the conversion succeeds an updated [`TypeTable`] is returned.
     pub fn try_from_abi<'abi>(
         type_info: impl IntoIterator<Item = &'abi abi::TypeDefinition<'abi>>,
         type_table: TypeTable,

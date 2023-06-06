@@ -1,8 +1,17 @@
-use std::fs;
-use std::path::Path;
+use std::{fs, io, path::Path};
 
-use anyhow::Error;
 use libloading::Library;
+
+/// An error that occurs upon construction of a [`TempLibrary`].
+#[derive(Debug, thiserror::Error)]
+pub enum InitError {
+    #[error("Failed to create a named temp file: {0}.")]
+    CreateTempFile(io::Error),
+    #[error("Failed to copy shared library: {0}.")]
+    CopyLibrary(io::Error),
+    #[error("Failed to load temp shared library: {0}")]
+    LoadTempLibrary(#[from] libloading::Error),
+}
 
 /// A structure that holds a `Library` instance but creates a unique file per load. This enables
 /// writing to the original library and ensures that each shared object on Linux is loaded
@@ -36,9 +45,11 @@ impl TempLibrary {
     /// executed when the library is unloaded.
     ///
     /// See [`libloading::Library::new`] for more information.
-    pub unsafe fn new(path: &Path) -> Result<Self, Error> {
-        let tmp_path = tempfile::NamedTempFile::new()?.into_temp_path();
-        fs::copy(path, &tmp_path)?;
+    pub unsafe fn new(path: &Path) -> Result<Self, InitError> {
+        let tmp_path = tempfile::NamedTempFile::new()
+            .map_err(InitError::CreateTempFile)?
+            .into_temp_path();
+        fs::copy(path, &tmp_path).map_err(InitError::CopyLibrary)?;
         let library = Library::new(&tmp_path)?;
         Ok(TempLibrary {
             _tmp_path: tmp_path,

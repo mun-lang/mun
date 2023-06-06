@@ -1,5 +1,5 @@
+use mun_runtime::LinkFunctionsError;
 use mun_test::CompileAndRunTestDriver;
-use std::io;
 
 #[macro_use]
 mod util;
@@ -155,23 +155,24 @@ fn from_fixture() {
 
 #[test]
 fn error_assembly_not_linkable() {
+    const EXPECTED_FN_NAME: &str = "dependency";
+
     let driver = CompileAndRunTestDriver::new(
-        r"
-    extern fn dependency() -> i32;
+        &format!(
+            r"
+    extern fn {EXPECTED_FN_NAME}() -> i32;
     
-    pub fn main() -> i32 { dependency() }
-    ",
+    pub fn main() -> i32 {{ {EXPECTED_FN_NAME}() }}
+    "
+        ),
         |builder| builder,
     );
     assert_eq!(
-        format!("{}", driver.unwrap_err()),
-        format!(
-            "{}",
-            io::Error::new(
-                io::ErrorKind::NotFound,
-                "Failed to link due to missing dependencies.\n- dependency".to_string(),
-            )
-        )
+        driver.unwrap_err().to_string(),
+        LinkFunctionsError::MissingDependencies {
+            functions: vec![EXPECTED_FN_NAME.to_string()]
+        }
+        .to_string()
     );
 }
 

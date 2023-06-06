@@ -1,11 +1,11 @@
 use std::{
     collections::{HashMap, VecDeque},
     ffi::c_void,
+    io,
     path::{Path, PathBuf},
     sync::Arc,
 };
 
-use anyhow::{anyhow, Context};
 use itertools::Itertools;
 use log::error;
 
@@ -18,6 +18,73 @@ use mun_memory::{
 };
 
 use crate::{garbage_collector::GarbageCollector, DispatchTable};
+
+/// An error that occurs upon loading of a Mun library.
+#[derive(Debug, thiserror::Error)]
+pub enum LoadError {
+    #[error("An assembly with the same name already exists")]
+    AlreadyExists,
+    #[error(transparent)]
+    FailedToLoadSharedLibrary(#[from] mun_libloader::InitError),
+    #[error("ABI version mismatch. munlib is `{actual}` but runtime is `{expected}`")]
+    MismatchedAbiVersions { expected: u32, actual: u32 },
+    #[error(transparent)]
+    Other(#[from] io::Error),
+}
+
+/// An error that occurs upon linking of a Mun assembly.
+#[derive(Debug, thiserror::Error)]
+pub enum LinkError {
+    /// Failed to load assembly
+    #[error(transparent)]
+    LoadAssembly(#[from] LoadError),
+    /// Failed to load type
+    #[error("Failed to load type with id `{0}`")]
+    LoadType(String),
+    /// Failed to link function
+    #[error(transparent)]
+    Function(#[from] LinkFunctionsError),
+    /// Failed to link assembly's types
+    #[error("Failed to link types: {0:?}")]
+    MissingTypes(Vec<String>),
+}
+
+/// An error that occurs upon linking of a Mun function prototype.
+#[derive(Debug, thiserror::Error)]
+pub enum LinkFunctionsError {
+    /// Failed to resolve function argument
+    #[error("Could not resolve function `{fn_name}`'s argument type #{idx}: {type_id}")]
+    UnresolvedArgument {
+        /// Function name
+        fn_name: String,
+        /// Argument index
+        idx: usize,
+        /// Argument type ID
+        type_id: String,
+    },
+    /// Failed to resolve function return type
+    #[error("Could not resolve function `{fn_name}`'s result type: {type_id}")]
+    UnresolvedResult {
+        /// Function name
+        fn_name: String,
+        /// Result type ID
+        type_id: String,
+    },
+    /// Failed to retrieve function pointer due to mismatched function signature
+    #[error("The function signature in the dispatch table does not match.\nExpected:\n\tfn {expected}\n\nFound:\n\tfn {found}")]
+    MismatchedSignature {
+        /// Expected function signature
+        expected: String,
+        /// Function signature found in dispatch table
+        found: String,
+    },
+    /// Failed to load functions due to missing dependencies.
+    #[error("Missing dependencies for functions: {functions:?}")]
+    MissingDependencies {
+        /// Function names for which dependencies were missing
+        functions: Vec<String>,
+    },
+}
 
 /// An assembly is a hot reloadable compilation unit, consisting of one or more Mun modules.
 pub struct Assembly {
@@ -43,19 +110,15 @@ impl Assembly {
     /// executed when the library is unloaded.
     ///
     /// See [`libloading::Library::new`] for more information.
-    pub unsafe fn load(
-        library_path: &Path,
-        gc: Arc<GarbageCollector>,
-    ) -> Result<Self, anyhow::Error> {
+    pub unsafe fn load(library_path: &Path, gc: Arc<GarbageCollector>) -> Result<Self, LoadError> {
         let mut library = MunLibrary::new(library_path)?;
 
         let version = library.get_abi_version();
         if abi::ABI_VERSION != version {
-            return Err(anyhow::anyhow!(
-                "ABI version mismatch. munlib is `{}` but runtime is `{}`",
-                version,
-                abi::ABI_VERSION
-            ));
+            return Err(LoadError::MismatchedAbiVersions {
+                expected: abi::ABI_VERSION,
+                actual: version,
+            });
         }
 
         let allocator_ptr = Arc::into_raw(gc.clone()) as *mut std::ffi::c_void;
@@ -71,28 +134,30 @@ impl Assembly {
         Ok(assembly)
     }
 
+    /// On failure, returns debug names of all missing types.
     fn link_all_types<'abi>(
         type_table: &TypeTable,
         to_link: impl Iterator<Item = (&'abi abi::TypeId<'abi>, &'abi mut *const c_void, &'abi str)>,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), Vec<String>> {
         // Try to link all LUT entries
-        let mut failed_to_link = false;
-        for (type_id, type_info_ptr, _debug_name) in to_link {
-            // Ensure that the function is in the runtime dispatch table
-            if let Some(ty) = type_table.find_type_info_by_id(type_id) {
-                *type_info_ptr = Type::into_raw(ty);
-            } else {
-                failed_to_link = true;
-            }
-        }
+        let failed_to_link = to_link
+            .filter_map(|(type_id, type_info_ptr, debug_name)| {
+                // Ensure that the function is in the runtime dispatch table
+                if let Some(ty) = type_table.find_type_info_by_id(type_id) {
+                    *type_info_ptr = Type::into_raw(ty);
+                    None
+                } else {
+                    Some(debug_name)
+                }
+            })
+            .map(ToString::to_string)
+            .collect::<Vec<String>>();
 
-        if failed_to_link {
-            return Err(anyhow!(
-                "Failed to link types due to missing type dependencies."
-            ));
+        if failed_to_link.is_empty() {
+            Ok(())
+        } else {
+            Err(failed_to_link)
         }
-
-        Ok(())
     }
 
     /// Private implementation of runtime linking
@@ -100,7 +165,7 @@ impl Assembly {
         dispatch_table: &DispatchTable,
         type_table: &TypeTable,
         to_link: impl Iterator<Item = (&'abi mut *const c_void, &'abi abi::FunctionPrototype<'abi>)>,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), LinkFunctionsError> {
         let mut to_link: Vec<_> = to_link.collect();
 
         let mut retry = true;
@@ -119,30 +184,20 @@ impl Assembly {
                     .map(|(idx, fn_arg_type_id)| {
                         type_table
                             .find_type_info_by_id(fn_arg_type_id)
-                            .ok_or_else(|| {
-                                anyhow!(
-                                    "could not resolve type of argument #{}: {}",
-                                    idx + 1,
-                                    fn_arg_type_id
-                                )
+                            .ok_or_else(|| LinkFunctionsError::UnresolvedArgument {
+                                fn_name: fn_prototype.name().to_string(),
+                                idx: idx + 1,
+                                type_id: fn_arg_type_id.to_string(),
                             })
                     })
-                    .collect::<Result<Vec<_>, _>>()
-                    .with_context(|| {
-                        format!("failed to link function '{}'", fn_prototype.name())
-                    })?;
+                    .collect::<Result<Vec<_>, _>>()?;
 
                 // Get the return type info
                 let fn_proto_ret_type_info = type_table
                     .find_type_info_by_id(&fn_prototype.signature.return_type)
-                    .ok_or_else(|| {
-                        anyhow!(
-                            "could not resolve type of return type: {}",
-                            &fn_prototype.signature.return_type
-                        )
-                    })
-                    .with_context(|| {
-                        format!("failed to link function '{}'", fn_prototype.name())
+                    .ok_or_else(|| LinkFunctionsError::UnresolvedResult {
+                        fn_name: fn_prototype.name().to_string(),
+                        type_id: fn_prototype.signature.return_type.to_string(),
                     })?;
 
                 // Ensure that the function is in the runtime dispatch table
@@ -163,10 +218,17 @@ impl Assembly {
                             .join(", ");
 
                         let fn_name = fn_prototype.name();
-                        return Err(anyhow!("a function with the same name does exist, but the signatures do not match.\nExpected:\n\tfn {fn_name}({expected}) -> {}\n\nFunction that exists:\n\tfn {fn_name}({found}) -> {}",
-                            &fn_proto_ret_type_info.name(),
-                            &existing_fn_def.prototype.signature.return_type.name()))
-                            .with_context(|| format!("failed to link function '{}'", fn_prototype.name()));
+
+                        return Err(LinkFunctionsError::MismatchedSignature {
+                            expected: format!(
+                                "{fn_name}({expected}) -> {}",
+                                fn_proto_ret_type_info.name()
+                            ),
+                            found: format!(
+                                "{fn_name}({found}) -> {}",
+                                existing_fn_def.prototype.signature.return_type.name()
+                            ),
+                        });
                     }
 
                     *dispatch_ptr = existing_fn_def.fn_ptr;
@@ -180,23 +242,16 @@ impl Assembly {
             to_link = failed_to_link;
         }
 
-        if !to_link.is_empty() {
-            let mut missing_functions = vec![];
-            for (_, fn_prototype) in to_link {
-                error!(
-                    "Failed to link: function `{}` is missing.",
-                    fn_prototype.name()
-                );
-                missing_functions.push(format!("- {}", fn_prototype.name()));
-            }
-
-            return Err(anyhow!(
-                "Failed to link due to missing dependencies.\n{}",
-                missing_functions.join("\n")
-            ));
+        if to_link.is_empty() {
+            Ok(())
+        } else {
+            Err(LinkFunctionsError::MissingDependencies {
+                functions: to_link
+                    .into_iter()
+                    .map(|(_, fn_prototype)| fn_prototype.name().to_string())
+                    .collect(),
+            })
         }
-
-        Ok(())
     }
 
     /// Tries to link the `assemblies`, resulting in a new [`DispatchTable`] on success. This leaves
@@ -205,7 +260,7 @@ impl Assembly {
         assemblies: impl Iterator<Item = &'a mut Assembly>,
         dispatch_table: &DispatchTable,
         type_table: &TypeTable,
-    ) -> anyhow::Result<(DispatchTable, TypeTable)> {
+    ) -> Result<(DispatchTable, TypeTable), LinkError> {
         let mut assemblies: Vec<&'a mut _> = assemblies.collect();
 
         // Load all types, this creates a new type table that contains the types loaded
@@ -215,7 +270,7 @@ impl Assembly {
                 .flat_map(|asm| asm.info().symbols.types().iter()),
             type_table.clone(),
         )
-        .map_err(|e| anyhow::anyhow!("failed to link types from assembly: {}", e))?;
+        .map_err(|e| LinkError::LoadType(e.to_string()))?;
 
         let types_to_link = assemblies
             .iter_mut()
@@ -224,7 +279,7 @@ impl Assembly {
             // by the compiler.
             .filter(|(_, ptr, _)| ptr.is_null());
 
-        Assembly::link_all_types(&type_table, types_to_link)?;
+        Assembly::link_all_types(&type_table, types_to_link).map_err(LinkError::MissingTypes)?;
 
         // Clone the dispatch table, such that we can roll back if linking fails
         let mut dispatch_table = dispatch_table.clone();
@@ -256,7 +311,7 @@ impl Assembly {
         linked_assemblies: &mut HashMap<PathBuf, Assembly>,
         dispatch_table: &DispatchTable,
         type_table: &TypeTable,
-    ) -> anyhow::Result<(DispatchTable, TypeTable)> {
+    ) -> Result<(DispatchTable, TypeTable), LinkError> {
         let mut dependencies: HashMap<String, Vec<String>> = unlinked_assemblies
             .values()
             .map(|assembly| {
@@ -312,7 +367,7 @@ impl Assembly {
             // Collect all types that need to be loaded
             let (updated_type_table, new_types) =
                 Type::try_from_abi(new_assembly.info.symbols.types(), type_table)
-                    .map_err(|e| anyhow::anyhow!("failed to load assembly types: {}", e))?;
+                    .map_err(|e| LinkError::LoadType(e.to_string()))?;
             type_table = updated_type_table;
 
             // Load all types, retrying types that depend on other unloaded types within the module
@@ -324,7 +379,8 @@ impl Assembly {
                 // by the compiler.
                 .filter(|(_, ptr, _)| ptr.is_null());
 
-            Assembly::link_all_types(&type_table, types_to_link)?;
+            Assembly::link_all_types(&type_table, types_to_link)
+                .map_err(LinkError::MissingTypes)?;
 
             // Memory map allocated object
             if let Some((old_assembly, old_types)) = old_types {

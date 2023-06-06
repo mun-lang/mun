@@ -13,8 +13,9 @@ mod dispatch_table;
 mod function_info;
 mod marshal;
 mod reflection;
+mod utils;
 
-use anyhow::Result;
+use assembly::LoadError;
 use dispatch_table::DispatchTable;
 use garbage_collector::GarbageCollector;
 use log::{debug, error, info};
@@ -26,11 +27,11 @@ use mun_memory::{
 use mun_project::LOCKFILE_NAME;
 use notify::{event::ModifyKind, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::{
-    collections::{HashMap, VecDeque},
+    cmp,
+    collections::{BTreeMap, HashMap, VecDeque},
     ffi,
     ffi::c_void,
     fmt::{Debug, Display, Formatter},
-    io,
     mem::ManuallyDrop,
     path::{Path, PathBuf},
     ptr::NonNull,
@@ -42,8 +43,8 @@ use std::{
 
 pub use crate::{
     adt::{RootedStruct, StructRef},
-    array::{ArrayRef, RootedArray},
-    assembly::Assembly,
+    array::{ArrayRef, RawArray, RootedArray},
+    assembly::{Assembly, LinkError, LinkFunctionsError},
     function_info::{
         FunctionDefinition, FunctionPrototype, FunctionSignature, IntoFunctionDefinition,
     },
@@ -51,7 +52,6 @@ pub use crate::{
     reflection::{ArgumentReflection, ReturnTypeReflection},
 };
 // Re-export some useful types so crates dont have to depend on mun_memory as well.
-use crate::array::RawArray;
 pub use mun_memory::{Field, FieldData, HasStaticType, PointerType, StructType, Type};
 
 /// Options for the construction of a [`Runtime`].
@@ -162,9 +162,20 @@ impl RuntimeBuilder {
     /// executed when the library is unloaded.
     ///
     /// See [`Assembly::load`] for more information.
-    pub unsafe fn finish(self) -> anyhow::Result<Runtime> {
+    pub unsafe fn finish(self) -> Result<Runtime, InitError> {
         Runtime::new(self.options)
     }
+}
+
+/// An error that occurs upon construction of a [`Runtime`].
+#[derive(Debug, thiserror::Error)]
+pub enum InitError {
+    /// Failed to link assembly
+    #[error(transparent)]
+    LinkAssembly(#[from] LinkError),
+    /// Failed to construct watcher
+    #[error(transparent)]
+    Watcher(#[from] notify::Error),
 }
 
 /// A runtime for the Mun language.
@@ -179,7 +190,7 @@ impl RuntimeBuilder {
 pub struct Runtime {
     assemblies: HashMap<PathBuf, Assembly>,
     /// Assemblies that have changed and thus need to be relinked. Maps the old to the (potentially) new path.
-    assemblies_to_relink: VecDeque<(PathBuf, PathBuf)>,
+    assemblies_to_relink: BTreeMap<PathBuf, PathBuf>,
     dispatch_table: DispatchTable,
     type_table: TypeTable,
     watcher: RecommendedWatcher,
@@ -210,7 +221,7 @@ impl Runtime {
     /// executed when the library is unloaded.
     ///
     /// See [`Assembly::load`] for more information.
-    pub unsafe fn new(mut options: RuntimeOptions) -> anyhow::Result<Runtime> {
+    pub unsafe fn new(mut options: RuntimeOptions) -> Result<Runtime, InitError> {
         let (tx, rx) = channel();
 
         let mut dispatch_table = DispatchTable::default();
@@ -241,7 +252,7 @@ impl Runtime {
         })?;
         let mut runtime = Runtime {
             assemblies: HashMap::new(),
-            assemblies_to_relink: VecDeque::new(),
+            assemblies_to_relink: BTreeMap::new(),
             dispatch_table,
             type_table,
             watcher,
@@ -268,14 +279,13 @@ impl Runtime {
     /// executed when the library is unloaded.
     ///
     /// See [`Assembly::load`] for more information.
-    unsafe fn add_assembly(&mut self, library_path: &Path) -> anyhow::Result<()> {
-        let library_path = library_path.canonicalize()?;
+    unsafe fn add_assembly(&mut self, library_path: &Path) -> Result<(), LinkError> {
+        let library_path = library_path
+            .canonicalize()
+            .map_err(|e| LinkError::LoadAssembly(LoadError::Other(e)))?;
+
         if self.assemblies.contains_key(&library_path) {
-            return Err(io::Error::new(
-                io::ErrorKind::AlreadyExists,
-                "An assembly with the same name already exists.",
-            )
-            .into());
+            return Err(LoadError::AlreadyExists.into());
         }
 
         let mut loaded = HashMap::new();
@@ -315,7 +325,8 @@ impl Runtime {
 
         for (library_path, assembly) in loaded.into_iter() {
             self.watcher
-                .watch(library_path.parent().unwrap(), RecursiveMode::NonRecursive)?;
+                .watch(library_path.parent().unwrap(), RecursiveMode::NonRecursive)
+                .expect("Path must exist as we just loaded the library");
 
             self.assemblies.insert(library_path, assembly);
         }
@@ -327,6 +338,31 @@ impl Runtime {
     pub fn get_function_definition(&self, function_name: &str) -> Option<Arc<FunctionDefinition>> {
         // TODO: Verify that when someone tries to invoke a non-public function, it should fail.
         self.dispatch_table.get_fn(function_name)
+    }
+
+    /// For a given fn_name, find the most similar name in fn_names
+    fn find_best_match_for_fn_name<'a>(
+        &self,
+        fn_name: &'a str,
+        fn_names: impl Iterator<Item = &'a str>,
+        dist: Option<usize>,
+    ) -> Option<&'a str> {
+        // As a loose rule to avoid the obviously incorrect suggestions, it takes
+        // an optional limit for the maximum allowable edit distance, which defaults
+        // to one-third of the given word.
+        let max_dist = dist.unwrap_or_else(|| cmp::max(fn_name.len(), 3) / 3);
+
+        let found_match = fn_names
+            .filter_map(|name| {
+                let dist = utils::lev_distance(fn_name, name);
+                if dist <= max_dist {
+                    Some((name, dist))
+                } else {
+                    None
+                }
+            })
+            .min_by(|(_, dist1), (_, dist2)| dist1.cmp(dist2));
+        found_match.map(|(closest_name, _)| closest_name)
     }
 
     /// Retrieves the type definition corresponding to `type_name`, if available.
@@ -360,7 +396,7 @@ impl Runtime {
 
         unsafe fn relink_assemblies(
             runtime: &mut Runtime,
-        ) -> anyhow::Result<(DispatchTable, TypeTable)> {
+        ) -> Result<(DispatchTable, TypeTable), LinkError> {
             let mut loaded = HashMap::new();
             let to_load = &mut runtime.assemblies_to_relink;
 
@@ -374,7 +410,7 @@ impl Runtime {
             }
 
             // Load all assemblies and their dependencies
-            while let Some((old_path, new_path)) = to_load.pop_front() {
+            while let Some((old_path, new_path)) = to_load.pop_first() {
                 // A dependency can be added by multiple dependants, so check that we didn't load it yet
                 if loaded.contains_key(&old_path) {
                     continue;
@@ -398,7 +434,7 @@ impl Runtime {
                     if !loaded.contains_key(&library_path)
                         && !runtime.assemblies.contains_key(&library_path)
                     {
-                        to_load.push_back((old_path.clone(), library_path));
+                        to_load.insert(old_path.clone(), library_path);
                     }
                 }
             }
@@ -433,7 +469,7 @@ impl Runtime {
                         EventKind::Modify(ModifyKind::Name(_)) => {
                             let tracker = event.attrs.tracker().expect("Invalid RENAME event.");
                             if let Some(old_path) = self.renamed_files.remove(&tracker) {
-                                self.assemblies_to_relink.push_back((old_path, path));
+                                self.assemblies_to_relink.insert(old_path, path);
                                 // on_file_changed(self, &old_path, &path);
                             } else {
                                 self.renamed_files.insert(tracker, path);
@@ -441,7 +477,7 @@ impl Runtime {
                         }
                         EventKind::Modify(_) => {
                             // TODO: don't overwrite existing
-                            self.assemblies_to_relink.push_back((path.clone(), path));
+                            self.assemblies_to_relink.insert(path.clone(), path);
                         }
                         _ => (),
                     }
@@ -463,7 +499,7 @@ impl Runtime {
 
                         return true;
                     }
-                    Err(e) => error!("Failed to relink assemblies, due to {}.", e),
+                    Err(e) => error!("Failed to relink assemblies: {e}"),
                 }
             }
         }
@@ -745,11 +781,20 @@ impl Runtime {
         }) {
             Ok(function_info) => function_info,
             Err(msg) => {
+                let available_names = self.dispatch_table.get_fn_names();
+                let suggested_name =
+                    self.find_best_match_for_fn_name(function_name, available_names, None);
+
+                let suggested_message = suggested_name.map_or_else(
+                    || msg.clone(),
+                    |name| format!("{msg} There is a function with a similar name: {name}"),
+                );
+
                 return Err(InvokeErr {
-                    msg,
+                    msg: suggested_message,
                     function_name,
                     arguments,
-                })
+                });
             }
         };
 

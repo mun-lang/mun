@@ -5,6 +5,19 @@ pub use temp_library::TempLibrary;
 
 mod temp_library;
 
+/// An error that occurs upon construction of a [`MunLibrary`].
+#[derive(Debug, thiserror::Error)]
+pub enum InitError {
+    #[error(transparent)]
+    FailedToCreateTempLibrary(#[from] temp_library::InitError),
+    #[error("Missing symbol for retrieving ABI version: {0}")]
+    MissingGetAbiVersionFn(libloading::Error),
+    #[error("Missing symbol for retrieving ABI information: {0}")]
+    MissingGetInfoFn(libloading::Error),
+    #[error("Missing symbol for setting allocator handle: {0}")]
+    MissingSetAllocatorHandleFn(libloading::Error),
+}
+
 pub struct MunLibrary(TempLibrary);
 
 impl MunLibrary {
@@ -22,7 +35,7 @@ impl MunLibrary {
     /// executed when the library is unloaded.
     ///
     /// See [`libloading::Library::new`] for more information.
-    pub unsafe fn new(library_path: &Path) -> Result<Self, anyhow::Error> {
+    pub unsafe fn new(library_path: &Path) -> Result<Self, InitError> {
         // Although loading a library is technically unsafe, we assume here that this is not the
         // case for munlibs.
         let library = TempLibrary::new(library_path)?;
@@ -30,15 +43,21 @@ impl MunLibrary {
         // Verify that the `*.munlib` contains all required functions. Note that this is an unsafe
         // operation because the loaded symbols don't actually contain type information. Casting
         // is therefore unsafe.
-        let _get_abi_version_fn: libloading::Symbol<'_, extern "C" fn() -> u32> =
-            library.library().get(abi::GET_VERSION_FN_NAME.as_bytes())?;
+        let _get_abi_version_fn: libloading::Symbol<'_, extern "C" fn() -> u32> = library
+            .library()
+            .get(abi::GET_VERSION_FN_NAME.as_bytes())
+            .map_err(InitError::MissingGetAbiVersionFn)?;
 
         let _get_info_fn: libloading::Symbol<'_, extern "C" fn() -> abi::AssemblyInfo<'static>> =
-            library.library().get(abi::GET_INFO_FN_NAME.as_bytes())?;
+            library
+                .library()
+                .get(abi::GET_INFO_FN_NAME.as_bytes())
+                .map_err(InitError::MissingGetInfoFn)?;
 
         let _set_allocator_handle_fn: libloading::Symbol<'_, extern "C" fn(*mut c_void)> = library
             .library()
-            .get(abi::SET_ALLOCATOR_HANDLE_FN_NAME.as_bytes())?;
+            .get(abi::SET_ALLOCATOR_HANDLE_FN_NAME.as_bytes())
+            .map_err(InitError::MissingSetAllocatorHandleFn)?;
 
         Ok(MunLibrary(library))
     }

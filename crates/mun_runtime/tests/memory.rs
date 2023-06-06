@@ -65,7 +65,7 @@ fn map_struct_insert_field1() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         struct Foo {
@@ -104,7 +104,7 @@ fn map_struct_insert_field2() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         struct Foo {
@@ -150,7 +150,7 @@ fn map_struct_insert_field3() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         struct Foo {
@@ -198,7 +198,7 @@ fn map_struct_remove_field1() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         struct Foo {
@@ -236,7 +236,7 @@ fn map_struct_remove_field2() {
     let result: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let rooted_result = result.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         struct Foo {
@@ -277,7 +277,7 @@ fn map_struct_remove_field3() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         struct Foo {
@@ -319,7 +319,7 @@ fn map_struct_cast_fields1() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c, d, e)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         struct Foo(
@@ -373,7 +373,7 @@ fn map_struct_cast_fields2() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a,)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         struct Foo(
@@ -412,7 +412,7 @@ fn map_struct_swap_fields1() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         struct Foo {
@@ -462,7 +462,7 @@ fn map_struct_swap_fields2() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         struct Foo {
@@ -515,7 +515,7 @@ fn map_struct_rename_field1() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         struct Foo {
@@ -563,7 +563,7 @@ fn map_struct_rename_field2() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         struct Foo {
@@ -613,7 +613,7 @@ fn map_struct_all() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct Foo {
@@ -667,7 +667,7 @@ fn map_array_to_array_different_array_to_primitive_different() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct Foo {
@@ -726,7 +726,7 @@ fn map_array_to_array_different_array_to_primitive_same() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct Foo {
@@ -794,7 +794,7 @@ fn map_array_to_array_different_array_to_struct_different() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, d)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct(gc) Bar(i64);
@@ -868,7 +868,7 @@ fn map_array_to_array_different_array_to_struct_same() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, d)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct Bar(i32);
@@ -933,7 +933,7 @@ fn map_array_to_array_different_primitive_to_array_different() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct Foo {
@@ -996,7 +996,7 @@ fn map_array_to_array_different_primitive_to_array_same() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct Foo {
@@ -1056,7 +1056,7 @@ fn map_array_to_array_different_primitive_to_primitive() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct Foo {
@@ -1116,7 +1116,7 @@ fn map_array_to_array_different_primitive_to_struct() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, d)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct(gc) Bar(i64);
@@ -1187,7 +1187,7 @@ fn map_array_to_array_different_struct_to_array_different() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, d)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct Bar(i64);
@@ -1270,7 +1270,7 @@ fn map_array_to_array_different_struct_to_array_same() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, d)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct Bar(i32);
@@ -1353,7 +1353,7 @@ fn map_array_to_array_different_struct_to_struct() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, d)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct(gc) Bar(i64);
@@ -1420,7 +1420,7 @@ fn map_array_to_array_same_primitive() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct Foo {
@@ -1475,7 +1475,7 @@ fn map_array_to_array_same_struct() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct Bar(f64);
@@ -1538,7 +1538,7 @@ fn map_array_to_primitive_different() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct Foo {
@@ -1588,7 +1588,7 @@ fn map_array_to_primitive_same() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct Foo {
@@ -1643,7 +1643,7 @@ fn map_array_to_struct_different() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct(gc) Bar(f64);
@@ -1711,7 +1711,7 @@ fn map_array_to_struct_same() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct(gc) Bar(f32);
@@ -1776,7 +1776,7 @@ fn map_primitive_to_array_same() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct Foo {
@@ -1840,7 +1840,7 @@ fn map_primitive_to_array_different() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct Foo {
@@ -1910,7 +1910,7 @@ fn map_struct_to_array_same() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct Bar(f64);
@@ -1975,7 +1975,7 @@ fn map_struct_to_array_different() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct Bar(f64);
@@ -2036,7 +2036,7 @@ fn insert_array() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         struct Foo {
@@ -2084,7 +2084,7 @@ fn delete_used_struct() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         pub struct Bar(i64);
@@ -2163,7 +2163,7 @@ fn nested_structs() {
     let value_wrapper = value_wrapper.root();
 
     // Tests mapping of `gc -> gc`, `value -> value`
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
     pub struct(gc) GcStruct(f64, f64);
@@ -2203,7 +2203,7 @@ fn nested_structs() {
     assert_eq!(value_1.get::<f64>("1"), Ok(b.into()));
 
     // Tests an identity mapping
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
     pub struct(gc) GcStruct(f64, f64);
@@ -2248,7 +2248,7 @@ fn nested_structs() {
     let value_1 = value_1.root();
 
     // Tests mapping of `gc -> value`, `value -> gc`
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
     struct(value) GcStruct(f64, f64);
@@ -2285,7 +2285,7 @@ fn nested_structs() {
 
     // Tests mapping of different struct type, when `gc -> value`, `value -> gc`, and
     // retention of an old library (due to removal of `GcStruct` and `ValueStruct`)
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
     struct(gc) GcStruct2(f64);
@@ -2356,7 +2356,7 @@ fn nested_structs() {
     let value_1 = value_1.root();
 
     // Tests mapping of different struct type, when `gc -> gc`, `value -> value`
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
     struct(gc) GcStruct(f64, f64);
@@ -2431,7 +2431,7 @@ fn insert_struct() {
     let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, c)).unwrap();
     let foo_struct = foo_struct.root();
 
-    driver.update(
+    driver.update_file(
         "mod.mun",
         r#"
         struct Bar(i64);
