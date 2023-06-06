@@ -23,6 +23,7 @@ pub fn server_capabilities(_client_caps: &ClientCapabilities) -> ServerCapabilit
             work_done_progress_options: WorkDoneProgressOptions {
                 work_done_progress: None,
             },
+            completion_item: None,
         }),
         ..Default::default()
     }
