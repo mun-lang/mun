@@ -6,7 +6,7 @@ fn test_uninitialized_access() {
     insta::assert_snapshot!(
         diagnostics(r#"
     fn foo() {
-        let a:int;
+        let a:i64;
         let b = a + 3;
     }
     "#), @"38..39: use of possibly-uninitialized variable"
@@ -18,31 +18,31 @@ fn test_uninitialized_access_if() {
     insta::assert_snapshot!(diagnostics(
         r#"
     fn foo() {
-        let a:int;
+        let a:i64;
         if true { a = 3; } else { a = 4; }
         let b = a + 4;  // correct, `a` is initialized either way
     }
 
     fn bar() {
-        let a:int;
+        let a:i64;
         if true { a = 3; }
         let b = a + 4;  // `a` is possibly-unitialized
     }
 
     fn baz() {
-        let a:int;
+        let a:i64;
         if true { return } else { a = 4 };
         let b = a + 4;  // correct, `a` is initialized either way
     }
 
     fn foz() {
-        let a:int;
+        let a:i64;
         if true { a = 4 } else { return };
         let b = a + 4;  // correct, `a` is initialized either way
     }
 
     fn boz() {
-        let a:int;
+        let a:i64;
         return;
         let b = a + 4;  // `a` is not initialized but this is dead code anyway
     }
@@ -54,8 +54,8 @@ fn test_uninitialized_access_if() {
 fn test_uninitialized_access_while() {
     insta::assert_snapshot!(diagnostics(
         r#"
-    fn foo(b:int) {
-        let a:int;
+    fn foo(b:i64) {
+        let a:i64;
         while b < 4 { b += 1; a = b; a += 1; }
         let c = a + 4;  // `a` is possibly-unitialized
     }
