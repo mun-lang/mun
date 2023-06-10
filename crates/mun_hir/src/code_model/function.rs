@@ -135,8 +135,7 @@ impl Function {
     }
 
     pub fn ty(self, db: &dyn HirDatabase) -> Ty {
-        // TODO: Add detection of cyclick types
-        db.type_for_def(self.into(), Namespace::Values).0
+        db.type_for_def(self.into(), Namespace::Values)
     }
 
     pub fn ret_type(self, db: &dyn HirDatabase) -> Ty {

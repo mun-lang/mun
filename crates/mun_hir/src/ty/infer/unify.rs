@@ -6,13 +6,13 @@ impl<'a> InferenceResultBuilder<'a> {
     /// If `ty` is a type variable, and it has been instantiated, then return the instantiated type;
     /// otherwise returns `ty`.
     pub(crate) fn replace_if_possible<'b>(&mut self, ty: &'b Ty) -> Cow<'b, Ty> {
-        self.type_variables.replace_if_possible(ty)
+        self.type_variables.replace_if_possible(self.db, ty)
     }
 
     /// Unifies the two types. If one or more type variables are involved instantiate or equate the
     /// variables with each other.
     pub(crate) fn unify(&mut self, a: &Ty, b: &Ty) -> bool {
-        self.type_variables.unify(a, b)
+        self.type_variables.unify(self.db, a, b)
     }
 
     /// Resolves the type as far as currently possible, replacing type variables by their known

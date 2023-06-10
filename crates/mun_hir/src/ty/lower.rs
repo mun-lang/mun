@@ -84,17 +84,14 @@ impl Ty {
     ) -> Ty {
         let res = match &type_ref_map[type_ref] {
             TypeRef::Path(path) => Ty::from_path(db, resolver, type_ref, path, diagnostics),
-            TypeRef::Error => Some((TyKind::Unknown.intern(), false)),
+            TypeRef::Error => Some(TyKind::Unknown.intern()),
             TypeRef::Tuple(inner) => {
                 let inner_tys = inner.iter().map(|tr| {
                     Self::from_hir_with_diagnostics(db, resolver, type_ref_map, diagnostics, *tr)
                 });
-                Some((
-                    TyKind::Tuple(inner_tys.len(), inner_tys.collect()).intern(),
-                    false,
-                ))
+                Some(TyKind::Tuple(inner_tys.len(), inner_tys.collect()).intern())
             }
-            TypeRef::Never => Some((TyKind::Never.intern(), false)),
+            TypeRef::Never => Some(TyKind::Never.intern()),
             TypeRef::Array(inner) => {
                 let inner = Self::from_hir_with_diagnostics(
                     db,
@@ -103,13 +100,10 @@ impl Ty {
                     diagnostics,
                     *inner,
                 );
-                Some((TyKind::Array(inner).intern(), false))
+                Some(TyKind::Array(inner).intern())
             }
         };
-        if let Some((ty, is_cyclic)) = res {
-            if is_cyclic {
-                diagnostics.push(LowerDiagnostic::CyclicType { id: type_ref })
-            }
+        if let Some(ty) = res {
             ty
         } else {
             diagnostics.push(LowerDiagnostic::UnresolvedType { id: type_ref });
@@ -124,7 +118,7 @@ impl Ty {
         type_ref: LocalTypeRefId,
         path: &Path,
         diagnostics: &mut Vec<LowerDiagnostic>,
-    ) -> Option<(Self, bool)> {
+    ) -> Option<Self> {
         // Find the type
         let (ty, vis) = resolver.resolve_path_as_type_fully(db.upcast(), path)?;
 
@@ -147,7 +141,7 @@ impl Ty {
 }
 
 /// Resolves all types in the specified `TypeRefMap`.
-pub fn types_from_hir(
+pub fn lower_types(
     db: &dyn HirDatabase,
     resolver: &Resolver,
     type_ref_map: &TypeRefMap,
@@ -156,6 +150,7 @@ pub fn types_from_hir(
     for (id, _) in type_ref_map.iter() {
         let ty =
             Ty::from_hir_with_diagnostics(db, resolver, type_ref_map, &mut result.diagnostics, id);
+
         result.type_ref_to_type.insert(id, ty);
     }
     Arc::new(result)
@@ -163,12 +158,12 @@ pub fn types_from_hir(
 
 pub fn lower_struct_query(db: &dyn HirDatabase, s: Struct) -> Arc<LowerTyMap> {
     let data = s.data(db.upcast());
-    types_from_hir(db, &s.id.resolver(db.upcast()), data.type_ref_map())
+    lower_types(db, &s.id.resolver(db.upcast()), data.type_ref_map())
 }
 
 pub fn lower_type_alias_query(db: &dyn HirDatabase, t: TypeAlias) -> Arc<LowerTyMap> {
     let data = t.data(db.upcast());
-    types_from_hir(db, &t.id.resolver(db.upcast()), data.type_ref_map())
+    lower_types(db, &t.id.resolver(db.upcast()), data.type_ref_map())
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -239,8 +234,8 @@ impl HasVisibility for CallableDef {
 /// `struct Foo(usize)`, we have two types: The type of the struct itself, and
 /// the constructor function `(usize) -> Foo` which lives in the values
 /// namespace.
-pub(crate) fn type_for_def(db: &dyn HirDatabase, def: TypableDef, ns: Namespace) -> (Ty, bool) {
-    let ty = match (def, ns) {
+pub(crate) fn type_for_def(db: &dyn HirDatabase, def: TypableDef, ns: Namespace) -> Ty {
+    match (def, ns) {
         (TypableDef::Function(f), Namespace::Values) => type_for_fn(db, f),
         (TypableDef::PrimitiveType(t), Namespace::Types) => type_for_primitive(t),
         (TypableDef::Struct(s), Namespace::Values) => type_for_struct_constructor(db, s),
@@ -251,18 +246,7 @@ pub(crate) fn type_for_def(db: &dyn HirDatabase, def: TypableDef, ns: Namespace)
         (TypableDef::Function(_), Namespace::Types) => TyKind::Unknown.intern(),
         (TypableDef::PrimitiveType(_), Namespace::Values) => TyKind::Unknown.intern(),
         (TypableDef::TypeAlias(_), Namespace::Values) => TyKind::Unknown.intern(),
-    };
-    (ty, false)
-}
-
-/// Recover with an unknown type when a cycle is detected in the salsa database.
-pub(crate) fn type_for_cycle_recover(
-    _db: &dyn HirDatabase,
-    _cycle: &[String],
-    _def: &TypableDef,
-    _ns: &Namespace,
-) -> (Ty, bool) {
-    (TyKind::Unknown.intern(), true)
+    }
 }
 
 /// Build the declared type of a static.
@@ -326,15 +310,12 @@ fn type_for_struct(_db: &dyn HirDatabase, def: Struct) -> Ty {
     TyKind::Struct(def).intern()
 }
 
-fn type_for_type_alias(db: &dyn HirDatabase, def: TypeAlias) -> Ty {
-    let data = def.data(db.upcast());
-    let resolver = def.id.resolver(db.upcast());
-    let type_ref = def.type_ref(db);
-    Ty::from_hir(db, &resolver, data.type_ref_map(), type_ref).0
+fn type_for_type_alias(_db: &dyn HirDatabase, def: TypeAlias) -> Ty {
+    TyKind::TypeAlias(def).intern()
 }
 
 pub mod diagnostics {
-    use crate::diagnostics::{CyclicType, PrivateAccess, UnresolvedType};
+    use crate::diagnostics::{PrivateAccess, UnresolvedType};
     use crate::{
         diagnostics::DiagnosticSink,
         type_ref::{LocalTypeRefId, TypeRefSourceMap},
@@ -345,7 +326,6 @@ pub mod diagnostics {
     pub(crate) enum LowerDiagnostic {
         UnresolvedType { id: LocalTypeRefId },
         TypeIsPrivate { id: LocalTypeRefId },
-        CyclicType { id: LocalTypeRefId },
     }
 
     impl LowerDiagnostic {
@@ -358,10 +338,6 @@ pub mod diagnostics {
         ) {
             match self {
                 LowerDiagnostic::UnresolvedType { id } => sink.push(UnresolvedType {
-                    file: file_id,
-                    type_ref: source_map.type_ref_syntax(*id).unwrap(),
-                }),
-                LowerDiagnostic::CyclicType { id } => sink.push(CyclicType {
                     file: file_id,
                     type_ref: source_map.type_ref_syntax(*id).unwrap(),
                 }),

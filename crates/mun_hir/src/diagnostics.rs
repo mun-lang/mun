@@ -804,3 +804,24 @@ impl Diagnostic for ImportDuplicateDefinition {
         self
     }
 }
+
+#[derive(Debug)]
+pub struct PrivateTypeAlias {
+    pub type_alias_def: InFile<SyntaxNodePtr>,
+    pub kind: String,
+    pub name: String,
+}
+
+impl Diagnostic for PrivateTypeAlias {
+    fn message(&self) -> String {
+        format!("{} `{}` is private", self.kind, self.name)
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        self.type_alias_def.clone()
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}

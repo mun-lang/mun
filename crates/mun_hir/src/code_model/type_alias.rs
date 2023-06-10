@@ -5,7 +5,7 @@ use crate::{
     ids::TypeAliasId,
     type_ref::{LocalTypeRefId, TypeRefMap, TypeRefSourceMap},
     visibility::RawVisibility,
-    DefDatabase, DiagnosticSink, FileId, HasVisibility, HirDatabase, Name, Visibility,
+    DefDatabase, DiagnosticSink, FileId, HasVisibility, HirDatabase, Name, Ty, TyKind, Visibility,
 };
 
 use super::Module;
@@ -51,6 +51,30 @@ impl TypeAlias {
         db.lower_type_alias(self)
     }
 
+    pub fn target_type(self, db: &dyn HirDatabase) -> Ty {
+        let data = self.data(db.upcast());
+        let mut ty = Ty::from_hir(
+            db,
+            &self.id.resolver(db.upcast()),
+            data.type_ref_map(),
+            data.type_ref_id,
+        )
+        .0;
+
+        while let &TyKind::TypeAlias(alias) = ty.interned() {
+            let data = alias.data(db.upcast());
+            ty = Ty::from_hir(
+                db,
+                &alias.id.resolver(db.upcast()),
+                data.type_ref_map(),
+                data.type_ref_id,
+            )
+            .0;
+        }
+
+        ty
+    }
+
     pub fn diagnostics(self, db: &dyn HirDatabase, sink: &mut DiagnosticSink) {
         let data = self.data(db.upcast());
         let lower = self.lower(db);
@@ -58,6 +82,8 @@ impl TypeAlias {
 
         let validator = TypeAliasValidator::new(self, db);
         validator.validate_target_type_existence(sink);
+        validator.validate_target_type_privacy(sink);
+        validator.validate_acyclic(sink);
     }
 }
 
