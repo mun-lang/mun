@@ -202,7 +202,7 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
 
                 impl<'ink> crate::value::PointerValueType<'ink> for #ident {
                     fn get_ptr_type(context: &crate::value::IrTypeContext<'ink, '_>, address_space: Option<inkwell::AddressSpace>) -> inkwell::types::PointerType<'ink> {
-                        Self::get_ir_type(context).ptr_type(address_space.unwrap_or(inkwell::AddressSpace::Generic))
+                        Self::get_ir_type(context).ptr_type(address_space.unwrap_or(inkwell::AddressSpace::default()))
                     }
                 }
 
@@ -611,7 +611,7 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
 
                 impl<'ink> crate::value::PointerValueType<'ink> for #ident {
                     fn get_ptr_type(context: &crate::value::IrTypeContext<'ink, '_>, address_space: Option<inkwell::AddressSpace>) -> inkwell::types::PointerType<'ink> {
-                        Self::get_ir_type(context).ptr_type(address_space.unwrap_or(inkwell::AddressSpace::Generic))
+                        Self::get_ir_type(context).ptr_type(address_space.unwrap_or(inkwell::AddressSpace::default()))
                     }
                 }
 

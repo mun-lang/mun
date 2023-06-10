@@ -28,7 +28,7 @@ impl<'ink> PointerValueType<'ink> for f32 {
         context: &IrTypeContext<'ink, '_>,
         address_space: Option<AddressSpace>,
     ) -> PointerType<'ink> {
-        Self::get_ir_type(context).ptr_type(address_space.unwrap_or(AddressSpace::Generic))
+        Self::get_ir_type(context).ptr_type(address_space.unwrap_or(AddressSpace::default()))
     }
 }
 impl<'ink> PointerValueType<'ink> for f64 {
@@ -36,7 +36,7 @@ impl<'ink> PointerValueType<'ink> for f64 {
         context: &IrTypeContext<'ink, '_>,
         address_space: Option<AddressSpace>,
     ) -> PointerType<'ink> {
-        Self::get_ir_type(context).ptr_type(address_space.unwrap_or(AddressSpace::Generic))
+        Self::get_ir_type(context).ptr_type(address_space.unwrap_or(AddressSpace::default()))
     }
 }
 

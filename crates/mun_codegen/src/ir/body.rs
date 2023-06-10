@@ -392,7 +392,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         // HACK: We should be able to use pointers for built-in struct types like `TypeInfo` in intrinsics
         let type_info_ptr = self.builder.build_bitcast(
             type_info_ptr,
-            self.context.i8_type().ptr_type(AddressSpace::Generic),
+            self.context.i8_type().ptr_type(AddressSpace::default()),
             "type_info_ptr_to_i8_ptr",
         );
 
@@ -417,8 +417,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .build_bitcast(
                 untyped_reference,
                 struct_ir_ty
-                    .ptr_type(AddressSpace::Generic)
-                    .ptr_type(AddressSpace::Generic),
+                    .ptr_type(AddressSpace::default())
+                    .ptr_type(AddressSpace::default()),
                 &format!("ref<{}>", hir_struct.name(self.db)),
             )
             .into_pointer_value();
@@ -1463,7 +1463,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         // HACK: We should be able to use pointers for built-in struct types like `TypeInfo` in intrinsics
         let type_info_ptr = self.builder.build_bitcast(
             type_info_ptr,
-            self.context.i8_type().ptr_type(AddressSpace::Generic),
+            self.context.i8_type().ptr_type(AddressSpace::default()),
             "type_info_ptr_to_i8_ptr",
         );
 
@@ -1499,8 +1499,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .build_bitcast(
                 untyped_array_ptr,
                 array_ty
-                    .ptr_type(AddressSpace::Generic)
-                    .ptr_type(AddressSpace::Generic),
+                    .ptr_type(AddressSpace::default())
+                    .ptr_type(AddressSpace::default()),
                 &format!("ref<[{}]>", element_ty.display(self.db)),
             )
             .into_pointer_value();

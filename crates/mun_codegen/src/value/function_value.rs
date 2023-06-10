@@ -54,10 +54,10 @@ macro_rules! into_function_info_impl {
                 ) -> inkwell::types::PointerType<'ink>
                 {
                     debug_assert!(
-                        address_space.is_none() || address_space == Some(inkwell::AddressSpace::Generic),
+                        address_space.is_none() || address_space == Some(inkwell::AddressSpace::default()),
                         "Functions can only live in generic address space"
                     );
-                    Self::get_ir_type(context).ptr_type(inkwell::AddressSpace::Generic)
+                    Self::get_ir_type(context).ptr_type(inkwell::AddressSpace::default())
                 }
             }
         )+
