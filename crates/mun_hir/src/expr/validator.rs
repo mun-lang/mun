@@ -1,6 +1,7 @@
 use crate::code_model::src::HasSource;
 use crate::diagnostics::{
-    ExportedPrivate, ExternCannotHaveBody, ExternNonPrimitiveParam, FreeTypeAliasWithoutTypeRef,
+    CyclicType, ExportedPrivate, ExternCannotHaveBody, ExternNonPrimitiveParam,
+    FreeTypeAliasWithoutTypeRef, PrivateTypeAlias,
 };
 use crate::expr::BodySourceMap;
 use crate::in_file::InFile;
@@ -8,7 +9,7 @@ use crate::resolve::HasResolver;
 use crate::{
     diagnostics::DiagnosticSink, Body, Expr, Function, HirDatabase, InferenceResult, TypeAlias,
 };
-use crate::{HasVisibility, Ty, Visibility};
+use crate::{HasVisibility, Ty, TyKind, Visibility};
 
 use mun_syntax::{AstNode, SyntaxNodePtr};
 use std::sync::Arc;
@@ -145,6 +146,76 @@ impl<'a> TypeAliasValidator<'a> {
             sink.push(FreeTypeAliasWithoutTypeRef {
                 type_alias_def: src.map(|t| SyntaxNodePtr::new(t.syntax())),
             })
+        }
+    }
+
+    /// Validates that the provided `TypeAlias` is not leaking the privacy of its target type.
+    pub fn validate_target_type_privacy(&self, sink: &mut DiagnosticSink) {
+        let lower = self.type_alias.lower(self.db);
+        let data = self.type_alias.data(self.db.upcast());
+        let target_ty = &lower[data.type_ref_id];
+
+        let target_visibility = target_ty.visibility(self.db);
+        let alias_visibility = self.type_alias.visibility(self.db);
+
+        let leaks_privacy = match alias_visibility {
+            Visibility::Module(module) => !target_visibility.is_visible_from(self.db, module),
+            Visibility::Public => !target_visibility.is_externally_visible(),
+        };
+
+        if leaks_privacy {
+            let src = self.type_alias.source(self.db.upcast());
+
+            let (kind, name) = match target_ty.interned() {
+                TyKind::Struct(s) => ("struct", s.name(self.db)),
+                TyKind::TypeAlias(a) => ("type alias", a.name(self.db)),
+                _ => unreachable!(),
+            };
+
+            sink.push(PrivateTypeAlias {
+                type_alias_def: src.map(|t| SyntaxNodePtr::new(t.syntax())),
+                kind: kind.to_string(),
+                name: name.to_string(),
+            })
+        }
+    }
+
+    /// Validates the provided `TypeAlias` is not cyclic.
+    pub fn validate_acyclic(&self, sink: &mut DiagnosticSink) {
+        let mut next_alias = Some(self.type_alias);
+
+        let mut ids = Vec::new();
+        while let Some(alias) = next_alias.take() {
+            let type_ref = alias.type_ref(self.db);
+
+            // Detect cyclic type
+            if ids.contains(&alias.id) {
+                let src = self.type_alias.source(self.db.upcast());
+                sink.push(CyclicType {
+                    file: src.file_id,
+                    type_ref: self
+                        .type_alias
+                        .data(self.db.upcast())
+                        .type_ref_source_map()
+                        .type_ref_syntax(type_ref)
+                        .unwrap(),
+                });
+                break;
+            }
+
+            ids.push(alias.id);
+
+            let ty = Ty::from_hir(
+                self.db,
+                &alias.id.resolver(self.db.upcast()),
+                alias.data(self.db.upcast()).type_ref_map(),
+                type_ref,
+            )
+            .0;
+
+            if let TyKind::TypeAlias(alias) = ty.into_inner() {
+                next_alias = Some(alias);
+            }
         }
     }
 }

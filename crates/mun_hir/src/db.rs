@@ -137,8 +137,7 @@ pub trait HirDatabase: DefDatabase + Upcast<dyn DefDatabase> {
     fn callable_sig(&self, def: CallableDef) -> FnSig;
 
     #[salsa::invoke(crate::ty::type_for_def)]
-    #[salsa::cycle(crate::ty::type_for_cycle_recover)]
-    fn type_for_def(&self, def: TypableDef, ns: Namespace) -> (Ty, bool);
+    fn type_for_def(&self, def: TypableDef, ns: Namespace) -> Ty;
 }
 
 fn parse_query(db: &dyn AstDatabase, file_id: FileId) -> Parse<SourceFile> {

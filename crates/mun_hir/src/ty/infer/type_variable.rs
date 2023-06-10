@@ -1,7 +1,7 @@
 use crate::{
     ty::infer::InferTy,
     ty::{TyKind, TypeWalk},
-    Substitution, Ty,
+    HirDatabase, Substitution, Ty,
 };
 use ena::unify::{InPlaceUnificationTable, NoError, UnifyKey, UnifyValue};
 use std::{borrow::Cow, fmt};
@@ -119,24 +119,24 @@ impl TypeVariableTable {
 
     /// Unifies the two types. If one or more type variables are involved instantiate or equate the
     /// variables with each other.
-    pub fn unify(&mut self, a: &Ty, b: &Ty) -> bool {
-        self.unify_inner(a, b)
+    pub fn unify(&mut self, db: &dyn HirDatabase, a: &Ty, b: &Ty) -> bool {
+        self.unify_inner(db, a, b)
     }
 
     /// Unifies the two types. If one or more type variables are involved instantiate or equate the
     /// variables with each other.
-    fn unify_inner(&mut self, a: &Ty, b: &Ty) -> bool {
+    fn unify_inner(&mut self, db: &dyn HirDatabase, a: &Ty, b: &Ty) -> bool {
         if a == b {
             return true;
         }
 
         // First resolve both types as much as possible
-        let a = self.replace_if_possible(a);
-        let b = self.replace_if_possible(b);
+        let a = self.replace_if_possible(db, a);
+        let b = self.replace_if_possible(db, b);
         if a.equals_ctor(&b) {
             match (a.interned(), b.interned()) {
-                (TyKind::Tuple(_, a), TyKind::Tuple(_, b)) => self.unify_substitutions(a, b),
-                (TyKind::Array(t1), TyKind::Array(t2)) => self.unify_inner(t1, t2),
+                (TyKind::Tuple(_, a), TyKind::Tuple(_, b)) => self.unify_substitutions(db, a, b),
+                (TyKind::Array(t1), TyKind::Array(t2)) => self.unify_inner(db, t1, t2),
                 _ => true,
             }
         } else {
@@ -144,12 +144,17 @@ impl TypeVariableTable {
         }
     }
 
-    fn unify_substitutions(&mut self, substs1: &Substitution, substs2: &Substitution) -> bool {
+    fn unify_substitutions(
+        &mut self,
+        db: &dyn HirDatabase,
+        substs1: &Substitution,
+        substs2: &Substitution,
+    ) -> bool {
         substs1
             .0
             .iter()
             .zip(substs2.0.iter())
-            .all(|(t1, t2)| self.unify_inner(t1, t2))
+            .all(|(t1, t2)| self.unify_inner(db, t1, t2))
     }
 
     /// Handles unificiation of trivial cases.
@@ -223,7 +228,7 @@ impl TypeVariableTable {
 
     /// If `ty` is a type variable, and it has been instantiated, then return the instantiated type;
     /// otherwise returns `ty`.
-    pub fn replace_if_possible<'t>(&mut self, ty: &'t Ty) -> Cow<'t, Ty> {
+    pub fn replace_if_possible<'t>(&mut self, db: &dyn HirDatabase, ty: &'t Ty) -> Cow<'t, Ty> {
         let mut ty = Cow::Borrowed(ty);
 
         // The type variable could resolve to an int/float variable. Therefore try to resolve up to
@@ -236,6 +241,10 @@ impl TypeVariableTable {
                         Some(known_ty) => ty = Cow::Owned(known_ty.clone()),
                         _ => return ty,
                     }
+                }
+                TyKind::TypeAlias(alias) => {
+                    let target_type = alias.target_type(db);
+                    return Cow::Owned(target_type);
                 }
                 _ => return ty,
             }

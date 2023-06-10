@@ -202,7 +202,6 @@ impl<'a> InferenceResultBuilder<'a> {
                 LowerDiagnostic::UnresolvedType { id } => {
                     InferenceDiagnostic::UnresolvedType { id }
                 }
-                LowerDiagnostic::CyclicType { id } => InferenceDiagnostic::CyclicType { id },
                 LowerDiagnostic::TypeIsPrivate { id } => InferenceDiagnostic::TypeIsPrivate { id },
             };
             self.diagnostics.push(diag);
@@ -730,7 +729,7 @@ impl<'a> InferenceResultBuilder<'a> {
                 match value {
                     ValueNs::LocalBinding(pat) => Some(self.type_of_pat.get(pat)?.clone()),
                     ValueNs::FunctionId(f) => {
-                        let (ty, _) = self
+                        let ty = self
                             .db
                             .type_for_def(TypableDef::Function(f.into()), Namespace::Values);
                         Some(ty)
@@ -739,7 +738,7 @@ impl<'a> InferenceResultBuilder<'a> {
                         if check_params.is_unit_struct {
                             self.check_unit_struct_lit(id, s.into())
                         }
-                        let (ty, _) = self
+                        let ty = self
                             .db
                             .type_for_def(TypableDef::Struct(s.into()), Namespace::Values);
                         Some(ty)
@@ -776,7 +775,7 @@ impl<'a> InferenceResultBuilder<'a> {
                             });
                     }
 
-                    let (ty, _) = self
+                    let ty = self
                         .db
                         .type_for_def(TypableDef::Struct(struct_id.into()), Namespace::Values);
                     return Some(ty);

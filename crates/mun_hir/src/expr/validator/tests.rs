@@ -147,7 +147,6 @@ fn test_private_leak_function_scoped() {
     ), @"155..158: can't leak private type");
 }
 
-// No errors, check https://github.com/mun-lang/mun/issues/339
 #[test]
 fn test_private_leak_alias() {
     insta::assert_snapshot!(diagnostics(
@@ -158,5 +157,27 @@ fn test_private_leak_alias() {
         0
     }
     "#,
-    ), @"");
+    ), @"35..38: can't leak private type");
+}
+
+#[test]
+fn test_type_alias_with_private_struct() {
+    insta::assert_snapshot!(diagnostics(
+        r#"
+    struct Foo;
+
+    pub type Bar = Foo;
+    "#,
+    ), @"13..32: struct `Foo` is private");
+}
+
+#[test]
+fn test_type_alias_with_private_type_alias() {
+    insta::assert_snapshot!(diagnostics(
+        r#"
+    type Foo = i32;
+
+    pub type Bar = Foo;
+    "#,
+    ), @"17..36: type alias `Foo` is private");
 }

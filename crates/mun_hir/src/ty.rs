@@ -12,9 +12,7 @@ use crate::{
 };
 pub(crate) use infer::infer_query;
 pub use infer::InferenceResult;
-pub(crate) use lower::{
-    callable_item_sig, fn_sig_for_fn, type_for_cycle_recover, type_for_def, CallableDef, TypableDef,
-};
+pub(crate) use lower::{callable_item_sig, fn_sig_for_fn, type_for_def, CallableDef, TypableDef};
 pub use primitives::{FloatTy, IntTy};
 pub use resolve::ResolveBitness;
 use smallvec::SmallVec;

@@ -300,8 +300,8 @@ fn private_access() {
     94..95 '3': i64
     124..125 'a': Baz
     128..145 'packag...o::Baz': Baz
-    173..174 'a': Foo
-    177..199 'packag...oBar{}': Foo
+    173..174 'a': FooBar
+    177..199 'packag...oBar{}': FooBar
     228..229 'a': Foo
     232..243 'foo::Foo {}': Foo
     271..272 'a': Bar
@@ -310,8 +310,8 @@ fn private_access() {
     284..285 '3': i64
     314..315 'a': Baz
     318..326 'foo::Baz': Baz
-    354..355 'a': Foo
-    358..371 'foo::FooBar{}': Foo
+    354..355 'a': FooBar
+    358..371 'foo::FooBar{}': FooBar
     396..413 'packag...o::foo': function foo() -> ()
     396..415 'packag...:foo()': ()
     439..447 'foo::foo': function foo() -> ()
@@ -324,8 +324,8 @@ fn private_access() {
     546..547 '3': i64
     558..559 'a': PubSupBaz
     562..585 'packag...SupBaz': PubSupBaz
-    595..596 'a': PubSupFoo
-    599..627 'packag...oBar{}': PubSupFoo
+    595..596 'a': PubSupFooBar
+    599..627 'packag...oBar{}': PubSupFooBar
     638..639 'a': PubSupFoo
     642..659 'foo::P...Foo {}': PubSupFoo
     669..670 'a': PubSupBar
@@ -334,8 +334,8 @@ fn private_access() {
     688..689 '3': i64
     700..701 'a': PubSupBaz
     704..718 'foo::PubSupBaz': PubSupBaz
-    728..729 'a': PubSupFoo
-    732..751 'foo::P...oBar{}': PubSupFoo
+    728..729 'a': PubSupFooBar
+    732..751 'foo::P...oBar{}': PubSupFooBar
     758..783 'packag...up_foo': function pub_sup_foo() -> ()
     758..785 'packag..._foo()': ()
     791..807 'foo::p...up_foo': function pub_sup_foo() -> ()
@@ -349,8 +349,8 @@ fn private_access() {
     94..95 '3': i64
     124..125 'a': Baz
     128..145 'packag...o::Baz': Baz
-    173..174 'a': Foo
-    177..199 'packag...oBar{}': Foo
+    173..174 'a': FooBar
+    177..199 'packag...oBar{}': FooBar
     53..55 '{}': ()
     158..160 '{}': ()
     314..316 '{}': ()
@@ -364,8 +364,8 @@ fn private_access() {
     76..77 '3': i64
     88..89 'a': Baz
     92..109 'packag...o::Baz': Baz
-    119..120 'a': Foo
-    123..145 'packag...oBar{}': Foo
+    119..120 'a': FooBar
+    123..145 'packag...oBar{}': FooBar
     156..157 'a': Foo
     160..173 'super::Foo {}': Foo
     183..184 'a': Bar
@@ -374,8 +374,8 @@ fn private_access() {
     198..199 '3': i64
     210..211 'a': Baz
     214..224 'super::Baz': Baz
-    234..235 'a': Foo
-    238..253 'super::FooBar{}': Foo
+    234..235 'a': FooBar
+    238..253 'super::FooBar{}': FooBar
     260..277 'packag...o::foo': function foo() -> ()
     260..279 'packag...:foo()': ()
     285..295 'super::foo': function foo() -> ()
@@ -1274,10 +1274,10 @@ fn infer_type_alias() {
     "#),
     @r###"
     43..54: undefined type
-    91..92 'a': i32
+    91..92 'a': Foo
     99..122 '{     ...= a; }': ()
-    109..110 'b': i32
-    118..119 'a': i32
+    109..110 'b': Bar
+    118..119 'a': Foo
     "###);
 }
 
@@ -1301,12 +1301,10 @@ fn recursive_alias() {
     14..29: the name `Foo` is defined multiple times
     40..41: cyclic type
     52..53: cyclic type
-    119..120: cyclic type
-    159..160: cyclic type
     66..189 '{     ...type }': ()
     76..77 'a': Foo
-    116..117 'b': {unknown}
-    156..157 'c': {unknown}
+    116..117 'b': A
+    156..157 'c': B
     "###);
 }
 
