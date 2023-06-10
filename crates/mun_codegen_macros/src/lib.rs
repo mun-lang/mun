@@ -342,48 +342,45 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
             const SUPPORTED_TAG_SIZES: &[&str] =
                 &["u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64"];
 
-            // Check whether the enum has a `repr` attribute
-            let repr_ty = derive_input.attrs.iter().find_map(|a| {
-                a.parse_meta().map_or(None, |m| {
-                    if let syn::Meta::List(list) = m {
-                        let op = list
-                            .path
-                            .segments
-                            .iter()
-                            .next()
-                            .map(|s| s.ident.to_string());
+            let repr_ty = derive_input.attrs.iter().find_map(|attr| {
+                let mut repr_ty = None::<proc_macro2::TokenStream>;
 
-                        if op == Some("repr".to_string()) {
-                            return list.nested.iter().next().and_then(|n| {
-                                if let syn::NestedMeta::Meta(m) = n {
-                                    m.path().segments.iter().next().map(|s| s.ident.clone())
-                                } else {
-                                    None
-                                }
+                // Check whether the enum has a `repr` attribute
+                if attr.path().is_ident("repr") {
+                    attr.parse_nested_meta(|meta| {
+                        // Use the `repr` attribute as tag type.
+                        if let Some(segment) = meta.path.segments.iter().next() {
+                            let ident = segment.ident.clone();
+                            let tag_name = ident.to_string();
+                            if !SUPPORTED_TAG_SIZES.contains(&tag_name.as_str()) {
+                                return Err(
+                                    meta.error(format!("unrecognised repr type: ${tag_name}"))
+                                );
+                            }
+
+                            repr_ty = Some(quote! {
+                                #ident
                             });
-                        }
-                    }
 
-                    None
-                })
+                            Ok(())
+                        } else {
+                            Err(meta.error("repr missing type. E.g. repr(u8)"))
+                        }
+                    })
+                    .unwrap_or_else(|err| {
+                        eprintln!("{err}");
+                    });
+                }
+
+                repr_ty
             });
 
-            // Use the `repr` attribute as tag type.
-            let repr_ty = if let Some(ident) = repr_ty {
-                let repr_ty = ident.to_string();
-                if !SUPPORTED_TAG_SIZES.contains(&repr_ty.as_str()) {
-                    eprintln!("`repr({repr_ty})` is not supported by the `AsValue` macro.");
-                }
-
-                quote! {
-                    #ident
-                }
-            } else {
+            let repr_ty = repr_ty.unwrap_or_else(|| {
                 // Default to u32
                 quote! {
                     u32
                 }
-            };
+            });
 
             if enum_data.variants.is_empty() {
                 eprintln!("Enums with no variants are not supported by the `AsValue` macro.")
