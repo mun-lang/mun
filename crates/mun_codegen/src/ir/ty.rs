@@ -160,8 +160,8 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
     pub fn get_array_reference_type(&self, element_ty: &Ty) -> PointerType<'ink> {
         let ir_ty = self.get_array_type(element_ty);
         ir_ty
-            .ptr_type(AddressSpace::Generic)
-            .ptr_type(AddressSpace::Generic)
+            .ptr_type(AddressSpace::default())
+            .ptr_type(AddressSpace::default())
     }
 
     /// Returns the type of the struct that should be used for variables. Depending on the memory
@@ -176,8 +176,8 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
                 // struct Foo {}
                 // Foo**
                 ir_ty
-                    .ptr_type(AddressSpace::Generic)
-                    .ptr_type(AddressSpace::Generic)
+                    .ptr_type(AddressSpace::default())
+                    .ptr_type(AddressSpace::default())
                     .into()
             }
             mun_hir::StructMemoryKind::Value => {
@@ -201,8 +201,8 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
         //
         // Value structs are converted to GC types in the public API.
         ir_ty
-            .ptr_type(AddressSpace::Generic)
-            .ptr_type(AddressSpace::Generic)
+            .ptr_type(AddressSpace::default())
+            .ptr_type(AddressSpace::default())
             .into()
     }
 

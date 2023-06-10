@@ -19,7 +19,7 @@ macro_rules! impl_as_int_ir_value {
 
             impl<'ink> PointerValueType<'ink> for $ty {
                 fn get_ptr_type(context: &IrTypeContext<'ink, '_>, address_space: Option<AddressSpace>) -> inkwell::types::PointerType<'ink> {
-                    Self::get_ir_type(context).ptr_type(address_space.unwrap_or(AddressSpace::Generic))
+                    Self::get_ir_type(context).ptr_type(address_space.unwrap_or(AddressSpace::default()))
                 }
             }
 

@@ -139,7 +139,7 @@ where
     fn get_ir_type(
         context: &IrTypeContext<'ink, '_>,
     ) -> <<Self as ConcreteValueType<'ink>>::Value as ValueType<'ink>>::Type {
-        <T as SizedValueType>::get_ir_type(context).ptr_type(AddressSpace::Generic)
+        <T as SizedValueType>::get_ir_type(context).ptr_type(AddressSpace::default())
     }
 }
 

@@ -324,7 +324,7 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
         let table_body: Vec<BasicTypeEnum> = self
             .entries
             .iter()
-            .map(|f| f.ir_type.ptr_type(inkwell::AddressSpace::Generic).into())
+            .map(|f| f.ir_type.ptr_type(inkwell::AddressSpace::default()).into())
             .collect();
 
         // We can fill in the DispatchTable body, i.e: struct DispatchTable { <this part> };

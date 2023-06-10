@@ -193,25 +193,25 @@ pub trait IsPointerType<'ink> {
 
 impl<'ink, S: BasicType<'ink>, T: IsIrType<'ink, Type = S>> IsPointerType<'ink> for *const T {
     fn ir_type(context: &'ink Context, target: &TargetData) -> PointerType<'ink> {
-        T::ir_type(context, target).ptr_type(AddressSpace::Generic)
+        T::ir_type(context, target).ptr_type(AddressSpace::default())
     }
 }
 
 impl<'ink> IsPointerType<'ink> for *const std::ffi::c_void {
     fn ir_type(context: &'ink Context, _target: &TargetData) -> PointerType<'ink> {
-        context.i8_type().ptr_type(AddressSpace::Generic)
+        context.i8_type().ptr_type(AddressSpace::default())
     }
 }
 
 impl<'ink> IsPointerType<'ink> for *mut std::ffi::c_void {
     fn ir_type(context: &'ink Context, _target: &TargetData) -> PointerType<'ink> {
-        context.i8_type().ptr_type(AddressSpace::Generic)
+        context.i8_type().ptr_type(AddressSpace::default())
     }
 }
 
 impl<'ink, S: BasicType<'ink>, T: IsIrType<'ink, Type = S>> IsPointerType<'ink> for *mut T {
     fn ir_type(context: &'ink Context, target: &TargetData) -> PointerType<'ink> {
-        T::ir_type(context, target).ptr_type(AddressSpace::Generic)
+        T::ir_type(context, target).ptr_type(AddressSpace::default())
     }
 }
 

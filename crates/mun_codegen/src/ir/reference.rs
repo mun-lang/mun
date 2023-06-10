@@ -33,8 +33,8 @@ impl<'ink> RuntimeReferenceValue<'ink> {
         object_type: impl BasicType<'ink>,
     ) -> Result<Self, String> {
         let reference_type = object_type
-            .ptr_type(AddressSpace::Generic)
-            .ptr_type(AddressSpace::Generic);
+            .ptr_type(AddressSpace::default())
+            .ptr_type(AddressSpace::default());
         if ptr.get_type() == reference_type {
             Ok(Self(ptr))
         } else {
