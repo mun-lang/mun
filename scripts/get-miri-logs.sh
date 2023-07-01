@@ -1,7 +1,10 @@
 #!/bin/bash
 
 # This script collect logs for running Miri in each crate
-# Note: Needs Miri installed to run
+# Note: Needs Miri installed to run or uncomment the line to install it
+
+# Install Miri
+#rustup +nightly component add miri
 
 mkdir ../.logs
 cd ../crates
@@ -14,6 +17,5 @@ for directory in * ; do
     -Zmiri-disable-stacked-borrows \
     -Zmiri-backtrace=full \
     -Zmiri-disable-isolation" \
-    RUST_BACKTRACE=full \
     cargo +nightly miri test --package $directory --no-fail-fast >> $OUTPUT_FILE 2>&1
 done
