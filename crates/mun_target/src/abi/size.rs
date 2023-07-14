@@ -1,5 +1,6 @@
-///! Taken from the
-///! [librustc_target](https://github.com/rust-lang/rust/tree/master/src/librustc_target) crate.
+//! Taken from the
+//! [librustc_target](https://github.com/rust-lang/rust/tree/master/src/librustc_target) crate.
+
 // use crate::abi::{Align, HasDataLayout};
 use std::convert::TryInto;
 // use std::ops::{Add, AddAssign, Mul, Sub};
