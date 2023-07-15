@@ -1,5 +1,6 @@
-///! A monitor is a trait that reads and monitors files in a given set of directories. Changes are
-///! read to memory and communicated.
+//! A monitor is a trait that reads and monitors files in a given set of directories. Changes are
+//! read to memory and communicated.
+
 mod notify_monitor;
 
 pub use notify_monitor::NotifyMonitor;

@@ -1,4 +1,5 @@
-///! This module provides constructs to enable type safe handling of inkwell types.
+//! This module provides constructs to enable type safe handling of inkwell types.
+
 mod array_value;
 mod float_value;
 mod function_value;

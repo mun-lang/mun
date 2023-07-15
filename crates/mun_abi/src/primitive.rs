@@ -1,4 +1,5 @@
-///! A module that defines information for built-in (or primitive) types.
+//! A module that defines information for built-in (or primitive) types.
+
 use crate::{Guid, HasStaticTypeId, TypeId};
 
 /// Defines functions for built-in types like f32, i32, etc.

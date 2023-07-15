@@ -1,4 +1,5 @@
-///! This module provides conversion from a `mun_hir::Diagnostics` to a `crate::Diagnostics`.
+//! This module provides conversion from a `mun_hir::Diagnostics` to a `crate::Diagnostics`.
+
 mod access_unknown_field;
 mod duplicate_definition_error;
 mod expected_function;

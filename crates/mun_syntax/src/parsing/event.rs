@@ -1,9 +1,10 @@
-///! It is intended to be completely decoupled from the parser, so as to allow to evolve the tree
-/// representation and the parser algorithm independently.
-///!
-///! The `TreeSink` trait is the bridge between the parser and the tree builder: the parses
-///! produces a stream of events like `start node`, `finish node` and `TreeSink` converts
-///! this stream to a real tree.
+//! It is intended to be completely decoupled from the parser, so as to allow to evolve the tree
+//! representation and the parser algorithm independently.
+//!
+//! The `TreeSink` trait is the bridge between the parser and the tree builder: the parses
+//! produces a stream of events like `start node`, `finish node` and `TreeSink` converts
+//! this stream to a real tree.
+
 use std::mem;
 
 use crate::{
