@@ -141,7 +141,7 @@ Windows (64-bit only).
 Make sure you have the following dependencies installed on you machine:
 
 * [Rust](https://www.rust-lang.org/tools/install)
-* [LLVM 13](https://docs.mun-lang.org/dev/02-building-llvm.html)
+* [LLVM 14](https://docs.mun-lang.org/dev/02-building-llvm.html)
 
 Clone the source code, including all submodules:
 

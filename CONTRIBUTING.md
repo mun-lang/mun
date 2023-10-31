@@ -38,7 +38,7 @@ impacting other features.
 ### Test Driven Development
 
 We try to implement new features using [Test Driven Development
-(TTD)](https://en.wikipedia.org/wiki/Test-driven_development). In practice this
+(TDD)](https://en.wikipedia.org/wiki/Test-driven_development). In practice this
 means that we write tests - based on requirements - before implementing new
 features to ensure that they work. This seamlessly integrates with regression
 testing, as there is no extra workload.

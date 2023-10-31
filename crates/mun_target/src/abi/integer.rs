@@ -1,5 +1,5 @@
-///! Taken from the
-///! [librustc_target](https://github.com/rust-lang/rust/tree/master/src/librustc_target) crate.
+//! Taken from the
+//! [librustc_target](https://github.com/rust-lang/rust/tree/master/src/librustc_target) crate.
 
 // use crate::abi::{AbiAndPrefAlign, Align, HasDataLayout, Size};
 

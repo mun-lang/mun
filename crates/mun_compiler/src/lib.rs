@@ -1,7 +1,7 @@
+//! This library contains the code required to go from source code to binaries.
 #![allow(clippy::enum_variant_names)] // This is a HACK because we use salsa
 
 mod db;
-///! This library contains the code required to go from source code to binaries.
 pub mod diagnostics;
 mod diagnostics_snippets;
 mod driver;
