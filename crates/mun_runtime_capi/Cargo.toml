@@ -21,7 +21,7 @@ mun_abi = { version = "0.4.0", path = "../mun_abi" }
 mun_memory = { version = "0.4.0", path = "../mun_memory" }
 mun_runtime = { version = "0.4.0", path = "../mun_runtime" }
 mun_capi_utils = { version = "0.4.0", path = "../mun_capi_utils", features=["insta"]}
-insta = { version = "1.12.0", default-features = false, features = ["ron"] }
+insta = { version = "1.34.0", default-features = false, features = ["ron"] }
 
 [dev-dependencies]
 mun_compiler = { path="../mun_compiler" }

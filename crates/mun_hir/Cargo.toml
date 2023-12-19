@@ -16,17 +16,17 @@ categories = ["game-development", "mun"]
 mun_syntax = { version = "0.4.0", path = "../mun_syntax" }
 mun_target = { version = "0.4.0", path = "../mun_target" }
 mun_paths = { version = "0.4.0", path="../mun_paths" }
-drop_bomb = { version = "0.1.4", default-features = false }
-either = { version = "1.5.3", default-features = false }
+drop_bomb = { version = "0.1.5", default-features = false }
+either = { version = "1.9.0", default-features = false }
 ena = { version = "0.14", default-features = false }
-itertools = { version = "0.10.0", default-features = false }
-once_cell = { version = "1.4.0", default-features = false }
+itertools = { version = "0.12.0", default-features = false }
+once_cell = { version = "1.19.0", default-features = false }
 rustc-hash = { version = "1.1", default-features = false }
 salsa = { version = "0.16.1", default-features = false }
-smallvec = { version = "1.6.1", features = ["union"], default-features = false }
+smallvec = { version = "1.11.2", features = ["union"], default-features = false }
 
 [dev-dependencies]
 mun_test = { path = "../mun_test" }
-insta = { version = "1.12.0", default-features = false }
-parking_lot = { version = "0.12.0", default-features = false }
+insta = { version = "1.34.0", default-features = false }
+parking_lot = { version = "0.12.1", default-features = false }
 text_trees = { version = "0.1.2", default-features = false }

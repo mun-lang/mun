@@ -1,8 +1,4 @@
-use annotate_snippets::{
-    display_list::DisplayList,
-    display_list::FormatOptions,
-    snippet::{Annotation, AnnotationType, Slice, Snippet, SourceAnnotation},
-};
+use annotate_snippets::{Annotation, AnnotationType, Renderer, Slice, Snippet, SourceAnnotation};
 use mun_diagnostics::DiagnosticForWith;
 use mun_hir::{line_index::LineIndex, FileId, HirDatabase};
 use mun_paths::RelativePathBuf;
@@ -44,14 +40,15 @@ pub(crate) fn emit_syntax_error(
             }],
             fold: true,
         }],
-        opt: FormatOptions {
-            color: display_colors,
-            anonymized_line_numbers: false,
-            margin: None,
-        },
     };
-    let dl = DisplayList::from(snippet);
-    write!(writer, "{dl}")
+
+    let renderer = if display_colors {
+        Renderer::styled()
+    } else {
+        Renderer::plain()
+    };
+    let display = renderer.render(snippet);
+    write!(writer, "{}", display)
 }
 
 /// Emits all diagnostics that are a result of HIR validation.
@@ -186,14 +183,14 @@ fn emit_diagnostic(
                 annotation_type: AnnotationType::Note,
             })
             .collect(),
-        opt: FormatOptions {
-            color: display_colors,
-            anonymized_line_numbers: false,
-            margin: None,
-        },
     };
 
-    // Build a display list and emit to the writer
-    let dl = DisplayList::from(snippet);
-    write!(writer, "{dl}")
+    // Write the snippet to the output stream
+    let renderer = if display_colors {
+        Renderer::styled()
+    } else {
+        Renderer::plain()
+    };
+    let display = renderer.render(snippet);
+    write!(writer, "{}", display)
 }

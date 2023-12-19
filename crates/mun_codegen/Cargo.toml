@@ -14,30 +14,30 @@ categories = ["Game development", "Mun"]
 
 [dependencies]
 mun_abi = { version = "0.4.0", path = "../mun_abi" }
-anyhow = { version = "1.0.31", default-features = false, features = ["std"] }
-apple-codesign = { version = "0.22.0", default-features = false }
-array-init = { version = "2.0.0", default-features = false }
-by_address = { version = "1.0.4", default-features = false }
-bytemuck = { version = "1.4.1", default-features = false }
+anyhow = { version = "1.0.75", default-features = false, features = ["std"] }
+apple-codesign = { version = "0.26.0", default-features = false, git = "https://github.com/baszalmstra/apple-platform-rs.git", branch = "fix/disabled_features" }
+array-init = { version = "2.1.0", default-features = false }
+by_address = { version = "1.1.0", default-features = false }
+bytemuck = { version = "1.14.0", default-features = false }
 mun_hir = { version = "0.4.0", path = "../mun_hir" }
 inkwell = { version = "0.2.0", default-features = false, features = ["llvm14-0", "target-x86", "target-aarch64"] }
-itertools = { version = "0.10.3", default-features = false }
+itertools = { version = "0.12.0", default-features = false }
 mun_codegen_macros = { version = "0.4.0", path = "../mun_codegen_macros" }
 mun_target = { version = "0.4.0", path = "../mun_target" }
-once_cell = { version = "1.4.0", default-features = false }
+once_cell = { version = "1.19.0", default-features = false }
 lld_rs = { version = "140.0.0", default-features = false }
-parking_lot = { version = "0.12.0", default-features = false }
-paste = { version = "1.0.7", default-features = false }
-mun_paths = { version = "0.4.0", path="../mun_paths"}
+parking_lot = { version = "0.12.1", default-features = false }
+paste = { version = "1.0.14", default-features = false }
+mun_paths = { version = "0.4.0", path = "../mun_paths" }
 rustc-hash = { version = "1.1.0", default-features = false }
 salsa = { version = "0.16.1", default-features = false }
-smallvec = { version = "1.6.1", features = ["union"], default-features = false }
+smallvec = { version = "1.11.2", features = ["union"], default-features = false }
 tempfile = { version = "3", default-features = false }
-thiserror = { version = "1.0.19", default-features = false }
+thiserror = { version = "1.0.51", default-features = false }
 
 [dev-dependencies]
 mun_abi = { path = "../mun_abi", features = ["serde"] }
-insta = { version = "1.12.0", default-features = false, features = ["ron"] }
+insta = { version = "1.34.0", default-features = false, features = ["ron"] }
 mun_libloader = { path = "../mun_libloader" }
 mun_test = { path = "../mun_test" }
 mun_runtime = { path = "../mun_runtime" }
