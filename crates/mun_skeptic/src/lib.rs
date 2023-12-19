@@ -73,7 +73,7 @@ pub fn generate_doc_tests_from_mdbook(book_root: impl Into<PathBuf>) {
                             .map(ToString::to_string)
                     })
                     .map(|file_stem| sanitize_test_name(&file_stem))
-                    .unwrap_or_else(String::new),
+                    .unwrap_or_default(),
             )
         })
         .collect::<Vec<_>>();

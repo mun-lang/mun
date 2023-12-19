@@ -689,12 +689,9 @@ fn map_array_to_array_different_array_to_primitive_different() {
 
     assert_eq!(b_array.iter().count(), 3);
 
-    b_array
-        .iter()
-        .zip([b, a, b].into_iter())
-        .for_each(|(lhs, rhs)| {
-            assert_eq!(lhs, rhs as i64);
-        });
+    b_array.iter().zip([b, a, b]).for_each(|(lhs, rhs)| {
+        assert_eq!(lhs, rhs as i64);
+    });
 
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<f32>("c").unwrap(),
@@ -748,12 +745,9 @@ fn map_array_to_array_different_array_to_primitive_same() {
 
     assert_eq!(b_array.iter().count(), 3);
 
-    b_array
-        .iter()
-        .zip([b, a, b].into_iter())
-        .for_each(|(lhs, rhs)| {
-            assert_eq!(lhs, rhs);
-        });
+    b_array.iter().zip([b, a, b]).for_each(|(lhs, rhs)| {
+        assert_eq!(lhs, rhs);
+    });
 
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<f32>("c").unwrap(),
@@ -955,16 +949,13 @@ fn map_array_to_array_different_primitive_to_array_different() {
 
     assert_eq!(b_array.iter().count(), 3);
 
-    b_array
-        .iter()
-        .zip([b, a, b].into_iter())
-        .for_each(|(lhs, rhs)| {
-            assert_eq!(lhs.iter().count(), 1);
-            assert_eq!(
-                lhs.iter().next().expect("Array must have a value."),
-                rhs as i64
-            );
-        });
+    b_array.iter().zip([b, a, b]).for_each(|(lhs, rhs)| {
+        assert_eq!(lhs.iter().count(), 1);
+        assert_eq!(
+            lhs.iter().next().expect("Array must have a value."),
+            rhs as i64
+        );
+    });
 
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<f32>("c").unwrap(),
@@ -1018,13 +1009,10 @@ fn map_array_to_array_different_primitive_to_array_same() {
 
     assert_eq!(b_array.iter().count(), 3);
 
-    b_array
-        .iter()
-        .zip([b, a, b].into_iter())
-        .for_each(|(lhs, rhs)| {
-            assert_eq!(lhs.iter().count(), 1);
-            assert_eq!(lhs.iter().next().expect("Array must have a value."), rhs);
-        });
+    b_array.iter().zip([b, a, b]).for_each(|(lhs, rhs)| {
+        assert_eq!(lhs.iter().count(), 1);
+        assert_eq!(lhs.iter().next().expect("Array must have a value."), rhs);
+    });
 
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<f32>("c").unwrap(),
@@ -1078,12 +1066,9 @@ fn map_array_to_array_different_primitive_to_primitive() {
 
     assert_eq!(b_array.iter().count(), 3);
 
-    b_array
-        .iter()
-        .zip([b, a, b].into_iter())
-        .for_each(|(lhs, rhs)| {
-            assert_eq!(lhs, rhs as i64);
-        });
+    b_array.iter().zip([b, a, b]).for_each(|(lhs, rhs)| {
+        assert_eq!(lhs, rhs as i64);
+    });
 
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<f32>("c").unwrap(),

@@ -28,7 +28,7 @@ fn numbers() {
     100_000
     0x3a_u32
     1f32
-    0o71234"#), @r###"
+    0o71234"#), @r#"
     WHITESPACE 5 "\n    "
     FLOAT_NUMBER 4 "1.34"
     WHITESPACE 5 "\n    "
@@ -43,7 +43,7 @@ fn numbers() {
     INT_NUMBER 4 "1f32"
     WHITESPACE 5 "\n    "
     INT_NUMBER 7 "0o71234"
-    "###);
+    "#);
 }
 
 #[test]
@@ -57,7 +57,7 @@ fn comments() {
        line
        comment */
     /* /* nested */ */
-    /* unclosed comment"#), @r###"
+    /* unclosed comment"#), @r#"
     WHITESPACE 5 "\n    "
     COMMENT 16 "// hello, world!"
     WHITESPACE 5 "\n    "
@@ -70,7 +70,7 @@ fn comments() {
     COMMENT 18 "/* /* nested */ */"
     WHITESPACE 5 "\n    "
     COMMENT 19 "/* unclosed comment"
-    "###);
+    "#);
 }
 
 #[test]
@@ -80,7 +80,7 @@ fn whitespace() {
     h e ll  o
     w
 
-    o r     l   d"#), @r###"
+    o r     l   d"#), @r#"
     WHITESPACE 5 "\n    "
     IDENT 1 "h"
     WHITESPACE 1 " "
@@ -99,7 +99,7 @@ fn whitespace() {
     IDENT 1 "l"
     WHITESPACE 3 "   "
     IDENT 1 "d"
-    "###);
+    "#);
 }
 
 #[test]
@@ -107,7 +107,7 @@ fn ident() {
     insta::assert_snapshot!(dump_text_tokens(
         r#"
     hello world_ _a2 _ __ x 即可编著课程
-    "#), @r###"
+    "#), @r#"
     WHITESPACE 5 "\n    "
     IDENT 5 "hello"
     WHITESPACE 1 " "
@@ -123,7 +123,7 @@ fn ident() {
     WHITESPACE 1 " "
     IDENT 18 "即可编著课程"
     WHITESPACE 5 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -148,7 +148,7 @@ fn symbols() {
     ^ ^=
     : ::
     ->
-    "#), @r###"
+    "#), @r##"
     WHITESPACE 5 "\n    "
     HASH 1 "#"
     WHITESPACE 1 " "
@@ -267,7 +267,7 @@ fn symbols() {
     MINUS 1 "-"
     GT 1 ">"
     WHITESPACE 5 "\n    "
-    "###);
+    "##);
 }
 
 #[test]
@@ -280,7 +280,7 @@ fn strings() {
     "\"\\"
     "multi
     line"
-    "#), @r###"
+    "#), @r#"
     WHITESPACE 5 "\n    "
     STRING 15 "\"Hello, world!\""
     WHITESPACE 5 "\n    "
@@ -292,7 +292,7 @@ fn strings() {
     WHITESPACE 5 "\n    "
     STRING 16 "\"multi\n    line\""
     WHITESPACE 5 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -302,7 +302,7 @@ fn keywords() {
     break do else false for fn if in nil
     return true while let mut struct class
     never loop pub super self package type
-    "#), @r###"
+    "#), @r#"
     WHITESPACE 5 "\n    "
     BREAK_KW 5 "break"
     WHITESPACE 1 " "
@@ -350,7 +350,7 @@ fn keywords() {
     WHITESPACE 1 " "
     TYPE_KW 4 "type"
     WHITESPACE 5 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -358,10 +358,10 @@ fn unclosed_string() {
     insta::assert_snapshot!(dump_text_tokens(
         r#"
     "test
-    "#), @r###"
+    "#), @r#"
     WHITESPACE 5 "\n    "
     STRING 10 "\"test\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -372,7 +372,7 @@ fn binary_cmp() {
     a ==b
     a== b
     a == b
-    "#), @r###"
+    "#), @r#"
     WHITESPACE 5 "\n    "
     IDENT 1 "a"
     EQ 1 "="
@@ -398,5 +398,5 @@ fn binary_cmp() {
     WHITESPACE 1 " "
     IDENT 1 "b"
     WHITESPACE 5 "\n    "
-    "###);
+    "#);
 }

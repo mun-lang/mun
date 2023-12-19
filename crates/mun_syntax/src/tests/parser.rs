@@ -7,7 +7,7 @@ fn array_type() {
     fn main(a: [int]) {
         let a:[[bool]];
     }"#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..54
       FUNCTION_DEF@0..54
         WHITESPACE@0..5 "\n    "
@@ -57,7 +57,7 @@ fn array_type() {
             SEMI@47..48 ";"
           WHITESPACE@48..53 "\n    "
           R_CURLY@53..54 "}"
-    "###
+    "#
     )
 }
 
@@ -72,7 +72,7 @@ fn index_expr() {
         a[0] = c;
         let a = { [3,4,5] }[1];
     }"#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..142
       FUNCTION_DEF@0..142
         WHITESPACE@0..5 "\n    "
@@ -212,7 +212,7 @@ fn index_expr() {
             SEMI@135..136 ";"
           WHITESPACE@136..141 "\n    "
           R_CURLY@141..142 "}"
-    "###
+    "#
     )
 }
 
@@ -226,7 +226,7 @@ fn array_expr() {
         let a = [call(123)]
         let a = [Struct { }, Struct { }]
     }"#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..135
       FUNCTION_DEF@0..135
         WHITESPACE@0..5 "\n    "
@@ -338,7 +338,7 @@ fn array_expr() {
               R_BRACKET@128..129 "]"
           WHITESPACE@129..134 "\n    "
           R_CURLY@134..135 "}"
-    "###
+    "#
     )
 }
 
@@ -349,7 +349,7 @@ fn missing_field_expr() {
     fn foo() {
         var.
     }"#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..34
       FUNCTION_DEF@0..34
         WHITESPACE@0..5 "\n    "
@@ -374,7 +374,7 @@ fn missing_field_expr() {
           WHITESPACE@28..33 "\n    "
           R_CURLY@33..34 "}"
     error Offset(28): expected field name or number
-    "###);
+    "#);
 }
 
 #[test]
@@ -395,7 +395,7 @@ fn function() {
     pub fn d() {}
     pub fn c()->never {}
     fn b(value:number)->number {}"#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..189
       WHITESPACE@0..5 "\n    "
       COMMENT@5..27 "// Source file comment"
@@ -503,7 +503,7 @@ fn function() {
         BLOCK_EXPR@187..189
           L_CURLY@187..188 "{"
           R_CURLY@188..189 "}"
-    "###);
+    "#);
 }
 
 #[test]
@@ -515,7 +515,7 @@ fn block() {
         let b:i32;
         let c:string;
     }"#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..77
       FUNCTION_DEF@0..77
         WHITESPACE@0..5 "\n    "
@@ -567,7 +567,7 @@ fn block() {
             SEMI@70..71 ";"
           WHITESPACE@71..76 "\n    "
           R_CURLY@76..77 "}"
-    "###);
+    "#);
 }
 
 #[test]
@@ -582,7 +582,7 @@ fn literals() {
         let e = "Hello, world!"
     }
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..144
       FUNCTION_DEF@0..139
         WHITESPACE@0..5 "\n    "
@@ -663,7 +663,7 @@ fn literals() {
           WHITESPACE@133..138 "\n    "
           R_CURLY@138..139 "}"
       WHITESPACE@139..144 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -690,7 +690,7 @@ fn struct_def() {
     struct Foo(f64,);
     struct Foo(f64, i32)
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..468
       WHITESPACE@0..5 "\n    "
       STRUCT_DEF@5..15
@@ -906,7 +906,7 @@ fn struct_def() {
     error Offset(87): expected a declaration
     error Offset(178): expected a field declaration
     error Offset(366): expected a type
-    "###);
+    "#);
 }
 
 #[test]
@@ -918,7 +918,7 @@ fn unary_expr() {
         let b = !!true;
     }
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..71
       FUNCTION_DEF@0..66
         WHITESPACE@0..5 "\n    "
@@ -969,7 +969,7 @@ fn unary_expr() {
           WHITESPACE@60..65 "\n    "
           R_CURLY@65..66 "}"
       WHITESPACE@66..71 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -981,7 +981,7 @@ fn binary_expr() {
         let b = 3*4+10/2
     }
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..73
       FUNCTION_DEF@0..68
         WHITESPACE@0..5 "\n    "
@@ -1042,7 +1042,7 @@ fn binary_expr() {
           WHITESPACE@62..67 "\n    "
           R_CURLY@67..68 "}"
       WHITESPACE@68..73 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -1058,7 +1058,7 @@ fn expression_statement() {
         -3
     }
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..148
       FUNCTION_DEF@0..143
         WHITESPACE@0..5 "\n    "
@@ -1154,7 +1154,7 @@ fn expression_statement() {
           WHITESPACE@137..142 "\n    "
           R_CURLY@142..143 "}"
       WHITESPACE@143..148 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -1166,7 +1166,7 @@ fn function_calls() {
       bar(i+1)
     }
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..74
       FUNCTION_DEF@0..25
         WHITESPACE@0..5 "\n    "
@@ -1236,7 +1236,7 @@ fn function_calls() {
           WHITESPACE@63..68 "\n    "
           R_CURLY@68..69 "}"
       WHITESPACE@69..74 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -1248,7 +1248,7 @@ fn patterns() {
        let _ = a;
     }
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..71
       FUNCTION_DEF@0..66
         WHITESPACE@0..5 "\n    "
@@ -1302,7 +1302,7 @@ fn patterns() {
           WHITESPACE@60..65 "\n    "
           R_CURLY@65..66 "}"
       WHITESPACE@66..71 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -1322,7 +1322,7 @@ fn arithmetic_operands() {
         let _ = a ^ b;
     }
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..259
       FUNCTION_DEF@0..254
         WHITESPACE@0..5 "\n    "
@@ -1579,7 +1579,7 @@ fn arithmetic_operands() {
           WHITESPACE@248..253 "\n    "
           R_CURLY@253..254 "}"
       WHITESPACE@254..259 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -1600,7 +1600,7 @@ fn assignment_operands() {
         a ^= b;
     }
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..208
       FUNCTION_DEF@0..203
         WHITESPACE@0..5 "\n    "
@@ -1803,7 +1803,7 @@ fn assignment_operands() {
           WHITESPACE@197..202 "\n    "
           R_CURLY@202..203 "}"
       WHITESPACE@203..208 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -1820,7 +1820,7 @@ fn compare_operands() {
         let _ = a >= b;
     }
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..193
       FUNCTION_DEF@0..188
         WHITESPACE@0..5 "\n    "
@@ -2005,7 +2005,7 @@ fn compare_operands() {
           WHITESPACE@182..187 "\n    "
           R_CURLY@187..188 "}"
       WHITESPACE@188..193 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -2017,7 +2017,7 @@ fn logic_operands() {
         let _ = a && b;
     }
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..75
       FUNCTION_DEF@0..70
         WHITESPACE@0..5 "\n    "
@@ -2082,7 +2082,7 @@ fn logic_operands() {
           WHITESPACE@64..69 "\n    "
           R_CURLY@69..70 "}"
       WHITESPACE@70..75 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -2096,7 +2096,7 @@ fn if_expr() {
         if {true} {} else {}
     }
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..148
       FUNCTION_DEF@0..143
         WHITESPACE@0..5 "\n    "
@@ -2197,7 +2197,7 @@ fn if_expr() {
           WHITESPACE@137..142 "\n    "
           R_CURLY@142..143 "}"
       WHITESPACE@143..148 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -2208,7 +2208,7 @@ fn block_expr() {
         {3}
     }
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..38
       FUNCTION_DEF@0..33
         WHITESPACE@0..5 "\n    "
@@ -2231,7 +2231,7 @@ fn block_expr() {
           WHITESPACE@27..32 "\n    "
           R_CURLY@32..33 "}"
       WHITESPACE@33..38 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -2243,7 +2243,7 @@ fn return_expr() {
         return 50;
     }
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..61
       FUNCTION_DEF@0..56
         WHITESPACE@0..5 "\n    "
@@ -2273,7 +2273,7 @@ fn return_expr() {
           WHITESPACE@50..55 "\n    "
           R_CURLY@55..56 "}"
       WHITESPACE@56..61 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -2283,7 +2283,7 @@ fn loop_expr() {
     fn foo() {
         loop {}
     }"#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..37
       FUNCTION_DEF@0..37
         WHITESPACE@0..5 "\n    "
@@ -2306,7 +2306,7 @@ fn loop_expr() {
               R_CURLY@30..31 "}"
           WHITESPACE@31..36 "\n    "
           R_CURLY@36..37 "}"
-    "###);
+    "#);
 }
 
 #[test]
@@ -2319,7 +2319,7 @@ fn break_expr() {
         if break 4 { 3; }
     }
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..91
       FUNCTION_DEF@0..86
         WHITESPACE@0..5 "\n    "
@@ -2379,7 +2379,7 @@ fn break_expr() {
           WHITESPACE@80..85 "\n    "
           R_CURLY@85..86 "}"
       WHITESPACE@86..91 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -2391,7 +2391,7 @@ fn while_expr() {
         while { true } {};
     }
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..76
       FUNCTION_DEF@0..71
         WHITESPACE@0..5 "\n    "
@@ -2439,7 +2439,7 @@ fn while_expr() {
           WHITESPACE@65..70 "\n    "
           R_CURLY@70..71 "}"
       WHITESPACE@71..76 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -2456,7 +2456,7 @@ fn struct_lit() {
         T(1.23, 4,)
     }
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..171
       FUNCTION_DEF@0..166
         WHITESPACE@0..5 "\n    "
@@ -2606,7 +2606,7 @@ fn struct_lit() {
           WHITESPACE@160..165 "\n    "
           R_CURLY@165..166 "}"
       WHITESPACE@166..171 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -2624,7 +2624,7 @@ fn struct_field_index() {
         foo.a.0
     }
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..177
       FUNCTION_DEF@0..172
         WHITESPACE@0..5 "\n    "
@@ -2737,7 +2737,7 @@ fn struct_field_index() {
           WHITESPACE@166..171 "\n    "
           R_CURLY@171..172 "}"
       WHITESPACE@172..177 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -2750,7 +2750,7 @@ fn memory_type_specifier() {
     struct() Err1 {};    // error: expected memory type specifier
     struct(foo) Err2 {}; // error: expected memory type specifier
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..205
       WHITESPACE@0..5 "\n    "
       STRUCT_DEF@5..19
@@ -2830,7 +2830,7 @@ fn memory_type_specifier() {
       WHITESPACE@200..205 "\n    "
     error Offset(80): expected memory type specifier
     error Offset(146): expected memory type specifier
-    "###);
+    "#);
 }
 
 #[test]
@@ -2843,7 +2843,7 @@ fn visibility() {
     pub(package) fn bar() {}
     pub fn baz() {}
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..140
       WHITESPACE@0..5 "\n    "
       STRUCT_DEF@5..23
@@ -2935,7 +2935,7 @@ fn visibility() {
           L_CURLY@133..134 "{"
           R_CURLY@134..135 "}"
       WHITESPACE@135..140 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -2944,7 +2944,7 @@ fn extern_fn() {
         r#"
     pub extern fn foo();
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..30
       FUNCTION_DEF@0..25
         WHITESPACE@0..5 "\n    "
@@ -2963,7 +2963,7 @@ fn extern_fn() {
           R_PAREN@23..24 ")"
         SEMI@24..25 ";"
       WHITESPACE@25..30 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -2973,7 +2973,7 @@ fn type_alias_def() {
     type Foo = i32;
     type Bar = Foo;
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..45
       WHITESPACE@0..5 "\n    "
       TYPE_ALIAS_DEF@5..20
@@ -3006,7 +3006,7 @@ fn type_alias_def() {
                 IDENT@36..39 "Foo"
         SEMI@39..40 ";"
       WHITESPACE@40..45 "\n    "
-    "###);
+    "#);
 }
 #[test]
 fn function_return_path() {
@@ -3017,7 +3017,7 @@ fn function_return_path() {
         fn main2() -> package::Foo {}
         fn main3() -> package::foo::Foo {}
     "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..156
       FUNCTION_DEF@0..34
         WHITESPACE@0..9 "\n        "
@@ -3129,7 +3129,7 @@ fn function_return_path() {
           L_CURLY@149..150 "{"
           R_CURLY@150..151 "}"
       WHITESPACE@151..156 "\n    "
-    "###);
+    "#);
 }
 
 #[test]
@@ -3164,7 +3164,7 @@ fn use_() {
         };
         use Foo as _;
         "#,
-    ).debug_dump(), @r###"
+    ).debug_dump(), @r#"
     SOURCE_FILE@0..726
       WHITESPACE@0..9 "\n        "
       COMMENT@9..24 "// Simple paths"
@@ -3496,5 +3496,5 @@ fn use_() {
     error Offset(367): expected a declaration
     error Offset(368): expected a declaration
     error Offset(369): expected a declaration
-    "###);
+    "#);
 }
