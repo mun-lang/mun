@@ -13,6 +13,8 @@ DIST_VERSION="${DISTRO}_${VERSION}"
 case "$DIST_VERSION" in
     Debian_9* )       REPO_NAME="deb http://apt.llvm.org/stretch/  llvm-toolchain-stretch-$LLVM_VERSION main" ;;
     Debian_10* )      REPO_NAME="deb http://apt.llvm.org/buster/   llvm-toolchain-buster-$LLVM_VERSION  main" ;;
+    Debian_11* )      REPO_NAME="deb http://apt.llvm.org/bullseye/ llvm-toolchain-bullseye-$LLVM_VERSION  main" ;;
+    Debian_12* )      REPO_NAME="deb http://apt.llvm.org/bookworm/ llvm-toolchain-bookworm-$LLVM_VERSION  main" ;;
     Debian_unstable ) REPO_NAME="deb http://apt.llvm.org/unstable/ llvm-toolchain-$LLVM_VERSION         main" ;;
     Debian_testing )  REPO_NAME="deb http://apt.llvm.org/unstable/ llvm-toolchain-$LLVM_VERSION         main" ;;
     Ubuntu_16.04 )    REPO_NAME="deb http://apt.llvm.org/xenial/   llvm-toolchain-xenial-$LLVM_VERSION  main" ;;
@@ -28,12 +30,16 @@ case "$DIST_VERSION" in
         exit 2
 esac
 
+# Install required package for `add-apt-repository`
+apt-get update
+apt-get install -y software-properties-common
+
 # Add the right repository for the distro
 wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
 add-apt-repository "${REPO_NAME}"
 apt-get update
 
-# Install required packages
+# Install required packages for LLVM
 apt-get install -y llvm-$LLVM_VERSION llvm-$LLVM_VERSION-* liblld-$LLVM_VERSION* libclang-rt-$LLVM_VERSION-dev
 
 apt download libpolly-$LLVM_VERSION-dev && dpkg --force-all -i libpolly-$LLVM_VERSION-dev*

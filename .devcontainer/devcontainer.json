@@ -1,0 +1,41 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/rust
+{
+	"name": "Mun",
+	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+	"image": "mcr.microsoft.com/devcontainers/base:bullseye",
+	"features": {
+		// LLVM install is broken
+		// "ghcr.io/devcontainers-community/features/llvm:3": {
+		// 	"version": "14"
+		// }
+	},
+	"portsAttributes": {
+		// The default port of mdbook
+		"3000": {
+			"label": "mdbook",
+			"onAutoForward": "openPreview"
+		}
+	},
+	// Every time the container is started, update Rust to the version specified in the `rust-toolchain` file.
+	"postStartCommand": "scripts/setup.sh",
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "rustc --version",
+	// Configure tool-specific properties.
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"rust-lang.rust-analyzer",
+				"tamasfe.even-better-toml",
+				"vadimcn.vscode-lldb"
+			]
+		},
+		"settings": {
+			"rust-analyzer.rustfmt.extraArgs": [
+				"+nightly"
+			]
+		}
+	}
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
+}
