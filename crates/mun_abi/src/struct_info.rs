@@ -26,9 +26,8 @@ pub struct StructDefinition<'a> {
 
 /// Represents the kind of memory management a struct uses.
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-#[derive(Default)]
 pub enum StructMemoryKind {
     /// A garbage collected struct is allocated on the heap and uses reference semantics when passed
     /// around.
