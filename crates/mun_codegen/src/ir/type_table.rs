@@ -203,7 +203,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
 
     /// Constructs a `TypeTable` from all *used* types.
     pub fn build(self) -> TypeTable<'ink> {
-        let mut entries = Vec::from_iter(self.entries.into_iter());
+        let mut entries = Vec::from_iter(self.entries);
         entries.sort_by(|a, b| a.name.cmp(&b.name));
 
         let type_info_to_index = entries

@@ -221,7 +221,7 @@ macro_rules! impl_value_type_value {
     }
 }
 
-impl_value_type_value! (
+impl_value_type_value!(
     inkwell::types::IntType<'ink> => inkwell::values::IntValue<'ink>,
     inkwell::types::FloatType<'ink> => inkwell::values::FloatValue<'ink>,
     inkwell::types::ArrayType<'ink> => inkwell::values::ArrayValue<'ink>,
@@ -333,7 +333,7 @@ impl<'ink, T: ConcreteValueType<'ink> + ?Sized> AsValue<'ink, T> for Value<'ink,
 
 impl<'ink, T: ConcreteValueType<'ink> + ?Sized> Clone for Value<'ink, T> {
     fn clone(&self) -> Self {
-        Value { value: self.value }
+        *self
     }
 }
 

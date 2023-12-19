@@ -25,7 +25,7 @@ impl<'ink> PointerValueType<'ink> for *const std::ffi::c_void {
         context: &IrTypeContext<'ink, '_>,
         address_space: Option<AddressSpace>,
     ) -> PointerType<'ink> {
-        Self::get_ir_type(context).ptr_type(address_space.unwrap_or(AddressSpace::default()))
+        Self::get_ir_type(context).ptr_type(address_space.unwrap_or_default())
     }
 }
 
@@ -53,7 +53,7 @@ impl<'ink, T: PointerValueType<'ink>> PointerValueType<'ink> for *mut T {
         context: &IrTypeContext<'ink, '_>,
         address_space: Option<AddressSpace>,
     ) -> PointerType<'ink> {
-        Self::get_ir_type(context).ptr_type(address_space.unwrap_or(AddressSpace::default()))
+        Self::get_ir_type(context).ptr_type(address_space.unwrap_or_default())
     }
 }
 
@@ -62,7 +62,7 @@ impl<'ink, T: PointerValueType<'ink>> PointerValueType<'ink> for *const T {
         context: &IrTypeContext<'ink, '_>,
         address_space: Option<AddressSpace>,
     ) -> PointerType<'ink> {
-        Self::get_ir_type(context).ptr_type(address_space.unwrap_or(AddressSpace::default()))
+        Self::get_ir_type(context).ptr_type(address_space.unwrap_or_default())
     }
 }
 

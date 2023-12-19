@@ -1,6 +1,7 @@
 use crate::{ir::ty::HirTypeCache, CodeGenDatabase};
 use inkwell::{context::Context, module::Module, targets::TargetMachine, types::StructType};
-use std::{cell::RefCell, collections::HashMap, sync::Arc};
+use std::rc::Rc;
+use std::{cell::RefCell, collections::HashMap};
 
 pub struct CodeGenContext<'db, 'ink> {
     /// The current LLVM context
@@ -19,7 +20,7 @@ pub struct CodeGenContext<'db, 'ink> {
     pub optimization_level: inkwell::OptimizationLevel,
 
     /// The target to generate code for
-    pub target_machine: Arc<TargetMachine>,
+    pub target_machine: Rc<TargetMachine>,
 }
 
 impl<'db, 'ink> CodeGenContext<'db, 'ink> {

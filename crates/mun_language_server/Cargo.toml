@@ -21,22 +21,22 @@ mun_syntax = { version = "0.4.0", path = "../mun_syntax" }
 mun_diagnostics = { version = "0.4.0", path = "../mun_diagnostics" }
 mun_paths = { version = "0.4.0", path="../mun_paths" }
 anyhow = { version = "1.0", default-features = false, features=["std"] }
-crossbeam-channel = { version = "0.5.0", default-features = false }
+crossbeam-channel = { version = "0.5.9", default-features = false }
 log = { version = "0.4", default-features = false }
-lsp-types = { version = "0.94.0", default-features = false }
-lsp-server = { version = "0.7.0", default-features = false }
-parking_lot = { version = "0.12.0", default-features = false }
-ra_ap_text_edit = { version = "0.0.149", default-features = false }
+lsp-types = { version = "0.95.0", default-features = false }
+lsp-server = { version = "0.7.5", default-features = false }
+parking_lot = { version = "0.12.1", default-features = false }
+ra_ap_text_edit = { version = "0.0.190", default-features = false }
 rustc-hash = { version = "1.1.0", default-features = false }
 salsa = { version = "0.16.1", default-features = false }
 serde = { version = "1.0", default-features = false }
 serde_derive = { version = "1.0", default-features = false }
 serde_json = { version = "1.0", default-features = false }
-thiserror = { version = "1.0.19", default-features = false }
+thiserror = { version = "1.0.51", default-features = false }
 threadpool = { version = "1.8.1", default-features = false }
 
 [dev-dependencies]
 mun_test = { path = "../mun_test"}
-insta = { version = "1.12.0", default-features = false }
-itertools = { version = "0.10.0", default-features = false }
+insta = { version = "1.34.0", default-features = false }
+itertools = { version = "0.12.0", default-features = false }
 tempdir = { version = "0.3.7", default-features = false }

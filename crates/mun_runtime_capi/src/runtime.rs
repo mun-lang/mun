@@ -347,7 +347,7 @@ mod tests {
     fn test_runtime_create_invalid_lib_path() {
         assert_error_snapshot!(
             unsafe { mun_runtime_create(ptr::null(), RuntimeOptions::default(), ptr::null_mut()) },
-            @r###""invalid argument \'library_path\': null pointer""###
+            @r#""invalid argument \'library_path\': null pointer""#
         );
     }
 
@@ -363,7 +363,7 @@ mod tests {
                     ptr::null_mut(),
                 )
             },
-            @r###""invalid argument \'library_path\': invalid UTF-8 encoded""###
+            @r#""invalid argument \'library_path\': invalid UTF-8 encoded""#
         );
     }
 
@@ -379,7 +379,7 @@ mod tests {
         let mut handle = MaybeUninit::uninit();
         assert_error_snapshot!(
             unsafe { mun_runtime_create(lib_path.into_raw(), options, handle.as_mut_ptr()) },
-            @r###""invalid argument: \'functions\' is null pointer.""###
+            @r#""invalid argument: \'functions\' is null pointer.""#
         );
     }
 
@@ -391,7 +391,7 @@ mod tests {
             unsafe {
                 mun_runtime_create(lib_path.into_raw(), RuntimeOptions::default(), ptr::null_mut())
             },
-            @r###""invalid argument \'handle\': null pointer""###
+            @r#""invalid argument \'handle\': null pointer""#
         );
     }
 
@@ -416,7 +416,7 @@ mod tests {
         let mut handle = MaybeUninit::uninit();
         assert_error_snapshot!(
             unsafe { mun_runtime_create(lib_path.into_raw(), options, handle.as_mut_ptr()) },
-            @r###""invalid function name: null pointer""###
+            @r#""invalid function name: null pointer""#
         );
     }
 
@@ -442,7 +442,7 @@ mod tests {
         let mut handle = MaybeUninit::uninit();
         assert_error_snapshot!(
             unsafe { mun_runtime_create(lib_path.into_raw(), options, handle.as_mut_ptr()) },
-            @r###""invalid function name: invalid UTF-8 encoded""###
+            @r#""invalid function name: invalid UTF-8 encoded""#
         );
     }
 
@@ -467,7 +467,7 @@ mod tests {
         let mut handle = MaybeUninit::uninit();
         assert_error_snapshot!(
             unsafe { mun_runtime_create(lib_path.into_raw(), options, handle.as_mut_ptr()) },
-            @r###""invalid function \'foobar\': \'return_type\': null pointer""###
+            @r#""invalid function \'foobar\': \'return_type\': null pointer""#
         );
     }
 
@@ -493,7 +493,7 @@ mod tests {
         let mut handle = MaybeUninit::uninit();
         assert_error_snapshot!(
             unsafe { mun_runtime_create(lib_path.into_raw(), options, handle.as_mut_ptr()) },
-            @r###""invalid function \'foobar\': \'arg_types\' is null pointer.""###
+            @r#""invalid function \'foobar\': \'arg_types\' is null pointer.""#
         );
     }
 
@@ -520,7 +520,7 @@ mod tests {
         let mut handle = MaybeUninit::uninit();
         assert_error_snapshot!(
             unsafe { mun_runtime_create(lib_path.into_raw(), options, handle.as_mut_ptr()) },
-            @r###""invalid function \'foobar\': argument #1: null pointer""###
+            @r#""invalid function \'foobar\': argument #1: null pointer""#
         );
     }
 
@@ -542,7 +542,7 @@ mod tests {
                     ptr::null_mut(),
                 )
             },
-            @r###""invalid argument \'fn_name\': null pointer""###
+            @r#""invalid argument \'fn_name\': null pointer""#
         );
     }
 
@@ -565,7 +565,7 @@ mod tests {
                     ptr::null_mut(),
                 )
             },
-            @r###""invalid argument \'fn_name\': invalid UTF-8 encoded""###
+            @r#""invalid argument \'fn_name\': invalid UTF-8 encoded""#
         );
     }
 
@@ -588,7 +588,7 @@ mod tests {
                     ptr::null_mut(),
                 )
             },
-            @r###""invalid argument \'has_fn_info\': null pointer""###
+            @r#""invalid argument \'has_fn_info\': null pointer""#
         );
     }
 
@@ -612,7 +612,7 @@ mod tests {
                     ptr::null_mut(),
                 )
             },
-            @r###""invalid argument \'fn_info\': null pointer""###
+            @r#""invalid argument \'fn_info\': null pointer""#
         );
     }
 
@@ -671,7 +671,7 @@ mod tests {
                     ptr::null_mut(),
                 )
             },
-            @r###""invalid argument \'type_name\': null pointer""###
+            @r#""invalid argument \'type_name\': null pointer""#
         );
     }
 
@@ -693,7 +693,7 @@ mod tests {
                     ptr::null_mut(),
                 )
             },
-            @r###""invalid argument \'type_name\': invalid UTF-8 encoded""###
+            @r#""invalid argument \'type_name\': invalid UTF-8 encoded""#
         );
     }
 
@@ -715,7 +715,7 @@ mod tests {
                     ptr::null_mut(),
                 )
             },
-            @r###""invalid argument \'has_type_info\': null pointer""###
+            @r#""invalid argument \'has_type_info\': null pointer""#
         );
     }
 
@@ -738,7 +738,7 @@ mod tests {
                     ptr::null_mut(),
                 )
             },
-            @r###""invalid argument \'type_info\': null pointer""###
+            @r#""invalid argument \'type_info\': null pointer""#
         );
     }
 
@@ -795,7 +795,7 @@ mod tests {
                     ptr::null_mut(),
                 )
             },
-            @r###""invalid argument \'type_id\': null pointer""###
+            @r#""invalid argument \'type_id\': null pointer""#
         );
     }
 
@@ -817,7 +817,7 @@ mod tests {
                     ptr::null_mut(),
                 )
             },
-            @r###""invalid argument \'has_type_info\': null pointer""###
+            @r#""invalid argument \'has_type_info\': null pointer""#
         );
     }
 
@@ -840,7 +840,7 @@ mod tests {
                     ptr::null_mut(),
                 )
             },
-            @r###""invalid argument \'type_info\': null pointer""###
+            @r#""invalid argument \'type_info\': null pointer""#
         );
     }
 
@@ -890,7 +890,7 @@ mod tests {
 
         assert_error_snapshot!(
             unsafe { mun_runtime_update(driver.runtime, ptr::null_mut()) },
-            @r###""invalid argument \'updated\': null pointer""###
+            @r#""invalid argument \'updated\': null pointer""#
         );
     }
 

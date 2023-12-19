@@ -82,7 +82,7 @@ impl LanguageServerState {
         let monitor_config = mun_vfs::MonitorConfig {
             watch: match self.config.watcher {
                 FilesWatcher::Client => vec![],
-                FilesWatcher::Notify => (0..entries_to_load.len()).into_iter().collect(),
+                FilesWatcher::Notify => (0..entries_to_load.len()).collect(),
             },
             load: entries_to_load,
         };

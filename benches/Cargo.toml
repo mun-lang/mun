@@ -1,0 +1,21 @@
+[package]
+name = "benches"
+version = "0.1.0"
+edition = "2021"
+description = "Benchmarks for the Mun compiler and runtime"
+
+[dependencies]
+
+[dev-dependencies]
+criterion = { version = "0.5.1", default-features = false }
+mlua = { package = "mlua", version = "0.9.2", default-features = false, features = ["vendored", "luajit"] }
+wasmer = { version = "4.2.4", default-features = false, features = ["sys-default"] }
+mun_runtime = { path = "../crates/mun_runtime", default-features = false }
+mun_compiler = { path = "../crates/mun_compiler", default-features = false }
+
+[[bench]]
+name = "benchmarks"
+harness = false
+
+[workspace]
+# Empty workspace

@@ -139,12 +139,10 @@ pub struct LocalItemTreeId<N: ItemTreeNode> {
 
 impl<N: ItemTreeNode> Clone for LocalItemTreeId<N> {
     fn clone(&self) -> Self {
-        Self {
-            index: self.index,
-            _p: PhantomData,
-        }
+        *self
     }
 }
+
 impl<N: ItemTreeNode> Copy for LocalItemTreeId<N> {}
 
 impl<N: ItemTreeNode> PartialEq for LocalItemTreeId<N> {
@@ -152,6 +150,7 @@ impl<N: ItemTreeNode> PartialEq for LocalItemTreeId<N> {
         self.index == other.index
     }
 }
+
 impl<N: ItemTreeNode> Eq for LocalItemTreeId<N> {}
 
 impl<N: ItemTreeNode> Hash for LocalItemTreeId<N> {
