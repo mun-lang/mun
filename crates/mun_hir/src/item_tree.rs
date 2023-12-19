@@ -111,6 +111,7 @@ struct ItemTreeData {
     structs: Arena<Struct>,
     fields: Arena<Field>,
     type_aliases: Arena<TypeAlias>,
+    impls: Arena<Impl>,
 
     visibilities: ItemVisibilities,
 }
@@ -222,6 +223,7 @@ mod_items! {
     Struct in structs -> ast::StructDef,
     TypeAlias in type_aliases -> ast::TypeAliasDef,
     Import in imports -> ast::Use,
+    Impl in impls -> ast::Impl,
 }
 
 macro_rules! impl_index {
@@ -309,6 +311,14 @@ pub struct Struct {
     pub ast_id: FileAstId<ast::StructDef>,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Impl {
+    pub types: TypeRefMap,
+    pub self_ty: LocalTypeRefId,
+    pub items: Box<[AssociatedItem]>,
+    pub ast_id: FileAstId<ast::Impl>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAlias {
     pub name: Name,
@@ -316,6 +326,25 @@ pub struct TypeAlias {
     pub types: TypeRefMap,
     pub type_ref: Option<LocalTypeRefId>,
     pub ast_id: FileAstId<ast::TypeAliasDef>,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum AssociatedItem {
+    Function(LocalItemTreeId<Function>),
+}
+
+impl From<LocalItemTreeId<Function>> for AssociatedItem {
+    fn from(value: LocalItemTreeId<Function>) -> Self {
+        AssociatedItem::Function(value)
+    }
+}
+
+impl From<AssociatedItem> for ModItem {
+    fn from(item: AssociatedItem) -> Self {
+        match item {
+            AssociatedItem::Function(it) => it.into(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -430,6 +459,7 @@ mod diagnostics {
                     ModItem::Import(item) => {
                         SyntaxNodePtr::new(item_tree.source(db, item).syntax())
                     }
+                    ModItem::Impl(item) => SyntaxNodePtr::new(item_tree.source(db, item).syntax()),
                 }
             }
 

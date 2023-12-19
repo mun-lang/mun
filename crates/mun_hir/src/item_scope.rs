@@ -1,3 +1,4 @@
+use crate::ids::ImplId;
 use crate::{
     ids::ItemDefinitionId, module_tree::LocalModuleId, primitive_type::PrimitiveType,
     visibility::Visibility, Name, PerNs,
@@ -41,6 +42,9 @@ pub struct ItemScope {
 
     /// All items that are defined in this scope
     defs: Vec<ItemDefinitionId>,
+
+    /// All implementations that are defined in this scope
+    impls: Vec<ImplId>,
 }
 
 /// A struct that is returned from `add_resolution_from_import`.
@@ -83,6 +87,11 @@ impl ItemScope {
     /// Adds an item definition to the list of definitions
     pub(crate) fn add_definition(&mut self, def: ItemDefinitionId) {
         self.defs.push(def);
+    }
+
+    /// Adds an implementation to the list of implementations
+    pub(crate) fn define_impl(&mut self, impl_: ImplId) {
+        self.impls.push(impl_);
     }
 
     /// Adds a named item resolution into the scope. Returns true if adding the resolution changes

@@ -1,6 +1,90 @@
 use crate::SourceFile;
 
 #[test]
+fn impl_block() {
+    insta::assert_snapshot!(SourceFile::parse(
+        r#"
+        impl Foo {}
+        impl Bar {
+            fn bar() {}
+            struct Baz {}
+        }
+        pub impl FooBar {}
+        "#).debug_dump(), @r###"
+    SOURCE_FILE@0..135
+      WHITESPACE@0..9 "\n        "
+      IMPL@9..20
+        IMPL_KW@9..13 "impl"
+        WHITESPACE@13..14 " "
+        PATH_TYPE@14..17
+          PATH@14..17
+            PATH_SEGMENT@14..17
+              NAME_REF@14..17
+                IDENT@14..17 "Foo"
+        WHITESPACE@17..18 " "
+        ASSOCIATED_ITEM_LIST@18..20
+          L_CURLY@18..19 "{"
+          R_CURLY@19..20 "}"
+      WHITESPACE@20..29 "\n        "
+      IMPL@29..99
+        IMPL_KW@29..33 "impl"
+        WHITESPACE@33..34 " "
+        PATH_TYPE@34..37
+          PATH@34..37
+            PATH_SEGMENT@34..37
+              NAME_REF@34..37
+                IDENT@34..37 "Bar"
+        WHITESPACE@37..38 " "
+        ASSOCIATED_ITEM_LIST@38..99
+          L_CURLY@38..39 "{"
+          FUNCTION_DEF@39..63
+            WHITESPACE@39..52 "\n            "
+            FN_KW@52..54 "fn"
+            WHITESPACE@54..55 " "
+            NAME@55..58
+              IDENT@55..58 "bar"
+            PARAM_LIST@58..60
+              L_PAREN@58..59 "("
+              R_PAREN@59..60 ")"
+            WHITESPACE@60..61 " "
+            BLOCK_EXPR@61..63
+              L_CURLY@61..62 "{"
+              R_CURLY@62..63 "}"
+          WHITESPACE@63..76 "\n            "
+          STRUCT_DEF@76..89
+            STRUCT_KW@76..82 "struct"
+            WHITESPACE@82..83 " "
+            NAME@83..86
+              IDENT@83..86 "Baz"
+            WHITESPACE@86..87 " "
+            RECORD_FIELD_DEF_LIST@87..89
+              L_CURLY@87..88 "{"
+              R_CURLY@88..89 "}"
+          WHITESPACE@89..98 "\n        "
+          R_CURLY@98..99 "}"
+      WHITESPACE@99..108 "\n        "
+      IMPL@108..126
+        VISIBILITY@108..111
+          PUB_KW@108..111 "pub"
+        WHITESPACE@111..112 " "
+        IMPL_KW@112..116 "impl"
+        WHITESPACE@116..117 " "
+        PATH_TYPE@117..123
+          PATH@117..123
+            PATH_SEGMENT@117..123
+              NAME_REF@117..123
+                IDENT@117..123 "FooBar"
+        WHITESPACE@123..124 " "
+        ASSOCIATED_ITEM_LIST@124..126
+          L_CURLY@124..125 "{"
+          R_CURLY@125..126 "}"
+      WHITESPACE@126..135 "\n        "
+    error Range(76..89): only functions are allowed in impl blocks
+    error Range(108..111): visibility is not allowed on impl blocks
+    "###);
+}
+
+#[test]
 fn array_type() {
     insta::assert_snapshot!(SourceFile::parse(
         r#"
@@ -3008,6 +3092,7 @@ fn type_alias_def() {
       WHITESPACE@40..45 "\n    "
     "#);
 }
+
 #[test]
 fn function_return_path() {
     insta::assert_snapshot!(SourceFile::parse(

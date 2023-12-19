@@ -1,3 +1,4 @@
+use crate::item_tree::Impl;
 use crate::{
     item_tree::{Function, ItemTreeId, ItemTreeNode, Struct, TypeAlias},
     module_tree::LocalModuleId,
@@ -89,6 +90,12 @@ pub struct ModuleId {
     pub package: PackageId,
     pub local_id: LocalModuleId,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ImplId(salsa::InternId);
+
+pub(crate) type ImplLoc = AssocItemLoc<Impl>;
+impl_intern!(ImplId, ImplLoc, intern_impl, lookup_intern_impl);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct FunctionId(salsa::InternId);

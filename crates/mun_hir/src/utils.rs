@@ -12,13 +12,23 @@ pub(crate) fn make_mut_slice<T: Clone>(a: &mut Arc<[T]>) -> &mut [T] {
 #[cfg(test)]
 pub mod tests {
     use crate::{
-        diagnostics::DiagnosticSink, mock::MockDatabase, with_fixture::WithFixture, Package,
+        diagnostics::DiagnosticSink, mock::MockDatabase, with_fixture::WithFixture, AstDatabase,
+        Package,
     };
 
     pub fn diagnostics(content: &str) -> String {
         let (db, _file_id) = MockDatabase::with_single_file(content);
 
         let mut diags = Vec::new();
+
+        for module in Package::all(&db).iter().flat_map(|pkg| pkg.modules(&db)) {
+            if let Some(file_id) = module.file_id(&db) {
+                let source_file = db.parse(file_id);
+                for err in source_file.errors() {
+                    diags.push(format!("{:?}: {}", err.location(), err.to_string()));
+                }
+            }
+        }
 
         let mut diag_sink = DiagnosticSink::new(|diag| {
             diags.push(format!("{:?}: {}", diag.highlight_range(), diag.message()));

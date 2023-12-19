@@ -1,13 +1,11 @@
 use super::PackageDefs;
-use crate::item_tree::Fields;
 use crate::{
     arena::map::ArenaMap,
-    ids::ItemDefinitionId,
-    ids::{FunctionLoc, Intern, StructLoc, TypeAliasLoc},
-    item_scope::ImportType,
-    item_scope::{ItemScope, PerNsGlobImports},
+    ids::{FunctionLoc, ImplLoc, Intern, ItemDefinitionId, StructLoc, TypeAliasLoc},
+    item_scope::{ImportType, ItemScope, PerNsGlobImports},
     item_tree::{
-        self, Function, ItemTree, ItemTreeId, LocalItemTreeId, ModItem, Struct, TypeAlias,
+        self, Fields, Function, Impl, ItemTree, ItemTreeId, LocalItemTreeId, ModItem, Struct,
+        TypeAlias,
     },
     module_tree::LocalModuleId,
     name_resolution::ReachedFixedPoint,
@@ -509,6 +507,10 @@ impl<'a> ModCollectorContext<'a, '_> {
                     self.collect_import(id);
                     continue;
                 }
+                ModItem::Impl(id) => {
+                    self.collect_impl(id);
+                    continue;
+                }
             };
 
             self.def_collector.package_defs.modules[self.module_id].add_definition(id);
@@ -522,6 +524,20 @@ impl<'a> ModCollectorContext<'a, '_> {
                 PerNs::from_definition(id, visibility, has_constructor),
             );
         }
+    }
+
+    /// Collects the definition data from an `Impl`.
+    fn collect_impl(&mut self, id: LocalItemTreeId<Impl>) {
+        self.def_collector.package_defs.modules[self.module_id].define_impl(
+            ImplLoc {
+                module: ModuleId {
+                    package: self.def_collector.package_id,
+                    local_id: self.module_id,
+                },
+                id: ItemTreeId::new(self.file_id, id),
+            }
+            .intern(self.def_collector.db),
+        );
     }
 
     /// Collects the definition data from an import statement.

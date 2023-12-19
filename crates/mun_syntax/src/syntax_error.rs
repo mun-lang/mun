@@ -58,6 +58,10 @@ impl SyntaxError {
         }
     }
 
+    pub fn parse_error<L: Into<Location>>(msg: impl Into<String>, loc: L) -> SyntaxError {
+        SyntaxError::new(SyntaxErrorKind::ParseError(ParseError(msg.into())), loc)
+    }
+
     pub fn kind(&self) -> SyntaxErrorKind {
         self.kind.clone()
     }

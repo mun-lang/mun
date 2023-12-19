@@ -1,6 +1,6 @@
 ---
 source: crates/mun_hir/src/item_tree/tests.rs
-expression: "print_item_tree(r#\"\n    fn foo(a:i32, b:u8, c:String) -> i32 {}\n    pub fn bar(a:i32, b:u8, c:String) ->  {}\n    pub(super) fn bar(a:i32, b:u8, c:String) ->  {}\n    pub(package) fn baz(a:i32, b:, c:String) ->  {}\n    extern fn eval(a:String) -> bool;\n\n    struct Foo {\n        a: i32,\n        b: u8,\n        c: String,\n    }\n    struct Foo2 {\n        a: i32,\n        b: ,\n        c: String,\n    }\n    struct Bar (i32, u32, String)\n    struct Baz;\n\n    type FooBar = Foo;\n    type FooBar = package::Foo;\n\n    pub use foo;\n    use super::bar;\n    use super::*;\n    use foo::{bar as _, baz::hello as world};\n    \"#).unwrap()"
+expression: "print_item_tree(r#\"\n    fn foo(a:i32, b:u8, c:String) -> i32 {}\n    pub fn bar(a:i32, b:u8, c:String) ->  {}\n    pub(super) fn bar(a:i32, b:u8, c:String) ->  {}\n    pub(package) fn baz(a:i32, b:, c:String) ->  {}\n    extern fn eval(a:String) -> bool;\n\n    struct Foo {\n        a: i32,\n        b: u8,\n        c: String,\n    }\n    struct Foo2 {\n        a: i32,\n        b: ,\n        c: String,\n    }\n    struct Bar (i32, u32, String)\n    struct Baz;\n\n    type FooBar = Foo;\n    type FooBar = package::Foo;\n    \"#).unwrap()"
 ---
 fn foo(
   i32,
@@ -43,9 +43,4 @@ struct Bar(
 struct Baz;
 type FooBar = Foo;
 type FooBar = package::Foo;
-pub use foo;
-use super::bar;
-use super::*;
-use foo::bar as _;
-use foo::baz::hello as world;
 

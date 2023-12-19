@@ -302,7 +302,8 @@ fn keywords() {
     break do else false for fn if in nil
     return true while let mut struct class
     never loop pub super self package type
-    "#), @r#"
+    impl
+    "#), @r###"
     WHITESPACE 5 "\n    "
     BREAK_KW 5 "break"
     WHITESPACE 1 " "
@@ -350,7 +351,9 @@ fn keywords() {
     WHITESPACE 1 " "
     TYPE_KW 4 "type"
     WHITESPACE 5 "\n    "
-    "#);
+    IMPL_KW 4 "impl"
+    WHITESPACE 5 "\n    "
+    "###);
 }
 
 #[test]

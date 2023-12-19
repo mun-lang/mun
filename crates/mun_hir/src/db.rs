@@ -82,6 +82,8 @@ pub trait InternDatabase: SourceDatabase {
     fn intern_struct(&self, loc: ids::StructLoc) -> ids::StructId;
     #[salsa::interned]
     fn intern_type_alias(&self, loc: ids::TypeAliasLoc) -> ids::TypeAliasId;
+    #[salsa::interned]
+    fn intern_impl(self, loc: ids::ImplLoc) -> ids::ImplId;
 }
 
 #[salsa::query_group(DefDatabaseStorage)]

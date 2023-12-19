@@ -4,6 +4,7 @@ mod expressions;
 mod params;
 mod paths;
 mod patterns;
+mod traits;
 mod types;
 
 use super::{

@@ -1,4 +1,4 @@
-use crate::item_tree::LocalItemTreeId;
+use crate::item_tree::{Impl, LocalItemTreeId};
 use crate::{
     item_tree::{Fields, Function, Import, ItemTree, ModItem, RawVisibilityId, Struct, TypeAlias},
     path::ImportAlias,
@@ -64,6 +64,7 @@ impl Printer<'_> {
             ModItem::Struct(it) => self.print_struct(it),
             ModItem::TypeAlias(it) => self.print_type_alias(it),
             ModItem::Import(it) => self.print_use(it),
+            ModItem::Impl(it) => self.print_impl(it),
         }
     }
 
@@ -200,6 +201,27 @@ impl Printer<'_> {
     /// Prints a type reference to the buffer.
     fn print_type_ref(&mut self, type_ref: LocalTypeRefId, map: &TypeRefMap) -> fmt::Result {
         print_type_ref(self.db, map, type_ref, self)
+    }
+
+    /// Prints an `impl` block to the buffer.
+    fn print_impl(&mut self, it: LocalItemTreeId<Impl>) -> fmt::Result {
+        let Impl {
+            types,
+            self_ty,
+            items,
+            ast_id: _,
+        } = &self.tree[it];
+        write!(self, "impl ")?;
+        self.print_type_ref(*self_ty, types)?;
+        self.whitespace()?;
+        write!(self, "{{")?;
+        self.indented(|this| {
+            for item in items.iter().copied() {
+                this.print_mod_item(item.into())?;
+            }
+            Ok(())
+        })?;
+        write!(self, "}}")
     }
 }
 

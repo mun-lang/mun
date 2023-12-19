@@ -32,11 +32,32 @@ fn top_level_items() {
 
     type FooBar = Foo;
     type FooBar = package::Foo;
+    "#
+    )
+    .unwrap());
+}
 
+#[test]
+fn test_use() {
+    insta::assert_snapshot!(print_item_tree(
+        r#"
     pub use foo;
     use super::bar;
     use super::*;
     use foo::{bar as _, baz::hello as world};
+        "#
+    )
+    .unwrap());
+}
+
+#[test]
+fn test_impls() {
+    insta::assert_snapshot!(print_item_tree(
+        r#"
+    impl Bar {
+        fn foo(a:i32, b:u8, c:String) -> i32 {}
+        pub fn bar(a:i32, b:u8, c:String) ->  {}
+    }
     "#
     )
     .unwrap());

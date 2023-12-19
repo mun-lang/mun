@@ -1,26 +1,30 @@
 //! This module implements the logic to convert an AST to an `ItemTree`.
 
 use super::{
-    diagnostics, Field, Fields, Function, IdRange, ItemTree, ItemTreeData, ItemTreeNode,
-    ItemVisibilities, LocalItemTreeId, ModItem, RawVisibilityId, Struct, TypeAlias,
+    diagnostics, AssociatedItem, Field, Fields, Function, IdRange, Impl, ItemTree, ItemTreeData,
+    ItemTreeNode, ItemVisibilities, LocalItemTreeId, ModItem, RawVisibilityId, Struct, TypeAlias,
 };
-use crate::item_tree::Import;
-use crate::type_ref::{TypeRefMap, TypeRefMapBuilder};
 use crate::{
     arena::{Idx, RawId},
+    item_tree::Import,
     name::AsName,
     source_id::AstIdMap,
+    type_ref::{TypeRefMap, TypeRefMapBuilder},
     visibility::RawVisibility,
     DefDatabase, FileId, InFile, Name, Path,
 };
-use mun_syntax::{
-    ast,
-    ast::{ExternOwner, ModuleItemOwner, NameOwner, StructKind, TypeAscriptionOwner},
+use mun_syntax::ast::{
+    self, ExternOwner, ModuleItemOwner, NameOwner, StructKind, TypeAscriptionOwner,
 };
 use smallvec::SmallVec;
 use std::{collections::HashMap, convert::TryInto, marker::PhantomData, sync::Arc};
 
 struct ModItems(SmallVec<[ModItem; 1]>);
+
+struct Foo {}
+impl Foo {
+    fn bar() {}
+}
 
 impl<T> From<T> for ModItems
 where
@@ -73,7 +77,7 @@ impl Context {
                 ModItem::Function(item) => Some(&self.data.functions[item.index].name),
                 ModItem::Struct(item) => Some(&self.data.structs[item.index].name),
                 ModItem::TypeAlias(item) => Some(&self.data.type_aliases[item.index].name),
-                ModItem::Import(_) => None,
+                ModItem::Impl(_) | ModItem::Import(_) => None,
             };
             if let Some(name) = name {
                 if let Some(first_item) = set.get(name) {
@@ -106,6 +110,7 @@ impl Context {
             ast::ModuleItemKind::Use(ast) => Some(ModItems(
                 self.lower_use(&ast).into_iter().map(Into::into).collect(),
             )),
+            ast::ModuleItemKind::Impl(ast) => self.lower_impl(&ast).map(Into::into),
         }
     }
 
@@ -264,6 +269,37 @@ impl Context {
             ast_id,
         };
         Some(self.data.type_aliases.alloc(res).into())
+    }
+
+    fn lower_impl(&mut self, impl_def: &ast::Impl) -> Option<LocalItemTreeId<Impl>> {
+        let ast_id = self.source_ast_id_map.ast_id(impl_def);
+        let mut types = TypeRefMap::builder();
+        let self_ty = impl_def.type_ref().map(|ty| types.alloc_from_node(&ty))?;
+
+        let items = impl_def
+            .associated_item_list()
+            .into_iter()
+            .flat_map(|it| it.associated_items())
+            .filter_map(|item| self.lower_associated_item(&item))
+            .collect();
+
+        let (types, _types_source_map) = types.finish();
+
+        let res = Impl {
+            types,
+            self_ty,
+            items,
+            ast_id,
+        };
+
+        Some(self.data.impls.alloc(res).into())
+    }
+
+    fn lower_associated_item(&mut self, item: &ast::AssociatedItem) -> Option<AssociatedItem> {
+        let item: AssociatedItem = match item.kind() {
+            ast::AssociatedItemKind::FunctionDef(ast) => self.lower_function(&ast).map(Into::into),
+        }?;
+        Some(item)
     }
 
     /// Returns the `Idx` of the next `Field`

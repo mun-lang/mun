@@ -22,6 +22,7 @@ mod token_text;
 #[cfg(test)]
 mod tests;
 pub mod utils;
+mod validation;
 
 use std::{fmt::Write, marker::PhantomData, sync::Arc};
 
@@ -143,8 +144,9 @@ use ra_ap_text_edit::Indel;
 
 impl SourceFile {
     pub fn parse(text: &str) -> Parse<SourceFile> {
-        let (green, errors) = parsing::parse_text(text);
-        //errors.extend(validation::validate(&SourceFile::new(green.clone())));
+        let (green, mut errors) = parsing::parse_text(text);
+        let root = SyntaxNode::new_root(green.clone());
+        errors.extend(validation::validate(&root));
         Parse {
             green,
             errors: Arc::from(errors),
@@ -208,7 +210,8 @@ fn api_walkthrough() {
             ast::ModuleItemKind::FunctionDef(f) => func = Some(f),
             ast::ModuleItemKind::StructDef(_)
             | ast::ModuleItemKind::TypeAliasDef(_)
-            | ast::ModuleItemKind::Use(_) => (),
+            | ast::ModuleItemKind::Use(_)
+            | ast::ModuleItemKind::Impl(_) => (),
         }
     }
 

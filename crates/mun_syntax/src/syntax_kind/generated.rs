@@ -97,6 +97,7 @@ pub enum SyntaxKind {
     SUPER_KW,
     SELF_KW,
     EXTERN_KW,
+    IMPL_KW,
     INT_NUMBER,
     FLOAT_NUMBER,
     STRING,
@@ -156,6 +157,9 @@ pub enum SyntaxKind {
     USE_TREE,
     USE_TREE_LIST,
     RENAME,
+    IMPL,
+    ASSOCIATED_ITEM_LIST,
+    ASSOCIATED_ITEM,
     // Technical kind so that we can cast from u16 safely
     #[doc(hidden)]
     __LAST,
@@ -383,6 +387,9 @@ macro_rules! T {
     (extern) => {
         $crate::SyntaxKind::EXTERN_KW
     };
+    (impl) => {
+        $crate::SyntaxKind::IMPL_KW
+    };
 }
 
 impl From<u16> for SyntaxKind {
@@ -428,6 +435,7 @@ impl SyntaxKind {
         | SUPER_KW
         | SELF_KW
         | EXTERN_KW
+        | IMPL_KW
         )
     }
 
@@ -569,6 +577,7 @@ impl SyntaxKind {
             SUPER_KW => &SyntaxInfo { name: "SUPER_KW" },
             SELF_KW => &SyntaxInfo { name: "SELF_KW" },
             EXTERN_KW => &SyntaxInfo { name: "EXTERN_KW" },
+            IMPL_KW => &SyntaxInfo { name: "IMPL_KW" },
             INT_NUMBER => &SyntaxInfo { name: "INT_NUMBER" },
             FLOAT_NUMBER => &SyntaxInfo { name: "FLOAT_NUMBER" },
             STRING => &SyntaxInfo { name: "STRING" },
@@ -628,6 +637,9 @@ impl SyntaxKind {
             USE_TREE => &SyntaxInfo { name: "USE_TREE" },
             USE_TREE_LIST => &SyntaxInfo { name: "USE_TREE_LIST" },
             RENAME => &SyntaxInfo { name: "RENAME" },
+            IMPL => &SyntaxInfo { name: "IMPL" },
+            ASSOCIATED_ITEM_LIST => &SyntaxInfo { name: "ASSOCIATED_ITEM_LIST" },
+            ASSOCIATED_ITEM => &SyntaxInfo { name: "ASSOCIATED_ITEM" },
             TOMBSTONE => &SyntaxInfo { name: "TOMBSTONE" },
             EOF => &SyntaxInfo { name: "EOF" },
             __LAST => &SyntaxInfo { name: "__LAST" },
@@ -662,6 +674,7 @@ impl SyntaxKind {
             "super" => SUPER_KW,
             "self" => SELF_KW,
             "extern" => EXTERN_KW,
+            "impl" => IMPL_KW,
             _ => return None,
         };
         Some(kw)
