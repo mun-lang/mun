@@ -104,7 +104,7 @@ impl TraceEvent {
                         struct_type: ty.into_owned(),
                         field_index: 0,
                     }))
-                }
+                };
             }
             TypeKind::Array(_) => Some(TraceEvent::Reference(ptr.cast())),
         }
@@ -324,7 +324,12 @@ impl ArrayHandle {
 
         unsafe {
             NonNull::new_unchecked(
-                (self.obj.as_ref().data.array.as_ptr().cast::<u8>() as *mut u8)
+                self.obj
+                    .as_ref()
+                    .data
+                    .array
+                    .as_ptr()
+                    .cast::<u8>()
                     .add(padded_header_size),
             )
         }
@@ -934,8 +939,8 @@ where
                 mapping::Action::StructMapFromGc { old_ty, old_offset } => {
                     let conversion = conversions.get(old_ty).unwrap_or_else(|| {
                         panic!(
-                        "If the struct changed, there must also be a conversion for type: {old_ty:#?}.",
-                    )
+                            "If the struct changed, there must also be a conversion for type: {old_ty:#?}.",
+                        )
                     });
 
                     // Safety: we already hold a write lock on `objects`, so this is legal.
@@ -960,8 +965,8 @@ where
 
                     let conversion = conversions.get(old_ty).unwrap_or_else(|| {
                         panic!(
-                        "If the struct changed, there must also be a conversion for type: {old_ty:#?}.",
-                    )
+                            "If the struct changed, there must also be a conversion for type: {old_ty:#?}.",
+                        )
                     });
 
                     // Map in-memory struct to heap-allocated struct
@@ -986,8 +991,8 @@ where
                 mapping::Action::StructMapInPlace { old_ty, old_offset } => {
                     let conversion = conversions.get(old_ty).unwrap_or_else(|| {
                         panic!(
-                        "If the struct changed, there must also be a conversion for type: {old_ty:#?}.",
-                    )
+                            "If the struct changed, there must also be a conversion for type: {old_ty:#?}.",
+                        )
                     });
 
                     map_struct(
@@ -1063,6 +1068,7 @@ union ObjectInfoData {
 
 /// An `ObjectInfo` is thread-safe.
 unsafe impl Send for ObjectInfo {}
+
 unsafe impl Sync for ObjectInfo {}
 
 impl From<GcPtr> for *const ObjectInfo {

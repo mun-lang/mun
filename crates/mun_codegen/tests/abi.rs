@@ -29,7 +29,7 @@ fn test_abi_compatibility() {
 
     assert_eq!(abi::ABI_VERSION, unsafe { lib.get_abi_version() });
     insta::assert_ron_snapshot!(unsafe { lib.get_info() },
-    @r###"
+    @r#"
     AssemblyInfo(
       symbols: ModuleInfo(
         path: "mod",
@@ -175,5 +175,5 @@ fn test_abi_compatibility() {
       ],
       dependencies: [],
     )
-    "###);
+    "#);
 }

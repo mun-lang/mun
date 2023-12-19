@@ -695,7 +695,7 @@ impl<'name, T: InvokeArgs> InvokeErr<'name, T> {
         Output: 'o + ReturnTypeReflection + Marshal<'o>,
         'r: 'o,
     {
-        #[allow(clippy::cast_ref_to_mut)]
+        #[allow(invalid_reference_casting, invalid_reference_casting)]
         let runtime = &mut *(runtime as *const Runtime as *mut Runtime);
 
         eprintln!("{}", self.msg);

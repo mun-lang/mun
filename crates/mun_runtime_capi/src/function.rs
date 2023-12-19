@@ -192,14 +192,14 @@ pub(crate) mod tests {
     fn test_function_release_invalid_fn_info() {
         assert_error_snapshot!(
             unsafe { mun_function_release(Function::null()) },
-            @r###""invalid argument \'function\': null pointer""###);
+            @r#""invalid argument \'function\': null pointer""#);
     }
 
     #[test]
     fn test_function_add_reference_invalid_fn_info() {
         assert_error_snapshot!(
             unsafe { mun_function_add_reference(Function::null()) },
-            @r###""invalid argument \'function\': null pointer""###);
+            @r#""invalid argument \'function\': null pointer""#);
     }
 
     #[test]
@@ -245,10 +245,10 @@ pub(crate) mod tests {
         let mut ptr = MaybeUninit::uninit();
         assert_error_snapshot!(
             unsafe { mun_function_fn_ptr(Function::null(), ptr.as_mut_ptr()) },
-            @r###""invalid argument \'function\': null pointer""###);
+            @r#""invalid argument \'function\': null pointer""#);
         assert_error_snapshot!(
             unsafe { mun_function_fn_ptr(function, ptr::null_mut()) },
-            @r###""invalid argument \'ptr\': null pointer""###);
+            @r#""invalid argument \'ptr\': null pointer""#);
 
         assert!(unsafe { mun_function_release(function) }.is_ok());
     }
@@ -276,10 +276,10 @@ pub(crate) mod tests {
         let mut ptr = MaybeUninit::uninit();
         assert_error_snapshot!(
             unsafe { mun_function_name(Function::null(), ptr.as_mut_ptr()) },
-            @r###""invalid argument \'function\': null pointer""###);
+            @r#""invalid argument \'function\': null pointer""#);
         assert_error_snapshot!(
             unsafe { mun_function_name(function, ptr::null_mut()) },
-            @r###""invalid argument \'name\': null pointer""###);
+            @r#""invalid argument \'name\': null pointer""#);
 
         assert!(unsafe { mun_function_release(function) }.is_ok());
     }
@@ -309,10 +309,10 @@ pub(crate) mod tests {
         let mut ptr = MaybeUninit::uninit();
         assert_error_snapshot!(unsafe {
             mun_function_argument_types(Function::null(), ptr.as_mut_ptr())
-        }, @r###""invalid argument \'function\': null pointer""###);
+        }, @r#""invalid argument \'function\': null pointer""#);
         assert_error_snapshot!(
             unsafe { mun_function_argument_types(function, ptr::null_mut()) },
-            @r###""invalid argument \'arg_types\': null pointer""###);
+            @r#""invalid argument \'arg_types\': null pointer""#);
 
         assert!(unsafe { mun_function_release(function) }.is_ok());
     }
@@ -359,10 +359,10 @@ pub(crate) mod tests {
         let mut ptr = MaybeUninit::uninit();
         assert_error_snapshot!(
             unsafe { mun_function_return_type(Function::null(), ptr.as_mut_ptr()) },
-            @r###""invalid argument \'function\': null pointer""###);
+            @r#""invalid argument \'function\': null pointer""#);
         assert_error_snapshot!(
             unsafe { mun_function_return_type(function, ptr::null_mut()) },
-            @r###""invalid argument \'ty\': null pointer""###);
+            @r#""invalid argument \'ty\': null pointer""#);
 
         assert!(unsafe { mun_function_release(function) }.is_ok());
     }

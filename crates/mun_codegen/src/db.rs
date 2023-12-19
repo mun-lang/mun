@@ -1,6 +1,7 @@
 use crate::{AssemblyIr, ModuleGroupId, ModulePartition, TargetAssembly};
 use by_address::ByAddress;
 use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, Target, TargetTriple};
+use std::rc::Rc;
 use std::sync::Arc;
 
 /// The `CodeGenDatabase` enables caching of code generation stages. Inkwell/LLVM objects are not
@@ -23,7 +24,7 @@ pub trait CodeGenDatabase:
 
     /// Returns the inkwell target machine that completely describes the code generation target. All
     /// target-specific information should be accessible through this interface.
-    fn target_machine(&self) -> ByAddress<Arc<inkwell::targets::TargetMachine>>;
+    fn target_machine(&self) -> ByAddress<Rc<inkwell::targets::TargetMachine>>;
 
     /// Returns a file containing the IR for the specified module.
     #[salsa::invoke(crate::assembly::build_assembly_ir)]
@@ -36,7 +37,7 @@ pub trait CodeGenDatabase:
 
 /// Constructs the primary interface to the complete machine description for the target machine. All
 /// target-specific information should be accessible through this interface.
-fn target_machine(db: &dyn CodeGenDatabase) -> ByAddress<Arc<inkwell::targets::TargetMachine>> {
+fn target_machine(db: &dyn CodeGenDatabase) -> ByAddress<Rc<inkwell::targets::TargetMachine>> {
     // Get the HIR target
     let target = db.target();
 
@@ -61,5 +62,5 @@ fn target_machine(db: &dyn CodeGenDatabase) -> ByAddress<Arc<inkwell::targets::T
         )
         .expect("could not create llvm target machine");
 
-    ByAddress(Arc::new(target_machine))
+    ByAddress(Rc::new(target_machine))
 }

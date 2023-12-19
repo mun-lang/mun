@@ -156,7 +156,7 @@ mod tests {
 
         assert_error_snapshot!(
             unsafe { mun_gc_alloc(driver.runtime, Type::null(), ptr::null_mut()) },
-            @r###""invalid argument \'obj\': null pointer""###
+            @r#""invalid argument \'obj\': null pointer""#
         );
     }
 
@@ -179,7 +179,7 @@ mod tests {
 
         assert_error_snapshot!(
             unsafe { mun_gc_alloc(driver.runtime, ty, ptr::null_mut()) },
-            @r###""invalid argument \'obj\': null pointer""###
+            @r#""invalid argument \'obj\': null pointer""#
         );
     }
 
@@ -220,7 +220,7 @@ mod tests {
                 let raw_ptr: RawGcPtr = ptr::null();
                 mun_gc_ptr_type(driver.runtime, raw_ptr.into(), ptr::null_mut())
             },
-            @r###""invalid argument \'ty\': null pointer""###
+            @r#""invalid argument \'ty\': null pointer""#
         );
     }
 
@@ -294,7 +294,7 @@ mod tests {
 
         assert_error_snapshot!(
             unsafe { mun_gc_collect(driver.runtime, ptr::null_mut()) },
-            @r###""invalid argument \'reclaimed\': null pointer""###
+            @r#""invalid argument \'reclaimed\': null pointer""#
         );
     }
 }
