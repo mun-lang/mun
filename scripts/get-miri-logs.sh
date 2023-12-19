@@ -1,21 +1,24 @@
 #!/bin/bash
 
 # This script collect logs for running Miri in each crate
-# Note: Needs Miri installed to run or uncomment the line to install it
 
-# Install Miri
-#rustup +nightly component add miri
+# Install nightly Miri
+rustup toolchain install nightly --profile minimal --component miri
 
-mkdir ../.logs
-cd ../crates
+# Create the folder for logs
+mkdir -p .logs
+
+# Run clean to ensure that we get all miri errors
 cargo clean
 
-for directory in * ; do
-    echo "$directory"
-    OUTPUT_FILE=../.logs/log_$directory
+for path in crates/* ; do
+    echo "Running miri in '$path'"
+    package=$(basename "$path")
+    OUTPUT_FILE=.logs/log_$package
     MIRIFLAGS="\
     -Zmiri-disable-stacked-borrows \
     -Zmiri-backtrace=full \
     -Zmiri-disable-isolation" \
-    cargo +nightly miri test --package $directory --no-fail-fast >> $OUTPUT_FILE 2>&1
+    # Log to stdout and a file - for future reference
+    cargo +nightly miri test --package $package --no-fail-fast 2>&1 | tee $OUTPUT_FILE
 done
