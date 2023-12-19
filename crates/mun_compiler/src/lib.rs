@@ -16,7 +16,7 @@ pub use crate::driver::{Config, Driver};
 pub use mun_codegen::OptimizationLevel;
 
 pub use crate::db::CompilerDatabase;
-pub use annotate_snippets::snippet::AnnotationType;
+pub use annotate_snippets::AnnotationType;
 use mun_project::Package;
 use std::ffi::OsStr;
 use std::io::stderr;

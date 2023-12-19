@@ -13,10 +13,10 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-mun_paths = { version = "0.4.0", path="../mun_paths" }
+mun_paths = { version = "0.4.0", path = "../mun_paths" }
 anyhow = { version = "1.0", default-features = false }
 rustc-hash = { version = "1.1.0", default-features = false, features = ["std"] }
 semver = { version = "1.0", default-features = false, features = ["serde"] }
 serde = { version = "1.0", default-features = false }
 serde_derive = { version = "1.0", default-features = false }
-toml = { version = "0.7", default-features = false, features = ["parse"] }
+toml = { version = "0.8.8", default-features = false, features = ["parse"] }
