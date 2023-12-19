@@ -6,6 +6,7 @@ use crate::{
     r#type::Type,
     ArrayType, TypeKind,
 };
+use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 
 /// The type mapping needed to convert an old into a new set of unique and ordered values.
@@ -177,8 +178,9 @@ impl Mapping {
 pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) -> StructMapping {
     let old_fields = old_ty
         .as_struct()
-        .map(|s| s.fields().iter().collect())
-        .unwrap_or_else(Vec::new);
+        .into_iter()
+        .flat_map(|s| s.fields().iter())
+        .collect_vec();
 
     let deletions: HashSet<usize> = diff
         .iter()
@@ -284,8 +286,9 @@ pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) ->
 
     let new_fields = new_ty
         .as_struct()
-        .map(|s| Vec::from_iter(s.fields().iter()))
-        .unwrap_or_else(Vec::new);
+        .into_iter()
+        .flat_map(|s| s.fields().iter())
+        .collect_vec();
     StructMapping {
         field_mapping: mapping
             .into_iter()

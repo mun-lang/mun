@@ -16,6 +16,7 @@ impl<N: ItemTreeNode> PartialEq for ItemLoc<N> {
         self.id == other.id
     }
 }
+
 impl<N: ItemTreeNode> Eq for ItemLoc<N> {}
 
 impl<N: ItemTreeNode> Hash for ItemLoc<N> {
@@ -26,9 +27,10 @@ impl<N: ItemTreeNode> Hash for ItemLoc<N> {
 
 impl<N: ItemTreeNode> Clone for ItemLoc<N> {
     fn clone(&self) -> ItemLoc<N> {
-        ItemLoc { id: self.id }
+        *self
     }
 }
+
 impl<N: ItemTreeNode> Copy for ItemLoc<N> {}
 
 #[derive(Debug)]
@@ -39,10 +41,7 @@ pub struct AssocItemLoc<N: ItemTreeNode> {
 
 impl<N: ItemTreeNode> Clone for AssocItemLoc<N> {
     fn clone(&self) -> Self {
-        Self {
-            module: self.module,
-            id: self.id,
-        }
+        *self
     }
 }
 
@@ -105,6 +104,7 @@ pub struct ModuleId {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct FunctionId(salsa::InternId);
+
 pub(crate) type FunctionLoc = AssocItemLoc<Function>;
 impl_intern!(
     FunctionId,
@@ -115,11 +115,13 @@ impl_intern!(
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct StructId(salsa::InternId);
+
 pub(crate) type StructLoc = AssocItemLoc<Struct>;
 impl_intern!(StructId, StructLoc, intern_struct, lookup_intern_struct);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TypeAliasId(salsa::InternId);
+
 pub(crate) type TypeAliasLoc = AssocItemLoc<TypeAlias>;
 impl_intern!(
     TypeAliasId,
@@ -152,21 +154,25 @@ impl From<ModuleId> for ItemDefinitionId {
         ItemDefinitionId::ModuleId(id)
     }
 }
+
 impl From<FunctionId> for ItemDefinitionId {
     fn from(id: FunctionId) -> Self {
         ItemDefinitionId::FunctionId(id)
     }
 }
+
 impl From<StructId> for ItemDefinitionId {
     fn from(id: StructId) -> Self {
         ItemDefinitionId::StructId(id)
     }
 }
+
 impl From<TypeAliasId> for ItemDefinitionId {
     fn from(id: TypeAliasId) -> Self {
         ItemDefinitionId::TypeAliasId(id)
     }
 }
+
 impl From<PrimitiveType> for ItemDefinitionId {
     fn from(id: PrimitiveType) -> Self {
         ItemDefinitionId::PrimitiveType(id)

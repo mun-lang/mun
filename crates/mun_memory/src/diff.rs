@@ -266,7 +266,7 @@ fn append_struct_mapping(
     // Any remaining unused deletions must have been deleted.
     used_deletions
         .into_iter()
-        .zip(deletions.into_iter())
+        .zip(deletions)
         .for_each(|(used, (_, old_index, ty, _))| {
             if !used {
                 mapping.push(StructDiff::Delete {
@@ -279,7 +279,7 @@ fn append_struct_mapping(
     // Any remaining unused insertions must have been inserted.
     used_insertions
         .into_iter()
-        .zip(insertions.into_iter())
+        .zip(insertions)
         .for_each(|(used, (_, new_index, ty, _))| {
             if !used {
                 mapping.push(StructDiff::Insert {

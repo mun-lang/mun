@@ -24,10 +24,7 @@ pub struct Global<'ink, T: ?Sized> {
 
 impl<'ink, T: ?Sized> Clone for Global<'ink, T> {
     fn clone(&self) -> Self {
-        Global {
-            value: self.value,
-            data: self.data,
-        }
+        *self
     }
 }
 
