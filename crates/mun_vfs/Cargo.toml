@@ -1,6 +1,6 @@
 [package]
 name = "mun_vfs"
-version = "0.5.0-dev"
+version = "0.5.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 description = "Provides an in-memory filesystem"
@@ -13,7 +13,7 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-mun_paths = { version = "0.5.0-dev", path="../mun_paths" }
+mun_paths = { version = "0.5.0", path="../mun_paths" }
 crossbeam-channel = { version = "0.5.9", default-features = false }
 log = { version = "0.4.20", default-features = false }
 notify = "5.2.0"

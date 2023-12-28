@@ -1,6 +1,6 @@
 [package]
 name = "mun_codegen"
-version = "0.5.0-dev"
+version = "0.5.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 description = "LLVM IR code generation for Mun"
@@ -13,22 +13,22 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["Game development", "Mun"]
 
 [dependencies]
-mun_abi = { version = "0.5.0-dev", path = "../mun_abi" }
+mun_abi = { version = "0.5.0", path = "../mun_abi" }
 anyhow = { version = "1.0.75", default-features = false, features = ["std"] }
 apple-codesign = { version = "0.26.0", default-features = false, git = "https://github.com/baszalmstra/apple-platform-rs.git", branch = "fix/disabled_features" }
 array-init = { version = "2.1.0", default-features = false }
 by_address = { version = "1.1.0", default-features = false }
 bytemuck = { version = "1.14.0", default-features = false }
-mun_hir = { version = "0.5.0-dev", path = "../mun_hir" }
+mun_hir = { version = "0.5.0", path = "../mun_hir" }
 inkwell = { version = "0.2.0", default-features = false, features = ["llvm14-0", "target-x86", "target-aarch64"] }
 itertools = { version = "0.12.0", default-features = false }
-mun_codegen_macros = { version = "0.5.0-dev", path = "../mun_codegen_macros" }
-mun_target = { version = "0.5.0-dev", path = "../mun_target" }
+mun_codegen_macros = { version = "0.5.0", path = "../mun_codegen_macros" }
+mun_target = { version = "0.5.0", path = "../mun_target" }
 once_cell = { version = "1.19.0", default-features = false }
 lld_rs = { version = "140.0.0", default-features = false }
 parking_lot = { version = "0.12.1", default-features = false }
 paste = { version = "1.0.14", default-features = false }
-mun_paths = { version = "0.5.0-dev", path = "../mun_paths" }
+mun_paths = { version = "0.5.0", path = "../mun_paths" }
 rustc-hash = { version = "1.1.0", default-features = false }
 salsa = { version = "0.16.1", default-features = false }
 smallvec = { version = "1.11.2", features = ["union"], default-features = false }
