@@ -1,6 +1,6 @@
 [package]
 name = "mun_memory"
-version = "0.5.0"
+version = "0.6.0-dev"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 description = "Memory management functionality for Mun"
@@ -13,8 +13,8 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-mun_abi = { version = "0.5.0", path = "../mun_abi" }
-mun_capi_utils = { version = "0.5.0", path = "../mun_capi_utils" }
+mun_abi = { version = "0.6.0-dev", path = "../mun_abi" }
+mun_capi_utils = { version = "0.6.0-dev", path = "../mun_capi_utils" }
 itertools = { version = "0.12.0", default-features = false }
 lazy_static = { version = "1.4.0", default-features = false }
 once_cell = { version = "1.19.0", default-features = false }
@@ -23,6 +23,6 @@ rustc-hash = { version = "1.1", default-features = false, features = ["std"] }
 thiserror = { version = "1.0.51", default-features = false }
 
 [dev-dependencies]
-mun_capi_utils = { version = "0.5.0", path = "../mun_capi_utils", features = ["insta"] }
+mun_capi_utils = { version = "0.6.0-dev", path = "../mun_capi_utils", features = ["insta"] }
 insta = { version = "1.34.0", default-features = false, features = ["ron"] }
 paste = { version = "1.0", default-features = false }

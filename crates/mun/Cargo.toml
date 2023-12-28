@@ -1,6 +1,6 @@
 [package]
 name = "mun"
-version = "0.5.0"
+version = "0.6.0-dev"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 description = "Command-line interface for compiling, monitoring and running Mun code"
@@ -18,12 +18,12 @@ anyhow = { version = "1.0.75", default-features = false }
 clap = { version = "4.4.11", default-features = false, features = ["std", "derive"] }
 log = { version = "0.4", default-features = false }
 pretty_env_logger = { version = "0.5.0", default-features = false }
-mun_abi = { version = "0.5.0", path = "../mun_abi" }
-mun_compiler = { version = "0.5.0", path = "../mun_compiler" }
-mun_compiler_daemon = { version = "0.5.0", path = "../mun_compiler_daemon" }
-mun_runtime = { version = "0.5.0", path = "../mun_runtime" }
-mun_language_server = { version = "0.5.0", path = "../mun_language_server" }
-mun_project = { version = "0.5.0", path = "../mun_project" }
+mun_abi = { version = "0.6.0-dev", path = "../mun_abi" }
+mun_compiler = { version = "0.6.0-dev", path = "../mun_compiler" }
+mun_compiler_daemon = { version = "0.6.0-dev", path = "../mun_compiler_daemon" }
+mun_runtime = { version = "0.6.0-dev", path = "../mun_runtime" }
+mun_language_server = { version = "0.6.0-dev", path = "../mun_language_server" }
+mun_project = { version = "0.6.0-dev", path = "../mun_project" }
 
 [dev-dependencies.cargo-husky]
 version = "1"
@@ -32,7 +32,7 @@ features = ["precommit-hook", "run-cargo-test", "run-cargo-fmt", "run-cargo-clip
 
 [dev-dependencies]
 tempfile = "3.8"
-mun_skeptic = { path = "../mun_skeptic", version = "0.5.0" }
+mun_skeptic = { path = "../mun_skeptic", version = "0.6.0-dev" }
 
 [build-dependencies]
-mun_skeptic = { path = "../mun_skeptic", version = "0.5.0" }
+mun_skeptic = { path = "../mun_skeptic", version = "0.6.0-dev" }
