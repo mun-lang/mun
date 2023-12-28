@@ -1,6 +1,6 @@
 [package]
 name = "mun_test"
-version = "0.4.0"
+version = "0.5.0-dev"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 description = "Functionality for testing Mun code"
@@ -13,10 +13,10 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-mun_compiler = { version = "0.4.0", path = "../mun_compiler" }
-mun_runtime = { version = "0.4.0", path = "../mun_runtime" }
-mun_hir = { version = "0.4.0", path = "../mun_hir" }
-mun_paths = { version = "0.4.0", path = "../mun_paths" }
+mun_compiler = { version = "0.5.0-dev", path = "../mun_compiler" }
+mun_runtime = { version = "0.5.0-dev", path = "../mun_runtime" }
+mun_hir = { version = "0.5.0-dev", path = "../mun_hir" }
+mun_paths = { version = "0.5.0-dev", path = "../mun_paths" }
 anyhow = { version = "1.0", default-features = false }
 itertools = { version = "0.12.0", default-features = false }
 tempfile = { version = "3", default-features = false }
