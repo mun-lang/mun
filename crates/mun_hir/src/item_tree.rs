@@ -1,4 +1,5 @@
 mod lower;
+mod pretty;
 #[cfg(test)]
 mod tests;
 
@@ -306,7 +307,6 @@ pub struct Struct {
     pub types: TypeRefMap,
     pub fields: Fields,
     pub ast_id: FileAstId<ast::StructDef>,
-    pub kind: StructDefKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

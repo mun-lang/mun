@@ -1,11 +1,6 @@
 use crate::with_fixture::WithFixture;
-use crate::{
-    item_tree::Fields,
-    item_tree::{ItemTree, ModItem},
-    mock::MockDatabase,
-    DefDatabase,
-};
-use std::{fmt, fmt::Write, sync::Arc};
+use crate::{item_tree::ItemTree, mock::MockDatabase, DefDatabase, Upcast};
+use std::{fmt, sync::Arc};
 
 fn item_tree(text: &str) -> Arc<ItemTree> {
     let (db, file_id) = MockDatabase::with_single_file(text);
@@ -13,47 +8,9 @@ fn item_tree(text: &str) -> Arc<ItemTree> {
 }
 
 fn print_item_tree(text: &str) -> Result<String, fmt::Error> {
-    let tree = item_tree(text);
-    let mut out = String::new();
-    writeln!(&mut out, "top-level items:")?;
-    for item in tree.top_level_items() {
-        format_mod_item(&mut out, &tree, *item)?;
-        writeln!(&mut out)?;
-    }
-
-    Ok(out)
-}
-
-fn format_mod_item(out: &mut String, tree: &ItemTree, item: ModItem) -> fmt::Result {
-    let mut children = String::new();
-    match item {
-        ModItem::Function(item) => {
-            write!(out, "{:?}", tree[item])?;
-        }
-        ModItem::Struct(item) => {
-            write!(out, "{:?}", tree[item])?;
-            match &tree[item].fields {
-                Fields::Record(a) | Fields::Tuple(a) => {
-                    for field in a.clone() {
-                        writeln!(children, "{:?}", tree[field])?;
-                    }
-                }
-                Fields::Unit => {}
-            };
-        }
-        ModItem::TypeAlias(item) => {
-            write!(out, "{:?}", tree[item])?;
-        }
-        ModItem::Import(item) => {
-            write!(out, "{:?}", tree[item])?;
-        }
-    }
-
-    for line in children.lines() {
-        write!(out, "\n> {line}")?;
-    }
-
-    Ok(())
+    let (db, file_id) = MockDatabase::with_single_file(text);
+    let item_tree = db.item_tree(file_id);
+    super::pretty::print_item_tree(db.upcast(), &item_tree)
 }
 
 #[test]
@@ -81,6 +38,11 @@ fn top_level_items() {
 
     type FooBar = Foo;
     type FooBar = package::Foo;
+
+    pub use foo;
+    use super::bar;
+    use super::*;
+    use foo::{bar, baz::hello as world};
     "#
     )
     .unwrap());

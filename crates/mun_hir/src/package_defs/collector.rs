@@ -1,4 +1,5 @@
 use super::PackageDefs;
+use crate::item_tree::Fields;
 use crate::{
     arena::map::ArenaMap,
     ids::ItemDefinitionId,
@@ -6,8 +7,7 @@ use crate::{
     item_scope::ImportType,
     item_scope::{ItemScope, PerNsGlobImports},
     item_tree::{
-        self, Function, ItemTree, ItemTreeId, LocalItemTreeId, ModItem, Struct, StructDefKind,
-        TypeAlias,
+        self, Function, ItemTree, ItemTreeId, LocalItemTreeId, ModItem, Struct, TypeAlias,
     },
     module_tree::LocalModuleId,
     name_resolution::ReachedFixedPoint,
@@ -568,7 +568,7 @@ impl<'a> ModCollectorContext<'a, '_> {
             .into(),
             name: &adt.name,
             visibility: &self.item_tree[adt.visibility],
-            has_constructor: adt.kind != StructDefKind::Record,
+            has_constructor: !matches!(adt.fields, Fields::Record(_)),
         }
     }
 

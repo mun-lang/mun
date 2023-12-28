@@ -1,27 +1,51 @@
 ---
 source: crates/mun_hir/src/item_tree/tests.rs
-assertion_line: 61
-expression: "print_item_tree(r#\"\n    fn foo(a:i32, b:u8, c:String) -> i32 {}\n    pub fn bar(a:i32, b:u8, c:String) ->  {}\n    pub(super) fn bar(a:i32, b:u8, c:String) ->  {}\n    pub(package) fn baz(a:i32, b:, c:String) ->  {}\n    extern fn eval(a:String) -> bool;\n\n    struct Foo {\n        a: i32,\n        b: u8,\n        c: String,\n    }\n    struct Foo2 {\n        a: i32,\n        b: ,\n        c: String,\n    }\n    struct Bar (i32, u32, String)\n    struct Baz;\n\n    type FooBar = Foo;\n    type FooBar = package::Foo;\n    \"#).unwrap()"
+expression: "print_item_tree(r#\"\n    fn foo(a:i32, b:u8, c:String) -> i32 {}\n    pub fn bar(a:i32, b:u8, c:String) ->  {}\n    pub(super) fn bar(a:i32, b:u8, c:String) ->  {}\n    pub(package) fn baz(a:i32, b:, c:String) ->  {}\n    extern fn eval(a:String) -> bool;\n\n    struct Foo {\n        a: i32,\n        b: u8,\n        c: String,\n    }\n    struct Foo2 {\n        a: i32,\n        b: ,\n        c: String,\n    }\n    struct Bar (i32, u32, String)\n    struct Baz;\n\n    type FooBar = Foo;\n    type FooBar = package::Foo;\n\n    pub use foo;\n    use super::bar;\n    use super::*;\n    use foo::{bar, baz::hello as world};\n    \"#).unwrap()"
 ---
-top-level items:
-Function { name: Name(Text("foo")), visibility: RawVisibilityId("pub(self)"), is_extern: false, types: TypeRefMap { type_refs: Arena { len: 4, data: [Path(Path { kind: Plain, segments: [Name(Text("i32"))] }), Path(Path { kind: Plain, segments: [Name(Text("u8"))] }), Path(Path { kind: Plain, segments: [Name(Text("String"))] }), Path(Path { kind: Plain, segments: [Name(Text("i32"))] })] } }, params: [Idx::<TypeRef>(0), Idx::<TypeRef>(1), Idx::<TypeRef>(2)], ret_type: Idx::<TypeRef>(3), ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(0), _ty: PhantomData<fn() -> mun_syntax::ast::generated::FunctionDef> } }
-Function { name: Name(Text("bar")), visibility: RawVisibilityId("pub"), is_extern: false, types: TypeRefMap { type_refs: Arena { len: 4, data: [Path(Path { kind: Plain, segments: [Name(Text("i32"))] }), Path(Path { kind: Plain, segments: [Name(Text("u8"))] }), Path(Path { kind: Plain, segments: [Name(Text("String"))] }), Tuple([])] } }, params: [Idx::<TypeRef>(0), Idx::<TypeRef>(1), Idx::<TypeRef>(2)], ret_type: Idx::<TypeRef>(3), ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(1), _ty: PhantomData<fn() -> mun_syntax::ast::generated::FunctionDef> } }
-Function { name: Name(Text("bar")), visibility: RawVisibilityId("pub(super)"), is_extern: false, types: TypeRefMap { type_refs: Arena { len: 4, data: [Path(Path { kind: Plain, segments: [Name(Text("i32"))] }), Path(Path { kind: Plain, segments: [Name(Text("u8"))] }), Path(Path { kind: Plain, segments: [Name(Text("String"))] }), Tuple([])] } }, params: [Idx::<TypeRef>(0), Idx::<TypeRef>(1), Idx::<TypeRef>(2)], ret_type: Idx::<TypeRef>(3), ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(2), _ty: PhantomData<fn() -> mun_syntax::ast::generated::FunctionDef> } }
-Function { name: Name(Text("baz")), visibility: RawVisibilityId("pub(package)"), is_extern: false, types: TypeRefMap { type_refs: Arena { len: 4, data: [Path(Path { kind: Plain, segments: [Name(Text("i32"))] }), Error, Path(Path { kind: Plain, segments: [Name(Text("String"))] }), Tuple([])] } }, params: [Idx::<TypeRef>(0), Idx::<TypeRef>(1), Idx::<TypeRef>(2)], ret_type: Idx::<TypeRef>(3), ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(3), _ty: PhantomData<fn() -> mun_syntax::ast::generated::FunctionDef> } }
-Function { name: Name(Text("eval")), visibility: RawVisibilityId("pub(self)"), is_extern: true, types: TypeRefMap { type_refs: Arena { len: 2, data: [Path(Path { kind: Plain, segments: [Name(Text("String"))] }), Path(Path { kind: Plain, segments: [Name(Text("bool"))] })] } }, params: [Idx::<TypeRef>(0)], ret_type: Idx::<TypeRef>(1), ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(4), _ty: PhantomData<fn() -> mun_syntax::ast::generated::FunctionDef> } }
-Struct { name: Name(Text("Foo")), visibility: RawVisibilityId("pub(self)"), types: TypeRefMap { type_refs: Arena { len: 3, data: [Path(Path { kind: Plain, segments: [Name(Text("i32"))] }), Path(Path { kind: Plain, segments: [Name(Text("u8"))] }), Path(Path { kind: Plain, segments: [Name(Text("String"))] })] } }, fields: Record(IdRange::<mun_hir::item_tree::Field>(0..3)), ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(5), _ty: PhantomData<fn() -> mun_syntax::ast::generated::StructDef> }, kind: Record }
-> Field { name: Name(Text("a")), type_ref: Idx::<TypeRef>(0) }
-> Field { name: Name(Text("b")), type_ref: Idx::<TypeRef>(1) }
-> Field { name: Name(Text("c")), type_ref: Idx::<TypeRef>(2) }
-Struct { name: Name(Text("Foo2")), visibility: RawVisibilityId("pub(self)"), types: TypeRefMap { type_refs: Arena { len: 3, data: [Path(Path { kind: Plain, segments: [Name(Text("i32"))] }), Error, Path(Path { kind: Plain, segments: [Name(Text("String"))] })] } }, fields: Record(IdRange::<mun_hir::item_tree::Field>(3..6)), ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(6), _ty: PhantomData<fn() -> mun_syntax::ast::generated::StructDef> }, kind: Record }
-> Field { name: Name(Text("a")), type_ref: Idx::<TypeRef>(0) }
-> Field { name: Name(Text("b")), type_ref: Idx::<TypeRef>(1) }
-> Field { name: Name(Text("c")), type_ref: Idx::<TypeRef>(2) }
-Struct { name: Name(Text("Bar")), visibility: RawVisibilityId("pub(self)"), types: TypeRefMap { type_refs: Arena { len: 3, data: [Path(Path { kind: Plain, segments: [Name(Text("i32"))] }), Path(Path { kind: Plain, segments: [Name(Text("u32"))] }), Path(Path { kind: Plain, segments: [Name(Text("String"))] })] } }, fields: Tuple(IdRange::<mun_hir::item_tree::Field>(6..9)), ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(7), _ty: PhantomData<fn() -> mun_syntax::ast::generated::StructDef> }, kind: Tuple }
-> Field { name: Name(TupleField(0)), type_ref: Idx::<TypeRef>(0) }
-> Field { name: Name(TupleField(1)), type_ref: Idx::<TypeRef>(1) }
-> Field { name: Name(TupleField(2)), type_ref: Idx::<TypeRef>(2) }
-Struct { name: Name(Text("Baz")), visibility: RawVisibilityId("pub(self)"), types: TypeRefMap { type_refs: Arena { len: 0, data: [] } }, fields: Unit, ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(8), _ty: PhantomData<fn() -> mun_syntax::ast::generated::StructDef> }, kind: Unit }
-TypeAlias { name: Name(Text("FooBar")), visibility: RawVisibilityId("pub(self)"), types: TypeRefMap { type_refs: Arena { len: 1, data: [Path(Path { kind: Plain, segments: [Name(Text("Foo"))] })] } }, type_ref: Some(Idx::<TypeRef>(0)), ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(9), _ty: PhantomData<fn() -> mun_syntax::ast::generated::TypeAliasDef> } }
-TypeAlias { name: Name(Text("FooBar")), visibility: RawVisibilityId("pub(self)"), types: TypeRefMap { type_refs: Arena { len: 1, data: [Path(Path { kind: Package, segments: [Name(Text("Foo"))] })] } }, type_ref: Some(Idx::<TypeRef>(0)), ast_id: FileAstId { raw: Idx::<SyntaxNodePtr>(10), _ty: PhantomData<fn() -> mun_syntax::ast::generated::TypeAliasDef> } }
+fn foo(
+  i32,
+  u8,
+  String,
+) -> i32;
+pub fn bar(
+  i32,
+  u8,
+  String,
+) -> ();
+pub(super) fn bar(
+  i32,
+  u8,
+  String,
+) -> ();
+pub(package) fn baz(
+  i32,
+  {unknown},
+  String,
+) -> ();
+extern fn eval(
+  String,
+) -> bool;
+struct Foo {
+  a: i32,
+  b: u8,
+  c: String,
+}
+struct Foo2 {
+  a: i32,
+  b: {unknown},
+  c: String,
+}
+struct Bar (
+  i32,
+  u32,
+  String,
+);
+struct Baz;
+type FooBar = Foo;
+type FooBar = package::Foo;
+pub use foo;
+use super::bar;
+use super::*;
+use foo::bar;
+use foo::baz::hello as world;
 
