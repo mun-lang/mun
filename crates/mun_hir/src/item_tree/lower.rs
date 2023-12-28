@@ -2,7 +2,7 @@
 
 use super::{
     diagnostics, Field, Fields, Function, IdRange, ItemTree, ItemTreeData, ItemTreeNode,
-    ItemVisibilities, LocalItemTreeId, ModItem, RawVisibilityId, Struct, StructDefKind, TypeAlias,
+    ItemVisibilities, LocalItemTreeId, ModItem, RawVisibilityId, Struct, TypeAlias,
 };
 use crate::item_tree::Import;
 use crate::type_ref::{TypeRefMap, TypeRefMapBuilder};
@@ -183,11 +183,6 @@ impl Context {
         let mut types = TypeRefMap::builder();
         let fields = self.lower_fields(&strukt.kind(), &mut types);
         let ast_id = self.source_ast_id_map.ast_id(strukt);
-        let kind = match strukt.kind() {
-            StructKind::Record(_) => StructDefKind::Record,
-            StructKind::Tuple(_) => StructDefKind::Tuple,
-            StructKind::Unit => StructDefKind::Unit,
-        };
 
         let (types, _types_source_map) = types.finish();
         let res = Struct {
@@ -196,7 +191,6 @@ impl Context {
             types,
             fields,
             ast_id,
-            kind,
         };
         Some(self.data.structs.alloc(res).into())
     }

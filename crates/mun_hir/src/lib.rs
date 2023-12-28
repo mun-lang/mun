@@ -72,6 +72,7 @@ mod item_scope;
 mod mock;
 mod package_defs;
 mod package_set;
+mod pretty;
 pub mod semantics;
 mod source_analyzer;
 #[cfg(test)]
