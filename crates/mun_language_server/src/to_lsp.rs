@@ -25,7 +25,7 @@ fn url_from_path_with_drive_lowercasing(path: impl AsRef<Path>) -> anyhow::Resul
 
     // VSCode expects drive letters to be lowercased, whereas rust will uppercase the drive letters.
     if component_has_windows_drive {
-        let url_original = Url::from_file_path(&path).map_err(|_| {
+        let url_original = Url::from_file_path(&path).map_err(|()| {
             anyhow::anyhow!("can't convert path to url: {}", path.as_ref().display())
         })?;
 
@@ -42,7 +42,7 @@ fn url_from_path_with_drive_lowercasing(path: impl AsRef<Path>) -> anyhow::Resul
 
         Ok(url)
     } else {
-        Ok(Url::from_file_path(&path).map_err(|_| {
+        Ok(Url::from_file_path(&path).map_err(|()| {
             anyhow::anyhow!("can't convert path to url: {}", path.as_ref().display())
         })?)
     }
@@ -117,8 +117,7 @@ pub(crate) fn completion_item_kind(
             SymbolKind::Function => lsp_types::CompletionItemKind::FUNCTION,
             SymbolKind::Local => lsp_types::CompletionItemKind::VARIABLE,
             SymbolKind::Module => lsp_types::CompletionItemKind::MODULE,
-            SymbolKind::Struct => lsp_types::CompletionItemKind::STRUCT,
-            SymbolKind::TypeAlias => lsp_types::CompletionItemKind::STRUCT,
+            SymbolKind::Struct | SymbolKind::TypeAlias => lsp_types::CompletionItemKind::STRUCT,
         },
         CompletionItemKind::Attribute => lsp_types::CompletionItemKind::ENUM_MEMBER,
     }

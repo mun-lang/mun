@@ -146,7 +146,7 @@ impl NotifyThread {
                 move |event| {
                     watcher_sender
                         .send(event)
-                        .expect("unable to send notify event over channel")
+                        .expect("unable to send notify event over channel");
                 },
                 Config::default().with_poll_interval(Duration::from_millis(250)),
             ));
@@ -219,9 +219,7 @@ impl NotifyThread {
                 .follow_links(true)
                 .into_iter()
                 .filter_entry(|entry| {
-                    if !entry.file_type().is_dir() {
-                        true
-                    } else {
+                    if entry.file_type().is_dir() {
                         let path = AbsPath::assert_new(entry.path());
                         root == path
                             || dirs
@@ -229,6 +227,8 @@ impl NotifyThread {
                                 .iter()
                                 .chain(&dirs.include)
                                 .all(|dir| dir != path)
+                    } else {
+                        true
                     }
                 });
 
@@ -240,15 +240,15 @@ impl NotifyThread {
                 if is_dir && watch {
                     self.watch(&abs_path);
                 }
-                if !is_file {
-                    None
-                } else {
+                if is_file {
                     let ext = abs_path.extension().unwrap_or_default();
                     if dirs.extensions.iter().all(|entry| entry.as_str() != ext) {
                         None
                     } else {
                         Some(abs_path)
                     }
+                } else {
+                    None
                 }
             });
 

@@ -5,10 +5,14 @@ mod numbers;
 mod strings;
 
 use self::{
-    classes::*, comments::scan_comment, cursor::Cursor, numbers::scan_number, strings::scan_string,
+    classes::{is_dec_digit, is_ident_continue, is_ident_start, is_whitespace},
+    comments::scan_comment,
+    cursor::Cursor,
+    numbers::scan_number,
+    strings::scan_string,
 };
 use crate::{
-    SyntaxKind::{self, *},
+    SyntaxKind::{self, ERROR, IDENT, NEQ, STRING, UNDERSCORE, WHITESPACE},
     TextSize,
 };
 
@@ -45,7 +49,7 @@ pub fn next_token(text: &str) -> Token {
     Token { kind, len }
 }
 
-fn next_token_inner(c: char, cursor: &mut Cursor) -> SyntaxKind {
+fn next_token_inner(c: char, cursor: &mut Cursor<'_>) -> SyntaxKind {
     if is_whitespace(c) {
         cursor.bump_while(is_whitespace);
         return WHITESPACE;
@@ -88,7 +92,7 @@ fn next_token_inner(c: char, cursor: &mut Cursor) -> SyntaxKind {
     ERROR
 }
 
-fn scan_identifier_or_keyword(c: char, cursor: &mut Cursor) -> SyntaxKind {
+fn scan_identifier_or_keyword(c: char, cursor: &mut Cursor<'_>) -> SyntaxKind {
     match (c, cursor.current()) {
         ('_', None) => return UNDERSCORE,
         ('_', Some(c)) if !is_ident_continue(c) => return UNDERSCORE,
@@ -101,7 +105,7 @@ fn scan_identifier_or_keyword(c: char, cursor: &mut Cursor) -> SyntaxKind {
     IDENT
 }
 
-fn scan_index(c: char, cursor: &mut Cursor) -> Option<SyntaxKind> {
+fn scan_index(c: char, cursor: &mut Cursor<'_>) -> Option<SyntaxKind> {
     if c == '.' {
         let mut is_first = true;
         while let Some(cc) = cursor.current() {

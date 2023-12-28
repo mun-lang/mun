@@ -43,10 +43,10 @@ impl TryFrom<PathBuf> for AbsPathBuf {
     type Error = PathBuf;
 
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
-        if !path.is_absolute() {
-            Err(path)
-        } else {
+        if path.is_absolute() {
             Ok(AbsPathBuf(path))
+        } else {
+            Err(path)
         }
     }
 }
@@ -92,10 +92,10 @@ impl<'a> TryFrom<&'a Path> for &'a AbsPath {
     type Error = &'a Path;
 
     fn try_from(path: &'a Path) -> Result<Self, Self::Error> {
-        if !path.is_absolute() {
-            Err(path)
-        } else {
+        if path.is_absolute() {
             Ok(AbsPath::assert_new(path))
+        } else {
+            Err(path)
         }
     }
 }

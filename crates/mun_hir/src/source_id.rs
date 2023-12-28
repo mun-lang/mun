@@ -25,17 +25,12 @@ impl<N: AstNode> AstId<N> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct FileAstId<N: AstNode> {
     raw: ErasedFileAstId,
     _ty: PhantomData<fn() -> N>,
 }
 
-impl<N: AstNode> Clone for FileAstId<N> {
-    fn clone(&self) -> FileAstId<N> {
-        *self
-    }
-}
 impl<N: AstNode> Copy for FileAstId<N> {}
 
 impl<N: AstNode> PartialEq for FileAstId<N> {
@@ -87,7 +82,7 @@ impl AstIdMap {
         }
     }
 
-    /// Constructs a new `AstIdMap` from a root SyntaxNode.
+    /// Constructs a new `AstIdMap` from a root [`SyntaxNode`].
     /// `node` must be the root of a syntax tree.
     fn from_source(node: &SyntaxNode) -> AstIdMap {
         assert!(node.parent().is_none());

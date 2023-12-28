@@ -132,8 +132,8 @@ impl RuntimeBuilder {
         Self {
             options: RuntimeOptions {
                 library_path: library_path.into(),
-                type_table: Default::default(),
-                user_functions: Default::default(),
+                type_table: TypeTable::default(),
+                user_functions: Vec::default(),
             },
         }
     }
@@ -248,7 +248,7 @@ impl Runtime {
         });
 
         let watcher: RecommendedWatcher = notify::recommended_watcher(move |res| {
-            tx.send(res).expect("Failed to send filesystem event.")
+            tx.send(res).expect("Failed to send filesystem event.");
         })?;
         let mut runtime = Runtime {
             assemblies: HashMap::new(),
@@ -323,7 +323,7 @@ impl Runtime {
         (self.dispatch_table, self.type_table) =
             Assembly::link_all(loaded.values_mut(), &self.dispatch_table, &self.type_table)?;
 
-        for (library_path, assembly) in loaded.into_iter() {
+        for (library_path, assembly) in loaded {
             self.watcher
                 .watch(library_path.parent().unwrap(), RecursiveMode::NonRecursive)
                 .expect("Path must exist as we just loaded the library");
@@ -340,9 +340,8 @@ impl Runtime {
         self.dispatch_table.get_fn(function_name)
     }
 
-    /// For a given fn_name, find the most similar name in fn_names
+    /// For a given `fn_name`, find the most similar name in `fn_names`
     fn find_best_match_for_fn_name<'a>(
-        &self,
         fn_name: &'a str,
         fn_names: impl Iterator<Item = &'a str>,
         dist: Option<usize>,
@@ -371,7 +370,7 @@ impl Runtime {
     }
 
     /// Retrieve the type information corresponding to the `type_id`, if available.
-    pub fn get_type_info_by_id(&self, type_id: &abi::TypeId) -> Option<Type> {
+    pub fn get_type_info_by_id(&self, type_id: &abi::TypeId<'_>) -> Option<Type> {
         self.type_table.find_type_info_by_id(type_id)
     }
 
@@ -684,7 +683,7 @@ impl<'name, T: InvokeArgs> InvokeErr<'name, T> {
 
     /// Inner implementation that retries a function invocation once, resulting in a
     /// potentially successful invocation. This is a workaround for:
-    /// https://doc.rust-lang.org/nomicon/lifetime-mismatch.html
+    /// <https://doc.rust-lang.org/nomicon/lifetime-mismatch.html>
     ///
     /// # Safety
     ///
@@ -783,7 +782,7 @@ impl Runtime {
             Err(msg) => {
                 let available_names = self.dispatch_table.get_fn_names();
                 let suggested_name =
-                    self.find_best_match_for_fn_name(function_name, available_names, None);
+                    Self::find_best_match_for_fn_name(function_name, available_names, None);
 
                 let suggested_message = suggested_name.map_or_else(
                     || msg.clone(),

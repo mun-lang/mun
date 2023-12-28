@@ -1,6 +1,6 @@
 use crate::parsing::lexer::cursor::Cursor;
 
-pub(crate) fn scan_string(c: char, cursor: &mut Cursor) {
+pub(crate) fn scan_string(c: char, cursor: &mut Cursor<'_>) {
     let quote_type = c;
     while let Some(c) = cursor.current() {
         match c {

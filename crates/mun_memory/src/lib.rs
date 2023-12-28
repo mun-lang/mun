@@ -1,5 +1,3 @@
-extern crate core;
-
 pub use r#type::{
     ArrayType, Field, FieldData, HasStaticType, PointerType, StructType, StructTypeBuilder, Type,
     TypeCollectionStats, TypeKind,

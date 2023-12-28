@@ -75,7 +75,7 @@ impl TypeAlias {
         ty
     }
 
-    pub fn diagnostics(self, db: &dyn HirDatabase, sink: &mut DiagnosticSink) {
+    pub fn diagnostics(self, db: &dyn HirDatabase, sink: &mut DiagnosticSink<'_>) {
         let data = self.data(db.upcast());
         let lower = self.lower(db);
         lower.add_diagnostics(db, self.file_id(db), data.type_ref_source_map(), sink);

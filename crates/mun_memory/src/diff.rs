@@ -131,32 +131,6 @@ fn append_struct_mapping(
     insertions: Vec<Change<Type>>,
     mapping: &mut Vec<StructDiff>,
 ) {
-    let deletions: Vec<_> = deletions
-        .iter()
-        .enumerate()
-        .map(|(deletion_index, Change { index, element })| {
-            let fields = element
-                .as_struct()
-                .map(|s| s.fields().iter().map(UniqueFieldInfo::from).collect())
-                .unwrap_or_else(Vec::new);
-
-            (deletion_index, *index, element.clone(), fields)
-        })
-        .collect();
-
-    let insertions: Vec<_> = insertions
-        .iter()
-        .enumerate()
-        .map(|(insertion_index, Change { index, element })| {
-            let fields = element
-                .as_struct()
-                .map(|s| s.fields().iter().map(UniqueFieldInfo::from).collect())
-                .unwrap_or_else(Vec::new);
-
-            (insertion_index, *index, element.clone(), fields)
-        })
-        .collect();
-
     struct LengthDescription<'f> {
         deletion_idx: usize,
         insertion_idx: usize,
@@ -168,6 +142,30 @@ fn append_struct_mapping(
         new_fields: &'f Vec<UniqueFieldInfo<'f>>,
         length: usize,
     }
+
+    let deletions: Vec<_> = deletions
+        .iter()
+        .enumerate()
+        .map(|(deletion_index, Change { index, element })| {
+            let fields = element.as_struct().map_or_else(Vec::new, |s| {
+                s.fields().iter().map(UniqueFieldInfo::from).collect()
+            });
+
+            (deletion_index, *index, element.clone(), fields)
+        })
+        .collect();
+
+    let insertions: Vec<_> = insertions
+        .iter()
+        .enumerate()
+        .map(|(insertion_index, Change { index, element })| {
+            let fields = element.as_struct().map_or_else(Vec::new, |s| {
+                s.fields().iter().map(UniqueFieldInfo::from).collect()
+            });
+
+            (insertion_index, *index, element.clone(), fields)
+        })
+        .collect();
 
     // For all (insertion, deletion) pairs, calculate their `myers::diff_length`
     let mut myers_lengths: Vec<_> = insertions
@@ -206,7 +204,7 @@ fn append_struct_mapping(
                         None
                     }
                 })
-                .collect::<Vec<LengthDescription>>()
+                .collect::<Vec<LengthDescription<'_>>>()
         })
         .collect();
 
@@ -294,7 +292,7 @@ fn append_struct_mapping(
 fn field_diff(old: &[UniqueFieldInfo<'_>], new: &[UniqueFieldInfo<'_>]) -> Vec<FieldDiff> {
     let diff = myers::compute_diff(old, new);
     let (deletions, insertions) = myers::split_diff(&diff);
-    let mut insertions: Vec<Option<Change<UniqueFieldInfo>>> =
+    let mut insertions: Vec<Option<Change<UniqueFieldInfo<'_>>>> =
         insertions.into_iter().map(Some).collect();
 
     let mut mapping = Vec::with_capacity(diff.len());
@@ -338,10 +336,10 @@ fn field_diff(old: &[UniqueFieldInfo<'_>], new: &[UniqueFieldInfo<'_>]) -> Vec<F
                         FieldDiff::Edit {
                             old_type: old_field.ty,
                             new_type: new_field.ty.clone(),
-                            old_index: if old_index != *new_index {
-                                Some(old_index)
-                            } else {
+                            old_index: if old_index == *new_index {
                                 None
+                            } else {
+                                Some(old_index)
                             },
                             new_index: *new_index,
                             kind: FieldEditKind::ChangedTyped,
@@ -398,10 +396,10 @@ fn field_diff(old: &[UniqueFieldInfo<'_>], new: &[UniqueFieldInfo<'_>]) -> Vec<F
                 FieldDiff::Edit {
                     old_type: old_field.ty.clone(),
                     new_type: closest_type,
-                    old_index: if old_index != closest_index {
-                        Some(old_index)
-                    } else {
+                    old_index: if old_index == closest_index {
                         None
+                    } else {
+                        Some(old_index)
                     },
                     new_index: closest_index,
                     kind: FieldEditKind::RenamedField,
@@ -410,7 +408,7 @@ fn field_diff(old: &[UniqueFieldInfo<'_>], new: &[UniqueFieldInfo<'_>]) -> Vec<F
             continue 'outer;
         }
         // If not, delete the field.
-        mapping.push(FieldDiff::Delete { index: old_index })
+        mapping.push(FieldDiff::Delete { index: old_index });
     }
 
     // If an insertion did not have a matching deletion, then insert it.

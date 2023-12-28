@@ -7,6 +7,7 @@
     bad_style,
     missing_docs,
     unreachable_pub,
+    clippy::enum_glob_use,
     clippy::manual_non_exhaustive,
     clippy::upper_case_acronyms
 )]

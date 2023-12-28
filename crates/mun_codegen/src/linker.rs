@@ -128,18 +128,14 @@ impl Ld64Linker {
         let sdk_name = match (arch.as_ref(), os.as_ref()) {
             ("aarch64", "tvos") => "appletvos",
             ("x86_64", "tvos") => "appletvsimulator",
-            ("arm", "ios") => "iphoneos",
             ("aarch64", "ios") if llvm_target.contains("macabi") => "macosx",
             ("aarch64", "ios") if llvm_target.ends_with("-simulator") => "iphonesimulator",
-            ("aarch64", "ios") => "iphoneos",
-            ("x86", "ios") => "iphonesimulator",
             ("x86_64", "ios") if llvm_target.contains("macabi") => "macosx",
-            ("x86_64", "ios") => "iphonesimulator",
-            ("x86_64", "watchos") => "watchsimulator",
-            ("arm64_32", "watchos") => "watchos",
+            ("arm" | "aarch64", "ios") => "iphoneos",
+            ("x86" | "x86_64", "ios") => "iphonesimulator",
             ("aarch64", "watchos") if llvm_target.ends_with("-simulator") => "watchsimulator",
-            ("aarch64", "watchos") => "watchos",
-            ("arm", "watchos") => "watchos",
+            ("x86_64", "watchos") => "watchsimulator",
+            ("aarch64" | "arm" | "arm64_32", "watchos") => "watchos",
             (_, "macos") => "macosx",
             _ => {
                 return Err(LinkerError::PlatformSdkMissing(format!(

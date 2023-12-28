@@ -27,7 +27,7 @@ pub fn compile_and_watch_manifest(
 
     // Emit all current errors, and write the assemblies if no errors occured
     if !driver.emit_diagnostics(&mut stderr(), display_color)? {
-        driver.write_all_assemblies(false)?
+        driver.write_all_assemblies(false)?;
     }
 
     // Insert Ctrl+C handler so we can gracefully quit
@@ -41,7 +41,7 @@ pub fn compile_and_watch_manifest(
     // Start watching filesystem events.
     while !should_quit.load(std::sync::atomic::Ordering::SeqCst) {
         if let Ok(event) = watcher_rx.recv_timeout(Duration::from_millis(1)) {
-            use notify::DebouncedEvent::*;
+            use notify::DebouncedEvent::{Create, Remove, Rename, Write};
             match event {
                 Write(ref path) if is_source_file(path) => {
                     let relative_path = compute_source_relative_path(&source_directory, path)?;

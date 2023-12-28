@@ -33,7 +33,7 @@ impl ChangeFixture {
                     "cannot have multiple cursor markers"
                 );
                 file_position = Some((file_id, range_or_offset));
-                text.to_string()
+                text.clone()
             } else {
                 entry.text.clone()
             };

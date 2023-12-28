@@ -1,5 +1,6 @@
 mod support;
 
+use lsp_types::{PartialResultParams, WorkDoneProgressParams};
 use support::Project;
 
 #[test]
@@ -42,8 +43,8 @@ fn test_document_symbols() {
     let symbols = server.send_request::<lsp_types::request::DocumentSymbolRequest>(
         lsp_types::DocumentSymbolParams {
             text_document: server.doc_id("src/mod.mun"),
-            work_done_progress_params: Default::default(),
-            partial_result_params: Default::default(),
+            work_done_progress_params: WorkDoneProgressParams::default(),
+            partial_result_params: PartialResultParams::default(),
         },
     );
 

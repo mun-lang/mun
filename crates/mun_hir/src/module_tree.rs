@@ -54,7 +54,7 @@ impl ModuleTree {
         db: &dyn SourceDatabase,
         package: PackageId,
     ) -> Arc<ModuleTree> {
-        use diagnostics::ModuleTreeDiagnostic::*;
+        use diagnostics::ModuleTreeDiagnostic::DuplicateModuleFile;
 
         let mut diagnostics = Vec::new();
 
@@ -77,26 +77,24 @@ impl ModuleTree {
                 .into_iter()
                 .map(Name::new)
             {
-                module_id = match modules[module_id].children.get(&path_segment) {
-                    Some(id) => *id,
-                    None => {
-                        let child_module_id = modules.alloc(ModuleData {
-                            parent: Some(module_id),
-                            children: Default::default(),
-                            file: None,
-                        });
+                module_id = if let Some(id) = modules[module_id].children.get(&path_segment) {
+                    *id
+                } else {
+                    let child_module_id = modules.alloc(ModuleData {
+                        parent: Some(module_id),
+                        children: FxHashMap::default(),
+                        file: None,
+                    });
 
-                        if !is_valid_module_name(path_segment.to_string()) {
-                            diagnostics
-                                .push(ModuleTreeDiagnostic::InvalidModuleName(child_module_id))
-                        }
-
-                        modules[module_id]
-                            .children
-                            .insert(path_segment, child_module_id);
-
-                        child_module_id
+                    if !is_valid_module_name(path_segment.to_string()) {
+                        diagnostics.push(ModuleTreeDiagnostic::InvalidModuleName(child_module_id));
                     }
+
+                    modules[module_id]
+                        .children
+                        .insert(path_segment, child_module_id);
+
+                    child_module_id
                 };
             }
 
@@ -163,7 +161,7 @@ fn path_to_module_path(path: &RelativePath) -> Vec<String> {
         path.components().map(|c| c.as_str().to_owned()).collect()
     } else if path
         .file_stem()
-        .map(|stem| stem.to_lowercase())
+        .map(str::to_lowercase)
         .expect("the file has an extension so it must also have a file stem")
         == "mod"
     {

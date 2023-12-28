@@ -79,9 +79,10 @@ pub fn run_test(code: &str, mode: TestMode) {
     let runtime = unsafe { builder.finish() }.expect("error creating runtime for test assembly");
 
     // Find the main function
-    if runtime.get_function_definition("main").is_none() {
-        panic!("Could not find `main` function");
-    }
+    assert!(
+        runtime.get_function_definition("main").is_some(),
+        "Could not find `main` function"
+    );
 
     // Call the main function
     let _: () = runtime

@@ -30,7 +30,7 @@ fn gen_prototype_from_function<'ink>(
     db: &dyn HirDatabase,
     context: &IrValueContext<'ink, '_, '_>,
     function: mun_hir::Function,
-    hir_types: &HirTypeCache,
+    hir_types: &HirTypeCache<'_, 'ink>,
     ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
 ) -> ir::FunctionPrototype<'ink> {
     let name = function.full_name(db);
@@ -104,12 +104,12 @@ fn gen_prototype_from_dispatch_entry<'ink>(
 }
 
 /// Construct a global that holds a reference to all types. e.g.:
-/// MunTypeInfo[] definitions = { ... }
+/// `MunTypeInfo[] definitions = { ... }`
 fn get_type_definition_array<'ink>(
     db: &dyn HirDatabase,
     context: &IrValueContext<'ink, '_, '_>,
     types: impl Iterator<Item = mun_hir::Ty>,
-    hir_types: &HirTypeCache,
+    hir_types: &HirTypeCache<'_, 'ink>,
     ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
 ) -> Value<'ink, *const ir::TypeDefinition<'ink>> {
     types
@@ -156,7 +156,7 @@ fn gen_struct_info<'ink>(
     db: &dyn HirDatabase,
     hir_struct: mun_hir::Struct,
     context: &IrValueContext<'ink, '_, '_>,
-    hir_types: &HirTypeCache,
+    hir_types: &HirTypeCache<'_, 'ink>,
     ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
 ) -> ir::StructDefinition<'ink> {
     let struct_ir = hir_types.get_struct_type(hir_struct);
@@ -214,12 +214,12 @@ fn gen_struct_info<'ink>(
 }
 
 /// Construct a global that holds a reference to all functions. e.g.:
-/// MunFunctionDefinition[] definitions = { ... }
+/// `MunFunctionDefinition[] definitions = { ... }`
 fn get_function_definition_array<'ink, 'a>(
     db: &dyn HirDatabase,
     context: &IrValueContext<'ink, '_, '_>,
     functions: impl Iterator<Item = &'a mun_hir::Function>,
-    hir_types: &HirTypeCache,
+    hir_types: &HirTypeCache<'_, 'ink>,
     ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
 ) -> Global<'ink, [ir::FunctionDefinition<'ink>]> {
     let module = context.module;
@@ -258,7 +258,7 @@ fn get_function_definition_array<'ink, 'a>(
 /// ```
 fn gen_type_lut<'ink>(
     context: &IrValueContext<'ink, '_, '_>,
-    type_table: &TypeTable,
+    type_table: &TypeTable<'ink>,
     ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
 ) -> ir::TypeLut<'ink> {
     let module = context.module;
@@ -281,14 +281,15 @@ fn gen_type_lut<'ink>(
         })
         .into_const_private_pointer("fn.get_info.typeLut.typeNames", context);
 
-    let type_ptrs = TypeTable::find_global(module)
-        .map(|type_table| {
+    let type_ptrs = TypeTable::find_global(module).map_or_else(
+        || Value::null(context),
+        |type_table| {
             Value::<*mut *const std::ffi::c_void>::with_cast(
                 type_table.as_value(context).value,
                 context,
             )
-        })
-        .unwrap_or_else(|| Value::null(context));
+        },
+    );
 
     ir::TypeLut {
         type_ids,
@@ -317,15 +318,22 @@ fn gen_dispatch_table<'ink>(
         .into_const_private_pointer("fn.get_info.dispatchTable.signatures", context);
 
     // Get the pointer to the global table (or nullptr if no global table was defined).
-    let fn_ptrs = dispatch_table
-        .global_value()
-        .map(|_g|
+    let fn_ptrs = dispatch_table.global_value().map_or_else(
+        || Value::null(context),
+        |_g| {
             // TODO: This is a hack, the passed module here is a clone of the module with which the
             // dispatch table was created. Because of this we have to lookup the dispatch table
             // global again. There is however not a `GlobalValue::get_name` method so I just
             // hardcoded the name here.
-            Value::<*mut *const fn()>::with_cast(module.get_global("dispatchTable").unwrap().as_pointer_value(), context))
-        .unwrap_or_else(|| Value::null(context));
+            Value::<*mut *const fn()>::with_cast(
+                module
+                    .get_global("dispatchTable")
+                    .unwrap()
+                    .as_pointer_value(),
+                context,
+            )
+        },
+    );
 
     ir::DispatchTable {
         prototypes,
@@ -458,7 +466,7 @@ fn gen_get_info_fn<'ink>(
             .into_pointer_value()
     } else {
         builder.build_alloca(
-            Value::<ir::AssemblyInfo>::get_ir_type(context.type_context),
+            Value::<ir::AssemblyInfo<'ink>>::get_ir_type(context.type_context),
             "",
         )
     };
@@ -501,7 +509,9 @@ fn gen_get_info_fn<'ink>(
     builder.build_store(
         num_dependencies_addr,
         context.context.i32_type().const_int(
-            u32::try_from(dependencies.len()).expect("too many dependencies") as u64,
+            u32::try_from(dependencies.len())
+                .expect("too many dependencies")
+                .into(),
             false,
         ),
     );
@@ -520,7 +530,7 @@ fn gen_get_info_fn<'ink>(
 /// Generates a method `void set_allocator_handle(void*)` that stores the argument into the global
 /// `allocatorHandle`. This global is used internally to reference the allocator used by this
 /// munlib.
-fn gen_set_allocator_handle_fn(context: &IrValueContext) {
+fn gen_set_allocator_handle_fn(context: &IrValueContext<'_, '_, '_>) {
     let set_allocator_handle_fn = context.module.add_function(
         "set_allocator_handle",
         Value::<fn(*const u8)>::get_ir_type(context.type_context),
@@ -545,7 +555,7 @@ fn gen_set_allocator_handle_fn(context: &IrValueContext) {
 
 /// Generates a `get_version` method that returns the current abi version.
 /// Specifically, it returns the abi version the function was generated in.
-fn gen_get_version_fn(context: &IrValueContext) {
+fn gen_get_version_fn(context: &IrValueContext<'_, '_, '_>) {
     let get_version_fn = context.module.add_function(
         abi::GET_VERSION_FN_NAME,
         Value::<fn() -> u32>::get_ir_type(context.type_context),

@@ -29,6 +29,7 @@ pub trait Upcast<T: ?Sized> {
 
 /// Database which stores all significant input facts: source code and project model.
 #[salsa::query_group(SourceDatabaseStorage)]
+#[allow(clippy::trait_duplication_in_bounds)]
 pub trait SourceDatabase: salsa::Database {
     /// Text of the file.
     #[salsa::input]

@@ -93,7 +93,7 @@ fn try_convert_to_structure_node(node: &SyntaxNode) -> Option<StructureNode> {
                     can_insert_ws = true;
                 }
             }
-        })
+        });
     }
 
     /// Given a `SyntaxNode` construct a `StructureNode` by referring to the type of a node.

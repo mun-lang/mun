@@ -23,13 +23,13 @@ impl From<u32> for RawId {
 }
 
 impl fmt::Debug for RawId {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }
 
 impl fmt::Display for RawId {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }
@@ -57,7 +57,7 @@ impl<T> Eq for Idx<T> {}
 
 impl<T> Hash for Idx<T> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.raw.hash(state)
+        self.raw.hash(state);
     }
 }
 
@@ -77,7 +77,7 @@ impl<T> fmt::Debug for Idx<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut type_name = std::any::type_name::<T>();
         if let Some(idx) = type_name.rfind(':') {
-            type_name = &type_name[idx + 1..]
+            type_name = &type_name[idx + 1..];
         }
         write!(f, "Idx::<{}>({})", type_name, self.raw)
     }
@@ -105,7 +105,7 @@ pub struct Arena<T> {
 }
 
 impl<T: fmt::Debug> fmt::Debug for Arena<T> {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("Arena")
             .field("len", &self.len())
             .field("data", &self.data)

@@ -33,13 +33,13 @@ fn array_of_structs() {
     )
     .expect("Failed to build test driver");
 
-    let result: ArrayRef<'_, StructRef> = driver.runtime.invoke("main", ()).unwrap();
+    let result: ArrayRef<'_, StructRef<'_>> = driver.runtime.invoke("main", ()).unwrap();
     let number: i32 = result.iter().nth(1).unwrap().get("value").unwrap();
 
     assert_eq!(result.len(), 2);
     assert_eq!(number, 18571);
 
-    let result: ArrayRef<'_, StructRef> = driver.runtime.invoke("main_value", ()).unwrap();
+    let result: ArrayRef<'_, StructRef<'_>> = driver.runtime.invoke("main_value", ()).unwrap();
     let number: i64 = result.iter().nth(1).unwrap().get("value").unwrap();
 
     assert_eq!(result.len(), 2);
@@ -93,7 +93,7 @@ fn root_array() {
     .expect("Failed to build test driver");
 
     let result = {
-        let array: ArrayRef<i32> = driver.runtime.invoke("main", ()).unwrap();
+        let array: ArrayRef<'_, i32> = driver.runtime.invoke("main", ()).unwrap();
         array.root()
     };
 

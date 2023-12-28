@@ -156,7 +156,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
     pub fn gen_fn_wrapper(&mut self) {
         let fn_sig = self.hir_function.ty(self.db).callable_sig(self.db).unwrap();
-        let args: Vec<BasicMetadataValueEnum> = fn_sig
+        let args: Vec<BasicMetadataValueEnum<'_>> = fn_sig
             .params()
             .iter()
             .enumerate()
@@ -237,7 +237,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 match self.infer[*callee].as_callable_def() {
                     Some(mun_hir::CallableDef::Function(def)) => {
                         // Get all the arguments
-                        let args: Vec<BasicMetadataValueEnum> = args
+                        let args: Vec<BasicMetadataValueEnum<'_>> = args
                             .iter()
                             .map(|expr| self.gen_expr(*expr).expect("expected a value").into())
                             .collect();
@@ -278,7 +278,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             } => self.gen_field(expr, *receiver_expr, name),
             Expr::Array(exprs) => self.gen_array(expr, exprs).map(Into::into),
             Expr::Index { base, index } => self.gen_index(expr, *base, *index),
-            _ => unimplemented!("unimplemented expr type {:?}", &body[expr]),
+            Expr::Missing => unimplemented!("unimplemented expr type {:?}", &body[expr]),
         }
     }
 
@@ -304,7 +304,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                             std::mem::transmute::<u128, [u64; 2]>(v.value)
                         })
                     }
-                    _ => unreachable!("unresolved bitness in code generation"),
+                    mun_hir::IntBitness::Xsize => {
+                        unreachable!("unresolved bitness in code generation")
+                    }
                 };
 
                 ir_ty.into()
@@ -352,7 +354,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
     ) -> BasicValueEnum<'ink> {
         // Construct the struct literal
         let struct_ty = self.hir_types.get_struct_type(hir_struct);
-        let mut value: AggregateValueEnum = struct_ty.get_undef().into();
+        let mut value: AggregateValueEnum<'_> = struct_ty.get_undef().into();
         for (i, arg) in args.into_iter().enumerate() {
             value = self
                 .builder
@@ -373,7 +375,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
     fn gen_struct_alloc_on_heap(
         &mut self,
         hir_struct: mun_hir::Struct,
-        struct_lit: StructValue,
+        struct_lit: StructValue<'_>,
     ) -> BasicValueEnum<'ink> {
         let struct_ir_ty = self.hir_types.get_struct_type(hir_struct);
         let new_fn_ptr = self.dispatch_table.gen_intrinsic_lookup(
@@ -442,7 +444,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
     ) -> BasicValueEnum<'ink> {
         let struct_ty = self.infer[type_expr].clone();
         let hir_struct = struct_ty.as_struct().unwrap(); // Can only really get here if the type is a struct
-        let fields: Vec<BasicValueEnum> = fields
+        let fields: Vec<BasicValueEnum<'ink>> = fields
             .iter()
             .map(|field| self.gen_expr(field.expr).expect("expected a field value"))
             .collect();
@@ -454,7 +456,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
     fn gen_named_tuple_lit(&mut self, type_expr: ExprId, args: &[ExprId]) -> BasicValueEnum<'ink> {
         let struct_ty = self.infer[type_expr].clone();
         let hir_struct = struct_ty.as_struct().unwrap(); // Can only really get here if the type is a struct
-        let args: Vec<BasicValueEnum> = args
+        let args: Vec<BasicValueEnum<'ink>> = args
             .iter()
             .map(|expr| self.gen_expr(*expr).expect("expected a field value"))
             .collect();
@@ -662,14 +664,14 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
     /// Generates IR to calculate a unary operation on a floating point value.
     fn gen_unary_op_float(&mut self, expr: ExprId, op: UnaryOp) -> Option<BasicValueEnum<'ink>> {
-        let value: FloatValue = self
+        let value: FloatValue<'ink> = self
             .gen_expr(expr)
             .map(|value| self.opt_deref_value(expr, value))
             .expect("no value")
             .into_float_value();
         match op {
             UnaryOp::Neg => Some(self.builder.build_float_neg(value, "neg").into()),
-            _ => unimplemented!("Operator {:?} is not implemented for float", op),
+            UnaryOp::Not => unimplemented!("Operator {:?} is not implemented for float", op),
         }
     }
 
@@ -680,7 +682,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         op: UnaryOp,
         signedness: mun_hir::Signedness,
     ) -> Option<BasicValueEnum<'ink>> {
-        let value: IntValue = self
+        let value: IntValue<'ink> = self
             .gen_expr(expr)
             .map(|value| self.opt_deref_value(expr, value))
             .expect("no value")
@@ -700,14 +702,14 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
     /// Generates IR to calculate a unary operation on a boolean value.
     fn gen_unary_op_bool(&mut self, expr: ExprId, op: UnaryOp) -> Option<BasicValueEnum<'ink>> {
-        let value: IntValue = self
+        let value: IntValue<'ink> = self
             .gen_expr(expr)
             .map(|value| self.opt_deref_value(expr, value))
             .expect("no value")
             .into_int_value();
         match op {
             UnaryOp::Not => Some(self.builder.build_not(value, "not").into()),
-            _ => unimplemented!("Operator {:?} is not implemented for boolean", op),
+            UnaryOp::Neg => unimplemented!("Operator {:?} is not implemented for boolean", op),
         }
     }
 
@@ -718,11 +720,11 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         rhs_expr: ExprId,
         op: BinaryOp,
     ) -> Option<BasicValueEnum<'ink>> {
-        let lhs: IntValue = self
+        let lhs: IntValue<'ink> = self
             .gen_expr(lhs_expr)
             .map(|value| self.opt_deref_value(lhs_expr, value))?
             .into_int_value();
-        let rhs: IntValue = self
+        let rhs: IntValue<'ink> = self
             .gen_expr(rhs_expr)
             .map(|value| self.opt_deref_value(rhs_expr, value))?
             .into_int_value();
@@ -800,7 +802,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 self.builder.build_store(place, rhs);
                 Some(self.gen_empty())
             }
-            _ => unimplemented!("Operator {:?} is not implemented for float", op),
+            BinaryOp::LogicOp(_) => {
+                unimplemented!("Operator {:?} is not implemented for float", op)
+            }
         }
     }
 
@@ -836,7 +840,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 self.builder.build_store(place, rhs);
                 Some(self.gen_empty())
             }
-            _ => unreachable!("Operator {:?} is not implemented for integer", op),
+            BinaryOp::LogicOp(_) => {
+                unreachable!("Operator {:?} is not implemented for integer", op)
+            }
         }
     }
 
@@ -1128,7 +1134,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         let merge_block = self.context.append_basic_block(self.fn_value, "if_merge");
 
         // Build the actual branching IR for the if statement
-        let else_block = else_block_and_expr.map(|e| e.0).unwrap_or(merge_block);
+        let else_block = else_block_and_expr.map_or(merge_block, |e| e.0);
         self.builder
             .build_conditional_branch(condition_ir, then_block, else_block);
 
@@ -1175,7 +1181,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             if else_block_ir.is_none() {
                 merge_block
                     .remove_from_function()
-                    .expect("merge block must have a parent")
+                    .expect("merge block must have a parent");
             }
             else_block_ir
         } else {
@@ -1205,33 +1211,31 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         _expr: ExprId,
         break_expr: Option<ExprId>,
     ) -> Option<BasicValueEnum<'ink>> {
-        match break_expr {
-            Some(expr) => {
-                // There is an expression
-                // e.g. break x;
-                // Turn that expression into IR.
-                let break_value = self.gen_expr(expr);
+        if let Some(expr) = break_expr {
+            // There is an expression
+            // e.g. break x;
+            // Turn that expression into IR.
+            let break_value = self.gen_expr(expr);
 
-                // If the expression never returns, we can stop what we're doing.
-                if let Some(break_value) = break_value {
-                    let loop_info = self.active_loop.as_mut().unwrap();
-                    loop_info.break_values.push(Some((
-                        break_value,
-                        self.builder.get_insert_block().unwrap(),
-                    )));
-                    self.builder
-                        .build_unconditional_branch(loop_info.exit_block);
-                }
-            }
-            None => {
-                // If the break expression doesnt contain a break statement. Add a none to the
-                // break values.
+            // If the expression never returns, we can stop what we're doing.
+            if let Some(break_value) = break_value {
                 let loop_info = self.active_loop.as_mut().unwrap();
-                loop_info.break_values.push(None);
+                loop_info.break_values.push(Some((
+                    break_value,
+                    self.builder.get_insert_block().unwrap(),
+                )));
                 self.builder
                     .build_unconditional_branch(loop_info.exit_block);
             }
+        } else {
+            // If the break expression doesnt contain a break statement. Add a none to the
+            // break values.
+            let loop_info = self.active_loop.as_mut().unwrap();
+            loop_info.break_values.push(None);
+            self.builder
+                .build_unconditional_branch(loop_info.exit_block);
         };
+
         None
     }
 
@@ -1323,7 +1327,14 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             self.builder.build_unconditional_branch(loop_block);
         }
 
-        if !break_values.is_empty() {
+        if break_values.is_empty() {
+            // Not a single code entry point jumped to the exit block through a break. Therefor we
+            // can completely remove the exit block since it doesnt have a predecessor.
+            exit_block
+                .remove_from_function()
+                .expect("the exit block must have a parent");
+            None
+        } else {
             // Move the builder to the exit block
             self.builder.position_at_end(exit_block);
 
@@ -1332,7 +1343,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             if let Some(Some((value, _))) = break_values.first() {
                 let phi = self.builder.build_phi(value.get_type(), "exit");
                 for (value, block) in break_values.into_iter().map(Option::unwrap) {
-                    phi.add_incoming(&[(&value, block)])
+                    phi.add_incoming(&[(&value, block)]);
                 }
                 Some(phi.as_basic_value())
             } else {
@@ -1340,13 +1351,6 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 // just empty.
                 Some(self.gen_empty())
             }
-        } else {
-            // Not a single code entry point jumped to the exit block through a break. Therefor we
-            // can completely remove the exit block since it doesnt have a predecessor.
-            exit_block
-                .remove_from_function()
-                .expect("the exit block must have a parent");
-            None
         }
     }
 

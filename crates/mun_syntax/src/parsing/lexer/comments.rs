@@ -1,8 +1,8 @@
 use crate::parsing::lexer::cursor::Cursor;
 
-use crate::SyntaxKind::{self, *};
+use crate::SyntaxKind::{self, COMMENT};
 
-pub(crate) fn scan_comment(cursor: &mut Cursor) -> Option<SyntaxKind> {
+pub(crate) fn scan_comment(cursor: &mut Cursor<'_>) -> Option<SyntaxKind> {
     if cursor.matches('/') {
         bump_until_eol(cursor);
         Some(COMMENT)
@@ -11,7 +11,7 @@ pub(crate) fn scan_comment(cursor: &mut Cursor) -> Option<SyntaxKind> {
     }
 }
 
-fn scan_block_comment(cursor: &mut Cursor) -> Option<SyntaxKind> {
+fn scan_block_comment(cursor: &mut Cursor<'_>) -> Option<SyntaxKind> {
     if cursor.matches('*') {
         cursor.bump();
         let mut depth: u32 = 1;
@@ -34,7 +34,7 @@ fn scan_block_comment(cursor: &mut Cursor) -> Option<SyntaxKind> {
     }
 }
 
-fn bump_until_eol(cursor: &mut Cursor) {
+fn bump_until_eol(cursor: &mut Cursor<'_>) {
     loop {
         if cursor.matches('\n') || cursor.matches_str("\r\n") {
             return;

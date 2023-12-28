@@ -238,8 +238,7 @@ fn tree_for_module(
         "mod {}",
         module
             .name(db)
-            .map(|name| name.to_string())
-            .unwrap_or_else(|| "mod".to_owned())
+            .map_or_else(|| "mod".to_owned(), |name| name.to_string())
     ));
 
     // Add module level diagnostics
@@ -329,7 +328,7 @@ fn tree_for_module(
 
     // Iterate over all children of this module
     for child_module in module.children(db) {
-        node.push_node(tree_for_module(db, package_defs, child_module))
+        node.push_node(tree_for_module(db, package_defs, child_module));
     }
 
     node
@@ -343,8 +342,7 @@ fn fully_qualified_module_path(db: &dyn HirDatabase, module: Module) -> String {
             .into_iter()
             .map(|m| {
                 m.name(db)
-                    .map(|name| name.to_string())
-                    .unwrap_or_else(|| "package".to_owned())
+                    .map_or_else(|| "package".to_owned(), |name| name.to_string())
             })
             .rev(),
         "::".to_string(),

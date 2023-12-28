@@ -96,14 +96,14 @@ impl<'a> serde::Serialize for StructDefinition<'a> {
         use itertools::Itertools;
         use serde::ser::SerializeStruct;
 
-        let mut s = serializer.serialize_struct("StructInfo", 3)?;
-
         #[derive(serde::Serialize)]
         struct Field<'a> {
             name: &'a str,
             r#type: &'a TypeId<'a>,
             offset: &'a u16,
         }
+
+        let mut s = serializer.serialize_struct("StructInfo", 3)?;
 
         s.serialize_field("guid", &self.guid)?;
         s.serialize_field(
@@ -143,7 +143,7 @@ mod tests {
             field_names,
             field_types,
             field_offsets,
-            Default::default(),
+            StructMemoryKind::default(),
         );
 
         assert_eq!(struct_info.field_names().count(), 0);
@@ -165,12 +165,12 @@ mod tests {
             field_names,
             field_types,
             field_offsets,
-            Default::default(),
+            StructMemoryKind::default(),
         );
 
         assert_eq!(struct_info.num_fields(), 1);
         for (lhs, rhs) in struct_info.field_names().zip([FAKE_FIELD_NAME].iter()) {
-            assert_eq!(lhs, *rhs)
+            assert_eq!(lhs, *rhs);
         }
         assert_eq!(struct_info.field_types(), field_types);
         assert_eq!(struct_info.field_offsets(), field_offsets);

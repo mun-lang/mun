@@ -126,7 +126,7 @@ impl Resolver {
     fn module_scope(&self) -> Option<(&PackageDefs, LocalModuleId)> {
         self.scopes.iter().rev().find_map(|scope| match scope {
             Scope::ModuleScope(m) => Some((&*m.package_defs, m.module_id)),
-            _ => None,
+            Scope::ExprScope(_) => None,
         })
     }
 
@@ -150,6 +150,22 @@ impl Resolver {
         db: &dyn DefDatabase,
         path: &Path,
     ) -> Option<ResolveValueResult> {
+        fn to_value_ns(
+            per_ns: PerNs<(ItemDefinitionId, Visibility)>,
+        ) -> Option<(ValueNs, Visibility)> {
+            let (res, vis) = match per_ns.take_values()? {
+                (ItemDefinitionId::FunctionId(id), vis) => (ValueNs::FunctionId(id), vis),
+                (ItemDefinitionId::StructId(id), vis) => (ValueNs::StructId(id), vis),
+                (
+                    ItemDefinitionId::ModuleId(_)
+                    | ItemDefinitionId::TypeAliasId(_)
+                    | ItemDefinitionId::PrimitiveType(_),
+                    _,
+                ) => return None,
+            };
+            Some((res, vis))
+        }
+
         let segments_count = path.segments.len();
         let first_name = path.segments.first()?;
         for scope in self.scopes.iter().rev() {
@@ -185,8 +201,10 @@ impl Resolver {
                                 (ItemDefinitionId::PrimitiveType(id), _) => {
                                     TypeNs::PrimitiveType(id)
                                 }
-                                (ItemDefinitionId::ModuleId(_), _)
-                                | (ItemDefinitionId::FunctionId(_), _) => return None,
+                                (
+                                    ItemDefinitionId::ModuleId(_) | ItemDefinitionId::FunctionId(_),
+                                    _,
+                                ) => return None,
                             };
                             Some(ResolveValueResult::Partial(ty, idx))
                         }
@@ -194,20 +212,8 @@ impl Resolver {
                 }
             };
         }
-        return None;
 
-        fn to_value_ns(
-            per_ns: PerNs<(ItemDefinitionId, Visibility)>,
-        ) -> Option<(ValueNs, Visibility)> {
-            let (res, vis) = match per_ns.take_values()? {
-                (ItemDefinitionId::FunctionId(id), vis) => (ValueNs::FunctionId(id), vis),
-                (ItemDefinitionId::StructId(id), vis) => (ValueNs::StructId(id), vis),
-                (ItemDefinitionId::ModuleId(_), _)
-                | (ItemDefinitionId::TypeAliasId(_), _)
-                | (ItemDefinitionId::PrimitiveType(_), _) => return None,
-            };
-            Some((res, vis))
-        }
+        None
     }
 
     /// Resolves the specified `path` as a value. Returns either `None` or the resolved path value.
@@ -229,6 +235,20 @@ impl Resolver {
         db: &dyn DefDatabase,
         path: &Path,
     ) -> Option<(TypeNs, Visibility, Option<usize>)> {
+        fn to_type_ns(
+            per_ns: PerNs<(ItemDefinitionId, Visibility)>,
+        ) -> Option<(TypeNs, Visibility)> {
+            let (res, vis) = match per_ns.take_types()? {
+                (ItemDefinitionId::StructId(id), vis) => (TypeNs::StructId(id), vis),
+                (ItemDefinitionId::TypeAliasId(id), vis) => (TypeNs::TypeAliasId(id), vis),
+                (ItemDefinitionId::PrimitiveType(id), vis) => (TypeNs::PrimitiveType(id), vis),
+                (ItemDefinitionId::ModuleId(_) | ItemDefinitionId::FunctionId(_), _) => {
+                    return None;
+                }
+            };
+            Some((res, vis))
+        }
+
         for scope in self.scopes.iter().rev() {
             match scope {
                 Scope::ExprScope(_) => continue,
@@ -240,21 +260,8 @@ impl Resolver {
                 }
             }
         }
-        return None;
-        fn to_type_ns(
-            per_ns: PerNs<(ItemDefinitionId, Visibility)>,
-        ) -> Option<(TypeNs, Visibility)> {
-            let (res, vis) = match per_ns.take_types()? {
-                (ItemDefinitionId::StructId(id), vis) => (TypeNs::StructId(id), vis),
-                (ItemDefinitionId::TypeAliasId(id), vis) => (TypeNs::TypeAliasId(id), vis),
-                (ItemDefinitionId::PrimitiveType(id), vis) => (TypeNs::PrimitiveType(id), vis),
 
-                (ItemDefinitionId::ModuleId(_), _) | (ItemDefinitionId::FunctionId(_), _) => {
-                    return None;
-                }
-            };
-            Some((res, vis))
-        }
+        None
     }
 
     /// Resolves the specified `path` as a type. Returns either `None` or the resolved path type.
@@ -283,14 +290,14 @@ impl Resolver {
     pub fn body_owner(&self) -> Option<DefWithBodyId> {
         self.scopes.iter().rev().find_map(|scope| match scope {
             Scope::ExprScope(it) => Some(it.owner),
-            _ => None,
+            Scope::ModuleScope(_) => None,
         })
     }
 
     /// Calls the `visitor` for each entry in scope.
     pub fn visit_all_names(&self, db: &dyn DefDatabase, visitor: &mut dyn FnMut(Name, ScopeDef)) {
         for scope in self.scopes.iter().rev() {
-            scope.visit_names(db, visitor)
+            scope.visit_names(db, visitor);
         }
     }
 }
@@ -305,7 +312,7 @@ impl Scope {
                     .for_each(|(name, def)| visitor(name.clone(), ScopeDef::PerNs(def)));
                 BUILTIN_SCOPE.iter().for_each(|(name, &def)| {
                     visitor(name.clone(), ScopeDef::PerNs(def));
-                })
+                });
             }
             Scope::ExprScope(scope) => scope
                 .expr_scopes

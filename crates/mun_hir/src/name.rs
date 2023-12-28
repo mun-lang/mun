@@ -1,7 +1,7 @@
 use mun_syntax::{ast, SmolStr};
 use std::fmt;
 
-/// `Name` is a wrapper around string, which is used in mun_hir for both references
+/// `Name` is a wrapper around string, which is used in `mun_hir` for both references
 /// and declarations.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Name(Repr);
@@ -13,7 +13,7 @@ enum Repr {
 }
 
 impl fmt::Display for Name {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.0 {
             Repr::Text(text) => fmt::Display::fmt(&text, f),
             Repr::TupleField(idx) => fmt::Display::fmt(&idx, f),
@@ -57,7 +57,7 @@ impl Name {
     pub(crate) fn as_tuple_index(&self) -> Option<usize> {
         match self.0 {
             Repr::TupleField(idx) => Some(idx),
-            _ => None,
+            Repr::Text(_) => None,
         }
     }
 }

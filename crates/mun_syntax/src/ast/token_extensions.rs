@@ -46,12 +46,11 @@ fn split_int_text_and_suffix(text: &str) -> (&str, Option<&str>) {
 }
 
 /// Skips all digits in the iterator that belong to the given base
-fn skip_digits(base: usize, iter: &mut Peekable<CharIndices>) {
+fn skip_digits(base: usize, iter: &mut Peekable<CharIndices<'_>>) {
     while let Some((_, c)) = iter.peek() {
         if match c {
-            '0'..='9' => true,
+            '0'..='9' | '_' => true,
             'a'..='f' | 'A'..='F' if base > 10 => true,
-            '_' => true,
             _ => false,
         } {
             iter.next();

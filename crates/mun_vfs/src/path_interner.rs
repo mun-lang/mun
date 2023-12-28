@@ -28,7 +28,7 @@ impl PathInterner {
         }
     }
 
-    /// Returns the path for the specified FileId.
+    /// Returns the path for the specified `FileId`.
     pub fn lookup(&self, id: FileId) -> &AbsPath {
         &self.id_to_path[id.0 as usize]
     }

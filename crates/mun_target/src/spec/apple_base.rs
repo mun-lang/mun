@@ -2,7 +2,10 @@ use crate::spec::{LinkerFlavor, TargetOptions};
 use std::borrow::Cow;
 use std::env;
 
-use Arch::*;
+use Arch::{
+    Arm64, Arm64_32, Arm64_macabi, Arm64_sim, Armv7, Armv7k, Armv7s, X86_64_macabi, X86_64_sim,
+    I386, I686, X86_64,
+};
 
 #[allow(non_camel_case_types, dead_code)]
 #[derive(Copy, Clone)]
@@ -56,16 +59,13 @@ impl Arch {
 
     fn target_cpu(self) -> &'static str {
         match self {
-            Armv7 => "cortex-a8", // iOS7 is supported on iPhone 4 and higher
-            Armv7k => "cortex-a8",
+            Armv7 | Armv7k => "cortex-a8", // iOS7 is supported on iPhone 4 and higher
             Armv7s => "cortex-a9",
             Arm64 => "apple-a7",
             Arm64_32 => "apple-s4",
             I386 | I686 => "yonah",
-            X86_64 | X86_64_sim => "core2",
-            X86_64_macabi => "core2",
-            Arm64_macabi => "apple-a12",
-            Arm64_sim => "apple-a12",
+            X86_64 | X86_64_sim | X86_64_macabi => "core2",
+            Arm64_macabi | Arm64_sim => "apple-a12",
         }
     }
 }

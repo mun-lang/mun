@@ -8,7 +8,7 @@ pub struct HirFormatter<'a, 'b> {
 }
 
 pub trait HirDisplay {
-    fn hir_fmt(&self, f: &mut HirFormatter) -> fmt::Result;
+    fn hir_fmt(&self, f: &mut HirFormatter<'_, '_>) -> fmt::Result;
     fn display<'a>(&'a self, db: &'a dyn HirDatabase) -> HirDisplayWrapper<'a, Self>
     where
         Self: Sized,
@@ -35,7 +35,7 @@ impl<'a, 'b> HirFormatter<'a, 'b> {
     }
 
     /// This allows using the `write!` macro directly with a `HirFormatter`.
-    pub fn write_fmt(&mut self, args: fmt::Arguments) -> fmt::Result {
+    pub fn write_fmt(&mut self, args: fmt::Arguments<'_>) -> fmt::Result {
         fmt::write(self.fmt, args)
     }
 }
@@ -46,7 +46,7 @@ impl<'a, T> fmt::Display for HirDisplayWrapper<'a, T>
 where
     T: HirDisplay,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.1.hir_fmt(&mut HirFormatter { db: self.0, fmt: f })
     }
 }

@@ -24,7 +24,7 @@ pub struct TypeTable<'ink> {
 }
 
 impl<'ink> TypeTable<'ink> {
-    /// The name of the TypeTable's LLVM `GlobalValue`.
+    /// The name of the `TypeTable`'s LLVM `GlobalValue`.
     pub(crate) const NAME: &'static str = "global_type_lookup_table";
 
     /// Returns a slice containing all types
@@ -32,7 +32,7 @@ impl<'ink> TypeTable<'ink> {
         &self.entries
     }
 
-    /// Looks for a global symbol with the name of the TypeTable global in the specified `module`.
+    /// Looks for a global symbol with the name of the `TypeTable` global in the specified `module`.
     /// Returns the global value if it could be found, `None` otherwise.
     pub fn find_global(module: &Module<'ink>) -> Option<Global<'ink, [*const std::ffi::c_void]>> {
         module
@@ -122,7 +122,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
             value_context,
             dispatch_table,
             hir_types,
-            entries: Default::default(),
+            entries: HashSet::default(),
             module_group,
         }
     }
@@ -146,11 +146,11 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
                 None => panic!("expected a callable expression"),
             }
         } else if let mun_hir::Expr::Array(..) = expr {
-            self.collect_type(self.hir_types.type_id(&infer[expr_id]))
+            self.collect_type(self.hir_types.type_id(&infer[expr_id]));
         }
 
         // Recurse further
-        expr.walk_child_exprs(|expr_id| self.collect_expr(expr_id, body, infer))
+        expr.walk_child_exprs(|expr_id| self.collect_expr(expr_id, body, infer));
     }
 
     /// Collects `TypeInfo` from types in the signature of a function
@@ -196,7 +196,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
         self.collect_type(type_info);
 
         let fields = hir_struct.fields(self.db);
-        for field in fields.into_iter() {
+        for field in fields {
             self.collect_type(self.hir_types.type_id(&field.ty(self.db)));
         }
     }

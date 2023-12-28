@@ -26,7 +26,7 @@ pub struct Project<'a> {
 
 impl<'a> Project<'a> {
     /// Constructs a project from a fixture.
-    pub fn with_fixture(fixture: &str) -> Project {
+    pub fn with_fixture(fixture: &str) -> Project<'_> {
         Project {
             fixture,
             tmp_dir: None,
@@ -97,7 +97,7 @@ impl Server {
         }
     }
 
-    /// Returns the LSP TextDocumentIdentifier for the given path
+    /// Returns the LSP `TextDocumentIdentifier` for the given path
     pub fn doc_id(&self, rel_path: &str) -> lsp_types::TextDocumentIdentifier {
         let path = self.tmp_dir.path().join(rel_path);
         lsp_types::TextDocumentIdentifier {
@@ -125,7 +125,7 @@ impl Server {
         let mut total = 0;
         for msg in self.messages.borrow().iter() {
             if cond(msg) {
-                total += 1
+                total += 1;
             }
         }
         while total < n {
@@ -172,7 +172,7 @@ impl Server {
         N::Params: Serialize,
     {
         let r = Notification::new(N::METHOD.to_string(), params);
-        self.send_notification(r)
+        self.send_notification(r);
     }
 
     /// Sends a server notification to the main loop

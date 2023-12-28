@@ -40,8 +40,8 @@ impl<'db> Semantics<'db> {
     pub fn new(db: &'db dyn HirDatabase) -> Self {
         Self {
             db,
-            source_file_to_file: Default::default(),
-            source_to_definition_cache: Default::default(),
+            source_file_to_file: RefCell::default(),
+            source_to_definition_cache: RefCell::default(),
         }
     }
 
@@ -102,7 +102,10 @@ impl<'db> Semantics<'db> {
     }
 
     /// Runs a function with a `SourceToDefContext` which can be used to cache definition queries.
-    fn with_source_to_def_context<F: FnOnce(&mut SourceToDefContext) -> T, T>(&self, f: F) -> T {
+    fn with_source_to_def_context<F: FnOnce(&mut SourceToDefContext<'_, '_>) -> T, T>(
+        &self,
+        f: F,
+    ) -> T {
         let mut cache = self.source_to_definition_cache.borrow_mut();
         let mut context = SourceToDefContext {
             db: self.db,
@@ -171,14 +174,14 @@ impl ScopeDef {
                 // Some things are returned as both a value and a type, such as a unit struct.
                 items.push(ScopeDef::ModuleDef(ty.0.into()));
                 if ty != val {
-                    items.push(ScopeDef::ModuleDef(val.0.into()))
+                    items.push(ScopeDef::ModuleDef(val.0.into()));
                 }
             }
             (None, None) => {}
         };
 
         if items.is_empty() {
-            items.push(ScopeDef::Unknown)
+            items.push(ScopeDef::Unknown);
         }
 
         items
@@ -221,7 +224,7 @@ impl<'a> SemanticsScope<'a> {
                     ScopeDef::Local(Local { parent, pat_id })
                 }
             };
-            visit(name, def)
-        })
+            visit(name, def);
+        });
     }
 }

@@ -6,7 +6,7 @@ use inkwell::{
 
 use mun_hir::HirDatabase;
 
-/// Constructs a PassManager to optimize functions for the given optimization level.
+/// Constructs a `PassManager` to optimize functions for the given optimization level.
 pub(crate) fn create_pass_manager<'ink>(
     module: &Module<'ink>,
     optimization_lvl: OptimizationLevel,

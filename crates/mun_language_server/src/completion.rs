@@ -55,13 +55,13 @@ impl From<Completions> for Vec<CompletionItem> {
 impl Completions {
     /// Adds a raw `CompletionItem`
     fn add(&mut self, item: CompletionItem) {
-        self.buf.push(item)
+        self.buf.push(item);
     }
 
     /// Adds a completion item for a resolved name
     fn add_resolution(
         &mut self,
-        ctx: &CompletionContext,
+        ctx: &CompletionContext<'_>,
         local_name: String,
         resolution: &ScopeDef,
     ) {
@@ -71,7 +71,7 @@ impl Completions {
     }
 
     /// Adds a completion item for a field
-    fn add_field(&mut self, ctx: &CompletionContext, field: mun_hir::Field) {
+    fn add_field(&mut self, ctx: &CompletionContext<'_>, field: mun_hir::Field) {
         let item = render_field(RenderContext::new(ctx), field);
         self.add(item);
     }

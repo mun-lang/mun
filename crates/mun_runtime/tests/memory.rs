@@ -31,7 +31,7 @@ fn gc_trace() {
     .expect("Failed to build test driver");
 
     let runtime = &driver.runtime;
-    let value: StructRef = runtime.invoke("new_foo", ()).unwrap();
+    let value: StructRef<'_> = runtime.invoke("new_foo", ()).unwrap();
     let value = value.root();
 
     assert!(!runtime.gc_collect());
@@ -62,7 +62,7 @@ fn map_struct_insert_field1() {
 
     let b = 5i64;
     let c = 3.0f64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (b, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -101,7 +101,7 @@ fn map_struct_insert_field2() {
 
     let a = 5i64;
     let c = 3.0f64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -147,7 +147,7 @@ fn map_struct_insert_field3() {
 
     let a = 5i64;
     let b = 3.0f64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -195,7 +195,7 @@ fn map_struct_remove_field1() {
     let a = 1.0f64;
     let b = 3.0f64;
     let c = 5i64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -233,7 +233,7 @@ fn map_struct_remove_field2() {
     let a = 1.0f64;
     let b = 5i64;
     let c = 3.0f64;
-    let result: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let result: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let rooted_result = result.root();
 
     driver.update_file(
@@ -274,7 +274,7 @@ fn map_struct_remove_field3() {
     let a = 5i64;
     let b = 1.0f64;
     let c = 3.0f64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -316,7 +316,7 @@ fn map_struct_cast_fields1() {
     let c = 3u32;
     let d = -4i64;
     let e = 3.1f32;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c, d, e)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c, d, e)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -370,7 +370,7 @@ fn map_struct_cast_fields2() {
     .expect("Failed to build test driver");
 
     let a = -2i16;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a,)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a,)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -409,7 +409,7 @@ fn map_struct_swap_fields1() {
     let a = 1.0f64;
     let b = 3i64;
     let c = 5.0f64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -459,7 +459,7 @@ fn map_struct_swap_fields2() {
     let b = 3i64;
     let c = 5.0f64;
     let d = 7i64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -512,7 +512,7 @@ fn map_struct_rename_field1() {
     let a = 5i64;
     let b = 1.0f64;
     let c = 3.0f64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -560,7 +560,7 @@ fn map_struct_rename_field2() {
     let a = 5i64;
     let b = 1.0f64;
     let c = 3.0f64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -610,7 +610,7 @@ fn map_struct_all() {
     let b = 1.0f64;
     let c = 3.0f64;
     let d = -1i32;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -664,7 +664,7 @@ fn map_array_to_array_different_array_to_primitive_different() {
     let a = 5i32;
     let b = 1i32;
     let c = 3.0f32;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -690,7 +690,7 @@ fn map_array_to_array_different_array_to_primitive_different() {
     assert_eq!(b_array.iter().count(), 3);
 
     b_array.iter().zip([b, a, b]).for_each(|(lhs, rhs)| {
-        assert_eq!(lhs, rhs as i64);
+        assert_eq!(lhs, i64::from(rhs));
     });
 
     assert_eq!(
@@ -720,7 +720,7 @@ fn map_array_to_array_different_array_to_primitive_same() {
     let a = 5i32;
     let b = 1i32;
     let c = 3.0f32;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -785,7 +785,7 @@ fn map_array_to_array_different_array_to_struct_different() {
     let a = 5i32;
     let b = 1i32;
     let d = 3.0f32;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, d)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, d)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -810,7 +810,7 @@ fn map_array_to_array_different_array_to_struct_different() {
     for field_name in ["b", "c"] {
         let array = foo_struct
             .as_ref(&driver.runtime)
-            .get::<ArrayRef<'_, StructRef>>(field_name)
+            .get::<ArrayRef<'_, StructRef<'_>>>(field_name)
             .unwrap();
 
         assert_eq!(array.iter().count(), 3);
@@ -819,7 +819,7 @@ fn map_array_to_array_different_array_to_struct_different() {
             .iter()
             .zip([b, a, b].into_iter())
             .for_each(|(lhs, rhs)| {
-                assert_eq!(lhs.get::<i64>("0").unwrap(), rhs as i64);
+                assert_eq!(lhs.get::<i64>("0").unwrap(), i64::from(rhs));
             });
     }
 
@@ -859,7 +859,7 @@ fn map_array_to_array_different_array_to_struct_same() {
     let a = 5i32;
     let b = 1i32;
     let d = 3.0f32;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, d)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, d)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -884,7 +884,7 @@ fn map_array_to_array_different_array_to_struct_same() {
     for field_name in ["b", "c"] {
         let array = foo_struct
             .as_ref(&driver.runtime)
-            .get::<ArrayRef<'_, StructRef>>(field_name)
+            .get::<ArrayRef<'_, StructRef<'_>>>(field_name)
             .unwrap();
 
         assert_eq!(array.iter().count(), 3);
@@ -924,7 +924,7 @@ fn map_array_to_array_different_primitive_to_array_different() {
     let a = 5i32;
     let b = 1i32;
     let c = 3.0f32;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -953,7 +953,7 @@ fn map_array_to_array_different_primitive_to_array_different() {
         assert_eq!(lhs.iter().count(), 1);
         assert_eq!(
             lhs.iter().next().expect("Array must have a value."),
-            rhs as i64
+            i64::from(rhs)
         );
     });
 
@@ -984,7 +984,7 @@ fn map_array_to_array_different_primitive_to_array_same() {
     let a = 5i32;
     let b = 1i32;
     let c = 3.0f32;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -1041,7 +1041,7 @@ fn map_array_to_array_different_primitive_to_primitive() {
     let a = 5i32;
     let b = 1i32;
     let c = 3.0f32;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -1067,7 +1067,7 @@ fn map_array_to_array_different_primitive_to_primitive() {
     assert_eq!(b_array.iter().count(), 3);
 
     b_array.iter().zip([b, a, b]).for_each(|(lhs, rhs)| {
-        assert_eq!(lhs, rhs as i64);
+        assert_eq!(lhs, i64::from(rhs));
     });
 
     assert_eq!(
@@ -1098,7 +1098,7 @@ fn map_array_to_array_different_primitive_to_struct() {
     let a = 5i32;
     let b = 1i32;
     let d = 3.0f32;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, d)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, d)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -1123,7 +1123,7 @@ fn map_array_to_array_different_primitive_to_struct() {
     for field_name in ["b", "c"] {
         let array = foo_struct
             .as_ref(&driver.runtime)
-            .get::<ArrayRef<'_, StructRef>>(field_name)
+            .get::<ArrayRef<'_, StructRef<'_>>>(field_name)
             .unwrap();
 
         assert_eq!(array.iter().count(), 3);
@@ -1169,7 +1169,7 @@ fn map_array_to_array_different_struct_to_array_different() {
     let a = 5i32;
     let b = 1i32;
     let d = 3.0f32;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, d)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, d)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -1194,7 +1194,7 @@ fn map_array_to_array_different_struct_to_array_different() {
     for field_name in ["b", "c"] {
         let array = foo_struct
             .as_ref(&driver.runtime)
-            .get::<ArrayRef<'_, ArrayRef<'_, StructRef>>>(field_name)
+            .get::<ArrayRef<'_, ArrayRef<'_, StructRef<'_>>>>(field_name)
             .unwrap();
 
         assert_eq!(array.iter().count(), 3);
@@ -1211,7 +1211,7 @@ fn map_array_to_array_different_struct_to_array_different() {
                         .expect("Array must have a value.")
                         .get::<i64>("0")
                         .unwrap(),
-                    rhs as i64
+                    i64::from(rhs)
                 );
             });
     }
@@ -1252,7 +1252,7 @@ fn map_array_to_array_different_struct_to_array_same() {
     let a = 5i32;
     let b = 1i32;
     let d = 3.0f32;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, d)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, d)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -1277,7 +1277,7 @@ fn map_array_to_array_different_struct_to_array_same() {
     for field_name in ["b", "c"] {
         let array = foo_struct
             .as_ref(&driver.runtime)
-            .get::<ArrayRef<'_, ArrayRef<'_, StructRef>>>(field_name)
+            .get::<ArrayRef<'_, ArrayRef<'_, StructRef<'_>>>>(field_name)
             .unwrap();
 
         assert_eq!(array.iter().count(), 3);
@@ -1335,7 +1335,7 @@ fn map_array_to_array_different_struct_to_struct() {
     let a = 5i32;
     let b = 1i32;
     let d = 3.0f32;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, d)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, d)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -1361,7 +1361,7 @@ fn map_array_to_array_different_struct_to_struct() {
     for field_name in ["b", "c"] {
         let array = foo_struct
             .as_ref(&driver.runtime)
-            .get::<ArrayRef<'_, StructRef>>(field_name)
+            .get::<ArrayRef<'_, StructRef<'_>>>(field_name)
             .unwrap();
 
         assert_eq!(array.iter().count(), 3);
@@ -1371,7 +1371,7 @@ fn map_array_to_array_different_struct_to_struct() {
             .zip([b, a, b].into_iter())
             .for_each(|(lhs, rhs)| {
                 // println!("struct type: {:?}", lhs.type_info());
-                assert_eq!(lhs.get::<i64>("0").unwrap(), rhs as i64);
+                assert_eq!(lhs.get::<i64>("0").unwrap(), i64::from(rhs));
             });
     }
 
@@ -1402,7 +1402,7 @@ fn map_array_to_array_same_primitive() {
     let a = 5i32;
     let b = 1.0f64;
     let c = 3.0f64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -1457,7 +1457,7 @@ fn map_array_to_array_same_struct() {
     let a = 5i32;
     let b = 1.0f64;
     let c = 3.0f64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -1479,7 +1479,7 @@ fn map_array_to_array_same_struct() {
 
     let b_array = foo_struct
         .as_ref(&driver.runtime)
-        .get::<ArrayRef<'_, StructRef>>("b")
+        .get::<ArrayRef<'_, StructRef<'_>>>("b")
         .unwrap();
 
     assert_eq!(b_array.iter().count(), 1);
@@ -1520,7 +1520,7 @@ fn map_array_to_primitive_different() {
     let a = 5i32;
     let b = 1.0f64;
     let c = 3.0f64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -1570,7 +1570,7 @@ fn map_array_to_primitive_same() {
     let a = 5i32;
     let b = 1.0f64;
     let c = 3.0f64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -1625,7 +1625,7 @@ fn map_array_to_struct_different() {
     let b = 1.0f32;
     let c = -1i32;
     let d = 3.0f64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -1649,17 +1649,17 @@ fn map_array_to_struct_different() {
 
     let bar_struct = foo_struct
         .as_ref(&driver.runtime)
-        .get::<StructRef>("b")
+        .get::<StructRef<'_>>("b")
         .unwrap();
 
-    assert_eq!(bar_struct.get::<f64>("0").unwrap(), b as f64);
+    assert_eq!(bar_struct.get::<f64>("0").unwrap(), f64::from(b));
 
     let baz_struct = foo_struct
         .as_ref(&driver.runtime)
-        .get::<StructRef>("c")
+        .get::<StructRef<'_>>("c")
         .unwrap();
 
-    assert_eq!(baz_struct.get::<i64>("0").unwrap(), c as i64);
+    assert_eq!(baz_struct.get::<i64>("0").unwrap(), i64::from(c));
 
     assert_eq!(
         foo_struct.as_ref(&driver.runtime).get::<f64>("d").unwrap(),
@@ -1693,7 +1693,7 @@ fn map_array_to_struct_same() {
     let b = 1.0f32;
     let c = -1i32;
     let d = 3.0f64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -1717,14 +1717,14 @@ fn map_array_to_struct_same() {
 
     let bar_struct = foo_struct
         .as_ref(&driver.runtime)
-        .get::<StructRef>("b")
+        .get::<StructRef<'_>>("b")
         .unwrap();
 
     assert_eq!(bar_struct.get::<f32>("0").unwrap(), b);
 
     let baz_struct = foo_struct
         .as_ref(&driver.runtime)
-        .get::<StructRef>("c")
+        .get::<StructRef<'_>>("c")
         .unwrap();
 
     assert_eq!(baz_struct.get::<i32>("0").unwrap(), c);
@@ -1758,7 +1758,7 @@ fn map_primitive_to_array_same() {
     let b = 1.0f64;
     let c = 3.0f64;
     let d = -1i32;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -1822,7 +1822,7 @@ fn map_primitive_to_array_different() {
     let b = 1.0f32;
     let c = 3.0f64;
     let d = -1i32;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c, d)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -1849,7 +1849,7 @@ fn map_primitive_to_array_different() {
     assert_eq!(b_array.iter().count(), 1);
     assert_eq!(
         b_array.iter().next().expect("Array must have a value."),
-        b as f64
+        f64::from(b)
     );
 
     assert_eq!(
@@ -1865,7 +1865,7 @@ fn map_primitive_to_array_different() {
     assert_eq!(d_array.iter().count(), 1);
     assert_eq!(
         d_array.iter().next().expect("Array must have a value."),
-        d as i64
+        i64::from(d)
     );
 }
 
@@ -1892,7 +1892,7 @@ fn map_struct_to_array_same() {
     let a = 5i32;
     let b = 1.0f64;
     let c = 3.0f64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -1914,7 +1914,7 @@ fn map_struct_to_array_same() {
 
     let b_array = foo_struct
         .as_ref(&driver.runtime)
-        .get::<ArrayRef<'_, StructRef>>("b")
+        .get::<ArrayRef<'_, StructRef<'_>>>("b")
         .unwrap();
 
     assert_eq!(b_array.iter().count(), 1);
@@ -1957,7 +1957,7 @@ fn map_struct_to_array_different() {
     let a = 5i32;
     let b = 1.0f32;
     let c = 3.0f64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -1979,7 +1979,7 @@ fn map_struct_to_array_different() {
 
     let b_array = foo_struct
         .as_ref(&driver.runtime)
-        .get::<ArrayRef<'_, StructRef>>("b")
+        .get::<ArrayRef<'_, StructRef<'_>>>("b")
         .unwrap();
 
     assert_eq!(b_array.iter().count(), 1);
@@ -1990,7 +1990,7 @@ fn map_struct_to_array_different() {
             .expect("Array must have a value.")
             .get::<f64>("0")
             .unwrap(),
-        b as f64
+        f64::from(b)
     );
 
     assert_eq!(
@@ -2018,7 +2018,7 @@ fn insert_array() {
 
     let b = 5i64;
     let c = 3.0f64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (b, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -2066,7 +2066,7 @@ fn delete_used_struct() {
     let a = 5i64;
     let b = 1.0f64;
     let c = 3.0f64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, b, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -2128,15 +2128,15 @@ fn nested_structs() {
 
     let a = -3.1f32;
     let b = 6.18f32;
-    let gc_struct: StructRef = driver.runtime.invoke("new_gc_struct", (a, b)).unwrap();
-    let value_struct: StructRef = driver.runtime.invoke("new_value_struct", (a, b)).unwrap();
+    let gc_struct: StructRef<'_> = driver.runtime.invoke("new_gc_struct", (a, b)).unwrap();
+    let value_struct: StructRef<'_> = driver.runtime.invoke("new_value_struct", (a, b)).unwrap();
 
-    let gc_wrapper: StructRef = driver
+    let gc_wrapper: StructRef<'_> = driver
         .runtime
         .invoke("new_gc_wrapper", (gc_struct.clone(), value_struct.clone()))
         .unwrap();
 
-    let value_wrapper: StructRef = driver
+    let value_wrapper: StructRef<'_> = driver
         .runtime
         .invoke(
             "new_value_wrapper",
@@ -2161,28 +2161,28 @@ fn nested_structs() {
 
     let gc_0 = gc_wrapper
         .as_ref(&driver.runtime)
-        .get::<StructRef>("0")
+        .get::<StructRef<'_>>("0")
         .unwrap();
     assert_eq!(gc_0.get::<f64>("0"), Ok(a.into()));
     assert_eq!(gc_0.get::<f64>("1"), Ok(b.into()));
 
     let gc_1 = gc_wrapper
         .as_ref(&driver.runtime)
-        .get::<StructRef>("1")
+        .get::<StructRef<'_>>("1")
         .unwrap();
     assert_eq!(gc_1.get::<f64>("0"), Ok(a.into()));
     assert_eq!(gc_1.get::<f64>("1"), Ok(b.into()));
 
     let value_0 = value_wrapper
         .as_ref(&driver.runtime)
-        .get::<StructRef>("0")
+        .get::<StructRef<'_>>("0")
         .unwrap();
     assert_eq!(value_0.get::<f64>("0"), Ok(a.into()));
     assert_eq!(value_0.get::<f64>("1"), Ok(b.into()));
 
     let value_1 = value_wrapper
         .as_ref(&driver.runtime)
-        .get::<StructRef>("1")
+        .get::<StructRef<'_>>("1")
         .unwrap();
     assert_eq!(value_1.get::<f64>("0"), Ok(a.into()));
     assert_eq!(value_1.get::<f64>("1"), Ok(b.into()));
@@ -2201,28 +2201,28 @@ fn nested_structs() {
 
     let gc_0 = gc_wrapper
         .as_ref(&driver.runtime)
-        .get::<StructRef>("0")
+        .get::<StructRef<'_>>("0")
         .unwrap();
     assert_eq!(gc_0.get::<f64>("0"), Ok(a.into()));
     assert_eq!(gc_0.get::<f64>("1"), Ok(b.into()));
 
     let gc_1 = gc_wrapper
         .as_ref(&driver.runtime)
-        .get::<StructRef>("1")
+        .get::<StructRef<'_>>("1")
         .unwrap();
     assert_eq!(gc_1.get::<f64>("0"), Ok(a.into()));
     assert_eq!(gc_1.get::<f64>("1"), Ok(b.into()));
 
     let value_0 = value_wrapper
         .as_ref(&driver.runtime)
-        .get::<StructRef>("0")
+        .get::<StructRef<'_>>("0")
         .unwrap();
     assert_eq!(value_0.get::<f64>("0"), Ok(a.into()));
     assert_eq!(value_0.get::<f64>("1"), Ok(b.into()));
 
     let value_1 = value_wrapper
         .as_ref(&driver.runtime)
-        .get::<StructRef>("1")
+        .get::<StructRef<'_>>("1")
         .unwrap();
     assert_eq!(value_1.get::<f64>("0"), Ok(a.into()));
     assert_eq!(value_1.get::<f64>("1"), Ok(b.into()));
@@ -2309,28 +2309,28 @@ fn nested_structs() {
     // The values in the wrappers should have been updated
     let mut gc_0 = gc_wrapper
         .as_ref(&driver.runtime)
-        .get::<StructRef>("0")
+        .get::<StructRef<'_>>("0")
         .unwrap();
     assert_eq!(gc_0.get::<f64>("0"), Ok(0.0));
     gc_0.set::<f64>("0", a.into()).unwrap();
 
     let mut gc_1 = gc_wrapper
         .as_ref(&driver.runtime)
-        .get::<StructRef>("1")
+        .get::<StructRef<'_>>("1")
         .unwrap();
     assert_eq!(gc_1.get::<f64>("0"), Ok(0.0));
     gc_1.set::<f64>("0", a.into()).unwrap();
 
     let mut value_0 = value_wrapper
         .as_ref(&driver.runtime)
-        .get::<StructRef>("0")
+        .get::<StructRef<'_>>("0")
         .unwrap();
     assert_eq!(value_0.get::<f64>("0"), Ok(0.0));
     value_0.set::<f64>("0", a.into()).unwrap();
 
     let mut value_1 = value_wrapper
         .as_ref(&driver.runtime)
-        .get::<StructRef>("1")
+        .get::<StructRef<'_>>("1")
         .unwrap();
     assert_eq!(value_1.get::<f64>("0"), Ok(0.0));
     value_1.set::<f64>("0", a.into()).unwrap();
@@ -2367,28 +2367,28 @@ fn nested_structs() {
     // The values in the wrappers should have been updated
     let gc_0 = gc_wrapper
         .as_ref(&driver.runtime)
-        .get::<StructRef>("0")
+        .get::<StructRef<'_>>("0")
         .unwrap();
     assert_eq!(gc_0.get::<f64>("0"), Ok(0.0));
     assert_eq!(gc_0.get::<f64>("1"), Ok(0.0));
 
     let gc_1 = gc_wrapper
         .as_ref(&driver.runtime)
-        .get::<StructRef>("1")
+        .get::<StructRef<'_>>("1")
         .unwrap();
     assert_eq!(gc_1.get::<f64>("0"), Ok(0.0));
     assert_eq!(gc_1.get::<f64>("1"), Ok(0.0));
 
     let value_0 = value_wrapper
         .as_ref(&driver.runtime)
-        .get::<StructRef>("0")
+        .get::<StructRef<'_>>("0")
         .unwrap();
     assert_eq!(value_0.get::<f64>("0"), Ok(0.0));
     assert_eq!(value_0.get::<f64>("1"), Ok(0.0));
 
     let value_1 = value_wrapper
         .as_ref(&driver.runtime)
-        .get::<StructRef>("1")
+        .get::<StructRef<'_>>("1")
         .unwrap();
     assert_eq!(value_1.get::<f64>("0"), Ok(0.0));
     assert_eq!(value_1.get::<f64>("1"), Ok(0.0));
@@ -2413,7 +2413,7 @@ fn insert_struct() {
 
     let a = 5i64;
     let c = 3.0f64;
-    let foo_struct: StructRef = driver.runtime.invoke("foo_new", (a, c)).unwrap();
+    let foo_struct: StructRef<'_> = driver.runtime.invoke("foo_new", (a, c)).unwrap();
     let foo_struct = foo_struct.root();
 
     driver.update_file(
@@ -2442,13 +2442,13 @@ fn insert_struct() {
 
     let b = foo_struct
         .as_ref(&driver.runtime)
-        .get::<StructRef>("b")
+        .get::<StructRef<'_>>("b")
         .unwrap();
     assert_eq!(b.get::<i64>("0"), Ok(0));
 
     let d = foo_struct
         .as_ref(&driver.runtime)
-        .get::<StructRef>("d")
+        .get::<StructRef<'_>>("d")
         .unwrap();
     assert_eq!(d.get::<f64>("0"), Ok(0.0));
 }
@@ -2486,7 +2486,7 @@ fn test_type_table() {
     )
     .expect("Failed to build test driver");
 
-    let a: StructRef = driver
+    let a: StructRef<'_> = driver
         .runtime
         .invoke("foo::new_foo", ())
         .expect("failed to call 'new_foo'");

@@ -23,8 +23,10 @@ pub struct TypeLut<'a> {
 
 impl<'a> TypeLut<'a> {
     /// Returns an iterator over pairs of type IDs and type handles.
-    pub fn iter(&self) -> impl Iterator<Item = (&TypeId, &*const ffi::c_void, &str)> {
-        let (type_ids, type_ptrs, type_names) = if self.num_entries != 0 {
+    pub fn iter(&self) -> impl Iterator<Item = (&TypeId<'_>, &*const ffi::c_void, &str)> {
+        let (type_ids, type_ptrs, type_names) = if self.num_entries == 0 {
+            (([]).iter(), ([]).iter(), ([]).iter())
+        } else {
             let ptrs =
                 unsafe { slice::from_raw_parts_mut(self.type_handles, self.num_entries as usize) };
             let type_ids =
@@ -33,8 +35,6 @@ impl<'a> TypeLut<'a> {
                 unsafe { slice::from_raw_parts(self.type_names, self.num_entries as usize) };
 
             (type_ids.iter(), ptrs.iter(), type_names.iter())
-        } else {
-            (([]).iter(), ([]).iter(), ([]).iter())
         };
 
         izip!(type_ids, type_ptrs, type_names).map(|(id, ptr, type_name)| {
@@ -45,8 +45,12 @@ impl<'a> TypeLut<'a> {
     }
 
     /// Returns an iterator over pairs of type IDs and mutable type handles.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&TypeId, &mut *const ffi::c_void, &str)> {
-        let (type_ids, type_ptrs, type_names) = if self.num_entries != 0 {
+    pub fn iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = (&TypeId<'_>, &mut *const ffi::c_void, &str)> {
+        let (type_ids, type_ptrs, type_names) = if self.num_entries == 0 {
+            (([]).iter(), ([]).iter_mut(), ([]).iter())
+        } else {
             let ptrs =
                 unsafe { slice::from_raw_parts_mut(self.type_handles, self.num_entries as usize) };
             let type_ids =
@@ -55,8 +59,6 @@ impl<'a> TypeLut<'a> {
                 unsafe { slice::from_raw_parts(self.type_names, self.num_entries as usize) };
 
             (type_ids.iter(), ptrs.iter_mut(), type_names.iter())
-        } else {
-            (([]).iter(), ([]).iter_mut(), ([]).iter())
         };
 
         izip!(type_ids, type_ptrs, type_names).map(|(id, ptr, type_name)| {
@@ -88,7 +90,7 @@ impl<'a> TypeLut<'a> {
     ///
     /// This is generally not recommended, use with caution! Calling this method with an
     /// out-of-bounds index is _undefined behavior_ even if the resulting reference is not used.
-    /// For a safe alternative see [get_ptr](#method.get_ptr).
+    /// For a safe alternative see [`get_ptr`](#method.get_ptr).
     ///
     /// # Safety
     ///
@@ -110,7 +112,7 @@ impl<'a> TypeLut<'a> {
     ///
     /// This is generally not recommended, use with caution! Calling this method with an
     /// out-of-bounds index is _undefined behavior_ even if the resulting reference is not used.
-    /// For a safe alternative see [get_ptr_mut](#method.get_ptr_mut).
+    /// For a safe alternative see [`get_ptr_mut`](#method.get_ptr_mut).
     ///
     /// # Safety
     ///
@@ -378,7 +380,7 @@ mod tests {
         let type_lut = fake_type_lut(type_ids, type_ptrs, type_names);
 
         for (lhs, rhs) in type_lut.type_names().zip([FAKE_TYPE_NAME].iter()) {
-            assert_eq!(lhs, *rhs)
+            assert_eq!(lhs, *rhs);
         }
     }
 }

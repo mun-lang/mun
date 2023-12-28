@@ -67,7 +67,7 @@ impl PackageId {
 }
 
 impl fmt::Display for PackageId {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} v{}", self.name(), self.version())
     }
 }

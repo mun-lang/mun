@@ -32,7 +32,7 @@ impl RawVisibilityId {
 }
 
 impl fmt::Debug for RawVisibilityId {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut f = f.debug_tuple("RawVisibilityId");
         match *self {
             Self::PUB => f.field(&"pub"),
@@ -93,7 +93,7 @@ struct ItemVisibilities {
 }
 
 impl ItemVisibilities {
-    fn alloc(&mut self, vis: RawVisibility) -> RawVisibilityId {
+    fn alloc(vis: RawVisibility) -> RawVisibilityId {
         match &vis {
             RawVisibility::Public => RawVisibilityId::PUB,
             RawVisibility::This => RawVisibilityId::PRIV,
@@ -127,20 +127,15 @@ pub trait ItemTreeNode: Clone {
     /// Downcasts a `ModItem` to a `FileItemTreeId` specific to this type
     fn id_from_mod_item(mod_item: ModItem) -> Option<LocalItemTreeId<Self>>;
 
-    /// Upcasts a `FileItemTreeId` to a generic ModItem.
+    /// Upcasts a `FileItemTreeId` to a generic [`ModItem`].
     fn id_to_mod_item(id: LocalItemTreeId<Self>) -> ModItem;
 }
 
 /// The typed Id of an item in an `ItemTree`
+#[derive(Clone)]
 pub struct LocalItemTreeId<N: ItemTreeNode> {
     index: Idx<N>,
     _p: PhantomData<N>,
-}
-
-impl<N: ItemTreeNode> Clone for LocalItemTreeId<N> {
-    fn clone(&self) -> Self {
-        *self
-    }
 }
 
 impl<N: ItemTreeNode> Copy for LocalItemTreeId<N> {}
@@ -155,7 +150,7 @@ impl<N: ItemTreeNode> Eq for LocalItemTreeId<N> {}
 
 impl<N: ItemTreeNode> Hash for LocalItemTreeId<N> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.index.hash(state)
+        self.index.hash(state);
     }
 }
 
@@ -165,7 +160,7 @@ impl<N: ItemTreeNode> fmt::Debug for LocalItemTreeId<N> {
     }
 }
 
-/// Represents the Id of an item in the ItemTree of a file.
+/// Represents the Id of an item in the [`ItemTree`] of a file.
 pub type ItemTreeId<N> = InFile<LocalItemTreeId<N>>;
 
 macro_rules! mod_items {
@@ -415,21 +410,8 @@ mod diagnostics {
             &self,
             db: &dyn HirDatabase,
             item_tree: &ItemTree,
-            sink: &mut DiagnosticSink,
+            sink: &mut DiagnosticSink<'_>,
         ) {
-            match self {
-                ItemTreeDiagnostic::DuplicateDefinition {
-                    name,
-                    first,
-                    second,
-                } => sink.push(DuplicateDefinition {
-                    file: item_tree.file_id,
-                    name: name.to_string(),
-                    first_definition: ast_ptr_from_mod(db.upcast(), item_tree, *first),
-                    definition: ast_ptr_from_mod(db.upcast(), item_tree, *second),
-                }),
-            };
-
             fn ast_ptr_from_mod(
                 db: &dyn DefDatabase,
                 item_tree: &ItemTree,
@@ -450,6 +432,19 @@ mod diagnostics {
                     }
                 }
             }
+
+            match self {
+                ItemTreeDiagnostic::DuplicateDefinition {
+                    name,
+                    first,
+                    second,
+                } => sink.push(DuplicateDefinition {
+                    file: item_tree.file_id,
+                    name: name.to_string(),
+                    first_definition: ast_ptr_from_mod(db.upcast(), item_tree, *first),
+                    definition: ast_ptr_from_mod(db.upcast(), item_tree, *second),
+                }),
+            };
         }
     }
 }

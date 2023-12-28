@@ -68,20 +68,20 @@ impl SyntaxTreeBuilder {
 
     pub fn token(&mut self, kind: SyntaxKind, text: &str) {
         let kind = MunLanguage::kind_to_raw(kind);
-        self.inner.token(kind, text)
+        self.inner.token(kind, text);
     }
 
     pub fn start_node(&mut self, kind: SyntaxKind) {
         let kind = MunLanguage::kind_to_raw(kind);
-        self.inner.start_node(kind)
+        self.inner.start_node(kind);
     }
 
     pub fn finish_node(&mut self) {
-        self.inner.finish_node()
+        self.inner.finish_node();
     }
 
     pub fn error(&mut self, error: ParseError, text_pos: TextSize) {
         let error = SyntaxError::new(SyntaxErrorKind::ParseError(error), text_pos);
-        self.errors.push(error)
+        self.errors.push(error);
     }
 }

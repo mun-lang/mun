@@ -254,7 +254,7 @@ impl<'s> Marshal<'s> for StructRef<'s> {
                     value.into_raw().get_ptr(),
                     dest,
                     type_info.value_layout().size(),
-                )
+                );
             };
         } else {
             unsafe { *ptr.as_mut() = value.into_raw() };

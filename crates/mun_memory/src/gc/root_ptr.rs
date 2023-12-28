@@ -16,7 +16,7 @@ where
 {
     fn clone(&self) -> Self {
         if let Some(runtime) = self.runtime.upgrade() {
-            runtime.as_ref().root(self.handle)
+            runtime.as_ref().root(self.handle);
         }
         Self {
             handle: self.handle,
@@ -29,7 +29,7 @@ impl<G> GcRootPtr<G>
 where
     G: GcRuntime,
 {
-    /// Constructs a new GCRootHandle from a runtime and a handle
+    /// Constructs a new [`GcRootPtr`] from a runtime and a handle
     pub fn new(runtime: &Arc<G>, handle: GcPtr) -> Self {
         runtime.as_ref().root(handle);
         Self {
@@ -71,7 +71,7 @@ where
 {
     fn drop(&mut self) {
         if let Some(runtime) = self.runtime.upgrade() {
-            runtime.as_ref().unroot(self.handle)
+            runtime.as_ref().unroot(self.handle);
         }
     }
 }

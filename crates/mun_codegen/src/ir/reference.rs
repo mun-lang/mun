@@ -46,7 +46,7 @@ impl<'ink> RuntimeReferenceValue<'ink> {
         }
     }
 
-    /// Constructs a new instance from an inkwell PointerValue without checking if this is actually
+    /// Constructs a new instance from an inkwell `PointerValue` without checking if this is actually
     /// a pointer to an object on the heap.
     pub unsafe fn from_ptr_unchecked(ptr: PointerValue<'ink>) -> Self {
         Self(ptr)

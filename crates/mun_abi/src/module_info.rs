@@ -81,6 +81,7 @@ mod tests {
     use std::{ffi::CString, ptr};
 
     use crate::type_id::HasStaticTypeId;
+    use crate::StructMemoryKind;
     use crate::{
         test_utils::{
             fake_fn_prototype, fake_module_info, fake_struct_definition, fake_type_definition,
@@ -121,7 +122,8 @@ mod tests {
         let functions = &[fn_info];
 
         let struct_name = CString::new(FAKE_STRUCT_NAME).expect("Invalid fake struct name");
-        let struct_info = fake_struct_definition(&struct_name, &[], &[], &[], Default::default());
+        let struct_info =
+            fake_struct_definition(&struct_name, &[], &[], &[], StructMemoryKind::default());
         let type_info =
             fake_type_definition(&struct_name, 1, 1, TypeDefinitionData::Struct(struct_info));
         let types = [type_info];
@@ -144,7 +146,7 @@ mod tests {
             );
         }
 
-        let result_types: &[TypeDefinition] = module.types();
+        let result_types: &[TypeDefinition<'_>] = module.types();
         assert_eq!(result_types.len(), types.len());
         for (lhs, rhs) in result_types.iter().zip(types.iter()) {
             assert_eq!(lhs, rhs);

@@ -49,7 +49,7 @@ impl CompilerDatabase {
     /// Constructs a new database
     pub fn new(config: &Config) -> Self {
         let mut db = CompilerDatabase {
-            storage: Default::default(),
+            storage: salsa::Storage::default(),
         };
 
         // Set the initial configuration

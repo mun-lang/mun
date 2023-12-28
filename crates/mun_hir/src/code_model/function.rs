@@ -156,7 +156,7 @@ impl Function {
         db.body_with_source_map(self.id.into()).1
     }
 
-    pub fn diagnostics(self, db: &dyn HirDatabase, sink: &mut DiagnosticSink) {
+    pub fn diagnostics(self, db: &dyn HirDatabase, sink: &mut DiagnosticSink<'_>) {
         let body = self.body(db);
         body.add_diagnostics(db, self.into(), sink);
         let infer = self.infer(db);

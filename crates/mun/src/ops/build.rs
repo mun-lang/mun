@@ -90,7 +90,7 @@ pub fn build(args: Args) -> Result<ExitStatus, anyhow::Error> {
                 )
             })?
         }
-        Some(path) => std::fs::canonicalize(Path::new(&path)).map_err(|_| {
+        Some(path) => std::fs::canonicalize(Path::new(&path)).map_err(|_error| {
             anyhow::anyhow!(
                 "'{}' does not refer to a valid manifest path",
                 path.display()

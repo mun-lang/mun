@@ -6,7 +6,7 @@ use crate::{Expr, HirDisplay, Literal};
 impl<'a> ExprValidator<'a> {
     /// Iterates over all expressions to determine if one of the literals has a value that is out of
     /// range of its type.
-    pub fn validate_literal_ranges(&self, sink: &mut DiagnosticSink) {
+    pub fn validate_literal_ranges(&self, sink: &mut DiagnosticSink<'_>) {
         self.body[self.body.body_expr].walk_child_exprs(move |expr_id| {
             let expr = &self.body[expr_id];
             if let Expr::Literal(Literal::Int(lit)) = &expr {
@@ -28,7 +28,7 @@ impl<'a> ExprValidator<'a> {
                             sink.push(LiteralOutOfRange {
                                 literal,
                                 int_ty: *int_ty,
-                            })
+                            });
                         }
                     }
                     _ => panic!(
@@ -37,6 +37,6 @@ impl<'a> ExprValidator<'a> {
                     ),
                 }
             }
-        })
+        });
     }
 }

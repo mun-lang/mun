@@ -42,7 +42,7 @@ mod tests {
         const FIRST_STRING: &str = "foo";
         const SECOND_STRING: &str = "zbar";
         const EXPECTED_DISTANCE: usize = 4;
-        assert_eq!(lev_distance(FIRST_STRING, SECOND_STRING), EXPECTED_DISTANCE)
+        assert_eq!(lev_distance(FIRST_STRING, SECOND_STRING), EXPECTED_DISTANCE);
     }
 
     #[test]
@@ -50,7 +50,7 @@ mod tests {
         const FIRST_STRING: &str = "calculate";
         const SECOND_STRING: &str = "";
         const EXPECTED_DISTANCE: usize = FIRST_STRING.len();
-        assert_eq!(lev_distance(FIRST_STRING, SECOND_STRING), EXPECTED_DISTANCE)
+        assert_eq!(lev_distance(FIRST_STRING, SECOND_STRING), EXPECTED_DISTANCE);
     }
 
     #[test]
@@ -58,6 +58,6 @@ mod tests {
         const FIRST_STRING: &str = "calculate";
         const SECOND_STRING: &str = "calculate";
         const EXPECTED_DISTANCE: usize = 0;
-        assert_eq!(lev_distance(FIRST_STRING, SECOND_STRING), EXPECTED_DISTANCE)
+        assert_eq!(lev_distance(FIRST_STRING, SECOND_STRING), EXPECTED_DISTANCE);
     }
 }

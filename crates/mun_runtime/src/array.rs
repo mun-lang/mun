@@ -44,7 +44,7 @@ impl<'array, T: Marshal<'array> + 'array> ArrayRef<'array, T> {
         Self {
             raw,
             runtime,
-            _phantom: Default::default(),
+            _phantom: PhantomData,
         }
     }
 
@@ -175,7 +175,7 @@ impl<T> RootedArray<T> {
         assert!(gc.ptr_type(raw.0).is_array());
         Self {
             handle: GcRootPtr::new(gc, raw.0),
-            _data: Default::default(),
+            _data: PhantomData,
         }
     }
 

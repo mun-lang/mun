@@ -49,7 +49,7 @@ pub trait Array: Sized {
 pub trait GcRuntime: Send + Sync {
     type Array: Array;
 
-    /// Allocates an object of the given type returning a GcPtr
+    /// Allocates an object of the given type returning a [`GcPtr`]
     fn alloc(&self, ty: &Type) -> GcPtr;
 
     /// Allocates an array of the given type. `ty` must be an array type.

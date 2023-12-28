@@ -94,18 +94,17 @@ pub fn run_server() -> anyhow::Result<()> {
 
     let config = {
         // Convert the root uri to a PathBuf
-        let root_dir = match initialize_params
+        let root_dir = if let Some(path) = initialize_params
             .root_uri
             .and_then(|it| it.to_file_path().ok())
             .and_then(|path| AbsPathBuf::try_from(path).ok())
         {
-            Some(path) => path,
-            None => {
-                // Get the current working directory as fallback
-                let cwd = std::env::current_dir()?;
-                AbsPathBuf::try_from(cwd)
-                    .expect("could not convert current directory to an absolute path")
-            }
+            path
+        } else {
+            // Get the current working directory as fallback
+            let cwd = std::env::current_dir()?;
+            AbsPathBuf::try_from(cwd)
+                .expect("could not convert current directory to an absolute path")
         };
 
         let mut config = Config::new(root_dir);
@@ -115,8 +114,7 @@ pub fn run_server() -> anyhow::Result<()> {
             .capabilities
             .workspace
             .and_then(|c| c.did_change_watched_files)
-            .map(|c| c.dynamic_registration.unwrap_or(false))
-            .unwrap_or(false);
+            .is_some_and(|c| c.dynamic_registration.unwrap_or(false));
         if supports_file_watcher_dynamic_registration {
             config.watcher = FilesWatcher::Client;
         }

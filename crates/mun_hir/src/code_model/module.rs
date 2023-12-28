@@ -66,7 +66,7 @@ impl Module {
     }
 
     /// Iterate over all diagnostics from this `Module` by placing them in the `sink`
-    pub fn diagnostics(self, db: &dyn HirDatabase, sink: &mut DiagnosticSink) {
+    pub fn diagnostics(self, db: &dyn HirDatabase, sink: &mut DiagnosticSink<'_>) {
         // Add diagnostics from the package definitions
         let package_defs = db.package_defs(self.id.package);
         package_defs.add_diagnostics(db.upcast(), self.id.local_id, sink);
@@ -111,7 +111,7 @@ impl Module {
         let mut curr = self;
         while let Some(next) = curr.parent(db) {
             res.push(next);
-            curr = next
+            curr = next;
         }
         res
     }

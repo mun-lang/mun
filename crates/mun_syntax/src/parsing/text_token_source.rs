@@ -1,6 +1,6 @@
 use crate::{
     parsing::{lexer::Token, Token as PToken, TokenSource},
-    SyntaxKind::*,
+    SyntaxKind::EOF,
     TextRange, TextSize,
 };
 
@@ -57,7 +57,7 @@ impl<'t> TokenSource for TextTokenSource<'t> {
 }
 
 fn mk_token(pos: usize, start_offsets: &[TextSize], tokens: &[Token]) -> PToken {
-    let kind = tokens.get(pos).map(|t| t.kind).unwrap_or(EOF);
+    let kind = tokens.get(pos).map_or(EOF, |t| t.kind);
     let is_jointed_to_next = if pos + 1 < start_offsets.len() {
         start_offsets[pos] + tokens[pos].len == start_offsets[pos + 1]
     } else {

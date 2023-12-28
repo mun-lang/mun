@@ -39,25 +39,6 @@ pub(crate) fn handle_completion(
     snapshot: LanguageServerSnapshot,
     params: lsp_types::CompletionParams,
 ) -> anyhow::Result<Option<lsp_types::CompletionResponse>> {
-    let position = from_lsp::file_position(&snapshot, params.text_document_position)?;
-
-    // If the completion was triggered after a single colon there is nothing to do. We only want
-    // completion after a *double* colon (::) or after a dot (.).
-    if is_position_at_single_colon(&snapshot, position, params.context)? {
-        return Ok(None);
-    }
-
-    // Get all completions from the analysis database
-    let items = match snapshot.analysis.completions(position)? {
-        None => return Ok(None),
-        Some(items) => items,
-    };
-
-    // Convert all the items to the LSP protocol type
-    let items: Vec<CompletionItem> = items.into_iter().map(to_lsp::completion_item).collect();
-
-    return Ok(Some(items.into()));
-
     /// Helper function to check if the given position is preceded by a single colon.
     fn is_position_at_single_colon(
         snapshot: &LanguageServerSnapshot,
@@ -80,9 +61,28 @@ pub(crate) fn handle_completion(
         }
         Ok(false)
     }
+
+    let position = from_lsp::file_position(&snapshot, params.text_document_position)?;
+
+    // If the completion was triggered after a single colon there is nothing to do. We only want
+    // completion after a *double* colon (::) or after a dot (.).
+    if is_position_at_single_colon(&snapshot, position, params.context)? {
+        return Ok(None);
+    }
+
+    // Get all completions from the analysis database
+    let items = match snapshot.analysis.completions(position)? {
+        None => return Ok(None),
+        Some(items) => items,
+    };
+
+    // Convert all the items to the LSP protocol type
+    let items: Vec<CompletionItem> = items.into_iter().map(to_lsp::completion_item).collect();
+
+    Ok(Some(items.into()))
 }
 
-/// Constructs a hierarchy of DocumentSymbols for a list of symbols that specify which index is the
+/// Constructs a hierarchy of `DocumentSymbols` for a list of symbols that specify which index is the
 /// parent of a symbol. The parent index must always be smaller than the current index.
 fn build_hierarchy_from_flat_list(
     mut symbols_and_parent: Vec<(DocumentSymbol, Option<usize>)>,
@@ -120,7 +120,7 @@ fn build_hierarchy_from_flat_list(
 #[cfg(test)]
 mod tests {
     use crate::handlers::build_hierarchy_from_flat_list;
-    use lsp_types::{DocumentSymbol, SymbolKind};
+    use lsp_types::{DocumentSymbol, Range, SymbolKind};
 
     #[test]
     fn test_build_hierarchy_from_flat_list() {
@@ -131,44 +131,41 @@ mod tests {
             kind: SymbolKind::FILE,
             tags: None,
             deprecated: None,
-            range: Default::default(),
-            selection_range: Default::default(),
+            range: Range::default(),
+            selection_range: Range::default(),
             children: None,
         };
 
-        let mut list = Vec::new();
-
-        list.push((
-            DocumentSymbol {
-                name: "a".to_string(),
-                ..default_symbol.clone()
-            },
-            None,
-        ));
-
-        list.push((
-            DocumentSymbol {
-                name: "b".to_string(),
-                ..default_symbol.clone()
-            },
-            Some(0),
-        ));
-
-        list.push((
-            DocumentSymbol {
-                name: "c".to_string(),
-                ..default_symbol.clone()
-            },
-            Some(0),
-        ));
-
-        list.push((
-            DocumentSymbol {
-                name: "d".to_string(),
-                ..default_symbol.clone()
-            },
-            Some(1),
-        ));
+        let list = vec![
+            (
+                DocumentSymbol {
+                    name: "a".to_string(),
+                    ..default_symbol.clone()
+                },
+                None,
+            ),
+            (
+                DocumentSymbol {
+                    name: "b".to_string(),
+                    ..default_symbol.clone()
+                },
+                Some(0),
+            ),
+            (
+                DocumentSymbol {
+                    name: "c".to_string(),
+                    ..default_symbol.clone()
+                },
+                Some(0),
+            ),
+            (
+                DocumentSymbol {
+                    name: "d".to_string(),
+                    ..default_symbol.clone()
+                },
+                Some(1),
+            ),
+        ];
 
         assert_eq!(
             build_hierarchy_from_flat_list(list),
@@ -190,6 +187,6 @@ mod tests {
                 ]),
                 ..default_symbol
             }]
-        )
+        );
     }
 }

@@ -40,14 +40,14 @@ impl<'a> ExprValidator<'a> {
         }
     }
 
-    pub fn validate_body(&self, sink: &mut DiagnosticSink) {
+    pub fn validate_body(&self, sink: &mut DiagnosticSink<'_>) {
         self.validate_literal_ranges(sink);
         self.validate_uninitialized_access(sink);
         self.validate_extern(sink);
         self.validate_privacy(sink);
     }
 
-    pub fn validate_privacy(&self, sink: &mut DiagnosticSink) {
+    pub fn validate_privacy(&self, sink: &mut DiagnosticSink<'_>) {
         let resolver = self.func.id.resolver(self.db.upcast());
         let fn_data = self.func.data(self.db.upcast());
         let ret_type_ref = fn_data.ret_type();
@@ -78,11 +78,11 @@ impl<'a> ExprValidator<'a> {
                         .type_ref_source_map()
                         .type_ref_syntax(*type_ref)
                         .unwrap(),
-                })
+                });
             });
     }
 
-    pub fn validate_extern(&self, sink: &mut DiagnosticSink) {
+    pub fn validate_extern(&self, sink: &mut DiagnosticSink<'_>) {
         if !self.func.is_extern(self.db) {
             return;
         }
@@ -109,7 +109,7 @@ impl<'a> ExprValidator<'a> {
                         .unwrap();
                     sink.push(ExternNonPrimitiveParam {
                         param: InFile::new(self.func.source(self.db.upcast()).file_id, arg_ptr),
-                    })
+                    });
                 }
             }
 
@@ -122,7 +122,7 @@ impl<'a> ExprValidator<'a> {
                     .unwrap();
                 sink.push(ExternNonPrimitiveParam {
                     param: InFile::new(self.func.source(self.db.upcast()).file_id, arg_ptr),
-                })
+                });
             }
         }
     }
@@ -140,17 +140,17 @@ impl<'a> TypeAliasValidator<'a> {
     }
 
     /// Validates that the provided `TypeAlias` has a target type of alias.
-    pub fn validate_target_type_existence(&self, sink: &mut DiagnosticSink) {
+    pub fn validate_target_type_existence(&self, sink: &mut DiagnosticSink<'_>) {
         let src = self.type_alias.source(self.db.upcast());
         if src.value.type_ref().is_none() {
             sink.push(FreeTypeAliasWithoutTypeRef {
                 type_alias_def: src.map(|t| SyntaxNodePtr::new(t.syntax())),
-            })
+            });
         }
     }
 
     /// Validates that the provided `TypeAlias` is not leaking the privacy of its target type.
-    pub fn validate_target_type_privacy(&self, sink: &mut DiagnosticSink) {
+    pub fn validate_target_type_privacy(&self, sink: &mut DiagnosticSink<'_>) {
         let lower = self.type_alias.lower(self.db);
         let data = self.type_alias.data(self.db.upcast());
         let target_ty = &lower[data.type_ref_id];
@@ -176,12 +176,12 @@ impl<'a> TypeAliasValidator<'a> {
                 type_alias_def: src.map(|t| SyntaxNodePtr::new(t.syntax())),
                 kind: kind.to_string(),
                 name: name.to_string(),
-            })
+            });
         }
     }
 
     /// Validates the provided `TypeAlias` is not cyclic.
-    pub fn validate_acyclic(&self, sink: &mut DiagnosticSink) {
+    pub fn validate_acyclic(&self, sink: &mut DiagnosticSink<'_>) {
         let mut next_alias = Some(self.type_alias);
 
         let mut ids = Vec::new();

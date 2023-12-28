@@ -13,7 +13,7 @@ enum ExprKind {
 
 impl<'d> ExprValidator<'d> {
     /// Validates that all binding access has previously been initialized.
-    pub(super) fn validate_uninitialized_access(&self, sink: &mut DiagnosticSink) {
+    pub(super) fn validate_uninitialized_access(&self, sink: &mut DiagnosticSink<'_>) {
         let mut initialized_patterns = HashSet::new();
 
         // Add all parameter patterns to the set of initialized patterns (they must have been
@@ -33,7 +33,7 @@ impl<'d> ExprValidator<'d> {
     /// Validates that the specified expr does not access unitialized bindings
     fn validate_expr_access(
         &self,
-        sink: &mut DiagnosticSink,
+        sink: &mut DiagnosticSink<'_>,
         initialized_patterns: &mut HashSet<PatId>,
         expr: ExprId,
         expr_side: ExprKind,
@@ -97,7 +97,7 @@ impl<'d> ExprValidator<'d> {
                     };
                 }
             }
-            Expr::UnaryOp { expr, .. } => {
+            Expr::UnaryOp { expr, .. } | Expr::Field { expr, .. } => {
                 self.validate_expr_access(sink, initialized_patterns, *expr, ExprKind::Normal);
             }
             Expr::BinaryOp { lhs, rhs, op } => {
@@ -107,7 +107,7 @@ impl<'d> ExprValidator<'d> {
                     _ => ExprKind::Normal,
                 };
                 self.validate_expr_access(sink, initialized_patterns, *lhs, lhs_expr_kind);
-                self.validate_expr_access(sink, initialized_patterns, *rhs, ExprKind::Normal)
+                self.validate_expr_access(sink, initialized_patterns, *rhs, ExprKind::Normal);
             }
             Expr::Block { statements, tail } => {
                 for statement in statements.iter() {
@@ -139,21 +139,16 @@ impl<'d> ExprValidator<'d> {
                     }
                 }
                 if let Some(tail) = tail {
-                    self.validate_expr_access(sink, initialized_patterns, *tail, ExprKind::Normal)
+                    self.validate_expr_access(sink, initialized_patterns, *tail, ExprKind::Normal);
                 }
             }
-            Expr::Return { expr } => {
+            Expr::Return { expr } | Expr::Break { expr } => {
                 if let Some(expr) = expr {
-                    self.validate_expr_access(sink, initialized_patterns, *expr, ExprKind::Normal)
-                }
-            }
-            Expr::Break { expr } => {
-                if let Some(expr) = expr {
-                    self.validate_expr_access(sink, initialized_patterns, *expr, ExprKind::Normal)
+                    self.validate_expr_access(sink, initialized_patterns, *expr, ExprKind::Normal);
                 }
             }
             Expr::Loop { body } => {
-                self.validate_expr_access(sink, initialized_patterns, *body, ExprKind::Normal)
+                self.validate_expr_access(sink, initialized_patterns, *body, ExprKind::Normal);
             }
             Expr::While { condition, body } => {
                 self.validate_expr_access(sink, initialized_patterns, *condition, ExprKind::Normal);
@@ -177,9 +172,6 @@ impl<'d> ExprValidator<'d> {
                     self.validate_expr_access(sink, initialized_patterns, *expr, ExprKind::Normal);
                 }
             }
-            Expr::Field { expr, .. } => {
-                self.validate_expr_access(sink, initialized_patterns, *expr, ExprKind::Normal);
-            }
             Expr::Index { base, index } => {
                 self.validate_expr_access(sink, initialized_patterns, *base, ExprKind::Normal);
                 self.validate_expr_access(sink, initialized_patterns, *index, ExprKind::Normal);
@@ -189,14 +181,13 @@ impl<'d> ExprValidator<'d> {
                     self.validate_expr_access(sink, initialized_patterns, *expr, ExprKind::Normal);
                 }
             }
-            Expr::Literal(_) => {}
-            Expr::Missing => {}
+            Expr::Literal(_) | Expr::Missing => {}
         }
     }
 
     fn validate_path_access(
         &self,
-        sink: &mut DiagnosticSink,
+        sink: &mut DiagnosticSink<'_>,
         initialized_patterns: &mut HashSet<PatId>,
         resolver: &Resolver,
         path: &Path,
@@ -219,7 +210,7 @@ impl<'d> ExprValidator<'d> {
                         .unwrap()
                         .value
                         .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr()),
-                })
+                });
             }
         }
 

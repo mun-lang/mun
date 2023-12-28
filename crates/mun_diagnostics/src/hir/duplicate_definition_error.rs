@@ -26,13 +26,11 @@ fn syntax_node_signature_range(
     match syntax_node_ptr.kind() {
         SyntaxKind::FUNCTION_DEF => {
             ast::FunctionDef::cast(syntax_node_ptr.to_node(parse.tree().syntax()))
-                .map(|f| f.signature_range())
-                .unwrap_or_else(|| syntax_node_ptr.range())
+                .map_or_else(|| syntax_node_ptr.range(), |f| f.signature_range())
         }
         SyntaxKind::STRUCT_DEF => {
             ast::StructDef::cast(syntax_node_ptr.to_node(parse.tree().syntax()))
-                .map(|s| s.signature_range())
-                .unwrap_or_else(|| syntax_node_ptr.range())
+                .map_or_else(|| syntax_node_ptr.range(), |s| s.signature_range())
         }
         _ => syntax_node_ptr.range(),
     }
@@ -64,8 +62,7 @@ fn syntax_node_identifier_range(
             .to_node(parse.tree().syntax())
             .children()
             .find(|n| n.kind() == SyntaxKind::NAME)
-            .map(|name| name.text_range())
-            .unwrap_or_else(|| syntax_node_ptr.range()),
+            .map_or_else(|| syntax_node_ptr.range(), |name| name.text_range()),
         _ => syntax_node_ptr.range(),
     }
 }

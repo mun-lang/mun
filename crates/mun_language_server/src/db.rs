@@ -31,7 +31,7 @@ pub(crate) struct AnalysisDatabase {
 impl Default for AnalysisDatabase {
     fn default() -> Self {
         let mut db = AnalysisDatabase {
-            storage: Default::default(),
+            storage: salsa::Storage::default(),
         };
         db.set_target(Target::host_target().expect("could not determine host target spec"));
         db
@@ -55,7 +55,7 @@ impl salsa::Database for AnalysisDatabase {
             | salsa::EventKind::WillExecute { .. } => {
                 self.check_canceled();
             }
-            _ => (),
+            salsa::EventKind::WillBlockOn { .. } => (),
         }
     }
 }

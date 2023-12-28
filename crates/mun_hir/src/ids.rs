@@ -6,7 +6,7 @@ use crate::{
 };
 use std::hash::{Hash, Hasher};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ItemLoc<N: ItemTreeNode> {
     pub id: ItemTreeId<N>,
 }
@@ -25,24 +25,12 @@ impl<N: ItemTreeNode> Hash for ItemLoc<N> {
     }
 }
 
-impl<N: ItemTreeNode> Clone for ItemLoc<N> {
-    fn clone(&self) -> ItemLoc<N> {
-        *self
-    }
-}
-
 impl<N: ItemTreeNode> Copy for ItemLoc<N> {}
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct AssocItemLoc<N: ItemTreeNode> {
     pub module: ModuleId,
     pub id: ItemTreeId<N>,
-}
-
-impl<N: ItemTreeNode> Clone for AssocItemLoc<N> {
-    fn clone(&self) -> Self {
-        *self
-    }
 }
 
 impl<N: ItemTreeNode> Copy for AssocItemLoc<N> {}

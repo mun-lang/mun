@@ -31,13 +31,13 @@ impl ArrayInfo {
         }
 
         Ok(ManuallyDrop::new(Arc::from_raw(
-            self.1 as *const TypeDataStore,
+            self.1.cast::<TypeDataStore>(),
         )))
     }
 
     /// Returns the struct info associated with the Type
     unsafe fn inner(&self) -> Result<&ArrayData, String> {
-        match (self.0 as *const ArrayData).as_ref() {
+        match self.0.cast::<ArrayData>().as_ref() {
             Some(store) => Ok(store),
             None => Err(String::from("null pointer")),
         }

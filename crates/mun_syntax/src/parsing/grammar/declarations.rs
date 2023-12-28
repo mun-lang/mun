@@ -1,16 +1,20 @@
-use super::*;
+use super::{
+    adt, error_block, expressions, name, name_recovery, opt_visibility, params, paths, types,
+    Marker, Parser, TokenSet, EOF, ERROR, EXTERN, FUNCTION_DEF, RENAME, RET_TYPE, USE, USE_TREE,
+    USE_TREE_LIST,
+};
 use crate::{parsing::grammar::paths::is_use_path_start, T};
 
 pub(super) const DECLARATION_RECOVERY_SET: TokenSet =
     TokenSet::new(&[T![fn], T![pub], T![struct], T![use], T![;]]);
 
-pub(super) fn mod_contents(p: &mut Parser) {
+pub(super) fn mod_contents(p: &mut Parser<'_>) {
     while !p.at(EOF) {
         declaration(p);
     }
 }
 
-pub(super) fn declaration(p: &mut Parser) {
+pub(super) fn declaration(p: &mut Parser<'_>) {
     let m = p.start();
     let m = match maybe_declaration(p, m) {
         Ok(()) => return,
@@ -19,7 +23,7 @@ pub(super) fn declaration(p: &mut Parser) {
 
     m.abandon(p);
     if p.at(T!['{']) {
-        error_block(p, "expected a declaration")
+        error_block(p, "expected a declaration");
     } else if p.at(T!['}']) {
         let e = p.start();
         p.error("unmatched }");
@@ -32,7 +36,7 @@ pub(super) fn declaration(p: &mut Parser) {
     }
 }
 
-pub(super) fn maybe_declaration(p: &mut Parser, m: Marker) -> Result<(), Marker> {
+pub(super) fn maybe_declaration(p: &mut Parser<'_>, m: Marker) -> Result<(), Marker> {
     opt_visibility(p);
 
     let m = match declarations_without_modifiers(p, m) {
@@ -54,14 +58,14 @@ pub(super) fn maybe_declaration(p: &mut Parser, m: Marker) -> Result<(), Marker>
     Ok(())
 }
 
-fn abi(p: &mut Parser) {
+fn abi(p: &mut Parser<'_>) {
     assert!(p.at(T![extern]));
     let abi = p.start();
     p.bump(T![extern]);
     abi.complete(p, EXTERN);
 }
 
-fn declarations_without_modifiers(p: &mut Parser, m: Marker) -> Result<(), Marker> {
+fn declarations_without_modifiers(p: &mut Parser<'_>, m: Marker) -> Result<(), Marker> {
     match p.current() {
         T![use] => {
             use_(p, m);
@@ -77,7 +81,7 @@ fn declarations_without_modifiers(p: &mut Parser, m: Marker) -> Result<(), Marke
     Ok(())
 }
 
-pub(super) fn fn_def(p: &mut Parser) {
+pub(super) fn fn_def(p: &mut Parser<'_>) {
     assert!(p.at(T![fn]));
     p.bump(T![fn]);
 
@@ -86,7 +90,7 @@ pub(super) fn fn_def(p: &mut Parser) {
     if p.at(T!['(']) {
         params::param_list(p);
     } else {
-        p.error("expected function arguments")
+        p.error("expected function arguments");
     }
 
     opt_fn_ret_type(p);
@@ -98,7 +102,7 @@ pub(super) fn fn_def(p: &mut Parser) {
     }
 }
 
-fn opt_fn_ret_type(p: &mut Parser) -> bool {
+fn opt_fn_ret_type(p: &mut Parser<'_>) -> bool {
     if p.at(T![->]) {
         let m = p.start();
         p.bump(T![->]);
@@ -110,7 +114,7 @@ fn opt_fn_ret_type(p: &mut Parser) -> bool {
     }
 }
 
-fn use_(p: &mut Parser, m: Marker) {
+fn use_(p: &mut Parser<'_>, m: Marker) {
     assert!(p.at(T![use]));
     p.bump(T![use]);
     use_tree(p, true);
@@ -119,7 +123,7 @@ fn use_(p: &mut Parser, m: Marker) {
 }
 
 /// Parses a use "tree", such as `foo::bar` in `use foo::bar;`.
-fn use_tree(p: &mut Parser, top_level: bool) {
+fn use_tree(p: &mut Parser<'_>, top_level: bool) {
     let m = p.start();
 
     match p.current() {
@@ -161,7 +165,7 @@ fn use_tree(p: &mut Parser, top_level: bool) {
     m.complete(p, USE_TREE);
 }
 
-fn use_tree_list(p: &mut Parser) {
+fn use_tree_list(p: &mut Parser<'_>) {
     assert!(p.at(T!['{']));
     let m = p.start();
     p.bump(T!['{']);
@@ -175,7 +179,7 @@ fn use_tree_list(p: &mut Parser) {
     m.complete(p, USE_TREE_LIST);
 }
 
-fn opt_rename(p: &mut Parser) {
+fn opt_rename(p: &mut Parser<'_>) {
     if p.at(T![as]) {
         let m = p.start();
         p.bump(T![as]);

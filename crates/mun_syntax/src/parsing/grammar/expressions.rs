@@ -1,4 +1,11 @@
-use super::*;
+use super::{
+    error_block, expressions, name_ref_or_index, paths, patterns, types, BlockLike,
+    CompletedMarker, Marker, Parser, SyntaxKind, TokenSet, ARG_LIST, ARRAY_EXPR, BIN_EXPR,
+    BLOCK_EXPR, BREAK_EXPR, CALL_EXPR, CONDITION, EOF, ERROR, EXPR_STMT, FIELD_EXPR, FLOAT_NUMBER,
+    IDENT, IF_EXPR, INDEX, INDEX_EXPR, INT_NUMBER, LET_STMT, LITERAL, LOOP_EXPR, PAREN_EXPR,
+    PATH_EXPR, PATH_TYPE, PREFIX_EXPR, RECORD_FIELD, RECORD_FIELD_LIST, RECORD_LIT, RETURN_EXPR,
+    STRING, WHILE_EXPR,
+};
 use crate::parsing::grammar::paths::PATH_FIRST;
 
 pub(crate) const LITERAL_FIRST: TokenSet =
@@ -34,7 +41,7 @@ struct Restrictions {
     forbid_structs: bool,
 }
 
-pub(crate) fn expr_block_contents(p: &mut Parser) {
+pub(crate) fn expr_block_contents(p: &mut Parser<'_>) {
     while !p.at(EOF) && !p.at(T!['}']) {
         if p.eat(T![;]) {
             continue;
@@ -45,7 +52,7 @@ pub(crate) fn expr_block_contents(p: &mut Parser) {
 }
 
 /// Parses a block statement
-pub(crate) fn block(p: &mut Parser) {
+pub(crate) fn block(p: &mut Parser<'_>) {
     if !p.at(T!['{']) {
         p.error("expected a block");
         return;
@@ -53,7 +60,7 @@ pub(crate) fn block(p: &mut Parser) {
     block_expr(p);
 }
 
-fn block_expr(p: &mut Parser) -> CompletedMarker {
+fn block_expr(p: &mut Parser<'_>) -> CompletedMarker {
     assert!(p.at(T!['{']));
     let m = p.start();
     p.bump(T!['{']);
@@ -63,7 +70,7 @@ fn block_expr(p: &mut Parser) -> CompletedMarker {
 }
 
 /// Parses a general statement: (let, expr, etc.)
-pub(super) fn stmt(p: &mut Parser) {
+pub(super) fn stmt(p: &mut Parser<'_>) {
     let m = p.start();
 
     // Encounters let keyword, so we know it's a let stmt
@@ -73,7 +80,7 @@ pub(super) fn stmt(p: &mut Parser) {
     }
 
     let (cm, _blocklike) = expr_stmt(p);
-    let kind = cm.as_ref().map(|cm| cm.kind()).unwrap_or(ERROR);
+    let kind = cm.as_ref().map_or(ERROR, CompletedMarker::kind);
 
     if p.at(T!['}']) {
         if let Some(cm) = cm {
@@ -88,7 +95,7 @@ pub(super) fn stmt(p: &mut Parser) {
     }
 }
 
-fn let_stmt(p: &mut Parser, m: Marker) {
+fn let_stmt(p: &mut Parser<'_>, m: Marker) {
     assert!(p.at(T![let]));
     p.bump(T![let]);
     patterns::pattern(p);
@@ -103,28 +110,28 @@ fn let_stmt(p: &mut Parser, m: Marker) {
     m.complete(p, LET_STMT);
 }
 
-pub(super) fn expr(p: &mut Parser) {
+pub(super) fn expr(p: &mut Parser<'_>) {
     let r = Restrictions {
         forbid_structs: false,
     };
     expr_bp(p, r, 1);
 }
 
-fn expr_no_struct(p: &mut Parser) {
+fn expr_no_struct(p: &mut Parser<'_>) {
     let r = Restrictions {
         forbid_structs: true,
     };
     expr_bp(p, r, 1);
 }
 
-fn expr_stmt(p: &mut Parser) -> (Option<CompletedMarker>, BlockLike) {
+fn expr_stmt(p: &mut Parser<'_>) -> (Option<CompletedMarker>, BlockLike) {
     let r = Restrictions {
         forbid_structs: false,
     };
     expr_bp(p, r, 1)
 }
 
-fn expr_bp(p: &mut Parser, r: Restrictions, bp: u8) -> (Option<CompletedMarker>, BlockLike) {
+fn expr_bp(p: &mut Parser<'_>, r: Restrictions, bp: u8) -> (Option<CompletedMarker>, BlockLike) {
     // Parse left hand side of the expression
     let mut lhs = match lhs(p, r) {
         Some((lhs, blocklike)) => {
@@ -152,7 +159,7 @@ fn expr_bp(p: &mut Parser, r: Restrictions, bp: u8) -> (Option<CompletedMarker>,
     (Some(lhs), BlockLike::NotBlock)
 }
 
-fn current_op(p: &Parser) -> (u8, SyntaxKind) {
+fn current_op(p: &Parser<'_>) -> (u8, SyntaxKind) {
     match p.current() {
         T![+] if p.at(T![+=]) => (1, T![+=]),
         T![+] => (10, T![+]),
@@ -187,7 +194,7 @@ fn current_op(p: &Parser) -> (u8, SyntaxKind) {
     }
 }
 
-fn lhs(p: &mut Parser, r: Restrictions) -> Option<(CompletedMarker, BlockLike)> {
+fn lhs(p: &mut Parser<'_>, r: Restrictions) -> Option<(CompletedMarker, BlockLike)> {
     let m;
     let kind = match p.current() {
         T![-] | T![!] => {
@@ -205,7 +212,7 @@ fn lhs(p: &mut Parser, r: Restrictions) -> Option<(CompletedMarker, BlockLike)> 
 }
 
 fn postfix_expr(
-    p: &mut Parser,
+    p: &mut Parser<'_>,
     mut lhs: CompletedMarker,
     // Calls are disallowed if the type is a block and we prefer statements because the call cannot be disambiguated from a tuple
     // E.g. `while true {break}();` is parsed as
@@ -222,19 +229,19 @@ fn postfix_expr(
             _ => break,
         };
         allow_calls = true;
-        blocklike = BlockLike::NotBlock
+        blocklike = BlockLike::NotBlock;
     }
     (lhs, blocklike)
 }
 
-fn call_expr(p: &mut Parser, lhs: CompletedMarker) -> CompletedMarker {
+fn call_expr(p: &mut Parser<'_>, lhs: CompletedMarker) -> CompletedMarker {
     assert!(p.at(T!['(']));
     let m = lhs.precede(p);
     arg_list(p);
     m.complete(p, CALL_EXPR)
 }
 
-fn index_expr(p: &mut Parser, lhs: CompletedMarker) -> CompletedMarker {
+fn index_expr(p: &mut Parser<'_>, lhs: CompletedMarker) -> CompletedMarker {
     assert!(p.at(T!['[']));
     let m = lhs.precede(p);
     p.bump(T!['[']);
@@ -243,7 +250,7 @@ fn index_expr(p: &mut Parser, lhs: CompletedMarker) -> CompletedMarker {
     m.complete(p, INDEX_EXPR)
 }
 
-fn arg_list(p: &mut Parser) {
+fn arg_list(p: &mut Parser<'_>) {
     assert!(p.at(T!['(']));
     let m = p.start();
     p.bump(T!['(']);
@@ -262,7 +269,7 @@ fn arg_list(p: &mut Parser) {
     m.complete(p, ARG_LIST);
 }
 
-fn postfix_dot_expr(p: &mut Parser, lhs: CompletedMarker) -> CompletedMarker {
+fn postfix_dot_expr(p: &mut Parser<'_>, lhs: CompletedMarker) -> CompletedMarker {
     assert!(p.at(T![.]));
     if p.nth(1) == IDENT && p.nth(2) == T!['('] {
         // TODO: Implement method calls here
@@ -272,13 +279,13 @@ fn postfix_dot_expr(p: &mut Parser, lhs: CompletedMarker) -> CompletedMarker {
     field_expr(p, lhs)
 }
 
-fn field_expr(p: &mut Parser, lhs: CompletedMarker) -> CompletedMarker {
+fn field_expr(p: &mut Parser<'_>, lhs: CompletedMarker) -> CompletedMarker {
     assert!(p.at(T![.]) || p.at(INDEX));
     let m = lhs.precede(p);
     if p.at(T![.]) {
         p.bump(T![.]);
         if p.at(IDENT) || p.at(INT_NUMBER) {
-            name_ref_or_index(p)
+            name_ref_or_index(p);
         } else {
             p.error("expected field name or number");
         }
@@ -290,7 +297,7 @@ fn field_expr(p: &mut Parser, lhs: CompletedMarker) -> CompletedMarker {
     m.complete(p, FIELD_EXPR)
 }
 
-fn atom_expr(p: &mut Parser, r: Restrictions) -> Option<(CompletedMarker, BlockLike)> {
+fn atom_expr(p: &mut Parser<'_>, r: Restrictions) -> Option<(CompletedMarker, BlockLike)> {
     if let Some(m) = literal(p) {
         return Some((m, BlockLike::NotBlock));
     }
@@ -320,7 +327,7 @@ fn atom_expr(p: &mut Parser, r: Restrictions) -> Option<(CompletedMarker, BlockL
     Some((marker, blocklike))
 }
 
-fn path_expr(p: &mut Parser, r: Restrictions) -> (CompletedMarker, BlockLike) {
+fn path_expr(p: &mut Parser<'_>, r: Restrictions) -> (CompletedMarker, BlockLike) {
     assert!(paths::is_path_start(p));
     let m = p.start();
     paths::expr_path(p);
@@ -334,7 +341,7 @@ fn path_expr(p: &mut Parser, r: Restrictions) -> (CompletedMarker, BlockLike) {
     }
 }
 
-fn literal(p: &mut Parser) -> Option<CompletedMarker> {
+fn literal(p: &mut Parser<'_>) -> Option<CompletedMarker> {
     if !p.at_ts(LITERAL_FIRST) {
         return None;
     }
@@ -343,7 +350,7 @@ fn literal(p: &mut Parser) -> Option<CompletedMarker> {
     Some(m.complete(p, LITERAL))
 }
 
-fn paren_expr(p: &mut Parser) -> CompletedMarker {
+fn paren_expr(p: &mut Parser<'_>) -> CompletedMarker {
     assert!(p.at(T!['(']));
     let m = p.start();
     p.bump(T!['(']);
@@ -352,7 +359,7 @@ fn paren_expr(p: &mut Parser) -> CompletedMarker {
     m.complete(p, PAREN_EXPR)
 }
 
-fn if_expr(p: &mut Parser) -> CompletedMarker {
+fn if_expr(p: &mut Parser<'_>) -> CompletedMarker {
     assert!(p.at(T![if]));
     let m = p.start();
     p.bump(T![if]);
@@ -369,7 +376,7 @@ fn if_expr(p: &mut Parser) -> CompletedMarker {
     m.complete(p, IF_EXPR)
 }
 
-fn loop_expr(p: &mut Parser) -> CompletedMarker {
+fn loop_expr(p: &mut Parser<'_>) -> CompletedMarker {
     assert!(p.at(T![loop]));
     let m = p.start();
     p.bump(T![loop]);
@@ -377,13 +384,13 @@ fn loop_expr(p: &mut Parser) -> CompletedMarker {
     m.complete(p, LOOP_EXPR)
 }
 
-fn cond(p: &mut Parser) {
+fn cond(p: &mut Parser<'_>) {
     let m = p.start();
     expr_no_struct(p);
     m.complete(p, CONDITION);
 }
 
-fn ret_expr(p: &mut Parser) -> CompletedMarker {
+fn ret_expr(p: &mut Parser<'_>) -> CompletedMarker {
     assert!(p.at(T![return]));
     let m = p.start();
     p.bump(T![return]);
@@ -393,7 +400,7 @@ fn ret_expr(p: &mut Parser) -> CompletedMarker {
     m.complete(p, RETURN_EXPR)
 }
 
-fn break_expr(p: &mut Parser, r: Restrictions) -> CompletedMarker {
+fn break_expr(p: &mut Parser<'_>, r: Restrictions) -> CompletedMarker {
     assert!(p.at(T![break]));
     let m = p.start();
     p.bump(T![break]);
@@ -403,7 +410,7 @@ fn break_expr(p: &mut Parser, r: Restrictions) -> CompletedMarker {
     m.complete(p, BREAK_EXPR)
 }
 
-fn while_expr(p: &mut Parser) -> CompletedMarker {
+fn while_expr(p: &mut Parser<'_>) -> CompletedMarker {
     assert!(p.at(T![while]));
     let m = p.start();
     p.bump(T![while]);
@@ -412,7 +419,7 @@ fn while_expr(p: &mut Parser) -> CompletedMarker {
     m.complete(p, WHILE_EXPR)
 }
 
-fn record_field_list(p: &mut Parser) {
+fn record_field_list(p: &mut Parser<'_>) {
     assert!(p.at(T!['{']));
     let m = p.start();
     p.bump(T!['{']);
@@ -437,7 +444,7 @@ fn record_field_list(p: &mut Parser) {
     m.complete(p, RECORD_FIELD_LIST);
 }
 
-fn array_expr(p: &mut Parser) -> CompletedMarker {
+fn array_expr(p: &mut Parser<'_>) -> CompletedMarker {
     assert!(p.at(T!['[']));
     let m = p.start();
 

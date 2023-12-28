@@ -4,7 +4,7 @@ use crate::{
     diff::{compute_struct_diff, FieldDiff, StructDiff},
     gc::GcPtr,
     r#type::Type,
-    ArrayType, TypeKind,
+    ArrayType, Field, TypeKind,
 };
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
@@ -109,7 +109,7 @@ impl Mapping {
                     insertions.insert(ty.clone());
                 }
                 StructDiff::Move { old_ty, new_ty, .. } => {
-                    identical.push((old_ty.clone(), new_ty.clone()))
+                    identical.push((old_ty.clone(), new_ty.clone()));
                 }
             }
         }
@@ -222,7 +222,7 @@ pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) ->
             } => old_index.map(|old_index| {
                 let old_offset = old_fields
                     .get(old_index)
-                    .map(|field| field.offset())
+                    .map(Field::offset)
                     .expect("The old field must exist.");
                 (*new_index, resolve_edit(old_type, new_type, old_offset))
             }),
@@ -243,7 +243,7 @@ pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) ->
             } => {
                 let old_offset = old_fields
                     .get(*old_index)
-                    .map(|field| field.offset())
+                    .map(Field::offset)
                     .expect("Old field must exist.");
 
                 Some((
@@ -276,7 +276,7 @@ pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) ->
         {
             let old_offset = old_fields
                 .get(*new_index)
-                .map(|field| field.offset())
+                .map(Field::offset)
                 .expect("The old field must exist.");
 
             let action = mapping.get_mut(*new_index).unwrap();
@@ -364,7 +364,7 @@ fn resolve_primitive_to_primitive_edit(
 
 fn resolve_primitive_to_array_edit(
     old_ty: &Type,
-    new_array: &ArrayType,
+    new_array: &ArrayType<'_>,
     old_offset: usize,
 ) -> Action {
     Action::ArrayFromValue {
@@ -438,7 +438,11 @@ pub fn resolve_struct_to_struct_edit(old_ty: &Type, new_ty: &Type, old_offset: u
     }
 }
 
-fn resolve_struct_to_array_edit(old_ty: &Type, new_array: &ArrayType, old_offset: usize) -> Action {
+fn resolve_struct_to_array_edit(
+    old_ty: &Type,
+    new_array: &ArrayType<'_>,
+    old_offset: usize,
+) -> Action {
     Action::ArrayFromValue {
         element_action: Box::new(resolve_edit(old_ty, &new_array.element_type(), 0)),
         old_offset,
@@ -450,7 +454,7 @@ fn resolve_pointer_edit(_old_ty: &Type, _new_ty: &Type) -> Action {
     unreachable!()
 }
 
-fn resolve_array_edit(old_array: &ArrayType, new_ty: &Type, old_offset: usize) -> Action {
+fn resolve_array_edit(old_array: &ArrayType<'_>, new_ty: &Type, old_offset: usize) -> Action {
     match &new_ty.kind() {
         TypeKind::Primitive(_) => resolve_array_to_primitive_edit(old_array, new_ty, old_offset),
         TypeKind::Struct(_) => resolve_array_to_struct_edit(old_array, new_ty, old_offset),
@@ -460,7 +464,7 @@ fn resolve_array_edit(old_array: &ArrayType, new_ty: &Type, old_offset: usize) -
 }
 
 fn resolve_array_to_primitive_edit(
-    old_array: &ArrayType,
+    old_array: &ArrayType<'_>,
     new_ty: &Type,
     old_offset: usize,
 ) -> Action {
@@ -470,7 +474,11 @@ fn resolve_array_to_primitive_edit(
     }
 }
 
-fn resolve_array_to_struct_edit(old_array: &ArrayType, new_ty: &Type, old_offset: usize) -> Action {
+fn resolve_array_to_struct_edit(
+    old_array: &ArrayType<'_>,
+    new_ty: &Type,
+    old_offset: usize,
+) -> Action {
     Action::ElementFromArray {
         old_offset,
         element_action: Box::new(resolve_edit(&old_array.element_type(), new_ty, 0)),
@@ -478,8 +486,8 @@ fn resolve_array_to_struct_edit(old_array: &ArrayType, new_ty: &Type, old_offset
 }
 
 fn resolve_array_to_array_edit(
-    old_array: &ArrayType,
-    new_array: &ArrayType,
+    old_array: &ArrayType<'_>,
+    new_array: &ArrayType<'_>,
     old_offset: usize,
 ) -> Action {
     let old_element_type = old_array.element_type();

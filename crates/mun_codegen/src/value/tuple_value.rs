@@ -5,13 +5,13 @@ use super::{
 
 macro_rules! tuple_impls {
     ( $( $name:ident )* ) => {
-        /// Every tuple that contains values that can be converted to BasicValueEnum can be
+        /// Every tuple that contains values that can be converted to [`BasicValueEnum`] can be
         /// represented by a tuple
         impl<'ink, $($name: AsValueInto<'ink, inkwell::values::BasicValueEnum<'ink>>),*> ConcreteValueType<'ink> for ($($name,)*) {
             type Value = inkwell::values::StructValue<'ink>;
         }
 
-        /// Every tuple that contains values that can be converted to BasicValueEnum and which are
+        /// Every tuple that contains values that can be converted to [`BasicValueEnum`] and which are
         /// sized, are also sized.
         impl<'ink, $($name: AsValueInto<'ink, inkwell::values::BasicValueEnum<'ink>> + SizedValueType<'ink>),*> SizedValueType<'ink> for ($($name,)*)
         where

@@ -6,7 +6,7 @@ use crate::{
 };
 use std::sync::Arc;
 
-/// This function tests that the ModuleData of a module does not change if the contents of a function
+/// This function tests that the `ModuleData` of a module does not change if the contents of a function
 /// is changed.
 #[test]
 fn check_package_defs_does_not_change() {
@@ -25,7 +25,7 @@ fn check_package_defs_does_not_change() {
         assert!(
             format!("{events:?}").contains("package_defs"),
             "{events:#?}"
-        )
+        );
     }
     db.set_file_text(
         file_id,
@@ -45,6 +45,6 @@ fn check_package_defs_does_not_change() {
         assert!(
             !format!("{events:?}").contains("package_defs"),
             "{events:#?}"
-        )
+        );
     }
 }

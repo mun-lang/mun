@@ -26,7 +26,7 @@ use std::{
 /// ```
 ///
 /// The dispatch table is used to add a patchable indirection when calling a function from IR. The
-/// DispatchTable is exposed to the Runtime which fills the structure with valid pointers to
+/// `DispatchTable` is exposed to the Runtime which fills the structure with valid pointers to
 /// functions. This basically enables all hot reloading within Mun.
 #[derive(Debug, Eq, PartialEq)]
 pub struct DispatchTable<'ink> {
@@ -55,7 +55,7 @@ pub struct FunctionPrototype {
 }
 
 /// A `DispatchableFunction` is an entry in the dispatch table that may or may not be pointing to an
-/// existing mun_hir function.
+/// existing `mun_hir` function.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct DispatchableFunction {
     pub prototype: FunctionPrototype,
@@ -73,7 +73,7 @@ impl<'ink> DispatchTable<'ink> {
         &self.entries
     }
 
-    /// Generate a function lookup through the DispatchTable, equivalent to something along the
+    /// Generate a function lookup through the `DispatchTable`, equivalent to something along the
     /// lines of: `dispatchTable[i]`, where i is the index of the function and `dispatchTable` is a
     /// struct
     pub fn gen_function_lookup(
@@ -91,10 +91,10 @@ impl<'ink> DispatchTable<'ink> {
             .get(&function)
             .expect("unknown function");
 
-        self.gen_function_lookup_by_index(table_ref, builder, &function_name, index)
+        Self::gen_function_lookup_by_index(table_ref, builder, &function_name, index)
     }
 
-    /// Generates a function lookup through the DispatchTable, equivalent to something along the
+    /// Generates a function lookup through the `DispatchTable`, equivalent to something along the
     /// lines of: `dispatchTable[i]`, where i is the index of the intrinsic and `dispatchTable` is a
     /// struct
     pub fn gen_intrinsic_lookup(
@@ -111,13 +111,12 @@ impl<'ink> DispatchTable<'ink> {
             .get(&prototype)
             .expect("unknown function");
 
-        self.gen_function_lookup_by_index(table_ref, builder, &prototype.name, index)
+        Self::gen_function_lookup_by_index(table_ref, builder, &prototype.name, index)
     }
 
-    /// Generates a function lookup through the DispatchTable, equivalent to something along the
+    /// Generates a function lookup through the `DispatchTable`, equivalent to something along the
     /// lines of: `dispatchTable[i]`, where i is the index and `dispatchTable` is a struct
     fn gen_function_lookup_by_index(
-        &self,
         table_ref: Option<inkwell::values::GlobalValue<'ink>>,
         builder: &inkwell::builder::Builder<'ink>,
         function_name: &str,
@@ -204,9 +203,9 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
             context,
             module,
             target_data,
-            function_to_idx: Default::default(),
-            prototype_to_idx: Default::default(),
-            entries: Default::default(),
+            function_to_idx: HashMap::default(),
+            prototype_to_idx: HashMap::default(),
+            entries: Vec::default(),
             table_ref: None,
             table_type: context.opaque_struct_type("DispatchTable"),
             hir_types,
@@ -240,7 +239,7 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
             self.table_ref = Some(
                 self.module
                     .add_global(self.table_type, None, "dispatchTable"),
-            )
+            );
         }
     }
 
@@ -285,10 +284,10 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
                 .iter()
                 .map(|arg| self.hir_types.type_id(arg))
                 .collect();
-            let ret_type = if !sig.ret().is_empty() {
-                self.hir_types.type_id(sig.ret())
-            } else {
+            let ret_type = if sig.ret().is_empty() {
                 <()>::type_id().clone()
+            } else {
+                self.hir_types.type_id(sig.ret())
             };
 
             let prototype = FunctionPrototype {
@@ -315,13 +314,13 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
         self.collect_expr(body.body_expr(), body, infer);
     }
 
-    /// Builds the final DispatchTable with all *called* functions from within the module
+    /// Builds the final `DispatchTable` with all *called* functions from within the module
     /// # Parameters
     /// * **functions**: Mapping of *defined* Mun functions to their respective IR values.
     /// Returns the `DispatchTable` and a set of dependencies for the module.
     pub fn build(self) -> (DispatchTable<'ink>, FxHashSet<mun_hir::Module>) {
         // Construct the table body from all the entries in the dispatch table
-        let table_body: Vec<BasicTypeEnum> = self
+        let table_body: Vec<BasicTypeEnum<'ink>> = self
             .entries
             .iter()
             .map(|f| f.ir_type.ptr_type(inkwell::AddressSpace::default()).into())
@@ -332,7 +331,7 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
 
         // Create a default initializer for function that are already known
         if let Some(table_ref) = self.table_ref {
-            let values: Vec<BasicValueEnum> = self
+            let values: Vec<BasicValueEnum<'ink>> = self
                 .entries
                 .iter()
                 .enumerate()

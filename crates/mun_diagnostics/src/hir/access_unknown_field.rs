@@ -48,8 +48,7 @@ impl<'db, 'diag, DB: mun_hir::HirDatabase> AccessUnknownField<'db, 'diag, DB> {
         let parse = db.parse(diag.file);
 
         let location = ast::FieldExpr::cast(diag.expr.to_node(&parse.syntax_node()))
-            .map(|f| f.field_range())
-            .unwrap_or_else(|| diag.highlight_range());
+            .map_or_else(|| diag.highlight_range(), |f| f.field_range());
 
         AccessUnknownField { db, diag, location }
     }

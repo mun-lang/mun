@@ -36,7 +36,7 @@ impl<'t> From<RustStructType<'t>> for StructInfo {
 impl StructInfo {
     /// Returns the struct info associated with the Type
     unsafe fn inner(&self) -> Result<&StructData, String> {
-        match (self.0 as *const StructData).as_ref() {
+        match self.0.cast::<StructData>().as_ref() {
             Some(store) => Ok(store),
             None => Err(String::from("null pointer")),
         }
@@ -113,7 +113,7 @@ pub unsafe extern "C" fn mun_fields_find_by_name(
     };
     let has_field = try_deref_mut!(has_field);
     let field = try_deref_mut!(field);
-    let name = std::str::from_utf8_unchecked(slice::from_raw_parts(name as *const u8, len));
+    let name = std::str::from_utf8_unchecked(slice::from_raw_parts(name.cast::<u8>(), len));
 
     *has_field = false;
 
@@ -168,12 +168,11 @@ pub unsafe extern "C" fn mun_struct_type_fields(
     let fields = try_deref_mut!(fields);
 
     // Get all fields
-    let mut fields_vec = Vec::from_iter(
-        inner
-            .fields
-            .iter()
-            .map(|field| Field((field as *const FieldData).cast(), ty.1)),
-    );
+    let mut fields_vec = inner
+        .fields
+        .iter()
+        .map(|field| Field((field as *const FieldData).cast(), ty.1))
+        .collect::<Vec<_>>();
 
     // Ensures that the length and the capacity are the same
     fields_vec.shrink_to_fit();
@@ -209,13 +208,13 @@ impl Field {
         }
 
         Ok(ManuallyDrop::new(Arc::from_raw(
-            self.1 as *const TypeDataStore,
+            self.1.cast::<TypeDataStore>(),
         )))
     }
 
     /// Returns the field info associated with this instance
     unsafe fn inner(&self) -> Result<&FieldData, String> {
-        match (self.0 as *const FieldData).as_ref() {
+        match self.0.cast::<FieldData>().as_ref() {
             Some(info) => Ok(info),
             None => Err(String::from("null pointer")),
         }

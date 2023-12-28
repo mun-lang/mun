@@ -58,7 +58,7 @@ fn array_type() {
           WHITESPACE@48..53 "\n    "
           R_CURLY@53..54 "}"
     "#
-    )
+    );
 }
 
 #[test]
@@ -213,7 +213,7 @@ fn index_expr() {
           WHITESPACE@136..141 "\n    "
           R_CURLY@141..142 "}"
     "#
-    )
+    );
 }
 
 #[test]
@@ -339,7 +339,7 @@ fn array_expr() {
           WHITESPACE@129..134 "\n    "
           R_CURLY@134..135 "}"
     "#
-    )
+    );
 }
 
 #[test]

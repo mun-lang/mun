@@ -82,8 +82,8 @@ fn collect_expr<'ink>(
             expr_id,
             body,
             infer,
-        )
-    })
+        );
+    });
 }
 
 /// Collects all intrinsics from the specified `body`.

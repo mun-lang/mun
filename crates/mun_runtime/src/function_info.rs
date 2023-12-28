@@ -165,7 +165,7 @@ impl FunctionDefinitionBuilder {
 
     /// Adds arguments
     pub fn add_arguments(mut self, iter: impl IntoIterator<Item = Type>) -> Self {
-        for arg in iter.into_iter() {
+        for arg in iter {
             self.arg_types.push(arg);
         }
         self

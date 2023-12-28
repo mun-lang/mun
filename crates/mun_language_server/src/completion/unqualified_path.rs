@@ -8,7 +8,7 @@ use super::{CompletionContext, Completions};
 ///    foo_$0
 /// }
 /// ```
-pub(super) fn complete_unqualified_path(result: &mut Completions, ctx: &CompletionContext) {
+pub(super) fn complete_unqualified_path(result: &mut Completions, ctx: &CompletionContext<'_>) {
     // Only complete trivial paths (e.g. foo, not ::foo)
     if !ctx.is_trivial_path {
         return;
@@ -35,6 +35,6 @@ mod tests {
         }
         "#,
             Some(CompletionKind::Reference)
-        ))
+        ));
     }
 }

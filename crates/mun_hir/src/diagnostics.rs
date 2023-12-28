@@ -4,9 +4,9 @@ use crate::{FileId, HirDatabase, IntTy, Name, Ty};
 use mun_syntax::{ast, AstPtr, SmolStr, SyntaxNode, SyntaxNodePtr, TextRange};
 use std::{any::Any, fmt};
 
-/// Diagnostic defines mun_hir API for errors and warnings.
+/// Diagnostic defines `mun_hir` API for errors and warnings.
 ///
-/// It is used as a `dyn` object, which you can downcast to concrete diagnostics. DiagnosticSink
+/// It is used as a `dyn` object, which you can downcast to concrete diagnostics. [`DiagnosticSink`]
 /// are structured, meaning that they include rich information which can be used by IDE to create
 /// fixes.
 ///
@@ -73,7 +73,7 @@ impl<'a> DiagnosticSink<'a> {
                 return;
             }
         }
-        (self.default_callback)(d)
+        (self.default_callback)(d);
     }
 }
 
@@ -651,7 +651,7 @@ impl Diagnostic for IntLiteralTooLarge {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        self.literal.clone().map(|ptr| ptr.into())
+        self.literal.clone().map(Into::into)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -672,7 +672,7 @@ impl Diagnostic for LiteralOutOfRange {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        self.literal.clone().map(|ptr| ptr.into())
+        self.literal.clone().map(Into::into)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -693,7 +693,7 @@ impl Diagnostic for InvalidLiteralSuffix {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        self.literal.clone().map(|ptr| ptr.into())
+        self.literal.clone().map(Into::into)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -720,7 +720,7 @@ impl Diagnostic for InvalidFloatingPointLiteral {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        self.literal.clone().map(|ptr| ptr.into())
+        self.literal.clone().map(Into::into)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -740,7 +740,7 @@ impl Diagnostic for InvalidLiteral {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        self.literal.clone().map(|ptr| ptr.into())
+        self.literal.clone().map(Into::into)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {

@@ -121,22 +121,19 @@ impl TargetDataLayout {
                 ["e"] => dl.endian = Endian::Little,
                 ["E"] => dl.endian = Endian::Big,
                 [p] if p.starts_with('P') => {
-                    dl.instruction_address_space = parse_address_space(&p[1..], "P")?
+                    dl.instruction_address_space = parse_address_space(&p[1..], "P")?;
                 }
                 ["a", ref a @ ..] => dl.aggregate_align = align(a, "a")?,
                 ["f32", ref a @ ..] => dl.f32_align = align(a, "f32")?,
                 ["f64", ref a @ ..] => dl.f64_align = align(a, "f64")?,
-                [p @ "p", s, ref a @ ..] | [p @ "p0", s, ref a @ ..] => {
+                [p @ ("p" | "p0"), s, ref a @ ..] => {
                     dl.pointer_size = size(s, p)?;
                     dl.pointer_align = align(a, p)?;
                 }
                 [s, ref a @ ..] if s.starts_with('i') => {
-                    let bits = match s[1..].parse::<u64>() {
-                        Ok(bits) => bits,
-                        Err(_) => {
-                            size(&s[1..], "i")?; // For the user error.
-                            continue;
-                        }
+                    let Ok(bits) = s[1..].parse::<u64>() else {
+                        size(&s[1..], "i")?; // For the user error.
+                        continue;
                     };
                     let a = align(a, s)?;
                     match bits {
@@ -211,7 +208,7 @@ impl TargetDataLayout {
     // }
 
     pub fn ptr_sized_integer(&self) -> Integer {
-        use Integer::*;
+        use Integer::{I16, I32, I64};
         match self.pointer_size.bits() {
             16 => I16,
             32 => I32,

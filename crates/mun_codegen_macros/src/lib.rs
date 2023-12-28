@@ -99,7 +99,7 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
             // `inkwell::values::BasicTypeValue`
             let field_types_values = struct_data.fields.iter().enumerate().map(|(idx, f)| {
                 let idx = Index::from(idx);
-                let name = f.ident.as_ref().map(|i| quote! { #i }).unwrap_or_else(|| quote! { #idx });
+                let name = f.ident.as_ref().map_or_else(|| quote! { #idx }, |i| quote! { #i });
                 quote! {
                     {
                         let value = crate::value::AsValueInto::<'ink, inkwell::values::BasicValueEnum<'ink>>::as_value_into(&self. #name, context);
@@ -120,8 +120,7 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
                     let name = f
                         .ident
                         .as_ref()
-                        .map(|i| quote! { #i })
-                        .unwrap_or_else(|| quote! { #idx });
+                        .map_or_else(|| quote! { #idx }, |i| quote! { #i });
                     quote! {
                         self. #name .as_bytes_and_ptrs(type_context)
                     }
@@ -383,7 +382,7 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
             });
 
             if enum_data.variants.is_empty() {
-                eprintln!("Enums with no variants are not supported by the `AsValue` macro.")
+                eprintln!("Enums with no variants are not supported by the `AsValue` macro.");
             }
 
             let enum_name = &derive_input.ident;
@@ -472,24 +471,24 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
                     .map(|(tag, v)| {
                         let tag = Index::from(tag);
                         let field_mappings = v.fields.iter().enumerate().map(|(idx, f)| {
-                            let name = f.ident.as_ref().map(|i| quote! { #i }).unwrap_or_else(|| {
+                            let name = f.ident.as_ref().map_or_else(|| {
                                 // If this is a tuple struct, map the index to an alias (e.g. 0: t0)
                                 let concatenated = format!("t{idx}");
                                 let local = Ident::new(&concatenated, Span::call_site());
                                 let idx = Index::from(idx);
                                 quote! { #idx: #local }
-                            });
+                            }, |i| quote! { #i });
 
                             name
                         });
 
                         let field_bytes_and_ptrs = v.fields.iter().enumerate().map(|(idx, f)| {
-                            let name = f.ident.as_ref().map(|i| quote! { #i }).unwrap_or_else(|| {
+                            let name = f.ident.as_ref().map_or_else(|| {
                                 // If this is a tuple struct, map the use an alias (e.g. t0 for 0)
                                 let concatenated = format!("t{idx}");
                                 let local = Ident::new(&concatenated, Span::call_site());
                                 quote! { #local }
-                            });
+                            }, |i| quote! { #i });
 
                             quote! {
                                 #name .as_bytes_and_ptrs(type_context)

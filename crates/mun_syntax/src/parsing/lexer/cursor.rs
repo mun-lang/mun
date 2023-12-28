@@ -80,7 +80,7 @@ impl<'s> Cursor<'s> {
     }
 
     /// Returns an iterator over the remaining characters.
-    fn chars(&self) -> Chars {
+    fn chars(&self) -> Chars<'_> {
         let len: u32 = self.len.into();
         self.text[len as usize..].chars()
     }

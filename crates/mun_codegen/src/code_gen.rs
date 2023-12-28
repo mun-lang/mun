@@ -17,7 +17,7 @@ pub mod symbols;
 
 /// Optimizes the specified LLVM `Module` using the default passes for the given
 /// `OptimizationLevel`.
-fn optimize_module(module: &Module, optimization_lvl: OptimizationLevel) {
+fn optimize_module(module: &Module<'_>, optimization_lvl: OptimizationLevel) {
     let pass_builder = PassManagerBuilder::create();
     pass_builder.set_optimization_level(optimization_lvl);
 

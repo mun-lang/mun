@@ -30,7 +30,7 @@ impl<T: Sync + Send + Sized> gc::Observer for EventAggregator<T> {
     type Event = T;
 
     fn event(&self, event: T) {
-        self.events.lock().push(event)
+        self.events.lock().push(event);
     }
 }
 

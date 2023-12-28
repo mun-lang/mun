@@ -87,13 +87,13 @@ impl<'a> fmt::Display for ArrayTypeId<'a> {
 
 /// A trait that defines that for a type we can statically return a `TypeId`.
 pub trait HasStaticTypeId {
-    /// Returns a reference to the TypeInfo for the type
+    /// Returns a reference to the [`TypeInfo`] for the type
     fn type_id() -> &'static TypeId<'static>;
 }
 
 impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *const T {
     fn type_id() -> &'static TypeId<'static> {
-        static VALUE: OnceCell<StaticTypeMap<TypeId>> = OnceCell::new();
+        static VALUE: OnceCell<StaticTypeMap<TypeId<'static>>> = OnceCell::new();
         let map = VALUE.get_or_init(Default::default);
         map.call_once::<T, _>(|| {
             PointerTypeId {
@@ -107,7 +107,7 @@ impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *const T {
 
 impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *mut T {
     fn type_id() -> &'static TypeId<'static> {
-        static VALUE: OnceCell<StaticTypeMap<TypeId>> = OnceCell::new();
+        static VALUE: OnceCell<StaticTypeMap<TypeId<'static>>> = OnceCell::new();
         let map = VALUE.get_or_init(Default::default);
         map.call_once::<T, _>(|| {
             PointerTypeId {

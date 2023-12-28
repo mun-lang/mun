@@ -40,15 +40,13 @@ impl ast::FunctionDef {
         let param_list = self.param_list().map(|p| p.syntax.text_range());
         let ret_type = self.ret_type().map(|r| r.syntax.text_range());
 
-        let start = fn_kw
-            .map(|kw| kw.start())
-            .unwrap_or_else(|| self.syntax.text_range().start());
+        let start = fn_kw.map_or_else(|| self.syntax.text_range().start(), rowan::TextRange::start);
 
         let end = ret_type
-            .map(|p| p.end())
-            .or_else(|| param_list.map(|name| name.end()))
-            .or_else(|| name.map(|name| name.end()))
-            .or_else(|| fn_kw.map(|kw| kw.end()))
+            .map(rowan::TextRange::end)
+            .or_else(|| param_list.map(rowan::TextRange::end))
+            .or_else(|| name.map(rowan::TextRange::end))
+            .or_else(|| fn_kw.map(rowan::TextRange::end))
             .unwrap_or_else(|| self.syntax().text_range().end());
 
         TextRange::new(start, end)
@@ -163,13 +161,12 @@ impl ast::StructDef {
             .map(|kw| kw.text_range());
         let name = self.name().map(|n| n.syntax.text_range());
 
-        let start = struct_kw
-            .map(|kw| kw.start())
-            .unwrap_or_else(|| self.syntax.text_range().start());
+        let start =
+            struct_kw.map_or_else(|| self.syntax.text_range().start(), rowan::TextRange::start);
 
         let end = name
-            .map(|name| name.end())
-            .or_else(|| struct_kw.map(|kw| kw.end()))
+            .map(rowan::TextRange::end)
+            .or_else(|| struct_kw.map(rowan::TextRange::end))
             .unwrap_or_else(|| self.syntax().text_range().end());
 
         TextRange::new(start, end)

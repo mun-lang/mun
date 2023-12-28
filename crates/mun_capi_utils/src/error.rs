@@ -8,6 +8,7 @@ use std::{
 
 #[repr(C)]
 #[derive(Clone, Copy)]
+#[allow(clippy::doc_markdown)]
 /// A C-style handle to an error message.
 ///
 /// If the handle contains a non-null pointer, an error occurred.
@@ -62,7 +63,7 @@ impl<T: Into<Vec<u8>>> From<T> for ErrorHandle {
 ///
 /// # Safety
 ///
-/// Only call this function on an ErrorHandle once.
+/// Only call this function on an [`ErrorHandle`] once.
 #[no_mangle]
 pub unsafe extern "C" fn mun_error_destroy(error: ErrorHandle) {
     if !error.0.is_null() {

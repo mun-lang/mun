@@ -98,7 +98,7 @@ impl ExprScopes {
                     name: name.clone(),
                     pat,
                 };
-                self.scopes[scope].entries.push(entry)
+                self.scopes[scope].entries.push(entry);
             }
             p => p.walk_child_pats(|pat| self.add_bindings(body, scope, pat)),
         }

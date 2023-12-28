@@ -64,7 +64,7 @@ pub(crate) fn parse_text(text: &str) -> (GreenNode, Vec<SyntaxError>) {
 
 fn parse_from_tokens<F>(token_source: &mut dyn TokenSource, tree_sink: &mut dyn TreeSink, f: F)
 where
-    F: FnOnce(&mut parser::Parser),
+    F: FnOnce(&mut parser::Parser<'_>),
 {
     let mut p = parser::Parser::new(token_source);
     f(&mut p);

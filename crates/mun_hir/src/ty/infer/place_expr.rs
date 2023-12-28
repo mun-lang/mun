@@ -17,7 +17,7 @@ impl<'a> InferenceResultBuilder<'a> {
     fn check_place_path(&mut self, resolver: &Resolver, path: &Path) -> bool {
         match resolver.resolve_path_as_value_fully(self.db.upcast(), path) {
             Some((ValueNs::LocalBinding(_), _)) => true,
-            Some((ValueNs::FunctionId(_), _)) | Some((ValueNs::StructId(_), _)) | None => false,
+            Some((ValueNs::FunctionId(_) | ValueNs::StructId(_), _)) | None => false,
         }
     }
 }

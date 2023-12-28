@@ -12,7 +12,7 @@ use std::ops::Index;
 /// The ID of a `TypeRef` in a `TypeRefMap`
 pub type LocalTypeRefId = Idx<TypeRef>;
 
-/// Compare ty::Ty
+/// Compare [`ty::Ty`]
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub enum TypeRef {
     Path(Path),
@@ -52,10 +52,7 @@ pub struct TypeRefMap {
 
 impl TypeRefMap {
     pub(crate) fn builder() -> TypeRefMapBuilder {
-        TypeRefMapBuilder {
-            map: Default::default(),
-            source_map: Default::default(),
-        }
+        TypeRefMapBuilder::default()
     }
 
     /// Returns an iterator over all types in this instance
@@ -73,7 +70,7 @@ impl Index<LocalTypeRefId> for TypeRefMap {
 }
 
 /// A builder object to lower type references from syntax to a more abstract representation.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub(crate) struct TypeRefMapBuilder {
     map: TypeRefMap,
     source_map: TypeRefSourceMap,
@@ -101,14 +98,14 @@ impl TypeRefMapBuilder {
 
     /// Lowers the given AST type references and returns the Id of the resulting `TypeRef`.
     pub fn alloc_from_node(&mut self, node: &ast::TypeRef) -> LocalTypeRefId {
-        use mun_syntax::ast::TypeRefKind::*;
+        use mun_syntax::ast::TypeRefKind::{ArrayType, NeverType, PathType};
+
         let ptr = AstPtr::new(node);
         let type_ref = match node.kind() {
             PathType(path) => path
                 .path()
                 .and_then(Path::from_ast)
-                .map(TypeRef::Path)
-                .unwrap_or(TypeRef::Error),
+                .map_or(TypeRef::Error, TypeRef::Path),
             NeverType(_) => TypeRef::Never,
             ArrayType(inner) => TypeRef::Array(self.alloc_from_node_opt(inner.type_ref().as_ref())),
         };
@@ -127,7 +124,7 @@ impl TypeRefMapBuilder {
     }
 
     /// Finish building type references, returning the `TypeRefMap` which contains all the
-    /// `TypeRef`s and a `TypeRefSourceMap` which converts LocalTypeRefIds back to source location.
+    /// `TypeRef`s and a `TypeRefSourceMap` which converts [`LocalTypeRefIds`] back to source location.
     pub fn finish(self) -> (TypeRefMap, TypeRefSourceMap) {
         (self.map, self.source_map)
     }

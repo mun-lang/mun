@@ -1,5 +1,6 @@
 use super::PackageDefs;
 use crate::{
+    arena::map::ArenaMap,
     ids::ItemDefinitionId,
     ids::{FunctionLoc, Intern, StructLoc, TypeAliasLoc},
     item_scope::ImportType,
@@ -42,8 +43,9 @@ impl PartiallyResolvedImport {
     fn namespaces(&self) -> PerNs<(ItemDefinitionId, Visibility)> {
         match self {
             PartiallyResolvedImport::Unresolved => PerNs::none(),
-            PartiallyResolvedImport::Indeterminate(ns) => *ns,
-            PartiallyResolvedImport::Resolved(ns) => *ns,
+            PartiallyResolvedImport::Indeterminate(ns) | PartiallyResolvedImport::Resolved(ns) => {
+                *ns
+            }
         }
     }
 }
@@ -101,14 +103,14 @@ pub(super) fn collect(db: &dyn DefDatabase, package_id: PackageId) -> PackageDef
         db,
         package_id,
         package_defs: PackageDefs {
-            modules: Default::default(),
+            modules: ArenaMap::default(),
             module_tree: db.module_tree(package_id),
-            diagnostics: Default::default(),
+            diagnostics: Vec::default(),
         },
-        unresolved_imports: Default::default(),
-        resolved_imports: Default::default(),
-        glob_imports: Default::default(),
-        from_glob_import: Default::default(),
+        unresolved_imports: Vec::default(),
+        resolved_imports: Vec::default(),
+        glob_imports: FxHashMap::default(),
+        from_glob_import: PerNsGlobImports::default(),
     };
     collector.collect();
     collector.finish()
@@ -133,60 +135,10 @@ struct DefCollector<'db> {
 impl<'db> DefCollector<'db> {
     /// Collects all information and stores it in the instance
     fn collect(&mut self) {
-        // Collect all definitions in each module
-        let module_tree = self.package_defs.module_tree.clone();
-
-        // Start by collecting the definitions from all modules. This ensures that, for every module,
-        // all local definitions are accessible. This is the starting point for the import
-        // resolution.
-        collect_modules_recursive(self, module_tree.root, None);
-
-        // Now, as long as we have unresolved imports, try to resolve them, or part of them.
-        while !self.unresolved_imports.is_empty() {
-            // Keep track of whether we were able to resolve anything
-            let mut resolved_something = false;
-
-            // Get all the current unresolved import directives
-            let imports = std::mem::take(&mut self.unresolved_imports);
-
-            // For each import, try to resolve it with the current state.
-            for mut directive in imports {
-                // Resolve the import
-                directive.status = self.resolve_import(directive.module_id, &directive.import);
-
-                // Check the status of the import, if the import is still considered unresolved, try
-                // again in the next round.
-                match directive.status {
-                    PartiallyResolvedImport::Indeterminate(_) => {
-                        self.record_resolved_import(&directive);
-                        // FIXME: To avoid performance regression, we consider an import resolved
-                        // if it is indeterminate (i.e not all namespace resolved). This might not
-                        // completely resolve correctly in the future if we can have values and
-                        // types with the same name.
-                        self.resolved_imports.push(directive);
-                        resolved_something = true;
-                    }
-                    PartiallyResolvedImport::Resolved(_) => {
-                        self.record_resolved_import(&directive);
-                        self.resolved_imports.push(directive);
-                        resolved_something = true;
-                    }
-                    PartiallyResolvedImport::Unresolved => {
-                        self.unresolved_imports.push(directive);
-                    }
-                }
-            }
-
-            // If nothing actually changed up to this point, stop resolving.
-            if !resolved_something {
-                break;
-            }
-        }
-
         /// Recursively iterate over all modules in the `ModuleTree` and add them and their
         /// definitions to their corresponding `ItemScope`.
         fn collect_modules_recursive(
-            collector: &mut DefCollector,
+            collector: &mut DefCollector<'_>,
             module_id: LocalModuleId,
             parent: Option<(Name, LocalModuleId)>,
         ) {
@@ -236,6 +188,57 @@ impl<'db> DefCollector<'db> {
                 collect_modules_recursive(collector, child_module_id, Some((name, module_id)));
             }
         }
+
+        // Collect all definitions in each module
+        let module_tree = self.package_defs.module_tree.clone();
+
+        // Start by collecting the definitions from all modules. This ensures that, for every module,
+        // all local definitions are accessible. This is the starting point for the import
+        // resolution.
+        collect_modules_recursive(self, module_tree.root, None);
+
+        // Now, as long as we have unresolved imports, try to resolve them, or part of them.
+        while !self.unresolved_imports.is_empty() {
+            // Keep track of whether we were able to resolve anything
+            let mut resolved_something = false;
+
+            // Get all the current unresolved import directives
+            let imports = std::mem::take(&mut self.unresolved_imports);
+
+            // For each import, try to resolve it with the current state.
+            for mut directive in imports {
+                // Resolve the import
+                directive.status = self.resolve_import(directive.module_id, &directive.import);
+
+                // Check the status of the import, if the import is still considered unresolved, try
+                // again in the next round.
+                #[allow(clippy::match_same_arms)]
+                match directive.status {
+                    PartiallyResolvedImport::Indeterminate(_) => {
+                        self.record_resolved_import(&directive);
+                        // FIXME: To avoid performance regression, we consider an import resolved
+                        // if it is indeterminate (i.e not all namespace resolved). This might not
+                        // completely resolve correctly in the future if we can have values and
+                        // types with the same name.
+                        self.resolved_imports.push(directive);
+                        resolved_something = true;
+                    }
+                    PartiallyResolvedImport::Resolved(_) => {
+                        self.record_resolved_import(&directive);
+                        self.resolved_imports.push(directive);
+                        resolved_something = true;
+                    }
+                    PartiallyResolvedImport::Unresolved => {
+                        self.unresolved_imports.push(directive);
+                    }
+                }
+            }
+
+            // If nothing actually changed up to this point, stop resolving.
+            if !resolved_something {
+                break;
+            }
+        }
     }
 
     /// Given an import, try to resolve it.
@@ -279,6 +282,7 @@ impl<'db> DefCollector<'db> {
         );
 
         if import.is_glob {
+            #[allow(clippy::match_same_arms)]
             match resolution.take_types() {
                 Some((ItemDefinitionId::ModuleId(m), _)) => {
                     let scope = &self.package_defs[m.local_id];
@@ -375,10 +379,8 @@ impl<'db> DefCollector<'db> {
         resolutions: &[ImportResolution],
         depth: usize,
     ) {
-        if depth > 100 {
-            // prevent stack overflows (but this shouldn't be possible)
-            panic!("infinite recursion in glob imports!");
-        }
+        // prevent stack overflows (but this shouldn't be possible)
+        assert!(depth <= 100, "infinite recursion in glob imports!");
 
         let scope = &mut self.package_defs.modules[import_module_id];
 
@@ -415,7 +417,7 @@ impl<'db> DefCollector<'db> {
                                 import_module_id,
                                 InFile::new(import_source.file_id, import_data.ast_id),
                                 import_data.index,
-                            ))
+                            ));
                     }
                 }
                 None => {
@@ -456,7 +458,7 @@ impl<'db> DefCollector<'db> {
                 glob_import_source,
                 resolutions,
                 depth + 1,
-            )
+            );
         }
     }
 
@@ -476,7 +478,7 @@ impl<'db> DefCollector<'db> {
                     directive.module_id,
                     InFile::new(import.source.file_id, import_data.ast_id),
                     import_data.index,
-                ))
+                ));
         }
 
         package_defs

@@ -28,10 +28,7 @@ pub struct Type(*const c_void, *const c_void);
 impl From<crate::Type> for Type {
     fn from(ty: crate::Type) -> Self {
         let ty = ManuallyDrop::new(ty);
-        Type(
-            ty.inner.as_ptr() as *const _,
-            Arc::as_ptr(&ty.store) as *const _,
-        )
+        Type(ty.inner.as_ptr() as *const _, Arc::as_ptr(&ty.store).cast())
     }
 }
 
@@ -43,13 +40,14 @@ impl Type {
         }
 
         Ok(ManuallyDrop::new(Arc::from_raw(
-            self.1 as *const TypeDataStore,
+            self.1.cast::<TypeDataStore>(),
         )))
     }
 
     /// Returns the store associated with the Type or
     unsafe fn inner(&self) -> Result<&TypeData, String> {
-        (self.0 as *const TypeData)
+        self.0
+            .cast::<TypeData>()
             .as_ref()
             .ok_or_else(|| String::from("null pointer"))
     }
@@ -71,7 +69,7 @@ impl Type {
 
         Ok(super::Type {
             inner: NonNull::new_unchecked(self.0 as *mut _),
-            store: Arc::from_raw(self.1 as *const _),
+            store: Arc::from_raw(self.1.cast()),
         })
     }
 
@@ -258,15 +256,15 @@ pub unsafe extern "C" fn mun_type_kind(ty: Type, kind: *mut TypeKind) -> ErrorHa
         TypeDataKind::Primitive(guid) => TypeKind::Primitive(*guid),
         TypeDataKind::Pointer(pointer) => TypeKind::Pointer(PointerInfo(
             (pointer as *const PointerData).cast(),
-            Arc::as_ptr(ManuallyDrop::deref(&store)) as *const _,
+            Arc::as_ptr(ManuallyDrop::deref(&store)).cast(),
         )),
         TypeDataKind::Struct(s) => TypeKind::Struct(StructInfo(
             (s as *const StructData).cast(),
-            Arc::as_ptr(ManuallyDrop::deref(&store)) as *const _,
+            Arc::as_ptr(ManuallyDrop::deref(&store)).cast(),
         )),
         TypeDataKind::Array(a) => TypeKind::Array(ArrayInfo(
             (a as *const ArrayData).cast(),
-            Arc::as_ptr(ManuallyDrop::deref(&store)) as *const _,
+            Arc::as_ptr(ManuallyDrop::deref(&store)).cast(),
         )),
         TypeDataKind::Uninitialized => unreachable!(),
     };
@@ -314,7 +312,7 @@ pub unsafe extern "C" fn mun_types_destroy(types: Types) -> ErrorHandle {
         return ErrorHandle::new("invalid argument 'types': null pointer");
     } else if types.count > 0 {
         let types = Vec::from_raw_parts(types.types as *mut Type, types.count, types.count);
-        for ty in types.into_iter() {
+        for ty in types {
             // Take ownership of the stored type and drop it
             drop(mun_error_try!(ty
                 .to_owned()
@@ -422,6 +420,12 @@ mod test {
 
     #[test]
     fn test_mun_type_size() {
+        fn assert_size(ty: Type, expected_size: usize) {
+            let mut size = MaybeUninit::uninit();
+            assert!(unsafe { mun_type_size(ty, size.as_mut_ptr()) }.is_ok());
+            assert_eq!(unsafe { size.assume_init() }, expected_size);
+        }
+
         let ffi_i8 = mun_type_primitive(PrimitiveType::I8);
         let ffi_u16 = mun_type_primitive(PrimitiveType::U16);
         let ffi_i32 = mun_type_primitive(PrimitiveType::I32);
@@ -436,12 +440,6 @@ mod test {
         unsafe { mun_type_release(ffi_i32) };
         unsafe { mun_type_release(ffi_u16) };
         unsafe { mun_type_release(ffi_i8) };
-
-        fn assert_size(ty: Type, expected_size: usize) {
-            let mut size = MaybeUninit::uninit();
-            assert!(unsafe { mun_type_size(ty, size.as_mut_ptr()) }.is_ok());
-            assert_eq!(unsafe { size.assume_init() }, expected_size);
-        }
     }
 
     #[test]
@@ -456,6 +454,12 @@ mod test {
 
     #[test]
     fn test_mun_type_alignment() {
+        fn assert_alignment(ty: Type, expected_alignment: usize) {
+            let mut align = MaybeUninit::uninit();
+            assert!(unsafe { mun_type_alignment(ty, align.as_mut_ptr()) }.is_ok());
+            assert_eq!(unsafe { align.assume_init() }, expected_alignment);
+        }
+
         let ffi_i8 = mun_type_primitive(PrimitiveType::I8);
         let ffi_u16 = mun_type_primitive(PrimitiveType::U16);
         let ffi_i32 = mun_type_primitive(PrimitiveType::I32);
@@ -470,12 +474,6 @@ mod test {
         unsafe { mun_type_release(ffi_i32) };
         unsafe { mun_type_release(ffi_u16) };
         unsafe { mun_type_release(ffi_i8) };
-
-        fn assert_alignment(ty: Type, expected_alignment: usize) {
-            let mut align = MaybeUninit::uninit();
-            assert!(unsafe { mun_type_alignment(ty, align.as_mut_ptr()) }.is_ok());
-            assert_eq!(unsafe { align.assume_init() }, expected_alignment);
-        }
     }
 
     #[test]

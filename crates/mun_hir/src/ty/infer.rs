@@ -79,11 +79,11 @@ impl InferenceResult {
         &self,
         db: &dyn HirDatabase,
         owner: Function,
-        sink: &mut DiagnosticSink,
+        sink: &mut DiagnosticSink<'_>,
     ) {
         self.diagnostics
             .iter()
-            .for_each(|it| it.add_to(db, owner, sink))
+            .for_each(|it| it.add_to(db, owner, sink));
     }
 }
 
@@ -223,7 +223,7 @@ impl<'a> InferenceResultBuilder<'a> {
         }
 
         // Resolve the return type
-        self.return_ty = self.resolve_type(self.body.ret_type())
+        self.return_ty = self.resolve_type(self.body.ret_type());
     }
 
     /// Record the type of the specified pattern and all sub-patterns.
@@ -285,11 +285,6 @@ impl<'a> InferenceResultBuilder<'a> {
         self.resolve_ty_as_far_as_possible(ty)
     }
 
-    /// Returns a type used for errors
-    fn error_type(&self) -> Ty {
-        TyKind::Unknown.intern()
-    }
-
     /// Infer the type of the given expression. Returns the type of the expression.
     fn infer_expr_inner(
         &mut self,
@@ -298,12 +293,12 @@ impl<'a> InferenceResultBuilder<'a> {
         check_params: &CheckParams,
     ) -> Ty {
         let ty = match &self.body[tgt_expr] {
-            Expr::Missing => self.error_type(),
+            Expr::Missing => error_type(),
             Expr::Path(p) => {
                 // FIXME this could be more efficient...
                 let resolver = resolver_for_expr(self.db.upcast(), self.body.owner(), tgt_expr);
                 self.infer_path_expr(&resolver, p, tgt_expr, check_params)
-                    .unwrap_or_else(|| self.error_type())
+                    .unwrap_or_else(error_type)
             }
             Expr::If {
                 condition,
@@ -324,7 +319,7 @@ impl<'a> InferenceResultBuilder<'a> {
                             self.diagnostics.push(InferenceDiagnostic::InvalidLhs {
                                 id: tgt_expr,
                                 lhs: *lhs,
-                            })
+                            });
                         }
                     };
                     let rhs_expected = op::binary_op_rhs_expectation(*op, lhs_ty.clone());
@@ -334,12 +329,12 @@ impl<'a> InferenceResultBuilder<'a> {
                                 id: tgt_expr,
                                 lhs: lhs_ty,
                                 rhs: rhs_expected.clone(),
-                            })
+                            });
                     }
                     let rhs_ty = self.infer_expr(*rhs, &Expectation::has_type(rhs_expected));
                     op::binary_op_return_ty(*op, rhs_ty)
                 }
-                _ => self.error_type(),
+                _ => error_type(),
             },
             Expr::Block { statements, tail } => self.infer_block(statements, *tail, expected),
             Expr::Call { callee: call, args } => self.infer_call(tgt_expr, *call, args, expected),
@@ -397,9 +392,10 @@ impl<'a> InferenceResultBuilder<'a> {
                 for (idx, field) in fields.iter().enumerate() {
                     let field_ty = def_id
                         .as_ref()
-                        .and_then(|it| match it.field(self.db, &field.name) {
-                            Some(field) => Some(field),
-                            None => {
+                        .and_then(|it| {
+                            if let Some(field) = it.field(self.db, &field.name) {
+                                Some(field)
+                            } else {
                                 self.diagnostics.push(InferenceDiagnostic::NoSuchField {
                                     id: tgt_expr,
                                     field: idx,
@@ -407,7 +403,7 @@ impl<'a> InferenceResultBuilder<'a> {
                                 None
                             }
                         })
-                        .map_or(self.error_type(), |field| field.ty(self.db));
+                        .map_or(error_type(), |field| field.ty(self.db));
                     self.infer_expr_coerce(field.expr, &Expectation::has_type(field_ty));
                 }
                 if let Some(expr) = spread {
@@ -420,6 +416,7 @@ impl<'a> InferenceResultBuilder<'a> {
             }
             Expr::Field { expr, name } => {
                 let receiver_ty = self.infer_expr(*expr, &Expectation::none());
+                #[allow(clippy::single_match_else)]
                 match receiver_ty.interned() {
                     TyKind::Struct(s) => {
                         match s.field(self.db, name).map(|field| field.ty(self.db)) {
@@ -432,7 +429,7 @@ impl<'a> InferenceResultBuilder<'a> {
                                         name: name.clone(),
                                     });
 
-                                self.error_type()
+                                error_type()
                             }
                         }
                     }
@@ -441,7 +438,7 @@ impl<'a> InferenceResultBuilder<'a> {
                             id: *expr,
                             found: receiver_ty,
                         });
-                        self.error_type()
+                        error_type()
                     }
                 }
             }
@@ -459,21 +456,20 @@ impl<'a> InferenceResultBuilder<'a> {
                                     id: *expr,
                                     ty: inner_ty,
                                 });
-                            self.error_type()
+                            error_type()
                         }
                     },
                     UnaryOp::Neg => match inner_ty.interned() {
                         TyKind::Float(_)
                         | TyKind::Int(_)
-                        | TyKind::InferenceVar(InferTy::Int(_))
-                        | TyKind::InferenceVar(InferTy::Float(_)) => inner_ty,
+                        | TyKind::InferenceVar(InferTy::Int(_) | InferTy::Float(_)) => inner_ty,
                         _ => {
                             self.diagnostics
                                 .push(InferenceDiagnostic::CannotApplyUnaryOp {
                                     id: *expr,
                                     ty: inner_ty,
                                 });
-                            self.error_type()
+                            error_type()
                         }
                     },
                 }
@@ -507,7 +503,7 @@ impl<'a> InferenceResultBuilder<'a> {
 
                 match base_ty.interned() {
                     TyKind::Array(ty) => ty.clone(),
-                    _ => self.error_type(),
+                    _ => error_type(),
                 }
             }
         };
@@ -528,32 +524,28 @@ impl<'a> InferenceResultBuilder<'a> {
     ) -> Ty {
         self.infer_expr(condition, &Expectation::has_type(TyKind::Bool.intern()));
         let then_ty = self.infer_expr_coerce(then_branch, expected);
-        match else_branch {
-            Some(else_branch) => {
-                let else_ty = self.infer_expr_coerce(else_branch, expected);
-                match self.coerce_merge_branch(&then_ty, &else_ty) {
-                    Some(ty) => ty,
-                    None => {
-                        self.diagnostics
-                            .push(InferenceDiagnostic::IncompatibleBranches {
-                                id: tgt_expr,
-                                then_ty: then_ty.clone(),
-                                else_ty: else_ty.clone(),
-                            });
-                        then_ty
-                    }
-                }
+        if let Some(else_branch) = else_branch {
+            let else_ty = self.infer_expr_coerce(else_branch, expected);
+            if let Some(ty) = self.coerce_merge_branch(&then_ty, &else_ty) {
+                ty
+            } else {
+                self.diagnostics
+                    .push(InferenceDiagnostic::IncompatibleBranches {
+                        id: tgt_expr,
+                        then_ty: then_ty.clone(),
+                        else_ty: else_ty.clone(),
+                    });
+                then_ty
             }
-            None => {
-                if !self.coerce(&then_ty, &Ty::unit()) {
-                    self.diagnostics
-                        .push(InferenceDiagnostic::MissingElseBranch {
-                            id: tgt_expr,
-                            then_ty,
-                        })
-                }
-                Ty::unit()
+        } else {
+            if !self.coerce(&then_ty, &Ty::unit()) {
+                self.diagnostics
+                    .push(InferenceDiagnostic::MissingElseBranch {
+                        id: tgt_expr,
+                        then_ty,
+                    });
             }
+            Ty::unit()
         }
     }
 
@@ -611,7 +603,7 @@ impl<'a> InferenceResultBuilder<'a> {
             }
             TyKind::Unknown => {
                 // Error has already been emitted somewhere else
-                self.error_type()
+                error_type()
             }
             _ => {
                 self.diagnostics
@@ -619,7 +611,7 @@ impl<'a> InferenceResultBuilder<'a> {
                         id: callee,
                         found: callee_ty,
                     });
-                self.error_type()
+                error_type()
             }
         }
     }
@@ -659,7 +651,7 @@ impl<'a> InferenceResultBuilder<'a> {
                     found: num_args,
                     expected: num_params,
                 }
-            })
+            });
         }
     }
 
@@ -712,81 +704,77 @@ impl<'a> InferenceResultBuilder<'a> {
         id: ExprId,
         check_params: &CheckParams,
     ) -> Option<Ty> {
-        match resolver.resolve_path_as_value_fully(self.db.upcast(), path) {
-            Some((value, vis)) => {
-                // Check visibility of this item
-                if !vis.is_visible_from(
-                    self.db,
-                    self.resolver
-                        .module()
-                        .expect("resolver must have a module to be able to resolve modules"),
-                ) {
-                    self.diagnostics
-                        .push(diagnostics::InferenceDiagnostic::PathIsPrivate { id })
-                }
-
-                // Match based on what type of value we found
-                match value {
-                    ValueNs::LocalBinding(pat) => Some(self.type_of_pat.get(pat)?.clone()),
-                    ValueNs::FunctionId(f) => {
-                        let ty = self
-                            .db
-                            .type_for_def(TypableDef::Function(f.into()), Namespace::Values);
-                        Some(ty)
-                    }
-                    ValueNs::StructId(s) => {
-                        if check_params.is_unit_struct {
-                            self.check_unit_struct_lit(id, s.into())
-                        }
-                        let ty = self
-                            .db
-                            .type_for_def(TypableDef::Struct(s.into()), Namespace::Values);
-                        Some(ty)
-                    }
-                }
+        if let Some((value, vis)) = resolver.resolve_path_as_value_fully(self.db.upcast(), path) {
+            // Check visibility of this item
+            if !vis.is_visible_from(
+                self.db,
+                self.resolver
+                    .module()
+                    .expect("resolver must have a module to be able to resolve modules"),
+            ) {
+                self.diagnostics
+                    .push(diagnostics::InferenceDiagnostic::PathIsPrivate { id });
             }
 
-            None => {
-                // If no value was found, try to resolve the path as a type. This will always result
-                // in an error but it does provide much better diagnostics.
-                let ty = resolver.resolve_path_as_type_fully(self.db.upcast(), path);
-                if let Some((TypeNs::StructId(struct_id), _)) = ty {
-                    // We can only really get here if the struct is actually a record. Both other
-                    // types can be seen as a values because they have a constructor.
-                    debug_assert_eq!(
-                        Struct::from(struct_id).data(self.db.upcast()).kind,
-                        StructKind::Record
-                    );
-
-                    // Should it be a unit struct?
-                    if check_params.is_unit_struct {
-                        self.diagnostics
-                            .push(InferenceDiagnostic::MismatchedStructLit {
-                                id,
-                                expected: StructKind::Record,
-                                found: StructKind::Unit,
-                            });
-                    } else {
-                        self.diagnostics
-                            .push(InferenceDiagnostic::MismatchedStructLit {
-                                id,
-                                expected: StructKind::Record,
-                                found: StructKind::Tuple,
-                            });
-                    }
-
+            // Match based on what type of value we found
+            match value {
+                ValueNs::LocalBinding(pat) => Some(self.type_of_pat.get(pat)?.clone()),
+                ValueNs::FunctionId(f) => {
                     let ty = self
                         .db
-                        .type_for_def(TypableDef::Struct(struct_id.into()), Namespace::Values);
-                    return Some(ty);
+                        .type_for_def(TypableDef::Function(f.into()), Namespace::Values);
+                    Some(ty)
+                }
+                ValueNs::StructId(s) => {
+                    if check_params.is_unit_struct {
+                        self.check_unit_struct_lit(id, s.into());
+                    }
+                    let ty = self
+                        .db
+                        .type_for_def(TypableDef::Struct(s.into()), Namespace::Values);
+                    Some(ty)
+                }
+            }
+        } else {
+            // If no value was found, try to resolve the path as a type. This will always result
+            // in an error but it does provide much better diagnostics.
+            let ty = resolver.resolve_path_as_type_fully(self.db.upcast(), path);
+            if let Some((TypeNs::StructId(struct_id), _)) = ty {
+                // We can only really get here if the struct is actually a record. Both other
+                // types can be seen as a values because they have a constructor.
+                debug_assert_eq!(
+                    Struct::from(struct_id).data(self.db.upcast()).kind,
+                    StructKind::Record
+                );
+
+                // Should it be a unit struct?
+                if check_params.is_unit_struct {
+                    self.diagnostics
+                        .push(InferenceDiagnostic::MismatchedStructLit {
+                            id,
+                            expected: StructKind::Record,
+                            found: StructKind::Unit,
+                        });
+                } else {
+                    self.diagnostics
+                        .push(InferenceDiagnostic::MismatchedStructLit {
+                            id,
+                            expected: StructKind::Record,
+                            found: StructKind::Tuple,
+                        });
                 }
 
-                // If the path also cannot be resolved as type, it must be considered an invalid
-                // value and there is nothing we can make of this path.
-                self.diagnostics
-                    .push(InferenceDiagnostic::UnresolvedValue { id: id.into() });
-                None
+                let ty = self
+                    .db
+                    .type_for_def(TypableDef::Struct(struct_id.into()), Namespace::Values);
+                return Some(ty);
             }
+
+            // If the path also cannot be resolved as type, it must be considered an invalid
+            // value and there is nothing we can make of this path.
+            self.diagnostics
+                .push(InferenceDiagnostic::UnresolvedValue { id: id.into() });
+            None
         }
     }
 
@@ -819,7 +807,7 @@ impl<'a> InferenceResultBuilder<'a> {
             type_of_expr: expr_types,
             type_of_pat: pat_types,
             diagnostics: self.diagnostics,
-            standard_types: Default::default(),
+            standard_types: InternedStandardTypes::default(),
         }
     }
 
@@ -839,8 +827,7 @@ impl<'a> InferenceResultBuilder<'a> {
                 } => {
                     let decl_ty = type_ref
                         .as_ref()
-                        .map(|tr| self.resolve_type(*tr))
-                        .unwrap_or_else(|| self.error_type());
+                        .map_or_else(error_type, |tr| self.resolve_type(*tr));
                     //let decl_ty = self.insert_type_vars(decl_ty);
                     let ty = if let Some(expr) = initializer {
                         self.infer_expr_coerce(*expr, &Expectation::has_type(decl_ty))
@@ -903,15 +890,15 @@ impl<'a> InferenceResultBuilder<'a> {
         };
 
         // Verify that it matches what we expected
-        let ty = if !self.unify(&ty, &expected.ty) {
+        let ty = if self.unify(&ty, &expected.ty) {
+            ty
+        } else {
             self.diagnostics.push(InferenceDiagnostic::MismatchedTypes {
                 expected: expected.ty.clone(),
                 found: ty,
                 id: tgt_expr,
             });
             expected.ty
-        } else {
-            ty
         };
 
         // Update the expected type for the rest of the loop
@@ -953,6 +940,7 @@ impl<'a> InferenceResultBuilder<'a> {
         Ty::unit()
     }
 
+    #[allow(clippy::unused_self)]
     pub fn report_pat_inference_failure(&mut self, _pat: PatId) {
         //        self.diagnostics.push(InferenceDiagnostic::PatInferenceFailed {
         //            pat
@@ -962,6 +950,7 @@ impl<'a> InferenceResultBuilder<'a> {
         panic!("pattern failed inferencing");
     }
 
+    #[allow(clippy::unused_self)]
     pub fn report_expr_inference_failure(&mut self, _expr: ExprId) {
         //        self.diagnostics.push(InferenceDiagnostic::ExprInferenceFailed {
         //            expr
@@ -970,6 +959,11 @@ impl<'a> InferenceResultBuilder<'a> {
         // types which always have a fallback value.
         panic!("expression failed inferencing");
     }
+}
+
+/// Returns a type used for errors
+fn error_type() -> Ty {
+    TyKind::Unknown.intern()
 }
 
 /// When inferring an expression, we propagate downward whatever type hint we
@@ -1150,7 +1144,7 @@ mod diagnostics {
             &self,
             db: &dyn HirDatabase,
             owner: Function,
-            sink: &mut DiagnosticSink,
+            sink: &mut DiagnosticSink<'_>,
         ) {
             let file = owner.source(db.upcast()).file_id;
             let body = owner.body_source_map(db);
@@ -1212,7 +1206,7 @@ mod diagnostics {
                         expr,
                         expected: *expected,
                         found: *found,
-                    })
+                    });
                 }
                 InferenceDiagnostic::ExpectedFunction { id, found } => {
                     let expr = body
@@ -1362,7 +1356,7 @@ mod diagnostics {
                         expr,
                         receiver_ty: receiver_ty.clone(),
                         name: name.clone(),
-                    })
+                    });
                 }
                 InferenceDiagnostic::FieldCountMismatch {
                     id,
@@ -1379,7 +1373,7 @@ mod diagnostics {
                         expr,
                         expected: *expected,
                         found: *found,
-                    })
+                    });
                 }
                 InferenceDiagnostic::MissingFields {
                     id,
@@ -1396,7 +1390,7 @@ mod diagnostics {
                         file,
                         struct_ty: struct_ty.clone(),
                         fields,
-                        field_names: names.to_vec(),
+                        field_names: names.clone(),
                     });
                 }
                 InferenceDiagnostic::MismatchedStructLit {
@@ -1426,7 +1420,7 @@ mod diagnostics {
                         file,
                         receiver_expr: expr,
                         found: found.clone(),
-                    })
+                    });
                 }
                 InferenceDiagnostic::NoSuchField { id, field } => {
                     let field = owner.body_source_map(db).field_syntax(*id, *field).into();
@@ -1446,7 +1440,7 @@ mod diagnostics {
                     sink.push(LiteralOutOfRange {
                         literal,
                         int_ty: *literal_ty,
-                    })
+                    });
                 }
             }
         }

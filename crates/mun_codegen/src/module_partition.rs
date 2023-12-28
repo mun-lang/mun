@@ -25,13 +25,15 @@ impl ModulePartition {
     ) -> ModuleGroupId {
         let id = ModuleGroupId(self.groups.len());
         for module in group.iter() {
-            if self.module_to_group.insert(module, id).is_some() {
-                panic!("cannot add a module to multiple groups");
-            }
+            assert!(
+                self.module_to_group.insert(module, id).is_none(),
+                "cannot add a module to multiple groups"
+            );
             if let Some(file_id) = module.file_id(db) {
-                if self.file_to_group.insert(file_id, id).is_some() {
-                    panic!("cannot add a file to multiple groups");
-                }
+                assert!(
+                    self.file_to_group.insert(file_id, id).is_none(),
+                    "cannot add a file to multiple groups"
+                );
             }
         }
 

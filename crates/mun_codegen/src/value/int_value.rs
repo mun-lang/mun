@@ -50,7 +50,7 @@ impl<'ink> AsValue<'ink, u8> for u8 {
     fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, u8> {
         Value::from_raw(
             <Self as SizedValueType>::get_ir_type(context.type_context)
-                .const_int(*self as u64, false),
+                .const_int(u64::from(*self), false),
         )
     }
 }
@@ -59,7 +59,7 @@ impl<'ink> AsValue<'ink, u16> for u16 {
     fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, u16> {
         Value::from_raw(
             <Self as SizedValueType>::get_ir_type(context.type_context)
-                .const_int(*self as u64, false),
+                .const_int(u64::from(*self), false),
         )
     }
 }
@@ -68,7 +68,7 @@ impl<'ink> AsValue<'ink, u32> for u32 {
     fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, u32> {
         Value::from_raw(
             <Self as SizedValueType>::get_ir_type(context.type_context)
-                .const_int(*self as u64, false),
+                .const_int(u64::from(*self), false),
         )
     }
 }
@@ -94,7 +94,7 @@ impl<'ink> AsValue<'ink, bool> for bool {
     fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, bool> {
         Value::from_raw(
             <Self as SizedValueType>::get_ir_type(context.type_context)
-                .const_int(*self as u64, true),
+                .const_int(u64::from(*self), true),
         )
     }
 }

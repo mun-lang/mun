@@ -22,7 +22,7 @@ fn array_index_assign() {
         a[1] = 100
     }
     ",
-    )
+    );
 }
 
 #[test]
@@ -35,7 +35,7 @@ fn array_index() {
         a[3]
     }
     ",
-    )
+    );
 }
 
 #[test]
@@ -47,7 +47,7 @@ fn array_literal() {
         let a = [1,2,3,4,]
     }
     ",
-    )
+    );
 }
 
 #[test]
@@ -65,7 +65,7 @@ fn multi_file() {
         3
     }
     ",
-    )
+    );
 }
 
 #[test]
@@ -83,7 +83,7 @@ fn issue_262() {
         let a = 3 + 4;
         a
     }",
-    )
+    );
 }
 
 #[test]
@@ -103,7 +103,7 @@ fn issue_225() {
         { let a = Num { value: b }; a}.value;
     }
         "#,
-    )
+    );
 }
 
 #[test]
@@ -116,7 +116,7 @@ fn issue_228_never_if() {
    	    return 2;
     }
     "#,
-    )
+    );
 }
 
 #[test]
@@ -128,7 +128,7 @@ fn issue_228() {
    	    if n == 0 {return 1} else {n * (n-1)}
     }
     "#,
-    )
+    );
 }
 
 #[test]
@@ -150,7 +150,7 @@ fn issue_128() {
         thing(78);
     }
     "#,
-    )
+    );
 }
 
 #[test]
@@ -196,7 +196,7 @@ fn literal_types() {
     pub fn add(a:u32) -> u32 {
         a + 12u32
     }",
-    )
+    );
 }
 
 #[test]
@@ -292,7 +292,7 @@ fn assignment_op_struct() {
     // a /= b;
     // a %= b;
     "#,
-    )
+    );
 }
 
 macro_rules! test_number_operator_types {
@@ -607,7 +607,7 @@ fn if_statement() {
         b
     }
     "#,
-    )
+    );
 }
 
 #[test]
@@ -622,7 +622,7 @@ fn void_return() {
         let c = bar()
     }
     "#,
-    )
+    );
 }
 
 #[test]
@@ -638,7 +638,7 @@ fn fibonacci() {
         }
     }
     "#,
-    )
+    );
 }
 
 #[test]
@@ -661,7 +661,7 @@ fn fibonacci_loop() {
         }
     }
     "#,
-    )
+    );
 }
 
 #[test]
@@ -677,7 +677,7 @@ fn loop_issue_llvm13() {
         }
     }
     "#,
-    )
+    );
 }
 
 #[test]
@@ -773,7 +773,7 @@ fn loop_expr() {
         loop {}
     }
     "#,
-    )
+    );
 }
 
 #[test]
@@ -793,7 +793,7 @@ fn loop_break_expr() {
         }
     }
     "#,
-    )
+    );
 }
 
 #[test]
@@ -812,7 +812,7 @@ fn while_expr() {
         };
     }
     "#,
-    )
+    );
 }
 
 #[test]
@@ -829,7 +829,7 @@ fn struct_test() {
         let c: Baz = Baz;
     }
     "#,
-    )
+    );
 }
 
 #[test]
@@ -860,7 +860,7 @@ fn field_expr() {
         aa_lhs + aa_rhs
     }
     "#,
-    )
+    );
 }
 
 #[test]
@@ -875,7 +875,7 @@ fn field_crash() {
         b.a
     }
     "#,
-    )
+    );
 }
 
 #[test]
@@ -891,7 +891,7 @@ fn gc_struct() {
         let b = a;
     }
     "#,
-    )
+    );
 }
 
 #[test]
@@ -904,7 +904,7 @@ fn extern_fn() {
         add(3,4);
     }
     "#,
-    )
+    );
 }
 
 #[test]
@@ -1032,7 +1032,7 @@ fn nested_private_extern_fn() {
         private_fn()
     }
     "#,
-    )
+    );
 }
 
 #[test]
@@ -1048,7 +1048,7 @@ fn nested_private_recursive_fn() {
         private_fn()
     }
     "#,
-    )
+    );
 }
 
 #[test]
@@ -1066,7 +1066,7 @@ fn nested_private_recursive_fn_with_args() {
         private_fn(other())
     }
     "#,
-    )
+    );
 }
 
 fn test_snapshot(name: &str, text: &str) {

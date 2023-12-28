@@ -184,13 +184,13 @@ pub trait PointerValueType<'ink> {
 }
 
 /// A trait that enables the conversion from an inkwell type to a corresponding value type. (e.g.
-/// IntType -> IntValue)
+/// `IntType` -> `IntValue`)
 pub trait TypeValue<'ink> {
     type Value: inkwell::values::AnyValue<'ink>;
 }
 
 /// A trait that enables the conversion from an inkwell value to a corresponding type. (e.g.
-/// IntValue -> IntType)
+/// `IntValue` -> `IntType`)
 pub trait ValueType<'ink>: Clone + Debug + Copy + Eq + PartialEq + Hash {
     type Type: inkwell::types::AnyType<'ink>;
 
@@ -349,12 +349,12 @@ impl<'ink, T: ConcreteValueType<'ink> + ?Sized> Eq for Value<'ink, T> {}
 
 impl<'ink, T: ConcreteValueType<'ink> + ?Sized> Hash for Value<'ink, T> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.value.hash(state)
+        self.value.hash(state);
     }
 }
 
 impl<'ink, T: ConcreteValueType<'ink> + ?Sized> std::fmt::Debug for Value<'ink, T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self.value)
     }
 }

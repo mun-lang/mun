@@ -6,6 +6,20 @@ pub(crate) fn apply_document_changes(
     old_text: &mut String,
     content_changes: Vec<lsp_types::TextDocumentContentChangeEvent>,
 ) {
+    enum IndexValid {
+        All,
+        UpToLineExclusive(u32),
+    }
+
+    impl IndexValid {
+        fn covers(&self, line: u32) -> bool {
+            match *self {
+                IndexValid::UpToLineExclusive(to) => to > line,
+                IndexValid::All => true,
+            }
+        }
+    }
+
     // The changes are specified with ranges where they apply. These ranges are given as line-column
     // pairs. We can compute the offset in the text using a `LineIndex` however, changes to the text
     // may invalidate this too.
@@ -16,35 +30,18 @@ pub(crate) fn apply_document_changes(
 
     let mut line_index = LineIndex::new(old_text);
 
-    enum IndexValid {
-        All,
-        UpToLineExclusive(u32),
-    }
-
-    impl IndexValid {
-        fn covers(&self, line: u32) -> bool {
-            match *self {
-                IndexValid::UpToLineExclusive(to) => to > line,
-                _ => true,
-            }
-        }
-    }
-
     let mut index_valid = IndexValid::All;
     for change in content_changes {
-        match change.range {
-            Some(range) => {
-                if !index_valid.covers(range.end.line) {
-                    line_index = LineIndex::new(old_text);
-                }
-                index_valid = IndexValid::UpToLineExclusive(range.start.line);
-                let range = from_lsp::text_range(&line_index, range);
-                old_text.replace_range(std::ops::Range::<usize>::from(range), &change.text);
+        if let Some(range) = change.range {
+            if !index_valid.covers(range.end.line) {
+                line_index = LineIndex::new(old_text);
             }
-            None => {
-                *old_text = change.text;
-                index_valid = IndexValid::UpToLineExclusive(0)
-            }
+            index_valid = IndexValid::UpToLineExclusive(range.start.line);
+            let range = from_lsp::text_range(&line_index, range);
+            old_text.replace_range(std::ops::Range::<usize>::from(range), &change.text);
+        } else {
+            *old_text = change.text;
+            index_valid = IndexValid::UpToLineExclusive(0);
         }
     }
 }

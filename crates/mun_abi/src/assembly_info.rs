@@ -76,7 +76,7 @@ mod tests {
 
         assert_eq!(assembly.dependencies().count(), dependencies.len());
         for (lhs, rhs) in assembly.dependencies().zip([FAKE_DEPENDENCY].iter()) {
-            assert_eq!(lhs, *rhs)
+            assert_eq!(lhs, *rhs);
         }
     }
 }

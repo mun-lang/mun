@@ -21,7 +21,7 @@ impl LanguageServerState {
         let message = message.as_ref().to_owned();
         self.send_notification::<lsp_types::notification::ShowMessage>(
             lsp_types::ShowMessageParams { typ, message },
-        )
+        );
     }
 
     /// Reports progress to the user via the `WorkDoneProgress` protocol.

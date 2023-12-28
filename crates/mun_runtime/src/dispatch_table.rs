@@ -18,7 +18,7 @@ impl DispatchTable {
 
     /// Retrieves the name of all available functions.
     pub fn get_fn_names(&self) -> impl Iterator<Item = &str> {
-        self.functions.keys().map(|key| key.as_str())
+        self.functions.keys().map(String::as_str)
     }
 
     /// Inserts the `fn_info` for `fn_path` into the dispatch table.
@@ -39,7 +39,7 @@ impl DispatchTable {
     // }
 
     /// Removes the function definitions from the given assembly from this dispatch table.
-    pub fn remove_module(&mut self, assembly: &abi::ModuleInfo) {
+    pub fn remove_module(&mut self, assembly: &abi::ModuleInfo<'_>) {
         for function in assembly.functions() {
             if let Some(value) = self.functions.get(function.prototype.name()) {
                 if value.fn_ptr == function.fn_ptr {
@@ -50,7 +50,7 @@ impl DispatchTable {
     }
 
     /// Add the function definitions from the given assembly from this dispatch table.
-    pub fn insert_module(&mut self, assembly: &abi::ModuleInfo, type_table: &TypeTable) {
+    pub fn insert_module(&mut self, assembly: &abi::ModuleInfo<'_>, type_table: &TypeTable) {
         for fn_def in assembly.functions() {
             let fn_def = FunctionDefinition::try_from_abi(fn_def, type_table)
                 .expect("All types from a loaded assembly must exist in the type table.");

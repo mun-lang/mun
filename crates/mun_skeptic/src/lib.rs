@@ -11,9 +11,8 @@ use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag};
 use std::{
     cell::RefCell,
     env,
-    fs::File,
-    io,
-    io::{Read, Write},
+    fs::{self, File},
+    io::{self, Write},
     mem,
     path::{Path, PathBuf},
 };
@@ -211,11 +210,11 @@ fn parse_code_block_info(info: &str) -> CodeBlockInfo {
             "" => {}
             "mun" => {
                 info.is_mun = true;
-                seen_mun_tags = true
+                seen_mun_tags = true;
             }
             "ignore" => {
                 info.ignore = true;
-                seen_mun_tags = true
+                seen_mun_tags = true;
             }
             "no_run" => {
                 info.no_run = true;
@@ -238,7 +237,7 @@ fn emit_tests(out_path: impl AsRef<Path>, tests: Vec<Test>) {
     let mut content = String::new();
 
     // All tests need the api from mun_skeptic::runtime
-    content.push_str("extern crate mun_skeptic;\n");
+    content.push_str("use mun_skeptic;\n");
 
     for test in tests.iter() {
         let test_string = emit_test_runner(test).unwrap();
@@ -291,10 +290,8 @@ fn emit_test_runner(test: &Test) -> io::Result<String> {
 /// that a filesystem write event is only emitted when the content actually changes.
 fn write_if_contents_changed(name: &Path, contents: &str) -> io::Result<()> {
     // Can't open in write mode now as that would modify the last changed timestamp of the file
-    match File::open(name) {
-        Ok(mut file) => {
-            let mut current_contents = String::new();
-            file.read_to_string(&mut current_contents)?;
+    match fs::read_to_string(name) {
+        Ok(current_contents) => {
             if current_contents == contents {
                 // No change avoid writing to avoid updating the timestamp of the file
                 return Ok(());

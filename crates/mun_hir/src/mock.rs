@@ -51,8 +51,8 @@ impl Upcast<dyn SourceDatabase> for MockDatabase {
 impl Default for MockDatabase {
     fn default() -> Self {
         let mut db: MockDatabase = MockDatabase {
-            storage: Default::default(),
-            events: Default::default(),
+            storage: salsa::Storage::default(),
+            events: Mutex::default(),
         };
         db.set_target(Target::host_target().unwrap());
         db

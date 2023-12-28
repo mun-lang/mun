@@ -36,8 +36,7 @@ impl ProjectManifest {
                 path.is_file()
                     && path
                         .file_name()
-                        .map(|file_name| file_name == MANIFEST_FILENAME)
-                        .unwrap_or(false)
+                        .is_some_and(|file_name| file_name == MANIFEST_FILENAME)
             })
             .map(|path| ProjectManifest {
                 path: AbsPathBuf::try_from(path).expect(

@@ -48,6 +48,21 @@ fn generate_from_template(template: &Path, src: &Path, mode: Mode) -> anyhow::Re
 /// Creates a new `tera::Tera` instance with some default filters and functions used in our
 /// templates.
 fn create_tera() -> tera::Tera {
+    /// Convert value to CamelCase
+    fn camel(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
+        Ok(value.as_str().unwrap().to_upper_camel_case().into())
+    }
+
+    /// Convert value to `snake_case`
+    fn snake(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
+        Ok(value.as_str().unwrap().to_snake_case().into())
+    }
+
+    /// Convert value to `SCREAM_CASE`
+    fn scream(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
+        Ok(value.as_str().unwrap().to_shouty_snake_case().into())
+    }
+
     let mut res = tera::Tera::default();
     res.register_filter("camel", camel);
     res.register_filter("snake", snake);
@@ -65,20 +80,5 @@ fn create_tera() -> tera::Tera {
         Ok(tera::Value::Array(elements))
     });
 
-    return res;
-
-    /// Convert value to CamelCase
-    fn camel(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
-        Ok(value.as_str().unwrap().to_upper_camel_case().into())
-    }
-
-    /// Convert value to snake_case
-    fn snake(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
-        Ok(value.as_str().unwrap().to_snake_case().into())
-    }
-
-    /// Convert value to SCREAM_CASE
-    fn scream(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
-        Ok(value.as_str().unwrap().to_shouty_snake_case().into())
-    }
+    res
 }

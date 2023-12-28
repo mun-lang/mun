@@ -11,7 +11,7 @@ use std::{
 
 pub(crate) const FAKE_TYPE_GUID: Guid =
     Guid([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
-pub(crate) const FAKE_TYPE_ID: TypeId = TypeId::Concrete(FAKE_TYPE_GUID);
+pub(crate) const FAKE_TYPE_ID: TypeId<'static> = TypeId::Concrete(FAKE_TYPE_GUID);
 pub(crate) const FAKE_DEPENDENCY: &str = "path/to/dependency.munlib";
 pub(crate) const FAKE_FIELD_NAME: &str = "field_name";
 pub(crate) const FAKE_FN_NAME: &str = "fn_name";

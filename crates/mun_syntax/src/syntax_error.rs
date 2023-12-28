@@ -68,7 +68,7 @@ impl SyntaxError {
 }
 
 impl fmt::Display for SyntaxError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.kind.fmt(f)
     }
 }
@@ -79,8 +79,8 @@ pub enum SyntaxErrorKind {
 }
 
 impl fmt::Display for SyntaxErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use self::SyntaxErrorKind::*;
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use self::SyntaxErrorKind::ParseError;
         match self {
             ParseError(msg) => write!(f, "{}", msg.0),
         }

@@ -34,7 +34,8 @@ impl Function {
     /// The caller must ensure that the internal pointers point to a valid
     /// [`mun_runtime::FunctionDefinition`].
     pub unsafe fn inner(&self) -> Result<&mun_runtime::FunctionDefinition, &'static str> {
-        (self.0 as *const mun_runtime::FunctionDefinition)
+        self.0
+            .cast::<mun_runtime::FunctionDefinition>()
             .as_ref()
             .ok_or("null pointer")
     }
@@ -224,7 +225,7 @@ pub(crate) mod tests {
             .into();
 
         let fn_info_arc = ManuallyDrop::new(unsafe {
-            Arc::from_raw(function.0 as *const mun_runtime::FunctionDefinition)
+            Arc::from_raw(function.0.cast::<mun_runtime::FunctionDefinition>())
         });
         let strong_count = Arc::strong_count(&fn_info_arc);
         assert!(strong_count > 0);

@@ -207,7 +207,7 @@ pub fn split_diff<T: Clone>(diff: &[Diff<T>]) -> (Vec<Change<T>>, Vec<Change<T>>
                 index: *index,
                 element: ty.clone(),
             }),
-            _ => None,
+            Diff::Insert { .. } => None,
         })
         .collect();
     let insertions = diff
@@ -217,7 +217,7 @@ pub fn split_diff<T: Clone>(diff: &[Diff<T>]) -> (Vec<Change<T>>, Vec<Change<T>>
                 index: *index,
                 element: ty.clone(),
             }),
-            _ => None,
+            Diff::Delete { .. } => None,
         })
         .collect();
 
