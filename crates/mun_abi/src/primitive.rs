@@ -16,7 +16,7 @@ macro_rules! define_primitives {
         $(
             impl HasStaticTypeId for $ty {
                 fn type_id() -> &'static $crate::TypeId<'static> {
-                    const TYPE_ID: $crate::TypeId = $crate::TypeId::Concrete(Guid::from_str($name));
+                    const TYPE_ID: $crate::TypeId<'static> = $crate::TypeId::Concrete(Guid::from_str($name));
                     &TYPE_ID
                 }
             }

@@ -36,19 +36,19 @@ pub fn start(args: Args) -> anyhow::Result<ExitStatus> {
             .invoke(&args.entry, ())
             .map_err(|e| anyhow!("{}", e))?;
 
-        println!("{result}")
+        println!("{result}");
     } else if return_type.equals::<f64>() {
         let result: f64 = runtime
             .invoke(&args.entry, ())
             .map_err(|e| anyhow!("{}", e))?;
 
-        println!("{result}")
+        println!("{result}");
     } else if return_type.equals::<i64>() {
         let result: i64 = runtime
             .invoke(&args.entry, ())
             .map_err(|e| anyhow!("{}", e))?;
 
-        println!("{result}")
+        println!("{result}");
     } else if return_type.equals::<()>() {
         #[allow(clippy::unit_arg)]
         runtime

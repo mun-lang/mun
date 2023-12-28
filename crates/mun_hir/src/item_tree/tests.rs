@@ -38,7 +38,7 @@ fn format_mod_item(out: &mut String, tree: &ItemTree, item: ModItem) -> fmt::Res
                         writeln!(children, "{:?}", tree[field])?;
                     }
                 }
-                _ => {}
+                Fields::Unit => {}
             };
         }
         ModItem::TypeAlias(item) => {

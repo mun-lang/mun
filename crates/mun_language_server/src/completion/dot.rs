@@ -1,8 +1,8 @@
 use super::{CompletionContext, Completions};
 use mun_hir::Upcast;
 
-/// Complete dot accesses, i.e. fields. Adds `CompletionItems` to `result.
-pub(super) fn complete_dot(result: &mut Completions, ctx: &CompletionContext) {
+/// Complete dot accesses, i.e. fields. Adds `CompletionItems` to `result`.
+pub(super) fn complete_dot(result: &mut Completions, ctx: &CompletionContext<'_>) {
     // Get the expression that we want to get the fields of
     let dot_receiver = match &ctx.dot_receiver {
         Some(expr) => expr,
@@ -18,7 +18,7 @@ pub(super) fn complete_dot(result: &mut Completions, ctx: &CompletionContext) {
     // Get all the fields of the expression
     if let Some(strukt) = receiver_ty.as_struct() {
         for field in strukt.fields(ctx.db.upcast()) {
-            result.add_field(ctx, field)
+            result.add_field(ctx, field);
         }
     };
 }
@@ -42,7 +42,7 @@ mod tests {
         }
         "#,
             Some(CompletionKind::Reference)
-        ))
+        ));
     }
 
     #[test]
@@ -57,7 +57,7 @@ mod tests {
         }
         "#,
             Some(CompletionKind::Reference)
-        ))
+        ));
     }
 
     #[test]
@@ -73,7 +73,7 @@ mod tests {
         }
         "#,
             Some(CompletionKind::Reference)
-        ))
+        ));
     }
 
     #[test]
@@ -88,6 +88,6 @@ mod tests {
         }
         "#,
             Some(CompletionKind::Reference)
-        ))
+        ));
     }
 }

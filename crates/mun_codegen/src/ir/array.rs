@@ -22,7 +22,7 @@ use inkwell::types::{BasicTypeEnum, IntType, StructType};
 use inkwell::values::{BasicValueEnum, IntValue, PointerValue};
 use std::ffi::CStr;
 
-/// A helper struct that wraps a PointerValue which points to an in memory Mun array value.
+/// A helper struct that wraps a [`PointerValue`] which points to an in memory Mun array value.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct RuntimeArrayValue<'ink>(RuntimeReferenceValue<'ink>);
 
@@ -34,7 +34,7 @@ impl<'ink> RuntimeArrayValue<'ink> {
         RuntimeReferenceValue::from_ptr(ptr, array_type).map(Self)
     }
 
-    /// Constructs a new instance from an inkwell PointerValue without checking if this is actually
+    /// Constructs a new instance from an inkwell [`PointerValue`] without checking if this is actually
     /// a pointer to an array.
     pub unsafe fn from_ptr_unchecked(ptr: PointerValue<'ink>) -> Self {
         Self(RuntimeReferenceValue::from_ptr_unchecked(ptr))
@@ -81,7 +81,7 @@ impl<'ink> RuntimeArrayValue<'ink> {
     }
 
     /// Returns the type of the `length` field
-    pub fn length_ty(&self) -> IntType {
+    pub fn length_ty(&self) -> IntType<'_> {
         self.array_data_ty()
             .get_field_type_at_index(0)
             .expect("an array must have a second field")
@@ -89,7 +89,7 @@ impl<'ink> RuntimeArrayValue<'ink> {
     }
 
     /// Returns the type of the `length` field
-    pub fn capacity_ty(&self) -> IntType {
+    pub fn capacity_ty(&self) -> IntType<'_> {
         self.array_data_ty()
             .get_field_type_at_index(1)
             .expect("an array must have a second field")

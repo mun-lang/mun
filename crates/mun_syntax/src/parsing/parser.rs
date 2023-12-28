@@ -1,6 +1,6 @@
 use crate::{
     parsing::{event::Event, token_set::TokenSet, ParseError, TokenSource},
-    SyntaxKind::{self, *},
+    SyntaxKind::{self, EOF, ERROR, TOMBSTONE},
 };
 use drop_bomb::DropBomb;
 use std::cell::Cell;
@@ -127,7 +127,7 @@ impl<'t> Parser<'t> {
         if kind == EOF {
             return;
         }
-        self.do_bump(kind, 1)
+        self.do_bump(kind, 1);
     }
 
     /// Advances the parser by one token, remapping its kind.
@@ -159,7 +159,7 @@ impl<'t> Parser<'t> {
 
     /// Create an error node and consume the next token.
     pub(crate) fn error_and_bump(&mut self, message: &str) {
-        self.error_recover(message, TokenSet::empty())
+        self.error_recover(message, TokenSet::empty());
     }
 
     /// Create an error node and consume the next token.
@@ -175,7 +175,7 @@ impl<'t> Parser<'t> {
     }
 
     fn push_event(&mut self, event: Event) {
-        self.events.push(event)
+        self.events.push(event);
     }
 
     /// Consume the next token if `kind` matches.
@@ -242,14 +242,16 @@ impl Marker {
     }
 
     /// Finishes the syntax tree node and assigns `kind` to it, and create a `CompletedMarker` for
-    /// possible future operation like `.precede()` to deal with forward_parent.
-    pub(crate) fn complete(mut self, p: &mut Parser, kind: SyntaxKind) -> CompletedMarker {
+    /// possible future operation like `.precede()` to deal with `forward_parent`.
+    pub(crate) fn complete(mut self, p: &mut Parser<'_>, kind: SyntaxKind) -> CompletedMarker {
         self.bomb.defuse();
         let idx = self.pos as usize;
-        match p.events[idx] {
-            Event::Start {
-                kind: ref mut slot, ..
-            } => {
+        match p
+            .events
+            .get_mut(idx)
+            .expect("marker position must be valid")
+        {
+            Event::Start { kind: slot, .. } => {
                 *slot = kind;
             }
             _ => unreachable!(),
@@ -260,7 +262,7 @@ impl Marker {
     }
 
     /// Abandons the syntax tree node. All its children are attached to its parent instead.
-    pub(crate) fn abandon(mut self, p: &mut Parser) {
+    pub(crate) fn abandon(mut self, p: &mut Parser<'_>) {
         self.bomb.defuse();
         let idx = self.pos as usize;
         if idx == p.events.len() - 1 {
@@ -297,15 +299,16 @@ impl CompletedMarker {
     ///
     /// Given completed events `[START, FINISH]` and its corresponding `CompletedMarker(pos: 0, _)`,
     /// append a new `START` event as `[START, FINISH, NEWSTART]`, then mark `NEWSTART` as `START`'s
-    /// parent with saving its relative distance to `NEWSTART` into forward_parent(=2 in this case).
-    pub(crate) fn precede(self, p: &mut Parser) -> Marker {
+    /// parent with saving its relative distance to `NEWSTART` into `forward_parent(=2` in this case).
+    pub(crate) fn precede(self, p: &mut Parser<'_>) -> Marker {
         let new_pos = p.start();
         let idx = self.start_pos as usize;
-        match p.events[idx] {
-            Event::Start {
-                ref mut forward_parent,
-                ..
-            } => {
+        match p
+            .events
+            .get_mut(idx)
+            .expect("Marker position must be valid")
+        {
+            Event::Start { forward_parent, .. } => {
                 *forward_parent = Some(new_pos.pos - self.start_pos);
             }
             _ => unreachable!(),
@@ -314,18 +317,26 @@ impl CompletedMarker {
     }
 
     /// Undo this completion and turns into a `Marker`
-    pub(crate) fn undo_completion(self, p: &mut Parser) -> Marker {
+    pub(crate) fn undo_completion(self, p: &mut Parser<'_>) -> Marker {
         let start_idx = self.start_pos as usize;
         let finish_idx = self.finish_pos as usize;
-        match p.events[start_idx] {
+        match p
+            .events
+            .get_mut(start_idx)
+            .expect("Marker position must be valid")
+        {
             Event::Start {
-                ref mut kind,
+                kind,
                 forward_parent: None,
             } => *kind = TOMBSTONE,
             _ => unreachable!(),
         }
-        match p.events[finish_idx] {
-            ref mut slot @ Event::Finish => *slot = Event::tombstone(),
+        match p
+            .events
+            .get_mut(finish_idx)
+            .expect("Marker position must be valid")
+        {
+            slot @ Event::Finish => *slot = Event::tombstone(),
             _ => unreachable!(),
         }
         Marker::new(self.start_pos)

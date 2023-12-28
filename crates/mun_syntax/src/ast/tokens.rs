@@ -1,4 +1,4 @@
-//! There are many AstNodes, but only a few tokens, so we hand-write them here.
+//! There are many `AstNodes`, but only a few tokens, so we hand-write them here.
 
 use crate::{
     ast::AstToken,
@@ -65,7 +65,10 @@ pub enum CommentPlacement {
 }
 
 const COMMENT_PREFIX_TO_KIND: &[(&str, CommentKind)] = {
-    use {CommentPlacement::*, CommentShape::*};
+    use {
+        CommentPlacement::{Inner, Outer},
+        CommentShape::{Block, Line},
+    };
     &[
         (
             "///",

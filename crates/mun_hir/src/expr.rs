@@ -72,7 +72,7 @@ impl Body {
                 let f = f.lookup(db);
                 let src = f.source(db);
                 collector = ExprCollector::new(def, src.file_id, db);
-                collector.collect_fn_body(&src.value)
+                collector.collect_fn_body(&src.value);
             }
         }
 
@@ -113,11 +113,11 @@ impl Body {
         &self,
         db: &dyn HirDatabase,
         owner: DefWithBody,
-        sink: &mut DiagnosticSink,
+        sink: &mut DiagnosticSink<'_>,
     ) {
         self.diagnostics
             .iter()
-            .for_each(|it| it.add_to(db, owner, sink))
+            .for_each(|it| it.add_to(db, owner, sink));
     }
 }
 
@@ -369,8 +369,7 @@ pub enum ArithOp {
 impl Expr {
     pub fn walk_child_exprs(&self, mut f: impl FnMut(ExprId)) {
         match self {
-            Expr::Missing => {}
-            Expr::Path(_) => {}
+            Expr::Missing | Expr::Path(_) | Expr::Literal(_) => {}
             Expr::Block { statements, tail } => {
                 for stmt in statements {
                     match stmt {
@@ -399,7 +398,6 @@ impl Expr {
             Expr::Field { expr, .. } | Expr::UnaryOp { expr, .. } => {
                 f(*expr);
             }
-            Expr::Literal(_) => {}
             Expr::If {
                 condition,
                 then_branch,
@@ -411,12 +409,7 @@ impl Expr {
                     f(*else_expr);
                 }
             }
-            Expr::Return { expr } => {
-                if let Some(expr) = expr {
-                    f(*expr);
-                }
-            }
-            Expr::Break { expr } => {
+            Expr::Return { expr } | Expr::Break { expr } => {
                 if let Some(expr) = expr {
                     f(*expr);
                 }
@@ -625,7 +618,7 @@ impl<'a> ExprCollector<'a> {
 
                     for err in errors {
                         self.diagnostics
-                            .push(ExprDiagnostic::LiteralError { expr: expr_id, err })
+                            .push(ExprDiagnostic::LiteralError { expr: expr_id, err });
                     }
 
                     expr_id
@@ -637,13 +630,13 @@ impl<'a> ExprCollector<'a> {
 
                     for err in errors {
                         self.diagnostics
-                            .push(ExprDiagnostic::LiteralError { expr: expr_id, err })
+                            .push(ExprDiagnostic::LiteralError { expr: expr_id, err });
                     }
 
                     expr_id
                 }
                 ast::LiteralKind::String(_lit) => {
-                    let lit = Literal::String(Default::default());
+                    let lit = Literal::String(String::default());
                     self.alloc_expr(Expr::Literal(lit), syntax_ptr)
                 }
             },
@@ -659,24 +652,24 @@ impl<'a> ExprCollector<'a> {
                 let op = e.op_kind();
                 if let Some(op) = op {
                     match op {
-                        op @ BinOp::Add
-                        | op @ BinOp::Subtract
-                        | op @ BinOp::Multiply
-                        | op @ BinOp::Divide
-                        | op @ BinOp::Remainder
-                        | op @ BinOp::LeftShift
-                        | op @ BinOp::RightShift
-                        | op @ BinOp::BitwiseAnd
-                        | op @ BinOp::BitwiseOr
-                        | op @ BinOp::BitwiseXor
-                        | op @ BinOp::BooleanAnd
-                        | op @ BinOp::BooleanOr
-                        | op @ BinOp::Equals
-                        | op @ BinOp::NotEqual
-                        | op @ BinOp::Less
-                        | op @ BinOp::LessEqual
-                        | op @ BinOp::Greater
-                        | op @ BinOp::GreatEqual => {
+                        op @ (BinOp::Add
+                        | BinOp::Subtract
+                        | BinOp::Multiply
+                        | BinOp::Divide
+                        | BinOp::Remainder
+                        | BinOp::LeftShift
+                        | BinOp::RightShift
+                        | BinOp::BitwiseAnd
+                        | BinOp::BitwiseOr
+                        | BinOp::BitwiseXor
+                        | BinOp::BooleanAnd
+                        | BinOp::BooleanOr
+                        | BinOp::Equals
+                        | BinOp::NotEqual
+                        | BinOp::Less
+                        | BinOp::LessEqual
+                        | BinOp::Greater
+                        | BinOp::GreatEqual) => {
                             let op = match op {
                                 BinOp::Add => BinaryOp::ArithOp(ArithOp::Add),
                                 BinOp::Subtract => BinaryOp::ArithOp(ArithOp::Subtract),
@@ -722,17 +715,17 @@ impl<'a> ExprCollector<'a> {
                                 syntax_ptr,
                             )
                         }
-                        op @ BinOp::Assign
-                        | op @ BinOp::AddAssign
-                        | op @ BinOp::SubtractAssign
-                        | op @ BinOp::MultiplyAssign
-                        | op @ BinOp::DivideAssign
-                        | op @ BinOp::RemainderAssign
-                        | op @ BinOp::LeftShiftAssign
-                        | op @ BinOp::RightShiftAssign
-                        | op @ BinOp::BitAndAssign
-                        | op @ BinOp::BitOrAssign
-                        | op @ BinOp::BitXorAssign => {
+                        op @ (BinOp::Assign
+                        | BinOp::AddAssign
+                        | BinOp::SubtractAssign
+                        | BinOp::MultiplyAssign
+                        | BinOp::DivideAssign
+                        | BinOp::RemainderAssign
+                        | BinOp::LeftShiftAssign
+                        | BinOp::RightShiftAssign
+                        | BinOp::BitAndAssign
+                        | BinOp::BitOrAssign
+                        | BinOp::BitXorAssign) => {
                             let assign_op = match op {
                                 BinOp::Assign => None,
                                 BinOp::AddAssign => Some(ArithOp::Add),
@@ -770,8 +763,7 @@ impl<'a> ExprCollector<'a> {
                 let path = e
                     .path()
                     .and_then(Path::from_ast)
-                    .map(Expr::Path)
-                    .unwrap_or(Expr::Missing);
+                    .map_or(Expr::Missing, Expr::Path);
                 self.alloc_expr(path, syntax_ptr)
             }
             ast::ExprKind::RecordLit(e) => {
@@ -786,8 +778,7 @@ impl<'a> ExprCollector<'a> {
                         .map(|field| RecordLitField {
                             name: field
                                 .name_ref()
-                                .map(|nr| nr.as_name())
-                                .unwrap_or_else(Name::missing),
+                                .map_or_else(Name::missing, |nr| nr.as_name()),
                             expr: if let Some(e) = field.expr() {
                                 self.collect_expr(e)
                             } else if let Some(nr) = field.name_ref() {
@@ -896,10 +887,7 @@ impl<'a> ExprCollector<'a> {
     fn collect_pat(&mut self, pat: ast::Pat) -> PatId {
         let pattern = match pat.kind() {
             ast::PatKind::BindPat(bp) => {
-                let name = bp
-                    .name()
-                    .map(|nr| nr.as_name())
-                    .unwrap_or_else(Name::missing);
+                let name = bp.name().map_or_else(Name::missing, |nr| nr.as_name());
                 Pat::Bind { name }
             }
             ast::PatKind::PlaceholderPat(_) => Pat::Wild,
@@ -953,7 +941,7 @@ impl<'a> ExprCollector<'a> {
 }
 
 /// Removes any underscores from a string if present
-fn strip_underscores(s: &str) -> Cow<str> {
+fn strip_underscores(s: &str) -> Cow<'_, str> {
     if s.contains('_') {
         let mut s = s.to_string();
         s.retain(|c| c != '_');
@@ -975,15 +963,15 @@ fn filtered_float_lit(str: &str, suffix: Option<&str>, base: u32) -> (Literal, V
     if base != 10 {
         errors.push(LiteralError::NonDecimalFloat(base));
     }
-    let kind = match suffix {
-        Some(suf) => match PrimitiveFloat::from_suffix(suf) {
-            Some(suf) => LiteralFloatKind::Suffixed(suf),
-            None => {
-                errors.push(LiteralError::InvalidFloatSuffix(suf.into()));
-                LiteralFloatKind::Unsuffixed
-            }
-        },
-        None => LiteralFloatKind::Unsuffixed,
+    let kind = if let Some(suf) = suffix {
+        if let Some(suf) = PrimitiveFloat::from_suffix(suf) {
+            LiteralFloatKind::Suffixed(suf)
+        } else {
+            errors.push(LiteralError::InvalidFloatSuffix(suf.into()));
+            LiteralFloatKind::Unsuffixed
+        }
+    } else {
+        LiteralFloatKind::Unsuffixed
     };
 
     let value = if base == 10 {
@@ -1007,37 +995,36 @@ fn integer_lit(str: &str, suffix: Option<&str>) -> (Literal, Vec<LiteralError>) 
 
     let mut errors = Vec::new();
 
-    let kind = match suffix {
-        Some(suf) => match PrimitiveInt::from_suffix(suf) {
-            Some(ty) => LiteralIntKind::Suffixed(ty),
-            None => {
-                // 1f32 is a valid number, but its an integer disguised as a float
-                if PrimitiveFloat::from_suffix(suf).is_some() {
-                    return filtered_float_lit(&str, suffix, base);
-                }
-
-                errors.push(LiteralError::InvalidIntSuffix(suf.into()));
-                LiteralIntKind::Unsuffixed
+    let kind = if let Some(suf) = suffix {
+        if let Some(ty) = PrimitiveInt::from_suffix(suf) {
+            LiteralIntKind::Suffixed(ty)
+        } else {
+            // 1f32 is a valid number, but its an integer disguised as a float
+            if PrimitiveFloat::from_suffix(suf).is_some() {
+                return filtered_float_lit(&str, suffix, base);
             }
-        },
-        _ => LiteralIntKind::Unsuffixed,
+
+            errors.push(LiteralError::InvalidIntSuffix(suf.into()));
+            LiteralIntKind::Unsuffixed
+        }
+    } else {
+        LiteralIntKind::Unsuffixed
     };
 
-    let str = &str[if base != 10 { 2 } else { 0 }..];
-    let (value, err) = match u128::from_str_radix(str, base) {
-        Ok(i) => (i, None),
-        Err(_) => {
-            // Small bases are lexed as if they were base 10, e.g. the string might be
-            // `0b10201`. This will cause the conversion above to fail.
-            let from_lexer = base < 10
-                && str
-                    .chars()
-                    .any(|c| c.to_digit(10).map_or(false, |d| d >= base));
-            if from_lexer {
-                (0, Some(LiteralError::LexerError))
-            } else {
-                (0, Some(LiteralError::IntTooLarge))
-            }
+    let str = &str[if base == 10 { 0 } else { 2 }..];
+    let (value, err) = if let Ok(i) = u128::from_str_radix(str, base) {
+        (i, None)
+    } else {
+        // Small bases are lexed as if they were base 10, e.g. the string might be
+        // `0b10201`. This will cause the conversion above to fail.
+        let from_lexer = base < 10
+            && str
+                .chars()
+                .any(|c| c.to_digit(10).map_or(false, |d| d >= base));
+        if from_lexer {
+            (0, Some(LiteralError::LexerError))
+        } else {
+            (0, Some(LiteralError::IntTooLarge))
         }
     };
 
@@ -1382,7 +1369,7 @@ mod diagnostics {
             &self,
             db: &dyn HirDatabase,
             owner: DefWithBody,
-            sink: &mut DiagnosticSink,
+            sink: &mut DiagnosticSink<'_>,
         ) {
             let source_map = owner.body_source_map(db);
 
@@ -1409,13 +1396,13 @@ mod diagnostics {
                             sink.push(InvalidLiteralSuffix {
                                 literal,
                                 suffix: SmolStr::new(suffix),
-                            })
+                            });
                         }
                         LiteralError::NonDecimalFloat(base) => {
                             sink.push(InvalidFloatingPointLiteral {
                                 literal,
                                 base: *base,
-                            })
+                            });
                         }
                     }
                 }

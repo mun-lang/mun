@@ -38,5 +38,5 @@ fn test_private_leak_struct_fields() {
     @r###"
     180..183: can't leak private type
     392..395: can't leak private type
-    "###)
+    "###);
 }

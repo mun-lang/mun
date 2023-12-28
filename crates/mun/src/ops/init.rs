@@ -65,11 +65,12 @@ version="0.1.0"
 /// Shortcut function for creating new directories.
 pub fn create_dir(path: impl AsRef<Path>) -> anyhow::Result<()> {
     fs::create_dir(&path)
-        .map_err(|_| anyhow!("failed to create directory `{}`", path.as_ref().display()))
+        .map_err(|_error| anyhow!("failed to create directory `{}`", path.as_ref().display()))
 }
 
 /// Shortcut function for creating new files.
 pub fn write(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> anyhow::Result<()> {
     let path = path.as_ref();
-    fs::write(path, contents.as_ref()).map_err(|_| anyhow!("failed to write `{}`", path.display()))
+    fs::write(path, contents.as_ref())
+        .map_err(|_error| anyhow!("failed to write `{}`", path.display()))
 }

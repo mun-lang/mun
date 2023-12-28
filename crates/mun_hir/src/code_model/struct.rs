@@ -122,7 +122,7 @@ impl Struct {
         db.lower_struct(self)
     }
 
-    pub fn diagnostics(self, db: &dyn HirDatabase, sink: &mut DiagnosticSink) {
+    pub fn diagnostics(self, db: &dyn HirDatabase, sink: &mut DiagnosticSink<'_>) {
         let data = self.data(db.upcast());
         let lower = self.lower(db);
         lower.add_diagnostics(db, self.file_id(db), data.type_ref_source_map(), sink);
@@ -159,7 +159,7 @@ pub enum StructKind {
 }
 
 impl fmt::Display for StructKind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             StructKind::Record => write!(f, "record"),
             StructKind::Tuple => write!(f, "tuple"),
@@ -200,7 +200,7 @@ impl StructData {
                 let fields = r
                     .fields()
                     .map(|fd| FieldData {
-                        name: fd.name().map(|n| n.as_name()).unwrap_or_else(Name::missing),
+                        name: fd.name().map_or_else(Name::missing, |n| n.as_name()),
                         type_ref: type_ref_builder.alloc_from_node_opt(fd.ascribed_type().as_ref()),
                         visibility: RawVisibility::from_ast(fd.visibility()),
                     })

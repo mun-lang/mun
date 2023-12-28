@@ -75,15 +75,20 @@ fn reloadable_struct_decl_single_file() {
     )
     .expect("Failed to build test driver");
 
-    let args: StructRef = driver
+    let args: StructRef<'_> = driver
         .runtime
         .invoke("args", ())
         .expect("Failed to call function");
 
-    let foo: StructRef = args.get("foo").expect("Failed to get struct field");
-    assert_eq!(foo.get::<i32>("m").expect("Failed to get struct field"), 1);
+    let foo_struct: StructRef<'_> = args.get("foo").expect("Failed to get struct field");
+    assert_eq!(
+        foo_struct
+            .get::<i32>("m")
+            .expect("Failed to get struct field"),
+        1
+    );
 
-    let foo = foo.root();
+    let foo_struct = foo_struct.root();
 
     driver.update_file(
         "mod.mun",
@@ -103,8 +108,13 @@ fn reloadable_struct_decl_single_file() {
     "#,
     );
 
-    let foo = foo.as_ref(&driver.runtime);
-    assert_eq!(foo.get::<i64>("m").expect("Failed to get struct field"), 1);
+    let foo_struct = foo_struct.as_ref(&driver.runtime);
+    assert_eq!(
+        foo_struct
+            .get::<i64>("m")
+            .expect("Failed to get struct field"),
+        1
+    );
 }
 
 #[test]
@@ -136,18 +146,23 @@ fn reloadable_struct_decl_multi_file() {
     )
     .expect("Failed to build test driver");
 
-    let args: StructRef = driver
+    let args: StructRef<'_> = driver
         .runtime
         .invoke("args", ())
         .expect("Failed to call function");
 
     assert_eq!(args.get::<i32>("n").expect("Failed to get struct field"), 3);
 
-    let foo: StructRef = args.get("foo").expect("Failed to get struct field");
-    assert_eq!(foo.get::<i64>("m").expect("Failed to get struct field"), 1);
+    let foo_struct: StructRef<'_> = args.get("foo").expect("Failed to get struct field");
+    assert_eq!(
+        foo_struct
+            .get::<i64>("m")
+            .expect("Failed to get struct field"),
+        1
+    );
 
     let args = args.root();
-    let foo = foo.root();
+    let foo_struct = foo_struct.root();
 
     driver.update_file(
         "mod.mun",
@@ -167,6 +182,11 @@ fn reloadable_struct_decl_multi_file() {
     let args = args.as_ref(&driver.runtime);
     assert_eq!(args.get::<i64>("n").expect("Failed to get struct field"), 3);
 
-    let foo = foo.as_ref(&driver.runtime);
-    assert_eq!(foo.get::<i64>("m").expect("Failed to get struct field"), 1);
+    let foo_struct = foo_struct.as_ref(&driver.runtime);
+    assert_eq!(
+        foo_struct
+            .get::<i64>("m")
+            .expect("Failed to get struct field"),
+        1
+    );
 }

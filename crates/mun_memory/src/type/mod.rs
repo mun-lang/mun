@@ -77,7 +77,7 @@ impl TypeDataStore {
                         NonNull::new_unchecked(Box::as_mut(ty) as *mut TypeData)
                     });
                 } else {
-                    ty.mark = Mark::Unused
+                    ty.mark = Mark::Unused;
                 };
             }
         }
@@ -124,7 +124,7 @@ impl TypeDataStore {
                 &ty.array_type,
             ] {
                 let read_lock = indirection.read();
-                if let &Some(mut indirection_ref) = read_lock.deref() {
+                if let &Some(mut indirection_ref) = &*read_lock {
                     let reference = unsafe { indirection_ref.as_mut() };
                     if reference.mark == Mark::Unused {
                         reference.mark = Mark::Used;
@@ -214,9 +214,9 @@ impl TypeDataStore {
             layout,
             data,
             external_references: AtomicUsize::new(0),
-            immutable_pointer_type: Default::default(),
-            mutable_pointer_type: Default::default(),
-            array_type: Default::default(),
+            immutable_pointer_type: RwLock::default(),
+            mutable_pointer_type: RwLock::default(),
+            array_type: RwLock::default(),
             mark: Mark::Initializing,
         }));
 
@@ -225,7 +225,7 @@ impl TypeDataStore {
         // as it lives.
         let entry = unsafe {
             NonNull::new_unchecked(
-                entries.back().expect("didnt insert").deref() as *const TypeData as *mut _,
+                &**entries.back().expect("didnt insert") as *const TypeData as *mut _
             )
         };
 
@@ -343,7 +343,7 @@ impl PartialEq for Type {
 impl Eq for Type {}
 impl Hash for Type {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.inner().hash(state)
+        self.inner().hash(state);
     }
 }
 
@@ -417,7 +417,7 @@ impl TypeData {
         let inner = unsafe { ty.inner.as_mut() };
 
         // Recheck if another thread acquired the write lock in the mean time
-        if let Some(element_ty) = write_lock.deref() {
+        if let Some(element_ty) = &*write_lock {
             inner.mark = Mark::Used;
             return Type {
                 inner: *element_ty,
@@ -467,7 +467,7 @@ impl TypeData {
         let inner = unsafe { ty.inner.as_mut() };
 
         // Recheck if another thread acquired the write lock in the mean time
-        if let Some(element_ty) = write_lock.deref() {
+        if let Some(element_ty) = &*write_lock {
             inner.mark = Mark::Used;
             return Type {
                 inner: *element_ty,
@@ -700,7 +700,7 @@ impl<'t> Display for PointerType<'t> {
 
 impl Hash for StructData {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.guid.hash(state)
+        self.guid.hash(state);
     }
 }
 
@@ -847,7 +847,7 @@ impl Type {
         }
     }
 
-    /// Returns true if this instance represents the TypeInfo of the given type.
+    /// Returns true if this instance represents the `TypeInfo` of the given type.
     ///
     /// ```rust
     /// # use mun_memory::HasStaticType;
@@ -1003,7 +1003,7 @@ impl StructData {
         struct_info: &'abi abi::StructDefinition<'abi>,
         type_table: &TypeTable,
     ) -> Result<StructData, TryFromAbiError<'abi>> {
-        let fields: Result<Vec<FieldData>, TryFromAbiError> = izip!(
+        let fields: Result<Vec<FieldData>, TryFromAbiError<'abi>> = izip!(
             struct_info.field_names(),
             struct_info.field_types(),
             struct_info.field_offsets()
@@ -1125,7 +1125,7 @@ impl StructTypeBuilder {
         mut self,
         iter: impl IntoIterator<Item = (N, Type)>,
     ) -> Self {
-        for (name, ty) in iter.into_iter() {
+        for (name, ty) in iter {
             self = self.add_field(name.into(), ty);
         }
         self

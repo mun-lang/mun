@@ -14,7 +14,7 @@ use mun_paths::AbsPathBuf;
 use mun_vfs::VirtualFileSystem;
 use parking_lot::RwLock;
 use rustc_hash::FxHashSet;
-use std::{ops::Deref, sync::Arc, time::Instant};
+use std::{sync::Arc, time::Instant};
 
 mod protocol;
 mod utils;
@@ -98,7 +98,7 @@ impl LanguageServerState {
         let vfs_monitor: mun_vfs::NotifyMonitor = mun_vfs::Monitor::new(Box::new(move |msg| {
             vfs_monitor_sender
                 .send(msg)
-                .expect("error sending vfs monitor message to foreground")
+                .expect("error sending vfs monitor message to foreground");
         }));
         let vfs_monitor = Box::new(vfs_monitor) as Box<dyn mun_vfs::Monitor>;
 
@@ -108,15 +108,15 @@ impl LanguageServerState {
         // Construct the state that will hold all the analysis and apply the initial state
         let mut analysis = Analysis::default();
         let mut change = AnalysisChange::new();
-        change.set_packages(Default::default());
-        change.set_roots(Default::default());
+        change.set_packages(mun_hir::PackageSet::default());
+        change.set_roots(Vec::default());
         analysis.apply_change(change);
 
         LanguageServerState {
             sender,
             request_queue: ReqQueue::default(),
             config,
-            vfs: Arc::new(RwLock::new(Default::default())),
+            vfs: Arc::default(),
             vfs_monitor,
             vfs_monitor_receiver,
             open_docs: FxHashSet::default(),
@@ -216,7 +216,7 @@ impl LanguageServerState {
                         progress_state,
                         Some(format!("{done}/{total}")),
                         Some(Progress::fraction(done, total)),
-                    )
+                    );
                 }
                 mun_vfs::MonitorMessage::Loaded { files } => {
                     let vfs = &mut *self.vfs.write();
@@ -270,10 +270,9 @@ fn handle_diagnostics(state: LanguageServerSnapshot, sender: Sender<Task>) -> an
                                         uri: to_lsp::url(&state, annotation.range.file_id)?,
                                         range: to_lsp::range(
                                             annotation.range.value,
-                                            state
+                                            &*state
                                                 .analysis
-                                                .file_line_index(annotation.range.file_id)?
-                                                .deref(),
+                                                .file_line_index(annotation.range.file_id)?,
                                         ),
                                     },
                                     message: annotation.message,

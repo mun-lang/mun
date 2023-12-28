@@ -48,11 +48,11 @@ impl Driver {
         Self {
             db: CompilerDatabase::new(&config),
             out_dir,
-            source_root: Default::default(),
-            path_to_file_id: Default::default(),
-            file_id_to_path: Default::default(),
+            source_root: SourceRoot::default(),
+            path_to_file_id: HashMap::default(),
+            file_id_to_path: HashMap::default(),
             next_file_id: 0,
-            module_to_temp_assembly_path: Default::default(),
+            module_to_temp_assembly_path: HashMap::default(),
             emit_ir: config.emit_ir,
         }
     }
@@ -149,7 +149,7 @@ impl Driver {
 }
 
 impl Driver {
-    /// Returns a file id for the file with the given `relative_path`. This function reuses FileId's
+    /// Returns a file id for the file with the given `relative_path`. This function reuses `FileId`'s
     /// for paths to keep the cache as valid as possible.
     ///
     /// The allocation of an id might fail if more file IDs exist than can be allocated.
@@ -240,7 +240,7 @@ impl Driver {
                             if let Err(e) =
                                 emit_hir_diagnostic(d, &self.db, file_id, emit_colors, writer)
                             {
-                                error = Some(e)
+                                error = Some(e);
                             };
                         }),
                     );
@@ -262,15 +262,15 @@ impl Driver {
         display_color: DisplayColor,
     ) -> anyhow::Result<Option<String>> {
         let mut compiler_errors: Vec<u8> = Vec::new();
-        if !self.emit_diagnostics(&mut Cursor::new(&mut compiler_errors), display_color)? {
-            Ok(None)
-        } else {
+        if self.emit_diagnostics(&mut Cursor::new(&mut compiler_errors), display_color)? {
             Ok(Some(String::from_utf8(compiler_errors).map_err(|e| {
                 anyhow::anyhow!(
                     "could not convert compiler diagnostics to valid UTF8: {}",
                     e
                 )
             })?))
+        } else {
+            Ok(None)
         }
     }
 }
@@ -359,7 +359,7 @@ impl Driver {
                     // } else {
                     //     eprintln!("Blocked on acquiring lock on output directory")
                     // }
-                    std::thread::sleep(Duration::from_secs(1))
+                    std::thread::sleep(Duration::from_secs(1));
                 }
             };
         }

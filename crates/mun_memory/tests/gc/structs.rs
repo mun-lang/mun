@@ -15,7 +15,7 @@ struct FooObject {
 
 impl Trace for FooObject {
     fn trace(&self, handles: &mut Vec<GcPtr>) {
-        handles.push(self.bar)
+        handles.push(self.bar);
     }
 }
 
@@ -42,7 +42,7 @@ fn test_trace() {
     let mut trace = foo_type_info.trace(foo_handle);
 
     assert_eq!(trace.next(), Some(bar_handle));
-    assert_eq!(trace.next(), None)
+    assert_eq!(trace.next(), None);
 }
 
 #[test]

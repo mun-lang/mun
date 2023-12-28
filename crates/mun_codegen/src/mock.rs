@@ -63,9 +63,9 @@ impl mun_hir::Upcast<dyn CodeGenDatabase> for MockDatabase {
 
 impl Default for MockDatabase {
     fn default() -> Self {
-        let mut db: MockDatabase = MockDatabase {
-            storage: Default::default(),
-            events: Default::default(),
+        let mut db = MockDatabase {
+            storage: salsa::Storage::default(),
+            events: Mutex::default(),
         };
         db.set_optimization_level(OptimizationLevel::Default);
         db.set_target(Target::host_target().unwrap());
@@ -76,7 +76,7 @@ impl Default for MockDatabase {
 impl MockDatabase {
     /// Creates a database from the given text.
     pub fn with_single_file(text: &str) -> (MockDatabase, FileId) {
-        let mut db: MockDatabase = Default::default();
+        let mut db = MockDatabase::default();
 
         let mut source_root = SourceRoot::default();
         let source_root_id = SourceRootId(0);

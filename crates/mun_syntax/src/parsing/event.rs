@@ -9,7 +9,7 @@ use std::mem;
 
 use crate::{
     parsing::{ParseError, TreeSink},
-    SyntaxKind::{self, *},
+    SyntaxKind::{self, TOMBSTONE},
 };
 
 /// `Parser` produces a flat list of `Events`'s. They are converted to a tree structure in a
@@ -84,7 +84,7 @@ pub(super) fn process(sink: &mut dyn TreeSink, mut events: Vec<Event>) {
                 }
 
                 for kind in forward_parents.drain(..).rev() {
-                    sink.start_node(kind)
+                    sink.start_node(kind);
                 }
             }
             Event::Finish => sink.finish_node(),

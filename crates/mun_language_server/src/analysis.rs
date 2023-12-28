@@ -21,7 +21,7 @@ impl Analysis {
     /// Applies the given changes to the state. If there are outstanding `AnalysisSnapshot`s they
     /// will be canceled.
     pub fn apply_change(&mut self, change: AnalysisChange) {
-        self.db.apply_change(change)
+        self.db.apply_change(change);
     }
 
     /// Creates a snapshot of the current `Analysis`. You can query the resulting `AnalysisSnapshot`

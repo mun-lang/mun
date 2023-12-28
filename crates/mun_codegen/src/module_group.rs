@@ -95,9 +95,7 @@ impl ModuleGroup {
                     .get(&visible_mod.into())
                     // If all its children are also part of the module group we can keep the
                     // function internal, so there is no need to export it.
-                    .map(|&includes_subtree| !includes_subtree)
-                    // Otherwise, the module is not part of the group and we have to export it.
-                    .unwrap_or(true)
+                    .map_or(true, |&includes_subtree| !includes_subtree)
             }
         }
     }

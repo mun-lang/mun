@@ -100,7 +100,7 @@ typedef MunRawGcPtr MunGcPtr;
 /**
  * Definition of an external function that is callable from Mun.
  *
- * The ownership of the contained TypeInfoHandles is considered to lie with this struct.
+ * The ownership of the contained `TypeInfoHandles` is considered to lie with this struct.
  */
 typedef struct MunExternalFunctionDefinition {
     /**
@@ -604,7 +604,7 @@ void mun_string_destroy(const char *string);
  *
  * # Safety
  *
- * Only call this function on an ErrorHandle once.
+ * Only call this function on an [`ErrorHandle`] once.
  */
 void mun_error_destroy(struct MunErrorHandle error);
 

@@ -58,7 +58,8 @@ impl HasConstValue for f64 {
 impl<'ink> AsValue<'ink, f32> for f32 {
     fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, f32> {
         Value::from_raw(
-            <Self as SizedValueType>::get_ir_type(context.type_context).const_float(*self as f64),
+            <Self as SizedValueType>::get_ir_type(context.type_context)
+                .const_float(f64::from(*self)),
         )
     }
 }

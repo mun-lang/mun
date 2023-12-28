@@ -30,10 +30,10 @@ impl PackageDefs {
         &self,
         db: &dyn DefDatabase,
         module: LocalModuleId,
-        sink: &mut DiagnosticSink,
+        sink: &mut DiagnosticSink<'_>,
     ) {
         for diagnostic in self.diagnostics.iter() {
-            diagnostic.add_to(db, module, sink)
+            diagnostic.add_to(db, module, sink);
         }
     }
 }
@@ -101,8 +101,28 @@ mod diagnostics {
             &self,
             db: &dyn DefDatabase,
             target_module: LocalModuleId,
-            sink: &mut DiagnosticSink,
+            sink: &mut DiagnosticSink<'_>,
         ) {
+            fn use_tree_ptr_from_ast(
+                db: &dyn AstDatabase,
+                ast: &AstId<Use>,
+                index: usize,
+            ) -> Option<InFile<AstPtr<ast::UseTree>>> {
+                let use_item = ast.to_node(db);
+                let mut cur = 0;
+                let mut tree = None;
+                Path::expand_use_item(
+                    InFile::new(ast.file_id, use_item),
+                    |_path, use_tree, _is_glob, _alias| {
+                        if cur == index {
+                            tree = Some(use_tree.clone());
+                        }
+                        cur += 1;
+                    },
+                );
+                tree.map(|t| InFile::new(ast.file_id, AstPtr::new(&t)))
+            }
+
             if self.in_module != target_module {
                 return;
             }
@@ -118,26 +138,6 @@ mod diagnostics {
                         sink.push(ImportDuplicateDefinition { use_tree });
                     }
                 }
-            }
-
-            fn use_tree_ptr_from_ast(
-                db: &dyn AstDatabase,
-                ast: &AstId<Use>,
-                index: usize,
-            ) -> Option<InFile<AstPtr<ast::UseTree>>> {
-                let use_item = ast.to_node(db);
-                let mut cur = 0;
-                let mut tree = None;
-                Path::expand_use_item(
-                    InFile::new(ast.file_id, use_item),
-                    |_path, use_tree, _is_glob, _alias| {
-                        if cur == index {
-                            tree = Some(use_tree.clone())
-                        }
-                        cur += 1;
-                    },
-                );
-                tree.map(|t| InFile::new(ast.file_id, AstPtr::new(&t)))
             }
         }
     }

@@ -31,13 +31,13 @@ impl PointerInfo {
         }
 
         Ok(ManuallyDrop::new(Arc::from_raw(
-            self.1 as *const TypeDataStore,
+            self.1.cast::<TypeDataStore>(),
         )))
     }
 
     /// Returns the pointer ino associated with the Type
     unsafe fn inner(&self) -> Result<&PointerData, String> {
-        match (self.0 as *const PointerData).as_ref() {
+        match self.0.cast::<PointerData>().as_ref() {
             Some(store) => Ok(store),
             None => Err(String::from("null pointer")),
         }
@@ -46,8 +46,8 @@ impl PointerInfo {
     /// Converts from C FFI type to a Rust type.
     unsafe fn to_rust<'a>(self) -> Result<super::super::PointerType<'a>, String> {
         match (
-            (self.0 as *const PointerData).as_ref(),
-            (self.1 as *const Arc<TypeDataStore>).as_ref(),
+            self.0.cast::<PointerData>().as_ref(),
+            self.1.cast::<Arc<TypeDataStore>>().as_ref(),
         ) {
             (Some(inner), Some(store)) => Ok(super::super::PointerType { inner, store }),
             _ => Err(String::from("null pointer")),

@@ -89,11 +89,11 @@ impl MunLibrary {
     /// This operations executes a function in the munlib. There is no guarantee that the execution
     /// of the function wont result in undefined behavior.
     pub unsafe fn get_info(&self) -> abi::AssemblyInfo<'static> {
-        let get_info_fn: libloading::Symbol<extern "C" fn() -> abi::AssemblyInfo<'static>> = self
-            .0
-            .library()
-            .get(abi::GET_INFO_FN_NAME.as_bytes())
-            .unwrap();
+        let get_info_fn: libloading::Symbol<'_, extern "C" fn() -> abi::AssemblyInfo<'static>> =
+            self.0
+                .library()
+                .get(abi::GET_INFO_FN_NAME.as_bytes())
+                .unwrap();
 
         get_info_fn()
     }

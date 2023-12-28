@@ -67,7 +67,7 @@ impl<'a> DispatchTable<'a> {
     ///
     /// This is generally not recommended, use with caution! Calling this method with an
     /// out-of-bounds index is _undefined behavior_ even if the resulting reference is not used.
-    /// For a safe alternative see [get_ptr](#method.get_ptr).
+    /// For a safe alternative see [`get_ptr`](#method.get_ptr).
     ///
     /// # Safety
     ///
@@ -89,7 +89,7 @@ impl<'a> DispatchTable<'a> {
     ///
     /// This is generally not recommended, use with caution! Calling this method with an
     /// out-of-bounds index is _undefined behavior_ even if the resulting reference is not used.
-    /// For a safe alternative see [get_ptr_mut](#method.get_ptr_mut).
+    /// For a safe alternative see [`get_ptr_mut`](#method.get_ptr_mut).
     ///
     /// # Safety
     ///

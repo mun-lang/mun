@@ -11,7 +11,7 @@ use std::{borrow::Cow, fmt};
 pub struct TypeVarId(pub(crate) u32);
 
 impl fmt::Display for TypeVarId {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "'{}", self.0)
     }
 }
@@ -159,6 +159,7 @@ impl TypeVariableTable {
 
     /// Handles unificiation of trivial cases.
     pub(crate) fn unify_inner_trivial(&mut self, a: &Ty, b: &Ty) -> bool {
+        #[allow(clippy::match_same_arms)]
         match (a.interned(), b.interned()) {
             // Ignore unificiation if dealing with unknown types, there are no guarentees in that case.
             (TyKind::Unknown, _) | (_, TyKind::Unknown) => true,
@@ -285,7 +286,7 @@ impl TypeVariableTable {
         })
     }
 
-    /// Resolves the type completely; type variables without known type are replaced by Ty::Unknown.
+    /// Resolves the type completely; type variables without known type are replaced by [`Ty::Unknown`].
     pub(crate) fn resolve_ty_completely(&mut self, ty: Ty) -> Ty {
         self.resolve_ty_completely_inner(&mut Vec::new(), ty)
     }

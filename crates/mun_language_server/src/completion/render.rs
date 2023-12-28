@@ -6,12 +6,12 @@ use crate::{db::AnalysisDatabase, SymbolKind};
 use function::FunctionRender;
 use mun_hir::{semantics::ScopeDef, HirDisplay};
 
-pub(super) fn render_field(ctx: RenderContext, field: mun_hir::Field) -> CompletionItem {
+pub(super) fn render_field(ctx: RenderContext<'_>, field: mun_hir::Field) -> CompletionItem {
     Render::new(ctx).render_field(field)
 }
 
 pub(super) fn render_fn(
-    ctx: RenderContext,
+    ctx: RenderContext<'_>,
     local_name: Option<String>,
     func: mun_hir::Function,
 ) -> Option<CompletionItem> {
@@ -19,7 +19,7 @@ pub(super) fn render_fn(
 }
 
 pub(super) fn render_resolution(
-    ctx: RenderContext,
+    ctx: RenderContext<'_>,
     local_name: String,
     resolution: &ScopeDef,
 ) -> Option<CompletionItem> {
@@ -57,7 +57,7 @@ impl<'a> Render<'a> {
         local_name: String,
         resolution: &ScopeDef,
     ) -> Option<CompletionItem> {
-        use mun_hir::ModuleDef::*;
+        use mun_hir::ModuleDef::{Function, Module, PrimitiveType, Struct, TypeAlias};
 
         let completion_kind = match resolution {
             ScopeDef::ModuleDef(PrimitiveType(..)) => CompletionKind::BuiltinType,

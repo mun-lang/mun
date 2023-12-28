@@ -38,8 +38,8 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
             db,
             target_data,
             types: RefCell::new(HashMap::default()),
-            struct_to_type_id: Default::default(),
-            array_ty_to_type_id: Default::default(),
+            struct_to_type_id: RefCell::default(),
+            array_ty_to_type_id: RefCell::default(),
         }
     }
 
@@ -165,7 +165,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
     }
 
     /// Returns the type of the struct that should be used for variables. Depending on the memory
-    /// type of the struct this is either a pointer to a GCHandle which holds a pointer to a struct,
+    /// type of the struct this is either a pointer to a `GCHandle` which holds a pointer to a struct,
     /// or, in case of a value struct, the struct type itself.
     /// Returns the type of the struct that should be used for variables.
     pub fn get_struct_reference_type(&self, struct_ty: mun_hir::Struct) -> BasicTypeEnum<'ink> {
@@ -315,7 +315,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
             tuple_ir_types.push(
                 self.get_basic_type(ty)
                     .expect("tuple type should be a basic type"),
-            )
+            );
         }
         self.context.struct_type(&tuple_ir_types, false)
     }
@@ -378,9 +378,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
                     .array_ty_to_type_id
                     .borrow_mut()
                     .insert(a.interned().clone(), array_type_id.clone());
-                if previous_entry.is_some() {
-                    panic!("array cyclic reference?");
-                }
+                assert!(previous_entry.is_none(), "array cyclic reference?");
 
                 array_type_id
             }

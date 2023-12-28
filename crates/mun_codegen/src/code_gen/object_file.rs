@@ -15,7 +15,7 @@ impl ObjectFile {
     pub fn new(
         target: &spec::Target,
         target_machine: &TargetMachine,
-        module: &inkwell::module::Module,
+        module: &inkwell::module::Module<'_>,
     ) -> Result<Self, anyhow::Error> {
         let obj = target_machine
             .write_to_memory_buffer(module, FileType::Object)

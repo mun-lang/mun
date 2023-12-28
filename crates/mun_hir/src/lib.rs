@@ -1,5 +1,5 @@
 //! HIR provides high-level, object-oriented access to Mun code. It is constructed by first parsing
-//! Mun code with the mun_syntax crate and then it is lowered into HIR constructs, names are
+//! Mun code with the `mun_syntax` crate and then it is lowered into HIR constructs, names are
 //! resolved, and type checking is performed. HIR is the input for both the compiler as well as the
 //! language server.
 

@@ -20,7 +20,7 @@ pub unsafe extern "C" fn mun_string_destroy(string: *const c_char) {
     }
 }
 
-/// Tries to convert a C style string pointer to a CStr.
+/// Tries to convert a C style string pointer to a [`CStr`].
 ///
 /// # Safety
 ///

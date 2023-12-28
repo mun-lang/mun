@@ -11,13 +11,13 @@ pub struct IntTy {
 }
 
 impl fmt::Debug for IntTy {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self, f)
     }
 }
 
 impl fmt::Display for IntTy {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.as_str())
     }
 }
@@ -133,15 +133,15 @@ impl IntTy {
                 IntBitness::X32 => i32::MAX as u128,
                 IntBitness::X64 => i64::MAX as u128,
                 IntBitness::X128 => i128::MAX as u128,
-                _ => unreachable!("cannot determine max size of variable bitness"),
+                IntBitness::Xsize => unreachable!("cannot determine max size of variable bitness"),
             },
             Signedness::Unsigned => match self.bitness {
-                IntBitness::X8 => u8::MAX as u128,
-                IntBitness::X16 => u16::MAX as u128,
-                IntBitness::X32 => u32::MAX as u128,
-                IntBitness::X64 => u64::MAX as u128,
+                IntBitness::X8 => u8::MAX.into(),
+                IntBitness::X16 => u16::MAX.into(),
+                IntBitness::X32 => u32::MAX.into(),
+                IntBitness::X64 => u64::MAX.into(),
                 IntBitness::X128 => u128::MAX,
-                _ => unreachable!("cannot determine max size of variable bitness"),
+                IntBitness::Xsize => unreachable!("cannot determine max size of variable bitness"),
             },
         }
     }
@@ -165,13 +165,13 @@ pub struct FloatTy {
 }
 
 impl fmt::Debug for FloatTy {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self, f)
     }
 }
 
 impl fmt::Display for FloatTy {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.as_str())
     }
 }

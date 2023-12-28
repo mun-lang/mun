@@ -29,7 +29,7 @@ pub struct LowerTyMap {
 impl Default for LowerTyMap {
     fn default() -> Self {
         LowerTyMap {
-            type_ref_to_type: Default::default(),
+            type_ref_to_type: ArenaMap::default(),
             diagnostics: vec![],
             unknown_ty: TyKind::Unknown.intern(),
         }
@@ -50,11 +50,11 @@ impl LowerTyMap {
         db: &dyn HirDatabase,
         file_id: FileId,
         source_map: &TypeRefSourceMap,
-        sink: &mut DiagnosticSink,
+        sink: &mut DiagnosticSink<'_>,
     ) {
         self.diagnostics
             .iter()
-            .for_each(|it| it.add_to(db, file_id, source_map, sink))
+            .for_each(|it| it.add_to(db, file_id, source_map, sink));
     }
 }
 
@@ -132,7 +132,7 @@ impl Ty {
         // Get the current module and see if the type is visible from here
         if let Some(module) = resolver.module() {
             if !vis.is_visible_from(db, module) {
-                diagnostics.push(LowerDiagnostic::TypeIsPrivate { id: type_ref })
+                diagnostics.push(LowerDiagnostic::TypeIsPrivate { id: type_ref });
             }
         }
 
@@ -243,9 +243,10 @@ pub(crate) fn type_for_def(db: &dyn HirDatabase, def: TypableDef, ns: Namespace)
         (TypableDef::TypeAlias(t), Namespace::Types) => type_for_type_alias(db, t),
 
         // 'error' cases:
-        (TypableDef::Function(_), Namespace::Types) => TyKind::Unknown.intern(),
-        (TypableDef::PrimitiveType(_), Namespace::Values) => TyKind::Unknown.intern(),
-        (TypableDef::TypeAlias(_), Namespace::Values) => TyKind::Unknown.intern(),
+        (TypableDef::Function(_), Namespace::Types)
+        | (TypableDef::PrimitiveType(_) | TypableDef::TypeAlias(_), Namespace::Values) => {
+            TyKind::Unknown.intern()
+        }
     }
 }
 
@@ -334,7 +335,7 @@ pub mod diagnostics {
             _db: &dyn HirDatabase,
             file_id: FileId,
             source_map: &TypeRefSourceMap,
-            sink: &mut DiagnosticSink,
+            sink: &mut DiagnosticSink<'_>,
         ) {
             match self {
                 LowerDiagnostic::UnresolvedType { id } => sink.push(UnresolvedType {

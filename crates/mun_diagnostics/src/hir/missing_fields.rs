@@ -55,8 +55,7 @@ impl<'db, 'diag, DB: mun_hir::HirDatabase> MissingFields<'db, 'diag, DB> {
 
         let location = ast::RecordLit::cast(diag.fields.to_node(&parse.syntax_node()))
             .and_then(|f| f.type_ref())
-            .map(|t| t.syntax().text_range())
-            .unwrap_or_else(|| diag.highlight_range());
+            .map_or_else(|| diag.highlight_range(), |t| t.syntax().text_range());
 
         MissingFields {
             db,

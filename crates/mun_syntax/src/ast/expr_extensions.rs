@@ -92,7 +92,7 @@ impl BinExpr {
     pub fn op_details(&self) -> Option<(SyntaxToken, BinOp)> {
         self.syntax()
             .children_with_tokens()
-            .filter_map(|it| it.into_token())
+            .filter_map(rowan::NodeOrToken::into_token)
             .find_map(|c| {
                 let bin_op = match c.kind() {
                     T![+] => BinOp::Add,
@@ -165,7 +165,7 @@ impl ast::FieldExpr {
         self.syntax
             .children_with_tokens()
             .find(|e| e.kind() == SyntaxKind::INDEX)
-            .and_then(|e| e.into_token())
+            .and_then(rowan::NodeOrToken::into_token)
     }
 
     pub fn field_access(&self) -> Option<FieldKind> {
@@ -182,13 +182,13 @@ impl ast::FieldExpr {
         let field_index = self.index_token().map(|i| i.text_range());
 
         let start = field_name
-            .map(|f| f.start())
+            .map(rowan::TextRange::start)
             .or_else(|| field_index.map(|i| i.start().add(TextSize::from(1u32))))
             .unwrap_or_else(|| self.syntax().text_range().start());
 
         let end = field_name
-            .map(|f| f.end())
-            .or_else(|| field_index.map(|f| f.end()))
+            .map(rowan::TextRange::end)
+            .or_else(|| field_index.map(rowan::TextRange::end))
             .unwrap_or_else(|| self.syntax().text_range().end());
 
         TextRange::new(start, end)
@@ -208,7 +208,7 @@ impl Literal {
         self.syntax()
             .children_with_tokens()
             .find(|e| !e.kind().is_trivia())
-            .and_then(|e| e.into_token())
+            .and_then(rowan::NodeOrToken::into_token)
             .unwrap()
     }
 
@@ -242,12 +242,11 @@ impl ast::IfExpr {
         self.blocks().next()
     }
     pub fn else_branch(&self) -> Option<ElseBranch> {
-        let res = match self.blocks().nth(1) {
-            Some(block) => ElseBranch::Block(block),
-            None => {
-                let elif: ast::IfExpr = child_opt(self)?;
-                ElseBranch::IfExpr(elif)
-            }
+        let res = if let Some(block) = self.blocks().nth(1) {
+            ElseBranch::Block(block)
+        } else {
+            let elif: ast::IfExpr = child_opt(self)?;
+            ElseBranch::IfExpr(elif)
         };
         Some(res)
     }

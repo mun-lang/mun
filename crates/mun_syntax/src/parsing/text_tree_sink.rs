@@ -4,7 +4,7 @@ use crate::{
     parsing::{lexer::Token, ParseError, TreeSink},
     syntax_node::GreenNode,
     SyntaxError,
-    SyntaxKind::{self, *},
+    SyntaxKind::{self, COMMENT, FUNCTION_DEF, WHITESPACE},
     SyntaxTreeBuilder, TextRange, TextSize,
 };
 
@@ -101,7 +101,7 @@ impl<'a> TextTreeSink<'a> {
         match mem::replace(&mut self.state, State::Normal) {
             State::PendingFinish => {
                 self.eat_trivias();
-                self.inner.finish_node()
+                self.inner.finish_node();
             }
             State::PendingStart | State::Normal => unreachable!(),
         }

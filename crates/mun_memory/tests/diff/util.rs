@@ -53,7 +53,7 @@ pub(crate) fn apply_diff(old: &[Type], diff: Vec<StructDiff>) -> Vec<Type> {
             StructDiff::Move { old_index, .. } => {
                 combined.remove(*old_index);
             }
-            _ => (),
+            StructDiff::Insert { .. } => (),
         }
     }
     for diff in diff {
@@ -74,10 +74,25 @@ pub(crate) fn apply_diff(old: &[Type], diff: Vec<StructDiff>) -> Vec<Type> {
 
 fn apply_struct_mapping(
     name: &str,
-    old_struct: StructType,
-    new_struct: StructType,
+    old_struct: StructType<'_>,
+    new_struct: StructType<'_>,
     mapping: &[FieldDiff],
 ) -> Type {
+    fn get_new_index(diff: &FieldDiff) -> usize {
+        match diff {
+            FieldDiff::Insert { index, .. } => *index,
+            FieldDiff::Move { new_index, .. } => *new_index,
+            _ => std::usize::MAX,
+        }
+    }
+
+    fn edit_field(kind: &FieldEditKind, old_field: &mut (String, Type), new_field: Field<'_>) {
+        match *kind {
+            FieldEditKind::ChangedTyped => old_field.1 = new_field.ty(),
+            FieldEditKind::RenamedField => old_field.0 = new_field.name().to_owned(),
+        }
+    }
+
     let mut fields: VecDeque<_> = old_struct
         .fields()
         .iter()
@@ -94,21 +109,6 @@ fn apply_struct_mapping(
                 fields.remove(*old_index);
             }
             _ => (),
-        }
-    }
-
-    fn get_new_index(diff: &FieldDiff) -> usize {
-        match diff {
-            FieldDiff::Insert { index, .. } => *index,
-            FieldDiff::Move { new_index, .. } => *new_index,
-            _ => std::usize::MAX,
-        }
-    }
-
-    fn edit_field(kind: &FieldEditKind, old_field: &mut (String, Type), new_field: Field) {
-        match *kind {
-            FieldEditKind::ChangedTyped => old_field.1 = new_field.ty(),
-            FieldEditKind::RenamedField => old_field.0 = new_field.name().to_owned(),
         }
     }
 

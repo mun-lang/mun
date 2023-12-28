@@ -9,6 +9,7 @@
 //! `.borrowed` functions. Most of the code works with borrowed mode, and only
 //! this mode has all AST accessors.
 
+#![allow(clippy::enum_glob_use)]
 use crate::{
     ast::{self, AstNode, AstToken},
     SyntaxKind::{self, *},

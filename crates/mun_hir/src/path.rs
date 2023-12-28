@@ -141,11 +141,11 @@ fn lower_use_tree(
                 }
             }
             if let Some(path) = convert_path(prefix, &ast_path) {
-                cb(path, tree, is_glob, alias)
+                cb(path, tree, is_glob, alias);
             }
         } else if is_glob {
             if let Some(prefix) = prefix {
-                cb(prefix, tree, is_glob, None)
+                cb(prefix, tree, is_glob, None);
             }
         }
     }

@@ -1,6 +1,10 @@
-use super::*;
+use super::{
+    declarations, error_block, name, name_recovery, opt_visibility, types, Marker, Parser, EOF,
+    GC_KW, IDENT, MEMORY_TYPE_SPECIFIER, RECORD_FIELD_DEF, RECORD_FIELD_DEF_LIST, STRUCT_DEF,
+    TUPLE_FIELD_DEF, TUPLE_FIELD_DEF_LIST, TYPE_ALIAS_DEF, VALUE_KW,
+};
 
-pub(super) fn struct_def(p: &mut Parser, m: Marker) {
+pub(super) fn struct_def(p: &mut Parser<'_>, m: Marker) {
     assert!(p.at(T![struct]));
     p.bump(T![struct]);
     opt_memory_type_specifier(p);
@@ -18,7 +22,7 @@ pub(super) fn struct_def(p: &mut Parser, m: Marker) {
     m.complete(p, STRUCT_DEF);
 }
 
-pub(super) fn type_alias_def(p: &mut Parser, m: Marker) {
+pub(super) fn type_alias_def(p: &mut Parser<'_>, m: Marker) {
     assert!(p.at(T![type]));
     p.bump(T![type]);
     name(p);
@@ -29,7 +33,7 @@ pub(super) fn type_alias_def(p: &mut Parser, m: Marker) {
     m.complete(p, TYPE_ALIAS_DEF);
 }
 
-pub(super) fn record_field_def_list(p: &mut Parser) {
+pub(super) fn record_field_def_list(p: &mut Parser<'_>) {
     assert!(p.at(T!['{']));
     let m = p.start();
     p.bump(T!['{']);
@@ -48,15 +52,15 @@ pub(super) fn record_field_def_list(p: &mut Parser) {
     m.complete(p, RECORD_FIELD_DEF_LIST);
 }
 
-fn opt_memory_type_specifier(p: &mut Parser) {
+fn opt_memory_type_specifier(p: &mut Parser<'_>) {
     if p.at(T!['(']) {
         let m = p.start();
         p.bump(T!['(']);
         if p.at(IDENT) {
             if p.at_contextual_kw("gc") {
-                p.bump_remap(GC_KW)
+                p.bump_remap(GC_KW);
             } else if p.at_contextual_kw("value") {
-                p.bump_remap(VALUE_KW)
+                p.bump_remap(VALUE_KW);
             } else {
                 p.error_and_bump("expected memory type specifier");
             }
@@ -68,7 +72,7 @@ fn opt_memory_type_specifier(p: &mut Parser) {
     }
 }
 
-pub(super) fn tuple_field_def_list(p: &mut Parser) {
+pub(super) fn tuple_field_def_list(p: &mut Parser<'_>) {
     assert!(p.at(T!['(']));
     let m = p.start();
     p.bump(T!['(']);
@@ -91,7 +95,7 @@ pub(super) fn tuple_field_def_list(p: &mut Parser) {
     m.complete(p, TUPLE_FIELD_DEF_LIST);
 }
 
-fn record_field_def(p: &mut Parser) {
+fn record_field_def(p: &mut Parser<'_>) {
     let m = p.start();
     opt_visibility(p);
     if p.at(IDENT) {

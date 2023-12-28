@@ -82,14 +82,14 @@ impl MonitorDirectories {
     /// this set.
     pub fn contains_file(&self, path: impl AsRef<AbsPath>) -> bool {
         let ext = path.as_ref().extension().unwrap_or_default();
-        if !self
+        if self
             .extensions
             .iter()
             .any(|include_ext| include_ext.as_str() == ext)
         {
-            false
-        } else {
             self.includes_path(path)
+        } else {
+            false
         }
     }
 
@@ -110,7 +110,7 @@ impl MonitorDirectories {
                 include = Some(match include {
                     Some(prev) if prev.starts_with(incl) => prev,
                     _ => incl,
-                })
+                });
             }
         }
 

@@ -82,7 +82,7 @@ impl ItemScope {
 
     /// Adds an item definition to the list of definitions
     pub(crate) fn add_definition(&mut self, def: ItemDefinitionId) {
-        self.defs.push(def)
+        self.defs.push(def);
     }
 
     /// Adds a named item resolution into the scope. Returns true if adding the resolution changes
@@ -215,8 +215,9 @@ impl PerNs<(ItemDefinitionId, Visibility)> {
                     PerNs::types((def, vis))
                 }
             }
-            ItemDefinitionId::TypeAliasId(_) => PerNs::types((def, vis)),
-            ItemDefinitionId::PrimitiveType(_) => PerNs::types((def, vis)),
+            ItemDefinitionId::TypeAliasId(_) | ItemDefinitionId::PrimitiveType(_) => {
+                PerNs::types((def, vis))
+            }
             ItemDefinitionId::ModuleId(_) => PerNs::types((def, vis)),
         }
     }

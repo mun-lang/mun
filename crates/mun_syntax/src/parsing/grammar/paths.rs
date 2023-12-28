@@ -1,13 +1,13 @@
-use super::*;
+use super::{declarations, name_ref, Parser, TokenSet, IDENT, PATH, PATH_SEGMENT};
 
 pub(super) const PATH_FIRST: TokenSet =
     TokenSet::new(&[IDENT, T![super], T![self], T![package], T![::]]);
 
-pub(super) fn is_path_start(p: &Parser) -> bool {
+pub(super) fn is_path_start(p: &Parser<'_>) -> bool {
     matches!(p.current(), IDENT | T![self] | T![super] | T![package])
 }
 
-pub(super) fn is_use_path_start(p: &Parser, top_level: bool) -> bool {
+pub(super) fn is_use_path_start(p: &Parser<'_>, top_level: bool) -> bool {
     if top_level {
         matches!(p.current(), IDENT | T![self] | T![super] | T![package])
     } else {
@@ -15,14 +15,14 @@ pub(super) fn is_use_path_start(p: &Parser, top_level: bool) -> bool {
     }
 }
 
-pub(super) fn type_path(p: &mut Parser) {
-    path(p, Mode::Type, true)
+pub(super) fn type_path(p: &mut Parser<'_>) {
+    path(p, Mode::Type, true);
 }
-pub(super) fn expr_path(p: &mut Parser) {
-    path(p, Mode::Expr, true)
+pub(super) fn expr_path(p: &mut Parser<'_>) {
+    path(p, Mode::Expr, true);
 }
-pub(super) fn use_path(p: &mut Parser, top_level: bool) {
-    path(p, Mode::Use, top_level)
+pub(super) fn use_path(p: &mut Parser<'_>, top_level: bool) {
+    path(p, Mode::Use, top_level);
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -32,7 +32,7 @@ enum Mode {
     Use,
 }
 
-fn path(p: &mut Parser, mode: Mode, top_level: bool) {
+fn path(p: &mut Parser<'_>, mode: Mode, top_level: bool) {
     let path = p.start();
     path_segment(p, mode, top_level);
     let mut qualifier = path.complete(p, PATH);
@@ -50,7 +50,7 @@ fn path(p: &mut Parser, mode: Mode, top_level: bool) {
     }
 }
 
-fn path_segment(p: &mut Parser, _mode: Mode, top_level: bool) {
+fn path_segment(p: &mut Parser<'_>, _mode: Mode, top_level: bool) {
     let m = p.start();
     match p.current() {
         IDENT => {

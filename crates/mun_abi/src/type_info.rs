@@ -92,7 +92,7 @@ impl<'a> TypeDefinition<'a> {
     }
 
     /// Retrieves the type's struct information, if available.
-    pub fn as_struct(&self) -> Option<&StructDefinition> {
+    pub fn as_struct(&self) -> Option<&StructDefinition<'_>> {
         let TypeDefinitionData::Struct(s) = &self.data;
         Some(s)
     }
@@ -147,7 +147,7 @@ impl<'a> TypeDefinitionData<'a> {
 
 /// A trait that defines that for a type we can statically return a type name.
 pub trait HasStaticTypeName {
-    /// Returns a reference to the TypeInfo for the type
+    /// Returns a reference to the [`TypeInfo`] for the type
     fn type_name() -> &'static CStr;
 }
 
@@ -155,7 +155,10 @@ pub trait HasStaticTypeName {
 mod tests {
     use std::ffi::CString;
 
-    use crate::test_utils::{fake_struct_definition, fake_type_definition, FAKE_TYPE_NAME};
+    use crate::{
+        test_utils::{fake_struct_definition, fake_type_definition, FAKE_TYPE_NAME},
+        StructMemoryKind,
+    };
 
     use super::TypeDefinitionData;
 
@@ -170,7 +173,7 @@ mod tests {
             field_names,
             field_types,
             field_offsets,
-            Default::default(),
+            StructMemoryKind::default(),
         );
 
         let type_definition =
@@ -189,7 +192,7 @@ mod tests {
             field_names,
             field_types,
             field_offsets,
-            Default::default(),
+            StructMemoryKind::default(),
         );
 
         let type_definition =
@@ -211,7 +214,7 @@ mod tests {
             field_names,
             field_types,
             field_offsets,
-            Default::default(),
+            StructMemoryKind::default(),
         );
 
         let type_definition =
@@ -230,7 +233,7 @@ mod tests {
             field_names,
             field_types,
             field_offsets,
-            Default::default(),
+            StructMemoryKind::default(),
         );
 
         let type_definition =

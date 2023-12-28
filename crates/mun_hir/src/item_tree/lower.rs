@@ -2,7 +2,7 @@
 
 use super::{
     diagnostics, Field, Fields, Function, IdRange, ItemTree, ItemTreeData, ItemTreeNode,
-    LocalItemTreeId, ModItem, RawVisibilityId, Struct, StructDefKind, TypeAlias,
+    ItemVisibilities, LocalItemTreeId, ModItem, RawVisibilityId, Struct, StructDefKind, TypeAlias,
 };
 use crate::item_tree::Import;
 use crate::type_ref::{TypeRefMap, TypeRefMapBuilder};
@@ -62,7 +62,7 @@ impl Context {
     pub(super) fn lower_module_items(mut self, item_owner: &impl ModuleItemOwner) -> ItemTree {
         let top_level = item_owner
             .items()
-            .flat_map(|item| self.lower_mod_item(&item))
+            .filter_map(|item| self.lower_mod_item(&item))
             .flat_map(|items| items.0)
             .collect::<Vec<_>>();
 
@@ -82,7 +82,7 @@ impl Context {
                             name: name.clone(),
                             first: **first_item,
                             second: *item,
-                        })
+                        });
                 } else {
                     set.insert(name.clone(), item);
                 }
@@ -111,7 +111,7 @@ impl Context {
 
     /// Lowers a `use` statement
     fn lower_use(&mut self, use_item: &ast::Use) -> Vec<LocalItemTreeId<Import>> {
-        let visibility = self.lower_visibility(use_item);
+        let visibility = lower_visibility(use_item);
         let ast_id = self.source_ast_id_map.ast_id(use_item);
 
         // Every use item can expand to many `Import`s.
@@ -141,7 +141,7 @@ impl Context {
     /// Lowers a function
     fn lower_function(&mut self, func: &ast::FunctionDef) -> Option<LocalItemTreeId<Function>> {
         let name = func.name()?.as_name();
-        let visibility = self.lower_visibility(func);
+        let visibility = lower_visibility(func);
         let mut types = TypeRefMap::builder();
 
         // Lower all the params
@@ -179,7 +179,7 @@ impl Context {
     /// Lowers a struct
     fn lower_struct(&mut self, strukt: &ast::StructDef) -> Option<LocalItemTreeId<Struct>> {
         let name = strukt.name()?.as_name();
-        let visibility = self.lower_visibility(strukt);
+        let visibility = lower_visibility(strukt);
         let mut types = TypeRefMap::builder();
         let fields = self.lower_fields(&strukt.kind(), &mut types);
         let ast_id = self.source_ast_id_map.ast_id(strukt);
@@ -228,24 +228,12 @@ impl Context {
     ) -> IdRange<Field> {
         let start = self.next_field_idx();
         for field in fields.fields() {
-            if let Some(data) = self.lower_record_field(&field, types) {
+            if let Some(data) = lower_record_field(&field, types) {
                 let _idx = self.data.fields.alloc(data);
             }
         }
         let end = self.next_field_idx();
         IdRange::new(start..end)
-    }
-
-    /// Lowers a record field (e.g. `a:i32`)
-    fn lower_record_field(
-        &mut self,
-        field: &ast::RecordFieldDef,
-        types: &mut TypeRefMapBuilder,
-    ) -> Option<Field> {
-        let name = field.name()?.as_name();
-        let type_ref = types.alloc_from_node_opt(field.ascribed_type().as_ref());
-        let res = Field { name, type_ref };
-        Some(res)
     }
 
     /// Lowers tuple fields (e.g. `(i32, u8)`)
@@ -256,23 +244,11 @@ impl Context {
     ) -> IdRange<Field> {
         let start = self.next_field_idx();
         for (i, field) in fields.fields().enumerate() {
-            let data = self.lower_tuple_field(i, &field, types);
+            let data = lower_tuple_field(i, &field, types);
             let _idx = self.data.fields.alloc(data);
         }
         let end = self.next_field_idx();
         IdRange::new(start..end)
-    }
-
-    /// Lowers a tuple field (e.g. `i32`)
-    fn lower_tuple_field(
-        &mut self,
-        idx: usize,
-        field: &ast::TupleFieldDef,
-        types: &mut TypeRefMapBuilder,
-    ) -> Field {
-        let name = Name::new_tuple_field(idx);
-        let type_ref = types.alloc_from_node_opt(field.type_ref().as_ref());
-        Field { name, type_ref }
     }
 
     /// Lowers a type alias (e.g. `type Foo = Bar`)
@@ -281,7 +257,7 @@ impl Context {
         type_alias: &ast::TypeAliasDef,
     ) -> Option<LocalItemTreeId<TypeAlias>> {
         let name = type_alias.name()?.as_name();
-        let visibility = self.lower_visibility(type_alias);
+        let visibility = lower_visibility(type_alias);
         let mut types = TypeRefMap::builder();
         let type_ref = type_alias.type_ref().map(|ty| types.alloc_from_node(&ty));
         let ast_id = self.source_ast_id_map.ast_id(type_alias);
@@ -296,15 +272,34 @@ impl Context {
         Some(self.data.type_aliases.alloc(res).into())
     }
 
-    /// Lowers an `ast::VisibilityOwner`
-    fn lower_visibility(&mut self, item: &impl ast::VisibilityOwner) -> RawVisibilityId {
-        let vis = RawVisibility::from_ast(item.visibility());
-        self.data.visibilities.alloc(vis)
-    }
-
     /// Returns the `Idx` of the next `Field`
     fn next_field_idx(&self) -> Idx<Field> {
         let idx: u32 = self.data.fields.len().try_into().expect("too many fields");
         Idx::from_raw(RawId::from(idx))
     }
+}
+
+/// Lowers a record field (e.g. `a:i32`)
+fn lower_record_field(field: &ast::RecordFieldDef, types: &mut TypeRefMapBuilder) -> Option<Field> {
+    let name = field.name()?.as_name();
+    let type_ref = types.alloc_from_node_opt(field.ascribed_type().as_ref());
+    let res = Field { name, type_ref };
+    Some(res)
+}
+
+/// Lowers a tuple field (e.g. `i32`)
+fn lower_tuple_field(
+    idx: usize,
+    field: &ast::TupleFieldDef,
+    types: &mut TypeRefMapBuilder,
+) -> Field {
+    let name = Name::new_tuple_field(idx);
+    let type_ref = types.alloc_from_node_opt(field.type_ref().as_ref());
+    Field { name, type_ref }
+}
+
+/// Lowers an `ast::VisibilityOwner`
+fn lower_visibility(item: &impl ast::VisibilityOwner) -> RawVisibilityId {
+    let vis = RawVisibility::from_ast(item.visibility());
+    ItemVisibilities::alloc(vis)
 }

@@ -120,7 +120,7 @@ impl LanguageServerState {
         self.request_queue.incoming.register(
             request.id.clone(),
             (request.method.clone(), request_received),
-        )
+        );
     }
 
     /// Sends a request to the client and registers the request so that we can handle the response.
@@ -153,7 +153,7 @@ impl LanguageServerState {
             .outgoing
             .complete(response.id.clone())
             .expect("received response for unknown request");
-        handler(self, response)
+        handler(self, response);
     }
 
     /// Sends a response to the client. This method logs the time it took us to reply
@@ -170,6 +170,6 @@ impl LanguageServerState {
     pub(crate) fn send(&mut self, message: lsp_server::Message) {
         self.sender
             .send(message)
-            .expect("error sending lsp message to the outgoing channel")
+            .expect("error sending lsp message to the outgoing channel");
     }
 }

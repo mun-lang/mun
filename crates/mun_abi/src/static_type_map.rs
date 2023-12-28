@@ -39,9 +39,10 @@ impl<T: 'static> StaticTypeMap<T> {
 
         // Insert the value into the map
         let old = map.borrow_mut().insert(TypeId::of::<Type>(), reference);
-        if old.is_some() {
-            panic!("StaticTypeMap value was reinitialized. This is a bug.")
-        }
+        assert!(
+            old.is_none(),
+            "StaticTypeMap value was reinitialized. This is a bug."
+        );
         reference
     }
 }

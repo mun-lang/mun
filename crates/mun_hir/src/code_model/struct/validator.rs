@@ -27,7 +27,7 @@ impl<'a> StructValidator<'a> {
         }
     }
 
-    pub fn validate_privacy(&self, sink: &mut DiagnosticSink) {
+    pub fn validate_privacy(&self, sink: &mut DiagnosticSink<'_>) {
         let resolver = self.strukt.id.resolver(self.db.upcast());
         let struct_data = self.strukt.data(self.db.upcast());
 
@@ -59,7 +59,7 @@ impl<'a> StructValidator<'a> {
                         .type_ref_source_map()
                         .type_ref_syntax(type_ref)
                         .unwrap(),
-                })
+                });
             });
     }
 }

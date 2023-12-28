@@ -45,7 +45,7 @@ impl SourceToDefContext<'_, '_> {
 
     /// Find the `FunctionId` associated with the specified syntax tree node.
     fn fn_to_def(&mut self, src: InFile<ast::FunctionDef>) -> Option<FunctionId> {
-        let container = self.find_container(src.as_ref().map(|it| it.syntax()))?;
+        let container = self.find_container(src.as_ref().map(AstNode::syntax))?;
         let db = self.db;
         let def_map = &*self
             .cache
@@ -124,11 +124,6 @@ impl SourceToDef for ModuleId {
 
 impl SourceToDef for ItemScope {
     fn source_to_def_map(&self, db: &dyn HirDatabase) -> SourceToDefMap {
-        let mut result = SourceToDefMap::default();
-        self.declarations()
-            .for_each(|item| add_module_def(db.upcast(), &mut result, item));
-        return result;
-
         fn add_module_def(db: &dyn DefDatabase, map: &mut SourceToDefMap, item: ItemDefinitionId) {
             match item {
                 ItemDefinitionId::FunctionId(id) => {
@@ -146,6 +141,12 @@ impl SourceToDef for ItemScope {
                 _ => {}
             }
         }
+
+        let mut result = SourceToDefMap::default();
+        self.declarations()
+            .for_each(|item| add_module_def(db.upcast(), &mut result, item));
+
+        result
     }
 }
 

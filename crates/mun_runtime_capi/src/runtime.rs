@@ -21,7 +21,8 @@ impl Runtime {
     ///
     /// The caller must ensure that the internal pointers point to a valid [`mun_runtime::Runtime`].
     pub(crate) unsafe fn inner(&self) -> Result<&mun_runtime::Runtime, &'static str> {
-        (self.0 as *mut mun_runtime::Runtime)
+        self.0
+            .cast::<mun_runtime::Runtime>()
             .as_ref()
             .ok_or("null pointer")
     }
@@ -33,7 +34,8 @@ impl Runtime {
     ///
     /// The caller must ensure that the internal pointers point to a valid [`mun_runtime::Runtime`].
     pub unsafe fn inner_mut(&self) -> Result<&mut mun_runtime::Runtime, &'static str> {
-        (self.0 as *mut mun_runtime::Runtime)
+        self.0
+            .cast::<mun_runtime::Runtime>()
             .as_mut()
             .ok_or("null pointer")
     }
@@ -41,7 +43,7 @@ impl Runtime {
 
 /// Definition of an external function that is callable from Mun.
 ///
-/// The ownership of the contained TypeInfoHandles is considered to lie with this struct.
+/// The ownership of the contained `TypeInfoHandles` is considered to lie with this struct.
 #[repr(C)]
 #[derive(Clone)]
 pub struct ExternalFunctionDefinition {
@@ -178,7 +180,7 @@ pub unsafe extern "C" fn mun_runtime_create(
         Err(e) => return ErrorHandle::new(format!("{e:?}")),
     };
 
-    handle.0 = Box::into_raw(Box::new(runtime)) as *mut _;
+    handle.0 = Box::into_raw(Box::new(runtime)).cast();
     ErrorHandle::default()
 }
 
@@ -188,7 +190,7 @@ pub extern "C" fn mun_runtime_destroy(runtime: Runtime) -> ErrorHandle {
     if runtime.0.is_null() {
         return ErrorHandle::new("invalid argument 'runtime': null pointer");
     }
-    let _runtime = unsafe { Box::from_raw(runtime.0 as *mut Runtime) };
+    let _runtime = unsafe { Box::from_raw(runtime.0.cast::<Runtime>()) };
     ErrorHandle::default()
 }
 
@@ -217,16 +219,16 @@ pub unsafe extern "C" fn mun_runtime_find_function_definition(
         return ErrorHandle::new("invalid argument 'fn_name': null pointer");
     }
     let name = mun_error_try!(std::str::from_utf8(slice::from_raw_parts(
-        fn_name as *const u8,
+        fn_name.cast::<u8>(),
         fn_name_len
     ))
-    .map_err(|_| String::from("invalid argument 'fn_name': invalid UTF-8 encoded")));
+    .map_err(|_error| String::from("invalid argument 'fn_name': invalid UTF-8 encoded")));
     let has_fn_info = try_deref_mut!(has_fn_info);
     let fn_info = try_deref_mut!(fn_info);
     match runtime.get_function_definition(name) {
         Some(info) => {
             *has_fn_info = true;
-            *fn_info = info.into()
+            *fn_info = info.into();
         }
         None => *has_fn_info = false,
     }
@@ -285,7 +287,7 @@ pub unsafe extern "C" fn mun_runtime_get_type_info_by_name(
 #[no_mangle]
 pub unsafe extern "C" fn mun_runtime_get_type_info_by_id(
     runtime: Runtime,
-    type_id: *const abi::TypeId,
+    type_id: *const abi::TypeId<'_>,
     has_type_info: *mut bool,
     type_info: *mut Type,
 ) -> ErrorHandle {
@@ -358,7 +360,7 @@ mod tests {
         assert_error_snapshot!(
             unsafe {
                 mun_runtime_create(
-                    invalid_encoding.as_ptr() as *const _,
+                    invalid_encoding.as_ptr().cast(),
                     RuntimeOptions::default(),
                     ptr::null_mut(),
                 )
@@ -427,7 +429,7 @@ mod tests {
         let invalid_encoding = ['�', '\0'];
         let type_id = <()>::type_info().clone().into();
         let functions = vec![ExternalFunctionDefinition {
-            name: invalid_encoding.as_ptr() as *const _,
+            name: invalid_encoding.as_ptr().cast(),
             arg_types: ptr::null(),
             return_type: type_id,
             num_args: 0,
@@ -559,7 +561,7 @@ mod tests {
             unsafe {
                 mun_runtime_find_function_definition(
                     driver.runtime,
-                    invalid_encoding.as_ptr() as *const _,
+                    invalid_encoding.as_ptr().cast(),
                     3,
                     ptr::null_mut(),
                     ptr::null_mut(),
@@ -688,7 +690,7 @@ mod tests {
             unsafe {
                 mun_runtime_get_type_info_by_name(
                     driver.runtime,
-                    invalid_encoding.as_ptr() as *const _,
+                    invalid_encoding.as_ptr().cast(),
                     ptr::null_mut(),
                     ptr::null_mut(),
                 )
@@ -812,7 +814,7 @@ mod tests {
             unsafe {
                 mun_runtime_get_type_info_by_id(
                     driver.runtime,
-                    &type_id as *const abi::TypeId,
+                    &type_id as *const abi::TypeId<'_>,
                     ptr::null_mut(),
                     ptr::null_mut(),
                 )
@@ -835,7 +837,7 @@ mod tests {
             unsafe {
                 mun_runtime_get_type_info_by_id(
                     driver.runtime,
-                    &type_id as *const abi::TypeId,
+                    &type_id as *const abi::TypeId<'_>,
                     &mut has_type_info as *mut _,
                     ptr::null_mut(),
                 )
@@ -855,7 +857,7 @@ mod tests {
         let type_id = abi::TypeId::Concrete(abi::Guid([0; 16]));
         assert_getter2!(mun_runtime_get_type_info_by_id(
             driver.runtime,
-            &type_id as *const abi::TypeId,
+            &type_id as *const abi::TypeId<'_>,
             has_type_info,
             _type_info,
         ));

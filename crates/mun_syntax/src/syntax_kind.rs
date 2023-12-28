@@ -5,7 +5,7 @@ pub use self::generated::SyntaxKind;
 use std::fmt;
 
 impl fmt::Debug for SyntaxKind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = self.info().name;
         f.write_str(name)
     }

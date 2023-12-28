@@ -1,10 +1,10 @@
-use super::*;
+use super::{patterns, types, Parser, TokenSet, EOF, PARAM, PARAM_LIST};
 
-pub(super) fn param_list(p: &mut Parser) {
-    list(p)
+pub(super) fn param_list(p: &mut Parser<'_>) {
+    list(p);
 }
 
-fn list(p: &mut Parser) {
+fn list(p: &mut Parser<'_>) {
     assert!(p.at(T!['(']));
     let m = p.start();
     p.bump(T!['(']);
@@ -24,7 +24,7 @@ fn list(p: &mut Parser) {
 
 const VALUE_PARAMETER_FIRST: TokenSet = patterns::PATTERN_FIRST;
 
-fn param(p: &mut Parser) {
+fn param(p: &mut Parser<'_>) {
     let m = p.start();
     patterns::pattern(p);
     types::ascription(p);

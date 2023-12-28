@@ -251,11 +251,10 @@ impl Ty {
         match (self.interned(), other.interned()) {
             (TyKind::Struct(s1), TyKind::Struct(s2)) => s1 == s2,
             (TyKind::Tuple(_, substs1), TyKind::Tuple(_, substs2)) => substs1 == substs2,
-            (TyKind::Array(_), TyKind::Array(_)) => true,
+            (TyKind::Array(_), TyKind::Array(_)) | (TyKind::Bool, TyKind::Bool) => true,
             (TyKind::Float(f1), TyKind::Float(f2)) => f1 == f2,
             (TyKind::Int(i1), TyKind::Int(i2)) => i1 == i2,
             (TyKind::FnDef(def, _), TyKind::FnDef(def2, _)) => def == def2,
-            (TyKind::Bool, TyKind::Bool) => true,
             _ => false,
         }
     }
@@ -288,9 +287,7 @@ impl Substitution {
     /// Assumes this instance has a single element and returns it. Panics if this instance doesnt
     /// contain exactly one element.
     pub fn as_single(&self) -> &Ty {
-        if self.0.len() != 1 {
-            panic!("expected substs of len 1, got {self:?}");
-        }
+        assert!(self.0.len() == 1, "expected substs of len 1, got {self:?}");
         &self.0[0]
     }
 }
@@ -359,7 +356,7 @@ impl FnSig {
 }
 
 impl HirDisplay for Ty {
-    fn hir_fmt(&self, f: &mut HirFormatter) -> fmt::Result {
+    fn hir_fmt(&self, f: &mut HirFormatter<'_, '_>) -> fmt::Result {
         match self.interned() {
             TyKind::Struct(s) => write!(f, "{}", s.name(f.db)),
             TyKind::Float(ty) => write!(f, "{ty}"),
@@ -403,7 +400,7 @@ impl HirDisplay for Ty {
 }
 
 impl HirDisplay for &Ty {
-    fn hir_fmt(&self, f: &mut HirFormatter) -> fmt::Result {
+    fn hir_fmt(&self, f: &mut HirFormatter<'_, '_>) -> fmt::Result {
         HirDisplay::hir_fmt(*self, f)
     }
 }
@@ -436,11 +433,11 @@ impl TypeWalk for Ty {
             TyKind::Array(elem_ty) => f(elem_ty),
             _ => {
                 if let Some(substs) = self.type_parameters() {
-                    substs.walk(f)
+                    substs.walk(f);
                 }
             }
         }
-        f(self)
+        f(self);
     }
 
     fn walk_mut(&mut self, f: &mut impl FnMut(&mut Ty)) {
@@ -448,10 +445,10 @@ impl TypeWalk for Ty {
             TyKind::Array(elem_ty) => f(elem_ty),
             _ => {
                 if let Some(substs) = self.type_parameters_mut() {
-                    substs.walk_mut(f)
+                    substs.walk_mut(f);
                 }
             }
         }
-        f(self)
+        f(self);
     }
 }

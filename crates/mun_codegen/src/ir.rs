@@ -31,7 +31,7 @@ pub trait IsIrType<'ink> {
     fn ir_type(context: &'ink Context, target: &TargetData) -> Self::Type;
 }
 
-/// Defines that a type has a static represention in inkwell that can be described as a BasicType.
+/// Defines that a type has a static represention in inkwell that can be described as a `BasicType`.
 pub trait IsBasicIrType<'ink> {
     fn ir_type(context: &'ink Context, target: &TargetData) -> BasicTypeEnum<'ink>;
 }
@@ -52,7 +52,7 @@ pub trait IsFunctionReturnType<'ink> {
     ) -> FunctionType<'ink>;
 }
 
-/// All types that statically have a BasicTypeEnum can also be used as a function return type
+/// All types that statically have a `BasicTypeEnum` can also be used as a function return type
 impl<'ink, T: IsBasicIrType<'ink>> IsFunctionReturnType<'ink> for T {
     fn fn_type(
         context: &'ink Context,

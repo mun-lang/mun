@@ -11,7 +11,7 @@ pub struct TypeTable {
 }
 
 impl TypeTable {
-    /// Returns the TypeInfo for the type with the given name.
+    /// Returns the [`TypeInfo`] for the type with the given name.
     pub fn find_type_info_by_name<S: AsRef<str>>(&self, name: S) -> Option<Type> {
         self.type_name_to_type_info.get(name.as_ref()).cloned()
     }
@@ -58,7 +58,7 @@ impl TypeTable {
         self.concrete.insert(guid, ty)
     }
 
-    /// Removes the specified TypeInfo from the lookup table.
+    /// Removes the specified [`TypeInfo`] from the lookup table.
     pub fn remove_type(&mut self, ty: &Type) -> Option<Type> {
         match ty.as_concrete() {
             None => panic!("can only remove concrete types"),
@@ -92,8 +92,8 @@ impl TypeTable {
 impl Default for TypeTable {
     fn default() -> Self {
         let mut type_table = Self {
-            concrete: Default::default(),
-            type_name_to_type_info: Default::default(),
+            concrete: FxHashMap::default(),
+            type_name_to_type_info: FxHashMap::default(),
         };
 
         // Add all primitive types

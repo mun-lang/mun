@@ -58,6 +58,21 @@ mod test {
 
     #[test]
     fn test_primitives() {
+        fn test_primitive<T: HasStaticType>(primitive_type: PrimitiveType) {
+            let ffi_ty = mun_type_primitive(primitive_type);
+
+            assert_getter1!(mun_type_kind(ffi_ty, ffi_kind));
+            let guid = match ffi_kind {
+                TypeKind::Primitive(guid) => guid,
+                _ => panic!("invalid type kind for primitive"),
+            };
+
+            let rust_ty = unsafe { ffi_ty.to_owned() }.unwrap();
+            let static_ty = T::type_info();
+            assert_eq!(&rust_ty, static_ty);
+            assert_eq!(static_ty.as_concrete().unwrap(), &guid);
+        }
+
         test_primitive::<bool>(Bool);
         test_primitive::<u8>(U8);
         test_primitive::<u16>(U16);
@@ -73,20 +88,5 @@ mod test {
         test_primitive::<f64>(F64);
         test_primitive::<()>(Empty);
         test_primitive::<std::ffi::c_void>(Void);
-
-        fn test_primitive<T: HasStaticType>(primitive_type: PrimitiveType) {
-            let ffi_ty = mun_type_primitive(primitive_type);
-
-            assert_getter1!(mun_type_kind(ffi_ty, ffi_kind));
-            let guid = match ffi_kind {
-                TypeKind::Primitive(guid) => guid,
-                _ => panic!("invalid type kind for primitive"),
-            };
-
-            let rust_ty = unsafe { ffi_ty.to_owned() }.unwrap();
-            let static_ty = T::type_info();
-            assert_eq!(&rust_ty, static_ty);
-            assert_eq!(static_ty.as_concrete().unwrap(), &guid);
-        }
     }
 }

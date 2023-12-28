@@ -48,7 +48,7 @@ pub(crate) fn emit_syntax_error(
         Renderer::plain()
     };
     let display = renderer.render(snippet);
-    write!(writer, "{}", display)
+    write!(writer, "{display}")
 }
 
 /// Emits all diagnostics that are a result of HIR validation.
@@ -72,10 +72,6 @@ fn emit_diagnostic(
     display_colors: bool,
     writer: &mut dyn std::io::Write,
 ) -> std::io::Result<()> {
-    // Get the basic info from the diagnostic
-    let title = diagnostic.title();
-    let range = diagnostic.range();
-
     /// Will hold all snippets and their relevant information
     struct AnnotationFile {
         relative_file_path: RelativePathBuf,
@@ -83,6 +79,10 @@ fn emit_diagnostic(
         line_index: Arc<LineIndex>,
         annotations: Vec<mun_diagnostics::SourceAnnotation>,
     }
+
+    // Get the basic info from the diagnostic
+    let title = diagnostic.title();
+    let range = diagnostic.range();
 
     let annotations = {
         let mut annotations = Vec::new();
@@ -192,5 +192,5 @@ fn emit_diagnostic(
         Renderer::plain()
     };
     let display = renderer.render(snippet);
-    write!(writer, "{}", display)
+    write!(writer, "{display}")
 }

@@ -174,7 +174,7 @@ impl Assembly {
             let mut failed_to_link = Vec::new();
 
             // Try to link outstanding entries
-            for (dispatch_ptr, fn_prototype) in to_link.into_iter() {
+            for (dispatch_ptr, fn_prototype) in to_link {
                 // Get the types of the function arguments
                 let fn_proto_arg_type_infos = fn_prototype
                     .signature
@@ -426,7 +426,7 @@ impl Assembly {
         let mut newly_linked = HashMap::new();
         std::mem::swap(unlinked_assemblies, &mut newly_linked);
 
-        for (old_path, new_assembly) in newly_linked.into_iter() {
+        for (old_path, new_assembly) in newly_linked {
             assert!(
                 linked_assemblies.remove(&old_path).is_some(),
                 "Assembly must exist."
@@ -443,12 +443,12 @@ impl Assembly {
     }
 
     /// Returns the assembly's information.
-    pub fn info(&self) -> &abi::AssemblyInfo {
+    pub fn info(&self) -> &abi::AssemblyInfo<'_> {
         &self.info
     }
 
     /// Returns the assembly's information.
-    pub fn info_mut(&mut self) -> &mut abi::AssemblyInfo {
+    pub fn info_mut(&mut self) -> &mut abi::AssemblyInfo<'_> {
         // HACK: We want to make sure that the assembly info never outlives self.
         unsafe { std::mem::transmute(&mut self.info) }
     }

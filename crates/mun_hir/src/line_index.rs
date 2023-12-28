@@ -135,8 +135,7 @@ impl LineIndex {
         let end_of_part = self
             .newlines
             .get(last_line as usize + 1)
-            .map(|u| usize::from(*u) - 1usize)
-            .unwrap_or(text_len);
+            .map_or(text_len, |u| usize::from(*u) - 1usize);
         Some(&text[start_of_part..end_of_part])
     }
 

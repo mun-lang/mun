@@ -41,7 +41,7 @@ impl<'ink, T: ?Sized> Global<'ink, T> {
     pub unsafe fn from_raw(value: inkwell::values::GlobalValue<'ink>) -> Self {
         Global {
             value,
-            data: Default::default(),
+            data: PhantomData,
         }
     }
 }
@@ -84,7 +84,7 @@ where
         }
         Global {
             value: global,
-            data: Default::default(),
+            data: PhantomData,
         }
     }
 

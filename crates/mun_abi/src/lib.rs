@@ -62,13 +62,6 @@ impl Guid {
 
 impl fmt::Display for Guid {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let hyphenated = format_hyphenated(&self.0);
-
-        // SAFETY: The encoded buffer is ASCII encoded
-        let hyphenated = unsafe { std::str::from_utf8_unchecked(&hyphenated) };
-
-        return f.write_str(hyphenated);
-
         #[inline]
         const fn format_hyphenated(src: &[u8; 16]) -> [u8; 36] {
             const LUT: [u8; 16] = [
@@ -99,6 +92,13 @@ impl fmt::Display for Guid {
             }
             dst
         }
+
+        let hyphenated = format_hyphenated(&self.0);
+
+        // SAFETY: The encoded buffer is ASCII encoded
+        let hyphenated = unsafe { std::str::from_utf8_unchecked(&hyphenated) };
+
+        f.write_str(hyphenated)
     }
 }
 

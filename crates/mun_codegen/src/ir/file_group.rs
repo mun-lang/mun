@@ -69,11 +69,12 @@ pub(crate) fn gen_file_group_ir<'ink>(
                     );
                 }
             }
-            ModuleDef::Module(_) => (),
-            ModuleDef::Function(_) => (), // TODO: Extern types?
-            ModuleDef::Struct(_) => (),
-            ModuleDef::PrimitiveType(_) => (),
-            ModuleDef::TypeAlias(_) => (),
+            // TODO: Extern types for functions?
+            ModuleDef::Module(_)
+            | ModuleDef::Struct(_)
+            | ModuleDef::PrimitiveType(_)
+            | ModuleDef::TypeAlias(_)
+            | ModuleDef::Function(_) => (),
         }
     }
 
