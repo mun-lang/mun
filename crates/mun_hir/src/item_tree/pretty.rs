@@ -84,7 +84,7 @@ impl Printer<'_> {
             write!(self, "::*")?;
         }
         match alias {
-            Some(ImportAlias::Alias(name)) => write!(self, " as {}", name)?,
+            Some(ImportAlias::Alias(name)) => write!(self, " as {name}")?,
             Some(ImportAlias::Underscore) => write!(self, " as _")?,
             None => {}
         }
@@ -101,7 +101,7 @@ impl Printer<'_> {
             ast_id: _,
         } = &self.tree[it];
         self.print_visibility(*visibility)?;
-        write!(self, "type {}", name)?;
+        write!(self, "type {name}")?;
         if let Some(ty) = type_ref {
             write!(self, " = ")?;
             self.print_type_ref(*ty, types)?;
@@ -119,7 +119,7 @@ impl Printer<'_> {
             ast_id: _,
         } = &self.tree[it];
         self.print_visibility(*visibility)?;
-        write!(self, "struct {}", name)?;
+        write!(self, "struct {name}")?;
         match fields {
             Fields::Record(fields) => {
                 self.whitespace()?;
@@ -171,7 +171,7 @@ impl Printer<'_> {
         if *is_extern {
             write!(self, "extern ")?;
         }
-        write!(self, "fn {}", name)?;
+        write!(self, "fn {name}")?;
         write!(self, "(")?;
         if !params.is_empty() {
             self.indented(|this| {
