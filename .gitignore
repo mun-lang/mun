@@ -42,5 +42,8 @@ CMakeSettings.json
 **/target/*
 build/
 
+# Script artifacts
+.logs/
+
 .idea
 cmake-build-*/
