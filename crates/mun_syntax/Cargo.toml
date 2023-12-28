@@ -1,6 +1,6 @@
 [package]
 name = "mun_syntax"
-version = "0.5.0-dev"
+version = "0.5.0"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 description = "Parsing functionality for the Mun programming language"
@@ -13,7 +13,7 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
-mun_abi = { version = "0.5.0-dev", path = "../mun_abi" }
+mun_abi = { version = "0.5.0", path = "../mun_abi" }
 drop_bomb = { version = "0.1.5", default-features = false }
 itertools = { version = "0.12.0", default-features = false }
 ra_ap_text_edit = { version = "0.0.190", default-features = false }
