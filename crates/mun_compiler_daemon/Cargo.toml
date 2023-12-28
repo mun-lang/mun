@@ -1,6 +1,6 @@
 [package]
 name = "mun_compiler_daemon"
-version = "0.5.0"
+version = "0.6.0-dev"
 authors = ["The Mun Team <team@mun-lang.org>"]
 edition = "2021"
 description = "Functionality for continuously monitoring Mun source files for changes and triggering recompilation"
@@ -16,8 +16,8 @@ categories = ["game-development", "mun"]
 anyhow = { version = "1.0.75", default-features = false }
 ctrlc = { version = "3.4", default-features = false }
 log = { version = "0.4", default-features = false }
-mun_codegen = { version = "0.5.0", path = "../mun_codegen" }
-mun_compiler = { version = "0.5.0", path = "../mun_compiler" }
-mun_project = { version = "0.5.0", path = "../mun_project" }
-mun_hir = { version = "0.5.0", path = "../mun_hir" }
+mun_codegen = { version = "0.6.0-dev", path = "../mun_codegen" }
+mun_compiler = { version = "0.6.0-dev", path = "../mun_compiler" }
+mun_project = { version = "0.6.0-dev", path = "../mun_project" }
+mun_hir = { version = "0.6.0-dev", path = "../mun_hir" }
 notify = { version = "4.0", default-features = false }
