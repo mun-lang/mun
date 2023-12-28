@@ -1,11 +1,5 @@
-use crate::with_fixture::WithFixture;
-use crate::{item_tree::ItemTree, mock::MockDatabase, DefDatabase, Upcast};
-use std::{fmt, sync::Arc};
-
-fn item_tree(text: &str) -> Arc<ItemTree> {
-    let (db, file_id) = MockDatabase::with_single_file(text);
-    db.item_tree(file_id)
-}
+use crate::{mock::MockDatabase, with_fixture::WithFixture, DefDatabase, Upcast};
+use std::fmt;
 
 fn print_item_tree(text: &str) -> Result<String, fmt::Error> {
     let (db, file_id) = MockDatabase::with_single_file(text);
