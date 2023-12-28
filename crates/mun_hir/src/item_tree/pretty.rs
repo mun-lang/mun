@@ -122,7 +122,8 @@ impl Printer<'_> {
         write!(self, "struct {}", name)?;
         match fields {
             Fields::Record(fields) => {
-                write!(self, " {{")?;
+                self.whitespace()?;
+                write!(self, "{{")?;
                 self.indented(|this| {
                     for field in fields.clone() {
                         let field = &this.tree[field];
@@ -135,7 +136,7 @@ impl Printer<'_> {
                 write!(self, "}}")?;
             }
             Fields::Tuple(fields) => {
-                write!(self, " (")?;
+                write!(self, "(")?;
                 self.indented(|this| {
                     for field in fields.clone() {
                         let field = &this.tree[field];

@@ -36,7 +36,7 @@ fn top_level_items() {
     pub use foo;
     use super::bar;
     use super::*;
-    use foo::{bar, baz::hello as world};
+    use foo::{bar as _, baz::hello as world};
     "#
     )
     .unwrap());
