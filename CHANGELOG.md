@@ -7,10 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+## [0.5.0] - 2023-12-28
+
+### Added
+
+- Suggestions if an invoked function cannot be found [#524](https://github.com/mun-lang/mun/pull/524)
+- Script for running and collecting Miri logs [#537](https://github.com/mun-lang/mun/pull/537)
+- Tests for multi-file hot reloading [#522](https://github.com/mun-lang/mun/pull/522)
+
 ### Changed
 
 - Bump LLVM from 13 to 14 [#495](https://github.com/mun-lang/mun/pull/495)
-- Bump Inkwell to 0.2.0 [#528](https://github.com/mun-lang/mun/pull/528)
+- Use detailed error enums instead of `anyhow` in libraries [#521](https://github.com/mun-lang/mun/pull/521)
+- Bump Inkwell to 0.2.0 [#529](https://github.com/mun-lang/mun/pull/529)
+- Bump Rust to 1.73 [#515](https://github.com/mun-lang/mun/pull/515) [#541](https://github.com/mun-lang/mun/pull/541)
+
+### Fixed
+
+- Invalid output module path in ABI [#520](https://github.com/mun-lang/mun/pull/520)
+- Missing `polly` static library [#523](https://github.com/mun-lang/mun/pull/523)
+- Missing validators in diagnostics tests [#527](https://github.com/mun-lang/mun/pull/527)
+- Detect and report cyclic type aliases and leaked privacy [#528](https://github.com/mun-lang/mun/pull/528)
+- Failing `test_function_release_strong_count` test [#535](https://github.com/mun-lang/mun/pull/535)
 
 ## [0.4.0] - 2022-12-12
 
