@@ -14,6 +14,7 @@ use mun_syntax::{
 };
 use std::{fmt, sync::Arc};
 
+use crate::has_module::HasModule;
 use crate::resolve::HasResolver;
 use crate::visibility::RawVisibility;
 pub use ast::StructMemoryKind;
@@ -66,9 +67,7 @@ impl Field {
 
 impl Struct {
     pub fn module(self, db: &dyn HirDatabase) -> Module {
-        Module {
-            id: self.id.lookup(db.upcast()).module,
-        }
+        self.id.module(db.upcast()).into()
     }
 
     pub fn file_id(self, db: &dyn HirDatabase) -> FileId {

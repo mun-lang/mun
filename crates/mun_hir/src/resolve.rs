@@ -1,5 +1,7 @@
+use crate::has_module::HasModule;
 use crate::ids::{
-    DefWithBodyId, FunctionId, ItemDefinitionId, Lookup, ModuleId, StructId, TypeAliasId,
+    DefWithBodyId, FunctionId, ImplId, ItemContainerId, ItemDefinitionId, Lookup, ModuleId,
+    StructId, TypeAliasId,
 };
 use crate::item_scope::BUILTIN_SCOPE;
 use crate::module_tree::LocalModuleId;
@@ -359,19 +361,19 @@ impl HasResolver for ModuleId {
 
 impl HasResolver for FunctionId {
     fn resolver(self, db: &dyn DefDatabase) -> Resolver {
-        self.lookup(db).module.resolver(db)
+        self.lookup(db).container.resolver(db)
     }
 }
 
 impl HasResolver for StructId {
     fn resolver(self, db: &dyn DefDatabase) -> Resolver {
-        self.lookup(db).module.resolver(db)
+        self.module(db).resolver(db)
     }
 }
 
 impl HasResolver for TypeAliasId {
     fn resolver(self, db: &dyn DefDatabase) -> Resolver {
-        self.lookup(db).module.resolver(db)
+        self.module(db).resolver(db)
     }
 }
 
@@ -380,5 +382,20 @@ impl HasResolver for DefWithBodyId {
         match self {
             DefWithBodyId::FunctionId(f) => f.resolver(db),
         }
+    }
+}
+
+impl HasResolver for ItemContainerId {
+    fn resolver(self, db: &dyn DefDatabase) -> Resolver {
+        match self {
+            ItemContainerId::ModuleId(it) => it.resolver(db),
+            ItemContainerId::ImplId(it) => it.resolver(db),
+        }
+    }
+}
+
+impl HasResolver for ImplId {
+    fn resolver(self, db: &dyn DefDatabase) -> Resolver {
+        self.module(db).resolver(db)
     }
 }

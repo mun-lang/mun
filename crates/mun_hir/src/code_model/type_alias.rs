@@ -10,6 +10,7 @@ use crate::{
 
 use super::Module;
 use crate::expr::validator::TypeAliasValidator;
+use crate::has_module::HasModule;
 use crate::resolve::HasResolver;
 use crate::ty::lower::LowerTyMap;
 
@@ -26,9 +27,7 @@ impl From<TypeAliasId> for TypeAlias {
 
 impl TypeAlias {
     pub fn module(self, db: &dyn HirDatabase) -> Module {
-        Module {
-            id: self.id.lookup(db.upcast()).module,
-        }
+        self.id.module(db.upcast()).into()
     }
 
     pub fn file_id(self, db: &dyn HirDatabase) -> FileId {

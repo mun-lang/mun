@@ -11,6 +11,7 @@ use std::{ops::Index, sync::Arc};
 /// Contains all top-level definitions for a package.
 #[derive(Debug, PartialEq, Eq)]
 pub struct PackageDefs {
+    pub id: PackageId,
     pub modules: ArenaMap<LocalModuleId, ItemScope>,
     pub module_tree: Arc<ModuleTree>,
     diagnostics: Vec<diagnostics::DefDiagnostic>,

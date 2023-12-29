@@ -15,6 +15,13 @@ impl From<ModuleId> for Module {
 }
 
 impl Module {
+    /// Returns the package associated with this module
+    pub fn package(self) -> Package {
+        Package {
+            id: self.id.package,
+        }
+    }
+
     /// Returns the module that corresponds to the given file
     pub fn from_file(db: &dyn HirDatabase, file: FileId) -> Option<Module> {
         Package::all(db)
@@ -70,6 +77,10 @@ impl Module {
         // Add diagnostics from the package definitions
         let package_defs = db.package_defs(self.id.package);
         package_defs.add_diagnostics(db.upcast(), self.id.local_id, sink);
+
+        // Add diagnostics from impls
+        let inherent_impls = db.inherent_impls_in_package(self.id.package);
+        inherent_impls.add_module_diagnostics(db, self.id.local_id, sink);
 
         // Add diagnostics from the item tree
         if let Some(file_id) = self.file_id(db) {

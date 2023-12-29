@@ -1,6 +1,7 @@
 //! Methods for lower the HIR to types.
 
 pub(crate) use self::diagnostics::LowerDiagnostic;
+use crate::ids::ImplId;
 use crate::resolve::{HasResolver, TypeNs};
 use crate::ty::{Substitution, TyKind};
 use crate::{
@@ -313,6 +314,12 @@ fn type_for_struct(_db: &dyn HirDatabase, def: Struct) -> Ty {
 
 fn type_for_type_alias(_db: &dyn HirDatabase, def: TypeAlias) -> Ty {
     TyKind::TypeAlias(def).intern()
+}
+
+pub(crate) fn lower_impl_query(db: &dyn HirDatabase, impl_id: ImplId) -> Arc<LowerTyMap> {
+    let impl_data = db.impl_data(impl_id);
+    let resolver = impl_id.resolver(db.upcast());
+    lower_types(db, &resolver, &impl_data.type_ref_map)
 }
 
 pub mod diagnostics {

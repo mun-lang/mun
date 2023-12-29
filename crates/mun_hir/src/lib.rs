@@ -67,7 +67,9 @@ mod type_ref;
 mod utils;
 
 pub mod fixture;
+mod has_module;
 mod item_scope;
+mod method_resolution;
 #[cfg(test)]
 mod mock;
 mod package_defs;

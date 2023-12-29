@@ -1,4 +1,5 @@
 use super::PackageDefs;
+use crate::ids::ItemContainerId;
 use crate::{
     arena::map::ArenaMap,
     ids::{FunctionLoc, ImplLoc, Intern, ItemDefinitionId, StructLoc, TypeAliasLoc},
@@ -101,6 +102,7 @@ pub(super) fn collect(db: &dyn DefDatabase, package_id: PackageId) -> PackageDef
         db,
         package_id,
         package_defs: PackageDefs {
+            id: package_id,
             modules: ArenaMap::default(),
             module_tree: db.module_tree(package_id),
             diagnostics: Vec::default(),
@@ -555,10 +557,10 @@ impl<'a> ModCollectorContext<'a, '_> {
         let func = &self.item_tree[id];
         DefData {
             id: FunctionLoc {
-                module: ModuleId {
+                container: ItemContainerId::ModuleId(ModuleId {
                     package: self.def_collector.package_id,
                     local_id: self.module_id,
-                },
+                }),
                 id: ItemTreeId::new(self.file_id, id),
             }
             .intern(self.def_collector.db)

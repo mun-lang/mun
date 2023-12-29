@@ -825,3 +825,41 @@ impl Diagnostic for PrivateTypeAlias {
         self
     }
 }
+
+#[derive(Debug)]
+pub struct IncoherentImpl {
+    pub impl_: InFile<AstPtr<ast::Impl>>,
+}
+
+impl Diagnostic for IncoherentImpl {
+    fn message(&self) -> String {
+        String::from("cannot define inherent `impl` for foreign type")
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        self.impl_.clone().map(Into::into)
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct InvalidSelfTyImpl {
+    pub impl_: InFile<AstPtr<ast::Impl>>,
+}
+
+impl Diagnostic for InvalidSelfTyImpl {
+    fn message(&self) -> String {
+        String::from("inherent `impl` blocks can only be added for structs")
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        self.impl_.clone().map(Into::into)
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
