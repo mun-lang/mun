@@ -11,7 +11,7 @@ use crate::{
     source_id::AstIdMap,
     type_ref::{TypeRefMap, TypeRefMapBuilder},
     visibility::RawVisibility,
-    DefDatabase, FileId, InFile, Name, Path,
+    DefDatabase, FileId, Name, Path,
 };
 use mun_syntax::ast::{
     self, ExternOwner, ModuleItemOwner, NameOwner, StructKind, TypeAscriptionOwner,
@@ -122,23 +122,20 @@ impl Context {
         // Every use item can expand to many `Import`s.
         let mut imports = Vec::new();
         let tree = &mut self.data;
-        Path::expand_use_item(
-            InFile::new(self.file, use_item.clone()),
-            |path, _use_tree, is_glob, alias| {
-                imports.push(
-                    tree.imports
-                        .alloc(Import {
-                            path,
-                            alias,
-                            visibility,
-                            is_glob,
-                            ast_id,
-                            index: imports.len(),
-                        })
-                        .into(),
-                );
-            },
-        );
+        Path::expand_use_item(use_item, |path, _use_tree, is_glob, alias| {
+            imports.push(
+                tree.imports
+                    .alloc(Import {
+                        path,
+                        alias,
+                        visibility,
+                        is_glob,
+                        ast_id,
+                        index: imports.len(),
+                    })
+                    .into(),
+            );
+        });
 
         imports
     }

@@ -1,3 +1,4 @@
+use crate::ids::AssocItemId;
 use crate::{
     ids::{AssocItemLoc, FunctionId, ImplId, ItemContainerId, Lookup, StructId, TypeAliasId},
     item_tree::ItemTreeNode,
@@ -45,5 +46,13 @@ impl HasModule for ImplId {
 impl HasModule for TypeAliasId {
     fn module(&self, db: &dyn DefDatabase) -> ModuleId {
         self.lookup(db).module
+    }
+}
+
+impl HasModule for AssocItemId {
+    fn module(&self, db: &dyn DefDatabase) -> ModuleId {
+        match self {
+            AssocItemId::FunctionId(it) => it.module(db),
+        }
     }
 }

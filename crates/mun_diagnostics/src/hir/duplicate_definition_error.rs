@@ -85,7 +85,10 @@ pub struct DuplicateDefinition<'db, 'diag, DB: mun_hir::HirDatabase> {
 
 impl<'db, 'diag, DB: mun_hir::HirDatabase> Diagnostic for DuplicateDefinition<'db, 'diag, DB> {
     fn range(&self) -> TextRange {
-        syntax_node_identifier_range(&self.diag.definition, &self.db.parse(self.diag.file))
+        syntax_node_identifier_range(
+            &self.diag.definition.value,
+            &self.db.parse(self.diag.definition.file_id),
+        )
     }
 
     fn title(&self) -> String {
@@ -99,8 +102,8 @@ impl<'db, 'diag, DB: mun_hir::HirDatabase> Diagnostic for DuplicateDefinition<'d
     fn primary_annotation(&self) -> Option<SourceAnnotation> {
         Some(SourceAnnotation {
             range: syntax_node_signature_range(
-                &self.diag.definition,
-                &self.db.parse(self.diag.file),
+                &self.diag.definition.value,
+                &self.db.parse(self.diag.definition.file_id),
             ),
             message: format!("`{}` redefined here", self.diag.name),
         })
@@ -109,10 +112,10 @@ impl<'db, 'diag, DB: mun_hir::HirDatabase> Diagnostic for DuplicateDefinition<'d
     fn secondary_annotations(&self) -> Vec<SecondaryAnnotation> {
         vec![SecondaryAnnotation {
             range: InFile::new(
-                self.diag.file,
+                self.diag.first_definition.file_id,
                 syntax_node_signature_range(
-                    &self.diag.first_definition,
-                    &self.db.parse(self.diag.file),
+                    &self.diag.first_definition.value,
+                    &self.db.parse(self.diag.first_definition.file_id),
                 ),
             ),
             message: format!(
@@ -135,7 +138,7 @@ impl<'db, 'diag, DB: mun_hir::HirDatabase> Diagnostic for DuplicateDefinition<'d
 impl<'db, 'diag, DB: mun_hir::HirDatabase> DuplicateDefinition<'db, 'diag, DB> {
     /// Returns either `type` or `value` definition on the type of definition.
     fn value_or_type_string(&self) -> &'static str {
-        if self.diag.definition.kind() == SyntaxKind::STRUCT_DEF {
+        if self.diag.definition.value.kind() == SyntaxKind::STRUCT_DEF {
             "type"
         } else {
             "value"

@@ -1,4 +1,5 @@
-use crate::diagnostics::{IncoherentImpl, InvalidSelfTyImpl};
+use crate::diagnostics::{DuplicateDefinition, IncoherentImpl, InvalidSelfTyImpl};
+use crate::ids::AssocItemId;
 use crate::{
     db::HirDatabase,
     has_module::HasModule,
@@ -6,10 +7,12 @@ use crate::{
     module_tree::LocalModuleId,
     package_defs::PackageDefs,
     ty::lower::LowerDiagnostic,
-    DiagnosticSink, HasSource, PackageId, Ty, TyKind,
+    DefDatabase, DiagnosticSink, HasSource, InFile, ModuleId, PackageId, Ty, TyKind,
 };
-use mun_syntax::AstPtr;
+use mun_syntax::{AstNode, AstPtr, SyntaxNodePtr};
 use rustc_hash::FxHashMap;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -22,6 +25,9 @@ pub enum InherentImplsDiagnostics {
 
     /// The type in the impl is not defined in the same package as the impl.
     IncoherentType(ImplId),
+
+    /// Duplicate definitions of an associated item
+    DuplicateDefinitions(AssocItemId, AssocItemId),
 }
 
 /// Holds inherit impls defined in some package.
@@ -97,6 +103,31 @@ impl InherentImpls {
                 self.map.entry(s.id).or_default().push(impl_id);
             }
         }
+
+        // Find duplicate associated items
+        for (_, impls) in self.map.iter() {
+            let mut name_to_item = HashMap::new();
+            for impl_id in impls.iter() {
+                let impl_data = db.impl_data(*impl_id);
+                for item in impl_data.items.iter() {
+                    let name = match item {
+                        AssocItemId::FunctionId(it) => db.fn_data(*it).name().clone(),
+                    };
+                    match name_to_item.entry(name) {
+                        Entry::Vacant(entry) => {
+                            entry.insert(*item);
+                        }
+                        Entry::Occupied(entry) => {
+                            self.diagnostics
+                                .push(InherentImplsDiagnostics::DuplicateDefinitions(
+                                    *entry.get(),
+                                    *item,
+                                ));
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// Adds all the `InherentImplsDiagnostics`s of the result of a specific module to the `DiagnosticSink`.
@@ -108,7 +139,7 @@ impl InherentImpls {
     ) {
         self.diagnostics
             .iter()
-            .filter(|it| it.impl_id().module(db.upcast()).local_id == module_id)
+            .filter(|it| it.module_id(db.upcast()).local_id == module_id)
             .for_each(|it| it.add_to(db, sink));
     }
 
@@ -153,15 +184,38 @@ impl InherentImplsDiagnostics {
                     .as_ref()
                     .map(AstPtr::new),
             }),
+            InherentImplsDiagnostics::DuplicateDefinitions(first, second) => {
+                sink.push(DuplicateDefinition {
+                    definition: assoc_item_syntax_node_ptr(db.upcast(), second),
+                    first_definition: assoc_item_syntax_node_ptr(db.upcast(), first),
+                    name: assoc_item_name(db.upcast(), first),
+                });
+            }
         }
     }
 
-    fn impl_id(&self) -> ImplId {
+    fn module_id(&self, db: &dyn DefDatabase) -> ModuleId {
         match self {
             InherentImplsDiagnostics::LowerDiagnostic(impl_id, _)
             | InherentImplsDiagnostics::InvalidSelfTy(impl_id)
-            | InherentImplsDiagnostics::IncoherentType(impl_id) => *impl_id,
+            | InherentImplsDiagnostics::IncoherentType(impl_id) => impl_id.module(db),
+            InherentImplsDiagnostics::DuplicateDefinitions(_first, second) => second.module(db),
         }
+    }
+}
+
+fn assoc_item_syntax_node_ptr(db: &dyn DefDatabase, id: &AssocItemId) -> InFile<SyntaxNodePtr> {
+    match id {
+        AssocItemId::FunctionId(it) => it
+            .lookup(db)
+            .source(db)
+            .map(|node| SyntaxNodePtr::new(node.syntax())),
+    }
+}
+
+fn assoc_item_name(db: &dyn DefDatabase, id: &AssocItemId) -> String {
+    match id {
+        AssocItemId::FunctionId(it) => db.fn_data(*it).name().to_string(),
     }
 }
 
@@ -228,6 +282,25 @@ mod tests {
             @r###"
         12..23: inherent `impl` blocks can only be added for structs
         24..37: inherent `impl` blocks can only be added for structs
+        "###);
+    }
+
+    #[test]
+    fn test_duplicate() {
+        insta::assert_snapshot!(impl_diagnostics(r#"
+            //- /main.mun
+            struct Foo;
+            impl Foo {
+                fn bar();
+                fn bar();
+            }
+            impl Foo {
+                fn bar();
+            }
+            "#),
+            @r###"
+        36..50: the name `bar` is defined multiple times
+        63..77: the name `bar` is defined multiple times
         "###);
     }
 }

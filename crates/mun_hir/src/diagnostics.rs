@@ -359,10 +359,9 @@ impl Diagnostic for CannotApplyUnaryOp {
 
 #[derive(Debug)]
 pub struct DuplicateDefinition {
-    pub file: FileId,
     pub name: String,
-    pub first_definition: SyntaxNodePtr,
-    pub definition: SyntaxNodePtr,
+    pub first_definition: InFile<SyntaxNodePtr>,
+    pub definition: InFile<SyntaxNodePtr>,
 }
 
 impl Diagnostic for DuplicateDefinition {
@@ -371,7 +370,7 @@ impl Diagnostic for DuplicateDefinition {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.definition.clone())
+        self.definition.clone()
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {

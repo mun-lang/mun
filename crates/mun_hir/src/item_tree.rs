@@ -422,7 +422,7 @@ impl<T> Eq for IdRange<T> {}
 mod diagnostics {
     use super::{ItemTree, ModItem};
     use crate::diagnostics::DuplicateDefinition;
-    use crate::{DefDatabase, DiagnosticSink, HirDatabase, Name};
+    use crate::{DefDatabase, DiagnosticSink, HirDatabase, InFile, Name, Path};
     use mun_syntax::{AstNode, SyntaxNodePtr};
 
     #[derive(Clone, Debug, Eq, PartialEq)]
@@ -445,21 +445,37 @@ mod diagnostics {
                 db: &dyn DefDatabase,
                 item_tree: &ItemTree,
                 item: ModItem,
-            ) -> SyntaxNodePtr {
+            ) -> InFile<SyntaxNodePtr> {
                 match item {
-                    ModItem::Function(item) => {
-                        SyntaxNodePtr::new(item_tree.source(db, item).syntax())
+                    ModItem::Function(item) => InFile::new(
+                        item_tree.file_id,
+                        SyntaxNodePtr::new(item_tree.source(db, item).syntax()),
+                    ),
+                    ModItem::Struct(item) => InFile::new(
+                        item_tree.file_id,
+                        SyntaxNodePtr::new(item_tree.source(db, item).syntax()),
+                    ),
+                    ModItem::TypeAlias(item) => InFile::new(
+                        item_tree.file_id,
+                        SyntaxNodePtr::new(item_tree.source(db, item).syntax()),
+                    ),
+                    ModItem::Import(it) => {
+                        let import = &item_tree[it];
+                        let import_src = item_tree.source(db, it);
+                        let mut use_item = None;
+                        let mut index = 0;
+                        Path::expand_use_item(&import_src, |_, tree, _, _| {
+                            if index == import.index {
+                                use_item = Some(tree.clone());
+                            }
+                            index += 1;
+                        });
+                        InFile::new(
+                            item_tree.file_id,
+                            SyntaxNodePtr::new(use_item.expect("cannot find use item").syntax()),
+                        )
                     }
-                    ModItem::Struct(item) => {
-                        SyntaxNodePtr::new(item_tree.source(db, item).syntax())
-                    }
-                    ModItem::TypeAlias(item) => {
-                        SyntaxNodePtr::new(item_tree.source(db, item).syntax())
-                    }
-                    ModItem::Import(item) => {
-                        SyntaxNodePtr::new(item_tree.source(db, item).syntax())
-                    }
-                    ModItem::Impl(item) => SyntaxNodePtr::new(item_tree.source(db, item).syntax()),
+                    ModItem::Impl(_) => unreachable!("impls cannot be duplicated"),
                 }
             }
 
@@ -469,7 +485,6 @@ mod diagnostics {
                     first,
                     second,
                 } => sink.push(DuplicateDefinition {
-                    file: item_tree.file_id,
                     name: name.to_string(),
                     first_definition: ast_ptr_from_mod(db.upcast(), item_tree, *first),
                     definition: ast_ptr_from_mod(db.upcast(), item_tree, *second),

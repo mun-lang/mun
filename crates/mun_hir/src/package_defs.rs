@@ -112,15 +112,12 @@ mod diagnostics {
                 let use_item = ast.to_node(db);
                 let mut cur = 0;
                 let mut tree = None;
-                Path::expand_use_item(
-                    InFile::new(ast.file_id, use_item),
-                    |_path, use_tree, _is_glob, _alias| {
-                        if cur == index {
-                            tree = Some(use_tree.clone());
-                        }
-                        cur += 1;
-                    },
-                );
+                Path::expand_use_item(&use_item, |_path, use_tree, _is_glob, _alias| {
+                    if cur == index {
+                        tree = Some(use_tree.clone());
+                    }
+                    cur += 1;
+                });
                 tree.map(|t| InFile::new(ast.file_id, AstPtr::new(&t)))
             }
 
