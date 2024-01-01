@@ -1,0 +1,11 @@
+---
+source: crates/mun_hir/src/item_tree/tests.rs
+expression: "print_item_tree(r#\"\n    use foo::Bar;\n    use baz::Bar;\n\n    struct Bar {}\n    \"#).unwrap()"
+---
+use foo::Bar;
+use baz::Bar;
+struct Bar {
+}
+
+18..26: the name `Bar` is defined multiple times
+29..42: the name `Bar` is defined multiple times

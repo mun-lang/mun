@@ -25,6 +25,15 @@ pub enum ImportAlias {
     Alias(Name),
 }
 
+impl ImportAlias {
+    pub fn as_name(&self) -> Option<&Name> {
+        match self {
+            ImportAlias::Underscore => None,
+            ImportAlias::Alias(name) => Some(name),
+        }
+    }
+}
+
 impl Path {
     /// Converts an `ast::Path` to `Path`.
     pub fn from_ast(mut path: ast::Path) -> Option<Path> {
@@ -96,6 +105,11 @@ impl Path {
         if let Some(tree) = item_src.use_tree() {
             lower_use_tree(None, &tree, &mut cb);
         }
+    }
+
+    /// Returns the last segment of the path, if any.
+    pub fn last_segment(&self) -> Option<&Name> {
+        self.segments.last()
     }
 }
 

@@ -44,3 +44,5 @@ struct Baz;
 type FooBar = Foo;
 type FooBar = package::Foo;
 
+80..128: the name `bar` is defined multiple times
+379..406: the name `FooBar` is defined multiple times

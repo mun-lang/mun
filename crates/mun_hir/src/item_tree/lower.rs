@@ -21,11 +21,6 @@ use std::{collections::HashMap, convert::TryInto, marker::PhantomData, sync::Arc
 
 struct ModItems(SmallVec<[ModItem; 1]>);
 
-struct Foo {}
-impl Foo {
-    fn bar() {}
-}
-
 impl<T> From<T> for ModItems
 where
     T: Into<ModItem>,
@@ -77,7 +72,18 @@ impl Context {
                 ModItem::Function(item) => Some(&self.data.functions[item.index].name),
                 ModItem::Struct(item) => Some(&self.data.structs[item.index].name),
                 ModItem::TypeAlias(item) => Some(&self.data.type_aliases[item.index].name),
-                ModItem::Impl(_) | ModItem::Import(_) => None,
+                ModItem::Import(item) => {
+                    let import = &self.data.imports[item.index];
+                    if import.is_glob {
+                        None
+                    } else {
+                        import
+                            .alias
+                            .as_ref()
+                            .map_or_else(|| import.path.last_segment(), |alias| alias.as_name())
+                    }
+                }
+                ModItem::Impl(_) => None,
             };
             if let Some(name) = name {
                 if let Some(first_item) = set.get(name) {

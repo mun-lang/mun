@@ -1,4 +1,4 @@
-use crate::diagnostics::{DuplicateDefinition, IncoherentImpl, InvalidSelfTyImpl};
+use crate::diagnostics::{DuplicateDefinition, ImplForForeignType, InvalidSelfTyImpl};
 use crate::ids::AssocItemId;
 use crate::{
     db::HirDatabase,
@@ -24,7 +24,7 @@ pub enum InherentImplsDiagnostics {
     InvalidSelfTy(ImplId),
 
     /// The type in the impl is not defined in the same package as the impl.
-    IncoherentType(ImplId),
+    ImplForForeignType(ImplId),
 
     /// Duplicate definitions of an associated item
     DuplicateDefinitions(AssocItemId, AssocItemId),
@@ -96,7 +96,7 @@ impl InherentImpls {
                 // Make sure the struct is defined in the same package
                 if s.module(db).package().id != package_defs.id {
                     self.diagnostics
-                        .push(InherentImplsDiagnostics::IncoherentType(impl_id));
+                        .push(InherentImplsDiagnostics::ImplForForeignType(impl_id));
                 }
 
                 // Add the impl to the map
@@ -177,13 +177,15 @@ impl InherentImplsDiagnostics {
                     .as_ref()
                     .map(AstPtr::new),
             }),
-            InherentImplsDiagnostics::IncoherentType(impl_id) => sink.push(IncoherentImpl {
-                impl_: impl_id
-                    .lookup(db.upcast())
-                    .source(db.upcast())
-                    .as_ref()
-                    .map(AstPtr::new),
-            }),
+            InherentImplsDiagnostics::ImplForForeignType(impl_id) => {
+                sink.push(ImplForForeignType {
+                    impl_: impl_id
+                        .lookup(db.upcast())
+                        .source(db.upcast())
+                        .as_ref()
+                        .map(AstPtr::new),
+                });
+            }
             InherentImplsDiagnostics::DuplicateDefinitions(first, second) => {
                 sink.push(DuplicateDefinition {
                     definition: assoc_item_syntax_node_ptr(db.upcast(), second),
@@ -198,7 +200,7 @@ impl InherentImplsDiagnostics {
         match self {
             InherentImplsDiagnostics::LowerDiagnostic(impl_id, _)
             | InherentImplsDiagnostics::InvalidSelfTy(impl_id)
-            | InherentImplsDiagnostics::IncoherentType(impl_id) => impl_id.module(db),
+            | InherentImplsDiagnostics::ImplForForeignType(impl_id) => impl_id.module(db),
             InherentImplsDiagnostics::DuplicateDefinitions(_first, second) => second.module(db),
         }
     }

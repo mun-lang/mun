@@ -32,6 +32,10 @@ fn syntax_node_signature_range(
             ast::StructDef::cast(syntax_node_ptr.to_node(parse.tree().syntax()))
                 .map_or_else(|| syntax_node_ptr.range(), |s| s.signature_range())
         }
+        SyntaxKind::TYPE_ALIAS_DEF => {
+            ast::TypeAliasDef::cast(syntax_node_ptr.to_node(parse.tree().syntax()))
+                .map_or_else(|| syntax_node_ptr.range(), |s| s.signature_range())
+        }
         _ => syntax_node_ptr.range(),
     }
 }
@@ -58,11 +62,13 @@ fn syntax_node_identifier_range(
     parse: &Parse<SourceFile>,
 ) -> TextRange {
     match syntax_node_ptr.kind() {
-        SyntaxKind::FUNCTION_DEF | SyntaxKind::STRUCT_DEF => syntax_node_ptr
-            .to_node(parse.tree().syntax())
-            .children()
-            .find(|n| n.kind() == SyntaxKind::NAME)
-            .map_or_else(|| syntax_node_ptr.range(), |name| name.text_range()),
+        SyntaxKind::FUNCTION_DEF | SyntaxKind::STRUCT_DEF | SyntaxKind::TYPE_ALIAS_DEF => {
+            syntax_node_ptr
+                .to_node(parse.tree().syntax())
+                .children()
+                .find(|n| n.kind() == SyntaxKind::NAME)
+                .map_or_else(|| syntax_node_ptr.range(), |name| name.text_range())
+        }
         _ => syntax_node_ptr.range(),
     }
 }

@@ -826,11 +826,11 @@ impl Diagnostic for PrivateTypeAlias {
 }
 
 #[derive(Debug)]
-pub struct IncoherentImpl {
+pub struct ImplForForeignType {
     pub impl_: InFile<AstPtr<ast::Impl>>,
 }
 
-impl Diagnostic for IncoherentImpl {
+impl Diagnostic for ImplForForeignType {
     fn message(&self) -> String {
         String::from("cannot define inherent `impl` for foreign type")
     }

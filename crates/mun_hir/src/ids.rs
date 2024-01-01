@@ -93,6 +93,7 @@ pub struct ModuleId {
     pub local_id: LocalModuleId,
 }
 
+/// Represents an id of an item inside a item container such as a module or a `impl` block.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ItemContainerId {
     ModuleId(ModuleId),
