@@ -48,6 +48,7 @@ fn use_duplicate_name() {
     mod mod
     +-- mod bar
     |   +-- ERROR: 4..20: a second item with the same name imported. Try to use an alias.
+    |   +-- ERROR: 23..37: the name `Ok` is defined multiple times
     |   '-- struct Ok
     '-- mod foo
         '-- struct Ok

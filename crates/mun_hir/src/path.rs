@@ -1,4 +1,4 @@
-use crate::{AsName, InFile, Name};
+use crate::{AsName, Name};
 use mun_syntax::ast;
 use mun_syntax::ast::{NameOwner, PathSegmentKind};
 
@@ -23,6 +23,15 @@ pub enum ImportAlias {
     Underscore,
     /// Named alias
     Alias(Name),
+}
+
+impl ImportAlias {
+    pub fn as_name(&self) -> Option<&Name> {
+        match self {
+            ImportAlias::Underscore => None,
+            ImportAlias::Alias(name) => Some(name),
+        }
+    }
 }
 
 impl Path {
@@ -90,12 +99,17 @@ impl Path {
     /// ```
     /// the function will call the callback twice. Once for `foo` and once for `foo::Bar`.
     pub(crate) fn expand_use_item(
-        item_src: InFile<ast::Use>,
+        item_src: &ast::Use,
         mut cb: impl FnMut(Path, &ast::UseTree, /* is_glob */ bool, Option<ImportAlias>),
     ) {
-        if let Some(tree) = item_src.value.use_tree() {
+        if let Some(tree) = item_src.use_tree() {
             lower_use_tree(None, &tree, &mut cb);
         }
+    }
+
+    /// Returns the last segment of the path, if any.
+    pub fn last_segment(&self) -> Option<&Name> {
+        self.segments.last()
     }
 }
 

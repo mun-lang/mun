@@ -1,13 +1,12 @@
 use super::PackageDefs;
-use crate::item_tree::Fields;
+use crate::ids::ItemContainerId;
 use crate::{
     arena::map::ArenaMap,
-    ids::ItemDefinitionId,
-    ids::{FunctionLoc, Intern, StructLoc, TypeAliasLoc},
-    item_scope::ImportType,
-    item_scope::{ItemScope, PerNsGlobImports},
+    ids::{FunctionLoc, ImplLoc, Intern, ItemDefinitionId, StructLoc, TypeAliasLoc},
+    item_scope::{ImportType, ItemScope, PerNsGlobImports},
     item_tree::{
-        self, Function, ItemTree, ItemTreeId, LocalItemTreeId, ModItem, Struct, TypeAlias,
+        self, Fields, Function, Impl, ItemTree, ItemTreeId, LocalItemTreeId, ModItem, Struct,
+        TypeAlias,
     },
     module_tree::LocalModuleId,
     name_resolution::ReachedFixedPoint,
@@ -103,6 +102,7 @@ pub(super) fn collect(db: &dyn DefDatabase, package_id: PackageId) -> PackageDef
         db,
         package_id,
         package_defs: PackageDefs {
+            id: package_id,
             modules: ArenaMap::default(),
             module_tree: db.module_tree(package_id),
             diagnostics: Vec::default(),
@@ -509,6 +509,10 @@ impl<'a> ModCollectorContext<'a, '_> {
                     self.collect_import(id);
                     continue;
                 }
+                ModItem::Impl(id) => {
+                    self.collect_impl(id);
+                    continue;
+                }
             };
 
             self.def_collector.package_defs.modules[self.module_id].add_definition(id);
@@ -522,6 +526,20 @@ impl<'a> ModCollectorContext<'a, '_> {
                 PerNs::from_definition(id, visibility, has_constructor),
             );
         }
+    }
+
+    /// Collects the definition data from an `Impl`.
+    fn collect_impl(&mut self, id: LocalItemTreeId<Impl>) {
+        self.def_collector.package_defs.modules[self.module_id].define_impl(
+            ImplLoc {
+                module: ModuleId {
+                    package: self.def_collector.package_id,
+                    local_id: self.module_id,
+                },
+                id: ItemTreeId::new(self.file_id, id),
+            }
+            .intern(self.def_collector.db),
+        );
     }
 
     /// Collects the definition data from an import statement.
@@ -539,10 +557,10 @@ impl<'a> ModCollectorContext<'a, '_> {
         let func = &self.item_tree[id];
         DefData {
             id: FunctionLoc {
-                module: ModuleId {
+                container: ItemContainerId::ModuleId(ModuleId {
                     package: self.def_collector.package_id,
                     local_id: self.module_id,
-                },
+                }),
                 id: ItemTreeId::new(self.file_id, id),
             }
             .intern(self.def_collector.db)

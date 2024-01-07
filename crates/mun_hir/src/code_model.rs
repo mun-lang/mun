@@ -1,4 +1,5 @@
 mod function;
+mod r#impl;
 mod module;
 mod package;
 pub(crate) mod src;
@@ -12,6 +13,7 @@ pub use self::{
     function::Function,
     module::{Module, ModuleDef},
     package::Package,
+    r#impl::{Impl, ImplData},
     r#struct::{Field, LocalFieldId, Struct, StructKind, StructMemoryKind},
     src::HasSource,
     type_alias::TypeAlias,

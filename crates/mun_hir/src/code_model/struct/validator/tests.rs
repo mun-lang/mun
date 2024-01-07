@@ -5,7 +5,7 @@ use crate::utils::tests::*;
 fn test_private_leak_struct_fields() {
     insta::assert_snapshot!(diagnostics(
         r#"
-    
+
     struct Foo(usize);
     pub struct Bar(usize);
 
@@ -27,7 +27,7 @@ fn test_private_leak_struct_fields() {
         pub bar: Bar,
     }
 
-    pub(crate) struct BarBaz;
+    pub(package) struct BarBaz;
 
     // invalid, exporting pub(crate) to pub
     pub struct FooBarBaz {
@@ -37,6 +37,6 @@ fn test_private_leak_struct_fields() {
     "#),
     @r###"
     180..183: can't leak private type
-    392..395: can't leak private type
+    394..397: can't leak private type
     "###);
 }

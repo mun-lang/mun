@@ -1,0 +1,17 @@
+---
+source: crates/mun_hir/src/item_tree/tests.rs
+expression: "print_item_tree(r#\"\n    impl Bar {\n        fn foo(a:i32, b:u8, c:String) -> i32 {}\n        pub fn bar(a:i32, b:u8, c:String) ->  {}\n    }\n    \"#).unwrap()"
+---
+impl Bar {
+  fn foo(
+    i32,
+    u8,
+    String,
+  ) -> i32;
+  pub fn bar(
+    i32,
+    u8,
+    String,
+  ) -> ();
+}
+

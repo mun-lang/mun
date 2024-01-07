@@ -1,6 +1,7 @@
 use super::Module;
 use crate::expr::validator::ExprValidator;
 use crate::expr::BodySourceMap;
+use crate::has_module::HasModule;
 use crate::ids::{FunctionId, Lookup};
 use crate::name_resolution::Namespace;
 use crate::resolve::HasResolver;
@@ -99,9 +100,7 @@ impl FunctionData {
 
 impl Function {
     pub fn module(self, db: &dyn HirDatabase) -> Module {
-        Module {
-            id: self.id.lookup(db.upcast()).module,
-        }
+        self.id.module(db.upcast()).into()
     }
 
     /// Returns the full name of the function including all module specifiers (e.g: `foo::bar`).

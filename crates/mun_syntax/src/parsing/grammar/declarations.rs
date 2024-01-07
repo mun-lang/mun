@@ -1,20 +1,20 @@
 use super::{
-    adt, error_block, expressions, name, name_recovery, opt_visibility, params, paths, types,
-    Marker, Parser, TokenSet, EOF, ERROR, EXTERN, FUNCTION_DEF, RENAME, RET_TYPE, USE, USE_TREE,
-    USE_TREE_LIST,
+    adt, error_block, expressions, name, name_recovery, opt_visibility, params, paths, traits,
+    types, Marker, Parser, TokenSet, EOF, ERROR, EXTERN, FUNCTION_DEF, RENAME, RET_TYPE, USE,
+    USE_TREE, USE_TREE_LIST,
 };
 use crate::{parsing::grammar::paths::is_use_path_start, T};
 
 pub(super) const DECLARATION_RECOVERY_SET: TokenSet =
-    TokenSet::new(&[T![fn], T![pub], T![struct], T![use], T![;]]);
+    TokenSet::new(&[T![fn], T![pub], T![struct], T![use], T![;], T![impl]]);
 
 pub(super) fn mod_contents(p: &mut Parser<'_>) {
     while !p.at(EOF) {
-        declaration(p);
+        declaration(p, false);
     }
 }
 
-pub(super) fn declaration(p: &mut Parser<'_>) {
+pub(super) fn declaration(p: &mut Parser<'_>, stop_on_r_curly: bool) {
     let m = p.start();
     let m = match maybe_declaration(p, m) {
         Ok(()) => return,
@@ -22,17 +22,16 @@ pub(super) fn declaration(p: &mut Parser<'_>) {
     };
 
     m.abandon(p);
-    if p.at(T!['{']) {
-        error_block(p, "expected a declaration");
-    } else if p.at(T!['}']) {
-        let e = p.start();
-        p.error("unmatched }");
-        p.bump(T!['}']);
-        e.complete(p, ERROR);
-    } else if !p.at(EOF) {
-        p.error_and_bump("expected a declaration");
-    } else {
-        p.error("expected a declaration");
+    match p.current() {
+        T!['{'] => error_block(p, "expected a declaration"),
+        T!['}'] if !stop_on_r_curly => {
+            let e = p.start();
+            p.error("unmatched }");
+            p.bump(T!['}']);
+            e.complete(p, ERROR);
+        }
+        EOF | T!['}'] => p.error("expected a declaration"),
+        _ => p.error_and_bump("expected a declaration"),
     }
 }
 
@@ -75,6 +74,9 @@ fn declarations_without_modifiers(p: &mut Parser<'_>, m: Marker) -> Result<(), M
         }
         T![type] => {
             adt::type_alias_def(p, m);
+        }
+        T![impl] => {
+            traits::impl_(p, m);
         }
         _ => return Err(m),
     };

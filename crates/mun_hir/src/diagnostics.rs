@@ -359,10 +359,9 @@ impl Diagnostic for CannotApplyUnaryOp {
 
 #[derive(Debug)]
 pub struct DuplicateDefinition {
-    pub file: FileId,
     pub name: String,
-    pub first_definition: SyntaxNodePtr,
-    pub definition: SyntaxNodePtr,
+    pub first_definition: InFile<SyntaxNodePtr>,
+    pub definition: InFile<SyntaxNodePtr>,
 }
 
 impl Diagnostic for DuplicateDefinition {
@@ -371,7 +370,7 @@ impl Diagnostic for DuplicateDefinition {
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
-        InFile::new(self.file, self.definition.clone())
+        self.definition.clone()
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {
@@ -819,6 +818,44 @@ impl Diagnostic for PrivateTypeAlias {
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
         self.type_alias_def.clone()
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct ImplForForeignType {
+    pub impl_: InFile<AstPtr<ast::Impl>>,
+}
+
+impl Diagnostic for ImplForForeignType {
+    fn message(&self) -> String {
+        String::from("cannot define inherent `impl` for foreign type")
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        self.impl_.clone().map(Into::into)
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct InvalidSelfTyImpl {
+    pub impl_: InFile<AstPtr<ast::Impl>>,
+}
+
+impl Diagnostic for InvalidSelfTyImpl {
+    fn message(&self) -> String {
+        String::from("inherent `impl` blocks can only be added for structs")
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        self.impl_.clone().map(Into::into)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {

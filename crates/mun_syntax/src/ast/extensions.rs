@@ -30,6 +30,14 @@ impl ast::NameRef {
 }
 
 impl ast::FunctionDef {
+    /// Returns the signature range.
+    ///
+    /// ```rust, ignore
+    /// fn foo_bar() {
+    /// ^^^^^^^^^^^^___ this part
+    ///     // ...
+    /// }
+    /// ```
     pub fn signature_range(&self) -> TextRange {
         let fn_kw = self
             .syntax()
@@ -153,6 +161,15 @@ impl ast::StructDef {
     pub fn kind(&self) -> StructKind {
         StructKind::from_node(self)
     }
+
+    /// Returns the signature range.
+    ///
+    /// ```rust, ignore
+    /// pub(gc) struct Foo {
+    ///         ^^^^^^^^^^___ this part
+    ///     // ...
+    /// }
+    /// ```
     pub fn signature_range(&self) -> TextRange {
         let struct_kw = self
             .syntax()
@@ -208,5 +225,32 @@ impl ast::UseTree {
         self.syntax()
             .children_with_tokens()
             .any(|it| it.kind() == T![*])
+    }
+}
+
+impl ast::TypeAliasDef {
+    /// Returns the signature range.
+    ///
+    /// ```rust, ignore
+    /// type FooBar = i32
+    /// ^^^^^^^^^^^___ this part
+    /// ```
+    pub fn signature_range(&self) -> TextRange {
+        let type_kw = self
+            .syntax()
+            .children_with_tokens()
+            .find(|p| p.kind() == T![type])
+            .map(|kw| kw.text_range());
+        let name = self.name().map(|n| n.syntax.text_range());
+
+        let start =
+            type_kw.map_or_else(|| self.syntax.text_range().start(), rowan::TextRange::start);
+
+        let end = name
+            .map(rowan::TextRange::end)
+            .or_else(|| type_kw.map(rowan::TextRange::end))
+            .unwrap_or_else(|| self.syntax().text_range().end());
+
+        TextRange::new(start, end)
     }
 }

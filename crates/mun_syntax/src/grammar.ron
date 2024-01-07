@@ -99,7 +99,9 @@ Grammar(
         "super",
         "self",
 
-        "extern"
+        "extern",
+
+        "impl",
     ],
     literals: [
         "INT_NUMBER",
@@ -178,14 +180,18 @@ Grammar(
         "USE",
         "USE_TREE",
         "USE_TREE_LIST",
-        "RENAME"
+        "RENAME",
+
+        "IMPL",
+        "ASSOCIATED_ITEM_LIST",
+        "ASSOCIATED_ITEM",
     ],
     ast: {
         "SourceFile": (
             traits: [ "ModuleItemOwner", "FunctionDefOwner" ],
         ),
         "ModuleItem": (
-            enum: ["Use", "FunctionDef", "StructDef", "TypeAliasDef"]
+            enum: ["Use", "FunctionDef", "StructDef", "TypeAliasDef", "Impl"]
         ),
         "Visibility": (),
         "FunctionDef": (
@@ -389,6 +395,17 @@ Grammar(
 
         "Rename": (
             traits: ("NameOwner")
-        )
+        ),
+
+        "Impl": (
+            options: ["AssociatedItemList", "TypeRef"],
+            traits: ["VisibilityOwner", "DocCommentsOwner"]
+        ),
+        "AssociatedItemList": (
+            collections: [ ("associated_items", "AssociatedItem") ]
+        ),
+        "AssociatedItem": (
+            enum: ["FunctionDef"]
+        ),
     }
 )

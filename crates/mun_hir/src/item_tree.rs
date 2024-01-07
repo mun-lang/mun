@@ -111,6 +111,7 @@ struct ItemTreeData {
     structs: Arena<Struct>,
     fields: Arena<Field>,
     type_aliases: Arena<TypeAlias>,
+    impls: Arena<Impl>,
 
     visibilities: ItemVisibilities,
 }
@@ -222,6 +223,7 @@ mod_items! {
     Struct in structs -> ast::StructDef,
     TypeAlias in type_aliases -> ast::TypeAliasDef,
     Import in imports -> ast::Use,
+    Impl in impls -> ast::Impl,
 }
 
 macro_rules! impl_index {
@@ -309,6 +311,14 @@ pub struct Struct {
     pub ast_id: FileAstId<ast::StructDef>,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Impl {
+    pub types: TypeRefMap,
+    pub self_ty: LocalTypeRefId,
+    pub items: Box<[AssociatedItem]>,
+    pub ast_id: FileAstId<ast::Impl>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAlias {
     pub name: Name,
@@ -316,6 +326,25 @@ pub struct TypeAlias {
     pub types: TypeRefMap,
     pub type_ref: Option<LocalTypeRefId>,
     pub ast_id: FileAstId<ast::TypeAliasDef>,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum AssociatedItem {
+    Function(LocalItemTreeId<Function>),
+}
+
+impl From<LocalItemTreeId<Function>> for AssociatedItem {
+    fn from(value: LocalItemTreeId<Function>) -> Self {
+        AssociatedItem::Function(value)
+    }
+}
+
+impl From<AssociatedItem> for ModItem {
+    fn from(item: AssociatedItem) -> Self {
+        match item {
+            AssociatedItem::Function(it) => it.into(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -393,7 +422,7 @@ impl<T> Eq for IdRange<T> {}
 mod diagnostics {
     use super::{ItemTree, ModItem};
     use crate::diagnostics::DuplicateDefinition;
-    use crate::{DefDatabase, DiagnosticSink, HirDatabase, Name};
+    use crate::{DefDatabase, DiagnosticSink, HirDatabase, InFile, Name, Path};
     use mun_syntax::{AstNode, SyntaxNodePtr};
 
     #[derive(Clone, Debug, Eq, PartialEq)]
@@ -416,20 +445,37 @@ mod diagnostics {
                 db: &dyn DefDatabase,
                 item_tree: &ItemTree,
                 item: ModItem,
-            ) -> SyntaxNodePtr {
+            ) -> InFile<SyntaxNodePtr> {
                 match item {
-                    ModItem::Function(item) => {
-                        SyntaxNodePtr::new(item_tree.source(db, item).syntax())
+                    ModItem::Function(item) => InFile::new(
+                        item_tree.file_id,
+                        SyntaxNodePtr::new(item_tree.source(db, item).syntax()),
+                    ),
+                    ModItem::Struct(item) => InFile::new(
+                        item_tree.file_id,
+                        SyntaxNodePtr::new(item_tree.source(db, item).syntax()),
+                    ),
+                    ModItem::TypeAlias(item) => InFile::new(
+                        item_tree.file_id,
+                        SyntaxNodePtr::new(item_tree.source(db, item).syntax()),
+                    ),
+                    ModItem::Import(it) => {
+                        let import = &item_tree[it];
+                        let import_src = item_tree.source(db, it);
+                        let mut use_item = None;
+                        let mut index = 0;
+                        Path::expand_use_item(&import_src, |_, tree, _, _| {
+                            if index == import.index {
+                                use_item = Some(tree.clone());
+                            }
+                            index += 1;
+                        });
+                        InFile::new(
+                            item_tree.file_id,
+                            SyntaxNodePtr::new(use_item.expect("cannot find use item").syntax()),
+                        )
                     }
-                    ModItem::Struct(item) => {
-                        SyntaxNodePtr::new(item_tree.source(db, item).syntax())
-                    }
-                    ModItem::TypeAlias(item) => {
-                        SyntaxNodePtr::new(item_tree.source(db, item).syntax())
-                    }
-                    ModItem::Import(item) => {
-                        SyntaxNodePtr::new(item_tree.source(db, item).syntax())
-                    }
+                    ModItem::Impl(_) => unreachable!("impls cannot be duplicated"),
                 }
             }
 
@@ -439,7 +485,6 @@ mod diagnostics {
                     first,
                     second,
                 } => sink.push(DuplicateDefinition {
-                    file: item_tree.file_id,
                     name: name.to_string(),
                     first_definition: ast_ptr_from_mod(db.upcast(), item_tree, *first),
                     definition: ast_ptr_from_mod(db.upcast(), item_tree, *second),

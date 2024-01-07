@@ -100,6 +100,79 @@ impl ArrayType {
     }
 }
 
+// AssociatedItem
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct AssociatedItem {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for AssociatedItem {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, FUNCTION_DEF)
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(AssociatedItem { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AssociatedItemKind {
+    FunctionDef(FunctionDef),
+}
+impl From<FunctionDef> for AssociatedItem {
+    fn from(n: FunctionDef) -> AssociatedItem {
+        AssociatedItem { syntax: n.syntax }
+    }
+}
+
+impl AssociatedItem {
+    pub fn kind(&self) -> AssociatedItemKind {
+        match self.syntax.kind() {
+            FUNCTION_DEF => {
+                AssociatedItemKind::FunctionDef(FunctionDef::cast(self.syntax.clone()).unwrap())
+            }
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl AssociatedItem {}
+
+// AssociatedItemList
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct AssociatedItemList {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for AssociatedItemList {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, ASSOCIATED_ITEM_LIST)
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(AssociatedItemList { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl AssociatedItemList {
+    pub fn associated_items(&self) -> impl Iterator<Item = AssociatedItem> {
+        super::children(self)
+    }
+}
+
 // BinExpr
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -568,6 +641,40 @@ impl IfExpr {
     }
 }
 
+// Impl
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Impl {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for Impl {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, IMPL)
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(Impl { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl ast::VisibilityOwner for Impl {}
+impl ast::DocCommentsOwner for Impl {}
+impl Impl {
+    pub fn associated_item_list(&self) -> Option<AssociatedItemList> {
+        super::child_opt(self)
+    }
+
+    pub fn type_ref(&self) -> Option<TypeRef> {
+        super::child_opt(self)
+    }
+}
+
 // IndexExpr
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -707,7 +814,10 @@ pub struct ModuleItem {
 
 impl AstNode for ModuleItem {
     fn can_cast(kind: SyntaxKind) -> bool {
-        matches!(kind, USE | FUNCTION_DEF | STRUCT_DEF | TYPE_ALIAS_DEF)
+        matches!(
+            kind,
+            USE | FUNCTION_DEF | STRUCT_DEF | TYPE_ALIAS_DEF | IMPL
+        )
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
         if Self::can_cast(syntax.kind()) {
@@ -726,6 +836,7 @@ pub enum ModuleItemKind {
     FunctionDef(FunctionDef),
     StructDef(StructDef),
     TypeAliasDef(TypeAliasDef),
+    Impl(Impl),
 }
 impl From<Use> for ModuleItem {
     fn from(n: Use) -> ModuleItem {
@@ -747,6 +858,11 @@ impl From<TypeAliasDef> for ModuleItem {
         ModuleItem { syntax: n.syntax }
     }
 }
+impl From<Impl> for ModuleItem {
+    fn from(n: Impl) -> ModuleItem {
+        ModuleItem { syntax: n.syntax }
+    }
+}
 
 impl ModuleItem {
     pub fn kind(&self) -> ModuleItemKind {
@@ -759,6 +875,7 @@ impl ModuleItem {
             TYPE_ALIAS_DEF => {
                 ModuleItemKind::TypeAliasDef(TypeAliasDef::cast(self.syntax.clone()).unwrap())
             }
+            IMPL => ModuleItemKind::Impl(Impl::cast(self.syntax.clone()).unwrap()),
             _ => unreachable!(),
         }
     }

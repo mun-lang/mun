@@ -1,9 +1,11 @@
 #![allow(clippy::type_repetition_in_bounds)]
 
+use crate::code_model::ImplData;
 use crate::expr::BodySourceMap;
-use crate::ids::{DefWithBodyId, FunctionId};
+use crate::ids::{DefWithBodyId, FunctionId, ImplId};
 use crate::input::{SourceRoot, SourceRootId};
 use crate::item_tree::{self, ItemTree};
+use crate::method_resolution::InherentImpls;
 use crate::module_tree::ModuleTree;
 use crate::name_resolution::Namespace;
 use crate::package_defs::PackageDefs;
@@ -82,6 +84,8 @@ pub trait InternDatabase: SourceDatabase {
     fn intern_struct(&self, loc: ids::StructLoc) -> ids::StructId;
     #[salsa::interned]
     fn intern_type_alias(&self, loc: ids::TypeAliasLoc) -> ids::TypeAliasId;
+    #[salsa::interned]
+    fn intern_impl(self, loc: ids::ImplLoc) -> ids::ImplId;
 }
 
 #[salsa::query_group(DefDatabaseStorage)]
@@ -113,6 +117,9 @@ pub trait DefDatabase: InternDatabase + AstDatabase + Upcast<dyn AstDatabase> {
 
     #[salsa::invoke(ExprScopes::expr_scopes_query)]
     fn expr_scopes(&self, def: DefWithBodyId) -> Arc<ExprScopes>;
+
+    #[salsa::invoke(ImplData::impl_data_query)]
+    fn impl_data(&self, def: ImplId) -> Arc<ImplData>;
 }
 
 #[salsa::query_group(HirDatabaseStorage)]
@@ -137,8 +144,14 @@ pub trait HirDatabase: DefDatabase + Upcast<dyn DefDatabase> {
     #[salsa::invoke(crate::ty::callable_item_sig)]
     fn callable_sig(&self, def: CallableDef) -> FnSig;
 
+    #[salsa::invoke(crate::ty::lower::lower_impl_query)]
+    fn lower_impl(&self, def: ImplId) -> Arc<LowerTyMap>;
+
     #[salsa::invoke(crate::ty::type_for_def)]
     fn type_for_def(&self, def: TypableDef, ns: Namespace) -> Ty;
+
+    #[salsa::invoke(InherentImpls::inherent_impls_in_package_query)]
+    fn inherent_impls_in_package(&self, package: PackageId) -> Arc<InherentImpls>;
 }
 
 fn parse_query(db: &dyn AstDatabase, file_id: FileId) -> Parse<SourceFile> {
