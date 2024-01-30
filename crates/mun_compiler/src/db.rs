@@ -1,6 +1,7 @@
-use crate::Config;
 use mun_codegen::{CodeGenDatabase, CodeGenDatabaseStorage};
 use mun_hir::{salsa, HirDatabase, Upcast};
+
+use crate::Config;
 
 /// A compiler database is a salsa database that enables increment compilation.
 #[salsa::database(

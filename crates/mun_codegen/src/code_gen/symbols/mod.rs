@@ -1,27 +1,24 @@
-use std::convert::TryFrom;
-use std::{collections::HashSet, ffi::CString};
+use std::{collections::HashSet, convert::TryFrom, ffi::CString};
 
 use inkwell::{attributes::Attribute, module::Linkage, types::AnyType};
-use itertools::Itertools;
-
 use ir_type_builder::TypeIdBuilder;
+use itertools::Itertools;
+use mun_abi as abi;
 use mun_hir::{HirDatabase, TyKind};
 
-use crate::ir::ty::guid_from_struct;
-use crate::type_info::HasStaticTypeId;
 use crate::{
-    ir::ty::HirTypeCache,
-    ir::types as ir,
     ir::{
         dispatch_table::{DispatchTable, DispatchableFunction},
         function,
+        ty::{guid_from_struct, HirTypeCache},
         type_table::TypeTable,
+        types as ir,
     },
+    type_info::HasStaticTypeId,
     value::{
         AsValue, CanInternalize, Global, IrValueContext, IterAsIrValue, SizedValueType, Value,
     },
 };
-use mun_abi as abi;
 
 mod ir_type_builder;
 
@@ -48,7 +45,8 @@ fn gen_prototype_from_function<'ink>(
         ir_type_builder.construct_from_type_id(&hir_types.type_id(fn_sig.ret()))
     };
 
-    // Construct an array of pointers to `ir::TypeInfo`s for the arguments of the prototype
+    // Construct an array of pointers to `ir::TypeInfo`s for the arguments of the
+    // prototype
     let arg_types = fn_sig
         .params()
         .iter()
@@ -65,7 +63,8 @@ fn gen_prototype_from_function<'ink>(
     }
 }
 
-/// Construct a `MunFunctionPrototype` struct for the specified dispatch table function.
+/// Construct a `MunFunctionPrototype` struct for the specified dispatch table
+/// function.
 fn gen_prototype_from_dispatch_entry<'ink>(
     context: &IrValueContext<'ink, '_, '_>,
     function: &DispatchableFunction,
@@ -82,7 +81,8 @@ fn gen_prototype_from_dispatch_entry<'ink>(
     // Get the `ir::TypeInfo` pointer for the return type of the function
     let return_type = ir_type_builder.construct_from_type_id(&function.prototype.ret_type);
 
-    // Construct an array of pointers to `ir::TypeInfo`s for the arguments of the prototype
+    // Construct an array of pointers to `ir::TypeInfo`s for the arguments of the
+    // prototype
     let arg_types = function
         .prototype
         .arg_types
@@ -228,7 +228,8 @@ fn get_function_definition_array<'ink, 'a>(
         .map(|f| {
             let name = f.name(db).to_string();
 
-            // Get the function from the cloned module and modify the linkage of the function.
+            // Get the function from the cloned module and modify the linkage of the
+            // function.
             let value = module
                 // If a wrapper function exists, use that (required for struct types)
                 .get_function(&format!("{name}_wrapper"))
@@ -317,14 +318,15 @@ fn gen_dispatch_table<'ink>(
         .map(|entry| gen_prototype_from_dispatch_entry(context, entry, ir_type_builder))
         .into_const_private_pointer("fn.get_info.dispatchTable.signatures", context);
 
-    // Get the pointer to the global table (or nullptr if no global table was defined).
+    // Get the pointer to the global table (or nullptr if no global table was
+    // defined).
     let fn_ptrs = dispatch_table.global_value().map_or_else(
         || Value::null(context),
         |_g| {
-            // TODO: This is a hack, the passed module here is a clone of the module with which the
-            // dispatch table was created. Because of this we have to lookup the dispatch table
-            // global again. There is however not a `GlobalValue::get_name` method so I just
-            // hardcoded the name here.
+            // TODO: This is a hack, the passed module here is a clone of the module with
+            // which the dispatch table was created. Because of this we have to
+            // lookup the dispatch table global again. There is however not a
+            // `GlobalValue::get_name` method so I just hardcoded the name here.
             Value::<*mut *const fn()>::with_cast(
                 module
                     .get_global("dispatchTable")
@@ -342,9 +344,10 @@ fn gen_dispatch_table<'ink>(
     }
 }
 
-/// Constructs IR that exposes the types and symbols in the specified module. A function called
-/// `get_info` is constructed that returns a struct `MunAssemblyInfo`. See the `mun_abi` crate
-/// for the ABI that `get_info` exposes.
+/// Constructs IR that exposes the types and symbols in the specified module. A
+/// function called `get_info` is constructed that returns a struct
+/// `MunAssemblyInfo`. See the `mun_abi` crate for the ABI that `get_info`
+/// exposes.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn gen_reflection_ir<'db, 'ink>(
     db: &'db dyn HirDatabase,
@@ -422,10 +425,10 @@ fn gen_get_info_fn<'ink>(
 ) {
     let target = db.target();
 
-    // Construct the return type of the `get_info` method. Depending on the C ABI this is either the
-    // `MunAssemblyInfo` struct or void. On windows the return argument is passed back to the caller
-    // through a pointer to the return type as the first argument. e.g.:
-    // On Windows:
+    // Construct the return type of the `get_info` method. Depending on the C ABI
+    // this is either the `MunAssemblyInfo` struct or void. On windows the
+    // return argument is passed back to the caller through a pointer to the
+    // return type as the first argument. e.g.: On Windows:
     // ```c
     // void get_info(MunModuleInfo* result) {...}
     // ```
@@ -457,8 +460,8 @@ fn gen_get_info_fn<'ink>(
     let body_ir = context.context.append_basic_block(get_symbols_fn, "body");
     builder.position_at_end(body_ir);
 
-    // Get a pointer to the IR value that will hold the return value. Again this differs depending
-    // on the C ABI.
+    // Get a pointer to the IR value that will hold the return value. Again this
+    // differs depending on the C ABI.
     let result_ptr = if target.options.is_like_windows {
         get_symbols_fn
             .get_nth_param(0)
@@ -527,9 +530,9 @@ fn gen_get_info_fn<'ink>(
     function::create_pass_manager(context.module, optimization_level).run_on(&get_symbols_fn);
 }
 
-/// Generates a method `void set_allocator_handle(void*)` that stores the argument into the global
-/// `allocatorHandle`. This global is used internally to reference the allocator used by this
-/// munlib.
+/// Generates a method `void set_allocator_handle(void*)` that stores the
+/// argument into the global `allocatorHandle`. This global is used internally
+/// to reference the allocator used by this munlib.
 fn gen_set_allocator_handle_fn(context: &IrValueContext<'_, '_, '_>) {
     let set_allocator_handle_fn = context.module.add_function(
         "set_allocator_handle",

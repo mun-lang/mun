@@ -1,13 +1,11 @@
-//! A crate to generate and run Mun tests based on mdbook content. It is based on
-//! [mdbook-test](https://github.com/Michael-F-Bryan/mdbook-test) and
+//! A crate to generate and run Mun tests based on mdbook content. It is based
+//! on [mdbook-test](https://github.com/Michael-F-Bryan/mdbook-test) and
 //! [rust-skeptic](https://github.com/budziq/rust-skeptic).
 
 #![warn(missing_docs)]
 
 pub mod runtime;
 
-use mdbook::renderer::RenderContext;
-use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag};
 use std::{
     cell::RefCell,
     env,
@@ -16,6 +14,9 @@ use std::{
     mem,
     path::{Path, PathBuf},
 };
+
+use mdbook::renderer::RenderContext;
+use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag};
 
 #[derive(Default)]
 struct BookStore {
@@ -44,8 +45,8 @@ pub fn generate_doc_tests_from_mdbook(book_root: impl Into<PathBuf>) {
         (book.source_dir(), book_store.book.take())
     };
 
-    // Inform cargo that it needs to rerun the build script if one of the source files of the book
-    // changed.
+    // Inform cargo that it needs to rerun the build script if one of the source
+    // files of the book changed.
     for item in book.iter() {
         if let mdbook::BookItem::Chapter(ch) = item {
             if let Some(path) = &ch.path {
@@ -98,8 +99,8 @@ struct Test {
     compile_fail: bool,
 }
 
-/// Extracts all the Mun tests from the specified markdown. The `file_stem` is appended to the name
-/// of the tests.
+/// Extracts all the Mun tests from the specified markdown. The `file_stem` is
+/// appended to the name of the tests.
 fn extract_tests_from_string(markdown: &str, file_stem: &str) -> Vec<Test> {
     enum Block {
         None,
@@ -190,8 +191,8 @@ struct CodeBlockInfo {
     compile_fail: bool,
 }
 
-/// Parses the code following code block tags for valid mun tokens. These tokens are similar to
-/// rustdoc.
+/// Parses the code following code block tags for valid mun tokens. These tokens
+/// are similar to rustdoc.
 fn parse_code_block_info(info: &str) -> CodeBlockInfo {
     let tokens = info.split(|c: char| !(c == '_' || c == '-' || c.is_alphanumeric()));
 
@@ -235,9 +236,6 @@ fn parse_code_block_info(info: &str) -> CodeBlockInfo {
 /// Emit all test cases to the specified file
 fn emit_tests(out_path: impl AsRef<Path>, tests: Vec<Test>) {
     let mut content = String::new();
-
-    // All tests need the api from mun_skeptic::runtime
-    content.push_str("use mun_skeptic;\n");
 
     for test in tests.iter() {
         let test_string = emit_test_runner(test).unwrap();
@@ -286,10 +284,12 @@ fn emit_test_runner(test: &Test) -> io::Result<String> {
     Ok(String::from_utf8(s).unwrap())
 }
 
-/// Write the contents of the specified path but only if the contents is different. This ensures
-/// that a filesystem write event is only emitted when the content actually changes.
+/// Write the contents of the specified path but only if the contents is
+/// different. This ensures that a filesystem write event is only emitted when
+/// the content actually changes.
 fn write_if_contents_changed(name: &Path, contents: &str) -> io::Result<()> {
-    // Can't open in write mode now as that would modify the last changed timestamp of the file
+    // Can't open in write mode now as that would modify the last changed timestamp
+    // of the file
     match fs::read_to_string(name) {
         Ok(current_contents) => {
             if current_contents == contents {

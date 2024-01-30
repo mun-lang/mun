@@ -1,9 +1,11 @@
-use crate::{CodeGenDatabase, ModuleGroup};
-use rustc_hash::FxHashMap;
-use std::ops::Index;
-use std::sync::Arc;
+use std::{ops::Index, sync::Arc};
 
-/// A `ModuleGroupId` refers to a single [`ModuleGroup`] in a [`ModulePartition`]
+use rustc_hash::FxHashMap;
+
+use crate::{CodeGenDatabase, ModuleGroup};
+
+/// A `ModuleGroupId` refers to a single [`ModuleGroup`] in a
+/// [`ModulePartition`]
 #[derive(Default, PartialEq, Eq, Clone, Debug, Hash, PartialOrd, Ord, Copy)]
 pub struct ModuleGroupId(usize);
 
@@ -16,8 +18,8 @@ pub struct ModulePartition {
 }
 
 impl ModulePartition {
-    /// Adds a new group of modules to the partition. This function panics if a module is added
-    /// twice in different groups.
+    /// Adds a new group of modules to the partition. This function panics if a
+    /// module is added twice in different groups.
     pub fn add_group(
         &mut self,
         db: &dyn mun_hir::HirDatabase,

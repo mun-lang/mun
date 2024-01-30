@@ -6,7 +6,9 @@ mod token_extensions;
 mod tokens;
 mod traits;
 
-use crate::{syntax_node::SyntaxNodeChildren, SyntaxKind, SyntaxNode, SyntaxToken};
+use std::marker::PhantomData;
+
+pub use mun_abi::StructMemoryKind;
 
 pub use self::{
     expr_extensions::*,
@@ -15,13 +17,12 @@ pub use self::{
     tokens::*,
     traits::*,
 };
-pub use mun_abi::StructMemoryKind;
+use crate::{syntax_node::SyntaxNodeChildren, SyntaxKind, SyntaxNode, SyntaxToken};
 
-use std::marker::PhantomData;
-
-/// The main trait to go from untyped `SyntaxNode` to a typed ast. The conversion itself has zero
-/// runtime cost; ast and syntax nodes have exactly the same representation; a pointer to the tree
-/// root and a pointer to the node itself.
+/// The main trait to go from untyped `SyntaxNode` to a typed ast. The
+/// conversion itself has zero runtime cost; ast and syntax nodes have exactly
+/// the same representation; a pointer to the tree root and a pointer to the
+/// node itself.
 pub trait AstNode: Clone {
     fn can_cast(kind: SyntaxKind) -> bool;
 

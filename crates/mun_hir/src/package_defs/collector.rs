@@ -1,8 +1,11 @@
+use rustc_hash::FxHashMap;
+
 use super::PackageDefs;
-use crate::ids::ItemContainerId;
 use crate::{
     arena::map::ArenaMap,
-    ids::{FunctionLoc, ImplLoc, Intern, ItemDefinitionId, StructLoc, TypeAliasLoc},
+    ids::{
+        FunctionLoc, ImplLoc, Intern, ItemContainerId, ItemDefinitionId, StructLoc, TypeAliasLoc,
+    },
     item_scope::{ImportType, ItemScope, PerNsGlobImports},
     item_tree::{
         self, Fields, Function, Impl, ItemTree, ItemTreeId, LocalItemTreeId, ModItem, Struct,
@@ -15,7 +18,6 @@ use crate::{
     visibility::RawVisibility,
     DefDatabase, FileId, InFile, ModuleId, Name, PackageId, Path, PerNs, Visibility,
 };
-use rustc_hash::FxHashMap;
 
 /// Result of resolving an import statement
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -52,8 +54,8 @@ impl PartiallyResolvedImport {
 /// Definition of a single import statement
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct Import {
-    /// The path of the import (e.g. foo::Bar). Note that group imports have been desugared, each
-    /// item in the import tree is a seperate import.
+    /// The path of the import (e.g. foo::Bar). Note that group imports have
+    /// been desugared, each item in the import tree is a seperate import.
     pub path: Path,
 
     /// The alias for this import statement
@@ -135,8 +137,9 @@ struct DefCollector<'db> {
 impl<'db> DefCollector<'db> {
     /// Collects all information and stores it in the instance
     fn collect(&mut self) {
-        /// Recursively iterate over all modules in the `ModuleTree` and add them and their
-        /// definitions to their corresponding `ItemScope`.
+        /// Recursively iterate over all modules in the `ModuleTree` and add
+        /// them and their definitions to their corresponding
+        /// `ItemScope`.
         fn collect_modules_recursive(
             collector: &mut DefCollector<'_>,
             module_id: LocalModuleId,
@@ -148,7 +151,8 @@ impl<'db> DefCollector<'db> {
                 .modules
                 .insert(module_id, ItemScope::default());
 
-            // If there is a file associated with the module, collect all definitions from it
+            // If there is a file associated with the module, collect all definitions from
+            // it
             let module_data = &collector.package_defs.module_tree[module_id];
             if let Some(file_id) = module_data.file {
                 let item_tree = collector.db.item_tree(file_id);
@@ -192,12 +196,13 @@ impl<'db> DefCollector<'db> {
         // Collect all definitions in each module
         let module_tree = self.package_defs.module_tree.clone();
 
-        // Start by collecting the definitions from all modules. This ensures that, for every module,
-        // all local definitions are accessible. This is the starting point for the import
-        // resolution.
+        // Start by collecting the definitions from all modules. This ensures that, for
+        // every module, all local definitions are accessible. This is the
+        // starting point for the import resolution.
         collect_modules_recursive(self, module_tree.root, None);
 
-        // Now, as long as we have unresolved imports, try to resolve them, or part of them.
+        // Now, as long as we have unresolved imports, try to resolve them, or part of
+        // them.
         while !self.unresolved_imports.is_empty() {
             // Keep track of whether we were able to resolve anything
             let mut resolved_something = false;
@@ -210,8 +215,8 @@ impl<'db> DefCollector<'db> {
                 // Resolve the import
                 directive.status = self.resolve_import(directive.module_id, &directive.import);
 
-                // Check the status of the import, if the import is still considered unresolved, try
-                // again in the next round.
+                // Check the status of the import, if the import is still considered unresolved,
+                // try again in the next round.
                 #[allow(clippy::match_same_arms)]
                 match directive.status {
                     PartiallyResolvedImport::Indeterminate(_) => {
@@ -314,17 +319,20 @@ impl<'db> DefCollector<'db> {
                         &resolutions,
                     );
 
-                    // Record the wildcard import in case new items are added to the module we are importing
+                    // Record the wildcard import in case new items are added to the module we are
+                    // importing
                     let glob = self.glob_imports.entry(m.local_id).or_default();
                     if !glob.iter().any(|(m, _, _)| *m == import_module_id) {
                         glob.push((import_module_id, import_visibility, import.source));
                     }
                 }
                 Some((_, _)) => {
-                    // Happens when wildcard importing something other than a module. I guess it's ok to do nothing here?
+                    // Happens when wildcard importing something other than a
+                    // module. I guess it's ok to do nothing here?
                 }
                 None => {
-                    // Happens if a wildcard import refers to something other than a type?
+                    // Happens if a wildcard import refers to something other
+                    // than a type?
                 }
             }
         } else {
@@ -368,8 +376,8 @@ impl<'db> DefCollector<'db> {
         );
     }
 
-    /// Updates the current state with the resolutions of an import statement. Also recursively
-    /// updates any wildcard imports.
+    /// Updates the current state with the resolutions of an import statement.
+    /// Also recursively updates any wildcard imports.
     fn update_recursive(
         &mut self,
         import_module_id: LocalModuleId,
@@ -386,8 +394,8 @@ impl<'db> DefCollector<'db> {
 
         let mut changed = false;
         for ImportResolution { name, resolution } in resolutions {
-            // TODO(#309): Add an error if the visibility of the item does not allow exposing with the
-            // import visibility. e.g.:
+            // TODO(#309): Add an error if the visibility of the item does not allow
+            // exposing with the import visibility. e.g.:
             // ```mun
             // //- foo.mun
             // pub(package) struct Foo;

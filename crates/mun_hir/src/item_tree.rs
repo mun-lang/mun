@@ -3,15 +3,6 @@ mod pretty;
 #[cfg(test)]
 mod tests;
 
-use crate::path::ImportAlias;
-use crate::type_ref::{LocalTypeRefId, TypeRefMap};
-use crate::{
-    arena::{Arena, Idx},
-    source_id::FileAstId,
-    visibility::RawVisibility,
-    DefDatabase, FileId, InFile, Name, Path,
-};
-use mun_syntax::{ast, AstNode};
 use std::{
     any::type_name,
     fmt,
@@ -20,6 +11,17 @@ use std::{
     marker::PhantomData,
     ops::{Index, Range},
     sync::Arc,
+};
+
+use mun_syntax::{ast, AstNode};
+
+use crate::{
+    arena::{Arena, Idx},
+    path::ImportAlias,
+    source_id::FileAstId,
+    type_ref::{LocalTypeRefId, TypeRefMap},
+    visibility::RawVisibility,
+    DefDatabase, FileId, InFile, Name, Path,
 };
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -46,7 +48,8 @@ impl fmt::Debug for RawVisibilityId {
     }
 }
 
-/// An `ItemTree` is a derivative of an AST that only contains the items defined in the AST.
+/// An `ItemTree` is a derivative of an AST that only contains the items defined
+/// in the AST.
 ///
 /// Examples of items are: functions, structs, use statements.
 #[derive(Debug, Eq, PartialEq)]
@@ -66,14 +69,15 @@ impl ItemTree {
         Arc::new(item_tree)
     }
 
-    /// Returns a slice over all items located at the top level of the `FileId` for which this
-    /// `ItemTree` was constructed.
+    /// Returns a slice over all items located at the top level of the `FileId`
+    /// for which this `ItemTree` was constructed.
     pub fn top_level_items(&self) -> &[ModItem] {
         &self.top_level
     }
 
-    /// Returns the source location of the specified item. Note that the `file_id` of the item must
-    /// be the same `file_id` that was used to create this `ItemTree`.
+    /// Returns the source location of the specified item. Note that the
+    /// `file_id` of the item must be the same `file_id` that was used to
+    /// create this `ItemTree`.
     pub fn source<S: ItemTreeNode>(
         &self,
         db: &dyn DefDatabase,
@@ -269,25 +273,26 @@ impl<N: ItemTreeNode> Index<LocalItemTreeId<N>> for ItemTree {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Import {
-    /// The path of the import (e.g. foo::Bar). Note that group imports have been desugared, each
-    /// item in the import tree is a seperate import.
+    /// The path of the import (e.g. foo::Bar). Note that group imports have
+    /// been desugared, each item in the import tree is a seperate import.
     pub path: Path,
 
     /// An optional alias for this import statement (e.g. `use foo as bar`)
     pub alias: Option<ImportAlias>,
 
-    /// The visibility of the import statement as seen from the file that contains the import
-    /// statement.
+    /// The visibility of the import statement as seen from the file that
+    /// contains the import statement.
     pub visibility: RawVisibilityId,
 
     /// Whether or not this is a wildcard import.
     pub is_glob: bool,
 
-    /// AST Id of the `use` item this import was derived from. Note that multiple `Import`s can map
-    /// to the same `use` item.
+    /// AST Id of the `use` item this import was derived from. Note that
+    /// multiple `Import`s can map to the same `use` item.
     pub ast_id: FileAstId<ast::Use>,
 
-    /// Index of this `Import` when the containing `Use` is visited with `Path::expand_use_item`.
+    /// Index of this `Import` when the containing `Use` is visited with
+    /// `Path::expand_use_item`.
     pub index: usize,
 }
 
@@ -420,10 +425,13 @@ impl<T> PartialEq for IdRange<T> {
 impl<T> Eq for IdRange<T> {}
 
 mod diagnostics {
-    use super::{ItemTree, ModItem};
-    use crate::diagnostics::DuplicateDefinition;
-    use crate::{DefDatabase, DiagnosticSink, HirDatabase, InFile, Name, Path};
     use mun_syntax::{AstNode, SyntaxNodePtr};
+
+    use super::{ItemTree, ModItem};
+    use crate::{
+        diagnostics::DuplicateDefinition, DefDatabase, DiagnosticSink, HirDatabase, InFile, Name,
+        Path,
+    };
 
     #[derive(Clone, Debug, Eq, PartialEq)]
     pub enum ItemTreeDiagnostic {

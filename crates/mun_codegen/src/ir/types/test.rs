@@ -1,10 +1,12 @@
+use std::{cell::RefCell, mem};
+
 use inkwell::types::AnyType;
 use mun_abi as abi;
-use std::cell::RefCell;
-use std::mem;
 
-use crate::ir::types as ir;
-use crate::value::{IrTypeContext, SizedValueType};
+use crate::{
+    ir::types as ir,
+    value::{IrTypeContext, SizedValueType},
+};
 
 #[test]
 fn abi_struct_sizes() {

@@ -1,9 +1,10 @@
+use std::{collections::HashMap, sync::Arc};
+
 use annotate_snippets::{Annotation, AnnotationType, Renderer, Slice, Snippet, SourceAnnotation};
 use mun_diagnostics::DiagnosticForWith;
 use mun_hir::{line_index::LineIndex, FileId, HirDatabase};
 use mun_paths::RelativePathBuf;
 use mun_syntax::SyntaxError;
-use std::{collections::HashMap, sync::Arc};
 
 /// Writes the specified syntax error to the output stream.
 pub(crate) fn emit_syntax_error(

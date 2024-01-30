@@ -1,12 +1,14 @@
-use crate::static_type_map::StaticTypeMap;
-use crate::Guid;
-use once_cell::sync::OnceCell;
 use std::fmt;
 
-/// Represents a unique identifier for types. The runtime can use this to lookup the corresponding
-/// [`TypeInfo`]. A [`TypeId`] is a key for a [`TypeInfo`].
+use once_cell::sync::OnceCell;
+
+use crate::{static_type_map::StaticTypeMap, Guid};
+
+/// Represents a unique identifier for types. The runtime can use this to lookup
+/// the corresponding [`TypeInfo`]. A [`TypeId`] is a key for a [`TypeInfo`].
 ///
-/// A [`TypeId`] only contains enough information to query the runtime for a [`TypeInfo`].
+/// A [`TypeId`] only contains enough information to query the runtime for a
+/// [`TypeInfo`].
 #[repr(u8)]
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]

@@ -5,9 +5,8 @@ use mun_memory::{
     type_table::TypeTable,
 };
 
-use crate::{assert_variant, fake_struct};
-
 use super::util::{EventAggregator, Trace};
+use crate::{assert_variant, fake_struct};
 
 struct FooObject {
     bar: GcPtr,

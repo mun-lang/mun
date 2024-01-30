@@ -1,13 +1,14 @@
-use mun_compiler::{Config, DisplayColor, Driver, PathOrInline, RelativePathBuf};
-use mun_runtime::{InitError, Runtime, RuntimeBuilder};
 use std::{
     path::{Path, PathBuf},
     thread::sleep,
     time::{Duration, Instant},
 };
 
-/// Implements a compiler that generates and temporarily stores a `*.munlib` library
-/// corresponding to a single source file.
+use mun_compiler::{Config, DisplayColor, Driver, PathOrInline, RelativePathBuf};
+use mun_runtime::{InitError, Runtime, RuntimeBuilder};
+
+/// Implements a compiler that generates and temporarily stores a `*.munlib`
+/// library corresponding to a single source file.
 pub struct CompileTestDriver {
     _temp_output_dir: tempfile::TempDir,
     _temp_workspace: Option<tempfile::TempDir>,
@@ -16,8 +17,10 @@ pub struct CompileTestDriver {
 }
 
 impl CompileTestDriver {
-    /// Constructs a new `CompilerTestDriver` from a fixture that describes an entire mun project.
-    /// So it file structure should look something like this:
+    /// Constructs a new `CompilerTestDriver` from a fixture that describes an
+    /// entire mun project. So it file structure should look something like
+    /// this:
+    ///
     /// ```text
     /// mun.toml
     /// src/
@@ -89,8 +92,8 @@ impl CompileTestDriver {
         }
     }
 
-    /// Updates the text of the Mun source and ensures that the generated assembly has been
-    /// recompiled.
+    /// Updates the text of the Mun source and ensures that the generated
+    /// assembly has been recompiled.
     pub fn update_file(&mut self, path: impl AsRef<mun_paths::RelativePath>, text: &str) {
         self.driver.set_file_text(path, text).unwrap();
 
@@ -139,8 +142,8 @@ impl std::fmt::Debug for CompileAndRunTestDriver {
 }
 
 impl CompileAndRunTestDriver {
-    /// Constructs a `CompileAndRunTestDriver` from a single Mun source file and a `config_fn` that
-    /// allows modification of a [`RuntimeBuilder`].
+    /// Constructs a `CompileAndRunTestDriver` from a single Mun source file and
+    /// a `config_fn` that allows modification of a [`RuntimeBuilder`].
     pub fn from_fixture(
         fixture: &str,
         config_fn: impl FnOnce(RuntimeBuilder) -> RuntimeBuilder,
@@ -148,15 +151,16 @@ impl CompileAndRunTestDriver {
         let driver = CompileTestDriver::from_fixture(fixture);
         let builder = Runtime::builder(driver.lib_path());
 
-        // Safety: We compiled the library ourselves, therefor loading the munlib is safe.
+        // Safety: We compiled the library ourselves, therefor loading the munlib is
+        // safe.
         let build = config_fn(builder);
         let runtime = unsafe { build.finish() }?;
 
         Ok(Self { driver, runtime })
     }
 
-    /// Constructs a `CompileAndRunTestDriver` from a single Mun source file and a `config_fn` that
-    /// allows modification of a [`RuntimeBuilder`].
+    /// Constructs a `CompileAndRunTestDriver` from a single Mun source file and
+    /// a `config_fn` that allows modification of a [`RuntimeBuilder`].
     pub fn new(
         text: &str,
         config_fn: impl FnOnce(RuntimeBuilder) -> RuntimeBuilder,
@@ -164,25 +168,27 @@ impl CompileAndRunTestDriver {
         let driver = CompileTestDriver::from_file(text);
         let builder = Runtime::builder(driver.lib_path());
 
-        // Safety: We compiled the library ourselves, therefor loading the munlib is safe.
+        // Safety: We compiled the library ourselves, therefor loading the munlib is
+        // safe.
         let build = config_fn(builder);
         let runtime = unsafe { build.finish() }?;
 
         Ok(Self { driver, runtime })
     }
 
-    /// Updates the text of the Mun source and ensures that the generated assembly has been
-    /// reloaded.
+    /// Updates the text of the Mun source and ensures that the generated
+    /// assembly has been reloaded.
     ///
-    /// A reference to the borrowed `runtime` is used as an argument to allow moving of the
-    /// existing borrow inside the update function. This obviates the necessity for `update` to use
-    /// the `Runtime`.
+    /// A reference to the borrowed `runtime` is used as an argument to allow
+    /// moving of the existing borrow inside the update function. This
+    /// obviates the necessity for `update` to use the `Runtime`.
     pub fn update_file(&mut self, path: impl AsRef<mun_paths::RelativePath>, text: &str) {
         self.driver.update_file(path, text);
 
         let start_time = Instant::now();
 
-        // Safety: We compiled the library ourselves, therefor updating the runtime is safe.
+        // Safety: We compiled the library ourselves, therefor updating the runtime is
+        // safe.
         while !unsafe { self.runtime.update() } {
             let now = Instant::now();
             if now - start_time > Duration::from_secs(10) {

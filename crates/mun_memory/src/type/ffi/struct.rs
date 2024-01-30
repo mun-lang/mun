@@ -11,15 +11,17 @@ use mun_abi::{self as abi, Guid};
 use mun_capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
 
 use crate::{
-    r#type::ffi::Type,
-    r#type::{StructData, StructType as RustStructType, Type as RustType, TypeDataStore},
+    r#type::{
+        ffi::Type, StructData, StructType as RustStructType, Type as RustType, TypeDataStore,
+    },
     FieldData,
 };
 
 /// Additional information of a struct [`Type`].
 ///
-/// Ownership of this type lies with the [`Type`] that created this instance. As long as the
-/// original type is not released through [`mun_type_release`] this type stays alive.
+/// Ownership of this type lies with the [`Type`] that created this instance. As
+/// long as the original type is not released through [`mun_type_release`] this
+/// type stays alive.
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct StructInfo(pub(super) *const c_void, pub(super) *const c_void);
@@ -47,8 +49,8 @@ impl StructInfo {
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `StructType` has been deallocated
-/// by a previous call to [`mun_type_release`].
+/// This function results in undefined behavior if the passed in `StructType`
+/// has been deallocated by a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_struct_type_guid(ty: StructInfo, guid: *mut Guid) -> ErrorHandle {
     let ty = mun_error_try!(ty
@@ -63,8 +65,8 @@ pub unsafe extern "C" fn mun_struct_type_guid(ty: StructInfo, guid: *mut Guid) -
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `StructType` has been deallocated
-/// by a previous call to [`mun_type_release`].
+/// This function results in undefined behavior if the passed in `StructType`
+/// has been deallocated by a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_struct_type_memory_kind(
     ty: StructInfo,
@@ -80,8 +82,9 @@ pub unsafe extern "C" fn mun_struct_type_memory_kind(
 
 /// An array of [`Field`]s.
 ///
-/// This is backed by a dynamically allocated array. Ownership is transferred via this struct
-/// and its contents must be destroyed with [`mun_fields_destroy`].
+/// This is backed by a dynamically allocated array. Ownership is transferred
+/// via this struct and its contents must be destroyed with
+/// [`mun_fields_destroy`].
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Fields {
@@ -91,12 +94,13 @@ pub struct Fields {
 
 /// Retrieves the field with the given name.
 ///
-/// The name can be passed as a non nul-terminated string it must be UTF-8 encoded.
+/// The name can be passed as a non nul-terminated string it must be UTF-8
+/// encoded.
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `Fields` has been deallocated
-/// by a previous call to [`mun_fields_destroy`].
+/// This function results in undefined behavior if the passed in `Fields` has
+/// been deallocated by a previous call to [`mun_fields_destroy`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_fields_find_by_name(
     fields: Fields,
@@ -139,8 +143,8 @@ pub unsafe extern "C" fn mun_fields_find_by_name(
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `Fields` has been deallocated
-/// by a previous call to [`mun_fields_destroy`].
+/// This function results in undefined behavior if the passed in `Fields` has
+/// been deallocated by a previous call to [`mun_fields_destroy`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_fields_destroy(fields: Fields) -> ErrorHandle {
     if fields.fields.is_null() && fields.count > 0 {
@@ -155,8 +159,8 @@ pub unsafe extern "C" fn mun_fields_destroy(fields: Fields) -> ErrorHandle {
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `StructType` has been deallocated
-/// by a previous call to [`mun_type_release`].
+/// This function results in undefined behavior if the passed in `StructType`
+/// has been deallocated by a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_struct_type_fields(
     ty: StructInfo,
@@ -194,8 +198,9 @@ pub unsafe extern "C" fn mun_struct_type_fields(
 
 /// Information of a field of a struct [`Type`].
 ///
-/// Ownership of this type lies with the [`Type`] that created this instance. As long as the
-/// original type is not released through [`mun_type_release`] this type stays alive.
+/// Ownership of this type lies with the [`Type`] that created this instance. As
+/// long as the original type is not released through [`mun_type_release`] this
+/// type stays alive.
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Field(*const c_void, *const c_void);
@@ -221,13 +226,14 @@ impl Field {
     }
 }
 
-/// Returns the name of the field in the parent struct. Ownership of the name is transferred and
-/// must be destroyed with [`mun_string_destroy`]. If this function fails a nullptr is returned.
+/// Returns the name of the field in the parent struct. Ownership of the name is
+/// transferred and must be destroyed with [`mun_string_destroy`]. If this
+/// function fails a nullptr is returned.
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `Field` has been deallocated
-/// by a previous call to [`mun_type_release`].
+/// This function results in undefined behavior if the passed in `Field` has
+/// been deallocated by a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_field_name(field: Field, name: *mut *const c_char) -> ErrorHandle {
     let inner = mun_error_try!(field
@@ -238,13 +244,13 @@ pub unsafe extern "C" fn mun_field_name(field: Field, name: *mut *const c_char) 
     ErrorHandle::default()
 }
 
-/// Returns the type of the field. Ownership of the returned [`Type`] is transferred and must be
-/// released with a call to [`mun_type_release`].
+/// Returns the type of the field. Ownership of the returned [`Type`] is
+/// transferred and must be released with a call to [`mun_type_release`].
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `Field` has been deallocated
-/// by a previous call to [`mun_type_release`].
+/// This function results in undefined behavior if the passed in `Field` has
+/// been deallocated by a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_field_type(field: Field, ty: *mut Type) -> ErrorHandle {
     let inner = mun_error_try!(field
@@ -258,12 +264,13 @@ pub unsafe extern "C" fn mun_field_type(field: Field, ty: *mut Type) -> ErrorHan
     ErrorHandle::default()
 }
 
-/// Returns the offset of the field in bytes from the start of the parent struct.
+/// Returns the offset of the field in bytes from the start of the parent
+/// struct.
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `Field` has been deallocated
-/// by a previous call to [`mun_type_release`].
+/// This function results in undefined behavior if the passed in `Field` has
+/// been deallocated by a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_field_offset(field: Field, offset: *mut usize) -> ErrorHandle {
     let inner = mun_error_try!(field
@@ -276,16 +283,16 @@ pub unsafe extern "C" fn mun_field_offset(field: Field, offset: *mut usize) -> E
 
 #[cfg(test)]
 mod test {
-    use std::ffi::{CStr, CString};
-    use std::{mem::MaybeUninit, ptr, slice};
+    use std::{
+        ffi::{CStr, CString},
+        mem::MaybeUninit,
+        ptr, slice,
+    };
 
     use mun_abi as abi;
     use mun_capi_utils::{
         assert_error_snapshot, assert_getter1, assert_getter3, mun_string_destroy,
     };
-
-    use crate::r#type::ffi::r#struct::mun_fields_find_by_name;
-    use crate::{HasStaticType, StructTypeBuilder};
 
     use super::{
         super::{mun_type_kind, mun_type_release, Type, TypeKind},
@@ -293,6 +300,7 @@ mod test {
         mun_struct_type_fields, mun_struct_type_guid, mun_struct_type_memory_kind, Field, Fields,
         StructInfo,
     };
+    use crate::{r#type::ffi::r#struct::mun_fields_find_by_name, HasStaticType, StructTypeBuilder};
 
     unsafe fn struct_type(ty: Type) -> (Type, StructInfo) {
         assert_getter1!(mun_type_kind(ty, ty_kind));

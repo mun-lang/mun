@@ -1,19 +1,21 @@
-use crate::diagnostics::{DuplicateDefinition, ImplForForeignType, InvalidSelfTyImpl};
-use crate::ids::AssocItemId;
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    sync::Arc,
+};
+
+use mun_syntax::{AstNode, AstPtr, SyntaxNodePtr};
+use rustc_hash::FxHashMap;
+
 use crate::{
     db::HirDatabase,
+    diagnostics::{DuplicateDefinition, ImplForForeignType, InvalidSelfTyImpl},
     has_module::HasModule,
-    ids::{ImplId, Lookup, StructId},
+    ids::{AssocItemId, ImplId, Lookup, StructId},
     module_tree::LocalModuleId,
     package_defs::PackageDefs,
     ty::lower::LowerDiagnostic,
     DefDatabase, DiagnosticSink, HasSource, InFile, ModuleId, PackageId, Ty, TyKind,
 };
-use mun_syntax::{AstNode, AstPtr, SyntaxNodePtr};
-use rustc_hash::FxHashMap;
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InherentImplsDiagnostics {
@@ -32,7 +34,8 @@ pub enum InherentImplsDiagnostics {
 
 /// Holds inherit impls defined in some package.
 ///
-/// Inherent impls are impls that are defined for a type in the same package as the type itself.
+/// Inherent impls are impls that are defined for a type in the same package as
+/// the type itself.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InherentImpls {
     map: FxHashMap<StructId, Vec<ImplId>>,
@@ -57,9 +60,11 @@ impl InherentImpls {
         Arc::new(impls)
     }
 
-    /// A method to ensure that this instance only uses the amount of memory it needs.
+    /// A method to ensure that this instance only uses the amount of memory it
+    /// needs.
     ///
-    /// This effectively removes all extra allocated capacity from the `map` and `invalid_impls` fields.
+    /// This effectively removes all extra allocated capacity from the `map` and
+    /// `invalid_impls` fields.
     fn shrink_to_fit(&mut self) {
         self.map.values_mut().for_each(Vec::shrink_to_fit);
         self.map.shrink_to_fit();
@@ -130,7 +135,8 @@ impl InherentImpls {
         }
     }
 
-    /// Adds all the `InherentImplsDiagnostics`s of the result of a specific module to the `DiagnosticSink`.
+    /// Adds all the `InherentImplsDiagnostics`s of the result of a specific
+    /// module to the `DiagnosticSink`.
     pub(crate) fn add_module_diagnostics(
         &self,
         db: &dyn HirDatabase,
@@ -143,7 +149,8 @@ impl InherentImpls {
             .for_each(|it| it.add_to(db, sink));
     }
 
-    /// Adds all the `InherentImplsDiagnostics`s of the result to the `DiagnosticSink`.
+    /// Adds all the `InherentImplsDiagnostics`s of the result to the
+    /// `DiagnosticSink`.
     pub(crate) fn add_diagnostics(&self, db: &dyn HirDatabase, sink: &mut DiagnosticSink<'_>) {
         self.diagnostics.iter().for_each(|it| it.add_to(db, sink));
     }

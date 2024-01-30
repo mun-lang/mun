@@ -1,9 +1,11 @@
-use super::{Monitor, MonitorConfig, MonitorDirectories, MonitorEntry, MonitorMessage};
-use crate::{AbsPath, AbsPathBuf};
+use std::{convert::TryFrom, thread, time::Duration};
+
 use crossbeam_channel::{never, select, unbounded, Receiver, Sender};
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
-use std::{convert::TryFrom, thread, time::Duration};
 use walkdir::WalkDir;
+
+use super::{Monitor, MonitorConfig, MonitorDirectories, MonitorEntry, MonitorMessage};
+use crate::{AbsPath, AbsPathBuf};
 
 /// A message that can be sent from the "foreground" to the background thread.
 #[derive(Debug)]
@@ -177,7 +179,8 @@ impl NotifyThread {
         }
     }
 
-    /// Loads all the files from the given entry and optionally adds to the watched entries
+    /// Loads all the files from the given entry and optionally adds to the
+    /// watched entries
     fn load_entry(
         &mut self,
         entry: MonitorEntry,
@@ -207,7 +210,8 @@ impl NotifyThread {
             .collect()
     }
 
-    /// Loads all the files from the specified directories and optionally starts watching them.
+    /// Loads all the files from the specified directories and optionally starts
+    /// watching them.
     fn load_directories_entry(
         &mut self,
         dirs: MonitorDirectories,
@@ -274,7 +278,8 @@ impl NotifyThread {
     }
 }
 
-/// A helper function that reads the contents of the specified file and returns it.
+/// A helper function that reads the contents of the specified file and returns
+/// it.
 fn read(path: impl AsRef<AbsPath>) -> Option<Vec<u8>> {
     std::fs::read(path.as_ref()).ok()
 }

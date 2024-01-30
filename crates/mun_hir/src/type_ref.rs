@@ -1,13 +1,15 @@
-//! HIR for references to types. These paths are not yet resolved. They can be directly created
-//! from an `ast::TypeRef`, without further queries.
+//! HIR for references to types. These paths are not yet resolved. They can be
+//! directly created from an `ast::TypeRef`, without further queries.
+
+use std::ops::Index;
+
+use mun_syntax::{ast, AstPtr};
+use rustc_hash::FxHashMap;
 
 use crate::{
     arena::{map::ArenaMap, Arena, Idx},
     Path,
 };
-use mun_syntax::{ast, AstPtr};
-use rustc_hash::FxHashMap;
-use std::ops::Index;
 
 /// The ID of a `TypeRef` in a `TypeRefMap`
 pub type LocalTypeRefId = Idx<TypeRef>;
@@ -29,22 +31,23 @@ pub struct TypeRefSourceMap {
 }
 
 impl TypeRefSourceMap {
-    /// Returns the syntax node of the specified `LocalTypeRefId` or `None` if it doesnt exist in
-    /// this instance.
+    /// Returns the syntax node of the specified `LocalTypeRefId` or `None` if
+    /// it doesnt exist in this instance.
     pub(crate) fn type_ref_syntax(&self, expr: LocalTypeRefId) -> Option<AstPtr<ast::TypeRef>> {
         self.type_ref_map_back.get(expr).cloned()
     }
 
-    /// Returns the `LocalTypeRefId` references at the given location or `None` if no such Id
-    /// exists.
+    /// Returns the `LocalTypeRefId` references at the given location or `None`
+    /// if no such Id exists.
     pub(crate) fn syntax_type_ref(&self, ptr: AstPtr<ast::TypeRef>) -> Option<LocalTypeRefId> {
         self.type_ref_map.get(&ptr).cloned()
     }
 }
 
-/// Holds all type references from a specific region in the source code (depending on the use of
-/// this struct). This struct is often used in conjunction with a `TypeRefSourceMap` which maps
-/// `LocalTypeRefId`s to location in the syntax tree and back.
+/// Holds all type references from a specific region in the source code
+/// (depending on the use of this struct). This struct is often used in
+/// conjunction with a `TypeRefSourceMap` which maps `LocalTypeRefId`s to
+/// location in the syntax tree and back.
 #[derive(Default, Debug, Eq, PartialEq, Clone)]
 pub struct TypeRefMap {
     type_refs: Arena<TypeRef>,
@@ -69,7 +72,8 @@ impl Index<LocalTypeRefId> for TypeRefMap {
     }
 }
 
-/// A builder object to lower type references from syntax to a more abstract representation.
+/// A builder object to lower type references from syntax to a more abstract
+/// representation.
 #[derive(Debug, Default, Eq, PartialEq)]
 pub(crate) struct TypeRefMapBuilder {
     map: TypeRefMap,
@@ -77,8 +81,8 @@ pub(crate) struct TypeRefMapBuilder {
 }
 
 impl TypeRefMapBuilder {
-    /// Allocates a new `LocalTypeRefId` for the specified `TypeRef`. The passed `ptr` marks where
-    /// the `TypeRef` is located in the AST.
+    /// Allocates a new `LocalTypeRefId` for the specified `TypeRef`. The passed
+    /// `ptr` marks where the `TypeRef` is located in the AST.
     fn alloc_type_ref(&mut self, type_ref: TypeRef, ptr: AstPtr<ast::TypeRef>) -> LocalTypeRefId {
         let id = self.map.type_refs.alloc(type_ref);
         self.source_map.type_ref_map.insert(ptr.clone(), id);
@@ -86,8 +90,9 @@ impl TypeRefMapBuilder {
         id
     }
 
-    /// Lowers the given optional AST type references and returns the Id of the resulting `TypeRef`.
-    /// If the node is None an error is created indicating a missing `TypeRef` in the AST.
+    /// Lowers the given optional AST type references and returns the Id of the
+    /// resulting `TypeRef`. If the node is None an error is created
+    /// indicating a missing `TypeRef` in the AST.
     pub fn alloc_from_node_opt(&mut self, node: Option<&ast::TypeRef>) -> LocalTypeRefId {
         if let Some(node) = node {
             self.alloc_from_node(node)
@@ -96,7 +101,8 @@ impl TypeRefMapBuilder {
         }
     }
 
-    /// Lowers the given AST type references and returns the Id of the resulting `TypeRef`.
+    /// Lowers the given AST type references and returns the Id of the resulting
+    /// `TypeRef`.
     pub fn alloc_from_node(&mut self, node: &ast::TypeRef) -> LocalTypeRefId {
         use mun_syntax::ast::TypeRefKind::{ArrayType, NeverType, PathType};
 
@@ -112,8 +118,8 @@ impl TypeRefMapBuilder {
         self.alloc_type_ref(type_ref, ptr)
     }
 
-    /// Constructs a new `TypeRef` for the empty tuple type. Returns the Id of the newly create
-    /// `TypeRef`.
+    /// Constructs a new `TypeRef` for the empty tuple type. Returns the Id of
+    /// the newly create `TypeRef`.
     pub fn unit(&mut self) -> LocalTypeRefId {
         self.map.type_refs.alloc(TypeRef::Tuple(vec![]))
     }
@@ -123,8 +129,9 @@ impl TypeRefMapBuilder {
         self.map.type_refs.alloc(TypeRef::Error)
     }
 
-    /// Finish building type references, returning the `TypeRefMap` which contains all the
-    /// `TypeRef`s and a `TypeRefSourceMap` which converts [`LocalTypeRefIds`] back to source location.
+    /// Finish building type references, returning the `TypeRefMap` which
+    /// contains all the `TypeRef`s and a `TypeRefSourceMap` which converts
+    /// [`LocalTypeRefIds`] back to source location.
     pub fn finish(self) -> (TypeRefMap, TypeRefSourceMap) {
         (self.map, self.source_map)
     }

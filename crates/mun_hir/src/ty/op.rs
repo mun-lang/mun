@@ -1,7 +1,11 @@
-use crate::{ty::infer::InferTy, ty::TyKind, ArithOp, BinaryOp, Ty};
+use crate::{
+    ty::{infer::InferTy, TyKind},
+    ArithOp, BinaryOp, Ty,
+};
 
-/// Given a binary operation and the type on the left of that operation, returns the expected type
-/// for the right hand side of the operation or `Ty::Unknown` if such an operation is invalid.
+/// Given a binary operation and the type on the left of that operation, returns
+/// the expected type for the right hand side of the operation or `Ty::Unknown`
+/// if such an operation is invalid.
 pub(super) fn binary_op_rhs_expectation(op: BinaryOp, lhs_ty: Ty) -> Ty {
     match op {
         BinaryOp::LogicOp(..) => TyKind::Bool.intern(),
@@ -55,8 +59,8 @@ pub(super) fn binary_op_rhs_expectation(op: BinaryOp, lhs_ty: Ty) -> Ty {
     }
 }
 
-/// For a binary operation with the specified type on the right hand side of the operation, return
-/// the return type of that operation.
+/// For a binary operation with the specified type on the right hand side of the
+/// operation, return the return type of that operation.
 pub(super) fn binary_op_return_ty(op: BinaryOp, rhs_ty: Ty) -> Ty {
     match op {
         BinaryOp::ArithOp(_) => match rhs_ty.interned() {

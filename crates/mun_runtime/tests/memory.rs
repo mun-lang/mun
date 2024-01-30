@@ -2268,8 +2268,9 @@ fn nested_structs() {
         Ok(b.into())
     );
 
-    // Tests mapping of different struct type, when `gc -> value`, `value -> gc`, and
-    // retention of an old library (due to removal of `GcStruct` and `ValueStruct`)
+    // Tests mapping of different struct type, when `gc -> value`, `value -> gc`,
+    // and retention of an old library (due to removal of `GcStruct` and
+    // `ValueStruct`)
     driver.update_file(
         "mod.mun",
         r#"

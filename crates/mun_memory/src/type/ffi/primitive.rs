@@ -48,13 +48,14 @@ pub extern "C" fn mun_type_primitive(primitive_type: PrimitiveType) -> Type {
 
 #[cfg(test)]
 mod test {
+    use mun_capi_utils::assert_getter1;
+
     use super::{
         super::{mun_type_kind, TypeKind},
         mun_type_primitive,
         PrimitiveType::{self, *},
     };
     use crate::HasStaticType;
-    use mun_capi_utils::assert_getter1;
 
     #[test]
     fn test_primitives() {

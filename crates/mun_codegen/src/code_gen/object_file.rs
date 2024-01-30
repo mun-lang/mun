@@ -1,9 +1,10 @@
-use crate::code_gen::CodeGenerationError;
-use crate::linker;
+use std::{io::Write, path::Path};
+
 use inkwell::targets::{FileType, TargetMachine};
 use mun_target::spec;
-use std::{io::Write, path::Path};
 use tempfile::NamedTempFile;
+
+use crate::{code_gen::CodeGenerationError, linker};
 
 pub struct ObjectFile {
     target: spec::Target,

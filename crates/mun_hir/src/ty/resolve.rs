@@ -1,7 +1,7 @@
+use mun_target::{abi, abi::TargetDataLayout};
+
 use super::primitives::IntTy;
 use crate::{FloatBitness, FloatTy, IntBitness};
-use mun_target::abi;
-use mun_target::abi::TargetDataLayout;
 
 pub trait ResolveBitness {
     /// Resolves any variable bitness into concrete values.

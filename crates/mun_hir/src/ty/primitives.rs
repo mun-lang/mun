@@ -1,8 +1,11 @@
+use std::{
+    fmt::{self},
+    i128, i16, i32, i64, i8, u128, u16, u32, u64, u8,
+};
+
+use mun_target::{abi, abi::Integer};
+
 use crate::primitive_type::{FloatBitness, IntBitness, PrimitiveFloat, PrimitiveInt, Signedness};
-use mun_target::abi;
-use mun_target::abi::Integer;
-use std::fmt::{self};
-use std::{i128, i16, i32, i64, i8, u128, u16, u32, u64, u8};
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct IntTy {

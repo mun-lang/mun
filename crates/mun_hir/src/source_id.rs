@@ -1,14 +1,16 @@
+use std::{
+    hash::{Hash, Hasher},
+    marker::PhantomData,
+    sync::Arc,
+};
+
+use mun_syntax::{ast, AstNode, AstPtr, SyntaxNode, SyntaxNodePtr};
+
 use crate::{
     arena::{Arena, Idx},
     db::AstDatabase,
     in_file::InFile,
     FileId,
-};
-use mun_syntax::{ast, AstNode, AstPtr, SyntaxNode, SyntaxNodePtr};
-use std::{
-    hash::{Hash, Hasher},
-    marker::PhantomData,
-    sync::Arc,
 };
 
 /// `AstId` points to an AST node in any file.

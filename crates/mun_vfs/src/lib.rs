@@ -3,19 +3,20 @@ use std::mem;
 pub use monitor::{
     Monitor, MonitorConfig, MonitorDirectories, MonitorEntry, MonitorMessage, NotifyMonitor,
 };
-
 use mun_paths::{AbsPath, AbsPathBuf};
 use path_interner::PathInterner;
 
 mod monitor;
 mod path_interner;
 
-/// A `FileId` represents a unique identifier for a file within the `VirtualFileSystem`.
+/// A `FileId` represents a unique identifier for a file within the
+/// `VirtualFileSystem`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub struct FileId(pub u32);
 
-/// The `VirtualFileSystem` is a struct that manages a set of files and their content. Changes to
-/// the instance are logged, they can be be retrieved via the `take_changes` method.
+/// The `VirtualFileSystem` is a struct that manages a set of files and their
+/// content. Changes to the instance are logged, they can be be retrieved via
+/// the `take_changes` method.
 #[derive(Default)]
 pub struct VirtualFileSystem {
     /// Used to convert from paths to `FileId` and vice versa.
@@ -36,7 +37,8 @@ pub struct ChangedFile {
 }
 
 impl ChangedFile {
-    /// Returns true if this change indicates that the file was created or deleted
+    /// Returns true if this change indicates that the file was created or
+    /// deleted
     pub fn is_created_or_deleted(&self) -> bool {
         matches!(self.kind, ChangeKind::Create | ChangeKind::Delete)
     }
@@ -56,14 +58,14 @@ impl VirtualFileSystem {
         !self.changes.is_empty()
     }
 
-    /// Returns the changes performed on the instance since the last time this function was called
-    /// or since the creation of the instance.
+    /// Returns the changes performed on the instance since the last time this
+    /// function was called or since the creation of the instance.
     pub fn take_changes(&mut self) -> Vec<ChangedFile> {
         mem::take(&mut self.changes)
     }
 
-    /// Returns the `FileId` of the file at the specified `path` or `None` if there is no data for
-    /// that file.
+    /// Returns the `FileId` of the file at the specified `path` or `None` if
+    /// there is no data for that file.
     pub fn file_id(&self, path: &AbsPath) -> Option<FileId> {
         self.interner
             .get(path)
@@ -93,8 +95,9 @@ impl VirtualFileSystem {
             })
     }
 
-    /// Notifies this instance that the contents of the specified file has changed to something
-    /// else. Returns true if the new contents is actually different.
+    /// Notifies this instance that the contents of the specified file has
+    /// changed to something else. Returns true if the new contents is
+    /// actually different.
     pub fn set_file_contents(&mut self, path: &AbsPath, contents: Option<Vec<u8>>) -> bool {
         let file_id = self.alloc_file_id(path);
         let kind = match (&self.get(file_id), &contents) {
@@ -110,8 +113,8 @@ impl VirtualFileSystem {
         true
     }
 
-    /// Returns the `FileId` for the specified path and ensures that we can use it with this
-    /// instance.
+    /// Returns the `FileId` for the specified path and ensures that we can use
+    /// it with this instance.
     fn alloc_file_id(&mut self, path: &AbsPath) -> FileId {
         let file_id = self.interner.intern(path);
         let idx = file_id.0 as usize;
@@ -120,14 +123,16 @@ impl VirtualFileSystem {
         file_id
     }
 
-    /// Returns a reference to the current content of a specific file. This function is only used
-    /// internally. Use the `file_contents` function to get the contents of a file.
+    /// Returns a reference to the current content of a specific file. This
+    /// function is only used internally. Use the `file_contents` function
+    /// to get the contents of a file.
     fn get(&self, file_id: FileId) -> &Option<Vec<u8>> {
         &self.file_contents[file_id.0 as usize]
     }
 
-    /// Returns a mutable reference to the current content of a specific file. This function is only
-    /// used internally. Use the `set_file_contents` function to update the contents of a file.
+    /// Returns a mutable reference to the current content of a specific file.
+    /// This function is only used internally. Use the `set_file_contents`
+    /// function to update the contents of a file.
     fn get_mut(&mut self, file_id: FileId) -> &mut Option<Vec<u8>> {
         &mut self.file_contents[file_id.0 as usize]
     }
@@ -135,8 +140,7 @@ impl VirtualFileSystem {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryInto;
-    use std::path::PathBuf;
+    use std::{convert::TryInto, path::PathBuf};
 
     use crate::{AbsPathBuf, ChangeKind, ChangedFile, VirtualFileSystem};
 
@@ -169,7 +173,8 @@ mod tests {
         // Get the contents of the file
         assert!(vfs.file_contents(file_id).is_some());
 
-        // Modify the file contents, but dont actually modify it, should not trigger a change
+        // Modify the file contents, but dont actually modify it, should not trigger a
+        // change
         assert!(!vfs.set_file_contents(&test_path, Some(vec![])));
 
         // Actually modify the contents

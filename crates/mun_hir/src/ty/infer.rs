@@ -1,3 +1,7 @@
+use std::{ops::Index, sync::Arc};
+
+use rustc_hash::FxHashSet;
+
 use crate::{
     arena::map::ArenaMap,
     code_model::{Struct, StructKind},
@@ -5,28 +9,30 @@ use crate::{
     expr::{Body, Expr, ExprId, Literal, Pat, PatId, RecordLitField, Statement, UnaryOp},
     name_resolution::Namespace,
     resolve::{Resolver, TypeNs, ValueNs},
-    ty::infer::diagnostics::InferenceDiagnostic,
-    ty::infer::type_variable::TypeVariableTable,
-    ty::lower::LowerDiagnostic,
-    ty::op,
-    ty::{Ty, TypableDef},
+    ty::{
+        infer::{diagnostics::InferenceDiagnostic, type_variable::TypeVariableTable},
+        lower::LowerDiagnostic,
+        op, Ty, TypableDef,
+    },
     type_ref::LocalTypeRefId,
     BinaryOp, Function, HirDatabase, Name, Path,
 };
-use rustc_hash::FxHashSet;
-use std::ops::Index;
-use std::sync::Arc;
 
 mod place_expr;
 mod type_variable;
 mod unify;
 
-use crate::expr::{LiteralFloat, LiteralFloatKind, LiteralInt, LiteralIntKind};
-use crate::ids::DefWithBodyId;
-use crate::resolve::{resolver_for_expr, HasResolver};
-use crate::ty::primitives::{FloatTy, IntTy};
-use crate::ty::TyKind;
 pub use type_variable::TypeVarId;
+
+use crate::{
+    expr::{LiteralFloat, LiteralFloatKind, LiteralInt, LiteralIntKind},
+    ids::DefWithBodyId,
+    resolve::{resolver_for_expr, HasResolver},
+    ty::{
+        primitives::{FloatTy, IntTy},
+        TyKind,
+    },
+};
 
 mod coerce;
 
@@ -44,7 +50,8 @@ impl Default for InternedStandardTypes {
     }
 }
 
-/// The result of type inference: A mapping from expressions and patterns to types.
+/// The result of type inference: A mapping from expressions and patterns to
+/// types.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct InferenceResult {
     pub(crate) type_of_expr: ArenaMap<ExprId, Ty>,
@@ -74,7 +81,8 @@ impl Index<PatId> for InferenceResult {
 }
 
 impl InferenceResult {
-    /// Adds all the `InferenceDiagnostic`s of the result to the `DiagnosticSink`.
+    /// Adds all the `InferenceDiagnostic`s of the result to the
+    /// `DiagnosticSink`.
     pub(crate) fn add_diagnostics(
         &self,
         db: &dyn HirDatabase,
@@ -87,8 +95,9 @@ impl InferenceResult {
     }
 }
 
-/// The entry point of type inference. This method takes a body and infers the types of all the
-/// expressions and patterns. Diagnostics are also reported and stored in the `InferenceResult`.
+/// The entry point of type inference. This method takes a body and infers the
+/// types of all the expressions and patterns. Diagnostics are also reported and
+/// stored in the `InferenceResult`.
 pub fn infer_query(db: &dyn HirDatabase, def: DefWithBodyId) -> Arc<InferenceResult> {
     let body = db.body(def);
     let resolver = def.resolver(db.upcast());
@@ -103,9 +112,10 @@ pub fn infer_query(db: &dyn HirDatabase, def: DefWithBodyId) -> Arc<InferenceRes
     Arc::new(ctx.resolve_all())
 }
 
-/// Placeholders required during type inferencing. There are seperate values for integer and
-/// floating-point types and for generic type variables. The first being used to distinguish
-/// literals; e.g `100` can be represented by a lot of different integer types.
+/// Placeholders required during type inferencing. There are seperate values for
+/// integer and floating-point types and for generic type variables. The first
+/// being used to distinguish literals; e.g `100` can be represented by a lot of
+/// different integer types.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum InferTy {
     Type(type_variable::TypeVarId),
@@ -148,9 +158,10 @@ struct InferenceResultBuilder<'a> {
 
     type_variables: TypeVariableTable,
 
-    /// Information on the current loop that we're processing (or None if we're not in a loop) the
-    /// entry contains the current type of the loop statement (initially `never`) and the expected
-    /// type of the loop expression. Both these values are updated when a break statement is
+    /// Information on the current loop that we're processing (or None if we're
+    /// not in a loop) the entry contains the current type of the loop
+    /// statement (initially `never`) and the expected type of the loop
+    /// expression. Both these values are updated when a break statement is
     /// encountered.
     active_loop: Option<ActiveLoop>,
 
@@ -159,7 +170,8 @@ struct InferenceResultBuilder<'a> {
 }
 
 impl<'a> InferenceResultBuilder<'a> {
-    /// Construct a new `InferenceContext` from a `Body` and a `Resolver` for that body.
+    /// Construct a new `InferenceContext` from a `Body` and a `Resolver` for
+    /// that body.
     fn new(db: &'a dyn HirDatabase, body: &'a Body, resolver: Resolver) -> Self {
         InferenceResultBuilder {
             type_of_expr: ArenaMap::default(),
@@ -184,8 +196,9 @@ impl<'a> InferenceResultBuilder<'a> {
         self.type_of_pat.insert(pat, ty);
     }
 
-    /// Given a `LocalTypeRefId`, resolve the reference to an actual `Ty`. If the the type could not
-    /// be resolved an error is emitted and `Ty::Error` is returned.
+    /// Given a `LocalTypeRefId`, resolve the reference to an actual `Ty`. If
+    /// the the type could not be resolved an error is emitted and
+    /// `Ty::Error` is returned.
     fn resolve_type(&mut self, type_ref: LocalTypeRefId) -> Ty {
         // Try to resolve the type from the Hir
         let (ty, diagnostics) = Ty::from_hir(
@@ -212,11 +225,12 @@ impl<'a> InferenceResultBuilder<'a> {
 }
 
 impl<'a> InferenceResultBuilder<'a> {
-    /// Collect all the parameter patterns from the body. After calling this method the `return_ty`
-    /// will have a valid value, also all parameters are added inferred.
+    /// Collect all the parameter patterns from the body. After calling this
+    /// method the `return_ty` will have a valid value, also all parameters
+    /// are added inferred.
     fn infer_signature(&mut self) {
-        // Iterate over all the parameters and associated types of the body and infer the types of
-        // the parameters.
+        // Iterate over all the parameters and associated types of the body and infer
+        // the types of the parameters.
         for (pat, type_ref) in self.body.params().iter() {
             let ty = self.resolve_type(*type_ref);
             self.infer_pat(*pat, ty);
@@ -259,15 +273,17 @@ impl<'a> InferenceResultBuilder<'a> {
         self.resolve_ty_as_far_as_possible(ty)
     }
 
-    /// Infer type of expression with possibly implicit coerce to the expected type. Return the type
-    /// after possible coercion. Adds a diagnostic message if coercion failed.
+    /// Infer type of expression with possibly implicit coerce to the expected
+    /// type. Return the type after possible coercion. Adds a diagnostic
+    /// message if coercion failed.
     fn infer_expr_coerce(&mut self, expr: ExprId, expected: &Expectation) -> Ty {
         let ty = self.infer_expr_inner(expr, expected, &CheckParams::default());
         self.coerce_expr_ty(expr, ty, expected)
     }
 
-    /// Performs implicit coercion of the specified `Ty` to an expected type. Returns the type after
-    /// possible coercion. Adds a diagnostic message if coercion failed.
+    /// Performs implicit coercion of the specified `Ty` to an expected type.
+    /// Returns the type after possible coercion. Adds a diagnostic message
+    /// if coercion failed.
     fn coerce_expr_ty(&mut self, expr: ExprId, ty: Ty, expected: &Expectation) -> Ty {
         let ty = if !self.coerce(&ty, &expected.ty) {
             self.diagnostics.push(InferenceDiagnostic::MismatchedTypes {
@@ -285,7 +301,8 @@ impl<'a> InferenceResultBuilder<'a> {
         self.resolve_ty_as_far_as_possible(ty)
     }
 
-    /// Infer the type of the given expression. Returns the type of the expression.
+    /// Infer the type of the given expression. Returns the type of the
+    /// expression.
     fn infer_expr_inner(
         &mut self,
         tgt_expr: ExprId,
@@ -567,8 +584,9 @@ impl<'a> InferenceResultBuilder<'a> {
 
         match callee_ty.interned() {
             TyKind::Struct(s) => {
-                // Erroneously found either a unit struct or record struct literal. Record struct
-                // literals can never be used as a value so that will have already been reported.
+                // Erroneously found either a unit struct or record struct literal. Record
+                // struct literals can never be used as a value so that will
+                // have already been reported.
                 if s.data(self.db.upcast()).kind == StructKind::Unit {
                     self.diagnostics
                         .push(InferenceDiagnostic::MismatchedStructLit {
@@ -629,8 +647,8 @@ impl<'a> InferenceResultBuilder<'a> {
         }
     }
 
-    /// Checks whether the number of passed arguments matches the number of parameters of a
-    /// callable definition.
+    /// Checks whether the number of passed arguments matches the number of
+    /// parameters of a callable definition.
     fn check_call_argument_count(
         &mut self,
         tgt_expr: ExprId,
@@ -736,8 +754,8 @@ impl<'a> InferenceResultBuilder<'a> {
                 }
             }
         } else {
-            // If no value was found, try to resolve the path as a type. This will always result
-            // in an error but it does provide much better diagnostics.
+            // If no value was found, try to resolve the path as a type. This will always
+            // result in an error but it does provide much better diagnostics.
             let ty = resolver.resolve_path_as_type_fully(self.db.upcast(), path);
             if let Some((TypeNs::StructId(struct_id), _)) = ty {
                 // We can only really get here if the struct is actually a record. Both other
@@ -846,8 +864,9 @@ impl<'a> InferenceResultBuilder<'a> {
             }
         }
         let ty = if let Some(expr) = tail {
-            // Perform coercion of the trailing expression unless the expression has a Never return
-            // type because we want the block to get the Never type in that case.
+            // Perform coercion of the trailing expression unless the expression has a Never
+            // return type because we want the block to get the Never type in
+            // that case.
             let ty = self.infer_expr_inner(expr, expected, &CheckParams::default());
             if ty.is_never() {
                 ty
@@ -945,8 +964,8 @@ impl<'a> InferenceResultBuilder<'a> {
         //        self.diagnostics.push(InferenceDiagnostic::PatInferenceFailed {
         //            pat
         //        });
-        // Currently this should never happen because we can only infer integer and floating-point
-        // types which always have a fallback value.
+        // Currently this should never happen because we can only infer integer and
+        // floating-point types which always have a fallback value.
         panic!("pattern failed inferencing");
     }
 
@@ -955,8 +974,8 @@ impl<'a> InferenceResultBuilder<'a> {
         //        self.diagnostics.push(InferenceDiagnostic::ExprInferenceFailed {
         //            expr
         //        });
-        // Currently this should never happen because we can only infer integer and floating-point
-        // types which always have a fallback value.
+        // Currently this should never happen because we can only infer integer and
+        // floating-point types which always have a fallback value.
         panic!("expression failed inferencing");
     }
 }
@@ -1028,16 +1047,15 @@ impl From<PatId> for ExprOrPatId {
 }
 
 mod diagnostics {
-    use crate::diagnostics::PrivateAccess;
     use crate::{
         code_model::{src::HasSource, StructKind},
         diagnostics::{
             AccessUnknownField, BreakOutsideLoop, BreakWithValueOutsideLoop, CannotApplyBinaryOp,
-            CannotApplyUnaryOp, ExpectedFunction, FieldCountMismatch, IncompatibleBranch,
-            InvalidLhs, LiteralOutOfRange, MismatchedStructLit, MismatchedType, MissingElseBranch,
-            MissingFields, NoFields, NoSuchField, ParameterCountMismatch, ReturnMissingExpression,
+            CannotApplyUnaryOp, CyclicType, DiagnosticSink, ExpectedFunction, FieldCountMismatch,
+            IncompatibleBranch, InvalidLhs, LiteralOutOfRange, MismatchedStructLit, MismatchedType,
+            MissingElseBranch, MissingFields, NoFields, NoSuchField, ParameterCountMismatch,
+            PrivateAccess, ReturnMissingExpression, UnresolvedType, UnresolvedValue,
         },
-        diagnostics::{CyclicType, DiagnosticSink, UnresolvedType, UnresolvedValue},
         ty::infer::ExprOrPatId,
         type_ref::LocalTypeRefId,
         ExprId, Function, HirDatabase, IntTy, Name, Ty,

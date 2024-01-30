@@ -1,22 +1,20 @@
 //! Methods for lower the HIR to types.
 
+use std::{ops::Index, sync::Arc};
+
 pub(crate) use self::diagnostics::LowerDiagnostic;
-use crate::ids::ImplId;
-use crate::resolve::{HasResolver, TypeNs};
-use crate::ty::{Substitution, TyKind};
 use crate::{
     arena::map::ArenaMap,
     code_model::StructKind,
     diagnostics::DiagnosticSink,
+    ids::ImplId,
     name_resolution::Namespace,
     primitive_type::PrimitiveType,
-    resolve::Resolver,
-    ty::{FnSig, Ty},
+    resolve::{HasResolver, Resolver, TypeNs},
+    ty::{FnSig, Substitution, Ty, TyKind},
     type_ref::{LocalTypeRefId, TypeRef, TypeRefMap, TypeRefSourceMap},
-    FileId, Function, HirDatabase, ModuleDef, Path, Struct, TypeAlias,
+    FileId, Function, HasVisibility, HirDatabase, ModuleDef, Path, Struct, TypeAlias, Visibility,
 };
-use crate::{HasVisibility, Visibility};
-use std::{ops::Index, sync::Arc};
 
 /// A struct which holds resolved type references to `Ty`s.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -60,8 +58,9 @@ impl LowerTyMap {
 }
 
 impl Ty {
-    /// Tries to lower a HIR type reference to an actual resolved type. Besides the type also
-    /// returns an diagnostics that where encountered along the way.
+    /// Tries to lower a HIR type reference to an actual resolved type. Besides
+    /// the type also returns an diagnostics that where encountered along
+    /// the way.
     pub(crate) fn from_hir(
         db: &dyn HirDatabase,
         resolver: &Resolver,
@@ -74,8 +73,9 @@ impl Ty {
         (ty, diagnostics)
     }
 
-    /// Tries to lower a HIR type reference to an actual resolved type. Takes a mutable reference
-    /// to a `Vec` which will hold any diagnostics encountered a long the way.
+    /// Tries to lower a HIR type reference to an actual resolved type. Takes a
+    /// mutable reference to a `Vec` which will hold any diagnostics
+    /// encountered a long the way.
     fn from_hir_with_diagnostics(
         db: &dyn HirDatabase,
         resolver: &Resolver,
@@ -323,9 +323,8 @@ pub(crate) fn lower_impl_query(db: &dyn HirDatabase, impl_id: ImplId) -> Arc<Low
 }
 
 pub mod diagnostics {
-    use crate::diagnostics::{PrivateAccess, UnresolvedType};
     use crate::{
-        diagnostics::DiagnosticSink,
+        diagnostics::{DiagnosticSink, PrivateAccess, UnresolvedType},
         type_ref::{LocalTypeRefId, TypeRefSourceMap},
         FileId, HirDatabase,
     };

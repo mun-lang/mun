@@ -27,8 +27,8 @@ mun_project = { version = "0.6.0-dev", path = "../mun_project" }
 
 [dev-dependencies.cargo-husky]
 version = "1"
-default-features = false # Disable features which are enabled by default
-features = ["precommit-hook", "run-cargo-test", "run-cargo-fmt", "run-cargo-clippy", "run-for-all"]
+default-features = false
+features = ["user-hooks"]
 
 [dev-dependencies]
 tempfile = "3.8"

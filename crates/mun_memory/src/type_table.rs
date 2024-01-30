@@ -1,6 +1,5 @@
-use rustc_hash::FxHashMap;
-
 use mun_abi::{self as abi, Guid};
+use rustc_hash::FxHashMap;
 
 use crate::r#type::{HasStaticType, Type};
 
@@ -29,18 +28,19 @@ impl TypeTable {
         }
     }
 
-    /// Inserts `type_info` into the type table for a type that has static type info.
+    /// Inserts `type_info` into the type table for a type that has static type
+    /// info.
     ///
-    /// If the type table already contained this `type_info`, the value is updated, and the old
-    /// value is returned.
+    /// If the type table already contained this `type_info`, the value is
+    /// updated, and the old value is returned.
     fn insert_static_type<T: HasStaticType>(&mut self) -> Option<Type> {
         self.insert_type(T::type_info().clone())
     }
 
     /// Inserts `type_info` into the type table.
     ///
-    /// If the type table already contained this `type_info`, the value is updated, and the old
-    /// value is returned.
+    /// If the type table already contained this `type_info`, the value is
+    /// updated, and the old value is returned.
     pub fn insert_type(&mut self, type_info: Type) -> Option<Type> {
         match type_info.as_concrete() {
             None => panic!("can only insert concrete types"),
@@ -50,8 +50,8 @@ impl TypeTable {
 
     /// Inserts the concrete `Type` into the type table.
     ///
-    /// If the type table already contained this `type_info`, the value is updated, and the old
-    /// value is returned.
+    /// If the type table already contained this `type_info`, the value is
+    /// updated, and the old value is returned.
     pub fn insert_concrete_type(&mut self, guid: Guid, ty: Type) -> Option<Type> {
         self.type_name_to_type_info
             .insert(ty.name().to_owned(), ty.clone());
@@ -69,8 +69,8 @@ impl TypeTable {
         }
     }
 
-    /// Removes a type described by the given [`abi::TypeInfo`]. Returns `None` if this instance
-    /// doesn't hold any type that matches `type_info`.
+    /// Removes a type described by the given [`abi::TypeInfo`]. Returns `None`
+    /// if this instance doesn't hold any type that matches `type_info`.
     pub fn remove_type_by_type_info<'abi>(
         &mut self,
         type_info: &'abi abi::TypeDefinition<'abi>,
@@ -79,7 +79,8 @@ impl TypeTable {
         self.type_name_to_type_info.remove(ty.name())
     }
 
-    /// Removes and returns the `TypeInfo` corresponding to `name`, if it exists.
+    /// Removes and returns the `TypeInfo` corresponding to `name`, if it
+    /// exists.
     pub fn remove_type_by_name<S: AsRef<str>>(&mut self, name: S) -> Option<Type> {
         if let Some(type_info) = self.type_name_to_type_info.remove(name.as_ref()) {
             self.remove_type(&type_info)

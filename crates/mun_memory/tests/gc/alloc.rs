@@ -1,9 +1,11 @@
-use super::util::EventAggregator;
+use std::sync::Arc;
+
 use mun_memory::{
     gc::{Event, GcRootPtr, GcRuntime, MarkSweep},
     HasStaticType,
 };
-use std::sync::Arc;
+
+use super::util::EventAggregator;
 
 #[test]
 fn alloc() {

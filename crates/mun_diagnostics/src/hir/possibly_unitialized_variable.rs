@@ -1,8 +1,10 @@
-use super::HirDiagnostic;
-use crate::{Diagnostic, SourceAnnotation};
 use mun_syntax::TextRange;
 
-/// An error that is emitted when trying to access a field that is potentially not yet initialized.
+use super::HirDiagnostic;
+use crate::{Diagnostic, SourceAnnotation};
+
+/// An error that is emitted when trying to access a field that is potentially
+/// not yet initialized.
 ///
 /// ```mun
 /// # fn main() {

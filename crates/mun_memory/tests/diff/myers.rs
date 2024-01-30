@@ -1,5 +1,6 @@
-use super::util::apply_myers_diff;
 use mun_memory::diff::myers;
+
+use super::util::apply_myers_diff;
 
 #[test]
 fn test1() {

@@ -1,16 +1,4 @@
-use crate::{
-    arena::map::ArenaMap,
-    arena::{Arena, Idx},
-    code_model::src::HasSource,
-    code_model::DefWithBody,
-    diagnostics::DiagnosticSink,
-    ids::{DefWithBodyId, Lookup},
-    in_file::InFile,
-    name::AsName,
-    primitive_type::{PrimitiveFloat, PrimitiveInt},
-    type_ref::{LocalTypeRefId, TypeRef, TypeRefMap, TypeRefMapBuilder, TypeRefSourceMap},
-    DefDatabase, FileId, HirDatabase, Name, Path,
-};
+use std::{borrow::Cow, ops::Index, str::FromStr, sync::Arc};
 
 use either::Either;
 pub use mun_syntax::ast::PrefixOp as UnaryOp;
@@ -20,9 +8,19 @@ use mun_syntax::{
     AstNode, AstPtr,
 };
 use rustc_hash::FxHashMap;
-use std::{borrow::Cow, ops::Index, str::FromStr, sync::Arc};
 
 pub use self::scope::ExprScopes;
+use crate::{
+    arena::{map::ArenaMap, Arena, Idx},
+    code_model::{src::HasSource, DefWithBody},
+    diagnostics::DiagnosticSink,
+    ids::{DefWithBodyId, Lookup},
+    in_file::InFile,
+    name::AsName,
+    primitive_type::{PrimitiveFloat, PrimitiveInt},
+    type_ref::{LocalTypeRefId, TypeRef, TypeRefMap, TypeRefMapBuilder, TypeRefSourceMap},
+    DefDatabase, FileId, HirDatabase, Name, Path,
+};
 
 pub(crate) mod scope;
 pub(crate) mod validator;
@@ -42,9 +40,9 @@ pub struct Body {
     exprs: Arena<Expr>,
     pats: Arena<Pat>,
     type_refs: TypeRefMap,
-    /// The patterns for the function's parameters. While the parameter types are part of the
-    /// function signature, the patterns are not (they don't change the external type of the
-    /// function).
+    /// The patterns for the function's parameters. While the parameter types
+    /// are part of the function signature, the patterns are not (they don't
+    /// change the external type of the function).
     ///
     /// If this `Body` is for the body of a constant, this will just be empty.
     params: Vec<(PatId, LocalTypeRefId)>,
@@ -108,7 +106,8 @@ impl Body {
         self.ret_type
     }
 
-    /// Adds all the `InferenceDiagnostic`s of the result to the `DiagnosticSink`.
+    /// Adds all the `InferenceDiagnostic`s of the result to the
+    /// `DiagnosticSink`.
     pub(crate) fn add_diagnostics(
         &self,
         db: &dyn HirDatabase,
@@ -153,10 +152,11 @@ type PatSource = InFile<PatPtr>;
 
 type RecordPtr = AstPtr<ast::RecordField>;
 
-/// An item body together with the mapping from syntax nodes to HIR expression Ids. This is needed
-/// to go from e.g. a position in a file to the HIR expression containing it; but for type
-/// inference etc., we want to operate on a structure that is agnostic to the action positions of
-/// expressions in the file, so that we don't recompute types whenever some whitespace is typed.
+/// An item body together with the mapping from syntax nodes to HIR expression
+/// Ids. This is needed to go from e.g. a position in a file to the HIR
+/// expression containing it; but for type inference etc., we want to operate on
+/// a structure that is agnostic to the action positions of expressions in the
+/// file, so that we don't recompute types whenever some whitespace is typed.
 #[derive(Default, Debug, Eq, PartialEq)]
 pub struct BodySourceMap {
     expr_map: FxHashMap<ExprPtr, ExprId>,
@@ -230,7 +230,8 @@ pub enum LiteralError {
     /// We cannot parse the integer because its too large to fit in memory
     IntTooLarge,
 
-    /// A lexer error occurred. This might happen if the literal is malformed (e.g. 0b01012)
+    /// A lexer error occurred. This might happen if the literal is malformed
+    /// (e.g. 0b01012)
     LexerError,
 
     /// Encountered an unknown suffix
@@ -239,7 +240,8 @@ pub enum LiteralError {
     /// Encountered an unknown suffix
     InvalidFloatSuffix(String),
 
-    /// Trying to add floating point suffix to a literal that is not a floating point number
+    /// Trying to add floating point suffix to a literal that is not a floating
+    /// point number
     NonDecimalFloat(u32),
 }
 
@@ -957,7 +959,8 @@ fn float_lit(str: &str, suffix: Option<&str>) -> (Literal, Vec<LiteralError>) {
     filtered_float_lit(&str, suffix, 10)
 }
 
-/// Parses the given string into a float literal (underscores are already removed from str)
+/// Parses the given string into a float literal (underscores are already
+/// removed from str)
 fn filtered_float_lit(str: &str, suffix: Option<&str>, base: u32) -> (Literal, Vec<LiteralError>) {
     let mut errors = Vec::new();
     if base != 10 {
@@ -1039,10 +1042,14 @@ fn integer_lit(str: &str, suffix: Option<&str>) -> (Literal, Vec<LiteralError>) 
 
 #[cfg(test)]
 mod test {
-    use crate::expr::{float_lit, LiteralError, LiteralFloat, LiteralFloatKind};
-    use crate::expr::{integer_lit, LiteralInt, LiteralIntKind};
-    use crate::primitive_type::{PrimitiveFloat, PrimitiveInt};
-    use crate::Literal;
+    use crate::{
+        expr::{
+            float_lit, integer_lit, LiteralError, LiteralFloat, LiteralFloatKind, LiteralInt,
+            LiteralIntKind,
+        },
+        primitive_type::{PrimitiveFloat, PrimitiveInt},
+        Literal,
+    };
 
     #[test]
     fn test_integer_literals() {
@@ -1355,14 +1362,17 @@ mod test {
 }
 
 mod diagnostics {
-    use super::{ExprDiagnostic, LiteralError};
-    use crate::code_model::DefWithBody;
-    use crate::diagnostics::{
-        DiagnosticSink, IntLiteralTooLarge, InvalidFloatingPointLiteral, InvalidLiteral,
-        InvalidLiteralSuffix,
-    };
-    use crate::HirDatabase;
     use mun_syntax::SmolStr;
+
+    use super::{ExprDiagnostic, LiteralError};
+    use crate::{
+        code_model::DefWithBody,
+        diagnostics::{
+            DiagnosticSink, IntLiteralTooLarge, InvalidFloatingPointLiteral, InvalidLiteral,
+            InvalidLiteralSuffix,
+        },
+        HirDatabase,
+    };
 
     impl ExprDiagnostic {
         pub(crate) fn add_to(

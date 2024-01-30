@@ -1,6 +1,8 @@
-use crate::ids::AssocItemId;
 use crate::{
-    ids::{AssocItemLoc, FunctionId, ImplId, ItemContainerId, Lookup, StructId, TypeAliasId},
+    ids::{
+        AssocItemId, AssocItemLoc, FunctionId, ImplId, ItemContainerId, Lookup, StructId,
+        TypeAliasId,
+    },
     item_tree::ItemTreeNode,
     DefDatabase, ModuleId,
 };

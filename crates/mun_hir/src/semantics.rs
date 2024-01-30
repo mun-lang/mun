@@ -1,14 +1,22 @@
-//! `Semantics` provides the means to get semantic information from syntax trees that are not
-//! necessarily part of the compilation process. This is useful when you want to extract information
-//! from a modified source file in the context of the current state.
+//! `Semantics` provides the means to get semantic information from syntax trees
+//! that are not necessarily part of the compilation process. This is useful
+//! when you want to extract information from a modified source file in the
+//! context of the current state.
 //!
-//! Our compilation databases (e.g. `HirDatabase`) provides a lot of steps to go from a syntax tree
-//! (as provided by the [`mun_syntax::ast`] module) to more abstract representations of the source
-//! through the process of `lowering`. However, for IDE purposes we often want to cut through all
-//! this and go from source locations straight to lowered data structures and back. This is what
+//! Our compilation databases (e.g. `HirDatabase`) provides a lot of steps to go
+//! from a syntax tree (as provided by the [`mun_syntax::ast`] module) to more
+//! abstract representations of the source through the process of `lowering`.
+//! However, for IDE purposes we often want to cut through all this and go from
+//! source locations straight to lowered data structures and back. This is what
 //! [`Semantics`] enables.
 
 mod source_to_def;
+
+use std::cell::RefCell;
+
+use mun_syntax::{ast, AstNode, SyntaxNode, TextSize};
+use rustc_hash::FxHashMap;
+use smallvec::SmallVec;
 
 use crate::{
     ids::{DefWithBodyId, ItemDefinitionId},
@@ -18,13 +26,9 @@ use crate::{
     source_analyzer::SourceAnalyzer,
     FileId, HirDatabase, InFile, ModuleDef, Name, PatId, PerNs, Resolver, Ty, Visibility,
 };
-use mun_syntax::{ast, AstNode, SyntaxNode, TextSize};
-use rustc_hash::FxHashMap;
-use smallvec::SmallVec;
-use std::cell::RefCell;
 
-/// The primary API to get semantic information, like types, from syntax trees. Exposes the database
-/// it was created with through the `db` field.
+/// The primary API to get semantic information, like types, from syntax trees.
+/// Exposes the database it was created with through the `db` field.
 pub struct Semantics<'db> {
     pub db: &'db dyn HirDatabase,
 
@@ -78,8 +82,8 @@ impl<'db> Semantics<'db> {
         self.build_analyzer(node, Some(offset))
     }
 
-    /// Internal function that constructs a `SourceAnalyzer` from the given `node` and optional
-    /// `offset` in the file.
+    /// Internal function that constructs a `SourceAnalyzer` from the given
+    /// `node` and optional `offset` in the file.
     fn build_analyzer(&self, node: &SyntaxNode, offset: Option<TextSize>) -> SourceAnalyzer {
         let node = self.find_file(node.clone());
         let node = node.as_ref();
@@ -101,7 +105,8 @@ impl<'db> Semantics<'db> {
         SourceAnalyzer::new_for_resolver(resolver, node)
     }
 
-    /// Runs a function with a `SourceToDefContext` which can be used to cache definition queries.
+    /// Runs a function with a `SourceToDefContext` which can be used to cache
+    /// definition queries.
     fn with_source_to_def_context<F: FnOnce(&mut SourceToDefContext<'_, '_>) -> T, T>(
         &self,
         f: F,
@@ -114,8 +119,8 @@ impl<'db> Semantics<'db> {
         f(&mut context)
     }
 
-    /// Returns the file that is associated with the given root CST node or `None` if no such
-    /// association exists.
+    /// Returns the file that is associated with the given root CST node or
+    /// `None` if no such association exists.
     fn lookup_file(&self, root_node: &SyntaxNode) -> Option<FileId> {
         let cache = self.source_file_to_file.borrow();
         cache.get(root_node).copied()
@@ -149,7 +154,8 @@ fn find_root(node: &SyntaxNode) -> SyntaxNode {
     node.ancestors().last().unwrap()
 }
 
-/// Represents the notion of a scope (set of possible names) at a particular position in source.
+/// Represents the notion of a scope (set of possible names) at a particular
+/// position in source.
 pub struct SemanticsScope<'a> {
     pub db: &'a dyn HirDatabase,
     file_id: FileId,

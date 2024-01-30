@@ -13,12 +13,13 @@ pub enum InitError {
     LoadTempLibrary(#[from] libloading::Error),
 }
 
-/// A structure that holds a `Library` instance but creates a unique file per load. This enables
-/// writing to the original library and ensures that each shared object on Linux is loaded
-/// separately.
+/// A structure that holds a `Library` instance but creates a unique file per
+/// load. This enables writing to the original library and ensures that each
+/// shared object on Linux is loaded separately.
 ///
-/// There is no risk of cleaning the temporary file while it is used because loading the library
-/// keeps the file open (Windows) or keeping the file is not required in the first place (*nix).
+/// There is no risk of cleaning the temporary file while it is used because
+/// loading the library keeps the file open (Windows) or keeping the file is not
+/// required in the first place (*nix).
 pub struct TempLibrary {
     _tmp_path: tempfile::TempPath,
     library: Library,
@@ -35,14 +36,16 @@ impl TempLibrary {
     ///
     /// # Safety
     ///
-    /// When a library is loaded, initialisation routines contained within it are executed.
-    /// For the purposes of safety, the execution of these routines is conceptually the same calling
-    /// an unknown foreign function and may impose arbitrary requirements on the caller for the call
-    /// to be sound.
+    /// When a library is loaded, initialisation routines contained within it
+    /// are executed. For the purposes of safety, the execution of these
+    /// routines is conceptually the same calling an unknown foreign
+    /// function and may impose arbitrary requirements on the caller for the
+    /// call to be sound.
     ///
-    /// Additionally, the callers of this function must also ensure that execution of the
-    /// termination routines contained within the library is safe as well. These routines may be
-    /// executed when the library is unloaded.
+    /// Additionally, the callers of this function must also ensure that
+    /// execution of the termination routines contained within the library
+    /// is safe as well. These routines may be executed when the library is
+    /// unloaded.
     ///
     /// See [`libloading::Library::new`] for more information.
     pub unsafe fn new(path: &Path) -> Result<Self, InitError> {

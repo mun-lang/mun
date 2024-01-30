@@ -1,8 +1,9 @@
+use std::{fmt::Write, sync::Arc};
+
 use crate::{
     diagnostics::DiagnosticSink, expr::BodySourceMap, mock::MockDatabase,
     with_fixture::WithFixture, HirDisplay, InferenceResult, ModuleDef, Package,
 };
-use std::{fmt::Write, sync::Arc};
 
 #[test]
 fn issue_354() {

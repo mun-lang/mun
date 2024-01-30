@@ -1,11 +1,10 @@
 //! The Mun ABI
 //!
-//! The Mun ABI defines the binary format used to communicate between the Mun Compiler and Mun
-//! Runtime.
+//! The Mun ABI defines the binary format used to communicate between the Mun
+//! Compiler and Mun Runtime.
 #![warn(missing_docs)]
 
-use std::ffi::CStr;
-use std::fmt;
+use std::{ffi::CStr, fmt};
 
 pub use assembly_info::AssemblyInfo;
 pub use dispatch_table::DispatchTable;
@@ -13,8 +12,7 @@ pub use function_info::{FunctionDefinition, FunctionPrototype, FunctionSignature
 pub use module_info::ModuleInfo;
 pub use primitive::PrimitiveType;
 pub use struct_info::{StructDefinition, StructMemoryKind};
-pub use type_id::HasStaticTypeId;
-pub use type_id::{ArrayTypeId, PointerTypeId, TypeId};
+pub use type_id::{ArrayTypeId, HasStaticTypeId, PointerTypeId, TypeId};
 pub use type_info::{HasStaticTypeName, TypeDefinition, TypeDefinitionData};
 pub use type_lut::TypeLut;
 
@@ -123,4 +121,5 @@ pub enum Privacy {
     Private = 1,
 }
 
-// TODO: Fix leakage of pointer types in struct fields due to integration tests and test utils
+// TODO: Fix leakage of pointer types in struct fields due to integration tests
+// and test utils

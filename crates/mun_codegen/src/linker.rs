@@ -1,11 +1,14 @@
-use crate::apple::get_apple_sdk_root;
+use std::{
+    borrow::Cow,
+    fmt,
+    path::{Path, PathBuf},
+};
+
 use mun_abi as abi;
-use mun_target::spec;
-use mun_target::spec::LinkerFlavor;
-use std::borrow::Cow;
-use std::fmt;
-use std::path::{Path, PathBuf};
+use mun_target::{spec, spec::LinkerFlavor};
 use thiserror::Error;
+
+use crate::apple::get_apple_sdk_root;
 
 #[derive(Error, Debug)]
 pub enum LinkerError {
@@ -182,8 +185,8 @@ impl Linker for Ld64Linker {
         self.args.push("-o".to_owned());
         self.args.push(path_str.to_owned());
 
-        // Ensure that the `install_name` is not a full path as it is used as a unique identifier on
-        // MacOS
+        // Ensure that the `install_name` is not a full path as it is used as a unique
+        // identifier on MacOS
         self.args.push("-install_name".to_owned());
         self.args.push(filename_str.to_owned());
 

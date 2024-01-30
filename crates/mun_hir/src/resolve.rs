@@ -1,18 +1,19 @@
-use crate::has_module::HasModule;
-use crate::ids::{
-    DefWithBodyId, FunctionId, ImplId, ItemContainerId, ItemDefinitionId, Lookup, ModuleId,
-    StructId, TypeAliasId,
-};
-use crate::item_scope::BUILTIN_SCOPE;
-use crate::module_tree::LocalModuleId;
-use crate::package_defs::PackageDefs;
-use crate::primitive_type::PrimitiveType;
-use crate::visibility::RawVisibility;
-use crate::{
-    expr::scope::LocalScopeId, expr::PatId, DefDatabase, ExprId, ExprScopes, Name, Path, PerNs,
-    Visibility,
-};
 use std::sync::Arc;
+
+use crate::{
+    expr::{scope::LocalScopeId, PatId},
+    has_module::HasModule,
+    ids::{
+        DefWithBodyId, FunctionId, ImplId, ItemContainerId, ItemDefinitionId, Lookup, ModuleId,
+        StructId, TypeAliasId,
+    },
+    item_scope::BUILTIN_SCOPE,
+    module_tree::LocalModuleId,
+    package_defs::PackageDefs,
+    primitive_type::PrimitiveType,
+    visibility::RawVisibility,
+    DefDatabase, ExprId, ExprScopes, Name, Path, PerNs, Visibility,
+};
 
 #[derive(Debug, Clone, Default)]
 pub struct Resolver {
@@ -114,10 +115,11 @@ impl Resolver {
     //         Some(it) => it,
     //     };
     //
-    //     let (module_res, segment_index) = defs.resolve_path_in_module(db, module, &path);
+    //     let (module_res, segment_index) = defs.resolve_path_in_module(db, module,
+    // &path);
     //
-    //     // If the `segment_index` contains a value it means the path didn't resolve completely yet
-    //     if segment_index.is_some() {
+    //     // If the `segment_index` contains a value it means the path didn't
+    // resolve completely yet     if segment_index.is_some() {
     //         return PerNs::none();
     //     }
     //
@@ -145,8 +147,8 @@ impl Resolver {
         })
     }
 
-    /// Resolves the specified `path` as a value. Returns a result that can also indicate that the
-    /// path was only partially resolved.
+    /// Resolves the specified `path` as a value. Returns a result that can also
+    /// indicate that the path was only partially resolved.
     pub fn resolve_path_as_value(
         &self,
         db: &dyn DefDatabase,
@@ -218,7 +220,8 @@ impl Resolver {
         None
     }
 
-    /// Resolves the specified `path` as a value. Returns either `None` or the resolved path value.
+    /// Resolves the specified `path` as a value. Returns either `None` or the
+    /// resolved path value.
     pub fn resolve_path_as_value_fully(
         &self,
         db: &dyn DefDatabase,
@@ -230,8 +233,8 @@ impl Resolver {
         }
     }
 
-    /// Resolves the specified `path` as a type. Returns a result that can also indicate that the
-    /// path was only partially resolved.
+    /// Resolves the specified `path` as a type. Returns a result that can also
+    /// indicate that the path was only partially resolved.
     pub fn resolve_path_as_type(
         &self,
         db: &dyn DefDatabase,
@@ -266,7 +269,8 @@ impl Resolver {
         None
     }
 
-    /// Resolves the specified `path` as a type. Returns either `None` or the resolved path type.
+    /// Resolves the specified `path` as a type. Returns either `None` or the
+    /// resolved path type.
     pub fn resolve_path_as_type_fully(
         &self,
         db: &dyn DefDatabase,

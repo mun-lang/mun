@@ -3,13 +3,13 @@ mod mark_sweep;
 mod ptr;
 mod root_ptr;
 
-use crate::r#type::Type;
-use std::marker::PhantomData;
-use std::ptr::NonNull;
+use std::{marker::PhantomData, ptr::NonNull};
 
 pub use mark_sweep::MarkSweep;
 pub use ptr::{GcPtr, HasIndirectionPtr, RawGcPtr};
 pub use root_ptr::GcRootPtr;
+
+use crate::r#type::Type;
 
 /// Contains stats about the current state of a GC implementation
 #[derive(Debug, Clone, Default)]
@@ -21,7 +21,8 @@ pub struct Stats {
 pub trait TypeTrace: Send + Sync {
     type Trace: Iterator<Item = GcPtr>;
 
-    /// Returns an iterator to iterate over all GC objects that are referenced by the given object.
+    /// Returns an iterator to iterate over all GC objects that are referenced
+    /// by the given object.
     fn trace(&self, obj: GcPtr) -> Self::Trace;
 }
 
@@ -61,15 +62,17 @@ pub trait GcRuntime: Send + Sync {
     /// Returns array information of the specified handle
     fn array(&self, handle: GcPtr) -> Option<Self::Array>;
 
-    /// Roots the specified `obj`, which keeps it and objects it references alive. Objects marked
-    /// as root, must call `unroot` before they can be collected. An object can be rooted multiple
-    /// times, but you must make sure to call `unroot` an equal number of times before the object
-    /// can be collected.
+    /// Roots the specified `obj`, which keeps it and objects it references
+    /// alive. Objects marked as root, must call `unroot` before they can be
+    /// collected. An object can be rooted multiple times, but you must make
+    /// sure to call `unroot` an equal number of times before the object can
+    /// be collected.
     fn root(&self, obj: GcPtr);
 
-    /// Unroots the specified `obj`, potentially allowing it and objects it references to be
-    /// collected. An object can be rooted multiple times, so you must make sure to call `unroot`
-    /// the same number of times as `root` was called before the object can be collected.
+    /// Unroots the specified `obj`, potentially allowing it and objects it
+    /// references to be collected. An object can be rooted multiple times,
+    /// so you must make sure to call `unroot` the same number of times as
+    /// `root` was called before the object can be collected.
     fn unroot(&self, obj: GcPtr);
 
     /// Returns stats about the current state of the runtime.
@@ -83,8 +86,9 @@ pub trait Observer: Send + Sync {
     fn event(&self, _event: Self::Event) {}
 }
 
-/// An `Event` is an event that can be emitted by a `GcRuntime` through the use of an `Observer`.
-/// This enables tracking of the runtimes behavior which is useful for testing.
+/// An `Event` is an event that can be emitted by a `GcRuntime` through the use
+/// of an `Observer`. This enables tracking of the runtimes behavior which is
+/// useful for testing.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
     /// The GC performed an allocation
@@ -100,8 +104,8 @@ pub enum Event {
     End,
 }
 
-/// A default implementation of an `Observer` which ensures that the compiler does not generate
-/// code for event handling.
+/// A default implementation of an `Observer` which ensures that the compiler
+/// does not generate code for event handling.
 #[derive(Clone)]
 pub struct NoopObserver<T: Send + Sync> {
     data: PhantomData<T>,

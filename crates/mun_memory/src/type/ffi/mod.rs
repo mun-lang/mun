@@ -3,8 +3,13 @@
 //! Defines an FFI compatible type interface for type information.
 
 use std::{
-    ffi::c_void, ffi::CString, mem::ManuallyDrop, ops::Deref, os::raw::c_char, ptr, ptr::NonNull,
-    sync::atomic::Ordering, sync::Arc,
+    ffi::{c_void, CString},
+    mem::ManuallyDrop,
+    ops::Deref,
+    os::raw::c_char,
+    ptr,
+    ptr::NonNull,
+    sync::{atomic::Ordering, Arc},
 };
 
 use mun_abi::Guid;
@@ -52,8 +57,8 @@ impl Type {
             .ok_or_else(|| String::from("null pointer"))
     }
 
-    /// Converts this FFI type into an owned Rust type. This transfers the ownership from the FFI
-    /// type back to Rust.
+    /// Converts this FFI type into an owned Rust type. This transfers the
+    /// ownership from the FFI type back to Rust.
     ///
     /// # Safety
     ///
@@ -79,13 +84,13 @@ impl Type {
     }
 }
 
-/// Notifies the runtime that the specified type is no longer used. Any use of the type after
-/// calling this function results in undefined behavior.
+/// Notifies the runtime that the specified type is no longer used. Any use of
+/// the type after calling this function results in undefined behavior.
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `Type` has been deallocated in a
-/// previous call to [`mun_type_release`].
+/// This function results in undefined behavior if the passed in `Type` has been
+/// deallocated in a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_release(ty: Type) -> ErrorHandle {
     // Transfer ownership to Rust and immediately drop the instance
@@ -100,8 +105,8 @@ pub unsafe extern "C" fn mun_type_release(ty: Type) -> ErrorHandle {
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `Type` has been deallocated in a
-/// previous call to [`mun_type_release`].
+/// This function results in undefined behavior if the passed in `Type` has been
+/// deallocated in a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_add_reference(ty: Type) -> ErrorHandle {
     let store = mun_error_try!(ty
@@ -122,11 +127,11 @@ pub unsafe extern "C" fn mun_type_add_reference(ty: Type) -> ErrorHandle {
 ///
 /// # Safety
 ///
-/// The caller is responsible for calling `mun_string_destroy` on the return pointer - if it is not
-/// null.
+/// The caller is responsible for calling `mun_string_destroy` on the return
+/// pointer - if it is not null.
 ///
-/// This function results in undefined behavior if the passed in `Type` has been deallocated in a
-/// previous call to [`mun_type_release`].
+/// This function results in undefined behavior if the passed in `Type` has been
+/// deallocated in a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_name(ty: Type, name: *mut *const c_char) -> ErrorHandle {
     let inner = mun_error_try!(ty
@@ -137,13 +142,14 @@ pub unsafe extern "C" fn mun_type_name(ty: Type, name: *mut *const c_char) -> Er
     ErrorHandle::default()
 }
 
-/// Compares two different Types. Returns `true` if the two types are equal. If either of the two
-/// types is invalid because for instance it contains null pointers this function returns `false`.
+/// Compares two different Types. Returns `true` if the two types are equal. If
+/// either of the two types is invalid because for instance it contains null
+/// pointers this function returns `false`.
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `Type`s have been deallocated in a
-/// previous call to [`mun_type_release`].
+/// This function results in undefined behavior if the passed in `Type`s have
+/// been deallocated in a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_equal(a: Type, b: Type) -> bool {
     match (a.inner(), b.inner()) {
@@ -152,13 +158,14 @@ pub unsafe extern "C" fn mun_type_equal(a: Type, b: Type) -> bool {
     }
 }
 
-/// Returns the storage size required for a type. The storage size does not include any padding to
-/// align the size. Call [`mun_type_alignment`] to request the alignment of the type.
+/// Returns the storage size required for a type. The storage size does not
+/// include any padding to align the size. Call [`mun_type_alignment`] to
+/// request the alignment of the type.
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `Type`s have been deallocated in a
-/// previous call to [`mun_type_release`].
+/// This function results in undefined behavior if the passed in `Type`s have
+/// been deallocated in a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_size(ty: Type, size: *mut usize) -> ErrorHandle {
     let size = try_deref_mut!(size);
@@ -173,8 +180,8 @@ pub unsafe extern "C" fn mun_type_size(ty: Type, size: *mut usize) -> ErrorHandl
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `Type`s have been deallocated in a
-/// previous call to [`mun_type_release`].
+/// This function results in undefined behavior if the passed in `Type`s have
+/// been deallocated in a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_alignment(ty: Type, align: *mut usize) -> ErrorHandle {
     let align = try_deref_mut!(align);
@@ -189,8 +196,8 @@ pub unsafe extern "C" fn mun_type_alignment(ty: Type, align: *mut usize) -> Erro
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `Type`s have been deallocated in a
-/// previous call to [`mun_type_release`].
+/// This function results in undefined behavior if the passed in `Type`s have
+/// been deallocated in a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_pointer_type(
     ty: Type,
@@ -212,8 +219,8 @@ pub unsafe extern "C" fn mun_type_pointer_type(
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `Type`s have been deallocated in a
-/// previous call to [`mun_type_release`].
+/// This function results in undefined behavior if the passed in `Type`s have
+/// been deallocated in a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_array_type(ty: Type, array_ty: *mut Type) -> ErrorHandle {
     let array_ty = try_deref_mut!(array_ty);
@@ -240,8 +247,8 @@ pub enum TypeKind {
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `Type`s have been deallocated in a
-/// previous call to [`mun_type_release`].
+/// This function results in undefined behavior if the passed in `Type`s have
+/// been deallocated in a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_type_kind(ty: Type, kind: *mut TypeKind) -> ErrorHandle {
     let kind = try_deref_mut!(kind);
@@ -274,11 +281,12 @@ pub unsafe extern "C" fn mun_type_kind(ty: Type, kind: *mut TypeKind) -> ErrorHa
 
 /// An array of [`Type`]s.
 ///
-/// The `Types` struct owns the `Type`s it references. Ownership of the `Type` can be shared by
-/// calling [`mun_type_add_reference`].
+/// The `Types` struct owns the `Type`s it references. Ownership of the `Type`
+/// can be shared by calling [`mun_type_add_reference`].
 ///
-/// This is backed by a dynamically allocated array. Ownership is transferred via this struct
-/// and its contents must be destroyed with [`mun_types_destroy`].
+/// This is backed by a dynamically allocated array. Ownership is transferred
+/// via this struct and its contents must be destroyed with
+/// [`mun_types_destroy`].
 #[repr(C)]
 pub struct Types {
     pub types: *const Type,
@@ -304,8 +312,8 @@ impl From<Vec<Type>> for Types {
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `Types` has been deallocated
-/// by a previous call to [`mun_types_destroy`].
+/// This function results in undefined behavior if the passed in `Types` has
+/// been deallocated by a previous call to [`mun_types_destroy`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_types_destroy(types: Types) -> ErrorHandle {
     if types.types.is_null() && types.count > 0 {
@@ -324,25 +332,28 @@ pub unsafe extern "C" fn mun_types_destroy(types: Types) -> ErrorHandle {
 
 #[cfg(test)]
 mod test {
-    use std::ffi::{c_void, CStr, CString};
-    use std::mem::MaybeUninit;
-    use std::ptr;
+    use std::{
+        ffi::{c_void, CStr, CString},
+        mem::MaybeUninit,
+        ptr,
+    };
 
-    use crate::ffi::{mun_types_destroy, Types};
     use mun_capi_utils::{
         assert_error, assert_error_snapshot, assert_getter1, assert_getter2, mun_string_destroy,
     };
-
-    use crate::r#type::ffi::{
-        mun_type_add_reference, mun_type_alignment, mun_type_array_type, mun_type_pointer_type,
-        mun_type_size,
-    };
-    use crate::HasStaticType;
 
     use super::{
         mun_type_equal, mun_type_name, mun_type_release,
         primitive::{mun_type_primitive, PrimitiveType},
         Type,
+    };
+    use crate::{
+        ffi::{mun_types_destroy, Types},
+        r#type::ffi::{
+            mun_type_add_reference, mun_type_alignment, mun_type_array_type, mun_type_pointer_type,
+            mun_type_size,
+        },
+        HasStaticType,
     };
 
     const FFI_TYPE_NULL_INNER: Type = Type(ptr::null(), 0xDEAD as *const c_void);

@@ -1,10 +1,11 @@
-use crate::{diff::util::*, fake_struct};
 use mun_abi::StructMemoryKind;
 use mun_memory::{
     diff::{compute_struct_diff, FieldDiff, FieldEditKind, StructDiff},
     type_table::TypeTable,
     HasStaticType, StructTypeBuilder, Type,
 };
+
+use crate::{diff::util::*, fake_struct};
 
 fn assert_eq_struct(result: &[Type], expected: &[Type]) {
     assert_eq!(result.len(), expected.len());

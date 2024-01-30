@@ -1,7 +1,12 @@
-use crate::module_tree::{LocalModuleId, ModuleTree};
-use crate::{ids::ModuleId, DefDatabase, HirDatabase, Resolver};
-use mun_syntax::ast;
 use std::iter::successors;
+
+use mun_syntax::ast;
+
+use crate::{
+    ids::ModuleId,
+    module_tree::{LocalModuleId, ModuleTree},
+    DefDatabase, HirDatabase, Resolver,
+};
 
 /// Visibility of an item, not yet resolved to an actual module.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -40,7 +45,8 @@ impl RawVisibility {
     }
 
     pub fn resolve(&self, db: &dyn DefDatabase, resolver: &Resolver) -> Visibility {
-        // we fall back to public visibility (i.e. fail open) if the path can't be resolved
+        // we fall back to public visibility (i.e. fail open) if the path can't be
+        // resolved
         resolver
             .resolve_visibility(db, self)
             .unwrap_or(Visibility::Public)
@@ -58,8 +64,8 @@ pub enum Visibility {
 }
 
 impl Visibility {
-    /// Returns true if an item with this visibility is accessible from the module of the
-    /// specified `PackageDefs`.
+    /// Returns true if an item with this visibility is accessible from the
+    /// module of the specified `PackageDefs`.
     pub(crate) fn is_visible_from_module_tree(
         self,
         module_tree: &ModuleTree,
@@ -75,7 +81,8 @@ impl Visibility {
         ancestors.any(|m| m == to_module.local_id)
     }
 
-    /// Returns true if an item with this visibility is accessible from the given module.
+    /// Returns true if an item with this visibility is accessible from the
+    /// given module.
     pub fn is_visible_from(self, db: &dyn HirDatabase, from_module: ModuleId) -> bool {
         let to_module = match self {
             Visibility::Module(m) => m,

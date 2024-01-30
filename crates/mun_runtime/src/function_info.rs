@@ -3,7 +3,8 @@ use std::{ffi::c_void, ptr, sync::Arc};
 use mun_abi as abi;
 use mun_memory::{type_table::TypeTable, HasStaticType, TryFromAbiError, Type};
 
-/// A linked version of [`mun_abi::FunctionDefinition`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
+/// A linked version of [`mun_abi::FunctionDefinition`] that has resolved all
+/// occurrences of `TypeId` with `TypeInfo`.
 #[derive(Clone)]
 pub struct FunctionDefinition {
     /// Function prototype
@@ -42,7 +43,8 @@ impl FunctionDefinition {
     }
 }
 
-/// A linked version of [`mun_abi::FunctionPrototype`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
+/// A linked version of [`mun_abi::FunctionPrototype`] that has resolved all
+/// occurrences of `TypeId` with `TypeInfo`.
 #[derive(Clone)]
 pub struct FunctionPrototype {
     /// Function name
@@ -66,7 +68,8 @@ impl FunctionPrototype {
     }
 }
 
-/// A linked version of [`mun_abi::FunctionSignature`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
+/// A linked version of [`mun_abi::FunctionSignature`] that has resolved all
+/// occurrences of `TypeId` with `TypeInfo`.
 #[derive(Clone)]
 pub struct FunctionSignature {
     /// Argument types

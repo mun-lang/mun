@@ -1,19 +1,19 @@
+use std::{iter::once, sync::Arc};
+
+use mun_syntax::ast::TypeAscriptionOwner;
+
 use super::Module;
-use crate::expr::validator::ExprValidator;
-use crate::expr::BodySourceMap;
-use crate::has_module::HasModule;
-use crate::ids::{FunctionId, Lookup};
-use crate::name_resolution::Namespace;
-use crate::resolve::HasResolver;
-use crate::type_ref::{LocalTypeRefId, TypeRefMap, TypeRefSourceMap};
-use crate::visibility::RawVisibility;
 use crate::{
+    expr::{validator::ExprValidator, BodySourceMap},
+    has_module::HasModule,
+    ids::{FunctionId, Lookup},
+    name_resolution::Namespace,
+    resolve::HasResolver,
+    type_ref::{LocalTypeRefId, TypeRefMap, TypeRefSourceMap},
+    visibility::RawVisibility,
     Body, DefDatabase, DiagnosticSink, FileId, HasVisibility, HirDatabase, InferenceResult, Name,
     Ty, Visibility,
 };
-use mun_syntax::ast::TypeAscriptionOwner;
-use std::iter::once;
-use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Function {
@@ -103,7 +103,8 @@ impl Function {
         self.id.module(db.upcast()).into()
     }
 
-    /// Returns the full name of the function including all module specifiers (e.g: `foo::bar`).
+    /// Returns the full name of the function including all module specifiers
+    /// (e.g: `foo::bar`).
     pub fn full_name(self, db: &dyn HirDatabase) -> String {
         itertools::Itertools::intersperse(
             self.module(db)

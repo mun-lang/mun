@@ -22,7 +22,8 @@ fn test_type_collection() {
         .add_field("bar", i32::type_info().clone())
         .finish();
 
-    // Now one type should be collected because we have a reference to it, one is added
+    // Now one type should be collected because we have a reference to it, one is
+    // added
     let current_stats = Type::collect_unreferenced_type_data();
     assert_eq!(current_stats.collected_types, 0);
     assert_eq!(current_stats.remaining_types, 4);

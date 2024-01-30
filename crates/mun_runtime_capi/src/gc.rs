@@ -1,24 +1,24 @@
 //! Exposes Mun garbage collection.
 
-use mun_capi_utils::error::ErrorHandle;
-use mun_capi_utils::{mun_error_try, try_deref_mut};
 use std::mem::ManuallyDrop;
 
-use crate::runtime::Runtime;
+use mun_capi_utils::{error::ErrorHandle, mun_error_try, try_deref_mut};
+pub use mun_memory::gc::GcPtr;
 use mun_memory::{ffi::Type, gc::GcRuntime};
 
-pub use mun_memory::gc::GcPtr;
+use crate::runtime::Runtime;
 
-/// Allocates an object in the runtime of the given `ty`. If successful, `obj` is set,
-/// otherwise a non-zero error handle is returned.
+/// Allocates an object in the runtime of the given `ty`. If successful, `obj`
+/// is set, otherwise a non-zero error handle is returned.
 ///
 /// If a non-zero error handle is returned, it must be manually destructed using
 /// [`mun_error_destroy`].
 ///
 /// # Safety
 ///
-/// This function receives raw pointers as parameters. If any of the arguments is a null pointer,
-/// an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
+/// This function receives raw pointers as parameters. If any of the arguments
+/// is a null pointer, an error will be returned. Passing pointers to invalid
+/// data, will lead to undefined behavior.
 #[no_mangle]
 pub unsafe extern "C" fn mun_gc_alloc(runtime: Runtime, ty: Type, obj: *mut GcPtr) -> ErrorHandle {
     let runtime = mun_error_try!(runtime
@@ -33,16 +33,17 @@ pub unsafe extern "C" fn mun_gc_alloc(runtime: Runtime, ty: Type, obj: *mut GcPt
     ErrorHandle::default()
 }
 
-/// Retrieves the `ty` for the specified `obj` from the runtime. If successful, `ty` is set,
-/// otherwise a non-zero error handle is returned.
+/// Retrieves the `ty` for the specified `obj` from the runtime. If successful,
+/// `ty` is set, otherwise a non-zero error handle is returned.
 ///
 /// If a non-zero error handle is returned, it must be manually destructed using
 /// [`mun_error_destroy`].
 ///
 /// # Safety
 ///
-/// This function receives raw pointers as parameters. If any of the arguments is a null pointer,
-/// an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
+/// This function receives raw pointers as parameters. If any of the arguments
+/// is a null pointer, an error will be returned. Passing pointers to invalid
+/// data, will lead to undefined behavior.
 #[no_mangle]
 pub unsafe extern "C" fn mun_gc_ptr_type(
     runtime: Runtime,
@@ -57,19 +58,21 @@ pub unsafe extern "C" fn mun_gc_ptr_type(
     ErrorHandle::default()
 }
 
-/// Roots the specified `obj`, which keeps it and objects it references alive. Objects marked as
-/// root, must call `mun_gc_unroot` before they can be collected. An object can be rooted multiple
-/// times, but you must make sure to call `mun_gc_unroot` an equal number of times before the
-/// object can be collected. If successful, `obj` has been rooted, otherwise a non-zero error handle
-/// is returned.
+/// Roots the specified `obj`, which keeps it and objects it references alive.
+/// Objects marked as root, must call `mun_gc_unroot` before they can be
+/// collected. An object can be rooted multiple times, but you must make sure to
+/// call `mun_gc_unroot` an equal number of times before the object can be
+/// collected. If successful, `obj` has been rooted, otherwise a non-zero error
+/// handle is returned.
 ///
 /// If a non-zero error handle is returned, it must be manually destructed using
 /// [`mun_error_destroy`].
 ///
 /// # Safety
 ///
-/// This function receives raw pointers as parameters. If any of the arguments is a null pointer,
-/// an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
+/// This function receives raw pointers as parameters. If any of the arguments
+/// is a null pointer, an error will be returned. Passing pointers to invalid
+/// data, will lead to undefined behavior.
 #[no_mangle]
 pub unsafe extern "C" fn mun_gc_root(runtime: Runtime, obj: GcPtr) -> ErrorHandle {
     let runtime = mun_error_try!(runtime
@@ -79,18 +82,20 @@ pub unsafe extern "C" fn mun_gc_root(runtime: Runtime, obj: GcPtr) -> ErrorHandl
     ErrorHandle::default()
 }
 
-/// Unroots the specified `obj`, potentially allowing it and objects it references to be
-/// collected. An object can be rooted multiple times, so you must make sure to call `mun_gc_unroot`
-/// the same number of times as `mun_gc_root` was called before the object can be collected. If
-/// successful, `obj` has been unrooted, otherwise a non-zero error handle is returned.
+/// Unroots the specified `obj`, potentially allowing it and objects it
+/// references to be collected. An object can be rooted multiple times, so you
+/// must make sure to call `mun_gc_unroot` the same number of times as
+/// `mun_gc_root` was called before the object can be collected. If successful,
+/// `obj` has been unrooted, otherwise a non-zero error handle is returned.
 ///
 /// If a non-zero error handle is returned, it must be manually destructed using
 /// [`mun_error_destroy`].
 ///
 /// # Safety
 ///
-/// This function receives raw pointers as parameters. If any of the arguments is a null pointer,
-/// an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
+/// This function receives raw pointers as parameters. If any of the arguments
+/// is a null pointer, an error will be returned. Passing pointers to invalid
+/// data, will lead to undefined behavior.
 #[no_mangle]
 pub unsafe extern "C" fn mun_gc_unroot(runtime: Runtime, obj: GcPtr) -> ErrorHandle {
     let runtime = mun_error_try!(runtime
@@ -100,17 +105,19 @@ pub unsafe extern "C" fn mun_gc_unroot(runtime: Runtime, obj: GcPtr) -> ErrorHan
     ErrorHandle::default()
 }
 
-/// Collects all memory that is no longer referenced by rooted objects. If successful, `reclaimed`
-/// is set, otherwise a non-zero error handle is returned. If `reclaimed` is `true`, memory was
-/// reclaimed, otherwise nothing happend. This behavior will likely change in the future.
+/// Collects all memory that is no longer referenced by rooted objects. If
+/// successful, `reclaimed` is set, otherwise a non-zero error handle is
+/// returned. If `reclaimed` is `true`, memory was reclaimed, otherwise nothing
+/// happend. This behavior will likely change in the future.
 ///
 /// If a non-zero error handle is returned, it must be manually destructed using
 /// [`mun_error_destroy`].
 ///
 /// # Safety
 ///
-/// This function receives raw pointers as parameters. If any of the arguments is a null pointer,
-/// an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
+/// This function receives raw pointers as parameters. If any of the arguments
+/// is a null pointer, an error will be returned. Passing pointers to invalid
+/// data, will lead to undefined behavior.
 #[no_mangle]
 pub unsafe extern "C" fn mun_gc_collect(runtime: Runtime, reclaimed: *mut bool) -> ErrorHandle {
     let runtime = mun_error_try!(runtime
@@ -123,19 +130,23 @@ pub unsafe extern "C" fn mun_gc_collect(runtime: Runtime, reclaimed: *mut bool) 
 
 #[cfg(test)]
 mod tests {
-    use mun_memory::ffi::{mun_type_equal, Type};
-    use mun_memory::gc::{HasIndirectionPtr, RawGcPtr};
-
-    use super::*;
-    use crate::{
-        runtime::mun_runtime_get_type_info_by_name, test_invalid_runtime, test_util::TestDriver,
-    };
-    use mun_capi_utils::error::mun_error_destroy;
-    use mun_capi_utils::{assert_error_snapshot, assert_getter1, assert_getter2};
     use std::{
         ffi::CString,
         mem::{self},
         ptr,
+    };
+
+    use mun_capi_utils::{
+        assert_error_snapshot, assert_getter1, assert_getter2, error::mun_error_destroy,
+    };
+    use mun_memory::{
+        ffi::{mun_type_equal, Type},
+        gc::{HasIndirectionPtr, RawGcPtr},
+    };
+
+    use super::*;
+    use crate::{
+        runtime::mun_runtime_get_type_info_by_name, test_invalid_runtime, test_util::TestDriver,
     };
 
     test_invalid_runtime!(

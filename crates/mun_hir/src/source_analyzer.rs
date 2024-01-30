@@ -1,12 +1,16 @@
-use crate::{
-    expr::scope::LocalScopeId, expr::BodySourceMap, ids::DefWithBodyId, resolver_for_scope, Body,
-    ExprId, ExprScopes, FileId, HirDatabase, InFile, InferenceResult, Resolver, Ty,
-};
-use mun_syntax::{ast, AstNode, SyntaxNode, TextRange, TextSize};
 use std::sync::Arc;
 
-/// A `SourceAnalyzer` is a wrapper which exposes the HIR API in terms of the original source file.
-/// It's useful to query things from the syntax.
+use mun_syntax::{ast, AstNode, SyntaxNode, TextRange, TextSize};
+
+use crate::{
+    expr::{scope::LocalScopeId, BodySourceMap},
+    ids::DefWithBodyId,
+    resolver_for_scope, Body, ExprId, ExprScopes, FileId, HirDatabase, InFile, InferenceResult,
+    Resolver, Ty,
+};
+
+/// A `SourceAnalyzer` is a wrapper which exposes the HIR API in terms of the
+/// original source file. It's useful to query things from the syntax.
 pub(crate) struct SourceAnalyzer {
     /// The file for which this analyzer was constructed
     pub(crate) file_id: FileId,
@@ -22,8 +26,8 @@ pub(crate) struct SourceAnalyzer {
 }
 
 impl SourceAnalyzer {
-    /// Constructs a new `SourceAnalyzer` for the given `def` and with an optional offset in the
-    /// source file.
+    /// Constructs a new `SourceAnalyzer` for the given `def` and with an
+    /// optional offset in the source file.
     pub(crate) fn new_for_body(
         db: &dyn HirDatabase,
         def: DefWithBodyId,
@@ -68,7 +72,8 @@ impl SourceAnalyzer {
         Some(self.infer.as_ref()?[expr_id].clone())
     }
 
-    /// Returns the expression id of the given expression or None if it could not be found.
+    /// Returns the expression id of the given expression or None if it could
+    /// not be found.
     fn expr_id(&self, _db: &dyn HirDatabase, expr: &ast::Expr) -> Option<ExprId> {
         let sm = self.body_source_map.as_ref()?;
         sm.node_expr(expr)
@@ -121,8 +126,9 @@ fn scope_for_offset(
     })
 }
 
-/// During completion the cursor may be outside of any expression. Given the range of the containing
-/// scope, finds the scope that is most likely the scope that the user is requesting.
+/// During completion the cursor may be outside of any expression. Given the
+/// range of the containing scope, finds the scope that is most likely the scope
+/// that the user is requesting.
 fn adjust(
     db: &dyn HirDatabase,
     scopes: &ExprScopes,

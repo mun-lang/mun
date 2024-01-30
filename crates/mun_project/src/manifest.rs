@@ -1,10 +1,9 @@
-use std::fmt;
-use std::path::Path;
-use std::str::FromStr;
+use std::{fmt, path::Path, str::FromStr};
 
 mod toml;
 
-/// Contains all information of a package. Usually this information is read from a mun.toml file.
+/// Contains all information of a package. Usually this information is read from
+/// a mun.toml file.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Manifest {
     package_id: PackageId,
@@ -33,7 +32,8 @@ impl Manifest {
         Self::from_str(&file_contents)
     }
 
-    /// Returns the unique identifier of this manifest based on the name and version
+    /// Returns the unique identifier of this manifest based on the name and
+    /// version
     pub fn package_id(&self) -> &PackageId {
         &self.package_id
     }
@@ -85,8 +85,9 @@ impl std::str::FromStr for Manifest {
 
 #[cfg(test)]
 mod tests {
-    use crate::Manifest;
     use std::str::FromStr;
+
+    use crate::Manifest;
 
     #[test]
     fn parse() {

@@ -2,11 +2,14 @@ mod collector;
 #[cfg(test)]
 mod tests;
 
-use crate::{
-    arena::map::ArenaMap, item_scope::ItemScope, module_tree::LocalModuleId,
-    module_tree::ModuleTree, DefDatabase, DiagnosticSink, PackageId,
-};
 use std::{ops::Index, sync::Arc};
+
+use crate::{
+    arena::map::ArenaMap,
+    item_scope::ItemScope,
+    module_tree::{LocalModuleId, ModuleTree},
+    DefDatabase, DiagnosticSink, PackageId,
+};
 
 /// Contains all top-level definitions for a package.
 #[derive(Debug, PartialEq, Eq)]
@@ -18,7 +21,8 @@ pub struct PackageDefs {
 }
 
 impl PackageDefs {
-    /// Constructs a `PackageDefs` for the specified `package` with the data from the `db`.
+    /// Constructs a `PackageDefs` for the specified `package` with the data
+    /// from the `db`.
     pub(crate) fn package_def_map_query(
         db: &dyn DefDatabase,
         package: PackageId,
@@ -48,22 +52,25 @@ impl Index<LocalModuleId> for PackageDefs {
 }
 
 mod diagnostics {
-    use crate::diagnostics::{ImportDuplicateDefinition, UnresolvedImport};
-    use crate::{
-        module_tree::LocalModuleId, source_id::AstId, AstDatabase, DefDatabase, DiagnosticSink,
-        InFile, Path,
-    };
-    use mun_syntax::ast::Use;
-    use mun_syntax::{ast, AstPtr};
+    use mun_syntax::{ast, ast::Use, AstPtr};
 
-    /// A type of diagnostic that may be emitted during resolving all package definitions.
+    use crate::{
+        diagnostics::{ImportDuplicateDefinition, UnresolvedImport},
+        module_tree::LocalModuleId,
+        source_id::AstId,
+        AstDatabase, DefDatabase, DiagnosticSink, InFile, Path,
+    };
+
+    /// A type of diagnostic that may be emitted during resolving all package
+    /// definitions.
     #[derive(Debug, PartialEq, Eq)]
     enum DiagnosticKind {
         UnresolvedImport { ast: AstId<ast::Use>, index: usize },
         DuplicateImport { ast: AstId<ast::Use>, index: usize },
     }
 
-    /// A diagnostic that may be emitted during resolving all package definitions.
+    /// A diagnostic that may be emitted during resolving all package
+    /// definitions.
     #[derive(Debug, PartialEq, Eq)]
     pub(super) struct DefDiagnostic {
         /// The module that contains the diagnostic
@@ -74,7 +81,8 @@ mod diagnostics {
     }
 
     impl DefDiagnostic {
-        /// Constructs a new `DefDiagnostic` which indicates that an import could not be resolved.
+        /// Constructs a new `DefDiagnostic` which indicates that an import
+        /// could not be resolved.
         pub(super) fn unresolved_import(
             container: LocalModuleId,
             ast: AstId<ast::Use>,
@@ -86,7 +94,8 @@ mod diagnostics {
             }
         }
 
-        /// Constructs a new `DefDiagnostic` which indicates that an import names a duplication.
+        /// Constructs a new `DefDiagnostic` which indicates that an import
+        /// names a duplication.
         pub(super) fn duplicate_import(
             container: LocalModuleId,
             ast: AstId<ast::Use>,

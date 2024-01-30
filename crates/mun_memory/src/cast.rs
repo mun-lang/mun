@@ -1,8 +1,10 @@
 #![allow(clippy::mutable_key_type)]
 
-use crate::{HasStaticType, Type};
-use lazy_static::lazy_static;
 use std::{collections::HashMap, ptr::NonNull};
+
+use lazy_static::lazy_static;
+
+use crate::{HasStaticType, Type};
 
 type CastFn = fn(NonNull<u8>, NonNull<u8>);
 
@@ -72,9 +74,10 @@ pub fn try_cast_from_to(old_id: Type, new_id: Type, src: NonNull<u8>, dest: NonN
 
 #[cfg(test)]
 mod tests {
+    use std::ptr::NonNull;
+
     use super::try_cast_from_to;
     use crate::HasStaticType;
-    use std::ptr::NonNull;
 
     fn assert_cast<A, B>(a: A, mut b: B)
     where

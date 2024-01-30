@@ -1,5 +1,6 @@
-use crate::{AstDatabase, FileId};
 use mun_syntax::SyntaxNode;
+
+use crate::{AstDatabase, FileId};
 
 /// `InFile<T>` stores a value of `T` inside a particular file/syntax tree.
 ///

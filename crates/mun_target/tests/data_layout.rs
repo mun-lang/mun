@@ -1,5 +1,4 @@
-use mun_target::abi::TargetDataLayout;
-use mun_target::spec::Target;
+use mun_target::{abi::TargetDataLayout, spec::Target};
 
 #[test]
 fn data_layout_windows() {

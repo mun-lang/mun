@@ -1,9 +1,12 @@
-use crate::has_module::HasModule;
-use crate::ids::{AssocItemId, FunctionLoc, ImplId, Intern, ItemContainerId, Lookup};
-use crate::item_tree::{AssociatedItem, ItemTreeId};
-use crate::type_ref::{LocalTypeRefId, TypeRefMap, TypeRefMapBuilder, TypeRefSourceMap};
-use crate::{DefDatabase, FileId, Function, HirDatabase, ItemLoc, Module, Package, Ty};
 use std::sync::Arc;
+
+use crate::{
+    has_module::HasModule,
+    ids::{AssocItemId, FunctionLoc, ImplId, Intern, ItemContainerId, Lookup},
+    item_tree::{AssociatedItem, ItemTreeId},
+    type_ref::{LocalTypeRefId, TypeRefMap, TypeRefMapBuilder, TypeRefSourceMap},
+    DefDatabase, FileId, Function, HirDatabase, ItemLoc, Module, Package, Ty,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Impl {
@@ -19,8 +22,9 @@ impl Impl {
 
     /// The module in which the `impl` was defined.
     ///
-    /// Note that this is not necessarily the module in which the self type was defined. `impl`s
-    /// can be defined in any module from where the self type is visibile.
+    /// Note that this is not necessarily the module in which the self type was
+    /// defined. `impl`s can be defined in any module from where the self
+    /// type is visibile.
     pub fn module(self, db: &dyn HirDatabase) -> Module {
         self.id.module(db.upcast()).into()
     }

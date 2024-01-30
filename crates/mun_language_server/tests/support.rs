@@ -1,3 +1,10 @@
+use std::{
+    cell::{Cell, RefCell},
+    convert::TryInto,
+    fs,
+    time::Duration,
+};
+
 use crossbeam_channel::{after, select};
 use lsp_server::{Connection, Message, Notification, Request};
 use lsp_types::{
@@ -10,15 +17,10 @@ use mun_paths::AbsPathBuf;
 use mun_project::ProjectManifest;
 use serde::Serialize;
 use serde_json::Value;
-use std::{
-    cell::{Cell, RefCell},
-    convert::TryInto,
-    fs,
-    time::Duration,
-};
 
-/// A `Project` represents a project that a language server can work with. Call the [`server`]
-/// method to instantiate a language server that will serve information about the project.
+/// A `Project` represents a project that a language server can work with. Call
+/// the [`server`] method to instantiate a language server that will serve
+/// information about the project.
 pub struct Project<'a> {
     fixture: &'a str,
     tmp_dir: Option<tempdir::TempDir>,
@@ -69,8 +71,8 @@ impl<'a> Project<'a> {
     }
 }
 
-/// An object that runs the language server main loop and enables sending and receiving messages
-/// to and from it.
+/// An object that runs the language server main loop and enables sending and
+/// receiving messages to and from it.
 pub struct Server {
     next_request_id: Cell<i32>,
     messages: RefCell<Vec<Message>>,
@@ -136,7 +138,8 @@ impl Server {
         }
     }
 
-    /// Sends a request to the main loop and expects the specified value to be returned
+    /// Sends a request to the main loop and expects the specified value to be
+    /// returned
     fn assert_request_returns_value<R: lsp_types::request::Request>(
         &self,
         params: R::Params,

@@ -1,14 +1,17 @@
-//! This module contains the validation pass for the AST. See the [`validate`] function for more
-//! information.
+//! This module contains the validation pass for the AST. See the [`validate`]
+//! function for more information.
 
-use crate::ast::VisibilityOwner;
-use crate::{ast, ast::AstNode, match_ast, SyntaxError, SyntaxNode};
+use crate::{
+    ast,
+    ast::{AstNode, VisibilityOwner},
+    match_ast, SyntaxError, SyntaxNode,
+};
 
 /// A validation pass that checks that the AST is valid.
 ///
-/// Even though the AST could be valid (aka without parse errors), it could still be semantically
-/// incorrect. For example, a struct cannot be declared in an impl block. This pass checks for
-/// these kinds of errors.
+/// Even though the AST could be valid (aka without parse errors), it could
+/// still be semantically incorrect. For example, a struct cannot be declared in
+/// an impl block. This pass checks for these kinds of errors.
 pub(crate) fn validate(root: &SyntaxNode) -> Vec<SyntaxError> {
     let mut errors = Vec::new();
     for node in root.descendants() {
@@ -39,8 +42,8 @@ fn validate_impl_visibility(node: ast::Impl, errors: &mut Vec<SyntaxError>) {
     }
 }
 
-/// Validate that only valid items are declared in an impl block. For example, a struct
-/// cannot be declared in an impl block.
+/// Validate that only valid items are declared in an impl block. For example, a
+/// struct cannot be declared in an impl block.
 fn validate_impl_associated_items(node: ast::Impl, errors: &mut Vec<SyntaxError>) {
     let Some(assoc_items) = node.associated_item_list() else {
         return;

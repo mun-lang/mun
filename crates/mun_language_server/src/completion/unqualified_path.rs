@@ -1,7 +1,8 @@
 use super::{CompletionContext, Completions};
 
-/// Adds completions to `result` for unqualified path. Unqualified paths are simple names which do
-/// not refer to anything outside of the current scope: local function names, variables, etc. E.g.:
+/// Adds completions to `result` for unqualified path. Unqualified paths are
+/// simple names which do not refer to anything outside of the current scope:
+/// local function names, variables, etc. E.g.:
 /// ```mun
 /// fn foo() {
 ///    let foo_bar = 3;
@@ -22,7 +23,7 @@ pub(super) fn complete_unqualified_path(result: &mut Completions, ctx: &Completi
 
 #[cfg(test)]
 mod tests {
-    use crate::{completion::test_utils::completion_string, completion::CompletionKind};
+    use crate::completion::{test_utils::completion_string, CompletionKind};
 
     #[test]
     fn test_local_scope() {

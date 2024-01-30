@@ -1,6 +1,6 @@
-use crate::TextSize;
-
 use std::str::Chars;
+
+use crate::TextSize;
 
 /// A simple view into the characters of a string.
 pub(crate) struct Cursor<'s> {
@@ -27,8 +27,8 @@ impl<'s> Cursor<'s> {
         self.chars().next()
     }
 
-    /// Gets the nth character from the current offset. For example, 0 will return the current
-    /// character, 1 will return the next, etc.
+    /// Gets the nth character from the current offset. For example, 0 will
+    /// return the current character, 1 will return the next, etc.
     pub fn nth(&self, n: u32) -> Option<char> {
         self.chars().nth(n as usize)
     }

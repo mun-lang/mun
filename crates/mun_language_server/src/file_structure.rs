@@ -1,14 +1,15 @@
-use crate::SymbolKind;
 use mun_syntax::{
     ast::{self, NameOwner},
     match_ast, AstNode, SourceFile, SyntaxNode, TextRange, WalkEvent,
 };
 
+use crate::SymbolKind;
+
 /// A description of a symbol in a source file.
 #[derive(Debug, Clone)]
 pub struct StructureNode {
-    /// An optional parent of this symbol. Refers to the index of the symbol in the collection that
-    /// this instance resides in.
+    /// An optional parent of this symbol. Refers to the index of the symbol in
+    /// the collection that this instance resides in.
     pub parent: Option<usize>,
 
     /// The text label
@@ -52,7 +53,8 @@ pub(crate) fn file_structure(file: &SourceFile) -> Vec<StructureNode> {
     result
 }
 
-/// Tries to convert an ast node to something that would reside in the hierarchical file structure.
+/// Tries to convert an ast node to something that would reside in the
+/// hierarchical file structure.
 fn try_convert_to_structure_node(node: &SyntaxNode) -> Option<StructureNode> {
     /// Create a `StructureNode` from a declaration
     fn decl<N: NameOwner>(node: N, kind: SymbolKind) -> Option<StructureNode> {
@@ -96,7 +98,8 @@ fn try_convert_to_structure_node(node: &SyntaxNode) -> Option<StructureNode> {
         });
     }
 
-    /// Given a `SyntaxNode` construct a `StructureNode` by referring to the type of a node.
+    /// Given a `SyntaxNode` construct a `StructureNode` by referring to the
+    /// type of a node.
     fn decl_with_type_ref<N: NameOwner>(
         node: &N,
         type_ref: Option<ast::TypeRef>,

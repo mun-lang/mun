@@ -16,7 +16,8 @@ impl Progress {
 }
 
 impl LanguageServerState {
-    /// Sends a notification to the client to display the specified message to the user.
+    /// Sends a notification to the client to display the specified message to
+    /// the user.
     pub(crate) fn show_message(&mut self, typ: lsp_types::MessageType, message: impl AsRef<str>) {
         let message = message.as_ref().to_owned();
         self.send_notification::<lsp_types::notification::ShowMessage>(

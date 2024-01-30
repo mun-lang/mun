@@ -1,7 +1,7 @@
+use std::{ffi::OsString, path::Path};
+
 use mun::run_with_args;
 use mun_runtime::Runtime;
-use std::ffi::OsString;
-use std::path::Path;
 
 const PROJECT_DIR: &str = "mun_projects";
 const PROJECT_NAME: &str = "mun_example_project";
@@ -74,7 +74,8 @@ fn build_and_run(project: &Path) {
     let library_path = project.join("target/mod.munlib");
     assert!(library_path.is_file());
 
-    // Safety: since we compiled the code ourselves, loading the library should be safe
+    // Safety: since we compiled the code ourselves, loading the library should be
+    // safe
     let builder = Runtime::builder(&library_path);
     let runtime = unsafe { builder.finish() }.unwrap();
     let result: f64 = runtime.invoke("main", ()).unwrap();

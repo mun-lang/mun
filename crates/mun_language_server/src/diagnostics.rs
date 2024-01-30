@@ -1,8 +1,10 @@
-use crate::db::AnalysisDatabase;
+use std::cell::RefCell;
+
 use mun_diagnostics::DiagnosticForWith;
 use mun_hir::{AstDatabase, InFile, ModuleId, PackageId, SourceDatabase};
 use mun_syntax::{Location, TextRange};
-use std::cell::RefCell;
+
+use crate::db::AnalysisDatabase;
 
 #[derive(Debug)]
 pub struct SourceAnnotation {

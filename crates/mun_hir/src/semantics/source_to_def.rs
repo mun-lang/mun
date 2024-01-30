@@ -1,16 +1,17 @@
+use mun_syntax::{ast, match_ast, AstNode, SyntaxNode};
+use rustc_hash::FxHashMap;
+
 use crate::{
     code_model::src::HasSource,
     ids::{DefWithBodyId, FunctionId, ItemDefinitionId, Lookup, StructId, TypeAliasId},
     item_scope::ItemScope,
     DefDatabase, FileId, HirDatabase, InFile, ModuleId,
 };
-use mun_syntax::{ast, match_ast, AstNode, SyntaxNode};
-use rustc_hash::FxHashMap;
 
 pub(super) type SourceToDefCache = FxHashMap<SourceToDefContainer, SourceToDefMap>;
 
-/// An object that can be used to efficiently find definitions of source objects. It is used to
-/// find HIR elements for corresponding AST elements.
+/// An object that can be used to efficiently find definitions of source
+/// objects. It is used to find HIR elements for corresponding AST elements.
 pub(super) struct SourceToDefContext<'a, 'db> {
     pub(super) db: &'db dyn HirDatabase,
     pub(super) cache: &'a mut SourceToDefCache,

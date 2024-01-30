@@ -1,13 +1,16 @@
-use crate::item_tree::{Impl, LocalItemTreeId};
+use std::{fmt, fmt::Write};
+
 use crate::{
-    item_tree::{Fields, Function, Import, ItemTree, ModItem, RawVisibilityId, Struct, TypeAlias},
+    item_tree::{
+        Fields, Function, Impl, Import, ItemTree, LocalItemTreeId, ModItem, RawVisibilityId,
+        Struct, TypeAlias,
+    },
     path::ImportAlias,
     pretty::{print_path, print_type_ref},
     type_ref::{LocalTypeRefId, TypeRefMap},
     visibility::RawVisibility,
     DefDatabase,
 };
-use std::{fmt, fmt::Write};
 
 /// A helper method to print an `ItemTree` to a string.
 pub(super) fn print_item_tree(db: &dyn DefDatabase, tree: &ItemTree) -> Result<String, fmt::Error> {
@@ -28,7 +31,8 @@ pub(super) fn print_item_tree(db: &dyn DefDatabase, tree: &ItemTree) -> Result<S
     Ok(s)
 }
 
-/// A helper struct for [`print_item_tree`] that keeps track of the current indentation level.
+/// A helper struct for [`print_item_tree`] that keeps track of the current
+/// indentation level.
 struct Printer<'a> {
     db: &'a dyn DefDatabase,
     tree: &'a ItemTree,
@@ -48,7 +52,8 @@ impl Printer<'_> {
         Ok(())
     }
 
-    // Add a whitespace to the end of the buffer if the last character is not a newline or space.
+    // Add a whitespace to the end of the buffer if the last character is not a
+    // newline or space.
     fn whitespace(&mut self) -> fmt::Result {
         match self.buf.chars().next_back() {
             None | Some('\n' | ' ') => {}

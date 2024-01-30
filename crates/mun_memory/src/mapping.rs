@@ -1,3 +1,6 @@
+use std::collections::{HashMap, HashSet};
+
+use itertools::Itertools;
 use mun_abi::Guid;
 
 use crate::{
@@ -6,10 +9,9 @@ use crate::{
     r#type::Type,
     ArrayType, Field, TypeKind,
 };
-use itertools::Itertools;
-use std::collections::{HashMap, HashSet};
 
-/// The type mapping needed to convert an old into a new set of unique and ordered values.
+/// The type mapping needed to convert an old into a new set of unique and
+/// ordered values.
 #[derive(Debug)]
 pub struct Mapping {
     /// The types that were deleted
@@ -20,7 +22,8 @@ pub struct Mapping {
     pub identical: Vec<(Type, Type)>,
 }
 
-/// The struct mapping needed to convert an old into a new struct of unique and ordered fields.
+/// The struct mapping needed to convert an old into a new struct of unique and
+/// ordered fields.
 #[derive(Debug)]
 pub struct StructMapping {
     /// The field mappings for each original struct field
@@ -29,8 +32,8 @@ pub struct StructMapping {
     pub new_ty: Type,
 }
 
-/// Description of the mapping of a single field. When stored together with the new index, this
-/// provides all information necessary for a mapping function.
+/// Description of the mapping of a single field. When stored together with the
+/// new index, this provides all information necessary for a mapping function.
 #[derive(Debug)]
 pub struct FieldMapping {
     pub new_ty: Type,
@@ -61,8 +64,8 @@ pub enum Action {
         /// Size in bytes
         size: usize,
     },
-    /// Replace an array with its element type, copying its first element - if any.
-    /// Otherwise, zero initialize the element.
+    /// Replace an array with its element type, copying its first element - if
+    /// any. Otherwise, zero initialize the element.
     ElementFromArray {
         element_action: Box<Action>,
         old_offset: usize,
@@ -114,8 +117,8 @@ impl Mapping {
             }
         }
 
-        // These candidates are used to collect a list of `new_index -> old_index` mappings for
-        // identical types.
+        // These candidates are used to collect a list of `new_index -> old_index`
+        // mappings for identical types.
         let mut new_candidates: HashSet<_> = new
             .iter()
             // Filter non-struct types
@@ -144,7 +147,8 @@ impl Mapping {
             .cloned()
             .collect();
 
-        // Remove moved types from the candidates, since we already know they are identical
+        // Remove moved types from the candidates, since we already know they are
+        // identical
         for (old_ty, new_ty) in identical.iter() {
             old_candidates.remove(old_ty);
             new_candidates.remove(new_ty);
@@ -167,14 +171,17 @@ impl Mapping {
     }
 }
 
-/// Given a set of `old_fields` of type `T` and their corresponding `diff`, calculates the mapping
-/// `new_index -> Option<FieldMappingDesc>` for each new field.
+/// Given a set of `old_fields` of type `T` and their corresponding `diff`,
+/// calculates the mapping `new_index -> Option<FieldMappingDesc>` for each new
+/// field.
 ///
-/// The indices of the returned `Vec`'s elements should be used as indices for the new fields.
+/// The indices of the returned `Vec`'s elements should be used as indices for
+/// the new fields.
 ///
 /// # Safety
 ///
-/// Expects the `diff` to be based on `old_ty` and `new_ty`. If not, it causes undefined behavior.
+/// Expects the `diff` to be based on `old_ty` and `new_ty`. If not, it causes
+/// undefined behavior.
 pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) -> StructMapping {
     let old_fields = old_ty
         .as_struct()
@@ -208,8 +215,8 @@ pub unsafe fn field_mapping(old_ty: &Type, new_ty: &Type, diff: &[FieldDiff]) ->
         })
         .collect();
 
-    // Sort elements in ascending order of their insertion indices to guarantee that insertions
-    // don't offset "later" insertions.
+    // Sort elements in ascending order of their insertion indices to guarantee that
+    // insertions don't offset "later" insertions.
     let mut additions: Vec<(usize, Action)> = diff
         .iter()
         .filter_map(|diff| match diff {
@@ -509,7 +516,8 @@ fn resolve_array_to_array_edit(
 pub trait MemoryMapper {
     /// Maps its allocated memory using the provided `mapping`.
     ///
-    /// A `Vec<GcPtr>` is returned containing all objects of types that were deleted. The
-    /// corresponding types have to remain in-memory until the objects have been deallocated.
+    /// A `Vec<GcPtr>` is returned containing all objects of types that were
+    /// deleted. The corresponding types have to remain in-memory until the
+    /// objects have been deallocated.
     fn map_memory(&self, mapping: Mapping) -> Vec<GcPtr>;
 }

@@ -1,5 +1,6 @@
-use crate::gc::{GcPtr, GcRuntime, HasIndirectionPtr};
 use std::sync::{Arc, Weak};
+
+use crate::gc::{GcPtr, GcRuntime, HasIndirectionPtr};
 
 /// A `GcPtr` that automatically roots and unroots its internal `GcPtr`.
 pub struct GcRootPtr<G>
@@ -49,8 +50,8 @@ where
     }
 
     /// Unroots the handle consuming self and returning the unrooted handle
-    /// TODO: Should this simply return nothing, since the returned handle may be collected at any
-    ///     time?
+    /// TODO: Should this simply return nothing, since the returned handle may
+    /// be collected at any     time?
     pub fn unroot(self) -> GcPtr {
         self.handle
     }

@@ -1,11 +1,11 @@
-use crate::item_tree::Impl;
+use std::hash::{Hash, Hasher};
+
 use crate::{
-    item_tree::{Function, ItemTreeId, ItemTreeNode, Struct, TypeAlias},
+    item_tree::{Function, Impl, ItemTreeId, ItemTreeNode, Struct, TypeAlias},
     module_tree::LocalModuleId,
     primitive_type::PrimitiveType,
     DefDatabase, PackageId,
 };
-use std::hash::{Hash, Hasher};
 
 #[derive(Clone, Debug)]
 pub struct ItemLoc<N: ItemTreeNode> {
@@ -93,7 +93,8 @@ pub struct ModuleId {
     pub local_id: LocalModuleId,
 }
 
-/// Represents an id of an item inside a item container such as a module or a `impl` block.
+/// Represents an id of an item inside a item container such as a module or a
+/// `impl` block.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ItemContainerId {
     ModuleId(ModuleId),

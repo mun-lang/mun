@@ -1,11 +1,13 @@
+use std::borrow::Cow;
+
+use mun_abi::StructMemoryKind;
+use rowan::{GreenNodeData, GreenTokenData, NodeOrToken};
+use text_size::TextRange;
+
 use crate::{
     ast::{self, child_opt, AstNode, NameOwner},
     SyntaxKind, SyntaxNode, TokenText, T,
 };
-use mun_abi::StructMemoryKind;
-use rowan::{GreenNodeData, GreenTokenData, NodeOrToken};
-use std::borrow::Cow;
-use text_size::TextRange;
 
 impl ast::Name {
     pub fn text(&self) -> TokenText<'_> {

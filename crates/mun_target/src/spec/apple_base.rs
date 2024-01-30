@@ -1,11 +1,11 @@
-use crate::spec::{LinkerFlavor, TargetOptions};
-use std::borrow::Cow;
-use std::env;
+use std::{borrow::Cow, env};
 
 use Arch::{
     Arm64, Arm64_32, Arm64_macabi, Arm64_sim, Armv7, Armv7k, Armv7s, X86_64_macabi, X86_64_sim,
     I386, I686, X86_64,
 };
+
+use crate::spec::{LinkerFlavor, TargetOptions};
 
 #[allow(non_camel_case_types, dead_code)]
 #[derive(Copy, Clone)]
@@ -198,5 +198,5 @@ fn watchos_lld_platform_version() -> String {
 
 // pub fn watchos_sim_llvm_target(arch: Arch) -> String {
 //     let (major, minor) = watchos_deployment_target();
-//     format!("{}-apple-watchos{}.{}.0-simulator", arch.target_name(), major, minor)
-// }
+//     format!("{}-apple-watchos{}.{}.0-simulator", arch.target_name(), major,
+// minor) }

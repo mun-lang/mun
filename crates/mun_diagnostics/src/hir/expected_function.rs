@@ -1,9 +1,11 @@
-use super::HirDiagnostic;
-use crate::{Diagnostic, SourceAnnotation};
 use mun_hir::HirDisplay;
 use mun_syntax::TextRange;
 
-/// An error that is emitted when a function is expected but something else is encountered:
+use super::HirDiagnostic;
+use crate::{Diagnostic, SourceAnnotation};
+
+/// An error that is emitted when a function is expected but something else is
+/// encountered:
 ///
 /// ```mun
 /// # fn main() {

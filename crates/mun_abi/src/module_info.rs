@@ -24,9 +24,9 @@ impl<'a> ModuleInfo<'a> {
     }
 
     // /// Finds the type's fields that match `filter`.
-    // pub fn find_fields(&self, filter: fn(&&FieldInfo) -> bool) -> impl Iterator<Item = &FieldInfo> {
-    //     self.fields.iter().map(|f| *f).filter(filter)
-    // }
+    // pub fn find_fields(&self, filter: fn(&&FieldInfo) -> bool) -> impl
+    // Iterator<Item = &FieldInfo> {     self.fields.iter().map(|f|
+    // *f).filter(filter) }
 
     // /// Retrieves the type's field with the specified `name`, if it exists.
     // pub fn get_field(&self, name: &str) -> Option<&FieldInfo> {
@@ -80,14 +80,13 @@ impl<'a> serde::Serialize for ModuleInfo<'a> {
 mod tests {
     use std::{ffi::CString, ptr};
 
-    use crate::type_id::HasStaticTypeId;
-    use crate::StructMemoryKind;
     use crate::{
         test_utils::{
             fake_fn_prototype, fake_module_info, fake_struct_definition, fake_type_definition,
             FAKE_FN_NAME, FAKE_MODULE_PATH, FAKE_STRUCT_NAME,
         },
-        FunctionDefinition, TypeDefinition, TypeDefinitionData,
+        type_id::HasStaticTypeId,
+        FunctionDefinition, StructMemoryKind, TypeDefinition, TypeDefinitionData,
     };
 
     #[test]

@@ -11,8 +11,8 @@ use crate::{
 
 /// An object that constructs [`ir::TypeId`]s from various representations.
 ///
-/// This object also caches any types that are referenced by other `TypeId`s. Types that reference
-/// other types are for instance pointers or arrays.
+/// This object also caches any types that are referenced by other `TypeId`s.
+/// Types that reference other types are for instance pointers or arrays.
 pub struct TypeIdBuilder<'ink, 'a, 'b, 'c> {
     context: &'a IrValueContext<'ink, 'b, 'c>,
 

@@ -1,8 +1,10 @@
-use crate::{Diagnostic, SecondaryAnnotation, SourceAnnotation};
 use mun_hir::InFile;
 use mun_syntax::{ast, AstNode, Parse, SourceFile, SyntaxKind, SyntaxNodePtr, TextRange};
 
-/// For a given node returns the signature range (if that is applicable for the type of node)
+use crate::{Diagnostic, SecondaryAnnotation, SourceAnnotation};
+
+/// For a given node returns the signature range (if that is applicable for the
+/// type of node)
 /// ```rust, ignore
 /// fn foo_bar() {
 /// ^^^^^^^^^^^^___ this part
@@ -17,8 +19,8 @@ use mun_syntax::{ast, AstNode, Parse, SourceFile, SyntaxKind, SyntaxNodePtr, Tex
 /// }
 /// ```
 ///
-/// If the specified syntax node is not a function definition or structure definition, returns the
-/// range of the syntax node itself.
+/// If the specified syntax node is not a function definition or structure
+/// definition, returns the range of the syntax node itself.
 fn syntax_node_signature_range(
     syntax_node_ptr: &SyntaxNodePtr,
     parse: &Parse<SourceFile>,
@@ -40,8 +42,9 @@ fn syntax_node_signature_range(
     }
 }
 
-/// For a given node returns the identifier range (if that is applicable for the type of node)
-/// ```rust, ignore
+/// For a given node returns the identifier range (if that is applicable for the
+/// type of node)
+///  ```rust, ignore
 /// fn foo_bar() {
 ///    ^^^^^^^___ this part
 ///     // ...
@@ -54,9 +57,9 @@ fn syntax_node_signature_range(
 ///     // ...
 /// }
 /// ```
-///
-/// If the specified syntax node is not a function definition or structure definition, returns the
-/// range of the syntax node itself.
+/// 
+/// If the specified syntax node is not a function definition or structure
+/// definition, returns the range of the syntax node itself.
 fn syntax_node_identifier_range(
     syntax_node_ptr: &SyntaxNodePtr,
     parse: &Parse<SourceFile>,

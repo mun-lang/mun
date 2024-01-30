@@ -1,10 +1,12 @@
-use super::LanguageServerState;
-use crate::{change::AnalysisChange, config::FilesWatcher};
-use mun_paths::{AbsPathBuf, RelativePath};
 use std::{
     convert::{TryFrom, TryInto},
     sync::Arc,
 };
+
+use mun_paths::{AbsPathBuf, RelativePath};
+
+use super::LanguageServerState;
+use crate::{change::AnalysisChange, config::FilesWatcher};
 
 impl LanguageServerState {
     /// Called to update all workspaces from the files
@@ -30,12 +32,14 @@ impl LanguageServerState {
             )
             .collect::<Vec<_>>();
 
-        // If these packages are the same as the ones we already had, there is little to do.
+        // If these packages are the same as the ones we already had, there is little to
+        // do.
         if *self.packages == packages {
             return;
         }
 
-        // If we use the client to watch for file changes, communicate a request to the client
+        // If we use the client to watch for file changes, communicate a request to the
+        // client
         if self.config.watcher == FilesWatcher::Client {
             let registration_options = lsp_types::DidChangeWatchedFilesRegistrationOptions {
                 watchers: packages
@@ -119,8 +123,8 @@ impl LanguageServerState {
             })
             .collect::<Vec<_>>();
 
-        // Iterate over all files and find to which source directory they belong, including their
-        // relative path
+        // Iterate over all files and find to which source directory they belong,
+        // including their relative path
         let vfs = &*self.vfs.read();
         for (file_id, path) in vfs.iter() {
             if let Some((idx, relative_path)) =

@@ -2,8 +2,9 @@ mod apple_base;
 mod linux_base;
 mod windows_msvc_base;
 
-use crate::{abi::Endian, host_triple};
 use std::borrow::Cow;
+
+use crate::{abi::Endian, host_triple};
 
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash)]
 pub enum LinkerFlavor {
@@ -22,7 +23,8 @@ pub struct Target {
     /// String to use as the `target_pointer_width` `cfg` variable.
     pub pointer_width: u32,
 
-    /// The name of the architecture. For example "x86" or "x86_64", "arm", "aarch64"
+    /// The name of the architecture. For example "x86" or "x86_64", "arm",
+    /// "aarch64"
     pub arch: Cow<'static, str>,
 
     /// [Data layout](http://llvm.org/docs/LangRef.html#data-layout) to pass to LLVM.
@@ -50,8 +52,8 @@ pub struct TargetOptions {
     /// The name of the environment
     pub env: String,
 
-    /// ABI name to distinguish multiple ABIs on the same OS and architecture. For instance, `"eabi"`
-    /// or `"eabihf"`. Defaults to "".
+    /// ABI name to distinguish multiple ABIs on the same OS and architecture.
+    /// For instance, `"eabi"` or `"eabihf"`. Defaults to "".
     pub abi: String,
 
     /// The name of the vendor
@@ -63,22 +65,26 @@ pub struct TargetOptions {
     /// Linker arguments that are passed *before* any user-defined libraries.
     pub pre_link_args: Vec<Cow<'static, str>>,
 
-    /// Default CPU to pass to LLVM. Corresponds to `llc -mcpu=$cpu`. Defaults to "generic".
+    /// Default CPU to pass to LLVM. Corresponds to `llc -mcpu=$cpu`. Defaults
+    /// to "generic".
     pub cpu: String,
 
-    /// Default target features to pass to LLVM. These features will *always* be passed, and cannot
-    /// be disabled even via `-C`. Corresponds to `llc -mattr=$features`.
+    /// Default target features to pass to LLVM. These features will *always* be
+    /// passed, and cannot be disabled even via `-C`. Corresponds to `llc
+    /// -mattr=$features`.
     pub features: String,
 
-    /// String to prepend to the name of every dynamic library. Defaults to "lib".
+    /// String to prepend to the name of every dynamic library. Defaults to
+    /// "lib".
     pub dll_prefix: String,
 
     /// Whether the target toolchain is like Windows
     pub is_like_windows: bool,
     pub is_like_msvc: bool,
 
-    /// Whether the target toolchain is like macOS's. Only useful for compiling against iOS/macOS,
-    /// in particular running dsymutil and some other stuff like `-dead_strip`. Defaults to false.
+    /// Whether the target toolchain is like macOS's. Only useful for compiling
+    /// against iOS/macOS, in particular running dsymutil and some other
+    /// stuff like `-dead_strip`. Defaults to false.
     pub is_like_osx: bool,
 }
 

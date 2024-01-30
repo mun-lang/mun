@@ -1,5 +1,6 @@
-use crate::{marshal::Marshal, Runtime};
 use mun_memory::{HasStaticType, Type};
+
+use crate::{marshal::Marshal, Runtime};
 
 /// A type to emulate dynamic typing across compilation units for static types.
 pub trait ReturnTypeReflection: Sized {
@@ -10,7 +11,8 @@ pub trait ReturnTypeReflection: Sized {
     fn type_hint() -> &'static str;
 }
 
-/// A type to emulate dynamic typing across compilation units for statically typed values.
+/// A type to emulate dynamic typing across compilation units for statically
+/// typed values.
 pub trait ArgumentReflection: Sized {
     /// Retrieves the argument's type information.
     fn type_info(&self, runtime: &Runtime) -> Type;

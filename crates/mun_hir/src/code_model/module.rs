@@ -1,7 +1,9 @@
 use super::{Function, Package, Struct, TypeAlias};
-use crate::ids::{ItemDefinitionId, ModuleId};
-use crate::primitive_type::PrimitiveType;
-use crate::{DiagnosticSink, FileId, HirDatabase, Name};
+use crate::{
+    ids::{ItemDefinitionId, ModuleId},
+    primitive_type::PrimitiveType,
+    DiagnosticSink, FileId, HirDatabase, Name,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Module {
@@ -72,7 +74,8 @@ impl Module {
             .collect()
     }
 
-    /// Iterate over all diagnostics from this `Module` by placing them in the `sink`
+    /// Iterate over all diagnostics from this `Module` by placing them in the
+    /// `sink`
     pub fn diagnostics(self, db: &dyn HirDatabase, sink: &mut DiagnosticSink<'_>) {
         // Add diagnostics from the package definitions
         let package_defs = db.package_defs(self.id.package);

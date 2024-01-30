@@ -5,13 +5,16 @@ mod align;
 mod integer;
 mod size;
 
-use crate::spec::Target;
-use std::fmt::{Display, Formatter};
-use std::str::FromStr;
+use std::{
+    fmt::{Display, Formatter},
+    str::FromStr,
+};
 
 pub use align::Align;
 pub use integer::Integer;
 pub use size::Size;
+
+use crate::spec::Target;
 
 /// Parsed [Data layout](http://llvm.org/docs/LangRef.html#data-layout) for a target, which contains
 /// everything needed to compute layouts.
@@ -189,16 +192,16 @@ impl TargetDataLayout {
 
     // /// Returns exclusive upper bound on object size.
     // ///
-    // /// The theoretical maximum object size is defined as the maximum positive `isize` value.
-    // /// This ensures that the `offset` semantics remain well-defined by allowing it to correctly
-    // /// index every address within an object along with one byte past the end, along with allowing
-    // /// `isize` to store the difference between any two pointers into an object.
-    // ///
-    // /// The upper bound on 64-bit currently needs to be lower because LLVM uses a 64-bit integer
-    // /// to represent object size in bits. It would need to be 1 << 61 to account for this, but is
-    // /// currently conservatively bounded to 1 << 47 as that is enough to cover the current usable
-    // /// address space on 64-bit ARMv8 and x86_64.
-    // pub fn obj_size_bound(&self) -> u64 {
+    // /// The theoretical maximum object size is defined as the maximum positive
+    // `isize` value. /// This ensures that the `offset` semantics remain
+    // well-defined by allowing it to correctly /// index every address within
+    // an object along with one byte past the end, along with allowing /// `isize`
+    // to store the difference between any two pointers into an object. ///
+    // /// The upper bound on 64-bit currently needs to be lower because LLVM uses a
+    // 64-bit integer /// to represent object size in bits. It would need to be
+    // 1 << 61 to account for this, but is /// currently conservatively bounded
+    // to 1 << 47 as that is enough to cover the current usable /// address
+    // space on 64-bit ARMv8 and x86_64. pub fn obj_size_bound(&self) -> u64 {
     //     match self.pointer_size.bits() {
     //         16 => 1 << 15,
     //         32 => 1 << 31,
@@ -225,8 +228,8 @@ impl TargetDataLayout {
     //     }
     //     // Default to natural alignment, which is what LLVM does.
     //     // That is, use the size, rounded up to a power of 2.
-    //     AbiAndPrefAlign::new(Align::from_bytes(vec_size.bytes().next_power_of_two()).unwrap())
-    // }
+    //     AbiAndPrefAlign::new(Align::from_bytes(vec_size.bytes().
+    // next_power_of_two()).unwrap()) }
 }
 
 // pub trait HasDataLayout {

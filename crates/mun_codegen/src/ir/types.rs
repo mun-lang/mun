@@ -1,13 +1,14 @@
 #[cfg(test)]
 mod test;
 
+use itertools::Itertools;
+use mun_abi as abi;
+use mun_codegen_macros::AsValue;
+
 use crate::value::{
     AsValue, BytesOrPtr, Global, IrTypeContext, IrValueContext, SizedValueType, TransparentValue,
     Value,
 };
-use itertools::Itertools;
-use mun_abi as abi;
-use mun_codegen_macros::AsValue;
 
 impl<'ink> TransparentValue<'ink> for abi::Guid {
     type Target = [u8; 16];

@@ -39,8 +39,9 @@ pub enum CompletionItemKind {
 }
 
 impl CompletionItemKind {
-    /// Returns a tag that describes the type of item that was completed. This is only used in
-    /// tests, to be able to distinguish between items with the same name.
+    /// Returns a tag that describes the type of item that was completed. This
+    /// is only used in tests, to be able to distinguish between items with
+    /// the same name.
     #[cfg(test)]
     pub(crate) fn tag(&self) -> &'static str {
         match self {
@@ -81,7 +82,8 @@ impl CompletionItem {
     }
 }
 
-/// A builder for a `CompletionItem`. Constructed by calling [`CompletionItem::builder`].
+/// A builder for a `CompletionItem`. Constructed by calling
+/// [`CompletionItem::builder`].
 pub struct Builder {
     label: String,
     completion_kind: CompletionKind,

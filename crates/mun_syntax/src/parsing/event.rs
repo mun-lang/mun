@@ -1,9 +1,9 @@
-//! It is intended to be completely decoupled from the parser, so as to allow to evolve the tree
-//! representation and the parser algorithm independently.
+//! It is intended to be completely decoupled from the parser, so as to allow to
+//! evolve the tree representation and the parser algorithm independently.
 //!
-//! The `TreeSink` trait is the bridge between the parser and the tree builder: the parses
-//! produces a stream of events like `start node`, `finish node` and `TreeSink` converts
-//! this stream to a real tree.
+//! The `TreeSink` trait is the bridge between the parser and the tree builder:
+//! the parses produces a stream of events like `start node`, `finish node` and
+//! `TreeSink` converts this stream to a real tree.
 
 use std::mem;
 
@@ -12,15 +12,16 @@ use crate::{
     SyntaxKind::{self, TOMBSTONE},
 };
 
-/// `Parser` produces a flat list of `Events`'s. They are converted to a tree structure in a
-/// separate pass via a `TreeSink`.
+/// `Parser` produces a flat list of `Events`'s. They are converted to a tree
+/// structure in a separate pass via a `TreeSink`.
 #[derive(Debug)]
 pub(crate) enum Event {
     /// This event signifies the start of a node.
-    /// It should be either abandoned (in which case the `kind` is `TOMBSTONE`, and the event is
-    /// ignored), or completed via a `Finish` event.
+    /// It should be either abandoned (in which case the `kind` is `TOMBSTONE`,
+    /// and the event is ignored), or completed via a `Finish` event.
     ///
-    /// All tokens between a `Start` and a `Finish` become the children of the respective node.
+    /// All tokens between a `Start` and a `Finish` become the children of the
+    /// respective node.
     Start {
         kind: SyntaxKind,
         forward_parent: Option<u32>,
@@ -31,8 +32,8 @@ pub(crate) enum Event {
 
     /// Produce a single leaf-element.
     /// `n_raw_tokens` is used to glue complex contextual tokens.
-    /// For example, the lexer tokenizes `>>` as `>`, `>`. `n_raw_tokens = 2` is used to produce
-    /// a single `>>`.
+    /// For example, the lexer tokenizes `>>` as `>`, `>`. `n_raw_tokens = 2` is
+    /// used to produce a single `>>`.
     Token {
         kind: SyntaxKind,
         n_raw_tokens: u8,

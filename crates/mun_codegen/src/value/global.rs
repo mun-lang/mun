@@ -1,20 +1,23 @@
+use std::marker::PhantomData;
+
+use inkwell::{
+    module::Linkage,
+    values::{BasicValueEnum, UnnamedAddress},
+    AddressSpace,
+};
+
 use super::{
     AsValue, ConcreteValueType, IrTypeContext, IrValueContext, SizedValueType, Value, ValueType,
 };
 use crate::value::{
     AddressableType, AddressableTypeValue, AsBytesAndPtrs, AsValueInto, BytesOrPtr, HasConstValue,
 };
-use inkwell::{
-    module::Linkage,
-    values::{BasicValueEnum, UnnamedAddress},
-    AddressSpace,
-};
-use std::marker::PhantomData;
 
-/// Represents a typed global value. A `Global<T>` can be constructed from any `Value<T>` that can
-/// be converted to a [`inkwell::values::BasicValueEnum`].
+/// Represents a typed global value. A `Global<T>` can be constructed from any
+/// `Value<T>` that can be converted to a [`inkwell::values::BasicValueEnum`].
 ///
-/// Globals can be used to store data inside an inkwell context which can be referenced from code.
+/// Globals can be used to store data inside an inkwell context which can be
+/// referenced from code.
 ///
 /// Like `Value<T>` a `Global<T>` is typed on the type of data that it stores.
 pub struct Global<'ink, T: ?Sized> {
@@ -35,8 +38,9 @@ impl<'ink, T: ?Sized> Global<'ink, T> {
     ///
     /// # Safety
     ///
-    /// There is no guarantee that the passed value actually represents the type `T`. Sometimes this
-    /// can however be very useful. This method is marked as unsafe since there is also no way to
+    /// There is no guarantee that the passed value actually represents the type
+    /// `T`. Sometimes this can however be very useful. This method is
+    /// marked as unsafe since there is also no way to
     /// check the correctness.
     pub unsafe fn from_raw(value: inkwell::values::GlobalValue<'ink>) -> Self {
         Global {
@@ -88,22 +92,24 @@ where
         }
     }
 
-    /// Converts self into a private const global. A private const global always has Private linkage
-    /// so its only accessible from the module it's defined in. Its address is globally
-    /// insignificant because the linker can rename it.
+    /// Converts self into a private const global. A private const global always
+    /// has Private linkage so its only accessible from the module it's
+    /// defined in. Its address is globally insignificant because the linker
+    /// can rename it.
     ///
-    /// This is useful for constant values that require dynamic sizing like arrays or strings but
-    /// still need to be referenced in the code. We can't use const arrays here because the size
-    /// must be constant in the type.
+    /// This is useful for constant values that require dynamic sizing like
+    /// arrays or strings but still need to be referenced in the code. We
+    /// can't use const arrays here because the size must be constant in the
+    /// type.
     ///
     /// e.g. in the following case:
     /// ```c
     /// const char str[] = "foobar"
     /// ```
     ///
-    /// The type of `str` is a 'dynamically' sized array which makes the type `const char*`. Not,
-    /// `const char[6]`. We use a const private to store the array and create a pointer from that
-    /// value.
+    /// The type of `str` is a 'dynamically' sized array which makes the type
+    /// `const char*`. Not, `const char[6]`. We use a const private to store
+    /// the array and create a pointer from that value.
     pub fn into_const_private_global<S: AsRef<str>>(
         self,
         name: S,

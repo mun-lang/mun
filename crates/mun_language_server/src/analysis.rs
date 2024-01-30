@@ -1,31 +1,33 @@
+use std::sync::Arc;
+
+use mun_hir::{line_index::LineIndex, AstDatabase, SourceDatabase};
+use mun_syntax::SourceFile;
+use salsa::{ParallelDatabase, Snapshot};
+
 use crate::{
     cancelation::Canceled, change::AnalysisChange, completion, db::AnalysisDatabase, diagnostics,
     diagnostics::Diagnostic, file_structure, FilePosition,
 };
-use mun_hir::{line_index::LineIndex, AstDatabase, SourceDatabase};
-use mun_syntax::SourceFile;
-use salsa::{ParallelDatabase, Snapshot};
-use std::sync::Arc;
 
 /// Result of an operation that can be canceled.
 pub type Cancelable<T> = Result<T, Canceled>;
 
-/// The `Analysis` struct is the basis of all language server operations. It maintains the current
-/// state of the source.
+/// The `Analysis` struct is the basis of all language server operations. It
+/// maintains the current state of the source.
 #[derive(Default)]
 pub struct Analysis {
     db: AnalysisDatabase,
 }
 
 impl Analysis {
-    /// Applies the given changes to the state. If there are outstanding `AnalysisSnapshot`s they
-    /// will be canceled.
+    /// Applies the given changes to the state. If there are outstanding
+    /// `AnalysisSnapshot`s they will be canceled.
     pub fn apply_change(&mut self, change: AnalysisChange) {
         self.db.apply_change(change);
     }
 
-    /// Creates a snapshot of the current `Analysis`. You can query the resulting `AnalysisSnapshot`
-    /// to get analysis and diagnostics.
+    /// Creates a snapshot of the current `Analysis`. You can query the
+    /// resulting `AnalysisSnapshot` to get analysis and diagnostics.
     pub fn snapshot(&self) -> AnalysisSnapshot {
         AnalysisSnapshot {
             db: self.db.snapshot(),
@@ -38,12 +40,13 @@ impl Analysis {
     }
 }
 
-/// The `AnalysisSnapshot` is a snapshot of the state of the source, it enables querying for
-/// the snapshot in a consistent state.
+/// The `AnalysisSnapshot` is a snapshot of the state of the source, it enables
+/// querying for the snapshot in a consistent state.
 ///
-/// A `AnalysisSnapshot` is created by calling `Analysis::snapshot`. When applying changes to the
-/// `Analysis` struct through the use of `Analysis::apply_changes` all snapshots are cancelled (most
-/// methods return `Err(Canceled)`).
+/// A `AnalysisSnapshot` is created by calling `Analysis::snapshot`. When
+/// applying changes to the `Analysis` struct through the use of
+/// `Analysis::apply_changes` all snapshots are cancelled (most methods return
+/// `Err(Canceled)`).
 pub struct AnalysisSnapshot {
     db: Snapshot<AnalysisDatabase>,
 }

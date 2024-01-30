@@ -1,11 +1,13 @@
 use super::ExprValidator;
-use crate::diagnostics::{DiagnosticSink, LiteralOutOfRange};
-use crate::ty::{ResolveBitness, TyKind};
-use crate::{Expr, HirDisplay, Literal};
+use crate::{
+    diagnostics::{DiagnosticSink, LiteralOutOfRange},
+    ty::{ResolveBitness, TyKind},
+    Expr, HirDisplay, Literal,
+};
 
 impl<'a> ExprValidator<'a> {
-    /// Iterates over all expressions to determine if one of the literals has a value that is out of
-    /// range of its type.
+    /// Iterates over all expressions to determine if one of the literals has a
+    /// value that is out of range of its type.
     pub fn validate_literal_ranges(&self, sink: &mut DiagnosticSink<'_>) {
         self.body[self.body.body_expr].walk_child_exprs(move |expr_id| {
             let expr = &self.body[expr_id];

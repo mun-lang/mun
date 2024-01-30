@@ -66,8 +66,8 @@ impl Size {
     // }
     //
     // #[inline]
-    // pub fn checked_add<C: HasDataLayout>(self, offset: Size, cx: &C) -> Option<Size> {
-    //     let dl = cx.data_layout();
+    // pub fn checked_add<C: HasDataLayout>(self, offset: Size, cx: &C) ->
+    // Option<Size> {     let dl = cx.data_layout();
     //
     //     let bytes = self.bytes().checked_add(offset.bytes())?;
     //
@@ -79,8 +79,8 @@ impl Size {
     // }
     //
     // #[inline]
-    // pub fn checked_mul<C: HasDataLayout>(self, count: u64, cx: &C) -> Option<Size> {
-    //     let dl = cx.data_layout();
+    // pub fn checked_mul<C: HasDataLayout>(self, count: u64, cx: &C) ->
+    // Option<Size> {     let dl = cx.data_layout();
     //
     //     let bytes = self.bytes().checked_mul(count)?;
     //     if bytes < dl.obj_size_bound() {
@@ -98,8 +98,8 @@ impl Size {
 //     type Output = Size;
 //     #[inline]
 //     fn add(self, other: Size) -> Size {
-//         Size::from_bytes(self.bytes().checked_add(other.bytes()).unwrap_or_else(|| {
-//             panic!(
+//         Size::from_bytes(self.bytes().checked_add(other.bytes()).
+// unwrap_or_else(|| {             panic!(
 //                 "Size::add: {} + {} doesn't fit in u64",
 //                 self.bytes(),
 //                 other.bytes()
@@ -112,8 +112,8 @@ impl Size {
 //     type Output = Size;
 //     #[inline]
 //     fn sub(self, other: Size) -> Size {
-//         Size::from_bytes(self.bytes().checked_sub(other.bytes()).unwrap_or_else(|| {
-//             panic!(
+//         Size::from_bytes(self.bytes().checked_sub(other.bytes()).
+// unwrap_or_else(|| {             panic!(
 //                 "Size::sub: {} - {} would result in negative size",
 //                 self.bytes(),
 //                 other.bytes()
@@ -136,8 +136,8 @@ impl Size {
 //     fn mul(self, count: u64) -> Size {
 //         match self.bytes().checked_mul(count) {
 //             Some(bytes) => Size::from_bytes(bytes),
-//             None => panic!("Size::mul: {} * {} doesn't fit in u64", self.bytes(), count),
-//         }
+//             None => panic!("Size::mul: {} * {} doesn't fit in u64",
+// self.bytes(), count),         }
 //     }
 // }
 //

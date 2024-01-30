@@ -1,16 +1,18 @@
+use std::{
+    ptr::{self, NonNull},
+    sync::Arc,
+};
+
+use mun_memory::{
+    gc::{GcPtr, GcRuntime, HasIndirectionPtr},
+    Type,
+};
+
 use crate::{
     garbage_collector::GcRootPtr,
     marshal::Marshal,
     reflection::{ArgumentReflection, ReturnTypeReflection},
     GarbageCollector, Runtime,
-};
-use mun_memory::{
-    gc::{GcPtr, GcRuntime, HasIndirectionPtr},
-    Type,
-};
-use std::{
-    ptr::{self, NonNull},
-    sync::Arc,
 };
 
 /// Represents a Mun struct pointer.
@@ -25,8 +27,9 @@ impl RawStruct {
     }
 }
 
-/// Type-agnostic wrapper for interoperability with a Mun struct. This is merely a reference to the
-/// Mun struct, that will be garbage collected unless it is rooted.
+/// Type-agnostic wrapper for interoperability with a Mun struct. This is merely
+/// a reference to the Mun struct, that will be garbage collected unless it is
+/// rooted.
 #[derive(Clone)]
 pub struct StructRef<'s> {
     raw: RawStruct,
@@ -69,7 +72,8 @@ impl<'s> StructRef<'s> {
         NonNull::new_unchecked(ptr.add(offset).cast::<T>() as *mut T)
     }
 
-    /// Retrieves the value of the field corresponding to the specified `field_name`.
+    /// Retrieves the value of the field corresponding to the specified
+    /// `field_name`.
     pub fn get<T: ReturnTypeReflection + Marshal<'s>>(&self, field_name: &str) -> Result<T, String>
     where
         T: 's,
@@ -109,8 +113,8 @@ impl<'s> StructRef<'s> {
         ))
     }
 
-    /// Replaces the value of the field corresponding to the specified `field_name` and returns the
-    /// old value.
+    /// Replaces the value of the field corresponding to the specified
+    /// `field_name` and returns the old value.
     pub fn replace<T: ArgumentReflection + Marshal<'s>>(
         &mut self,
         field_name: &str,
@@ -224,7 +228,8 @@ impl<'s> Marshal<'s> for StructRef<'s> {
     {
         let struct_info = type_info.as_struct().unwrap();
 
-        // Copy the contents of the struct based on what kind of pointer we are dealing with
+        // Copy the contents of the struct based on what kind of pointer we are dealing
+        // with
         let gc_handle = if struct_info.is_value_struct() {
             // For a value struct, `ptr` points to a struct value.
 
@@ -263,7 +268,8 @@ impl<'s> Marshal<'s> for StructRef<'s> {
 }
 
 impl<'r> ReturnTypeReflection for StructRef<'r> {
-    /// Returns true if this specified type can be stored in an instance of this type
+    /// Returns true if this specified type can be stored in an instance of this
+    /// type
     fn accepts_type(ty: &Type) -> bool {
         ty.is_struct()
     }
@@ -273,8 +279,8 @@ impl<'r> ReturnTypeReflection for StructRef<'r> {
     }
 }
 
-/// Type-agnostic wrapper for interoperability with a Mun struct, that has been rooted. To marshal,
-/// obtain a `StructRef` for the `RootedStruct`.
+/// Type-agnostic wrapper for interoperability with a Mun struct, that has been
+/// rooted. To marshal, obtain a `StructRef` for the `RootedStruct`.
 #[derive(Clone)]
 pub struct RootedStruct {
     handle: GcRootPtr,
@@ -289,8 +295,8 @@ impl RootedStruct {
         }
     }
 
-    /// Converts the `RootedStruct` into a `StructRef`, using an external shared reference to a
-    /// `Runtime`.
+    /// Converts the `RootedStruct` into a `StructRef`, using an external shared
+    /// reference to a `Runtime`.
     pub fn as_ref<'r>(&self, runtime: &'r Runtime) -> StructRef<'r> {
         assert_eq!(Arc::as_ptr(&runtime.gc), self.handle.runtime().as_ptr());
         StructRef::new(RawStruct(self.handle.handle()), runtime)

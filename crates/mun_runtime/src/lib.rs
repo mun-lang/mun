@@ -1,7 +1,7 @@
 //! The Mun Runtime
 //!
-//! The Mun Runtime provides functionality for automatically hot reloading Mun C ABI
-//! compliant shared libraries.
+//! The Mun Runtime provides functionality for automatically hot reloading Mun C
+//! ABI compliant shared libraries.
 #![warn(missing_docs)]
 
 mod assembly;
@@ -15,17 +15,6 @@ mod marshal;
 mod reflection;
 mod utils;
 
-use assembly::LoadError;
-use dispatch_table::DispatchTable;
-use garbage_collector::GarbageCollector;
-use log::{debug, error, info};
-use mun_abi as abi;
-use mun_memory::{
-    gc::{self, Array, GcRuntime},
-    type_table::TypeTable,
-};
-use mun_project::LOCKFILE_NAME;
-use notify::{event::ModifyKind, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::{
     cmp,
     collections::{BTreeMap, HashMap, VecDeque},
@@ -41,6 +30,20 @@ use std::{
     },
 };
 
+use assembly::LoadError;
+use dispatch_table::DispatchTable;
+use garbage_collector::GarbageCollector;
+use log::{debug, error, info};
+use mun_abi as abi;
+use mun_memory::{
+    gc::{self, Array, GcRuntime},
+    type_table::TypeTable,
+};
+// Re-export some useful types so crates dont have to depend on mun_memory as well.
+pub use mun_memory::{Field, FieldData, HasStaticType, PointerType, StructType, Type};
+use mun_project::LOCKFILE_NAME;
+use notify::{event::ModifyKind, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+
 pub use crate::{
     adt::{RootedStruct, StructRef},
     array::{ArrayRef, RawArray, RootedArray},
@@ -51,8 +54,6 @@ pub use crate::{
     marshal::Marshal,
     reflection::{ArgumentReflection, ReturnTypeReflection},
 };
-// Re-export some useful types so crates dont have to depend on mun_memory as well.
-pub use mun_memory::{Field, FieldData, HasStaticType, PointerType, StructType, Type};
 
 /// Options for the construction of a [`Runtime`].
 pub struct RuntimeOptions {
@@ -68,8 +69,8 @@ pub struct RuntimeOptions {
 ///
 /// # Safety
 ///
-/// The allocator must have been set using the `set_allocator_handle` call - exposed by the Mun
-/// library.
+/// The allocator must have been set using the `set_allocator_handle` call -
+/// exposed by the Mun library.
 unsafe fn get_allocator(alloc_handle: *mut ffi::c_void) -> Arc<GarbageCollector> {
     Arc::from_raw(alloc_handle as *const GarbageCollector)
 }
@@ -78,7 +79,8 @@ unsafe fn get_allocator(alloc_handle: *mut ffi::c_void) -> Arc<GarbageCollector>
 ///
 /// # Safety
 ///
-/// The type handle must have been returned from a call to [`Arc<TypeInfo>::into_raw`][into_raw].
+/// The type handle must have been returned from a call to
+/// [`Arc<TypeInfo>::into_raw`][into_raw].
 unsafe fn get_type_info(type_handle: *const ffi::c_void) -> Type {
     Type::from_raw(type_handle)
 }
@@ -87,16 +89,18 @@ extern "C" fn new(
     type_handle: *const ffi::c_void,
     alloc_handle: *mut ffi::c_void,
 ) -> *const *mut ffi::c_void {
-    // SAFETY: The runtime always constructs and uses `Arc<TypeInfo>::into_raw` to set the type
-    // type handles in the type LUT.
+    // SAFETY: The runtime always constructs and uses `Arc<TypeInfo>::into_raw` to
+    // set the type type handles in the type LUT.
     let type_info = ManuallyDrop::new(unsafe { get_type_info(type_handle) });
 
-    // Safety: `new` is only called from within Mun assemblies' core logic, so we are guaranteed
-    // that the `Runtime` and its `GarbageCollector` still exist if this function is called, and
-    // will continue to do so for the duration of this function.
+    // Safety: `new` is only called from within Mun assemblies' core logic, so we
+    // are guaranteed that the `Runtime` and its `GarbageCollector` still exist
+    // if this function is called, and will continue to do so for the duration
+    // of this function.
     let allocator = ManuallyDrop::new(unsafe { get_allocator(alloc_handle) });
 
-    // Safety: the Mun Compiler guarantees that `new` is never called with `ptr::null()`.
+    // Safety: the Mun Compiler guarantees that `new` is never called with
+    // `ptr::null()`.
     let handle = allocator.as_ref().alloc(&type_info);
 
     handle.into()
@@ -107,13 +111,14 @@ extern "C" fn new_array(
     length: usize,
     alloc_handle: *mut ffi::c_void,
 ) -> *const *mut ffi::c_void {
-    // SAFETY: The runtime always constructs and uses `Arc<TypeInfo>::into_raw` to set the type
-    // type handles in the type LUT.
+    // SAFETY: The runtime always constructs and uses `Arc<TypeInfo>::into_raw` to
+    // set the type type handles in the type LUT.
     let type_info = ManuallyDrop::new(unsafe { get_type_info(type_handle) });
 
-    // Safety: `new` is only called from within Mun assemblies' core logic, so we are guaranteed
-    // that the `Runtime` and its `GarbageCollector` still exist if this function is called, and
-    // will continue to do so for the duration of this function.
+    // Safety: `new` is only called from within Mun assemblies' core logic, so we
+    // are guaranteed that the `Runtime` and its `GarbageCollector` still exist
+    // if this function is called, and will continue to do so for the duration
+    // of this function.
     let allocator = ManuallyDrop::new(unsafe { get_allocator(alloc_handle) });
 
     let handle = allocator.as_ref().alloc_array(&type_info, length);
@@ -127,7 +132,8 @@ pub struct RuntimeBuilder {
 }
 
 impl RuntimeBuilder {
-    /// Constructs a new `RuntimeBuilder` for the shared library at `library_path`.
+    /// Constructs a new `RuntimeBuilder` for the shared library at
+    /// `library_path`.
     fn new<P: Into<PathBuf>>(library_path: P) -> Self {
         Self {
             options: RuntimeOptions {
@@ -152,14 +158,16 @@ impl RuntimeBuilder {
     ///
     /// # Safety
     ///
-    /// A munlib is simply a shared object. When a library is loaded, initialisation routines
-    /// contained within it are executed. For the purposes of safety, the execution of these
-    /// routines is conceptually the same calling an unknown foreign function and may impose
+    /// A munlib is simply a shared object. When a library is loaded,
+    /// initialisation routines contained within it are executed. For the
+    /// purposes of safety, the execution of these routines is conceptually
+    /// the same calling an unknown foreign function and may impose
     /// arbitrary requirements on the caller for the call to be sound.
     ///
-    /// Additionally, the callers of this function must also ensure that execution of the
-    /// termination routines contained within the library is safe as well. These routines may be
-    /// executed when the library is unloaded.
+    /// Additionally, the callers of this function must also ensure that
+    /// execution of the termination routines contained within the library
+    /// is safe as well. These routines may be executed when the library is
+    /// unloaded.
     ///
     /// See [`Assembly::load`] for more information.
     pub unsafe fn finish(self) -> Result<Runtime, InitError> {
@@ -182,14 +190,16 @@ pub enum InitError {
 ///
 /// # Logging
 ///
-/// The runtime uses [log] as a logging facade, but does not install a logger. To produce log
-/// output, you have to use a [logger implementation][log-impl] compatible with the facade.
+/// The runtime uses [log] as a logging facade, but does not install a logger.
+/// To produce log output, you have to use a [logger implementation][log-impl]
+/// compatible with the facade.
 ///
 /// [log]: https://docs.rs/log
 /// [log-impl]: https://docs.rs/log/0.4.13/log/#available-logging-implementations
 pub struct Runtime {
     assemblies: HashMap<PathBuf, Assembly>,
-    /// Assemblies that have changed and thus need to be relinked. Maps the old to the (potentially) new path.
+    /// Assemblies that have changed and thus need to be relinked. Maps the old
+    /// to the (potentially) new path.
     assemblies_to_relink: BTreeMap<PathBuf, PathBuf>,
     dispatch_table: DispatchTable,
     type_table: TypeTable,
@@ -200,25 +210,28 @@ pub struct Runtime {
 }
 
 impl Runtime {
-    /// Constructs a new [`RuntimeBuilder`] to construct a new [`Runtime`] instance.
+    /// Constructs a new [`RuntimeBuilder`] to construct a new [`Runtime`]
+    /// instance.
     pub fn builder<P: Into<PathBuf>>(library_path: P) -> RuntimeBuilder {
         RuntimeBuilder::new(library_path)
     }
 
-    /// Constructs a new `Runtime` that loads the library at `library_path` and its
-    /// dependencies. The `Runtime` contains a file watcher that is triggered with an interval
-    /// of `dur`.
+    /// Constructs a new `Runtime` that loads the library at `library_path` and
+    /// its dependencies. The `Runtime` contains a file watcher that is
+    /// triggered with an interval of `dur`.
     ///
     /// # Safety
     ///
-    /// A munlib is simply a shared object. When a library is loaded, initialisation routines
-    /// contained within it are executed. For the purposes of safety, the execution of these
-    /// routines is conceptually the same calling an unknown foreign function and may impose
+    /// A munlib is simply a shared object. When a library is loaded,
+    /// initialisation routines contained within it are executed. For the
+    /// purposes of safety, the execution of these routines is conceptually
+    /// the same calling an unknown foreign function and may impose
     /// arbitrary requirements on the caller for the call to be sound.
     ///
-    /// Additionally, the callers of this function must also ensure that execution of the
-    /// termination routines contained within the library is safe as well. These routines may be
-    /// executed when the library is unloaded.
+    /// Additionally, the callers of this function must also ensure that
+    /// execution of the termination routines contained within the library
+    /// is safe as well. These routines may be executed when the library is
+    /// unloaded.
     ///
     /// See [`Assembly::load`] for more information.
     pub unsafe fn new(mut options: RuntimeOptions) -> Result<Runtime, InitError> {
@@ -269,14 +282,16 @@ impl Runtime {
     ///
     /// # Safety
     ///
-    /// A munlib is simply a shared object. When a library is loaded, initialisation routines
-    /// contained within it are executed. For the purposes of safety, the execution of these
-    /// routines is conceptually the same calling an unknown foreign function and may impose
+    /// A munlib is simply a shared object. When a library is loaded,
+    /// initialisation routines contained within it are executed. For the
+    /// purposes of safety, the execution of these routines is conceptually
+    /// the same calling an unknown foreign function and may impose
     /// arbitrary requirements on the caller for the call to be sound.
     ///
-    /// Additionally, the callers of this function must also ensure that execution of the
-    /// termination routines contained within the library is safe as well. These routines may be
-    /// executed when the library is unloaded.
+    /// Additionally, the callers of this function must also ensure that
+    /// execution of the termination routines contained within the library
+    /// is safe as well. These routines may be executed when the library is
+    /// unloaded.
     ///
     /// See [`Assembly::load`] for more information.
     unsafe fn add_assembly(&mut self, library_path: &Path) -> Result<(), LinkError> {
@@ -294,7 +309,8 @@ impl Runtime {
 
         // Load all assemblies and their dependencies
         while let Some(library_path) = to_load.pop_front() {
-            // A dependency can be added by multiple dependants, so check that we didn't load it yet
+            // A dependency can be added by multiple dependants, so check that we didn't
+            // load it yet
             if loaded.contains_key(&library_path) {
                 continue;
             }
@@ -334,9 +350,11 @@ impl Runtime {
         Ok(())
     }
 
-    /// Retrieves the function definition corresponding to `function_name`, if available.
+    /// Retrieves the function definition corresponding to `function_name`, if
+    /// available.
     pub fn get_function_definition(&self, function_name: &str) -> Option<Arc<FunctionDefinition>> {
-        // TODO: Verify that when someone tries to invoke a non-public function, it should fail.
+        // TODO: Verify that when someone tries to invoke a non-public function, it
+        // should fail.
         self.dispatch_table.get_fn(function_name)
     }
 
@@ -364,28 +382,32 @@ impl Runtime {
         found_match.map(|(closest_name, _)| closest_name)
     }
 
-    /// Retrieves the type definition corresponding to `type_name`, if available.
+    /// Retrieves the type definition corresponding to `type_name`, if
+    /// available.
     pub fn get_type_info_by_name(&self, type_name: &str) -> Option<Type> {
         self.type_table.find_type_info_by_name(type_name)
     }
 
-    /// Retrieve the type information corresponding to the `type_id`, if available.
+    /// Retrieve the type information corresponding to the `type_id`, if
+    /// available.
     pub fn get_type_info_by_id(&self, type_id: &abi::TypeId<'_>) -> Option<Type> {
         self.type_table.find_type_info_by_id(type_id)
     }
 
-    /// Updates the state of the runtime. This includes checking for file changes, and reloading
-    /// compiled assemblies.
+    /// Updates the state of the runtime. This includes checking for file
+    /// changes, and reloading compiled assemblies.
     /// # Safety
     ///
-    /// A munlib is simply a shared object. When a library is loaded, initialisation routines
-    /// contained within it are executed. For the purposes of safety, the execution of these
-    /// routines is conceptually the same calling an unknown foreign function and may impose
+    /// A munlib is simply a shared object. When a library is loaded,
+    /// initialisation routines contained within it are executed. For the
+    /// purposes of safety, the execution of these routines is conceptually
+    /// the same calling an unknown foreign function and may impose
     /// arbitrary requirements on the caller for the call to be sound.
     ///
-    /// Additionally, the callers of this function must also ensure that execution of the
-    /// termination routines contained within the library is safe as well. These routines may be
-    /// executed when the library is unloaded.
+    /// Additionally, the callers of this function must also ensure that
+    /// execution of the termination routines contained within the library
+    /// is safe as well. These routines may be executed when the library is
+    /// unloaded.
     ///
     /// See [`Assembly::load`] for more information.
     pub unsafe fn update(&mut self) -> bool {
@@ -410,7 +432,8 @@ impl Runtime {
 
             // Load all assemblies and their dependencies
             while let Some((old_path, new_path)) = to_load.pop_first() {
-                // A dependency can be added by multiple dependants, so check that we didn't load it yet
+                // A dependency can be added by multiple dependants, so check that we didn't
+                // load it yet
                 if loaded.contains_key(&old_path) {
                     continue;
                 }
@@ -508,14 +531,15 @@ impl Runtime {
 
     /// Returns a shared reference to the runtime's garbage collector.
     ///
-    /// We cannot return an `Arc` here, because the lifetime of data contained in `GarbageCollector`
-    /// is dependent on the `Runtime`.
+    /// We cannot return an `Arc` here, because the lifetime of data contained
+    /// in `GarbageCollector` is dependent on the `Runtime`.
     pub fn gc(&self) -> &GarbageCollector {
         self.gc.as_ref()
     }
 
-    /// Collects all memory that is no longer referenced by rooted objects. Returns `true` if memory
-    /// was reclaimed, `false` otherwise. This behavior will likely change in the future.
+    /// Collects all memory that is no longer referenced by rooted objects.
+    /// Returns `true` if memory was reclaimed, `false` otherwise. This
+    /// behavior will likely change in the future.
     pub fn gc_collect(&self) -> bool {
         self.gc.collect()
     }
@@ -647,8 +671,8 @@ impl<'name, T> Display for InvokeErr<'name, T> {
 }
 
 impl<'name, T: InvokeArgs> InvokeErr<'name, T> {
-    /// Retries a function invocation once, resulting in a potentially successful
-    /// invocation.
+    /// Retries a function invocation once, resulting in a potentially
+    /// successful invocation.
     // FIXME: `unwrap_or_else` does not compile for `StructRef`, due to
     // https://doc.rust-lang.org/nomicon/lifetime-mismatch.html#improperly-reduced-borrows
     pub fn retry<'r, 'o, Output>(self, runtime: &'r mut Runtime) -> Result<Output, Self>
@@ -661,7 +685,8 @@ impl<'name, T: InvokeArgs> InvokeErr<'name, T> {
         unsafe { self.retry_impl(runtime) }
     }
 
-    /// Retries the function invocation until it succeeds, resulting in an output.
+    /// Retries the function invocation until it succeeds, resulting in an
+    /// output.
     // FIXME: `unwrap_or_else` does not compile for `StructRef`, due to
     // https://doc.rust-lang.org/nomicon/lifetime-mismatch.html#improperly-reduced-borrows
     pub fn wait<'r, 'o, Output>(mut self, runtime: &'r mut Runtime) -> Output
@@ -681,14 +706,15 @@ impl<'name, T: InvokeArgs> InvokeErr<'name, T> {
         }
     }
 
-    /// Inner implementation that retries a function invocation once, resulting in a
-    /// potentially successful invocation. This is a workaround for:
+    /// Inner implementation that retries a function invocation once, resulting
+    /// in a potentially successful invocation. This is a workaround for:
     /// <https://doc.rust-lang.org/nomicon/lifetime-mismatch.html>
     ///
     /// # Safety
     ///
-    /// When calling this function, you have to guarantee that `runtime` is mutably
-    /// borrowed. The `Output` value can only contain a shared borrow of `runtime`.
+    /// When calling this function, you have to guarantee that `runtime` is
+    /// mutably borrowed. The `Output` value can only contain a shared
+    /// borrow of `runtime`.
     unsafe fn retry_impl<'r, 'o, Output>(self, runtime: &'r Runtime) -> Result<Output, Self>
     where
         Output: 'o + ReturnTypeReflection + Marshal<'o>,
@@ -706,17 +732,19 @@ impl<'name, T: InvokeArgs> InvokeErr<'name, T> {
     }
 }
 
-/// A trait that handles calling a certain function with a set of arguments. This trait is
-/// implemented for tuples up to and including 20 elements.
+/// A trait that handles calling a certain function with a set of arguments.
+/// This trait is implemented for tuples up to and including 20 elements.
 pub trait InvokeArgs {
-    /// Determines whether the specified function can be called with these arguments
+    /// Determines whether the specified function can be called with these
+    /// arguments
     fn can_invoke(&self, runtime: &Runtime, signature: &FunctionSignature) -> Result<(), String>;
 
     /// Calls the specified function with these function arguments
     ///
     /// # Safety
     ///
-    /// The `fn_ptr` is cast and invoked which might result in undefined behavior.
+    /// The `fn_ptr` is cast and invoked which might result in undefined
+    /// behavior.
     unsafe fn invoke<ReturnType>(self, fn_ptr: *const c_void) -> ReturnType;
 }
 
@@ -759,7 +787,8 @@ seq_macro::seq!(I in 0..N {
 )*});
 
 impl Runtime {
-    /// Invokes the Mun function called `function_name` with the specified `arguments`.
+    /// Invokes the Mun function called `function_name` with the specified
+    /// `arguments`.
     pub fn invoke<
         'runtime,
         'ret,

@@ -1,9 +1,13 @@
-//! A `ModuleGroup` describes a grouping of modules that together form an assembly.
+//! A `ModuleGroup` describes a grouping of modules that together form an
+//! assembly.
+
+use std::{
+    hash::{Hash, Hasher},
+    iter::FromIterator,
+};
 
 use mun_hir::{HasVisibility, HirDatabase};
 use rustc_hash::{FxHashMap, FxHashSet};
-use std::hash::{Hash, Hasher};
-use std::iter::FromIterator;
 
 /// A `ModuleGroup` describes a grouping of modules
 #[derive(Clone, Eq, Debug)]
@@ -74,10 +78,12 @@ impl ModuleGroup {
         self.ordered_modules.iter().copied()
     }
 
-    /// Returns true if the specified function should be exported from the module group. This
-    /// indicates that when queried the resulting assembly will expose this function.
+    /// Returns true if the specified function should be exported from the
+    /// module group. This indicates that when queried the resulting
+    /// assembly will expose this function.
     pub fn should_export_fn(&self, db: &dyn HirDatabase, function: mun_hir::Function) -> bool {
-        // If the function is not defined in the module group we should definitely not export it.
+        // If the function is not defined in the module group we should definitely not
+        // export it.
         if !self.modules.contains(&function.module(db)) {
             return false;
         }
@@ -89,8 +95,8 @@ impl ModuleGroup {
 
             // The function is visible from the specified module and all child modules.
             mun_hir::Visibility::Module(visible_mod) => {
-                // If the modules is contained within `includes_entire_subtree` it is included in
-                // the module group.
+                // If the modules is contained within `includes_entire_subtree` it is included
+                // in the module group.
                 self.includes_entire_subtree
                     .get(&visible_mod.into())
                     // If all its children are also part of the module group we can keep the
@@ -100,8 +106,9 @@ impl ModuleGroup {
         }
     }
 
-    /// Returns true if the specified function should be included in the dispatch table of this
-    /// module group if it is used from within this module group.
+    /// Returns true if the specified function should be included in the
+    /// dispatch table of this module group if it is used from within this
+    /// module group.
     pub fn should_runtime_link_fn(
         &self,
         db: &dyn HirDatabase,

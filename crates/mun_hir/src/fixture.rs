@@ -4,9 +4,10 @@ use mun_paths::RelativePathBuf;
 const DEFAULT_FILE_NAME: &str = "mod.mun";
 const META_LINE: &str = "//-";
 
-/// A `Fixture` describes an single file in a project workspace. `Fixture`s can be parsed from a
-/// single string with the `parse` function. Using that function enables users to conveniently
-/// describe an entire workspace in a single string.
+/// A `Fixture` describes an single file in a project workspace. `Fixture`s can
+/// be parsed from a single string with the `parse` function. Using that
+/// function enables users to conveniently describe an entire workspace in a
+/// single string.
 #[derive(Debug, Eq, PartialEq)]
 pub struct Fixture {
     /// The relative path of this file
@@ -29,12 +30,14 @@ impl Fixture {
     /// }
     /// ```
     ///
-    /// into two separate `Fixture`s one with `relative_path` 'foo.mun' and one with 'bar.mun'.
+    /// into two separate `Fixture`s one with `relative_path` 'foo.mun' and one
+    /// with 'bar.mun'.
     pub fn parse(text: impl AsRef<str>) -> Vec<Fixture> {
         let text = trim_raw_string_literal(text);
         let mut result: Vec<Fixture> = Vec::new();
 
-        // If the text does not contain any meta tags, insert a default meta tag at the start.
+        // If the text does not contain any meta tags, insert a default meta tag at the
+        // start.
         let default_start = if text.contains(META_LINE) {
             None
         } else {
@@ -90,8 +93,8 @@ impl Fixture {
     }
 }
 
-/// Turns a string that is likely to come from a raw string literal into something that is
-/// probably intended.
+/// Turns a string that is likely to come from a raw string literal into
+/// something that is probably intended.
 ///
 /// * Strips the first newline if there is one
 /// * Removes any initial indentation

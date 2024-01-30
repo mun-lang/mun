@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::{Config, DisplayColor, Driver, PathOrInline, RelativePathBuf};
     use std::io::Cursor;
+
+    use crate::{Config, DisplayColor, Driver, PathOrInline, RelativePathBuf};
 
     /// Compile passed source code and return all compilation errors
     fn compilation_errors(source_code: &str) -> String {

@@ -1,4 +1,5 @@
-//! This module provides conversion from a `mun_hir::Diagnostics` to a `crate::Diagnostics`.
+//! This module provides conversion from a `mun_hir::Diagnostics` to a
+//! `crate::Diagnostics`.
 
 mod access_unknown_field;
 mod duplicate_definition_error;
@@ -10,12 +11,13 @@ mod possibly_unitialized_variable;
 mod unresolved_type;
 mod unresolved_value;
 
-use crate::{Diagnostic, DiagnosticForWith, SourceAnnotation};
 use mun_hir::Diagnostic as HirDiagnostic;
 use mun_syntax::TextRange;
 
-// Provides conversion of a mun_hir::Diagnostic to a crate::Diagnostic. This requires a database for
-// most operations.
+use crate::{Diagnostic, DiagnosticForWith, SourceAnnotation};
+
+// Provides conversion of a mun_hir::Diagnostic to a crate::Diagnostic. This
+// requires a database for most operations.
 impl<DB: mun_hir::HirDatabase> DiagnosticForWith<DB> for dyn mun_hir::Diagnostic {
     fn with_diagnostic<R, F: FnMut(&dyn Diagnostic) -> R>(&self, with: &DB, mut f: F) -> R {
         if let Some(v) = self.downcast_ref::<mun_hir::diagnostics::UnresolvedValue>() {
@@ -46,7 +48,8 @@ impl<DB: mun_hir::HirDatabase> DiagnosticForWith<DB> for dyn mun_hir::Diagnostic
     }
 }
 
-/// Diagnostic handler for HIR diagnostics that do not have a specialized implementation.
+/// Diagnostic handler for HIR diagnostics that do not have a specialized
+/// implementation.
 struct GenericHirDiagnostic<'diag> {
     diagnostic: &'diag dyn mun_hir::Diagnostic,
 }

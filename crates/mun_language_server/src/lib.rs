@@ -1,12 +1,11 @@
 use std::convert::TryFrom;
 
-use serde::{de::DeserializeOwned, Serialize};
-
 pub use config::{Config, FilesWatcher};
 pub use main_loop::main_loop;
 use mun_paths::AbsPathBuf;
 use mun_project::ProjectManifest;
 use mun_syntax::{TextRange, TextSize};
+use serde::{de::DeserializeOwned, Serialize};
 pub(crate) use state::LanguageServerState;
 pub(crate) use symbol_kind::SymbolKind;
 

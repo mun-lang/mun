@@ -1,7 +1,8 @@
-use crate::parsing::ParseError;
 use std::fmt;
 
 use text_size::{TextRange, TextSize};
+
+use crate::parsing::ParseError;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Location {

@@ -1,10 +1,11 @@
 #![allow(dead_code)]
 
+use std::collections::VecDeque;
+
 use mun_memory::{
     diff::{myers, FieldDiff, FieldEditKind, StructDiff},
     Field, StructType, StructTypeBuilder, Type,
 };
-use std::collections::VecDeque;
 
 pub fn apply_myers_diff<T: Clone + Eq>(old: &[T], diff: Vec<myers::Diff<T>>) -> Vec<T> {
     let mut combined: Vec<_> = old.to_vec();

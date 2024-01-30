@@ -8,7 +8,6 @@ use std::{
 
 use itertools::Itertools;
 use log::error;
-
 use mun_abi as abi;
 use mun_libloader::{MunLibrary, TempLibrary};
 use mun_memory::{
@@ -86,7 +85,8 @@ pub enum LinkFunctionsError {
     },
 }
 
-/// An assembly is a hot reloadable compilation unit, consisting of one or more Mun modules.
+/// An assembly is a hot reloadable compilation unit, consisting of one or more
+/// Mun modules.
 pub struct Assembly {
     library_path: PathBuf,
     library: TempLibrary,
@@ -95,19 +95,21 @@ pub struct Assembly {
 }
 
 impl Assembly {
-    /// Loads an assembly and its information for the shared library at `library_path`. The
-    /// resulting `Assembly` is ensured to be linkable.
+    /// Loads an assembly and its information for the shared library at
+    /// `library_path`. The resulting `Assembly` is ensured to be linkable.
     ///
     /// # Safety
     ///
-    /// A munlib is simply a shared object. When a library is loaded, initialisation routines
-    /// contained within it are executed. For the purposes of safety, the execution of these
-    /// routines is conceptually the same calling an unknown foreign function and may impose
+    /// A munlib is simply a shared object. When a library is loaded,
+    /// initialisation routines contained within it are executed. For the
+    /// purposes of safety, the execution of these routines is conceptually
+    /// the same calling an unknown foreign function and may impose
     /// arbitrary requirements on the caller for the call to be sound.
     ///
-    /// Additionally, the callers of this function must also ensure that execution of the
-    /// termination routines contained within the library is safe as well. These routines may be
-    /// executed when the library is unloaded.
+    /// Additionally, the callers of this function must also ensure that
+    /// execution of the termination routines contained within the library
+    /// is safe as well. These routines may be executed when the library is
+    /// unloaded.
     ///
     /// See [`libloading::Library::new`] for more information.
     pub unsafe fn load(library_path: &Path, gc: Arc<GarbageCollector>) -> Result<Self, LoadError> {
@@ -254,8 +256,9 @@ impl Assembly {
         }
     }
 
-    /// Tries to link the `assemblies`, resulting in a new [`DispatchTable`] on success. This leaves
-    /// the original `dispatch_table` intact, in case of linking errors.
+    /// Tries to link the `assemblies`, resulting in a new [`DispatchTable`] on
+    /// success. This leaves the original `dispatch_table` intact, in case
+    /// of linking errors.
     pub(super) fn link_all<'a>(
         assemblies: impl Iterator<Item = &'a mut Assembly>,
         dispatch_table: &DispatchTable,
@@ -304,8 +307,9 @@ impl Assembly {
         Ok((dispatch_table, type_table))
     }
 
-    /// Tries to link the `unlinked_assemblies`, resulting in a new [`DispatchTable`] on success.
-    /// This leaves the original `dispatch_table` intact, in case of linking errors.
+    /// Tries to link the `unlinked_assemblies`, resulting in a new
+    /// [`DispatchTable`] on success. This leaves the original
+    /// `dispatch_table` intact, in case of linking errors.
     pub(super) fn relink_all(
         unlinked_assemblies: &mut HashMap<PathBuf, Assembly>,
         linked_assemblies: &mut HashMap<PathBuf, Assembly>,
@@ -370,7 +374,8 @@ impl Assembly {
                     .map_err(|e| LinkError::LoadType(e.to_string()))?;
             type_table = updated_type_table;
 
-            // Load all types, retrying types that depend on other unloaded types within the module
+            // Load all types, retrying types that depend on other unloaded types within the
+            // module
             let types_to_link = new_assembly
                 .info_mut()
                 .type_lut
@@ -386,7 +391,8 @@ impl Assembly {
             if let Some((old_assembly, old_types)) = old_types {
                 let mapping = Mapping::new(&old_types, &new_types);
                 let _deleted_objects = old_assembly.allocator.map_memory(mapping);
-                // DISCUSSION: Do we need to maintain an assembly for the type LUT of allocated objects with deleted types?
+                // DISCUSSION: Do we need to maintain an assembly for the type
+                // LUT of allocated objects with deleted types?
             }
 
             // Remove the old assembly's functions from the dispatch table
@@ -401,17 +407,19 @@ impl Assembly {
                 .info_mut()
                 .dispatch_table
                 .iter_mut()
-                // Only take signatures into account that do *not* yet have a function pointer assigned
-                // by the compiler. When an assembly is compiled it "pre-fills" its internal dispatch
-                // table with pointers to self-referencing functions.
+                // Only take signatures into account that do *not* yet have a function pointer
+                // assigned by the compiler. When an assembly is compiled it
+                // "pre-fills" its internal dispatch table with pointers to
+                // self-referencing functions.
                 .filter(|(ptr, _)| ptr.is_null());
 
-            // Update the dispatch tables of the assemblies themselves based on our global dispatch
-            // table. This will effectively link the function definitions of the assemblies together.
-            // It also modifies the internal state of the assemblies.
+            // Update the dispatch tables of the assemblies themselves based on our global
+            // dispatch table. This will effectively link the function
+            // definitions of the assemblies together. It also modifies the
+            // internal state of the assemblies.
             //
-            // Note that linking may fail because for instance functions remaining unlinked (missing)
-            // or the signature of a function doesnt match.
+            // Note that linking may fail because for instance functions remaining unlinked
+            // (missing) or the signature of a function doesnt match.
             Assembly::link_all_functions(&dispatch_table, &type_table, functions_to_link)?;
 
             // Remove this assembly from the dependencies
@@ -458,7 +466,8 @@ impl Assembly {
         self.library_path.as_path()
     }
 
-    /// Converts the `Assembly` into a `TempLibrary`, consuming the input in the process.
+    /// Converts the `Assembly` into a `TempLibrary`, consuming the input in the
+    /// process.
     pub fn into_library(self) -> TempLibrary {
         self.library
     }

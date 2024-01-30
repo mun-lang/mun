@@ -1,8 +1,10 @@
-use super::{CompletionItem, CompletionKind, RenderContext};
-use crate::SymbolKind;
 use mun_hir::HirDisplay;
 
-/// Similar to [`Render<'a>`] but used to render a completion item for a function
+use super::{CompletionItem, CompletionKind, RenderContext};
+use crate::SymbolKind;
+
+/// Similar to [`Render<'a>`] but used to render a completion item for a
+/// function
 pub(super) struct FunctionRender<'a> {
     ctx: RenderContext<'a>,
     name: String,
@@ -29,7 +31,8 @@ impl<'a> FunctionRender<'a> {
             .finish()
     }
 
-    /// Returns the detail text to add to the completion. This currently returns `-> <ret_ty>`.
+    /// Returns the detail text to add to the completion. This currently returns
+    /// `-> <ret_ty>`.
     fn detail(&self) -> String {
         let ty = self.func.ret_type(self.ctx.db());
         format!("-> {}", ty.display(self.ctx.db()))

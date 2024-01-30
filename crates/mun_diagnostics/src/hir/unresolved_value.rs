@@ -1,8 +1,10 @@
-use super::HirDiagnostic;
-use crate::{Diagnostic, SourceAnnotation};
 use mun_syntax::{AstNode, TextRange};
 
-/// An error that is emitted when trying to use a value that doesnt exist within the scope.
+use super::HirDiagnostic;
+use crate::{Diagnostic, SourceAnnotation};
+
+/// An error that is emitted when trying to use a value that doesnt exist within
+/// the scope.
 ///
 /// ```mun
 /// # fn main() {

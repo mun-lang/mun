@@ -1,15 +1,15 @@
-use super::body::ExternalGlobals;
-use crate::module_group::ModuleGroup;
-use crate::{
-    code_gen::CodeGenContext,
-    ir::body::BodyIrGenerator,
-    ir::file_group::FileGroupIr,
-    ir::{function, type_table::TypeTable},
-    value::Global,
-};
+use std::collections::{BTreeMap, HashMap, HashSet};
+
 use inkwell::module::Module;
 use mun_hir::{HasVisibility, ModuleDef};
-use std::collections::{BTreeMap, HashMap, HashSet};
+
+use super::body::ExternalGlobals;
+use crate::{
+    code_gen::CodeGenContext,
+    ir::{body::BodyIrGenerator, file_group::FileGroupIr, function, type_table::TypeTable},
+    module_group::ModuleGroup,
+    value::Global,
+};
 
 /// The IR generated for a single source file.
 #[derive(Debug, Clone, Eq, PartialEq)]

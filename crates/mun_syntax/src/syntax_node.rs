@@ -6,14 +6,14 @@
 //! The *real* implementation is in the (language-agnostic) `rowan` crate, this
 //! modules just wraps its API.
 
+pub(crate) use rowan::GreenNode;
+use rowan::{GreenNodeBuilder, Language};
+
 use crate::{
     parsing::ParseError,
     syntax_error::{SyntaxError, SyntaxErrorKind},
     Parse, SyntaxKind, TextSize,
 };
-use rowan::{GreenNodeBuilder, Language};
-
-pub(crate) use rowan::GreenNode;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum MunLanguage {}

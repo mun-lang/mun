@@ -61,8 +61,8 @@ impl Integer {
     // }
     //
     // /// Finds the smallest integer with the given alignment.
-    // pub fn for_align<C: HasDataLayout>(cx: &C, wanted: Align) -> Option<Integer> {
-    //     let dl = cx.data_layout();
+    // pub fn for_align<C: HasDataLayout>(cx: &C, wanted: Align) -> Option<Integer>
+    // {     let dl = cx.data_layout();
     //
     //     for &candidate in &[
     //         Integer::I8,
@@ -71,21 +71,21 @@ impl Integer {
     //         Integer::I64,
     //         Integer::I128,
     //     ] {
-    //         if wanted == candidate.align(dl).abi && wanted.bytes() == candidate.size().bytes() {
-    //             return Some(candidate);
+    //         if wanted == candidate.align(dl).abi && wanted.bytes() ==
+    // candidate.size().bytes() {             return Some(candidate);
     //         }
     //     }
     //     None
     // }
     //
     // /// Find the largest integer with the given alignment or less.
-    // pub fn approximate_align<C: HasDataLayout>(cx: &C, wanted: Align) -> Integer {
-    //     let dl = cx.data_layout();
+    // pub fn approximate_align<C: HasDataLayout>(cx: &C, wanted: Align) -> Integer
+    // {     let dl = cx.data_layout();
     //
-    //     for &candidate in &[Integer::I128, Integer::I64, Integer::I32, Integer::I16] {
-    //         if wanted >= candidate.align(dl).abi && wanted.bytes() >= candidate.size().bytes() {
-    //             return candidate;
-    //         }
+    //     for &candidate in &[Integer::I128, Integer::I64, Integer::I32,
+    // Integer::I16] {         if wanted >= candidate.align(dl).abi &&
+    // wanted.bytes() >= candidate.size().bytes() {             return
+    // candidate;         }
     //     }
     //     Integer::I8
     // }

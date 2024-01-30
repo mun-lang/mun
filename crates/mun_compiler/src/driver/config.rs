@@ -1,6 +1,7 @@
+use std::path::PathBuf;
+
 pub use mun_codegen::OptimizationLevel;
 use mun_target::spec::Target;
-use std::path::PathBuf;
 
 /// Describes all the permanent settings that are used during compilations.
 #[derive(Debug, Clone)]
@@ -11,8 +12,8 @@ pub struct Config {
     /// The optimization level to use for the IR generation.
     pub optimization_lvl: OptimizationLevel,
 
-    /// The optional output directory to store all outputs. If no directory is specified all output
-    /// is stored in a temporary directory.
+    /// The optional output directory to store all outputs. If no directory is
+    /// specified all output is stored in a temporary directory.
     pub out_dir: Option<PathBuf>,
 
     /// Whether or not to emit an IR file instead of a munlib.

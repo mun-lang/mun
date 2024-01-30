@@ -1,8 +1,9 @@
+use std::ops::Add;
+
 use crate::{
     ast::{self, child_opt, children, AstChildren, AstToken, BinExpr, Literal},
     AstNode, SyntaxKind, SyntaxToken, TextRange, TextSize,
 };
-use std::ops::Add;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum PrefixOp {

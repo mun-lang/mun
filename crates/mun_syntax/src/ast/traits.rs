@@ -1,6 +1,8 @@
-use crate::ast::{self, child_opt, children, AstChildren, AstNode, AstToken};
-use crate::syntax_node::SyntaxElementChildren;
-use crate::SyntaxKind;
+use crate::{
+    ast::{self, child_opt, children, AstChildren, AstNode, AstToken},
+    syntax_node::SyntaxElementChildren,
+    SyntaxKind,
+};
 
 pub trait ModuleItemOwner: AstNode {
     fn items(&self) -> AstChildren<ast::ModuleItem> {

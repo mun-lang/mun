@@ -1,9 +1,10 @@
-use crate::parsing::lexer::{
-    classes::{is_ident_continue, is_ident_start},
-    cursor::Cursor,
+use crate::{
+    parsing::lexer::{
+        classes::{is_ident_continue, is_ident_start},
+        cursor::Cursor,
+    },
+    SyntaxKind::{self, FLOAT_NUMBER, INT_NUMBER},
 };
-
-use crate::SyntaxKind::{self, FLOAT_NUMBER, INT_NUMBER};
 
 pub(crate) fn scan_number(c: char, cursor: &mut Cursor<'_>) -> SyntaxKind {
     if c == '0' {

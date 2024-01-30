@@ -1,5 +1,7 @@
-use std::path::Path;
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use anyhow::anyhow;
 
@@ -10,8 +12,9 @@ pub struct Args {
     path: Option<PathBuf>,
 }
 
-/// This method is invoked when the executable is run with the `init` argument indicating that a
-/// user requested us to create a new project in the current directory.
+/// This method is invoked when the executable is run with the `init` argument
+/// indicating that a user requested us to create a new project in the current
+/// directory.
 pub fn init(args: Args) -> Result<ExitStatus, anyhow::Error> {
     let create_in = args.path.unwrap_or_else(|| {
         std::env::current_dir().expect("could not determine current working directory")
@@ -26,7 +29,8 @@ pub fn init(args: Args) -> Result<ExitStatus, anyhow::Error> {
     create_project(&create_in, project_name)
 }
 
-/// This is used by `init` and `new` arguments to create projects in different paths.
+/// This is used by `init` and `new` arguments to create projects in different
+/// paths.
 pub fn create_project(create_in: &Path, project_name: &str) -> Result<ExitStatus, anyhow::Error> {
     log::trace!("Creating new project");
     {

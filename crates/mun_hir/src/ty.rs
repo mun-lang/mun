@@ -4,19 +4,20 @@ mod op;
 mod primitives;
 mod resolve;
 
-use crate::{
-    display::{HirDisplay, HirFormatter},
-    ty::infer::InferTy,
-    ty::lower::fn_sig_for_struct_constructor,
-    HasVisibility, HirDatabase, Struct, StructMemoryKind, TypeAlias, Visibility,
-};
+use std::{fmt, iter::FromIterator, mem, ops::Deref, sync::Arc};
+
 pub(crate) use infer::infer_query;
 pub use infer::InferenceResult;
 pub(crate) use lower::{callable_item_sig, fn_sig_for_fn, type_for_def, CallableDef, TypableDef};
 pub use primitives::{FloatTy, IntTy};
 pub use resolve::ResolveBitness;
 use smallvec::SmallVec;
-use std::{fmt, iter::FromIterator, mem, ops::Deref, sync::Arc};
+
+use crate::{
+    display::{HirDisplay, HirFormatter},
+    ty::{infer::InferTy, lower::fn_sig_for_struct_constructor},
+    HasVisibility, HirDatabase, Struct, StructMemoryKind, TypeAlias, Visibility,
+};
 
 #[cfg(test)]
 mod tests;
@@ -40,7 +41,8 @@ pub enum TyKind {
     /// A tuple type. For example `(f32, f64, bool)`.
     Tuple(usize, Substitution),
 
-    /// A type variable used during type checking. Not to be confused with a type parameter.
+    /// A type variable used during type checking. Not to be confused with a
+    /// type parameter.
     InferenceVar(InferTy),
 
     /// A type alias
@@ -49,9 +51,9 @@ pub enum TyKind {
     /// The never type `never`.
     Never,
 
-    /// The anonymous type of a function declaration/definition. Each function has a unique type,
-    /// which is output (for a function named `foo` returning an `number`) as
-    /// `fn() -> number {foo}`.
+    /// The anonymous type of a function declaration/definition. Each function
+    /// has a unique type, which is output (for a function named `foo`
+    /// returning an `number`) as `fn() -> number {foo}`.
     ///
     /// This includes tuple struct / enum variant constructors as well.
     ///
@@ -66,10 +68,11 @@ pub enum TyKind {
     /// An dynamically sized array type
     Array(Ty),
 
-    /// A placeholder for a type which could not be computed; this is propagated to avoid useless
-    /// error messages. Doubles as a placeholder where type variables are inserted before type
-    /// checking, since we want to try to infer a better type here anyway -- for the IDE use case,
-    /// we want to try to infer as much as possible even in the presence of type errors.
+    /// A placeholder for a type which could not be computed; this is propagated
+    /// to avoid useless error messages. Doubles as a placeholder where type
+    /// variables are inserted before type checking, since we want to try to
+    /// infer a better type here anyway -- for the IDE use case, we want to
+    /// try to infer as much as possible even in the presence of type errors.
     Unknown,
 }
 
@@ -137,7 +140,8 @@ impl Ty {
         }
     }
 
-    /// If this type represents a tuple type, returns a reference to the substitutions of the tuple.
+    /// If this type represents a tuple type, returns a reference to the
+    /// substitutions of the tuple.
     pub fn as_tuple(&self) -> Option<&Substitution> {
         match self.interned() {
             TyKind::Tuple(_, substs) => Some(substs),
@@ -145,7 +149,8 @@ impl Ty {
         }
     }
 
-    /// If this type represents an array type, returns a reference to the element type.
+    /// If this type represents an array type, returns a reference to the
+    /// element type.
     pub fn as_array(&self) -> Option<&Ty> {
         match self.interned() {
             TyKind::Array(element_ty) => Some(element_ty),
@@ -163,8 +168,8 @@ impl Ty {
         matches!(self.interned(), TyKind::Never)
     }
 
-    /// Returns the callable definition for the given expression or `None` if the type does not
-    /// represent a callable.
+    /// Returns the callable definition for the given expression or `None` if
+    /// the type does not represent a callable.
     pub fn as_callable_def(&self) -> Option<CallableDef> {
         match self.interned() {
             TyKind::FnDef(def, _) => Some(*def),
@@ -228,8 +233,9 @@ impl Ty {
         matches!(self.interned(), TyKind::Unknown)
     }
 
-    /// Returns the type parameters of this type if it has some (i.e. is an ADT or function); so
-    /// if `self` is an `Option<u32>`, this returns the `u32`
+    /// Returns the type parameters of this type if it has some (i.e. is an ADT
+    /// or function); so if `self` is an `Option<u32>`, this returns the
+    /// `u32`
     pub fn type_parameters(&self) -> Option<&Substitution> {
         match self.interned() {
             TyKind::Tuple(_, substs) | TyKind::FnDef(_, substs) => Some(substs),
@@ -237,8 +243,9 @@ impl Ty {
         }
     }
 
-    /// Returns a mutable reference to the type parameters of this type if it has some (i.e. is an
-    /// ADT or function); so if `self` is an `Option<u32>`, this returns the `u32`
+    /// Returns a mutable reference to the type parameters of this type if it
+    /// has some (i.e. is an ADT or function); so if `self` is an
+    /// `Option<u32>`, this returns the `u32`
     pub fn type_parameters_mut(&mut self) -> Option<&mut Substitution> {
         match self.interned_mut() {
             TyKind::Tuple(_, substs) | TyKind::FnDef(_, substs) => Some(substs),
@@ -284,8 +291,8 @@ impl Substitution {
         &self.0
     }
 
-    /// Assumes this instance has a single element and returns it. Panics if this instance doesnt
-    /// contain exactly one element.
+    /// Assumes this instance has a single element and returns it. Panics if
+    /// this instance doesnt contain exactly one element.
     pub fn as_single(&self) -> &Ty {
         assert!(self.0.len() == 1, "expected substs of len 1, got {self:?}");
         &self.0[0]
@@ -410,11 +417,12 @@ pub trait TypeWalk {
     /// Calls the function `f` for each `Ty` in this instance.
     fn walk(&self, f: &mut impl FnMut(&Ty));
 
-    /// Calls the function `f` for each `Ty` in this instance with a mutable reference.
+    /// Calls the function `f` for each `Ty` in this instance with a mutable
+    /// reference.
     fn walk_mut(&mut self, f: &mut impl FnMut(&mut Ty));
 
-    /// Folds this instance by replacing all instances of types with other instances as specified
-    /// by the function `f`.
+    /// Folds this instance by replacing all instances of types with other
+    /// instances as specified by the function `f`.
     fn fold(mut self, f: &mut impl FnMut(Ty) -> Ty) -> Self
     where
         Self: Sized,

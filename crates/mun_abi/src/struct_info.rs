@@ -1,7 +1,6 @@
 use std::{ffi::CStr, os::raw::c_char, slice, str};
 
-use crate::type_id::TypeId;
-use crate::Guid;
+use crate::{type_id::TypeId, Guid};
 
 /// Represents a struct declaration.
 #[repr(C)]
@@ -29,15 +28,17 @@ pub struct StructDefinition<'a> {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum StructMemoryKind {
-    /// A garbage collected struct is allocated on the heap and uses reference semantics when passed
-    /// around.
+    /// A garbage collected struct is allocated on the heap and uses reference
+    /// semantics when passed around.
     #[default]
     Gc,
 
-    /// A value struct is allocated on the stack and uses value semantics when passed around.
+    /// A value struct is allocated on the stack and uses value semantics when
+    /// passed around.
     ///
-    /// NOTE: When a value struct is used in an external API, a wrapper is created that _pins_ the
-    /// value on the heap. The heap-allocated value needs to be *manually deallocated*!
+    /// NOTE: When a value struct is used in an external API, a wrapper is
+    /// created that _pins_ the value on the heap. The heap-allocated value
+    /// needs to be *manually deallocated*!
     Value,
 }
 
@@ -126,12 +127,13 @@ impl<'a> serde::Serialize for StructDefinition<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::type_id::HasStaticTypeId;
     use std::ffi::CString;
 
-    use crate::test_utils::{fake_struct_definition, FAKE_FIELD_NAME, FAKE_STRUCT_NAME};
-
     use super::StructMemoryKind;
+    use crate::{
+        test_utils::{fake_struct_definition, FAKE_FIELD_NAME, FAKE_STRUCT_NAME},
+        type_id::HasStaticTypeId,
+    };
 
     #[test]
     fn test_struct_info_fields_none() {

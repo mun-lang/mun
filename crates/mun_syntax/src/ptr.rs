@@ -1,7 +1,10 @@
+use std::{
+    hash::{Hash, Hasher},
+    iter::successors,
+    marker::PhantomData,
+};
+
 use crate::{AstNode, SyntaxKind, SyntaxNode, TextRange};
-use std::hash::{Hash, Hasher};
-use std::iter::successors;
-use std::marker::PhantomData;
 
 /// A pointer to a syntax node inside a file. It can be used to remember a
 /// specific node across reparses of the same file.
@@ -37,7 +40,8 @@ impl SyntaxNodePtr {
         self.kind
     }
 
-    /// Casts this instance to a pointer of another type. Returns None if the cast is not valid.
+    /// Casts this instance to a pointer of another type. Returns None if the
+    /// cast is not valid.
     pub fn try_cast<N: AstNode>(self) -> Option<AstPtr<N>> {
         if !N::can_cast(self.kind) {
             return None;

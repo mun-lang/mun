@@ -1,12 +1,14 @@
-use crate::ir::dispatch_table::FunctionPrototype;
-use inkwell::{context::Context, targets::TargetData, types::FunctionType};
 use std::ffi;
+
+use inkwell::{context::Context, targets::TargetData, types::FunctionType};
+
+use crate::ir::dispatch_table::FunctionPrototype;
 
 #[macro_use]
 mod macros;
 
-/// Defines the properties of an intrinsic function that can be called from Mun. These functions
-/// are mostly used internally.
+/// Defines the properties of an intrinsic function that can be called from Mun.
+/// These functions are mostly used internally.
 pub trait Intrinsic: Sync {
     /// Returns the prototype of the intrinsic
     fn prototype(&self) -> FunctionPrototype;

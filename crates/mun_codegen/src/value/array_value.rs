@@ -1,11 +1,12 @@
-use super::{
-    AddressableType, AsValue, ConcreteValueType, HasConstValue, IrTypeContext, IrValueContext,
-    PointerValueType, SizedValueType, TypeValue, Value, ValueType,
-};
 use inkwell::{
     types::{BasicType, PointerType},
     values::PointerValue,
     AddressSpace,
+};
+
+use super::{
+    AddressableType, AsValue, ConcreteValueType, HasConstValue, IrTypeContext, IrValueContext,
+    PointerValueType, SizedValueType, TypeValue, Value, ValueType,
 };
 
 impl<'ink, T: ConcreteValueType<'ink>> ConcreteValueType<'ink> for [T] {
@@ -136,8 +137,8 @@ pub trait IterAsIrValue<'ink, E: SizedValueType<'ink>, T: AsValue<'ink, E>>:
             .as_value(context)
     }
 
-    /// Constructs a const private global and returns a pointer to it. If the iterator is empty a
-    /// null pointer is returned.
+    /// Constructs a const private global and returns a pointer to it. If the
+    /// iterator is empty a null pointer is returned.
     fn into_const_private_pointer_or_null<S: AsRef<str>>(
         self,
         name: S,
