@@ -13,17 +13,13 @@ pub use self::{
     function::Function,
     module::{Module, ModuleDef},
     package::Package,
-    r#impl::{Impl, ImplData},
-    r#struct::{Field, LocalFieldId, Struct, StructKind, StructMemoryKind},
+    r#impl::ImplData,
+    r#struct::{Field, Struct, StructKind, StructMemoryKind},
     src::HasSource,
     type_alias::TypeAlias,
 };
 
-pub use self::{
-    function::FunctionData,
-    r#struct::{FieldData, StructData},
-    type_alias::TypeAliasData,
-};
+pub use self::{function::FunctionData, r#struct::StructData, type_alias::TypeAliasData};
 
 /// The definitions that have a body.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

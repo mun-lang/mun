@@ -402,7 +402,7 @@ mod tests {
         let lib_path = CString::new("some/path").expect("Invalid library path");
 
         let type_id = <()>::type_info().clone().into();
-        let functions = vec![ExternalFunctionDefinition {
+        let functions = [ExternalFunctionDefinition {
             name: ptr::null(),
             arg_types: ptr::null(),
             return_type: type_id,
@@ -428,7 +428,7 @@ mod tests {
 
         let invalid_encoding = ['�', '\0'];
         let type_id = <()>::type_info().clone().into();
-        let functions = vec![ExternalFunctionDefinition {
+        let functions = [ExternalFunctionDefinition {
             name: invalid_encoding.as_ptr().cast(),
             arg_types: ptr::null(),
             return_type: type_id,
@@ -453,7 +453,7 @@ mod tests {
         let lib_path = CString::new("some/path").expect("Invalid library path");
         let function_name = CString::new("foobar").unwrap();
 
-        let functions = vec![ExternalFunctionDefinition {
+        let functions = [ExternalFunctionDefinition {
             name: function_name.as_ptr(),
             arg_types: ptr::null(),
             return_type: Type::null(),
@@ -479,7 +479,7 @@ mod tests {
         let function_name = CString::new("foobar").unwrap();
 
         let type_id = <()>::type_info().clone().into();
-        let functions = vec![ExternalFunctionDefinition {
+        let functions = [ExternalFunctionDefinition {
             name: function_name.as_ptr(),
             arg_types: ptr::null(),
             return_type: type_id,
@@ -506,7 +506,7 @@ mod tests {
         let arg_types = [Type::null()];
 
         let type_id = <()>::type_info().clone().into();
-        let functions = vec![ExternalFunctionDefinition {
+        let functions = [ExternalFunctionDefinition {
             name: function_name.as_ptr(),
             arg_types: &arg_types as _,
             return_type: type_id,
