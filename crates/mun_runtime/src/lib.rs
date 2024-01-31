@@ -669,10 +669,6 @@ impl<'name, T: InvokeArgs> InvokeErr<'name, T> {
         Output: 'o + ReturnTypeReflection + Marshal<'o>,
         'r: 'o,
     {
-        // Safety: The output of `retry_impl` is guaranteed to only contain a shared
-        // reference.
-        let runtime = &*runtime;
-
         loop {
             self = match unsafe { self.retry_impl(runtime) } {
                 Ok(output) => return output,
@@ -687,15 +683,14 @@ impl<'name, T: InvokeArgs> InvokeErr<'name, T> {
     ///
     /// # Safety
     ///
-    /// When calling this function, you have to guarantee that `runtime` is mutably
-    /// borrowed. The `Output` value can only contain a shared borrow of `runtime`.
-    unsafe fn retry_impl<'r, 'o, Output>(self, runtime: &'r Runtime) -> Result<Output, Self>
+    /// When calling this function, you have to guarantee that `runtime` can be dereferenced and is
+    /// valid for `'o`. The `Output` value can only contain a shared borrow of `runtime`.
+    unsafe fn retry_impl<'o, Output>(self, runtime: *mut Runtime) -> Result<Output, Self>
     where
         Output: 'o + ReturnTypeReflection + Marshal<'o>,
-        'r: 'o,
     {
-        #[allow(invalid_reference_casting, invalid_reference_casting)]
-        let runtime = &mut *(runtime as *const Runtime as *mut Runtime);
+        // Safety: Guaranteed by the caller to be valid to dereference.
+        let runtime = &mut *runtime;
 
         eprintln!("{}", self.msg);
         while !runtime.update() {
