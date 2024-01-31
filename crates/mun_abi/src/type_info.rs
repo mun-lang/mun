@@ -113,9 +113,7 @@ impl<'a> TypeDefinition<'a> {
 
     /// Returns the alignment of the type in bytes
     pub fn alignment(&self) -> usize {
-        self.alignment
-            .try_into()
-            .expect("cannot convert alignment to platform size")
+        self.alignment.into()
     }
 }
 

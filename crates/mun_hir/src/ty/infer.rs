@@ -26,7 +26,6 @@ use crate::ids::DefWithBodyId;
 use crate::resolve::{resolver_for_expr, HasResolver};
 use crate::ty::primitives::{FloatTy, IntTy};
 use crate::ty::TyKind;
-pub use type_variable::TypeVarId;
 
 mod coerce;
 
