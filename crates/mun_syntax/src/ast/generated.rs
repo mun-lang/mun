@@ -1558,6 +1558,33 @@ impl ReturnExpr {
     }
 }
 
+// SelfParam
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct SelfParam {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for SelfParam {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind,
+            SELF_PARAM
+        )
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(SelfParam { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl ast::TypeAscriptionOwner for SelfParam {}
+impl SelfParam {}
+
 // SourceFile
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

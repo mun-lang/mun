@@ -129,6 +129,7 @@ Grammar(
 
         "PARAM_LIST",
         "PARAM",
+        "SELF_PARAM",
 
         "STRUCT_DEF",
         "TYPE_ALIAS_DEF",
@@ -214,6 +215,11 @@ Grammar(
             traits: [
                 "TypeAscriptionOwner"
             ],
+        ),
+        "SelfParam": (
+            traits: [
+                "TypeAscriptionOwner",
+            ]
         ),
         "StructDef": (
             options: ["MemoryTypeSpecifier"],
