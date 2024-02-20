@@ -12,8 +12,8 @@ pub use self::{
     function::{Function, FunctionData},
     module::{Module, ModuleDef},
     package::Package,
-    r#impl::{Impl, ImplData},
-    r#struct::{Field, FieldData, LocalFieldId, Struct, StructData, StructKind, StructMemoryKind},
+    r#impl::ImplData,
+    r#struct::{Field, Struct, StructData, StructKind, StructMemoryKind},
     src::HasSource,
     type_alias::{TypeAlias, TypeAliasData},
 };

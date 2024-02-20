@@ -22,8 +22,6 @@ mod place_expr;
 mod type_variable;
 mod unify;
 
-pub use type_variable::TypeVarId;
-
 use crate::{
     expr::{LiteralFloat, LiteralFloatKind, LiteralInt, LiteralIntKind},
     ids::DefWithBodyId,

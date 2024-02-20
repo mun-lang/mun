@@ -35,7 +35,7 @@ pub type SyntaxElement = rowan::NodeOrToken<SyntaxNode, SyntaxToken>;
 pub type SyntaxNodeChildren = rowan::SyntaxNodeChildren<MunLanguage>;
 pub type SyntaxElementChildren = rowan::SyntaxElementChildren<MunLanguage>;
 
-pub use rowan::{Direction, NodeOrToken};
+pub use rowan::Direction;
 
 pub struct SyntaxTreeBuilder {
     errors: Vec<SyntaxError>,

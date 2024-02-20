@@ -17,7 +17,7 @@ impl DispatchTable {
     /// Retrieves the [`FunctionDefinition`] corresponding to `fn_path`, if it
     /// exists.
     pub fn get_fn(&self, fn_path: &str) -> Option<Arc<FunctionDefinition>> {
-        self.functions.get(fn_path).map(Clone::clone)
+        self.functions.get(fn_path).cloned()
     }
 
     /// Retrieves the name of all available functions.

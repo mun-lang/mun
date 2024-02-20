@@ -134,9 +134,7 @@ impl<T> Arena<T> {
     }
 
     /// Iterate over the elements in the arena
-    pub fn iter(
-        &self,
-    ) -> impl Iterator<Item = (Idx<T>, &T)> + ExactSizeIterator + DoubleEndedIterator {
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = (Idx<T>, &T)> + DoubleEndedIterator {
         self.data
             .iter()
             .enumerate()

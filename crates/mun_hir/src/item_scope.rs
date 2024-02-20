@@ -84,12 +84,12 @@ impl ItemScope {
     }
 
     /// Returns an iterator over all declarations with this scope
-    pub fn declarations(&self) -> impl Iterator<Item = ItemDefinitionId> + ExactSizeIterator + '_ {
+    pub fn declarations(&self) -> impl ExactSizeIterator<Item = ItemDefinitionId> + '_ {
         self.defs.iter().copied()
     }
 
     /// Returns an iterator over all impls in this scope
-    pub fn impls(&self) -> impl Iterator<Item = ImplId> + ExactSizeIterator + '_ {
+    pub fn impls(&self) -> impl ExactSizeIterator<Item = ImplId> + '_ {
         self.impls.iter().copied()
     }
 
