@@ -1,16 +1,19 @@
+use std::cell::Cell;
+
+use drop_bomb::DropBomb;
+
 use crate::{
     parsing::{event::Event, token_set::TokenSet, ParseError, TokenSource},
     SyntaxKind::{self, EOF, ERROR, TOMBSTONE},
 };
-use drop_bomb::DropBomb;
-use std::cell::Cell;
 
-/// `Parser` struct provides the low-level API for navigating through the stream of tokens and
-/// constructing the parse tree. The actual parsing happens in the `grammar` module.
+/// `Parser` struct provides the low-level API for navigating through the stream
+/// of tokens and constructing the parse tree. The actual parsing happens in the
+/// `grammar` module.
 ///
-/// However, the result of this `Parser` is not a real tree, but rather a flat stream of
-/// events of the form 'start expression, consume number literal, finish espression'. See `Event`
-/// docs for more info.
+/// However, the result of this `Parser` is not a real tree, but rather a flat
+/// stream of events of the form 'start expression, consume number literal,
+/// finish espression'. See `Event` docs for more info.
 pub(crate) struct Parser<'t> {
     token_source: &'t mut dyn TokenSource,
     events: Vec<Event>,
@@ -31,7 +34,8 @@ impl<'t> Parser<'t> {
     }
 
     /// Returns the kind of the current token.
-    /// If the parser has already reach the end of the input the special `EOF` kind is returned.
+    /// If the parser has already reach the end of the input the special `EOF`
+    /// kind is returned.
     pub(crate) fn current(&self) -> SyntaxKind {
         self.nth(0)
     }
@@ -108,8 +112,9 @@ impl<'t> Parser<'t> {
         self.token_source.is_keyword(kw)
     }
 
-    /// Starts a new node in the syntax tree. All nodes and tokens consumed between the `start` and
-    /// the corresponding `Marker::complete` belong to the same node.
+    /// Starts a new node in the syntax tree. All nodes and tokens consumed
+    /// between the `start` and the corresponding `Marker::complete` belong
+    /// to the same node.
     pub(crate) fn start(&mut self) -> Marker {
         let pos = self.events.len() as u32;
         self.push_event(Event::tombstone());
@@ -241,8 +246,9 @@ impl Marker {
         }
     }
 
-    /// Finishes the syntax tree node and assigns `kind` to it, and create a `CompletedMarker` for
-    /// possible future operation like `.precede()` to deal with `forward_parent`.
+    /// Finishes the syntax tree node and assigns `kind` to it, and create a
+    /// `CompletedMarker` for possible future operation like `.precede()` to
+    /// deal with `forward_parent`.
     pub(crate) fn complete(mut self, p: &mut Parser<'_>, kind: SyntaxKind) -> CompletedMarker {
         self.bomb.defuse();
         let idx = self.pos as usize;
@@ -261,7 +267,8 @@ impl Marker {
         CompletedMarker::new(self.pos, finish_pos, kind)
     }
 
-    /// Abandons the syntax tree node. All its children are attached to its parent instead.
+    /// Abandons the syntax tree node. All its children are attached to its
+    /// parent instead.
     pub(crate) fn abandon(mut self, p: &mut Parser<'_>) {
         self.bomb.defuse();
         let idx = self.pos as usize;
@@ -292,14 +299,17 @@ impl CompletedMarker {
         }
     }
 
-    /// This method allows to create a new node which starts *before* the current one. That is,
-    /// the parser could start node `A`, then complete it, and then after parsing the whole `A`,
-    /// decide that it should have started some node `B` before starting `A`. `precede` allows to
+    /// This method allows to create a new node which starts *before* the
+    /// current one. That is, the parser could start node `A`, then complete
+    /// it, and then after parsing the whole `A`, decide that it should have
+    /// started some node `B` before starting `A`. `precede` allows to
     /// do exactly that. See also docs about `forward_parent` in `Event::Start`.
     ///
-    /// Given completed events `[START, FINISH]` and its corresponding `CompletedMarker(pos: 0, _)`,
-    /// append a new `START` event as `[START, FINISH, NEWSTART]`, then mark `NEWSTART` as `START`'s
-    /// parent with saving its relative distance to `NEWSTART` into `forward_parent(=2` in this case).
+    /// Given completed events `[START, FINISH]` and its corresponding
+    /// `CompletedMarker(pos: 0, _)`, append a new `START` event as `[START,
+    /// FINISH, NEWSTART]`, then mark `NEWSTART` as `START`'s parent with
+    /// saving its relative distance to `NEWSTART` into `forward_parent(=2` in
+    /// this case).
     pub(crate) fn precede(self, p: &mut Parser<'_>) -> Marker {
         let new_pos = p.start();
         let idx = self.start_pos as usize;

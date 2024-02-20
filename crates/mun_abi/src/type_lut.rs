@@ -1,12 +1,11 @@
-use std::ffi::CStr;
-use std::os::raw::c_char;
-use std::{ffi, slice, str};
+use std::{ffi, ffi::CStr, os::raw::c_char, slice, str};
 
 use itertools::izip;
 
 use crate::type_id::TypeId;
 
-/// Represents a lookup table for type information. This is used for runtime linking.
+/// Represents a lookup table for type information. This is used for runtime
+/// linking.
 ///
 /// Type IDs and handles are stored separately for cache efficiency.
 #[repr(C)]
@@ -88,9 +87,10 @@ impl<'a> TypeLut<'a> {
 
     /// Returns a type handle, without doing bounds checking.
     ///
-    /// This is generally not recommended, use with caution! Calling this method with an
-    /// out-of-bounds index is _undefined behavior_ even if the resulting reference is not used.
-    /// For a safe alternative see [`get_ptr`](#method.get_ptr).
+    /// This is generally not recommended, use with caution! Calling this method
+    /// with an out-of-bounds index is _undefined behavior_ even if the
+    /// resulting reference is not used. For a safe alternative see
+    /// [`get_ptr`](#method.get_ptr).
     ///
     /// # Safety
     ///
@@ -108,11 +108,13 @@ impl<'a> TypeLut<'a> {
         }
     }
 
-    /// Returns a mutable reference to a type handle, without doing bounds checking.
+    /// Returns a mutable reference to a type handle, without doing bounds
+    /// checking.
     ///
-    /// This is generally not recommended, use with caution! Calling this method with an
-    /// out-of-bounds index is _undefined behavior_ even if the resulting reference is not used.
-    /// For a safe alternative see [`get_ptr_mut`](#method.get_ptr_mut).
+    /// This is generally not recommended, use with caution! Calling this method
+    /// with an out-of-bounds index is _undefined behavior_ even if the
+    /// resulting reference is not used. For a safe alternative see
+    /// [`get_ptr_mut`](#method.get_ptr_mut).
     ///
     /// # Safety
     ///
@@ -121,8 +123,8 @@ impl<'a> TypeLut<'a> {
         &mut *self.type_handles.offset(idx as isize)
     }
 
-    /// Returns a mutable reference to a type handle at the given index, or `None` if out of
-    /// bounds.
+    /// Returns a mutable reference to a type handle at the given index, or
+    /// `None` if out of bounds.
     pub fn get_type_handle_mut(&mut self, idx: u32) -> Option<&mut *const ffi::c_void> {
         if idx < self.num_entries {
             Some(unsafe { self.get_type_handle_unchecked_mut(idx) })

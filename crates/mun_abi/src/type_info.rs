@@ -1,8 +1,7 @@
 use std::{
     convert::TryInto,
     ffi::CStr,
-    fmt::Debug,
-    fmt::{self, Formatter},
+    fmt::{self, Debug, Formatter},
     os::raw::c_char,
     str,
 };
@@ -11,16 +10,17 @@ use crate::{type_id::TypeId, Guid, StructDefinition};
 
 /// Represents the type declaration for a type that is exported by an assembly.
 ///
-/// When multiple Mun modules reference the same type, only one module exports the type; the module
-/// that contains the type definition. All the other Mun modules reference the type through a
-/// [`TypeId`].
+/// When multiple Mun modules reference the same type, only one module exports
+/// the type; the module that contains the type definition. All the other Mun
+/// modules reference the type through a [`TypeId`].
 ///
-/// The modules that defines the type exports the data to reduce the filesize of the assemblies and
-/// to ensure only one definition exists. When linking all assemblies together the type definitions
-/// from all assemblies are loaded and the information is shared to modules that reference the type.
+/// The modules that defines the type exports the data to reduce the filesize of
+/// the assemblies and to ensure only one definition exists. When linking all
+/// assemblies together the type definitions from all assemblies are loaded and
+/// the information is shared to modules that reference the type.
 ///
-/// TODO: add support for polymorphism, enumerations, type parameters, generic type definitions, and
-///   constructed generic types.
+/// TODO: add support for polymorphism, enumerations, type parameters, generic
+/// type definitions, and   constructed generic types.
 #[repr(C)]
 pub struct TypeDefinition<'a> {
     /// Type name
@@ -61,7 +61,8 @@ impl<'a> serde::Serialize for TypeDefinition<'a> {
     }
 }
 
-/// Contains data specific to a group of types that illicit the same characteristics.
+/// Contains data specific to a group of types that illicit the same
+/// characteristics.
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
@@ -153,12 +154,11 @@ pub trait HasStaticTypeName {
 mod tests {
     use std::ffi::CString;
 
+    use super::TypeDefinitionData;
     use crate::{
         test_utils::{fake_struct_definition, fake_type_definition, FAKE_TYPE_NAME},
         StructMemoryKind,
     };
-
-    use super::TypeDefinitionData;
 
     #[test]
     fn test_type_definition_name() {

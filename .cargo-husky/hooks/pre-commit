@@ -1,0 +1,1 @@
+./scripts/pre-commit.sh

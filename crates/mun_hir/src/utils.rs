@@ -25,7 +25,7 @@ pub mod tests {
             if let Some(file_id) = module.file_id(&db) {
                 let source_file = db.parse(file_id);
                 for err in source_file.errors() {
-                    diags.push(format!("{:?}: {}", err.location(), err));
+                    diags.push(format!("{:?}: {err}", err.location()));
                 }
             }
         }

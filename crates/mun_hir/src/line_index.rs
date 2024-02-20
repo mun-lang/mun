@@ -1,5 +1,4 @@
 use mun_syntax::TextSize;
-
 use rustc_hash::FxHashMap;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -50,8 +49,8 @@ impl LineIndex {
         let mut utf16_lines = FxHashMap::default();
         let mut utf16_chars = Vec::new();
 
-        // Iterate over all the characters in the text and record all the newlines and UTF16
-        // characters.
+        // Iterate over all the characters in the text and record all the newlines and
+        // UTF16 characters.
         let mut newlines = vec![0.into()];
         let mut curr_row = 0.into();
         let mut curr_col = 0.into();
@@ -145,7 +144,8 @@ impl LineIndex {
         self.newlines[line_index as usize].into()
     }
 
-    /// Given a line and column number for utf16 text convert it to the offset in utf8 text.
+    /// Given a line and column number for utf16 text convert it to the offset
+    /// in utf8 text.
     fn utf16_to_utf8_col(&self, line: u32, mut col: u32) -> TextSize {
         if let Some(utf16_chars) = self.utf16_lines.get(&line) {
             for c in utf16_chars {
@@ -162,7 +162,8 @@ impl LineIndex {
         col.into()
     }
 
-    /// Given a line and column number for utf8 text, convert it to the offset in utf16 text.
+    /// Given a line and column number for utf8 text, convert it to the offset
+    /// in utf16 text.
     fn utf8_to_utf16_col(&self, line: u32, col: TextSize) -> usize {
         let mut res: usize = col.into();
         if let Some(utf16_chars) = self.utf16_lines.get(&line) {

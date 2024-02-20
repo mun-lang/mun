@@ -5,9 +5,10 @@ use proc_macro2::Span;
 use quote::quote;
 use syn::{parse_macro_input, Data, DeriveInput, Ident, Index};
 
-/// This procedural macro implements the `AsValue` trait as well as several required other traits.
-/// All of these traits enable creating an `inkwell::values::StructValue` from a generic struct, as
-/// long as all fields of the struct also implement `AsValue`.
+/// This procedural macro implements the `AsValue` trait as well as several
+/// required other traits. All of these traits enable creating an
+/// `inkwell::values::StructValue` from a generic struct, as long as all fields
+/// of the struct also implement `AsValue`.
 #[proc_macro_derive(AsValue)]
 pub fn as_value_derive(input: TokenStream) -> TokenStream {
     // Parse Phase
@@ -24,8 +25,8 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
 
     match derive_input.data {
         Data::Struct(struct_data) => {
-            // Generate a list of functions that return `false` if the struct field does not have an
-            // equivalent constant IR value.
+            // Generate a list of functions that return `false` if the struct field does not
+            // have an equivalent constant IR value.
             let field_has_const_values = struct_data.fields.iter().map(|f| {
                 let ty = &f.ty;
                 quote! {
@@ -86,8 +87,8 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
             let field_padding_values = field_padding_types.clone();
             let field_padding_bytes = field_padding_types.clone();
 
-            // Generate a list of where clauses that ensure that we can cast each field to an
-            // `inkwell::types::BasicTypeEnum`
+            // Generate a list of where clauses that ensure that we can cast each field to
+            // an `inkwell::types::BasicTypeEnum`
             let field_types = struct_data.fields.iter().map(|f| {
                 let ty = &f.ty;
                 quote! {
@@ -95,8 +96,8 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
                 }
             });
 
-            // Generate a list of where clauses that ensure that we can cast each field to an
-            // `inkwell::values::BasicTypeValue`
+            // Generate a list of where clauses that ensure that we can cast each field to
+            // an `inkwell::values::BasicTypeValue`
             let field_types_values = struct_data.fields.iter().enumerate().map(|(idx, f)| {
                 let idx = Index::from(idx);
                 let name = f.ident.as_ref().map_or_else(|| quote! { #idx }, |i| quote! { #i });

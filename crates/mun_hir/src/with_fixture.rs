@@ -1,6 +1,7 @@
+use std::{convert::TryInto, sync::Arc};
+
 pub use crate::fixture::Fixture;
 use crate::{FileId, PackageSet, SourceDatabase, SourceRoot, SourceRootId};
-use std::{convert::TryInto, sync::Arc};
 
 impl<DB: SourceDatabase + Default + 'static> WithFixture for DB {}
 

@@ -1,8 +1,11 @@
-use super::ExprValidator;
-use crate::diagnostics::{DiagnosticSink, PossiblyUninitializedVariable};
-use crate::resolve::{resolver_for_expr, ValueNs};
-use crate::{BinaryOp, Expr, ExprId, PatId, Path, Resolver, Statement};
 use std::collections::HashSet;
+
+use super::ExprValidator;
+use crate::{
+    diagnostics::{DiagnosticSink, PossiblyUninitializedVariable},
+    resolve::{resolver_for_expr, ValueNs},
+    BinaryOp, Expr, ExprId, PatId, Path, Resolver, Statement,
+};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 enum ExprKind {
@@ -16,8 +19,8 @@ impl<'d> ExprValidator<'d> {
     pub(super) fn validate_uninitialized_access(&self, sink: &mut DiagnosticSink<'_>) {
         let mut initialized_patterns = HashSet::new();
 
-        // Add all parameter patterns to the set of initialized patterns (they must have been
-        // initialized)
+        // Add all parameter patterns to the set of initialized patterns (they must have
+        // been initialized)
         for (pat, _) in self.body.params.iter() {
             initialized_patterns.insert(*pat);
         }

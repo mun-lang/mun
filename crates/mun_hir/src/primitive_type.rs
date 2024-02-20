@@ -1,5 +1,6 @@
-use crate::name::{name, Name};
 use std::fmt;
+
+use crate::name::{name, Name};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum Signedness {

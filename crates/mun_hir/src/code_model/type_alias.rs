@@ -1,18 +1,16 @@
 use std::sync::Arc;
 
+use super::Module;
 use crate::{
-    ids::Lookup,
-    ids::TypeAliasId,
+    expr::validator::TypeAliasValidator,
+    has_module::HasModule,
+    ids::{Lookup, TypeAliasId},
+    resolve::HasResolver,
+    ty::lower::LowerTyMap,
     type_ref::{LocalTypeRefId, TypeRefMap, TypeRefSourceMap},
     visibility::RawVisibility,
     DefDatabase, DiagnosticSink, FileId, HasVisibility, HirDatabase, Name, Ty, TyKind, Visibility,
 };
-
-use super::Module;
-use crate::expr::validator::TypeAliasValidator;
-use crate::has_module::HasModule;
-use crate::resolve::HasResolver;
-use crate::ty::lower::LowerTyMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TypeAlias {

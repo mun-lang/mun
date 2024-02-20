@@ -6,20 +6,18 @@ pub(crate) mod src;
 pub(crate) mod r#struct;
 mod type_alias;
 
-use crate::{expr::BodySourceMap, HirDatabase, Name};
 use std::sync::Arc;
 
 pub use self::{
-    function::Function,
+    function::{Function, FunctionData},
     module::{Module, ModuleDef},
     package::Package,
     r#impl::ImplData,
-    r#struct::{Field, Struct, StructKind, StructMemoryKind},
+    r#struct::{Field, Struct, StructData, StructKind, StructMemoryKind},
     src::HasSource,
-    type_alias::TypeAlias,
+    type_alias::{TypeAlias, TypeAliasData},
 };
-
-pub use self::{function::FunctionData, r#struct::StructData, type_alias::TypeAliasData};
+use crate::{expr::BodySourceMap, HirDatabase, Name};
 
 /// The definitions that have a body.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

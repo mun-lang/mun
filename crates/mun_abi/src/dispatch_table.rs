@@ -1,5 +1,6 @@
-use crate::FunctionPrototype;
 use std::{ffi::c_void, slice};
+
+use crate::FunctionPrototype;
 
 /// Represents a function dispatch table. This is used for runtime linking.
 ///
@@ -15,7 +16,8 @@ pub struct DispatchTable<'a> {
 }
 
 impl<'a> DispatchTable<'a> {
-    /// Returns an iterator over pairs of mutable function pointers and signatures.
+    /// Returns an iterator over pairs of mutable function pointers and
+    /// signatures.
     pub fn iter_mut(
         &mut self,
     ) -> impl Iterator<Item = (&mut *const c_void, &FunctionPrototype<'a>)> {
@@ -65,9 +67,10 @@ impl<'a> DispatchTable<'a> {
 
     /// Returns a function pointer, without doing bounds checking.
     ///
-    /// This is generally not recommended, use with caution! Calling this method with an
-    /// out-of-bounds index is _undefined behavior_ even if the resulting reference is not used.
-    /// For a safe alternative see [`get_ptr`](#method.get_ptr).
+    /// This is generally not recommended, use with caution! Calling this method
+    /// with an out-of-bounds index is _undefined behavior_ even if the
+    /// resulting reference is not used. For a safe alternative see
+    /// [`get_ptr`](#method.get_ptr).
     ///
     /// # Safety
     ///
@@ -76,7 +79,8 @@ impl<'a> DispatchTable<'a> {
         *self.fn_ptrs.offset(idx as isize)
     }
 
-    /// Returns a function pointer at the given index, or `None` if out of bounds.
+    /// Returns a function pointer at the given index, or `None` if out of
+    /// bounds.
     pub fn get_ptr(&self, idx: u32) -> Option<*const c_void> {
         if idx < self.num_entries {
             Some(unsafe { self.get_ptr_unchecked(idx) })
@@ -85,11 +89,13 @@ impl<'a> DispatchTable<'a> {
         }
     }
 
-    /// Returns a mutable reference to a function pointer, without doing bounds checking.
+    /// Returns a mutable reference to a function pointer, without doing bounds
+    /// checking.
     ///
-    /// This is generally not recommended, use with caution! Calling this method with an
-    /// out-of-bounds index is _undefined behavior_ even if the resulting reference is not used.
-    /// For a safe alternative see [`get_ptr_mut`](#method.get_ptr_mut).
+    /// This is generally not recommended, use with caution! Calling this method
+    /// with an out-of-bounds index is _undefined behavior_ even if the
+    /// resulting reference is not used. For a safe alternative see
+    /// [`get_ptr_mut`](#method.get_ptr_mut).
     ///
     /// # Safety
     ///
@@ -98,8 +104,8 @@ impl<'a> DispatchTable<'a> {
         &mut *self.fn_ptrs.offset(idx as isize)
     }
 
-    /// Returns a mutable reference to a function pointer at the given index, or `None` if out of
-    /// bounds.
+    /// Returns a mutable reference to a function pointer at the given index, or
+    /// `None` if out of bounds.
     pub fn get_ptr_mut(&mut self, idx: u32) -> Option<&mut *const c_void> {
         if idx < self.num_entries {
             Some(unsafe { self.get_ptr_unchecked_mut(idx) })
@@ -125,9 +131,12 @@ impl<'a> serde::Serialize for DispatchTable<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_utils::{fake_dispatch_table, fake_fn_prototype, FAKE_FN_NAME};
-    use crate::type_id::HasStaticTypeId;
     use std::{ffi::CString, ptr};
+
+    use crate::{
+        test_utils::{fake_dispatch_table, fake_fn_prototype, FAKE_FN_NAME},
+        type_id::HasStaticTypeId,
+    };
 
     #[test]
     fn test_dispatch_table_iter_mut_none() {

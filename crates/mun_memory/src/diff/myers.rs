@@ -7,7 +7,8 @@ pub enum Diff<T> {
     Delete { index: usize, ty: T },
 }
 
-/// Computes the difference in ordering and uniqueness of values between and old and new set.
+/// Computes the difference in ordering and uniqueness of values between and old
+/// and new set.
 pub fn compute_diff<T: Clone + Eq>(old: &[T], new: &[T]) -> Vec<Diff<T>> {
     let mut diff = Vec::new();
     diff_impl(&mut diff, old, new, 0, 0);
@@ -145,7 +146,8 @@ fn diff_impl<T: Clone + Eq>(
     }
 }
 
-/// Calculates the Myer's difference length between an old and new set based on ordering and uniqueness.
+/// Calculates the Myer's difference length between an old and new set based on
+/// ordering and uniqueness.
 pub fn diff_length<T: Eq>(old: &[T], new: &[T]) -> usize {
     let num_old = old.len();
     assert!(

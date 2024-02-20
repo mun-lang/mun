@@ -1,8 +1,9 @@
 #[macro_use]
 mod generated;
 
-pub use self::generated::SyntaxKind;
 use std::fmt;
+
+pub use self::generated::SyntaxKind;
 
 impl fmt::Debug for SyntaxKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

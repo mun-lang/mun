@@ -135,8 +135,8 @@ impl<'a> TextTreeSink<'a> {
     }
 }
 
-/// This method counts the number of preceding trivias that should be attached to the
-/// to node of the given kind.
+/// This method counts the number of preceding trivias that should be attached
+/// to the to node of the given kind.
 fn n_attached_trivias<'a>(
     kind: SyntaxKind,
     trivias: impl Iterator<Item = (SyntaxKind, &'a str)>,

@@ -1,18 +1,19 @@
-use crate::code_model::StructKind;
-use crate::in_file::InFile;
-use crate::{FileId, HirDatabase, IntTy, Name, Ty};
-use mun_syntax::{ast, AstPtr, SmolStr, SyntaxNode, SyntaxNodePtr, TextRange};
 use std::{any::Any, fmt};
+
+use mun_syntax::{ast, AstPtr, SmolStr, SyntaxNode, SyntaxNodePtr, TextRange};
+
+use crate::{code_model::StructKind, in_file::InFile, FileId, HirDatabase, IntTy, Name, Ty};
 
 /// Diagnostic defines `mun_hir` API for errors and warnings.
 ///
-/// It is used as a `dyn` object, which you can downcast to concrete diagnostics. [`DiagnosticSink`]
-/// are structured, meaning that they include rich information which can be used by IDE to create
-/// fixes.
+/// It is used as a `dyn` object, which you can downcast to concrete
+/// diagnostics. [`DiagnosticSink`] are structured, meaning that they include
+/// rich information which can be used by IDE to create fixes.
 ///
-/// Internally, various subsystems of HIR produce diagnostics specific to a subsystem (typically,
-/// an `enum`), which are safe to store in salsa but do not include source locations. Such internal
-/// diagnostics are transformed into an instance of `Diagnostic` on demand.
+/// Internally, various subsystems of HIR produce diagnostics specific to a
+/// subsystem (typically, an `enum`), which are safe to store in salsa but do
+/// not include source locations. Such internal diagnostics are transformed into
+/// an instance of `Diagnostic` on demand.
 pub trait Diagnostic: Any + Send + Sync + fmt::Debug + 'static {
     fn message(&self) -> String;
     fn source(&self) -> InFile<SyntaxNodePtr>;
@@ -679,7 +680,8 @@ impl Diagnostic for LiteralOutOfRange {
     }
 }
 
-/// An error that is emitted for a literal with an invalid suffix (e.g. `123_foo`)
+/// An error that is emitted for a literal with an invalid suffix (e.g.
+/// `123_foo`)
 #[derive(Debug)]
 pub struct InvalidLiteralSuffix {
     pub literal: InFile<AstPtr<ast::Literal>>,
@@ -700,8 +702,8 @@ impl Diagnostic for InvalidLiteralSuffix {
     }
 }
 
-/// An error that is emitted for a literal with a floating point suffix with a non 10 base (e.g.
-/// `0x123_f32`)
+/// An error that is emitted for a literal with a floating point suffix with a
+/// non 10 base (e.g. `0x123_f32`)
 #[derive(Debug)]
 pub struct InvalidFloatingPointLiteral {
     pub literal: InFile<AstPtr<ast::Literal>>,

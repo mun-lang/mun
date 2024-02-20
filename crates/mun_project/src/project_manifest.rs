@@ -1,8 +1,10 @@
-use crate::MANIFEST_FILENAME;
+use std::{convert::TryFrom, fs::read_dir, io};
+
 use anyhow::bail;
 use mun_paths::{AbsPath, AbsPathBuf};
 use rustc_hash::FxHashSet;
-use std::{convert::TryFrom, fs::read_dir, io};
+
+use crate::MANIFEST_FILENAME;
 
 /// A wrapper around a path to a mun project
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]

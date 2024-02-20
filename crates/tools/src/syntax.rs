@@ -1,10 +1,10 @@
-use crate::{project_root, reformat, update};
+use std::{collections::HashMap, fs, path::Path};
+
 use anyhow::anyhow;
 use heck::{ToShoutySnakeCase, ToSnakeCase, ToUpperCamelCase};
-use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
 use tera::{Context, Value};
+
+use crate::{project_root, reformat, update};
 
 pub const GRAMMAR: &str = "crates/mun_syntax/src/grammar.ron";
 pub const SYNTAX_KINDS: &str = "crates/mun_syntax/src/syntax_kind/generated.rs.tera";
@@ -45,8 +45,8 @@ fn generate_from_template(template: &Path, src: &Path, mode: Mode) -> anyhow::Re
     update(&tgt, &content, mode)
 }
 
-/// Creates a new `tera::Tera` instance with some default filters and functions used in our
-/// templates.
+/// Creates a new `tera::Tera` instance with some default filters and functions
+/// used in our templates.
 fn create_tera() -> tera::Tera {
     /// Convert value to CamelCase
     fn camel(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {

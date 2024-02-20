@@ -1,5 +1,4 @@
 use mun_runtime::{ArgumentReflection, Marshal, ReturnTypeReflection, StructRef};
-
 use mun_test::CompileAndRunTestDriver;
 
 #[macro_use]
@@ -271,7 +270,8 @@ fn true_is_true() {
 //         );
 //
 //         if let Some(s) = arg_type.as_struct() {
-//             let field_names = unsafe { slice::from_raw_parts(s.field_names, s.num_fields()) };
+//             let field_names = unsafe { slice::from_raw_parts(s.field_names,
+// s.num_fields()) };
 //
 //             for field_name in field_names {
 //                 assert_eq!(
@@ -499,8 +499,8 @@ fn marshal_struct() {
         .unwrap();
     test_struct(&mut qux, c1, c2);
 
-    // Verify the dispatch table works when a marshallable wrapper function exists alongside the
-    // original function.
+    // Verify the dispatch table works when a marshallable wrapper function exists
+    // alongside the original function.
     let mut baz2: StructRef<'_> = driver
         .runtime
         .invoke("baz_new_transitive", (int_data.0, bool_data.0))

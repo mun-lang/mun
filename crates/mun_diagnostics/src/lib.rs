@@ -1,9 +1,11 @@
-//! This crate provides in-depth human-readable diagnostic information and fixes for compiler
-//! errors that can be shared between the compiler and the language server.
+//! This crate provides in-depth human-readable diagnostic information and fixes
+//! for compiler errors that can be shared between the compiler and the language
+//! server.
 //!
-//! The processing of diagnostics into human-readable is separated from the machine-readable
-//! diagnostics in for instance the HIR crate for performance reasons. This enables lazily querying
-//! the system for more information only when required.
+//! The processing of diagnostics into human-readable is separated from the
+//! machine-readable diagnostics in for instance the HIR crate for performance
+//! reasons. This enables lazily querying the system for more information only
+//! when required.
 
 mod hir;
 
@@ -38,10 +40,12 @@ pub trait Diagnostic {
     /// Returns the location of this diagnostic.
     fn range(&self) -> TextRange;
 
-    /// Returns a source annotation that acts as the primary annotation for this Diagnostic.
+    /// Returns a source annotation that acts as the primary annotation for this
+    /// Diagnostic.
     fn primary_annotation(&self) -> Option<SourceAnnotation>;
 
-    /// Returns secondary source annotation that are shown as additional references.
+    /// Returns secondary source annotation that are shown as additional
+    /// references.
     fn secondary_annotations(&self) -> Vec<SecondaryAnnotation> {
         Vec::new()
     }
@@ -54,16 +58,16 @@ pub trait Diagnostic {
 
 /// When implemented enables requesting `Diagnostic`s for the implementer.
 pub trait DiagnosticFor {
-    /// Calls the specified function `f` with an instance of a [`Diagnostic`]. This can be used
-    /// to perform lazy diagnostic evaluation.
+    /// Calls the specified function `f` with an instance of a [`Diagnostic`].
+    /// This can be used to perform lazy diagnostic evaluation.
     fn with_diagnostic<R, F: FnMut(&dyn Diagnostic) -> R>(&self, f: F) -> R;
 }
 
-/// Like [`DiagnosticFor`], enables requesting `Diagnostic`s for the implementer but only if passed
-/// a required object.
+/// Like [`DiagnosticFor`], enables requesting `Diagnostic`s for the implementer
+/// but only if passed a required object.
 pub trait DiagnosticForWith<With> {
-    /// Calls the specified function `f` with an instance of a [`Diagnostic`]. This can be used
-    /// to perform lazy diagnostic evaluation.
+    /// Calls the specified function `f` with an instance of a [`Diagnostic`].
+    /// This can be used to perform lazy diagnostic evaluation.
     fn with_diagnostic<R, F: FnMut(&dyn Diagnostic) -> R>(&self, with: &With, f: F) -> R;
 }
 

@@ -1,24 +1,24 @@
-use super::Module;
-use crate::{
-    arena::{Arena, Idx},
-    ids::{Lookup, StructId},
-    name::AsName,
-    name_resolution::Namespace,
-    ty::lower::LowerTyMap,
-    type_ref::{LocalTypeRefId, TypeRefMap, TypeRefSourceMap},
-    DefDatabase, DiagnosticSink, FileId, HasVisibility, HirDatabase, Name, Ty, Visibility,
-};
+use std::{fmt, iter::once, sync::Arc};
+
+pub use ast::StructMemoryKind;
 use mun_syntax::{
     ast,
     ast::{NameOwner, TypeAscriptionOwner, VisibilityOwner},
 };
-use std::{fmt, sync::Arc};
 
-use crate::has_module::HasModule;
-use crate::resolve::HasResolver;
-use crate::visibility::RawVisibility;
-pub use ast::StructMemoryKind;
-use std::iter::once;
+use super::Module;
+use crate::{
+    arena::{Arena, Idx},
+    has_module::HasModule,
+    ids::{Lookup, StructId},
+    name::AsName,
+    name_resolution::Namespace,
+    resolve::HasResolver,
+    ty::lower::LowerTyMap,
+    type_ref::{LocalTypeRefId, TypeRefMap, TypeRefSourceMap},
+    visibility::RawVisibility,
+    DefDatabase, DiagnosticSink, FileId, HasVisibility, HirDatabase, Name, Ty, Visibility,
+};
 
 pub(crate) mod validator;
 
@@ -78,12 +78,14 @@ impl Struct {
         db.struct_data(self.id)
     }
 
-    /// Returns the name of the struct non including any module specifiers (e.g: `Bar`).
+    /// Returns the name of the struct non including any module specifiers (e.g:
+    /// `Bar`).
     pub fn name(self, db: &dyn HirDatabase) -> Name {
         self.data(db.upcast()).name.clone()
     }
 
-    /// Returns the full name of the struct including all module specifiers (e.g: `foo::Bar`).
+    /// Returns the full name of the struct including all module specifiers
+    /// (e.g: `foo::Bar`).
     pub fn full_name(self, db: &dyn HirDatabase) -> String {
         itertools::Itertools::intersperse(
             self.module(db)

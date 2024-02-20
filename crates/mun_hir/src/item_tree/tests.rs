@@ -1,5 +1,6 @@
-use crate::{mock::MockDatabase, with_fixture::WithFixture, DefDatabase, DiagnosticSink, Upcast};
 use std::fmt;
+
+use crate::{mock::MockDatabase, with_fixture::WithFixture, DefDatabase, DiagnosticSink, Upcast};
 
 fn print_item_tree(text: &str) -> Result<String, fmt::Error> {
     let (db, file_id) = MockDatabase::with_single_file(text);
@@ -10,7 +11,7 @@ fn print_item_tree(text: &str) -> Result<String, fmt::Error> {
             "\n{:?}: {}",
             diag.highlight_range(),
             diag.message()
-        ))
+        ));
     });
 
     item_tree

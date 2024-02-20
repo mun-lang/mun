@@ -1,45 +1,49 @@
-//! Type information in Mun is stored globally. This allows type information to be stored easily.
+//! Type information in Mun is stored globally. This allows type information to
+//! be stored easily.
 //!
-//! A type is referred to with [`Type`]. A `Type` holds a reference to the underlying data which is
-//! managed by the runtime. `Type`s can be freely created through a [`StructTypeBuilder`], via
-//! [`HasStaticType`] or by querying other types ([`Type::pointer_type`] for instance). Cloning a
+//! A type is referred to with [`Type`]. A `Type` holds a reference to the
+//! underlying data which is managed by the runtime. `Type`s can be freely
+//! created through a [`StructTypeBuilder`], via [`HasStaticType`] or by
+//! querying other types ([`Type::pointer_type`] for instance). Cloning a
 //! [`Type`] is a cheap operation.
 //!
-//! Type information is stored globally on the heap and is freed when no longer referenced by a
-//! `Type`. However, since `Type`s can reference each other a garbage collection algorithm is used
-//! to clean up unreferenced type information. See [`Type::collect_unreferenced_types()`].
+//! Type information is stored globally on the heap and is freed when no longer
+//! referenced by a `Type`. However, since `Type`s can reference each other a
+//! garbage collection algorithm is used to clean up unreferenced type
+//! information. See [`Type::collect_unreferenced_types()`].
 
 pub mod ffi;
 
-use std::ffi::c_void;
 use std::{
     alloc::Layout,
     borrow::Cow,
     collections::VecDeque,
-    fmt::{self, Formatter},
-    fmt::{Debug, Display},
+    ffi::c_void,
+    fmt::{self, Debug, Display, Formatter},
     hash::{Hash, Hasher},
     ops::Deref,
     ptr::NonNull,
-    sync::{atomic::AtomicUsize, atomic::Ordering, Arc, Once},
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc, Once,
+    },
 };
 
 use itertools::izip;
+use mun_abi::{self as abi, static_type_map::StaticTypeMap};
 use once_cell::sync::Lazy;
 use parking_lot::{lock_api::MutexGuard, Mutex, RawMutex, RwLock};
-
-use mun_abi::{self as abi, static_type_map::StaticTypeMap};
 
 use crate::{type_table::TypeTable, TryFromAbiError};
 
 static GLOBAL_TYPE_STORE: Lazy<Arc<TypeDataStore>> = Lazy::new(Default::default);
 
-/// A type store holds a list of interconnected [`TypeData`]s. Type information can contain cycles
-/// so the `TypeData`s refer to each other via pointers. The `TypeDataStore` owns the heap allocated
-/// `TypeData` instances.
+/// A type store holds a list of interconnected [`TypeData`]s. Type information
+/// can contain cycles so the `TypeData`s refer to each other via pointers. The
+/// `TypeDataStore` owns the heap allocated `TypeData` instances.
 ///
-/// By calling [`TypeDataStore::collect_garbage`] types that are no longer referenced by [`Type`]s
-/// are removed.
+/// By calling [`TypeDataStore::collect_garbage`] types that are no longer
+/// referenced by [`Type`]s are removed.
 #[derive(Default)]
 struct TypeDataStore {
     types: Mutex<VecDeque<Box<TypeData>>>,
@@ -52,9 +56,9 @@ pub struct TypeCollectionStats {
     pub remaining_types: usize,
 }
 
-/// A status stored with every [`TypeData`] which stores the current usage of the `TypeData`.
-/// Initially, types are marked as `Initializing` which indicates that they should not 'yet'
-/// participate in garbage-collection.
+/// A status stored with every [`TypeData`] which stores the current usage of
+/// the `TypeData`. Initially, types are marked as `Initializing` which
+/// indicates that they should not 'yet' participate in garbage-collection.
 #[derive(Eq, PartialEq)]
 enum Mark {
     Used,
@@ -115,9 +119,10 @@ impl TypeDataStore {
                 TypeDataKind::Primitive(_) | TypeDataKind::Uninitialized => {}
             }
 
-            // Iterate over the indirections. This is an interesting case safety wise, because at
-            // this very moment another thread might be accessing this as well. However this is safe
-            // because we use `allocate_into` to allocate the values.
+            // Iterate over the indirections. This is an interesting case safety wise,
+            // because at this very moment another thread might be accessing
+            // this as well. However this is safe because we use `allocate_into`
+            // to allocate the values.
             for indirection in [
                 &ty.mutable_pointer_type,
                 &ty.immutable_pointer_type,
@@ -153,8 +158,9 @@ impl TypeDataStore {
         }
     }
 
-    /// Tries to convert multiple [`abi::TypeDefinition`] to internal type representations. If
-    /// the conversion succeeds an updated [`TypeTable`] is returned
+    /// Tries to convert multiple [`abi::TypeDefinition`] to internal type
+    /// representations. If the conversion succeeds an updated [`TypeTable`]
+    /// is returned
     pub fn try_from_abi<'abi>(
         self: &Arc<Self>,
         definitions: impl Iterator<Item = &'abi abi::TypeDefinition<'abi>>,
@@ -183,8 +189,8 @@ impl TypeDataStore {
 
         // Next, initialize the types.
         for (type_def, mut ty) in definition_and_type {
-            // Safety: we are modifying the inner data of the type here. At this point this is safe
-            // because the type cannot be used by anything else yet.
+            // Safety: we are modifying the inner data of the type here. At this point this
+            // is safe because the type cannot be used by anything else yet.
             let inner_ty = unsafe { ty.inner.as_mut() };
             let type_data = match &type_def.data {
                 abi::TypeDefinitionData::Struct(s) => {
@@ -193,9 +199,10 @@ impl TypeDataStore {
             };
             inner_ty.data = type_data;
 
-            // Mark the entry as used. This should be safe because the `type_table` also still holds
-            // a strong reference to the type. After that type is potentially dropped (after this
-            // function returns) all values has already been initialized.
+            // Mark the entry as used. This should be safe because the `type_table` also
+            // still holds a strong reference to the type. After that type is
+            // potentially dropped (after this function returns) all values has
+            // already been initialized.
             inner_ty.mark = Mark::Used;
         }
 
@@ -220,16 +227,17 @@ impl TypeDataStore {
             mark: Mark::Initializing,
         }));
 
-        // Safety: get a TypeInner with a 'static lifetime. This is safe because of the nature of
-        // `Type`. The `Type` struct ensures that the pointed to value is never destructed as long
-        // as it lives.
+        // Safety: get a TypeInner with a 'static lifetime. This is safe because of the
+        // nature of `Type`. The `Type` struct ensures that the pointed to value
+        // is never destructed as long as it lives.
         let entry = unsafe {
             NonNull::new_unchecked(
                 &**entries.back().expect("didnt insert") as *const TypeData as *mut _
             )
         };
 
-        // Safety: this operation is safe, because we currently own the instance and the lock.
+        // Safety: this operation is safe, because we currently own the instance and the
+        // lock.
         unsafe { Type::new_unchecked(entry, self.clone()) }
     }
 
@@ -258,19 +266,21 @@ impl TypeDataStore {
     }
 }
 
-/// A reference to internally stored type information. A `Type` can be used to query information,
-/// construct other types, or store type information for later use.
+/// A reference to internally stored type information. A `Type` can be used to
+/// query information, construct other types, or store type information for
+/// later use.
 pub struct Type {
     inner: NonNull<TypeData>,
 
-    /// A [`Type`] holds a strong reference to its data store. This ensure that the data is never
-    /// deleted before this instance is destroyed.
+    /// A [`Type`] holds a strong reference to its data store. This ensure that
+    /// the data is never deleted before this instance is destroyed.
     ///
-    /// This has to be here because we store [`Type`] instances globally both in Rust and
-    /// potentially als over FFI. Since the static destruction order is not completely guarenteed
-    /// the store might be deallocated before the last type is deallocated. Keeping a reference to
-    /// the store in this instance ensures that the data is kept alive until the last `Type` is
-    /// dropped.
+    /// This has to be here because we store [`Type`] instances globally both in
+    /// Rust and potentially als over FFI. Since the static destruction
+    /// order is not completely guarenteed the store might be deallocated
+    /// before the last type is deallocated. Keeping a reference to
+    /// the store in this instance ensures that the data is kept alive until the
+    /// last `Type` is dropped.
     store: Arc<TypeDataStore>,
 }
 
@@ -279,8 +289,8 @@ impl Type {
     ///
     /// # Safety
     ///
-    /// The pointer pointed to by `inner` might be invalid, in which case this method will cause
-    /// undefined behavior.
+    /// The pointer pointed to by `inner` might be invalid, in which case this
+    /// method will cause undefined behavior.
     unsafe fn new_unchecked(mut inner: NonNull<TypeData>, store: Arc<TypeDataStore>) -> Self {
         // Increment the external reference count
         inner
@@ -347,7 +357,8 @@ impl Hash for Type {
     }
 }
 
-/// Stores type information for a particular type as well as references to related types.
+/// Stores type information for a particular type as well as references to
+/// related types.
 pub struct TypeData {
     /// Type name
     name: String,
@@ -358,11 +369,11 @@ pub struct TypeData {
     /// Type group
     data: TypeDataKind,
 
-    /// Holds the number of external (non-cyclic) references. Basically the number of [`Type`]
-    /// instances pointing to this instance.
+    /// Holds the number of external (non-cyclic) references. Basically the
+    /// number of [`Type`] instances pointing to this instance.
     ///
-    /// Note that if this ever reaches zero is doesn't mean it's no longer used because it can still
-    /// be referenced by other types.
+    /// Note that if this ever reaches zero is doesn't mean it's no longer used
+    /// because it can still be referenced by other types.
     external_references: AtomicUsize,
 
     /// The type of an immutable pointer to this type
@@ -425,9 +436,9 @@ impl TypeData {
             };
         }
 
-        // We store the reference to the array type in the current type. After which we mark the
-        // type as used. This ensures that the garbage collector never removes the type from under
-        // our noses.
+        // We store the reference to the array type in the current type. After which we
+        // mark the type as used. This ensures that the garbage collector never
+        // removes the type from under our noses.
         *write_lock = Some(ty.inner);
         inner.mark = Mark::Used;
 
@@ -475,9 +486,9 @@ impl TypeData {
             };
         }
 
-        // We store the reference to the array type in the current type. After which we mark the
-        // type as used. This ensures that the garbage collector never removes the type from under
-        // our noses.
+        // We store the reference to the array type in the current type. After which we
+        // mark the type as used. This ensures that the garbage collector never
+        // removes the type from under our noses.
         *write_lock = Some(ty.inner);
         inner.mark = Mark::Used;
 
@@ -496,7 +507,8 @@ impl Eq for TypeData {}
 unsafe impl Send for TypeData {}
 unsafe impl Sync for TypeData {}
 
-/// A linked version of [`mun_abi::TypeInfoData`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
+/// A linked version of [`mun_abi::TypeInfoData`] that has resolved all
+/// occurrences of `TypeId` with `TypeInfo`.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 enum TypeDataKind {
     /// Primitive types (i.e. `()`, `bool`, `float`, `int`, etc.)
@@ -507,8 +519,9 @@ enum TypeDataKind {
     Pointer(PointerData),
     /// An array
     Array(ArrayData),
-    /// Indicates that the type has been allocated but it has not yet been initialized,
-    /// this indicates that it still needs to be properly initialized.
+    /// Indicates that the type has been allocated but it has not yet been
+    /// initialized, this indicates that it still needs to be properly
+    /// initialized.
     Uninitialized,
 }
 
@@ -524,7 +537,8 @@ pub enum TypeKind<'t> {
     Array(ArrayType<'t>),
 }
 
-/// A linked version of [`mun_abi::StructInfo`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
+/// A linked version of [`mun_abi::StructInfo`] that has resolved all
+/// occurrences of `TypeId` with `TypeInfo`.
 #[derive(Clone, Debug)]
 struct StructData {
     /// The unique identifier of this struct
@@ -557,8 +571,8 @@ impl<'t> StructType<'t> {
         self.inner.memory_kind
     }
 
-    /// Returns true if this struct is a value struct. Value structs are passed by value and are not
-    /// allocated by the garbage collector.
+    /// Returns true if this struct is a value struct. Value structs are passed
+    /// by value and are not allocated by the garbage collector.
     pub fn is_value_struct(&self) -> bool {
         self.memory_kind() == abi::StructMemoryKind::Value
     }
@@ -603,7 +617,8 @@ impl<'t> Fields<'t> {
         self.inner.fields.len()
     }
 
-    /// Returns the field at the given index, or `None` if `index` exceeds the number of fields.
+    /// Returns the field at the given index, or `None` if `index` exceeds the
+    /// number of fields.
     pub fn get(&self, index: usize) -> Option<Field<'t>> {
         self.inner.fields.get(index).map(|field| Field {
             inner: field,
@@ -611,7 +626,8 @@ impl<'t> Fields<'t> {
         })
     }
 
-    /// Returns the field with the given name, or `None` if no such field exists.
+    /// Returns the field with the given name, or `None` if no such field
+    /// exists.
     pub fn find_by_name(&self, name: impl AsRef<str>) -> Option<Field<'t>> {
         let field_name = name.as_ref();
         self.iter().find(|field| field.name() == field_name)
@@ -654,7 +670,8 @@ impl<'t> Iterator for FieldsIterator<'t> {
     }
 }
 
-/// A linked version of [`mun_abi::PointerInfo`] that has resolved all occurrences of `TypeId` with `TypeInfo`.
+/// A linked version of [`mun_abi::PointerInfo`] that has resolved all
+/// occurrences of `TypeId` with `TypeInfo`.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 struct PointerData {
     /// The type to which is pointed
@@ -765,8 +782,8 @@ impl Hash for TypeData {
 }
 
 impl Type {
-    /// Collects all data related to types that are no longer referenced by a [`Type`]. Returns
-    /// the number of types that were removed.
+    /// Collects all data related to types that are no longer referenced by a
+    /// [`Type`]. Returns the number of types that were removed.
     pub fn collect_unreferenced_type_data() -> TypeCollectionStats {
         GLOBAL_TYPE_STORE.collect_garbage()
     }
@@ -801,8 +818,8 @@ impl Type {
 
     /// Returns a reference to the [`TypeInner`]
     fn inner(&self) -> &TypeData {
-        // Safety: taking the reference is always ok because the garbage collector ensures that as
-        // long as self (Type) exists the inner stays alive.
+        // Safety: taking the reference is always ok because the garbage collector
+        // ensures that as long as self (Type) exists the inner stays alive.
         unsafe { self.inner.as_ref() }
     }
 
@@ -811,8 +828,8 @@ impl Type {
         self.inner().name.as_str()
     }
 
-    /// Returns the memory layout of the data of the type. This is the layout of the memory when
-    /// stored on the stack or in the heap.
+    /// Returns the memory layout of the data of the type. This is the layout of
+    /// the memory when stored on the stack or in the heap.
     pub fn value_layout(&self) -> Layout {
         self.inner().layout
     }
@@ -827,8 +844,9 @@ impl Type {
         }
     }
 
-    /// Returns true if the type is a reference type. Variables of reference types store references
-    /// to their data (objects), while variables of value types directly contain their data.
+    /// Returns true if the type is a reference type. Variables of reference
+    /// types store references to their data (objects), while variables of
+    /// value types directly contain their data.
     pub fn is_reference_type(&self) -> bool {
         match self.kind() {
             TypeKind::Primitive(_) | TypeKind::Pointer(_) => false,
@@ -837,8 +855,9 @@ impl Type {
         }
     }
 
-    /// Returns true if the type is a value type. Variables of reference types store references to
-    /// their data (objects), while variables of value types directly contain their data.
+    /// Returns true if the type is a value type. Variables of reference types
+    /// store references to their data (objects), while variables of value
+    /// types directly contain their data.
     pub fn is_value_type(&self) -> bool {
         match self.kind() {
             TypeKind::Primitive(_) | TypeKind::Pointer(_) => true,
@@ -847,7 +866,8 @@ impl Type {
         }
     }
 
-    /// Returns true if this instance represents the `TypeInfo` of the given type.
+    /// Returns true if this instance represents the `TypeInfo` of the given
+    /// type.
     ///
     /// ```rust
     /// # use mun_memory::HasStaticType;
@@ -900,8 +920,8 @@ impl Type {
         }
     }
 
-    /// Returns true if this type is a concrete type. This is the case for any type that doesn't
-    /// refer to another type like a pointer.
+    /// Returns true if this type is a concrete type. This is the case for any
+    /// type that doesn't refer to another type like a pointer.
     pub fn is_concrete(&self) -> bool {
         match self.kind() {
             TypeKind::Primitive(_) | TypeKind::Struct(_) => true,
@@ -909,7 +929,8 @@ impl Type {
         }
     }
 
-    /// Returns the GUID associated with this instance if this instance represents a concrete type.
+    /// Returns the GUID associated with this instance if this instance
+    /// represents a concrete type.
     pub fn as_concrete(&self) -> Option<&abi::Guid> {
         match self.kind() {
             TypeKind::Primitive(g) => Some(g),
@@ -945,8 +966,9 @@ impl Type {
         }
     }
 
-    /// Tries to convert multiple [`abi::TypeDefinition`] to internal type representations. If
-    /// the conversion succeeds an updated [`TypeTable`] is returned.
+    /// Tries to convert multiple [`abi::TypeDefinition`] to internal type
+    /// representations. If the conversion succeeds an updated [`TypeTable`]
+    /// is returned.
     pub fn try_from_abi<'abi>(
         type_info: impl IntoIterator<Item = &'abi abi::TypeDefinition<'abi>>,
         type_table: TypeTable,
@@ -966,29 +988,34 @@ impl Type {
 
     /// Consumes the `Type`, returning a wrapped raw pointer.
     ///
-    /// After calling this function, the caller is responsible for the memory previously managed by
-    /// the `Type`. The easiest way to do this is to convert the raw pointer back into a `Type` with
-    /// the [`Type::from_raw`] function, allowing the `Type` destructor to perform the cleanup.
+    /// After calling this function, the caller is responsible for the memory
+    /// previously managed by the `Type`. The easiest way to do this is to
+    /// convert the raw pointer back into a `Type` with
+    /// the [`Type::from_raw`] function, allowing the `Type` destructor to
+    /// perform the cleanup.
     pub fn into_raw(ty: Type) -> *const std::ffi::c_void {
         ty.inner.as_ptr().cast()
     }
 
     /// Constructs a box from a raw pointer.
     ///
-    /// After calling this function, the raw pointer is owned by the resulting `Type`. Specifically,
-    /// the `Type` destructor will ensure the memory previously retained by the `raw` will be
-    /// properly cleaned up. For this to be safe, the passed in `raw` pointer must have been
+    /// After calling this function, the raw pointer is owned by the resulting
+    /// `Type`. Specifically, the `Type` destructor will ensure the memory
+    /// previously retained by the `raw` will be properly cleaned up. For
+    /// this to be safe, the passed in `raw` pointer must have been
     /// previously returned by [`Type::into_raw`].
     ///
-    /// This function must also not be called as part of static deinitialization as that may cause
-    /// undefined behavior in the underlying implementation. Therefor passing the raw pointer over
-    /// FFI might not be safe. Instead, wrap the `Type` in an `Arc` or a `Box` and use that on the
-    /// FFI boundary.
+    /// This function must also not be called as part of static deinitialization
+    /// as that may cause undefined behavior in the underlying
+    /// implementation. Therefor passing the raw pointer over FFI might not
+    /// be safe. Instead, wrap the `Type` in an `Arc` or a `Box` and use that on
+    /// the FFI boundary.
     ///
     /// # Safety
     ///
-    /// This function is unsafe because improper use may lead to memory problems. For example, a
-    /// double-free may occur if the function is called twice on the same raw pointer.
+    /// This function is unsafe because improper use may lead to memory
+    /// problems. For example, a double-free may occur if the function is
+    /// called twice on the same raw pointer.
     pub unsafe fn from_raw(raw: *const std::ffi::c_void) -> Type {
         Type {
             inner: NonNull::new(raw as *mut _).expect("invalid raw pointer"),
@@ -1157,7 +1184,8 @@ impl StructTypeBuilder {
     }
 }
 
-/// Constructs a string that unique identifies a struct with the given name and fields.
+/// Constructs a string that unique identifies a struct with the given name and
+/// fields.
 fn build_struct_guid_string<'t, N: AsRef<str> + 't>(
     name: &str,
     fields: impl Iterator<Item = (N, Cow<'t, Type>, usize)>,

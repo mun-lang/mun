@@ -1,14 +1,15 @@
-use std::sync::mpsc::channel;
-use std::time::Duration;
+use std::{
+    io::stderr,
+    path::Path,
+    sync::{mpsc::channel, Arc},
+    time::Duration,
+};
 
 use mun_compiler::{compute_source_relative_path, is_source_file, Config, DisplayColor, Driver};
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 
-use std::io::stderr;
-use std::path::Path;
-use std::sync::Arc;
-
-/// Compiles and watches the package at the specified path. Recompiles changes that occur.
+/// Compiles and watches the package at the specified path. Recompiles changes
+/// that occur.
 pub fn compile_and_watch_manifest(
     manifest_path: &Path,
     config: Config,
@@ -66,17 +67,20 @@ pub fn compile_and_watch_manifest(
                     let relative_path = compute_source_relative_path(&source_directory, path)?;
                     log::info!("Removing {}", relative_path);
                     // TODO: Remove assembly files if there are no files referencing it.
-                    // let assembly_path = driver.assembly_output_path(driver.get_file_id_for_path(&relative_path).expect("cannot remove a file that was not part of the compilation in the first place"));
-                    // if assembly_path.is_file() {
+                    // let assembly_path =
+                    // driver.assembly_output_path(driver.get_file_id_for_path(&relative_path).
+                    // expect("cannot remove a file that was not part of the compilation in the
+                    // first place")); if assembly_path.is_file() {
                     //     std::fs::remove_file(assembly_path)?;
                     // }
                     driver.remove_file(relative_path);
                     driver.emit_diagnostics(&mut stderr(), display_color)?;
                 }
                 Rename(ref from, ref to) => {
-                    // Renaming is done by changing the relative path of the original source file but
-                    // not modifying any text. This ensures that most of the cache for the renamed file
-                    // stays alive. This is effectively a rename of the file_id in the database.
+                    // Renaming is done by changing the relative path of the original source file
+                    // but not modifying any text. This ensures that most of the
+                    // cache for the renamed file stays alive. This is
+                    // effectively a rename of the file_id in the database.
                     let from_relative_path = compute_source_relative_path(&source_directory, from)?;
                     let to_relative_path = compute_source_relative_path(&source_directory, to)?;
 

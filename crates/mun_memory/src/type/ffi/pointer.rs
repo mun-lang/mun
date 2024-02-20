@@ -2,14 +2,14 @@ use std::{ffi::c_void, mem::ManuallyDrop, ops::Deref, sync::Arc};
 
 use mun_capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
 
-use crate::r#type::{PointerData, Type as RustType, TypeDataStore};
-
 use super::Type;
+use crate::r#type::{PointerData, Type as RustType, TypeDataStore};
 
 /// Additional information of a pointer [`Type`].
 ///
-/// Ownership of this type lies with the [`Type`] that created this instance. As long as the
-/// original type is not released through [`mun_type_release`] this type stays alive.
+/// Ownership of this type lies with the [`Type`] that created this instance. As
+/// long as the original type is not released through [`mun_type_release`] this
+/// type stays alive.
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct PointerInfo(pub(super) *const c_void, pub(super) *const c_void);
@@ -55,13 +55,13 @@ impl PointerInfo {
     }
 }
 
-/// Returns the type that this instance points to. Ownership is transferred if this function returns
-/// successfully.
+/// Returns the type that this instance points to. Ownership is transferred if
+/// this function returns successfully.
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `PointerType` has been deallocated
-/// by a previous call to [`mun_type_release`].
+/// This function results in undefined behavior if the passed in `PointerType`
+/// has been deallocated by a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_pointer_type_pointee(
     ty: PointerInfo,
@@ -82,8 +82,8 @@ pub unsafe extern "C" fn mun_pointer_type_pointee(
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `PointerType` has been deallocated
-/// by a previous call to [`mun_type_release`].
+/// This function results in undefined behavior if the passed in `PointerType`
+/// has been deallocated by a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_pointer_is_mutable(
     ty: PointerInfo,
@@ -99,8 +99,7 @@ pub unsafe extern "C" fn mun_pointer_is_mutable(
 
 #[cfg(test)]
 mod test {
-    use std::mem::MaybeUninit;
-    use std::ptr;
+    use std::{mem::MaybeUninit, ptr};
 
     use mun_capi_utils::{assert_error_snapshot, assert_getter1, assert_getter2};
 

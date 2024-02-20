@@ -1,5 +1,6 @@
-use crate::from_lsp;
 use mun_hir::line_index::LineIndex;
+
+use crate::from_lsp;
 
 /// Given a set of text document changes apply them to the given string.
 pub(crate) fn apply_document_changes(
@@ -20,13 +21,14 @@ pub(crate) fn apply_document_changes(
         }
     }
 
-    // The changes are specified with ranges where they apply. These ranges are given as line-column
-    // pairs. We can compute the offset in the text using a `LineIndex` however, changes to the text
-    // may invalidate this too.
-    // As a simple optimization we keep track of the lines that are possibly invalid in the
-    // LineIndex based on where we insert new text. If a changes is within the invalid range we
-    // recompute the LineIndex. Some clients (e.g. Code) sort the ranges in reverse which should
-    // ensure that we almost never invalidate the LineIndex.
+    // The changes are specified with ranges where they apply. These ranges are
+    // given as line-column pairs. We can compute the offset in the text using a
+    // `LineIndex` however, changes to the text may invalidate this too.
+    // As a simple optimization we keep track of the lines that are possibly invalid
+    // in the LineIndex based on where we insert new text. If a changes is
+    // within the invalid range we recompute the LineIndex. Some clients (e.g.
+    // Code) sort the ranges in reverse which should ensure that we almost never
+    // invalidate the LineIndex.
 
     let mut line_index = LineIndex::new(old_text);
 
@@ -48,8 +50,9 @@ pub(crate) fn apply_document_changes(
 
 #[cfg(test)]
 mod tests {
-    use crate::lsp_utils::apply_document_changes;
     use lsp_types::{Position, Range, TextDocumentContentChangeEvent};
+
+    use crate::lsp_utils::apply_document_changes;
 
     #[test]
     fn test_apply_document_changes() {

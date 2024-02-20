@@ -1,13 +1,14 @@
+use std::sync::Arc;
+
 use crate::{
     db::{DefDatabase, SourceDatabase},
     mock::MockDatabase,
     with_fixture::WithFixture,
     PackageId,
 };
-use std::sync::Arc;
 
-/// This function tests that the `ModuleData` of a module does not change if the contents of a function
-/// is changed.
+/// This function tests that the `ModuleData` of a module does not change if the
+/// contents of a function is changed.
 #[test]
 fn check_package_defs_does_not_change() {
     let (mut db, file_id) = MockDatabase::with_single_file(

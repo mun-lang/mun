@@ -5,9 +5,9 @@ use std::{
 
 use mun_abi::{self as abi, static_type_map::StaticTypeMap, Guid};
 
-/// An owned version of a [`abi::TypeId`]. Using the `abi::TypeId` is cumbersome because it
-/// involves dealing with pointers. The `TypeId` introduced here owns all data it refers to, which
-/// makes it easier to work with from rust.
+/// An owned version of a [`abi::TypeId`]. Using the `abi::TypeId` is cumbersome
+/// because it involves dealing with pointers. The `TypeId` introduced here owns
+/// all data it refers to, which makes it easier to work with from rust.
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct TypeId {
     pub name: String,

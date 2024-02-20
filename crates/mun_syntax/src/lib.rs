@@ -7,7 +7,8 @@
 //! Properties:
 //!     - easy and fast incremental re-parsing
 //!     - graceful handling of errors
-//!     - full-fidelity representation (*any* text can be precisely represented as a syntax tree)
+//!     - full-fidelity representation (*any* text can be precisely represented
+//!       as a syntax tree)
 
 #[macro_use]
 mod syntax_kind;
@@ -26,6 +27,10 @@ mod validation;
 
 use std::{fmt::Write, marker::PhantomData, sync::Arc};
 
+use rowan::GreenNode;
+pub use rowan::{TextRange, TextSize, WalkEvent};
+pub use smol_str::SmolStr;
+
 pub use crate::{
     ast::{AstNode, AstToken},
     parsing::{lexer::Token, tokenize},
@@ -35,14 +40,12 @@ pub use crate::{
     syntax_node::{Direction, SyntaxElement, SyntaxNode, SyntaxToken, SyntaxTreeBuilder},
     token_text::TokenText,
 };
-pub use rowan::{TextRange, TextSize, WalkEvent};
-pub use smol_str::SmolStr;
 
-use rowan::GreenNode;
-
-/// `Parse` is the result of the parsing: a syntax tree and a collection of errors.
+/// `Parse` is the result of the parsing: a syntax tree and a collection of
+/// errors.
 ///
-/// Note that we always produce a syntax tree, event for completely invalid files.
+/// Note that we always produce a syntax tree, event for completely invalid
+/// files.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Parse<T> {
     green: GreenNode,
@@ -129,8 +132,8 @@ impl Parse<SourceFile> {
         self.full_reparse(indel)
     }
 
-    /// Performs a "reparse" of the `SourceFile` after applying the specified modification by
-    /// simply parsing the entire thing again.
+    /// Performs a "reparse" of the `SourceFile` after applying the specified
+    /// modification by simply parsing the entire thing again.
     fn full_reparse(&self, indel: &Indel) -> Parse<SourceFile> {
         let mut text = self.tree().syntax().text().to_string();
         indel.apply(&mut text);
@@ -138,9 +141,10 @@ impl Parse<SourceFile> {
     }
 }
 
+use ra_ap_text_edit::Indel;
+
 /// `SourceFile` represents a parse tree for a single Mun file.
 pub use crate::ast::SourceFile;
-use ra_ap_text_edit::Indel;
 
 impl SourceFile {
     pub fn parse(text: &str) -> Parse<SourceFile> {
@@ -180,11 +184,11 @@ macro_rules! match_ast {
     }};
 }
 
-/// This tests does not assert anything and instead just shows off the crate's API.
+/// This tests does not assert anything and instead just shows off the crate's
+/// API.
 #[test]
 fn api_walkthrough() {
-    use ast::ModuleItemOwner;
-    use ast::NameOwner;
+    use ast::{ModuleItemOwner, NameOwner};
 
     let source_code = "
         fn foo() {
@@ -194,8 +198,8 @@ fn api_walkthrough() {
 
     // `SourceFile` is the main entry point.
     //
-    // The `parse` method returns a `Parse` -- a pair of syntax tree and a list of errors. That is,
-    // syntax tree is constructed even in presence of errors.
+    // The `parse` method returns a `Parse` -- a pair of syntax tree and a list of
+    // errors. That is, syntax tree is constructed even in presence of errors.
     let parse = SourceFile::parse(source_code);
     assert!(parse.errors().is_empty());
 
@@ -218,10 +222,11 @@ fn api_walkthrough() {
     // The returned items are always references.
     let func: ast::FunctionDef = func.unwrap();
 
-    // Each AST node has a bunch of getters for children. All getters return `Option`s though, to
-    // account for incomplete code. Some getters are common for several kinds of node. In this case,
-    // a trait like `ast::NameOwner` usually exists. By convention, all ast types should be used
-    // with `ast::` qualifier.
+    // Each AST node has a bunch of getters for children. All getters return
+    // `Option`s though, to account for incomplete code. Some getters are common
+    // for several kinds of node. In this case, a trait like `ast::NameOwner`
+    // usually exists. By convention, all ast types should be used with `ast::`
+    // qualifier.
     let name: Option<ast::Name> = func.name();
     let name = name.unwrap();
     assert_eq!(name.text(), "foo");

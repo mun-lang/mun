@@ -1,13 +1,15 @@
 //! Exposes the Mun runtime using the C ABI.
 
-use crate::function::Function;
+use std::{ffi::c_void, mem::ManuallyDrop, ops::Deref, os::raw::c_char, slice};
+
 use mun_abi as abi;
 use mun_capi_utils::{
     error::ErrorHandle, mun_error_try, try_convert_c_string, try_deref, try_deref_mut,
 };
 use mun_memory::{ffi::Type, type_table::TypeTable, Type as RustType};
 use mun_runtime::{FunctionDefinition, FunctionPrototype, FunctionSignature};
-use std::{ffi::c_void, mem::ManuallyDrop, ops::Deref, os::raw::c_char, slice};
+
+use crate::function::Function;
 
 /// A C-style handle to a runtime.
 #[repr(C)]
@@ -15,11 +17,13 @@ use std::{ffi::c_void, mem::ManuallyDrop, ops::Deref, os::raw::c_char, slice};
 pub struct Runtime(pub *mut c_void);
 
 impl Runtime {
-    /// Returns a reference to rust Runtime, or an error if this instance contains a null pointer.
+    /// Returns a reference to rust Runtime, or an error if this instance
+    /// contains a null pointer.
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the internal pointers point to a valid [`mun_runtime::Runtime`].
+    /// The caller must ensure that the internal pointers point to a valid
+    /// [`mun_runtime::Runtime`].
     pub(crate) unsafe fn inner(&self) -> Result<&mun_runtime::Runtime, &'static str> {
         self.0
             .cast::<mun_runtime::Runtime>()
@@ -27,12 +31,13 @@ impl Runtime {
             .ok_or("null pointer")
     }
 
-    /// Returns a mutable reference to rust Runtime, or an error if this instance contains a null
-    /// pointer.
+    /// Returns a mutable reference to rust Runtime, or an error if this
+    /// instance contains a null pointer.
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the internal pointers point to a valid [`mun_runtime::Runtime`].
+    /// The caller must ensure that the internal pointers point to a valid
+    /// [`mun_runtime::Runtime`].
     pub unsafe fn inner_mut(&self) -> Result<&mut mun_runtime::Runtime, &'static str> {
         self.0
             .cast::<mun_runtime::Runtime>()
@@ -43,7 +48,8 @@ impl Runtime {
 
 /// Definition of an external function that is callable from Mun.
 ///
-/// The ownership of the contained `TypeInfoHandles` is considered to lie with this struct.
+/// The ownership of the contained `TypeInfoHandles` is considered to lie with
+/// this struct.
 #[repr(C)]
 #[derive(Clone)]
 pub struct ExternalFunctionDefinition {
@@ -63,20 +69,22 @@ pub struct ExternalFunctionDefinition {
     pub fn_ptr: *const c_void,
 }
 
-/// Options required to construct a [`RuntimeHandle`] through [`mun_runtime_create`]
+/// Options required to construct a [`RuntimeHandle`] through
+/// [`mun_runtime_create`]
 ///
 /// # Safety
 ///
-/// This struct contains raw pointers as parameters. Passing pointers to invalid data, will lead to
-/// undefined behavior.
+/// This struct contains raw pointers as parameters. Passing pointers to invalid
+/// data, will lead to undefined behavior.
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct RuntimeOptions {
-    /// Function definitions that should be inserted in the runtime before a mun library is loaded.
-    /// This is useful to initialize `extern` functions used in a mun library.
+    /// Function definitions that should be inserted in the runtime before a mun
+    /// library is loaded. This is useful to initialize `extern` functions
+    /// used in a mun library.
     ///
-    /// If the [`num_functions`] fields is non-zero this field must contain a pointer to an array
-    /// of [`abi::FunctionDefinition`]s.
+    /// If the [`num_functions`] fields is non-zero this field must contain a
+    /// pointer to an array of [`abi::FunctionDefinition`]s.
     pub functions: *const ExternalFunctionDefinition,
 
     /// The number of functions in the [`functions`] array.
@@ -92,8 +100,9 @@ impl Default for RuntimeOptions {
     }
 }
 
-/// Constructs a new runtime that loads the library at `library_path` and its dependencies. If
-/// successful, the runtime `handle` is set, otherwise a non-zero error handle is returned.
+/// Constructs a new runtime that loads the library at `library_path` and its
+/// dependencies. If successful, the runtime `handle` is set, otherwise a
+/// non-zero error handle is returned.
 ///
 /// If a non-zero error handle is returned, it must be manually destructed using
 /// [`mun_error_destroy`].
@@ -102,8 +111,9 @@ impl Default for RuntimeOptions {
 ///
 /// # Safety
 ///
-/// This function receives raw pointers as parameters. If any of the arguments is a null pointer,
-/// an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
+/// This function receives raw pointers as parameters. If any of the arguments
+/// is a null pointer, an error will be returned. Passing pointers to invalid
+/// data, will lead to undefined behavior.
 #[no_mangle]
 pub unsafe extern "C" fn mun_runtime_create(
     library_path: *const c_char,
@@ -194,16 +204,18 @@ pub extern "C" fn mun_runtime_destroy(runtime: Runtime) -> ErrorHandle {
     ErrorHandle::default()
 }
 
-/// Retrieves the [`FunctionDefinition`] for `fn_name` from the `runtime`. If successful,
-/// `has_fn_info` and `fn_info` are set, otherwise a non-zero error handle is returned.
+/// Retrieves the [`FunctionDefinition`] for `fn_name` from the `runtime`. If
+/// successful, `has_fn_info` and `fn_info` are set, otherwise a non-zero error
+/// handle is returned.
 ///
 /// If a non-zero error handle is returned, it must be manually destructed using
 /// [`mun_error_destroy`].
 ///
 /// # Safety
 ///
-/// This function receives raw pointers as parameters. If any of the arguments is a null pointer,
-/// an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
+/// This function receives raw pointers as parameters. If any of the arguments
+/// is a null pointer, an error will be returned. Passing pointers to invalid
+/// data, will lead to undefined behavior.
 #[no_mangle]
 pub unsafe extern "C" fn mun_runtime_find_function_definition(
     runtime: Runtime,
@@ -236,17 +248,18 @@ pub unsafe extern "C" fn mun_runtime_find_function_definition(
     ErrorHandle::default()
 }
 
-/// Retrieves the type information corresponding to the specified `type_name` from the runtime.
-/// If successful, `has_type_info` and `type_info` are set, otherwise a non-zero error handle is
-/// returned.
+/// Retrieves the type information corresponding to the specified `type_name`
+/// from the runtime. If successful, `has_type_info` and `type_info` are set,
+/// otherwise a non-zero error handle is returned.
 ///
 /// If a non-zero error handle is returned, it must be manually destructed using
 /// [`mun_error_destroy`].
 ///
 /// # Safety
 ///
-/// This function receives raw pointers as parameters. If any of the arguments is a null pointer,
-/// an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
+/// This function receives raw pointers as parameters. If any of the arguments
+/// is a null pointer, an error will be returned. Passing pointers to invalid
+/// data, will lead to undefined behavior.
 #[no_mangle]
 pub unsafe extern "C" fn mun_runtime_get_type_info_by_name(
     runtime: Runtime,
@@ -273,17 +286,18 @@ pub unsafe extern "C" fn mun_runtime_get_type_info_by_name(
     ErrorHandle::default()
 }
 
-/// Retrieves the type information corresponding to the specified `type_id` from the runtime. If
-/// successful, `has_type_info` and `type_info` are set, otherwise a non-zero error handle is
-/// returned.
+/// Retrieves the type information corresponding to the specified `type_id` from
+/// the runtime. If successful, `has_type_info` and `type_info` are set,
+/// otherwise a non-zero error handle is returned.
 ///
 /// If a non-zero error handle is returned, it must be manually destructed using
 /// [`mun_error_destroy`].
 ///
 /// # Safety
 ///
-/// This function receives raw pointers as parameters. If any of the arguments is a null pointer,
-/// an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
+/// This function receives raw pointers as parameters. If any of the arguments
+/// is a null pointer, an error will be returned. Passing pointers to invalid
+/// data, will lead to undefined behavior.
 #[no_mangle]
 pub unsafe extern "C" fn mun_runtime_get_type_info_by_id(
     runtime: Runtime,
@@ -309,16 +323,17 @@ pub unsafe extern "C" fn mun_runtime_get_type_info_by_id(
     ErrorHandle::default()
 }
 
-/// Updates the runtime corresponding to `handle`. If successful, `updated` is set, otherwise a
-/// non-zero error handle is returned.
+/// Updates the runtime corresponding to `handle`. If successful, `updated` is
+/// set, otherwise a non-zero error handle is returned.
 ///
 /// If a non-zero error handle is returned, it must be manually destructed using
 /// [`mun_error_destroy`].
 ///
 /// # Safety
 ///
-/// This function receives raw pointers as parameters. If any of the arguments is a null pointer,
-/// an error will be returned. Passing pointers to invalid data, will lead to undefined behavior.
+/// This function receives raw pointers as parameters. If any of the arguments
+/// is a null pointer, an error will be returned. Passing pointers to invalid
+/// data, will lead to undefined behavior.
 #[no_mangle]
 pub unsafe extern "C" fn mun_runtime_update(runtime: Runtime, updated: *mut bool) -> ErrorHandle {
     let runtime = mun_error_try!(runtime
@@ -331,12 +346,16 @@ pub unsafe extern "C" fn mun_runtime_update(runtime: Runtime, updated: *mut bool
 
 #[cfg(test)]
 mod tests {
+    use std::{ffi::CString, mem::MaybeUninit, ptr};
+
+    use mun_capi_utils::{
+        assert_error_snapshot, assert_getter1, assert_getter2, assert_getter3,
+        error::mun_error_destroy,
+    };
+    use mun_memory::HasStaticType;
+
     use super::*;
     use crate::{test_invalid_runtime, test_util::TestDriver};
-    use mun_capi_utils::error::mun_error_destroy;
-    use mun_capi_utils::{assert_error_snapshot, assert_getter1, assert_getter2, assert_getter3};
-    use mun_memory::HasStaticType;
-    use std::{ffi::CString, mem::MaybeUninit, ptr};
 
     test_invalid_runtime!(
         runtime_find_function_definition(ptr::null(), 0, ptr::null_mut(), ptr::null_mut()),

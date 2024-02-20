@@ -8,7 +8,8 @@ pub use crate::{
     module_partition::{ModuleGroupId, ModulePartition},
 };
 
-/// This library generates machine code from HIR using inkwell which is a safe wrapper around LLVM.
+/// This library generates machine code from HIR using inkwell which is a safe
+/// wrapper around LLVM.
 mod code_gen;
 mod db;
 #[macro_use]

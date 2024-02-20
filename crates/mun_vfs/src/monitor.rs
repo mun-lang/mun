@@ -1,12 +1,13 @@
-//! A monitor is a trait that reads and monitors files in a given set of directories. Changes are
-//! read to memory and communicated.
+//! A monitor is a trait that reads and monitors files in a given set of
+//! directories. Changes are read to memory and communicated.
 
 mod notify_monitor;
+
+use std::fmt;
 
 pub use notify_monitor::NotifyMonitor;
 
 use crate::{AbsPath, AbsPathBuf};
-use std::fmt;
 
 /// Describes something to be monitored by a `Monitor`.
 #[derive(Debug, Clone)]
@@ -36,8 +37,8 @@ pub struct MonitorDirectories {
     pub exclude: Vec<AbsPathBuf>,
 }
 
-/// Describes the configuration of the monitor. This can be updated with the `set_config` method on
-/// a [`Monitor`]
+/// Describes the configuration of the monitor. This can be updated with the
+/// `set_config` method on a [`Monitor`]
 #[derive(Debug, Clone)]
 pub struct MonitorConfig {
     /// The set of entries to load
@@ -52,8 +53,8 @@ pub enum MonitorMessage {
     /// A message that indicates the progress status of the monitor
     Progress { total: usize, done: usize },
 
-    /// A message that indicates files has been loaded or modified. If the contents of a file is
-    /// `None` it has been removed.
+    /// A message that indicates files has been loaded or modified. If the
+    /// contents of a file is `None` it has been removed.
     Loaded {
         files: Vec<(AbsPathBuf, Option<Vec<u8>>)>,
     },
@@ -62,7 +63,8 @@ pub enum MonitorMessage {
 pub type Sender = Box<dyn Fn(MonitorMessage) + Send>;
 
 /// A trait to monitor a set of directories and files
-/// TODO: In the future it would be nice to do this with a Future (no pun intended).
+/// TODO: In the future it would be nice to do this with a Future (no pun
+/// intended).
 pub trait Monitor {
     /// Instantiates a new instance of `Self`
     fn new(sender: Sender) -> Self
@@ -72,14 +74,14 @@ pub trait Monitor {
     /// Updates the configuration of things to monitor.
     fn set_config(&mut self, config: MonitorConfig);
 
-    /// Reload the content of the specified file. This will trigger a new `Loaded` message to be
-    /// send.
+    /// Reload the content of the specified file. This will trigger a new
+    /// `Loaded` message to be send.
     fn reload(&mut self, path: &AbsPath);
 }
 
 impl MonitorDirectories {
-    /// Returns true if, according to this instance, the file at the given `path` is contained in
-    /// this set.
+    /// Returns true if, according to this instance, the file at the given
+    /// `path` is contained in this set.
     pub fn contains_file(&self, path: impl AsRef<AbsPath>) -> bool {
         let ext = path.as_ref().extension().unwrap_or_default();
         if self
@@ -93,8 +95,8 @@ impl MonitorDirectories {
         }
     }
 
-    /// Returns true if, according to this instance, the directory at the given `path` is contained
-    /// in this set.
+    /// Returns true if, according to this instance, the directory at the given
+    /// `path` is contained in this set.
     pub fn contains_dir(&self, path: impl AsRef<AbsPath>) -> bool {
         self.includes_path(path)
     }
@@ -132,8 +134,8 @@ impl MonitorDirectories {
 }
 
 impl MonitorEntry {
-    /// Returns true if, according to this instance, the file at the given `path` is contained in
-    /// this entry.
+    /// Returns true if, according to this instance, the file at the given
+    /// `path` is contained in this entry.
     pub fn contains_file(&self, path: impl AsRef<AbsPath>) -> bool {
         match self {
             MonitorEntry::Files(files) => {
@@ -144,8 +146,8 @@ impl MonitorEntry {
         }
     }
 
-    /// Returns true if, according to this instance, the directory at the given `path` is contained
-    /// in this set.
+    /// Returns true if, according to this instance, the directory at the given
+    /// `path` is contained in this set.
     pub fn contains_dir(&self, path: impl AsRef<AbsPath>) -> bool {
         match self {
             MonitorEntry::Files(_) => false,
@@ -172,9 +174,9 @@ impl fmt::Debug for MonitorMessage {
 
 #[cfg(test)]
 mod tests {
+    use std::{convert::TryInto, path::PathBuf};
+
     use super::{AbsPathBuf, Monitor, MonitorDirectories};
-    use std::convert::TryInto;
-    use std::path::PathBuf;
 
     #[test]
     fn monitor_is_object_safe() {

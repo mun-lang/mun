@@ -1,10 +1,12 @@
-use super::LanguageServerState;
-use crate::{from_lsp, handlers, lsp_utils::apply_document_changes, state::RequestHandler};
+use std::time::Instant;
+
 use dispatcher::{NotificationDispatcher, RequestDispatcher};
 use lsp_types::notification::{
     DidChangeTextDocument, DidChangeWatchedFiles, DidCloseTextDocument, DidOpenTextDocument,
 };
-use std::time::Instant;
+
+use super::LanguageServerState;
+use crate::{from_lsp, handlers, lsp_utils::apply_document_changes, state::RequestHandler};
 
 pub mod dispatcher;
 
@@ -113,9 +115,9 @@ impl LanguageServerState {
         Ok(())
     }
 
-    /// Registers a request with the server. We register all these request to make sure they all get
-    /// handled and so we can measure the time it takes for them to complete from the point of view
-    /// of the client.
+    /// Registers a request with the server. We register all these request to
+    /// make sure they all get handled and so we can measure the time it
+    /// takes for them to complete from the point of view of the client.
     fn register_request(&mut self, request: &lsp_server::Request, request_received: Instant) {
         self.request_queue.incoming.register(
             request.id.clone(),
@@ -123,7 +125,8 @@ impl LanguageServerState {
         );
     }
 
-    /// Sends a request to the client and registers the request so that we can handle the response.
+    /// Sends a request to the client and registers the request so that we can
+    /// handle the response.
     pub(crate) fn send_request<R: lsp_types::request::Request>(
         &mut self,
         params: R::Params,
@@ -145,8 +148,8 @@ impl LanguageServerState {
         self.send(not.into());
     }
 
-    /// Handles a response to a request we made. The response gets forwarded to where we made the
-    /// request from.
+    /// Handles a response to a request we made. The response gets forwarded to
+    /// where we made the request from.
     pub(super) fn complete_request(&mut self, response: lsp_server::Response) {
         let handler = self
             .request_queue
@@ -156,8 +159,8 @@ impl LanguageServerState {
         handler(self, response);
     }
 
-    /// Sends a response to the client. This method logs the time it took us to reply
-    /// to a request from the client.
+    /// Sends a response to the client. This method logs the time it took us to
+    /// reply to a request from the client.
     pub(super) fn respond(&mut self, response: lsp_server::Response) {
         if let Some((_method, start)) = self.request_queue.incoming.complete(response.id.clone()) {
             let duration = start.elapsed();

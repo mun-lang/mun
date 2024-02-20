@@ -1,10 +1,10 @@
 mod function;
 
-use super::{CompletionContext, CompletionItem, CompletionItemKind};
-use crate::completion::CompletionKind;
-use crate::{db::AnalysisDatabase, SymbolKind};
 use function::FunctionRender;
 use mun_hir::{semantics::ScopeDef, HirDisplay};
+
+use super::{CompletionContext, CompletionItem, CompletionItemKind};
+use crate::{completion::CompletionKind, db::AnalysisDatabase, SymbolKind};
 
 pub(super) fn render_field(ctx: RenderContext<'_>, field: mun_hir::Field) -> CompletionItem {
     Render::new(ctx).render_field(field)

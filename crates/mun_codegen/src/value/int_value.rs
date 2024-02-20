@@ -1,8 +1,9 @@
+use inkwell::AddressSpace;
+
 use super::{
     AddressableType, AsBytesAndPtrs, AsValue, BytesOrPtr, ConcreteValueType, HasConstValue,
     IrTypeContext, IrValueContext, PointerValueType, SizedValueType, Value,
 };
-use inkwell::AddressSpace;
 
 macro_rules! impl_as_int_ir_value {
     ($($ty:ty => $context_fun:ident()),*) => {

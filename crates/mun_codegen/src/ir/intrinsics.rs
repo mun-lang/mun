@@ -1,10 +1,12 @@
+use std::{collections::BTreeMap, sync::Arc};
+
+use inkwell::{context::Context, targets::TargetData, types::FunctionType};
+use mun_hir::{Body, Expr, ExprId, HirDatabase, InferenceResult, ValueNs};
+
 use crate::{
     intrinsics::{self, Intrinsic},
     ir::dispatch_table::FunctionPrototype,
 };
-use inkwell::{context::Context, targets::TargetData, types::FunctionType};
-use mun_hir::{Body, Expr, ExprId, HirDatabase, InferenceResult, ValueNs};
-use std::{collections::BTreeMap, sync::Arc};
 
 // Use a `BTreeMap` to guarantee deterministically ordered output
 pub type IntrinsicsMap<'ink> = BTreeMap<FunctionPrototype, FunctionType<'ink>>;
@@ -22,7 +24,8 @@ fn collect_intrinsic<'ink>(
         .or_insert_with(|| intrinsic.ir_type(context, target));
 }
 
-/// Iterates over all expressions and stores information on which intrinsics they use in `entries`.
+/// Iterates over all expressions and stores information on which intrinsics
+/// they use in `entries`.
 #[allow(clippy::too_many_arguments)]
 fn collect_expr<'ink>(
     context: &'ink Context,

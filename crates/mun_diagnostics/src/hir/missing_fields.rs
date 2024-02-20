@@ -1,7 +1,8 @@
-use super::HirDiagnostic;
-use crate::{Diagnostic, SourceAnnotation};
 use mun_hir::HirDisplay;
 use mun_syntax::{ast, AstNode, TextRange};
+
+use super::HirDiagnostic;
+use crate::{Diagnostic, SourceAnnotation};
 
 /// An error that is emitted when a field is missing from a struct initializer.
 ///

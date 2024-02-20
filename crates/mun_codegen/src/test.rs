@@ -1,16 +1,17 @@
-use crate::{
-    code_gen::{AssemblyBuilder, CodeGenContext},
-    ir::file::gen_file_ir,
-    ir::file_group::gen_file_group_ir,
-    mock::MockDatabase,
-    CodeGenDatabase,
-};
+use std::cell::RefCell;
+
 use inkwell::{context::Context, OptimizationLevel};
 use mun_hir::{
     diagnostics::DiagnosticSink, with_fixture::WithFixture, HirDatabase, SourceDatabase, Upcast,
 };
 use mun_target::spec::Target;
-use std::cell::RefCell;
+
+use crate::{
+    code_gen::{AssemblyBuilder, CodeGenContext},
+    ir::{file::gen_file_ir, file_group::gen_file_group_ir},
+    mock::MockDatabase,
+    CodeGenDatabase,
+};
 
 #[test]
 fn array_index_assign() {
@@ -666,9 +667,9 @@ fn fibonacci_loop() {
 
 #[test]
 fn loop_issue_llvm13() {
-    // A bug was surfaced by switching to LLVM13. When using a loop in code an exit block was
-    // generated which didnt have a predecessor (because nobody jumped to it), this caused LLVM13
-    // to crash.
+    // A bug was surfaced by switching to LLVM13. When using a loop in code an exit
+    // block was generated which didnt have a predecessor (because nobody jumped
+    // to it), this caused LLVM13 to crash.
     test_snapshot(
         "loop_issue_llvm13",
         r#"

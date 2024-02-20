@@ -1,3 +1,6 @@
+use inkwell::module::{Linkage, Module};
+use rustc_hash::FxHashSet;
+
 use crate::{
     assembly::Assembly,
     code_gen::{optimize_module, symbols, CodeGenContext, CodeGenerationError},
@@ -5,8 +8,6 @@ use crate::{
     value::{IrTypeContext, IrValueContext},
     ModuleGroupId, ModulePartition,
 };
-use inkwell::module::{Linkage, Module};
-use rustc_hash::FxHashSet;
 
 /// A struct that can be used to build an `Assembly<'db, 'ink', ctx>`
 pub struct AssemblyBuilder<'db, 'ink, 'ctx, 't> {
@@ -41,7 +42,8 @@ impl<'db, 'ink, 'ctx, 't> AssemblyBuilder<'db, 'ink, 'ctx, 't> {
         let group_ir = gen_file_group_ir(self.code_gen, module_group);
         let file = gen_file_ir(self.code_gen, &group_ir, module_group);
 
-        // Clone the LLVM modules so that we can modify it without modifying the cached value.
+        // Clone the LLVM modules so that we can modify it without modifying the cached
+        // value.
         self.assembly_module
             .link_in_module(group_ir.llvm_module.clone())
             .map_err(|e| CodeGenerationError::ModuleLinkerError(e.to_string()))?;

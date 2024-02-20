@@ -1,14 +1,18 @@
-use crate::ids::ImplId;
-use crate::{
-    ids::ItemDefinitionId, module_tree::LocalModuleId, primitive_type::PrimitiveType,
-    visibility::Visibility, Name, PerNs,
-};
-use once_cell::sync::Lazy;
-use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::hash_map::Entry;
 
-/// Defines the type of import. An import can either be a named import (e.g. `use foo::Bar`) or a
-/// wildcard import (e.g. `use foo::*`)
+use once_cell::sync::Lazy;
+use rustc_hash::{FxHashMap, FxHashSet};
+
+use crate::{
+    ids::{ImplId, ItemDefinitionId},
+    module_tree::LocalModuleId,
+    primitive_type::PrimitiveType,
+    visibility::Visibility,
+    Name, PerNs,
+};
+
+/// Defines the type of import. An import can either be a named import (e.g.
+/// `use foo::Bar`) or a wildcard import (e.g. `use foo::*`)
 #[derive(Copy, Clone)]
 pub(crate) enum ImportType {
     /// A wildcard import statement (`use foo::*`)
@@ -18,9 +22,9 @@ pub(crate) enum ImportType {
     Named,
 }
 
-/// A struct that holds information on which name was imported via a glob import. This information
-/// is used by the `PackageDef` collector to keep track of duplicates so that this doesn't result in
-/// a duplicate name error; e.g. :
+/// A struct that holds information on which name was imported via a glob
+/// import. This information is used by the `PackageDef` collector to keep track
+/// of duplicates so that this doesn't result in a duplicate name error; e.g. :
 /// ```mun
 /// use foo::{Foo, *};
 /// ```
@@ -30,8 +34,8 @@ pub struct PerNsGlobImports {
     values: FxHashSet<(LocalModuleId, Name)>,
 }
 
-/// Holds all items that are visible from an item as well as by which name and under which
-/// visibility they are accessible.
+/// Holds all items that are visible from an item as well as by which name and
+/// under which visibility they are accessible.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct ItemScope {
     /// All types visible in this scope
@@ -99,8 +103,8 @@ impl ItemScope {
         self.impls.push(impl_);
     }
 
-    /// Adds a named item resolution into the scope. Returns true if adding the resolution changes
-    /// the scope.
+    /// Adds a named item resolution into the scope. Returns true if adding the
+    /// resolution changes the scope.
     pub(crate) fn add_resolution(
         &mut self,
         name: Name,
@@ -123,8 +127,9 @@ impl ItemScope {
         changed
     }
 
-    /// Adds a named item resolution into the scope which is the result of a `use` statement.
-    /// Returns true if adding the resolution changes the scope.
+    /// Adds a named item resolution into the scope which is the result of a
+    /// `use` statement. Returns true if adding the resolution changes the
+    /// scope.
     pub(crate) fn add_resolution_from_import(
         &mut self,
         glob_imports: &mut PerNsGlobImports,

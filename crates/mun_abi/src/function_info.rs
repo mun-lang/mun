@@ -1,14 +1,13 @@
-use crate::type_id::HasStaticTypeId;
 use std::{
     ffi::{c_void, CStr},
     os::raw::c_char,
     slice, str,
 };
 
-use crate::type_id::TypeId;
+use crate::type_id::{HasStaticTypeId, TypeId};
 
-/// Represents a function definition. A function definition contains the name, type signature, and
-/// a pointer to the implementation.
+/// Represents a function definition. A function definition contains the name,
+/// type signature, and a pointer to the implementation.
 ///
 /// `fn_ptr` can be used to call the declared function.
 #[repr(C)]
@@ -20,8 +19,8 @@ pub struct FunctionDefinition<'a> {
     pub fn_ptr: *const c_void,
 }
 
-/// Represents a function prototype. A function prototype contains the name, type signature, but
-/// not an implementation.
+/// Represents a function prototype. A function prototype contains the name,
+/// type signature, but not an implementation.
 #[repr(C)]
 #[derive(Clone)]
 pub struct FunctionPrototype<'a> {
@@ -136,8 +135,10 @@ impl<'a> serde::Serialize for FunctionSignature<'a> {
 mod tests {
     use std::ffi::CString;
 
-    use crate::test_utils::{fake_fn_prototype, fake_fn_signature, FAKE_FN_NAME};
-    use crate::type_id::HasStaticTypeId;
+    use crate::{
+        test_utils::{fake_fn_prototype, fake_fn_signature, FAKE_FN_NAME},
+        type_id::HasStaticTypeId,
+    };
 
     #[test]
     fn test_fn_prototype_name() {

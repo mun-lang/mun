@@ -31,13 +31,17 @@ const EXPR_FIRST: TokenSet = LHS_FIRST;
 
 #[derive(Clone, Copy)]
 struct Restrictions {
-    /// Indicates that parsing of structs is not valid in the current context. For instance:
+    /// Indicates that parsing of structs is not valid in the current context.
+    /// For instance:
+    ///
     /// ```mun
     /// if break { 3 }
     /// if break 4 { 3 }
     /// ```
-    /// In the first if expression we do not want the `break` expression to capture the block as an
-    /// expression. However, in the second statement we do want the break to capture the 4.
+    ///
+    /// In the first if expression we do not want the `break` expression to
+    /// capture the block as an expression. However, in the second statement
+    /// we do want the break to capture the 4.
     forbid_structs: bool,
 }
 
@@ -214,8 +218,8 @@ fn lhs(p: &mut Parser<'_>, r: Restrictions) -> Option<(CompletedMarker, BlockLik
 fn postfix_expr(
     p: &mut Parser<'_>,
     mut lhs: CompletedMarker,
-    // Calls are disallowed if the type is a block and we prefer statements because the call cannot be disambiguated from a tuple
-    // E.g. `while true {break}();` is parsed as
+    // Calls are disallowed if the type is a block and we prefer statements because the call cannot
+    // be disambiguated from a tuple E.g. `while true {break}();` is parsed as
     // `while true {break}; ();`
     mut blocklike: BlockLike,
     mut allow_calls: bool,

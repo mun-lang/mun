@@ -1,10 +1,12 @@
+use std::{fmt, fmt::Write, iter};
+
+use either::Either;
+use itertools::Itertools;
+
 use crate::{
     type_ref::{LocalTypeRefId, TypeRef, TypeRefMap},
     DefDatabase, Path, PathKind,
 };
-use either::Either;
-use itertools::Itertools;
-use std::{fmt, fmt::Write, iter};
 
 pub(crate) fn print_type_ref<W: Write>(
     db: &dyn DefDatabase,
@@ -43,8 +45,8 @@ pub(crate) fn print_path(_db: &dyn DefDatabase, path: &Path, buf: &mut dyn Write
     }
     .map(Either::Left);
 
-    // Chain the segments of the path to the prefix iterator to get an iterator that yields the
-    // individual segments of the path.
+    // Chain the segments of the path to the prefix iterator to get an iterator that
+    // yields the individual segments of the path.
     let segments = prefix_iter.chain(path.segments.iter().map(either::Right));
 
     // Format the segments of the path seperated by '::'.

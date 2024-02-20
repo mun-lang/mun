@@ -1,9 +1,11 @@
-use crate::db::AnalysisDatabase;
-use crate::FilePosition;
-use mun_hir::semantics::{Semantics, SemanticsScope};
-use mun_hir::AstDatabase;
+use mun_hir::{
+    semantics::{Semantics, SemanticsScope},
+    AstDatabase,
+};
 use mun_syntax::{ast, utils::find_node_at_offset, AstNode, SyntaxNode, TextRange, TextSize};
 use ra_ap_text_edit::Indel;
+
+use crate::{db::AnalysisDatabase, FilePosition};
 
 /// A `CompletionContext` is created to figure out where exactly the cursor is.
 pub(super) struct CompletionContext<'a> {
@@ -22,19 +24,22 @@ pub(super) struct CompletionContext<'a> {
     /// True if we're at an ast::PathType
     pub is_path_type: bool,
 
-    /// The receiver if this is a field or method access, i.e. writing something.$0
+    /// The receiver if this is a field or method access, i.e. writing
+    /// something.$0
     pub dot_receiver: Option<ast::Expr>,
 }
 
 impl<'a> CompletionContext<'a> {
-    /// Tries to construct a new `CompletionContext` with the given database and file position.
+    /// Tries to construct a new `CompletionContext` with the given database and
+    /// file position.
     pub fn new(db: &'a AnalysisDatabase, position: FilePosition) -> Option<Self> {
         let sema = Semantics::new(db);
 
         let original_file = sema.parse(position.file_id);
 
-        // Insert a fake identifier to get a valid parse tree. This tree will be used to determine
-        // context. The actual original_file will be used for completion.
+        // Insert a fake identifier to get a valid parse tree. This tree will be used to
+        // determine context. The actual original_file will be used for
+        // completion.
         let file_with_fake_ident = {
             let parse = db.parse(position.file_id);
             let edit = Indel::insert(position.offset, String::from("intellijRulezz"));
@@ -126,7 +131,8 @@ impl<'a> CompletionContext<'a> {
     }
 }
 
-/// Returns true if the given `node` or one if its parents is of the specified type.
+/// Returns true if the given `node` or one if its parents is of the specified
+/// type.
 fn is_node<N: AstNode>(node: &SyntaxNode) -> bool {
     match node.ancestors().find_map(N::cast) {
         None => false,

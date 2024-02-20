@@ -1,12 +1,13 @@
-use crate::{ir::ty::HirTypeCache, Module, OptimizationLevel};
 use inkwell::{
     passes::{PassManager, PassManagerBuilder},
     values::FunctionValue,
 };
-
 use mun_hir::HirDatabase;
 
-/// Constructs a `PassManager` to optimize functions for the given optimization level.
+use crate::{ir::ty::HirTypeCache, Module, OptimizationLevel};
+
+/// Constructs a `PassManager` to optimize functions for the given optimization
+/// level.
 pub(crate) fn create_pass_manager<'ink>(
     module: &Module<'ink>,
     optimization_lvl: OptimizationLevel,
@@ -21,10 +22,11 @@ pub(crate) fn create_pass_manager<'ink>(
     function_pass_manager
 }
 
-/// Generates a `FunctionValue` for a `mun_hir::Function`. This function does not generate a body for
-/// the `mun_hir::Function`. That task is left to the `gen_body` function. The reason this is split
-/// between two functions is that first all signatures are generated and then all bodies. This
-/// allows bodies to reference `FunctionValue` wherever they are declared in the file.
+/// Generates a `FunctionValue` for a `mun_hir::Function`. This function does
+/// not generate a body for the `mun_hir::Function`. That task is left to the
+/// `gen_body` function. The reason this is split between two functions is that
+/// first all signatures are generated and then all bodies. This allows bodies
+/// to reference `FunctionValue` wherever they are declared in the file.
 pub(crate) fn gen_prototype<'db, 'ink>(
     db: &'db dyn HirDatabase,
     types: &HirTypeCache<'db, 'ink>,
@@ -36,11 +38,12 @@ pub(crate) fn gen_prototype<'db, 'ink>(
     module.add_function(&name, ir_ty, None)
 }
 
-/// Generates a `FunctionValue` for a `mun_hir::Function` that is usable from the public API. This
-/// function does not generate a body for the `mun_hir::Function`. That task is left to the `gen_body`
-/// function. The reason this is split between two functions is that first all signatures are
-/// generated and then all bodies. This allows bodies to reference `FunctionValue` wherever they
-/// are declared in the file.
+/// Generates a `FunctionValue` for a `mun_hir::Function` that is usable from
+/// the public API. This function does not generate a body for the
+/// `mun_hir::Function`. That task is left to the `gen_body` function. The
+/// reason this is split between two functions is that first all signatures are
+/// generated and then all bodies. This allows bodies to reference
+/// `FunctionValue` wherever they are declared in the file.
 pub(crate) fn gen_public_prototype<'db, 'ink>(
     db: &'db dyn HirDatabase,
     types: &HirTypeCache<'db, 'ink>,

@@ -1,13 +1,8 @@
 use super::Struct;
-use crate::diagnostics::ExportedPrivate;
-use crate::resolve::HasResolver;
-use crate::DiagnosticSink;
-use crate::{HasVisibility, Ty, Visibility};
-
-use crate::FileId;
-use crate::HirDatabase;
-
-use crate::visibility::RawVisibility;
+use crate::{
+    diagnostics::ExportedPrivate, resolve::HasResolver, visibility::RawVisibility, DiagnosticSink,
+    FileId, HasVisibility, HirDatabase, Ty, Visibility,
+};
 
 #[cfg(test)]
 mod tests;

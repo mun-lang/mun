@@ -1,9 +1,8 @@
-use crate::resolve::ValueNs;
-use crate::{ty::infer::InferenceResultBuilder, Expr, ExprId, Path, Resolver};
+use crate::{resolve::ValueNs, ty::infer::InferenceResultBuilder, Expr, ExprId, Path, Resolver};
 
 impl<'a> InferenceResultBuilder<'a> {
-    /// Checks if the specified expression is a place-expression. A place expression represents a
-    /// memory location.
+    /// Checks if the specified expression is a place-expression. A place
+    /// expression represents a memory location.
     pub(super) fn check_place_expression(&mut self, resolver: &Resolver, expr: ExprId) -> bool {
         match &self.body[expr] {
             Expr::Path(p) => self.check_place_path(resolver, p),

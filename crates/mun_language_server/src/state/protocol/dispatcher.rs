@@ -1,10 +1,12 @@
-use super::LanguageServerState;
-use crate::cancelation::is_canceled;
-use crate::from_json;
-use crate::state::{LanguageServerSnapshot, Task};
 use lsp_server::ExtractError;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
+
+use super::LanguageServerState;
+use crate::{
+    cancelation::is_canceled,
+    from_json,
+    state::{LanguageServerSnapshot, Task},
+};
 
 /// A helper struct to ergonomically dispatch LSP requests to functions.
 pub(crate) struct RequestDispatcher<'a> {
@@ -21,7 +23,8 @@ impl<'a> RequestDispatcher<'a> {
         }
     }
 
-    /// Try to dispatch the event as the given Request type on the current thread.
+    /// Try to dispatch the event as the given Request type on the current
+    /// thread.
     pub fn on_sync<R>(
         &mut self,
         compute_response_fn: fn(&mut LanguageServerState, R::Params) -> anyhow::Result<R::Result>,
@@ -72,9 +75,10 @@ impl<'a> RequestDispatcher<'a> {
         Ok(self)
     }
 
-    /// Tries to parse the request as the specified type. If the request is of the specified type,
-    /// the request is transferred and any subsequent call to this method will return None. If an
-    /// error is encountered during parsing of the request parameters an error is send to the
+    /// Tries to parse the request as the specified type. If the request is of
+    /// the specified type, the request is transferred and any subsequent
+    /// call to this method will return None. If an error is encountered
+    /// during parsing of the request parameters an error is send to the
     /// client.
     fn parse<R>(&mut self) -> Option<(lsp_server::RequestId, R::Params)>
     where
@@ -100,8 +104,8 @@ impl<'a> RequestDispatcher<'a> {
         }
     }
 
-    /// Wraps-up the dispatcher. If the request was not handled, report back that this is an
-    /// unknown request.
+    /// Wraps-up the dispatcher. If the request was not handled, report back
+    /// that this is an unknown request.
     pub fn finish(&mut self) {
         if let Some(req) = self.request.take() {
             log::error!("unknown request: {:?}", req);
@@ -156,7 +160,8 @@ impl<'a> NotificationDispatcher<'a> {
         Ok(self)
     }
 
-    /// Wraps-up the dispatcher. If the notification was not handled, log an error.
+    /// Wraps-up the dispatcher. If the notification was not handled, log an
+    /// error.
     pub fn finish(&mut self) {
         if let Some(notification) = &self.notification {
             if !notification.method.starts_with("$/") {
@@ -166,8 +171,8 @@ impl<'a> NotificationDispatcher<'a> {
     }
 }
 
-/// Converts the specified results of an LSP request into an LSP response handling any errors that
-/// may have occurred.
+/// Converts the specified results of an LSP request into an LSP response
+/// handling any errors that may have occurred.
 fn result_to_response<R>(
     id: lsp_server::RequestId,
     result: anyhow::Result<R::Result>,

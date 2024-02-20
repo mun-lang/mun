@@ -3,7 +3,6 @@ mod ops;
 use std::ffi::OsString;
 
 use clap::{Parser, Subcommand};
-
 use ops::{build, init, language_server, new, start};
 
 #[derive(Parser)]

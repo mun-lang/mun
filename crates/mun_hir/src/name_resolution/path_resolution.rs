@@ -1,3 +1,5 @@
+use std::iter::successors;
+
 use crate::{
     ids::{ItemDefinitionId, ModuleId},
     item_scope::BUILTIN_SCOPE,
@@ -5,19 +7,18 @@ use crate::{
     package_defs::PackageDefs,
     DefDatabase, Name, PackageId, Path, PathKind, PerNs, Visibility,
 };
-use std::iter::successors;
 
-/// Indicates whether or not any newly resolved import statements will actually change the outcome
-/// of an operation. This is useful to know if more iterations of an algorithm might be required, or
-/// whether its hopeless.
+/// Indicates whether or not any newly resolved import statements will actually
+/// change the outcome of an operation. This is useful to know if more
+/// iterations of an algorithm might be required, or whether its hopeless.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReachedFixedPoint {
     Yes,
     No,
 }
 
-/// Contains the result of resolving a path. It contains how far the path was able to be resolved
-/// as well as the resolved values or types so far.
+/// Contains the result of resolving a path. It contains how far the path was
+/// able to be resolved as well as the resolved values or types so far.
 #[derive(Debug, Clone)]
 pub(crate) struct ResolvePathResult {
     pub(crate) resolved_def: PerNs<(ItemDefinitionId, Visibility)>,
@@ -49,9 +50,9 @@ impl ResolvePathResult {
 }
 
 impl PackageDefs {
-    /// Resolves the specified `path` from within the specified `module`. Also optionally returns
-    /// which part of the path was resolved, if this is not `None` it means the path didn't resolve
-    /// completely yet.
+    /// Resolves the specified `path` from within the specified `module`. Also
+    /// optionally returns which part of the path was resolved, if this is
+    /// not `None` it means the path didn't resolve completely yet.
     pub(crate) fn resolve_path_in_module(
         &self,
         db: &dyn DefDatabase,
@@ -74,9 +75,10 @@ impl PackageDefs {
             .or(BUILTIN_SCOPE.get(name).copied().unwrap_or_else(PerNs::none))
     }
 
-    /// Resolves the specified `path` from within the specified `module`. Also returns whether or
-    /// not additions to the `PackageDef` would change the result or whether a fixed point has been
-    /// reached. This is useful when resolving all imports.
+    /// Resolves the specified `path` from within the specified `module`. Also
+    /// returns whether or not additions to the `PackageDef` would change
+    /// the result or whether a fixed point has been reached. This is useful
+    /// when resolving all imports.
     pub(crate) fn resolve_path_with_fixedpoint(
         &self,
         db: &dyn DefDatabase,

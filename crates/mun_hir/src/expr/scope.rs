@@ -1,12 +1,13 @@
-use crate::expr::{Expr, Pat, PatId, Statement};
-use crate::ids::DefWithBodyId;
+use std::sync::Arc;
+
+use rustc_hash::FxHashMap;
+
 use crate::{
     arena::{Arena, Idx},
-    expr::{Body, ExprId},
+    expr::{Body, Expr, ExprId, Pat, PatId, Statement},
+    ids::DefWithBodyId,
     DefDatabase, Name,
 };
-use rustc_hash::FxHashMap;
-use std::sync::Arc;
 
 /// The ID of a scope in an `ExprScopes`
 pub type LocalScopeId = Idx<ScopeData>;

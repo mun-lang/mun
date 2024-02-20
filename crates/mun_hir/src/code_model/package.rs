@@ -13,7 +13,8 @@ impl Package {
         db.packages().iter().map(|id| Package { id }).collect()
     }
 
-    /// Returns the root module of the package (represented by the `mod.rs` in the source root)
+    /// Returns the root module of the package (represented by the `mod.rs` in
+    /// the source root)
     pub fn root_module(self, db: &dyn HirDatabase) -> Module {
         let module_tree = db.module_tree(self.id);
         Module {

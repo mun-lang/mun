@@ -1,7 +1,11 @@
-use crate::{Manifest, PackageId};
+use std::{
+    fmt,
+    path::{Path, PathBuf},
+};
+
 use semver::Version;
-use std::fmt;
-use std::path::{Path, PathBuf};
+
+use crate::{Manifest, PackageId};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Package {

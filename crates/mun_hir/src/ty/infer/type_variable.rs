@@ -1,10 +1,11 @@
+use std::{borrow::Cow, fmt};
+
+use ena::unify::{InPlaceUnificationTable, NoError, UnifyKey, UnifyValue};
+
 use crate::{
-    ty::infer::InferTy,
-    ty::{TyKind, TypeWalk},
+    ty::{infer::InferTy, TyKind, TypeWalk},
     HirDatabase, Substitution, Ty,
 };
-use ena::unify::{InPlaceUnificationTable, NoError, UnifyKey, UnifyValue};
-use std::{borrow::Cow, fmt};
 
 /// The ID of a type variable.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -101,7 +102,8 @@ impl TypeVariableTable {
         .intern()
     }
 
-    /// Constructs a new type variable that is used to represent *some* integer type
+    /// Constructs a new type variable that is used to represent *some* integer
+    /// type
     pub fn new_integer_var(&mut self) -> Ty {
         TyKind::InferenceVar(InferTy::Int(
             self.eq_relations.new_key(TypeVarValue::Unknown),
@@ -109,7 +111,8 @@ impl TypeVariableTable {
         .intern()
     }
 
-    /// Constructs a new type variable that is used to represent *some* floating-point type
+    /// Constructs a new type variable that is used to represent *some*
+    /// floating-point type
     pub fn new_float_var(&mut self) -> Ty {
         TyKind::InferenceVar(InferTy::Float(
             self.eq_relations.new_key(TypeVarValue::Unknown),
@@ -117,14 +120,14 @@ impl TypeVariableTable {
         .intern()
     }
 
-    /// Unifies the two types. If one or more type variables are involved instantiate or equate the
-    /// variables with each other.
+    /// Unifies the two types. If one or more type variables are involved
+    /// instantiate or equate the variables with each other.
     pub fn unify(&mut self, db: &dyn HirDatabase, a: &Ty, b: &Ty) -> bool {
         self.unify_inner(db, a, b)
     }
 
-    /// Unifies the two types. If one or more type variables are involved instantiate or equate the
-    /// variables with each other.
+    /// Unifies the two types. If one or more type variables are involved
+    /// instantiate or equate the variables with each other.
     fn unify_inner(&mut self, db: &dyn HirDatabase, a: &Ty, b: &Ty) -> bool {
         if a == b {
             return true;
@@ -161,7 +164,8 @@ impl TypeVariableTable {
     pub(crate) fn unify_inner_trivial(&mut self, a: &Ty, b: &Ty) -> bool {
         #[allow(clippy::match_same_arms)]
         match (a.interned(), b.interned()) {
-            // Ignore unificiation if dealing with unknown types, there are no guarentees in that case.
+            // Ignore unificiation if dealing with unknown types, there are no guarentees in that
+            // case.
             (TyKind::Unknown, _) | (_, TyKind::Unknown) => true,
 
             // In case of two unknowns of the same type, equate them
@@ -188,7 +192,8 @@ impl TypeVariableTable {
                 true
             }
 
-            // Instantiate the variable if unifying an unknown integer type with a concrete integer type
+            // Instantiate the variable if unifying an unknown integer type with a concrete integer
+            // type
             (TyKind::InferenceVar(InferTy::Int(tv)), other @ TyKind::Int(_))
             | (other @ TyKind::Int(_), TyKind::InferenceVar(InferTy::Int(tv))) => {
                 self.instantiate(*tv, other.clone().intern());
@@ -214,8 +219,9 @@ impl TypeVariableTable {
         self.eq_relations.union(a, b);
     }
 
-    /// Instantiates `tv` with the type `ty`. Instantiation is the process of associating a concrete
-    /// type with a type variable which in turn will resolve all equated type variables.
+    /// Instantiates `tv` with the type `ty`. Instantiation is the process of
+    /// associating a concrete type with a type variable which in turn will
+    /// resolve all equated type variables.
     fn instantiate(&mut self, tv: TypeVarId, ty: Ty) {
         debug_assert!(
             self.eq_relations.probe_value(tv).is_unknown(),
@@ -227,13 +233,14 @@ impl TypeVariableTable {
         self.eq_relations.union_value(tv, TypeVarValue::Known(ty));
     }
 
-    /// If `ty` is a type variable, and it has been instantiated, then return the instantiated type;
-    /// otherwise returns `ty`.
+    /// If `ty` is a type variable, and it has been instantiated, then return
+    /// the instantiated type; otherwise returns `ty`.
     pub fn replace_if_possible<'t>(&mut self, db: &dyn HirDatabase, ty: &'t Ty) -> Cow<'t, Ty> {
         let mut ty = Cow::Borrowed(ty);
 
-        // The type variable could resolve to an int/float variable. Therefore try to resolve up to
-        // three times; each type of variable shouldn't occur more than once
+        // The type variable could resolve to an int/float variable. Therefore try to
+        // resolve up to three times; each type of variable shouldn't occur more
+        // than once
         for _i in 0..3 {
             match ty.interned() {
                 TyKind::InferenceVar(tv) => {
@@ -254,9 +261,10 @@ impl TypeVariableTable {
         ty
     }
 
-    /// Resolves the type as far as currently possible, replacing type variables by their known
-    /// types. All types returned by the `infer_*` functions should be resolved as far as possible,
-    /// i.e. contain no type variables with known type.
+    /// Resolves the type as far as currently possible, replacing type variables
+    /// by their known types. All types returned by the `infer_*` functions
+    /// should be resolved as far as possible, i.e. contain no type
+    /// variables with known type.
     pub(crate) fn resolve_ty_as_far_as_possible(&mut self, ty: Ty) -> Ty {
         self.resolve_ty_as_far_as_possible_inner(&mut Vec::new(), ty)
     }
@@ -286,7 +294,8 @@ impl TypeVariableTable {
         })
     }
 
-    /// Resolves the type completely; type variables without known type are replaced by [`Ty::Unknown`].
+    /// Resolves the type completely; type variables without known type are
+    /// replaced by [`Ty::Unknown`].
     pub(crate) fn resolve_ty_completely(&mut self, ty: Ty) -> Ty {
         self.resolve_ty_completely_inner(&mut Vec::new(), ty)
     }

@@ -1,22 +1,25 @@
 #![allow(clippy::enum_variant_names)] // This is a HACK because we use salsa
 
-use crate::cancelation::Canceled;
+use std::panic;
+
 use mun_hir::{HirDatabase, Upcast};
 use mun_target::spec::Target;
 use salsa::{Database, Durability, Snapshot};
-use std::panic;
 
-/// The `AnalysisDatabase` provides the database for all analyses. A database is given input and
-/// produces output based on these inputs through the use of queries. These queries are memoized
-/// which enables us to not have to recompute everything if certain inputs change. `salsa` powers
-/// this.
+use crate::cancelation::Canceled;
+
+/// The `AnalysisDatabase` provides the database for all analyses. A database is
+/// given input and produces output based on these inputs through the use of
+/// queries. These queries are memoized which enables us to not have to
+/// recompute everything if certain inputs change. `salsa` powers this.
 ///
-/// Internally this `AnalysisDatabase` is composed of the `Analysis` struct. You can apply a set of
-/// changes which will be applied to the database. You can take snapshots of the `Analysis` struct
-/// which can be used to perform analysis.
+/// Internally this `AnalysisDatabase` is composed of the `Analysis` struct. You
+/// can apply a set of changes which will be applied to the database. You can
+/// take snapshots of the `Analysis` struct which can be used to perform
+/// analysis.
 ///
-/// With this struct we can reuse a lot of functionality from the compiler which should provide a
-/// better user experience.
+/// With this struct we can reuse a lot of functionality from the compiler which
+/// should provide a better user experience.
 #[salsa::database(
     mun_hir::SourceDatabaseStorage,
     mun_hir::DefDatabaseStorage,
@@ -39,7 +42,8 @@ impl Default for AnalysisDatabase {
 }
 
 impl AnalysisDatabase {
-    /// Triggers a simple write on the database which will cancell all outstanding snapshots.
+    /// Triggers a simple write on the database which will cancell all
+    /// outstanding snapshots.
     pub fn request_cancelation(&mut self) {
         self.salsa_runtime_mut().synthetic_write(Durability::LOW);
     }

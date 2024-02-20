@@ -1,6 +1,7 @@
+use std::path::PathBuf;
+
 use anyhow::anyhow;
 use mun_runtime::Runtime;
-use std::path::PathBuf;
 
 use crate::ExitStatus;
 

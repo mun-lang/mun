@@ -1,9 +1,10 @@
+use inkwell::{types::PointerType, AddressSpace};
+
 use super::{
     AddressableType, AsBytesAndPtrs, BytesOrPtr, ConcreteValueType, HasConstValue, IrTypeContext,
     IrValueContext, PointerValueType, SizedValueType, Value,
 };
 use crate::value::ValueType;
-use inkwell::{types::PointerType, AddressSpace};
 
 impl<'ink> ConcreteValueType<'ink> for *const std::ffi::c_void {
     type Value = inkwell::values::PointerValue<'ink>;

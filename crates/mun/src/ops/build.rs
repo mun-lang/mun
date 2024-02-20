@@ -1,5 +1,7 @@
-use std::env;
-use std::path::{Path, PathBuf};
+use std::{
+    env,
+    path::{Path, PathBuf},
+};
 
 use anyhow::anyhow;
 use mun_compiler::{Config, DisplayColor, Target};
@@ -32,7 +34,8 @@ pub struct Args {
     #[clap(long)]
     emit_ir: bool,
 
-    /// Run the compiler in watch mode. Watch input files and trigger recompilation on changes.
+    /// Run the compiler in watch mode. Watch input files and trigger
+    /// recompilation on changes.
     #[clap(long)]
     watch: bool,
 
@@ -46,8 +49,9 @@ fn parse_target_triple(target_triple: &str) -> Result<Target, String> {
         .ok_or_else(|| format!("could not find target for '{target_triple}'"))
 }
 
-/// This method is invoked when the executable is run with the `build` argument indicating that a
-/// user requested us to build a project in the current directory or one of its parent directories.
+/// This method is invoked when the executable is run with the `build` argument
+/// indicating that a user requested us to build a project in the current
+/// directory or one of its parent directories.
 pub fn build(args: Args) -> Result<ExitStatus, anyhow::Error> {
     log::trace!("starting build");
 
@@ -136,8 +140,9 @@ fn find_manifest(directory: &Path) -> Option<PathBuf> {
 
 #[cfg(test)]
 mod test {
-    use super::find_manifest;
     use mun_project::MANIFEST_FILENAME;
+
+    use super::find_manifest;
 
     #[test]
     fn test_find_manifest() {

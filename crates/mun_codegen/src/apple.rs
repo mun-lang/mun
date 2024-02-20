@@ -1,15 +1,16 @@
-use once_cell::sync::Lazy;
-use parking_lot::Mutex;
-use std::collections::HashMap;
 use std::{
+    collections::HashMap,
     env, io,
     path::{Path, PathBuf},
     process::Command,
 };
 
-/// Finds the Apple SDK root directory by checking the `SDKROOT` environment variable or running
-/// `xcrun --show-sdk-path`. The result is cached so multiple calls to this function should be
-/// fast.
+use once_cell::sync::Lazy;
+use parking_lot::Mutex;
+
+/// Finds the Apple SDK root directory by checking the `SDKROOT` environment
+/// variable or running `xcrun --show-sdk-path`. The result is cached so
+/// multiple calls to this function should be fast.
 pub fn get_apple_sdk_root(sdk_name: &str) -> Result<PathBuf, String> {
     static SDK_PATH: Lazy<Mutex<HashMap<String, PathBuf>>> = Lazy::new(Default::default);
 
@@ -27,8 +28,8 @@ pub fn get_apple_sdk_root(sdk_name: &str) -> Result<PathBuf, String> {
 fn find_apple_sdk_root(sdk_name: &str) -> Result<PathBuf, String> {
     // Following what clang (and rustc) does
     // (https://github.com/llvm/llvm-project/blob/
-    // 296a80102a9b72c3eda80558fb78a3ed8849b341/clang/lib/Driver/ToolChains/Darwin.cpp#L1661-L1678
-    // and https://github.dev/rust-lang/rust/blob/33eb3c05c54b306afea341dd233671a9f039156f/compiler/
+    // 296a80102a9b72c3eda80558fb78a3ed8849b341/clang/lib/Driver/ToolChains/Darwin.
+    // cpp#L1661-L1678 and https://github.dev/rust-lang/rust/blob/33eb3c05c54b306afea341dd233671a9f039156f/compiler/
     // rustc_codegen_ssa/src/back/link.rs#L2659-L2681)
     // to allow the SDK path to be set. (For clang, xcrun sets
     // SDKROOT; for rustc, the user or build system can set it, or we

@@ -2,8 +2,8 @@ use super::InferenceResultBuilder;
 use crate::{ty::TyKind, Ty};
 
 impl<'a> InferenceResultBuilder<'a> {
-    /// Unify two types, but may coerce the first one to the second using implicit coercion rules if
-    /// needed.
+    /// Unify two types, but may coerce the first one to the second using
+    /// implicit coercion rules if needed.
     pub(super) fn coerce(&mut self, from_ty: &Ty, to_ty: &Ty) -> bool {
         let from_ty = self.replace_if_possible(from_ty).into_owned();
         let to_ty = self.replace_if_possible(to_ty);

@@ -1,6 +1,8 @@
-use crate::db::AnalysisDatabase;
-use mun_hir::SourceDatabase;
 use std::sync::Arc;
+
+use mun_hir::SourceDatabase;
+
+use crate::db::AnalysisDatabase;
 
 /// Represents an atomic change to the state of the `Analysis`
 #[derive(Default)]

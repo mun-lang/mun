@@ -5,7 +5,8 @@ use crate::{
     FilePosition,
 };
 
-/// Creates an analysis database from a multi-file fixture and a position marked with `$0`.
+/// Creates an analysis database from a multi-file fixture and a position marked
+/// with `$0`.
 pub(crate) fn position(fixture: &str) -> (AnalysisDatabase, FilePosition) {
     let change_fixture = ChangeFixture::parse(fixture);
     let mut database = AnalysisDatabase::default();
@@ -20,8 +21,8 @@ pub(crate) fn position(fixture: &str) -> (AnalysisDatabase, FilePosition) {
     (database, FilePosition { file_id, offset })
 }
 
-/// Creates a list of completions for the specified code. The code must contain a cursor in the text
-/// indicated by `$0`
+/// Creates a list of completions for the specified code. The code must contain
+/// a cursor in the text indicated by `$0`
 pub(crate) fn completion_list(
     code: &str,
     filter_kind: Option<CompletionKind>,
@@ -39,8 +40,8 @@ pub(crate) fn completion_list(
     }
 }
 
-/// Constructs a string representation of all the completions for the specified code. The code must
-/// contain a cursor in the text indicated by `$0`.
+/// Constructs a string representation of all the completions for the specified
+/// code. The code must contain a cursor in the text indicated by `$0`.
 pub(crate) fn completion_string(code: &str, filter_kind: Option<CompletionKind>) -> String {
     let completions = completion_list(code, filter_kind);
     let label_width = completions

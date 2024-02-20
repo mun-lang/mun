@@ -1,9 +1,12 @@
-use crate::code_model::{Field, Function, Struct, TypeAlias};
-use crate::ids::{AssocItemLoc, Lookup};
-use crate::in_file::InFile;
-use crate::item_tree::{ItemTreeId, ItemTreeNode};
-use crate::{DefDatabase, ItemLoc};
 use mun_syntax::ast;
+
+use crate::{
+    code_model::{Field, Function, Struct, TypeAlias},
+    ids::{AssocItemLoc, Lookup},
+    in_file::InFile,
+    item_tree::{ItemTreeId, ItemTreeNode},
+    DefDatabase, ItemLoc,
+};
 
 /// A trait implemented for items that can be related back to their source. The
 /// [`HasSource::source`] method returns the source location of its instance.

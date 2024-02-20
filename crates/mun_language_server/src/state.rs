@@ -1,3 +1,16 @@
+use std::{sync::Arc, time::Instant};
+
+use crossbeam_channel::{select, unbounded, Receiver, Sender};
+use lsp_server::{ReqQueue, Response};
+use lsp_types::{
+    notification::{Notification, PublishDiagnostics},
+    PublishDiagnosticsParams,
+};
+use mun_paths::AbsPathBuf;
+use mun_vfs::VirtualFileSystem;
+use parking_lot::RwLock;
+use rustc_hash::FxHashSet;
+
 use crate::{
     analysis::{Analysis, AnalysisSnapshot},
     change::AnalysisChange,
@@ -5,23 +18,14 @@ use crate::{
     state::utils::Progress,
     to_json, to_lsp,
 };
-use crossbeam_channel::{select, unbounded, Receiver, Sender};
-use lsp_server::{ReqQueue, Response};
-use lsp_types::{
-    notification::Notification, notification::PublishDiagnostics, PublishDiagnosticsParams,
-};
-use mun_paths::AbsPathBuf;
-use mun_vfs::VirtualFileSystem;
-use parking_lot::RwLock;
-use rustc_hash::FxHashSet;
-use std::{sync::Arc, time::Instant};
 
 mod protocol;
 mod utils;
 mod workspace;
 
-/// A `Task` is something that is send from async tasks to the entry point for processing. This
-/// enables synchronizing resources like the connection with the client.
+/// A `Task` is something that is send from async tasks to the entry point for
+/// processing. This enables synchronizing resources like the connection with
+/// the client.
 #[derive(Debug)]
 pub(crate) enum Task {
     Response(Response),
@@ -105,7 +109,8 @@ impl LanguageServerState {
         // Construct a task channel
         let (task_sender, task_receiver) = unbounded();
 
-        // Construct the state that will hold all the analysis and apply the initial state
+        // Construct the state that will hold all the analysis and apply the initial
+        // state
         let mut analysis = Analysis::default();
         let mut change = AnalysisChange::new();
         change.set_packages(mun_hir::PackageSet::default());
@@ -129,8 +134,9 @@ impl LanguageServerState {
         }
     }
 
-    /// Blocks until a new event is received from one of the many channels the language server
-    /// listens to. Returns the first event that is received.
+    /// Blocks until a new event is received from one of the many channels the
+    /// language server listens to. Returns the first event that is
+    /// received.
     fn next_event(&self, receiver: &Receiver<lsp_server::Message>) -> Option<Event> {
         select! {
             recv(receiver) -> msg => msg.ok().map(Event::Lsp),
@@ -156,7 +162,8 @@ impl LanguageServerState {
         Ok(())
     }
 
-    /// Handles an event from one of the many sources that the language server subscribes to.
+    /// Handles an event from one of the many sources that the language server
+    /// subscribes to.
     fn handle_event(&mut self, event: Event) -> anyhow::Result<()> {
         let start_time = Instant::now();
         log::info!("handling event: {:?}", event);
@@ -317,9 +324,9 @@ impl LanguageServerState {
         }
     }
 
-    /// Processes any and all changes that have been applied to the virtual filesystem. Generates
-    /// an `AnalysisChange` and applies it if there are changes. True is returned if things changed,
-    /// otherwise false.
+    /// Processes any and all changes that have been applied to the virtual
+    /// filesystem. Generates an `AnalysisChange` and applies it if there
+    /// are changes. True is returned if things changed, otherwise false.
     pub fn process_vfs_changes(&mut self) -> bool {
         // Get all the changes since the last time we processed
         let changed_files = {
@@ -335,8 +342,8 @@ impl LanguageServerState {
         let mut analysis_change = AnalysisChange::new();
         let mut has_created_or_deleted_entries = false;
         for file in changed_files {
-            // If the file was deleted or created we have to remember that so that we update the
-            // source roots as well.
+            // If the file was deleted or created we have to remember that so that we update
+            // the source roots as well.
             if file.is_created_or_deleted() {
                 has_created_or_deleted_entries = true;
             }

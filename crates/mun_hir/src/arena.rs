@@ -1,9 +1,11 @@
-use std::cmp::Ordering;
-use std::fmt;
-use std::hash::{Hash, Hasher};
-use std::iter::FromIterator;
-use std::marker::PhantomData;
-use std::ops::{Index, IndexMut};
+use std::{
+    cmp::Ordering,
+    fmt,
+    hash::{Hash, Hasher},
+    iter::FromIterator,
+    marker::PhantomData,
+    ops::{Index, IndexMut},
+};
 
 pub mod map;
 
@@ -95,10 +97,10 @@ impl<T> Idx<T> {
     }
 }
 
-/// An `Arena<T>` holds a collection of `T`s but allocates persistent ID's that are used to refer
-/// to an element in the arena. When adding an item to an `Arena` it returns an `Idx<T>` that is
-/// only valid for the `Arena` that allocated the `Idx`. Its only possible to add items to an
-/// `Arena`.
+/// An `Arena<T>` holds a collection of `T`s but allocates persistent ID's that
+/// are used to refer to an element in the arena. When adding an item to an
+/// `Arena` it returns an `Idx<T>` that is only valid for the `Arena` that
+/// allocated the `Idx`. Its only possible to add items to an `Arena`.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Arena<T> {
     data: Vec<T>,

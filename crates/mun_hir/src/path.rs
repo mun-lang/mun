@@ -1,6 +1,9 @@
+use mun_syntax::{
+    ast,
+    ast::{NameOwner, PathSegmentKind},
+};
+
 use crate::{AsName, Name};
-use mun_syntax::ast;
-use mun_syntax::ast::{NameOwner, PathSegmentKind};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Path {
@@ -79,7 +82,8 @@ impl Path {
         self.kind == PathKind::Plain && self.segments.len() == 1
     }
 
-    /// If this path represents a single identifier, like `foo`, return its name.
+    /// If this path represents a single identifier, like `foo`, return its
+    /// name.
     pub fn as_ident(&self) -> Option<&Name> {
         if self.is_ident() {
             return self.segments.first();
@@ -93,11 +97,13 @@ impl Path {
         Path { kind, segments }
     }
 
-    /// Calls `cb` with all paths, represented by this use item. For the use statement:
+    /// Calls `cb` with all paths, represented by this use item. For the use
+    /// statement:
     /// ```mun
     /// use foo::{self, Bar};
     /// ```
-    /// the function will call the callback twice. Once for `foo` and once for `foo::Bar`.
+    /// the function will call the callback twice. Once for `foo` and once for
+    /// `foo::Bar`.
     pub(crate) fn expand_use_item(
         item_src: &ast::Use,
         mut cb: impl FnMut(Path, &ast::UseTree, /* is_glob */ bool, Option<ImportAlias>),
@@ -113,14 +119,15 @@ impl Path {
     }
 }
 
-/// Given an `ast::UseTree` and an optional prefix, call a callback function for every item that is
-/// contained in the import tree.
+/// Given an `ast::UseTree` and an optional prefix, call a callback function for
+/// every item that is contained in the import tree.
 ///
 /// For the use statement:
 /// ```mun
 /// use foo::{self, Bar};
 /// ```
-/// the function will call the callback twice. Once for `foo` and once for `foo::Bar`.
+/// the function will call the callback twice. Once for `foo` and once for
+/// `foo::Bar`.
 fn lower_use_tree(
     prefix: Option<Path>,
     tree: &ast::UseTree,

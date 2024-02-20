@@ -1,10 +1,13 @@
-use crate::{from_lsp, state::LanguageServerSnapshot, to_lsp, FilePosition};
 use lsp_types::{CompletionContext, CompletionItem, DocumentSymbol};
 use mun_syntax::{AstNode, TextSize};
 
-/// Computes the document symbols for a specific document. Converts the LSP types to internal
-/// formats and calls [`LanguageServerSnapshot::file_structure`] to fetch the symbols in the
-/// requested document. Once completed, returns the result converted back to LSP types.
+use crate::{from_lsp, state::LanguageServerSnapshot, to_lsp, FilePosition};
+
+/// Computes the document symbols for a specific document. Converts the LSP
+/// types to internal formats and calls
+/// [`LanguageServerSnapshot::file_structure`] to fetch the symbols in the
+/// requested document. Once completed, returns the result converted back to LSP
+/// types.
 pub(crate) fn handle_document_symbol(
     snapshot: LanguageServerSnapshot,
     params: lsp_types::DocumentSymbolParams,
@@ -33,13 +36,14 @@ pub(crate) fn handle_document_symbol(
     Ok(Some(build_hierarchy_from_flat_list(parents).into()))
 }
 
-/// Computes completion items that should be presented to the user when the cursor is at a specific
-/// location.
+/// Computes completion items that should be presented to the user when the
+/// cursor is at a specific location.
 pub(crate) fn handle_completion(
     snapshot: LanguageServerSnapshot,
     params: lsp_types::CompletionParams,
 ) -> anyhow::Result<Option<lsp_types::CompletionResponse>> {
-    /// Helper function to check if the given position is preceded by a single colon.
+    /// Helper function to check if the given position is preceded by a single
+    /// colon.
     fn is_position_at_single_colon(
         snapshot: &LanguageServerSnapshot,
         position: FilePosition,
@@ -64,8 +68,8 @@ pub(crate) fn handle_completion(
 
     let position = from_lsp::file_position(&snapshot, params.text_document_position)?;
 
-    // If the completion was triggered after a single colon there is nothing to do. We only want
-    // completion after a *double* colon (::) or after a dot (.).
+    // If the completion was triggered after a single colon there is nothing to do.
+    // We only want completion after a *double* colon (::) or after a dot (.).
     if is_position_at_single_colon(&snapshot, position, params.context)? {
         return Ok(None);
     }
@@ -82,8 +86,9 @@ pub(crate) fn handle_completion(
     Ok(Some(items.into()))
 }
 
-/// Constructs a hierarchy of `DocumentSymbols` for a list of symbols that specify which index is the
-/// parent of a symbol. The parent index must always be smaller than the current index.
+/// Constructs a hierarchy of `DocumentSymbols` for a list of symbols that
+/// specify which index is the parent of a symbol. The parent index must always
+/// be smaller than the current index.
 fn build_hierarchy_from_flat_list(
     mut symbols_and_parent: Vec<(DocumentSymbol, Option<usize>)>,
 ) -> Vec<DocumentSymbol> {
@@ -91,8 +96,8 @@ fn build_hierarchy_from_flat_list(
 
     // Iterate over all elements in the list from back to front.
     while let Some((mut node, parent_index)) = symbols_and_parent.pop() {
-        // If this node has children (added by the code below), they are in the reverse order. This
-        // is because we iterate the input from back to front.
+        // If this node has children (added by the code below), they are in the reverse
+        // order. This is because we iterate the input from back to front.
         if let Some(children) = &mut node.children {
             children.reverse();
         }
@@ -119,8 +124,9 @@ fn build_hierarchy_from_flat_list(
 
 #[cfg(test)]
 mod tests {
-    use crate::handlers::build_hierarchy_from_flat_list;
     use lsp_types::{DocumentSymbol, Range, SymbolKind};
+
+    use crate::handlers::build_hierarchy_from_flat_list;
 
     #[test]
     fn test_build_hierarchy_from_flat_list() {

@@ -32,12 +32,13 @@ impl ErrorHandle {
         !self.0.is_null()
     }
 
-    /// Returns the error associated with this instance or `None` if there is no error.
+    /// Returns the error associated with this instance or `None` if there is no
+    /// error.
     ///
     /// # Safety
     ///
-    /// If the error contained in this handle has previously been deallocated the data may have been
-    /// corrupted.
+    /// If the error contained in this handle has previously been deallocated
+    /// the data may have been corrupted.
     pub unsafe fn err(&self) -> Option<&CStr> {
         if self.is_err() {
             Some(CStr::from_ptr(self.0))

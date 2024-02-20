@@ -1,12 +1,11 @@
+pub use assembly_builder::AssemblyBuilder;
+pub use context::CodeGenContext;
+pub use error::CodeGenerationError;
 use inkwell::{
     module::Module,
     passes::{PassManager, PassManagerBuilder},
     OptimizationLevel,
 };
-
-pub use assembly_builder::AssemblyBuilder;
-pub use context::CodeGenContext;
-pub use error::CodeGenerationError;
 pub(crate) use object_file::ObjectFile;
 
 mod assembly_builder;

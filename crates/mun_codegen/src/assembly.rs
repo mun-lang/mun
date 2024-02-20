@@ -1,15 +1,18 @@
+use std::{path::Path, sync::Arc};
+
+use anyhow::anyhow;
+use apple_codesign::{SigningSettings, UnifiedSigner};
+use inkwell::context::Context;
+use tempfile::NamedTempFile;
+
 use crate::{
     code_gen::{AssemblyBuilder, CodeGenContext, ObjectFile},
     db::CodeGenDatabase,
     ModuleGroupId,
 };
-use anyhow::anyhow;
-use apple_codesign::{SigningSettings, UnifiedSigner};
-use inkwell::context::Context;
-use std::{path::Path, sync::Arc};
-use tempfile::NamedTempFile;
 
-/// An `Assembly` is a successfully linked module of code from one or more files.
+/// An `Assembly` is a successfully linked module of code from one or more
+/// files.
 pub struct Assembly<'db, 'ink, 'ctx> {
     code_gen: &'ctx CodeGenContext<'db, 'ink>,
     module: inkwell::module::Module<'ink>,

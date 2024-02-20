@@ -1,5 +1,12 @@
 //! This module implements the logic to convert an AST to an `ItemTree`.
 
+use std::{collections::HashMap, convert::TryInto, marker::PhantomData, sync::Arc};
+
+use mun_syntax::ast::{
+    self, ExternOwner, ModuleItemOwner, NameOwner, StructKind, TypeAscriptionOwner,
+};
+use smallvec::SmallVec;
+
 use super::{
     diagnostics, AssociatedItem, Field, Fields, Function, IdRange, Impl, ItemTree, ItemTreeData,
     ItemTreeNode, ItemVisibilities, LocalItemTreeId, ModItem, RawVisibilityId, Struct, TypeAlias,
@@ -13,11 +20,6 @@ use crate::{
     visibility::RawVisibility,
     DefDatabase, FileId, Name, Path,
 };
-use mun_syntax::ast::{
-    self, ExternOwner, ModuleItemOwner, NameOwner, StructKind, TypeAscriptionOwner,
-};
-use smallvec::SmallVec;
-use std::{collections::HashMap, convert::TryInto, marker::PhantomData, sync::Arc};
 
 struct ModItems(SmallVec<[ModItem; 1]>);
 
@@ -57,7 +59,8 @@ impl Context {
         }
     }
 
-    /// Lowers all the items in the specified `ModuleItemOwner` and returns an `ItemTree`
+    /// Lowers all the items in the specified `ModuleItemOwner` and returns an
+    /// `ItemTree`
     pub(super) fn lower_module_items(mut self, item_owner: &impl ModuleItemOwner) -> ItemTree {
         let top_level = item_owner
             .items()

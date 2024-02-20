@@ -1,14 +1,15 @@
 #![cfg(test)]
 
-use crate::{
-    db::{AstDatabase, SourceDatabase},
-    db::{HirDatabase, Upcast},
-    DefDatabase,
-};
 use mun_target::spec::Target;
 use parking_lot::Mutex;
 
-/// A mock implementation of the IR database. It can be used to set up a simple test case.
+use crate::{
+    db::{AstDatabase, HirDatabase, SourceDatabase, Upcast},
+    DefDatabase,
+};
+
+/// A mock implementation of the IR database. It can be used to set up a simple
+/// test case.
 #[salsa::database(
     crate::SourceDatabaseStorage,
     crate::AstDatabaseStorage,

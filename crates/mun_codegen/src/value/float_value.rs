@@ -1,8 +1,9 @@
+use inkwell::{types::PointerType, AddressSpace};
+
 use super::{
     AddressableType, AsBytesAndPtrs, AsValue, BytesOrPtr, ConcreteValueType, HasConstValue,
     IrTypeContext, IrValueContext, PointerValueType, SizedValueType, Value,
 };
-use inkwell::{types::PointerType, AddressSpace};
 
 impl<'ink> ConcreteValueType<'ink> for f32 {
     type Value = inkwell::values::FloatValue<'ink>;

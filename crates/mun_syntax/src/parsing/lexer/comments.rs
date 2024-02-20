@@ -1,6 +1,7 @@
-use crate::parsing::lexer::cursor::Cursor;
-
-use crate::SyntaxKind::{self, COMMENT};
+use crate::{
+    parsing::lexer::cursor::Cursor,
+    SyntaxKind::{self, COMMENT},
+};
 
 pub(crate) fn scan_comment(cursor: &mut Cursor<'_>) -> Option<SyntaxKind> {
     if cursor.matches('/') {

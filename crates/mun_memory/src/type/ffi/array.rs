@@ -1,15 +1,17 @@
-use crate::ffi::Type;
-use crate::r#type::{ArrayData, Type as RustType, TypeDataStore};
+use std::{ffi::c_void, mem::ManuallyDrop, ops::Deref, sync::Arc};
+
 use mun_capi_utils::{mun_error_try, try_deref_mut, ErrorHandle};
-use std::ffi::c_void;
-use std::mem::ManuallyDrop;
-use std::ops::Deref;
-use std::sync::Arc;
+
+use crate::{
+    ffi::Type,
+    r#type::{ArrayData, Type as RustType, TypeDataStore},
+};
 
 /// Additional information of an array [`Type`].
 ///
-/// Ownership of this type lies with the [`Type`] that created this instance. As long as the
-/// original type is not released through [`mun_type_release`] this type stays alive.
+/// Ownership of this type lies with the [`Type`] that created this instance. As
+/// long as the original type is not released through [`mun_type_release`] this
+/// type stays alive.
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ArrayInfo(pub(super) *const c_void, pub(super) *const c_void);
@@ -44,13 +46,13 @@ impl ArrayInfo {
     }
 }
 
-/// Returns the type of the elements stored in this type. Ownership is transferred if this function
-/// returns successfully.
+/// Returns the type of the elements stored in this type. Ownership is
+/// transferred if this function returns successfully.
 ///
 /// # Safety
 ///
-/// This function results in undefined behavior if the passed in `ArrayInfo` has been deallocated
-/// by a previous call to [`mun_type_release`].
+/// This function results in undefined behavior if the passed in `ArrayInfo` has
+/// been deallocated by a previous call to [`mun_type_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_array_type_element_type(
     ty: ArrayInfo,
@@ -70,13 +72,17 @@ pub unsafe extern "C" fn mun_array_type_element_type(
 
 #[cfg(test)]
 mod test {
-    use super::{mun_array_type_element_type, ArrayInfo};
-    use crate::ffi::{
-        mun_type_array_type, mun_type_equal, mun_type_kind, mun_type_release, Type, TypeKind,
-    };
-    use crate::r#type::ffi::primitive::{mun_type_primitive, PrimitiveType};
-    use mun_capi_utils::{assert_error_snapshot, assert_getter1};
     use std::{mem::MaybeUninit, ptr};
+
+    use mun_capi_utils::{assert_error_snapshot, assert_getter1};
+
+    use super::{mun_array_type_element_type, ArrayInfo};
+    use crate::{
+        ffi::{
+            mun_type_array_type, mun_type_equal, mun_type_kind, mun_type_release, Type, TypeKind,
+        },
+        r#type::ffi::primitive::{mun_type_primitive, PrimitiveType},
+    };
 
     /// Returns the array type of the specified type. Asserts if that fails.
     unsafe fn array_type(ty: Type) -> (Type, ArrayInfo) {

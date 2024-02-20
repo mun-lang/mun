@@ -1,6 +1,8 @@
-use crate::SourceRootId;
-use rustc_hash::FxHashMap;
 use std::ops::Index;
+
+use rustc_hash::FxHashMap;
+
+use crate::SourceRootId;
 
 /// Information regarding a package
 #[derive(Debug, Clone)]
@@ -9,8 +11,8 @@ pub struct PackageData {
     pub source_root: SourceRootId,
 }
 
-/// Represents the id of a single package, all packages have a unique id, the main package and all
-/// dependent packages.
+/// Represents the id of a single package, all packages have a unique id, the
+/// main package and all dependent packages.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PackageId(pub u32);
 

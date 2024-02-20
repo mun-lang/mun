@@ -1,5 +1,6 @@
-use super::{Manifest, ManifestMetadata, PackageId};
 use serde_derive::{Deserialize, Serialize};
+
+use super::{Manifest, ManifestMetadata, PackageId};
 
 /// A manifest as specified in a mun.toml file.
 #[derive(Debug, Deserialize, Serialize)]

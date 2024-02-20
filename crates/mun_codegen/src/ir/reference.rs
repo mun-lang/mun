@@ -1,13 +1,17 @@
-use inkwell::builder::Builder;
-use inkwell::types::{BasicType, BasicTypeEnum};
-use inkwell::values::{BasicValueEnum, PointerValue};
-use inkwell::AddressSpace;
 use std::ffi::CStr;
+
+use inkwell::{
+    builder::Builder,
+    types::{BasicType, BasicTypeEnum},
+    values::{BasicValueEnum, PointerValue},
+    AddressSpace,
+};
 
 /// A helper struct that wraps an object on the heap.
 ///
-/// Objects on the heap are represented as an indirection. The stored pointer points to an object
-/// on the heap where the first field points to the actual data of the object:
+/// Objects on the heap are represented as an indirection. The stored pointer
+/// points to an object on the heap where the first field points to the actual
+/// data of the object:
 ///
 /// ```c
 /// struct Obj {
@@ -16,16 +20,17 @@ use std::ffi::CStr;
 /// }
 /// ```
 ///
-/// This enables the runtime to modify the contents of the object without having to modify the
-/// references that point to it.
+/// This enables the runtime to modify the contents of the object without having
+/// to modify the references that point to it.
 ///
-/// The `RuntimeReferenceValue` stores the indirection as `**T` (a pointer to a pointer to `T`),
-/// where T is the type of the object stored on the heap.
+/// The `RuntimeReferenceValue` stores the indirection as `**T` (a pointer to a
+/// pointer to `T`), where T is the type of the object stored on the heap.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct RuntimeReferenceValue<'ink>(PointerValue<'ink>);
 
 impl<'ink> RuntimeReferenceValue<'ink> {
-    /// Constructs a new `RuntimeReferenceValue` from a reference pointer to a specific type.
+    /// Constructs a new `RuntimeReferenceValue` from a reference pointer to a
+    /// specific type.
     ///
     /// The pointer passed must be of type `**T`.
     pub fn from_ptr(
@@ -46,8 +51,8 @@ impl<'ink> RuntimeReferenceValue<'ink> {
         }
     }
 
-    /// Constructs a new instance from an inkwell `PointerValue` without checking if this is actually
-    /// a pointer to an object on the heap.
+    /// Constructs a new instance from an inkwell `PointerValue` without
+    /// checking if this is actually a pointer to an object on the heap.
     pub unsafe fn from_ptr_unchecked(ptr: PointerValue<'ink>) -> Self {
         Self(ptr)
     }
@@ -57,7 +62,8 @@ impl<'ink> RuntimeReferenceValue<'ink> {
         self.0.get_name()
     }
 
-    /// Generates code to dereference the reference to get to the data of the reference.
+    /// Generates code to dereference the reference to get to the data of the
+    /// reference.
     pub fn get_data_ptr(&self, builder: &Builder<'ink>) -> PointerValue<'ink> {
         let value_name = self.0.get_name().to_string_lossy();
 

@@ -1,10 +1,5 @@
-use crate::{
-    intrinsics,
-    ir::{dispatch_table::DispatchTable, ty::HirTypeCache, type_table::TypeTable},
-    ir::{RuntimeArrayValue, RuntimeReferenceValue},
-    module_group::ModuleGroup,
-    value::Global,
-};
+use std::{collections::HashMap, sync::Arc};
+
 use inkwell::{
     basic_block::BasicBlock,
     builder::Builder,
@@ -21,7 +16,16 @@ use mun_hir::{
     Literal, LogicOp, Name, Ordering, Pat, PatId, Path, ResolveBitness, Resolver, Statement,
     TyKind, UnaryOp, ValueNs,
 };
-use std::{collections::HashMap, sync::Arc};
+
+use crate::{
+    intrinsics,
+    ir::{
+        dispatch_table::DispatchTable, ty::HirTypeCache, type_table::TypeTable, RuntimeArrayValue,
+        RuntimeReferenceValue,
+    },
+    module_group::ModuleGroup,
+    value::Global,
+};
 
 type BreakSources<'ink> = Vec<Option<(BasicValueEnum<'ink>, BasicBlock<'ink>)>>;
 
@@ -104,8 +108,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
     /// Generates IR for the body of the function.
     pub fn gen_fn_body(&mut self) {
-        // Iterate over all parameters and their type and store them so we can reference them
-        // later in code.
+        // Iterate over all parameters and their type and store them so we can reference
+        // them later in code.
         for (i, (pat, _ty)) in self.body.params().iter().enumerate() {
             let body = self.body.clone(); // Avoid borrow issues
 
@@ -120,7 +124,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     self.pat_to_name.insert(*pat, name);
                 }
                 Pat::Wild => {
-                    // Wildcard patterns cannot be referenced from code. So nothing to do.
+                    // Wildcard patterns cannot be referenced from code. So
+                    // nothing to do.
                 }
                 Pat::Path(_) => unreachable!(
                     "Path patterns are not supported as parameters, are we missing a diagnostic?"
@@ -134,9 +139,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         // Generate code for the body of the function
         let ret_value = self.gen_expr(self.body.body_expr());
 
-        // Construct a return statement from the returned value of the body if a return is expected
-        // in the first place. If the return type of the body is `never` there is no need to
-        // generate a return statement.
+        // Construct a return statement from the returned value of the body if a return
+        // is expected in the first place. If the return type of the body is
+        // `never` there is no need to generate a return statement.
         let block_ret_type = &self.infer[self.body.body_expr()];
         let fn_ret_type = self
             .hir_function
@@ -209,8 +214,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         }
     }
 
-    /// Generates IR for the specified expression. Dependending on the type of expression an IR
-    /// value is returned.
+    /// Generates IR for the specified expression. Dependending on the type of
+    /// expression an IR value is returned.
     fn gen_expr(&mut self, expr: ExprId) -> Option<inkwell::values::BasicValueEnum<'ink>> {
         let body = self.body.clone();
         match &body[expr] {
@@ -346,7 +351,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         self.context.const_struct(&[], false).into()
     }
 
-    /// Allocate a struct literal either on the stack or the heap based on the type of the struct.
+    /// Allocate a struct literal either on the stack or the heap based on the
+    /// type of the struct.
     fn gen_struct_alloc(
         &mut self,
         hir_struct: mun_hir::Struct,
@@ -391,7 +397,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             self.external_globals.type_table,
         );
 
-        // HACK: We should be able to use pointers for built-in struct types like `TypeInfo` in intrinsics
+        // HACK: We should be able to use pointers for built-in struct types like
+        // `TypeInfo` in intrinsics
         let type_info_ptr = self.builder.build_bitcast(
             type_info_ptr,
             self.context.i8_type().ptr_type(AddressSpace::default()),
@@ -502,8 +509,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         }
     }
 
-    /// Constructs a builder that should be used to emit an `alloca` instruction. These instructions
-    /// should be at the start of the IR.
+    /// Constructs a builder that should be used to emit an `alloca`
+    /// instruction. These instructions should be at the start of the IR.
     fn new_alloca_builder(&self) -> Builder<'ink> {
         let temp_builder = self.context.create_builder();
         let block = self
@@ -518,8 +525,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         temp_builder
     }
 
-    /// Generate IR for a let statement: `let a:int = 3`. Returns `false` if the initializer of the
-    /// statement never returns; `true` otherwise.
+    /// Generate IR for a let statement: `let a:int = 3`. Returns `false` if the
+    /// initializer of the statement never returns; `true` otherwise.
     fn gen_let_statement(&mut self, pat: PatId, initializer: Option<ExprId>) -> bool {
         let initializer = match initializer {
             Some(expr) => match self.gen_expr(expr) {
@@ -582,8 +589,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         }
     }
 
-    /// Given an expression and its value optionally dereference the value to get to the actual
-    /// value. This is useful if we need to do an indirection to get to the actual value.
+    /// Given an expression and its value optionally dereference the value to
+    /// get to the actual value. This is useful if we need to do an
+    /// indirection to get to the actual value.
     fn opt_deref_value(
         &mut self,
         expr: ExprId,
@@ -747,7 +755,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         }
     }
 
-    /// Generates IR to calculate a binary operation between two floating point values.
+    /// Generates IR to calculate a binary operation between two floating point
+    /// values.
     fn gen_binary_op_float(
         &mut self,
         lhs_expr: ExprId,
@@ -846,8 +855,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         }
     }
 
-    /// Generates IR to calculate a binary operation between two heap struct values (e.g. a Mun
-    /// `struct(gc)`).
+    /// Generates IR to calculate a binary operation between two heap struct
+    /// values (e.g. a Mun `struct(gc)`).
     fn gen_binary_op_heap_struct(
         &mut self,
         lhs_expr: ExprId,
@@ -875,8 +884,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         }
     }
 
-    /// Generates IR to calculate a binary operation between two value struct values, denoted in
-    /// Mun as `struct(value)`.
+    /// Generates IR to calculate a binary operation between two value struct
+    /// values, denoted in Mun as `struct(value)`.
     fn gen_binary_op_value_struct(
         &mut self,
         lhs_expr: ExprId,
@@ -1044,8 +1053,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         }
     }
 
-    /// Given an expression generate code that results in a memory address that can be used for
-    /// other place operations.
+    /// Given an expression generate code that results in a memory address that
+    /// can be used for other place operations.
     fn gen_place_expr(&mut self, expr: ExprId) -> Option<PointerValue<'ink>> {
         let body = self.body.clone();
         match &body[expr] {
@@ -1063,8 +1072,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         }
     }
 
-    /// Returns true if the specified expression refers to an expression that results in a memory
-    /// address that can be used for other place operations.
+    /// Returns true if the specified expression refers to an expression that
+    /// results in a memory address that can be used for other place
+    /// operations.
     fn is_place_expr(&self, expr: ExprId) -> bool {
         let body = self.body.clone();
         match &body[expr] {
@@ -1075,8 +1085,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         }
     }
 
-    /// Returns true if a call to the specified function should be looked up in the dispatch table;
-    /// if false is returned the function should be called directly.
+    /// Returns true if a call to the specified function should be looked up in
+    /// the dispatch table; if false is returned the function should be
+    /// called directly.
     fn should_use_dispatch_table(&self, function: mun_hir::Function) -> bool {
         self.module_group.should_runtime_link_fn(self.db, function)
     }
@@ -1176,8 +1187,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 Some(then_block_ir)
             }
         } else if let Some((else_block_ir, _else_block)) = else_ir_and_block {
-            // If both the then and the else block never return, the entire if statement will never
-            // return. Therefor we have to remove the merge block because it has no predecessor.
+            // If both the then and the else block never return, the entire if statement
+            // will never return. Therefor we have to remove the merge block
+            // because it has no predecessor.
             if else_block_ir.is_none() {
                 merge_block
                     .remove_from_function()
@@ -1294,8 +1306,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 exit_block,
             );
         } else {
-            // If the condition doesn't return a value, we also immediately return without a value.
-            // This can happen if the expression is a `never` expression.
+            // If the condition doesn't return a value, we also immediately return without a
+            // value. This can happen if the expression is a `never` expression.
             return None;
         }
 
@@ -1328,8 +1340,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         }
 
         if break_values.is_empty() {
-            // Not a single code entry point jumped to the exit block through a break. Therefor we
-            // can completely remove the exit block since it doesnt have a predecessor.
+            // Not a single code entry point jumped to the exit block through a break.
+            // Therefor we can completely remove the exit block since it doesnt
+            // have a predecessor.
             exit_block
                 .remove_from_function()
                 .expect("the exit block must have a parent");
@@ -1338,8 +1351,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             // Move the builder to the exit block
             self.builder.position_at_end(exit_block);
 
-            // If the break values contain values, (so there where `break x;` statements), generate
-            // a phi value. This then assumes that all breaks had values.
+            // If the break values contain values, (so there where `break x;` statements),
+            // generate a phi value. This then assumes that all breaks had
+            // values.
             if let Some(Some((value, _))) = break_values.first() {
                 let phi = self.builder.build_phi(value.get_type(), "exit");
                 for (value, block) in break_values.into_iter().map(Option::unwrap) {
@@ -1347,8 +1361,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 }
                 Some(phi.as_basic_value())
             } else {
-                // Otherwise, in the case of `break;` (without an expression) the return value is
-                // just empty.
+                // Otherwise, in the case of `break;` (without an expression) the return value
+                // is just empty.
                 Some(self.gen_empty())
             }
         }
@@ -1443,8 +1457,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         )
     }
 
-    /// Generates code to construct an array literal at runtime. Returns `None` if the code
-    /// generation for the array literal never returns.
+    /// Generates code to construct an array literal at runtime. Returns `None`
+    /// if the code generation for the array literal never returns.
     fn gen_array(&mut self, expr: ExprId, exprs: &[ExprId]) -> Option<RuntimeArrayValue<'ink>> {
         let array_ty = &self.infer[expr];
         let element_ty = array_ty
@@ -1464,7 +1478,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             self.external_globals.type_table,
         );
 
-        // HACK: We should be able to use pointers for built-in struct types like `TypeInfo` in intrinsics
+        // HACK: We should be able to use pointers for built-in struct types like
+        // `TypeInfo` in intrinsics
         let type_info_ptr = self.builder.build_bitcast(
             type_info_ptr,
             self.context.i8_type().ptr_type(AddressSpace::default()),
@@ -1478,8 +1493,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .get_usize_type()
             .const_int(exprs.len() as u64, false);
 
-        // An object pointer adds an extra layer of indirection to allow for hot reloading. To
-        // make it struct type agnostic, it is stored in a `*const *mut std::ffi::c_void`.
+        // An object pointer adds an extra layer of indirection to allow for hot
+        // reloading. To make it struct type agnostic, it is stored in a `*const
+        // *mut std::ffi::c_void`.
         let untyped_array_ptr = self
             .builder
             .build_call(
@@ -1551,7 +1567,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         base: ExprId,
         index: ExprId,
     ) -> Option<PointerValue<'ink>> {
-        // Safety: place expression can only be generated if the base expression is an array.
+        // Safety: place expression can only be generated if the base expression is an
+        // array.
         let base = unsafe {
             RuntimeArrayValue::from_ptr_unchecked(self.gen_expr(base)?.into_pointer_value())
         };
@@ -1581,8 +1598,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
     }
 }
 
-/// Derefs a heap-allocated value. As we introduce a layer of indirection for hot
-/// reloading, we need to first load the pointer that points to the memory block.
+/// Derefs a heap-allocated value. As we introduce a layer of indirection for
+/// hot reloading, we need to first load the pointer that points to the memory
+/// block.
 fn deref_heap_value<'ink>(
     builder: &Builder<'ink>,
     value: BasicValueEnum<'ink>,

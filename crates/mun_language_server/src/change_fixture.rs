@@ -1,12 +1,15 @@
-use crate::change::AnalysisChange;
+use std::sync::Arc;
+
 use mun_hir::fixture::Fixture;
 use mun_syntax::{TextRange, TextSize};
-use std::sync::Arc;
+
+use crate::change::AnalysisChange;
 
 pub const CURSOR_MARKER: &str = "$0";
 
-/// A `ChangeFixture` is an extended [`Fixture`] that can be used to construct an entire
-/// [`AnalysisDatabase`] with. It can also optionally contain a cursor indicated by `$0`.
+/// A `ChangeFixture` is an extended [`Fixture`] that can be used to construct
+/// an entire [`AnalysisDatabase`] with. It can also optionally contain a cursor
+/// indicated by `$0`.
 pub struct ChangeFixture {
     pub file_position: Option<(mun_hir::FileId, RangeOrOffset)>,
     pub files: Vec<mun_hir::FileId>,
@@ -57,8 +60,8 @@ impl ChangeFixture {
     }
 }
 
-/// Returns the offset of the first occurrence of `$0` marker and the copy of `text` without the
-/// marker.
+/// Returns the offset of the first occurrence of `$0` marker and the copy of
+/// `text` without the marker.
 fn try_extract_offset(text: &str) -> Option<(TextSize, String)> {
     let cursor_pos = text.find(CURSOR_MARKER)?;
     let mut new_text = String::with_capacity(text.len() - CURSOR_MARKER.len());
@@ -91,7 +94,8 @@ impl From<RangeOrOffset> for TextRange {
     }
 }
 
-/// Extracts `TextRange` or `TextSize` depending on the amount of `$0` markers found in `text`.
+/// Extracts `TextRange` or `TextSize` depending on the amount of `$0` markers
+/// found in `text`.
 pub fn extract_range_or_offset(text: &str) -> (RangeOrOffset, String) {
     if let Some((range, text)) = try_extract_range(text) {
         (RangeOrOffset::Range(range), text)

@@ -1,7 +1,9 @@
-use std::borrow::Borrow;
-use std::convert::{TryFrom, TryInto};
-use std::ops::Deref;
-use std::path::{Path, PathBuf};
+use std::{
+    borrow::Borrow,
+    convert::{TryFrom, TryInto},
+    ops::Deref,
+    path::{Path, PathBuf},
+};
 
 /// Represents an absolute path, internally simply wraps a `PathBuf`.
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
@@ -104,7 +106,8 @@ impl AbsPath {
     /// Constructs a new `AbsPath` from a `Path`.
     pub fn assert_new(path: &Path) -> &AbsPath {
         assert!(path.is_absolute());
-        // This is a safe operation because `AbsPath` is a transparent wrapper around `Path`
+        // This is a safe operation because `AbsPath` is a transparent wrapper around
+        // `Path`
         unsafe { &*(path as *const Path as *const AbsPath) }
     }
 

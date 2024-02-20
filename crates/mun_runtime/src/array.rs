@@ -1,14 +1,14 @@
-use crate::{
-    garbage_collector::GcRootPtr, ArgumentReflection, GarbageCollector, Marshal,
-    ReturnTypeReflection, Runtime,
-};
+use std::{marker::PhantomData, ptr::NonNull, sync::Arc};
+
 use mun_memory::{
     gc::{Array, GcPtr, GcRuntime, HasIndirectionPtr},
     Type,
 };
-use std::marker::PhantomData;
-use std::ptr::NonNull;
-use std::sync::Arc;
+
+use crate::{
+    garbage_collector::GcRootPtr, ArgumentReflection, GarbageCollector, Marshal,
+    ReturnTypeReflection, Runtime,
+};
 
 /// Represents a Mun array pointer.
 #[repr(transparent)]
@@ -26,8 +26,9 @@ impl RawArray {
     }
 }
 
-/// Type-agnostic wrapper for interoperability with a Mun array. This is merely a reference to the
-/// Mun array, that will be garbage collected unless it is rooted.
+/// Type-agnostic wrapper for interoperability with a Mun array. This is merely
+/// a reference to the Mun array, that will be garbage collected unless it is
+/// rooted.
 #[derive(Clone)]
 pub struct ArrayRef<'a, T> {
     raw: RawArray,
@@ -161,8 +162,8 @@ impl<'a, T: Marshal<'a> + 'a> Marshal<'a> for ArrayRef<'a, T> {
     }
 }
 
-/// Type-agnostic wrapper for interoperability with a Mun struct, that has been rooted. To marshal,
-/// obtain a `ArrayRef` for the `RootedArray`.
+/// Type-agnostic wrapper for interoperability with a Mun struct, that has been
+/// rooted. To marshal, obtain a `ArrayRef` for the `RootedArray`.
 #[derive(Clone)]
 pub struct RootedArray<T> {
     handle: GcRootPtr,
@@ -179,8 +180,8 @@ impl<T> RootedArray<T> {
         }
     }
 
-    /// Converts the `RootedArray` into an `ArrayRef<T>`, using an external shared reference to a
-    /// `Runtime`.
+    /// Converts the `RootedArray` into an `ArrayRef<T>`, using an external
+    /// shared reference to a `Runtime`.
     pub fn as_ref<'r>(&self, runtime: &'r Runtime) -> ArrayRef<'r, T>
     where
         T: Marshal<'r> + 'r,

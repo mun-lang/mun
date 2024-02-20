@@ -1,10 +1,6 @@
-//! `Driver` is a stateful compiler frontend that enables incremental compilation by retaining state
-//! from previous compilation.
+//! `Driver` is a stateful compiler frontend that enables incremental
+//! compilation by retaining state from previous compilation.
 
-use crate::{
-    compute_source_relative_path, db::CompilerDatabase, ensure_package_output_dir, is_source_file,
-    PathOrInline, RelativePath,
-};
 use mun_codegen::{AssemblyIr, CodeGenDatabase, ModuleGroup, TargetAssembly};
 use mun_hir::{
     AstDatabase, DiagnosticSink, FileId, Module, PackageSet, SourceDatabase, SourceRoot,
@@ -12,19 +8,28 @@ use mun_hir::{
 };
 use mun_paths::RelativePathBuf;
 
+use crate::{
+    compute_source_relative_path, db::CompilerDatabase, ensure_package_output_dir, is_source_file,
+    PathOrInline, RelativePath,
+};
+
 mod config;
 mod display_color;
 
-pub use self::config::Config;
-pub use self::display_color::DisplayColor;
-
-use crate::diagnostics_snippets::{emit_hir_diagnostic, emit_syntax_error};
-use mun_project::{Package, LOCKFILE_NAME};
 use std::{
-    collections::HashMap, convert::TryInto, io::Cursor, path::Path, path::PathBuf, sync::Arc,
+    collections::HashMap,
+    convert::TryInto,
+    io::Cursor,
+    path::{Path, PathBuf},
+    sync::Arc,
     time::Duration,
 };
+
+use mun_project::{Package, LOCKFILE_NAME};
 use walkdir::WalkDir;
+
+pub use self::{config::Config, display_color::DisplayColor};
+use crate::diagnostics_snippets::{emit_hir_diagnostic, emit_syntax_error};
 
 pub const WORKSPACE: SourceRootId = SourceRootId(0);
 
@@ -108,8 +113,8 @@ impl Driver {
         // Construct the driver
         let mut driver = Driver::with_config(config, output_dir);
 
-        // Iterate over all files in the source directory of the package and store their information in
-        // the database
+        // Iterate over all files in the source directory of the package and store their
+        // information in the database
         let source_directory = package.source_directory();
         if !source_directory.is_dir() {
             anyhow::bail!("the source directory does not exist")
@@ -149,10 +154,12 @@ impl Driver {
 }
 
 impl Driver {
-    /// Returns a file id for the file with the given `relative_path`. This function reuses `FileId`'s
-    /// for paths to keep the cache as valid as possible.
+    /// Returns a file id for the file with the given `relative_path`. This
+    /// function reuses `FileId`'s for paths to keep the cache as valid as
+    /// possible.
     ///
-    /// The allocation of an id might fail if more file IDs exist than can be allocated.
+    /// The allocation of an id might fail if more file IDs exist than can be
+    /// allocated.
     pub fn alloc_file_id<P: AsRef<RelativePath>>(
         &mut self,
         relative_path: P,
@@ -163,8 +170,8 @@ impl Driver {
         }
 
         // Allocate a new id
-        // TODO: See if we can figure out if the compiler cleared the cache of a certain file, at
-        //  which point we can sort of reset the `next_file_id`
+        // TODO: See if we can figure out if the compiler cleared the cache of a certain
+        // file, at  which point we can sort of reset the `next_file_id`
         let id = FileId(
             self.next_file_id
                 .try_into()
@@ -200,8 +207,8 @@ impl Driver {
 }
 
 impl Driver {
-    /// Emits all diagnostic messages currently in the database; returns true if errors were
-    /// emitted.
+    /// Emits all diagnostic messages currently in the database; returns true if
+    /// errors were emitted.
     pub fn emit_diagnostics(
         &self,
         writer: &mut dyn std::io::Write,
@@ -245,7 +252,8 @@ impl Driver {
                         }),
                     );
 
-                    // If an error occurred when emitting HIR diagnostics, return early with the error.
+                    // If an error occurred when emitting HIR diagnostics, return early with the
+                    // error.
                     if let Some(e) = error {
                         return Err(e.into());
                     }
@@ -276,7 +284,8 @@ impl Driver {
 }
 
 impl Driver {
-    /// Get the path where the driver will write the assembly for the specified file.
+    /// Get the path where the driver will write the assembly for the specified
+    /// file.
     pub fn assembly_output_path_from_file(&self, file_id: FileId) -> PathBuf {
         let module_partition = self.db.module_partition();
         let module_group_id = module_partition
@@ -296,7 +305,8 @@ impl Driver {
             .with_extension(AssemblyIr::EXTENSION)
     }
 
-    /// Get the path where the driver will write the assembly for the specified module.
+    /// Get the path where the driver will write the assembly for the specified
+    /// module.
     pub fn assembly_output_path(&self, module: Module) -> PathBuf {
         let module_partition = self.db.module_partition();
         let module_group_id = module_partition
@@ -306,7 +316,8 @@ impl Driver {
             .with_extension(TargetAssembly::EXTENSION)
     }
 
-    /// Get the path where the driver will write the IR for the specified module.
+    /// Get the path where the driver will write the IR for the specified
+    /// module.
     pub fn ir_output_path(&self, module: Module) -> PathBuf {
         let module_partition = self.db.module_partition();
         let module_group_id = module_partition
@@ -316,13 +327,14 @@ impl Driver {
             .with_extension(AssemblyIr::EXTENSION)
     }
 
-    /// Returns the output path for the specified module group without an extension
+    /// Returns the output path for the specified module group without an
+    /// extension
     fn path_for_module_group(&self, module_group: &ModuleGroup) -> PathBuf {
         module_group.relative_file_path().to_path(&self.out_dir)
     }
 
-    /// Writes all assemblies. If `force` is false, the binary will not be written if there are no
-    /// changes since last time it was written.
+    /// Writes all assemblies. If `force` is false, the binary will not be
+    /// written if there are no changes since last time it was written.
     pub fn write_all_assemblies(&mut self, force: bool) -> Result<(), anyhow::Error> {
         let _lock = self.acquire_filesystem_output_lock();
 
@@ -340,9 +352,9 @@ impl Driver {
         Ok(())
     }
 
-    /// Acquires a filesystem lock on the output directory. This ensures that multiple instances
-    /// cannot write to the same output directory and that the runtime does not start reading before
-    /// we finished writing.
+    /// Acquires a filesystem lock on the output directory. This ensures that
+    /// multiple instances cannot write to the same output directory and
+    /// that the runtime does not start reading before we finished writing.
     fn acquire_filesystem_output_lock(&self) -> lockfile::Lockfile {
         loop {
             match lockfile::Lockfile::create(self.out_dir.join(LOCKFILE_NAME)) {
@@ -365,9 +377,10 @@ impl Driver {
         }
     }
 
-    /// Generates an assembly for the target machine and specified module and stores it in the
-    /// output location. If `force` is false, the binary will not be written if there are no
-    /// changes since last time it was written. Returns `true` if the assembly was written, `false`
+    /// Generates an assembly for the target machine and specified module and
+    /// stores it in the output location. If `force` is false, the binary
+    /// will not be written if there are no changes since last time it was
+    /// written. Returns `true` if the assembly was written, `false`
     /// if it was up to date.
     fn write_target_assembly(
         &mut self,
@@ -413,7 +426,8 @@ impl Driver {
         Ok(true)
     }
 
-    /// Generates IR for the specified module and stores it in the output location.
+    /// Generates IR for the specified module and stores it in the output
+    /// location.
     fn write_assembly_ir(&mut self, module: mun_hir::Module) -> Result<(), anyhow::Error> {
         log::trace!("writing assembly IR for {:?}", module);
 
@@ -445,8 +459,8 @@ impl Driver {
         self.path_to_file_id.get(path.as_ref()).copied()
     }
 
-    /// Tells the driver that the file at the specified `path` has changed its contents. Returns the
-    /// `FileId` of the modified file.
+    /// Tells the driver that the file at the specified `path` has changed its
+    /// contents. Returns the `FileId` of the modified file.
     pub fn update_file<P: AsRef<RelativePath>>(&mut self, path: P, contents: String) -> FileId {
         let file_id = *self
             .path_to_file_id

@@ -1,16 +1,17 @@
-//! This modules contains several helper functions to convert from types defined in the Language
-//! Server Protocol to our own datatypes.
+//! This modules contains several helper functions to convert from types defined
+//! in the Language Server Protocol to our own datatypes.
 
-use crate::state::LanguageServerSnapshot;
-use crate::FilePosition;
+use std::convert::TryFrom;
+
 use lsp_types::Url;
 use mun_hir::line_index::LineIndex;
 use mun_paths::AbsPathBuf;
 use mun_syntax::{TextRange, TextSize};
-use std::convert::TryFrom;
 
-/// Converts the specified `uri` to an absolute path. Returns an error if the url could not be
-/// converted to an absolute path.
+use crate::{state::LanguageServerSnapshot, FilePosition};
+
+/// Converts the specified `uri` to an absolute path. Returns an error if the
+/// url could not be converted to an absolute path.
 pub(crate) fn abs_path(uri: &Url) -> anyhow::Result<AbsPathBuf> {
     uri.to_file_path()
         .ok()
@@ -42,8 +43,8 @@ pub(crate) fn offset(line_index: &LineIndex, position: lsp_types::Position) -> T
     line_index.offset(line_col)
 }
 
-/// Converts the given lsp range to a `TextRange`. This requires a `LineIndex` to convert lines to
-/// offsets.
+/// Converts the given lsp range to a `TextRange`. This requires a `LineIndex`
+/// to convert lines to offsets.
 pub(crate) fn text_range(line_index: &LineIndex, range: lsp_types::Range) -> TextRange {
     let start = offset(line_index, range.start);
     let end = offset(line_index, range.end);

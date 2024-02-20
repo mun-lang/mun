@@ -1,8 +1,9 @@
-use crate::{AbsPath, AbsPathBuf, FileId};
 use rustc_hash::FxHashMap;
 
-/// A struct to map file paths to `FileId`s. `FileId`s are never cleared because we assume there
-/// never be too many.
+use crate::{AbsPath, AbsPathBuf, FileId};
+
+/// A struct to map file paths to `FileId`s. `FileId`s are never cleared because
+/// we assume there never be too many.
 #[derive(Default)]
 pub(crate) struct PathInterner {
     path_to_id: FxHashMap<AbsPathBuf, FileId>,
@@ -10,8 +11,8 @@ pub(crate) struct PathInterner {
 }
 
 impl PathInterner {
-    /// Returns the `FileId` for the specified `path` or `None` if the specified path was not
-    /// interned.
+    /// Returns the `FileId` for the specified `path` or `None` if the specified
+    /// path was not interned.
     pub fn get(&self, path: &AbsPath) -> Option<FileId> {
         self.path_to_id.get(path).copied()
     }
@@ -36,10 +37,10 @@ impl PathInterner {
 
 #[cfg(test)]
 mod tests {
+    use std::{convert::TryInto, path::PathBuf};
+
     use super::PathInterner;
     use crate::AbsPathBuf;
-    use std::convert::TryInto;
-    use std::path::PathBuf;
 
     #[test]
     fn intern() {

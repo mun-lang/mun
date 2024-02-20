@@ -1,6 +1,7 @@
+use mun_syntax::{AstNode, TextRange};
+
 use super::HirDiagnostic;
 use crate::{Diagnostic, SourceAnnotation};
-use mun_syntax::{AstNode, TextRange};
 
 /// An error that is emitted when trying to leak a private type
 pub struct ExportedPrivate<'db, 'diag, DB: mun_hir::HirDatabase> {

@@ -1,7 +1,8 @@
-use crate::{ir::ty::HirTypeCache, CodeGenDatabase};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
+
 use inkwell::{context::Context, module::Module, targets::TargetMachine, types::StructType};
-use std::rc::Rc;
-use std::{cell::RefCell, collections::HashMap};
+
+use crate::{ir::ty::HirTypeCache, CodeGenDatabase};
 
 pub struct CodeGenContext<'db, 'ink> {
     /// The current LLVM context
@@ -24,7 +25,8 @@ pub struct CodeGenContext<'db, 'ink> {
 }
 
 impl<'db, 'ink> CodeGenContext<'db, 'ink> {
-    /// Constructs a new `CodeGenContext` from an LLVM context and a `CodeGenDatabase`.
+    /// Constructs a new `CodeGenContext` from an LLVM context and a
+    /// `CodeGenDatabase`.
     pub fn new(context: &'ink Context, db: &'db dyn CodeGenDatabase) -> Self {
         let target_machine = db.target_machine().0;
         Self {
@@ -37,7 +39,8 @@ impl<'db, 'ink> CodeGenContext<'db, 'ink> {
         }
     }
 
-    /// Constructs a new `Module` with the specified name and initialized for the target.
+    /// Constructs a new `Module` with the specified name and initialized for
+    /// the target.
     pub fn create_module(&self, name: impl AsRef<str>) -> Module<'ink> {
         let module = self.context.create_module(name.as_ref());
         module.set_data_layout(&self.target_machine.get_target_data().get_data_layout());

@@ -6,20 +6,23 @@ pub mod diagnostics;
 mod diagnostics_snippets;
 mod driver;
 
+use std::{
+    ffi::OsStr,
+    io::stderr,
+    path::{Path, PathBuf},
+};
+
+pub use annotate_snippets::AnnotationType;
+pub use mun_codegen::OptimizationLevel;
 pub use mun_hir::FileId;
 pub use mun_paths::{RelativePath, RelativePathBuf};
-pub use mun_target::spec::Target;
-use std::path::{Path, PathBuf};
-
-pub use crate::driver::DisplayColor;
-pub use crate::driver::{Config, Driver};
-pub use mun_codegen::OptimizationLevel;
-
-pub use crate::db::CompilerDatabase;
-pub use annotate_snippets::AnnotationType;
 use mun_project::Package;
-use std::ffi::OsStr;
-use std::io::stderr;
+pub use mun_target::spec::Target;
+
+pub use crate::{
+    db::CompilerDatabase,
+    driver::{Config, DisplayColor, Driver},
+};
 
 #[derive(Debug, Clone)]
 pub enum PathOrInline {
@@ -125,8 +128,9 @@ pub fn compute_source_relative_path(
 
 #[cfg(test)]
 mod test {
-    use crate::{compute_source_relative_path, is_source_file, RelativePath};
     use std::path::Path;
+
+    use crate::{compute_source_relative_path, is_source_file, RelativePath};
 
     #[test]
     fn test_is_source_file() {

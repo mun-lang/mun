@@ -1,3 +1,14 @@
+use std::{
+    alloc::{Layout, LayoutError},
+    borrow::Cow,
+    collections::{HashMap, VecDeque},
+    pin::Pin,
+    ptr::NonNull,
+};
+
+use mapping::{Mapping, StructMapping};
+use parking_lot::RwLock;
+
 use crate::{
     cast,
     gc::{
@@ -7,15 +18,6 @@ use crate::{
     mapping::{self, resolve_struct_to_struct_edit, Action, FieldMapping, MemoryMapper},
     r#type::Type,
     TypeKind,
-};
-use mapping::{Mapping, StructMapping};
-use parking_lot::RwLock;
-use std::{
-    alloc::{Layout, LayoutError},
-    borrow::Cow,
-    collections::{HashMap, VecDeque},
-    pin::Pin,
-    ptr::NonNull,
 };
 
 /// An object that enables tracing all reference types from another object.
@@ -74,7 +76,8 @@ impl Iterator for Trace {
     }
 }
 
-/// An object that enables iterating over a composite value stored somewhere in memory.
+/// An object that enables iterating over a composite value stored somewhere in
+/// memory.
 enum CompositeTrace {
     /// A struct
     Struct(StructTrace),
@@ -89,7 +92,8 @@ enum TraceEvent {
 }
 
 impl TraceEvent {
-    /// Construct a new `TraceEvent` based on the type of data stored at the specified location.
+    /// Construct a new `TraceEvent` based on the type of data stored at the
+    /// specified location.
     pub fn new(ptr: NonNull<u8>, ty: Cow<'_, Type>) -> Option<TraceEvent> {
         match ty.kind() {
             TypeKind::Primitive(_) | TypeKind::Pointer(_) => None,
@@ -110,8 +114,8 @@ impl TraceEvent {
     }
 }
 
-/// A struct that enables iterating over all GC references in a struct. Structs can be stored inline
-/// or on the heap. This struct supports both.
+/// A struct that enables iterating over all GC references in a struct. Structs
+/// can be stored inline or on the heap. This struct supports both.
 struct StructTrace {
     struct_ptr: NonNull<u8>,
     struct_type: Type,
@@ -144,8 +148,8 @@ impl Iterator for StructTrace {
 
 /// A struct that enables iterating over all GC references in a struct.
 ///
-/// TODO: if the element type doesnt contain any references it's a bit of a waste to iterate over
-/// all elements.
+/// TODO: if the element type doesnt contain any references it's a bit of a
+/// waste to iterate over all elements.
 struct ArrayTrace {
     iter: ArrayHandleIter,
     element_ty: Type,
@@ -239,7 +243,8 @@ fn alloc_obj(ty: Type) -> Pin<Box<ObjectInfo>> {
 /// An error that might occur when requesting memory layout of a type
 #[derive(Debug)]
 pub enum MemoryLayoutError {
-    /// An error that is returned when the memory requested is to large to deal with.
+    /// An error that is returned when the memory requested is to large to deal
+    /// with.
     OutOfBounds,
 
     /// An error that is returned by constructing a Layout
@@ -254,8 +259,8 @@ impl From<LayoutError> for MemoryLayoutError {
 
 /// Helper object to work with [`GcPtr`] that represents an array.
 ///
-/// Arrays are stored in memory with a header which holds the length and capacity. The memory layout
-/// of an array looks like this in memory:
+/// Arrays are stored in memory with a header which holds the length and
+/// capacity. The memory layout of an array looks like this in memory:
 ///
 /// ```text
 /// object.data.array ───►┌──────────────┐
@@ -278,8 +283,9 @@ pub struct ArrayHandle {
 impl ArrayHandle {
     /// Returns a reference to the header
     pub fn header(&self) -> &ArrayHeader {
-        // Safety: Safe because at the moment we have a reference to the object which cannot be
-        // modified. Also we can be sure this is an array at this point.
+        // Safety: Safe because at the moment we have a reference to the object which
+        // cannot be modified. Also we can be sure this is an array at this
+        // point.
         unsafe { self.obj.as_ref().data.array.as_ref() }
     }
 
@@ -287,7 +293,8 @@ impl ArrayHandle {
     ///
     /// # Safety
     ///
-    /// This function is unsafe because the array elements might be left uninitialized.
+    /// This function is unsafe because the array elements might be left
+    /// uninitialized.
     pub unsafe fn set_length(&mut self, length: usize) {
         let header = self.obj.as_mut().data.array.as_mut();
         debug_assert!(header.capacity >= length);
@@ -296,25 +303,26 @@ impl ArrayHandle {
 
     /// Returns the layout of an element stored in the array.
     ///
-    /// Note that this may be different from the layout of the [`Self::element_type`]. If the
-    /// element type is a garbage collected type, the array stores references instead of raw
-    /// elements.
+    /// Note that this may be different from the layout of the
+    /// [`Self::element_type`]. If the element type is a garbage collected
+    /// type, the array stores references instead of raw elements.
     pub fn element_layout(&self) -> Layout {
         self.element_type().reference_layout()
     }
 
     /// Returns the stride in bytes between elements.
     ///
-    /// The stride is determined by the size of [`Self::element_layout`] padded to alignment of
-    /// layout.
+    /// The stride is determined by the size of [`Self::element_layout`] padded
+    /// to alignment of layout.
     pub fn element_stride(&self) -> usize {
         self.element_layout().pad_to_align().size()
     }
 
     /// Returns a pointer to the data.
     pub fn data(&self) -> NonNull<u8> {
-        // Determine the offset of the data relative from the start of the array pointer. This
-        // the header and the extra alignment padding between the header and the data.
+        // Determine the offset of the data relative from the start of the array
+        // pointer. This the header and the extra alignment padding between the
+        // header and the data.
         let element_layout = self.element_layout();
         let header_layout = Layout::new::<ArrayHeader>();
         let (_, padded_header_size) = header_layout
@@ -373,8 +381,8 @@ impl GcArray for ArrayHandle {
 
 /// An iterator implementation.
 ///
-/// TODO: Note that this iterator is highly non-thread safe. Any operation that modifies the
-/// original array could cause undefined behavior.
+/// TODO: Note that this iterator is highly non-thread safe. Any operation that
+/// modifies the original array could cause undefined behavior.
 pub struct ArrayHandleIter {
     /// Pointer to the next element
     next: NonNull<u8>,
@@ -401,8 +409,9 @@ impl Iterator for ArrayHandleIter {
     }
 }
 
-/// Creates a layout describing the record for `n` instances of `layout`, with a suitable amount of
-/// padding between each to ensure that each instance is given its requested size and alignment.
+/// Creates a layout describing the record for `n` instances of `layout`, with a
+/// suitable amount of padding between each to ensure that each instance is
+/// given its requested size and alignment.
 ///
 /// Implementation taken from `Layout::repeat` (which is currently unstable)
 fn repeat_layout(layout: Layout, n: usize) -> Result<Layout, MemoryLayoutError> {
@@ -415,7 +424,8 @@ fn repeat_layout(layout: Layout, n: usize) -> Result<Layout, MemoryLayoutError> 
     Layout::from_size_align(alloc_size, layout.align()).map_err(Into::into)
 }
 
-/// Allocates memory for an array type with `length` elements. `array_ty` must be an array type.
+/// Allocates memory for an array type with `length` elements. `array_ty` must
+/// be an array type.
 fn alloc_array(ty: Type, length: usize) -> Pin<Box<ObjectInfo>> {
     Box::pin(ObjectInfo {
         data: ObjectInfoData {
@@ -544,8 +554,8 @@ impl<O> MarkSweep<O>
 where
     O: Observer<Event = Event>,
 {
-    /// Collects all memory that is no longer referenced by rooted objects. Returns `true` if memory
-    /// was reclaimed, `false` otherwise.
+    /// Collects all memory that is no longer referenced by rooted objects.
+    /// Returns `true` if memory was reclaimed, `false` otherwise.
     pub fn collect(&self) -> bool {
         self.observer.event(Event::Start);
 
@@ -754,7 +764,8 @@ where
                         unsafe { get_field_ptr(src, *old_offset) },
                         dest,
                     ) {
-                        // Failed to cast. Use the previously zero-initialized value instead
+                        // Failed to cast. Use the previously zero-initialized
+                        // value instead
                     }
                 }
                 mapping::Action::Copy {
@@ -1019,7 +1030,8 @@ where
             });
 
         // Retroactively store newly allocated objects
-        // This cannot be done while mapping because we hold a mutable reference to objects
+        // This cannot be done while mapping because we hold a mutable reference to
+        // objects
         for object in new_allocations {
             let size = object.layout().size();
             // We want to return a pointer to the `ObjectInfo`, to
@@ -1040,15 +1052,16 @@ enum Color {
     /// A white object has not been seen yet by the mark phase
     White,
 
-    /// A gray object has been seen by the mark phase but has not yet been visited
+    /// A gray object has been seen by the mark phase but has not yet been
+    /// visited
     Gray,
 
     /// A black object has been visited by the mark phase
     Black,
 }
 
-/// An indirection table that stores the address to the actual memory, the type of the object and
-/// meta information.
+/// An indirection table that stores the address to the actual memory, the type
+/// of the object and meta information.
 #[repr(C)]
 struct ObjectInfo {
     pub data: ObjectInfoData,

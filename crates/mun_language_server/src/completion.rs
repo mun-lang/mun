@@ -1,6 +1,7 @@
-//! A module that provides completions based on the position of the cursor (indicated as `$0` in the
-//! documentation).
-//! The [`completions`] function is the main entry point for computing the completions.
+//! A module that provides completions based on the position of the cursor
+//! (indicated as `$0` in the documentation).
+//! The [`completions`] function is the main entry point for computing the
+//! completions.
 
 mod context;
 mod dot;
@@ -11,24 +12,28 @@ mod unqualified_path;
 #[cfg(test)]
 mod test_utils;
 
+use context::CompletionContext;
+pub use item::{CompletionItem, CompletionItemKind, CompletionKind};
+use mun_hir::semantics::ScopeDef;
+
 use crate::{
     completion::render::{render_field, render_resolution, RenderContext},
     db::AnalysisDatabase,
     FilePosition,
 };
-use context::CompletionContext;
-pub use item::{CompletionItem, CompletionItemKind, CompletionKind};
-use mun_hir::semantics::ScopeDef;
 
-/// This is the main entry point for computing completions. This is a two step process.
+/// This is the main entry point for computing completions. This is a two step
+/// process.
 ///
-/// The first step is to determine the context of where the completion is requested. This
-/// information is captured in the [`CompletionContext`]. The context captures things like which
-/// type of syntax node is before the cursor or the current scope.
+/// The first step is to determine the context of where the completion is
+/// requested. This information is captured in the [`CompletionContext`]. The
+/// context captures things like which type of syntax node is before the cursor
+/// or the current scope.
 ///
-/// Second is to compute a set of completions based on the previously computed context. We provide
-/// several methods for computing completions based on different syntax contexts. For instance when
-/// writing `foo.$0` you want to complete the fields of `foo` and don't want the local variables of
+/// Second is to compute a set of completions based on the previously computed
+/// context. We provide several methods for computing completions based on
+/// different syntax contexts. For instance when writing `foo.$0` you want to
+/// complete the fields of `foo` and don't want the local variables of
 /// the active scope.
 pub(crate) fn completions(db: &AnalysisDatabase, position: FilePosition) -> Option<Completions> {
     let context = CompletionContext::new(db, position)?;
@@ -39,8 +44,8 @@ pub(crate) fn completions(db: &AnalysisDatabase, position: FilePosition) -> Opti
     Some(result)
 }
 
-/// Represents an in-progress set of completions being built. Use the `add_..` functions to quickly
-/// add completion items.
+/// Represents an in-progress set of completions being built. Use the `add_..`
+/// functions to quickly add completion items.
 #[derive(Debug, Default)]
 pub(crate) struct Completions {
     buf: Vec<CompletionItem>,

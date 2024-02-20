@@ -19,7 +19,8 @@ impl DisplayColor {
     }
 }
 
-/// Decides whether the current terminal supports ANSI escape codes based on the `term` environment variable and the operating system.
+/// Decides whether the current terminal supports ANSI escape codes based on the
+/// `term` environment variable and the operating system.
 fn terminal_support_ansi() -> bool {
     let supports_color = if let Ok(terminal) = env::var("TERM") {
         terminal.as_str() == "dumb"
@@ -41,7 +42,8 @@ fn terminal_support_ansi() -> bool {
 }
 
 #[cfg(target_os = "windows")]
-/// Determines whether the 'cmd' supports ANSI escape codes, based on the user's version of Windows.
+/// Determines whether the 'cmd' supports ANSI escape codes, based on the user's
+/// version of Windows.
 fn cmd_supports_ansi() -> bool {
     // Run `ver` program to find out Windows version
     Command::new("cmd")

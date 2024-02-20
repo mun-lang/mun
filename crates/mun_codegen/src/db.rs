@@ -1,15 +1,18 @@
-use crate::{AssemblyIr, ModuleGroupId, ModulePartition, TargetAssembly};
+use std::{rc::Rc, sync::Arc};
+
 use by_address::ByAddress;
 use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, Target, TargetTriple};
-use std::rc::Rc;
-use std::sync::Arc;
 
-/// The `CodeGenDatabase` enables caching of code generation stages. Inkwell/LLVM objects are not
-/// stored in the cache because they are not thread-safe.
+use crate::{AssemblyIr, ModuleGroupId, ModulePartition, TargetAssembly};
+
+/// The `CodeGenDatabase` enables caching of code generation stages.
+/// Inkwell/LLVM objects are not stored in the cache because they are not
+/// thread-safe.
 ///
-/// The main purpose of using this Salsa database is to enable caching of high-level objects based
-/// on changes to source files. Although the code generation cache is pretty granular there is still
-/// a benefit to not having to recompile assemblies if not required.
+/// The main purpose of using this Salsa database is to enable caching of
+/// high-level objects based on changes to source files. Although the code
+/// generation cache is pretty granular there is still a benefit to not having
+/// to recompile assemblies if not required.
 #[salsa::query_group(CodeGenDatabaseStorage)]
 pub trait CodeGenDatabase:
     mun_hir::HirDatabase + mun_hir::Upcast<dyn mun_hir::HirDatabase>
@@ -22,8 +25,9 @@ pub trait CodeGenDatabase:
     #[salsa::invoke(crate::module_partition::build_partition)]
     fn module_partition(&self) -> Arc<ModulePartition>;
 
-    /// Returns the inkwell target machine that completely describes the code generation target. All
-    /// target-specific information should be accessible through this interface.
+    /// Returns the inkwell target machine that completely describes the code
+    /// generation target. All target-specific information should be
+    /// accessible through this interface.
     fn target_machine(&self) -> ByAddress<Rc<inkwell::targets::TargetMachine>>;
 
     /// Returns a file containing the IR for the specified module.
@@ -35,8 +39,9 @@ pub trait CodeGenDatabase:
     fn target_assembly(&self, module_group: ModuleGroupId) -> Arc<TargetAssembly>;
 }
 
-/// Constructs the primary interface to the complete machine description for the target machine. All
-/// target-specific information should be accessible through this interface.
+/// Constructs the primary interface to the complete machine description for the
+/// target machine. All target-specific information should be accessible through
+/// this interface.
 fn target_machine(db: &dyn CodeGenDatabase) -> ByAddress<Rc<inkwell::targets::TargetMachine>> {
     // Get the HIR target
     let target = db.target();

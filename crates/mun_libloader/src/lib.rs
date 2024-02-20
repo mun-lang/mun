@@ -1,6 +1,6 @@
-use mun_abi as abi;
 use std::{ffi::c_void, path::Path};
 
+use mun_abi as abi;
 pub use temp_library::TempLibrary;
 
 mod temp_library;
@@ -25,24 +25,26 @@ impl MunLibrary {
     ///
     /// # Safety
     ///
-    /// A munlib is simply a shared object. When a library is loaded, initialisation routines
-    /// contained within it are executed. For the purposes of safety, the execution of these
-    /// routines is conceptually the same calling an unknown foreign function and may impose
+    /// A munlib is simply a shared object. When a library is loaded,
+    /// initialisation routines contained within it are executed. For the
+    /// purposes of safety, the execution of these routines is conceptually
+    /// the same calling an unknown foreign function and may impose
     /// arbitrary requirements on the caller for the call to be sound.
     ///
-    /// Additionally, the callers of this function must also ensure that execution of the
-    /// termination routines contained within the library is safe as well. These routines may be
-    /// executed when the library is unloaded.
+    /// Additionally, the callers of this function must also ensure that
+    /// execution of the termination routines contained within the library
+    /// is safe as well. These routines may be executed when the library is
+    /// unloaded.
     ///
     /// See [`libloading::Library::new`] for more information.
     pub unsafe fn new(library_path: &Path) -> Result<Self, InitError> {
-        // Although loading a library is technically unsafe, we assume here that this is not the
-        // case for munlibs.
+        // Although loading a library is technically unsafe, we assume here that this is
+        // not the case for munlibs.
         let library = TempLibrary::new(library_path)?;
 
-        // Verify that the `*.munlib` contains all required functions. Note that this is an unsafe
-        // operation because the loaded symbols don't actually contain type information. Casting
-        // is therefore unsafe.
+        // Verify that the `*.munlib` contains all required functions. Note that this is
+        // an unsafe operation because the loaded symbols don't actually contain
+        // type information. Casting is therefore unsafe.
         let _get_abi_version_fn: libloading::Symbol<'_, extern "C" fn() -> u32> = library
             .library()
             .get(abi::GET_VERSION_FN_NAME.as_bytes())
@@ -70,8 +72,9 @@ impl MunLibrary {
     ///
     /// # Safety
     ///
-    /// This operations executes a function in the munlib. There is no guarantee that the execution
-    /// of the function wont result in undefined behavior.
+    /// This operations executes a function in the munlib. There is no guarantee
+    /// that the execution of the function wont result in undefined
+    /// behavior.
     pub unsafe fn get_abi_version(&self) -> u32 {
         let get_abi_version_fn: libloading::Symbol<'_, extern "C" fn() -> u32> = self
             .0
@@ -86,8 +89,9 @@ impl MunLibrary {
     ///
     /// # Safety
     ///
-    /// This operations executes a function in the munlib. There is no guarantee that the execution
-    /// of the function wont result in undefined behavior.
+    /// This operations executes a function in the munlib. There is no guarantee
+    /// that the execution of the function wont result in undefined
+    /// behavior.
     pub unsafe fn get_info(&self) -> abi::AssemblyInfo<'static> {
         let get_info_fn: libloading::Symbol<'_, extern "C" fn() -> abi::AssemblyInfo<'static>> =
             self.0
@@ -98,13 +102,14 @@ impl MunLibrary {
         get_info_fn()
     }
 
-    /// Stores the allocator handle inside the shared object. This is used by the internals of the
-    /// library to be able to allocate memory.
+    /// Stores the allocator handle inside the shared object. This is used by
+    /// the internals of the library to be able to allocate memory.
     ///
     /// # Safety
     ///
-    /// This operations executes a function in the munlib. There is no guarantee that the execution
-    /// of the function wont result in undefined behavior.
+    /// This operations executes a function in the munlib. There is no guarantee
+    /// that the execution of the function wont result in undefined
+    /// behavior.
     pub unsafe fn set_allocator_handle(&mut self, allocator_ptr: *mut c_void) {
         let set_allocator_handle_fn: libloading::Symbol<'_, extern "C" fn(*mut c_void)> = self
             .0

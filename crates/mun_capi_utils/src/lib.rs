@@ -1,5 +1,7 @@
-use std::ffi::CStr;
-use std::{ffi::CString, os::raw::c_char};
+use std::{
+    ffi::{CStr, CString},
+    os::raw::c_char,
+};
 
 pub mod error;
 
@@ -9,9 +11,10 @@ pub use error::ErrorHandle;
 ///
 /// # Safety
 ///
-/// This function receives a raw pointer as parameter. Only when the argument is not a null pointer,
-/// its content will be deallocated. Passing pointers to invalid data or memory allocated by other
-/// processes, will lead to undefined behavior.
+/// This function receives a raw pointer as parameter. Only when the argument is
+/// not a null pointer, its content will be deallocated. Passing pointers to
+/// invalid data or memory allocated by other processes, will lead to undefined
+/// behavior.
 #[no_mangle]
 pub unsafe extern "C" fn mun_string_destroy(string: *const c_char) {
     if !string.is_null() {
@@ -24,8 +27,8 @@ pub unsafe extern "C" fn mun_string_destroy(string: *const c_char) {
 ///
 /// # Safety
 ///
-/// The caller must provide a valid C string with a null terminator, whose content doesnt change
-/// during the lifetime `'a`.
+/// The caller must provide a valid C string with a null terminator, whose
+/// content doesnt change during the lifetime `'a`.
 pub unsafe fn try_convert_c_string<'a>(string: *const c_char) -> Result<&'a str, &'static str> {
     if string.is_null() {
         return Err("null pointer");

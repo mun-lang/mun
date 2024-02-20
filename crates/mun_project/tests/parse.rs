@@ -1,7 +1,7 @@
+use std::{path::Path, str::FromStr};
+
 use mun_project::{Manifest, Package};
 use semver::Version;
-use std::path::Path;
-use std::str::FromStr;
 
 #[test]
 fn manifest_from_file() {

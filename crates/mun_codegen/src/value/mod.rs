@@ -1,4 +1,5 @@
-//! This module provides constructs to enable type safe handling of inkwell types.
+//! This module provides constructs to enable type safe handling of inkwell
+//! types.
 
 mod array_value;
 mod float_value;
@@ -9,53 +10,64 @@ mod pointer_value;
 mod string;
 mod tuple_value;
 
-use inkwell::context::Context;
-use inkwell::module::Module;
-use inkwell::targets::TargetData;
+use std::{cell::RefCell, collections::HashMap, fmt::Debug, hash::Hash};
 
 pub use array_value::IterAsIrValue;
 pub use global::Global;
+use inkwell::{
+    context::Context,
+    module::Module,
+    targets::TargetData,
+    types::{BasicTypeEnum, PointerType, StructType},
+    values::PointerValue,
+    AddressSpace,
+};
 pub use string::CanInternalize;
 
-use inkwell::types::{BasicTypeEnum, PointerType, StructType};
-use inkwell::values::PointerValue;
-use inkwell::AddressSpace;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::hash::Hash;
-
-/// Represents a generic inkwell value. This is a wrapper around inkwell types that enforces type
-/// safety in the Rust compiler. Rust values that can be converted to inkwell types can be
-/// represented as a value. e.g. `Value<u32>`. Internally this holds an `inkwell::values::IntValue`
-/// but we maintain the information that it's actually a `u32` value.
+/// Represents a generic inkwell value. This is a wrapper around inkwell types
+/// that enforces type safety in the Rust compiler. Rust values that can be
+/// converted to inkwell types can be represented as a value. e.g. `Value<u32>`.
+/// Internally this holds an `inkwell::values::IntValue` but we maintain the
+/// information that it's actually a `u32` value.
 ///
-/// There are several ways to enable a type to be used as a `Value<T>` type through the `AsValue`
-/// trait.
+/// There are several ways to enable a type to be used as a `Value<T>` type
+/// through the `AsValue` trait.
 ///
-/// - Implement the [`TransparentValue`] trait which converts the implementor into another
-///   `Value<T>` type. Internally the inkwell value is taken from the inner type but a `Value<Self>`
-///   is returned. This allows transparent composition. e.g.:
+/// - Implement the [`TransparentValue`] trait which converts the implementor
+///   into another `Value<T>` type. Internally the inkwell value is taken from
+///   the inner type but a `Value<Self>` is returned. This allows transparent
+///   composition. e.g.:
 ///
 ///   ```rust
-///   # use mun_codegen::value::{AsValue, BytesOrPtr, IrTypeContext, IrValueContext, TransparentValue, Value};
+///   # use mun_codegen::value::{AsValue, BytesOrPtr, IrTypeContext,
+///   # IrValueContext, TransparentValue, Value};
 ///   struct Foo {
-///      value: u32,
-///      bar: f32,
+///       value: u32,
+///       bar: f32,
 ///   }
 ///
 ///   impl<'ink> TransparentValue<'ink> for Foo {
 ///       type Target = (u32, f32);
 ///
-///       fn as_target_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, Self::Target> {
+///       fn as_target_value(
+///           &self,
+///           context: &IrValueContext<'ink, '_, '_>
+///       ) -> Value<'ink, Self::Target> {
 ///           (self.value, self.bar).as_value(context)
 ///       }
 ///
-///       fn as_bytes_and_ptrs(&self, context: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>> {
-///           vec![
-///               bytemuck::cast_ref::<u32, [u8; 4]>(&self.value).to_vec().into(),
-///               bytemuck::cast_ref::<f32, [u8; 4]>(&self.bar).to_vec().into(),
-///           ]
+///       fn as_bytes_and_ptrs(
+///           &self,
+///           context: &IrTypeContext<'ink, '_>
+///       ) -> Vec<BytesOrPtr<'ink>> {
+///            vec![
+///                bytemuck::cast_ref::<u32, [u8; 4]>(
+///                    &self.value
+///                ).to_vec().into(),
+///                bytemuck::cast_ref::<f32, [u8; 4]>(
+///                    &self.bar
+///                ).to_vec().into(),
+///            ]
 ///       }
 ///   }
 ///   ```
@@ -63,8 +75,10 @@ use std::hash::Hash;
 ///   This will result in an anonymous LLVM type: `type { u32, f32 }`
 ///
 /// - Auto derive the `AsValue` trait e.g.:
+///
 ///   ```ignore
-///   #[macro_use] extern crate mun_codegen_macros;
+///   #[macro_use]
+///   extern crate mun_codegen_macros;
 ///
 ///   #[derive(AsValue)]
 ///   struct Foo {
@@ -75,9 +89,9 @@ use std::hash::Hash;
 ///
 ///   This will result in a _named_ LLVM type: `%Foo = type { u32, f32 }`
 ///
-/// - You can also add completely custom support by implementing the [`ConcreteValueType`] and
-///   [`AsValue`] traits. Optionally you might also want to implement the [`SizedValueType`] and
-///   [`PointerValueType`] traits.
+/// - You can also add completely custom support by implementing the
+///   [`ConcreteValueType`] and [`AsValue`] traits. Optionally you might also
+///   want to implement the [`SizedValueType`] and [`PointerValueType`] traits.
 pub struct Value<'ink, T: ConcreteValueType<'ink> + ?Sized> {
     pub value: T::Value,
 }
@@ -88,16 +102,16 @@ pub trait AsValue<'ink, T: ConcreteValueType<'ink> + ?Sized> {
     fn as_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, T>;
 }
 
-/// A `TransparentValue` is something that can be represented as a `Value<T>` but which is actually
-/// a rewritten version of another type.
+/// A `TransparentValue` is something that can be represented as a `Value<T>`
+/// but which is actually a rewritten version of another type.
 pub trait TransparentValue<'ink> {
     type Target: ConcreteValueType<'ink> + ?Sized;
 
     /// Converts the instance to the target value
     fn as_target_value(&self, context: &IrValueContext<'ink, '_, '_>) -> Value<'ink, Self::Target>;
 
-    /// Converts the instance to bytes and pointers. All pointers remain pointer values, whereas
-    /// all other value types are converted to bytes.
+    /// Converts the instance to bytes and pointers. All pointers remain pointer
+    /// values, whereas all other value types are converted to bytes.
     fn as_bytes_and_ptrs(&self, context: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>>;
 }
 
@@ -122,14 +136,17 @@ impl<'ink> From<PointerValue<'ink>> for BytesOrPtr<'ink> {
     }
 }
 
-/// Converts a value to its raw byte representation, while leaving pointers intact.
+/// Converts a value to its raw byte representation, while leaving pointers
+/// intact.
 pub trait AsBytesAndPtrs<'ink> {
-    /// Converts the instance to bytes and pointers.  All pointers remain pointer values, whereas
-    /// all other value types are converted to bytes.
+    /// Converts the instance to bytes and pointers.  All pointers remain
+    /// pointer values, whereas all other value types are converted to
+    /// bytes.
     fn as_bytes_and_ptrs(&self, context: &IrTypeContext<'ink, '_>) -> Vec<BytesOrPtr<'ink>>;
 }
 
-/// Signals whether the instance can construct a matching LLVM constant IR value.
+/// Signals whether the instance can construct a matching LLVM constant IR
+/// value.
 pub trait HasConstValue {
     /// Returns whether the instance can be converted into an LLVM IR value.
     fn has_const_value() -> bool;
@@ -149,13 +166,15 @@ pub struct IrValueContext<'ink, 'a, 'b> {
     pub module: &'b Module<'ink>,
 }
 
-/// A trait that represents that a concrete type can be used as `Value<T>` type generic. A type must
-/// implement this trait to be able to be represented as a `Value<Self>`.
+/// A trait that represents that a concrete type can be used as `Value<T>` type
+/// generic. A type must implement this trait to be able to be represented as a
+/// `Value<Self>`.
 pub trait ConcreteValueType<'ink> {
     type Value: ValueType<'ink>;
 }
 
-/// If we take a pointer of value T, which type can it return? This trait dictates that.
+/// If we take a pointer of value T, which type can it return? This trait
+/// dictates that.
 pub trait AddressableType<'ink, T: ?Sized> {
     /// Cast the pointer if required
     fn ptr_cast(
@@ -166,7 +185,8 @@ pub trait AddressableType<'ink, T: ?Sized> {
     }
 }
 
-/// A trait implemented for types that can determine the IR type of a value without an instance.
+/// A trait implemented for types that can determine the IR type of a value
+/// without an instance.
 pub trait SizedValueType<'ink>: ConcreteValueType<'ink> + Sized {
     /// Returns the IR type of a value of this type.
     fn get_ir_type(
@@ -183,14 +203,14 @@ pub trait PointerValueType<'ink> {
     ) -> inkwell::types::PointerType<'ink>;
 }
 
-/// A trait that enables the conversion from an inkwell type to a corresponding value type. (e.g.
-/// `IntType` -> `IntValue`)
+/// A trait that enables the conversion from an inkwell type to a corresponding
+/// value type. (e.g. `IntType` -> `IntValue`)
 pub trait TypeValue<'ink> {
     type Value: inkwell::values::AnyValue<'ink>;
 }
 
-/// A trait that enables the conversion from an inkwell value to a corresponding type. (e.g.
-/// `IntValue` -> `IntType`)
+/// A trait that enables the conversion from an inkwell value to a corresponding
+/// type. (e.g. `IntValue` -> `IntType`)
 pub trait ValueType<'ink>: Clone + Debug + Copy + Eq + PartialEq + Hash {
     type Type: inkwell::types::AnyType<'ink>;
 
@@ -198,7 +218,8 @@ pub trait ValueType<'ink>: Clone + Debug + Copy + Eq + PartialEq + Hash {
     fn get_type(&self) -> Self::Type;
 }
 
-/// A trait that is implemented for types that can also be represented as a pointer.
+/// A trait that is implemented for types that can also be represented as a
+/// pointer.
 pub trait AddressableTypeValue<'ink>: TypeValue<'ink> {
     fn ptr_type(&self, address_space: AddressSpace) -> inkwell::types::PointerType<'ink>;
 }
@@ -406,7 +427,8 @@ where
     }
 }
 
-// If the target of the transparent value can statically return a pointer type, so can we.
+// If the target of the transparent value can statically return a pointer type,
+// so can we.
 impl<'ink, T: TransparentValue<'ink>> PointerValueType<'ink> for T
 where
     T::Target: PointerValueType<'ink>,
@@ -419,7 +441,8 @@ where
     }
 }
 
-// If the target is addressable as I, the transparent value is also addressable as I.
+// If the target is addressable as I, the transparent value is also addressable
+// as I.
 impl<
         'ink,
         I: ?Sized,
@@ -456,10 +479,12 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::mem::size_of;
+
+    use bytemuck::from_bytes;
+
     use super::{AsBytesAndPtrs, HasConstValue};
     use crate::{code_gen::CodeGenContext, mock::MockDatabase, value::IrTypeContext};
-    use bytemuck::from_bytes;
-    use std::mem::size_of;
 
     macro_rules! test_as_bytes_and_ptrs_primitive {
         ($($ty:ty),+) => {

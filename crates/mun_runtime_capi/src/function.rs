@@ -1,8 +1,5 @@
 //! Exposes function information using the C ABI.
 
-use mun_capi_utils::error::ErrorHandle;
-use mun_capi_utils::{mun_error_try, try_deref_mut};
-use mun_memory::ffi::{Type, Types};
 use std::{
     ffi::{c_void, CString},
     os::raw::c_char,
@@ -10,13 +7,17 @@ use std::{
     sync::Arc,
 };
 
+use mun_capi_utils::{error::ErrorHandle, mun_error_try, try_deref_mut};
+use mun_memory::ffi::{Type, Types};
+
 /// Describes a `Function` accessible from a Mun [`super::runtime::Runtime`].
 ///
-/// An instance of `Function` shares ownership of the underlying data. To create a copy of the
-/// `Function` object call [`mun_function_add_reference`] to make sure the number of references to
-/// the data is properly tracked. Calling [`mun_function_release`] signals the runtime that the data
-/// is no longer referenced through the specified object. When all references are released the
-/// underlying data is deallocated.
+/// An instance of `Function` shares ownership of the underlying data. To create
+/// a copy of the `Function` object call [`mun_function_add_reference`] to make
+/// sure the number of references to the data is properly tracked. Calling
+/// [`mun_function_release`] signals the runtime that the data is no longer
+/// referenced through the specified object. When all references are released
+/// the underlying data is deallocated.
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct Function(pub *const c_void);
@@ -47,14 +48,15 @@ impl From<Arc<mun_runtime::FunctionDefinition>> for Function {
     }
 }
 
-/// Notifies the runtime an additional references exists to the function. This ensures that the data
-/// is kept alive even if [`mun_function_release`] is called for the existing references. Only
-/// after all references have been released can the underlying data be deallocated.
+/// Notifies the runtime an additional references exists to the function. This
+/// ensures that the data is kept alive even if [`mun_function_release`] is
+/// called for the existing references. Only after all references have been
+/// released can the underlying data be deallocated.
 ///
 /// # Safety
 ///
-/// This function might be unsafe if the underlying data has already been deallocated by a previous
-/// call to [`mun_function_release`].
+/// This function might be unsafe if the underlying data has already been
+/// deallocated by a previous call to [`mun_function_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_function_add_reference(function: Function) -> ErrorHandle {
     if function.0.is_null() {
@@ -65,14 +67,14 @@ pub unsafe extern "C" fn mun_function_add_reference(function: Function) -> Error
     ErrorHandle::default()
 }
 
-/// Notifies the runtime that one of the references to the function is no longer in use. The data
-/// may not immediately be destroyed. Only after all references have been released can the
-/// underlying data be deallocated.
+/// Notifies the runtime that one of the references to the function is no longer
+/// in use. The data may not immediately be destroyed. Only after all references
+/// have been released can the underlying data be deallocated.
 ///
 /// # Safety
 ///
-/// This function might be unsafe if the underlying data has been deallocated by a previous call
-/// to [`mun_function_release`].
+/// This function might be unsafe if the underlying data has been deallocated by
+/// a previous call to [`mun_function_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_function_release(function: Function) -> ErrorHandle {
     if function.0.is_null() {
@@ -87,8 +89,8 @@ pub unsafe extern "C" fn mun_function_release(function: Function) -> ErrorHandle
 ///
 /// # Safety
 ///
-/// This function might be unsafe if the underlying data has been deallocated by a previous call
-/// to [`mun_function_release`].
+/// This function might be unsafe if the underlying data has been deallocated by
+/// a previous call to [`mun_function_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_function_fn_ptr(
     function: Function,
@@ -104,13 +106,13 @@ pub unsafe extern "C" fn mun_function_fn_ptr(
 
 /// Retrieves the function's name.
 ///
-/// If the function is successful, the caller is responsible for calling [`mun_string_destroy`] on
-/// the return pointer.
+/// If the function is successful, the caller is responsible for calling
+/// [`mun_string_destroy`] on the return pointer.
 ///
 /// # Safety
 ///
-/// This function might be unsafe if the underlying data has been deallocated by a previous call
-/// to [`mun_function_release`].
+/// This function might be unsafe if the underlying data has been deallocated by
+/// a previous call to [`mun_function_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_function_name(
     function: Function,
@@ -128,14 +130,14 @@ pub unsafe extern "C" fn mun_function_name(
 
 /// Retrieves the function's argument types.
 ///
-/// If successful, ownership of the [`Types`] is transferred to the caller. It must be deallocated
-/// with a call to [`mun_types_destroy`].
+/// If successful, ownership of the [`Types`] is transferred to the caller. It
+/// must be deallocated with a call to [`mun_types_destroy`].
 ///
 /// # Safety
 ///
 ///
-/// This function might be unsafe if the underlying data has been deallocated by a previous call
-/// to [`mun_function_release`].
+/// This function might be unsafe if the underlying data has been deallocated by
+/// a previous call to [`mun_function_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_function_argument_types(
     function: Function,
@@ -158,13 +160,13 @@ pub unsafe extern "C" fn mun_function_argument_types(
 
 /// Retrieves the function's return type.
 ///
-/// Ownership of the [`Type`] is transferred to the called. It must be released with a call to
-/// [`mun_type_release`].
+/// Ownership of the [`Type`] is transferred to the called. It must be released
+/// with a call to [`mun_type_release`].
 ///
 /// # Safety
 ///
-/// This function might be unsafe if the underlying data has been deallocated by a previous call
-/// to [`mun_function_release`].
+/// This function might be unsafe if the underlying data has been deallocated by
+/// a previous call to [`mun_function_release`].
 #[no_mangle]
 pub unsafe extern "C" fn mun_function_return_type(
     function: Function,
@@ -180,14 +182,21 @@ pub unsafe extern "C" fn mun_function_return_type(
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use super::*;
+    use std::{
+        mem::{ManuallyDrop, MaybeUninit},
+        slice,
+        sync::Arc,
+    };
+
     use mun_capi_utils::{
         assert_error_snapshot, assert_getter1, mun_string_destroy, try_convert_c_string,
     };
-    use mun_memory::ffi::{mun_type_equal, mun_types_destroy};
-    use mun_memory::HasStaticType;
-    use std::mem::ManuallyDrop;
-    use std::{mem::MaybeUninit, slice, sync::Arc};
+    use mun_memory::{
+        ffi::{mun_type_equal, mun_types_destroy},
+        HasStaticType,
+    };
+
+    use super::*;
 
     #[test]
     fn test_function_release_invalid_fn_info() {
@@ -213,8 +222,8 @@ pub(crate) mod tests {
 
         assert!(unsafe { mun_function_release(ffi_function) }.is_ok());
 
-        // This works because the Arc is not shared between threads because it's local to the
-        // runtime created in this test
+        // This works because the Arc is not shared between threads because it's local
+        // to the runtime created in this test
         assert_eq!(Arc::strong_count(&fn_def), strong_count - 1);
     }
 
@@ -232,8 +241,8 @@ pub(crate) mod tests {
 
         assert!(unsafe { mun_function_add_reference(function) }.is_ok());
 
-        // This works because the Arc is not shared between threads because it's local to the
-        // runtime created in this test
+        // This works because the Arc is not shared between threads because it's local
+        // to the runtime created in this test
         assert_eq!(Arc::strong_count(&fn_info_arc), strong_count + 1);
     }
 

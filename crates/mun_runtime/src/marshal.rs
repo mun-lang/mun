@@ -1,10 +1,11 @@
+use std::ptr::NonNull;
+
 use mun_memory::Type;
 
 use crate::Runtime;
-use std::ptr::NonNull;
 
-/// Used to do value-to-value conversions that require runtime type information while consuming the
-/// input value.
+/// Used to do value-to-value conversions that require runtime type information
+/// while consuming the input value.
 ///
 /// If no `TypeInfo` is provided, the type is `()`.
 pub trait Marshal<'t>: Sized {
@@ -20,7 +21,8 @@ pub trait Marshal<'t>: Sized {
     /// Marshals itself into a `Marshalled` value (i.e. Rust -> Mun).
     fn marshal_into(self) -> Self::MunType;
 
-    /// Marshals the value at memory location `ptr` into a `Marshalled` value (i.e. Mun -> Rust).
+    /// Marshals the value at memory location `ptr` into a `Marshalled` value
+    /// (i.e. Mun -> Rust).
     fn marshal_from_ptr<'r>(
         ptr: NonNull<Self::MunType>,
         runtime: &'r Runtime,

@@ -1,20 +1,22 @@
+use std::collections::BTreeMap;
+
+use inkwell::{module::Module, types::PointerType, values::UnnamedAddress, AddressSpace};
+use mun_hir::{HasVisibility, ModuleDef};
+use rustc_hash::FxHashSet;
+
 use super::{
     dispatch_table::{DispatchTable, DispatchTableBuilder},
     intrinsics,
     type_table::{TypeTable, TypeTableBuilder},
 };
-use crate::module_group::ModuleGroup;
 use crate::{
     code_gen::CodeGenContext,
+    module_group::ModuleGroup,
     value::{IrTypeContext, IrValueContext},
 };
-use inkwell::{module::Module, types::PointerType, values::UnnamedAddress, AddressSpace};
-use mun_hir::{HasVisibility, ModuleDef};
-use rustc_hash::FxHashSet;
-use std::collections::BTreeMap;
 
-/// The IR generated for a group of files. It is used to generate IR for all of the group's files
-/// and the resulting `Assembly`'s symbols.
+/// The IR generated for a group of files. It is used to generate IR for all of
+/// the group's files and the resulting `Assembly`'s symbols.
 #[derive(Debug, PartialEq, Eq)]
 pub struct FileGroupIr<'ink> {
     /// The LLVM module that contains the IR
@@ -25,7 +27,8 @@ pub struct FileGroupIr<'ink> {
     pub(crate) type_table: TypeTable<'ink>,
     /// The allocator handle, if it exists
     pub(crate) allocator_handle_type: Option<PointerType<'ink>>,
-    /// The modules that contain code that was referenced from this group of modules
+    /// The modules that contain code that was referenced from this group of
+    /// modules
     pub(crate) referenced_modules: FxHashSet<mun_hir::Module>,
 }
 
@@ -40,7 +43,8 @@ pub(crate) fn gen_file_group_ir<'ink>(
     let mut intrinsics_map = BTreeMap::new();
     let mut needs_alloc = false;
 
-    // Collect all intrinsic functions, wrapper function, and generate struct declarations.
+    // Collect all intrinsic functions, wrapper function, and generate struct
+    // declarations.
     for def in module_group
         .iter()
         .flat_map(|module| module.declarations(code_gen.db))

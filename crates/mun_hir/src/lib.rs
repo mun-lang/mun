@@ -1,12 +1,17 @@
-//! HIR provides high-level, object-oriented access to Mun code. It is constructed by first parsing
-//! Mun code with the `mun_syntax` crate and then it is lowered into HIR constructs, names are
-//! resolved, and type checking is performed. HIR is the input for both the compiler as well as the
+//! HIR provides high-level, object-oriented access to Mun code. It is
+//! constructed by first parsing Mun code with the `mun_syntax` crate and then
+//! it is lowered into HIR constructs, names are resolved, and type checking is
+//! performed. HIR is the input for both the compiler as well as the
 //! language server.
 
 #![allow(dead_code)]
 
 pub use salsa;
 
+pub use self::code_model::{
+    Field, Function, FunctionData, HasSource, Module, ModuleDef, Package, Struct, StructMemoryKind,
+    TypeAlias,
+};
 pub use crate::{
     db::{
         AstDatabase, AstDatabaseStorage, DefDatabase, DefDatabaseStorage, HirDatabase,
@@ -35,11 +40,6 @@ pub use crate::{
     visibility::{HasVisibility, Visibility},
 };
 use crate::{name::AsName, source_id::AstIdMap};
-
-pub use self::code_model::{
-    Field, Function, FunctionData, HasSource, Module, ModuleDef, Package, Struct, StructMemoryKind,
-    TypeAlias,
-};
 
 #[macro_use]
 mod macros;

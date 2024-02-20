@@ -1,12 +1,12 @@
-use crate::type_id::HasStaticTypeId;
-use crate::type_id::TypeId;
-use crate::{
-    AssemblyInfo, DispatchTable, FunctionDefinition, FunctionPrototype, FunctionSignature, Guid,
-    ModuleInfo, StructDefinition, StructMemoryKind, TypeDefinition, TypeDefinitionData, TypeLut,
-};
 use std::{
     ffi::{self, CStr},
     os::raw::c_char,
+};
+
+use crate::{
+    type_id::{HasStaticTypeId, TypeId},
+    AssemblyInfo, DispatchTable, FunctionDefinition, FunctionPrototype, FunctionSignature, Guid,
+    ModuleInfo, StructDefinition, StructMemoryKind, TypeDefinition, TypeDefinitionData, TypeLut,
 };
 
 pub(crate) const FAKE_TYPE_GUID: Guid =

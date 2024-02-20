@@ -1,35 +1,34 @@
 #![allow(clippy::type_repetition_in_bounds)]
 
-use crate::code_model::ImplData;
-use crate::expr::BodySourceMap;
-use crate::ids::{DefWithBodyId, FunctionId, ImplId};
-use crate::input::{SourceRoot, SourceRootId};
-use crate::item_tree::{self, ItemTree};
-use crate::method_resolution::InherentImpls;
-use crate::module_tree::ModuleTree;
-use crate::name_resolution::Namespace;
-use crate::package_defs::PackageDefs;
-use crate::ty::lower::LowerTyMap;
-use crate::ty::{CallableDef, FnSig, Ty, TypableDef};
-use crate::{
-    code_model::{FunctionData, StructData, TypeAliasData},
-    ids,
-    line_index::LineIndex,
-    ty::InferenceResult,
-    AstIdMap, Body, ExprScopes, FileId, PackageId, PackageSet, Struct, TypeAlias,
-};
+use std::sync::Arc;
+
 use mun_paths::RelativePathBuf;
 use mun_syntax::{ast, Parse, SourceFile};
-use mun_target::abi;
-use mun_target::spec::Target;
-use std::sync::Arc;
+use mun_target::{abi, spec::Target};
+
+use crate::{
+    code_model::{FunctionData, ImplData, StructData, TypeAliasData},
+    expr::BodySourceMap,
+    ids,
+    ids::{DefWithBodyId, FunctionId, ImplId},
+    input::{SourceRoot, SourceRootId},
+    item_tree::{self, ItemTree},
+    line_index::LineIndex,
+    method_resolution::InherentImpls,
+    module_tree::ModuleTree,
+    name_resolution::Namespace,
+    package_defs::PackageDefs,
+    ty::{lower::LowerTyMap, CallableDef, FnSig, InferenceResult, Ty, TypableDef},
+    AstIdMap, Body, ExprScopes, FileId, PackageId, PackageSet, Struct, TypeAlias,
+};
 
 // TODO(bas): In the future maybe move this to a seperate crate (mun_db?)
 pub trait Upcast<T: ?Sized> {
     fn upcast(&self) -> &T;
 }
 
-/// Database which stores all significant input facts: source code and project model.
+/// Database which stores all significant input facts: source code and project
+/// model.
 #[salsa::query_group(SourceDatabaseStorage)]
 #[allow(clippy::trait_duplication_in_bounds)]
 pub trait SourceDatabase: salsa::Database {
@@ -61,8 +60,8 @@ pub trait SourceDatabase: salsa::Database {
     fn packages(&self) -> Arc<PackageSet>;
 }
 
-/// The `AstDatabase` provides queries that transform text from the `SourceDatabase` into an
-/// Abstract Syntax Tree (AST).
+/// The `AstDatabase` provides queries that transform text from the
+/// `SourceDatabase` into an Abstract Syntax Tree (AST).
 #[salsa::query_group(AstDatabaseStorage)]
 pub trait AstDatabase: SourceDatabase {
     /// Parses the file into the syntax tree.
@@ -74,8 +73,9 @@ pub trait AstDatabase: SourceDatabase {
     fn ast_id_map(&self, file_id: FileId) -> Arc<AstIdMap>;
 }
 
-/// The `InternDatabase` maps certain datastructures to ids. These ids refer to instances of
-/// concepts like a `Function`, `Struct` or `TypeAlias` in a semi-stable way.
+/// The `InternDatabase` maps certain datastructures to ids. These ids refer to
+/// instances of concepts like a `Function`, `Struct` or `TypeAlias` in a
+/// semi-stable way.
 #[salsa::query_group(InternDatabaseStorage)]
 pub trait InternDatabase: SourceDatabase {
     #[salsa::interned]
@@ -90,8 +90,8 @@ pub trait InternDatabase: SourceDatabase {
 
 #[salsa::query_group(DefDatabaseStorage)]
 pub trait DefDatabase: InternDatabase + AstDatabase + Upcast<dyn AstDatabase> {
-    /// Returns the `ItemTree` for a specific file. An `ItemTree` represents all the top level
-    /// declarations within a file.
+    /// Returns the `ItemTree` for a specific file. An `ItemTree` represents all
+    /// the top level declarations within a file.
     #[salsa::invoke(item_tree::ItemTree::item_tree_query)]
     fn item_tree(&self, file_id: FileId) -> Arc<ItemTree>;
 
@@ -104,8 +104,9 @@ pub trait DefDatabase: InternDatabase + AstDatabase + Upcast<dyn AstDatabase> {
     #[salsa::invoke(crate::FunctionData::fn_data_query)]
     fn fn_data(&self, func: FunctionId) -> Arc<FunctionData>;
 
-    /// Returns the `PackageDefs` for the specified `PackageId`. The `PackageDefs` contains all
-    /// resolved items defined for every module in the package.
+    /// Returns the `PackageDefs` for the specified `PackageId`. The
+    /// `PackageDefs` contains all resolved items defined for every module
+    /// in the package.
     #[salsa::invoke(crate::package_defs::PackageDefs::package_def_map_query)]
     fn package_defs(&self, package_id: PackageId) -> Arc<PackageDefs>;
 

@@ -1,18 +1,19 @@
-use crate::code_model::src::HasSource;
-use crate::diagnostics::{
-    CyclicType, ExportedPrivate, ExternCannotHaveBody, ExternNonPrimitiveParam,
-    FreeTypeAliasWithoutTypeRef, PrivateTypeAlias,
-};
-use crate::expr::BodySourceMap;
-use crate::in_file::InFile;
-use crate::resolve::HasResolver;
-use crate::{
-    diagnostics::DiagnosticSink, Body, Expr, Function, HirDatabase, InferenceResult, TypeAlias,
-};
-use crate::{HasVisibility, Ty, TyKind, Visibility};
+use std::sync::Arc;
 
 use mun_syntax::{AstNode, SyntaxNodePtr};
-use std::sync::Arc;
+
+use crate::{
+    code_model::src::HasSource,
+    diagnostics::{
+        CyclicType, DiagnosticSink, ExportedPrivate, ExternCannotHaveBody, ExternNonPrimitiveParam,
+        FreeTypeAliasWithoutTypeRef, PrivateTypeAlias,
+    },
+    expr::BodySourceMap,
+    in_file::InFile,
+    resolve::HasResolver,
+    Body, Expr, Function, HasVisibility, HirDatabase, InferenceResult, Ty, TyKind, TypeAlias,
+    Visibility,
+};
 
 mod literal_out_of_range;
 mod uninitialized_access;
@@ -149,7 +150,8 @@ impl<'a> TypeAliasValidator<'a> {
         }
     }
 
-    /// Validates that the provided `TypeAlias` is not leaking the privacy of its target type.
+    /// Validates that the provided `TypeAlias` is not leaking the privacy of
+    /// its target type.
     pub fn validate_target_type_privacy(&self, sink: &mut DiagnosticSink<'_>) {
         let lower = self.type_alias.lower(self.db);
         let data = self.type_alias.data(self.db.upcast());

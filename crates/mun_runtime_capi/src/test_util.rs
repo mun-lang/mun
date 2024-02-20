@@ -1,10 +1,11 @@
-use mun_compiler::{Config, DisplayColor, Driver, PathOrInline, RelativePathBuf};
 use std::{ffi::CString, io::stderr, path::Path, ptr};
+
+use mun_compiler::{Config, DisplayColor, Driver, PathOrInline, RelativePathBuf};
 
 use crate::runtime::{mun_runtime_create, mun_runtime_destroy, Runtime, RuntimeOptions};
 
-/// Combines a compiler and runtime in one. Use of the `TestDriver` allows for quick testing of Mun
-/// constructs in the runtime with hot-reloading support.
+/// Combines a compiler and runtime in one. Use of the `TestDriver` allows for
+/// quick testing of Mun constructs in the runtime with hot-reloading support.
 pub(crate) struct TestDriver {
     _temp_dir: tempfile::TempDir,
     pub(crate) runtime: Runtime,

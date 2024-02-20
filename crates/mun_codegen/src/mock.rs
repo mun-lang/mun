@@ -1,14 +1,17 @@
-use crate::{
-    db::{CodeGenDatabase, CodeGenDatabaseStorage},
-    OptimizationLevel,
-};
+use std::sync::Arc;
+
 use mun_hir::{FileId, HirDatabase, SourceDatabase, SourceRoot, SourceRootId};
 use mun_paths::RelativePathBuf;
 use mun_target::spec::Target;
 use parking_lot::Mutex;
-use std::sync::Arc;
 
-/// A mock implementation of the IR database. It can be used to set up a simple test case.
+use crate::{
+    db::{CodeGenDatabase, CodeGenDatabaseStorage},
+    OptimizationLevel,
+};
+
+/// A mock implementation of the IR database. It can be used to set up a simple
+/// test case.
 #[salsa::database(
     mun_hir::SourceDatabaseStorage,
     mun_hir::AstDatabaseStorage,

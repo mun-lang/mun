@@ -1,5 +1,6 @@
-use super::{ConcreteValueType, IrTypeContext, PointerValueType, SizedValueType, ValueType};
 use inkwell::types::BasicType;
+
+use super::{ConcreteValueType, IrTypeContext, PointerValueType, SizedValueType, ValueType};
 
 macro_rules! into_function_info_impl {
     ($(

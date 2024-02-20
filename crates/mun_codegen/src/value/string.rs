@@ -1,5 +1,6 @@
-use super::{AsValue, BytesOrPtr, Global, IrTypeContext, IrValueContext, TransparentValue, Value};
 use std::ffi::{CStr, CString};
+
+use super::{AsValue, BytesOrPtr, Global, IrTypeContext, IrValueContext, TransparentValue, Value};
 
 /// Enables internalizing certain data structures like strings.
 pub trait CanInternalize {

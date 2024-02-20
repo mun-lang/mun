@@ -17,15 +17,17 @@ enum MunStructMemoryKind
 #endif // __cplusplus
  {
     /**
-     * A garbage collected struct is allocated on the heap and uses reference semantics when passed
-     * around.
+     * A garbage collected struct is allocated on the heap and uses reference
+     * semantics when passed around.
      */
     Gc,
     /**
-     * A value struct is allocated on the stack and uses value semantics when passed around.
+     * A value struct is allocated on the stack and uses value semantics when
+     * passed around.
      *
-     * NOTE: When a value struct is used in an external API, a wrapper is created that _pins_ the
-     * value on the heap. The heap-allocated value needs to be *manually deallocated*!
+     * NOTE: When a value struct is used in an external API, a wrapper is
+     * created that _pins_ the value on the heap. The heap-allocated value
+     * needs to be *manually deallocated*!
      */
     Value,
 };
@@ -65,10 +67,11 @@ typedef struct MunArrayTypeId {
 } MunArrayTypeId;
 
 /**
- * Represents a unique identifier for types. The runtime can use this to lookup the corresponding
- * [`TypeInfo`]. A [`TypeId`] is a key for a [`TypeInfo`].
+ * Represents a unique identifier for types. The runtime can use this to lookup
+ * the corresponding [`TypeInfo`]. A [`TypeId`] is a key for a [`TypeInfo`].
  *
- * A [`TypeId`] only contains enough information to query the runtime for a [`TypeInfo`].
+ * A [`TypeId`] only contains enough information to query the runtime for a
+ * [`TypeInfo`].
  */
 enum MunTypeId_Tag
 #ifdef __cplusplus
@@ -127,8 +130,8 @@ typedef struct MunFunctionSignature {
 } MunFunctionSignature;
 
 /**
- * Represents a function prototype. A function prototype contains the name, type signature, but
- * not an implementation.
+ * Represents a function prototype. A function prototype contains the name,
+ * type signature, but not an implementation.
  */
 typedef struct MunFunctionPrototype {
     /**
@@ -142,8 +145,8 @@ typedef struct MunFunctionPrototype {
 } MunFunctionPrototype;
 
 /**
- * Represents a function definition. A function definition contains the name, type signature, and
- * a pointer to the implementation.
+ * Represents a function definition. A function definition contains the name,
+ * type signature, and a pointer to the implementation.
  *
  * `fn_ptr` can be used to call the declared function.
  */
@@ -189,7 +192,8 @@ typedef struct MunStructDefinition {
 } MunStructDefinition;
 
 /**
- * Contains data specific to a group of types that illicit the same characteristics.
+ * Contains data specific to a group of types that illicit the same
+ * characteristics.
  */
 enum MunTypeDefinitionData_Tag
 #ifdef __cplusplus
@@ -216,16 +220,17 @@ typedef union MunTypeDefinitionData {
 /**
  * Represents the type declaration for a type that is exported by an assembly.
  *
- * When multiple Mun modules reference the same type, only one module exports the type; the module
- * that contains the type definition. All the other Mun modules reference the type through a
- * [`TypeId`].
+ * When multiple Mun modules reference the same type, only one module exports
+ * the type; the module that contains the type definition. All the other Mun
+ * modules reference the type through a [`TypeId`].
  *
- * The modules that defines the type exports the data to reduce the filesize of the assemblies and
- * to ensure only one definition exists. When linking all assemblies together the type definitions
- * from all assemblies are loaded and the information is shared to modules that reference the type.
+ * The modules that defines the type exports the data to reduce the filesize of
+ * the assemblies and to ensure only one definition exists. When linking all
+ * assemblies together the type definitions from all assemblies are loaded and
+ * the information is shared to modules that reference the type.
  *
- * TODO: add support for polymorphism, enumerations, type parameters, generic type definitions, and
- *   constructed generic types.
+ * TODO: add support for polymorphism, enumerations, type parameters, generic
+ * type definitions, and   constructed generic types.
  */
 typedef struct MunTypeDefinition {
     /**
@@ -293,7 +298,8 @@ typedef struct MunDispatchTable {
 } MunDispatchTable;
 
 /**
- * Represents a lookup table for type information. This is used for runtime linking.
+ * Represents a lookup table for type information. This is used for runtime
+ * linking.
  *
  * Type IDs and handles are stored separately for cache efficiency.
  */

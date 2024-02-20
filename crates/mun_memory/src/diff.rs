@@ -1,8 +1,7 @@
 pub mod myers;
 
-use crate::{r#type::Field, r#type::Type};
-
 use self::myers::Change;
+use crate::r#type::{Field, Type};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum FieldEditKind {
@@ -82,8 +81,9 @@ impl PartialOrd for StructDiff {
     }
 }
 
-/// Given an `old` and a `new` ordered set of types, computes the difference based on ordering and equality of struct types.
-/// Thus, a diff can consist of inserted, deleted, moved, and edited (i.e. fields of) struct types.
+/// Given an `old` and a `new` ordered set of types, computes the difference
+/// based on ordering and equality of struct types. Thus, a diff can consist of
+/// inserted, deleted, moved, and edited (i.e. fields of) struct types.
 pub fn compute_struct_diff(old: &[Type], new: &[Type]) -> Vec<StructDiff> {
     let diff = myers::compute_diff(old, new);
     let (deletions, insertions) = myers::split_diff(&diff);
@@ -123,9 +123,9 @@ impl<'a> From<Field<'a>> for UniqueFieldInfo<'a> {
     }
 }
 
-/// Given a set of indices for `deletions` from the `old` slice of types and a set of indices
-/// for `insertions` into the `new` slice of types, appends the corresponding `Diff` mapping
-/// for all
+/// Given a set of indices for `deletions` from the `old` slice of types and a
+/// set of indices for `insertions` into the `new` slice of types, appends the
+/// corresponding `Diff` mapping for all
 fn append_struct_mapping(
     deletions: Vec<Change<Type>>,
     insertions: Vec<Change<Type>>,
@@ -245,8 +245,8 @@ fn append_struct_mapping(
                 new_ty,
             }
         } else {
-            // ASSUMPTION: Don't use recursion, because all types are individually checked for
-            // differences.
+            // ASSUMPTION: Don't use recursion, because all types are individually checked
+            // for differences.
             // TODO: Support value struct vs heap struct?
             let diff = field_diff(old_fields, new_fields);
 
@@ -351,7 +351,8 @@ fn field_diff(old: &[UniqueFieldInfo<'_>], new: &[UniqueFieldInfo<'_>]) -> Vec<F
             }
         }
         // Else, is there an insertion with a different name but same type?
-        // As there can be multiple fields with the same type, we want to find the closest one.
+        // As there can be multiple fields with the same type, we want to find the
+        // closest one.
         let mut closest = None;
         for (insert_index, insertion) in insertions.iter_mut().enumerate() {
             if let Some(Change {

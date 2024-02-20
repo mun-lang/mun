@@ -6,7 +6,8 @@ use mun_runtime::Runtime;
 /// The type of test to create
 #[derive(Copy, Clone)]
 pub enum TestMode {
-    /// Compile the code to ensure it compiles and run the `main` function which should not panic
+    /// Compile the code to ensure it compiles and run the `main` function which
+    /// should not panic
     CompileAndRun,
 
     /// Only compile the code to ensure its valid Mun code
@@ -75,7 +76,8 @@ pub fn run_test(code: &str, mode: TestMode) {
     let assembly_path = driver.assembly_output_path_from_file(file_id);
     let builder = Runtime::builder(assembly_path);
 
-    // Safety: We compiled the mun code ourselves, therefor loading the munlib is safe
+    // Safety: We compiled the mun code ourselves, therefor loading the munlib is
+    // safe
     let runtime = unsafe { builder.finish() }.expect("error creating runtime for test assembly");
 
     // Find the main function
