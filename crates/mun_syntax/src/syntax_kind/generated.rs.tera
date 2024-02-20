@@ -22,7 +22,7 @@ pub enum SyntaxKind {
     {{t.1}},
 {%- endfor -%}
 {% for kw in keywords %}
-    {{kw | upper}}_KW,
+    {{kw | upper}}{% if kw == "Self" %}_TYPE{% endif %}_KW,
 {%- endfor -%}
 {% for t in concat(a=literals, b=tokens, c=nodes) %}
     {{t}},
@@ -48,7 +48,7 @@ macro_rules! T {
 {%- endfor -%}
 {% for kw in keywords %}
     ({{kw}}) => {
-        $crate::SyntaxKind::{{kw | upper}}_KW
+        $crate::SyntaxKind::{{kw | upper}}{% if kw == "Self" %}_TYPE{% endif %}_KW
     };
 {%- endfor %}
 }
@@ -71,7 +71,7 @@ impl SyntaxKind {
     pub fn is_keyword(self) -> bool {
         matches!(self,
 {%- for kw in keywords %}
-        {%  if loop.index > 1 %}| {% endif %}{{kw | upper}}_KW
+        {%  if loop.index > 1 %}| {% endif %}{{kw | upper}}{% if kw == "Self" %}_TYPE{% endif %}_KW
 {%- endfor %}
         )
     }
@@ -101,7 +101,7 @@ impl SyntaxKind {
             {{t.1}} => &SyntaxInfo { name: "{{t.1}}" },
     {%- endfor -%}
     {% for kw in keywords %}
-            {{kw | upper}}_KW => &SyntaxInfo { name: "{{kw | upper}}_KW" },
+            {{kw | upper}}{% if kw == "Self" %}_TYPE{% endif %}_KW => &SyntaxInfo { name: "{{kw | upper}}{% if kw == "Self" %}_TYPE{% endif %}_KW" },
     {%- endfor -%}
     {% for t in concat(a=literals, b=tokens, c=nodes) %}
             {{t}} => &SyntaxInfo { name: "{{t}}" },
@@ -115,7 +115,7 @@ impl SyntaxKind {
     pub fn from_keyword(ident: &str) -> Option<SyntaxKind> {
         let kw = match ident {
     {%- for kw in keywords %}
-            "{{kw}}" => {{kw | upper}}_KW,
+            "{{kw}}" => {{kw | upper}}{% if kw == "Self" %}_TYPE{% endif %}_KW,
     {%- endfor %}
             _ => return None,
         };

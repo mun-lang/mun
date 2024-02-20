@@ -1,10 +1,11 @@
 use super::{declarations, name_ref, Parser, TokenSet, IDENT, PATH, PATH_SEGMENT};
+use crate::SyntaxKind::NAME_REF;
 
 pub(super) const PATH_FIRST: TokenSet =
-    TokenSet::new(&[IDENT, T![super], T![self], T![package], T![::]]);
+    TokenSet::new(&[IDENT, T![super], T![self], T![package], T![Self], T![::]]);
 
 pub(super) fn is_path_start(p: &Parser<'_>) -> bool {
-    matches!(p.current(), IDENT | T![self] | T![super] | T![package])
+    is_use_path_start(p, true) || p.at(T![Self])
 }
 
 pub(super) fn is_use_path_start(p: &Parser<'_>, top_level: bool) -> bool {
@@ -56,7 +57,11 @@ fn path_segment(p: &mut Parser<'_>, _mode: Mode, top_level: bool) {
         IDENT => {
             name_ref(p);
         }
-        T![super] | T![package] if top_level => p.bump_any(),
+        T![super] | T![package] | T![Self] if top_level => {
+            let m = p.start();
+            p.bump_any();
+            m.complete(p, NAME_REF);
+        }
         T![self] => p.bump(T![self]),
         _ => p.error_recover(
             "expected identifier",

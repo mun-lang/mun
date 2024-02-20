@@ -98,6 +98,7 @@ Grammar(
         "package",
         "super",
         "self",
+        "Self",
 
         "extern",
 

@@ -302,7 +302,7 @@ fn keywords() {
     break do else false for fn if in nil
     return true while let mut struct class
     never loop pub super self package type
-    impl
+    impl Self
     "#), @r###"
     WHITESPACE 5 "\n    "
     BREAK_KW 5 "break"

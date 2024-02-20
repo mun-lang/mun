@@ -96,6 +96,7 @@ pub enum SyntaxKind {
     PACKAGE_KW,
     SUPER_KW,
     SELF_KW,
+    SELF_TYPE_KW,
     EXTERN_KW,
     IMPL_KW,
     INT_NUMBER,
@@ -385,6 +386,9 @@ macro_rules! T {
     (self) => {
         $crate::SyntaxKind::SELF_KW
     };
+    (Self) => {
+        $crate::SyntaxKind::SELF_TYPE_KW
+    };
     (extern) => {
         $crate::SyntaxKind::EXTERN_KW
     };
@@ -435,6 +439,7 @@ impl SyntaxKind {
         | PACKAGE_KW
         | SUPER_KW
         | SELF_KW
+        | SELF_TYPE_KW
         | EXTERN_KW
         | IMPL_KW
         )
@@ -577,6 +582,7 @@ impl SyntaxKind {
             PACKAGE_KW => &SyntaxInfo { name: "PACKAGE_KW" },
             SUPER_KW => &SyntaxInfo { name: "SUPER_KW" },
             SELF_KW => &SyntaxInfo { name: "SELF_KW" },
+            SELF_TYPE_KW => &SyntaxInfo { name: "SELF_TYPE_KW" },
             EXTERN_KW => &SyntaxInfo { name: "EXTERN_KW" },
             IMPL_KW => &SyntaxInfo { name: "IMPL_KW" },
             INT_NUMBER => &SyntaxInfo { name: "INT_NUMBER" },
@@ -675,6 +681,7 @@ impl SyntaxKind {
             "package" => PACKAGE_KW,
             "super" => SUPER_KW,
             "self" => SELF_KW,
+            "Self" => SELF_TYPE_KW,
             "extern" => EXTERN_KW,
             "impl" => IMPL_KW,
             _ => return None,

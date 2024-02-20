@@ -1252,6 +1252,8 @@ fn function_calls() {
     fn baz(self) { }
     fn qux(self, i:number) { }
     fn foo(self i:number) { } // error: expected comma
+    fn constructor() -> Self { Self }
+    fn with_self(self, other: Self) { }
     "#,
     ).debug_dump(), @r###"
     SOURCE_FILE@0..181
@@ -3177,6 +3179,7 @@ fn type_alias_def() {
 fn function_return_path() {
     insta::assert_snapshot!(SourceFile::parse(
         r#"
+        fn main() -> Self { Self }
         fn main() -> self::Foo {}
         fn main1() -> super::Foo {}
         fn main2() -> package::Foo {}
@@ -3328,6 +3331,11 @@ fn use_() {
             running::out::of::synonyms::for_::different::*
         };
         use Foo as _;
+
+        // Self should not be allowed in use trees
+        use Self; // error: 
+        use Self::Item; // error: 
+        use Self::{Item}; // error:
         "#,
     ).debug_dump(), @r#"
     SOURCE_FILE@0..726
