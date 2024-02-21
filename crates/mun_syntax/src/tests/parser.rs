@@ -1249,9 +1249,12 @@ fn function_calls() {
     fn foo(i:number) {
       bar(i+1)
     }
+    fn baz(self) { }
+    fn qux(self, i:number) { }
+    fn foo(self i:number) { } // error: expected comma
     "#,
-    ).debug_dump(), @r#"
-    SOURCE_FILE@0..74
+    ).debug_dump(), @r###"
+    SOURCE_FILE@0..181
       FUNCTION_DEF@0..25
         WHITESPACE@0..5 "\n    "
         FN_KW@5..7 "fn"
@@ -1319,8 +1322,85 @@ fn function_calls() {
               R_PAREN@62..63 ")"
           WHITESPACE@63..68 "\n    "
           R_CURLY@68..69 "}"
-      WHITESPACE@69..74 "\n    "
-    "#);
+      FUNCTION_DEF@69..90
+        WHITESPACE@69..74 "\n    "
+        FN_KW@74..76 "fn"
+        WHITESPACE@76..77 " "
+        NAME@77..80
+          IDENT@77..80 "baz"
+        PARAM_LIST@80..86
+          L_PAREN@80..81 "("
+          SELF_PARAM@81..85
+            NAME@81..85
+              SELF_KW@81..85 "self"
+          R_PAREN@85..86 ")"
+        WHITESPACE@86..87 " "
+        BLOCK_EXPR@87..90
+          L_CURLY@87..88 "{"
+          WHITESPACE@88..89 " "
+          R_CURLY@89..90 "}"
+      FUNCTION_DEF@90..121
+        WHITESPACE@90..95 "\n    "
+        FN_KW@95..97 "fn"
+        WHITESPACE@97..98 " "
+        NAME@98..101
+          IDENT@98..101 "qux"
+        PARAM_LIST@101..117
+          L_PAREN@101..102 "("
+          SELF_PARAM@102..106
+            NAME@102..106
+              SELF_KW@102..106 "self"
+          COMMA@106..107 ","
+          WHITESPACE@107..108 " "
+          PARAM@108..116
+            BIND_PAT@108..109
+              NAME@108..109
+                IDENT@108..109 "i"
+            COLON@109..110 ":"
+            PATH_TYPE@110..116
+              PATH@110..116
+                PATH_SEGMENT@110..116
+                  NAME_REF@110..116
+                    IDENT@110..116 "number"
+          R_PAREN@116..117 ")"
+        WHITESPACE@117..118 " "
+        BLOCK_EXPR@118..121
+          L_CURLY@118..119 "{"
+          WHITESPACE@119..120 " "
+          R_CURLY@120..121 "}"
+      FUNCTION_DEF@121..151
+        WHITESPACE@121..126 "\n    "
+        FN_KW@126..128 "fn"
+        WHITESPACE@128..129 " "
+        NAME@129..132
+          IDENT@129..132 "foo"
+        PARAM_LIST@132..147
+          L_PAREN@132..133 "("
+          SELF_PARAM@133..137
+            NAME@133..137
+              SELF_KW@133..137 "self"
+          WHITESPACE@137..138 " "
+          PARAM@138..146
+            BIND_PAT@138..139
+              NAME@138..139
+                IDENT@138..139 "i"
+            COLON@139..140 ":"
+            PATH_TYPE@140..146
+              PATH@140..146
+                PATH_SEGMENT@140..146
+                  NAME_REF@140..146
+                    IDENT@140..146 "number"
+          R_PAREN@146..147 ")"
+        WHITESPACE@147..148 " "
+        BLOCK_EXPR@148..151
+          L_CURLY@148..149 "{"
+          WHITESPACE@149..150 " "
+          R_CURLY@150..151 "}"
+      WHITESPACE@151..152 " "
+      COMMENT@152..176 "// error: expected comma"
+      WHITESPACE@176..181 "\n    "
+    error Offset(137): expected COMMA
+    "###);
 }
 
 #[test]

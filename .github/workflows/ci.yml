@@ -82,12 +82,19 @@ jobs:
       - name: Install LLVM
         uses: ./.github/actions/install-llvm
 
-      - name: Install toolchain
+      - name: Install nightly rustfmt
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          components: rustfmt
+
+      - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           override: true
-          components: rustfmt, llvm-tools-preview
+          components: llvm-tools-preview
 
       - uses: Swatinem/rust-cache@v2
         if: matrix.os != 'windows-latest'
@@ -169,12 +176,18 @@ jobs:
       - name: Install LLVM
         uses: ./.github/actions/install-llvm
 
-      - name: Install toolchain
+      - name: Install nightly rustfmt
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          components: rustfmt
+
+      - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           override: true
-          components: rustfmt
 
       - uses: Swatinem/rust-cache@v2
 
@@ -219,12 +232,18 @@ jobs:
       - name: Install LLVM
         uses: ./.github/actions/install-llvm
 
-      - name: Install toolchain
+      - name: Install nightly rustfmt
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          components: rustfmt
+
+      - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           override: true
-          components: rustfmt
 
       - uses: Swatinem/rust-cache@v2
 
