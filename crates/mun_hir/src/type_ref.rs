@@ -3,13 +3,11 @@
 
 use std::ops::Index;
 
+use la_arena::{Arena, ArenaMap, Idx};
 use mun_syntax::{ast, AstPtr};
 use rustc_hash::FxHashMap;
 
-use crate::{
-    arena::{map::ArenaMap, Arena, Idx},
-    Path,
-};
+use crate::Path;
 
 /// The ID of a `TypeRef` in a `TypeRefMap`
 pub type LocalTypeRefId = Idx<TypeRef>;

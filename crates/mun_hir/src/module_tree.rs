@@ -1,14 +1,12 @@
 use std::sync::Arc;
 
 use itertools::Itertools;
+use la_arena::{Arena, Idx};
 use mun_paths::RelativePath;
 use rustc_hash::FxHashMap;
 
 use crate::{
-    arena::{Arena, Idx},
-    ids::ModuleId,
-    module_tree::diagnostics::ModuleTreeDiagnostic,
-    visibility::RawVisibility,
+    ids::ModuleId, module_tree::diagnostics::ModuleTreeDiagnostic, visibility::RawVisibility,
     DefDatabase, FileId, Name, PackageId, SourceDatabase, Visibility,
 };
 

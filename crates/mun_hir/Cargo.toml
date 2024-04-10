@@ -13,6 +13,7 @@ keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
 categories = ["game-development", "mun"]
 
 [dependencies]
+la-arena = {  version = "0.3.1", default-features = false }
 mun_syntax = { version = "0.6.0-dev", path = "../mun_syntax" }
 mun_target = { version = "0.6.0-dev", path = "../mun_target" }
 mun_paths = { version = "0.6.0-dev", path="../mun_paths" }

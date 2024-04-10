@@ -1,6 +1,7 @@
 use std::{fmt, iter::once, sync::Arc};
 
 pub use ast::StructMemoryKind;
+use la_arena::{Arena, Idx};
 use mun_syntax::{
     ast,
     ast::{NameOwner, TypeAscriptionOwner, VisibilityOwner},
@@ -8,7 +9,6 @@ use mun_syntax::{
 
 use super::Module;
 use crate::{
-    arena::{Arena, Idx},
     has_module::HasModule,
     ids::{Lookup, StructId},
     name::AsName,

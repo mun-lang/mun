@@ -2,6 +2,7 @@
 
 use std::{collections::HashMap, convert::TryInto, marker::PhantomData, sync::Arc};
 
+use la_arena::{Idx, RawIdx};
 use mun_syntax::ast::{
     self, ExternOwner, ModuleItemOwner, NameOwner, StructKind, TypeAscriptionOwner,
 };
@@ -12,7 +13,6 @@ use super::{
     ItemTreeNode, ItemVisibilities, LocalItemTreeId, ModItem, RawVisibilityId, Struct, TypeAlias,
 };
 use crate::{
-    arena::{Idx, RawId},
     item_tree::Import,
     name::AsName,
     source_id::AstIdMap,
@@ -311,7 +311,7 @@ impl Context {
     /// Returns the `Idx` of the next `Field`
     fn next_field_idx(&self) -> Idx<Field> {
         let idx: u32 = self.data.fields.len().try_into().expect("too many fields");
-        Idx::from_raw(RawId::from(idx))
+        Idx::from_raw(RawIdx::from(idx))
     }
 }
 

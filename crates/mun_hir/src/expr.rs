@@ -1,6 +1,7 @@
 use std::{borrow::Cow, ops::Index, str::FromStr, sync::Arc};
 
 use either::Either;
+use la_arena::{Arena, ArenaMap, Idx};
 pub use mun_syntax::ast::PrefixOp as UnaryOp;
 use mun_syntax::{
     ast,
@@ -11,7 +12,6 @@ use rustc_hash::FxHashMap;
 
 pub use self::scope::ExprScopes;
 use crate::{
-    arena::{map::ArenaMap, Arena, Idx},
     code_model::{src::HasSource, DefWithBody},
     diagnostics::DiagnosticSink,
     ids::{DefWithBodyId, Lookup},
