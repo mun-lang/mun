@@ -35,10 +35,8 @@ fn update(path: &Path, contents: &str, mode: Mode) -> Result<()> {
 }
 
 fn reformat(text: impl std::fmt::Display) -> Result<String> {
-    let mut rustfmt = Command::new("rustfmt")
-        .arg("+nightly")
-        //.arg("--config-path")
-        //.arg(project_root().join("rustfmt.toml"))
+    let mut rustfmt = Command::new("rustup")
+        .args(&["run", "nightly", "--", "rustfmt"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()?;
