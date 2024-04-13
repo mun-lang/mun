@@ -4,7 +4,7 @@ use std::{
     sync::Arc,
 };
 
-use mun_syntax::{ast, AstNode, AstPtr, SyntaxNode, SyntaxNodePtr};
+use mun_syntax::{ast, AstNode, AstPtr, SyntaxNode, SyntaxNodePtr, WalkEvent};
 
 use crate::{
     arena::{Arena, Idx},
@@ -13,12 +13,14 @@ use crate::{
     FileId,
 };
 
+type ErasedFileAstId = Idx<SyntaxNodePtr>;
+
 /// `AstId` points to an AST node in any file.
 ///
 /// It is stable across reparses, and can be used as salsa key/value.
 pub(crate) type AstId<N> = InFile<FileAstId<N>>;
 
-impl<N: AstNode> AstId<N> {
+impl<N: AstIdNode> AstId<N> {
     pub fn to_node(self, db: &dyn AstDatabase) -> N {
         let root = db.parse(self.file_id);
         db.ast_id_map(self.file_id)
@@ -28,29 +30,51 @@ impl<N: AstNode> AstId<N> {
 }
 
 #[derive(Clone, Debug)]
-pub struct FileAstId<N: AstNode> {
+pub struct FileAstId<N: AstIdNode> {
     raw: ErasedFileAstId,
     _ty: PhantomData<fn() -> N>,
 }
 
-impl<N: AstNode> Copy for FileAstId<N> {}
+impl<N: AstIdNode> Copy for FileAstId<N> {}
 
-impl<N: AstNode> PartialEq for FileAstId<N> {
+impl<N: AstIdNode> PartialEq for FileAstId<N> {
     fn eq(&self, other: &Self) -> bool {
         self.raw == other.raw
     }
 }
-impl<N: AstNode> Eq for FileAstId<N> {}
-impl<N: AstNode> Hash for FileAstId<N> {
+impl<N: AstIdNode> Eq for FileAstId<N> {}
+impl<N: AstIdNode> Hash for FileAstId<N> {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         self.raw.hash(hasher);
     }
 }
 
-impl<N: AstNode> FileAstId<N> {
-    pub(crate) fn with_file_id(self, file_id: FileId) -> AstId<N> {
-        AstId::new(file_id, self)
-    }
+/// A trait that is implemented for all nodes that can be represented as a
+/// `FileAstId`.
+pub trait AstIdNode: AstNode {}
+
+macro_rules! register_ast_id_node {
+    (impl AstIdNode for $($ident:ident),+ ) => {
+        $(
+            impl AstIdNode for ast::$ident {}
+        )+
+        fn should_alloc_id(kind: mun_syntax::SyntaxKind) -> bool {
+            $(
+                ast::$ident::can_cast(kind)
+            )||+
+        }
+    };
+}
+
+register_ast_id_node! {
+    impl AstIdNode for
+    ModuleItem,
+        Use,
+        FunctionDef,
+        StructDef,
+        Impl,
+        TypeAliasDef,
+    Param
 }
 
 /// Maps items' `SyntaxNode`s to `ErasedFileAstId`s and back.
@@ -59,15 +83,13 @@ pub struct AstIdMap {
     arena: Arena<SyntaxNodePtr>,
 }
 
-type ErasedFileAstId = Idx<SyntaxNodePtr>;
-
 impl AstIdMap {
     pub(crate) fn ast_id_map_query(db: &dyn AstDatabase, file_id: FileId) -> Arc<AstIdMap> {
         let map = AstIdMap::from_source(db.parse(file_id).tree().syntax());
         Arc::new(map)
     }
 
-    pub(crate) fn ast_id<N: AstNode>(&self, item: &N) -> FileAstId<N> {
+    pub(crate) fn ast_id<N: AstIdNode>(&self, item: &N) -> FileAstId<N> {
         let ptr = SyntaxNodePtr::new(item.syntax());
         let raw = match self.arena.iter().find(|(_id, i)| **i == ptr) {
             Some((it, _)) => it,
@@ -88,22 +110,31 @@ impl AstIdMap {
     /// `node` must be the root of a syntax tree.
     fn from_source(node: &SyntaxNode) -> AstIdMap {
         assert!(node.parent().is_none());
-
         let mut res = AstIdMap::default();
+
+        // Make sure the root node is allocated
+        if !should_alloc_id(node.kind()) {
+            res.alloc(node);
+        }
+
         // By walking the tree in breadth-first order we make sure that parents
         // get lower ids then children. That is, adding a new child does not
         // change parent's id. This means that, say, adding a new function to a
         // trait does not change ids of top-level items, which helps caching.
-        bfs(node, |it| {
-            if let Some(module_item) = ast::ModuleItem::cast(it) {
-                res.alloc(module_item.syntax());
+        bdfs(node, |it| {
+            if should_alloc_id(it.kind()) {
+                res.alloc(&it);
+                TreeOrder::BreadthFirst
+            } else {
+                TreeOrder::DepthFirst
             }
         });
+
         res
     }
 
     /// Returns the `AstPtr` of the given id.
-    pub(crate) fn get<N: AstNode>(&self, id: FileAstId<N>) -> AstPtr<N> {
+    pub(crate) fn get<N: AstIdNode>(&self, id: FileAstId<N>) -> AstPtr<N> {
         self.arena[id.raw].clone().try_cast::<N>().unwrap()
     }
 
@@ -113,14 +144,39 @@ impl AstIdMap {
     }
 }
 
-/// Walks the subtree in bfs order, calling `f` for each node.
-fn bfs(node: &SyntaxNode, mut f: impl FnMut(SyntaxNode)) {
+#[derive(Copy, Clone, PartialEq, Eq)]
+enum TreeOrder {
+    BreadthFirst,
+    DepthFirst,
+}
+
+/// Walks the subtree in bdfs order, calling `f` for each node.
+///
+/// ### What is bdfs order?
+///
+/// It is a mix of breadth-first and depth first orders. Nodes for which `f`
+/// returns [`TreeOrder::BreadthFirst`] are visited breadth-first, all the other
+/// nodes are explored [`TreeOrder::DepthFirst`].
+///
+/// In other words, the size of the bfs queue is bound by the number of "true"
+/// nodes.
+fn bdfs(node: &SyntaxNode, mut f: impl FnMut(SyntaxNode) -> TreeOrder) {
     let mut curr_layer = vec![node.clone()];
     let mut next_layer = vec![];
     while !curr_layer.is_empty() {
         curr_layer.drain(..).for_each(|node| {
-            next_layer.extend(node.children());
-            f(node);
+            let mut preorder = node.preorder();
+            while let Some(event) = preorder.next() {
+                match event {
+                    WalkEvent::Enter(node) => {
+                        if f(node.clone()) == TreeOrder::BreadthFirst {
+                            next_layer.extend(node.children());
+                            preorder.skip_subtree();
+                        }
+                    }
+                    WalkEvent::Leave(_) => {}
+                }
+            }
         });
         std::mem::swap(&mut curr_layer, &mut next_layer);
     }

@@ -1,6 +1,6 @@
 use std::{iter::once, sync::Arc};
 
-use mun_syntax::ast::TypeAscriptionOwner;
+use mun_syntax::{ast, ast::TypeAscriptionOwner};
 
 use super::Module;
 use crate::{
@@ -11,8 +11,8 @@ use crate::{
     resolve::HasResolver,
     type_ref::{LocalTypeRefId, TypeRefMap, TypeRefSourceMap},
     visibility::RawVisibility,
-    Body, DefDatabase, DiagnosticSink, FileId, HasVisibility, HirDatabase, InferenceResult, Name,
-    Ty, Visibility,
+    Body, DefDatabase, DiagnosticSink, FileId, HasSource, HasVisibility, HirDatabase, InFile,
+    InferenceResult, Name, Ty, Visibility,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
@@ -138,6 +138,20 @@ impl Function {
         db.type_for_def(self.into(), Namespace::Values)
     }
 
+    /// Returns the parameters of the function.
+    pub fn params(self, db: &dyn HirDatabase) -> Vec<Param> {
+        db.callable_sig(self.into())
+            .params()
+            .iter()
+            .enumerate()
+            .map(|(idx, ty)| Param {
+                func: self,
+                ty: ty.clone(),
+                idx,
+            })
+            .collect()
+    }
+
     pub fn ret_type(self, db: &dyn HirDatabase) -> Ty {
         let resolver = self.id.resolver(db.upcast());
         let data = self.data(db.upcast());
@@ -163,6 +177,42 @@ impl Function {
         infer.add_diagnostics(db, self, sink);
         let validator = ExprValidator::new(self, db);
         validator.validate_body(sink);
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+pub struct Param {
+    func: Function,
+    /// The index in parameter list, including self parameter.
+    idx: usize,
+    ty: Ty,
+}
+
+impl Param {
+    /// Returns the function to which this parameter belongs
+    pub fn parent_fn(&self) -> Function {
+        self.func
+    }
+
+    /// Returns the index of this parameter in the parameter list (including
+    /// self)
+    pub fn index(&self) -> usize {
+        self.idx
+    }
+
+    /// Returns the type of this parameter.
+    pub fn ty(&self) -> &Ty {
+        &self.ty
+    }
+
+    /// Returns the source of the parameter.
+    pub fn source(&self, db: &dyn HirDatabase) -> Option<InFile<ast::Param>> {
+        let InFile { file_id, value } = self.func.source(db.upcast());
+        let params = value.param_list()?;
+        params
+            .params()
+            .nth(self.idx)
+            .map(|value| InFile { file_id, value })
     }
 }
 

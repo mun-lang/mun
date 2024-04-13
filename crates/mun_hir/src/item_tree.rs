@@ -13,12 +13,12 @@ use std::{
     sync::Arc,
 };
 
-use mun_syntax::{ast, AstNode};
+use mun_syntax::ast;
 
 use crate::{
     arena::{Arena, Idx},
     path::ImportAlias,
-    source_id::FileAstId,
+    source_id::{AstIdNode, FileAstId},
     type_ref::{LocalTypeRefId, TypeRefMap},
     visibility::RawVisibility,
     DefDatabase, FileId, InFile, Name, Path,
@@ -112,6 +112,7 @@ impl ItemVisibilities {
 struct ItemTreeData {
     imports: Arena<Import>,
     functions: Arena<Function>,
+    params: Arena<Param>,
     structs: Arena<Struct>,
     fields: Arena<Field>,
     type_aliases: Arena<TypeAlias>,
@@ -122,7 +123,7 @@ struct ItemTreeData {
 
 /// Trait implemented by all item nodes in the item tree.
 pub trait ItemTreeNode: Clone {
-    type Source: AstNode + Into<ast::ModuleItem>;
+    type Source: AstIdNode + Into<ast::ModuleItem>;
 
     /// Returns the AST id for this instance
     fn ast_id(&self) -> FileAstId<Self::Source>;
@@ -244,7 +245,7 @@ macro_rules! impl_index {
     };
 }
 
-impl_index!(fields: Field);
+impl_index!(fields: Field, params: Param);
 
 static VIS_PUB: RawVisibility = RawVisibility::Public;
 static VIS_PRIV: RawVisibility = RawVisibility::This;
@@ -302,9 +303,20 @@ pub struct Function {
     pub visibility: RawVisibilityId,
     pub is_extern: bool,
     pub types: TypeRefMap,
-    pub params: Box<[LocalTypeRefId]>,
+    pub params: IdRange<Param>,
     pub ret_type: LocalTypeRefId,
     pub ast_id: FileAstId<ast::FunctionDef>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Param {
+    pub type_ref: LocalTypeRefId,
+    pub ast_id: ParamAstId,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum ParamAstId {
+    Param(FileAstId<ast::Param>),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -389,6 +401,11 @@ impl<T> IdRange<T> {
             range: range.start.into_raw().into()..range.end.into_raw().into(),
             _p: PhantomData,
         }
+    }
+
+    /// Returns true if the index range is empty
+    pub fn is_empty(&self) -> bool {
+        self.range.is_empty()
     }
 }
 

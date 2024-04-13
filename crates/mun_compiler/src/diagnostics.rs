@@ -29,82 +29,82 @@ mod tests {
 
     #[test]
     fn test_syntax_error() {
-        insta::assert_display_snapshot!(compilation_errors("\n\nfn main(\n struct Foo\n"));
+        insta::assert_snapshot!(compilation_errors("\n\nfn main(\n struct Foo\n"));
     }
 
     #[test]
     fn test_unresolved_value_error() {
-        insta::assert_display_snapshot!(compilation_errors(
+        insta::assert_snapshot!(compilation_errors(
             "\n\nfn main() {\nlet b = a;\n\nlet d = c;\n}"
         ));
     }
 
     #[test]
     fn test_unresolved_type_error() {
-        insta::assert_display_snapshot!(compilation_errors(
+        insta::assert_snapshot!(compilation_errors(
             "\n\nfn main() {\nlet a = Foo{};\n\nlet b = Bar{};\n}"
         ));
     }
 
     #[test]
     fn test_leaked_private_type_error_function() {
-        insta::assert_display_snapshot!(compilation_errors(
+        insta::assert_snapshot!(compilation_errors(
             "\n\nstruct Foo;\n pub fn Bar() -> Foo { Foo } \n fn main() {}"
         ));
     }
 
     #[test]
     fn test_expected_function_error() {
-        insta::assert_display_snapshot!(compilation_errors(
+        insta::assert_snapshot!(compilation_errors(
             "\n\nfn main() {\nlet a = Foo();\n\nlet b = Bar();\n}"
         ));
     }
 
     #[test]
     fn test_mismatched_type_error() {
-        insta::assert_display_snapshot!(compilation_errors(
+        insta::assert_snapshot!(compilation_errors(
             "\n\nfn main() {\nlet a: f64 = false;\n\nlet b: bool = 22;\n}"
         ));
     }
 
     #[test]
     fn test_duplicate_definition_error() {
-        insta::assert_display_snapshot!(compilation_errors(
+        insta::assert_snapshot!(compilation_errors(
             "\n\nfn foo(){}\n\nfn foo(){}\n\nstruct Bar;\n\nstruct Bar;\n\nfn BAZ(){}\n\nstruct BAZ;"
         ));
     }
 
     #[test]
     fn test_possibly_uninitialized_variable_error() {
-        insta::assert_display_snapshot!(compilation_errors(
+        insta::assert_snapshot!(compilation_errors(
             "\n\nfn main() {\nlet a;\nif 5>6 {\na = 5\n}\nlet b = a;\n}"
         ));
     }
 
     #[test]
     fn test_access_unknown_field_error() {
-        insta::assert_display_snapshot!(compilation_errors(
+        insta::assert_snapshot!(compilation_errors(
             "\n\nstruct Foo {\ni: bool\n}\n\nfn main() {\nlet a = Foo { i: false };\nlet b = a.t;\n}"
         ));
     }
 
     #[test]
     fn test_free_type_alias_error() {
-        insta::assert_display_snapshot!(compilation_errors("\n\ntype Foo;"));
+        insta::assert_snapshot!(compilation_errors("\n\ntype Foo;"));
     }
 
     #[test]
     fn test_type_alias_target_undeclared_error() {
-        insta::assert_display_snapshot!(compilation_errors("\n\ntype Foo = UnknownType;"));
+        insta::assert_snapshot!(compilation_errors("\n\ntype Foo = UnknownType;"));
     }
 
     #[test]
     fn test_cyclic_type_alias_error() {
-        insta::assert_display_snapshot!(compilation_errors("\n\ntype Foo = Foo;"));
+        insta::assert_snapshot!(compilation_errors("\n\ntype Foo = Foo;"));
     }
 
     #[test]
     fn test_expected_function() {
-        insta::assert_display_snapshot!(compilation_errors("\n\nfn foo() { let a = 3; a(); }"));
+        insta::assert_snapshot!(compilation_errors("\n\nfn foo() { let a = 3; a(); }"));
     }
 }
