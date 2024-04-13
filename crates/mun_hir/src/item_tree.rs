@@ -13,10 +13,10 @@ use std::{
     sync::Arc,
 };
 
+use la_arena::{Arena, Idx};
 use mun_syntax::ast;
 
 use crate::{
-    arena::{Arena, Idx},
     path::ImportAlias,
     source_id::{AstIdNode, FileAstId},
     type_ref::{LocalTypeRefId, TypeRefMap},

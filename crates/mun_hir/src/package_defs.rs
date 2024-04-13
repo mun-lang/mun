@@ -4,8 +4,9 @@ mod tests;
 
 use std::{ops::Index, sync::Arc};
 
+use la_arena::ArenaMap;
+
 use crate::{
-    arena::map::ArenaMap,
     item_scope::ItemScope,
     module_tree::{LocalModuleId, ModuleTree},
     DefDatabase, DiagnosticSink, PackageId,

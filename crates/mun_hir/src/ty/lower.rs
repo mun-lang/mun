@@ -2,9 +2,10 @@
 
 use std::{ops::Index, sync::Arc};
 
+use la_arena::ArenaMap;
+
 pub(crate) use self::diagnostics::LowerDiagnostic;
 use crate::{
-    arena::map::ArenaMap,
     code_model::StructKind,
     diagnostics::DiagnosticSink,
     ids::ImplId,

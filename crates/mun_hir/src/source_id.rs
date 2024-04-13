@@ -4,14 +4,10 @@ use std::{
     sync::Arc,
 };
 
+use la_arena::{Arena, Idx};
 use mun_syntax::{ast, AstNode, AstPtr, SyntaxNode, SyntaxNodePtr, WalkEvent};
 
-use crate::{
-    arena::{Arena, Idx},
-    db::AstDatabase,
-    in_file::InFile,
-    FileId,
-};
+use crate::{db::AstDatabase, in_file::InFile, FileId};
 
 type ErasedFileAstId = Idx<SyntaxNodePtr>;
 

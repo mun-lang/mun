@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
+use la_arena::{Arena, Idx};
 use rustc_hash::FxHashMap;
 
 use crate::{
-    arena::{Arena, Idx},
     expr::{Body, Expr, ExprId, Pat, PatId, Statement},
     ids::DefWithBodyId,
     DefDatabase, Name,

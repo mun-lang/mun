@@ -1,9 +1,9 @@
 use std::{ops::Index, sync::Arc};
 
+use la_arena::ArenaMap;
 use rustc_hash::FxHashSet;
 
 use crate::{
-    arena::map::ArenaMap,
     code_model::{Struct, StructKind},
     diagnostics::DiagnosticSink,
     expr::{Body, Expr, ExprId, Literal, Pat, PatId, RecordLitField, Statement, UnaryOp},

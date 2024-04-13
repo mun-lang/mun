@@ -43,8 +43,6 @@ use crate::{name::AsName, source_id::AstIdMap};
 
 #[macro_use]
 mod macros;
-#[macro_use]
-mod arena;
 mod code_model;
 mod db;
 pub mod diagnostics;

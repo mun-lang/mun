@@ -1,8 +1,8 @@
+use la_arena::ArenaMap;
 use rustc_hash::FxHashMap;
 
 use super::PackageDefs;
 use crate::{
-    arena::map::ArenaMap,
     ids::{
         FunctionLoc, ImplLoc, Intern, ItemContainerId, ItemDefinitionId, StructLoc, TypeAliasLoc,
     },
