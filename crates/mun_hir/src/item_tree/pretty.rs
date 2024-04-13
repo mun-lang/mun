@@ -2,7 +2,7 @@ use std::{fmt, fmt::Write};
 
 use crate::{
     item_tree::{
-        Fields, Function, Impl, Import, ItemTree, LocalItemTreeId, ModItem, RawVisibilityId,
+        Fields, Function, Impl, Import, ItemTree, LocalItemTreeId, ModItem, Param, RawVisibilityId,
         Struct, TypeAlias,
     },
     path::ImportAlias,
@@ -181,8 +181,12 @@ impl Printer<'_> {
         write!(self, "(")?;
         if !params.is_empty() {
             self.indented(|this| {
-                for param in params.iter().copied() {
-                    this.print_type_ref(param, types)?;
+                for param in params.clone() {
+                    let Param {
+                        type_ref,
+                        ast_id: _,
+                    } = &this.tree[param];
+                    this.print_type_ref(*type_ref, types)?;
                     writeln!(this, ",")?;
                 }
                 Ok(())

@@ -10,7 +10,8 @@ use smallvec::SmallVec;
 
 use super::{
     diagnostics, AssociatedItem, Field, Fields, Function, IdRange, Impl, ItemTree, ItemTreeData,
-    ItemTreeNode, ItemVisibilities, LocalItemTreeId, ModItem, RawVisibilityId, Struct, TypeAlias,
+    ItemTreeNode, ItemVisibilities, LocalItemTreeId, ModItem, Param, ParamAstId, RawVisibilityId,
+    Struct, TypeAlias,
 };
 use crate::{
     item_tree::Import,
@@ -156,13 +157,19 @@ impl Context {
         let mut types = TypeRefMap::builder();
 
         // Lower all the params
-        let mut params = Vec::new();
+        let start_param_idx = self.next_param_idx();
         if let Some(param_list) = func.param_list() {
             for param in param_list.params() {
+                let ast_id = self.source_ast_id_map.ast_id(&param);
                 let type_ref = types.alloc_from_node_opt(param.ascribed_type().as_ref());
-                params.push(type_ref);
+                self.data.params.alloc(Param {
+                    type_ref,
+                    ast_id: ParamAstId::Param(ast_id),
+                });
             }
         }
+        let end_param_idx = self.next_param_idx();
+        let params = IdRange::new(start_param_idx..end_param_idx);
 
         // Lowers the return type
         let ret_type = match func.ret_type().and_then(|rt| rt.type_ref()) {
@@ -177,9 +184,9 @@ impl Context {
         let res = Function {
             name,
             visibility,
-            types,
             is_extern,
-            params: params.into_boxed_slice(),
+            types,
+            params,
             ret_type,
             ast_id,
         };
@@ -311,6 +318,12 @@ impl Context {
     /// Returns the `Idx` of the next `Field`
     fn next_field_idx(&self) -> Idx<Field> {
         let idx: u32 = self.data.fields.len().try_into().expect("too many fields");
+        Idx::from_raw(RawIdx::from(idx))
+    }
+
+    /// Returns the `Idx` of the next `Param`
+    fn next_param_idx(&self) -> Idx<Param> {
+        let idx: u32 = self.data.params.len().try_into().expect("too many params");
         Idx::from_raw(RawIdx::from(idx))
     }
 }
