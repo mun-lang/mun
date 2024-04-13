@@ -112,11 +112,12 @@ jobs:
           args: nextest --all-features --workspace --lcov --output-path lcov.info --profile ci
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           files: lcov.info
           name: ${{ matrix.os }}
           fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   doctest:
     name: Doctest Rust

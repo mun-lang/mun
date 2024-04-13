@@ -36,7 +36,7 @@ fn update(path: &Path, contents: &str, mode: Mode) -> Result<()> {
 
 fn reformat(text: impl std::fmt::Display) -> Result<String> {
     let mut rustfmt = Command::new("rustup")
-        .args(&["run", "nightly", "--", "rustfmt"])
+        .args(["run", "nightly", "--", "rustfmt"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()?;
