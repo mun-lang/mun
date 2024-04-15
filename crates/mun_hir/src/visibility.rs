@@ -3,9 +3,10 @@ use std::iter::successors;
 use mun_syntax::ast;
 
 use crate::{
-    ids::ModuleId,
+    ids::{FunctionId, ModuleId},
     module_tree::{LocalModuleId, ModuleTree},
-    DefDatabase, HirDatabase, Resolver,
+    resolve::HasResolver,
+    DefDatabase, HirDatabase, Module, Resolver,
 };
 
 /// Visibility of an item, not yet resolved to an actual module.
@@ -105,5 +106,18 @@ impl Visibility {
 }
 
 pub trait HasVisibility {
+    /// Returns the visibility of the item.
     fn visibility(&self, db: &dyn HirDatabase) -> Visibility;
+
+    /// Returns true if the item is visible from the specified module.
+    fn is_visible_from(&self, db: &dyn HirDatabase, module: Module) -> bool {
+        let vis = self.visibility(db);
+        vis.is_visible_from(db, module.id)
+    }
+}
+
+/// Resolve visibility of a function.
+pub(crate) fn function_visibility_query(db: &dyn DefDatabase, def: FunctionId) -> Visibility {
+    let resolver = def.resolver(db);
+    db.fn_data(def).visibility().resolve(db, &resolver)
 }

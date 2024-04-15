@@ -61,6 +61,14 @@ impl Name {
             Repr::Text(_) => None,
         }
     }
+
+    /// Returns the text this name represents if it isn't a tuple field.
+    pub fn as_str(&self) -> Option<&str> {
+        match &self.0 {
+            Repr::Text(it) => Some(it),
+            Repr::TupleField(_) => None,
+        }
+    }
 }
 
 pub(crate) trait AsName {

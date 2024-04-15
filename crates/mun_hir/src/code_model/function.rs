@@ -12,7 +12,7 @@ use crate::{
     type_ref::{LocalTypeRefId, TypeRefMap, TypeRefSourceMap},
     visibility::RawVisibility,
     Body, DefDatabase, DiagnosticSink, FileId, HasSource, HasVisibility, HirDatabase, InFile,
-    InferenceResult, Name, Ty, Visibility,
+    InferenceResult, Name, Pat, Ty, Visibility,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
@@ -95,6 +95,11 @@ impl FunctionData {
 
     pub fn type_ref_map(&self) -> &TypeRefMap {
         &self.type_ref_map
+    }
+
+    /// Returns true if this function is an extern function.
+    pub fn is_extern(&self) -> bool {
+        self.is_extern
     }
 }
 
@@ -214,12 +219,26 @@ impl Param {
             .nth(self.idx)
             .map(|value| InFile { file_id, value })
     }
+
+    /// Returns the name of the parameter.
+    ///
+    /// Only if the parameter is a named binding will this function return a
+    /// name. If the function parameter is a wildcard for instance then this
+    /// function will return `None`.
+    pub fn name(&self, db: &dyn HirDatabase) -> Option<Name> {
+        let body = self.func.body(db);
+        let pat_id = body.params().get(self.idx)?.0;
+        let pat = &body[pat_id];
+        if let Pat::Bind { name, .. } = pat {
+            Some(name.clone())
+        } else {
+            None
+        }
+    }
 }
 
 impl HasVisibility for Function {
     fn visibility(&self, db: &dyn HirDatabase) -> Visibility {
-        self.data(db.upcast())
-            .visibility
-            .resolve(db.upcast(), &self.id.resolver(db.upcast()))
+        db.function_visibility(self.id)
     }
 }
