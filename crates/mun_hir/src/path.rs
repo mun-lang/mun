@@ -1,3 +1,5 @@
+use std::{fmt, fmt::Formatter};
+
 use mun_syntax::{
     ast,
     ast::{NameOwner, PathSegmentKind},
@@ -116,6 +118,39 @@ impl Path {
     /// Returns the last segment of the path, if any.
     pub fn last_segment(&self) -> Option<&Name> {
         self.segments.last()
+    }
+}
+
+impl fmt::Display for Path {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let mut first_segment = true;
+        let mut add_segment = |s| -> fmt::Result {
+            if !first_segment {
+                write!(f, "::")?;
+            }
+            first_segment = false;
+            write!(f, "{s}")
+        };
+
+        match self.kind {
+            PathKind::Plain => {}
+            PathKind::Super(0) => add_segment("self")?,
+            PathKind::Super(lvl) => {
+                for _ in 0..lvl {
+                    add_segment("super")?;
+                }
+            }
+            PathKind::Package => add_segment("package")?,
+        }
+
+        for segment in &self.segments {
+            if !first_segment {
+                write!(f, "::")?;
+            }
+            first_segment = false;
+            write!(f, "{segment}")?;
+        }
+        Ok(())
     }
 }
 

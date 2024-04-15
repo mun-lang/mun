@@ -19,7 +19,8 @@ use crate::{
     name_resolution::Namespace,
     package_defs::PackageDefs,
     ty::{lower::LowerTyMap, CallableDef, FnSig, InferenceResult, Ty, TypableDef},
-    AstIdMap, Body, ExprScopes, FileId, PackageId, PackageSet, Struct, TypeAlias,
+    visibility, AstIdMap, Body, ExprScopes, FileId, PackageId, PackageSet, Struct, TypeAlias,
+    Visibility,
 };
 
 // TODO(bas): In the future maybe move this to a seperate crate (mun_db?)
@@ -103,6 +104,9 @@ pub trait DefDatabase: InternDatabase + AstDatabase + Upcast<dyn AstDatabase> {
 
     #[salsa::invoke(crate::FunctionData::fn_data_query)]
     fn fn_data(&self, func: FunctionId) -> Arc<FunctionData>;
+
+    #[salsa::invoke(visibility::function_visibility_query)]
+    fn function_visibility(&self, def: FunctionId) -> Visibility;
 
     /// Returns the `PackageDefs` for the specified `PackageId`. The
     /// `PackageDefs` contains all resolved items defined for every module

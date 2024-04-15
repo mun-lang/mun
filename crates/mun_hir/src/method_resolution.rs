@@ -1,5 +1,6 @@
 use std::{
     collections::{hash_map::Entry, HashMap},
+    ops::ControlFlow,
     sync::Arc,
 };
 
@@ -10,11 +11,11 @@ use crate::{
     db::HirDatabase,
     diagnostics::{DuplicateDefinition, ImplForForeignType, InvalidSelfTyImpl},
     has_module::HasModule,
-    ids::{AssocItemId, ImplId, Lookup, StructId},
+    ids::{AssocItemId, FunctionId, ImplId, Lookup, StructId},
     module_tree::LocalModuleId,
     package_defs::PackageDefs,
     ty::lower::LowerDiagnostic,
-    DefDatabase, DiagnosticSink, HasSource, InFile, ModuleId, PackageId, Ty, TyKind,
+    DefDatabase, DiagnosticSink, HasSource, InFile, ModuleId, Name, PackageId, Ty, TyKind,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -228,10 +229,177 @@ fn assoc_item_name(db: &dyn DefDatabase, id: &AssocItemId) -> String {
     }
 }
 
+/// An object to iterate over methods associated with a type.
+pub struct MethodResolutionCtx<'db> {
+    pub db: &'db dyn HirDatabase,
+
+    /// The type for which to resolve methods
+    pub ty: Ty,
+
+    /// Filter based on this name
+    name: Option<Name>,
+
+    /// Filter based on visibility from this module
+    visible_from: Option<ModuleId>,
+}
+
+enum IsValidCandidate {
+    Yes,
+    No,
+    NotVisible,
+}
+
+impl<'db> MethodResolutionCtx<'db> {
+    pub fn new(db: &'db dyn HirDatabase, ty: Ty) -> Self {
+        Self {
+            db,
+            ty,
+            name: None,
+            visible_from: None,
+        }
+    }
+
+    /// Only include methods with the specified name.
+    pub fn with_name(self, name: Name) -> Self {
+        Self {
+            name: Some(name),
+            ..self
+        }
+    }
+
+    /// Only include methods that are visible from the specified module.
+    pub fn visible_from(self, module_id: ModuleId) -> Self {
+        Self {
+            visible_from: Some(module_id),
+            ..self
+        }
+    }
+
+    /// Collects all methods that match the specified criteria.
+    ///
+    /// If the callback method returns `Some(_)`, the iteration will stop and
+    /// value will be returned.
+    pub fn collect<T>(
+        &self,
+        mut callback: impl FnMut(AssocItemId, bool) -> Option<T>,
+    ) -> Option<T> {
+        match self.collect_inner(|item, visible| match callback(item, visible) {
+            Some(r) => ControlFlow::Break(r),
+            None => ControlFlow::Continue(()),
+        }) {
+            ControlFlow::Continue(()) => None,
+            ControlFlow::Break(r) => Some(r),
+        }
+    }
+
+    fn collect_inner<T>(
+        &self,
+        mut callback: impl FnMut(AssocItemId, bool) -> ControlFlow<T>,
+    ) -> ControlFlow<T> {
+        let Some(package_id) = self.defining_package() else {
+            return ControlFlow::Continue(());
+        };
+        let inherent_impls = self.db.inherent_impls_in_package(package_id);
+        let impls = inherent_impls.for_self_ty(&self.ty);
+        for &self_impl in impls {
+            let impl_data = self.db.impl_data(self_impl);
+            for item in impl_data.items.iter().copied() {
+                let visible = match self.is_valid_candidate(self_impl, item) {
+                    IsValidCandidate::Yes => true,
+                    IsValidCandidate::No => continue,
+                    IsValidCandidate::NotVisible => false,
+                };
+                callback(item, visible)?;
+            }
+        }
+
+        ControlFlow::Continue(())
+    }
+
+    /// Returns the package in which the type was defined.
+    fn defining_package(&self) -> Option<PackageId> {
+        match self.ty.interned() {
+            TyKind::Struct(s) => {
+                let module = s.module(self.db);
+                Some(module.id.package)
+            }
+            _ => None,
+        }
+    }
+
+    /// Returns whether the specified item is a valid candidate for method
+    /// resolution based on the filters.
+    fn is_valid_candidate(&self, impl_id: ImplId, item: AssocItemId) -> IsValidCandidate {
+        match item {
+            AssocItemId::FunctionId(f) => self.is_valid_function_candidate(impl_id, f),
+        }
+    }
+
+    /// Returns true if the specified function is a valid candidate for method
+    /// resolution based on the filters.
+    fn is_valid_function_candidate(
+        &self,
+        _impl_id: ImplId,
+        fun_id: FunctionId,
+    ) -> IsValidCandidate {
+        let data = self.db.fn_data(fun_id);
+
+        // Check if the name matches
+        if let Some(name) = &self.name {
+            if data.name() != name {
+                return IsValidCandidate::No;
+            }
+        }
+
+        // Check if the function is visible from the selected module
+        if let Some(visible_from) = self.visible_from {
+            if !self
+                .db
+                .function_visibility(fun_id)
+                .is_visible_from(self.db, visible_from)
+            {
+                return IsValidCandidate::NotVisible;
+            }
+        }
+
+        IsValidCandidate::Yes
+    }
+}
+
+/// Find the method with the specified name on the specified type.
+///
+/// Returns `Ok` if the method was found, `Err(None)` if no method by that name
+/// was found and `Err(Some(_))` if a method by that name was found but it is
+/// not visible from the selected module.
+pub(crate) fn lookup_method(
+    db: &dyn HirDatabase,
+    ty: &Ty,
+    visible_from_module: ModuleId,
+    name: &Name,
+) -> Result<FunctionId, Option<FunctionId>> {
+    let mut not_visible = None;
+    MethodResolutionCtx::new(db, ty.clone())
+        .visible_from(visible_from_module)
+        .with_name(name.clone())
+        .collect(|item, visible| match item {
+            AssocItemId::FunctionId(f) if visible => Some(f),
+            AssocItemId::FunctionId(f) => {
+                not_visible = Some(f);
+                None
+            }
+        })
+        .ok_or(not_visible)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
-        mock::MockDatabase, with_fixture::WithFixture, DiagnosticSink, HirDatabase, SourceDatabase,
+        code_model::AssocItem,
+        display::HirDisplay,
+        method_resolution::{lookup_method, MethodResolutionCtx},
+        mock::MockDatabase,
+        with_fixture::WithFixture,
+        DiagnosticSink, HirDatabase, Module, ModuleDef, Name, Package, SourceDatabase, Ty,
     };
 
     #[test]
@@ -311,5 +479,129 @@ mod tests {
         36..50: the name `bar` is defined multiple times
         63..77: the name `bar` is defined multiple times
         "###);
+    }
+
+    struct Fixture {
+        db: MockDatabase,
+        root_module: Module,
+        foo_ty: Ty,
+    }
+
+    impl Fixture {
+        pub fn new() -> Self {
+            let db = MockDatabase::with_files(
+                r#"
+            //- /mod.mun
+            struct Foo;
+            impl Foo {
+                fn bar();
+            }
+            //- /foo.mun
+            use super::Foo;
+
+            impl Foo {
+                fn baz(value: i32);
+            }
+            "#,
+            );
+
+            let package = Package::all(&db).into_iter().next().unwrap();
+            let root_module = package.root_module(&db);
+
+            let foo_ty = root_module
+                .declarations(&db)
+                .into_iter()
+                .find_map(|decl| match decl {
+                    ModuleDef::Struct(s) if s.name(&db).as_str() == Some("Foo") => Some(s.ty(&db)),
+                    _ => None,
+                })
+                .unwrap();
+
+            Self {
+                db,
+                root_module,
+                foo_ty,
+            }
+        }
+    }
+
+    #[test]
+    fn test_method_resolution_visibility() {
+        let fixture = Fixture::new();
+
+        insta::assert_snapshot!(
+            display_method_resolution(
+                MethodResolutionCtx::new(&fixture.db, fixture.foo_ty)
+                    .visible_from(fixture.root_module.id)),
+            @r###"
+        + fn bar()
+        - fn baz(value: i32)
+        "###);
+    }
+
+    #[test]
+    fn test_method_resolution_by_name() {
+        let fixture = Fixture::new();
+
+        insta::assert_snapshot!(
+            display_method_resolution(
+                MethodResolutionCtx::new(&fixture.db, fixture.foo_ty)
+                    .with_name(Name::new("bar"))),
+            @r###"
+        + fn bar()
+        "###);
+    }
+
+    #[test]
+    fn test_lookup_method() {
+        let fixture = Fixture::new();
+        assert!(lookup_method(
+            &fixture.db,
+            &fixture.foo_ty,
+            fixture.root_module.id,
+            &Name::new("bar"),
+        )
+        .is_ok())
+    }
+
+    #[test]
+    fn test_lookup_method_not_found() {
+        let fixture = Fixture::new();
+        assert!(lookup_method(
+            &fixture.db,
+            &fixture.foo_ty,
+            fixture.root_module.id,
+            &Name::new("not_found"),
+        )
+        .unwrap_err()
+        .is_none())
+    }
+
+    #[test]
+    fn test_lookup_method_not_visible() {
+        let fixture = Fixture::new();
+        assert!(lookup_method(
+            &fixture.db,
+            &fixture.foo_ty,
+            fixture.root_module.id,
+            &Name::new("baz"),
+        )
+        .unwrap_err()
+        .is_some())
+    }
+
+    fn display_method_resolution(ctx: MethodResolutionCtx<'_>) -> String {
+        let mut methods = Vec::new();
+        ctx.collect(|item, visible| {
+            methods.push(format!(
+                "{}{}",
+                if visible { "+ " } else { "- " },
+                AssocItem::from(item).display(ctx.db)
+            ));
+
+            None::<()>
+        });
+
+        methods.join("\n")
     }
 }
