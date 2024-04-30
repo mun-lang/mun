@@ -52,6 +52,9 @@ impl ExprScopes {
             scope_by_expr: FxHashMap::default(),
         };
         let root = scopes.root_scope();
+        if let Some(self_param) = body.self_param {
+            scopes.add_bindings(body, root, self_param.0);
+        }
         scopes.add_params_bindings(body, root, body.params().iter().map(|p| &p.0));
         compute_expr_scopes(body.body_expr(), body, &mut scopes, root);
         scopes

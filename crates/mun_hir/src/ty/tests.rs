@@ -1,7 +1,7 @@
 use std::{fmt::Write, sync::Arc};
 
 use crate::{
-    diagnostics::DiagnosticSink, expr::BodySourceMap, mock::MockDatabase,
+    code_model::AssocItem, diagnostics::DiagnosticSink, expr::BodySourceMap, mock::MockDatabase,
     with_fixture::WithFixture, HirDisplay, InferenceResult, ModuleDef, Package,
 };
 
@@ -654,6 +654,23 @@ fn infer_return() {
     59..67 'return 5': never
     66..67 '5': i32
     "###);
+}
+
+#[test]
+fn infer_self_param() {
+    insta::assert_snapshot!(infer(
+        r#"
+    struct Foo {
+        a: i32
+    }
+
+    impl Foo {
+        fn with_self(self) -> Self {
+            self
+        }
+    }
+    "#
+    ));
 }
 
 #[test]
@@ -1320,7 +1337,9 @@ fn infer(content: &str) -> String {
 
         for (pat, ty) in infer_result.type_of_pat.iter() {
             let syntax_ptr = match body_source_map.pat_syntax(pat) {
-                Some(sp) => sp.map(|ast| ast.syntax_node_ptr()),
+                Some(sp) => {
+                    sp.map(|ast| ast.either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr()))
+                }
                 None => continue,
             };
             types.push((syntax_ptr, ty));
@@ -1376,6 +1395,20 @@ fn infer(content: &str) -> String {
         .flat_map(|module| module.declarations(&db))
     {
         if let ModuleDef::Function(fun) = item {
+            let source_map = fun.body_source_map(&db);
+            let infer_result = fun.infer(&db);
+            infer_def(infer_result, source_map);
+        }
+    }
+
+    for item in Package::all(&db)
+        .iter()
+        .flat_map(|pkg| pkg.modules(&db))
+        .flat_map(|module| module.impls(&db))
+    {
+        for associated_item in item.items(&db) {
+            let AssocItem::Function(fun) = associated_item;
+
             let source_map = fun.body_source_map(&db);
             let infer_result = fun.infer(&db);
             infer_def(infer_result, source_map);

@@ -5,6 +5,8 @@ pub enum SymbolKind {
     Function,
     Local,
     Module,
+    SelfParam,
+    SelfType,
     Struct,
     TypeAlias,
 }

@@ -84,6 +84,7 @@ impl Ty {
         diagnostics: &mut Vec<LowerDiagnostic>,
         type_ref: LocalTypeRefId,
     ) -> Ty {
+        println!("ty3: {:?}", type_ref_map[type_ref]);
         let res = match &type_ref_map[type_ref] {
             TypeRef::Path(path) => Ty::from_path(db, resolver, type_ref, path, diagnostics),
             TypeRef::Error => Some(TyKind::Unknown.intern()),
@@ -121,15 +122,8 @@ impl Ty {
         path: &Path,
         diagnostics: &mut Vec<LowerDiagnostic>,
     ) -> Option<Self> {
-        // Find the type
-        let (ty, vis) = resolver.resolve_path_as_type_fully(db.upcast(), path)?;
-
-        // Get the definition and visibility
-        let def = match ty {
-            TypeNs::StructId(id) => TypableDef::Struct(id.into()),
-            TypeNs::TypeAliasId(id) => TypableDef::TypeAlias(id.into()),
-            TypeNs::PrimitiveType(id) => TypableDef::PrimitiveType(id),
-        };
+        // Find the type namespace and visibility
+        let (type_ns, vis) = resolver.resolve_path_as_type_fully(db.upcast(), path)?;
 
         // Get the current module and see if the type is visible from here
         if let Some(module) = resolver.module() {
@@ -138,7 +132,14 @@ impl Ty {
             }
         }
 
-        Some(db.type_for_def(def, Namespace::Types))
+        let type_for_def_fn = |def| Some(db.type_for_def(def, Namespace::Types));
+
+        match type_ns {
+            TypeNs::SelfType(id) => Some(db.type_for_impl_self(id)),
+            TypeNs::StructId(id) => type_for_def_fn(TypableDef::Struct(id.into())),
+            TypeNs::TypeAliasId(id) => type_for_def_fn(TypableDef::TypeAlias(id.into())),
+            TypeNs::PrimitiveType(id) => type_for_def_fn(TypableDef::PrimitiveType(id)),
+        }
     }
 }
 
@@ -250,6 +251,12 @@ pub(crate) fn type_for_def(db: &dyn HirDatabase, def: TypableDef, ns: Namespace)
             TyKind::Unknown.intern()
         }
     }
+}
+
+pub(crate) fn type_for_impl_self(db: &dyn HirDatabase, i: ImplId) -> Ty {
+    let impl_data = db.impl_data(i);
+    let resolver = i.resolver(db.upcast());
+    Ty::from_hir(db, &resolver, &impl_data.type_ref_map, impl_data.self_ty).0
 }
 
 /// Build the declared type of a static.

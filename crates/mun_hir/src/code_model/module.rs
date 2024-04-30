@@ -1,4 +1,4 @@
-use super::{Function, Package, Struct, TypeAlias};
+use super::{r#impl::Impl, Function, Package, Struct, TypeAlias};
 use crate::{
     ids::{ItemDefinitionId, ModuleId},
     primitive_type::PrimitiveType,
@@ -140,6 +140,14 @@ impl Module {
             String::from("::"),
         )
         .collect()
+    }
+
+    pub fn impls(self, db: &dyn HirDatabase) -> Vec<Impl> {
+        let package_defs = db.package_defs(self.id.package);
+        package_defs.modules[self.id.local_id]
+            .impls()
+            .map(Impl::from)
+            .collect()
     }
 }
 

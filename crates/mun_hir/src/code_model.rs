@@ -12,7 +12,7 @@ pub use self::{
     function::{Function, FunctionData},
     module::{Module, ModuleDef},
     package::Package,
-    r#impl::{AssocItem, Impl, ImplData},
+    r#impl::{AssocItem, ImplData},
     r#struct::{Field, Struct, StructData, StructKind, StructMemoryKind},
     src::HasSource,
     type_alias::{TypeAlias, TypeAliasData},

@@ -74,6 +74,7 @@ impl<'a> Render<'a> {
             ScopeDef::ModuleDef(TypeAlias(_)) => {
                 CompletionItemKind::SymbolKind(SymbolKind::TypeAlias)
             }
+            ScopeDef::ImplSelfType(_) => CompletionItemKind::SymbolKind(SymbolKind::SelfParam),
             ScopeDef::Local(_) => CompletionItemKind::SymbolKind(SymbolKind::Local),
             ScopeDef::Unknown => {
                 let item = CompletionItem::builder(CompletionKind::Reference, local_name)
