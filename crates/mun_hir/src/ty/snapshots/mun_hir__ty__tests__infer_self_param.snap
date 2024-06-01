@@ -1,0 +1,7 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "infer(r#\"\n    struct Foo {\n        a: i32\n    }\n\n    impl Foo {\n        fn with_self(self) -> Self {\n            self\n        }\n    }\n    \"#)"
+---
+55..59 'self': Foo
+69..89 '{     ...     }': Foo
+79..83 'self': Foo

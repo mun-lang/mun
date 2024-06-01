@@ -537,21 +537,9 @@ impl<'a> ExprCollector<'a> {
                     Pat::Bind { name: name![self] },
                     Either::Right(AstPtr::new(&self_param)),
                 );
-                let self_type = self
-                    .type_ref_builder
-                    .alloc_from_node_opt(self_param.ascribed_type().as_ref());
 
+                let self_type = self.type_ref_builder.alloc_self();
                 self.self_param = Some((self_pat, self_type));
-
-                // let is_mutable =
-                //     self_param.mut_token().is_some() &&
-                // self_param.amp_token().is_none();
-                // let binding_id: la_arena::Idx<Binding> =
-                //     self.alloc_binding(name![self],
-                // BindingAnnotation::new(is_mutable, false));
-                // self.body.self_param = Some(binding_id);
-                // self.source_map.self_param =
-                // Some(self.expander.in_file(AstPtr::new(&self_param)));
             }
 
             for param in param_list.params() {

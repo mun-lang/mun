@@ -84,7 +84,6 @@ impl Ty {
         diagnostics: &mut Vec<LowerDiagnostic>,
         type_ref: LocalTypeRefId,
     ) -> Ty {
-        println!("ty3: {:?}", type_ref_map[type_ref]);
         let res = match &type_ref_map[type_ref] {
             TypeRef::Path(path) => Ty::from_path(db, resolver, type_ref, path, diagnostics),
             TypeRef::Error => Some(TyKind::Unknown.intern()),

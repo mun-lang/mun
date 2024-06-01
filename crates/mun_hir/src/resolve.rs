@@ -185,7 +185,6 @@ impl Resolver {
         }
 
         let num_segments = path.segments.len();
-        println!("num_segments: {num_segments}");
 
         let tmp = name![self];
         let first_name = if path.is_self() {
@@ -194,7 +193,6 @@ impl Resolver {
             path.segments.first()?
         };
 
-        println!("first_name: {first_name:?}");
         for scope in self.scopes.iter().rev() {
             match scope {
                 Scope::Expr(scope) if num_segments <= 1 => {
@@ -205,7 +203,6 @@ impl Resolver {
                         .find(|entry| entry.name() == first_name);
 
                     if let Some(e) = entry {
-                        println!("found: {:?}", e);
                         return Some(ResolveValueResult::ValueNs(
                             ValueNs::LocalBinding(e.pat()),
                             Visibility::Public,

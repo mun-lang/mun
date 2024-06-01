@@ -228,7 +228,6 @@ impl<'a> InferenceResultBuilder<'a> {
     /// are added inferred.
     fn infer_signature(&mut self) {
         if let Some((self_pat, self_type_ref)) = self.body.self_param() {
-            println!("self param: {:?} -> {:?}", self_pat, self_type_ref);
             let ty = self.resolve_type(*self_type_ref);
             self.infer_pat(*self_pat, ty);
         }
@@ -248,8 +247,7 @@ impl<'a> InferenceResultBuilder<'a> {
     fn infer_pat(&mut self, pat: PatId, ty: Ty) {
         #[allow(clippy::single_match)]
         match &self.body[pat] {
-            Pat::Bind { name } => {
-                println!("infer pat: {} -> {:?}", name, ty);
+            Pat::Bind { name: _name } => {
                 self.set_pat_type(pat, ty);
             }
             _ => {}
@@ -531,7 +529,6 @@ impl<'a> InferenceResultBuilder<'a> {
         };
 
         let ty = self.resolve_ty_as_far_as_possible(ty);
-        println!("ty: {ty:?}");
         self.set_expr_type(tgt_expr, ty.clone());
         ty
     }
@@ -739,8 +736,6 @@ impl<'a> InferenceResultBuilder<'a> {
                 self.diagnostics
                     .push(diagnostics::InferenceDiagnostic::PathIsPrivate { id });
             }
-
-            println!("type of pat: {:?}", self.type_of_pat);
 
             // Match based on what type of value we found
             match value {

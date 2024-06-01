@@ -51,7 +51,7 @@ impl CompletionItemKind {
                 SymbolKind::Local => "lc",
                 SymbolKind::Module => "md",
                 SymbolKind::SelfParam => "sp",
-                SymbolKind::SelfType => "st",
+                SymbolKind::SelfType => "sy",
                 SymbolKind::Struct => "st",
                 SymbolKind::TypeAlias => "ta",
             },
