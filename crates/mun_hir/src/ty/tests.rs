@@ -674,6 +674,27 @@ fn infer_self_param() {
 }
 
 #[test]
+fn infer_self_field() {
+    insta::assert_snapshot!(infer(
+        r#"
+    struct Foo {
+        a: i32
+    }
+
+    impl Foo {
+        fn self_a(self) -> i32 {
+            self.a
+        }
+
+        fn self_b(self) -> i32 {
+            self.b  // error: attempted to access a non-existent field in a struct.
+        }
+    }
+    "#
+    ));
+}
+
+#[test]
 fn infer_basics() {
     insta::assert_snapshot!(infer(
         r#"
