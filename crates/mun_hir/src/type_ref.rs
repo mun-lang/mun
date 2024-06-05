@@ -7,7 +7,7 @@ use la_arena::{Arena, ArenaMap, Idx};
 use mun_syntax::{ast, AstPtr};
 use rustc_hash::FxHashMap;
 
-use crate::Path;
+use crate::{name, Path};
 
 /// The ID of a `TypeRef` in a `TypeRefMap`
 pub type LocalTypeRefId = Idx<TypeRef>;
@@ -114,6 +114,12 @@ impl TypeRefMapBuilder {
             ArrayType(inner) => TypeRef::Array(self.alloc_from_node_opt(inner.type_ref().as_ref())),
         };
         self.alloc_type_ref(type_ref, ptr)
+    }
+
+    /// Constructs a new instance for a `Self` type. Returns the Id of the newly
+    /// created `TypeRef`.
+    pub fn alloc_self(&mut self) -> LocalTypeRefId {
+        self.map.type_refs.alloc(TypeRef::Path(name![Self].into()))
     }
 
     /// Constructs a new `TypeRef` for the empty tuple type. Returns the Id of

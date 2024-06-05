@@ -19,9 +19,8 @@ use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 
 use crate::{
-    ids::{DefWithBodyId, ItemDefinitionId},
-    resolve,
-    resolve::HasResolver,
+    ids::{DefWithBodyId, ImplId, ItemDefinitionId},
+    resolve::{self, HasResolver},
     semantics::source_to_def::{SourceToDefCache, SourceToDefContainer, SourceToDefContext},
     source_analyzer::SourceAnalyzer,
     FileId, HirDatabase, InFile, ModuleDef, Name, PatId, PerNs, Resolver, Ty, Visibility,
@@ -165,6 +164,7 @@ pub struct SemanticsScope<'a> {
 /// Represents an element in a scope
 pub enum ScopeDef {
     ModuleDef(ModuleDef),
+    ImplSelfType(Impl),
     Local(Local),
     Unknown,
 }
@@ -194,6 +194,18 @@ impl ScopeDef {
     }
 }
 
+/// An `impl` block
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Impl {
+    pub(crate) id: ImplId,
+}
+
+impl Impl {
+    pub fn self_ty(self, db: &dyn HirDatabase) -> Ty {
+        db.type_for_impl_self(self.id)
+    }
+}
+
 /// A local variable in a body
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Local {
@@ -216,6 +228,7 @@ impl<'a> SemanticsScope<'a> {
 
         resolver.visit_all_names(self.db.upcast(), &mut |name, def| {
             let def = match def {
+                resolve::ScopeDef::ImplSelfType(id) => ScopeDef::ImplSelfType(Impl { id }),
                 resolve::ScopeDef::PerNs(it) => {
                     let items = ScopeDef::all_items(it);
                     for item in items {

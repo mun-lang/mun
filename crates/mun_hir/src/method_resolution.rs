@@ -561,7 +561,7 @@ mod tests {
             fixture.root_module.id,
             &Name::new("bar"),
         )
-        .is_ok())
+        .is_ok());
     }
 
     #[test]
@@ -574,7 +574,7 @@ mod tests {
             &Name::new("not_found"),
         )
         .unwrap_err()
-        .is_none())
+        .is_none());
     }
 
     #[test]
@@ -587,7 +587,7 @@ mod tests {
             &Name::new("baz"),
         )
         .unwrap_err()
-        .is_some())
+        .is_some());
     }
 
     fn display_method_resolution(ctx: MethodResolutionCtx<'_>) -> String {

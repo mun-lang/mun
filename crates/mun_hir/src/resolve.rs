@@ -9,6 +9,7 @@ use crate::{
     },
     item_scope::BUILTIN_SCOPE,
     module_tree::LocalModuleId,
+    name,
     package_defs::PackageDefs,
     primitive_type::PrimitiveType,
     visibility::RawVisibility,
@@ -23,10 +24,11 @@ pub struct Resolver {
 #[derive(Debug, Clone)]
 pub(crate) enum Scope {
     /// All the items and imported names of a module
-    ModuleScope(ModuleItemMap),
-
+    Module(ModuleItemMap),
+    /// Brings `Self` in `impl` block into scope
+    Impl(ImplId),
     /// Local bindings
-    ExprScope(ExprScope),
+    Expr(ExprScope),
 }
 
 #[derive(Debug, Clone)]
@@ -50,6 +52,7 @@ pub enum ResolveValueResult {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ValueNs {
+    ImplSelf(ImplId),
     LocalBinding(PatId),
     FunctionId(FunctionId),
     StructId(StructId),
@@ -57,6 +60,7 @@ pub enum ValueNs {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeNs {
+    SelfType(ImplId),
     StructId(StructId),
     TypeAliasId(TypeAliasId),
     PrimitiveType(PrimitiveType),
@@ -64,6 +68,7 @@ pub enum TypeNs {
 
 /// An item definition visible from a certain scope.
 pub enum ScopeDef {
+    ImplSelfType(ImplId),
     PerNs(PerNs<(ItemDefinitionId, Visibility)>),
     Local(PatId),
 }
@@ -75,13 +80,19 @@ impl Resolver {
         self
     }
 
+    /// Adds an `impl` block scope to the resolver from which it can resolve
+    /// names
+    fn push_impl_scope(self, impl_id: ImplId) -> Resolver {
+        self.push_scope(Scope::Impl(impl_id))
+    }
+
     /// Adds a module scope to the resolver from which it can resolve names
     pub(crate) fn push_module_scope(
         self,
         package_defs: Arc<PackageDefs>,
         module_id: LocalModuleId,
     ) -> Resolver {
-        self.push_scope(Scope::ModuleScope(ModuleItemMap {
+        self.push_scope(Scope::Module(ModuleItemMap {
             package_defs,
             module_id,
         }))
@@ -94,7 +105,7 @@ impl Resolver {
         expr_scopes: Arc<ExprScopes>,
         scope_id: LocalScopeId,
     ) -> Resolver {
-        self.push_scope(Scope::ExprScope(ExprScope {
+        self.push_scope(Scope::Expr(ExprScope {
             owner,
             expr_scopes,
             scope_id,
@@ -128,9 +139,12 @@ impl Resolver {
 
     /// Returns the `Module` scope of the resolver
     fn module_scope(&self) -> Option<(&PackageDefs, LocalModuleId)> {
-        self.scopes.iter().rev().find_map(|scope| match scope {
-            Scope::ModuleScope(m) => Some((&*m.package_defs, m.module_id)),
-            Scope::ExprScope(_) => None,
+        self.scopes.iter().rev().find_map(|scope| {
+            if let Scope::Module(m) = scope {
+                Some((&*m.package_defs, m.module_id))
+            } else {
+                None
+            }
         })
     }
 
@@ -170,11 +184,18 @@ impl Resolver {
             Some((res, vis))
         }
 
-        let segments_count = path.segments.len();
-        let first_name = path.segments.first()?;
+        let num_segments = path.segments.len();
+
+        let tmp = name![self];
+        let first_name = if path.is_self() {
+            &tmp
+        } else {
+            path.segments.first()?
+        };
+
         for scope in self.scopes.iter().rev() {
             match scope {
-                Scope::ExprScope(scope) if segments_count <= 1 => {
+                Scope::Expr(scope) if num_segments <= 1 => {
                     let entry = scope
                         .expr_scopes
                         .entries(scope.scope_id)
@@ -188,9 +209,19 @@ impl Resolver {
                         ));
                     }
                 }
-                Scope::ExprScope(_) => continue,
+                Scope::Expr(_) => continue,
 
-                Scope::ModuleScope(m) => {
+                Scope::Impl(i) => {
+                    if first_name == &name![Self] {
+                        return Some(if num_segments <= 1 {
+                            ResolveValueResult::ValueNs(ValueNs::ImplSelf(*i), Visibility::Public)
+                        } else {
+                            ResolveValueResult::Partial(TypeNs::SelfType(*i), 1)
+                        });
+                    }
+                }
+
+                Scope::Module(m) => {
                     let (module_def, idx) =
                         m.package_defs.resolve_path_in_module(db, m.module_id, path);
                     return match idx {
@@ -254,12 +285,28 @@ impl Resolver {
             Some((res, vis))
         }
 
+        let first_name = path.first_segment()?;
+
+        let remaining_idx = || {
+            if path.segments.len() == 1 {
+                None
+            } else {
+                Some(1)
+            }
+        };
+
         for scope in self.scopes.iter().rev() {
             match scope {
-                Scope::ExprScope(_) => continue,
-                Scope::ModuleScope(m) => {
+                Scope::Expr(_) => continue,
+                Scope::Impl(i) => {
+                    if first_name == &name![Self] {
+                        return Some((TypeNs::SelfType(*i), Visibility::Public, remaining_idx()));
+                    }
+                }
+                Scope::Module(m) => {
                     let (module_def, idx) =
                         m.package_defs.resolve_path_in_module(db, m.module_id, path);
+
                     let (res, vis) = to_type_ns(module_def)?;
                     return Some((res, vis, idx));
                 }
@@ -294,9 +341,12 @@ impl Resolver {
 
     /// If the resolver holds a scope from a body, returns that body.
     pub fn body_owner(&self) -> Option<DefWithBodyId> {
-        self.scopes.iter().rev().find_map(|scope| match scope {
-            Scope::ExprScope(it) => Some(it.owner),
-            Scope::ModuleScope(_) => None,
+        self.scopes.iter().rev().find_map(|scope| {
+            if let Scope::Expr(it) = scope {
+                Some(it.owner)
+            } else {
+                None
+            }
         })
     }
 
@@ -312,7 +362,7 @@ impl Scope {
     /// Calls the `visitor` for each entry in scope.
     fn visit_names(&self, _db: &dyn DefDatabase, visitor: &mut dyn FnMut(Name, ScopeDef)) {
         match self {
-            Scope::ModuleScope(m) => {
+            Scope::Module(m) => {
                 m.package_defs[m.module_id]
                     .entries()
                     .for_each(|(name, def)| visitor(name.clone(), ScopeDef::PerNs(def)));
@@ -320,7 +370,10 @@ impl Scope {
                     visitor(name.clone(), ScopeDef::PerNs(def));
                 });
             }
-            Scope::ExprScope(scope) => scope
+            Scope::Impl(i) => {
+                visitor(name![Self], ScopeDef::ImplSelfType(*i));
+            }
+            Scope::Expr(scope) => scope
                 .expr_scopes
                 .entries(scope.scope_id)
                 .iter()
@@ -400,6 +453,6 @@ impl HasResolver for ItemContainerId {
 
 impl HasResolver for ImplId {
     fn resolver(self, db: &dyn DefDatabase) -> Resolver {
-        self.module(db).resolver(db)
+        self.lookup(db).module.resolver(db).push_impl_scope(self)
     }
 }

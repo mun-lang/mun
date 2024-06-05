@@ -155,6 +155,9 @@ pub trait HirDatabase: DefDatabase + Upcast<dyn DefDatabase> {
     #[salsa::invoke(crate::ty::type_for_def)]
     fn type_for_def(&self, def: TypableDef, ns: Namespace) -> Ty;
 
+    #[salsa::invoke(crate::ty::type_for_impl_self)]
+    fn type_for_impl_self(&self, def: ImplId) -> Ty;
+
     #[salsa::invoke(InherentImpls::inherent_impls_in_package_query)]
     fn inherent_impls_in_package(&self, package: PackageId) -> Arc<InherentImpls>;
 }

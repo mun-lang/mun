@@ -301,11 +301,38 @@ pub struct Import {
 pub struct Function {
     pub name: Name,
     pub visibility: RawVisibilityId,
-    pub is_extern: bool,
     pub types: TypeRefMap,
     pub params: IdRange<Param>,
     pub ret_type: LocalTypeRefId,
     pub ast_id: FileAstId<ast::FunctionDef>,
+    pub(crate) flags: FunctionFlags,
+}
+
+bitflags::bitflags! {
+    #[doc = "Flags that are used to store additional information about a function"]
+    #[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
+    pub(crate) struct FunctionFlags: u8 {
+        const HAS_SELF_PARAM = 1 << 0;
+        const HAS_BODY = 1 << 1;
+        const IS_EXTERN = 1 << 2;
+    }
+}
+
+impl FunctionFlags {
+    /// Whether the function has a self parameter.
+    pub fn has_self_param(self) -> bool {
+        self.contains(Self::HAS_SELF_PARAM)
+    }
+
+    /// Whether the function has a body.
+    pub fn has_body(self) -> bool {
+        self.contains(Self::HAS_BODY)
+    }
+
+    /// Whether the function is extern.
+    pub fn is_extern(self) -> bool {
+        self.contains(Self::IS_EXTERN)
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -317,6 +344,7 @@ pub struct Param {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ParamAstId {
     Param(FileAstId<ast::Param>),
+    SelfParam(FileAstId<ast::SelfParam>),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

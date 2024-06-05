@@ -21,6 +21,10 @@ impl<'d> ExprValidator<'d> {
 
         // Add all parameter patterns to the set of initialized patterns (they must have
         // been initialized)
+        if let Some((pat, _)) = self.body.self_param {
+            initialized_patterns.insert(pat);
+        }
+
         for (pat, _) in self.body.params.iter() {
             initialized_patterns.insert(*pat);
         }

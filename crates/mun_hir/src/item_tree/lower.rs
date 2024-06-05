@@ -9,9 +9,9 @@ use mun_syntax::ast::{
 use smallvec::SmallVec;
 
 use super::{
-    diagnostics, AssociatedItem, Field, Fields, Function, IdRange, Impl, ItemTree, ItemTreeData,
-    ItemTreeNode, ItemVisibilities, LocalItemTreeId, ModItem, Param, ParamAstId, RawVisibilityId,
-    Struct, TypeAlias,
+    diagnostics, AssociatedItem, Field, Fields, Function, FunctionFlags, IdRange, Impl, ItemTree,
+    ItemTreeData, ItemTreeNode, ItemVisibilities, LocalItemTreeId, ModItem, Param, ParamAstId,
+    RawVisibilityId, Struct, TypeAlias,
 };
 use crate::{
     item_tree::Import,
@@ -158,7 +158,21 @@ impl Context {
 
         // Lower all the params
         let start_param_idx = self.next_param_idx();
+        let mut has_self_param = false;
         if let Some(param_list) = func.param_list() {
+            if let Some(self_param) = param_list.self_param() {
+                let ast_id = self.source_ast_id_map.ast_id(&self_param);
+                let type_ref = match self_param.ascribed_type().as_ref() {
+                    Some(type_ref) => types.alloc_from_node(type_ref),
+                    None => types.alloc_self(),
+                };
+                self.data.params.alloc(Param {
+                    type_ref,
+                    ast_id: ParamAstId::SelfParam(ast_id),
+                });
+                has_self_param = true;
+            }
+
             for param in param_list.params() {
                 let ast_id = self.source_ast_id_map.ast_id(&param);
                 let type_ref = types.alloc_from_node_opt(param.ascribed_type().as_ref());
@@ -177,18 +191,28 @@ impl Context {
             Some(ty) => types.alloc_from_node(&ty),
         };
 
-        let is_extern = func.is_extern();
-
         let (types, _types_source_map) = types.finish();
         let ast_id = self.source_ast_id_map.ast_id(func);
+
+        let mut flags = FunctionFlags::default();
+        if func.is_extern() {
+            flags |= FunctionFlags::IS_EXTERN;
+        }
+        if func.body().is_some() {
+            flags |= FunctionFlags::HAS_BODY;
+        }
+        if has_self_param {
+            flags |= FunctionFlags::HAS_SELF_PARAM;
+        }
+
         let res = Function {
             name,
             visibility,
-            is_extern,
             types,
             params,
             ret_type,
             ast_id,
+            flags,
         };
 
         Some(self.data.functions.alloc(res).into())

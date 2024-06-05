@@ -574,6 +574,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .expect("unknown path")
             .0
         {
+            ValueNs::ImplSelf(_) => unimplemented!("no support for self types"),
             ValueNs::LocalBinding(pat) => {
                 if let Some(param) = self.pat_to_param.get(&pat) {
                     *param
@@ -618,6 +619,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .expect("unknown path")
             .0
         {
+            ValueNs::ImplSelf(_) => unimplemented!("no support for self types"),
             ValueNs::LocalBinding(pat) => *self
                 .pat_to_local
                 .get(&pat)

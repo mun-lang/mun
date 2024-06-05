@@ -1370,7 +1370,6 @@ fn map_array_to_array_different_struct_to_struct() {
             .iter()
             .zip([b, a, b].into_iter())
             .for_each(|(lhs, rhs)| {
-                // println!("struct type: {:?}", lhs.type_info());
                 assert_eq!(lhs.get::<i64>("0").unwrap(), i64::from(rhs));
             });
     }

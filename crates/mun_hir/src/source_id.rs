@@ -70,7 +70,7 @@ register_ast_id_node! {
         StructDef,
         Impl,
         TypeAliasDef,
-    Param
+    Param, SelfParam
 }
 
 /// Maps items' `SyntaxNode`s to `ErasedFileAstId`s and back.
