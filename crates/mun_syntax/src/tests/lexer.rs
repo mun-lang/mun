@@ -299,7 +299,7 @@ fn strings() {
 fn keywords() {
     insta::assert_snapshot!(dump_text_tokens(
         r#"
-    break do else false for fn if in nil
+    break do else enum false for fn if in nil
     return true while let mut struct class
     never loop pub super self package type
     impl
@@ -310,6 +310,8 @@ fn keywords() {
     DO_KW 2 "do"
     WHITESPACE 1 " "
     ELSE_KW 4 "else"
+    WHITESPACE 1 " "
+    ENUM_KW 4 "enum"
     WHITESPACE 1 " "
     FALSE_KW 5 "false"
     WHITESPACE 1 " "

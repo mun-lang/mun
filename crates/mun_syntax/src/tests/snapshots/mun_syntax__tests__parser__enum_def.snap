@@ -1,0 +1,499 @@
+---
+source: crates/mun_syntax/src/tests/parser.rs
+expression: "SourceFile::parse(r#\"\n    enum Foo      // error: expected a '{'\n    enum Foo;     // error: expected a '{', error: expected a declaration\n    enum Foo {}\n    enum Foo {};  // error: expected a declaration\n    enum Foo {,}  // error: expected enum variant\n    enum Foo {\n      Bar\n    }\n    enum Foo {\n      Bar,\n      Baz\n    }\n    enum Foo {\n      Bar         // error: expected COMMA\n      Baz\n    }\n    enum Foo {\n      Bar,\n      Baz,\n    }\n    enum Foo {\n      Bar = 0,\n      Baz,\n    }\n    enum Foo {\n      Bar = 0     // error: expected COMMA\n      Baz\n    }\n    enum Foo {\n      Bar = 0,\n      Baz,\n      Qux = 5,\n    }\n    enum Foo {\n      Bar { a: i32 },\n      Baz { a: i32, },\n      Qux { a: i32, b: i32, },\n      Quux { a },               // error: expected COLON, error: expected type\n      Quuux { a: }              // error: expected type\n    }\n    enum Foo {\n      Bar(i32),\n      Baz(i32,),\n      Qux(i32, i32,),\n      Quux(i32 i32)             // error: expected COMMA\n    }\n    enum Foo {\n      Bar = 0,\n      Baz(i32),\n      Qux { a: i32 },\n    }\n    \"#).debug_dump()"
+---
+SOURCE_FILE@0..1051
+  WHITESPACE@0..5 "\n    "
+  ENUM_DEF@5..13
+    ENUM_KW@5..9 "enum"
+    WHITESPACE@9..10 " "
+    NAME@10..13
+      IDENT@10..13 "Foo"
+  WHITESPACE@13..19 "      "
+  COMMENT@19..43 "// error: expected a '{'"
+  WHITESPACE@43..48 "\n    "
+  ENUM_DEF@48..56
+    ENUM_KW@48..52 "enum"
+    WHITESPACE@52..53 " "
+    NAME@53..56
+      IDENT@53..56 "Foo"
+  ERROR@56..57
+    SEMI@56..57 ";"
+  WHITESPACE@57..62 "     "
+  COMMENT@62..117 "// error: expected a  ..."
+  WHITESPACE@117..122 "\n    "
+  ENUM_DEF@122..133
+    ENUM_KW@122..126 "enum"
+    WHITESPACE@126..127 " "
+    NAME@127..130
+      IDENT@127..130 "Foo"
+    WHITESPACE@130..131 " "
+    ENUM_VARIANT_LIST@131..133
+      L_CURLY@131..132 "{"
+      R_CURLY@132..133 "}"
+  WHITESPACE@133..138 "\n    "
+  ENUM_DEF@138..149
+    ENUM_KW@138..142 "enum"
+    WHITESPACE@142..143 " "
+    NAME@143..146
+      IDENT@143..146 "Foo"
+    WHITESPACE@146..147 " "
+    ENUM_VARIANT_LIST@147..149
+      L_CURLY@147..148 "{"
+      R_CURLY@148..149 "}"
+  ERROR@149..150
+    SEMI@149..150 ";"
+  WHITESPACE@150..152 "  "
+  COMMENT@152..184 "// error: expected a  ..."
+  WHITESPACE@184..189 "\n    "
+  ENUM_DEF@189..201
+    ENUM_KW@189..193 "enum"
+    WHITESPACE@193..194 " "
+    NAME@194..197
+      IDENT@194..197 "Foo"
+    WHITESPACE@197..198 " "
+    ENUM_VARIANT_LIST@198..201
+      L_CURLY@198..199 "{"
+      ERROR@199..200
+        COMMA@199..200 ","
+      R_CURLY@200..201 "}"
+  WHITESPACE@201..203 "  "
+  COMMENT@203..234 "// error: expected en ..."
+  WHITESPACE@234..239 "\n    "
+  ENUM_DEF@239..265
+    ENUM_KW@239..243 "enum"
+    WHITESPACE@243..244 " "
+    NAME@244..247
+      IDENT@244..247 "Foo"
+    WHITESPACE@247..248 " "
+    ENUM_VARIANT_LIST@248..265
+      L_CURLY@248..249 "{"
+      WHITESPACE@249..256 "\n      "
+      ENUM_VARIANT@256..259
+        NAME@256..259
+          IDENT@256..259 "Bar"
+      WHITESPACE@259..264 "\n    "
+      R_CURLY@264..265 "}"
+  WHITESPACE@265..270 "\n    "
+  ENUM_DEF@270..307
+    ENUM_KW@270..274 "enum"
+    WHITESPACE@274..275 " "
+    NAME@275..278
+      IDENT@275..278 "Foo"
+    WHITESPACE@278..279 " "
+    ENUM_VARIANT_LIST@279..307
+      L_CURLY@279..280 "{"
+      WHITESPACE@280..287 "\n      "
+      ENUM_VARIANT@287..290
+        NAME@287..290
+          IDENT@287..290 "Bar"
+      COMMA@290..291 ","
+      WHITESPACE@291..298 "\n      "
+      ENUM_VARIANT@298..301
+        NAME@298..301
+          IDENT@298..301 "Baz"
+      WHITESPACE@301..306 "\n    "
+      R_CURLY@306..307 "}"
+  WHITESPACE@307..312 "\n    "
+  ENUM_DEF@312..381
+    ENUM_KW@312..316 "enum"
+    WHITESPACE@316..317 " "
+    NAME@317..320
+      IDENT@317..320 "Foo"
+    WHITESPACE@320..321 " "
+    ENUM_VARIANT_LIST@321..381
+      L_CURLY@321..322 "{"
+      WHITESPACE@322..329 "\n      "
+      ENUM_VARIANT@329..332
+        NAME@329..332
+          IDENT@329..332 "Bar"
+      WHITESPACE@332..341 "         "
+      COMMENT@341..365 "// error: expected COMMA"
+      WHITESPACE@365..372 "\n      "
+      ENUM_VARIANT@372..375
+        NAME@372..375
+          IDENT@372..375 "Baz"
+      WHITESPACE@375..380 "\n    "
+      R_CURLY@380..381 "}"
+  WHITESPACE@381..386 "\n    "
+  ENUM_DEF@386..424
+    ENUM_KW@386..390 "enum"
+    WHITESPACE@390..391 " "
+    NAME@391..394
+      IDENT@391..394 "Foo"
+    WHITESPACE@394..395 " "
+    ENUM_VARIANT_LIST@395..424
+      L_CURLY@395..396 "{"
+      WHITESPACE@396..403 "\n      "
+      ENUM_VARIANT@403..406
+        NAME@403..406
+          IDENT@403..406 "Bar"
+      COMMA@406..407 ","
+      WHITESPACE@407..414 "\n      "
+      ENUM_VARIANT@414..417
+        NAME@414..417
+          IDENT@414..417 "Baz"
+      COMMA@417..418 ","
+      WHITESPACE@418..423 "\n    "
+      R_CURLY@423..424 "}"
+  WHITESPACE@424..429 "\n    "
+  ENUM_DEF@429..471
+    ENUM_KW@429..433 "enum"
+    WHITESPACE@433..434 " "
+    NAME@434..437
+      IDENT@434..437 "Foo"
+    WHITESPACE@437..438 " "
+    ENUM_VARIANT_LIST@438..471
+      L_CURLY@438..439 "{"
+      WHITESPACE@439..446 "\n      "
+      ENUM_VARIANT@446..453
+        NAME@446..449
+          IDENT@446..449 "Bar"
+        WHITESPACE@449..450 " "
+        EQ@450..451 "="
+        WHITESPACE@451..452 " "
+        LITERAL@452..453
+          INT_NUMBER@452..453 "0"
+      COMMA@453..454 ","
+      WHITESPACE@454..461 "\n      "
+      ENUM_VARIANT@461..464
+        NAME@461..464
+          IDENT@461..464 "Baz"
+      COMMA@464..465 ","
+      WHITESPACE@465..470 "\n    "
+      R_CURLY@470..471 "}"
+  WHITESPACE@471..476 "\n    "
+  ENUM_DEF@476..545
+    ENUM_KW@476..480 "enum"
+    WHITESPACE@480..481 " "
+    NAME@481..484
+      IDENT@481..484 "Foo"
+    WHITESPACE@484..485 " "
+    ENUM_VARIANT_LIST@485..545
+      L_CURLY@485..486 "{"
+      WHITESPACE@486..493 "\n      "
+      ENUM_VARIANT@493..500
+        NAME@493..496
+          IDENT@493..496 "Bar"
+        WHITESPACE@496..497 " "
+        EQ@497..498 "="
+        WHITESPACE@498..499 " "
+        LITERAL@499..500
+          INT_NUMBER@499..500 "0"
+      WHITESPACE@500..505 "     "
+      COMMENT@505..529 "// error: expected COMMA"
+      WHITESPACE@529..536 "\n      "
+      ENUM_VARIANT@536..539
+        NAME@536..539
+          IDENT@536..539 "Baz"
+      WHITESPACE@539..544 "\n    "
+      R_CURLY@544..545 "}"
+  WHITESPACE@545..550 "\n    "
+  ENUM_DEF@550..607
+    ENUM_KW@550..554 "enum"
+    WHITESPACE@554..555 " "
+    NAME@555..558
+      IDENT@555..558 "Foo"
+    WHITESPACE@558..559 " "
+    ENUM_VARIANT_LIST@559..607
+      L_CURLY@559..560 "{"
+      WHITESPACE@560..567 "\n      "
+      ENUM_VARIANT@567..574
+        NAME@567..570
+          IDENT@567..570 "Bar"
+        WHITESPACE@570..571 " "
+        EQ@571..572 "="
+        WHITESPACE@572..573 " "
+        LITERAL@573..574
+          INT_NUMBER@573..574 "0"
+      COMMA@574..575 ","
+      WHITESPACE@575..582 "\n      "
+      ENUM_VARIANT@582..585
+        NAME@582..585
+          IDENT@582..585 "Baz"
+      COMMA@585..586 ","
+      WHITESPACE@586..593 "\n      "
+      ENUM_VARIANT@593..600
+        NAME@593..596
+          IDENT@593..596 "Qux"
+        WHITESPACE@596..597 " "
+        EQ@597..598 "="
+        WHITESPACE@598..599 " "
+        LITERAL@599..600
+          INT_NUMBER@599..600 "5"
+      COMMA@600..601 ","
+      WHITESPACE@601..606 "\n    "
+      R_CURLY@606..607 "}"
+  WHITESPACE@607..612 "\n    "
+  ENUM_DEF@612..839
+    ENUM_KW@612..616 "enum"
+    WHITESPACE@616..617 " "
+    NAME@617..620
+      IDENT@617..620 "Foo"
+    WHITESPACE@620..621 " "
+    ENUM_VARIANT_LIST@621..839
+      L_CURLY@621..622 "{"
+      WHITESPACE@622..629 "\n      "
+      ENUM_VARIANT@629..643
+        NAME@629..632
+          IDENT@629..632 "Bar"
+        WHITESPACE@632..633 " "
+        RECORD_FIELD_DEF_LIST@633..643
+          L_CURLY@633..634 "{"
+          WHITESPACE@634..635 " "
+          RECORD_FIELD_DEF@635..641
+            NAME@635..636
+              IDENT@635..636 "a"
+            COLON@636..637 ":"
+            WHITESPACE@637..638 " "
+            PATH_TYPE@638..641
+              PATH@638..641
+                PATH_SEGMENT@638..641
+                  NAME_REF@638..641
+                    IDENT@638..641 "i32"
+          WHITESPACE@641..642 " "
+          R_CURLY@642..643 "}"
+      COMMA@643..644 ","
+      WHITESPACE@644..651 "\n      "
+      ENUM_VARIANT@651..666
+        NAME@651..654
+          IDENT@651..654 "Baz"
+        WHITESPACE@654..655 " "
+        RECORD_FIELD_DEF_LIST@655..666
+          L_CURLY@655..656 "{"
+          WHITESPACE@656..657 " "
+          RECORD_FIELD_DEF@657..663
+            NAME@657..658
+              IDENT@657..658 "a"
+            COLON@658..659 ":"
+            WHITESPACE@659..660 " "
+            PATH_TYPE@660..663
+              PATH@660..663
+                PATH_SEGMENT@660..663
+                  NAME_REF@660..663
+                    IDENT@660..663 "i32"
+          COMMA@663..664 ","
+          WHITESPACE@664..665 " "
+          R_CURLY@665..666 "}"
+      COMMA@666..667 ","
+      WHITESPACE@667..674 "\n      "
+      ENUM_VARIANT@674..697
+        NAME@674..677
+          IDENT@674..677 "Qux"
+        WHITESPACE@677..678 " "
+        RECORD_FIELD_DEF_LIST@678..697
+          L_CURLY@678..679 "{"
+          WHITESPACE@679..680 " "
+          RECORD_FIELD_DEF@680..686
+            NAME@680..681
+              IDENT@680..681 "a"
+            COLON@681..682 ":"
+            WHITESPACE@682..683 " "
+            PATH_TYPE@683..686
+              PATH@683..686
+                PATH_SEGMENT@683..686
+                  NAME_REF@683..686
+                    IDENT@683..686 "i32"
+          COMMA@686..687 ","
+          WHITESPACE@687..688 " "
+          RECORD_FIELD_DEF@688..694
+            NAME@688..689
+              IDENT@688..689 "b"
+            COLON@689..690 ":"
+            WHITESPACE@690..691 " "
+            PATH_TYPE@691..694
+              PATH@691..694
+                PATH_SEGMENT@691..694
+                  NAME_REF@691..694
+                    IDENT@691..694 "i32"
+          COMMA@694..695 ","
+          WHITESPACE@695..696 " "
+          R_CURLY@696..697 "}"
+      COMMA@697..698 ","
+      WHITESPACE@698..705 "\n      "
+      ENUM_VARIANT@705..715
+        NAME@705..709
+          IDENT@705..709 "Quux"
+        WHITESPACE@709..710 " "
+        RECORD_FIELD_DEF_LIST@710..715
+          L_CURLY@710..711 "{"
+          WHITESPACE@711..712 " "
+          RECORD_FIELD_DEF@712..713
+            NAME@712..713
+              IDENT@712..713 "a"
+          WHITESPACE@713..714 " "
+          R_CURLY@714..715 "}"
+      COMMA@715..716 ","
+      WHITESPACE@716..731 "               "
+      COMMENT@731..777 "// error: expected CO ..."
+      WHITESPACE@777..784 "\n      "
+      ENUM_VARIANT@784..796
+        NAME@784..789
+          IDENT@784..789 "Quuux"
+        WHITESPACE@789..790 " "
+        RECORD_FIELD_DEF_LIST@790..796
+          L_CURLY@790..791 "{"
+          WHITESPACE@791..792 " "
+          RECORD_FIELD_DEF@792..794
+            NAME@792..793
+              IDENT@792..793 "a"
+            COLON@793..794 ":"
+          WHITESPACE@794..795 " "
+          R_CURLY@795..796 "}"
+      WHITESPACE@796..810 "              "
+      COMMENT@810..833 "// error: expected type"
+      WHITESPACE@833..838 "\n    "
+      R_CURLY@838..839 "}"
+  WHITESPACE@839..844 "\n    "
+  ENUM_DEF@844..972
+    ENUM_KW@844..848 "enum"
+    WHITESPACE@848..849 " "
+    NAME@849..852
+      IDENT@849..852 "Foo"
+    WHITESPACE@852..853 " "
+    ENUM_VARIANT_LIST@853..972
+      L_CURLY@853..854 "{"
+      WHITESPACE@854..861 "\n      "
+      ENUM_VARIANT@861..869
+        NAME@861..864
+          IDENT@861..864 "Bar"
+        TUPLE_FIELD_DEF_LIST@864..869
+          L_PAREN@864..865 "("
+          TUPLE_FIELD_DEF@865..868
+            PATH_TYPE@865..868
+              PATH@865..868
+                PATH_SEGMENT@865..868
+                  NAME_REF@865..868
+                    IDENT@865..868 "i32"
+          R_PAREN@868..869 ")"
+      COMMA@869..870 ","
+      WHITESPACE@870..877 "\n      "
+      ENUM_VARIANT@877..886
+        NAME@877..880
+          IDENT@877..880 "Baz"
+        TUPLE_FIELD_DEF_LIST@880..886
+          L_PAREN@880..881 "("
+          TUPLE_FIELD_DEF@881..884
+            PATH_TYPE@881..884
+              PATH@881..884
+                PATH_SEGMENT@881..884
+                  NAME_REF@881..884
+                    IDENT@881..884 "i32"
+          COMMA@884..885 ","
+          R_PAREN@885..886 ")"
+      COMMA@886..887 ","
+      WHITESPACE@887..894 "\n      "
+      ENUM_VARIANT@894..908
+        NAME@894..897
+          IDENT@894..897 "Qux"
+        TUPLE_FIELD_DEF_LIST@897..908
+          L_PAREN@897..898 "("
+          TUPLE_FIELD_DEF@898..901
+            PATH_TYPE@898..901
+              PATH@898..901
+                PATH_SEGMENT@898..901
+                  NAME_REF@898..901
+                    IDENT@898..901 "i32"
+          COMMA@901..902 ","
+          WHITESPACE@902..903 " "
+          TUPLE_FIELD_DEF@903..906
+            PATH_TYPE@903..906
+              PATH@903..906
+                PATH_SEGMENT@903..906
+                  NAME_REF@903..906
+                    IDENT@903..906 "i32"
+          COMMA@906..907 ","
+          R_PAREN@907..908 ")"
+      COMMA@908..909 ","
+      WHITESPACE@909..916 "\n      "
+      ENUM_VARIANT@916..929
+        NAME@916..920
+          IDENT@916..920 "Quux"
+        TUPLE_FIELD_DEF_LIST@920..929
+          L_PAREN@920..921 "("
+          TUPLE_FIELD_DEF@921..924
+            PATH_TYPE@921..924
+              PATH@921..924
+                PATH_SEGMENT@921..924
+                  NAME_REF@921..924
+                    IDENT@921..924 "i32"
+          WHITESPACE@924..925 " "
+          TUPLE_FIELD_DEF@925..928
+            PATH_TYPE@925..928
+              PATH@925..928
+                PATH_SEGMENT@925..928
+                  NAME_REF@925..928
+                    IDENT@925..928 "i32"
+          R_PAREN@928..929 ")"
+      WHITESPACE@929..942 "             "
+      COMMENT@942..966 "// error: expected COMMA"
+      WHITESPACE@966..971 "\n    "
+      R_CURLY@971..972 "}"
+  WHITESPACE@972..977 "\n    "
+  ENUM_DEF@977..1046
+    ENUM_KW@977..981 "enum"
+    WHITESPACE@981..982 " "
+    NAME@982..985
+      IDENT@982..985 "Foo"
+    WHITESPACE@985..986 " "
+    ENUM_VARIANT_LIST@986..1046
+      L_CURLY@986..987 "{"
+      WHITESPACE@987..994 "\n      "
+      ENUM_VARIANT@994..1001
+        NAME@994..997
+          IDENT@994..997 "Bar"
+        WHITESPACE@997..998 " "
+        EQ@998..999 "="
+        WHITESPACE@999..1000 " "
+        LITERAL@1000..1001
+          INT_NUMBER@1000..1001 "0"
+      COMMA@1001..1002 ","
+      WHITESPACE@1002..1009 "\n      "
+      ENUM_VARIANT@1009..1017
+        NAME@1009..1012
+          IDENT@1009..1012 "Baz"
+        TUPLE_FIELD_DEF_LIST@1012..1017
+          L_PAREN@1012..1013 "("
+          TUPLE_FIELD_DEF@1013..1016
+            PATH_TYPE@1013..1016
+              PATH@1013..1016
+                PATH_SEGMENT@1013..1016
+                  NAME_REF@1013..1016
+                    IDENT@1013..1016 "i32"
+          R_PAREN@1016..1017 ")"
+      COMMA@1017..1018 ","
+      WHITESPACE@1018..1025 "\n      "
+      ENUM_VARIANT@1025..1039
+        NAME@1025..1028
+          IDENT@1025..1028 "Qux"
+        WHITESPACE@1028..1029 " "
+        RECORD_FIELD_DEF_LIST@1029..1039
+          L_CURLY@1029..1030 "{"
+          WHITESPACE@1030..1031 " "
+          RECORD_FIELD_DEF@1031..1037
+            NAME@1031..1032
+              IDENT@1031..1032 "a"
+            COLON@1032..1033 ":"
+            WHITESPACE@1033..1034 " "
+            PATH_TYPE@1034..1037
+              PATH@1034..1037
+                PATH_SEGMENT@1034..1037
+                  NAME_REF@1034..1037
+                    IDENT@1034..1037 "i32"
+          WHITESPACE@1037..1038 " "
+          R_CURLY@1038..1039 "}"
+      COMMA@1039..1040 ","
+      WHITESPACE@1040..1045 "\n    "
+      R_CURLY@1045..1046 "}"
+  WHITESPACE@1046..1051 "\n    "
+error Offset(13): expected a '{'
+error Offset(56): expected a '{'
+error Offset(56): expected a declaration
+error Offset(149): expected a declaration
+error Offset(199): expected enum variant
+error Offset(332): expected COMMA
+error Offset(500): expected COMMA
+error Offset(713): expected COLON
+error Offset(713): expected type
+error Offset(794): expected type
+error Offset(924): expected COMMA

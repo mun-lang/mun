@@ -114,6 +114,7 @@ impl Context {
     /// Lowers a single module item
     fn lower_mod_item(&mut self, item: &ast::ModuleItem) -> Option<ModItems> {
         match item.kind() {
+            ast::ModuleItemKind::EnumDef(_ast) => unimplemented!("Implement lowering of enums"),
             ast::ModuleItemKind::FunctionDef(ast) => self.lower_function(&ast).map(Into::into),
             ast::ModuleItemKind::StructDef(ast) => self.lower_struct(&ast).map(Into::into),
             ast::ModuleItemKind::TypeAliasDef(ast) => self.lower_type_alias(&ast).map(Into::into),

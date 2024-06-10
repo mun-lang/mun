@@ -89,6 +89,7 @@ pub enum SyntaxKind {
     LET_KW,
     MUT_KW,
     CLASS_KW,
+    ENUM_KW,
     STRUCT_KW,
     NEVER_KW,
     PUB_KW,
@@ -109,6 +110,9 @@ pub enum SyntaxKind {
     GC_KW,
     VALUE_KW,
     SOURCE_FILE,
+    ENUM_DEF,
+    ENUM_VARIANT_LIST,
+    ENUM_VARIANT,
     FUNCTION_DEF,
     EXTERN,
     RET_TYPE,
@@ -364,6 +368,9 @@ macro_rules! T {
     (class) => {
         $crate::SyntaxKind::CLASS_KW
     };
+    (enum) => {
+        $crate::SyntaxKind::ENUM_KW
+    };
     (struct) => {
         $crate::SyntaxKind::STRUCT_KW
     };
@@ -428,6 +435,7 @@ impl SyntaxKind {
         | LET_KW
         | MUT_KW
         | CLASS_KW
+        | ENUM_KW
         | STRUCT_KW
         | NEVER_KW
         | PUB_KW
@@ -570,6 +578,7 @@ impl SyntaxKind {
             LET_KW => &SyntaxInfo { name: "LET_KW" },
             MUT_KW => &SyntaxInfo { name: "MUT_KW" },
             CLASS_KW => &SyntaxInfo { name: "CLASS_KW" },
+            ENUM_KW => &SyntaxInfo { name: "ENUM_KW" },
             STRUCT_KW => &SyntaxInfo { name: "STRUCT_KW" },
             NEVER_KW => &SyntaxInfo { name: "NEVER_KW" },
             PUB_KW => &SyntaxInfo { name: "PUB_KW" },
@@ -590,6 +599,9 @@ impl SyntaxKind {
             GC_KW => &SyntaxInfo { name: "GC_KW" },
             VALUE_KW => &SyntaxInfo { name: "VALUE_KW" },
             SOURCE_FILE => &SyntaxInfo { name: "SOURCE_FILE" },
+            ENUM_DEF => &SyntaxInfo { name: "ENUM_DEF" },
+            ENUM_VARIANT_LIST => &SyntaxInfo { name: "ENUM_VARIANT_LIST" },
+            ENUM_VARIANT => &SyntaxInfo { name: "ENUM_VARIANT" },
             FUNCTION_DEF => &SyntaxInfo { name: "FUNCTION_DEF" },
             EXTERN => &SyntaxInfo { name: "EXTERN" },
             RET_TYPE => &SyntaxInfo { name: "RET_TYPE" },
@@ -668,6 +680,7 @@ impl SyntaxKind {
             "let" => LET_KW,
             "mut" => MUT_KW,
             "class" => CLASS_KW,
+            "enum" => ENUM_KW,
             "struct" => STRUCT_KW,
             "never" => NEVER_KW,
             "pub" => PUB_KW,

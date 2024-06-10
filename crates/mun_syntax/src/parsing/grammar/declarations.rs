@@ -5,8 +5,15 @@ use super::{
 };
 use crate::{parsing::grammar::paths::is_use_path_start, T};
 
-pub(super) const DECLARATION_RECOVERY_SET: TokenSet =
-    TokenSet::new(&[T![fn], T![pub], T![struct], T![use], T![;], T![impl]]);
+pub(super) const DECLARATION_RECOVERY_SET: TokenSet = TokenSet::new(&[
+    T![enum],
+    T![fn],
+    T![impl],
+    T![pub],
+    T![struct],
+    T![use],
+    T![;],
+]);
 
 pub(super) fn mod_contents(p: &mut Parser<'_>) {
     while !p.at(EOF) {
@@ -66,6 +73,9 @@ fn abi(p: &mut Parser<'_>) {
 
 fn declarations_without_modifiers(p: &mut Parser<'_>, m: Marker) -> Result<(), Marker> {
     match p.current() {
+        T![enum] => {
+            adt::enum_def(p, m);
+        }
         T![use] => {
             use_(p, m);
         }

@@ -90,6 +90,7 @@ Grammar(
         "let",
         "mut",
         "class",
+        "enum",
         "struct",
         "never",
         "pub",
@@ -121,6 +122,10 @@ Grammar(
     ],
     nodes: [
         "SOURCE_FILE",
+
+        "ENUM_DEF",
+        "ENUM_VARIANT_LIST",
+        "ENUM_VARIANT",
 
         "FUNCTION_DEF",
         "EXTERN",
@@ -192,7 +197,30 @@ Grammar(
             traits: [ "ModuleItemOwner", "FunctionDefOwner" ],
         ),
         "ModuleItem": (
-            enum: ["Use", "FunctionDef", "StructDef", "TypeAliasDef", "Impl"]
+            enum: ["Use", "EnumDef", "FunctionDef", "StructDef", "TypeAliasDef", "Impl"]
+        ),
+        "EnumDef": (
+            traits: [
+                "NameOwner",
+                "VisibilityOwner",
+                "DocCommentsOwner",
+            ],
+            options: [
+                ["variant_list", "EnumVariantList"]
+            ]
+        ),
+        "EnumVariantList": (
+            collections: [
+                ["variants", "EnumVariant"]
+            ]
+        ),
+        "EnumVariant": (
+            traits: [
+                "NameOwner",
+            ],
+            options: [
+                "Expr",
+            ]
         ),
         "Visibility": (),
         "FunctionDef": (

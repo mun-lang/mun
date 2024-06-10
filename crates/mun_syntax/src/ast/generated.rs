@@ -347,6 +347,94 @@ impl Condition {
     }
 }
 
+// EnumDef
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct EnumDef {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for EnumDef {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, ENUM_DEF)
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(EnumDef { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl ast::NameOwner for EnumDef {}
+impl ast::VisibilityOwner for EnumDef {}
+impl ast::DocCommentsOwner for EnumDef {}
+impl EnumDef {
+    pub fn variant_list(&self) -> Option<EnumVariantList> {
+        super::child_opt(self)
+    }
+}
+
+// EnumVariant
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct EnumVariant {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for EnumVariant {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, ENUM_VARIANT)
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(EnumVariant { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl ast::NameOwner for EnumVariant {}
+impl EnumVariant {
+    pub fn expr(&self) -> Option<Expr> {
+        super::child_opt(self)
+    }
+}
+
+// EnumVariantList
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct EnumVariantList {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for EnumVariantList {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, ENUM_VARIANT_LIST)
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(EnumVariantList { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl EnumVariantList {
+    pub fn variants(&self) -> impl Iterator<Item = EnumVariant> {
+        super::children(self)
+    }
+}
+
 // Expr
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -816,7 +904,7 @@ impl AstNode for ModuleItem {
     fn can_cast(kind: SyntaxKind) -> bool {
         matches!(
             kind,
-            USE | FUNCTION_DEF | STRUCT_DEF | TYPE_ALIAS_DEF | IMPL
+            USE | ENUM_DEF | FUNCTION_DEF | STRUCT_DEF | TYPE_ALIAS_DEF | IMPL
         )
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
@@ -833,6 +921,7 @@ impl AstNode for ModuleItem {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModuleItemKind {
     Use(Use),
+    EnumDef(EnumDef),
     FunctionDef(FunctionDef),
     StructDef(StructDef),
     TypeAliasDef(TypeAliasDef),
@@ -840,6 +929,11 @@ pub enum ModuleItemKind {
 }
 impl From<Use> for ModuleItem {
     fn from(n: Use) -> ModuleItem {
+        ModuleItem { syntax: n.syntax }
+    }
+}
+impl From<EnumDef> for ModuleItem {
+    fn from(n: EnumDef) -> ModuleItem {
         ModuleItem { syntax: n.syntax }
     }
 }
@@ -868,6 +962,7 @@ impl ModuleItem {
     pub fn kind(&self) -> ModuleItemKind {
         match self.syntax.kind() {
             USE => ModuleItemKind::Use(Use::cast(self.syntax.clone()).unwrap()),
+            ENUM_DEF => ModuleItemKind::EnumDef(EnumDef::cast(self.syntax.clone()).unwrap()),
             FUNCTION_DEF => {
                 ModuleItemKind::FunctionDef(FunctionDef::cast(self.syntax.clone()).unwrap())
             }

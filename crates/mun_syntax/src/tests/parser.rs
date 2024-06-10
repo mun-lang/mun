@@ -1,6 +1,66 @@
 use crate::SourceFile;
 
 #[test]
+fn enum_def() {
+    insta::assert_snapshot!(SourceFile::parse(
+        r#"
+    enum Foo      // error: expected a '{'
+    enum Foo;     // error: expected a '{', error: expected a declaration
+    enum Foo {}
+    enum Foo {};  // error: expected a declaration
+    enum Foo {,}  // error: expected enum variant
+    enum Foo {
+      Bar
+    }
+    enum Foo {
+      Bar,
+      Baz
+    }
+    enum Foo {
+      Bar         // error: expected COMMA
+      Baz
+    }
+    enum Foo {
+      Bar,
+      Baz,
+    }
+    enum Foo {
+      Bar = 0,
+      Baz,
+    }
+    enum Foo {
+      Bar = 0     // error: expected COMMA
+      Baz
+    }
+    enum Foo {
+      Bar = 0,
+      Baz,
+      Qux = 5,
+    }
+    enum Foo {
+      Bar { a: i32 },
+      Baz { a: i32, },
+      Qux { a: i32, b: i32, },
+      Quux { a },               // error: expected COLON, error: expected type
+      Quuux { a: }              // error: expected type
+    }
+    enum Foo {
+      Bar(i32),
+      Baz(i32,),
+      Qux(i32, i32,),
+      Quux(i32 i32)             // error: expected COMMA
+    }
+    enum Foo {
+      Bar = 0,
+      Baz(i32),
+      Qux { a: i32 },
+    }
+    "#,
+    )
+    .debug_dump());
+}
+
+#[test]
 fn impl_block() {
     insta::assert_snapshot!(SourceFile::parse(
         r#"
