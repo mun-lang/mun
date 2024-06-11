@@ -1,8 +1,8 @@
 use super::{
     declarations, error_block, expressions, name, name_recovery, opt_visibility, types, Marker,
-    Parser, ENUM_DEF, ENUM_VARIANT, ENUM_VARIANT_LIST, EOF, GC_KW, IDENT, MEMORY_TYPE_SPECIFIER,
-    RECORD_FIELD_DEF, RECORD_FIELD_DEF_LIST, STRUCT_DEF, TUPLE_FIELD_DEF, TUPLE_FIELD_DEF_LIST,
-    TYPE_ALIAS_DEF, VALUE_KW,
+    Parser, ENUM_DEF, EOF, GC_KW, IDENT, MEMORY_TYPE_SPECIFIER, RECORD_FIELD_DEF,
+    RECORD_FIELD_DEF_LIST, STRUCT_DEF, TUPLE_FIELD_DEF, TUPLE_FIELD_DEF_LIST, TYPE_ALIAS_DEF,
+    VALUE_KW, VARIANT, VARIANT_LIST,
 };
 
 pub(super) fn enum_def(p: &mut Parser<'_>, m: Marker) {
@@ -10,14 +10,14 @@ pub(super) fn enum_def(p: &mut Parser<'_>, m: Marker) {
     p.bump(T![enum]);
     name_recovery(p, declarations::DECLARATION_RECOVERY_SET);
     if p.at(T!['{']) {
-        enum_variant_list(p);
+        variant_list(p);
     } else {
         p.error("expected a '{'");
     }
     m.complete(p, ENUM_DEF);
 }
 
-fn enum_variant_list(p: &mut Parser<'_>) {
+fn variant_list(p: &mut Parser<'_>) {
     assert!(p.at(T!['{']));
     let m = p.start();
     p.bump(T!['{']);
@@ -26,16 +26,16 @@ fn enum_variant_list(p: &mut Parser<'_>) {
             error_block(p, "expected enum variant");
             continue;
         }
-        enum_variant(p);
+        variant(p);
         if !p.at(T!['}']) {
             p.expect(T![,]);
         }
     }
     p.expect(T!['}']);
-    m.complete(p, ENUM_VARIANT_LIST);
+    m.complete(p, VARIANT_LIST);
 }
 
-fn enum_variant(p: &mut Parser<'_>) {
+fn variant(p: &mut Parser<'_>) {
     let m = p.start();
     if p.at(IDENT) {
         name(p);
@@ -50,7 +50,7 @@ fn enum_variant(p: &mut Parser<'_>) {
         if p.eat(T![=]) {
             expressions::expr(p);
         }
-        m.complete(p, ENUM_VARIANT);
+        m.complete(p, VARIANT);
     } else {
         m.abandon(p);
         p.error_and_bump("expected enum variant");

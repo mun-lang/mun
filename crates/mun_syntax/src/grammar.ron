@@ -124,8 +124,8 @@ Grammar(
         "SOURCE_FILE",
 
         "ENUM_DEF",
-        "ENUM_VARIANT_LIST",
-        "ENUM_VARIANT",
+        "VARIANT_LIST",
+        "VARIANT",
 
         "FUNCTION_DEF",
         "EXTERN",
@@ -206,15 +206,15 @@ Grammar(
                 "DocCommentsOwner",
             ],
             options: [
-                ["variant_list", "EnumVariantList"]
+                ["variant_list", "VariantList"]
             ]
         ),
-        "EnumVariantList": (
+        "VariantList": (
             collections: [
-                ["variants", "EnumVariant"]
+                ["variants", "Variant"]
             ]
         ),
-        "EnumVariant": (
+        "Variant": (
             traits: [
                 "NameOwner",
             ],
