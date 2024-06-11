@@ -510,6 +510,7 @@ impl<'a> ModCollectorContext<'a, '_> {
                 visibility,
                 has_constructor,
             } = match item {
+                ModItem::Enum(id) => todo!("collect enum"),
                 ModItem::Function(id) => self.collect_function(id),
                 ModItem::Struct(id) => self.collect_struct(id),
                 ModItem::TypeAlias(id) => self.collect_type_alias(id),

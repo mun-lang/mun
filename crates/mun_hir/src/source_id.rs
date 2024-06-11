@@ -67,6 +67,8 @@ register_ast_id_node! {
     ModuleItem,
         Use,
         FunctionDef,
+        EnumDef,
+            Variant,
         StructDef,
         Impl,
         TypeAliasDef,

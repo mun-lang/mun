@@ -13,7 +13,7 @@ use std::{
     sync::Arc,
 };
 
-use la_arena::{Arena, Idx};
+use la_arena::{Arena, Idx, IdxRange};
 use mun_syntax::ast;
 
 use crate::{
@@ -113,6 +113,8 @@ struct ItemTreeData {
     imports: Arena<Import>,
     functions: Arena<Function>,
     params: Arena<Param>,
+    enums: Arena<Enum>,
+    variants: Arena<Variant>,
     structs: Arena<Struct>,
     fields: Arena<Field>,
     type_aliases: Arena<TypeAlias>,
@@ -123,19 +125,13 @@ struct ItemTreeData {
 
 /// Trait implemented by all item nodes in the item tree.
 pub trait ItemTreeNode: Clone {
-    type Source: AstIdNode + Into<ast::ModuleItem>;
+    type Source: AstIdNode;
 
     /// Returns the AST id for this instance
     fn ast_id(&self) -> FileAstId<Self::Source>;
 
     /// Looks up an instance of `Self` in an item tree.
     fn lookup(tree: &ItemTree, index: Idx<Self>) -> &Self;
-
-    /// Downcasts a `ModItem` to a `FileItemTreeId` specific to this type
-    fn id_from_mod_item(mod_item: ModItem) -> Option<LocalItemTreeId<Self>>;
-
-    /// Upcasts a `FileItemTreeId` to a generic [`ModItem`].
-    fn id_to_mod_item(id: LocalItemTreeId<Self>) -> ModItem;
 }
 
 /// The typed Id of an item in an `ItemTree`
@@ -198,18 +194,6 @@ macro_rules! mod_items {
                 fn lookup(tree: &ItemTree, index: Idx<Self>) -> &Self {
                     &tree.data.$fld[index]
                 }
-
-                fn id_from_mod_item(mod_item: ModItem) -> Option<LocalItemTreeId<Self>> {
-                    if let ModItem::$typ(id) = mod_item {
-                        Some(id)
-                    } else {
-                        None
-                    }
-                }
-
-                fn id_to_mod_item(id: LocalItemTreeId<Self>) -> ModItem {
-                    ModItem::$typ(id)
-                }
             }
 
             impl Index<Idx<$typ>> for ItemTree {
@@ -225,6 +209,7 @@ macro_rules! mod_items {
 
 mod_items! {
     Function in functions -> ast::FunctionDef,
+    Enum in enums -> ast::EnumDef,
     Struct in structs -> ast::StructDef,
     TypeAlias in type_aliases -> ast::TypeAliasDef,
     Import in imports -> ast::Use,
@@ -245,7 +230,7 @@ macro_rules! impl_index {
     };
 }
 
-impl_index!(fields: Field, params: Param);
+impl_index!(fields: Field, variants: Variant, params: Param);
 
 static VIS_PUB: RawVisibility = RawVisibility::Public;
 static VIS_PRIV: RawVisibility = RawVisibility::This;
@@ -269,6 +254,18 @@ impl<N: ItemTreeNode> Index<LocalItemTreeId<N>> for ItemTree {
     type Output = N;
     fn index(&self, id: LocalItemTreeId<N>) -> &N {
         N::lookup(self, id.index)
+    }
+}
+
+impl ItemTreeNode for Variant {
+    type Source = ast::Variant;
+
+    fn ast_id(&self) -> FileAstId<Self::Source> {
+        self.ast_id
+    }
+
+    fn lookup(tree: &ItemTree, index: Idx<Self>) -> &Self {
+        &tree.data.variants[index]
     }
 }
 
@@ -348,6 +345,15 @@ pub enum ParamAstId {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Enum {
+    pub name: Name,
+    pub visibility: RawVisibilityId,
+    pub types: TypeRefMap,
+    pub variants: IdxRange<Variant>,
+    pub ast_id: FileAstId<ast::EnumDef>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Struct {
     pub name: Name,
     pub visibility: RawVisibilityId,
@@ -376,6 +382,13 @@ pub struct TypeAlias {
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum AssociatedItem {
     Function(LocalItemTreeId<Function>),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Variant {
+    pub name: Name,
+    pub fields: Fields,
+    pub ast_id: FileAstId<ast::Variant>,
 }
 
 impl From<LocalItemTreeId<Function>> for AssociatedItem {
@@ -501,6 +514,10 @@ mod diagnostics {
             ) -> InFile<SyntaxNodePtr> {
                 match item {
                     ModItem::Function(item) => InFile::new(
+                        item_tree.file_id,
+                        SyntaxNodePtr::new(item_tree.source(db, item).syntax()),
+                    ),
+                    ModItem::Enum(item) => InFile::new(
                         item_tree.file_id,
                         SyntaxNodePtr::new(item_tree.source(db, item).syntax()),
                     ),

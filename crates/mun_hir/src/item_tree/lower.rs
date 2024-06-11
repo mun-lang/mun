@@ -2,16 +2,16 @@
 
 use std::{collections::HashMap, convert::TryInto, marker::PhantomData, sync::Arc};
 
-use la_arena::{Idx, RawIdx};
+use la_arena::{Idx, IdxRange, RawIdx};
 use mun_syntax::ast::{
     self, ExternOwner, ModuleItemOwner, NameOwner, StructKind, TypeAscriptionOwner,
 };
 use smallvec::SmallVec;
 
 use super::{
-    diagnostics, AssociatedItem, Field, Fields, Function, FunctionFlags, IdRange, Impl, ItemTree,
-    ItemTreeData, ItemTreeNode, ItemVisibilities, LocalItemTreeId, ModItem, Param, ParamAstId,
-    RawVisibilityId, Struct, TypeAlias,
+    diagnostics, AssociatedItem, Enum, Field, Fields, Function, FunctionFlags, IdRange, Impl,
+    ItemTree, ItemTreeData, ItemTreeNode, ItemVisibilities, LocalItemTreeId, ModItem, Param,
+    ParamAstId, RawVisibilityId, Struct, TypeAlias, Variant,
 };
 use crate::{
     item_tree::Import,
@@ -73,6 +73,7 @@ impl Context {
         let mut set = HashMap::<Name, &ModItem>::new();
         for item in top_level.iter() {
             let name = match item {
+                ModItem::Enum(item) => Some(&self.data.enums[item.index].name),
                 ModItem::Function(item) => Some(&self.data.functions[item.index].name),
                 ModItem::Struct(item) => Some(&self.data.structs[item.index].name),
                 ModItem::TypeAlias(item) => Some(&self.data.type_aliases[item.index].name),
@@ -219,6 +220,60 @@ impl Context {
         Some(self.data.functions.alloc(res).into())
     }
 
+    /// Lowers an enum
+    fn lower_enum(&mut self, def: &ast::EnumDef) -> Option<LocalItemTreeId<Enum>> {
+        let name = def.name()?.as_name();
+        let visibility = lower_visibility(def);
+
+        let mut types = TypeRefMap::builder();
+        let variants = match &def.variant_list() {
+            Some(variant_list) => self.lower_variants(variant_list, &mut types),
+            None => IdxRange::new(self.next_variant_idx()..self.next_variant_idx()),
+        };
+
+        let ast_id = self.source_ast_id_map.ast_id(def);
+        let (types, _types_source_map) = types.finish();
+        let res = Enum {
+            name,
+            visibility,
+            types,
+            variants,
+            ast_id,
+        };
+
+        Some(self.data.enums.alloc(res).into())
+    }
+
+    fn lower_variants(
+        &mut self,
+        variants: &ast::VariantList,
+        types: &mut TypeRefMapBuilder,
+    ) -> IdxRange<Variant> {
+        let start = self.next_variant_idx();
+        for variant in variants.variants() {
+            if let Some(data) = self.lower_variant(&variant, types) {
+                let _idx = self.data.variants.alloc(data);
+            }
+        }
+        let end = self.next_variant_idx();
+        IdxRange::new(start..end)
+    }
+
+    fn lower_variant(
+        &mut self,
+        variant: &ast::Variant,
+        types: &mut TypeRefMapBuilder,
+    ) -> Option<Variant> {
+        let name = variant.name()?.as_name();
+        let fields = self.lower_fields(&variant.kind(), types);
+        let ast_id = self.source_ast_id_map.ast_id(variant);
+        Some(Variant {
+            name,
+            fields,
+            ast_id,
+        })
+    }
+
     /// Lowers a struct
     fn lower_struct(&mut self, strukt: &ast::StructDef) -> Option<LocalItemTreeId<Struct>> {
         let name = strukt.name()?.as_name();
@@ -349,6 +404,17 @@ impl Context {
     /// Returns the `Idx` of the next `Param`
     fn next_param_idx(&self) -> Idx<Param> {
         let idx: u32 = self.data.params.len().try_into().expect("too many params");
+        Idx::from_raw(RawIdx::from(idx))
+    }
+
+    /// Returns the `Idx` of the next `Variant`
+    fn next_variant_idx(&self) -> Idx<Variant> {
+        let idx: u32 = self
+            .data
+            .variants
+            .len()
+            .try_into()
+            .expect("too many variants");
         Idx::from_raw(RawIdx::from(idx))
     }
 }

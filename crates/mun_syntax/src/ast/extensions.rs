@@ -159,6 +159,12 @@ impl ast::MemoryTypeSpecifier {
     }
 }
 
+impl ast::Variant {
+    pub fn kind(&self) -> StructKind {
+        StructKind::from_node(self)
+    }
+}
+
 impl ast::StructDef {
     pub fn kind(&self) -> StructKind {
         StructKind::from_node(self)

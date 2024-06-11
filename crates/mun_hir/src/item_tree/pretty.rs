@@ -2,8 +2,8 @@ use std::{fmt, fmt::Write};
 
 use crate::{
     item_tree::{
-        Fields, Function, Impl, Import, ItemTree, LocalItemTreeId, ModItem, Param, RawVisibilityId,
-        Struct, TypeAlias,
+        Enum, Fields, Function, Impl, Import, ItemTree, LocalItemTreeId, ModItem, Param,
+        RawVisibilityId, Struct, TypeAlias,
     },
     path::ImportAlias,
     pretty::{print_path, print_type_ref},
@@ -65,6 +65,7 @@ impl Printer<'_> {
     /// Print a module item to the buffer.
     fn print_mod_item(&mut self, item: ModItem) -> fmt::Result {
         match item {
+            ModItem::Enum(it) => self.print_enum(it),
             ModItem::Function(it) => self.print_function(it),
             ModItem::Struct(it) => self.print_struct(it),
             ModItem::TypeAlias(it) => self.print_type_alias(it),
@@ -115,6 +116,32 @@ impl Printer<'_> {
         writeln!(self, ";")
     }
 
+    /// Prints an enum to the buffer.
+    fn print_enum(&mut self, it: LocalItemTreeId<Enum>) -> fmt::Result {
+        let Enum {
+            visibility,
+            name,
+            variants,
+            types,
+            ast_id: _,
+        } = &self.tree[it];
+        self.print_visibility(*visibility)?;
+        write!(self, "enum {name}")?;
+        self.whitespace()?;
+        write!(self, "{{")?;
+        self.indented(|this| {
+            for variant in variants.clone() {
+                let variant = &this.tree[variant];
+                write!(this, "{name}", name = variant.name)?;
+                this.print_fields(&variant.fields, types)?;
+                writeln!(this, ",")?;
+            }
+            Ok(())
+        })?;
+        write!(self, "}}")?;
+        writeln!(self)
+    }
+
     /// Prints a struct to the buffer.
     fn print_struct(&mut self, it: LocalItemTreeId<Struct>) -> fmt::Result {
         let Struct {
@@ -126,6 +153,15 @@ impl Printer<'_> {
         } = &self.tree[it];
         self.print_visibility(*visibility)?;
         write!(self, "struct {name}")?;
+        self.print_fields(fields, types)?;
+        if matches!(fields, Fields::Record(_)) {
+            writeln!(self)
+        } else {
+            writeln!(self, ";")
+        }
+    }
+
+    fn print_fields(&mut self, fields: &Fields, types: &TypeRefMap) -> fmt::Result {
         match fields {
             Fields::Record(fields) => {
                 self.whitespace()?;
@@ -154,12 +190,8 @@ impl Printer<'_> {
                 write!(self, ")")?;
             }
             Fields::Unit => {}
-        };
-        if matches!(fields, Fields::Record(_)) {
-            writeln!(self)
-        } else {
-            writeln!(self, ";")
         }
+        Ok(())
     }
 
     /// Prints a function to the buffer.
