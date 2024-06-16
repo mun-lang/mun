@@ -1,7 +1,7 @@
 use std::hash::{Hash, Hasher};
 
 use crate::{
-    item_tree::{Function, Impl, ItemTreeId, ItemTreeNode, Struct, TypeAlias},
+    item_tree::{Enum, Function, Impl, ItemTreeId, ItemTreeNode, Struct, TypeAlias, Variant},
     module_tree::LocalModuleId,
     primitive_type::PrimitiveType,
     DefDatabase, PackageId,
@@ -100,17 +100,46 @@ pub enum ItemContainerId {
     ModuleId(ModuleId),
     ImplId(ImplId),
 }
-impl From<ModuleId> for ItemContainerId {
-    fn from(value: ModuleId) -> Self {
-        ItemContainerId::ModuleId(value)
-    }
+
+impl_froms!(ModuleId, ImplId for ItemContainerId);
+
+/// A date type ID
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum AdtId {
+    EnumId(EnumId),
+    StructId(StructId),
 }
+
+impl_froms!(EnumId, StructId for AdtId);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct ImplId(salsa::InternId);
 
 pub(crate) type ImplLoc = ItemLoc<Impl>;
 impl_intern!(ImplId, ImplLoc, intern_impl, lookup_intern_impl);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
+pub struct EnumId(salsa::InternId);
+
+pub(crate) type EnumLoc = ItemLoc<Enum>;
+impl_intern!(EnumId, EnumLoc, intern_enum, lookup_intern_enum);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct EnumVariantId(salsa::InternId);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct EnumVariantLoc {
+    pub id: ItemTreeId<Variant>,
+    pub parent: EnumId,
+    pub index: u32,
+}
+
+impl_intern!(
+    EnumVariantId,
+    EnumVariantLoc,
+    intern_enum_variant,
+    lookup_intern_enum_variant
+);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct FunctionId(salsa::InternId);
@@ -154,40 +183,18 @@ pub trait Lookup {
 pub enum ItemDefinitionId {
     ModuleId(ModuleId),
     FunctionId(FunctionId),
-    StructId(StructId),
+    AdtId(AdtId),
     TypeAliasId(TypeAliasId),
     PrimitiveType(PrimitiveType),
 }
 
-impl From<ModuleId> for ItemDefinitionId {
-    fn from(id: ModuleId) -> Self {
-        ItemDefinitionId::ModuleId(id)
-    }
-}
-
-impl From<FunctionId> for ItemDefinitionId {
-    fn from(id: FunctionId) -> Self {
-        ItemDefinitionId::FunctionId(id)
-    }
-}
-
-impl From<StructId> for ItemDefinitionId {
-    fn from(id: StructId) -> Self {
-        ItemDefinitionId::StructId(id)
-    }
-}
-
-impl From<TypeAliasId> for ItemDefinitionId {
-    fn from(id: TypeAliasId) -> Self {
-        ItemDefinitionId::TypeAliasId(id)
-    }
-}
-
-impl From<PrimitiveType> for ItemDefinitionId {
-    fn from(id: PrimitiveType) -> Self {
-        ItemDefinitionId::PrimitiveType(id)
-    }
-}
+impl_froms!(
+    ModuleId,
+    FunctionId,
+    AdtId(EnumId, StructId),
+    TypeAliasId,
+    PrimitiveType for ItemDefinitionId
+);
 
 /// Items that are associated with an `impl`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -201,8 +208,4 @@ pub enum DefWithBodyId {
     FunctionId(FunctionId),
 }
 
-impl From<FunctionId> for DefWithBodyId {
-    fn from(id: FunctionId) -> Self {
-        DefWithBodyId::FunctionId(id)
-    }
-}
+impl_froms!(FunctionId for DefWithBodyId);

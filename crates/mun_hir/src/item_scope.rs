@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-    ids::{ImplId, ItemDefinitionId},
+    ids::{AdtId, ImplId, ItemDefinitionId},
     module_tree::LocalModuleId,
     primitive_type::PrimitiveType,
     visibility::Visibility,
@@ -227,7 +227,8 @@ impl PerNs<(ItemDefinitionId, Visibility)> {
     ) -> PerNs<(ItemDefinitionId, Visibility)> {
         match def {
             ItemDefinitionId::FunctionId(_) => PerNs::values((def, vis)),
-            ItemDefinitionId::StructId(_) => {
+            ItemDefinitionId::AdtId(AdtId::EnumId(_)) => PerNs::types((def, vis)),
+            ItemDefinitionId::AdtId(AdtId::StructId(_)) => {
                 if has_constructor {
                     PerNs::both((def, vis), (def, vis))
                 } else {

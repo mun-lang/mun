@@ -135,7 +135,7 @@ impl Ty {
 
         match type_ns {
             TypeNs::SelfType(id) => Some(db.type_for_impl_self(id)),
-            TypeNs::StructId(id) => type_for_def_fn(TypableDef::Struct(id.into())),
+            TypeNs::AdtId(id) => type_for_def_fn(TypableDef::Struct(id.into())),
             TypeNs::TypeAliasId(id) => type_for_def_fn(TypableDef::TypeAlias(id.into())),
             TypeNs::PrimitiveType(id) => type_for_def_fn(TypableDef::PrimitiveType(id)),
         }
@@ -211,7 +211,7 @@ pub enum CallableDef {
     Function(Function),
     Struct(Struct),
 }
-impl_froms!(CallableDef: Function, Struct);
+impl_froms!(Function, Struct for CallableDef);
 
 impl CallableDef {
     pub fn is_function(self) -> bool {

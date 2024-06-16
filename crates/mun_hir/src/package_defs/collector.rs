@@ -4,11 +4,12 @@ use rustc_hash::FxHashMap;
 use super::PackageDefs;
 use crate::{
     ids::{
-        FunctionLoc, ImplLoc, Intern, ItemContainerId, ItemDefinitionId, StructLoc, TypeAliasLoc,
+        EnumLoc, EnumVariantLoc, FunctionLoc, ImplLoc, Intern, ItemContainerId, ItemDefinitionId,
+        StructLoc, TypeAliasLoc,
     },
     item_scope::{ImportType, ItemScope, PerNsGlobImports},
     item_tree::{
-        self, Fields, Function, Impl, ItemTree, ItemTreeId, LocalItemTreeId, ModItem, Struct,
+        self, Enum, Fields, Function, Impl, ItemTree, ItemTreeId, LocalItemTreeId, ModItem, Struct,
         TypeAlias,
     },
     module_tree::LocalModuleId,
@@ -107,6 +108,7 @@ pub(super) fn collect(db: &dyn DefDatabase, package_id: PackageId) -> PackageDef
             id: package_id,
             modules: ArenaMap::default(),
             module_tree: db.module_tree(package_id),
+            enum_definitions: FxHashMap::default(),
             diagnostics: Vec::default(),
         },
         unresolved_imports: Vec::default(),
@@ -510,7 +512,7 @@ impl<'a> ModCollectorContext<'a, '_> {
                 visibility,
                 has_constructor,
             } = match item {
-                ModItem::Enum(id) => todo!("collect enum"),
+                ModItem::Enum(id) => self.collect_enum(id),
                 ModItem::Function(id) => self.collect_function(id),
                 ModItem::Struct(id) => self.collect_struct(id),
                 ModItem::TypeAlias(id) => self.collect_type_alias(id),
@@ -534,6 +536,49 @@ impl<'a> ModCollectorContext<'a, '_> {
                 name.clone(),
                 PerNs::from_definition(id, visibility, has_constructor),
             );
+        }
+    }
+
+    /// Collects the definition data from an `Enum`.
+    fn collect_enum(&mut self, id: LocalItemTreeId<Enum>) -> DefData<'a> {
+        let adt = &self.item_tree[id];
+
+        let enum_id = EnumLoc {
+            module: ModuleId {
+                package: self.def_collector.package_id,
+                local_id: self.module_id,
+            },
+            id: ItemTreeId::new(self.file_id, id),
+        }
+        .intern(self.def_collector.db);
+
+        let mut index = 0;
+        let variants = adt
+            .variants
+            .clone()
+            .map(|variant| {
+                let loc = EnumVariantLoc {
+                    id: ItemTreeId::new(self.file_id, variant.into()),
+                    parent: enum_id,
+                    index,
+                }
+                .intern(self.def_collector.db);
+
+                index += 1;
+                loc
+            })
+            .collect();
+
+        self.def_collector
+            .package_defs
+            .enum_definitions
+            .insert(enum_id, variants);
+
+        DefData {
+            id: enum_id.into(),
+            name: &adt.name,
+            visibility: &self.item_tree[adt.visibility],
+            has_constructor: false,
         }
     }
 

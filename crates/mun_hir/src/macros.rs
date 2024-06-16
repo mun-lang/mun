@@ -1,18 +1,35 @@
+/// Generates `From` impls for `Enum E { Foo(Foo), Bar(Bar) }` enums
+///
+/// # Example
+///
+/// ```rust
+/// impl_froms!(Struct, Union, Enum for Adt);
+/// ```
+#[macro_export]
 macro_rules! impl_froms {
-    ($e:ident: $($v:ident $(($($sv:ident),*))?),*) => {
+    ($($variant:ident $(($($sub_variant:ident),*))?),* for $enum:ident) => {
         $(
-            impl From<$v> for $e {
-                fn from(it: $v) -> $e {
-                    $e::$v(it)
+            impl From<$variant> for $enum {
+                fn from(it: $variant) -> $enum {
+                    $enum::$variant(it)
                 }
             }
             $($(
-                impl From<$sv> for $e {
-                    fn from(it: $sv) -> $e {
-                        $e::$v($v::$sv(it))
+                impl From<$sub_variant> for $enum {
+                    fn from(it: $sub_variant) -> $enum {
+                        $enum::$variant($variant::$sub_variant(it))
                     }
                 }
             )*)?
+        )*
+    };
+    ($($variant:ident$(<$V:ident>)?),* for $enum:ident) => {
+        $(
+            impl$(<$V>)? From<$variant$(<$V>)?> for $enum$(<$V>)? {
+                fn from(it: $variant$(<$V>)?) -> $enum$(<$V>)? {
+                    $enum::$variant(it)
+                }
+            }
         )*
     }
 }

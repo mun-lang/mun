@@ -5,8 +5,10 @@ mod tests;
 use std::{ops::Index, sync::Arc};
 
 use la_arena::ArenaMap;
+use rustc_hash::FxHashMap;
 
 use crate::{
+    ids::{EnumId, EnumVariantId},
     item_scope::ItemScope,
     module_tree::{LocalModuleId, ModuleTree},
     DefDatabase, DiagnosticSink, PackageId,
@@ -18,6 +20,7 @@ pub struct PackageDefs {
     pub id: PackageId,
     pub modules: ArenaMap<LocalModuleId, ItemScope>,
     pub module_tree: Arc<ModuleTree>,
+    pub(crate) enum_definitions: FxHashMap<EnumId, Box<[EnumVariantId]>>,
     diagnostics: Vec<diagnostics::DefDiagnostic>,
 }
 

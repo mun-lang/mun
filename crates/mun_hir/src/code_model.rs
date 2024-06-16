@@ -24,7 +24,7 @@ use crate::{expr::BodySourceMap, HirDatabase, Name};
 pub enum DefWithBody {
     Function(Function),
 }
-impl_froms!(DefWithBody: Function);
+impl_froms!(Function for DefWithBody);
 
 impl DefWithBody {
     pub fn module(self, db: &dyn HirDatabase) -> Module {
@@ -45,7 +45,7 @@ impl DefWithBody {
 pub enum DefWithStruct {
     Struct(Struct),
 }
-impl_froms!(DefWithStruct: Struct);
+impl_froms!(Struct for DefWithStruct);
 
 impl DefWithStruct {
     pub fn module(self, db: &dyn HirDatabase) -> Module {

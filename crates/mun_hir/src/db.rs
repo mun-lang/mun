@@ -80,6 +80,10 @@ pub trait AstDatabase: SourceDatabase {
 #[salsa::query_group(InternDatabaseStorage)]
 pub trait InternDatabase: SourceDatabase {
     #[salsa::interned]
+    fn intern_enum(&self, loc: ids::EnumLoc) -> ids::EnumId;
+    #[salsa::interned]
+    fn intern_enum_variant(&self, loc: ids::EnumVariantLoc) -> ids::EnumVariantId;
+    #[salsa::interned]
     fn intern_function(&self, loc: ids::FunctionLoc) -> ids::FunctionId;
     #[salsa::interned]
     fn intern_struct(&self, loc: ids::StructLoc) -> ids::StructId;

@@ -4,8 +4,8 @@ use crate::{
     expr::{scope::LocalScopeId, PatId},
     has_module::HasModule,
     ids::{
-        DefWithBodyId, FunctionId, ImplId, ItemContainerId, ItemDefinitionId, Lookup, ModuleId,
-        StructId, TypeAliasId,
+        AdtId, DefWithBodyId, FunctionId, ImplId, ItemContainerId, ItemDefinitionId, Lookup,
+        ModuleId, StructId, TypeAliasId,
     },
     item_scope::BUILTIN_SCOPE,
     module_tree::LocalModuleId,
@@ -61,7 +61,7 @@ pub enum ValueNs {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeNs {
     SelfType(ImplId),
-    StructId(StructId),
+    AdtId(AdtId),
     TypeAliasId(TypeAliasId),
     PrimitiveType(PrimitiveType),
 }
@@ -173,9 +173,10 @@ impl Resolver {
         ) -> Option<(ValueNs, Visibility)> {
             let (res, vis) = match per_ns.take_values()? {
                 (ItemDefinitionId::FunctionId(id), vis) => (ValueNs::FunctionId(id), vis),
-                (ItemDefinitionId::StructId(id), vis) => (ValueNs::StructId(id), vis),
+                (ItemDefinitionId::AdtId(AdtId::StructId(id)), vis) => (ValueNs::StructId(id), vis),
                 (
-                    ItemDefinitionId::ModuleId(_)
+                    ItemDefinitionId::AdtId(AdtId::EnumId(_))
+                    | ItemDefinitionId::ModuleId(_)
                     | ItemDefinitionId::TypeAliasId(_)
                     | ItemDefinitionId::PrimitiveType(_),
                     _,
@@ -231,7 +232,7 @@ impl Resolver {
                         }
                         Some(idx) => {
                             let ty = match module_def.take_types()? {
-                                (ItemDefinitionId::StructId(id), _) => TypeNs::StructId(id),
+                                (ItemDefinitionId::AdtId(id), _) => TypeNs::AdtId(id),
                                 (ItemDefinitionId::TypeAliasId(id), _) => TypeNs::TypeAliasId(id),
                                 (ItemDefinitionId::PrimitiveType(id), _) => {
                                     TypeNs::PrimitiveType(id)
@@ -275,7 +276,7 @@ impl Resolver {
             per_ns: PerNs<(ItemDefinitionId, Visibility)>,
         ) -> Option<(TypeNs, Visibility)> {
             let (res, vis) = match per_ns.take_types()? {
-                (ItemDefinitionId::StructId(id), vis) => (TypeNs::StructId(id), vis),
+                (ItemDefinitionId::AdtId(id), vis) => (TypeNs::AdtId(id), vis),
                 (ItemDefinitionId::TypeAliasId(id), vis) => (TypeNs::TypeAliasId(id), vis),
                 (ItemDefinitionId::PrimitiveType(id), vis) => (TypeNs::PrimitiveType(id), vis),
                 (ItemDefinitionId::ModuleId(_) | ItemDefinitionId::FunctionId(_), _) => {
