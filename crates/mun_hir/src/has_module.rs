@@ -1,6 +1,6 @@
 use crate::{
     ids::{
-        AssocItemId, AssocItemLoc, FunctionId, ImplId, ItemContainerId, Lookup, StructId,
+        AssocItemId, AssocItemLoc, EnumId, FunctionId, ImplId, ItemContainerId, Lookup, StructId,
         TypeAliasId,
     },
     item_tree::ItemTreeNode,
@@ -24,6 +24,12 @@ impl HasModule for ItemContainerId {
 impl<N: ItemTreeNode> HasModule for AssocItemLoc<N> {
     fn module(&self, db: &dyn DefDatabase) -> ModuleId {
         self.container.module(db)
+    }
+}
+
+impl HasModule for EnumId {
+    fn module(&self, db: &dyn DefDatabase) -> ModuleId {
+        self.lookup(db).module
     }
 }
 

@@ -1,3 +1,4 @@
+pub(crate) mod r#enum;
 mod function;
 mod r#impl;
 mod module;

@@ -7,10 +7,9 @@ use mun_syntax::{ast, Parse, SourceFile};
 use mun_target::{abi, spec::Target};
 
 use crate::{
-    code_model::{FunctionData, ImplData, StructData, TypeAliasData},
+    code_model::{r#enum::EnumData, FunctionData, ImplData, StructData, TypeAliasData},
     expr::BodySourceMap,
-    ids,
-    ids::{DefWithBodyId, FunctionId, ImplId},
+    ids::{self, DefWithBodyId, FunctionId, ImplId},
     input::{SourceRoot, SourceRootId},
     item_tree::{self, ItemTree},
     line_index::LineIndex,
@@ -99,6 +98,9 @@ pub trait DefDatabase: InternDatabase + AstDatabase + Upcast<dyn AstDatabase> {
     /// the top level declarations within a file.
     #[salsa::invoke(item_tree::ItemTree::item_tree_query)]
     fn item_tree(&self, file_id: FileId) -> Arc<ItemTree>;
+
+    #[salsa::invoke(EnumData::enum_data_query)]
+    fn enum_data(&self, id: ids::EnumId) -> Arc<EnumData>;
 
     #[salsa::invoke(StructData::struct_data_query)]
     fn struct_data(&self, id: ids::StructId) -> Arc<StructData>;

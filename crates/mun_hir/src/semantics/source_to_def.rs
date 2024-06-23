@@ -3,7 +3,9 @@ use rustc_hash::FxHashMap;
 
 use crate::{
     code_model::src::HasSource,
-    ids::{DefWithBodyId, FunctionId, ItemDefinitionId, Lookup, StructId, TypeAliasId},
+    ids::{
+        AdtId, DefWithBodyId, EnumId, FunctionId, ItemDefinitionId, Lookup, StructId, TypeAliasId,
+    },
     item_scope::ItemScope,
     DefDatabase, FileId, HirDatabase, InFile, ModuleId,
 };
@@ -127,13 +129,17 @@ impl SourceToDef for ItemScope {
     fn source_to_def_map(&self, db: &dyn HirDatabase) -> SourceToDefMap {
         fn add_module_def(db: &dyn DefDatabase, map: &mut SourceToDefMap, item: ItemDefinitionId) {
             match item {
+                ItemDefinitionId::AdtId(AdtId::EnumId(id)) => {
+                    let src = id.lookup(db).source(db);
+                    map.enums.insert(src, id);
+                }
+                ItemDefinitionId::AdtId(AdtId::StructId(id)) => {
+                    let src = id.lookup(db).source(db);
+                    map.structs.insert(src, id);
+                }
                 ItemDefinitionId::FunctionId(id) => {
                     let src = id.lookup(db).source(db);
                     map.functions.insert(src, id);
-                }
-                ItemDefinitionId::StructId(id) => {
-                    let src = id.lookup(db).source(db);
-                    map.structs.insert(src, id);
                 }
                 ItemDefinitionId::TypeAliasId(id) => {
                     let src = id.lookup(db).source(db);
@@ -154,6 +160,7 @@ impl SourceToDef for ItemScope {
 /// Holds conversion from source location to definitions in the HIR.
 #[derive(Default)]
 pub(crate) struct SourceToDefMap {
+    enums: FxHashMap<InFile<ast::EnumDef>, EnumId>,
     functions: FxHashMap<InFile<ast::FunctionDef>, FunctionId>,
     structs: FxHashMap<InFile<ast::StructDef>, StructId>,
     type_aliases: FxHashMap<InFile<ast::TypeAliasDef>, TypeAliasId>,
