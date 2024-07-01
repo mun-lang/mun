@@ -7,7 +7,9 @@ use mun_syntax::{ast, Parse, SourceFile};
 use mun_target::{abi, spec::Target};
 
 use crate::{
-    code_model::{r#enum::EnumData, FunctionData, ImplData, StructData, TypeAliasData},
+    code_model::{
+        r#enum::EnumData, EnumVariantData, FunctionData, ImplData, StructData, TypeAliasData,
+    },
     expr::BodySourceMap,
     ids::{self, DefWithBodyId, FunctionId, ImplId},
     input::{SourceRoot, SourceRootId},
@@ -101,6 +103,9 @@ pub trait DefDatabase: InternDatabase + AstDatabase + Upcast<dyn AstDatabase> {
 
     #[salsa::invoke(EnumData::enum_data_query)]
     fn enum_data(&self, id: ids::EnumId) -> Arc<EnumData>;
+
+    #[salsa::invoke(EnumVariantData::query)]
+    fn enum_variant_data(&self, id: ids::EnumVariantId) -> Arc<EnumVariantData>;
 
     #[salsa::invoke(StructData::struct_data_query)]
     fn struct_data(&self, id: ids::StructId) -> Arc<StructData>;

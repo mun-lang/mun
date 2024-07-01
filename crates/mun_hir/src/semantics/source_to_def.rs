@@ -32,6 +32,10 @@ impl SourceToDefContext<'_, '_> {
         {
             let res: SourceToDefContainer = match_ast! {
                 match (container.value) {
+                    ast::EnumDef(it) => {
+                        let def = self.enum_to_def(container.with_value(it))?;
+                        DefWithBodyId::from(def).into()
+                    },
                     ast::FunctionDef(it) => {
                         let def = self.fn_to_def(container.with_value(it))?;
                         DefWithBodyId::from(def).into()
@@ -44,6 +48,16 @@ impl SourceToDefContext<'_, '_> {
 
         let def = self.file_to_def(src.file_id)?;
         Some(def.into())
+    }
+
+    fn enum_to_def(&mut self, src: InFile<ast::EnumDef>) -> Option<EnumId> {
+        let container = self.find_container(src.as_ref().map(AstNode::syntax))?;
+        let db = self.db;
+        let def_map = &*self
+            .cache
+            .entry(container)
+            .or_insert_with(|| container.source_to_def_map(db));
+        def_map.enums.get(&src).copied()
     }
 
     /// Find the `FunctionId` associated with the specified syntax tree node.

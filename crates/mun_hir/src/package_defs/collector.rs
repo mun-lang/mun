@@ -552,6 +552,7 @@ impl<'a> ModCollectorContext<'a, '_> {
         }
         .intern(self.def_collector.db);
 
+        // TODO: Should I keep this here or use the one in `enum.rs:54`?
         let mut index = 0;
         let variants = adt
             .variants

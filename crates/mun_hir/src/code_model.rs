@@ -13,6 +13,7 @@ pub use self::{
     function::{Function, FunctionData},
     module::{Module, ModuleDef},
     package::Package,
+    r#enum::{Enum, EnumData, EnumVariantData},
     r#impl::{AssocItem, ImplData},
     r#struct::{Field, Struct, StructData, StructKind, StructMemoryKind},
     src::HasSource,

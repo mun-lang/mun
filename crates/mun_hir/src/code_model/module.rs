@@ -1,6 +1,6 @@
 use super::{r#impl::Impl, AssocItem, Enum, Function, Package, Struct, TypeAlias};
 use crate::{
-    ids::{self, AdtId, ItemDefinitionId, ModuleId},
+    ids::{AdtId, ItemDefinitionId, ModuleId},
     primitive_type::PrimitiveType,
     DiagnosticSink, FileId, HirDatabase, Name,
 };
@@ -163,10 +163,17 @@ impl Module {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ModuleDef {
     Module(Module),
+    Enum(Enum),
     Function(Function),
     PrimitiveType(PrimitiveType),
     Struct(Struct),
     TypeAlias(TypeAlias),
+}
+
+impl From<Enum> for ModuleDef {
+    fn from(value: Enum) -> Self {
+        ModuleDef::Enum(value)
+    }
 }
 
 impl From<Function> for ModuleDef {
@@ -202,7 +209,7 @@ impl From<Module> for ModuleDef {
 impl From<ItemDefinitionId> for ModuleDef {
     fn from(id: ItemDefinitionId) -> Self {
         match id {
-            ItemDefinitionId::AdtId(AdtId::EnumId(id)) => Enum { id }.into(),
+            ItemDefinitionId::AdtId(AdtId::EnumId(id)) => Enum::from(id).into(),
             ItemDefinitionId::AdtId(AdtId::StructId(id)) => Struct { id }.into(),
             ItemDefinitionId::ModuleId(id) => Module { id }.into(),
             ItemDefinitionId::FunctionId(id) => Function { id }.into(),
