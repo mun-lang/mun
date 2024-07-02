@@ -16,6 +16,7 @@ pub use resolve::ResolveBitness;
 use smallvec::SmallVec;
 
 use crate::{
+    code_model::Enum,
     display::{HirDisplay, HirFormatter},
     ty::{infer::InferTy, lower::fn_sig_for_struct_constructor},
     HasVisibility, HirDatabase, Struct, StructMemoryKind, TypeAlias, Visibility,
@@ -27,6 +28,9 @@ mod tests;
 /// A kind of type.
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub enum TyKind {
+    /// An enumeration type.
+    Enum(Enum),
+
     /// An abstract datatype (structures, tuples, or enumerations)
     /// TODO: Add enumerations
     Struct(Struct),
@@ -367,6 +371,7 @@ impl FnSig {
 impl HirDisplay for Ty {
     fn hir_fmt(&self, f: &mut HirFormatter<'_, '_>) -> fmt::Result {
         match self.interned() {
+            TyKind::Enum(e) => write!(f, "{}", e.name(f.db)),
             TyKind::Struct(s) => write!(f, "{}", s.name(f.db)),
             TyKind::Float(ty) => write!(f, "{ty}"),
             TyKind::Int(ty) => write!(f, "{ty}"),

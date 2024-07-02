@@ -192,6 +192,18 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
         }
     }
 
+    /// Collects unique `TypeInfo` from the specified enum type.
+    pub fn collect_enum(&mut self, hir_enum: mun_hir::Enum) {
+        let type_info = self.hir_types.type_id(&hir_enum.ty(self.db));
+        self.collect_type(type_info);
+
+        for variant in hir_enum.variants(self.db).into_iter() {
+            for field in variant.fields(self.db) {
+                self.collect_type(self.hir_types.type_id(&field.ty(self.db)));
+            }
+        }
+    }
+
     /// Collects unique `TypeInfo` from the specified function signature and
     /// body.
     pub fn collect_fn(&mut self, hir_fn: mun_hir::Function) {

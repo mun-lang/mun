@@ -61,7 +61,7 @@ pub enum ValueNs {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeNs {
     SelfType(ImplId),
-    AdtId(AdtId),
+    Adt(AdtId),
     TypeAliasId(TypeAliasId),
     PrimitiveType(PrimitiveType),
 }
@@ -232,7 +232,7 @@ impl Resolver {
                         }
                         Some(idx) => {
                             let ty = match module_def.take_types()? {
-                                (ItemDefinitionId::AdtId(id), _) => TypeNs::AdtId(id),
+                                (ItemDefinitionId::AdtId(id), _) => TypeNs::Adt(id),
                                 (ItemDefinitionId::TypeAliasId(id), _) => TypeNs::TypeAliasId(id),
                                 (ItemDefinitionId::PrimitiveType(id), _) => {
                                     TypeNs::PrimitiveType(id)
@@ -276,7 +276,7 @@ impl Resolver {
             per_ns: PerNs<(ItemDefinitionId, Visibility)>,
         ) -> Option<(TypeNs, Visibility)> {
             let (res, vis) = match per_ns.take_types()? {
-                (ItemDefinitionId::AdtId(id), vis) => (TypeNs::AdtId(id), vis),
+                (ItemDefinitionId::AdtId(id), vis) => (TypeNs::Adt(id), vis),
                 (ItemDefinitionId::TypeAliasId(id), vis) => (TypeNs::TypeAliasId(id), vis),
                 (ItemDefinitionId::PrimitiveType(id), vis) => (TypeNs::PrimitiveType(id), vis),
                 (ItemDefinitionId::ModuleId(_) | ItemDefinitionId::FunctionId(_), _) => {

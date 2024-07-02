@@ -57,7 +57,7 @@ impl<'a> Render<'a> {
         local_name: String,
         resolution: &ScopeDef,
     ) -> Option<CompletionItem> {
-        use mun_hir::ModuleDef::{Function, Module, PrimitiveType, Struct, TypeAlias};
+        use mun_hir::ModuleDef::{Enum, Function, Module, PrimitiveType, Struct, TypeAlias};
 
         let completion_kind = match resolution {
             ScopeDef::ModuleDef(PrimitiveType(..)) => CompletionKind::BuiltinType,
@@ -70,6 +70,7 @@ impl<'a> Render<'a> {
                 return render_fn(self.ctx, Some(local_name), *func)
             }
             ScopeDef::ModuleDef(PrimitiveType(_)) => CompletionItemKind::BuiltinType,
+            ScopeDef::ModuleDef(Enum(_)) => CompletionItemKind::SymbolKind(SymbolKind::Enum),
             ScopeDef::ModuleDef(Struct(_)) => CompletionItemKind::SymbolKind(SymbolKind::Struct),
             ScopeDef::ModuleDef(TypeAlias(_)) => {
                 CompletionItemKind::SymbolKind(SymbolKind::TypeAlias)

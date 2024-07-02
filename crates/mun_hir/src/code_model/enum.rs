@@ -5,13 +5,15 @@ use mun_syntax::ast::{self, NameOwner, TypeAscriptionOwner as _, VisibilityOwner
 
 use super::r#struct::FieldData;
 use crate::{
+    db,
     has_module::HasModule as _,
     ids::{EnumId, EnumVariantId, EnumVariantLoc, Intern as _, Lookup},
     item_tree::ItemTreeId,
     name::AsName,
+    name_resolution::Namespace,
     type_ref::{TypeRefMap, TypeRefSourceMap},
     visibility::RawVisibility,
-    DefDatabase, HirDatabase, Module, Name,
+    DefDatabase, Field, HirDatabase, Module, Name, Ty,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -27,11 +29,51 @@ impl Enum {
     pub fn name(self, db: &dyn HirDatabase) -> Name {
         db.enum_data(self.id).name.clone()
     }
+
+    pub fn variants(self, db: &dyn HirDatabase) -> Box<[Variant]> {
+        db.enum_data(self.id)
+            .variants
+            .iter()
+            .map(|&id| id.into())
+            .collect()
+    }
+
+    pub fn ty(self, db: &dyn HirDatabase) -> Ty {
+        db.type_for_def(self.into(), Namespace::Types)
+    }
 }
 
 impl From<EnumId> for Enum {
     fn from(id: EnumId) -> Self {
         Enum { id }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct Variant {
+    id: EnumVariantId,
+}
+
+impl Variant {
+    pub fn fields(self, db: &dyn HirDatabase) -> Box<[Field]> {
+        self.data(db)
+            .fields()
+            .iter()
+            .map(|(id, _)| Field {
+                parent: self.into(),
+                id,
+            })
+            .collect()
+    }
+
+    pub(crate) fn data(self, db: &dyn HirDatabase) -> Arc<EnumVariantData> {
+        db.enum_variant_data(self.id)
+    }
+}
+
+impl From<EnumVariantId> for Variant {
+    fn from(id: EnumVariantId) -> Self {
+        Variant { id }
     }
 }
 
@@ -48,7 +90,6 @@ impl EnumData {
         let item_tree = db.item_tree(loc.id.file_id);
 
         let item = &item_tree[loc.id.value];
-        let src = item_tree.source(db, loc.id.value);
 
         // TODO: Should I keep this here or use the one in `collector.rs:556`?
         let mut index = 0;
@@ -71,7 +112,7 @@ impl EnumData {
         Arc::new(EnumData {
             name: item.name.clone(),
             variants,
-            visibility: item_tree[item.visibility],
+            visibility: item_tree[item.visibility].clone(),
         })
     }
 }
@@ -129,11 +170,20 @@ impl EnumVariantData {
 
         let (type_ref_map, type_ref_source_map) = type_ref_builder.finish();
         Arc::new(EnumVariantData {
-            name: variant.name,
+            name: variant.name.clone(),
             data,
             type_ref_map,
             type_ref_source_map,
         })
+    }
+
+    pub fn fields(&self) -> &Arena<FieldData> {
+        const EMPTY: &Arena<FieldData> = &Arena::new();
+
+        match &self.data {
+            VariantData::Record(fields) | VariantData::Tuple(fields) => fields,
+            VariantData::Unit => EMPTY,
+        }
     }
 }
 

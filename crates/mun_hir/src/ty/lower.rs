@@ -6,9 +6,9 @@ use la_arena::ArenaMap;
 
 pub(crate) use self::diagnostics::LowerDiagnostic;
 use crate::{
-    code_model::StructKind,
+    code_model::{Enum, StructKind},
     diagnostics::DiagnosticSink,
-    ids::ImplId,
+    ids::{AdtId, ImplId},
     name_resolution::Namespace,
     primitive_type::PrimitiveType,
     resolve::{HasResolver, Resolver, TypeNs},
@@ -135,7 +135,8 @@ impl Ty {
 
         match type_ns {
             TypeNs::SelfType(id) => Some(db.type_for_impl_self(id)),
-            TypeNs::AdtId(id) => type_for_def_fn(TypableDef::Struct(id.into())),
+            TypeNs::Adt(AdtId::EnumId(id)) => type_for_def_fn(TypableDef::Enum(id.into())),
+            TypeNs::Adt(AdtId::StructId(id)) => type_for_def_fn(TypableDef::Struct(id.into())),
             TypeNs::TypeAliasId(id) => type_for_def_fn(TypableDef::TypeAlias(id.into())),
             TypeNs::PrimitiveType(id) => type_for_def_fn(TypableDef::PrimitiveType(id)),
         }
@@ -170,33 +171,19 @@ pub fn lower_type_alias_query(db: &dyn HirDatabase, t: TypeAlias) -> Arc<LowerTy
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum TypableDef {
+    Enum(Enum),
     Function(Function),
     PrimitiveType(PrimitiveType),
     Struct(Struct),
     TypeAlias(TypeAlias),
 }
 
-impl From<Function> for TypableDef {
-    fn from(f: Function) -> Self {
-        TypableDef::Function(f)
-    }
-}
-
-impl From<PrimitiveType> for TypableDef {
-    fn from(f: PrimitiveType) -> Self {
-        TypableDef::PrimitiveType(f)
-    }
-}
-
-impl From<Struct> for TypableDef {
-    fn from(f: Struct) -> Self {
-        TypableDef::Struct(f)
-    }
-}
+impl_froms!(Enum, Function, PrimitiveType, Struct, TypeAlias for TypableDef);
 
 impl From<ModuleDef> for Option<TypableDef> {
     fn from(d: ModuleDef) -> Self {
         match d {
+            ModuleDef::Enum(e) => Some(TypableDef::Enum(e)),
             ModuleDef::Function(f) => Some(TypableDef::Function(f)),
             ModuleDef::PrimitiveType(t) => Some(TypableDef::PrimitiveType(t)),
             ModuleDef::Struct(t) => Some(TypableDef::Struct(t)),
@@ -240,15 +227,17 @@ pub(crate) fn type_for_def(db: &dyn HirDatabase, def: TypableDef, ns: Namespace)
     match (def, ns) {
         (TypableDef::Function(f), Namespace::Values) => type_for_fn(db, f),
         (TypableDef::PrimitiveType(t), Namespace::Types) => type_for_primitive(t),
+        (TypableDef::Enum(e), Namespace::Types) => type_for_enum(db, e),
         (TypableDef::Struct(s), Namespace::Values) => type_for_struct_constructor(db, s),
         (TypableDef::Struct(s), Namespace::Types) => type_for_struct(db, s),
         (TypableDef::TypeAlias(t), Namespace::Types) => type_for_type_alias(db, t),
 
         // 'error' cases:
         (TypableDef::Function(_), Namespace::Types)
-        | (TypableDef::PrimitiveType(_) | TypableDef::TypeAlias(_), Namespace::Values) => {
-            TyKind::Unknown.intern()
-        }
+        | (
+            TypableDef::PrimitiveType(_) | TypableDef::Enum(_) | TypableDef::TypeAlias(_),
+            Namespace::Values,
+        ) => TyKind::Unknown.intern(),
     }
 }
 
@@ -303,6 +292,10 @@ pub(crate) fn fn_sig_for_struct_constructor(db: &dyn HirDatabase, def: Struct) -
         .collect::<Vec<_>>();
     let ret = type_for_struct(db, def);
     FnSig::from_params_and_return(params, ret)
+}
+
+fn type_for_enum(_db: &dyn HirDatabase, def: Enum) -> Ty {
+    TyKind::Enum(def).intern()
 }
 
 /// Build the type of a struct constructor.

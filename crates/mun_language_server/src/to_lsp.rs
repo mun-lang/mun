@@ -78,6 +78,7 @@ pub(crate) fn position(
 /// Converts a symbol kind from this crate to one for the LSP protocol.
 pub(crate) fn symbol_kind(symbol_kind: SymbolKind) -> lsp_types::SymbolKind {
     match symbol_kind {
+        SymbolKind::Enum => lsp_types::SymbolKind::ENUM,
         SymbolKind::Function => lsp_types::SymbolKind::FUNCTION,
         SymbolKind::Struct => lsp_types::SymbolKind::STRUCT,
         SymbolKind::TypeAlias | SymbolKind::SelfType => lsp_types::SymbolKind::TYPE_PARAMETER,
@@ -119,6 +120,7 @@ pub(crate) fn completion_item_kind(
         CompletionItemKind::Snippet => lsp_types::CompletionItemKind::SNIPPET,
         CompletionItemKind::UnresolvedReference => lsp_types::CompletionItemKind::REFERENCE,
         CompletionItemKind::SymbolKind(symbol) => match symbol {
+            SymbolKind::Enum => lsp_types::CompletionItemKind::ENUM,
             SymbolKind::Field => lsp_types::CompletionItemKind::FIELD,
             SymbolKind::Function => lsp_types::CompletionItemKind::FUNCTION,
             SymbolKind::Local => lsp_types::CompletionItemKind::VARIABLE,

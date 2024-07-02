@@ -7,6 +7,7 @@ use crate::{
     code_model::{Struct, StructKind},
     diagnostics::DiagnosticSink,
     expr::{Body, Expr, ExprId, Literal, Pat, PatId, RecordLitField, Statement, UnaryOp},
+    ids::AdtId,
     name_resolution::Namespace,
     resolve::{Resolver, TypeNs, ValueNs},
     ty::{
@@ -764,7 +765,7 @@ impl<'a> InferenceResultBuilder<'a> {
             // If no value was found, try to resolve the path as a type. This will always
             // result in an error but it does provide much better diagnostics.
             let ty = resolver.resolve_path_as_type_fully(self.db.upcast(), path);
-            if let Some((TypeNs::AdtId(struct_id), _)) = ty {
+            if let Some((TypeNs::Adt(AdtId::StructId(struct_id)), _)) = ty {
                 // We can only really get here if the struct is actually a record. Both other
                 // types can be seen as a values because they have a constructor.
                 debug_assert_eq!(

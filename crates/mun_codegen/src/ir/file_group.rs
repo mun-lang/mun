@@ -75,6 +75,7 @@ pub(crate) fn gen_file_group_ir<'ink>(
             }
             // TODO: Extern types for functions?
             ModuleDef::Module(_)
+            | ModuleDef::Enum(_)
             | ModuleDef::Struct(_)
             | ModuleDef::PrimitiveType(_)
             | ModuleDef::TypeAlias(_)

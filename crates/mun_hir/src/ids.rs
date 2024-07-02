@@ -103,7 +103,7 @@ pub enum ItemContainerId {
 
 impl_froms!(ModuleId, ImplId for ItemContainerId);
 
-/// A date type ID
+/// An abstract data type ID
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum AdtId {
     EnumId(EnumId),

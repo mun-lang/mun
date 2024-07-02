@@ -1,13 +1,13 @@
 use std::{fmt, iter::once, sync::Arc};
 
 pub use ast::StructMemoryKind;
-use la_arena::{Arena, Idx};
+use la_arena::Arena;
 use mun_syntax::{
     ast,
     ast::{NameOwner, TypeAscriptionOwner, VisibilityOwner},
 };
 
-use super::Module;
+use super::{field::Field, Module};
 use crate::{
     has_module::HasModule,
     ids::{Lookup, StructId},
@@ -30,38 +30,6 @@ pub struct Struct {
 impl From<StructId> for Struct {
     fn from(id: StructId) -> Self {
         Struct { id }
-    }
-}
-
-/// A field of a [`Struct`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Field {
-    pub(crate) parent: Struct,
-    pub(crate) id: LocalFieldId,
-}
-
-impl Field {
-    /// Returns the type of the field
-    pub fn ty(self, db: &dyn HirDatabase) -> Ty {
-        let data = self.parent.data(db.upcast());
-        let type_ref_id = data.fields[self.id].type_ref;
-        let lower = self.parent.lower(db);
-        lower[type_ref_id].clone()
-    }
-
-    /// Returns the name of the field
-    pub fn name(self, db: &dyn HirDatabase) -> Name {
-        self.parent.data(db.upcast()).fields[self.id].name.clone()
-    }
-
-    /// Returns the index of this field in the parent
-    pub fn index(self, _db: &dyn HirDatabase) -> u32 {
-        self.id.into_raw().into()
-    }
-
-    /// Returns the ID of the field with relation to the parent struct
-    pub(crate) fn id(self) -> LocalFieldId {
-        self.id
     }
 }
 
@@ -99,11 +67,14 @@ impl Struct {
         .collect()
     }
 
-    pub fn fields(self, db: &dyn HirDatabase) -> Vec<Field> {
+    pub fn fields(self, db: &dyn HirDatabase) -> Box<[Field]> {
         self.data(db.upcast())
             .fields
             .iter()
-            .map(|(id, _)| Field { parent: self, id })
+            .map(|(id, _)| Field {
+                parent: self.into(),
+                id,
+            })
             .collect()
     }
 
@@ -112,7 +83,10 @@ impl Struct {
             .fields
             .iter()
             .find(|(_, data)| data.name == *name)
-            .map(|(id, _)| Field { parent: self, id })
+            .map(|(id, _)| Field {
+                parent: self.into(),
+                id,
+            })
     }
 
     pub fn ty(self, db: &dyn HirDatabase) -> Ty {
@@ -168,9 +142,6 @@ impl fmt::Display for StructKind {
         }
     }
 }
-
-/// An identifier for a struct's or tuple's field
-pub type LocalFieldId = Idx<FieldData>;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct StructData {

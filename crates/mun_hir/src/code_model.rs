@@ -1,4 +1,5 @@
 pub(crate) mod r#enum;
+mod field;
 mod function;
 mod r#impl;
 mod module;
