@@ -7,6 +7,7 @@ use crate::{
     expr::{validator::ExprValidator, BodySourceMap},
     has_module::HasModule,
     ids::{FunctionId, Lookup},
+    item_tree::FunctionFlags,
     name_resolution::Namespace,
     resolve::HasResolver,
     type_ref::{LocalTypeRefId, TypeRefMap, TypeRefSourceMap},
@@ -34,7 +35,7 @@ pub struct FunctionData {
     ret_type: LocalTypeRefId,
     type_ref_map: TypeRefMap,
     type_ref_source_map: TypeRefSourceMap,
-    is_extern: bool,
+    flags: FunctionFlags,
 }
 
 impl FunctionData {
@@ -68,7 +69,7 @@ impl FunctionData {
             ret_type,
             type_ref_map,
             type_ref_source_map,
-            is_extern: func.is_extern,
+            flags: func.flags,
             visibility: item_tree[func.visibility].clone(),
         })
     }
@@ -99,7 +100,7 @@ impl FunctionData {
 
     /// Returns true if this function is an extern function.
     pub fn is_extern(&self) -> bool {
-        self.is_extern
+        self.flags.is_extern()
     }
 }
 
@@ -168,7 +169,7 @@ impl Function {
     }
 
     pub fn is_extern(self, db: &dyn HirDatabase) -> bool {
-        db.fn_data(self.id).is_extern
+        db.fn_data(self.id).flags.is_extern()
     }
 
     pub(crate) fn body_source_map(self, db: &dyn HirDatabase) -> Arc<BodySourceMap> {

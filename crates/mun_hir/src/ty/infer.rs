@@ -227,6 +227,11 @@ impl<'a> InferenceResultBuilder<'a> {
     /// method the `return_ty` will have a valid value, also all parameters
     /// are added inferred.
     fn infer_signature(&mut self) {
+        if let Some((self_pat, self_type_ref)) = self.body.self_param() {
+            let ty = self.resolve_type(*self_type_ref);
+            self.infer_pat(*self_pat, ty);
+        }
+
         // Iterate over all the parameters and associated types of the body and infer
         // the types of the parameters.
         for (pat, type_ref) in self.body.params().iter() {
@@ -242,7 +247,7 @@ impl<'a> InferenceResultBuilder<'a> {
     fn infer_pat(&mut self, pat: PatId, ty: Ty) {
         #[allow(clippy::single_match)]
         match &self.body[pat] {
-            Pat::Bind { .. } => {
+            Pat::Bind { name: _name } => {
                 self.set_pat_type(pat, ty);
             }
             _ => {}
@@ -734,6 +739,10 @@ impl<'a> InferenceResultBuilder<'a> {
 
             // Match based on what type of value we found
             match value {
+                ValueNs::ImplSelf(i) => {
+                    let ty = self.db.type_for_impl_self(i);
+                    Some(ty)
+                }
                 ValueNs::LocalBinding(pat) => Some(self.type_of_pat.get(pat)?.clone()),
                 ValueNs::FunctionId(f) => {
                     let ty = self
@@ -1171,9 +1180,10 @@ mod diagnostics {
                             ptr.value
                                 .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr())
                         }),
-                        ExprOrPatId::PatId(id) => {
-                            body.pat_syntax(*id).map(|ptr| ptr.value.syntax_node_ptr())
-                        }
+                        ExprOrPatId::PatId(id) => body.pat_syntax(*id).map(|ptr| {
+                            ptr.value
+                                .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr())
+                        }),
                     }
                     .unwrap();
 

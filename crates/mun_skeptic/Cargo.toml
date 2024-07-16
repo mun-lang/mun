@@ -1,24 +1,22 @@
 [package]
 name = "mun_skeptic"
-version = "0.6.0-dev"
-authors = ["The Mun Team <team@mun-lang.org>"]
-edition = "2021"
 description = "Provides the ability to test Mun code snippets in an mdbook"
-documentation = "https://docs.mun-lang.org/v0.4"
-readme = "README.md"
-homepage = "https://mun-lang.org"
-repository = "https://github.com/mun-lang/mun"
-license = "MIT OR Apache-2.0"
 keywords = ["game", "hot-reloading", "language", "mun", "mdbook"]
-categories = ["game-development", "mun"]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+categories.workspace = true
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+documentation.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [dependencies]
-bytecount = { version = "0.6.7", default-features = false }
-itertools = { version = "0.12.0", default-features = false }
-mdbook = { version = "0.4.36", default-features = false }
-pulldown-cmark = { version = "0.9.3", default-features = false }
+bytecount = { workspace = true }
+itertools = { workspace = true }
+mdbook = { workspace = true }
+pulldown-cmark = { workspace = true }
 mun_compiler = { version = "0.6.0-dev", path = "../mun_compiler" }
 mun_runtime = { version = "0.6.0-dev", path = "../mun_runtime" }
-tempdir = { version = "0.3.7", default-features = false }
+tempdir = { workspace = true }

@@ -84,6 +84,11 @@ impl Path {
         self.kind == PathKind::Plain && self.segments.len() == 1
     }
 
+    /// Whether the path is `self`.
+    pub fn is_self(&self) -> bool {
+        self.kind == PathKind::Super(0) && self.segments.is_empty()
+    }
+
     /// If this path represents a single identifier, like `foo`, return its
     /// name.
     pub fn as_ident(&self) -> Option<&Name> {
@@ -113,6 +118,11 @@ impl Path {
         if let Some(tree) = item_src.use_tree() {
             lower_use_tree(None, &tree, &mut cb);
         }
+    }
+
+    /// Returns the first segment of the path, if any.
+    pub fn first_segment(&self) -> Option<&Name> {
+        self.segments.first()
     }
 
     /// Returns the last segment of the path, if any.

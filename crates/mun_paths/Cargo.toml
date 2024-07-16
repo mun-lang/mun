@@ -1,16 +1,16 @@
 [package]
 name = "mun_paths"
-version = "0.6.0-dev"
-authors = ["The Mun Team <team@mun-lang.org>"]
-edition = "2021"
 description = "Provides convenience structures for handling relative- and absolute paths"
-documentation = "https://docs.mun-lang.org/v0.4"
-readme = "README.md"
-homepage = "https://mun-lang.org"
-repository = "https://github.com/mun-lang/mun"
-license = "MIT OR Apache-2.0"
 keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
-categories = ["game-development", "mun"]
+categories.workspace = true
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+documentation.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [dependencies]
-relative-path = { version = "1.9", default-features = false }
+relative-path = { workspace = true }

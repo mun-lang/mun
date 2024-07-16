@@ -35,8 +35,8 @@ impl Name {
     }
 
     /// Shortcut to create inline plain text name
-    const fn new_inline(text: &str) -> Name {
-        Name::new_text(SmolStr::new_inline(text))
+    const fn new_static(text: &'static str) -> Name {
+        Name::new_text(SmolStr::new_static(text))
     }
 
     /// Resolve a name from the text of token.
@@ -105,7 +105,7 @@ pub mod known {
             $(
                 #[allow(bad_style)]
                 pub const $ident: super::Name =
-                    super::Name::new_inline(stringify!($ident));
+                    super::Name::new_static(stringify!($ident));
             )*
         };
     }
@@ -116,8 +116,18 @@ pub mod known {
         bool,
     );
 
+    // self/Self cannot be used as an identifier
+    pub const SELF_PARAM: super::Name = super::Name::new_static("self");
+    pub const SELF_TYPE: super::Name = super::Name::new_static("Self");
+
     #[macro_export]
     macro_rules! name {
+        (self) => {
+            $crate::name::known::SELF_PARAM
+        };
+        (Self) => {
+            $crate::name::known::SELF_TYPE
+        };
         ($ident:ident) => {
             $crate::name::known::$ident
         };

@@ -167,21 +167,29 @@ impl Printer<'_> {
         let Function {
             name,
             visibility,
-            is_extern,
             types,
             params,
             ret_type,
             ast_id: _,
+            flags,
         } = &self.tree[it];
         self.print_visibility(*visibility)?;
-        if *is_extern {
+        if flags.is_extern() {
             write!(self, "extern ")?;
         }
         write!(self, "fn {name}")?;
         write!(self, "(")?;
         if !params.is_empty() {
             self.indented(|this| {
-                for param in params.clone() {
+                let mut params = params.clone();
+                if flags.has_self_param() {
+                    // Skip self parameter
+                    params.next();
+
+                    write!(this, "self")?;
+                }
+
+                for param in params {
                     let Param {
                         type_ref,
                         ast_id: _,

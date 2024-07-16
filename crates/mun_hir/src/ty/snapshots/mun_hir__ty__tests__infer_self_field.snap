@@ -1,0 +1,13 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "infer(r#\"\n    struct Foo {\n        a: i32\n    }\n\n    impl Foo {\n        fn self_a(self) -> i32 {\n            self.a\n        }\n\n        fn self_b(self) -> i32 {\n            self.b  // error: attempted to access a non-existent field in a struct.\n        }\n    }\n    \"#)"
+---
+126..132: attempted to access a non-existent field in a struct.
+52..56 'self': Foo
+65..87 '{     ...     }': i32
+75..79 'self': Foo
+75..81 'self.a': i32
+103..107 'self': Foo
+116..203 '{     ...     }': i32
+126..130 'self': Foo
+126..132 'self.b': {unknown}

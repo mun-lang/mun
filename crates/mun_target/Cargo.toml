@@ -1,19 +1,19 @@
 [package]
 name = "mun_target"
-version = "0.6.0-dev"
-authors = ["The Mun Team <team@mun-lang.org>"]
-edition = "2021"
 description = "Describes compilation targets for Mun"
-documentation = "https://docs.mun-lang.org/v0.4"
-readme = "README.md"
-homepage = "https://mun-lang.org"
-repository = "https://github.com/mun-lang/mun"
-license = "MIT OR Apache-2.0"
 keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
-categories = ["game-development", "mun"]
+categories.workspace = true
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+documentation.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [dependencies]
-log = { version = "0.4.20", default-features = false }
+log = { workspace = true }
 
 [dev-dependencies]
-insta = { version = "1.34.0", default-features = false }
+insta = { workspace = true }

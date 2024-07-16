@@ -80,9 +80,9 @@ pub(crate) fn symbol_kind(symbol_kind: SymbolKind) -> lsp_types::SymbolKind {
     match symbol_kind {
         SymbolKind::Function => lsp_types::SymbolKind::FUNCTION,
         SymbolKind::Struct => lsp_types::SymbolKind::STRUCT,
-        SymbolKind::TypeAlias => lsp_types::SymbolKind::TYPE_PARAMETER,
+        SymbolKind::TypeAlias | SymbolKind::SelfType => lsp_types::SymbolKind::TYPE_PARAMETER,
         SymbolKind::Field => lsp_types::SymbolKind::FIELD,
-        SymbolKind::Local => lsp_types::SymbolKind::VARIABLE,
+        SymbolKind::Local | SymbolKind::SelfParam => lsp_types::SymbolKind::VARIABLE,
         SymbolKind::Module => lsp_types::SymbolKind::MODULE,
     }
 }
@@ -123,6 +123,8 @@ pub(crate) fn completion_item_kind(
             SymbolKind::Function => lsp_types::CompletionItemKind::FUNCTION,
             SymbolKind::Local => lsp_types::CompletionItemKind::VARIABLE,
             SymbolKind::Module => lsp_types::CompletionItemKind::MODULE,
+            SymbolKind::SelfParam => lsp_types::CompletionItemKind::VALUE,
+            SymbolKind::SelfType => lsp_types::CompletionItemKind::TYPE_PARAMETER,
             SymbolKind::Struct | SymbolKind::TypeAlias => lsp_types::CompletionItemKind::STRUCT,
         },
         CompletionItemKind::Attribute => lsp_types::CompletionItemKind::ENUM_MEMBER,

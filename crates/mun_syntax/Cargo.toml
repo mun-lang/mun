@@ -1,26 +1,26 @@
 [package]
 name = "mun_syntax"
-version = "0.6.0-dev"
-authors = ["The Mun Team <team@mun-lang.org>"]
-edition = "2021"
 description = "Parsing functionality for the Mun programming language"
-documentation = "https://docs.mun-lang.org/v0.4"
-readme = "README.md"
-homepage = "https://mun-lang.org"
-repository = "https://github.com/mun-lang/mun"
-license = "MIT OR Apache-2.0"
 keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
-categories = ["game-development", "mun"]
+categories.workspace = true
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+documentation.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [dependencies]
 mun_abi = { version = "0.6.0-dev", path = "../mun_abi" }
-drop_bomb = { version = "0.1.5", default-features = false }
-itertools = { version = "0.12.0", default-features = false }
-ra_ap_text_edit = { version = "0.0.190", default-features = false }
-rowan = { version = "0.15.15", default-features = false }
-smol_str = { version = "0.2.0", default-features = false, features = ["serde", "std"] }
-text-size = { version = "1.1.1", default-features = false, features = ["serde"] }
-unicode-xid = { version = "0.2.4", default-features = false }
+drop_bomb = { workspace = true }
+itertools = { workspace = true }
+ra_ap_text_edit = { workspace = true }
+rowan = { workspace = true }
+smol_str = { workspace = true, features = ["serde", "std"] }
+text-size = { workspace = true, features = ["serde"] }
+unicode-xid = { workspace = true }
 
 [dev-dependencies]
-insta = { version = "1.34.0", default-features = false }
+insta = { workspace = true }

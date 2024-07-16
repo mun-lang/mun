@@ -206,6 +206,7 @@ Grammar(
         ),
         "RetType": (options: ["TypeRef"]),
         "ParamList": (
+            options: [ "SelfParam" ],
             collections: [
                 ["params", "Param"]
             ]

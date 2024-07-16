@@ -1,4 +1,4 @@
-use super::{Function, Package, Struct, TypeAlias};
+use super::{r#impl::Impl, AssocItem, Function, Package, Struct, TypeAlias};
 use crate::{
     ids::{ItemDefinitionId, ModuleId},
     primitive_type::PrimitiveType,
@@ -81,7 +81,7 @@ impl Module {
         let package_defs = db.package_defs(self.id.package);
         package_defs.add_diagnostics(db.upcast(), self.id.local_id, sink);
 
-        // Add diagnostics from impls
+        // Add diagnostics from inherent impls
         let inherent_impls = db.inherent_impls_in_package(self.id.package);
         inherent_impls.add_module_diagnostics(db, self.id.local_id, sink);
 
@@ -100,6 +100,15 @@ impl Module {
                 ModuleDef::Struct(s) => s.diagnostics(db, sink),
                 ModuleDef::TypeAlias(t) => t.diagnostics(db, sink),
                 _ => (),
+            }
+        }
+
+        // Add diagnostics from impls
+        for item in self.impls(db) {
+            for associated_item in item.items(db) {
+                let AssocItem::Function(fun) = associated_item;
+
+                fun.diagnostics(db, sink);
             }
         }
     }
@@ -140,6 +149,14 @@ impl Module {
             String::from("::"),
         )
         .collect()
+    }
+
+    pub fn impls(self, db: &dyn HirDatabase) -> Vec<Impl> {
+        let package_defs = db.package_defs(self.id.package);
+        package_defs.modules[self.id.local_id]
+            .impls()
+            .map(Impl::from)
+            .collect()
     }
 }
 

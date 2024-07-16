@@ -16,7 +16,7 @@ use crate::{
     diagnostics::DiagnosticSink,
     ids::{DefWithBodyId, Lookup},
     in_file::InFile,
-    name::AsName,
+    name::{name, AsName},
     primitive_type::{PrimitiveFloat, PrimitiveInt},
     type_ref::{LocalTypeRefId, TypeRef, TypeRefMap, TypeRefMapBuilder, TypeRefSourceMap},
     DefDatabase, FileId, HirDatabase, Name, Path,
@@ -46,6 +46,7 @@ pub struct Body {
     ///
     /// If this `Body` is for the body of a constant, this will just be empty.
     params: Vec<(PatId, LocalTypeRefId)>,
+    self_param: Option<(PatId, LocalTypeRefId)>,
     /// The `ExprId` of the actual body expression.
     body_expr: ExprId,
     ret_type: LocalTypeRefId,
@@ -80,6 +81,10 @@ impl Body {
 
     pub fn params(&self) -> &[(PatId, LocalTypeRefId)] {
         &self.params
+    }
+
+    pub fn self_param(&self) -> Option<&(PatId, LocalTypeRefId)> {
+        self.self_param.as_ref()
     }
 
     pub fn body_expr(&self) -> ExprId {
@@ -147,7 +152,7 @@ impl Index<LocalTypeRefId> for Body {
 type ExprPtr = Either<AstPtr<ast::Expr>, AstPtr<ast::RecordField>>;
 type ExprSource = InFile<ExprPtr>;
 
-type PatPtr = AstPtr<ast::Pat>; //Either<AstPtr<ast::Pat>, AstPtr<ast::SelfParam>>;
+type PatPtr = Either<AstPtr<ast::Pat>, AstPtr<ast::SelfParam>>;
 type PatSource = InFile<PatPtr>;
 
 type RecordPtr = AstPtr<ast::RecordField>;
@@ -189,7 +194,7 @@ impl BodySourceMap {
     }
 
     pub(crate) fn node_pat(&self, node: &ast::Pat) -> Option<PatId> {
-        self.pat_map.get(&AstPtr::new(node)).cloned()
+        self.pat_map.get(&Either::Left(AstPtr::new(node))).cloned()
     }
 
     pub fn type_refs(&self) -> &TypeRefSourceMap {
@@ -466,6 +471,7 @@ pub(crate) struct ExprCollector<'a> {
     pats: Arena<Pat>,
     source_map: BodySourceMap,
     params: Vec<(PatId, LocalTypeRefId)>,
+    self_param: Option<(PatId, LocalTypeRefId)>,
     body_expr: Option<ExprId>,
     ret_type: Option<LocalTypeRefId>,
     type_ref_builder: TypeRefMapBuilder,
@@ -482,6 +488,7 @@ impl<'a> ExprCollector<'a> {
             pats: Arena::default(),
             source_map: BodySourceMap::default(),
             params: Vec::new(),
+            self_param: None,
             body_expr: None,
             ret_type: None,
             type_ref_builder: TypeRefMap::builder(),
@@ -525,6 +532,16 @@ impl<'a> ExprCollector<'a> {
 
     fn collect_fn_body(&mut self, node: &ast::FunctionDef) {
         if let Some(param_list) = node.param_list() {
+            if let Some(self_param) = param_list.self_param() {
+                let self_pat = self.alloc_pat(
+                    Pat::Bind { name: name![self] },
+                    Either::Right(AstPtr::new(&self_param)),
+                );
+
+                let self_type = self.type_ref_builder.alloc_self();
+                self.self_param = Some((self_pat, self_type));
+            }
+
             for param in param_list.params() {
                 let pat = if let Some(pat) = param.pat() {
                     pat
@@ -895,7 +912,7 @@ impl<'a> ExprCollector<'a> {
             ast::PatKind::PlaceholderPat(_) => Pat::Wild,
         };
         let ptr = AstPtr::new(&pat);
-        self.alloc_pat(pattern, ptr)
+        self.alloc_pat(pattern, Either::Left(ptr))
     }
 
     fn collect_return(&mut self, expr: ast::ReturnExpr) -> ExprId {
@@ -930,6 +947,7 @@ impl<'a> ExprCollector<'a> {
             exprs: self.exprs,
             pats: self.pats,
             params: self.params,
+            self_param: self.self_param,
             body_expr: self.body_expr.expect("A body should have been collected"),
             type_refs,
             ret_type: self

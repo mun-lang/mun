@@ -1010,6 +1010,10 @@ impl ParamList {
     pub fn params(&self) -> impl Iterator<Item = Param> {
         super::children(self)
     }
+
+    pub fn self_param(&self) -> Option<SelfParam> {
+        super::child_opt(self)
+    }
 }
 
 // ParenExpr

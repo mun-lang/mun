@@ -50,6 +50,8 @@ impl CompletionItemKind {
                 SymbolKind::Function => "fn",
                 SymbolKind::Local => "lc",
                 SymbolKind::Module => "md",
+                SymbolKind::SelfParam => "sp",
+                SymbolKind::SelfType => "sy",
                 SymbolKind::Struct => "st",
                 SymbolKind::TypeAlias => "ta",
             },
