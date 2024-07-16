@@ -57,7 +57,7 @@ fn syntax_node_signature_range(
 ///     // ...
 /// }
 /// ```
-/// 
+///
 /// If the specified syntax node is not a function definition or structure
 /// definition, returns the range of the syntax node itself.
 fn syntax_node_identifier_range(

@@ -249,10 +249,7 @@ mod tests {
             line: 1,
             col_utf16: 1,
         });
-        assert_eq!(
-            index.text_part(1, 1, text, (end - start).into()),
-            Some("❤️")
-        );
+        assert_eq!(index.text_part(1, 1, text, (end - start).into()), Some("❤️"));
     }
 
     #[test]
