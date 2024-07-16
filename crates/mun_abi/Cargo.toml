@@ -1,20 +1,20 @@
 [package]
 name = "mun_abi"
-version = "0.6.0-dev"
-authors = ["The Mun Team <team@mun-lang.org>"]
-edition = "2021"
 description = "Rust wrapper for the Mun ABI"
-documentation = "https://docs.mun-lang.org/v0.4"
-readme = "README.md"
-homepage = "https://mun-lang.org"
-repository = "https://github.com/mun-lang/mun"
-license = "MIT OR Apache-2.0"
 keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
-categories = ["api-bindings", "game-development", "mun"]
+categories = ["api-bindings", "game-development"]
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+documentation.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [dependencies]
-once_cell = "1.19.0"
-itertools = { version = "0.12.0", default-features = false }
-parking_lot = { version = "0.12.1", default-features = false }
-extendhash = { version = "1.0.10", default-features = false }
-serde = { version = "1.0.193", default-features = false, optional = true }
+once_cell = { workspace = true, features = ["std", "critical-section"] }
+itertools = { workspace = true }
+parking_lot = { workspace = true }
+extendhash = { workspace = true }
+serde = { workspace = true, optional = true }

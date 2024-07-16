@@ -1,16 +1,16 @@
 [package]
 name = "mun_runtime"
-version = "0.6.0-dev"
-authors = ["The Mun Team <team@mun-lang.org>"]
-edition = "2021"
 description = "A runtime for hot reloading and invoking Mun from Rust"
-documentation = "https://docs.mun-lang.org/v0.4"
-readme = "README.md"
-homepage = "https://mun-lang.org"
-repository = "https://github.com/mun-lang/mun"
-license = "MIT OR Apache-2.0"
 keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
-categories = ["game-development", "mun"]
+categories.workspace = true
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+documentation.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [dependencies]
 mun_abi = { version = "0.6.0-dev", path = "../mun_abi" }
@@ -18,17 +18,17 @@ mun_libloader = { version = "0.6.0-dev", path = "../mun_libloader" }
 mun_capi_utils = { version = "0.6.0-dev", path = "../mun_capi_utils" }
 mun_memory = { version = "0.6.0-dev", path = "../mun_memory" }
 mun_project = { version = "0.6.0-dev", path = "../mun_project" }
-itertools = { version = "0.12.0", default-features = false, features = ["use_alloc"] }
-log = { version = "0.4", default-features = false }
-notify = "5.2.0"
-once_cell = { version = "1.19.0", default-features = false }
-parking_lot = { version = "0.12.1", default-features = false }
-rustc-hash = { version = "1.1", default-features = false }
-seq-macro = { version = "0.3.5", default-features = false }
-thiserror = { version = "1.0.51", default-features = false }
+itertools = { workspace = true, features = ["use_alloc"] }
+log = { workspace = true }
+notify = { workspace = true }
+once_cell = { workspace = true }
+parking_lot = { workspace = true }
+rustc-hash = { workspace = true }
+seq-macro = { workspace = true }
+thiserror = { workspace = true }
 
 [dev-dependencies]
 mun_compiler = { path = "../mun_compiler" }
 mun_test = { path = "../mun_test" }
-tempfile = { version = "3", default-features = false }
-termcolor = { version = "1.1", default-features = false }
+tempfile = { workspace = true }
+termcolor = { workspace = true }

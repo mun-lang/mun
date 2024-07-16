@@ -1,14 +1,14 @@
 [package]
 name = "tools"
 version = "0.3.0"
-authors = ["The Mun Team <team@mun-lang.org>"]
-edition = "2021"
+authors.workspace = true
+edition.workspace = true
 
 [dependencies]
-anyhow = "1.0.75"
-cbindgen = { version = "0.24.5", default-features = false }
-clap = { version="4.4.11", features = ["derive"] }
-difference = "2.0"
-heck = "0.4.1"
-ron = "0.8.1"
-tera = { version = "1.19.1", default-features = false }
+anyhow = { workspace = true }
+cbindgen = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+difference = { workspace = true }
+heck = { workspace = true }
+ron = { workspace = true }
+tera = { workspace = true }

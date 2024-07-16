@@ -1,34 +1,34 @@
 [package]
 name = "mun_hir"
-version = "0.6.0-dev"
-authors = ["The Mun Team <team@mun-lang.org>"]
-edition = "2021"
 description = "Provides high-level intermediate representation of Mun code"
-documentation = "https://docs.mun-lang.org/v0.4"
-readme = "README.md"
-homepage = "https://mun-lang.org"
-repository = "https://github.com/mun-lang/mun"
-license = "MIT OR Apache-2.0"
 keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
-categories = ["game-development", "mun"]
+categories.workspace = true
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+documentation.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [dependencies]
-la-arena = {  version = "0.3.1", default-features = false }
+la-arena = { workspace = true }
 mun_syntax = { version = "0.6.0-dev", path = "../mun_syntax" }
 mun_target = { version = "0.6.0-dev", path = "../mun_target" }
 mun_paths = { version = "0.6.0-dev", path="../mun_paths" }
-drop_bomb = { version = "0.1.5", default-features = false }
-either = { version = "1.9.0", default-features = false }
-ena = { version = "0.14", default-features = false }
-itertools = { version = "0.12.0", default-features = false }
-once_cell = { version = "1.19.0", default-features = false }
-rustc-hash = { version = "1.1", default-features = false }
-salsa = { version = "0.16.1", default-features = false }
-smallvec = { version = "1.11.2", features = ["union"], default-features = false }
-bitflags = { version = "2.5.0", default-features = false }
+drop_bomb = { workspace = true }
+either = { workspace = true }
+ena = { workspace = true }
+itertools = { workspace = true }
+once_cell = { workspace = true }
+rustc-hash = { workspace = true }
+salsa = { workspace = true }
+smallvec = { workspace = true, features = ["union"] }
+bitflags = { workspace = true }
 
 [dev-dependencies]
 mun_test = { path = "../mun_test" }
-insta = { version = "1.34.0", default-features = false }
-parking_lot = { version = "0.12.1", default-features = false }
-text_trees = { version = "0.1.2", default-features = false }
+insta = { workspace = true }
+parking_lot = { workspace = true }
+text_trees = { workspace = true }
