@@ -20,7 +20,7 @@ mun_memory = { version = "0.6.0-dev", path = "../mun_memory" }
 mun_project = { version = "0.6.0-dev", path = "../mun_project" }
 itertools = { workspace = true, features = ["use_alloc"] }
 log = { workspace = true }
-notify = { workspace = true, features = ["macos_kqueue"] }
+notify = { workspace = true, features = ["macos_kqueue", "macos_fsevent", "crossbeam-channel"] }
 once_cell = { workspace = true }
 parking_lot = { workspace = true }
 rustc-hash = { workspace = true }
