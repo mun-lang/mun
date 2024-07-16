@@ -13,7 +13,7 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
-once_cell = { workspace = true }
+once_cell = { workspace = true, features = ["std", "critical-section"] }
 itertools = { workspace = true }
 parking_lot = { workspace = true }
 extendhash = { workspace = true }
