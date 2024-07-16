@@ -16,6 +16,6 @@ license.workspace = true
 mun_paths = { version = "0.6.0-dev", path="../mun_paths" }
 crossbeam-channel = { workspace = true }
 log = { workspace = true }
-notify = { workspace = true, features = ["macos_kqueue", "macos_fsevent", "crossbeam-channel"] }
+notify = { workspace = true }
 rustc-hash = { workspace = true }
 walkdir = { workspace = true }

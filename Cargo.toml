@@ -80,7 +80,7 @@ toml = { version = "0.8.8", default-features = false }
 unicode-xid = { version = "0.2.4", default-features = false }
 walkdir = { version = "2.4.0", default-features = false }
 yansi-term = { version = "0.1.2", default-features = false }
-notify = { version = "5.2.0", default-features = false }
+notify = { version = "5.2.0" }
 winapi = { version = "0.3.9", default-features = false }
 
 [profile.dev]
