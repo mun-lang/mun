@@ -2,7 +2,8 @@
 
 use std::sync::Arc;
 
-use mun_paths::RelativePathBuf;
+use mun_db::Upcast;
+use mun_hir_input::{FileId, PackageId, SourceDatabase};
 use mun_syntax::{ast, Parse, SourceFile};
 use mun_target::{abi, spec::Target};
 
@@ -11,55 +12,13 @@ use crate::{
     expr::BodySourceMap,
     ids,
     ids::{DefWithBodyId, FunctionId, ImplId},
-    input::{SourceRoot, SourceRootId},
     item_tree::{self, ItemTree},
-    line_index::LineIndex,
     method_resolution::InherentImpls,
-    module_tree::ModuleTree,
     name_resolution::Namespace,
     package_defs::PackageDefs,
     ty::{lower::LowerTyMap, CallableDef, FnSig, InferenceResult, Ty, TypableDef},
-    visibility, AstIdMap, Body, ExprScopes, FileId, PackageId, PackageSet, Struct, TypeAlias,
-    Visibility,
+    visibility, AstIdMap, Body, ExprScopes, Struct, TypeAlias, Visibility,
 };
-
-// TODO(bas): In the future maybe move this to a seperate crate (mun_db?)
-pub trait Upcast<T: ?Sized> {
-    fn upcast(&self) -> &T;
-}
-
-/// Database which stores all significant input facts: source code and project
-/// model.
-#[salsa::query_group(SourceDatabaseStorage)]
-#[allow(clippy::trait_duplication_in_bounds)]
-pub trait SourceDatabase: salsa::Database {
-    /// Text of the file.
-    #[salsa::input]
-    fn file_text(&self, file_id: FileId) -> Arc<str>;
-
-    /// Source root of a file
-    #[salsa::input]
-    fn file_source_root(&self, file_id: FileId) -> SourceRootId;
-
-    /// Returns the relative path of a file
-    fn file_relative_path(&self, file_id: FileId) -> RelativePathBuf;
-
-    /// Contents of the source root
-    #[salsa::input]
-    fn source_root(&self, id: SourceRootId) -> Arc<SourceRoot>;
-
-    /// For a package, returns its hierarchy of modules.
-    #[salsa::invoke(ModuleTree::module_tree_query)]
-    fn module_tree(&self, package: PackageId) -> Arc<ModuleTree>;
-
-    /// Returns the line index of a file
-    #[salsa::invoke(line_index_query)]
-    fn line_index(&self, file_id: FileId) -> Arc<LineIndex>;
-
-    /// Returns the set of packages
-    #[salsa::input]
-    fn packages(&self) -> Arc<PackageSet>;
-}
 
 /// The `AstDatabase` provides queries that transform text from the
 /// `SourceDatabase` into an Abstract Syntax Tree (AST).
@@ -167,20 +126,9 @@ fn parse_query(db: &dyn AstDatabase, file_id: FileId) -> Parse<SourceFile> {
     SourceFile::parse(&text)
 }
 
-fn line_index_query(db: &dyn SourceDatabase, file_id: FileId) -> Arc<LineIndex> {
-    let text = db.file_text(file_id);
-    Arc::new(LineIndex::new(text.as_ref()))
-}
-
 fn target_data_layout(db: &dyn HirDatabase) -> Arc<abi::TargetDataLayout> {
     let target = db.target();
     let data_layout = abi::TargetDataLayout::parse(&target)
         .expect("unable to create TargetDataLayout from target");
     Arc::new(data_layout)
-}
-
-fn file_relative_path(db: &dyn SourceDatabase, file_id: FileId) -> RelativePathBuf {
-    let source_root_id = db.file_source_root(file_id);
-    let source_root = db.source_root(source_root_id);
-    source_root.relative_path(file_id).to_relative_path_buf()
 }

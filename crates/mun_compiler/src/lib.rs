@@ -14,7 +14,7 @@ use std::{
 
 pub use annotate_snippets::AnnotationType;
 pub use mun_codegen::OptimizationLevel;
-pub use mun_hir::FileId;
+pub use mun_hir_input::FileId;
 pub use mun_paths::{RelativePath, RelativePathBuf};
 use mun_project::Package;
 pub use mun_target::spec::Target;

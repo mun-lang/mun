@@ -1,5 +1,7 @@
+use mun_hir_input::{ModuleId, PackageId};
+
 use super::Module;
-use crate::{HirDatabase, ModuleId, PackageId};
+use crate::HirDatabase;
 
 /// A `Package` describes a single package.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

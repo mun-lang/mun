@@ -1,11 +1,13 @@
 use mun_codegen::{CodeGenDatabase, CodeGenDatabaseStorage};
-use mun_hir::{salsa, HirDatabase, Upcast};
+use mun_db::Upcast;
+use mun_hir::{salsa, HirDatabase};
+use mun_hir_input::SourceDatabase;
 
 use crate::Config;
 
 /// A compiler database is a salsa database that enables increment compilation.
 #[salsa::database(
-    mun_hir::SourceDatabaseStorage,
+    mun_hir_input::SourceDatabaseStorage,
     mun_hir::InternDatabaseStorage,
     mun_hir::AstDatabaseStorage,
     mun_hir::DefDatabaseStorage,
@@ -22,8 +24,8 @@ impl Upcast<dyn mun_hir::AstDatabase> for CompilerDatabase {
     }
 }
 
-impl Upcast<dyn mun_hir::SourceDatabase> for CompilerDatabase {
-    fn upcast(&self) -> &(dyn mun_hir::SourceDatabase + 'static) {
+impl Upcast<dyn SourceDatabase> for CompilerDatabase {
+    fn upcast(&self) -> &(dyn SourceDatabase + 'static) {
         self
     }
 }

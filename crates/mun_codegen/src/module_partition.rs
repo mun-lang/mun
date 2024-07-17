@@ -1,5 +1,6 @@
 use std::{ops::Index, sync::Arc};
 
+use mun_hir_input::FileId;
 use rustc_hash::FxHashMap;
 
 use crate::{CodeGenDatabase, ModuleGroup};
@@ -14,7 +15,7 @@ pub struct ModuleGroupId(usize);
 pub struct ModulePartition {
     groups: Vec<ModuleGroup>,
     module_to_group: FxHashMap<mun_hir::Module, ModuleGroupId>,
-    file_to_group: FxHashMap<mun_hir::FileId, ModuleGroupId>,
+    file_to_group: FxHashMap<FileId, ModuleGroupId>,
 }
 
 impl ModulePartition {
@@ -49,7 +50,7 @@ impl ModulePartition {
     }
 
     /// Returns the group to which the specified module belongs.
-    pub fn group_for_file(&self, file: mun_hir::FileId) -> Option<ModuleGroupId> {
+    pub fn group_for_file(&self, file: FileId) -> Option<ModuleGroupId> {
         self.file_to_group.get(&file).copied()
     }
 

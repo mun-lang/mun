@@ -1,6 +1,9 @@
 use std::fmt;
 
-use crate::{mock::MockDatabase, with_fixture::WithFixture, DefDatabase, DiagnosticSink, Upcast};
+use mun_db::Upcast;
+use mun_hir_input::WithFixture;
+
+use crate::{mock::MockDatabase, DefDatabase, DiagnosticSink};
 
 fn print_item_tree(text: &str) -> Result<String, fmt::Error> {
     let (db, file_id) = MockDatabase::with_single_file(text);

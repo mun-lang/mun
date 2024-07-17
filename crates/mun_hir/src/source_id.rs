@@ -5,9 +5,10 @@ use std::{
 };
 
 use la_arena::{Arena, Idx};
+use mun_hir_input::FileId;
 use mun_syntax::{ast, AstNode, AstPtr, SyntaxNode, SyntaxNodePtr, WalkEvent};
 
-use crate::{db::AstDatabase, in_file::InFile, FileId};
+use crate::{db::AstDatabase, in_file::InFile};
 
 type ErasedFileAstId = Idx<SyntaxNodePtr>;
 

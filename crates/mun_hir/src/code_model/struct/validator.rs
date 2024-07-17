@@ -1,7 +1,9 @@
+use mun_hir_input::FileId;
+
 use super::Struct;
 use crate::{
     diagnostics::ExportedPrivate, resolve::HasResolver, visibility::RawVisibility, DiagnosticSink,
-    FileId, HasVisibility, HirDatabase, Ty, Visibility,
+    HasVisibility, HirDatabase, Ty, Visibility,
 };
 
 #[cfg(test)]

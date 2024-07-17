@@ -2,7 +2,8 @@ use std::{collections::HashMap, sync::Arc};
 
 use annotate_snippets::{Annotation, AnnotationType, Renderer, Slice, Snippet, SourceAnnotation};
 use mun_diagnostics::DiagnosticForWith;
-use mun_hir::{line_index::LineIndex, FileId, HirDatabase};
+use mun_hir::HirDatabase;
+use mun_hir_input::{FileId, LineIndex};
 use mun_paths::RelativePathBuf;
 use mun_syntax::SyntaxError;
 

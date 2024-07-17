@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use mun_hir_input::FileId;
+
 use super::Module;
 use crate::{
     expr::validator::TypeAliasValidator,
@@ -9,7 +11,7 @@ use crate::{
     ty::lower::LowerTyMap,
     type_ref::{LocalTypeRefId, TypeRefMap, TypeRefSourceMap},
     visibility::RawVisibility,
-    DefDatabase, DiagnosticSink, FileId, HasVisibility, HirDatabase, Name, Ty, TyKind, Visibility,
+    DefDatabase, DiagnosticSink, HasVisibility, HirDatabase, Name, Ty, TyKind, Visibility,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

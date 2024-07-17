@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use mun_hir::{FileId, HirDatabase, SourceDatabase, SourceRoot, SourceRootId};
+use mun_hir::HirDatabase;
+use mun_hir_input::{FileId, PackageSet, SourceDatabase, SourceRoot, SourceRootId};
 use mun_paths::RelativePathBuf;
 use mun_target::spec::Target;
 use parking_lot::Mutex;
@@ -13,7 +14,7 @@ use crate::{
 /// A mock implementation of the IR database. It can be used to set up a simple
 /// test case.
 #[salsa::database(
-    mun_hir::SourceDatabaseStorage,
+    mun_hir_input::SourceDatabaseStorage,
     mun_hir::AstDatabaseStorage,
     mun_hir::InternDatabaseStorage,
     mun_hir::DefDatabaseStorage,
@@ -34,31 +35,31 @@ impl salsa::Database for MockDatabase {
     }
 }
 
-impl mun_hir::Upcast<dyn mun_hir::AstDatabase> for MockDatabase {
+impl mun_db::Upcast<dyn mun_hir::AstDatabase> for MockDatabase {
     fn upcast(&self) -> &(dyn mun_hir::AstDatabase + 'static) {
         self
     }
 }
 
-impl mun_hir::Upcast<dyn mun_hir::SourceDatabase> for MockDatabase {
-    fn upcast(&self) -> &(dyn mun_hir::SourceDatabase + 'static) {
+impl mun_db::Upcast<dyn SourceDatabase> for MockDatabase {
+    fn upcast(&self) -> &(dyn SourceDatabase + 'static) {
         self
     }
 }
 
-impl mun_hir::Upcast<dyn mun_hir::DefDatabase> for MockDatabase {
+impl mun_db::Upcast<dyn mun_hir::DefDatabase> for MockDatabase {
     fn upcast(&self) -> &(dyn mun_hir::DefDatabase + 'static) {
         self
     }
 }
 
-impl mun_hir::Upcast<dyn mun_hir::HirDatabase> for MockDatabase {
+impl mun_db::Upcast<dyn mun_hir::HirDatabase> for MockDatabase {
     fn upcast(&self) -> &(dyn mun_hir::HirDatabase + 'static) {
         self
     }
 }
 
-impl mun_hir::Upcast<dyn CodeGenDatabase> for MockDatabase {
+impl mun_db::Upcast<dyn CodeGenDatabase> for MockDatabase {
     fn upcast(&self) -> &(dyn CodeGenDatabase + 'static) {
         self
     }
@@ -93,7 +94,7 @@ impl MockDatabase {
 
         db.set_source_root(source_root_id, Arc::new(source_root));
 
-        let mut packages = mun_hir::PackageSet::default();
+        let mut packages = PackageSet::default();
         packages.add_package(source_root_id);
         db.set_packages(Arc::new(packages));
 

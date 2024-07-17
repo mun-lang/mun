@@ -1,11 +1,10 @@
 use std::iter::successors;
 
+use mun_hir_input::{ModuleId, PackageId, PackageModuleId};
+
 use crate::{
-    ids::{ItemDefinitionId, ModuleId},
-    item_scope::BUILTIN_SCOPE,
-    module_tree::LocalModuleId,
-    package_defs::PackageDefs,
-    DefDatabase, Name, PackageId, Path, PathKind, PerNs, Visibility,
+    ids::ItemDefinitionId, item_scope::BUILTIN_SCOPE, package_defs::PackageDefs, DefDatabase, Name,
+    Path, PathKind, PerNs, Visibility,
 };
 
 /// Indicates whether or not any newly resolved import statements will actually
@@ -56,7 +55,7 @@ impl PackageDefs {
     pub(crate) fn resolve_path_in_module(
         &self,
         db: &dyn DefDatabase,
-        module: LocalModuleId,
+        module: PackageModuleId,
         path: &Path,
     ) -> (PerNs<(ItemDefinitionId, Visibility)>, Option<usize>) {
         let res = self.resolve_path_with_fixedpoint(db, module, path);
@@ -67,7 +66,7 @@ impl PackageDefs {
     fn resolve_name_in_module(
         &self,
         _db: &dyn DefDatabase,
-        module: LocalModuleId,
+        module: PackageModuleId,
         name: &Name,
     ) -> PerNs<(ItemDefinitionId, Visibility)> {
         self[module]
@@ -82,7 +81,7 @@ impl PackageDefs {
     pub(crate) fn resolve_path_with_fixedpoint(
         &self,
         db: &dyn DefDatabase,
-        original_module: LocalModuleId,
+        original_module: PackageModuleId,
         path: &Path,
     ) -> ResolvePathResult {
         let mut segments = path.segments.iter().enumerate();

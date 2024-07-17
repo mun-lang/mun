@@ -1,4 +1,4 @@
-use mun_hir::line_index::LineIndex;
+use mun_hir_input::LineIndex;
 
 use crate::from_lsp;
 

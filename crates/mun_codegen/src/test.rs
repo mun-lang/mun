@@ -1,9 +1,9 @@
 use std::cell::RefCell;
 
 use inkwell::{context::Context, OptimizationLevel};
-use mun_hir::{
-    diagnostics::DiagnosticSink, with_fixture::WithFixture, HirDatabase, SourceDatabase, Upcast,
-};
+use mun_db::Upcast;
+use mun_hir::{diagnostics::DiagnosticSink, HirDatabase};
+use mun_hir_input::{SourceDatabase, WithFixture};
 use mun_target::spec::Target;
 
 use crate::{

@@ -11,10 +11,9 @@ pub(crate) fn make_mut_slice<T: Clone>(a: &mut Arc<[T]>) -> &mut [T] {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::{
-        diagnostics::DiagnosticSink, mock::MockDatabase, with_fixture::WithFixture, AstDatabase,
-        Package,
-    };
+    use mun_hir_input::WithFixture;
+
+    use crate::{diagnostics::DiagnosticSink, mock::MockDatabase, AstDatabase, Package};
 
     pub fn diagnostics(content: &str) -> String {
         let (db, _file_id) = MockDatabase::with_single_file(content);

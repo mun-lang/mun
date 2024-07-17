@@ -2,6 +2,7 @@ use std::convert::TryFrom;
 
 pub use config::{Config, FilesWatcher};
 pub use main_loop::main_loop;
+use mun_hir_input::FileId;
 use mun_paths::AbsPathBuf;
 use mun_project::ProjectManifest;
 use mun_syntax::{TextRange, TextSize};
@@ -31,14 +32,14 @@ mod to_lsp;
 /// Represents a position in a file
 #[derive(Clone, Copy, Debug)]
 pub struct FilePosition {
-    pub file_id: mun_hir::FileId,
+    pub file_id: FileId,
     pub offset: TextSize,
 }
 
 /// Represents a range of text in a file.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct FileRange {
-    pub file_id: mun_hir::FileId,
+    pub file_id: FileId,
     pub range: TextRange,
 }
 

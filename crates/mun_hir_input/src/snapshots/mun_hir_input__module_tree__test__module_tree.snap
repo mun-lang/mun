@@ -1,0 +1,97 @@
+---
+source: crates/mun_hir_input/src/module_tree.rs
+assertion_line: 233
+expression: module_tree
+---
+ModuleTree {
+    root: Idx::<ModuleData>(0),
+    modules: Arena {
+        len: 6,
+        data: [
+            ModuleData {
+                parent: None,
+                children: {
+                    "baz": Idx::<ModuleData>(1),
+                    "foo": Idx::<ModuleData>(3),
+                },
+                file: Some(
+                    FileId(
+                        0,
+                    ),
+                ),
+            },
+            ModuleData {
+                parent: Some(
+                    Idx::<ModuleData>(0),
+                ),
+                children: {
+                    "foo": Idx::<ModuleData>(2),
+                },
+                file: None,
+            },
+            ModuleData {
+                parent: Some(
+                    Idx::<ModuleData>(1),
+                ),
+                children: {},
+                file: Some(
+                    FileId(
+                        5,
+                    ),
+                ),
+            },
+            ModuleData {
+                parent: Some(
+                    Idx::<ModuleData>(0),
+                ),
+                children: {
+                    "bar": Idx::<ModuleData>(4),
+                    "baz": Idx::<ModuleData>(5),
+                },
+                file: Some(
+                    FileId(
+                        1,
+                    ),
+                ),
+            },
+            ModuleData {
+                parent: Some(
+                    Idx::<ModuleData>(3),
+                ),
+                children: {},
+                file: Some(
+                    FileId(
+                        3,
+                    ),
+                ),
+            },
+            ModuleData {
+                parent: Some(
+                    Idx::<ModuleData>(3),
+                ),
+                children: {},
+                file: Some(
+                    FileId(
+                        4,
+                    ),
+                ),
+            },
+        ],
+    },
+    package: PackageId(
+        0,
+    ),
+    diagnostics: [
+        DuplicateModuleFile(
+            Idx::<ModuleData>(3),
+            [
+                FileId(
+                    2,
+                ),
+                FileId(
+                    1,
+                ),
+            ],
+        ),
+    ],
+}

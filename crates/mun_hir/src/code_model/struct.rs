@@ -2,6 +2,7 @@ use std::{fmt, iter::once, sync::Arc};
 
 pub use ast::StructMemoryKind;
 use la_arena::{Arena, Idx};
+use mun_hir_input::FileId;
 use mun_syntax::{
     ast,
     ast::{NameOwner, TypeAscriptionOwner, VisibilityOwner},
@@ -17,7 +18,7 @@ use crate::{
     ty::lower::LowerTyMap,
     type_ref::{LocalTypeRefId, TypeRefMap, TypeRefSourceMap},
     visibility::RawVisibility,
-    DefDatabase, DiagnosticSink, FileId, HasVisibility, HirDatabase, Name, Ty, Visibility,
+    DefDatabase, DiagnosticSink, HasVisibility, HirDatabase, Name, Ty, Visibility,
 };
 
 pub(crate) mod validator;
@@ -92,8 +93,7 @@ impl Struct {
                 .path_to_root(db)
                 .into_iter()
                 .filter_map(|module| module.name(db))
-                .chain(once(self.name(db)))
-                .map(|name| name.to_string()),
+                .chain(once(self.name(db).to_string())),
             String::from("::"),
         )
         .collect()

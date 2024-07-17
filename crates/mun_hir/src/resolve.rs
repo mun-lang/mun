@@ -1,14 +1,15 @@
 use std::sync::Arc;
 
+use mun_hir_input::{ModuleId, PackageModuleId};
+
 use crate::{
     expr::{scope::LocalScopeId, PatId},
     has_module::HasModule,
     ids::{
-        DefWithBodyId, FunctionId, ImplId, ItemContainerId, ItemDefinitionId, Lookup, ModuleId,
-        StructId, TypeAliasId,
+        DefWithBodyId, FunctionId, ImplId, ItemContainerId, ItemDefinitionId, Lookup, StructId,
+        TypeAliasId,
     },
     item_scope::BUILTIN_SCOPE,
-    module_tree::LocalModuleId,
     name,
     package_defs::PackageDefs,
     primitive_type::PrimitiveType,
@@ -34,7 +35,7 @@ pub(crate) enum Scope {
 #[derive(Debug, Clone)]
 pub(crate) struct ModuleItemMap {
     package_defs: Arc<PackageDefs>,
-    module_id: LocalModuleId,
+    module_id: PackageModuleId,
 }
 
 #[derive(Debug, Clone)]
@@ -90,7 +91,7 @@ impl Resolver {
     pub(crate) fn push_module_scope(
         self,
         package_defs: Arc<PackageDefs>,
-        module_id: LocalModuleId,
+        module_id: PackageModuleId,
     ) -> Resolver {
         self.push_scope(Scope::Module(ModuleItemMap {
             package_defs,
@@ -138,7 +139,7 @@ impl Resolver {
     // }
 
     /// Returns the `Module` scope of the resolver
-    fn module_scope(&self) -> Option<(&PackageDefs, LocalModuleId)> {
+    fn module_scope(&self) -> Option<(&PackageDefs, PackageModuleId)> {
         self.scopes.iter().rev().find_map(|scope| {
             if let Scope::Module(m) = scope {
                 Some((&*m.package_defs, m.module_id))
@@ -155,9 +156,7 @@ impl Resolver {
         visibility: &RawVisibility,
     ) -> Option<Visibility> {
         self.module_scope().map(|(package_defs, module)| {
-            package_defs
-                .module_tree
-                .resolve_visibility(db, module, visibility)
+            Visibility::resolve(db, &package_defs.module_tree, module, visibility)
         })
     }
 

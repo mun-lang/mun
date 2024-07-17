@@ -1,13 +1,15 @@
 use mun_syntax::TextSize;
 use rustc_hash::FxHashMap;
 
+/// A [`LineIndex`] enables efficient mapping between offsets and line/column
+/// positions in a text.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LineIndex {
     /// Offsets from the beginning of each line
     newlines: Vec<TextSize>,
 
     /// List of non-ASCII characters on each line
-    pub(crate) utf16_lines: FxHashMap<u32, Vec<Utf16Char>>,
+    utf16_lines: FxHashMap<u32, Vec<Utf16Char>>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -20,7 +22,7 @@ pub struct LineCol {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub(crate) struct Utf16Char {
+struct Utf16Char {
     /// Start offset of a character inside a line, zero-based
     pub(crate) start: TextSize,
 
@@ -45,6 +47,7 @@ impl Utf16Char {
 }
 
 impl LineIndex {
+    /// Constructs a new [`LineIndex`] from the given text.
     pub fn new(text: &str) -> LineIndex {
         let mut utf16_lines = FxHashMap::default();
         let mut utf16_chars = Vec::new();

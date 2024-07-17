@@ -13,6 +13,7 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
+mun_hir_input = { version = "0.6.0-dev", path = "../mun_hir_input" }
 mun_compiler = { version = "0.6.0-dev", path = "../mun_compiler" }
 mun_runtime = { version = "0.6.0-dev", path = "../mun_runtime" }
 mun_hir = { version = "0.6.0-dev", path = "../mun_hir" }

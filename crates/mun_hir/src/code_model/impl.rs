@@ -1,11 +1,13 @@
 use std::sync::Arc;
 
+use mun_hir_input::FileId;
+
 use crate::{
     has_module::HasModule,
     ids::{AssocItemId, FunctionLoc, ImplId, Intern, ItemContainerId, Lookup},
     item_tree::{AssociatedItem, ItemTreeId},
     type_ref::{LocalTypeRefId, TypeRefMap, TypeRefMapBuilder, TypeRefSourceMap},
-    DefDatabase, FileId, Function, HirDatabase, ItemLoc, Module, Package, Ty,
+    DefDatabase, Function, HirDatabase, ItemLoc, Module, Package, Ty,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]

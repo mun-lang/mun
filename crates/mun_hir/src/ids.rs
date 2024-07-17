@@ -1,10 +1,11 @@
 use std::hash::{Hash, Hasher};
 
+use mun_hir_input::ModuleId;
+
 use crate::{
     item_tree::{Function, Impl, ItemTreeId, ItemTreeNode, Struct, TypeAlias},
-    module_tree::LocalModuleId,
     primitive_type::PrimitiveType,
-    DefDatabase, PackageId,
+    DefDatabase,
 };
 
 #[derive(Clone, Debug)]
@@ -84,13 +85,6 @@ macro_rules! impl_intern {
             }
         }
     };
-}
-
-/// Represents an id of a module inside a package.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
-pub struct ModuleId {
-    pub package: PackageId,
-    pub local_id: LocalModuleId,
 }
 
 /// Represents an id of an item inside a item container such as a module or a

@@ -1,9 +1,9 @@
+use mun_hir_input::WithFixture;
 use rustc_hash::FxHashSet;
 
 use crate::{
     db::DefDatabase, ids::ItemDefinitionId, mock::MockDatabase, package_defs::PackageDefs,
-    with_fixture::WithFixture, DiagnosticSink, Function, HirDatabase, Module, Package, Struct,
-    TypeAlias,
+    DiagnosticSink, Function, HirDatabase, Module, Package, Struct, TypeAlias,
 };
 
 #[test]

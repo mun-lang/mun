@@ -1,10 +1,12 @@
+use mun_hir_input::ModuleId;
+
 use crate::{
     ids::{
         AssocItemId, AssocItemLoc, FunctionId, ImplId, ItemContainerId, Lookup, StructId,
         TypeAliasId,
     },
     item_tree::ItemTreeNode,
-    DefDatabase, ModuleId,
+    DefDatabase,
 };
 
 /// A trait to lookup the module associated with an item.

@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
+use mun_hir_input::FileId;
 use mun_syntax::{ast, AstNode, SyntaxNode, TextRange, TextSize};
 
 use crate::{
     expr::{scope::LocalScopeId, BodySourceMap},
     ids::DefWithBodyId,
-    resolver_for_scope, Body, ExprId, ExprScopes, FileId, HirDatabase, InFile, InferenceResult,
-    Resolver, Ty,
+    resolver_for_scope, Body, ExprId, ExprScopes, HirDatabase, InFile, InferenceResult, Resolver,
+    Ty,
 };
 
 /// A `SourceAnalyzer` is a wrapper which exposes the HIR API in terms of the

@@ -5,18 +5,15 @@ mod tests;
 use std::{ops::Index, sync::Arc};
 
 use la_arena::ArenaMap;
+use mun_hir_input::{ModuleTree, PackageId, PackageModuleId};
 
-use crate::{
-    item_scope::ItemScope,
-    module_tree::{LocalModuleId, ModuleTree},
-    DefDatabase, DiagnosticSink, PackageId,
-};
+use crate::{item_scope::ItemScope, DefDatabase, DiagnosticSink};
 
 /// Contains all top-level definitions for a package.
 #[derive(Debug, PartialEq, Eq)]
 pub struct PackageDefs {
     pub id: PackageId,
-    pub modules: ArenaMap<LocalModuleId, ItemScope>,
+    pub modules: ArenaMap<PackageModuleId, ItemScope>,
     pub module_tree: Arc<ModuleTree>,
     diagnostics: Vec<diagnostics::DefDiagnostic>,
 }
@@ -35,7 +32,7 @@ impl PackageDefs {
     pub fn add_diagnostics(
         &self,
         db: &dyn DefDatabase,
-        module: LocalModuleId,
+        module: PackageModuleId,
         sink: &mut DiagnosticSink<'_>,
     ) {
         for diagnostic in self.diagnostics.iter() {
@@ -44,20 +41,20 @@ impl PackageDefs {
     }
 }
 
-impl Index<LocalModuleId> for PackageDefs {
+impl Index<PackageModuleId> for PackageDefs {
     type Output = ItemScope;
 
-    fn index(&self, index: LocalModuleId) -> &Self::Output {
+    fn index(&self, index: PackageModuleId) -> &Self::Output {
         &self.modules[index]
     }
 }
 
 mod diagnostics {
+    use mun_hir_input::PackageModuleId;
     use mun_syntax::{ast, ast::Use, AstPtr};
 
     use crate::{
         diagnostics::{ImportDuplicateDefinition, UnresolvedImport},
-        module_tree::LocalModuleId,
         source_id::AstId,
         AstDatabase, DefDatabase, DiagnosticSink, InFile, Path,
     };
@@ -75,7 +72,7 @@ mod diagnostics {
     #[derive(Debug, PartialEq, Eq)]
     pub(super) struct DefDiagnostic {
         /// The module that contains the diagnostic
-        in_module: LocalModuleId,
+        in_module: PackageModuleId,
 
         /// The type of diagnostic
         kind: DiagnosticKind,
@@ -85,7 +82,7 @@ mod diagnostics {
         /// Constructs a new `DefDiagnostic` which indicates that an import
         /// could not be resolved.
         pub(super) fn unresolved_import(
-            container: LocalModuleId,
+            container: PackageModuleId,
             ast: AstId<ast::Use>,
             index: usize,
         ) -> Self {
@@ -98,7 +95,7 @@ mod diagnostics {
         /// Constructs a new `DefDiagnostic` which indicates that an import
         /// names a duplication.
         pub(super) fn duplicate_import(
-            container: LocalModuleId,
+            container: PackageModuleId,
             ast: AstId<ast::Use>,
             index: usize,
         ) -> Self {
@@ -111,7 +108,7 @@ mod diagnostics {
         pub(super) fn add_to(
             &self,
             db: &dyn DefDatabase,
-            target_module: LocalModuleId,
+            target_module: PackageModuleId,
             sink: &mut DiagnosticSink<'_>,
         ) {
             fn use_tree_ptr_from_ast(

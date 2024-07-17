@@ -1,5 +1,6 @@
 use std::{iter::once, sync::Arc};
 
+use mun_hir_input::FileId;
 use mun_syntax::{ast, ast::TypeAscriptionOwner};
 
 use super::Module;
@@ -12,7 +13,7 @@ use crate::{
     resolve::HasResolver,
     type_ref::{LocalTypeRefId, TypeRefMap, TypeRefSourceMap},
     visibility::RawVisibility,
-    Body, DefDatabase, DiagnosticSink, FileId, HasSource, HasVisibility, HirDatabase, InFile,
+    Body, DefDatabase, DiagnosticSink, HasSource, HasVisibility, HirDatabase, InFile,
     InferenceResult, Name, Pat, Ty, Visibility,
 };
 
@@ -117,8 +118,7 @@ impl Function {
                 .path_to_root(db)
                 .into_iter()
                 .filter_map(|module| module.name(db))
-                .chain(once(self.name(db)))
-                .map(|name| name.to_string()),
+                .chain(once(self.name(db).to_string())),
             String::from("::"),
         )
         .collect()

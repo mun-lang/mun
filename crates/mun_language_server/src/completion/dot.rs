@@ -1,4 +1,4 @@
-use mun_hir::Upcast;
+use mun_db::Upcast;
 
 use super::{CompletionContext, Completions};
 

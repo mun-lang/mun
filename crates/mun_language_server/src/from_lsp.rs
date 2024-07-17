@@ -4,7 +4,7 @@
 use std::convert::TryFrom;
 
 use lsp_types::Url;
-use mun_hir::line_index::LineIndex;
+use mun_hir_input::{FileId, LineCol, LineIndex};
 use mun_paths::AbsPathBuf;
 use mun_syntax::{TextRange, TextSize};
 
@@ -23,20 +23,20 @@ pub(crate) fn abs_path(uri: &Url) -> anyhow::Result<AbsPathBuf> {
 pub(crate) fn file_id(
     snapshot: &LanguageServerSnapshot,
     url: &lsp_types::Url,
-) -> anyhow::Result<mun_hir::FileId> {
+) -> anyhow::Result<FileId> {
     abs_path(url).and_then(|path| {
         snapshot
             .vfs
             .read()
             .file_id(&path)
             .ok_or_else(|| anyhow::anyhow!("url does not refer to a file: {}", url))
-            .map(|id| mun_hir::FileId(id.0))
+            .map(|id| FileId(id.0))
     })
 }
 
 /// Converts the specified offset to our own `TextSize` structure
 pub(crate) fn offset(line_index: &LineIndex, position: lsp_types::Position) -> TextSize {
-    let line_col = mun_hir::line_index::LineCol {
+    let line_col = LineCol {
         line: position.line,
         col_utf16: position.character,
     };

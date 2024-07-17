@@ -3,6 +3,7 @@
 use std::{collections::HashMap, convert::TryInto, marker::PhantomData, sync::Arc};
 
 use la_arena::{Idx, RawIdx};
+use mun_hir_input::FileId;
 use mun_syntax::ast::{
     self, ExternOwner, ModuleItemOwner, NameOwner, StructKind, TypeAscriptionOwner,
 };
@@ -19,7 +20,7 @@ use crate::{
     source_id::AstIdMap,
     type_ref::{TypeRefMap, TypeRefMapBuilder},
     visibility::RawVisibility,
-    DefDatabase, FileId, Name, Path,
+    DefDatabase, Name, Path,
 };
 
 struct ModItems(SmallVec<[ModItem; 1]>);

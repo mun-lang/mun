@@ -1,11 +1,11 @@
 use std::collections::hash_map::Entry;
 
+use mun_hir_input::PackageModuleId;
 use once_cell::sync::Lazy;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
     ids::{ImplId, ItemDefinitionId},
-    module_tree::LocalModuleId,
     primitive_type::PrimitiveType,
     visibility::Visibility,
     Name, PerNs,
@@ -30,8 +30,8 @@ pub(crate) enum ImportType {
 /// ```
 #[derive(Debug, Default)]
 pub struct PerNsGlobImports {
-    types: FxHashSet<(LocalModuleId, Name)>,
-    values: FxHashSet<(LocalModuleId, Name)>,
+    types: FxHashSet<(PackageModuleId, Name)>,
+    values: FxHashSet<(PackageModuleId, Name)>,
 }
 
 /// Holds all items that are visible from an item as well as by which name and
@@ -133,7 +133,7 @@ impl ItemScope {
     pub(crate) fn add_resolution_from_import(
         &mut self,
         glob_imports: &mut PerNsGlobImports,
-        lookup: (LocalModuleId, Name),
+        lookup: (PackageModuleId, Name),
         def: PerNs<(ItemDefinitionId, Visibility)>,
         def_import_type: ImportType,
     ) -> AddResolutionFromImportResult {

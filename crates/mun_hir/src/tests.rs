@@ -1,11 +1,8 @@
 use std::sync::Arc;
 
-use crate::{
-    db::{DefDatabase, SourceDatabase},
-    mock::MockDatabase,
-    with_fixture::WithFixture,
-    PackageId,
-};
+use mun_hir_input::{PackageId, SourceDatabase, WithFixture};
+
+use crate::{db::DefDatabase, mock::MockDatabase};
 
 /// This function tests that the `ModuleData` of a module does not change if the
 /// contents of a function is changed.

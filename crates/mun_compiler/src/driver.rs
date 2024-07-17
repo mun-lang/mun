@@ -2,10 +2,8 @@
 //! compilation by retaining state from previous compilation.
 
 use mun_codegen::{AssemblyIr, CodeGenDatabase, ModuleGroup, TargetAssembly};
-use mun_hir::{
-    AstDatabase, DiagnosticSink, FileId, Module, PackageSet, SourceDatabase, SourceRoot,
-    SourceRootId, Upcast,
-};
+use mun_hir::{AstDatabase, DiagnosticSink, Module};
+use mun_hir_input::{FileId, PackageSet, SourceDatabase, SourceRoot, SourceRootId};
 use mun_paths::RelativePathBuf;
 
 use crate::{
@@ -25,6 +23,7 @@ use std::{
     time::Duration,
 };
 
+use mun_db::Upcast;
 use mun_project::{Package, LOCKFILE_NAME};
 use walkdir::WalkDir;
 

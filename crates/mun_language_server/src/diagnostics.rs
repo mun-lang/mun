@@ -1,7 +1,8 @@
 use std::cell::RefCell;
 
 use mun_diagnostics::DiagnosticForWith;
-use mun_hir::{AstDatabase, InFile, ModuleId, PackageId, SourceDatabase};
+use mun_hir::{AstDatabase, InFile, Module};
+use mun_hir_input::{FileId, ModuleId, PackageId, SourceDatabase};
 use mun_syntax::{Location, TextRange};
 
 use crate::db::AnalysisDatabase;
@@ -30,7 +31,7 @@ fn location_to_range(location: Location) -> TextRange {
 }
 
 /// Computes all the diagnostics for the specified file.
-pub(crate) fn diagnostics(db: &AnalysisDatabase, file_id: mun_hir::FileId) -> Vec<Diagnostic> {
+pub(crate) fn diagnostics(db: &AnalysisDatabase, file_id: FileId) -> Vec<Diagnostic> {
     let mut result = Vec::new();
 
     // Add all syntax errors
@@ -69,7 +70,7 @@ pub(crate) fn diagnostics(db: &AnalysisDatabase, file_id: mun_hir::FileId) -> Ve
             package: package_id,
             local_id,
         };
-        mun_hir::Module::from(module_id).diagnostics(db, &mut sink);
+        Module::from(module_id).diagnostics(db, &mut sink);
     }
     drop(sink);
 
