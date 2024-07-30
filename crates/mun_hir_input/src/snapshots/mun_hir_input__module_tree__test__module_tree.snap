@@ -1,8 +1,7 @@
 ---
-source: crates/mun_hir/src/module_tree.rs
-assertion_line: 255
+source: crates/mun_hir_input/src/module_tree.rs
+assertion_line: 233
 expression: module_tree
-
 ---
 ModuleTree {
     root: Idx::<ModuleData>(0),
@@ -12,16 +11,8 @@ ModuleTree {
             ModuleData {
                 parent: None,
                 children: {
-                    Name(
-                        Text(
-                            "baz",
-                        ),
-                    ): Idx::<ModuleData>(1),
-                    Name(
-                        Text(
-                            "foo",
-                        ),
-                    ): Idx::<ModuleData>(3),
+                    "baz": Idx::<ModuleData>(1),
+                    "foo": Idx::<ModuleData>(3),
                 },
                 file: Some(
                     FileId(
@@ -34,11 +25,7 @@ ModuleTree {
                     Idx::<ModuleData>(0),
                 ),
                 children: {
-                    Name(
-                        Text(
-                            "foo",
-                        ),
-                    ): Idx::<ModuleData>(2),
+                    "foo": Idx::<ModuleData>(2),
                 },
                 file: None,
             },
@@ -58,16 +45,8 @@ ModuleTree {
                     Idx::<ModuleData>(0),
                 ),
                 children: {
-                    Name(
-                        Text(
-                            "bar",
-                        ),
-                    ): Idx::<ModuleData>(4),
-                    Name(
-                        Text(
-                            "baz",
-                        ),
-                    ): Idx::<ModuleData>(5),
+                    "bar": Idx::<ModuleData>(4),
+                    "baz": Idx::<ModuleData>(5),
                 },
                 file: Some(
                     FileId(

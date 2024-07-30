@@ -1,10 +1,12 @@
 use std::fmt;
 
+use mun_hir_input::ModuleId;
+
 use crate::{
     code_model::AssocItem,
     db::HirDatabase,
     type_ref::{LocalTypeRefId, TypeRef, TypeRefMap},
-    Function, HasVisibility, ModuleId, Visibility,
+    Function, HasVisibility, Visibility,
 };
 
 pub struct HirFormatter<'a, 'b> {

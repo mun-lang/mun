@@ -7,6 +7,7 @@ use std::{
 };
 
 use mun_hir::{HasVisibility, HirDatabase};
+use mun_hir_input::FileId;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 /// A `ModuleGroup` describes a grouping of modules
@@ -118,10 +119,7 @@ impl ModuleGroup {
     }
 
     /// Returns the `mun_hir::FileId`s that are included in this module group.
-    pub fn files<'s>(
-        &'s self,
-        db: &'s dyn HirDatabase,
-    ) -> impl Iterator<Item = mun_hir::FileId> + 's {
+    pub fn files<'s>(&'s self, db: &'s dyn HirDatabase) -> impl Iterator<Item = FileId> + 's {
         self.ordered_modules
             .iter()
             .filter_map(move |module| module.file_id(db))

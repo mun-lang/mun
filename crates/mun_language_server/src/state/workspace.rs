@@ -3,6 +3,7 @@ use std::{
     sync::Arc,
 };
 
+use mun_hir_input::{FileId, PackageSet, SourceRoot, SourceRootId};
 use mun_paths::{AbsPathBuf, RelativePath};
 
 use super::LanguageServerState;
@@ -94,9 +95,9 @@ impl LanguageServerState {
         self.vfs_monitor.set_config(monitor_config);
 
         // Create the set of packages
-        let mut package_set = mun_hir::PackageSet::default();
+        let mut package_set = PackageSet::default();
         for (idx, _package) in packages.iter().enumerate() {
-            package_set.add_package(mun_hir::SourceRootId(idx as u32));
+            package_set.add_package(SourceRootId(idx as u32));
         }
         change.set_packages(package_set);
 
@@ -109,9 +110,9 @@ impl LanguageServerState {
     }
 
     /// Recomputes all the source roots based on the `packages`
-    pub(crate) fn recompute_source_roots(&self) -> Vec<mun_hir::SourceRoot> {
+    pub(crate) fn recompute_source_roots(&self) -> Vec<SourceRoot> {
         // Iterate over all sources and see to which package they belong
-        let mut source_roots = vec![mun_hir::SourceRoot::default(); self.packages.len()];
+        let mut source_roots = vec![SourceRoot::default(); self.packages.len()];
 
         // Source directories
         let source_dirs = self
@@ -138,7 +139,7 @@ impl LanguageServerState {
                             .map(|relative| (index, relative))
                     })
             {
-                source_roots[idx].insert_file(mun_hir::FileId(file_id.0), relative_path);
+                source_roots[idx].insert_file(FileId(file_id.0), relative_path);
             }
         }
 

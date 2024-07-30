@@ -1,8 +1,10 @@
 use std::{fmt::Write, sync::Arc};
 
+use mun_hir_input::WithFixture;
+
 use crate::{
     code_model::AssocItem, diagnostics::DiagnosticSink, expr::BodySourceMap, mock::MockDatabase,
-    with_fixture::WithFixture, HirDisplay, InferenceResult, ModuleDef, Package,
+    HirDisplay, InferenceResult, ModuleDef, Package,
 };
 
 #[test]

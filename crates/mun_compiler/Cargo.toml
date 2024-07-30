@@ -15,6 +15,8 @@ license.workspace = true
 [dependencies]
 mun_codegen = { version = "0.6.0-dev", path = "../mun_codegen" }
 mun_syntax = { version = "0.6.0-dev", path = "../mun_syntax" }
+mun_db = { version = "0.6.0-dev", path = "../mun_db" }
+mun_hir_input = { version = "0.6.0-dev", path = "../mun_hir_input" }
 mun_hir = { version = "0.6.0-dev", path = "../mun_hir" }
 mun_paths = { version = "0.6.0-dev", path = "../mun_paths" }
 mun_target = { version = "0.6.0-dev", path = "../mun_target" }

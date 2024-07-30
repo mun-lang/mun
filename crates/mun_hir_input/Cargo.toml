@@ -1,0 +1,23 @@
+[package]
+name = "mun_hir_input"
+description = "Database implementation for everything mun source related."
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+documentation.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+categories.workspace = true
+
+[dependencies]
+itertools = { workspace = true }
+mun_paths = { version = "0.6.0-dev", path = "../mun_paths" }
+mun_syntax = { version = "0.6.0-dev", path = "../mun_syntax" }
+rustc-hash = { workspace = true }
+la-arena = { workspace = true }
+salsa = { workspace = true }
+
+[dev-dependencies]
+insta = { workspace = true }

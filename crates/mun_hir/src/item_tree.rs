@@ -14,6 +14,7 @@ use std::{
 };
 
 use la_arena::{Arena, Idx};
+use mun_hir_input::FileId;
 use mun_syntax::ast;
 
 use crate::{
@@ -21,7 +22,7 @@ use crate::{
     source_id::{AstIdNode, FileAstId},
     type_ref::{LocalTypeRefId, TypeRefMap},
     visibility::RawVisibility,
-    DefDatabase, FileId, InFile, Name, Path,
+    DefDatabase, InFile, Name, Path,
 };
 
 #[derive(Copy, Clone, Eq, PartialEq)]

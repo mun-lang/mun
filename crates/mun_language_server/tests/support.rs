@@ -11,7 +11,7 @@ use lsp_types::{
     notification::Exit, request::Shutdown, ProgressParams, ProgressParamsValue, Url,
     WorkDoneProgress,
 };
-use mun_hir::fixture::Fixture;
+use mun_hir_input::Fixture;
 use mun_language_server::{main_loop, Config, FilesWatcher};
 use mun_paths::AbsPathBuf;
 use mun_project::ProjectManifest;

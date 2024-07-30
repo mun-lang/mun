@@ -1,13 +1,9 @@
 use std::iter::successors;
 
+use mun_hir_input::{ModuleId, ModuleTree, PackageModuleId};
 use mun_syntax::ast;
 
-use crate::{
-    ids::{FunctionId, ModuleId},
-    module_tree::{LocalModuleId, ModuleTree},
-    resolve::HasResolver,
-    DefDatabase, HirDatabase, Module, Resolver,
-};
+use crate::{ids::FunctionId, resolve::HasResolver, DefDatabase, HirDatabase, Module, Resolver};
 
 /// Visibility of an item, not yet resolved to an actual module.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -70,7 +66,7 @@ impl Visibility {
     pub(crate) fn is_visible_from_module_tree(
         self,
         module_tree: &ModuleTree,
-        from_module: LocalModuleId,
+        from_module: PackageModuleId,
     ) -> bool {
         let to_module = match self {
             Visibility::Module(m) => m,
@@ -101,6 +97,37 @@ impl Visibility {
         match self {
             Visibility::Module(_) => false,
             Visibility::Public => true,
+        }
+    }
+
+    /// Converts a `RawVisibility` which describes the visibility of an item
+    /// relative to a module into a `Visibility` which describes the
+    /// absolute visibility within the module tree.
+    pub(crate) fn resolve(
+        _db: &dyn DefDatabase,
+        module_tree: &ModuleTree,
+        original_module: PackageModuleId,
+        visibility: &RawVisibility,
+    ) -> Visibility {
+        match visibility {
+            RawVisibility::This => Visibility::Module(ModuleId {
+                package: module_tree.package,
+                local_id: original_module,
+            }),
+            RawVisibility::Super => {
+                let parent_module_id = module_tree[original_module]
+                    .parent
+                    .unwrap_or(original_module);
+                Visibility::Module(ModuleId {
+                    package: module_tree.package,
+                    local_id: parent_module_id,
+                })
+            }
+            RawVisibility::Package => Visibility::Module(ModuleId {
+                package: module_tree.package,
+                local_id: module_tree.root,
+            }),
+            RawVisibility::Public => Visibility::Public,
         }
     }
 }

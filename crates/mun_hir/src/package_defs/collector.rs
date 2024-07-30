@@ -1,4 +1,5 @@
 use la_arena::ArenaMap;
+use mun_hir_input::{FileId, ModuleId, PackageId, PackageModuleId};
 use rustc_hash::FxHashMap;
 
 use super::PackageDefs;
@@ -11,12 +12,11 @@ use crate::{
         self, Fields, Function, Impl, ItemTree, ItemTreeId, LocalItemTreeId, ModItem, Struct,
         TypeAlias,
     },
-    module_tree::LocalModuleId,
     name_resolution::ReachedFixedPoint,
     package_defs::diagnostics::DefDiagnostic,
     path::ImportAlias,
     visibility::RawVisibility,
-    DefDatabase, FileId, InFile, ModuleId, Name, PackageId, Path, PerNs, Visibility,
+    DefDatabase, InFile, Name, Path, PerNs, Visibility,
 };
 
 /// Result of resolving an import statement
@@ -90,7 +90,7 @@ impl Import {
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct ImportDirective {
     /// The module that defines the import statement
-    module_id: LocalModuleId,
+    module_id: PackageModuleId,
 
     /// Information about the import statement.
     import: Import,
@@ -127,8 +127,10 @@ struct DefCollector<'db> {
     resolved_imports: Vec<ImportDirective>,
 
     /// A mapping from local module to wildcard imports of other modules
-    glob_imports:
-        FxHashMap<LocalModuleId, Vec<(LocalModuleId, Visibility, ItemTreeId<item_tree::Import>)>>,
+    glob_imports: FxHashMap<
+        PackageModuleId,
+        Vec<(PackageModuleId, Visibility, ItemTreeId<item_tree::Import>)>,
+    >,
 
     /// A list of all items that have been imported via a wildcard
     from_glob_import: PerNsGlobImports,
@@ -142,8 +144,8 @@ impl<'db> DefCollector<'db> {
         /// `ItemScope`.
         fn collect_modules_recursive(
             collector: &mut DefCollector<'_>,
-            module_id: LocalModuleId,
-            parent: Option<(Name, LocalModuleId)>,
+            module_id: PackageModuleId,
+            parent: Option<(String, PackageModuleId)>,
         ) {
             // Insert an empty item scope for this module, this will be filled in.
             collector
@@ -169,7 +171,7 @@ impl<'db> DefCollector<'db> {
             // Insert this module into the scope of the parent
             if let Some((name, parent)) = parent {
                 collector.package_defs.modules[parent].add_resolution(
-                    name,
+                    Name::new(name),
                     PerNs::from_definition(
                         ModuleId {
                             package: collector.package_id,
@@ -247,7 +249,11 @@ impl<'db> DefCollector<'db> {
     }
 
     /// Given an import, try to resolve it.
-    fn resolve_import(&self, module_id: LocalModuleId, import: &Import) -> PartiallyResolvedImport {
+    fn resolve_import(
+        &self,
+        module_id: PackageModuleId,
+        import: &Import,
+    ) -> PartiallyResolvedImport {
         let res = self
             .package_defs
             .resolve_path_with_fixedpoint(self.db, module_id, &import.path);
@@ -280,8 +286,9 @@ impl<'db> DefCollector<'db> {
         let resolution = directive.status.namespaces();
 
         // Get the visibility of the import statement
-        let import_visibility = self.package_defs.module_tree.resolve_visibility(
+        let import_visibility = Visibility::resolve(
             self.db,
+            &self.package_defs.module_tree,
             import_module_id,
             &directive.import.visibility,
         );
@@ -360,7 +367,7 @@ impl<'db> DefCollector<'db> {
     /// Updates the current state with the resolutions of an import statement.
     fn update(
         &mut self,
-        import_module_id: LocalModuleId,
+        import_module_id: PackageModuleId,
         import_visibility: Visibility,
         import_type: ImportType,
         import_source: ItemTreeId<item_tree::Import>,
@@ -380,7 +387,7 @@ impl<'db> DefCollector<'db> {
     /// Also recursively updates any wildcard imports.
     fn update_recursive(
         &mut self,
-        import_module_id: LocalModuleId,
+        import_module_id: PackageModuleId,
         import_visibility: Visibility,
         import_type: ImportType,
         import_source: ItemTreeId<item_tree::Import>,
@@ -496,7 +503,7 @@ impl<'db> DefCollector<'db> {
 /// Collects all items from a module
 struct ModCollectorContext<'a, 'db> {
     def_collector: &'a mut DefCollector<'db>,
-    module_id: LocalModuleId,
+    module_id: PackageModuleId,
     file_id: FileId,
     item_tree: &'a ItemTree,
 }
@@ -524,11 +531,12 @@ impl<'a> ModCollectorContext<'a, '_> {
             };
 
             self.def_collector.package_defs.modules[self.module_id].add_definition(id);
-            let visibility = self
-                .def_collector
-                .package_defs
-                .module_tree
-                .resolve_visibility(self.def_collector.db, self.module_id, visibility);
+            let visibility = Visibility::resolve(
+                self.def_collector.db,
+                &self.def_collector.package_defs.module_tree,
+                self.module_id,
+                visibility,
+            );
             self.def_collector.package_defs.modules[self.module_id].add_resolution(
                 name.clone(),
                 PerNs::from_definition(id, visibility, has_constructor),

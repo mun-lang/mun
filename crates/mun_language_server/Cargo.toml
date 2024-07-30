@@ -13,6 +13,8 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
+mun_db = { version = "0.6.0-dev", path="../mun_db" }
+mun_hir_input = { version = "0.6.0-dev", path="../mun_hir_input" }
 mun_hir = { version = "0.6.0-dev", path="../mun_hir" }
 mun_vfs = { version = "0.6.0-dev", path = "../mun_vfs" }
 mun_project = { version = "0.6.0-dev", path = "../mun_project" }

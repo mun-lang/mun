@@ -14,6 +14,7 @@ mod source_to_def;
 
 use std::cell::RefCell;
 
+use mun_hir_input::FileId;
 use mun_syntax::{ast, AstNode, SyntaxNode, TextSize};
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
@@ -23,7 +24,7 @@ use crate::{
     resolve::{self, HasResolver},
     semantics::source_to_def::{SourceToDefCache, SourceToDefContainer, SourceToDefContext},
     source_analyzer::SourceAnalyzer,
-    FileId, HirDatabase, InFile, ModuleDef, Name, PatId, PerNs, Resolver, Ty, Visibility,
+    HirDatabase, InFile, ModuleDef, Name, PatId, PerNs, Resolver, Ty, Visibility,
 };
 
 /// The primary API to get semantic information, like types, from syntax trees.

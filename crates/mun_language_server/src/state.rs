@@ -6,6 +6,7 @@ use lsp_types::{
     notification::{Notification, PublishDiagnostics},
     PublishDiagnosticsParams,
 };
+use mun_hir_input::{FileId, PackageId, PackageSet};
 use mun_paths::AbsPathBuf;
 use mun_vfs::VirtualFileSystem;
 use parking_lot::RwLock;
@@ -113,7 +114,7 @@ impl LanguageServerState {
         // state
         let mut analysis = Analysis::default();
         let mut change = AnalysisChange::new();
-        change.set_packages(mun_hir::PackageSet::default());
+        change.set_packages(PackageSet::default());
         change.set_roots(Vec::default());
         analysis.apply_change(change);
 
@@ -247,7 +248,7 @@ impl LanguageServerState {
 fn handle_diagnostics(state: LanguageServerSnapshot, sender: Sender<Task>) -> anyhow::Result<()> {
     // Iterate over all files
     for (idx, _package) in state.packages.iter().enumerate() {
-        let package_id = mun_hir::PackageId(idx as u32);
+        let package_id = PackageId(idx as u32);
 
         // Get all the files
         let files = state.analysis.package_source_files(package_id)?;
@@ -356,7 +357,7 @@ impl LanguageServerState {
             let text = String::from_utf8(bytes).ok().map(Arc::from);
 
             // Notify the database about this change
-            analysis_change.change_file(mun_hir::FileId(file.file_id.0), text);
+            analysis_change.change_file(FileId(file.file_id.0), text);
         }
 
         // If an entry was created or deleted we have to recreate all source roots

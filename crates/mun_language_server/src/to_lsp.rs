@@ -4,6 +4,7 @@ use std::{
 };
 
 use lsp_types::Url;
+use mun_hir_input::{FileId, LineIndex};
 use mun_syntax::{TextRange, TextSize};
 
 use crate::{
@@ -54,20 +55,14 @@ fn url_from_path_with_drive_lowercasing(path: impl AsRef<Path>) -> anyhow::Resul
     }
 }
 
-pub(crate) fn range(
-    range: TextRange,
-    line_index: &mun_hir::line_index::LineIndex,
-) -> lsp_types::Range {
+pub(crate) fn range(range: TextRange, line_index: &LineIndex) -> lsp_types::Range {
     lsp_types::Range {
         start: position(range.start(), line_index),
         end: position(range.end(), line_index),
     }
 }
 
-pub(crate) fn position(
-    range: TextSize,
-    line_index: &mun_hir::line_index::LineIndex,
-) -> lsp_types::Position {
+pub(crate) fn position(range: TextSize, line_index: &LineIndex) -> lsp_types::Position {
     let line_col = line_index.line_col(range);
     lsp_types::Position {
         line: line_col.line,
@@ -88,10 +83,7 @@ pub(crate) fn symbol_kind(symbol_kind: SymbolKind) -> lsp_types::SymbolKind {
 }
 
 /// Returns the `Url` associated with the specified `FileId`.
-pub(crate) fn url(
-    snapshot: &LanguageServerSnapshot,
-    file_id: mun_hir::FileId,
-) -> anyhow::Result<Url> {
+pub(crate) fn url(snapshot: &LanguageServerSnapshot, file_id: FileId) -> anyhow::Result<Url> {
     let vfs = snapshot.vfs.read();
     let path = vfs.file_path(mun_vfs::FileId(file_id.0));
     let url = url_from_path_with_drive_lowercasing(path)?;

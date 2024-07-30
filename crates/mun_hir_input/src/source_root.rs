@@ -1,16 +1,10 @@
 use mun_paths::{RelativePath, RelativePathBuf};
 use rustc_hash::FxHashMap;
 
-/// `FileId` is an integer which uniquely identifies a file. File paths are
-/// messy and system-dependent, so most of the code should work directly with
-/// `FileId`, without inspecting the path. The mapping between `FileId` and path
-/// and `SourceRoot` is constant. A file rename is represented as a pair of
-/// deletion/creation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct FileId(pub u32);
+use crate::FileId;
 
-/// Files are grouped into source roots. A source root is a directory on the
-/// file systems which is watched for changes. Typically it corresponds to a
+/// Files are grouped into [`SourceRoot`]. A source root is a directory on the
+/// file systems which is watched for changes. Typically, it corresponds to a
 /// single library.
 ///
 /// Paths to files are always relative to a source root, the compiler does not
@@ -19,9 +13,8 @@ pub struct FileId(pub u32);
 ///
 /// Multiple source roots can be present if the language server is monitoring
 /// multiple directories.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct SourceRootId(pub u32);
-
+///
+/// [`SourceRoot`]s are identified by a unique [`SourceRootId`].
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct SourceRoot {
     files: FxHashMap<FileId, RelativePathBuf>,
@@ -42,3 +35,9 @@ impl SourceRoot {
         self.files.keys().copied()
     }
 }
+
+/// A unique identifier of a [`SourceRoot`].
+///
+/// When referring to a [`SourceRoot`] it is preferable to use this identifier.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct SourceRootId(pub u32);

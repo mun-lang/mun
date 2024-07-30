@@ -1,8 +1,9 @@
 use std::{any::Any, fmt};
 
+use mun_hir_input::FileId;
 use mun_syntax::{ast, AstPtr, SmolStr, SyntaxNode, SyntaxNodePtr, TextRange};
 
-use crate::{code_model::StructKind, in_file::InFile, FileId, HirDatabase, IntTy, Name, Ty};
+use crate::{code_model::StructKind, in_file::InFile, HirDatabase, IntTy, Name, Ty};
 
 /// Diagnostic defines `mun_hir` API for errors and warnings.
 ///

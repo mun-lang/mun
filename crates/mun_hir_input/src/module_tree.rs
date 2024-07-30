@@ -5,47 +5,45 @@ use la_arena::{Arena, Idx};
 use mun_paths::RelativePath;
 use rustc_hash::FxHashMap;
 
-use crate::{
-    ids::ModuleId, module_tree::diagnostics::ModuleTreeDiagnostic, visibility::RawVisibility,
-    DefDatabase, FileId, Name, PackageId, SourceDatabase, Visibility,
-};
+use self::diagnostics::ModuleTreeDiagnostic;
+use crate::{FileId, PackageId, SourceDatabase};
 
 /// Represents the tree of modules of a package.
 ///
-/// The `ModuleTree` is built by looking at all the source files of the source
+/// The [`ModuleTree`] is built by looking at all the source files of the source
 /// root of a package and creating a tree based on their relative paths. See the
-/// [`ModuleTree::module_tree_query`] method. When constructing the `ModuleTree`
-/// extra empty modules may be added for missing files. For instance for the
-/// relative path `foo/bar/baz.mun`, besides the module `foo::bar::baz` the
-/// modules `foo`, `foo::bar` get created along the way.
+/// [`ModuleTree::module_tree_query`] method. When constructing the
+/// [`ModuleTree`] extra empty modules may be added for missing files. For
+/// instance for the relative path `foo/bar/baz.mun`, besides the module
+/// `foo::bar::baz` the modules `foo`, `foo::bar` get created along the way.
 ///
-/// A `ModuleTree` represent the inner connections between files. It can be used
-/// to query the shortest path for use declarations
+/// A [`ModuleTree`] represent the inner connections between files. It can be
+/// used to query the shortest path for use declarations
 #[derive(Debug, PartialEq, Eq)]
 pub struct ModuleTree {
-    pub root: LocalModuleId,
+    pub root: PackageModuleId,
     pub modules: Arena<ModuleData>,
     pub package: PackageId,
 
-    pub diagnostics: Vec<diagnostics::ModuleTreeDiagnostic>,
+    pub diagnostics: Vec<ModuleTreeDiagnostic>,
 }
 
 /// A module in the tree of modules
 #[derive(Default, Debug, PartialEq, Eq)]
 pub struct ModuleData {
-    pub parent: Option<LocalModuleId>,
-    pub children: FxHashMap<Name, LocalModuleId>,
+    pub parent: Option<PackageModuleId>,
+    pub children: FxHashMap<String, PackageModuleId>,
     pub file: Option<FileId>,
 }
 
 /// The ID of a module within a specific package
-pub(crate) type LocalModuleId = Idx<ModuleData>;
+pub type PackageModuleId = Idx<ModuleData>;
 
 // Using a `LocalModuleId` you can access the `ModuleTree` to get the
 // `ModuleData`
-impl std::ops::Index<LocalModuleId> for ModuleTree {
+impl std::ops::Index<PackageModuleId> for ModuleTree {
     type Output = ModuleData;
-    fn index(&self, id: LocalModuleId) -> &ModuleData {
+    fn index(&self, id: PackageModuleId) -> &ModuleData {
         &self.modules[id]
     }
 }
@@ -76,10 +74,7 @@ impl ModuleTree {
             // Iterate over all segments of the relative path and construct modules on the
             // way
             let mut module_id = root;
-            for path_segment in path_to_module_path(relative_path)
-                .into_iter()
-                .map(Name::new)
-            {
+            for path_segment in path_to_module_path(relative_path) {
                 module_id = if let Some(id) = modules[module_id].children.get(&path_segment) {
                     *id
                 } else {
@@ -89,7 +84,7 @@ impl ModuleTree {
                         file: None,
                     });
 
-                    if !is_valid_module_name(path_segment.to_string()) {
+                    if !is_valid_module_name(&path_segment) {
                         diagnostics.push(ModuleTreeDiagnostic::InvalidModuleName(child_module_id));
                     }
 
@@ -118,37 +113,8 @@ impl ModuleTree {
         })
     }
 
-    /// Converts a `RawVisibility` which describes the visibility of an item
-    /// relative to a module into a `Visibility` which describes the
-    /// absolute visibility within the module tree.
-    pub(crate) fn resolve_visibility(
-        &self,
-        _db: &dyn DefDatabase,
-        original_module: LocalModuleId,
-        visibility: &RawVisibility,
-    ) -> Visibility {
-        match visibility {
-            RawVisibility::This => Visibility::Module(ModuleId {
-                package: self.package,
-                local_id: original_module,
-            }),
-            RawVisibility::Super => {
-                let parent_module_id = self[original_module].parent.unwrap_or(original_module);
-                Visibility::Module(ModuleId {
-                    package: self.package,
-                    local_id: parent_module_id,
-                })
-            }
-            RawVisibility::Package => Visibility::Module(ModuleId {
-                package: self.package,
-                local_id: self.root,
-            }),
-            RawVisibility::Public => Visibility::Public,
-        }
-    }
-
     /// Returns the module that is defined by the specified `file`
-    pub fn module_for_file(&self, file: FileId) -> Option<LocalModuleId> {
+    pub fn module_for_file(&self, file: FileId) -> Option<PackageModuleId> {
         self.modules.iter().find_map(|(idx, data)| {
             if data.file == Some(file) {
                 Some(idx)
@@ -191,20 +157,20 @@ fn is_valid_module_name(name: impl AsRef<str>) -> bool {
 }
 
 mod diagnostics {
-    use super::LocalModuleId;
+    use super::PackageModuleId;
     use crate::FileId;
 
     #[derive(Debug, PartialEq, Eq)]
     pub enum ModuleTreeDiagnostic {
-        DuplicateModuleFile(LocalModuleId, Vec<FileId>),
-        InvalidModuleName(LocalModuleId),
+        DuplicateModuleFile(PackageModuleId, Vec<FileId>),
+        InvalidModuleName(PackageModuleId),
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{mock::MockDatabase, with_fixture::WithFixture};
+    use crate::{SourceDatabaseStorage, WithFixture};
 
     #[test]
     fn valid_module_name() {
@@ -240,6 +206,16 @@ mod test {
             Vec::<String>::new()
         );
     }
+
+    /// A mock implementation of the IR database. It can be used to set up a
+    /// simple test case.
+    #[salsa::database(SourceDatabaseStorage)]
+    #[derive(Default)]
+    struct MockDatabase {
+        storage: salsa::Storage<Self>,
+    }
+
+    impl salsa::Database for MockDatabase {}
 
     #[test]
     fn module_tree() {

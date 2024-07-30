@@ -1,6 +1,10 @@
 use itertools::Itertools;
 use mun_paths::RelativePathBuf;
 
+mod with_fixture;
+
+pub use with_fixture::WithFixture;
+
 const DEFAULT_FILE_NAME: &str = "mod.mun";
 const META_LINE: &str = "//-";
 
@@ -116,7 +120,7 @@ impl Fixture {
 ///     // code
 /// }
 /// ```
-pub fn trim_raw_string_literal(text: impl AsRef<str>) -> String {
+fn trim_raw_string_literal(text: impl AsRef<str>) -> String {
     let mut text = text.as_ref();
     if text.starts_with('\n') {
         text = &text[1..];

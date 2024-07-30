@@ -2,6 +2,7 @@ use std::{borrow::Cow, ops::Index, str::FromStr, sync::Arc};
 
 use either::Either;
 use la_arena::{Arena, ArenaMap, Idx};
+use mun_hir_input::FileId;
 pub use mun_syntax::ast::PrefixOp as UnaryOp;
 use mun_syntax::{
     ast,
@@ -19,7 +20,7 @@ use crate::{
     name::{name, AsName},
     primitive_type::{PrimitiveFloat, PrimitiveInt},
     type_ref::{LocalTypeRefId, TypeRef, TypeRefMap, TypeRefMapBuilder, TypeRefSourceMap},
-    DefDatabase, FileId, HirDatabase, Name, Path,
+    DefDatabase, HirDatabase, Name, Path,
 };
 
 pub(crate) mod scope;

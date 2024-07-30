@@ -1,3 +1,4 @@
+use mun_hir_input::{FileId, ModuleId};
 use mun_syntax::{ast, match_ast, AstNode, SyntaxNode};
 use rustc_hash::FxHashMap;
 
@@ -5,7 +6,7 @@ use crate::{
     code_model::src::HasSource,
     ids::{DefWithBodyId, FunctionId, ItemDefinitionId, Lookup, StructId, TypeAliasId},
     item_scope::ItemScope,
-    DefDatabase, FileId, HirDatabase, InFile, ModuleId,
+    DefDatabase, HirDatabase, InFile,
 };
 
 pub(super) type SourceToDefCache = FxHashMap<SourceToDefContainer, SourceToDefMap>;

@@ -3,6 +3,7 @@
 use std::{ops::Index, sync::Arc};
 
 use la_arena::ArenaMap;
+use mun_hir_input::FileId;
 
 pub(crate) use self::diagnostics::LowerDiagnostic;
 use crate::{
@@ -14,7 +15,7 @@ use crate::{
     resolve::{HasResolver, Resolver, TypeNs},
     ty::{FnSig, Substitution, Ty, TyKind},
     type_ref::{LocalTypeRefId, TypeRef, TypeRefMap, TypeRefSourceMap},
-    FileId, Function, HasVisibility, HirDatabase, ModuleDef, Path, Struct, TypeAlias, Visibility,
+    Function, HasVisibility, HirDatabase, ModuleDef, Path, Struct, TypeAlias, Visibility,
 };
 
 /// A struct which holds resolved type references to `Ty`s.
@@ -330,10 +331,12 @@ pub(crate) fn lower_impl_query(db: &dyn HirDatabase, impl_id: ImplId) -> Arc<Low
 }
 
 pub mod diagnostics {
+    use mun_hir_input::FileId;
+
     use crate::{
         diagnostics::{DiagnosticSink, PrivateAccess, UnresolvedType},
         type_ref::{LocalTypeRefId, TypeRefSourceMap},
-        FileId, HirDatabase,
+        HirDatabase,
     };
 
     #[derive(Debug, PartialEq, Eq, Clone)]

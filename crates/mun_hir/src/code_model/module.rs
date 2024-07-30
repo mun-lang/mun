@@ -1,9 +1,7 @@
+use mun_hir_input::{FileId, ModuleId};
+
 use super::{r#impl::Impl, AssocItem, Function, Package, Struct, TypeAlias};
-use crate::{
-    ids::{ItemDefinitionId, ModuleId},
-    primitive_type::PrimitiveType,
-    DiagnosticSink, FileId, HirDatabase, Name,
-};
+use crate::{ids::ItemDefinitionId, primitive_type::PrimitiveType, DiagnosticSink, HirDatabase};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Module {
@@ -45,7 +43,7 @@ impl Module {
     }
 
     /// Returns the name of this module or None if this is the root module
-    pub fn name(self, db: &dyn HirDatabase) -> Option<Name> {
+    pub fn name(self, db: &dyn HirDatabase) -> Option<String> {
         let module_tree = db.module_tree(self.id.package);
         let parent = module_tree[self.id.local_id].parent?;
         module_tree[parent]
@@ -144,8 +142,7 @@ impl Module {
         itertools::Itertools::intersperse(
             self.path_to_root(db)
                 .iter()
-                .filter_map(|&module| module.name(db))
-                .map(|name| name.to_string()),
+                .filter_map(|&module| module.name(db)),
             String::from("::"),
         )
         .collect()

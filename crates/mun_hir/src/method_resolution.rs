@@ -4,6 +4,7 @@ use std::{
     sync::Arc,
 };
 
+use mun_hir_input::{ModuleId, PackageId, PackageModuleId};
 use mun_syntax::{AstNode, AstPtr, SyntaxNodePtr};
 use rustc_hash::FxHashMap;
 
@@ -12,10 +13,9 @@ use crate::{
     diagnostics::{DuplicateDefinition, ImplForForeignType, InvalidSelfTyImpl},
     has_module::HasModule,
     ids::{AssocItemId, FunctionId, ImplId, Lookup, StructId},
-    module_tree::LocalModuleId,
     package_defs::PackageDefs,
     ty::lower::LowerDiagnostic,
-    DefDatabase, DiagnosticSink, HasSource, InFile, ModuleId, Name, PackageId, Ty, TyKind,
+    DefDatabase, DiagnosticSink, HasSource, InFile, Name, Ty, TyKind,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -141,7 +141,7 @@ impl InherentImpls {
     pub(crate) fn add_module_diagnostics(
         &self,
         db: &dyn HirDatabase,
-        module_id: LocalModuleId,
+        module_id: PackageModuleId,
         sink: &mut DiagnosticSink<'_>,
     ) {
         self.diagnostics
@@ -393,13 +393,14 @@ pub(crate) fn lookup_method(
 
 #[cfg(test)]
 mod tests {
+    use mun_hir_input::{SourceDatabase, WithFixture};
+
     use crate::{
         code_model::AssocItem,
         display::HirDisplay,
         method_resolution::{lookup_method, MethodResolutionCtx},
         mock::MockDatabase,
-        with_fixture::WithFixture,
-        DiagnosticSink, HirDatabase, Module, ModuleDef, Name, Package, SourceDatabase, Ty,
+        DiagnosticSink, HirDatabase, Module, ModuleDef, Name, Package, Ty,
     };
 
     #[test]

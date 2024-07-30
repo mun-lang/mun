@@ -5,6 +5,7 @@ use std::{
 };
 
 use mun_compiler::{Config, DisplayColor, Driver, PathOrInline, RelativePathBuf};
+use mun_hir_input::Fixture;
 use mun_runtime::{InitError, Runtime, RuntimeBuilder};
 
 /// Implements a compiler that generates and temporarily stores a `*.munlib`
@@ -35,7 +36,7 @@ impl CompileTestDriver {
 
         // Write the contents of the fixture to a temporary directory
         let temp_source_dir = tempfile::TempDir::new().unwrap();
-        for entry in mun_hir::fixture::Fixture::parse(text) {
+        for entry in Fixture::parse(text) {
             let path = entry.relative_path.to_path(temp_source_dir.path());
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
             std::fs::write(&path, entry.text).unwrap();

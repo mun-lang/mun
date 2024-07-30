@@ -2,7 +2,8 @@
 
 use std::panic;
 
-use mun_hir::{HirDatabase, Upcast};
+use mun_db::Upcast;
+use mun_hir::HirDatabase;
 use mun_target::spec::Target;
 use salsa::{Database, Durability, Snapshot};
 
@@ -21,7 +22,7 @@ use crate::cancelation::Canceled;
 /// With this struct we can reuse a lot of functionality from the compiler which
 /// should provide a better user experience.
 #[salsa::database(
-    mun_hir::SourceDatabaseStorage,
+    mun_hir_input::SourceDatabaseStorage,
     mun_hir::DefDatabaseStorage,
     mun_hir::HirDatabaseStorage,
     mun_hir::AstDatabaseStorage,
@@ -70,8 +71,8 @@ impl Upcast<dyn mun_hir::AstDatabase> for AnalysisDatabase {
     }
 }
 
-impl Upcast<dyn mun_hir::SourceDatabase> for AnalysisDatabase {
-    fn upcast(&self) -> &(dyn mun_hir::SourceDatabase + 'static) {
+impl Upcast<dyn mun_hir_input::SourceDatabase> for AnalysisDatabase {
+    fn upcast(&self) -> &(dyn mun_hir_input::SourceDatabase + 'static) {
         self
     }
 }
