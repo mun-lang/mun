@@ -29,7 +29,6 @@ pub struct PackageSet {
 }
 
 impl PackageSet {
-
     /// Adds a new package to the package set with the source files located add
     /// the specified root. Returns the `PackageId` associated with the package.
     pub fn add_package(&mut self, source_root: SourceRootId) -> PackageId {
