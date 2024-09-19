@@ -27,7 +27,8 @@ impl<'a> StructValidator<'a> {
         let struct_data = self.strukt.data(self.db.upcast());
 
         let public_fields = struct_data
-            .fields
+            .fields_data
+            .fields()
             .iter()
             .filter(|(_, field_data)| field_data.visibility == RawVisibility::Public);
 

@@ -1,13 +1,15 @@
 use std::{fmt, iter::once, sync::Arc};
 
 pub use ast::StructMemoryKind;
-use la_arena::Arena;
 use mun_syntax::{
     ast,
     ast::{NameOwner, TypeAscriptionOwner, VisibilityOwner},
 };
 
-use super::{field::Field, Module};
+use super::{
+    field::{Field, FieldsData},
+    Module,
+};
 use crate::{
     has_module::HasModule,
     ids::{Lookup, StructId},
@@ -24,13 +26,7 @@ pub(crate) mod validator;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Struct {
-    pub(crate) id: StructId,
-}
-
-impl From<StructId> for Struct {
-    fn from(id: StructId) -> Self {
-        Struct { id }
-    }
+    id: StructId,
 }
 
 impl Struct {
@@ -69,7 +65,8 @@ impl Struct {
 
     pub fn fields(self, db: &dyn HirDatabase) -> Box<[Field]> {
         self.data(db.upcast())
-            .fields
+            .fields_data
+            .fields()
             .iter()
             .map(|(id, _)| Field {
                 parent: self.into(),
@@ -80,7 +77,8 @@ impl Struct {
 
     pub fn field(self, db: &dyn HirDatabase, name: &Name) -> Option<Field> {
         self.data(db.upcast())
-            .fields
+            .fields_data
+            .fields()
             .iter()
             .find(|(_, data)| data.name == *name)
             .map(|(id, _)| Field {
@@ -103,6 +101,18 @@ impl Struct {
         lower.add_diagnostics(db, self.file_id(db), data.type_ref_source_map(), sink);
         let validator = validator::StructValidator::new(self, db, self.file_id(db));
         validator.validate_privacy(sink);
+    }
+}
+
+impl From<Struct> for StructId {
+    fn from(value: Struct) -> Self {
+        value.id
+    }
+}
+
+impl From<StructId> for Struct {
+    fn from(id: StructId) -> Self {
+        Struct { id }
     }
 }
 
@@ -147,8 +157,7 @@ impl fmt::Display for StructKind {
 pub struct StructData {
     pub name: Name,
     pub visibility: RawVisibility,
-    pub fields: Arena<FieldData>,
-    pub kind: StructKind,
+    pub fields_data: Arc<FieldsData>,
     pub memory_kind: StructMemoryKind,
     type_ref_map: TypeRefMap,
     type_ref_source_map: TypeRefSourceMap,
@@ -167,7 +176,7 @@ impl StructData {
             .unwrap_or_default();
 
         let mut type_ref_builder = TypeRefMap::builder();
-        let (fields, kind) = match src.kind() {
+        let fields_data = match src.kind() {
             ast::StructKind::Record(r) => {
                 let fields = r
                     .fields()
@@ -177,7 +186,7 @@ impl StructData {
                         visibility: RawVisibility::from_ast(fd.visibility()),
                     })
                     .collect();
-                (fields, StructKind::Record)
+                FieldsData::Record(fields)
             }
             ast::StructKind::Tuple(t) => {
                 let fields = t
@@ -189,9 +198,9 @@ impl StructData {
                         visibility: RawVisibility::from_ast(fd.visibility()),
                     })
                     .collect();
-                (fields, StructKind::Tuple)
+                FieldsData::Tuple(fields)
             }
-            ast::StructKind::Unit => (Arena::default(), StructKind::Unit),
+            ast::StructKind::Unit => FieldsData::Unit,
         };
 
         let visibility = item_tree[strukt.visibility].clone();
@@ -200,8 +209,7 @@ impl StructData {
         Arc::new(StructData {
             name: strukt.name.clone(),
             visibility,
-            fields,
-            kind,
+            fields_data: Arc::new(fields_data),
             memory_kind,
             type_ref_map,
             type_ref_source_map,

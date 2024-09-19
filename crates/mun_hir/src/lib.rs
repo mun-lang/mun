@@ -9,8 +9,8 @@
 pub use salsa;
 
 pub use self::code_model::{
-    Enum, Field, Function, FunctionData, HasSource, Module, ModuleDef, Package, Struct,
-    StructMemoryKind, TypeAlias,
+    Enum, Function, FunctionData, HasSource, Module, ModuleDef, Package, Struct, StructMemoryKind,
+    TypeAlias,
 };
 pub use crate::{
     db::{

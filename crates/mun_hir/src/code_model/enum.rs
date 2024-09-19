@@ -3,9 +3,9 @@ use std::sync::Arc;
 use la_arena::Arena;
 use mun_syntax::ast::{self, NameOwner, TypeAscriptionOwner as _, VisibilityOwner as _};
 
-use super::r#struct::FieldData;
+use super::{field::FieldsData, r#struct::FieldData};
 use crate::{
-    db,
+    code_model::field::Field,
     has_module::HasModule as _,
     ids::{EnumId, EnumVariantId, EnumVariantLoc, Intern as _, Lookup},
     item_tree::ItemTreeId,
@@ -13,7 +13,7 @@ use crate::{
     name_resolution::Namespace,
     type_ref::{TypeRefMap, TypeRefSourceMap},
     visibility::RawVisibility,
-    DefDatabase, Field, HirDatabase, Module, Name, Ty,
+    DefDatabase, HirDatabase, Module, Name, Ty,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -30,7 +30,7 @@ impl Enum {
         db.enum_data(self.id).name.clone()
     }
 
-    pub fn variants(self, db: &dyn HirDatabase) -> Box<[Variant]> {
+    pub fn variants(self, db: &dyn HirDatabase) -> Box<[EnumVariant]> {
         db.enum_data(self.id)
             .variants
             .iter()
@@ -50,11 +50,11 @@ impl From<EnumId> for Enum {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct Variant {
+pub struct EnumVariant {
     id: EnumVariantId,
 }
 
-impl Variant {
+impl EnumVariant {
     pub fn fields(self, db: &dyn HirDatabase) -> Box<[Field]> {
         self.data(db)
             .fields()
@@ -71,9 +71,15 @@ impl Variant {
     }
 }
 
-impl From<EnumVariantId> for Variant {
+impl From<EnumVariant> for EnumVariantId {
+    fn from(value: EnumVariant) -> Self {
+        value.id
+    }
+}
+
+impl From<EnumVariantId> for EnumVariant {
     fn from(id: EnumVariantId) -> Self {
-        Variant { id }
+        EnumVariant { id }
     }
 }
 
@@ -120,7 +126,7 @@ impl EnumData {
 #[derive(Debug, PartialEq, Eq)]
 pub struct EnumVariantData {
     pub name: Name,
-    pub data: VariantData,
+    pub fields_data: Arc<FieldsData>,
     // TODO: Can we avoid storing these on the enum variant?
     // TODO: RA uses `Interned` for this. Can we do the same?
     type_ref_map: TypeRefMap,
@@ -136,7 +142,7 @@ impl EnumVariantData {
         let src = item_tree.source(db, loc.id.value);
 
         let mut type_ref_builder = TypeRefMap::builder();
-        let data = match src.kind() {
+        let fields = match src.kind() {
             ast::StructKind::Record(record) => {
                 let fields = record
                     .fields()
@@ -150,7 +156,7 @@ impl EnumVariantData {
                     })
                     .collect();
 
-                VariantData::Record(fields)
+                FieldsData::Record(fields)
             }
             ast::StructKind::Tuple(tuple) => {
                 let fields = tuple
@@ -163,33 +169,21 @@ impl EnumVariantData {
                     })
                     .collect();
 
-                VariantData::Tuple(fields)
+                FieldsData::Tuple(fields)
             }
-            ast::StructKind::Unit => VariantData::Unit,
+            ast::StructKind::Unit => FieldsData::Unit,
         };
 
         let (type_ref_map, type_ref_source_map) = type_ref_builder.finish();
         Arc::new(EnumVariantData {
             name: variant.name.clone(),
-            data,
+            fields_data: Arc::new(fields),
             type_ref_map,
             type_ref_source_map,
         })
     }
 
     pub fn fields(&self) -> &Arena<FieldData> {
-        const EMPTY: &Arena<FieldData> = &Arena::new();
-
-        match &self.data {
-            VariantData::Record(fields) | VariantData::Tuple(fields) => fields,
-            VariantData::Unit => EMPTY,
-        }
+        self.fields_data.fields()
     }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum VariantData {
-    Record(Arena<FieldData>),
-    Tuple(Arena<FieldData>),
-    Unit,
 }

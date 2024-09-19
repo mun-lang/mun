@@ -698,7 +698,7 @@ impl<'a> InferenceResultBuilder<'a> {
 
         let lit_fields: FxHashSet<_> = fields.iter().map(|f| &f.name).collect();
         let missed_fields: Vec<Name> = struct_data
-            .fields
+            .fields_data
             .iter()
             .filter_map(|(_f, d)| {
                 let name = d.name.clone();

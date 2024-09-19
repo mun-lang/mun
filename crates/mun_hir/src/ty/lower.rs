@@ -286,7 +286,7 @@ pub(crate) fn fn_sig_for_struct_constructor(db: &dyn HirDatabase, def: Struct) -
     let data = def.data(db.upcast());
     let resolver = def.id.resolver(db.upcast());
     let params = data
-        .fields
+        .fields_data
         .iter()
         .map(|(_, field)| Ty::from_hir(db, &resolver, data.type_ref_map(), field.type_ref).0)
         .collect::<Vec<_>>();

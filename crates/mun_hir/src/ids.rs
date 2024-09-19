@@ -209,3 +209,11 @@ pub enum DefWithBodyId {
 }
 
 impl_froms!(FunctionId for DefWithBodyId);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum FieldOwnerId {
+    EnumVariantId(EnumVariantId),
+    StructId(StructId),
+}
+
+impl_froms!(EnumVariantId, StructId for FieldOwnerId);

@@ -1,10 +1,38 @@
+use std::sync::Arc;
+
 use la_arena::{Arena, Idx};
 
-use super::{r#enum::Variant, r#struct::FieldData};
-use crate::{HirDatabase, Name, Struct, Ty};
+use super::{r#enum::EnumVariant, r#struct::FieldData, StructKind};
+use crate::{ids::FieldOwnerId, ty::lower::LowerTyMap, HirDatabase, Name, Struct, Ty};
 
 /// An identifier for a struct's or tuple's field
 pub type LocalFieldId = Idx<FieldData>;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum FieldsData {
+    Record(Arena<FieldData>),
+    Tuple(Arena<FieldData>),
+    Unit,
+}
+
+impl FieldsData {
+    pub fn fields(&self) -> &Arena<FieldData> {
+        const EMPTY: &Arena<FieldData> = &Arena::new();
+
+        match self {
+            FieldsData::Record(fields) | FieldsData::Tuple(fields) => fields,
+            FieldsData::Unit => EMPTY,
+        }
+    }
+
+    pub fn kind(&self) -> StructKind {
+        match self {
+            FieldsData::Record(_) => StructKind::Record,
+            FieldsData::Tuple(_) => StructKind::Tuple,
+            FieldsData::Unit => StructKind::Unit,
+        }
+    }
+}
 
 /// A field of a [`Struct`], [`Variant`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -18,7 +46,7 @@ impl Field {
     pub fn ty(self, db: &dyn HirDatabase) -> Ty {
         let fields = self.parent.fields(db);
         let type_ref_id = fields[self.id].type_ref;
-        let lower = self.parent.lower(db);
+        let fields = self.parent.lower(db);
         lower[type_ref_id].clone()
     }
 
@@ -40,17 +68,30 @@ impl Field {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum FieldOwner {
+    EnumVariant(EnumVariant),
     Struct(Struct),
-    Variant(Variant),
 }
 
-impl_froms!(Struct, Variant for FieldOwner);
+impl_froms!(EnumVariant, Struct for FieldOwner);
 
 impl FieldOwner {
-    pub fn fields(self, db: &dyn HirDatabase) -> &Arena<FieldData> {
+    pub fn fields_data(self, db: &dyn HirDatabase) -> Arc<FieldsData> {
         match self {
-            FieldOwner::Struct(s) => &s.data(db.upcast()).fields,
-            FieldOwner::Variant(v) => v.data(db).fields(),
+            FieldOwner::EnumVariant(v) => v.data(db).fields_data.clone(),
+            FieldOwner::Struct(s) => s.data(db.upcast()).fields_data.clone(),
+        }
+    }
+
+    pub fn fields(&self, db: &dyn HirDatabase) -> &Arena<FieldData> {
+        self.fields_data(db).fields()
+    }
+}
+
+impl From<FieldOwner> for FieldOwnerId {
+    fn from(value: FieldOwner) -> Self {
+        match value {
+            FieldOwner::EnumVariant(e) => Self::EnumVariantId(e.into()),
+            FieldOwner::Struct(s) => Self::StructId(s.id),
         }
     }
 }

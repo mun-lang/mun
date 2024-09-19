@@ -11,12 +11,13 @@ mod type_alias;
 use std::sync::Arc;
 
 pub use self::{
+    field::Field,
     function::{Function, FunctionData},
     module::{Module, ModuleDef},
     package::Package,
     r#enum::{Enum, EnumData, EnumVariantData},
     r#impl::{AssocItem, ImplData},
-    r#struct::{Field, Struct, StructData, StructKind, StructMemoryKind},
+    r#struct::{Struct, StructData, StructKind, StructMemoryKind},
     src::HasSource,
     type_alias::{TypeAlias, TypeAliasData},
 };
@@ -57,7 +58,7 @@ impl DefWithStruct {
         }
     }
 
-    pub fn fields(self, db: &dyn HirDatabase) -> Vec<Field> {
+    pub fn fields(self, db: &dyn HirDatabase) -> Box<[Field]> {
         match self {
             DefWithStruct::Struct(s) => s.fields(db),
         }
