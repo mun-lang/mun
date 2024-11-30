@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use crate::{ty::infer::InferenceResultBuilder, Ty};
 
-impl<'a> InferenceResultBuilder<'a> {
+impl InferenceResultBuilder<'_> {
     /// If `ty` is a type variable, and it has been instantiated, then return
     /// the instantiated type; otherwise returns `ty`.
     pub(crate) fn replace_if_possible<'b>(&mut self, ty: &'b Ty) -> Cow<'b, Ty> {

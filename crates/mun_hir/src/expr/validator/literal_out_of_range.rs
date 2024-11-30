@@ -5,7 +5,7 @@ use crate::{
     Expr, HirDisplay, Literal,
 };
 
-impl<'a> ExprValidator<'a> {
+impl ExprValidator<'_> {
     /// Iterates over all expressions to determine if one of the literals has a
     /// value that is out of range of its type.
     pub fn validate_literal_ranges(&self, sink: &mut DiagnosticSink<'_>) {

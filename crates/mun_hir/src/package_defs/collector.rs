@@ -54,7 +54,7 @@ impl PartiallyResolvedImport {
 /// Definition of a single import statement
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct Import {
-    /// The path of the import (e.g. foo::Bar). Note that group imports have
+    /// The path of the import (e.g. `foo::Bar`). Note that group imports have
     /// been desugared, each item in the import tree is a seperate import.
     pub path: Path,
 
@@ -136,7 +136,7 @@ struct DefCollector<'db> {
     from_glob_import: PerNsGlobImports,
 }
 
-impl<'db> DefCollector<'db> {
+impl DefCollector<'_> {
     /// Collects all information and stores it in the instance
     fn collect(&mut self) {
         /// Recursively iterate over all modules in the `ModuleTree` and add

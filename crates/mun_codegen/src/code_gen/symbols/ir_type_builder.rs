@@ -16,7 +16,7 @@ use crate::{
 pub struct TypeIdBuilder<'ink, 'a, 'b, 'c> {
     context: &'a IrValueContext<'ink, 'b, 'c>,
 
-    /// A map of ir::TypeIds that have already have already been interned.
+    /// A map of `ir::TypeIds` that have already have already been interned.
     interned_types: RefCell<FxHashMap<Arc<TypeId>, Global<'ink, ir::TypeId<'ink>>>>,
 }
 

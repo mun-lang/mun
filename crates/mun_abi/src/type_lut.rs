@@ -148,7 +148,7 @@ impl<'a> TypeLut<'a> {
 }
 
 #[cfg(feature = "serde")]
-impl<'a> serde::Serialize for TypeLut<'a> {
+impl serde::Serialize for TypeLut<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,

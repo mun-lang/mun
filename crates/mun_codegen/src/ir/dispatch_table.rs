@@ -323,9 +323,13 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
     }
 
     /// Builds the final `DispatchTable` with all *called* functions from within
-    /// the module # Parameters
+    /// the module
+    ///
+    /// # Parameters
+    ///
     /// * **functions**: Mapping of *defined* Mun functions to their respective
     ///   IR values.
+    ///
     /// Returns the `DispatchTable` and a set of dependencies for the module.
     pub fn build(self) -> (DispatchTable<'ink>, FxHashSet<mun_hir::Module>) {
         // Construct the table body from all the entries in the dispatch table

@@ -72,10 +72,10 @@ impl<N: AstNode> Iterator for AstChildren<N> {
     }
 }
 
-fn child_opt<P: AstNode + ?Sized, C: AstNode>(parent: &P) -> Option<C> {
+fn child_opt<P: AstNode, C: AstNode>(parent: &P) -> Option<C> {
     children(parent).next()
 }
 
-fn children<P: AstNode + ?Sized, C: AstNode>(parent: &P) -> AstChildren<C> {
+fn children<P: AstNode, C: AstNode>(parent: &P) -> AstChildren<C> {
     AstChildren::new(parent.syntax())
 }

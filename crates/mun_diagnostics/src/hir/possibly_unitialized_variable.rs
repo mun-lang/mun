@@ -18,8 +18,8 @@ pub struct PossiblyUninitializedVariable<'db, 'diag, DB: mun_hir::HirDatabase> {
     value_name: String,
 }
 
-impl<'db, 'diag, DB: mun_hir::HirDatabase> Diagnostic
-    for PossiblyUninitializedVariable<'db, 'diag, DB>
+impl<DB: mun_hir::HirDatabase> Diagnostic
+    for PossiblyUninitializedVariable<'_, '_, DB>
 {
     fn range(&self) -> TextRange {
         self.diag.highlight_range()

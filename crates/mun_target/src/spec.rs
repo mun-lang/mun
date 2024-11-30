@@ -23,7 +23,7 @@ pub struct Target {
     /// String to use as the `target_pointer_width` `cfg` variable.
     pub pointer_width: u32,
 
-    /// The name of the architecture. For example "x86" or "x86_64", "arm",
+    /// The name of the architecture. For example "x86" or "`x86_64`", "arm",
     /// "aarch64"
     pub arch: Cow<'static, str>,
 
@@ -43,7 +43,7 @@ pub struct TargetOptions {
     /// Used as the `target_endian` `cfg` variable. Defaults to little endian.
     pub endian: Endian,
 
-    /// Width of c_int type
+    /// Width of `c_int` type
     pub c_int_width: String,
 
     /// The name of the OS

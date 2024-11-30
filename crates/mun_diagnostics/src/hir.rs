@@ -54,7 +54,7 @@ struct GenericHirDiagnostic<'diag> {
     diagnostic: &'diag dyn mun_hir::Diagnostic,
 }
 
-impl<'diag> Diagnostic for GenericHirDiagnostic<'diag> {
+impl Diagnostic for GenericHirDiagnostic<'_> {
     fn range(&self) -> TextRange {
         self.diagnostic.highlight_range()
     }

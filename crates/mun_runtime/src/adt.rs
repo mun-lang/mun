@@ -74,9 +74,7 @@ impl<'s> StructRef<'s> {
 
     /// Retrieves the value of the field corresponding to the specified
     /// `field_name`.
-    pub fn get<T: ReturnTypeReflection + Marshal<'s>>(&self, field_name: &str) -> Result<T, String>
-    where
-        T: 's,
+    pub fn get<T: ReturnTypeReflection + Marshal<'s> + 's>(&self, field_name: &str) -> Result<T, String>
     {
         let type_info = self.type_info();
 
@@ -115,13 +113,11 @@ impl<'s> StructRef<'s> {
 
     /// Replaces the value of the field corresponding to the specified
     /// `field_name` and returns the old value.
-    pub fn replace<T: ArgumentReflection + Marshal<'s>>(
+    pub fn replace<T: ArgumentReflection + Marshal<'s> + 's>(
         &mut self,
         field_name: &str,
         value: T,
     ) -> Result<T, String>
-    where
-        T: 's,
     {
         let type_info = self.type_info();
 
@@ -197,7 +193,7 @@ impl<'s> StructRef<'s> {
     }
 }
 
-impl<'r> ArgumentReflection for StructRef<'r> {
+impl ArgumentReflection for StructRef<'_> {
     fn type_info(&self, _runtime: &Runtime) -> Type {
         self.type_info()
     }
@@ -267,7 +263,7 @@ impl<'s> Marshal<'s> for StructRef<'s> {
     }
 }
 
-impl<'r> ReturnTypeReflection for StructRef<'r> {
+impl ReturnTypeReflection for StructRef<'_> {
     /// Returns true if this specified type can be stored in an instance of this
     /// type
     fn accepts_type(ty: &Type) -> bool {

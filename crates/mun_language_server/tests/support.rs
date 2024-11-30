@@ -26,7 +26,7 @@ pub struct Project<'a> {
     tmp_dir: Option<tempdir::TempDir>,
 }
 
-impl<'a> Project<'a> {
+impl Project<'_> {
     /// Constructs a project from a fixture.
     pub fn with_fixture(fixture: &str) -> Project<'_> {
         Project {

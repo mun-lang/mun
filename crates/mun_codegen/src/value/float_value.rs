@@ -41,8 +41,8 @@ impl<'ink> PointerValueType<'ink> for f64 {
     }
 }
 
-impl<'ink> AddressableType<'ink, f32> for f32 {}
-impl<'ink> AddressableType<'ink, f64> for f64 {}
+impl AddressableType<'_, f32> for f32 {}
+impl AddressableType<'_, f64> for f64 {}
 
 impl HasConstValue for f32 {
     fn has_const_value() -> bool {

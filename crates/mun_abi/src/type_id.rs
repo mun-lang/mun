@@ -44,11 +44,11 @@ pub struct ArrayTypeId<'a> {
     pub element: &'a TypeId<'a>,
 }
 
-unsafe impl<'a> Send for TypeId<'a> {}
+unsafe impl Send for TypeId<'_> {}
 
-unsafe impl<'a> Sync for TypeId<'a> {}
+unsafe impl Sync for TypeId<'_> {}
 
-impl<'a> From<Guid> for TypeId<'a> {
+impl From<Guid> for TypeId<'_> {
     fn from(guid: Guid) -> Self {
         TypeId::Concrete(guid)
     }
@@ -60,7 +60,7 @@ impl<'a> From<PointerTypeId<'a>> for TypeId<'a> {
     }
 }
 
-impl<'a> fmt::Display for TypeId<'a> {
+impl fmt::Display for TypeId<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             TypeId::Concrete(guid) => guid.fmt(f),
@@ -70,7 +70,7 @@ impl<'a> fmt::Display for TypeId<'a> {
     }
 }
 
-impl<'a> fmt::Display for PointerTypeId<'a> {
+impl fmt::Display for PointerTypeId<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.mutable {
             write!(f, "*mut ")
@@ -81,7 +81,7 @@ impl<'a> fmt::Display for PointerTypeId<'a> {
     }
 }
 
-impl<'a> fmt::Display for ArrayTypeId<'a> {
+impl fmt::Display for ArrayTypeId<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "[{}]", &self.element)
     }

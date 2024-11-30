@@ -222,7 +222,7 @@ impl<'a> InferenceResultBuilder<'a> {
     }
 }
 
-impl<'a> InferenceResultBuilder<'a> {
+impl InferenceResultBuilder<'_> {
     /// Collect all the parameter patterns from the body. After calling this
     /// method the `return_ty` will have a valid value, also all parameters
     /// are added inferred.

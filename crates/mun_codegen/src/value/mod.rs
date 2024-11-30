@@ -124,7 +124,7 @@ pub enum BytesOrPtr<'ink> {
     UntypedPtr(PointerValue<'ink>),
 }
 
-impl<'ink> From<Vec<u8>> for BytesOrPtr<'ink> {
+impl From<Vec<u8>> for BytesOrPtr<'_> {
     fn from(bytes: Vec<u8>) -> Self {
         BytesOrPtr::Bytes(bytes)
     }
@@ -339,7 +339,7 @@ where
     }
 }
 
-impl<'ink, T: SizedValueType<'ink> + ?Sized> Value<'ink, T> {
+impl<'ink, T: SizedValueType<'ink>> Value<'ink, T> {
     /// Returns the inkwell type of this `Value`.
     pub fn get_ir_type(context: &IrTypeContext<'ink, '_>) -> <T::Value as ValueType<'ink>>::Type {
         T::get_ir_type(context)
