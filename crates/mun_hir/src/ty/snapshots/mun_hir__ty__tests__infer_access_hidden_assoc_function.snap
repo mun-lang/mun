@@ -1,0 +1,9 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "infer(r#\"\n    //- /foo.mun\n    pub struct Foo {\n        a: i32\n    }\n\n    impl Foo {\n        fn new(){}\n    }\n\n    //- /mod.mun\n    fn main() {\n        foo::Foo::new();\n    }\n    \"#)"
+---
+16..29: access of private type
+10..34 '{     ...w(); }': ()
+16..29 'foo::Foo::new': function new() -> ()
+16..31 'foo::Foo::new()': ()
+54..56 '{}': ()

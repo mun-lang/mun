@@ -1,6 +1,7 @@
 use std::{ops::Index, sync::Arc};
 
 use la_arena::ArenaMap;
+use mun_hir_input::ModuleId;
 use rustc_hash::FxHashSet;
 
 use crate::{
@@ -24,8 +25,10 @@ mod unify;
 
 use crate::{
     expr::{LiteralFloat, LiteralFloatKind, LiteralInt, LiteralIntKind},
+    has_module::HasModule,
     ids::DefWithBodyId,
-    resolve::{resolver_for_expr, HasResolver},
+    method_resolution::lookup_method,
+    resolve::{resolver_for_expr, HasResolver, ResolveValueResult},
     ty::{
         primitives::{FloatTy, IntTy},
         TyKind,
@@ -181,6 +184,13 @@ impl<'a> InferenceResultBuilder<'a> {
             body,
             resolver,
             return_ty: TyKind::Unknown.intern(), // set in collect_fn_signature
+        }
+    }
+
+    /// Returns the module in which the body is defined.
+    pub fn module(&self) -> ModuleId {
+        match self.body.owner() {
+            DefWithBodyId::FunctionId(func) => func.module(self.db.upcast()),
         }
     }
 
@@ -718,6 +728,65 @@ impl<'a> InferenceResultBuilder<'a> {
         }
     }
 
+    fn resolve_assoc_item(
+        &mut self,
+        def: TypeNs,
+        path: &Path,
+        remaining_index: usize,
+        id: ExprId,
+    ) -> Option<ValueNs> {
+        // We can only resolve the last element of the path.
+        let name = if remaining_index == path.segments.len() - 1 {
+            &path.segments[remaining_index]
+        } else {
+            return None;
+        };
+
+        // Infer the type of the definitions
+        let type_for_def_fn = |def| self.db.type_for_def(def, Namespace::Types);
+        let root_ty = match def {
+            TypeNs::SelfType(id) => self.db.type_for_impl_self(id),
+            TypeNs::StructId(id) => type_for_def_fn(TypableDef::Struct(id.into())),
+            TypeNs::TypeAliasId(id) => type_for_def_fn(TypableDef::TypeAlias(id.into())),
+            TypeNs::PrimitiveType(id) => type_for_def_fn(TypableDef::PrimitiveType(id)),
+        };
+
+        // Resolve the value.
+        let function_id = match lookup_method(self.db, &root_ty, self.module(), name) {
+            Ok(value) => value,
+            Err(Some(value)) => {
+                self.diagnostics
+                    .push(InferenceDiagnostic::PathIsPrivate { id });
+                value
+            }
+            _ => return None,
+        };
+
+        Some(ValueNs::FunctionId(function_id))
+    }
+
+    fn resolve_value_path_inner(
+        &mut self,
+        resolver: &Resolver,
+        path: &Path,
+        id: ExprId,
+    ) -> Option<ValueNs> {
+        let value_or_partial = resolver.resolve_path_as_value(self.db.upcast(), path)?;
+        match value_or_partial {
+            ResolveValueResult::ValueNs(it, vis) => {
+                if !vis.is_visible_from(self.db, self.module()) {
+                    self.diagnostics
+                        .push(diagnostics::InferenceDiagnostic::PathIsPrivate { id });
+                }
+
+                Some(it)
+            }
+            ResolveValueResult::Partial(def, remaining_index) => {
+                self.resolve_assoc_item(def, path, remaining_index, id)
+            }
+        }
+    }
+
     fn infer_path_expr(
         &mut self,
         resolver: &Resolver,
@@ -725,18 +794,7 @@ impl<'a> InferenceResultBuilder<'a> {
         id: ExprId,
         check_params: &CheckParams,
     ) -> Option<Ty> {
-        if let Some((value, vis)) = resolver.resolve_path_as_value_fully(self.db.upcast(), path) {
-            // Check visibility of this item
-            if !vis.is_visible_from(
-                self.db,
-                self.resolver
-                    .module()
-                    .expect("resolver must have a module to be able to resolve modules"),
-            ) {
-                self.diagnostics
-                    .push(diagnostics::InferenceDiagnostic::PathIsPrivate { id });
-            }
-
+        if let Some(value) = self.resolve_value_path_inner(resolver, path, id) {
             // Match based on what type of value we found
             match value {
                 ValueNs::ImplSelf(i) => {

@@ -161,7 +161,7 @@ impl InherentImpls {
         self.map.values().flatten().copied()
     }
 
-    // Returns all implementations defined for the specified type.
+    /// Returns all implementations defined for the specified type.
     pub fn for_self_ty(&self, self_ty: &Ty) -> &[ImplId] {
         match self_ty.interned() {
             TyKind::Struct(s) => self.map.get(&s.id).map_or(&[], AsRef::as_ref),

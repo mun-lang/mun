@@ -697,6 +697,48 @@ fn infer_self_field() {
 }
 
 #[test]
+fn infer_assoc_function() {
+    insta::assert_snapshot!(infer(
+        r#"
+    struct Foo {
+        a: i32
+    }
+
+    impl Foo {
+        fn new() -> Self {
+            Self { a: 3 }
+        }
+    }
+
+    fn main() {
+        let a = Foo::new();
+    }
+    "#
+    ));
+}
+
+#[test]
+fn infer_access_hidden_assoc_function() {
+    insta::assert_snapshot!(infer(
+        r#"
+    //- /foo.mun
+    pub struct Foo {
+        a: i32
+    }
+
+    impl Foo {
+        fn new(){}
+    }
+
+    //- /mod.mun
+    fn main() {
+        foo::Foo::new();
+    }
+    "#
+    ));
+}
+
+#[test]
 fn infer_basics() {
     insta::assert_snapshot!(infer(
         r#"
