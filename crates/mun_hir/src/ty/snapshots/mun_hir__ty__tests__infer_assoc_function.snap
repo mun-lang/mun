@@ -1,0 +1,11 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "infer(r#\"\n    struct Foo {\n        a: i32\n    }\n\n    impl Foo {\n        fn new() -> Self {\n            Self { a: 3 }\n        }\n    }\n\n    fn main() {\n        let a = Foo::new();\n    }\n    \"#)"
+---
+102..129 '{     ...w(); }': ()
+112..113 'a': Foo
+116..124 'Foo::new': function new() -> Foo
+116..126 'Foo::new()': Foo
+59..88 '{     ...     }': Foo
+69..82 'Self { a: 3 }': Foo
+79..80 '3': i32
