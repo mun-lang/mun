@@ -74,8 +74,10 @@ impl<'s> StructRef<'s> {
 
     /// Retrieves the value of the field corresponding to the specified
     /// `field_name`.
-    pub fn get<T: ReturnTypeReflection + Marshal<'s> + 's>(&self, field_name: &str) -> Result<T, String>
-    {
+    pub fn get<T: ReturnTypeReflection + Marshal<'s> + 's>(
+        &self,
+        field_name: &str,
+    ) -> Result<T, String> {
         let type_info = self.type_info();
 
         // Safety: `as_struct` is guaranteed to return `Some` for `StructRef`s.
@@ -117,8 +119,7 @@ impl<'s> StructRef<'s> {
         &mut self,
         field_name: &str,
         value: T,
-    ) -> Result<T, String>
-    {
+    ) -> Result<T, String> {
         let type_info = self.type_info();
 
         // Safety: `as_struct` is guaranteed to return `Some` for `StructRef`s.

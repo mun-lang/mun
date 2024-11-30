@@ -90,15 +90,16 @@ impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *const T {
 impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *mut T {
     fn type_id() -> &'static Arc<TypeId> {
         static INIT: OnceLock<StaticTypeMap<Arc<TypeId>>> = OnceLock::new();
-        INIT.get_or_init(StaticTypeMap::default).call_once::<T, _>(|| {
-            let element_type_id = T::type_id().clone();
-            Arc::new(TypeId {
-                name: format!("*mut {}", &element_type_id.name),
-                data: TypeIdData::Pointer(PointerTypeId {
-                    pointee: element_type_id,
-                    mutable: true,
-                }),
+        INIT.get_or_init(StaticTypeMap::default)
+            .call_once::<T, _>(|| {
+                let element_type_id = T::type_id().clone();
+                Arc::new(TypeId {
+                    name: format!("*mut {}", &element_type_id.name),
+                    data: TypeIdData::Pointer(PointerTypeId {
+                        pointee: element_type_id,
+                        mutable: true,
+                    }),
+                })
             })
-        })
     }
 }

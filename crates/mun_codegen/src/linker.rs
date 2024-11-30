@@ -131,7 +131,7 @@ impl Ld64Linker {
         let sdk_name = match (arch.as_ref(), os.as_ref()) {
             ("aarch64", "tvos") => "appletvos",
             ("x86_64", "tvos") => "appletvsimulator",
-            ("aarch64"|"x86_64", "ios") if llvm_target.contains("macabi") => "macosx",
+            ("aarch64" | "x86_64", "ios") if llvm_target.contains("macabi") => "macosx",
             ("aarch64", "ios") if llvm_target.ends_with("-simulator") => "iphonesimulator",
             ("arm" | "aarch64", "ios") => "iphoneos",
             ("x86" | "x86_64", "ios") => "iphonesimulator",
