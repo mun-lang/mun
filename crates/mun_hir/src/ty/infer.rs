@@ -1714,7 +1714,7 @@ mod diagnostics {
                         .map(|expr_src| {
                             expr_src
                                 .left()
-                                .expect("could not retrieve expr from ExprSource")
+                                .expect("could not retrieve expression from ExprSource")
                                 .cast()
                                 .expect("could not cast expression to method call")
                         });
