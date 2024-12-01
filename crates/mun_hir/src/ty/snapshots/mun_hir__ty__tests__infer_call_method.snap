@@ -1,0 +1,15 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "infer(r#\"\n    struct Foo {}\n\n    impl Foo {\n        fn with_self(self) -> Self {\n            self\n        }\n    }\n\n    fn main() {\n        let a = Foo {};\n        a.with_self();\n        a.with_self(1);\n    }\n    \"#)"
+---
+136..150: this function takes 0 parameters but 1 parameters was supplied
+91..153 '{     ...(1); }': ()
+101..102 'a': Foo
+105..111 'Foo {}': Foo
+117..118 'a': Foo
+117..130 'a.with_self()': Foo
+136..137 'a': Foo
+136..150 'a.with_self(1)': Foo
+43..47 'self': Foo
+57..77 '{     ...     }': Foo
+67..71 'self': Foo

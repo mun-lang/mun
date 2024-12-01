@@ -1,8 +1,8 @@
-use std::{ops::Index, sync::Arc};
+use std::{convert::identity, ops::Index, sync::Arc};
 
 use la_arena::ArenaMap;
 use mun_hir_input::ModuleId;
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
     code_model::{Struct, StructKind},
@@ -16,7 +16,7 @@ use crate::{
         op, Ty, TypableDef,
     },
     type_ref::LocalTypeRefId,
-    BinaryOp, Function, HirDatabase, Name, Path,
+    BinaryOp, CallableDef, Function, HirDatabase, Name, Path,
 };
 
 mod place_expr;
@@ -26,8 +26,8 @@ mod unify;
 use crate::{
     expr::{LiteralFloat, LiteralFloatKind, LiteralInt, LiteralIntKind},
     has_module::HasModule,
-    ids::DefWithBodyId,
-    method_resolution::lookup_method,
+    ids::{DefWithBodyId, FunctionId},
+    method_resolution::{lookup_method, AssociationMode},
     resolve::{resolver_for_expr, HasResolver, ResolveValueResult},
     ty::{
         primitives::{FloatTy, IntTy},
@@ -59,6 +59,9 @@ pub struct InferenceResult {
     pub(crate) type_of_pat: ArenaMap<PatId, Ty>,
     pub(crate) diagnostics: Vec<diagnostics::InferenceDiagnostic>,
 
+    /// For each method call expression, records the function it resolves to.
+    pub(crate) method_resolutions: FxHashMap<ExprId, FunctionId>,
+
     /// Interned Unknown to return references to.
     standard_types: InternedStandardTypes,
 }
@@ -82,6 +85,12 @@ impl Index<PatId> for InferenceResult {
 }
 
 impl InferenceResult {
+    /// Find the method resolution for the given expression. Returns `None` if
+    /// the expression is not a method call.
+    pub fn method_resolution(&self, expr: ExprId) -> Option<FunctionId> {
+        self.method_resolutions.get(&expr).cloned()
+    }
+
     /// Adds all the `InferenceDiagnostic`s of the result to the
     /// `DiagnosticSink`.
     pub(crate) fn add_diagnostics(
@@ -168,6 +177,9 @@ struct InferenceResultBuilder<'a> {
 
     /// The return type of the function being inferred.
     return_ty: Ty,
+
+    /// Stores the resolution of method calls
+    method_resolution: FxHashMap<ExprId, FunctionId>,
 }
 
 impl<'a> InferenceResultBuilder<'a> {
@@ -184,6 +196,7 @@ impl<'a> InferenceResultBuilder<'a> {
             body,
             resolver,
             return_ty: TyKind::Unknown.intern(), // set in collect_fn_signature
+            method_resolution: FxHashMap::default(),
         }
     }
 
@@ -368,6 +381,11 @@ impl<'a> InferenceResultBuilder<'a> {
             },
             Expr::Block { statements, tail } => self.infer_block(statements, *tail, expected),
             Expr::Call { callee: call, args } => self.infer_call(tgt_expr, *call, args, expected),
+            Expr::MethodCall {
+                receiver,
+                args,
+                method_name,
+            } => self.infer_method_call(tgt_expr, *receiver, args, method_name, expected),
             Expr::Literal(lit) => match lit {
                 Literal::String(_) => TyKind::Unknown.intern(),
                 Literal::Bool(_) => TyKind::Bool.intern(),
@@ -446,29 +464,26 @@ impl<'a> InferenceResultBuilder<'a> {
             }
             Expr::Field { expr, name } => {
                 let receiver_ty = self.infer_expr(*expr, &Expectation::none());
-                #[allow(clippy::single_match_else)]
-                match receiver_ty.interned() {
-                    TyKind::Struct(s) => {
-                        match s.field(self.db, name).map(|field| field.ty(self.db)) {
-                            Some(field_ty) => field_ty,
-                            None => {
-                                self.diagnostics
-                                    .push(InferenceDiagnostic::AccessUnknownField {
-                                        id: tgt_expr,
-                                        receiver_ty,
-                                        name: name.clone(),
-                                    });
-
-                                error_type()
-                            }
-                        }
-                    }
-                    _ => {
-                        self.diagnostics.push(InferenceDiagnostic::NoFields {
-                            id: *expr,
-                            found: receiver_ty,
-                        });
+                match self.lookup_field(receiver_ty.clone(), name) {
+                    None => {
+                        self.diagnostics
+                            .push(InferenceDiagnostic::AccessUnknownField {
+                                id: tgt_expr,
+                                receiver_ty,
+                                name: name.clone(),
+                            });
                         error_type()
+                    }
+                    Some((field_ty, is_visible)) => {
+                        if !is_visible {
+                            self.diagnostics
+                                .push(InferenceDiagnostic::AccessPrivateField {
+                                    id: tgt_expr,
+                                    receiver_ty,
+                                    name: name.clone(),
+                                });
+                        }
+                        field_ty
                     }
                 }
             }
@@ -577,6 +592,126 @@ impl<'a> InferenceResultBuilder<'a> {
             }
             Ty::unit()
         }
+    }
+
+    fn lookup_field(&mut self, receiver_ty: Ty, field_name: &Name) -> Option<(Ty, bool)> {
+        match receiver_ty.interned() {
+            TyKind::Tuple(_, subs) => {
+                let idx = field_name.as_tuple_index()?;
+                let field_ty = subs.interned().get(idx)?.clone();
+                Some((field_ty, true))
+            }
+            TyKind::Struct(s) => {
+                let struct_data = self.db.struct_data(s.id);
+                let local_field_idx = struct_data.find_field(field_name)?;
+                let field_types = self.db.lower_struct(*s);
+                let field_visibilities = self.db.field_visibilities(s.id.into());
+                let field_data = &struct_data.fields[local_field_idx];
+                Some((
+                    field_types[field_data.type_ref].clone(),
+                    field_visibilities[local_field_idx].is_visible_from(self.db, self.module()),
+                ))
+            }
+            _ => None,
+        }
+    }
+
+    fn infer_method_call(
+        &mut self,
+        tgt_expr: ExprId,
+        receiver: ExprId,
+        args: &[ExprId],
+        method_name: &Name,
+        _expected: &Expectation,
+    ) -> Ty {
+        let receiver_ty = self.infer_expr(receiver, &Expectation::none());
+
+        // If the method name is missing from the AST we simply return an error type
+        // since an error would have already been emitted by the AST generation.
+        if method_name.is_missing() {
+            return error_type();
+        }
+
+        // Resolve the method on the receiver type.
+        let resolved_function = match lookup_method(
+            self.db,
+            &receiver_ty,
+            self.module(),
+            method_name,
+            Some(AssociationMode::WithSelf),
+        ) {
+            Ok(resolved) => resolved,
+            Err(Some(resolved)) => {
+                self.diagnostics
+                    .push(InferenceDiagnostic::MethodNotInScope {
+                        id: tgt_expr,
+                        receiver_ty,
+                    });
+                resolved
+            }
+            Err(None) => {
+                // Check if there is a field with the same name.
+                let field_with_same_name = self
+                    .lookup_field(receiver_ty.clone(), method_name)
+                    .map(|(field_ty, _is_visible)| field_ty);
+
+                // Check if there is an associated function with the same name.
+                let associated_function_with_same_name = lookup_method(
+                    self.db,
+                    &receiver_ty,
+                    self.module(),
+                    method_name,
+                    Some(AssociationMode::WithoutSelf),
+                )
+                .map_or_else(identity, Some);
+
+                //
+                self.diagnostics.push(InferenceDiagnostic::MethodNotFound {
+                    id: tgt_expr,
+                    method_name: method_name.clone(),
+                    receiver_ty,
+                    field_with_same_name,
+                    associated_function_with_same_name,
+                });
+                return error_type();
+            }
+        };
+
+        // Store the method resolution.
+        self.method_resolution.insert(tgt_expr, resolved_function);
+
+        self.infer_call_arguments_and_return(
+            tgt_expr,
+            args,
+            Function::from(resolved_function).into(),
+        )
+    }
+
+    fn infer_call_arguments_and_return(
+        &mut self,
+        tgt_expr: ExprId,
+        args: &[ExprId],
+        callable: CallableDef,
+    ) -> Ty {
+        // Retrieve the function signature.
+        let signature = self.db.callable_sig(callable);
+
+        // Verify that the number of arguments matches
+        if signature.params().len() != args.len() {
+            self.diagnostics
+                .push(InferenceDiagnostic::ParameterCountMismatch {
+                    id: tgt_expr,
+                    found: args.len(),
+                    expected: signature.params().len(),
+                });
+        }
+
+        // Verify the argument types
+        for (&arg, param_ty) in args.iter().zip(signature.params().iter()) {
+            self.infer_expr_coerce(arg, &Expectation::has_type(param_ty.clone()));
+        }
+
+        signature.ret().clone()
     }
 
     /// Inferences the type of a call expression.
@@ -752,7 +887,13 @@ impl<'a> InferenceResultBuilder<'a> {
         };
 
         // Resolve the value.
-        let function_id = match lookup_method(self.db, &root_ty, self.module(), name) {
+        let function_id = match lookup_method(
+            self.db,
+            &root_ty,
+            self.module(),
+            name,
+            Some(AssociationMode::WithoutSelf),
+        ) {
             Ok(value) => value,
             Err(Some(value)) => {
                 self.diagnostics
@@ -883,7 +1024,6 @@ impl<'a> InferenceResultBuilder<'a> {
             *ty = resolved;
         }
         InferenceResult {
-            //            method_resolutions: self.method_resolutions,
             //            field_resolutions: self.field_resolutions,
             //            variant_resolutions: self.variant_resolutions,
             //            assoc_resolutions: self.assoc_resolutions,
@@ -891,6 +1031,7 @@ impl<'a> InferenceResultBuilder<'a> {
             type_of_pat: pat_types,
             diagnostics: self.diagnostics,
             standard_types: InternedStandardTypes::default(),
+            method_resolutions: self.method_resolution,
         }
     }
 
@@ -1117,10 +1258,12 @@ mod diagnostics {
         diagnostics::{
             AccessUnknownField, BreakOutsideLoop, BreakWithValueOutsideLoop, CannotApplyBinaryOp,
             CannotApplyUnaryOp, CyclicType, DiagnosticSink, ExpectedFunction, FieldCountMismatch,
-            IncompatibleBranch, InvalidLhs, LiteralOutOfRange, MismatchedStructLit, MismatchedType,
-            MissingElseBranch, MissingFields, NoFields, NoSuchField, ParameterCountMismatch,
-            PrivateAccess, ReturnMissingExpression, UnresolvedType, UnresolvedValue,
+            IncompatibleBranch, InvalidLhs, LiteralOutOfRange, MethodNotFound, MethodNotInScope,
+            MismatchedStructLit, MismatchedType, MissingElseBranch, MissingFields, NoFields,
+            NoSuchField, ParameterCountMismatch, PrivateAccess, ReturnMissingExpression,
+            UnresolvedType, UnresolvedValue,
         },
+        ids::FunctionId,
         ty::infer::ExprOrPatId,
         type_ref::LocalTypeRefId,
         ExprId, Function, HirDatabase, IntTy, Name, Ty,
@@ -1187,6 +1330,11 @@ mod diagnostics {
             receiver_ty: Ty,
             name: Name,
         },
+        AccessPrivateField {
+            id: ExprId,
+            receiver_ty: Ty,
+            name: Name,
+        },
         FieldCountMismatch {
             id: ExprId,
             found: usize,
@@ -1219,6 +1367,17 @@ mod diagnostics {
         },
         PathIsPrivate {
             id: ExprId,
+        },
+        MethodNotInScope {
+            id: ExprId,
+            receiver_ty: Ty,
+        },
+        MethodNotFound {
+            id: ExprId,
+            method_name: Name,
+            receiver_ty: Ty,
+            field_with_same_name: Option<Ty>,
+            associated_function_with_same_name: Option<FunctionId>,
         },
     }
 
@@ -1525,6 +1684,56 @@ mod diagnostics {
                         literal,
                         int_ty: *literal_ty,
                     });
+                }
+                InferenceDiagnostic::MethodNotInScope { id, receiver_ty } => {
+                    let method_call = body
+                        .expr_syntax(*id)
+                        .expect("expression missing fro msource map")
+                        .map(|expr_src| {
+                            expr_src
+                                .left()
+                                .expect("could not retrieve expr from ExprSource")
+                                .cast()
+                                .expect("could not cast expression to method call")
+                        });
+                    sink.push(MethodNotInScope {
+                        method_call,
+                        receiver_ty: receiver_ty.clone(),
+                    });
+                }
+                InferenceDiagnostic::MethodNotFound {
+                    id,
+                    receiver_ty,
+                    method_name,
+                    field_with_same_name,
+                    associated_function_with_same_name,
+                } => {
+                    let method_call = body
+                        .expr_syntax(*id)
+                        .expect("expression missing fro msource map")
+                        .map(|expr_src| {
+                            expr_src
+                                .left()
+                                .expect("could not retrieve expr from ExprSource")
+                                .cast()
+                                .expect("could not cast expression to method call")
+                        });
+                    sink.push(MethodNotFound {
+                        method_call,
+                        receiver_ty: receiver_ty.clone(),
+                        method_name: method_name.clone(),
+                        field_with_same_name: field_with_same_name.clone(),
+                        associated_function_with_same_name: *associated_function_with_same_name,
+                    });
+                }
+                InferenceDiagnostic::AccessPrivateField { id, .. } => {
+                    // TODO: Add dedicated diagnostic for this
+                    let expr = body
+                        .expr_syntax(*id)
+                        .unwrap()
+                        .value
+                        .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
+                    sink.push(PrivateAccess { file, expr });
                 }
             }
         }

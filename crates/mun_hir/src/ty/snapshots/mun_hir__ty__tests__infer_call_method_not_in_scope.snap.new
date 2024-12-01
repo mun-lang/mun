@@ -1,0 +1,14 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+assertion_line: 683
+expression: "infer(r#\"\n    //- /foo.mun\n    pub struct Foo {}\n\n    impl Foo {\n        fn with_self(self) -> Self {\n            self\n        }\n    }\n\n    //- /mod.mun\n    fn main() {\n        let a = foo::Foo {};\n        a.with_self();\n    }\n    \"#)"
+---
+41..54: method not in scope for type
+10..57 '{     ...f(); }': ()
+20..21 'a': Foo
+24..35 'foo::Foo {}': Foo
+41..42 'a': Foo
+41..54 'a.with_self()': Foo
+47..51 'self': Foo
+61..81 '{     ...     }': Foo
+71..75 'self': Foo

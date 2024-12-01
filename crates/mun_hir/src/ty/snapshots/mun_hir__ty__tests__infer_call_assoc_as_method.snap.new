@@ -1,0 +1,12 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+assertion_line: 732
+expression: "infer(r#\"\n    pub struct Foo {}\n\n    impl Foo {\n        fn assoc() {}\n    }\n\n    fn main() {\n        let a = Foo {};\n        a.assoc();\n    }\n    \"#)"
+---
+87..96: method `assoc` does not exist
+61..99 '{     ...c(); }': ()
+71..72 'a': Foo
+75..81 'Foo {}': Foo
+87..88 'a': Foo
+87..96 'a.assoc()': {unknown}
+45..47 '{}': ()

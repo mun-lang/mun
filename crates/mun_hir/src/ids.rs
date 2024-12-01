@@ -200,3 +200,13 @@ impl From<FunctionId> for DefWithBodyId {
         DefWithBodyId::FunctionId(id)
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum VariantId {
+    StructId(StructId),
+}
+impl From<StructId> for VariantId {
+    fn from(value: StructId) -> Self {
+        VariantId::StructId(value)
+    }
+}

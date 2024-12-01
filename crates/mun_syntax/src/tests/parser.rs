@@ -1,6 +1,21 @@
 use crate::SourceFile;
 
 #[test]
+fn method_call() {
+    insta::assert_snapshot!(SourceFile::parse(
+        r#"
+        fn main() {
+            a.foo();
+            a.0.foo();
+            a.0.0.foo();
+            a.0 .f32();
+        }
+        "#
+    )
+    .debug_dump());
+}
+
+#[test]
 fn impl_block() {
     insta::assert_snapshot!(SourceFile::parse(
         r#"
