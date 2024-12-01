@@ -1710,7 +1710,7 @@ mod diagnostics {
                 } => {
                     let method_call = body
                         .expr_syntax(*id)
-                        .expect("expression missing fro msource map")
+                        .expect("expression missing from source map")
                         .map(|expr_src| {
                             expr_src
                                 .left()
