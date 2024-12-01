@@ -104,8 +104,8 @@ impl FunctionData {
         self.flags.is_extern()
     }
 
-    /// Returns true if the first param is `self`. This is relevant to decided
-    /// whether this can be called as method as opposed to an associated
+    /// Returns true if the first param is `self`. This is relevant to decide
+    /// whether this can be called as a method as opposed to an associated
     /// function.
     ///
     /// An associated function is a function that is associated with a type but
