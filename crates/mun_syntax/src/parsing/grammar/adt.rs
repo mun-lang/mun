@@ -1,10 +1,14 @@
-use crate::parsing::grammar::types::TYPE_FIRST;
-use crate::parsing::token_set::TokenSet;
-use crate::SyntaxKind::ERROR;
-use super::{declarations, error_block, name, name_recovery, opt_visibility, types, Marker, Parser, EOF, GC_KW, IDENT, MEMORY_TYPE_SPECIFIER, RECORD_FIELD_DEF, RECORD_FIELD_DEF_LIST, STRUCT_DEF, TUPLE_FIELD_DEF, TUPLE_FIELD_DEF_LIST, TYPE_ALIAS_DEF, VALUE_KW, VISIBILITY_FIRST};
+use super::{
+    declarations, error_block, name, name_recovery, opt_visibility, types, Marker, Parser, EOF,
+    GC_KW, IDENT, MEMORY_TYPE_SPECIFIER, RECORD_FIELD_DEF, RECORD_FIELD_DEF_LIST, STRUCT_DEF,
+    TUPLE_FIELD_DEF, TUPLE_FIELD_DEF_LIST, TYPE_ALIAS_DEF, VALUE_KW, VISIBILITY_FIRST,
+};
+use crate::{
+    parsing::{grammar::types::TYPE_FIRST, token_set::TokenSet},
+    SyntaxKind::ERROR,
+};
 
-const TUPLE_FIELD_FIRST: TokenSet =
-    types::TYPE_FIRST.union(VISIBILITY_FIRST);
+const TUPLE_FIELD_FIRST: TokenSet = types::TYPE_FIRST.union(VISIBILITY_FIRST);
 
 pub(super) fn struct_def(p: &mut Parser<'_>, m: Marker) {
     assert!(p.at(T![struct]));
