@@ -1301,6 +1301,28 @@ fn struct_lit() {
 }
 
 #[test]
+fn struct_field_visibility() {
+    insta::assert_snapshot!(infer(
+        r#"
+    //- /foo.mun
+    pub struct Foo(pub i32, i32)
+
+    impl Foo {
+        pub fn new() -> Self {
+            Self(1, 2)
+        }
+    }
+
+    //- /mod.mun
+    fn main() {
+        let foo = foo::Foo::new();
+        let a = foo.0;
+        let b = foo.1;
+    }"#
+    ));
+}
+
+#[test]
 fn struct_field_index() {
     insta::assert_snapshot!(infer(
         r#"
@@ -1330,8 +1352,8 @@ fn struct_field_index() {
     146..151: attempted to access a non-existent field in a struct.
     268..273: attempted to access a non-existent field in a struct.
     361..366: attempted to access a non-existent field in a struct.
-    451..452: attempted to access a non-existent field in a struct.
-    83..516 '{     ...ype. }': ()
+    451..454: attempted to access a non-existent field in a struct.
+    83..521 '{     ...uct. }': ()
     93..96 'foo': Foo
     99..120 'Foo { ...b: 4 }': Foo
     108..112 '1.23': f64

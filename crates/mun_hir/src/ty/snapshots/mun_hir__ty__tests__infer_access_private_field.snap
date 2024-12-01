@@ -1,6 +1,5 @@
 ---
 source: crates/mun_hir/src/ty/tests.rs
-assertion_line: 705
 expression: "infer(r#\"\n    //- /foo.mun\n    pub struct Foo {\n        private: i32\n        pub public: i32,\n    }\n\n    impl Foo {\n        pub fn new() -> Self {\n            Self { private: 0, public: 0 }\n        }\n    }\n\n\n    //- /mod.mun\n    fn main() {\n        let foo = foo::Foo::new();\n        let a = foo.private;\n        let b = foo.public;\n    }\n    \"#)"
 ---
 55..66: access of private type

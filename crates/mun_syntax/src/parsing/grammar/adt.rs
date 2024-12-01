@@ -1,8 +1,10 @@
-use super::{
-    declarations, error_block, name, name_recovery, opt_visibility, types, Marker, Parser, EOF,
-    GC_KW, IDENT, MEMORY_TYPE_SPECIFIER, RECORD_FIELD_DEF, RECORD_FIELD_DEF_LIST, STRUCT_DEF,
-    TUPLE_FIELD_DEF, TUPLE_FIELD_DEF_LIST, TYPE_ALIAS_DEF, VALUE_KW,
-};
+use crate::parsing::grammar::types::TYPE_FIRST;
+use crate::parsing::token_set::TokenSet;
+use crate::SyntaxKind::ERROR;
+use super::{declarations, error_block, name, name_recovery, opt_visibility, types, Marker, Parser, EOF, GC_KW, IDENT, MEMORY_TYPE_SPECIFIER, RECORD_FIELD_DEF, RECORD_FIELD_DEF_LIST, STRUCT_DEF, TUPLE_FIELD_DEF, TUPLE_FIELD_DEF_LIST, TYPE_ALIAS_DEF, VALUE_KW, VISIBILITY_FIRST};
+
+const TUPLE_FIELD_FIRST: TokenSet =
+    types::TYPE_FIRST.union(VISIBILITY_FIRST);
 
 pub(super) fn struct_def(p: &mut Parser<'_>, m: Marker) {
     assert!(p.at(T![struct]));
@@ -78,9 +80,19 @@ pub(super) fn tuple_field_def_list(p: &mut Parser<'_>) {
     p.bump(T!['(']);
     while !p.at(T![')']) && !p.at(EOF) {
         let m = p.start();
-        if !p.at_ts(types::TYPE_FIRST) {
+        if !p.at_ts(TUPLE_FIELD_FIRST) {
             m.abandon(p);
-            p.error_and_bump("expected a type");
+            p.error_and_bump("expected a tuple field");
+            break;
+        }
+        let has_vis = opt_visibility(p);
+        if !p.at_ts(TYPE_FIRST) {
+            p.error("expected a type");
+            if has_vis {
+                m.complete(p, ERROR);
+            } else {
+                m.abandon(p);
+            }
             break;
         }
         types::type_(p);
