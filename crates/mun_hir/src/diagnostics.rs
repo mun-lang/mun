@@ -890,7 +890,7 @@ impl Diagnostic for MethodNotInScope {
     }
 }
 
-/// An error that is emitted if a unknown method is called
+/// An error that is emitted if an unknown method is called
 #[derive(Debug)]
 pub struct MethodNotFound {
     pub method_call: InFile<AstPtr<ast::MethodCallExpr>>,
