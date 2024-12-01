@@ -124,60 +124,66 @@ pub unsafe extern "C" fn mun_runtime_create(
         .map_err(|e| format!("invalid argument 'library_path': {e}")));
     let handle = try_deref_mut!(handle);
 
-    if options.num_functions > 0 && options.functions.is_null() {
-        return ErrorHandle::new("invalid argument: 'functions' is null pointer.");
-    }
+    let user_functions = if options.functions.is_null() {
+        if options.num_functions > 0 {
+            return ErrorHandle::new("invalid argument: 'functions' is null pointer.");
+        }
+        None
+    } else {
+        Some(std::slice::from_raw_parts(
+            options.functions,
+            options.num_functions as usize,
+        ))
+    };
 
     let type_table = TypeTable::default();
-    let user_functions = mun_error_try!(std::slice::from_raw_parts(
-        options.functions,
-        options.num_functions as usize
-    )
-    .iter()
-    .map(|def| {
-        let name =
-            try_convert_c_string(def.name).map_err(|e| format!("invalid function name: {e}"))?;
-        let return_type = ManuallyDrop::new(
-            def.return_type
-                .to_owned()
-                .map_err(|e| format!("invalid function '{name}': 'return_type': {e}"))?,
-        )
-        .deref()
-        .clone();
+    let user_functions = mun_error_try!(user_functions
+        .into_iter()
+        .flatten()
+        .map(|def| {
+            let name = try_convert_c_string(def.name)
+                .map_err(|e| format!("invalid function name: {e}"))?;
+            let return_type = ManuallyDrop::new(
+                def.return_type
+                    .to_owned()
+                    .map_err(|e| format!("invalid function '{name}': 'return_type': {e}"))?,
+            )
+            .deref()
+            .clone();
 
-        if def.num_args > 0 && def.arg_types.is_null() {
-            return Err(format!(
-                "invalid function '{name}': 'arg_types' is null pointer."
-            ));
-        }
+            if def.num_args > 0 && def.arg_types.is_null() {
+                return Err(format!(
+                    "invalid function '{name}': 'arg_types' is null pointer."
+                ));
+            }
 
-        let arg_types: Vec<_> = if def.num_args > 0 {
-            std::slice::from_raw_parts(def.arg_types, def.num_args as usize)
-                .iter()
-                .enumerate()
-                .map(|(i, arg)| -> Result<RustType, String> {
-                    let ty = (*arg).to_owned().map_err(|e| {
-                        format!("invalid function '{}': argument #{}: {}", name, i + 1, e)
-                    })?;
-                    Ok(ManuallyDrop::new(ty).deref().clone())
-                })
-                .collect::<Result<_, _>>()?
-        } else {
-            Vec::new()
-        };
+            let arg_types: Vec<_> = if def.num_args > 0 {
+                std::slice::from_raw_parts(def.arg_types, def.num_args as usize)
+                    .iter()
+                    .enumerate()
+                    .map(|(i, arg)| -> Result<RustType, String> {
+                        let ty = (*arg).to_owned().map_err(|e| {
+                            format!("invalid function '{}': argument #{}: {}", name, i + 1, e)
+                        })?;
+                        Ok(ManuallyDrop::new(ty).deref().clone())
+                    })
+                    .collect::<Result<_, _>>()?
+            } else {
+                Vec::new()
+            };
 
-        Ok(FunctionDefinition {
-            prototype: FunctionPrototype {
-                name: name.to_owned(),
-                signature: FunctionSignature {
-                    arg_types,
-                    return_type,
+            Ok(FunctionDefinition {
+                prototype: FunctionPrototype {
+                    name: name.to_owned(),
+                    signature: FunctionSignature {
+                        arg_types,
+                        return_type,
+                    },
                 },
-            },
-            fn_ptr: def.fn_ptr,
+                fn_ptr: def.fn_ptr,
+            })
         })
-    })
-    .collect::<Result<_, _>>());
+        .collect::<Result<_, _>>());
 
     let runtime_options = mun_runtime::RuntimeOptions {
         library_path: library_path.into(),
