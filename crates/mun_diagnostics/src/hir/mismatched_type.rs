@@ -20,7 +20,7 @@ pub struct MismatchedType<'db, 'diag, DB: mun_hir::HirDatabase> {
     diag: &'diag mun_hir::diagnostics::MismatchedType,
 }
 
-impl<'db, 'diag, DB: mun_hir::HirDatabase> Diagnostic for MismatchedType<'db, 'diag, DB> {
+impl<DB: mun_hir::HirDatabase> Diagnostic for MismatchedType<'_, '_, DB> {
     fn range(&self) -> TextRange {
         self.diag.highlight_range()
     }

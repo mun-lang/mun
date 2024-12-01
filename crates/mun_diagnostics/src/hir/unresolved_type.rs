@@ -17,7 +17,7 @@ pub struct UnresolvedType<'db, 'diag, DB: mun_hir::HirDatabase> {
     value_name: String,
 }
 
-impl<'db, 'diag, DB: mun_hir::HirDatabase> Diagnostic for UnresolvedType<'db, 'diag, DB> {
+impl<DB: mun_hir::HirDatabase> Diagnostic for UnresolvedType<'_, '_, DB> {
     fn range(&self) -> TextRange {
         self.diag.highlight_range()
     }

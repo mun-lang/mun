@@ -29,10 +29,10 @@ use crate::{
 pub struct RawVisibilityId(u32);
 
 impl RawVisibilityId {
-    pub const PUB: Self = RawVisibilityId(u32::max_value());
-    pub const PRIV: Self = RawVisibilityId(u32::max_value() - 1);
-    pub const PUB_PACKAGE: Self = RawVisibilityId(u32::max_value() - 2);
-    pub const PUB_SUPER: Self = RawVisibilityId(u32::max_value() - 3);
+    pub const PUB: Self = RawVisibilityId(u32::MAX);
+    pub const PRIV: Self = RawVisibilityId(u32::MAX - 1);
+    pub const PUB_PACKAGE: Self = RawVisibilityId(u32::MAX - 2);
+    pub const PUB_SUPER: Self = RawVisibilityId(u32::MAX - 3);
 }
 
 impl fmt::Debug for RawVisibilityId {
@@ -275,7 +275,7 @@ impl<N: ItemTreeNode> Index<LocalItemTreeId<N>> for ItemTree {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Import {
-    /// The path of the import (e.g. foo::Bar). Note that group imports have
+    /// The path of the import (e.g. `foo::Bar`). Note that group imports have
     /// been desugared, each item in the import tree is a seperate import.
     pub path: Path,
 

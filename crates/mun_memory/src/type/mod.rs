@@ -25,7 +25,7 @@ use std::{
     ptr::NonNull,
     sync::{
         atomic::{AtomicUsize, Ordering},
-        Arc, Once,
+        Arc, OnceLock,
     },
 };
 
@@ -591,7 +591,7 @@ impl<'t> StructType<'t> {
     }
 }
 
-impl<'t> Display for StructType<'t> {
+impl Display for StructType<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!(
             "struct({}) {{",
@@ -687,7 +687,7 @@ pub struct PointerType<'t> {
     store: &'t Arc<TypeDataStore>,
 }
 
-impl<'t> PointerType<'t> {
+impl PointerType<'_> {
     /// Returns the type to which this pointer points
     pub fn pointee(&self) -> Type {
         // Safety: this operation is safe due to the lifetime constraints on this type
@@ -705,7 +705,7 @@ impl<'t> PointerType<'t> {
     }
 }
 
-impl<'t> Display for PointerType<'t> {
+impl Display for PointerType<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!(
             "*{} {}",
@@ -741,7 +741,7 @@ pub struct ArrayType<'t> {
     store: &'t Arc<TypeDataStore>,
 }
 
-impl<'t> ArrayType<'t> {
+impl ArrayType<'_> {
     /// Returns the type of elements this array stores
     pub fn element_type(&self) -> Type {
         // Safety: this operation is safe due to the lifetime constraints on this type
@@ -749,7 +749,7 @@ impl<'t> ArrayType<'t> {
     }
 }
 
-impl<'t> Display for ArrayType<'t> {
+impl Display for ArrayType<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_str("[")?;
         std::fmt::Display::fmt(&self.element_type(), f)?;
@@ -1270,33 +1270,17 @@ impl_primitive_type!(
 /// Every type that has at least a type name also has a valid pointer type name
 impl<T: HasStaticType + 'static> HasStaticType for *mut T {
     fn type_info() -> &'static Type {
-        static mut VALUE: Option<StaticTypeMap<Type>> = None;
-        static INIT: Once = Once::new();
-
-        let map = unsafe {
-            INIT.call_once(|| {
-                VALUE = Some(StaticTypeMap::default());
-            });
-            VALUE.as_ref().unwrap()
-        };
-
-        map.call_once::<T, _>(|| T::type_info().pointer_type(true))
+        static INIT: OnceLock<StaticTypeMap<Type>> = OnceLock::new();
+        INIT.get_or_init(StaticTypeMap::default)
+            .call_once::<T, _>(|| T::type_info().pointer_type(true))
     }
 }
 
 /// Every type that has at least a type name also has a valid pointer type name
 impl<T: HasStaticType + 'static> HasStaticType for *const T {
     fn type_info() -> &'static Type {
-        static mut VALUE: Option<StaticTypeMap<Type>> = None;
-        static INIT: Once = Once::new();
-
-        let map = unsafe {
-            INIT.call_once(|| {
-                VALUE = Some(StaticTypeMap::default());
-            });
-            VALUE.as_ref().unwrap()
-        };
-
-        map.call_once::<T, _>(|| T::type_info().pointer_type(false))
+        static INIT: OnceLock<StaticTypeMap<Type>> = OnceLock::new();
+        INIT.get_or_init(StaticTypeMap::default)
+            .call_once::<T, _>(|| T::type_info().pointer_type(false))
     }
 }

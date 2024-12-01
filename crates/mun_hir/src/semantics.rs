@@ -222,7 +222,7 @@ impl Local {
     }
 }
 
-impl<'a> SemanticsScope<'a> {
+impl SemanticsScope<'_> {
     /// Call the `visit` function for every named item in the scope
     pub fn visit_all_names(&self, visit: &mut dyn FnMut(Name, ScopeDef)) {
         let resolver = &self.resolver;

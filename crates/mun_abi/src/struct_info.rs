@@ -80,16 +80,16 @@ impl<'a> StructDefinition<'a> {
     }
 }
 
-impl<'a> PartialEq for StructDefinition<'a> {
+impl PartialEq for StructDefinition<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.guid == other.guid
     }
 }
 
-impl<'a> Eq for StructDefinition<'a> {}
+impl Eq for StructDefinition<'_> {}
 
 #[cfg(feature = "serde")]
-impl<'a> serde::Serialize for StructDefinition<'a> {
+impl serde::Serialize for StructDefinition<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,

@@ -1,6 +1,6 @@
 use crate::{resolve::ValueNs, ty::infer::InferenceResultBuilder, Expr, ExprId, Path, Resolver};
 
-impl<'a> InferenceResultBuilder<'a> {
+impl InferenceResultBuilder<'_> {
     /// Checks if the specified expression is a place-expression. A place
     /// expression represents a memory location.
     pub(super) fn check_place_expression(&mut self, resolver: &Resolver, expr: ExprId) -> bool {

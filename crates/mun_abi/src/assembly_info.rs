@@ -17,7 +17,7 @@ pub struct AssemblyInfo<'a> {
     pub num_dependencies: u32,
 }
 
-impl<'a> AssemblyInfo<'a> {
+impl AssemblyInfo<'_> {
     /// Returns an iterator over the assembly's dependencies.
     pub fn dependencies(&self) -> impl Iterator<Item = &str> {
         let dependencies = if self.num_dependencies == 0 {
@@ -32,11 +32,11 @@ impl<'a> AssemblyInfo<'a> {
     }
 }
 
-unsafe impl<'a> Send for AssemblyInfo<'a> {}
-unsafe impl<'a> Sync for AssemblyInfo<'a> {}
+unsafe impl Send for AssemblyInfo<'_> {}
+unsafe impl Sync for AssemblyInfo<'_> {}
 
 #[cfg(feature = "serde")]
-impl<'a> serde::Serialize for AssemblyInfo<'a> {
+impl serde::Serialize for AssemblyInfo<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,

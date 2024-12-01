@@ -62,6 +62,7 @@ fn make_runtime(lib_path: &Path) -> Runtime {
     handle
 }
 
+/// A macro that generates tests for invalid runtime arguments
 #[macro_export]
 macro_rules! test_invalid_runtime {
     ($(

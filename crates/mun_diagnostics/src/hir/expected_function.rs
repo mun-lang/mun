@@ -18,7 +18,7 @@ pub struct ExpectedFunction<'db, 'diag, DB: mun_hir::HirDatabase> {
     diag: &'diag mun_hir::diagnostics::ExpectedFunction,
 }
 
-impl<'db, 'diag, DB: mun_hir::HirDatabase> Diagnostic for ExpectedFunction<'db, 'diag, DB> {
+impl<DB: mun_hir::HirDatabase> Diagnostic for ExpectedFunction<'_, '_, DB> {
     fn range(&self) -> TextRange {
         self.diag.highlight_range()
     }

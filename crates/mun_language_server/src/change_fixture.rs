@@ -12,7 +12,7 @@ pub const CURSOR_MARKER: &str = "$0";
 /// indicated by `$0`.
 pub struct ChangeFixture {
     pub file_position: Option<(FileId, RangeOrOffset)>,
-    pub files: Vec<FileId>,
+    pub _files: Vec<FileId>,
     pub change: AnalysisChange,
 }
 
@@ -54,7 +54,7 @@ impl ChangeFixture {
 
         ChangeFixture {
             file_position,
-            files,
+            _files: files,
             change,
         }
     }

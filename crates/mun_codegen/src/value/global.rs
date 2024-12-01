@@ -25,13 +25,13 @@ pub struct Global<'ink, T: ?Sized> {
     data: PhantomData<T>,
 }
 
-impl<'ink, T: ?Sized> Clone for Global<'ink, T> {
+impl<T: ?Sized> Clone for Global<'_, T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<'ink, T: ?Sized> Copy for Global<'ink, T> {}
+impl<T: ?Sized> Copy for Global<'_, T> {}
 
 impl<'ink, T: ?Sized> Global<'ink, T> {
     /// Creates a `Global<T>` from an underlying value.
@@ -146,7 +146,7 @@ where
     }
 }
 
-impl<'ink, T> HasConstValue for Global<'ink, T> {
+impl<T> HasConstValue for Global<'_, T> {
     fn has_const_value() -> bool {
         false
     }

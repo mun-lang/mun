@@ -1,6 +1,6 @@
 use std::{
     hash::Hash,
-    sync::{Arc, Once},
+    sync::{Arc, OnceLock},
 };
 
 use mun_abi::{self as abi, static_type_map::StaticTypeMap, Guid};
@@ -72,50 +72,34 @@ impl_primitive_type_id! {
 
 impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *const T {
     fn type_id() -> &'static Arc<TypeId> {
-        static mut VALUE: Option<StaticTypeMap<Arc<TypeId>>> = None;
-        static INIT: Once = Once::new();
-
-        let map = unsafe {
-            INIT.call_once(|| {
-                VALUE = Some(StaticTypeMap::default());
-            });
-            VALUE.as_ref().unwrap()
-        };
-
-        map.call_once::<T, _>(|| {
-            let element_type_id = T::type_id().clone();
-            Arc::new(TypeId {
-                name: format!("*const {}", &element_type_id.name),
-                data: TypeIdData::Pointer(PointerTypeId {
-                    pointee: element_type_id,
-                    mutable: false,
-                }),
+        static INIT: OnceLock<StaticTypeMap<Arc<TypeId>>> = OnceLock::new();
+        INIT.get_or_init(StaticTypeMap::default)
+            .call_once::<T, _>(|| {
+                let element_type_id = T::type_id().clone();
+                Arc::new(TypeId {
+                    name: format!("*const {}", &element_type_id.name),
+                    data: TypeIdData::Pointer(PointerTypeId {
+                        pointee: element_type_id,
+                        mutable: false,
+                    }),
+                })
             })
-        })
     }
 }
 
 impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *mut T {
     fn type_id() -> &'static Arc<TypeId> {
-        static mut VALUE: Option<StaticTypeMap<Arc<TypeId>>> = None;
-        static INIT: Once = Once::new();
-
-        let map = unsafe {
-            INIT.call_once(|| {
-                VALUE = Some(StaticTypeMap::default());
-            });
-            VALUE.as_ref().unwrap()
-        };
-
-        map.call_once::<T, _>(|| {
-            let element_type_id = T::type_id().clone();
-            Arc::new(TypeId {
-                name: format!("*mut {}", &element_type_id.name),
-                data: TypeIdData::Pointer(PointerTypeId {
-                    pointee: element_type_id,
-                    mutable: true,
-                }),
+        static INIT: OnceLock<StaticTypeMap<Arc<TypeId>>> = OnceLock::new();
+        INIT.get_or_init(StaticTypeMap::default)
+            .call_once::<T, _>(|| {
+                let element_type_id = T::type_id().clone();
+                Arc::new(TypeId {
+                    name: format!("*mut {}", &element_type_id.name),
+                    data: TypeIdData::Pointer(PointerTypeId {
+                        pointee: element_type_id,
+                        mutable: true,
+                    }),
+                })
             })
-        })
     }
 }

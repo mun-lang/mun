@@ -98,7 +98,7 @@ impl TraceEvent {
         match ty.kind() {
             TypeKind::Primitive(_) | TypeKind::Pointer(_) => None,
             TypeKind::Struct(s) => {
-                return if s.is_gc_struct() {
+                if s.is_gc_struct() {
                     let deref_ptr = unsafe { ptr.cast::<NonNull<ObjectInfo>>().as_ref() };
                     Some(TraceEvent::Reference(*deref_ptr))
                 } else {
@@ -107,7 +107,7 @@ impl TraceEvent {
                         struct_type: ty.into_owned(),
                         field_index: 0,
                     }))
-                };
+                }
             }
             TypeKind::Array(_) => Some(TraceEvent::Reference(ptr.cast())),
         }
@@ -633,6 +633,7 @@ where
             NonNull::new_unchecked(ptr as *mut u8)
         }
 
+        #[allow(clippy::mutable_key_type)]
         fn map_array(
             new_allocations: &mut Vec<Pin<Box<ObjectInfo>>>,
             conversions: &HashMap<Type, StructMapping>,
@@ -678,6 +679,7 @@ where
             };
         }
 
+        #[allow(clippy::mutable_key_type)]
         fn map_type(
             new_allocations: &mut Vec<Pin<Box<ObjectInfo>>>,
             conversions: &HashMap<Type, StructMapping>,
