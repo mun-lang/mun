@@ -2,16 +2,17 @@
 
 use std::sync::Arc;
 
+use la_arena::ArenaMap;
 use mun_db::Upcast;
 use mun_hir_input::{FileId, PackageId, SourceDatabase};
 use mun_syntax::{ast, Parse, SourceFile};
 use mun_target::{abi, spec::Target};
 
 use crate::{
-    code_model::{FunctionData, ImplData, StructData, TypeAliasData},
+    code_model::{r#struct::LocalFieldId, FunctionData, ImplData, StructData, TypeAliasData},
     expr::BodySourceMap,
     ids,
-    ids::{DefWithBodyId, FunctionId, ImplId},
+    ids::{DefWithBodyId, FunctionId, ImplId, VariantId},
     item_tree::{self, ItemTree},
     method_resolution::InherentImpls,
     name_resolution::Namespace,
@@ -66,6 +67,9 @@ pub trait DefDatabase: InternDatabase + AstDatabase + Upcast<dyn AstDatabase> {
 
     #[salsa::invoke(visibility::function_visibility_query)]
     fn function_visibility(&self, def: FunctionId) -> Visibility;
+
+    #[salsa::invoke(visibility::field_visibilities_query)]
+    fn field_visibilities(&self, variant_id: VariantId) -> Arc<ArenaMap<LocalFieldId, Visibility>>;
 
     /// Returns the `PackageDefs` for the specified `PackageId`. The
     /// `PackageDefs` contains all resolved items defined for every module

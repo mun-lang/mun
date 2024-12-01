@@ -364,6 +364,7 @@ impl AstNode for Expr {
                 | BIN_EXPR
                 | PAREN_EXPR
                 | CALL_EXPR
+                | METHOD_CALL_EXPR
                 | FIELD_EXPR
                 | IF_EXPR
                 | LOOP_EXPR
@@ -395,6 +396,7 @@ pub enum ExprKind {
     BinExpr(BinExpr),
     ParenExpr(ParenExpr),
     CallExpr(CallExpr),
+    MethodCallExpr(MethodCallExpr),
     FieldExpr(FieldExpr),
     IfExpr(IfExpr),
     LoopExpr(LoopExpr),
@@ -433,6 +435,11 @@ impl From<ParenExpr> for Expr {
 }
 impl From<CallExpr> for Expr {
     fn from(n: CallExpr) -> Expr {
+        Expr { syntax: n.syntax }
+    }
+}
+impl From<MethodCallExpr> for Expr {
+    fn from(n: MethodCallExpr) -> Expr {
         Expr { syntax: n.syntax }
     }
 }
@@ -496,6 +503,9 @@ impl Expr {
             BIN_EXPR => ExprKind::BinExpr(BinExpr::cast(self.syntax.clone()).unwrap()),
             PAREN_EXPR => ExprKind::ParenExpr(ParenExpr::cast(self.syntax.clone()).unwrap()),
             CALL_EXPR => ExprKind::CallExpr(CallExpr::cast(self.syntax.clone()).unwrap()),
+            METHOD_CALL_EXPR => {
+                ExprKind::MethodCallExpr(MethodCallExpr::cast(self.syntax.clone()).unwrap())
+            }
             FIELD_EXPR => ExprKind::FieldExpr(FieldExpr::cast(self.syntax.clone()).unwrap()),
             IF_EXPR => ExprKind::IfExpr(IfExpr::cast(self.syntax.clone()).unwrap()),
             LOOP_EXPR => ExprKind::LoopExpr(LoopExpr::cast(self.syntax.clone()).unwrap()),
@@ -804,6 +814,39 @@ impl AstNode for MemoryTypeSpecifier {
     }
 }
 impl MemoryTypeSpecifier {}
+
+// MethodCallExpr
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct MethodCallExpr {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for MethodCallExpr {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, METHOD_CALL_EXPR)
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(MethodCallExpr { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl ast::ArgListOwner for MethodCallExpr {}
+impl MethodCallExpr {
+    pub fn expr(&self) -> Option<Expr> {
+        super::child_opt(self)
+    }
+
+    pub fn name_ref(&self) -> Option<NameRef> {
+        super::child_opt(self)
+    }
+}
 
 // ModuleItem
 

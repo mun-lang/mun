@@ -1,0 +1,19 @@
+---
+source: crates/mun_hir/src/ty/tests.rs
+expression: "infer(r#\"\n    //- /foo.mun\n    pub struct Foo {\n        private: i32\n        pub public: i32,\n    }\n\n    impl Foo {\n        pub fn new() -> Self {\n            Self { private: 0, public: 0 }\n        }\n    }\n\n\n    //- /mod.mun\n    fn main() {\n        let foo = foo::Foo::new();\n        let a = foo.private;\n        let b = foo.public;\n    }\n    \"#)"
+---
+55..66: access of private type
+10..93 '{     ...lic; }': ()
+20..23 'foo': Foo
+26..39 'foo::Foo::new': function new() -> Foo
+26..41 'foo::Foo::new()': Foo
+51..52 'a': i32
+55..58 'foo': Foo
+55..66 'foo.private': i32
+76..77 'b': i32
+80..83 'foo': Foo
+80..90 'foo.public': i32
+94..140 '{     ...     }': Foo
+104..134 'Self {...c: 0 }': Foo
+120..121 '0': i32
+131..132 '0': i32

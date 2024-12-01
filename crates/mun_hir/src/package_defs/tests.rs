@@ -184,7 +184,7 @@ fn use_() {
         r#"
     //- /bar.mun
     use package::Foo;
-    pub struct Bar(Foo);
+    pub struct Bar(pub Foo);
 
     //- /mod.mun
     pub use foo::Foo; // Re-export a child's definition

@@ -234,6 +234,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 self.gen_binary_op(expr, *lhs, *rhs, op.expect("missing op"))
             }
             Expr::UnaryOp { expr, op } => self.gen_unary_op(*expr, *op),
+            Expr::MethodCall { .. } => {
+                unimplemented!("Method calls are not yet implemented in the IR generator")
+            }
             Expr::Call {
                 ref callee,
                 ref args,

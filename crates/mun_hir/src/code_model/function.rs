@@ -103,6 +103,21 @@ impl FunctionData {
     pub fn is_extern(&self) -> bool {
         self.flags.is_extern()
     }
+
+    /// Returns true if the first param is `self`. This is relevant to decide
+    /// whether this can be called as a method as opposed to an associated
+    /// function.
+    ///
+    /// An associated function is a function that is associated with a type but
+    /// doesn't "act" on an instance. E.g. in Rust terms you can call
+    /// `String::from("foo")` but you can't call `String::len()`.
+    ///
+    /// A method on the other hand is a function that is associated with a type
+    /// and does "act" on an instance. E.g. in Rust terms you can call
+    /// `foo.len()` but you can't call `foo.new()`.
+    pub fn has_self_param(&self) -> bool {
+        self.flags.has_self_param()
+    }
 }
 
 impl Function {

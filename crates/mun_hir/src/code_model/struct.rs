@@ -244,6 +244,13 @@ impl StructData {
     pub fn type_ref_map(&self) -> &TypeRefMap {
         &self.type_ref_map
     }
+
+    /// Returns the index of the field with the specified name.
+    pub fn find_field(&self, name: &Name) -> Option<LocalFieldId> {
+        self.fields
+            .iter()
+            .find_map(|(idx, data)| (data.name == *name).then_some(idx))
+    }
 }
 
 impl HasVisibility for Struct {

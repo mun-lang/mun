@@ -69,6 +69,11 @@ impl Name {
             Repr::TupleField(_) => None,
         }
     }
+
+    /// Returns true if this name represents a missing name.
+    pub fn is_missing(&self) -> bool {
+        self == &Self::missing()
+    }
 }
 
 pub(crate) trait AsName {

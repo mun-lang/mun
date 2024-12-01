@@ -241,12 +241,26 @@ pub struct MethodResolutionCtx<'db> {
 
     /// Filter based on visibility from this module
     visible_from: Option<ModuleId>,
+
+    /// Whether to look up methods or associated functions.
+    association_mode: Option<AssociationMode>,
 }
 
 enum IsValidCandidate {
     Yes,
     No,
     NotVisible,
+}
+
+/// Whether to look up methods or associated functions.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum AssociationMode {
+    /// Method call e.g. a method that takes self as the first argument.
+    WithSelf,
+
+    /// Associated function e.g. a method that does not take self as the first
+    /// argument.
+    WithoutSelf,
 }
 
 impl<'db> MethodResolutionCtx<'db> {
@@ -256,6 +270,23 @@ impl<'db> MethodResolutionCtx<'db> {
             ty,
             name: None,
             visible_from: None,
+            association_mode: None,
+        }
+    }
+
+    /// Filter methods based on the specified lookup mode.
+    pub fn with_association(self, association: AssociationMode) -> Self {
+        Self {
+            association_mode: Some(association),
+            ..self
+        }
+    }
+
+    /// Filter methods based on the specified lookup mode.
+    pub fn with_association_opt(self, association: Option<AssociationMode>) -> Self {
+        Self {
+            association_mode: association,
+            ..self
         }
     }
 
@@ -351,6 +382,16 @@ impl<'db> MethodResolutionCtx<'db> {
             }
         }
 
+        // Check the association mode
+        if let Some(association_mode) = self.association_mode {
+            if matches!(
+                (association_mode, data.has_self_param()),
+                (AssociationMode::WithSelf, false) | (AssociationMode::WithoutSelf, true)
+            ) {
+                return IsValidCandidate::No;
+            }
+        }
+
         // Check if the function is visible from the selected module
         if let Some(visible_from) = self.visible_from {
             if !self
@@ -361,6 +402,8 @@ impl<'db> MethodResolutionCtx<'db> {
                 return IsValidCandidate::NotVisible;
             }
         }
+
+        // Check if the function
 
         IsValidCandidate::Yes
     }
@@ -376,9 +419,11 @@ pub(crate) fn lookup_method(
     ty: &Ty,
     visible_from_module: ModuleId,
     name: &Name,
+    association_mode: Option<AssociationMode>,
 ) -> Result<FunctionId, Option<FunctionId>> {
     let mut not_visible = None;
     MethodResolutionCtx::new(db, ty.clone())
+        .with_association_opt(association_mode)
         .visible_from(visible_from_module)
         .with_name(name.clone())
         .collect(|item, visible| match item {
@@ -561,6 +606,7 @@ mod tests {
             &fixture.foo_ty,
             fixture.root_module.id,
             &Name::new("bar"),
+            None,
         )
         .is_ok());
     }
@@ -573,6 +619,7 @@ mod tests {
             &fixture.foo_ty,
             fixture.root_module.id,
             &Name::new("not_found"),
+            None,
         )
         .unwrap_err()
         .is_none());
@@ -586,6 +633,7 @@ mod tests {
             &fixture.foo_ty,
             fixture.root_module.id,
             &Name::new("baz"),
+            None,
         )
         .unwrap_err()
         .is_some());

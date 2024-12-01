@@ -1,9 +1,16 @@
-use std::iter::successors;
+use std::{iter::successors, sync::Arc};
 
+use la_arena::ArenaMap;
 use mun_hir_input::{ModuleId, ModuleTree, PackageModuleId};
 use mun_syntax::ast;
 
-use crate::{ids::FunctionId, resolve::HasResolver, DefDatabase, HirDatabase, Module, Resolver};
+use crate::{
+    code_model::r#struct::LocalFieldId,
+    has_module::HasModule,
+    ids::{FunctionId, VariantId},
+    resolve::HasResolver,
+    DefDatabase, HirDatabase, Module, Resolver,
+};
 
 /// Visibility of an item, not yet resolved to an actual module.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -147,4 +154,22 @@ pub trait HasVisibility {
 pub(crate) fn function_visibility_query(db: &dyn DefDatabase, def: FunctionId) -> Visibility {
     let resolver = def.resolver(db);
     db.fn_data(def).visibility().resolve(db, &resolver)
+}
+
+/// Resolve visibility of all fields of a variant.
+pub(crate) fn field_visibilities_query(
+    db: &dyn DefDatabase,
+    variant_id: VariantId,
+) -> Arc<ArenaMap<LocalFieldId, Visibility>> {
+    let mut res = ArenaMap::default();
+    let resolver = variant_id.module(db).resolver(db);
+    match variant_id {
+        VariantId::StructId(st) => {
+            let struct_data = db.struct_data(st);
+            for (field_idx, field_data) in struct_data.fields.iter() {
+                res.insert(field_idx, field_data.visibility.resolve(db, &resolver));
+            }
+        }
+    };
+    Arc::new(res)
 }

@@ -285,6 +285,11 @@ pub enum Expr {
         callee: ExprId,
         args: Vec<ExprId>,
     },
+    MethodCall {
+        receiver: ExprId,
+        method_name: Name,
+        args: Vec<ExprId>,
+    },
     Path(Path),
     If {
         condition: ExprId,
@@ -395,6 +400,12 @@ impl Expr {
             }
             Expr::Call { callee, args } => {
                 f(*callee);
+                for arg in args {
+                    f(*arg);
+                }
+            }
+            Expr::MethodCall { receiver, args, .. } => {
+                f(*receiver);
                 for arg in args {
                     f(*arg);
                 }
@@ -876,6 +887,24 @@ impl<'a> ExprCollector<'a> {
                     Vec::new()
                 };
                 self.alloc_expr(Expr::Call { callee, args }, syntax_ptr)
+            }
+            ast::ExprKind::MethodCallExpr(e) => {
+                let receiver = self.collect_expr_opt(e.expr());
+                let args = e
+                    .arg_list()
+                    .into_iter()
+                    .flat_map(|arg_list| arg_list.args())
+                    .map(|e| self.collect_expr(e))
+                    .collect();
+                let method_name = e.name_ref().map_or_else(Name::missing, |nr| nr.as_name());
+                self.alloc_expr(
+                    Expr::MethodCall {
+                        receiver,
+                        method_name,
+                        args,
+                    },
+                    syntax_ptr,
+                )
             }
             ast::ExprKind::ArrayExpr(e) => {
                 let exprs = e.exprs().map(|expr| self.collect_expr(expr)).collect();
