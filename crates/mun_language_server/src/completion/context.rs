@@ -21,7 +21,7 @@ pub(super) struct CompletionContext<'a> {
     /// True if the context is currently on a parameter
     pub is_param: bool,
 
-    /// True if we're at an ast::PathType
+    /// True if we're at an `ast::PathType`
     pub is_path_type: bool,
 
     /// The receiver if this is a field or method access, i.e. writing

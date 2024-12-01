@@ -33,7 +33,7 @@ pub struct TypeDefinition<'a> {
     pub data: TypeDefinitionData<'a>,
 }
 
-impl<'a> Debug for TypeDefinition<'a> {
+impl Debug for TypeDefinition<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("TypeDefinition")
             .field("name", &self.name())
@@ -45,7 +45,7 @@ impl<'a> Debug for TypeDefinition<'a> {
 }
 
 #[cfg(feature = "serde")]
-impl<'a> serde::Serialize for TypeDefinition<'a> {
+impl serde::Serialize for TypeDefinition<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -118,13 +118,13 @@ impl<'a> TypeDefinition<'a> {
     }
 }
 
-impl<'a> fmt::Display for TypeDefinition<'a> {
+impl fmt::Display for TypeDefinition<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name())
     }
 }
 
-impl<'a> PartialEq for TypeDefinition<'a> {
+impl PartialEq for TypeDefinition<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.size_in_bits == other.size_in_bits
             && self.alignment == other.alignment
@@ -132,12 +132,12 @@ impl<'a> PartialEq for TypeDefinition<'a> {
     }
 }
 
-impl<'a> Eq for TypeDefinition<'a> {}
+impl Eq for TypeDefinition<'_> {}
 
-unsafe impl<'a> Send for TypeDefinition<'a> {}
-unsafe impl<'a> Sync for TypeDefinition<'a> {}
+unsafe impl Send for TypeDefinition<'_> {}
+unsafe impl Sync for TypeDefinition<'_> {}
 
-impl<'a> TypeDefinitionData<'a> {
+impl TypeDefinitionData<'_> {
     /// Returns whether this is a struct type.
     pub fn is_struct(&self) -> bool {
         matches!(self, TypeDefinitionData::Struct(_))

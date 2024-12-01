@@ -57,11 +57,11 @@ impl<'a> ModuleInfo<'a> {
     }
 }
 
-unsafe impl<'a> Send for ModuleInfo<'a> {}
-unsafe impl<'a> Sync for ModuleInfo<'a> {}
+unsafe impl Send for ModuleInfo<'_> {}
+unsafe impl Sync for ModuleInfo<'_> {}
 
 #[cfg(feature = "serde")]
-impl<'a> serde::Serialize for ModuleInfo<'a> {
+impl serde::Serialize for ModuleInfo<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,

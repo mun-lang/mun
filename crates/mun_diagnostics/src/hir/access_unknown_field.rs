@@ -22,7 +22,7 @@ pub struct AccessUnknownField<'db, 'diag, DB: mun_hir::HirDatabase> {
     location: TextRange,
 }
 
-impl<'db, 'diag, DB: mun_hir::HirDatabase> Diagnostic for AccessUnknownField<'db, 'diag, DB> {
+impl<DB: mun_hir::HirDatabase> Diagnostic for AccessUnknownField<'_, '_, DB> {
     fn range(&self) -> TextRange {
         self.location
     }

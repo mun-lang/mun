@@ -17,8 +17,6 @@ pub struct ParseError(pub String);
 
 /// `TokenSource` abstract the source of the tokens.
 trait TokenSource {
-    fn current(&self) -> Token;
-
     /// Lookahead n token
     fn lookahead_nth(&self, n: usize) -> Token;
 

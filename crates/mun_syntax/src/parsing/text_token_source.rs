@@ -14,7 +14,7 @@ pub(crate) struct TextTokenSource<'t> {
     /// |      |  ^-
     /// 0      7  10
     /// ```
-    /// (token, start_offset): `[(struct, 0), (Foo, 7), (;, 10)]`
+    /// (token, `start_offset)`: `[(struct, 0), (Foo, 7), (;, 10)]`
     start_offsets: Vec<TextSize>,
     /// non-whitespace/comment tokens
     /// ```non-rust
@@ -28,11 +28,7 @@ pub(crate) struct TextTokenSource<'t> {
     curr: (PToken, usize),
 }
 
-impl<'t> TokenSource for TextTokenSource<'t> {
-    fn current(&self) -> PToken {
-        self.curr.0
-    }
-
+impl TokenSource for TextTokenSource<'_> {
     fn lookahead_nth(&self, n: usize) -> PToken {
         mk_token(self.curr.1 + n, &self.start_offsets, &self.tokens)
     }

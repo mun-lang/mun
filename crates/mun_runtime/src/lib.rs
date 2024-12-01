@@ -658,19 +658,19 @@ pub struct InvokeErr<'name, T> {
     arguments: T,
 }
 
-impl<'name, T> Debug for InvokeErr<'name, T> {
+impl<T> Debug for InvokeErr<'_, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", &self.msg)
     }
 }
 
-impl<'name, T> Display for InvokeErr<'name, T> {
+impl<T> Display for InvokeErr<'_, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", &self.msg)
     }
 }
 
-impl<'name, T: InvokeArgs> InvokeErr<'name, T> {
+impl<T: InvokeArgs> InvokeErr<'_, T> {
     /// Retries a function invocation once, resulting in a potentially
     /// successful invocation.
     // FIXME: `unwrap_or_else` does not compile for `StructRef`, due to

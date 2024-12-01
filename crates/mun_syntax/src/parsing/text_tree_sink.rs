@@ -23,7 +23,7 @@ enum State {
     PendingFinish,
 }
 
-impl<'a> TreeSink for TextTreeSink<'a> {
+impl TreeSink for TextTreeSink<'_> {
     fn token(&mut self, kind: SyntaxKind, n_tokens: u8) {
         match mem::replace(&mut self.state, State::Normal) {
             State::PendingStart => unreachable!(),

@@ -24,7 +24,7 @@ pub trait HirDisplay {
     }
 }
 
-impl<'a, 'b> HirFormatter<'a, 'b> {
+impl HirFormatter<'_, '_> {
     pub fn write_joined<T: HirDisplay>(
         &mut self,
         iter: impl IntoIterator<Item = T>,
@@ -49,7 +49,7 @@ impl<'a, 'b> HirFormatter<'a, 'b> {
 
 pub struct HirDisplayWrapper<'a, T>(&'a dyn HirDatabase, &'a T);
 
-impl<'a, T> fmt::Display for HirDisplayWrapper<'a, T>
+impl<T> fmt::Display for HirDisplayWrapper<'_, T>
 where
     T: HirDisplay,
 {

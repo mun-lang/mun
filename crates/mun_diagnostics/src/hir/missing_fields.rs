@@ -22,7 +22,7 @@ pub struct MissingFields<'db, 'diag, DB: mun_hir::HirDatabase> {
     missing_fields: String,
 }
 
-impl<'db, 'diag, DB: mun_hir::HirDatabase> Diagnostic for MissingFields<'db, 'diag, DB> {
+impl<DB: mun_hir::HirDatabase> Diagnostic for MissingFields<'_, '_, DB> {
     fn range(&self) -> TextRange {
         self.location
     }

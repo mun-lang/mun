@@ -14,7 +14,7 @@ enum ExprKind {
     Both,
 }
 
-impl<'d> ExprValidator<'d> {
+impl ExprValidator<'_> {
     /// Validates that all binding access has previously been initialized.
     pub(super) fn validate_uninitialized_access(&self, sink: &mut DiagnosticSink<'_>) {
         let mut initialized_patterns = HashSet::new();

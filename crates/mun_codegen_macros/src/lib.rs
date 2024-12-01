@@ -164,7 +164,7 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
                         /// Calculates the size of data after padding has been appended to its end,
                         /// based on its alignment.
                         fn padded_size(align: usize, data_size: usize) -> usize {
-                            ((data_size + align - 1) / align) * align
+                            data_size.div_ceil(align) * align
                         }
 
                         // Aliasing to make sure that all procedurally generated macros can use the
@@ -222,7 +222,7 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
                         use crate::value::AsBytesAndPtrs;
 
                         fn padded_size(align: usize, data_size: usize) -> usize {
-                            ((data_size + align - 1) / align) * align
+                            data_size.div_ceil(align) * align
                         }
 
                         // Aliasing to make sure that all procedurally generated macros can use the
@@ -241,7 +241,7 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
                         /// Calculates the size of data after padding has been appended to its end,
                         /// based on its alignment.
                         fn padded_size(align: usize, data_size: usize) -> usize {
-                            ((data_size + align - 1) / align) * align
+                            data_size.div_ceil(align) * align
                         }
 
                         // Aliasing to make sure that all procedurally generated macros can use the
@@ -580,7 +580,7 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
                         );
 
                         fn padded_size(align: usize, data_size: usize) -> usize {
-                            ((data_size + align - 1) / align) * align
+                            data_size.div_ceil(align) * align
                         }
 
                         let variant_field_paddings_and_sizes = [ #(#variant_type_field_paddings_and_sizes),* ];
@@ -644,7 +644,7 @@ pub fn as_value_derive(input: TokenStream) -> TokenStream {
                         );
 
                         fn padded_size(align: usize, data_size: usize) -> usize {
-                            ((data_size + align - 1) / align) * align
+                            data_size.div_ceil(align) * align
                         }
 
                         let variant_field_paddings_and_sizes = [ #(#variant_value_field_paddings_and_sizes),* ];

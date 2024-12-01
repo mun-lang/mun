@@ -2,7 +2,7 @@ use inkwell::{
     context::Context,
     targets::TargetData,
     types::{
-        AnyType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType,
+        AnyType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FunctionType, IntType,
         PointerType,
     },
     AddressSpace,
@@ -76,94 +76,6 @@ impl<'ink> IsFunctionReturnType<'ink> for () {
         context.void_type().fn_type(arg_types, is_var_args)
     }
 }
-
-/// Defines that a value can be converted to an inkwell type
-pub trait AsIrType<'ink> {
-    type Type: AnyType<'ink>;
-
-    fn as_ir_type(&self, context: &'ink Context, target: &TargetData) -> Self::Type;
-}
-
-pub trait AsBasicIrType<'ink> {
-    fn as_ir_type(&self, context: &'ink Context, target: &TargetData) -> BasicTypeEnum<'ink>;
-}
-
-impl<'ink, S: BasicType<'ink>, T: AsIrType<'ink, Type = S>> AsBasicIrType<'ink> for T {
-    fn as_ir_type(&self, context: &'ink Context, target: &TargetData) -> BasicTypeEnum<'ink> {
-        self.as_ir_type(context, target).as_basic_type_enum()
-    }
-}
-
-/// Defines that a value can be used to construct a function type.
-pub trait AsFunctionReturnType<'ink> {
-    fn as_fn_type(
-        &self,
-        context: &'ink Context,
-        target: &TargetData,
-        arg_types: &[BasicMetadataTypeEnum<'ink>],
-        is_var_args: bool,
-    ) -> FunctionType<'ink>;
-}
-
-impl<'ink, T: AsBasicIrType<'ink>> AsFunctionReturnType<'ink> for T {
-    fn as_fn_type(
-        &self,
-        context: &'ink Context,
-        target: &TargetData,
-        arg_types: &[BasicMetadataTypeEnum<'ink>],
-        is_var_args: bool,
-    ) -> FunctionType<'ink> {
-        self.as_ir_type(context, target)
-            .fn_type(arg_types, is_var_args)
-    }
-}
-
-impl<'ink> AsFunctionReturnType<'ink> for () {
-    fn as_fn_type(
-        &self,
-        context: &'ink Context,
-        _target: &TargetData,
-        arg_types: &[BasicMetadataTypeEnum<'ink>],
-        is_var_args: bool,
-    ) -> FunctionType<'ink> {
-        context.void_type().fn_type(arg_types, is_var_args)
-    }
-}
-
-macro_rules! impl_fundamental_ir_types {
-    ($(
-        $ty:ty => $context_fun:ident():$inkwell_ty:ty
-    ),+) => {
-        $(
-            impl<'ink> IsIrType<'ink> for $ty {
-                type Type = $inkwell_ty;
-
-                fn ir_type(context: &'ink Context, _target: &TargetData) -> Self::Type {
-                    context.$context_fun()
-                }
-            }
-        )+
-    }
-}
-
-impl_fundamental_ir_types!(
-    i8 => i8_type():IntType<'ink>,
-    i16 => i16_type():IntType<'ink>,
-    i32 => i32_type():IntType<'ink>,
-    i64 => i64_type():IntType<'ink>,
-    i128 => i128_type():IntType<'ink>,
-
-    u8 => i8_type():IntType<'ink>,
-    u16 => i16_type():IntType<'ink>,
-    u32 => i32_type():IntType<'ink>,
-    u64 => i64_type():IntType<'ink>,
-    u128 => i128_type():IntType<'ink>,
-
-    bool => bool_type():IntType<'ink>,
-
-    f32 => f32_type():FloatType<'ink>,
-    f64 => f64_type():FloatType<'ink>
-);
 
 impl<'ink> IsIrType<'ink> for usize {
     type Type = IntType<'ink>;

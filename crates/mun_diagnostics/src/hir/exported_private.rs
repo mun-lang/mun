@@ -10,7 +10,7 @@ pub struct ExportedPrivate<'db, 'diag, DB: mun_hir::HirDatabase> {
     value_name: String,
 }
 
-impl<'db, 'diag, DB: mun_hir::HirDatabase> Diagnostic for ExportedPrivate<'db, 'diag, DB> {
+impl<DB: mun_hir::HirDatabase> Diagnostic for ExportedPrivate<'_, '_, DB> {
     fn range(&self) -> TextRange {
         self.diag.highlight_range()
     }

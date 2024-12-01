@@ -42,18 +42,18 @@ pub struct FunctionSignature<'a> {
     pub num_arg_types: u16,
 }
 
-unsafe impl<'a> Send for FunctionDefinition<'a> {}
-unsafe impl<'a> Sync for FunctionDefinition<'a> {}
+unsafe impl Send for FunctionDefinition<'_> {}
+unsafe impl Sync for FunctionDefinition<'_> {}
 
-impl<'a> FunctionPrototype<'a> {
+impl FunctionPrototype<'_> {
     /// Returns the function's name.
     pub fn name(&self) -> &str {
         unsafe { str::from_utf8_unchecked(CStr::from_ptr(self.name).to_bytes()) }
     }
 }
 
-unsafe impl<'a> Send for FunctionPrototype<'a> {}
-unsafe impl<'a> Sync for FunctionPrototype<'a> {}
+unsafe impl Send for FunctionPrototype<'_> {}
+unsafe impl Sync for FunctionPrototype<'_> {}
 
 impl<'a> FunctionSignature<'a> {
     /// Returns the function's arguments' types.
@@ -75,19 +75,19 @@ impl<'a> FunctionSignature<'a> {
     }
 }
 
-impl<'a> PartialEq for FunctionSignature<'a> {
+impl PartialEq for FunctionSignature<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.return_type() == other.return_type() && self.arg_types().eq(other.arg_types())
     }
 }
 
-impl<'a> Eq for FunctionSignature<'a> {}
+impl Eq for FunctionSignature<'_> {}
 
-unsafe impl<'a> Send for FunctionSignature<'a> {}
-unsafe impl<'a> Sync for FunctionSignature<'a> {}
+unsafe impl Send for FunctionSignature<'_> {}
+unsafe impl Sync for FunctionSignature<'_> {}
 
 #[cfg(feature = "serde")]
-impl<'a> serde::Serialize for FunctionDefinition<'a> {
+impl serde::Serialize for FunctionDefinition<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -102,7 +102,7 @@ impl<'a> serde::Serialize for FunctionDefinition<'a> {
 }
 
 #[cfg(feature = "serde")]
-impl<'a> serde::Serialize for FunctionPrototype<'a> {
+impl serde::Serialize for FunctionPrototype<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -117,7 +117,7 @@ impl<'a> serde::Serialize for FunctionPrototype<'a> {
 }
 
 #[cfg(feature = "serde")]
-impl<'a> serde::Serialize for FunctionSignature<'a> {
+impl serde::Serialize for FunctionSignature<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
