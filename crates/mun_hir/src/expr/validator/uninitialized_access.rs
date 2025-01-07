@@ -53,6 +53,12 @@ impl ExprValidator<'_> {
                     self.validate_expr_access(sink, initialized_patterns, *arg, expr_side);
                 }
             }
+            Expr::MethodCall { receiver, args, .. } => {
+                self.validate_expr_access(sink, initialized_patterns, *receiver, expr_side);
+                for arg in args.iter() {
+                    self.validate_expr_access(sink, initialized_patterns, *arg, expr_side);
+                }
+            }
             Expr::Path(p) => {
                 let resolver = resolver_for_expr(self.db.upcast(), self.body.owner(), expr);
                 self.validate_path_access(

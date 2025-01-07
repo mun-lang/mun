@@ -1,12 +1,12 @@
 use super::{
-    error_block, expressions, name_ref_or_index, paths, patterns, types, BlockLike,
+    error_block, expressions, name_ref, name_ref_or_index, paths, patterns, types, BlockLike,
     CompletedMarker, Marker, Parser, SyntaxKind, TokenSet, ARG_LIST, ARRAY_EXPR, BIN_EXPR,
     BLOCK_EXPR, BREAK_EXPR, CALL_EXPR, CONDITION, EOF, ERROR, EXPR_STMT, FIELD_EXPR, FLOAT_NUMBER,
     IDENT, IF_EXPR, INDEX, INDEX_EXPR, INT_NUMBER, LET_STMT, LITERAL, LOOP_EXPR, PAREN_EXPR,
     PATH_EXPR, PATH_TYPE, PREFIX_EXPR, RECORD_FIELD, RECORD_FIELD_LIST, RECORD_LIT, RETURN_EXPR,
     STRING, WHILE_EXPR,
 };
-use crate::parsing::grammar::paths::PATH_FIRST;
+use crate::{parsing::grammar::paths::PATH_FIRST, SyntaxKind::METHOD_CALL_EXPR};
 
 pub(crate) const LITERAL_FIRST: TokenSet =
     TokenSet::new(&[T![true], T![false], INT_NUMBER, FLOAT_NUMBER, STRING]);
@@ -245,6 +245,19 @@ fn call_expr(p: &mut Parser<'_>, lhs: CompletedMarker) -> CompletedMarker {
     m.complete(p, CALL_EXPR)
 }
 
+fn method_call_expr(p: &mut Parser<'_>, lhs: CompletedMarker) -> CompletedMarker {
+    let m = lhs.precede(p);
+    p.bump(T![.]);
+    name_ref(p);
+    if p.at(T!['(']) {
+        arg_list(p);
+    } else {
+        p.error("expected argument list");
+    }
+
+    m.complete(p, METHOD_CALL_EXPR)
+}
+
 fn index_expr(p: &mut Parser<'_>, lhs: CompletedMarker) -> CompletedMarker {
     assert!(p.at(T!['[']));
     let m = lhs.precede(p);
@@ -276,8 +289,7 @@ fn arg_list(p: &mut Parser<'_>) {
 fn postfix_dot_expr(p: &mut Parser<'_>, lhs: CompletedMarker) -> CompletedMarker {
     assert!(p.at(T![.]));
     if p.nth(1) == IDENT && p.nth(2) == T!['('] {
-        // TODO: Implement method calls here
-        //unimplemented!("Method calls are not supported yet.");
+        return method_call_expr(p, lhs);
     }
 
     field_expr(p, lhs)

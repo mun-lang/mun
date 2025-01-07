@@ -1,6 +1,31 @@
 use crate::SourceFile;
 
 #[test]
+fn tuple_record() {
+    insta::assert_snapshot!(SourceFile::parse(
+        r#"
+        pub struct Foo(pub i32, i32);
+        "#
+    )
+    .debug_dump());
+}
+
+#[test]
+fn method_call() {
+    insta::assert_snapshot!(SourceFile::parse(
+        r#"
+        fn main() {
+            a.foo();
+            a.0.foo();
+            a.0.0.foo();
+            a.0 .f32();
+        }
+        "#
+    )
+    .debug_dump());
+}
+
+#[test]
 fn impl_block() {
     insta::assert_snapshot!(SourceFile::parse(
         r#"
@@ -774,7 +799,7 @@ fn struct_def() {
     struct Foo(f64,);
     struct Foo(f64, i32)
     "#,
-    ).debug_dump(), @r#"
+    ).debug_dump(), @r###"
     SOURCE_FILE@0..468
       WHITESPACE@0..5 "\n    "
       STRUCT_DEF@5..15
@@ -989,8 +1014,8 @@ fn struct_def() {
     error Offset(15): expected a ';', '{', or '('
     error Offset(87): expected a declaration
     error Offset(178): expected a field declaration
-    error Offset(366): expected a type
-    "#);
+    error Offset(366): expected a tuple field
+    "###);
 }
 
 #[test]

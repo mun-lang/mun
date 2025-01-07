@@ -3,7 +3,7 @@ use mun_hir_input::ModuleId;
 use crate::{
     ids::{
         AssocItemId, AssocItemLoc, FunctionId, ImplId, ItemContainerId, Lookup, StructId,
-        TypeAliasId,
+        TypeAliasId, VariantId,
     },
     item_tree::ItemTreeNode,
     DefDatabase,
@@ -57,6 +57,14 @@ impl HasModule for AssocItemId {
     fn module(&self, db: &dyn DefDatabase) -> ModuleId {
         match self {
             AssocItemId::FunctionId(it) => it.module(db),
+        }
+    }
+}
+
+impl HasModule for VariantId {
+    fn module(&self, db: &dyn DefDatabase) -> ModuleId {
+        match self {
+            VariantId::StructId(it) => it.module(db),
         }
     }
 }

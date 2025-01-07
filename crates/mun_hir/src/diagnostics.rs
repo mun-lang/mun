@@ -3,7 +3,9 @@ use std::{any::Any, fmt};
 use mun_hir_input::FileId;
 use mun_syntax::{ast, AstPtr, SmolStr, SyntaxNode, SyntaxNodePtr, TextRange};
 
-use crate::{code_model::StructKind, in_file::InFile, HirDatabase, IntTy, Name, Ty};
+use crate::{
+    code_model::StructKind, ids::FunctionId, in_file::InFile, HirDatabase, IntTy, Name, Ty,
+};
 
 /// Diagnostic defines `mun_hir` API for errors and warnings.
 ///
@@ -859,6 +861,52 @@ impl Diagnostic for InvalidSelfTyImpl {
 
     fn source(&self) -> InFile<SyntaxNodePtr> {
         self.impl_.clone().map(Into::into)
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+/// An error that is emitted if a method is called that is not visible from the
+/// current scope
+#[derive(Debug)]
+pub struct MethodNotInScope {
+    pub method_call: InFile<AstPtr<ast::MethodCallExpr>>,
+    pub receiver_ty: Ty,
+}
+
+impl Diagnostic for MethodNotInScope {
+    fn message(&self) -> String {
+        "method not in scope for type".to_string()
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        self.method_call.clone().map(Into::into)
+    }
+
+    fn as_any(&self) -> &(dyn Any + Send + 'static) {
+        self
+    }
+}
+
+/// An error that is emitted if an unknown method is called
+#[derive(Debug)]
+pub struct MethodNotFound {
+    pub method_call: InFile<AstPtr<ast::MethodCallExpr>>,
+    pub receiver_ty: Ty,
+    pub method_name: Name,
+    pub field_with_same_name: Option<Ty>,
+    pub associated_function_with_same_name: Option<FunctionId>,
+}
+
+impl Diagnostic for MethodNotFound {
+    fn message(&self) -> String {
+        format!("method `{}` does not exist", &self.method_name)
+    }
+
+    fn source(&self) -> InFile<SyntaxNodePtr> {
+        self.method_call.clone().map(Into::into)
     }
 
     fn as_any(&self) -> &(dyn Any + Send + 'static) {

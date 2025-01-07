@@ -23,6 +23,8 @@ use super::{
     },
 };
 
+const VISIBILITY_FIRST: TokenSet = TokenSet::new(&[T![pub]]);
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum BlockLike {
     Block,
