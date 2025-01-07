@@ -27,6 +27,15 @@ use crate::{
     HirDatabase, InFile, ModuleDef, Name, PatId, PerNs, Resolver, Ty, Visibility,
 };
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum PathResolution {
+    /// An item
+    Def(ModuleDef),
+    /// A local binding (only value namespace)
+    Local(Local),
+    SelfType(Impl),
+}
+
 /// The primary API to get semantic information, like types, from syntax trees.
 /// Exposes the database it was created with through the `db` field.
 pub struct Semantics<'db> {
@@ -147,6 +156,11 @@ impl<'db> Semantics<'db> {
         });
         InFile::new(file_id, node)
     }
+
+    /// Resolves the specified `ast::Path`
+    pub fn resolve_path(&self, path: &ast::Path) -> Option<PathResolution> {
+        self.analyze(path.syntax()).resolve_path(self.db, path)
+    }
 }
 
 /// Returns the root node of the specified node.
@@ -199,6 +213,12 @@ impl ScopeDef {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Impl {
     pub(crate) id: ImplId,
+}
+
+impl From<ImplId> for Impl {
+    fn from(id: ImplId) -> Self {
+        Impl { id }
+    }
 }
 
 impl Impl {

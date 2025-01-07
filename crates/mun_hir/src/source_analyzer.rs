@@ -6,8 +6,10 @@ use mun_syntax::{ast, AstNode, SyntaxNode, TextRange, TextSize};
 use crate::{
     expr::{scope::LocalScopeId, BodySourceMap},
     ids::DefWithBodyId,
-    resolver_for_scope, Body, ExprId, ExprScopes, HirDatabase, InFile, InferenceResult, Resolver,
-    Ty,
+    resolver_for_scope,
+    semantics::PathResolution,
+    Body, ExprId, ExprScopes, HirDatabase, InFile, InferenceResult, Path, Resolver, Struct, Ty,
+    TypeAlias, TypeNs,
 };
 
 /// A `SourceAnalyzer` is a wrapper which exposes the HIR API in terms of the
@@ -78,6 +80,22 @@ impl SourceAnalyzer {
     fn expr_id(&self, _db: &dyn HirDatabase, expr: &ast::Expr) -> Option<ExprId> {
         let sm = self.body_source_map.as_ref()?;
         sm.node_expr(expr)
+    }
+
+    pub(crate) fn resolve_path(
+        &self,
+        db: &dyn HirDatabase,
+        path: &ast::Path,
+    ) -> Option<PathResolution> {
+        let hir_path = Path::from_ast(path.clone())?;
+
+        // Case where path is a qualifier of another path, e.g. foo::bar::Baz where we
+        // are trying to resolve foo::bar.
+        if path.parent_path().is_some() {
+            return resolve_hir_path_qualifier(db, &self.resolver, &hir_path);
+        }
+
+        None
     }
 }
 
@@ -172,4 +190,32 @@ fn adjust(
             }
         })
         .map(|(_ptr, scope)| *scope)
+}
+
+/// Resolves a path where we know it is a qualifier of another path.
+fn resolve_hir_path_qualifier(
+    db: &dyn HirDatabase,
+    resolver: &Resolver,
+    path: &Path,
+) -> Option<PathResolution> {
+    let (ty, _, remaining_idx) = resolver.resolve_path_as_type(db.upcast(), path)?;
+    let (ty, _unresolved) = match remaining_idx {
+        Some(remaining_idx) => {
+            if remaining_idx + 1 == path.segments.len() {
+                Some((ty, path.segments.last()))
+            } else {
+                None
+            }
+        }
+        None => Some((ty, None)),
+    }?;
+
+    let res = match ty {
+        TypeNs::SelfType(it) => PathResolution::SelfType(it.into()),
+        TypeNs::StructId(it) => PathResolution::Def(Struct::from(it).into()),
+        TypeNs::TypeAliasId(it) => PathResolution::Def(TypeAlias::from(it).into()),
+        TypeNs::PrimitiveType(it) => PathResolution::Def(it.into()),
+    };
+
+    Some(res)
 }

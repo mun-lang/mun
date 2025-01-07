@@ -1,18 +1,18 @@
 use mun_db::Upcast;
 
-use super::{CompletionContext, Completions};
+use super::{CompletionContext, Completions, DotAccess};
 
 /// Complete dot accesses, i.e. fields. Adds `CompletionItems` to `result`.
-pub(super) fn complete_dot(result: &mut Completions, ctx: &CompletionContext<'_>) {
-    // Get the expression that we want to get the fields of
-    let dot_receiver = match &ctx.dot_receiver {
-        Some(expr) => expr,
-        _ => return,
-    };
-
-    // Figure out the type of the expression
-    let receiver_ty = match ctx.sema.type_of_expr(dot_receiver) {
-        Some(ty) => ty,
+pub(super) fn complete_dot(
+    result: &mut Completions,
+    ctx: &CompletionContext<'_>,
+    dot_access: &DotAccess,
+) {
+    let receiver_ty = match dot_access {
+        DotAccess {
+            receiver_ty: Some(receiver_ty),
+            ..
+        } => receiver_ty,
         _ => return,
     };
 

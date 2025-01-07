@@ -10,6 +10,8 @@ use super::{CompletionContext, Completions};
 /// }
 /// ```
 pub(super) fn complete_unqualified_path(result: &mut Completions, ctx: &CompletionContext<'_>) {
+    dbg!(ctx.is_trivial_path, ctx.is_param, ctx.is_path_type);
+
     // Only complete trivial paths (e.g. foo, not ::foo)
     if !ctx.is_trivial_path {
         return;
@@ -33,6 +35,26 @@ mod tests {
             let bar = 0;
             let foo_bar = 0;
             f$0
+        }
+        "#,
+            Some(CompletionKind::Reference)
+        ));
+    }
+
+    #[test]
+    fn test_associate_function() {
+        insta::assert_snapshot!(completion_string(
+            r#"
+        struct Foo;
+
+        impl Foo {
+            fn new() -> Self {
+                Self
+            }
+        }
+
+        fn foo() {
+            let bar = Foo::$0;
         }
         "#,
             Some(CompletionKind::Reference)

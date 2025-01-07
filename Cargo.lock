@@ -2565,6 +2565,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "tempdir",
+ "text_trees",
  "thiserror 1.0.69",
  "threadpool",
 ]

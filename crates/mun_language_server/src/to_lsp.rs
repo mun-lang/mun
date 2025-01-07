@@ -79,6 +79,8 @@ pub(crate) fn symbol_kind(symbol_kind: SymbolKind) -> lsp_types::SymbolKind {
         SymbolKind::Field => lsp_types::SymbolKind::FIELD,
         SymbolKind::Local | SymbolKind::SelfParam => lsp_types::SymbolKind::VARIABLE,
         SymbolKind::Module => lsp_types::SymbolKind::MODULE,
+        SymbolKind::Method => lsp_types::SymbolKind::METHOD,
+        SymbolKind::Impl => lsp_types::SymbolKind::OBJECT,
     }
 }
 
@@ -118,6 +120,8 @@ pub(crate) fn completion_item_kind(
             SymbolKind::SelfParam => lsp_types::CompletionItemKind::VALUE,
             SymbolKind::SelfType => lsp_types::CompletionItemKind::TYPE_PARAMETER,
             SymbolKind::Struct | SymbolKind::TypeAlias => lsp_types::CompletionItemKind::STRUCT,
+            SymbolKind::Method => lsp_types::CompletionItemKind::METHOD,
+            SymbolKind::Impl => lsp_types::CompletionItemKind::TEXT,
         },
         CompletionItemKind::Attribute => lsp_types::CompletionItemKind::ENUM_MEMBER,
     }

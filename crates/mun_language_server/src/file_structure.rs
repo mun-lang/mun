@@ -1,5 +1,5 @@
 use mun_syntax::{
-    ast::{self, NameOwner},
+    ast::{self, NameOwner, TypeAscriptionOwner},
     match_ast, AstNode, SourceFile, SyntaxNode, TextRange, WalkEvent,
 };
 
@@ -117,18 +117,36 @@ fn try_convert_to_structure_node(node: &SyntaxNode) -> Option<StructureNode> {
         match node {
             ast::FunctionDef(it) => {
                 let mut detail = String::from("fn");
-                if let Some(param_list) = it.param_list() {
+                let has_self_param = if let Some(param_list) = it.param_list() {
                     collapse_whitespaces(param_list.syntax(), &mut detail);
-                }
+                    param_list.self_param().is_some()
+                } else {
+                    false
+                };
                 if let Some(ret_type) = it.ret_type() {
                     detail.push(' ');
                     collapse_whitespaces(ret_type.syntax(), &mut detail);
                 }
 
-                decl_with_detail(&it, Some(detail), SymbolKind::Function)
+                decl_with_detail(&it, Some(detail), if has_self_param { SymbolKind::Method } else { SymbolKind::Function })
             },
             ast::StructDef(it) => decl(it, SymbolKind::Struct),
             ast::TypeAliasDef(it) => decl_with_type_ref(&it, it.type_ref(), SymbolKind::TypeAlias),
+            ast::RecordFieldDef(it) => decl_with_type_ref(&it, it.ascribed_type(), SymbolKind::Field),
+            ast::Impl(it) => {
+                let target_type = it.type_ref()?;
+                let label = format!("impl {}", target_type.syntax().text());
+
+                let node = StructureNode {
+                    parent: None,
+                    label,
+                    navigation_range: target_type.syntax().text_range(),
+                    node_range: it.syntax().text_range(),
+                    kind: SymbolKind::Impl,
+                    detail: None,
+                };
+                Some(node)
+            },
             _ => None
         }
     }

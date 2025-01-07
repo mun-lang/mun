@@ -54,6 +54,8 @@ impl CompletionItemKind {
                 SymbolKind::SelfType => "sy",
                 SymbolKind::Struct => "st",
                 SymbolKind::TypeAlias => "ta",
+                SymbolKind::Impl => "im",
+                SymbolKind::Method => "mt",
             },
             CompletionItemKind::Attribute => "at",
             CompletionItemKind::Binding => "bn",
