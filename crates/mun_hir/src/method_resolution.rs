@@ -403,8 +403,6 @@ impl<'db> MethodResolutionCtx<'db> {
             }
         }
 
-        // Check if the function
-
         IsValidCandidate::Yes
     }
 }

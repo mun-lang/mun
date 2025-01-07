@@ -464,27 +464,24 @@ impl InferenceResultBuilder<'_> {
             }
             Expr::Field { expr, name } => {
                 let receiver_ty = self.infer_expr(*expr, &Expectation::none());
-                match self.lookup_field(receiver_ty.clone(), name) {
-                    None => {
+                if let Some((field_ty, is_visible)) = self.lookup_field(receiver_ty.clone(), name) {
+                    if !is_visible {
                         self.diagnostics
-                            .push(InferenceDiagnostic::AccessUnknownField {
+                            .push(InferenceDiagnostic::AccessPrivateField {
                                 id: tgt_expr,
                                 receiver_ty,
                                 name: name.clone(),
                             });
-                        error_type()
                     }
-                    Some((field_ty, is_visible)) => {
-                        if !is_visible {
-                            self.diagnostics
-                                .push(InferenceDiagnostic::AccessPrivateField {
-                                    id: tgt_expr,
-                                    receiver_ty,
-                                    name: name.clone(),
-                                });
-                        }
-                        field_ty
-                    }
+                    field_ty
+                } else {
+                    self.diagnostics
+                        .push(InferenceDiagnostic::AccessUnknownField {
+                            id: tgt_expr,
+                            receiver_ty,
+                            name: name.clone(),
+                        });
+                    error_type()
                 }
             }
             Expr::UnaryOp { expr, op } => {
@@ -665,7 +662,7 @@ impl InferenceResultBuilder<'_> {
                 )
                 .map_or_else(identity, Some);
 
-                //
+                // Method could not be resolved, emit an error.
                 self.diagnostics.push(InferenceDiagnostic::MethodNotFound {
                     id: tgt_expr,
                     method_name: method_name.clone(),
