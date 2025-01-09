@@ -10,7 +10,6 @@ use super::{CompletionContext, Completions};
 /// }
 /// ```
 pub(super) fn complete_unqualified_path(result: &mut Completions, ctx: &CompletionContext<'_>) {
-    dbg!(ctx.is_trivial_path, ctx.is_param, ctx.is_path_type);
 
     // Only complete trivial paths (e.g. foo, not ::foo)
     if !ctx.is_trivial_path {
