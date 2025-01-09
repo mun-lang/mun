@@ -109,6 +109,7 @@ impl<'db> Semantics<'db> {
                 return SourceAnalyzer::new_for_body(self.db, def, node, offset)
             }
             SourceToDefContainer::ModuleId(id) => id.resolver(self.db.upcast()),
+            SourceToDefContainer::Impl(id) => id.resolver(self.db.upcast()),
         };
 
         SourceAnalyzer::new_for_resolver(resolver, node)

@@ -8,8 +8,9 @@ use std::{fmt, iter::FromIterator, mem, ops::Deref, sync::Arc};
 
 pub(crate) use infer::infer_query;
 pub use infer::InferenceResult;
+pub use lower::TypableDef;
 pub(crate) use lower::{
-    callable_item_sig, fn_sig_for_fn, type_for_def, type_for_impl_self, CallableDef, TypableDef,
+    callable_item_sig, fn_sig_for_fn, type_for_def, type_for_impl_self, CallableDef,
 };
 pub use primitives::{FloatTy, IntTy};
 pub use resolve::ResolveBitness;

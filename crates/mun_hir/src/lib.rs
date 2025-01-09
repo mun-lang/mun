@@ -28,13 +28,13 @@ pub use crate::{
     ids::{AssocItemId, ItemLoc},
     in_file::InFile,
     name::Name,
-    name_resolution::PerNs,
+    name_resolution::{Namespace, PerNs},
     path::{Path, PathKind},
     primitive_type::{FloatBitness, IntBitness, Signedness},
     resolve::{resolver_for_expr, resolver_for_scope, Resolver, TypeNs, ValueNs},
     ty::{
         lower::CallableDef, FloatTy, InferenceResult, IntTy, ResolveBitness, Substitution, Ty,
-        TyKind,
+        TyKind, TypableDef,
     },
     visibility::{HasVisibility, Visibility},
 };
