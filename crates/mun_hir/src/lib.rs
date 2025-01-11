@@ -25,7 +25,7 @@ pub use crate::{
         ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, ExprScopes, Literal, LogicOp, Ordering, Pat,
         PatId, RecordLitField, Statement, UnaryOp,
     },
-    ids::ItemLoc,
+    ids::{AssocItemId, ItemLoc},
     in_file::InFile,
     name::Name,
     name_resolution::PerNs,
@@ -62,7 +62,7 @@ mod utils;
 
 mod has_module;
 mod item_scope;
-mod method_resolution;
+pub mod method_resolution;
 #[cfg(test)]
 mod mock;
 mod package_defs;

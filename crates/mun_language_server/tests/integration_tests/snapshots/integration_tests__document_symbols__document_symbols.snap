@@ -1,0 +1,13 @@
+---
+source: crates/mun_language_server/tests/integration_tests/document_symbols.rs
+expression: format_document_symbols_response(symbols)
+---
+Foo
+'-- a (i32)
+Bar (Foo)
+impl Foo
++-- new (fn() -> Self)
+'-- modify (fn(self) -> Self)
+impl Foo
+'-- modify2 (fn(self) -> Self)
+main (fn() -> i32)

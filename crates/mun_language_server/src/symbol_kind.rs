@@ -3,8 +3,10 @@
 pub enum SymbolKind {
     Field,
     Function,
+    Method,
     Local,
     Module,
+    Impl,
     SelfParam,
     SelfType,
     Struct,

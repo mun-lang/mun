@@ -1,0 +1,7 @@
+---
+source: crates/mun_language_server/src/completion/expr.rs
+expression: "completion_string(r#\"\n        fn foo() {\n            let bar = 0;\n            let foo_bar = 0;\n            f$0\n        }\n        \"#,\nSome(CompletionKind::Reference))"
+---
+lc foo_bar i32
+lc bar     i32
+fn foo     -> ()

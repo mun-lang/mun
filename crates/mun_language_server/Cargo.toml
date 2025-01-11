@@ -42,3 +42,4 @@ mun_test = { path = "../mun_test"}
 insta = { workspace = true }
 itertools = { workspace = true }
 tempdir = { workspace = true }
+text_trees = { workspace = true }

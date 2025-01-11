@@ -340,7 +340,7 @@ pub mod diagnostics {
     };
 
     #[derive(Debug, PartialEq, Eq, Clone)]
-    pub(crate) enum LowerDiagnostic {
+    pub enum LowerDiagnostic {
         UnresolvedType { id: LocalTypeRefId },
         TypeIsPrivate { id: LocalTypeRefId },
     }

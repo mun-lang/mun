@@ -4,20 +4,26 @@
 //! completions.
 
 mod context;
-mod dot;
+// mod dot;
 mod item;
 mod render;
-mod unqualified_path;
+// mod unqualified_path;
 
+mod dot;
+mod expr;
+mod name_ref;
 #[cfg(test)]
 mod test_utils;
 
-use context::CompletionContext;
+use context::{
+    CompletionAnalysis, CompletionContext, DotAccess, NameRefContext, NameRefKind,
+    PathCompletionContext, PathExprContext, PathKind, Qualified,
+};
 pub use item::{CompletionItem, CompletionItemKind, CompletionKind};
 use mun_hir::semantics::ScopeDef;
 
 use crate::{
-    completion::render::{render_field, render_resolution, RenderContext},
+    completion::render::{render_field, render_fn, render_resolution, RenderContext},
     db::AnalysisDatabase,
     FilePosition,
 };
@@ -36,11 +42,18 @@ use crate::{
 /// complete the fields of `foo` and don't want the local variables of
 /// the active scope.
 pub(crate) fn completions(db: &AnalysisDatabase, position: FilePosition) -> Option<Completions> {
-    let context = CompletionContext::new(db, position)?;
+    let (context, analysis) = CompletionContext::new(db, position)?;
 
     let mut result = Completions::default();
-    unqualified_path::complete_unqualified_path(&mut result, &context);
-    dot::complete_dot(&mut result, &context);
+
+    match analysis {
+        CompletionAnalysis::NameRef(name_ref_ctx) => {
+            name_ref::complete_name_ref(&mut result, &context, &name_ref_ctx);
+        }
+    }
+
+    // unqualified_path::complete_unqualified_path(&mut result, &context);
+    // dot::complete_dot(&mut result, &context);
     Some(result)
 }
 
@@ -79,5 +92,16 @@ impl Completions {
     fn add_field(&mut self, ctx: &CompletionContext<'_>, field: mun_hir::Field) {
         let item = render_field(RenderContext::new(ctx), field);
         self.add(item);
+    }
+
+    fn add_function(
+        &mut self,
+        ctx: &CompletionContext<'_>,
+        func: mun_hir::Function,
+        local_name: Option<String>,
+    ) {
+        if let Some(item) = render_fn(RenderContext::new(ctx), local_name, func) {
+            self.add(item);
+        }
     }
 }

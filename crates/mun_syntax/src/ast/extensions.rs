@@ -78,6 +78,12 @@ fn text_of_first_token(node: &SyntaxNode) -> TokenText<'_> {
     }
 }
 
+impl ast::Path {
+    pub fn parent_path(&self) -> Option<ast::Path> {
+        self.syntax().parent().and_then(ast::Path::cast)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PathSegmentKind {
     Name(ast::NameRef),
