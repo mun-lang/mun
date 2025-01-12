@@ -96,7 +96,7 @@ pub(crate) fn url(snapshot: &LanguageServerSnapshot, file_id: FileId) -> anyhow:
 pub(crate) fn completion_item(completion_item: CompletionItem) -> lsp_types::CompletionItem {
     lsp_types::CompletionItem {
         label: completion_item.label,
-        kind: completion_item.kind.map(completion_item_kind),
+        kind: Some(completion_item_kind(completion_item.kind)),
         detail: completion_item.detail,
         ..Default::default()
     }

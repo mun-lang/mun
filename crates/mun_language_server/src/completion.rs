@@ -19,7 +19,7 @@ use context::{
     CompletionAnalysis, CompletionContext, DotAccess, NameRefContext, NameRefKind,
     PathCompletionContext, PathExprContext, PathKind, Qualified,
 };
-pub use item::{CompletionItem, CompletionItemKind, CompletionKind};
+pub use item::{CompletionItem, CompletionItemKind};
 use mun_hir::semantics::ScopeDef;
 
 use crate::{

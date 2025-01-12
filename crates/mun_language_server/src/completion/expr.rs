@@ -46,7 +46,7 @@ pub(super) fn complete_expr_path(
 
 #[cfg(test)]
 mod tests {
-    use crate::completion::{test_utils::completion_string, CompletionKind};
+    use crate::completion::{test_utils::completion_string};
 
     #[test]
     fn test_local_scope() {
@@ -57,9 +57,12 @@ mod tests {
             let foo_bar = 0;
             f$0
         }
-        "#,
-            Some(CompletionKind::Reference)
-        ));
+        "#
+        ), @r###"
+        lc foo_bar i32
+        lc bar     i32
+        fn foo     -> ()
+        "###);
     }
 
     #[test]
@@ -77,9 +80,8 @@ mod tests {
         fn foo() {
             let bar = Foo::$0;
         }
-        "#,
-            Some(CompletionKind::Reference)
-        ));
+        "#
+        ), @"fn new -> Foo");
     }
 
     #[test]
@@ -90,9 +92,11 @@ mod tests {
             let a = 0;
             foo(f$0)
         }
-        "#,
-            Some(CompletionKind::Reference)
-        ));
+        "#
+        ), @r###"
+        lc a   i32
+        fn bar -> ()
+        "###);
     }
 
     #[test]
@@ -107,8 +111,7 @@ mod tests {
             }
         }
         "#,
-            Some(CompletionKind::Reference)
-        ));
+        ), @"fn foo -> ()");
     }
 
     #[test]
@@ -123,7 +126,10 @@ mod tests {
             }
         }
         "#,
-            Some(CompletionKind::Reference)
-        ));
+        ), @r###"
+        lc self Foo
+        sp Self
+        st Foo
+        "###);
     }
 }

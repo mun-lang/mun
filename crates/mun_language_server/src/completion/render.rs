@@ -4,7 +4,7 @@ use function::FunctionRender;
 use mun_hir::{semantics::ScopeDef, HirDisplay};
 
 use super::{CompletionContext, CompletionItem, CompletionItemKind};
-use crate::{completion::CompletionKind, db::AnalysisDatabase, SymbolKind};
+use crate::{db::AnalysisDatabase, SymbolKind};
 
 pub(super) fn render_field(ctx: RenderContext<'_>, field: mun_hir::Field) -> CompletionItem {
     Render::new(ctx).render_field(field)
@@ -59,11 +59,6 @@ impl<'a> Render<'a> {
     ) -> Option<CompletionItem> {
         use mun_hir::ModuleDef::{Function, Module, PrimitiveType, Struct, TypeAlias};
 
-        let completion_kind = match resolution {
-            ScopeDef::ModuleDef(PrimitiveType(..)) => CompletionKind::BuiltinType,
-            _ => CompletionKind::Reference,
-        };
-
         let kind = match resolution {
             ScopeDef::ModuleDef(Module(_)) => CompletionItemKind::SymbolKind(SymbolKind::Module),
             ScopeDef::ModuleDef(Function(func)) => {
@@ -77,14 +72,14 @@ impl<'a> Render<'a> {
             ScopeDef::ImplSelfType(_) => CompletionItemKind::SymbolKind(SymbolKind::SelfParam),
             ScopeDef::Local(_) => CompletionItemKind::SymbolKind(SymbolKind::Local),
             ScopeDef::Unknown => {
-                let item = CompletionItem::builder(CompletionKind::Reference, local_name)
-                    .kind(CompletionItemKind::UnresolvedReference)
-                    .finish();
+                let item =
+                    CompletionItem::builder(CompletionItemKind::UnresolvedReference, local_name)
+                        .finish();
                 return Some(item);
             }
         };
 
-        let mut item = CompletionItem::builder(completion_kind, local_name);
+        let mut item = CompletionItem::builder(kind, local_name);
 
         // Add the type for locals
         if let ScopeDef::Local(local) = resolution {
@@ -94,14 +89,13 @@ impl<'a> Render<'a> {
             }
         };
 
-        Some(item.kind(kind).finish())
+        Some(item.finish())
     }
 
     /// Constructs a `CompletionItem` for a field.
     fn render_field(&mut self, field: mun_hir::Field) -> CompletionItem {
         let name = field.name(self.ctx.db());
-        CompletionItem::builder(CompletionKind::Reference, name.to_string())
-            .kind(SymbolKind::Field)
+        CompletionItem::builder(SymbolKind::Field, name.to_string())
             .detail(field.ty(self.ctx.db()).display(self.ctx.db()).to_string())
             .finish()
     }

@@ -1,6 +1,6 @@
 use mun_hir::HirDisplay;
 
-use super::{CompletionItem, CompletionKind, RenderContext};
+use super::{CompletionItem, RenderContext};
 use crate::SymbolKind;
 
 /// Similar to [`Render<'a>`] but used to render a completion item for a
@@ -25,8 +25,7 @@ impl<'a> FunctionRender<'a> {
 
     /// Constructs a [`CompletionItem`] for the wrapped function.
     pub fn render(self) -> CompletionItem {
-        CompletionItem::builder(CompletionKind::Reference, self.name.clone())
-            .kind(SymbolKind::Function)
+        CompletionItem::builder(SymbolKind::Function, self.name.clone())
             .detail(self.detail())
             .finish()
     }
