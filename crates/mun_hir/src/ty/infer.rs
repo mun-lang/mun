@@ -880,7 +880,7 @@ impl InferenceResultBuilder<'_> {
             TypeNs::SelfType(id) => self.db.type_for_impl_self(id),
             TypeNs::StructId(id) => type_for_def_fn(TypableDef::Struct(id.into())),
             TypeNs::TypeAliasId(id) => type_for_def_fn(TypableDef::TypeAlias(id.into())),
-            TypeNs::PrimitiveType(id) => type_for_def_fn(TypableDef::PrimitiveType(id)),
+            TypeNs::PrimitiveType(id) => type_for_def_fn(TypableDef::PrimitiveType(id.into())),
         };
 
         // Resolve the value.

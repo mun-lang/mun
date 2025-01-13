@@ -1,6 +1,8 @@
+use itertools::Itertools;
+
 use crate::{
     change_fixture::{ChangeFixture, RangeOrOffset},
-    completion::{CompletionItem, CompletionKind},
+    completion::{CompletionItem, CompletionItemKind},
     db::AnalysisDatabase,
     FilePosition,
 };
@@ -23,27 +25,35 @@ pub(crate) fn position(fixture: &str) -> (AnalysisDatabase, FilePosition) {
 
 /// Creates a list of completions for the specified code. The code must contain
 /// a cursor in the text indicated by `$0`
-pub(crate) fn completion_list(
-    code: &str,
-    filter_kind: Option<CompletionKind>,
-) -> Vec<CompletionItem> {
+pub(crate) fn completion_list(code: &str) -> Vec<CompletionItem> {
     let (db, position) = position(code);
     let completions = super::completions(&db, position).unwrap();
-    if let Some(filter_kind) = filter_kind {
-        completions
-            .buf
-            .into_iter()
-            .filter(|item| item.completion_kind == filter_kind)
-            .collect()
-    } else {
-        completions.into()
-    }
+    completions
+        .buf
+        .into_iter()
+        .filter(|item| item.kind != CompletionItemKind::BuiltinType)
+        .sorted_by_key(|it| (it.kind, it.label.clone()))
+        .collect()
 }
 
 /// Constructs a string representation of all the completions for the specified
 /// code. The code must contain a cursor in the text indicated by `$0`.
-pub(crate) fn completion_string(code: &str, filter_kind: Option<CompletionKind>) -> String {
-    let completions = completion_list(code, filter_kind);
+pub(crate) fn completion_string(code: &str) -> String {
+    let completions = completion_list(code);
+    completions_to_string(completions)
+}
+
+/// Similar to [`completion_string`] but the items are sorted by relevance.
+pub(crate) fn completion_relevance_string(code: &str) -> String {
+    let completions = completion_list(code)
+        .into_iter()
+        .sorted_by_key(|it| it.relevance.score())
+        .rev()
+        .collect();
+    completions_to_string(completions)
+}
+
+fn completions_to_string(completions: Vec<CompletionItem>) -> String {
     let label_width = completions
         .iter()
         .map(|it| it.label.chars().count())
@@ -52,7 +62,7 @@ pub(crate) fn completion_string(code: &str, filter_kind: Option<CompletionKind>)
         .min(16);
     itertools::Itertools::intersperse(
         completions.into_iter().map(|item| {
-            let mut result = format!("{} {}", item.kind.unwrap().tag(), &item.label);
+            let mut result = format!("{} {}", item.kind.tag(), &item.label);
             if let Some(detail) = item.detail {
                 result = format!("{:width$} {}", result, detail, width = label_width + 3);
             }

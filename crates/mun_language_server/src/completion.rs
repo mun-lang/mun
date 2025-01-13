@@ -14,12 +14,13 @@ mod expr;
 mod name_ref;
 #[cfg(test)]
 mod test_utils;
+mod tests;
 
 use context::{
     CompletionAnalysis, CompletionContext, DotAccess, NameRefContext, NameRefKind,
     PathCompletionContext, PathExprContext, PathKind, Qualified,
 };
-pub use item::{CompletionItem, CompletionItemKind, CompletionKind};
+pub use item::{CompletionItem, CompletionItemKind};
 use mun_hir::semantics::ScopeDef;
 
 use crate::{
@@ -52,8 +53,6 @@ pub(crate) fn completions(db: &AnalysisDatabase, position: FilePosition) -> Opti
         }
     }
 
-    // unqualified_path::complete_unqualified_path(&mut result, &context);
-    // dot::complete_dot(&mut result, &context);
     Some(result)
 }
 

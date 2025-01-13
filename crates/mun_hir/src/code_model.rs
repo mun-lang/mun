@@ -2,6 +2,7 @@ mod function;
 mod r#impl;
 mod module;
 mod package;
+mod primitive_type;
 pub(crate) mod src;
 pub(crate) mod r#struct;
 mod type_alias;
@@ -12,6 +13,7 @@ pub use self::{
     function::{Function, FunctionData},
     module::{Module, ModuleDef},
     package::Package,
+    primitive_type::PrimitiveType,
     r#impl::{AssocItem, ImplData},
     r#struct::{Field, Struct, StructData, StructKind, StructMemoryKind},
     src::HasSource,

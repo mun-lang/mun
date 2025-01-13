@@ -26,7 +26,7 @@ pub(super) fn complete_dot(
 
 #[cfg(test)]
 mod tests {
-    use crate::completion::{test_utils::completion_string, CompletionKind};
+    use crate::completion::test_utils::completion_string;
 
     #[test]
     fn test_struct_fields() {
@@ -42,8 +42,10 @@ mod tests {
             bar.$0
         }
         "#,
-            Some(CompletionKind::Reference)
-        ));
+        ), @r###"
+        fd bar i32
+        fd foo i32
+        "###);
     }
 
     #[test]
@@ -57,8 +59,10 @@ mod tests {
             bar.$0
         }
         "#,
-            Some(CompletionKind::Reference)
-        ));
+        ), @r###"
+        fd 0 i32
+        fd 1 i32
+        "###);
     }
 
     #[test]
@@ -73,8 +77,7 @@ mod tests {
             bar.0.$0
         }
         "#,
-            Some(CompletionKind::Reference)
-        ));
+        ), @"fd baz i32");
     }
 
     #[test]
@@ -88,8 +91,7 @@ mod tests {
             bar.$0
         }
         "#,
-            Some(CompletionKind::Reference)
-        ));
+        ), @"fd bar i32");
     }
 
     #[test]
@@ -102,8 +104,7 @@ mod tests {
             bar.$0
         }
         "#,
-            Some(CompletionKind::Reference)
-        ));
+        ), @"fd bar i32");
     }
 
     #[test]
@@ -118,7 +119,6 @@ mod tests {
             }
         }
         "#,
-            Some(CompletionKind::Reference)
-        ));
+        ), @"fd bar i32");
     }
 }

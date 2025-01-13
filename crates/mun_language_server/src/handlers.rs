@@ -1,7 +1,9 @@
-use lsp_types::{CompletionContext, CompletionItem, DocumentSymbol};
+use lsp_types::{CompletionContext, DocumentSymbol};
 use mun_syntax::{AstNode, TextSize};
 
-use crate::{from_lsp, state::LanguageServerSnapshot, to_lsp, FilePosition};
+use crate::{
+    from_lsp, state::LanguageServerSnapshot, to_lsp, to_lsp::completion_items, FilePosition,
+};
 
 /// Computes the document symbols for a specific document. Converts the LSP
 /// types to internal formats and calls
@@ -81,9 +83,7 @@ pub(crate) fn handle_completion(
     };
 
     // Convert all the items to the LSP protocol type
-    let items: Vec<CompletionItem> = items.into_iter().map(to_lsp::completion_item).collect();
-
-    Ok(Some(items.into()))
+    Ok(Some(completion_items(items).into()))
 }
 
 /// Constructs a hierarchy of `DocumentSymbols` for a list of symbols that

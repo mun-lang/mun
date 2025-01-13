@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::name::{name, Name};
+use crate::name::{name, AsName, Name};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum Signedness {
@@ -74,7 +74,13 @@ impl PrimitiveType {
 
 impl fmt::Display for PrimitiveType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let type_name = match self {
+        f.write_str(self.as_str())
+    }
+}
+
+impl PrimitiveType {
+    pub fn as_str(self) -> &'static str {
+        match self {
             PrimitiveType::Bool => "bool",
             PrimitiveType::Int(PrimitiveInt {
                 signedness,
@@ -98,8 +104,13 @@ impl fmt::Display for PrimitiveType {
                 FloatBitness::X32 => "f32",
                 FloatBitness::X64 => "f64",
             },
-        };
-        f.write_str(type_name)
+        }
+    }
+}
+
+impl AsName for PrimitiveType {
+    fn as_name(&self) -> Name {
+        Name::new(self.as_str())
     }
 }
 

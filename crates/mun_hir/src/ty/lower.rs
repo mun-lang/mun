@@ -11,11 +11,11 @@ use crate::{
     diagnostics::DiagnosticSink,
     ids::ImplId,
     name_resolution::Namespace,
-    primitive_type::PrimitiveType,
     resolve::{HasResolver, Resolver, TypeNs},
     ty::{FnSig, Substitution, Ty, TyKind},
     type_ref::{LocalTypeRefId, TypeRef, TypeRefMap, TypeRefSourceMap},
-    Function, HasVisibility, HirDatabase, ModuleDef, Path, Struct, TypeAlias, Visibility,
+    Function, HasVisibility, HirDatabase, ModuleDef, Path, PrimitiveType, Struct, TypeAlias,
+    Visibility,
 };
 
 /// A struct which holds resolved type references to `Ty`s.
@@ -138,7 +138,7 @@ impl Ty {
             TypeNs::SelfType(id) => Some(db.type_for_impl_self(id)),
             TypeNs::StructId(id) => type_for_def_fn(TypableDef::Struct(id.into())),
             TypeNs::TypeAliasId(id) => type_for_def_fn(TypableDef::TypeAlias(id.into())),
-            TypeNs::PrimitiveType(id) => type_for_def_fn(TypableDef::PrimitiveType(id)),
+            TypeNs::PrimitiveType(id) => type_for_def_fn(TypableDef::PrimitiveType(id.into())),
         }
     }
 }
@@ -260,11 +260,11 @@ pub(crate) fn type_for_impl_self(db: &dyn HirDatabase, i: ImplId) -> Ty {
 }
 
 /// Build the declared type of a static.
-fn type_for_primitive(def: PrimitiveType) -> Ty {
-    match def {
-        PrimitiveType::Float(f) => TyKind::Float(f.into()),
-        PrimitiveType::Int(i) => TyKind::Int(i.into()),
-        PrimitiveType::Bool => TyKind::Bool,
+pub(crate) fn type_for_primitive(def: PrimitiveType) -> Ty {
+    match def.inner {
+        crate::primitive_type::PrimitiveType::Float(f) => TyKind::Float(f.into()),
+        crate::primitive_type::PrimitiveType::Int(i) => TyKind::Int(i.into()),
+        crate::primitive_type::PrimitiveType::Bool => TyKind::Bool,
     }
     .intern()
 }

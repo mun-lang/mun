@@ -11,8 +11,8 @@ pub use mun_hir_input::ModuleId;
 pub use salsa;
 
 pub use self::code_model::{
-    Field, Function, FunctionData, HasSource, Module, ModuleDef, Package, Struct, StructMemoryKind,
-    TypeAlias,
+    Field, Function, FunctionData, HasSource, Module, ModuleDef, Package, PrimitiveType, Struct,
+    StructMemoryKind, TypeAlias,
 };
 pub use crate::{
     db::{

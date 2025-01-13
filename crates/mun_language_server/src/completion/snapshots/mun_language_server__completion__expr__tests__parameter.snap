@@ -1,6 +1,0 @@
----
-source: crates/mun_language_server/src/completion/expr.rs
-expression: "completion_string(r#\"\n        fn bar() {\n            let a = 0;\n            foo(f$0)\n        }\n        \"#,\nSome(CompletionKind::Reference))"
----
-lc a   i32
-fn bar -> ()
