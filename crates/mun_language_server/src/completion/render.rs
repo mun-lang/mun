@@ -1,10 +1,10 @@
 mod function;
 
 use function::FunctionRender;
-use mun_hir::{semantics::ScopeDef, HirDisplay};
+use mun_hir::{semantics::ScopeDef, HirDisplay, ModuleDef, Ty};
 
 use super::{CompletionContext, CompletionItem, CompletionItemKind};
-use crate::{db::AnalysisDatabase, SymbolKind};
+use crate::{completion::item::CompletionRelevance, db::AnalysisDatabase, SymbolKind};
 
 pub(super) fn render_field(ctx: RenderContext<'_>, field: mun_hir::Field) -> CompletionItem {
     Render::new(ctx).render_field(field)
@@ -81,13 +81,28 @@ impl<'a> Render<'a> {
 
         let mut item = CompletionItem::builder(kind, local_name);
 
-        // Add the type for locals
-        if let ScopeDef::Local(local) = resolution {
-            let ty = local.ty(self.ctx.db());
+        let mut set_item_relevance = |ty: Ty| {
             if !ty.is_unknown() {
-                item = item.detail(ty.display(self.ctx.db()).to_string());
+                item.set_detail(ty.display(self.ctx.db()).to_string());
             }
+
+            item.set_relevance(CompletionRelevance {
+                is_local: matches!(resolution, ScopeDef::Local(_)),
+            });
         };
+
+        match resolution {
+            ScopeDef::Local(local) => set_item_relevance(local.ty(self.ctx.db())),
+            ScopeDef::ModuleDef(ModuleDef::Struct(st)) => set_item_relevance(st.ty(self.ctx.db())),
+            ScopeDef::ModuleDef(ModuleDef::PrimitiveType(pt)) => {
+                set_item_relevance(pt.ty(self.ctx.db()))
+            }
+            ScopeDef::ImplSelfType(imp) => set_item_relevance(imp.self_ty(self.ctx.db())),
+            ScopeDef::Unknown
+            | ScopeDef::ModuleDef(
+                ModuleDef::Module(_) | ModuleDef::Function(_) | ModuleDef::TypeAlias(_),
+            ) => (),
+        }
 
         Some(item.finish())
     }
@@ -96,7 +111,7 @@ impl<'a> Render<'a> {
     fn render_field(&mut self, field: mun_hir::Field) -> CompletionItem {
         let name = field.name(self.ctx.db());
         CompletionItem::builder(SymbolKind::Field, name.to_string())
-            .detail(field.ty(self.ctx.db()).display(self.ctx.db()).to_string())
+            .with_detail(field.ty(self.ctx.db()).display(self.ctx.db()).to_string())
             .finish()
     }
 }

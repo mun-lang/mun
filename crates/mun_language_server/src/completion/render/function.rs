@@ -26,7 +26,7 @@ impl<'a> FunctionRender<'a> {
     /// Constructs a [`CompletionItem`] for the wrapped function.
     pub fn render(self) -> CompletionItem {
         CompletionItem::builder(SymbolKind::Function, self.name.clone())
-            .detail(self.detail())
+            .with_detail(self.detail())
             .finish()
     }
 

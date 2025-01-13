@@ -92,12 +92,50 @@ pub(crate) fn url(snapshot: &LanguageServerSnapshot, file_id: FileId) -> anyhow:
     Ok(url)
 }
 
+/// Converts from a list of our `CompletionItem` to an LSP `CompletionItem`
+pub(crate) fn completion_items(
+    completion_items: Vec<CompletionItem>,
+) -> Vec<lsp_types::CompletionItem> {
+    let max_relevance = completion_items
+        .iter()
+        .map(|it| it.relevance.score())
+        .max()
+        .unwrap_or_default();
+    completion_items
+        .into_iter()
+        .map(|it| completion_item(max_relevance, it))
+        .collect()
+}
+
 /// Converts from our `CompletionItem` to an LSP `CompletionItem`
-pub(crate) fn completion_item(completion_item: CompletionItem) -> lsp_types::CompletionItem {
+pub(crate) fn completion_item(
+    max_relevance: u32,
+    completion_item: CompletionItem,
+) -> lsp_types::CompletionItem {
+    // Compute the score_text based on the relevance of the completion item
+    let relevance = completion_item.relevance;
+    let preselect = if relevance.is_relevant() && relevance.score() == max_relevance {
+        Some(true)
+    } else {
+        None
+    };
+
+    // The relevance needs to be inverted to come up with a sort score
+    // because the client will sort ascending.
+    let sort_score = relevance.score() ^ 0xFF_FF_FF_FF;
+
+    // Zero pad the string to ensure values can be properly sorted
+    // by the client. Hex format is used because it is easier to
+    // visually compare very large values, which the sort text
+    // tends to be since it is the opposite of the score.
+    let sort_text = Some(format!("{sort_score:08x}"));
+
     lsp_types::CompletionItem {
         label: completion_item.label,
         kind: Some(completion_item_kind(completion_item.kind)),
         detail: completion_item.detail,
+        preselect,
+        sort_text,
         ..Default::default()
     }
 }

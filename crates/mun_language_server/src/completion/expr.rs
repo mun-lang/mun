@@ -46,7 +46,7 @@ pub(super) fn complete_expr_path(
 
 #[cfg(test)]
 mod tests {
-    use crate::completion::{test_utils::completion_string};
+    use crate::completion::test_utils::completion_string;
 
     #[test]
     fn test_local_scope() {
@@ -59,9 +59,9 @@ mod tests {
         }
         "#
         ), @r###"
-        lc foo_bar i32
-        lc bar     i32
         fn foo     -> ()
+        lc bar     i32
+        lc foo_bar i32
         "###);
     }
 
@@ -94,8 +94,8 @@ mod tests {
         }
         "#
         ), @r###"
-        lc a   i32
         fn bar -> ()
+        lc a   i32
         "###);
     }
 
@@ -128,8 +128,8 @@ mod tests {
         "#,
         ), @r###"
         lc self Foo
-        sp Self
-        st Foo
+        sp Self Foo
+        st Foo  Foo
         "###);
     }
 }

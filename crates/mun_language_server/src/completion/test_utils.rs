@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use crate::{
     change_fixture::{ChangeFixture, RangeOrOffset},
     completion::{CompletionItem, CompletionItemKind},
@@ -30,6 +32,7 @@ pub(crate) fn completion_list(code: &str) -> Vec<CompletionItem> {
         .buf
         .into_iter()
         .filter(|item| item.kind != CompletionItemKind::BuiltinType)
+        .sorted_by_key(|it| (it.kind, it.label.clone()))
         .collect()
 }
 
@@ -37,6 +40,20 @@ pub(crate) fn completion_list(code: &str) -> Vec<CompletionItem> {
 /// code. The code must contain a cursor in the text indicated by `$0`.
 pub(crate) fn completion_string(code: &str) -> String {
     let completions = completion_list(code);
+    completions_to_string(completions)
+}
+
+/// Similar to [`completion_string`] but the items are sorted by relevance.
+pub(crate) fn completion_relevance_string(code: &str) -> String {
+    let completions = completion_list(code)
+        .into_iter()
+        .sorted_by_key(|it| it.relevance.score())
+        .rev()
+        .collect();
+    completions_to_string(completions)
+}
+
+fn completions_to_string(completions: Vec<CompletionItem>) -> String {
     let label_width = completions
         .iter()
         .map(|it| it.label.chars().count())

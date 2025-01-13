@@ -11,11 +11,43 @@ pub struct CompletionItem {
 
     /// Additional info to show in the UI pop up.
     pub detail: Option<String>,
+
+    /// The relevance of this completion item. This is used to score different
+    /// completions.
+    pub relevance: CompletionRelevance,
+}
+
+/// Defines the relevance of a completion item this is used to score different
+/// completions amongst each-other.
+#[derive(Clone, Debug, Default)]
+pub struct CompletionRelevance {
+    /// True for local variables.
+    pub is_local: bool,
+}
+
+impl CompletionRelevance {
+    /// Returns a relative score for the completion item. This is used to sort
+    /// the completions.
+    pub fn score(&self) -> u32 {
+        let mut score = !0 / 2;
+        let CompletionRelevance { is_local } = self;
+
+        // Slightly prefer locals
+        if *is_local {
+            score += 1;
+        }
+
+        score
+    }
+
+    /// Indicates whether this item likely especially relevant to the user.
+    pub fn is_relevant(&self) -> bool {
+        self.score() > 0
+    }
 }
 
 /// Type of completion used to provide hints to the user.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(unused)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CompletionItemKind {
     SymbolKind(SymbolKind),
     Attribute,
@@ -70,6 +102,7 @@ impl CompletionItem {
             label: label.into(),
             kind: kind.into(),
             detail: None,
+            relevance: CompletionRelevance::default(),
         }
     }
 }
@@ -80,6 +113,7 @@ pub struct Builder {
     label: String,
     kind: CompletionItemKind,
     detail: Option<String>,
+    relevance: CompletionRelevance,
 }
 
 impl Builder {
@@ -89,12 +123,23 @@ impl Builder {
             label: self.label,
             kind: self.kind,
             detail: self.detail,
+            relevance: self.relevance,
         }
     }
 
     /// Set the details of the completion item
-    pub fn detail(mut self, detail: impl Into<String>) -> Builder {
+    pub fn with_detail(mut self, detail: impl Into<String>) -> Builder {
         self.detail = Some(detail.into());
         self
+    }
+
+    /// Set the details of the completion item
+    pub fn set_detail(&mut self, detail: impl Into<String>) {
+        self.detail = Some(detail.into());
+    }
+
+    /// Sets the relevance of this item
+    pub fn set_relevance(&mut self, relevance: CompletionRelevance) {
+        self.relevance = relevance;
     }
 }

@@ -104,7 +104,6 @@ impl<'a> CompletionContext<'a> {
         let sema = Semantics::new(db);
 
         let original_file = sema.parse(position.file_id);
-
         // Insert a fake identifier to get a valid parse tree. This tree will be used to
         // determine context. The actual original_file will be used for
         // completion.

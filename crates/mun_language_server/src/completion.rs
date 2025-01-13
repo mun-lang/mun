@@ -14,6 +14,7 @@ mod expr;
 mod name_ref;
 #[cfg(test)]
 mod test_utils;
+mod tests;
 
 use context::{
     CompletionAnalysis, CompletionContext, DotAccess, NameRefContext, NameRefKind,
@@ -52,8 +53,6 @@ pub(crate) fn completions(db: &AnalysisDatabase, position: FilePosition) -> Opti
         }
     }
 
-    // unqualified_path::complete_unqualified_path(&mut result, &context);
-    // dot::complete_dot(&mut result, &context);
     Some(result)
 }
 
