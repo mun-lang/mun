@@ -14,18 +14,25 @@ pub(super) fn complete_expr_path(
 ) {
     match qualified {
         Qualified::With {
-            resolution: Some(PathResolution::Def(ModuleDef::Struct(s))),
+            resolution: Some(resolution),
             ..
         } => {
-            let ty = s.ty(ctx.db);
-            MethodResolutionCtx::new(ctx.db, ty.clone())
-                .with_association(AssociationMode::WithoutSelf)
-                .collect(|item, _visible| {
-                    match item {
-                        AssocItemId::FunctionId(f) => result.add_function(ctx, f.into(), None),
-                    };
-                    None::<()>
-                });
+            let ty = match resolution {
+                PathResolution::Def(ModuleDef::Struct(st)) => Some(st.ty(ctx.db)),
+                PathResolution::SelfType(imp) => Some(imp.self_ty(ctx.db)),
+                _ => None,
+            };
+
+            if let Some(ty) = ty {
+                MethodResolutionCtx::new(ctx.db, ty)
+                    .with_association(AssociationMode::WithoutSelf)
+                    .collect(|item, _visible| {
+                        match item {
+                            AssocItemId::FunctionId(f) => result.add_function(ctx, f.into(), None),
+                        };
+                        None::<()>
+                    });
+            }
         }
         Qualified::No => {
             // Iterate over all items in the current scope and add completions for them
@@ -69,6 +76,51 @@ mod tests {
 
         fn foo() {
             let bar = Foo::$0;
+        }
+        "#,
+            Some(CompletionKind::Reference)
+        ));
+    }
+
+    #[test]
+    fn test_parameter() {
+        insta::assert_snapshot!(completion_string(
+            r#"
+        fn bar() {
+            let a = 0;
+            foo(f$0)
+        }
+        "#,
+            Some(CompletionKind::Reference)
+        ));
+    }
+
+    #[test]
+    fn test_associated_self() {
+        insta::assert_snapshot!(completion_string(
+            r#"
+            struct Foo;
+
+        impl Foo {
+            fn foo() {
+                Self::$0
+            }
+        }
+        "#,
+            Some(CompletionKind::Reference)
+        ));
+    }
+
+    #[test]
+    fn test_complete_self() {
+        insta::assert_snapshot!(completion_string(
+            r#"
+            struct Foo;
+
+        impl Foo {
+            fn foo(self) {
+                $0
+            }
         }
         "#,
             Some(CompletionKind::Reference)

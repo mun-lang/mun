@@ -14,6 +14,7 @@ use crate::{
 
 /// A `SourceAnalyzer` is a wrapper which exposes the HIR API in terms of the
 /// original source file. It's useful to query things from the syntax.
+#[derive(Debug)]
 pub(crate) struct SourceAnalyzer {
     /// The file for which this analyzer was constructed
     pub(crate) file_id: FileId,

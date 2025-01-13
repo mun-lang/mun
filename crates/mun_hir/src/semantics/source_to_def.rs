@@ -4,9 +4,9 @@ use rustc_hash::FxHashMap;
 
 use crate::{
     code_model::src::HasSource,
-    ids::{DefWithBodyId, FunctionId, ItemDefinitionId, Lookup, StructId, TypeAliasId},
+    ids::{DefWithBodyId, FunctionId, ImplId, ItemDefinitionId, Lookup, StructId, TypeAliasId},
     item_scope::ItemScope,
-    DefDatabase, HirDatabase, InFile,
+    AssocItemId, DefDatabase, HirDatabase, InFile,
 };
 
 pub(super) type SourceToDefCache = FxHashMap<SourceToDefContainer, SourceToDefMap>;
@@ -24,25 +24,33 @@ impl SourceToDefContext<'_, '_> {
         &mut self,
         src: InFile<&SyntaxNode>,
     ) -> Option<SourceToDefContainer> {
-        for container in std::iter::successors(Some(src.cloned()), move |node| {
+        let mut ancestors = std::iter::successors(Some(src.cloned()), move |node| {
             node.value.parent().map(|parent| node.with_value(parent))
         })
-        .skip(1)
-        {
-            let res: SourceToDefContainer = match_ast! {
-                match (container.value) {
-                    ast::FunctionDef(it) => {
-                        let def = self.fn_to_def(container.with_value(it))?;
-                        DefWithBodyId::from(def).into()
-                    },
-                    _ => continue,
-                }
-            };
-            return Some(res);
-        }
+        .skip(1);
 
-        let def = self.file_to_def(src.file_id)?;
-        Some(def.into())
+        ancestors.find_map(|node| self.container_to_def(node))
+    }
+
+    /// Find the container associated with the given ast node.
+    fn container_to_def(&mut self, container: InFile<SyntaxNode>) -> Option<SourceToDefContainer> {
+        Some(match_ast! {
+            match (container.value) {
+                ast::FunctionDef(it) => {
+                    let def = self.fn_to_def(container.with_value(it))?;
+                    SourceToDefContainer::DefWithBodyId(def.into())
+                },
+                ast::Impl(it) => {
+                    let def = self.impl_to_def(container.with_value(it))?;
+                    SourceToDefContainer::Impl(def)
+                },
+                ast::SourceFile(_) => {
+                    let def = self.file_to_def(container.file_id)?;
+                    SourceToDefContainer::ModuleId(def)
+                },
+                _ => return None,
+            }
+        })
     }
 
     /// Find the `FunctionId` associated with the specified syntax tree node.
@@ -56,22 +64,30 @@ impl SourceToDefContext<'_, '_> {
         def_map.functions.get(&src).copied()
     }
 
+    /// Find the `ImplId` associated with the specified syntax tree node.
+    fn impl_to_def(&mut self, src: InFile<ast::Impl>) -> Option<ImplId> {
+        let container = self.find_container(src.as_ref().map(AstNode::syntax))?;
+        let db = self.db;
+        let def_map = &*self
+            .cache
+            .entry(container)
+            .or_insert_with(|| container.source_to_def_map(db));
+        def_map.impls.get(&src).copied()
+    }
+
     /// Finds the `ModuleId` associated with the specified `file`
     fn file_to_def(&self, file_id: FileId) -> Option<ModuleId> {
         let source_root_id = self.db.file_source_root(file_id);
         let packages = self.db.packages();
-        let result = packages
+        let package_id = packages
             .iter()
-            .filter(|package_id| packages[*package_id].source_root == source_root_id)
-            .find_map(|package_id| {
-                let module_tree = self.db.module_tree(package_id);
-                let module_id = module_tree.module_for_file(file_id)?;
-                Some(ModuleId {
-                    package: package_id,
-                    local_id: module_id,
-                })
-            });
-        result
+            .find(|package_id| packages[*package_id].source_root == source_root_id)?;
+        let module_tree = self.db.module_tree(package_id);
+        let module_id = module_tree.module_for_file(file_id)?;
+        Some(ModuleId {
+            package: package_id,
+            local_id: module_id,
+        })
     }
 }
 
@@ -80,6 +96,7 @@ impl SourceToDefContext<'_, '_> {
 pub(crate) enum SourceToDefContainer {
     DefWithBodyId(DefWithBodyId),
     ModuleId(ModuleId),
+    Impl(ImplId),
 }
 
 impl From<DefWithBodyId> for SourceToDefContainer {
@@ -99,6 +116,7 @@ impl SourceToDefContainer {
         match self {
             SourceToDefContainer::DefWithBodyId(id) => id.source_to_def_map(db),
             SourceToDefContainer::ModuleId(id) => id.source_to_def_map(db),
+            SourceToDefContainer::Impl(id) => id.source_to_def_map(db),
         }
     }
 }
@@ -148,6 +166,27 @@ impl SourceToDef for ItemScope {
         self.declarations()
             .for_each(|item| add_module_def(db.upcast(), &mut result, item));
 
+        self.impls().for_each(|id| {
+            let src = id.lookup(db.upcast()).source(db.upcast());
+            result.impls.insert(src, id);
+        });
+
+        result
+    }
+}
+
+impl SourceToDef for ImplId {
+    fn source_to_def_map(&self, db: &dyn HirDatabase) -> SourceToDefMap {
+        let mut result = SourceToDefMap::default();
+        let impl_items = db.impl_data(*self);
+        for &assoc_item in &impl_items.items {
+            match assoc_item {
+                AssocItemId::FunctionId(id) => {
+                    let src = id.lookup(db.upcast()).source(db.upcast());
+                    result.functions.insert(src, id);
+                }
+            }
+        }
         result
     }
 }
@@ -156,6 +195,7 @@ impl SourceToDef for ItemScope {
 #[derive(Default)]
 pub(crate) struct SourceToDefMap {
     functions: FxHashMap<InFile<ast::FunctionDef>, FunctionId>,
+    impls: FxHashMap<InFile<ast::Impl>, ImplId>,
     structs: FxHashMap<InFile<ast::StructDef>, StructId>,
     type_aliases: FxHashMap<InFile<ast::TypeAliasDef>, TypeAliasId>,
 }

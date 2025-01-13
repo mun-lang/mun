@@ -91,4 +91,34 @@ mod tests {
             Some(CompletionKind::Reference)
         ));
     }
+
+    #[test]
+    fn test_param() {
+        insta::assert_snapshot!(completion_string(
+            r#"
+        struct Foo { bar: i32 }
+
+        fn foo(bar: Foo) {
+            bar.$0
+        }
+        "#,
+            Some(CompletionKind::Reference)
+        ));
+    }
+
+    #[test]
+    fn test_self() {
+        insta::assert_snapshot!(completion_string(
+            r#"
+        struct Foo { bar: i32 }
+
+        impl Foo {
+            fn foo(self) {
+                self.$0
+            }
+        }
+        "#,
+            Some(CompletionKind::Reference)
+        ));
+    }
 }
