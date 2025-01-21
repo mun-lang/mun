@@ -22,7 +22,10 @@ pub trait CodeGenDatabase: mun_hir::HirDatabase + mun_db::Upcast<dyn mun_hir::Hi
     /// Returns the current module partition
     #[salsa::invoke(crate::module_partition::build_partition)]
     fn module_partition(&self) -> Arc<ModulePartition>;
+}
 
+#[salsa::query_group(LlvmCodeGenDatabaseStorage)]
+pub trait LlvmCodeGenDatabase: CodeGenDatabase {
     /// Returns the inkwell target machine that completely describes the code
     /// generation target. All target-specific information should be
     /// accessible through this interface.
@@ -40,7 +43,7 @@ pub trait CodeGenDatabase: mun_hir::HirDatabase + mun_db::Upcast<dyn mun_hir::Hi
 /// Constructs the primary interface to the complete machine description for the
 /// target machine. All target-specific information should be accessible through
 /// this interface.
-fn target_machine(db: &dyn CodeGenDatabase) -> ByAddress<Rc<inkwell::targets::TargetMachine>> {
+fn target_machine(db: &dyn LlvmCodeGenDatabase) -> ByAddress<Rc<inkwell::targets::TargetMachine>> {
     // Get the HIR target
     let target = db.target();
 

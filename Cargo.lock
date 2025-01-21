@@ -271,6 +271,12 @@ checksum = "3d62b7694a562cdf5a74227903507c56ab2cc8bdd1f781ed5cb4cf9c9f810bfc"
 
 [[package]]
 name = "arrayvec"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
+
+[[package]]
+name = "arrayvec"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
@@ -516,6 +522,16 @@ dependencies = [
  "cc",
  "libc",
  "pkg-config",
+]
+
+[[package]]
+name = "c_codegen"
+version = "0.1.0"
+source = "git+https://github.com/Wodann/c-codegen-rs.git#f7d020e6f7bedfe882003efee47eb55c20644ad6"
+dependencies = [
+ "anyhow",
+ "pretty",
+ "thiserror 2.0.3",
 ]
 
 [[package]]
@@ -2441,6 +2457,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "mun_codegen_c"
+version = "0.6.0-dev"
+dependencies = [
+ "c_codegen",
+ "mun_codegen",
+ "mun_hir",
+ "salsa",
+]
+
+[[package]]
 name = "mun_codegen_macros"
 version = "0.6.0-dev"
 dependencies = [
@@ -3200,6 +3226,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "pretty"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b55c4d17d994b637e2f4daf6e5dc5d660d209d5642377d675d7a1c3ab69fa579"
+dependencies = [
+ "arrayvec 0.5.2",
+ "typed-arena",
+ "unicode-width",
+]
+
+[[package]]
 name = "pretty_env_logger"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3419,7 +3456,7 @@ version = "0.20.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e442690f86da40561d5548e7ffb4a18af90d1c1b3536090de847ca2d5a3a6426"
 dependencies = [
- "arrayvec",
+ "arrayvec 0.7.6",
  "bitvec",
  "bitvec-nom2",
  "bytes",
@@ -4594,6 +4631,12 @@ dependencies = [
  "cfg-if 0.1.10",
  "static_assertions",
 ]
+
+[[package]]
+name = "typed-arena"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6af6ae20167a9ece4bcb41af5b80f8a1f1df981f6391189ce00fd257af04126a"
 
 [[package]]
 name = "typenum"

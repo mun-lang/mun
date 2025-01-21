@@ -1,0 +1,19 @@
+[package]
+name = "mun_codegen_c"
+description = "C code generation for Mun"
+keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+documentation.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+categories.workspace = true
+
+[dependencies]
+c_codegen = { workspace = true }
+mun_codegen = { path = "../mun_codegen" }
+mun_hir = { path = "../mun_hir" }
+salsa = { workspace = true }

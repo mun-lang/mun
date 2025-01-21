@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use inkwell::{context::Context, module::Module, targets::TargetMachine, types::StructType};
 
-use crate::{ir::ty::HirTypeCache, CodeGenDatabase};
+use crate::{db::LlvmCodeGenDatabase, ir::ty::HirTypeCache};
 
 pub struct CodeGenContext<'db, 'ink> {
     /// The current LLVM context
@@ -27,7 +27,7 @@ pub struct CodeGenContext<'db, 'ink> {
 impl<'db, 'ink> CodeGenContext<'db, 'ink> {
     /// Constructs a new `CodeGenContext` from an LLVM context and a
     /// `CodeGenDatabase`.
-    pub fn new(context: &'ink Context, db: &'db dyn CodeGenDatabase) -> Self {
+    pub fn new(context: &'ink Context, db: &'db dyn LlvmCodeGenDatabase) -> Self {
         let target_machine = db.target_machine().0;
         Self {
             context,

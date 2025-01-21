@@ -7,7 +7,7 @@ use tempfile::NamedTempFile;
 
 use crate::{
     code_gen::{AssemblyBuilder, CodeGenContext, ObjectFile},
-    db::CodeGenDatabase,
+    db::LlvmCodeGenDatabase,
     ModuleGroupId,
 };
 
@@ -46,7 +46,7 @@ impl<'db, 'ink, 'ctx> Assembly<'db, 'ink, 'ctx> {
 
 /// Builds an assembly for the specified file
 fn build_assembly<'db, 'ink, 'ctx>(
-    db: &'db dyn CodeGenDatabase,
+    db: &'db dyn LlvmCodeGenDatabase,
     code_gen: &'ctx CodeGenContext<'db, 'ink>,
     module_group_id: ModuleGroupId,
 ) -> Assembly<'db, 'ink, 'ctx> {
@@ -87,7 +87,7 @@ impl TargetAssembly {
 
 /// Builds an assembly for the specified module.
 pub(crate) fn build_target_assembly(
-    db: &dyn CodeGenDatabase,
+    db: &dyn LlvmCodeGenDatabase,
     module_group: ModuleGroupId,
 ) -> Arc<TargetAssembly> {
     // Setup the code generation context
@@ -151,7 +151,7 @@ impl AssemblyIr {
 
 /// Builds an IR file for the specified module.
 pub(crate) fn build_assembly_ir(
-    db: &dyn CodeGenDatabase,
+    db: &dyn LlvmCodeGenDatabase,
     module_group: ModuleGroupId,
 ) -> Arc<AssemblyIr> {
     // Setup the code generation context
