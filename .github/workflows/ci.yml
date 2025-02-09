@@ -8,7 +8,6 @@ on:
       - release/*
 
 env:
-  RUSTFLAGS: -Dwarnings
   CARGO_TERM_COLOR: always
 
 concurrency:
@@ -325,4 +324,4 @@ jobs:
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
+          args: --all --all-features --all-targets  -- -D warnings

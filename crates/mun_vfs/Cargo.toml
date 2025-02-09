@@ -19,3 +19,6 @@ log = { workspace = true }
 notify = { workspace = true }
 rustc-hash = { workspace = true }
 walkdir = { workspace = true }
+
+[lints]
+workspace = true

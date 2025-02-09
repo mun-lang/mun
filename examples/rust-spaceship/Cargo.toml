@@ -8,3 +8,5 @@ mun_runtime = { path="../../crates/mun_runtime" }
 rand = "0.8"
 tetra = { version = "0.7", features=["sdl2_bundled"] }
 
+[lints]
+workspace = true

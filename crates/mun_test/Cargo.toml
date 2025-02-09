@@ -21,3 +21,6 @@ mun_paths = { version = "0.6.0-dev", path = "../mun_paths" }
 anyhow = { workspace = true }
 itertools = { workspace = true }
 tempfile = { workspace = true }
+
+[lints]
+workspace = true

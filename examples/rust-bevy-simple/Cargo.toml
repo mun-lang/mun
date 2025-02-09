@@ -6,3 +6,6 @@ edition = "2021"
 [dependencies]
 mun_runtime = { path = "../../crates/mun_runtime" }
 bevy = { version = "0.8", default-features = false }
+
+[lints]
+workspace = true

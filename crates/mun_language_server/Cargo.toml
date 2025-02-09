@@ -43,3 +43,6 @@ insta = { workspace = true }
 itertools = { workspace = true }
 tempdir = { workspace = true }
 text_trees = { workspace = true }
+
+[lints]
+workspace = true

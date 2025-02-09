@@ -42,4 +42,3 @@ apt-get update
 # Install required packages for LLVM
 apt-get install -y llvm-$LLVM_VERSION llvm-$LLVM_VERSION-* liblld-$LLVM_VERSION* libclang-rt-$LLVM_VERSION-dev
 
-apt download libpolly-$LLVM_VERSION-dev && dpkg --force-all -i libpolly-$LLVM_VERSION-dev*

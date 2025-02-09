@@ -17,10 +17,7 @@
 			"onAutoForward": "openPreview"
 		}
 	},
-	// Every time the container is started, update Rust to the version specified in the `rust-toolchain` file.
-	"postStartCommand": "scripts/setup.sh",
-	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "rustc --version",
+	"postCreateCommand": "scripts/setup.sh",
 	// Configure tool-specific properties.
 	"customizations": {
 		"vscode": {

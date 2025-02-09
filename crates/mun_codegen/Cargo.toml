@@ -43,3 +43,6 @@ insta = { workspace = true, features = ["ron"] }
 mun_libloader = { path = "../mun_libloader" }
 mun_test = { path = "../mun_test" }
 mun_runtime = { path = "../mun_runtime" }
+
+[lints]
+workspace = true

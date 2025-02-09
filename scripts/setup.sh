@@ -15,3 +15,7 @@ source "$HOME/.cargo/env"
 # Install nightly rustfmt
 rustup toolchain install nightly --profile minimal --component rustfmt
 
+script_dir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+# Install LLVM
+sudo /bin/sh -c $script_dir/install-llvm.sh
