@@ -73,6 +73,7 @@ macro_rules! test_invalid_runtime {
                 #[test]
                 fn [<test_ $name _invalid_runtime>]() {
                     let runtime = Runtime(ptr::null_mut());
+                    #[allow(clippy::macro_metavars_in_unsafe)]
                     let handle =
                         unsafe { [<mun_ $name>](runtime $(, $arg)*) };
 
