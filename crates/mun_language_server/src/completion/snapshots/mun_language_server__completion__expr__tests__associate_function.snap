@@ -1,5 +1,0 @@
----
-source: crates/mun_language_server/src/completion/expr.rs
-expression: "completion_string(r#\"\n        struct Foo;\n\n        impl Foo {\n            fn new() -> Self {\n                Self\n            }\n        }\n\n        fn foo() {\n            let bar = Foo::$0;\n        }\n        \"#,\nSome(CompletionKind::Reference))"
----
-fn new -> Foo

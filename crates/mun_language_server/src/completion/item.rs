@@ -3,30 +3,51 @@ use crate::SymbolKind;
 /// A `CompletionItem` describes a single completion variant in an editor.
 #[derive(Clone, Debug)]
 pub struct CompletionItem {
-    /// Used for tests to filter certain type of completions
-    #[allow(unused)]
-    pub completion_kind: CompletionKind,
-
     /// Label in the completion pop up which identifies completion.
     pub label: String,
 
     /// The type of completion
-    pub kind: Option<CompletionItemKind>,
+    pub kind: CompletionItemKind,
 
     /// Additional info to show in the UI pop up.
     pub detail: Option<String>,
+
+    /// The relevance of this completion item. This is used to score different
+    /// completions.
+    pub relevance: CompletionRelevance,
 }
 
-#[derive(Debug, PartialEq, Eq, Copy, Clone)]
-pub enum CompletionKind {
-    /// Your usual "complete all valid identifiers".
-    Reference,
-    BuiltinType,
+/// Defines the relevance of a completion item this is used to score different
+/// completions amongst each-other.
+#[derive(Clone, Debug, Default)]
+pub struct CompletionRelevance {
+    /// True for local variables.
+    pub is_local: bool,
+}
+
+impl CompletionRelevance {
+    /// Returns a relative score for the completion item. This is used to sort
+    /// the completions.
+    pub fn score(&self) -> u32 {
+        let mut score = !0 / 2;
+        let CompletionRelevance { is_local } = self;
+
+        // Slightly prefer locals
+        if *is_local {
+            score += 1;
+        }
+
+        score
+    }
+
+    /// Indicates whether this item likely especially relevant to the user.
+    pub fn is_relevant(&self) -> bool {
+        self.score() > 0
+    }
 }
 
 /// Type of completion used to provide hints to the user.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(unused)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CompletionItemKind {
     SymbolKind(SymbolKind),
     Attribute,
@@ -76,12 +97,12 @@ impl From<SymbolKind> for CompletionItemKind {
 
 impl CompletionItem {
     /// Constructs a [`Builder`] to build a `CompletionItem` with
-    pub fn builder(kind: CompletionKind, label: impl Into<String>) -> Builder {
+    pub fn builder(kind: impl Into<CompletionItemKind>, label: impl Into<String>) -> Builder {
         Builder {
             label: label.into(),
-            kind: None,
-            completion_kind: kind,
+            kind: kind.into(),
             detail: None,
+            relevance: CompletionRelevance::default(),
         }
     }
 }
@@ -90,31 +111,35 @@ impl CompletionItem {
 /// [`CompletionItem::builder`].
 pub struct Builder {
     label: String,
-    completion_kind: CompletionKind,
-    kind: Option<CompletionItemKind>,
+    kind: CompletionItemKind,
     detail: Option<String>,
+    relevance: CompletionRelevance,
 }
 
 impl Builder {
     /// Completes building the `CompletionItem` and returns it
     pub fn finish(self) -> CompletionItem {
         CompletionItem {
-            completion_kind: self.completion_kind,
             label: self.label,
             kind: self.kind,
             detail: self.detail,
+            relevance: self.relevance,
         }
     }
 
-    /// Sets the type of the completion
-    pub fn kind(mut self, kind: impl Into<CompletionItemKind>) -> Builder {
-        self.kind = Some(kind.into());
+    /// Set the details of the completion item
+    pub fn with_detail(mut self, detail: impl Into<String>) -> Builder {
+        self.detail = Some(detail.into());
         self
     }
 
     /// Set the details of the completion item
-    pub fn detail(mut self, detail: impl Into<String>) -> Builder {
+    pub fn set_detail(&mut self, detail: impl Into<String>) {
         self.detail = Some(detail.into());
-        self
+    }
+
+    /// Sets the relevance of this item
+    pub fn set_relevance(&mut self, relevance: CompletionRelevance) {
+        self.relevance = relevance;
     }
 }

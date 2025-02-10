@@ -8,8 +8,8 @@ use crate::{
     ids::DefWithBodyId,
     resolver_for_scope,
     semantics::PathResolution,
-    Body, ExprId, ExprScopes, HirDatabase, InFile, InferenceResult, Path, Resolver, Struct, Ty,
-    TypeAlias, TypeNs,
+    Body, ExprId, ExprScopes, HirDatabase, InFile, InferenceResult, Path, PrimitiveType, Resolver,
+    Struct, Ty, TypeAlias, TypeNs,
 };
 
 /// A `SourceAnalyzer` is a wrapper which exposes the HIR API in terms of the
@@ -215,7 +215,7 @@ fn resolve_hir_path_qualifier(
         TypeNs::SelfType(it) => PathResolution::SelfType(it.into()),
         TypeNs::StructId(it) => PathResolution::Def(Struct::from(it).into()),
         TypeNs::TypeAliasId(it) => PathResolution::Def(TypeAlias::from(it).into()),
-        TypeNs::PrimitiveType(it) => PathResolution::Def(it.into()),
+        TypeNs::PrimitiveType(it) => PathResolution::Def(PrimitiveType::from(it).into()),
     };
 
     Some(res)

@@ -1,7 +1,7 @@
 use mun_hir_input::{FileId, ModuleId};
 
-use super::{r#impl::Impl, AssocItem, Function, Package, Struct, TypeAlias};
-use crate::{ids::ItemDefinitionId, primitive_type::PrimitiveType, DiagnosticSink, HirDatabase};
+use super::{r#impl::Impl, AssocItem, Function, Package, PrimitiveType, Struct, TypeAlias};
+use crate::{ids::ItemDefinitionId, DiagnosticSink, HirDatabase};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Module {
@@ -203,7 +203,7 @@ impl From<ItemDefinitionId> for ModuleDef {
             ItemDefinitionId::FunctionId(id) => Function { id }.into(),
             ItemDefinitionId::StructId(id) => Struct { id }.into(),
             ItemDefinitionId::TypeAliasId(id) => TypeAlias { id }.into(),
-            ItemDefinitionId::PrimitiveType(id) => id.into(),
+            ItemDefinitionId::PrimitiveType(ty) => PrimitiveType { inner: ty }.into(),
         }
     }
 }
