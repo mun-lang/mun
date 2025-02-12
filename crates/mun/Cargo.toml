@@ -32,3 +32,6 @@ mun_skeptic = { path = "../mun_skeptic", version = "0.6.0-dev" }
 
 [build-dependencies]
 mun_skeptic = { path = "../mun_skeptic", version = "0.6.0-dev" }
+
+[lints]
+workspace = true

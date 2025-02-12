@@ -32,6 +32,9 @@ export async function execute(cmd) {
         if (isLinux) {
             const installScript = path.join(__dirname, "../../../../scripts/install-llvm.sh");
             await exec.exec(`sudo ${installScript}`);
+
+            const fixPollyScript = path.join(__dirname, "../../../../scripts/fix-libpolly.sh");
+            await exec.exec(`sudo ${fixPollyScript}`);
         } else if (isMacOS) {
             await exec.exec("brew install llvm@14")
             let llvmPath = await execute("brew --prefix llvm@14");

@@ -25,3 +25,6 @@ notify = { version = "4.0", default-features = false }
 # Enable std feature for winapi through feature unification to ensure notify uses the correct `c_void` type
 [target.'cfg(windows)'.dependencies]
 winapi = { workspace = true, features = ["std"] }
+
+[lints]
+workspace = true

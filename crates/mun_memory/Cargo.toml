@@ -26,3 +26,6 @@ thiserror = { workspace = true }
 mun_capi_utils = { version = "0.6.0-dev", path = "../mun_capi_utils", features = ["insta"] }
 insta = { workspace = true, features = ["ron"] }
 paste = { workspace = true }
+
+[lints]
+workspace = true

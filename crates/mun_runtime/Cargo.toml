@@ -32,3 +32,6 @@ mun_compiler = { path = "../mun_compiler" }
 mun_test = { path = "../mun_test" }
 tempfile = { workspace = true }
 termcolor = { workspace = true }
+
+[lints]
+workspace = true

@@ -12,3 +12,6 @@ difference = { workspace = true }
 heck = { workspace = true }
 ron = { workspace = true }
 tera = { workspace = true }
+
+[lints]
+workspace = true

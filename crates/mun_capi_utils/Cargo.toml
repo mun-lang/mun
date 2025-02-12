@@ -14,3 +14,6 @@ license.workspace = true
 
 [dependencies]
 insta = { workspace = true, features = ["ron"], optional = true }
+
+[lints]
+workspace = true

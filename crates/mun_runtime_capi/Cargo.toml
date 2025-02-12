@@ -27,3 +27,6 @@ insta = { workspace = true, features = ["ron"] }
 mun_compiler = { path="../mun_compiler" }
 paste = { workspace = true }
 tempfile = { workspace = true }
+
+[lints]
+workspace = true

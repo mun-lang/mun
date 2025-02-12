@@ -34,3 +34,6 @@ mun_test = { path = "../mun_test" }
 insta = { workspace = true }
 parking_lot = { workspace = true }
 text_trees = { workspace = true }
+
+[lints]
+workspace = true

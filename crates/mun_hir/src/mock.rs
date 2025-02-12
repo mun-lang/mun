@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use mun_db::Upcast;
 use mun_hir_input::SourceDatabase;
 use mun_target::spec::Target;

@@ -240,7 +240,7 @@ fn tree_for_module(
         "mod {}",
         module
             .name(db)
-            .map_or_else(|| "mod".to_owned(), |name| name.to_string())
+            .map_or_else(|| "mod".to_owned(), |name| name.clone())
     ));
 
     // Add module level diagnostics
@@ -344,7 +344,7 @@ fn fully_qualified_module_path(db: &dyn HirDatabase, module: Module) -> String {
             .into_iter()
             .map(|m| {
                 m.name(db)
-                    .map_or_else(|| "package".to_owned(), |name| name.to_string())
+                    .map_or_else(|| "package".to_owned(), |name| name.clone())
             })
             .rev(),
         "::".to_string(),

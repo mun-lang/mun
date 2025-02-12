@@ -83,7 +83,7 @@ fn apply_struct_mapping(
         match diff {
             FieldDiff::Insert { index, .. } => *index,
             FieldDiff::Move { new_index, .. } => *new_index,
-            _ => std::usize::MAX,
+            _ => usize::MAX,
         }
     }
 

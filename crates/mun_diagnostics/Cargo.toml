@@ -15,3 +15,6 @@ license.workspace = true
 [dependencies]
 mun_hir = { version = "0.6.0-dev", path = "../mun_hir" }
 mun_syntax = { version = "0.6.0-dev", path = "../mun_syntax" }
+
+[lints]
+workspace = true

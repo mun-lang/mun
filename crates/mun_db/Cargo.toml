@@ -11,4 +11,5 @@ repository.workspace = true
 license.workspace = true
 categories.workspace = true
 
-[dependencies]
+[lints]
+workspace = true
