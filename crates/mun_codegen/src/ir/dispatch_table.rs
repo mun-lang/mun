@@ -1,24 +1,16 @@
-use std::{
-    collections::{BTreeMap, BTreeSet, HashMap},
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
-use inkwell::{
-    context::Context,
-    module::Module,
-    targets::TargetData,
-    types::{BasicTypeEnum, FunctionType},
-    values::BasicValueEnum,
-};
 use mun_hir::{Body, Expr, ExprId, HirDatabase, InferenceResult};
 use rustc_hash::FxHashSet;
 
 use crate::{
     intrinsics::Intrinsic,
-    ir::{function, ty::HirTypeCache},
+    ir::ty::HirTypeCache,
     module_group::ModuleGroup,
     type_info::{HasStaticTypeId, TypeId},
 };
+
+use super::intrinsics::IntrinsicsSet;
 
 /// A dispatch table in IR is a struct that contains pointers to all functions
 /// that are called from code. In C terms it looks something like this:
@@ -105,7 +97,7 @@ impl<'db, 'group> DispatchTableBuilder<'db, 'group> {
     /// Creates a new builder that can generate a dispatch function.
     pub fn new(
         db: &'db dyn HirDatabase,
-        intrinsics: &BTreeSet<FunctionPrototype>,
+        intrinsics: &IntrinsicsSet,
         hir_types: &'group HirTypeCache<'db>,
         module_group: &'group ModuleGroup,
     ) -> Self {
@@ -204,53 +196,6 @@ impl<'db, 'group> DispatchTableBuilder<'db, 'group> {
     ///
     /// Returns the `DispatchTable` and a set of dependencies for the module.
     pub fn build(self) -> (DispatchTable, FxHashSet<mun_hir::Module>) {
-        // Construct the table body from all the entries in the dispatch table
-        let table_body: Vec<BasicTypeEnum<'ink>> = self
-            .entries
-            .iter()
-            .map(|f| f.ir_type.ptr_type(inkwell::AddressSpace::default()).into())
-            .collect();
-
-        // We can fill in the DispatchTable body, i.e: struct DispatchTable { <this
-        // part> };
-        self.table_type.set_body(&table_body, false);
-
-        // Create a default initializer for function that are already known
-        if let Some(table_ref) = self.table_ref {
-            let values: Vec<BasicValueEnum<'ink>> = self
-                .entries
-                .iter()
-                .enumerate()
-                // Maps over all HIR functions
-                .map(|(i, entry)| {
-                    let function_type = table_body[i].into_pointer_type();
-                    // Find the associated IR function if it exists
-                    match entry.function.mun_hir {
-                        // Case external function: Convert to typed null for the given function
-                        None => function_type.const_null(),
-                        // Case external function, or function from another module
-                        Some(f) => {
-                            if f.is_extern(self.db)
-                                || !self.module_group.contains(f.module(self.db))
-                            {
-                                // If the function is externally defined (i.e. it's an `extern`
-                                // function or it's defined in another module) don't initialize.
-                                function_type.const_null()
-                            } else {
-                                // Otherwise generate a function prototype
-                                function::gen_prototype(self.db, self.hir_types, f, self.module)
-                                    .as_global_value()
-                                    .as_pointer_value()
-                            }
-                        }
-                    }
-                    .into()
-                })
-                .collect();
-            // Set the initialize for the global value
-            table_ref.set_initializer(&self.table_type.const_named_struct(&values));
-        }
-
         (
             DispatchTable {
                 function_to_idx: self.function_to_idx,

@@ -1,36 +1,82 @@
-use c_codegen::{identifier, operator::ArraySubscript, r#type::{structure::Struct, InitializerList}, variable, Identifier, Value, Variable};
-use mun_codegen::DispatchTable;
+use c_codegen::{
+    identifier,
+    operator::{ArraySubscript, PrefixOperator, PrefixOperatorKind},
+    r#type::{
+        member::{self, Member},
+        structure::Struct,
+        InitializerList,
+    },
+    variable, Expression, Identifier, Type, Value, Variable,
+};
+use mun_codegen::{DispatchTable, ModuleGroup};
 use mun_hir::HirDatabase;
+
+use crate::{function, ty};
 
 const GLOBAL_DISPATCH_TABLE_NAME: &str = "g_dispatchTable";
 
 /// Generate the initialization of the global dispatch table. This is equivalent to:
 /// ```c
-/// struct DispatchTable
+/// struct DispatchTable {
+///     void (*fn0)(void);
+///     void (*fn1)(int);
+/// } g_dispatchTable = { &fn0, &fn1 };
 /// ```
 pub fn generate_initialization(
+    module_group: &ModuleGroup,
     dispatch_table: &DispatchTable,
     db: &dyn HirDatabase,
-) -> Result<Variable, identifier::Error> {
+) -> Result<variable::Declaration, identifier::Error> {
+    let (member_groups, values) = dispatch_table
+        .entries()
+        .iter()
+        .enumerate()
+        .map(|(index, function)| {
+            let ty = function::generate_pointer_type(&function.prototype);
+            let group = member::Group {
+                ty,
+                members: vec![Member {
+                    name: Identifier::new(&function.prototype.name)?,
+                    bit_field_size: None,
+                }]
+                .try_into()?,
+            };
 
-    let initializer_list = dispatch_table.entries().iter().enumerate().map(|(index, function)| {
-        if let Some(function) = function.mun_hir {
+            let expression: Expression = if let Some(function) = function.mun_hir {
+                // If the function is externally defined (i.e. it's an `extern`
+                // function or it's defined in another module) don't initialize.
+                if function.is_extern(db) || !module_group.contains(function.module(db)) {
+                    Value::Pointer { address: 0 }.into()
+                } else {
+                    let function_name = function.name(db);
 
-        } else {
-            Value::Pointer { address: 0, base_type: Type }
-        }
-    })
+                    PrefixOperator {
+                        operand: Variable::new(function_name)?,
+                        operator: PrefixOperatorKind::Address,
+                    }
+                    .into()
+                }
+            } else {
+                Value::Pointer { address: 0 }.into()
+            };
+
+            Ok((group, expression))
+        })
+        .collect::<Result<(Vec<member::Group>, Vec<Expression>)>>()?;
 
     let declaration = variable::Declaration {
         storage_class: None,
-        ty: Struct::Definition { name: None, member_groups: todo!() },
-        variables: vec![(Identifier::new(GLOBAL_DISPATCH_TABLE_NAME)?,
-            Some(todo!())
+        ty: Struct::Definition {
+            name: None,
+            member_groups: member_groups.try_into()?,
+        },
+        variables: vec![(
+            Identifier::new(GLOBAL_DISPATCH_TABLE_NAME)?,
+            Some(InitializerList::Ordered(values)),
         )],
     };
-    
 
-    let initializer_list = InitializerList::Ordered(todo!());
+    Ok(declaration)
 }
 
 /// Generate a function lookup through the `DispatchTable`, equivalent to

@@ -1,7 +1,5 @@
 use std::ffi;
 
-use inkwell::{context::Context, targets::TargetData, types::FunctionType};
-
 use crate::ir::dispatch_table::FunctionPrototype;
 
 #[macro_use]
@@ -12,9 +10,6 @@ mod macros;
 pub trait Intrinsic: Sync {
     /// Returns the prototype of the intrinsic
     fn prototype(&self) -> FunctionPrototype;
-
-    /// Returns the IR type for the function
-    fn ir_type<'ink>(&self, context: &'ink Context, target: &TargetData) -> FunctionType<'ink>;
 }
 
 intrinsics! {

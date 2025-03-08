@@ -1,12 +1,10 @@
-use std::collections::BTreeMap;
-
 use inkwell::{module::Module, types::PointerType, values::UnnamedAddress, AddressSpace};
 use mun_hir::{HasVisibility, ModuleDef};
 use rustc_hash::FxHashSet;
 
 use super::{
     dispatch_table::{DispatchTable, DispatchTableBuilder},
-    intrinsics,
+    intrinsics::{self, IntrinsicsSet},
     type_table::{TypeTable, TypeTableBuilder},
 };
 use crate::{
@@ -22,7 +20,7 @@ pub struct FileGroupIr<'ink> {
     /// The LLVM module that contains the IR
     pub(crate) llvm_module: Module<'ink>,
     /// The dispatch table
-    pub(crate) dispatch_table: DispatchTable<'ink>,
+    pub(crate) dispatch_table: DispatchTable,
     /// The type table
     pub(crate) type_table: TypeTable<'ink>,
     /// The allocator handle, if it exists
@@ -39,8 +37,7 @@ pub(crate) fn gen_file_group_ir<'ink>(
 ) -> FileGroupIr<'ink> {
     let llvm_module = code_gen.context.create_module("group_name");
 
-    // Use a `BTreeMap` to guarantee deterministically ordered output.
-    let mut intrinsics_map = BTreeMap::new();
+    let mut intrinsics = IntrinsicsSet::new();
     let mut needs_alloc = false;
 
     // Collect all intrinsic functions, wrapper function, and generate struct
@@ -52,10 +49,8 @@ pub(crate) fn gen_file_group_ir<'ink>(
         match def {
             ModuleDef::Function(f) if !f.is_extern(code_gen.db) => {
                 intrinsics::collect_fn_body(
-                    code_gen.context,
-                    code_gen.target_machine.get_target_data(),
                     code_gen.db,
-                    &mut intrinsics_map,
+                    &mut intrinsics,
                     &mut needs_alloc,
                     &f.body(code_gen.db),
                     &f.infer(code_gen.db),
@@ -65,12 +60,7 @@ pub(crate) fn gen_file_group_ir<'ink>(
                 if f.visibility(code_gen.db).is_externally_visible()
                     && !fn_sig.marshallable(code_gen.db)
                 {
-                    intrinsics::collect_wrapper_body(
-                        code_gen.context,
-                        code_gen.target_machine.get_target_data(),
-                        &mut intrinsics_map,
-                        &mut needs_alloc,
-                    );
+                    intrinsics::collect_wrapper_body(&mut intrinsics, &mut needs_alloc);
                 }
             }
             // TODO: Extern types for functions?
@@ -83,15 +73,8 @@ pub(crate) fn gen_file_group_ir<'ink>(
     }
 
     // Collect all exposed functions' bodies.
-    let mut dispatch_table_builder = DispatchTableBuilder::new(
-        code_gen.context,
-        code_gen.target_machine.get_target_data(),
-        code_gen.db,
-        &llvm_module,
-        &intrinsics_map,
-        &code_gen.hir_types,
-        module_group,
-    );
+    let mut dispatch_table_builder =
+        DispatchTableBuilder::new(code_gen.db, &intrinsics, &code_gen.hir_types, module_group);
     for def in module_group
         .iter()
         .flat_map(|module| module.declarations(code_gen.db))
@@ -122,7 +105,7 @@ pub(crate) fn gen_file_group_ir<'ink>(
     let mut type_table_builder = TypeTableBuilder::new(
         code_gen.db,
         &value_context,
-        intrinsics_map.keys(),
+        intrinsics.iter(),
         &dispatch_table,
         &code_gen.hir_types,
         module_group,

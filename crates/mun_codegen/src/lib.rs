@@ -4,7 +4,7 @@ pub use crate::{
     assembly::{AssemblyIr, TargetAssembly},
     code_gen::AssemblyBuilder,
     db::{CodeGenDatabase, CodeGenDatabaseStorage},
-    ir::dispatch_table::DispatchTable,
+    ir::dispatch_table::{DispatchTable, FunctionPrototype},
     module_group::ModuleGroup,
     module_partition::{ModuleGroupId, ModulePartition},
 };
