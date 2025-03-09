@@ -29,7 +29,7 @@ pub(crate) fn create_pass_manager<'ink>(
 /// to reference `FunctionValue` wherever they are declared in the file.
 pub(crate) fn gen_prototype<'db, 'ink>(
     db: &'db dyn HirDatabase,
-    types: &HirTypeCache<'db, 'ink>,
+    types: &HirTypeCache<'db>,
     func: mun_hir::Function,
     module: &Module<'ink>,
 ) -> FunctionValue<'ink> {

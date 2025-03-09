@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use c_codegen::{identifier, statement::Include, CFileBuilder, Statement};
+use c_codegen::{identifier, statement::Include, CFileBuilder};
 use mun_codegen::{ModuleGroup, ModuleGroupId};
-use mun_hir::{HirDatabase, ModuleDef};
+use mun_hir::HirDatabase;
 
 use crate::{db::CCodegenDatabase, dispatch_table, HeaderAndSourceFiles};
 
@@ -20,8 +20,8 @@ pub(crate) fn build_c_files(
 
     let module_group = &module_partition[module_group];
 
-    let header = generate_header(db, module_group);
-    let source = generate_source(db, module_group);
+    let header = generate_header(db.upcast(), module_group);
+    let source = generate_source(db.upcast(), module_group).expect("Invalid source code");
 
     Arc::new(HeaderAndSourceFiles { header, source })
 }
@@ -40,10 +40,13 @@ fn generate_header(_db: &dyn HirDatabase, _module_group: &ModuleGroup) -> String
 }
 
 fn generate_source(
-    _db: &dyn HirDatabase,
-    _module_group: &ModuleGroup,
+    db: &dyn CCodegenDatabase,
+    module_group: &ModuleGroup,
 ) -> Result<String, identifier::Error> {
     let include = Include::with_quotes("dispatch_table.h");
+
+    let file_group_data = db.file_group(key0)
+
     let dispatch_table = dispatch_table::generate_initialization(module_group, dispatch_table, db)?;
 
     CFileBuilder::default()

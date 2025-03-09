@@ -27,7 +27,7 @@ fn gen_prototype_from_function<'ink>(
     db: &dyn HirDatabase,
     context: &IrValueContext<'ink, '_, '_>,
     function: mun_hir::Function,
-    hir_types: &HirTypeCache<'_, 'ink>,
+    hir_types: &HirTypeCache<'_>,
     ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
 ) -> ir::FunctionPrototype<'ink> {
     let name = function.full_name(db);
@@ -109,7 +109,7 @@ fn get_type_definition_array<'ink>(
     db: &dyn HirDatabase,
     context: &IrValueContext<'ink, '_, '_>,
     types: impl Iterator<Item = mun_hir::Ty>,
-    hir_types: &HirTypeCache<'_, 'ink>,
+    hir_types: &HirTypeCache<'_>,
     ir_type_builder: &TypeIdBuilder<'ink, '_, '_, '_>,
 ) -> Value<'ink, *const ir::TypeDefinition<'ink>> {
     types

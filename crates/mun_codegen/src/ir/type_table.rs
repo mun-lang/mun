@@ -102,8 +102,8 @@ impl<'ink> TypeTable<'ink> {
 pub(crate) struct TypeTableBuilder<'db, 'ink, 't> {
     db: &'db dyn HirDatabase,
     value_context: &'t IrValueContext<'ink, 't, 't>,
-    dispatch_table: &'t DispatchTable<'ink>,
-    hir_types: &'t HirTypeCache<'db, 'ink>,
+    dispatch_table: &'t DispatchTable,
+    hir_types: &'t HirTypeCache<'db>,
     entries: HashSet<Arc<TypeId>>,
     module_group: &'t ModuleGroup,
 }
@@ -114,8 +114,8 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
         db: &'db dyn HirDatabase,
         value_context: &'t IrValueContext<'ink, '_, '_>,
         _intrinsics: impl Iterator<Item = &'f FunctionPrototype>,
-        dispatch_table: &'t DispatchTable<'ink>,
-        hir_types: &'t HirTypeCache<'db, 'ink>,
+        dispatch_table: &'t DispatchTable,
+        hir_types: &'t HirTypeCache<'db>,
         module_group: &'t ModuleGroup,
     ) -> Self {
         // for prototype in intrinsics {

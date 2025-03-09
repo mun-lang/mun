@@ -6,12 +6,12 @@ use c_codegen::{
         structure::Struct,
         InitializerList,
     },
-    variable, Expression, Identifier, Type, Value, Variable,
+    variable, Expression, Identifier, Value, Variable,
 };
-use mun_codegen::{DispatchTable, ModuleGroup};
+use mun_codegen::{DispatchTable, Intrinsic, ModuleGroup};
 use mun_hir::HirDatabase;
 
-use crate::{function, ty};
+use crate::function;
 
 const GLOBAL_DISPATCH_TABLE_NAME: &str = "g_dispatchTable";
 
@@ -26,12 +26,11 @@ pub fn generate_initialization(
     module_group: &ModuleGroup,
     dispatch_table: &DispatchTable,
     db: &dyn HirDatabase,
-) -> Result<variable::Declaration, identifier::Error> {
+) -> c_codegen::Result<variable::Declaration> {
     let (member_groups, values) = dispatch_table
         .entries()
         .iter()
-        .enumerate()
-        .map(|(index, function)| {
+        .map(|function| {
             let ty = function::generate_pointer_type(&function.prototype);
             let group = member::Group {
                 ty,
@@ -51,7 +50,7 @@ pub fn generate_initialization(
                     let function_name = function.name(db);
 
                     PrefixOperator {
-                        operand: Variable::new(function_name)?,
+                        operand: Variable::new(function_name.to_string())?.into(),
                         operator: PrefixOperatorKind::Address,
                     }
                     .into()
@@ -62,18 +61,20 @@ pub fn generate_initialization(
 
             Ok((group, expression))
         })
-        .collect::<Result<(Vec<member::Group>, Vec<Expression>)>>()?;
+        .collect::<c_codegen::Result<(Vec<member::Group>, Vec<Expression>)>>()?;
 
     let declaration = variable::Declaration {
         storage_class: None,
         ty: Struct::Definition {
             name: None,
             member_groups: member_groups.try_into()?,
-        },
+        }
+        .into(),
         variables: vec![(
             Identifier::new(GLOBAL_DISPATCH_TABLE_NAME)?,
-            Some(InitializerList::Ordered(values)),
-        )],
+            Some(InitializerList::Ordered(values).into()),
+        )]
+        .try_into()?,
     };
 
     Ok(declaration)
@@ -84,7 +85,6 @@ pub fn generate_initialization(
 /// index of the function and `dispatchTable` is a struct
 pub fn generate_function_lookup(
     dispatch_table: &DispatchTable,
-    db: &dyn HirDatabase,
     function: mun_hir::Function,
 ) -> Result<ArraySubscript, identifier::Error> {
     // Get the index of the function
@@ -93,8 +93,8 @@ pub fn generate_function_lookup(
         .expect("unknown function");
 
     Ok(ArraySubscript {
-        array: Variable::new(GLOBAL_DISPATCH_TABLE_NAME)?,
-        index: Value::Size { value: index },
+        array: Variable::new(GLOBAL_DISPATCH_TABLE_NAME)?.into(),
+        index: Value::Size { value: index }.into(),
     })
 }
 
@@ -105,15 +105,13 @@ pub fn generate_intrinsic_lookup(
     dispatch_table: &DispatchTable,
     intrinsic: &impl Intrinsic,
 ) -> Result<ArraySubscript, identifier::Error> {
-    let prototype = intrinsic.prototype();
-
     // Get the index of the intrinsic
     let index = dispatch_table
         .index_by_intrinsic(intrinsic)
         .expect("unknown intrinsic");
 
     Ok(ArraySubscript {
-        array: Variable::new(GLOBAL_DISPATCH_TABLE_NAME)?,
-        index: Value::Size { value: index },
+        array: Variable::new(GLOBAL_DISPATCH_TABLE_NAME)?.into(),
+        index: Value::Size { value: index }.into(),
     })
 }

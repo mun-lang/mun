@@ -1,24 +1,11 @@
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
-use inkwell::{
-    context::Context,
-    targets::TargetData,
-    types::{
-        AnyTypeEnum, BasicType, BasicTypeEnum, FloatType, FunctionType, IntType, PointerType,
-        StructType,
-    },
-    AddressSpace,
-};
 use mun_abi::Guid;
 use mun_hir::{
     FloatBitness, HirDatabase, HirDisplay, IntBitness, ResolveBitness, Signedness, Ty, TyKind,
 };
-use smallvec::SmallVec;
 
-use crate::{
-    ir::IsIrType,
-    type_info::{HasStaticTypeId, TypeId, TypeIdData},
-};
+use crate::type_info::{HasStaticTypeId, TypeId, TypeIdData};
 
 /// An object to cache and convert HIR types to Inkwell types.
 pub struct HirTypeCache<'db> {

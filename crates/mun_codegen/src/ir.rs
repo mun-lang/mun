@@ -9,20 +9,17 @@ use inkwell::{
 };
 
 mod array;
-pub mod body;
+// pub mod body;
 #[macro_use]
 pub(crate) mod dispatch_table;
-pub mod file;
-pub(crate) mod file_group;
-pub mod function;
-mod intrinsics;
+// pub mod file;
+// pub(crate) mod file_group;
+// pub mod function;
+pub mod intrinsics;
 mod reference;
 pub mod ty;
 pub(crate) mod type_table;
 pub mod types;
-
-use array::RuntimeArrayValue;
-use reference::RuntimeReferenceValue;
 
 /// Defines that a type has a static representation in inkwell
 pub trait IsIrType<'ink> {

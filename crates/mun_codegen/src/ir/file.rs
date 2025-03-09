@@ -24,7 +24,7 @@ pub struct FileIr<'ink> {
 
 /// Generates IR for the specified file.
 pub(crate) fn gen_file_ir<'ink>(
-    code_gen: &CodeGenContext<'_, 'ink>,
+    code_gen: &CodeGenContext<'_>,
     group_ir: &FileGroupIr<'ink>,
     module_group: &ModuleGroup,
 ) -> FileIr<'ink> {

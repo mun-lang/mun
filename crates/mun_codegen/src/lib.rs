@@ -1,9 +1,11 @@
 pub use inkwell::{builder::Builder, context::Context, module::Module, OptimizationLevel};
 
 pub use crate::{
-    assembly::{AssemblyIr, TargetAssembly},
-    code_gen::AssemblyBuilder,
     db::{CodeGenDatabase, CodeGenDatabaseStorage},
+    // assembly::{AssemblyIr, TargetAssembly},
+    // code_gen::AssemblyBuilder,
+    file_group::FileGroupData,
+    intrinsics::Intrinsic,
     ir::dispatch_table::{DispatchTable, FunctionPrototype},
     module_group::ModuleGroup,
     module_partition::{ModuleGroupId, ModulePartition},
@@ -15,7 +17,7 @@ mod code_gen;
 mod db;
 #[macro_use]
 mod ir;
-mod assembly;
+// mod assembly;
 
 #[cfg(test)]
 mod mock;
@@ -25,7 +27,8 @@ mod test;
 pub mod value;
 
 mod apple;
-pub(crate) mod intrinsics;
+pub mod file_group;
+pub mod intrinsics;
 mod linker;
 mod module_group;
 mod module_partition;
