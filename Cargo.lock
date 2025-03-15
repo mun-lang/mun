@@ -2459,10 +2459,17 @@ dependencies = [
 name = "mun_codegen_c"
 version = "0.6.0-dev"
 dependencies = [
+ "anyhow",
  "c_codegen",
  "mun_codegen",
+ "mun_diagnostics_output",
  "mun_hir",
+ "mun_hir_input",
+ "mun_paths",
+ "mun_syntax",
+ "mun_target",
  "salsa",
+ "tempfile",
 ]
 
 [[package]]
@@ -2520,6 +2527,19 @@ name = "mun_diagnostics"
 version = "0.6.0-dev"
 dependencies = [
  "mun_hir",
+ "mun_syntax",
+]
+
+[[package]]
+name = "mun_diagnostics_output"
+version = "0.6.0-dev"
+dependencies = [
+ "annotate-snippets",
+ "anyhow",
+ "mun_diagnostics",
+ "mun_hir",
+ "mun_hir_input",
+ "mun_paths",
  "mun_syntax",
 ]
 

@@ -1,0 +1,22 @@
+[package]
+name = "mun_diagnostics_output"
+description = "Provides output formatting for compiler diagnostics"
+keywords = ["game", "hot-reloading", "language", "mun", "scripting"]
+categories.workspace = true
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+documentation.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+annotate-snippets = { workspace = true }
+anyhow = { workspace = true }
+mun_diagnostics = { version = "0.6.0-dev", path = "../mun_diagnostics" }
+mun_hir_input = { version = "0.6.0-dev", path = "../mun_hir_input" }
+mun_hir = { version = "0.6.0-dev", path = "../mun_hir" }
+mun_paths = { version = "0.6.0-dev", path = "../mun_paths" }
+mun_syntax = { version = "0.6.0-dev", path = "../mun_syntax" }

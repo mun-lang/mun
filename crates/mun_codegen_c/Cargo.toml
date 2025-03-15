@@ -13,7 +13,14 @@ license.workspace = true
 categories.workspace = true
 
 [dependencies]
+anyhow = { workspace = true }
 c_codegen = { workspace = true }
 mun_codegen = { path = "../mun_codegen" }
+mun_diagnostics_output = { path = "../mun_diagnostics_output" }
 mun_hir = { path = "../mun_hir" }
+mun_hir_input = { path = "../mun_hir_input" }
+mun_paths = { path = "../mun_paths" }
+mun_syntax = { path = "../mun_syntax" }
+mun_target = { path = "../mun_target" }
 salsa = { workspace = true }
+tempfile = { workspace = true }

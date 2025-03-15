@@ -1,6 +1,4 @@
-use std::{rc::Rc, sync::Arc};
-
-use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, Target, TargetTriple};
+use std::sync::Arc;
 
 use crate::{FileGroupData, ModuleGroupId, ModulePartition};
 

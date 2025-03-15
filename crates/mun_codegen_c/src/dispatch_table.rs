@@ -67,7 +67,7 @@ pub fn generate_initialization(
         storage_class: None,
         ty: Struct::Definition {
             name: None,
-            member_groups: member_groups.try_into()?,
+            member_groups,
         }
         .into(),
         variables: vec![(

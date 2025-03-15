@@ -16,9 +16,9 @@ pub type Data = FileGroupData;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct FileGroupData {
-    dispatch_table: DispatchTable,
-    intrinsics: IntrinsicsSet,
-    referenced_modules: FxHashSet<mun_hir::Module>,
+    pub dispatch_table: DispatchTable,
+    pub intrinsics: IntrinsicsSet,
+    pub referenced_modules: FxHashSet<mun_hir::Module>,
 }
 
 pub(super) fn build_file_group(
