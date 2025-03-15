@@ -11,7 +11,7 @@ use c_codegen::{
 use mun_codegen::{DispatchTable, Intrinsic, ModuleGroup};
 use mun_hir::HirDatabase;
 
-use crate::function;
+use crate::{function, identifier::generate_function_name};
 
 const GLOBAL_DISPATCH_TABLE_NAME: &str = "g_dispatchTable";
 
@@ -26,7 +26,7 @@ pub fn generate_initialization(
     module_group: &ModuleGroup,
     dispatch_table: &DispatchTable,
     db: &dyn HirDatabase,
-) -> c_codegen::Result<variable::Declaration> {
+) -> variable::Declaration {
     let (member_groups, values) = dispatch_table
         .entries()
         .iter()
@@ -35,10 +35,11 @@ pub fn generate_initialization(
             let group = member::Group {
                 ty,
                 members: vec![Member {
-                    name: Identifier::new(&function.prototype.name)?,
+                    name: generate_function_name(&function.prototype.name),
                     bit_field_size: None,
                 }]
-                .try_into()?,
+                .try_into()
+                .expect("Vec is not empty"),
             };
 
             let expression: Expression = if let Some(function) = function.mun_hir {
@@ -50,7 +51,7 @@ pub fn generate_initialization(
                     let function_name = function.name(db);
 
                     PrefixOperator {
-                        operand: Variable::new(function_name.to_string())?.into(),
+                        operand: generate_function_name(&function_name.to_string()).into(),
                         operator: PrefixOperatorKind::Address,
                     }
                     .into()
@@ -59,11 +60,11 @@ pub fn generate_initialization(
                 Value::Pointer { address: 0 }.into()
             };
 
-            Ok((group, expression))
+            (group, expression)
         })
-        .collect::<c_codegen::Result<(Vec<member::Group>, Vec<Expression>)>>()?;
+        .collect::<(Vec<member::Group>, Vec<Expression>)>();
 
-    let declaration = variable::Declaration {
+    variable::Declaration {
         storage_class: None,
         ty: Struct::Definition {
             name: None,
@@ -71,13 +72,12 @@ pub fn generate_initialization(
         }
         .into(),
         variables: vec![(
-            Identifier::new(GLOBAL_DISPATCH_TABLE_NAME)?,
+            Identifier::new(GLOBAL_DISPATCH_TABLE_NAME).expect("Invalid identifier"),
             Some(InitializerList::Ordered(values).into()),
         )]
-        .try_into()?,
-    };
-
-    Ok(declaration)
+        .try_into()
+        .expect("Vec is not empty"),
+    }
 }
 
 /// Generate a function lookup through the `DispatchTable`, equivalent to

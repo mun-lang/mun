@@ -20,6 +20,7 @@ mun_diagnostics_output = { path = "../mun_diagnostics_output" }
 mun_hir = { path = "../mun_hir" }
 mun_hir_input = { path = "../mun_hir_input" }
 mun_paths = { path = "../mun_paths" }
+mun_project = { path = "../mun_project" }
 mun_syntax = { path = "../mun_syntax" }
 mun_target = { path = "../mun_target" }
 salsa = { workspace = true }

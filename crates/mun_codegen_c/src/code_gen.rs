@@ -19,6 +19,8 @@ pub(crate) fn build_c_files(
     let module_partition = db.module_partition();
     let module_group = &module_partition[module_group_id];
 
+    println!("module_group: {module_group:?}");
+
     let file_group_data = db.file_group(module_group_id);
 
     let header = generate_header(db.upcast(), module_group);
@@ -46,9 +48,10 @@ fn generate_source(
     module_group: &ModuleGroup,
     dispatch_table: &DispatchTable,
 ) -> c_codegen::Result<String> {
-    let dispatch_table = dispatch_table::generate_initialization(module_group, dispatch_table, db)?;
+    let dispatch_table = dispatch_table::generate_initialization(module_group, dispatch_table, db);
 
-    let include = Include::with_quotes("dispatch_table.h");
+    let file_name = &module_group.name;
+    let include = Include::with_quotes(format!("{file_name}.h"));
 
     CFileBuilder::default()
         .add_statement(include)
