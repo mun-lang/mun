@@ -19,8 +19,6 @@ pub(crate) fn build_c_files(
     let module_partition = db.module_partition();
     let module_group = &module_partition[module_group_id];
 
-    println!("module_group: {module_group:?}");
-
     let file_group_data = db.file_group(module_group_id);
 
     let header = generate_header(db.upcast(), module_group);

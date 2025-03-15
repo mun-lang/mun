@@ -59,16 +59,17 @@ impl Driver {
         } in Fixture::parse(text)
         {
             if relative_path != "mun.toml" {
-                println!("relative path: {relative_path}");
+                let relative_path = relative_path.strip_prefix("src/").unwrap_or_else(|_| {
+                    panic!("Could not determine relative path for '{relative_path}'")
+                });
+
                 let file_id = driver
-                    .alloc_file_id(&relative_path)
+                    .alloc_file_id(relative_path)
                     .expect("Failed to allocate file id");
 
                 driver.db.set_file_text(file_id, Arc::from(text));
                 driver.db.set_file_source_root(file_id, WORKSPACE);
-                driver
-                    .source_root
-                    .insert_file(file_id, relative_path.clone());
+                driver.source_root.insert_file(file_id, relative_path);
             }
         }
 
@@ -79,6 +80,12 @@ impl Driver {
         let mut package_set = PackageSet::default();
         package_set.add_package(WORKSPACE);
         driver.db.set_packages(Arc::new(package_set));
+
+        if let Some(compiler_errors) = emit_diagnostics_to_string(&driver.db, DisplayColor::Disable)
+            .expect("could not create diagnostics")
+        {
+            panic!("compiler errors:\n{compiler_errors}")
+        }
 
         driver
     }
