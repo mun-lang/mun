@@ -1,25 +1,19 @@
 mod config;
 mod db;
 mod driver;
+mod snapshot;
 
-use driver::Driver;
+use snapshot::assert_snapshot_of_transpiled_fixture;
 
 #[test]
-fn end_to_end() -> anyhow::Result<()> {
-    let mut driver = Driver::with_fixture(
-        r#"
-    //- /src/mod.mun
-    pub fn main() -> i32 { foo::foo() }
+fn end_to_end() {
+    assert_snapshot_of_transpiled_fixture!("\
+//- /src/mod.mun
+pub fn main() -> i32 { foo::foo() }
 
-    fn bar() -> i32 { 5 }
+fn bar() -> i32 { 5 }
 
-    //- /src/foo.mun
-    pub fn foo() -> i32 { super::bar() }
-    "#,
+//- /src/foo.mun
+pub fn foo() -> i32 { super::bar() }", @""
     );
-
-    let units = driver.transpile_all_packages()?;
-    println!("C units: {units:?}");
-
-    Ok(())
 }

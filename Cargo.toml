@@ -87,5 +87,11 @@ winapi = { version = "0.3.9", default-features = false }
 [profile.dev]
 rpath = true
 
+[profile.dev.package]
+# Optimize `insta` and its dependency `similar` for faster test execution.
+# See: https://insta.rs/docs/quickstart/
+insta.opt-level = 3
+similar.opt-level = 3
+
 [profile.release]
 rpath = true

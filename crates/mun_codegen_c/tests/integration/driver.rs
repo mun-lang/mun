@@ -1,18 +1,22 @@
-use std::{collections::HashMap, io, path::PathBuf, str::FromStr, sync::Arc};
+use std::{collections::HashMap, io, path::PathBuf, sync::Arc};
 
-use mun_codegen::{CodeGenDatabase, ModuleGroup};
+use mun_codegen::CodeGenDatabase;
 use mun_codegen_c::{CCodegenDatabase, HeaderAndSourceFiles};
 use mun_diagnostics_output::{emit_diagnostics_to_string, DisplayColor};
 use mun_hir::{Module, Upcast};
 use mun_hir_input::{FileId, Fixture, PackageSet, SourceDatabase as _, SourceRoot, SourceRootId};
 use mun_paths::{RelativePath, RelativePathBuf};
-use mun_project::{Manifest, Package};
 
 use super::{config::Config, db::CompilerDatabase};
 
 pub const WORKSPACE: SourceRootId = SourceRootId(0);
 pub const HEADER_EXTENSION: &str = "h";
 pub const SOURCE_EXTENSION: &str = "c";
+
+pub struct TranspiledFile {
+    pub module_path: RelativePathBuf,
+    pub transpiled: Arc<HeaderAndSourceFiles>,
+}
 
 pub struct Driver {
     db: CompilerDatabase,
@@ -22,10 +26,6 @@ pub struct Driver {
     path_to_file_id: HashMap<RelativePathBuf, FileId>,
     file_id_to_path: HashMap<FileId, RelativePathBuf>,
     next_file_id: usize,
-
-    module_to_temp_assembly_path: HashMap<Module, PathBuf>,
-
-    emit_ir: bool,
 }
 
 impl Driver {
@@ -38,20 +38,14 @@ impl Driver {
             path_to_file_id: HashMap::default(),
             file_id_to_path: HashMap::default(),
             next_file_id: 0,
-            module_to_temp_assembly_path: HashMap::default(),
-            emit_ir: config.emit_ir,
         }
     }
 
     pub fn with_fixture(text: &str) -> Self {
         let temp_dir = tempfile::TempDir::new().unwrap();
         let out_dir = temp_dir.path().to_path_buf();
-        let config = Config {
-            out_dir: Some(out_dir.clone()),
-            ..Config::default()
-        };
 
-        let mut driver = Driver::with_config(config, out_dir);
+        let mut driver = Driver::with_config(Config::default(), out_dir);
 
         for Fixture {
             relative_path,
@@ -94,12 +88,8 @@ impl Driver {
     pub fn with_text(text: &str) -> (Self, FileId) {
         let temp_dir = tempfile::TempDir::new().unwrap();
         let out_dir = temp_dir.path().to_path_buf();
-        let config = Config {
-            out_dir: Some(out_dir.clone()),
-            ..Config::default()
-        };
 
-        let mut driver = Driver::with_config(config, out_dir);
+        let mut driver = Driver::with_config(Config::default(), out_dir);
         let rel_path = RelativePathBuf::from("mod.mun");
 
         // Store the file information in the database together with the source root
@@ -127,26 +117,41 @@ impl Driver {
         (driver, file_id)
     }
 
-    pub fn transpile_all_packages(&mut self) -> anyhow::Result<Vec<Arc<HeaderAndSourceFiles>>> {
+    pub fn transpile_all_packages(
+        &mut self,
+    ) -> anyhow::Result<HashMap<RelativePathBuf, Arc<HeaderAndSourceFiles>>> {
         let packages = mun_hir::Package::all(self.db.upcast());
-        let mut units = Vec::with_capacity(packages.len());
+        let mut units = HashMap::with_capacity(packages.len());
 
         for package in packages {
             for module in package.modules(self.db.upcast()) {
-                units.push(self.transpile_module(module));
+                let TranspiledFile {
+                    module_path,
+                    transpiled,
+                } = self.transpile_module(module);
+
+                units.insert(module_path, transpiled);
             }
         }
 
         Ok(units)
     }
 
-    pub fn transpile_module(&mut self, module: Module) -> Arc<HeaderAndSourceFiles> {
+    pub fn transpile_module(&mut self, module: Module) -> TranspiledFile {
         let module_partition = self.db.module_partition();
         let module_group_id = module_partition
             .group_for_module(module)
             .expect("Could not find the module in the module partition");
 
-        self.db.transpile_to_c(module_group_id)
+        let transpiled = self.db.transpile_to_c(module_group_id);
+
+        let module_group = &module_partition[module_group_id];
+        let module_path = module_group.relative_file_path();
+
+        TranspiledFile {
+            module_path,
+            transpiled,
+        }
     }
 
     pub fn write_all_packages(&mut self) -> anyhow::Result<()> {
@@ -163,18 +168,15 @@ impl Driver {
     }
 
     pub fn write_module(&mut self, module: Module) -> io::Result<()> {
-        let module_partition = self.db.module_partition();
-        let module_group_id = module_partition
-            .group_for_module(module)
-            .expect("Could not find the module in the module partition");
+        let TranspiledFile {
+            module_path,
+            transpiled,
+        } = self.transpile_module(module);
 
-        let transpiled = self.db.transpile_to_c(module_group_id);
+        let output_path = module_path.to_path(&self.out_dir);
 
-        let module_group = &module_partition[module_group_id];
-        let module_path = self.path_for_module_group(module_group);
-
-        let header_file = module_path.with_extension(HEADER_EXTENSION);
-        let source_file = module_path.with_extension(SOURCE_EXTENSION);
+        let header_file = output_path.with_extension(HEADER_EXTENSION);
+        let source_file = output_path.with_extension(SOURCE_EXTENSION);
 
         std::fs::write(header_file, &transpiled.header)?;
         std::fs::write(source_file, &transpiled.source)?;
@@ -214,11 +216,5 @@ impl Driver {
             .insert(id, relative_path.as_ref().to_relative_path_buf());
 
         Ok(id)
-    }
-
-    /// Returns the output path for the specified module group without an
-    /// extension
-    fn path_for_module_group(&self, module_group: &ModuleGroup) -> PathBuf {
-        module_group.relative_file_path().to_path(&self.out_dir)
     }
 }

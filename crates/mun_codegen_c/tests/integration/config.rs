@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 pub use mun_codegen::OptimizationLevel;
 use mun_target::spec::Target;
 
@@ -11,13 +9,6 @@ pub struct Config {
 
     /// The optimization level to use for the IR generation.
     pub optimization_lvl: OptimizationLevel,
-
-    /// The optional output directory to store all outputs. If no directory is
-    /// specified all output is stored in a temporary directory.
-    pub out_dir: Option<PathBuf>,
-
-    /// Whether or not to emit an IR file instead of a munlib.
-    pub emit_ir: bool,
 }
 
 impl Default for Config {
@@ -29,8 +20,6 @@ impl Default for Config {
             // triple.
             target: target.unwrap(),
             optimization_lvl: OptimizationLevel::Default,
-            out_dir: None,
-            emit_ir: false,
         }
     }
 }

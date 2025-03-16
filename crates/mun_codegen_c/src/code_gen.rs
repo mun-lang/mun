@@ -38,7 +38,7 @@ fn generate_header(_db: &dyn HirDatabase, _module_group: &ModuleGroup) -> String
     //     }
     // }
 
-    String::new()
+    String::from("#pragma once;\n")
 }
 
 fn generate_source(

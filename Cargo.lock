@@ -2461,6 +2461,8 @@ version = "0.6.0-dev"
 dependencies = [
  "anyhow",
  "c_codegen",
+ "insta",
+ "itertools 0.12.1",
  "mun_codegen",
  "mun_diagnostics_output",
  "mun_hir",
