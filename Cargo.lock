@@ -2431,6 +2431,7 @@ dependencies = [
  "array-init",
  "by_address",
  "bytemuck",
+ "either",
  "inkwell",
  "insta",
  "itertools 0.12.1",

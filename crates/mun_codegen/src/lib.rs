@@ -32,4 +32,5 @@ pub mod intrinsics;
 mod linker;
 mod module_group;
 mod module_partition;
+mod ty;
 pub(crate) mod type_info;

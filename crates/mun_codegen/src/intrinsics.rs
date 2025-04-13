@@ -10,6 +10,9 @@ mod macros;
 pub trait Intrinsic: Sync {
     /// Returns the prototype of the intrinsic
     fn prototype(&self) -> FunctionPrototype;
+
+    /// Returns the function signature as seen by type inference.
+    fn callable_sig(&self) -> mun_hir::FnSig;
 }
 
 intrinsics! {

@@ -9,7 +9,7 @@ mod type_alias;
 use std::sync::Arc;
 
 pub use self::{
-    function::{Function, FunctionData},
+    function::{Function, FunctionData, Param},
     module::{Module, ModuleDef},
     package::Package,
     r#impl::{AssocItem, ImplData},

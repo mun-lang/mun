@@ -1,4 +1,4 @@
-use std::{collections::BTreeSet, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc};
 
 use mun_hir::{Body, Expr, ExprId, HirDatabase, InferenceResult, ValueNs};
 
@@ -8,12 +8,14 @@ use crate::{
 };
 
 // Use a `BTreeMap` to guarantee deterministically ordered output
-pub type IntrinsicsSet = BTreeSet<FunctionPrototype>;
+pub type IntrinsicsSet = BTreeMap<FunctionPrototype, mun_hir::FnSig>;
 
 /// Stores the type information from the `intrinsic` in `entries`
 fn collect_intrinsic(intrinsic: &impl Intrinsic, entries: &mut IntrinsicsSet) {
     let prototype = intrinsic.prototype();
-    entries.insert(prototype);
+    entries
+        .entry(prototype)
+        .or_insert_with(|| intrinsic.callable_sig());
 }
 
 /// Iterates over all expressions and stores information on which intrinsics

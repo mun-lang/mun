@@ -7,6 +7,13 @@ macro_rules! intrinsics{
             }
             paste::item! {
                 impl Intrinsic for [<Intrinsic $name>] {
+                    fn callable_sig(&self) -> mun_hir::FnSig {
+                        mun_hir::FnSig::from_params_and_return(
+                            vec![$(<$arg as $crate::ty::HasStaticType>::ty().clone()),*],
+                            <$ret as $crate::ty::HasStaticType>::ty().clone(),
+                        )
+                    }
+
                     fn prototype(&self) -> FunctionPrototype {
                         FunctionPrototype {
                             name: stringify!($name).to_owned(),

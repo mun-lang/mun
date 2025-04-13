@@ -11,8 +11,8 @@ pub use mun_hir_input::ModuleId;
 pub use salsa;
 
 pub use self::code_model::{
-    Field, Function, FunctionData, HasSource, Module, ModuleDef, Package, Struct, StructMemoryKind,
-    TypeAlias,
+    Field, Function, FunctionData, HasSource, Module, ModuleDef, Package, Param, Struct,
+    StructMemoryKind, TypeAlias,
 };
 pub use crate::{
     db::{
@@ -33,8 +33,8 @@ pub use crate::{
     primitive_type::{FloatBitness, IntBitness, Signedness},
     resolve::{resolver_for_expr, resolver_for_scope, Resolver, TypeNs, ValueNs},
     ty::{
-        lower::CallableDef, FloatTy, InferenceResult, IntTy, ResolveBitness, Substitution, Ty,
-        TyKind, TypableDef,
+        lower::CallableDef, FloatTy, FnSig, InferenceResult, IntTy, Mutability, PointerTy,
+        ResolveBitness, Substitution, Ty, TyKind, TypableDef,
     },
     visibility::{HasVisibility, Visibility},
 };

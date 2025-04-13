@@ -8,6 +8,7 @@ use c_codegen::{
     },
     variable, Expression, Identifier, Value, Variable,
 };
+use itertools::Either;
 use mun_codegen::{DispatchTable, Intrinsic, ModuleGroup};
 use mun_hir::HirDatabase;
 
@@ -31,7 +32,16 @@ pub fn generate_initialization(
         .entries()
         .iter()
         .map(|function| {
-            let ty = function::generate_pointer_type(&function.prototype);
+            let ty = match &function.mun_hir {
+                Either::Left(function) => function::generate_pointer_type(
+                    function.params(db).iter().map(mun_hir::Param::ty),
+                    &function.ret_type(db),
+                ),
+                Either::Right(fn_sig) => {
+                    function::generate_pointer_type(fn_sig.params().iter(), fn_sig.ret())
+                }
+            };
+
             let group = member::Group {
                 ty,
                 members: vec![Member {
@@ -42,7 +52,7 @@ pub fn generate_initialization(
                 .expect("Vec is not empty"),
             };
 
-            let expression: Expression = if let Some(function) = function.mun_hir {
+            let expression: Expression = if let Either::Left(function) = function.mun_hir {
                 // If the function is externally defined (i.e. it's an `extern`
                 // function or it's defined in another module) don't initialize.
                 if function.is_extern(db) || !module_group.contains(function.module(db)) {

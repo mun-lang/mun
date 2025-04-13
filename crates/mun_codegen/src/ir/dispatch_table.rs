@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
+use either::Either;
 use mun_hir::{Body, Expr, ExprId, HirDatabase, InferenceResult};
 use rustc_hash::FxHashSet;
 
@@ -49,7 +50,7 @@ pub struct FunctionPrototype {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct DispatchableFunction {
     pub prototype: FunctionPrototype,
-    pub mun_hir: Option<mun_hir::Function>,
+    pub mun_hir: Either<mun_hir::Function, mun_hir::FnSig>,
 }
 
 impl DispatchTable {
@@ -113,11 +114,11 @@ impl<'db, 'group> DispatchTableBuilder<'db, 'group> {
 
         if !intrinsics.is_empty() {
             // Use a `BTreeSet` to guarantee deterministically ordered output
-            for prototype in intrinsics.iter() {
+            for (prototype, fn_sig) in intrinsics.iter() {
                 let index = table.entries.len();
                 table.entries.push(DispatchableFunction {
                     prototype: prototype.clone(),
-                    mun_hir: None,
+                    mun_hir: Either::Right(fn_sig.clone()),
                 });
 
                 table.prototype_to_idx.insert(prototype.clone(), index);
@@ -178,7 +179,7 @@ impl<'db, 'group> DispatchTableBuilder<'db, 'group> {
             let index = self.entries.len();
             self.entries.push(DispatchableFunction {
                 prototype: prototype.clone(),
-                mun_hir: Some(function),
+                mun_hir: Either::Left(function),
             });
             self.prototype_to_idx.insert(prototype, index);
             self.function_to_idx.insert(function, index);

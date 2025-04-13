@@ -1,11 +1,13 @@
 mod infer;
 pub(super) mod lower;
 mod op;
+mod pointer;
 mod primitives;
 mod resolve;
 
 use std::{fmt, iter::FromIterator, mem, ops::Deref, sync::Arc};
 
+pub use self::pointer::{Mutability, PointerTy};
 pub(crate) use infer::infer_query;
 pub use infer::InferenceResult;
 pub use lower::TypableDef;
@@ -71,6 +73,10 @@ pub enum TyKind {
     /// An dynamically sized array type
     Array(Ty),
 
+    /// A raw pointer type.
+    /// Currently only supported for intrinsics.
+    RawPtr(PointerTy),
+
     /// A placeholder for a type which could not be computed; this is propagated
     /// to avoid useless error messages. Doubles as a placeholder where type
     /// variables are inserted before type checking, since we want to try to
@@ -93,6 +99,11 @@ impl TyKind {
     /// Constructs a new `Ty` by interning self
     pub fn intern(self) -> Ty {
         Ty(Arc::new(self))
+    }
+
+    /// Constructs an instance of the unit type `()`
+    pub fn unit() -> Self {
+        Self::Tuple(0, Substitution::empty())
     }
 }
 
@@ -127,7 +138,7 @@ impl Ty {
 impl Ty {
     /// Constructs an instance of the unit type `()`
     pub fn unit() -> Self {
-        TyKind::Tuple(0, Substitution::empty()).intern()
+        TyKind::unit().intern()
     }
 
     /// Constructs a new struct type
@@ -404,6 +415,13 @@ impl HirDisplay for Ty {
                 write!(f, ") -> {}", sig.ret().display(f.db))
             }
             TyKind::Array(elem_ty) => write!(f, "[{}]", elem_ty.display(f.db)),
+            TyKind::RawPtr(PointerTy {
+                pointee_ty,
+                mutability,
+            }) => {
+                let mutability = mutability.as_keyword_for_ptr();
+                write!(f, "*{mutability} {}", pointee_ty.display(f.db))
+            }
             TyKind::Unknown => write!(f, "{{unknown}}"),
         }
     }
