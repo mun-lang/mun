@@ -1,11 +1,7 @@
 use c_codegen::{
     identifier,
     operator::{ArraySubscript, PrefixOperator, PrefixOperatorKind},
-    r#type::{
-        member::{self, Member},
-        structure::Struct,
-        InitializerList,
-    },
+    r#type::{member::Member, structure::Struct, InitializerList},
     variable, Expression, Identifier, Value, Variable,
 };
 use itertools::Either;
@@ -28,7 +24,7 @@ pub fn generate_initialization(
     dispatch_table: &DispatchTable,
     db: &dyn HirDatabase,
 ) -> variable::Declaration {
-    let (member_groups, values) = dispatch_table
+    let (members, values) = dispatch_table
         .entries()
         .iter()
         .map(|function| {
@@ -42,14 +38,10 @@ pub fn generate_initialization(
                 }
             };
 
-            let group = member::Group {
+            let member = Member {
                 ty,
-                members: vec![Member {
-                    name: generate_function_name(&function.prototype.name),
-                    bit_field_size: None,
-                }]
-                .try_into()
-                .expect("Vec is not empty"),
+                name: generate_function_name(&function.prototype.name),
+                bit_field_size: None,
             };
 
             let expression: Expression = if let Either::Left(function) = function.mun_hir {
@@ -70,23 +62,19 @@ pub fn generate_initialization(
                 Value::Pointer { address: 0 }.into()
             };
 
-            (group, expression)
+            (member, expression)
         })
-        .collect::<(Vec<member::Group>, Vec<Expression>)>();
+        .collect::<(Vec<Member>, Vec<Expression>)>();
 
     variable::Declaration {
         storage_class: None,
         ty: Struct::Definition {
             name: None,
-            member_groups,
+            members,
         }
         .into(),
-        variables: vec![(
-            Identifier::new(GLOBAL_DISPATCH_TABLE_NAME).expect("Invalid identifier"),
-            Some(InitializerList::Ordered(values).into()),
-        )]
-        .try_into()
-        .expect("Vec is not empty"),
+        identifier: Identifier::new(GLOBAL_DISPATCH_TABLE_NAME).expect("Invalid identifier"),
+        initializer: Some(InitializerList::Ordered(values).into()),
     }
 }
 

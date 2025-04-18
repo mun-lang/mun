@@ -8,11 +8,11 @@ mod macros;
 /// Defines the properties of an intrinsic function that can be called from Mun.
 /// These functions are mostly used internally.
 pub trait Intrinsic: Sync {
-    /// Returns the prototype of the intrinsic
-    fn prototype(&self) -> FunctionPrototype;
-
     /// Returns the function signature as seen by type inference.
     fn callable_sig(&self) -> mun_hir::FnSig;
+
+    /// Returns the prototype of the intrinsic
+    fn prototype(&self) -> FunctionPrototype;
 }
 
 intrinsics! {
