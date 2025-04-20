@@ -78,22 +78,24 @@ pub fn generate_initialization(
     }
 }
 
-/// Generate a function lookup through the `DispatchTable`, equivalent to
+/// Generates a function lookup through the `DispatchTable`, equivalent to
 /// something along the lines of: `dispatchTable[i]`, where i is the
 /// index of the function and `dispatchTable` is a struct
 pub fn generate_function_lookup(
     dispatch_table: &DispatchTable,
     function: mun_hir::Function,
-) -> Result<ArraySubscript, identifier::Error> {
+) -> ArraySubscript {
     // Get the index of the function
     let index = dispatch_table
         .index_by_function(function)
         .expect("unknown function");
 
-    Ok(ArraySubscript {
-        array: Variable::new(GLOBAL_DISPATCH_TABLE_NAME)?.into(),
+    let global = Variable::new(GLOBAL_DISPATCH_TABLE_NAME).expect("Invalid identifier");
+
+    ArraySubscript {
+        array: global.into(),
         index: Value::Size { value: index }.into(),
-    })
+    }
 }
 
 /// Generates a function lookup through the `DispatchTable`, equivalent to
@@ -102,14 +104,16 @@ pub fn generate_function_lookup(
 pub fn generate_intrinsic_lookup(
     dispatch_table: &DispatchTable,
     intrinsic: &impl Intrinsic,
-) -> Result<ArraySubscript, identifier::Error> {
+) -> ArraySubscript {
     // Get the index of the intrinsic
     let index = dispatch_table
         .index_by_intrinsic(intrinsic)
         .expect("unknown intrinsic");
 
-    Ok(ArraySubscript {
-        array: Variable::new(GLOBAL_DISPATCH_TABLE_NAME)?.into(),
+    let global = Variable::new(GLOBAL_DISPATCH_TABLE_NAME).expect("Invalid identifier");
+
+    ArraySubscript {
+        array: global.into(),
         index: Value::Size { value: index }.into(),
-    })
+    }
 }

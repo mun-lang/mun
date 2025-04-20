@@ -1,4 +1,5 @@
 use std::{
+    fmt::Display,
     hash::Hash,
     sync::{Arc, OnceLock},
 };
@@ -12,6 +13,12 @@ use mun_abi::{self as abi, static_type_map::StaticTypeMap, Guid};
 pub struct TypeId {
     pub name: String,
     pub data: TypeIdData,
+}
+
+impl Display for TypeId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.name.fmt(f)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]

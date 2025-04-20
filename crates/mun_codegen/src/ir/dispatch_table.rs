@@ -36,6 +36,13 @@ pub struct DispatchTable {
     entries: Vec<DispatchableFunction>,
 }
 
+/// The output of the dispatch table builder. This contains the dispatch table
+/// and a set of modules that are referenced by the dispatch table.
+pub struct DispatchTableBuildOutput {
+    pub dispatch_table: DispatchTable,
+    pub referenced_modules: FxHashSet<mun_hir::Module>,
+}
+
 /// A `FunctionPrototype` defines a unique signature that can be added to the
 /// dispatch table.
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
@@ -196,14 +203,14 @@ impl<'db, 'group> DispatchTableBuilder<'db, 'group> {
     /// the module.
     ///
     /// Returns the `DispatchTable` and a set of dependencies for the module.
-    pub fn build(self) -> (DispatchTable, FxHashSet<mun_hir::Module>) {
-        (
-            DispatchTable {
+    pub fn build(self) -> DispatchTableBuildOutput {
+        DispatchTableBuildOutput {
+            dispatch_table: DispatchTable {
                 function_to_idx: self.function_to_idx,
                 prototype_to_idx: self.prototype_to_idx,
                 entries: self.entries,
             },
-            self.referenced_modules,
-        )
+            referenced_modules: self.referenced_modules,
+        }
     }
 }

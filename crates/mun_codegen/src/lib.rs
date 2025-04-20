@@ -9,6 +9,8 @@ pub use crate::{
     ir::dispatch_table::{DispatchTable, FunctionPrototype},
     module_group::ModuleGroup,
     module_partition::{ModuleGroupId, ModulePartition},
+    type_info::TypeId,
+    type_table::TypeTable,
 };
 
 /// This library generates machine code from HIR using inkwell which is a safe
@@ -34,3 +36,4 @@ mod module_group;
 mod module_partition;
 mod ty;
 pub(crate) mod type_info;
+mod type_table;
