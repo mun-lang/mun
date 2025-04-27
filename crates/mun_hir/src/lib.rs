@@ -6,7 +6,6 @@
 
 #![allow(dead_code)]
 
-pub use mun_db::Upcast;
 pub use mun_hir_input::ModuleId;
 pub use salsa;
 

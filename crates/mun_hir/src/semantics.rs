@@ -108,8 +108,8 @@ impl<'db> Semantics<'db> {
             SourceToDefContainer::DefWithBodyId(def) => {
                 return SourceAnalyzer::new_for_body(self.db, def, node, offset)
             }
-            SourceToDefContainer::ModuleId(id) => id.resolver(self.db.upcast()),
-            SourceToDefContainer::Impl(id) => id.resolver(self.db.upcast()),
+            SourceToDefContainer::ModuleId(id) => id.resolver(self.db),
+            SourceToDefContainer::Impl(id) => id.resolver(self.db),
         };
 
         SourceAnalyzer::new_for_resolver(resolver, node)
@@ -248,7 +248,7 @@ impl SemanticsScope<'_> {
     pub fn visit_all_names(&self, visit: &mut dyn FnMut(Name, ScopeDef)) {
         let resolver = &self.resolver;
 
-        resolver.visit_all_names(self.db.upcast(), &mut |name, def| {
+        resolver.visit_all_names(self.db, &mut |name, def| {
             let def = match def {
                 resolve::ScopeDef::ImplSelfType(id) => ScopeDef::ImplSelfType(Impl { id }),
                 resolve::ScopeDef::PerNs(it) => {

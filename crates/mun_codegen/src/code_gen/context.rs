@@ -32,10 +32,10 @@ impl<'db, 'ink> CodeGenContext<'db, 'ink> {
         Self {
             context,
             rust_types: RefCell::new(HashMap::default()),
-            hir_types: HirTypeCache::new(context, db.upcast(), target_machine.get_target_data()),
+            hir_types: HirTypeCache::new(context, db, target_machine.get_target_data()),
             optimization_level: db.optimization_level(),
             target_machine,
-            db: db.upcast(),
+            db,
         }
     }
 

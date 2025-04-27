@@ -49,8 +49,8 @@ impl<'a> ExprValidator<'a> {
     }
 
     pub fn validate_privacy(&self, sink: &mut DiagnosticSink<'_>) {
-        let resolver = self.func.id.resolver(self.db.upcast());
-        let fn_data = self.func.data(self.db.upcast());
+        let resolver = self.func.id.resolver(self.db);
+        let fn_data = self.func.data(self.db);
         let ret_type_ref = fn_data.ret_type();
         let param_types = fn_data
             .params()
@@ -69,7 +69,7 @@ impl<'a> ExprValidator<'a> {
             Visibility::Public => ty.visibility(self.db).is_externally_visible(),
         };
 
-        let file_id = self.func.source(self.db.upcast()).file_id;
+        let file_id = self.func.source(self.db).file_id;
         param_types
             .filter(|(ty, _)| !type_is_allowed(ty))
             .for_each(|(_, type_ref)| {
@@ -94,13 +94,13 @@ impl<'a> ExprValidator<'a> {
             _ => sink.push(ExternCannotHaveBody {
                 func: self
                     .func
-                    .source(self.db.upcast())
+                    .source(self.db)
                     .map(|f| SyntaxNodePtr::new(f.syntax())),
             }),
         }
 
         if let Some(sig) = self.func.ty(self.db).callable_sig(self.db) {
-            let fn_data = self.func.data(self.db.upcast());
+            let fn_data = self.func.data(self.db);
             for (arg_ty, ty_ref) in sig.params().iter().zip(fn_data.params()) {
                 if arg_ty.as_struct().is_some() {
                     let arg_ptr = fn_data
@@ -109,7 +109,7 @@ impl<'a> ExprValidator<'a> {
                         .map(|ptr| ptr.syntax_node_ptr())
                         .unwrap();
                     sink.push(ExternNonPrimitiveParam {
-                        param: InFile::new(self.func.source(self.db.upcast()).file_id, arg_ptr),
+                        param: InFile::new(self.func.source(self.db).file_id, arg_ptr),
                     });
                 }
             }
@@ -122,7 +122,7 @@ impl<'a> ExprValidator<'a> {
                     .map(|ptr| ptr.syntax_node_ptr())
                     .unwrap();
                 sink.push(ExternNonPrimitiveParam {
-                    param: InFile::new(self.func.source(self.db.upcast()).file_id, arg_ptr),
+                    param: InFile::new(self.func.source(self.db).file_id, arg_ptr),
                 });
             }
         }
@@ -142,7 +142,7 @@ impl<'a> TypeAliasValidator<'a> {
 
     /// Validates that the provided `TypeAlias` has a target type of alias.
     pub fn validate_target_type_existence(&self, sink: &mut DiagnosticSink<'_>) {
-        let src = self.type_alias.source(self.db.upcast());
+        let src = self.type_alias.source(self.db);
         if src.value.type_ref().is_none() {
             sink.push(FreeTypeAliasWithoutTypeRef {
                 type_alias_def: src.map(|t| SyntaxNodePtr::new(t.syntax())),
@@ -154,7 +154,7 @@ impl<'a> TypeAliasValidator<'a> {
     /// its target type.
     pub fn validate_target_type_privacy(&self, sink: &mut DiagnosticSink<'_>) {
         let lower = self.type_alias.lower(self.db);
-        let data = self.type_alias.data(self.db.upcast());
+        let data = self.type_alias.data(self.db);
         let target_ty = &lower[data.type_ref_id];
 
         let target_visibility = target_ty.visibility(self.db);
@@ -166,7 +166,7 @@ impl<'a> TypeAliasValidator<'a> {
         };
 
         if leaks_privacy {
-            let src = self.type_alias.source(self.db.upcast());
+            let src = self.type_alias.source(self.db);
 
             let (kind, name) = match target_ty.interned() {
                 TyKind::Struct(s) => ("struct", s.name(self.db)),
@@ -192,12 +192,12 @@ impl<'a> TypeAliasValidator<'a> {
 
             // Detect cyclic type
             if ids.contains(&alias.id) {
-                let src = self.type_alias.source(self.db.upcast());
+                let src = self.type_alias.source(self.db);
                 sink.push(CyclicType {
                     file: src.file_id,
                     type_ref: self
                         .type_alias
-                        .data(self.db.upcast())
+                        .data(self.db)
                         .type_ref_source_map()
                         .type_ref_syntax(type_ref)
                         .unwrap(),
@@ -209,8 +209,8 @@ impl<'a> TypeAliasValidator<'a> {
 
             let ty = Ty::from_hir(
                 self.db,
-                &alias.id.resolver(self.db.upcast()),
-                alias.data(self.db.upcast()).type_ref_map(),
+                &alias.id.resolver(self.db),
+                alias.data(self.db).type_ref_map(),
                 type_ref,
             )
             .0;

@@ -74,20 +74,17 @@ impl Index<ModuleGroupId> for ModulePartition {
 /// Builds a module partition from the contents of the database
 pub(crate) fn build_partition(db: &dyn CodeGenDatabase) -> Arc<ModulePartition> {
     let mut partition = ModulePartition::default();
-    for module in mun_hir::Package::all(db.upcast())
+    for module in mun_hir::Package::all(db)
         .into_iter()
-        .flat_map(|package| package.modules(db.upcast()))
+        .flat_map(|package| package.modules(db))
     {
-        let name = if module.name(db.upcast()).is_some() {
-            module.full_name(db.upcast())
+        let name = if module.name(db).is_some() {
+            module.full_name(db)
         } else {
             String::from("mod")
         };
 
-        partition.add_group(
-            db.upcast(),
-            ModuleGroup::new(db.upcast(), name, vec![module]),
-        );
+        partition.add_group(db, ModuleGroup::new(db, name, vec![module]));
     }
     Arc::new(partition)
 }

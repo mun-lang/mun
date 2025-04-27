@@ -173,7 +173,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
     /// that should be used for variables.
     pub fn get_struct_reference_type(&self, struct_ty: mun_hir::Struct) -> BasicTypeEnum<'ink> {
         let ir_ty = self.get_struct_type(struct_ty);
-        match struct_ty.data(self.db.upcast()).memory_kind {
+        match struct_ty.data(self.db).memory_kind {
             mun_hir::StructMemoryKind::Gc => {
                 // GC values are pointers to pointers
                 // struct Foo {}

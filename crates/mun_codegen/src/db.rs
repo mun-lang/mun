@@ -14,7 +14,7 @@ use crate::{AssemblyIr, ModuleGroupId, ModulePartition, TargetAssembly};
 /// generation cache is pretty granular there is still a benefit to not having
 /// to recompile assemblies if not required.
 #[salsa::query_group(CodeGenDatabaseStorage)]
-pub trait CodeGenDatabase: mun_hir::HirDatabase + mun_db::Upcast<dyn mun_hir::HirDatabase> {
+pub trait CodeGenDatabase: mun_hir::HirDatabase {
     /// Set the optimization level used to generate assemblies
     #[salsa::input]
     fn optimization_level(&self) -> inkwell::OptimizationLevel;

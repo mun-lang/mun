@@ -35,36 +35,6 @@ impl salsa::Database for MockDatabase {
     }
 }
 
-impl mun_db::Upcast<dyn mun_hir::AstDatabase> for MockDatabase {
-    fn upcast(&self) -> &(dyn mun_hir::AstDatabase + 'static) {
-        self
-    }
-}
-
-impl mun_db::Upcast<dyn SourceDatabase> for MockDatabase {
-    fn upcast(&self) -> &(dyn SourceDatabase + 'static) {
-        self
-    }
-}
-
-impl mun_db::Upcast<dyn mun_hir::DefDatabase> for MockDatabase {
-    fn upcast(&self) -> &(dyn mun_hir::DefDatabase + 'static) {
-        self
-    }
-}
-
-impl mun_db::Upcast<dyn mun_hir::HirDatabase> for MockDatabase {
-    fn upcast(&self) -> &(dyn mun_hir::HirDatabase + 'static) {
-        self
-    }
-}
-
-impl mun_db::Upcast<dyn CodeGenDatabase> for MockDatabase {
-    fn upcast(&self) -> &(dyn CodeGenDatabase + 'static) {
-        self
-    }
-}
-
 impl Default for MockDatabase {
     fn default() -> Self {
         let mut db = MockDatabase {

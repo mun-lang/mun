@@ -27,11 +27,11 @@ impl From<TypeAliasId> for TypeAlias {
 
 impl TypeAlias {
     pub fn module(self, db: &dyn HirDatabase) -> Module {
-        self.id.module(db.upcast()).into()
+        self.id.module(db).into()
     }
 
     pub fn file_id(self, db: &dyn HirDatabase) -> FileId {
-        self.id.lookup(db.upcast()).id.file_id
+        self.id.lookup(db).id.file_id
     }
 
     pub fn data(self, db: &dyn DefDatabase) -> Arc<TypeAliasData> {
@@ -39,11 +39,11 @@ impl TypeAlias {
     }
 
     pub fn name(self, db: &dyn HirDatabase) -> Name {
-        self.data(db.upcast()).name.clone()
+        self.data(db).name.clone()
     }
 
     pub fn type_ref(self, db: &dyn HirDatabase) -> LocalTypeRefId {
-        self.data(db.upcast()).type_ref_id
+        self.data(db).type_ref_id
     }
 
     pub fn lower(self, db: &dyn HirDatabase) -> Arc<LowerTyMap> {
@@ -51,20 +51,20 @@ impl TypeAlias {
     }
 
     pub fn target_type(self, db: &dyn HirDatabase) -> Ty {
-        let data = self.data(db.upcast());
+        let data = self.data(db);
         let mut ty = Ty::from_hir(
             db,
-            &self.id.resolver(db.upcast()),
+            &self.id.resolver(db),
             data.type_ref_map(),
             data.type_ref_id,
         )
         .0;
 
         while let &TyKind::TypeAlias(alias) = ty.interned() {
-            let data = alias.data(db.upcast());
+            let data = alias.data(db);
             ty = Ty::from_hir(
                 db,
-                &alias.id.resolver(db.upcast()),
+                &alias.id.resolver(db),
                 data.type_ref_map(),
                 data.type_ref_id,
             )
@@ -75,7 +75,7 @@ impl TypeAlias {
     }
 
     pub fn diagnostics(self, db: &dyn HirDatabase, sink: &mut DiagnosticSink<'_>) {
-        let data = self.data(db.upcast());
+        let data = self.data(db);
         let lower = self.lower(db);
         lower.add_diagnostics(db, self.file_id(db), data.type_ref_source_map(), sink);
 
@@ -127,8 +127,6 @@ impl TypeAliasData {
 
 impl HasVisibility for TypeAlias {
     fn visibility(&self, db: &dyn HirDatabase) -> Visibility {
-        self.data(db.upcast())
-            .visibility
-            .resolve(db.upcast(), &self.id.resolver(db.upcast()))
+        self.data(db).visibility.resolve(db, &self.id.resolver(db))
     }
 }

@@ -164,10 +164,10 @@ impl SourceToDef for ItemScope {
 
         let mut result = SourceToDefMap::default();
         self.declarations()
-            .for_each(|item| add_module_def(db.upcast(), &mut result, item));
+            .for_each(|item| add_module_def(db, &mut result, item));
 
         self.impls().for_each(|id| {
-            let src = id.lookup(db.upcast()).source(db.upcast());
+            let src = id.lookup(db).source(db);
             result.impls.insert(src, id);
         });
 
@@ -182,7 +182,7 @@ impl SourceToDef for ImplId {
         for &assoc_item in &impl_items.items {
             match assoc_item {
                 AssocItemId::FunctionId(id) => {
-                    let src = id.lookup(db.upcast()).source(db.upcast());
+                    let src = id.lookup(db).source(db);
                     result.functions.insert(src, id);
                 }
             }

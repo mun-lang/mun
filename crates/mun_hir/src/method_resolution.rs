@@ -146,7 +146,7 @@ impl InherentImpls {
     ) {
         self.diagnostics
             .iter()
-            .filter(|it| it.module_id(db.upcast()).local_id == module_id)
+            .filter(|it| it.module_id(db).local_id == module_id)
             .for_each(|it| it.add_to(db, sink));
     }
 
@@ -175,30 +175,22 @@ impl InherentImplsDiagnostics {
         match self {
             InherentImplsDiagnostics::LowerDiagnostic(impl_id, diag) => {
                 let impl_data = db.impl_data(*impl_id);
-                let file_id = impl_id.lookup(db.upcast()).id.file_id;
+                let file_id = impl_id.lookup(db).id.file_id;
                 diag.add_to(db, file_id, &impl_data.type_ref_source_map, sink);
             }
             InherentImplsDiagnostics::InvalidSelfTy(impl_id) => sink.push(InvalidSelfTyImpl {
-                impl_: impl_id
-                    .lookup(db.upcast())
-                    .source(db.upcast())
-                    .as_ref()
-                    .map(AstPtr::new),
+                impl_: impl_id.lookup(db).source(db).as_ref().map(AstPtr::new),
             }),
             InherentImplsDiagnostics::ImplForForeignType(impl_id) => {
                 sink.push(ImplForForeignType {
-                    impl_: impl_id
-                        .lookup(db.upcast())
-                        .source(db.upcast())
-                        .as_ref()
-                        .map(AstPtr::new),
+                    impl_: impl_id.lookup(db).source(db).as_ref().map(AstPtr::new),
                 });
             }
             InherentImplsDiagnostics::DuplicateDefinitions(first, second) => {
                 sink.push(DuplicateDefinition {
-                    definition: assoc_item_syntax_node_ptr(db.upcast(), second),
-                    first_definition: assoc_item_syntax_node_ptr(db.upcast(), first),
-                    name: assoc_item_name(db.upcast(), first),
+                    definition: assoc_item_syntax_node_ptr(db, second),
+                    first_definition: assoc_item_syntax_node_ptr(db, first),
+                    name: assoc_item_name(db, first),
                 });
             }
         }

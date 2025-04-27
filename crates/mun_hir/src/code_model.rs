@@ -70,7 +70,7 @@ impl DefWithStruct {
 
     pub fn data(self, db: &dyn HirDatabase) -> Arc<StructData> {
         match self {
-            DefWithStruct::Struct(s) => s.data(db.upcast()),
+            DefWithStruct::Struct(s) => s.data(db),
         }
     }
 }

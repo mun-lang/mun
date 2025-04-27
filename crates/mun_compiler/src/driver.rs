@@ -23,7 +23,6 @@ use std::{
     time::Duration,
 };
 
-use mun_db::Upcast;
 use mun_project::{Package, LOCKFILE_NAME};
 use walkdir::WalkDir;
 
@@ -216,9 +215,9 @@ impl Driver {
         let emit_colors = display_color.should_enable();
         let mut has_error = false;
 
-        for package in mun_hir::Package::all(self.db.upcast()) {
-            for module in package.modules(self.db.upcast()) {
-                if let Some(file_id) = module.file_id(self.db.upcast()) {
+        for package in mun_hir::Package::all(&self.db) {
+            for module in package.modules(&self.db) {
+                if let Some(file_id) = module.file_id(&self.db) {
                     let parse = self.db.parse(file_id);
                     let source_code = self.db.file_text(file_id);
                     let relative_file_path = self.db.file_relative_path(file_id);
@@ -240,7 +239,7 @@ impl Driver {
                     // Emit all HIR diagnostics
                     let mut error = None;
                     module.diagnostics(
-                        self.db.upcast(),
+                        &self.db,
                         &mut DiagnosticSink::new(|d| {
                             has_error = true;
                             if let Err(e) =
@@ -338,8 +337,8 @@ impl Driver {
         let _lock = self.acquire_filesystem_output_lock();
 
         // Create a copy of all current files
-        for package in mun_hir::Package::all(self.db.upcast()) {
-            for module in package.modules(self.db.upcast()) {
+        for package in mun_hir::Package::all(&self.db) {
+            for module in package.modules(&self.db) {
                 if self.emit_ir {
                     self.write_assembly_ir(module)?;
                 } else {

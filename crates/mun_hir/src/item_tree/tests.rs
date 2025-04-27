@@ -1,6 +1,5 @@
 use std::fmt;
 
-use mun_db::Upcast;
 use mun_hir_input::WithFixture;
 
 use crate::{mock::MockDatabase, DefDatabase, DiagnosticSink};
@@ -8,7 +7,7 @@ use crate::{mock::MockDatabase, DefDatabase, DiagnosticSink};
 fn print_item_tree(text: &str) -> Result<String, fmt::Error> {
     let (db, file_id) = MockDatabase::with_single_file(text);
     let item_tree = db.item_tree(file_id);
-    let mut result_str = super::pretty::print_item_tree(db.upcast(), &item_tree)?;
+    let mut result_str = super::pretty::print_item_tree(&db, &item_tree)?;
     let mut sink = DiagnosticSink::new(|diag| {
         result_str.push_str(&format!(
             "\n{:?}: {}",

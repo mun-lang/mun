@@ -3,7 +3,6 @@
 use std::sync::Arc;
 
 use la_arena::ArenaMap;
-use mun_db::Upcast;
 use mun_hir_input::{FileId, PackageId, SourceDatabase};
 use mun_syntax::{ast, Parse, SourceFile};
 use mun_target::{abi, spec::Target};
@@ -50,7 +49,7 @@ pub trait InternDatabase: SourceDatabase {
 }
 
 #[salsa::query_group(DefDatabaseStorage)]
-pub trait DefDatabase: InternDatabase + AstDatabase + Upcast<dyn AstDatabase> {
+pub trait DefDatabase: InternDatabase + AstDatabase {
     /// Returns the `ItemTree` for a specific file. An `ItemTree` represents all
     /// the top level declarations within a file.
     #[salsa::invoke(item_tree::ItemTree::item_tree_query)]
@@ -91,7 +90,7 @@ pub trait DefDatabase: InternDatabase + AstDatabase + Upcast<dyn AstDatabase> {
 }
 
 #[salsa::query_group(HirDatabaseStorage)]
-pub trait HirDatabase: DefDatabase + Upcast<dyn DefDatabase> {
+pub trait HirDatabase: DefDatabase {
     /// Returns the target for code generation.
     #[salsa::input]
     fn target(&self) -> Target;

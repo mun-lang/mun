@@ -28,12 +28,12 @@ impl Impl {
     /// defined. `impl`s can be defined in any module from where the self
     /// type is visibile.
     pub fn module(self, db: &dyn HirDatabase) -> Module {
-        self.id.module(db.upcast()).into()
+        self.id.module(db).into()
     }
 
     /// Returns the file in which the implementation was defined
     pub fn file_id(self, db: &dyn HirDatabase) -> FileId {
-        self.id.lookup(db.upcast()).id.file_id
+        self.id.lookup(db).id.file_id
     }
 
     /// Returns the type for which this is an implementation

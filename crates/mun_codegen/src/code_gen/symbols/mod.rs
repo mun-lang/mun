@@ -209,7 +209,7 @@ fn gen_struct_info<'ink>(
             .len()
             .try_into()
             .expect("could not convert num_fields to smaller bit size"),
-        memory_kind: hir_struct.data(db.upcast()).memory_kind,
+        memory_kind: hir_struct.data(db).memory_kind,
     }
 }
 

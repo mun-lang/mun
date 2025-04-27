@@ -59,10 +59,8 @@ fn collect_expr<'ink>(
     }
 
     if let Expr::Path(path) = expr {
-        let resolver = mun_hir::resolver_for_expr(db.upcast(), body.owner(), expr_id);
-        if let Some((ValueNs::StructId(_), _)) =
-            resolver.resolve_path_as_value_fully(db.upcast(), path)
-        {
+        let resolver = mun_hir::resolver_for_expr(db, body.owner(), expr_id);
+        if let Some((ValueNs::StructId(_), _)) = resolver.resolve_path_as_value_fully(db, path) {
             collect_intrinsic(context, target, &intrinsics::new, intrinsics);
             // self.collect_intrinsic( module, entries, &intrinsics::drop);
             *needs_alloc = true;

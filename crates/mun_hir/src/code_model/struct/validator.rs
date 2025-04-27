@@ -25,8 +25,8 @@ impl<'a> StructValidator<'a> {
     }
 
     pub fn validate_privacy(&self, sink: &mut DiagnosticSink<'_>) {
-        let resolver = self.strukt.id.resolver(self.db.upcast());
-        let struct_data = self.strukt.data(self.db.upcast());
+        let resolver = self.strukt.id.resolver(self.db);
+        let struct_data = self.strukt.data(self.db);
 
         let public_fields = struct_data
             .fields

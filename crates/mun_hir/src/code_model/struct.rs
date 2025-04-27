@@ -44,7 +44,7 @@ pub struct Field {
 impl Field {
     /// Returns the type of the field
     pub fn ty(self, db: &dyn HirDatabase) -> Ty {
-        let data = self.parent.data(db.upcast());
+        let data = self.parent.data(db);
         let type_ref_id = data.fields[self.id].type_ref;
         let lower = self.parent.lower(db);
         lower[type_ref_id].clone()
@@ -52,7 +52,7 @@ impl Field {
 
     /// Returns the name of the field
     pub fn name(self, db: &dyn HirDatabase) -> Name {
-        self.parent.data(db.upcast()).fields[self.id].name.clone()
+        self.parent.data(db).fields[self.id].name.clone()
     }
 
     /// Returns the index of this field in the parent
@@ -68,11 +68,11 @@ impl Field {
 
 impl Struct {
     pub fn module(self, db: &dyn HirDatabase) -> Module {
-        self.id.module(db.upcast()).into()
+        self.id.module(db).into()
     }
 
     pub fn file_id(self, db: &dyn HirDatabase) -> FileId {
-        self.id.lookup(db.upcast()).id.file_id
+        self.id.lookup(db).id.file_id
     }
 
     pub fn data(self, db: &dyn DefDatabase) -> Arc<StructData> {
@@ -82,7 +82,7 @@ impl Struct {
     /// Returns the name of the struct non including any module specifiers (e.g:
     /// `Bar`).
     pub fn name(self, db: &dyn HirDatabase) -> Name {
-        self.data(db.upcast()).name.clone()
+        self.data(db).name.clone()
     }
 
     /// Returns the full name of the struct including all module specifiers
@@ -100,7 +100,7 @@ impl Struct {
     }
 
     pub fn fields(self, db: &dyn HirDatabase) -> Vec<Field> {
-        self.data(db.upcast())
+        self.data(db)
             .fields
             .iter()
             .map(|(id, _)| Field { parent: self, id })
@@ -108,7 +108,7 @@ impl Struct {
     }
 
     pub fn field(self, db: &dyn HirDatabase, name: &Name) -> Option<Field> {
-        self.data(db.upcast())
+        self.data(db)
             .fields
             .iter()
             .find(|(_, data)| data.name == *name)
@@ -124,7 +124,7 @@ impl Struct {
     }
 
     pub fn diagnostics(self, db: &dyn HirDatabase, sink: &mut DiagnosticSink<'_>) {
-        let data = self.data(db.upcast());
+        let data = self.data(db);
         let lower = self.lower(db);
         lower.add_diagnostics(db, self.file_id(db), data.type_ref_source_map(), sink);
         let validator = validator::StructValidator::new(self, db, self.file_id(db));
@@ -255,8 +255,6 @@ impl StructData {
 
 impl HasVisibility for Struct {
     fn visibility(&self, db: &dyn HirDatabase) -> Visibility {
-        self.data(db.upcast())
-            .visibility
-            .resolve(db.upcast(), &self.id.resolver(db.upcast()))
+        self.data(db).visibility.resolve(db, &self.id.resolver(db))
     }
 }
