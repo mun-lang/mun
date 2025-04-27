@@ -107,7 +107,8 @@ impl<'a> TypeDefinition<'a> {
 
     /// Returns the size of the type in bytes
     pub fn size_in_bytes(&self) -> usize {
-        ((self.size_in_bits + 7) / 8)
+        self.size_in_bits
+            .div_ceil(8)
             .try_into()
             .expect("cannot covert size in bytes to platform size")
     }

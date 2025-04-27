@@ -18,7 +18,7 @@ impl Size {
     pub fn from_bits(bits: impl TryInto<u64>) -> Size {
         let bits = bits.try_into().ok().unwrap();
         // Avoid potential overflow from `bits + 7`.
-        Size::from_bytes(bits / 8 + ((bits % 8) + 7) / 8)
+        Size::from_bytes(bits / 8 + (bits % 8).div_ceil(8))
     }
 
     #[inline]

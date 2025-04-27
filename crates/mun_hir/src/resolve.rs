@@ -208,7 +208,7 @@ impl Resolver {
                         ));
                     }
                 }
-                Scope::Expr(_) => continue,
+                Scope::Expr(_) => (),
 
                 Scope::Impl(i) => {
                     if first_name == &name![Self] {
@@ -296,7 +296,7 @@ impl Resolver {
 
         for scope in self.scopes.iter().rev() {
             match scope {
-                Scope::Expr(_) => continue,
+                Scope::Expr(_) => {}
                 Scope::Impl(i) => {
                     if first_name == &name![Self] {
                         return Some((TypeNs::SelfType(*i), Visibility::Public, remaining_idx()));

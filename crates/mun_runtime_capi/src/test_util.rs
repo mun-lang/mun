@@ -71,6 +71,7 @@ macro_rules! test_invalid_runtime {
         $(
             paste::item! {
                 #[test]
+                #[allow(clippy::macro_metavars_in_unsafe)]
                 fn [<test_ $name _invalid_runtime>]() {
                     let runtime = Runtime(ptr::null_mut());
                     let handle =

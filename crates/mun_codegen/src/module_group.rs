@@ -102,7 +102,7 @@ impl ModuleGroup {
                     .get(&visible_mod.into())
                     // If all its children are also part of the module group we can keep the
                     // function internal, so there is no need to export it.
-                    .map_or(true, |&includes_subtree| !includes_subtree)
+                    .is_none_or(|&includes_subtree| !includes_subtree)
             }
         }
     }

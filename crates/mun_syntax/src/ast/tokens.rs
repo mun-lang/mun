@@ -154,6 +154,6 @@ impl Whitespace {
     pub fn spans_multiple_lines(&self) -> bool {
         let text = self.text();
         text.find('\n')
-            .map_or(false, |idx| text[idx + 1..].contains('\n'))
+            .is_some_and(|idx| text[idx + 1..].contains('\n'))
     }
 }

@@ -1071,7 +1071,7 @@ fn integer_lit(str: &str, suffix: Option<&str>) -> (Literal, Vec<LiteralError>) 
         let from_lexer = base < 10
             && str
                 .chars()
-                .any(|c| c.to_digit(10).map_or(false, |d| d >= base));
+                .any(|c| c.to_digit(10).is_some_and(|d| d >= base));
         if from_lexer {
             (0, Some(LiteralError::LexerError))
         } else {
