@@ -23,7 +23,7 @@ impl DisplayColor {
 /// `term` environment variable and the operating system.
 fn terminal_support_ansi() -> bool {
     let supports_color = if let Ok(terminal) = env::var("TERM") {
-        terminal.as_str() == "dumb"
+        terminal.as_str() != "dumb"
     } else {
         #[cfg(target_os = "windows")]
         let term_support = cmd_supports_ansi();
