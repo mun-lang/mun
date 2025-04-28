@@ -168,7 +168,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .map(|(idx, ty)| {
                 let param = self.fn_value.get_nth_param(idx as u32).unwrap();
                 if let Some(s) = ty.as_struct() {
-                    if s.data(self.db.upcast()).memory_kind == abi::StructMemoryKind::Value {
+                    if s.data(self.db).memory_kind == abi::StructMemoryKind::Value {
                         deref_heap_value(&self.builder, param)
                     } else {
                         param
@@ -199,9 +199,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 self.builder.build_return(None);
             } else if let Some(value) = ret_value {
                 let ret_value = if let Some(hir_struct) = fn_ret_type.as_struct() {
-                    if hir_struct.data(self.db.upcast()).memory_kind
-                        == mun_hir::StructMemoryKind::Value
-                    {
+                    if hir_struct.data(self.db).memory_kind == mun_hir::StructMemoryKind::Value {
                         self.gen_struct_alloc_on_heap(hir_struct, value.into_struct_value())
                     } else {
                         value
@@ -224,8 +222,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 tail,
             } => self.gen_block(expr, statements, *tail),
             Expr::Path(ref p) => {
-                let resolver =
-                    mun_hir::resolver_for_expr(self.db.upcast(), self.body.owner(), expr);
+                let resolver = mun_hir::resolver_for_expr(self.db, self.body.owner(), expr);
                 Some(self.gen_path_expr(p, expr, &resolver))
             }
             Expr::Literal(lit) => Some(self.gen_literal(lit, expr)),
@@ -372,7 +369,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         }
         let struct_lit = value.into_struct_value();
 
-        match hir_struct.data(self.db.upcast()).memory_kind {
+        match hir_struct.data(self.db).memory_kind {
             mun_hir::StructMemoryKind::Value => struct_lit.into(),
             mun_hir::StructMemoryKind::Gc => {
                 // TODO: Root memory in GC
@@ -573,7 +570,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         resolver: &Resolver,
     ) -> inkwell::values::BasicValueEnum<'ink> {
         match resolver
-            .resolve_path_as_value_fully(self.db.upcast(), path)
+            .resolve_path_as_value_fully(self.db, path)
             .expect("unknown path")
             .0
         {
@@ -603,7 +600,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
     ) -> BasicValueEnum<'ink> {
         let ty = &self.infer[expr];
         if let Some(s) = ty.as_struct() {
-            if s.data(self.db.upcast()).memory_kind == mun_hir::StructMemoryKind::Gc {
+            if s.data(self.db).memory_kind == mun_hir::StructMemoryKind::Gc {
                 return deref_heap_value(&self.builder, value);
             }
         }
@@ -618,7 +615,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         resolver: &Resolver,
     ) -> inkwell::values::PointerValue<'ink> {
         match resolver
-            .resolve_path_as_value_fully(self.db.upcast(), path)
+            .resolve_path_as_value_fully(self.db, path)
             .expect("unknown path")
             .0
         {
@@ -647,7 +644,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             TyKind::Float(_) => self.gen_binary_op_float(lhs, rhs, op),
             TyKind::Int(ty) => self.gen_binary_op_int(lhs, rhs, op, ty.signedness),
             TyKind::Struct(s) => {
-                if s.data(self.db.upcast()).memory_kind == mun_hir::StructMemoryKind::Value {
+                if s.data(self.db).memory_kind == mun_hir::StructMemoryKind::Value {
                     self.gen_binary_op_value_struct(lhs, rhs, op)
                 } else {
                     self.gen_binary_op_heap_struct(lhs, rhs, op)
@@ -1064,8 +1061,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         let body = self.body.clone();
         match &body[expr] {
             Expr::Path(ref p) => {
-                let resolver =
-                    mun_hir::resolver_for_expr(self.db.upcast(), self.body.owner(), expr);
+                let resolver = mun_hir::resolver_for_expr(self.db, self.body.owner(), expr);
                 Some(self.gen_path_place_expr(p, expr, &resolver))
             }
             Expr::Field {

@@ -122,7 +122,7 @@ impl FunctionData {
 
 impl Function {
     pub fn module(self, db: &dyn HirDatabase) -> Module {
-        self.id.module(db.upcast()).into()
+        self.id.module(db).into()
     }
 
     /// Returns the full name of the function including all module specifiers
@@ -140,11 +140,11 @@ impl Function {
     }
 
     pub fn file_id(self, db: &dyn HirDatabase) -> FileId {
-        self.id.lookup(db.upcast()).id.file_id
+        self.id.lookup(db).id.file_id
     }
 
     pub fn name(self, db: &dyn HirDatabase) -> Name {
-        self.data(db.upcast()).name.clone()
+        self.data(db).name.clone()
     }
 
     pub fn data(self, db: &dyn DefDatabase) -> Arc<FunctionData> {
@@ -174,8 +174,8 @@ impl Function {
     }
 
     pub fn ret_type(self, db: &dyn HirDatabase) -> Ty {
-        let resolver = self.id.resolver(db.upcast());
-        let data = self.data(db.upcast());
+        let resolver = self.id.resolver(db);
+        let data = self.data(db);
         Ty::from_hir(db, &resolver, &data.type_ref_map, data.ret_type).0
     }
 
@@ -228,7 +228,7 @@ impl Param {
 
     /// Returns the source of the parameter.
     pub fn source(&self, db: &dyn HirDatabase) -> Option<InFile<ast::Param>> {
-        let InFile { file_id, value } = self.func.source(db.upcast());
+        let InFile { file_id, value } = self.func.source(db);
         let params = value.param_list()?;
         params
             .params()

@@ -19,7 +19,6 @@ apple-codesign = { workspace = true }
 array-init = { workspace = true }
 by_address = { workspace = true }
 bytemuck = { workspace = true }
-mun_db = { version = "0.6.0-dev", path = "../mun_db" }
 mun_hir = { version = "0.6.0-dev", path = "../mun_hir" }
 mun_hir_input = { version = "0.6.0-dev", path = "../mun_hir_input" }
 inkwell = { workspace = true, features = ["llvm14-0", "target-x86", "target-aarch64"] }

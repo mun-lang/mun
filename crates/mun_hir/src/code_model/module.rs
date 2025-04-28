@@ -77,7 +77,7 @@ impl Module {
     pub fn diagnostics(self, db: &dyn HirDatabase, sink: &mut DiagnosticSink<'_>) {
         // Add diagnostics from the package definitions
         let package_defs = db.package_defs(self.id.package);
-        package_defs.add_diagnostics(db.upcast(), self.id.local_id, sink);
+        package_defs.add_diagnostics(db, self.id.local_id, sink);
 
         // Add diagnostics from inherent impls
         let inherent_impls = db.inherent_impls_in_package(self.id.package);

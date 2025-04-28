@@ -2,7 +2,6 @@
 
 use std::panic;
 
-use mun_db::Upcast;
 use mun_hir::HirDatabase;
 use mun_target::spec::Target;
 use salsa::{Database, Durability, Snapshot};
@@ -62,30 +61,6 @@ impl salsa::Database for AnalysisDatabase {
             }
             salsa::EventKind::WillBlockOn { .. } => (),
         }
-    }
-}
-
-impl Upcast<dyn mun_hir::AstDatabase> for AnalysisDatabase {
-    fn upcast(&self) -> &(dyn mun_hir::AstDatabase + 'static) {
-        self
-    }
-}
-
-impl Upcast<dyn mun_hir_input::SourceDatabase> for AnalysisDatabase {
-    fn upcast(&self) -> &(dyn mun_hir_input::SourceDatabase + 'static) {
-        self
-    }
-}
-
-impl Upcast<dyn mun_hir::DefDatabase> for AnalysisDatabase {
-    fn upcast(&self) -> &(dyn mun_hir::DefDatabase + 'static) {
-        self
-    }
-}
-
-impl Upcast<dyn mun_hir::HirDatabase> for AnalysisDatabase {
-    fn upcast(&self) -> &(dyn mun_hir::HirDatabase + 'static) {
-        self
     }
 }
 

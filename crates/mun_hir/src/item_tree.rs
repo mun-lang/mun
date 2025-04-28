@@ -540,8 +540,8 @@ mod diagnostics {
                     second,
                 } => sink.push(DuplicateDefinition {
                     name: name.to_string(),
-                    first_definition: ast_ptr_from_mod(db.upcast(), item_tree, *first),
-                    definition: ast_ptr_from_mod(db.upcast(), item_tree, *second),
+                    first_definition: ast_ptr_from_mod(db, item_tree, *first),
+                    definition: ast_ptr_from_mod(db, item_tree, *second),
                 }),
             };
         }

@@ -14,7 +14,7 @@ impl InferenceResultBuilder<'_> {
 
     /// Checks if the specified path references a memory location.
     fn check_place_path(&mut self, resolver: &Resolver, path: &Path) -> bool {
-        match resolver.resolve_path_as_value_fully(self.db.upcast(), path) {
+        match resolver.resolve_path_as_value_fully(self.db, path) {
             Some((ValueNs::ImplSelf(_) | ValueNs::LocalBinding(_), _)) => true,
             Some((ValueNs::FunctionId(_) | ValueNs::StructId(_), _)) | None => false,
         }

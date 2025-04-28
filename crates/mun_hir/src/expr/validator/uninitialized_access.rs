@@ -60,7 +60,7 @@ impl ExprValidator<'_> {
                 }
             }
             Expr::Path(p) => {
-                let resolver = resolver_for_expr(self.db.upcast(), self.body.owner(), expr);
+                let resolver = resolver_for_expr(self.db, self.body.owner(), expr);
                 self.validate_path_access(
                     sink,
                     initialized_patterns,
@@ -207,7 +207,7 @@ impl ExprValidator<'_> {
         expr: ExprId,
         expr_side: ExprKind,
     ) {
-        let pat = match resolver.resolve_path_as_value_fully(self.db.upcast(), path) {
+        let pat = match resolver.resolve_path_as_value_fully(self.db, path) {
             Some((ValueNs::LocalBinding(pat), _)) => pat,
             _ => return,
         };

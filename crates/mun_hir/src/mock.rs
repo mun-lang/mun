@@ -1,14 +1,7 @@
-#![cfg(test)]
-
-use mun_db::Upcast;
-use mun_hir_input::SourceDatabase;
 use mun_target::spec::Target;
 use parking_lot::Mutex;
 
-use crate::{
-    db::{AstDatabase, HirDatabase},
-    DefDatabase,
-};
+use crate::db::HirDatabase;
 
 /// A mock implementation of the IR database. It can be used to set up a simple
 /// test case.
@@ -30,24 +23,6 @@ impl salsa::Database for MockDatabase {
         if let Some(events) = &mut *events {
             events.push(event);
         }
-    }
-}
-
-impl Upcast<dyn AstDatabase> for MockDatabase {
-    fn upcast(&self) -> &(dyn AstDatabase + 'static) {
-        self
-    }
-}
-
-impl Upcast<dyn DefDatabase> for MockDatabase {
-    fn upcast(&self) -> &(dyn DefDatabase + 'static) {
-        self
-    }
-}
-
-impl Upcast<dyn SourceDatabase> for MockDatabase {
-    fn upcast(&self) -> &(dyn SourceDatabase + 'static) {
-        self
     }
 }
 

@@ -134,12 +134,12 @@ mod diagnostics {
 
             match &self.kind {
                 DiagnosticKind::UnresolvedImport { ast, index } => {
-                    if let Some(use_tree) = use_tree_ptr_from_ast(db.upcast(), ast, *index) {
+                    if let Some(use_tree) = use_tree_ptr_from_ast(db, ast, *index) {
                         sink.push(UnresolvedImport { use_tree });
                     }
                 }
                 DiagnosticKind::DuplicateImport { ast, index } => {
-                    if let Some(use_tree) = use_tree_ptr_from_ast(db.upcast(), ast, *index) {
+                    if let Some(use_tree) = use_tree_ptr_from_ast(db, ast, *index) {
                         sink.push(ImportDuplicateDefinition { use_tree });
                     }
                 }

@@ -17,7 +17,6 @@ la-arena = { workspace = true }
 mun_syntax = { version = "0.6.0-dev", path = "../mun_syntax" }
 mun_target = { version = "0.6.0-dev", path = "../mun_target" }
 mun_paths = { version = "0.6.0-dev", path="../mun_paths" }
-mun_db = { version = "0.6.0-dev", path="../mun_db" }
 mun_hir_input = { version = "0.6.0-dev", path="../mun_hir_input" }
 drop_bomb = { workspace = true }
 either = { workspace = true }

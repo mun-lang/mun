@@ -196,7 +196,7 @@ impl Ty {
             &TyKind::Struct(s) => {
                 let name = s.name(db).to_string();
 
-                Some(if s.data(db.upcast()).memory_kind == StructMemoryKind::Gc {
+                Some(if s.data(db).memory_kind == StructMemoryKind::Gc {
                     format!("struct {name}")
                 } else {
                     let fields: Vec<String> = s
@@ -356,7 +356,7 @@ impl FnSig {
     pub fn marshallable(&self, db: &dyn HirDatabase) -> bool {
         for ty in self.params_and_return.iter() {
             if let Some(s) = ty.as_struct() {
-                if s.data(db.upcast()).memory_kind == StructMemoryKind::Value {
+                if s.data(db).memory_kind == StructMemoryKind::Value {
                     return false;
                 }
             }

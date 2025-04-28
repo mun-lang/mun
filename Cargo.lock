@@ -2422,7 +2422,6 @@ dependencies = [
  "lld_rs",
  "mun_abi",
  "mun_codegen_macros",
- "mun_db",
  "mun_hir",
  "mun_hir_input",
  "mun_libloader",
@@ -2459,7 +2458,6 @@ dependencies = [
  "lockfile",
  "log",
  "mun_codegen",
- "mun_db",
  "mun_diagnostics",
  "mun_hir",
  "mun_hir_input",
@@ -2487,10 +2485,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mun_db"
-version = "0.6.0-dev"
-
-[[package]]
 name = "mun_diagnostics"
 version = "0.6.0-dev"
 dependencies = [
@@ -2509,7 +2503,6 @@ dependencies = [
  "insta",
  "itertools 0.12.1",
  "la-arena",
- "mun_db",
  "mun_hir_input",
  "mun_paths",
  "mun_syntax",
@@ -2547,7 +2540,6 @@ dependencies = [
  "log",
  "lsp-server",
  "lsp-types",
- "mun_db",
  "mun_diagnostics",
  "mun_hir",
  "mun_hir_input",

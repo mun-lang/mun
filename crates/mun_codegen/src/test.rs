@@ -1,7 +1,6 @@
 use std::cell::RefCell;
 
 use inkwell::{context::Context, OptimizationLevel};
-use mun_db::Upcast;
 use mun_hir::{diagnostics::DiagnosticSink, HirDatabase};
 use mun_hir_input::{SourceDatabase, WithFixture};
 use mun_target::spec::Target;
@@ -1100,18 +1099,18 @@ fn test_snapshot_with_optimization(name: &str, text: &str, opt: OptimizationLeve
             diag.message()
         ));
     });
-    for module in mun_hir::Package::all(db.upcast())
+    for module in mun_hir::Package::all(&db)
         .into_iter()
-        .flat_map(|package| package.modules(db.upcast()))
+        .flat_map(|package| package.modules(&db))
     {
-        module.diagnostics(db.upcast(), &mut sink);
+        module.diagnostics(&db, &mut sink);
     }
     drop(sink);
     let messages = messages.into_inner();
 
     // Setup code generation
     let llvm_context = Context::create();
-    let code_gen = CodeGenContext::new(&llvm_context, db.upcast());
+    let code_gen = CodeGenContext::new(&llvm_context, &db);
     let module_parition = db.module_partition();
 
     let value = if messages.is_empty() {

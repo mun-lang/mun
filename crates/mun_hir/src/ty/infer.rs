@@ -110,7 +110,7 @@ impl InferenceResult {
 /// stored in the `InferenceResult`.
 pub fn infer_query(db: &dyn HirDatabase, def: DefWithBodyId) -> Arc<InferenceResult> {
     let body = db.body(def);
-    let resolver = def.resolver(db.upcast());
+    let resolver = def.resolver(db);
     let mut ctx = InferenceResultBuilder::new(db, &body, resolver);
 
     match def {
@@ -203,7 +203,7 @@ impl<'a> InferenceResultBuilder<'a> {
     /// Returns the module in which the body is defined.
     pub fn module(&self) -> ModuleId {
         match self.body.owner() {
-            DefWithBodyId::FunctionId(func) => func.module(self.db.upcast()),
+            DefWithBodyId::FunctionId(func) => func.module(self.db),
         }
     }
 
@@ -339,7 +339,7 @@ impl InferenceResultBuilder<'_> {
             Expr::Missing => error_type(),
             Expr::Path(p) => {
                 // FIXME this could be more efficient...
-                let resolver = resolver_for_expr(self.db.upcast(), self.body.owner(), tgt_expr);
+                let resolver = resolver_for_expr(self.db, self.body.owner(), tgt_expr);
                 self.infer_path_expr(&resolver, p, tgt_expr, check_params)
                     .unwrap_or_else(error_type)
             }
@@ -356,8 +356,7 @@ impl InferenceResultBuilder<'_> {
                     };
                     let lhs_ty = self.infer_expr(*lhs, &lhs_expected);
                     if let BinaryOp::Assignment { op: _op } = op {
-                        let resolver =
-                            resolver_for_expr(self.db.upcast(), self.body.owner(), tgt_expr);
+                        let resolver = resolver_for_expr(self.db, self.body.owner(), tgt_expr);
                         if !self.check_place_expression(&resolver, *lhs) {
                             self.diagnostics.push(InferenceDiagnostic::InvalidLhs {
                                 id: tgt_expr,
@@ -732,7 +731,7 @@ impl InferenceResultBuilder<'_> {
                 // Erroneously found either a unit struct or record struct literal. Record
                 // struct literals can never be used as a value so that will
                 // have already been reported.
-                if s.data(self.db.upcast()).kind == StructKind::Unit {
+                if s.data(self.db).kind == StructKind::Unit {
                     self.diagnostics
                         .push(InferenceDiagnostic::MismatchedStructLit {
                             id: tgt_expr,
@@ -781,7 +780,7 @@ impl InferenceResultBuilder<'_> {
 
     /// Checks whether the specified struct type is a unit struct.
     fn check_unit_struct_lit(&mut self, tgt_expr: ExprId, expected: Struct) {
-        let struct_data = expected.data(self.db.upcast());
+        let struct_data = expected.data(self.db);
         if struct_data.kind != StructKind::Unit {
             self.diagnostics
                 .push(InferenceDiagnostic::MismatchedStructLit {
@@ -826,7 +825,7 @@ impl InferenceResultBuilder<'_> {
         expected: Struct,
         fields: &[RecordLitField],
     ) {
-        let struct_data = expected.data(self.db.upcast());
+        let struct_data = expected.data(self.db);
         if struct_data.kind != StructKind::Record {
             self.diagnostics
                 .push(InferenceDiagnostic::MismatchedStructLit {
@@ -909,7 +908,7 @@ impl InferenceResultBuilder<'_> {
         path: &Path,
         id: ExprId,
     ) -> Option<ValueNs> {
-        let value_or_partial = resolver.resolve_path_as_value(self.db.upcast(), path)?;
+        let value_or_partial = resolver.resolve_path_as_value(self.db, path)?;
         match value_or_partial {
             ResolveValueResult::ValueNs(it, vis) => {
                 if !vis.is_visible_from(self.db, self.module()) {
@@ -959,12 +958,12 @@ impl InferenceResultBuilder<'_> {
         } else {
             // If no value was found, try to resolve the path as a type. This will always
             // result in an error but it does provide much better diagnostics.
-            let ty = resolver.resolve_path_as_type_fully(self.db.upcast(), path);
+            let ty = resolver.resolve_path_as_type_fully(self.db, path);
             if let Some((TypeNs::StructId(struct_id), _)) = ty {
                 // We can only really get here if the struct is actually a record. Both other
                 // types can be seen as a values because they have a constructor.
                 debug_assert_eq!(
-                    Struct::from(struct_id).data(self.db.upcast()).kind,
+                    Struct::from(struct_id).data(self.db).kind,
                     StructKind::Record
                 );
 
@@ -1385,7 +1384,7 @@ mod diagnostics {
             owner: Function,
             sink: &mut DiagnosticSink<'_>,
         ) {
-            let file = owner.source(db.upcast()).file_id;
+            let file = owner.source(db).file_id;
             let body = owner.body_source_map(db);
             match self {
                 InferenceDiagnostic::UnresolvedValue { id } => {

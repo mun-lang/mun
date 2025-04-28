@@ -1,7 +1,5 @@
 use mun_codegen::{CodeGenDatabase, CodeGenDatabaseStorage};
-use mun_db::Upcast;
 use mun_hir::{salsa, HirDatabase};
-use mun_hir_input::SourceDatabase;
 
 use crate::Config;
 
@@ -16,36 +14,6 @@ use crate::Config;
 )]
 pub struct CompilerDatabase {
     storage: salsa::Storage<Self>,
-}
-
-impl Upcast<dyn mun_hir::AstDatabase> for CompilerDatabase {
-    fn upcast(&self) -> &(dyn mun_hir::AstDatabase + 'static) {
-        self
-    }
-}
-
-impl Upcast<dyn SourceDatabase> for CompilerDatabase {
-    fn upcast(&self) -> &(dyn SourceDatabase + 'static) {
-        self
-    }
-}
-
-impl Upcast<dyn mun_hir::DefDatabase> for CompilerDatabase {
-    fn upcast(&self) -> &(dyn mun_hir::DefDatabase + 'static) {
-        self
-    }
-}
-
-impl Upcast<dyn mun_hir::HirDatabase> for CompilerDatabase {
-    fn upcast(&self) -> &(dyn mun_hir::HirDatabase + 'static) {
-        self
-    }
-}
-
-impl Upcast<dyn CodeGenDatabase> for CompilerDatabase {
-    fn upcast(&self) -> &(dyn CodeGenDatabase + 'static) {
-        self
-    }
 }
 
 impl CompilerDatabase {

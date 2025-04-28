@@ -1,5 +1,3 @@
-use mun_db::Upcast;
-
 use super::{CompletionContext, Completions, DotAccess};
 
 /// Complete dot accesses, i.e. fields. Adds `CompletionItems` to `result`.
@@ -18,7 +16,7 @@ pub(super) fn complete_dot(
 
     // Get all the fields of the expression
     if let Some(strukt) = receiver_ty.as_struct() {
-        for field in strukt.fields(ctx.db.upcast()) {
+        for field in strukt.fields(ctx.db) {
             result.add_field(ctx, field);
         }
     };

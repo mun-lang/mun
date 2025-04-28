@@ -411,38 +411,35 @@ impl DefCollector<'_> {
             // pub foo::Foo; // This is not allowed because Foo is only public within the package.
             // ```
 
-            match name {
-                Some(name) => {
-                    let add_result = scope.add_resolution_from_import(
-                        &mut self.from_glob_import,
-                        (import_module_id, name.clone()),
-                        resolution.map(|(item, _)| (item, import_visibility)),
-                        import_type,
-                    );
+            let Some(name) = name else {
+                // This is not yet implemented (bringing in types into scope
+                // without a name). This might be useful for
+                // traits. e.g.: ```mun
+                // use foo::SomeTrait as _; // Should be able to call methods added by
+                // SomeTrait. ```
+                continue;
+            };
 
-                    if add_result.changed {
-                        changed = true;
-                    }
-                    if add_result.duplicate {
-                        let item_tree = self.db.item_tree(import_source.file_id);
-                        let import_data = &item_tree[import_source.value];
-                        self.package_defs
-                            .diagnostics
-                            .push(DefDiagnostic::duplicate_import(
-                                import_module_id,
-                                InFile::new(import_source.file_id, import_data.ast_id),
-                                import_data.index,
-                            ));
-                    }
-                }
-                None => {
-                    // This is not yet implemented (bringing in types into scope without a name).
-                    // This might be useful for traits. e.g.:
-                    // ```mun
-                    // use foo::SomeTrait as _; // Should be able to call methods added by SomeTrait.
-                    // ```
-                    continue;
-                }
+            let add_result = scope.add_resolution_from_import(
+                &mut self.from_glob_import,
+                (import_module_id, name.clone()),
+                resolution.map(|(item, _)| (item, import_visibility)),
+                import_type,
+            );
+
+            if add_result.changed {
+                changed = true;
+            }
+            if add_result.duplicate {
+                let item_tree = self.db.item_tree(import_source.file_id);
+                let import_data = &item_tree[import_source.value];
+                self.package_defs
+                    .diagnostics
+                    .push(DefDiagnostic::duplicate_import(
+                        import_module_id,
+                        InFile::new(import_source.file_id, import_data.ast_id),
+                        import_data.index,
+                    ));
             }
         }
 

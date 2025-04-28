@@ -123,7 +123,7 @@ impl Ty {
         diagnostics: &mut Vec<LowerDiagnostic>,
     ) -> Option<Self> {
         // Find the type namespace and visibility
-        let (type_ns, vis) = resolver.resolve_path_as_type_fully(db.upcast(), path)?;
+        let (type_ns, vis) = resolver.resolve_path_as_type_fully(db, path)?;
 
         // Get the current module and see if the type is visible from here
         if let Some(module) = resolver.module() {
@@ -160,13 +160,13 @@ pub fn lower_types(
 }
 
 pub fn lower_struct_query(db: &dyn HirDatabase, s: Struct) -> Arc<LowerTyMap> {
-    let data = s.data(db.upcast());
-    lower_types(db, &s.id.resolver(db.upcast()), data.type_ref_map())
+    let data = s.data(db);
+    lower_types(db, &s.id.resolver(db), data.type_ref_map())
 }
 
 pub fn lower_type_alias_query(db: &dyn HirDatabase, t: TypeAlias) -> Arc<LowerTyMap> {
-    let data = t.data(db.upcast());
-    lower_types(db, &t.id.resolver(db.upcast()), data.type_ref_map())
+    let data = t.data(db);
+    lower_types(db, &t.id.resolver(db), data.type_ref_map())
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -255,7 +255,7 @@ pub(crate) fn type_for_def(db: &dyn HirDatabase, def: TypableDef, ns: Namespace)
 
 pub(crate) fn type_for_impl_self(db: &dyn HirDatabase, i: ImplId) -> Ty {
     let impl_data = db.impl_data(i);
-    let resolver = i.resolver(db.upcast());
+    let resolver = i.resolver(db);
     Ty::from_hir(db, &resolver, &impl_data.type_ref_map, impl_data.self_ty).0
 }
 
@@ -283,8 +283,8 @@ pub(crate) fn callable_item_sig(db: &dyn HirDatabase, def: CallableDef) -> FnSig
 }
 
 pub(crate) fn fn_sig_for_fn(db: &dyn HirDatabase, def: Function) -> FnSig {
-    let data = def.data(db.upcast());
-    let resolver = def.id.resolver(db.upcast());
+    let data = def.data(db);
+    let resolver = def.id.resolver(db);
     let params = data
         .params()
         .iter()
@@ -295,8 +295,8 @@ pub(crate) fn fn_sig_for_fn(db: &dyn HirDatabase, def: Function) -> FnSig {
 }
 
 pub(crate) fn fn_sig_for_struct_constructor(db: &dyn HirDatabase, def: Struct) -> FnSig {
-    let data = def.data(db.upcast());
-    let resolver = def.id.resolver(db.upcast());
+    let data = def.data(db);
+    let resolver = def.id.resolver(db);
     let params = data
         .fields
         .iter()
@@ -326,7 +326,7 @@ fn type_for_type_alias(_db: &dyn HirDatabase, def: TypeAlias) -> Ty {
 
 pub(crate) fn lower_impl_query(db: &dyn HirDatabase, impl_id: ImplId) -> Arc<LowerTyMap> {
     let impl_data = db.impl_data(impl_id);
-    let resolver = impl_id.resolver(db.upcast());
+    let resolver = impl_id.resolver(db);
     lower_types(db, &resolver, &impl_data.type_ref_map)
 }
 

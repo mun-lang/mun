@@ -83,7 +83,7 @@ fn format_document_symbol(symbol: &lsp_types::DocumentSymbol) -> text_trees::Str
             symbol
                 .detail
                 .as_ref()
-                .map_or_else(String::new, |s| format!(" ({})", s))
+                .map_or_else(String::new, |s| format!(" ({s})"))
         ),
         symbol.children.iter().flatten().map(format_document_symbol),
     )

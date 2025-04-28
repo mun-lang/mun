@@ -44,7 +44,7 @@ impl SourceAnalyzer {
             None => scope_for(&scopes, &source_map, node),
             Some(offset) => scope_for_offset(db, &scopes, &source_map, node.with_value(offset)),
         };
-        let resolver = resolver_for_scope(db.upcast(), def, scope);
+        let resolver = resolver_for_scope(db, def, scope);
         SourceAnalyzer {
             resolver,
             body: Some(body),
@@ -127,7 +127,7 @@ fn scope_for_offset(
         if source.file_id != offset.file_id {
             return None;
         }
-        let root = source.file_syntax(db.upcast());
+        let root = source.file_syntax(db);
         let node = source
             .value
             .either(|ptr| ptr.syntax_node_ptr(), |ptr| ptr.syntax_node_ptr());
@@ -164,7 +164,7 @@ fn adjust(
             if source.file_id != offset.file_id {
                 return None;
             }
-            let root = source.file_syntax(db.upcast());
+            let root = source.file_syntax(db);
             let node = source
                 .value
                 .either(|ptr| ptr.syntax_node_ptr(), |ptr| ptr.syntax_node_ptr());
@@ -199,7 +199,7 @@ fn resolve_hir_path_qualifier(
     resolver: &Resolver,
     path: &Path,
 ) -> Option<PathResolution> {
-    let (ty, _, remaining_idx) = resolver.resolve_path_as_type(db.upcast(), path)?;
+    let (ty, _, remaining_idx) = resolver.resolve_path_as_type(db, path)?;
     let (ty, _unresolved) = match remaining_idx {
         Some(remaining_idx) => {
             if remaining_idx + 1 == path.segments.len() {
