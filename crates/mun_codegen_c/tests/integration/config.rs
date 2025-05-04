@@ -2,7 +2,7 @@ pub use mun_codegen::OptimizationLevel;
 use mun_target::spec::Target;
 
 /// Describes all the permanent settings that are used during compilations.
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct Config {
     /// The target triple to compile the code for.
     pub target: Target,

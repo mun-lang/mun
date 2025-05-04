@@ -1,4 +1,4 @@
-macro_rules! intrinsics{
+macro_rules! impl_intrinsics{
     ($($(#[$attr:meta])* pub fn $name:ident($($arg_name:ident:$arg:ty),+) -> $ret:ty;)+) => {
         $(
             paste::item! {

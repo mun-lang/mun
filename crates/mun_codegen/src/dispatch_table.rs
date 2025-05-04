@@ -6,8 +6,8 @@ use rustc_hash::FxHashSet;
 
 use crate::{
     intrinsics::Intrinsic,
-    ir::ty::HirTypeCache,
     module_group::ModuleGroup,
+    ty::HirTypeCache,
     type_info::{HasStaticTypeId, TypeId},
 };
 

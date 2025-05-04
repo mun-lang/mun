@@ -1,23 +1,17 @@
 pub use error::CodeGenerationError;
-use inkwell::{
-    module::Module,
-    passes::{PassManager, PassManagerBuilder},
-    OptimizationLevel,
-};
 
 // mod assembly_builder;
 mod context;
 mod error;
-mod object_file;
+// mod object_file;
 // pub mod symbols;
 
-/// Optimizes the specified LLVM `Module` using the default passes for the given
-/// `OptimizationLevel`.
-fn optimize_module(module: &Module<'_>, optimization_lvl: OptimizationLevel) {
-    let pass_builder = PassManagerBuilder::create();
-    pass_builder.set_optimization_level(optimization_lvl);
-
-    let module_pass_manager = PassManager::create(());
-    pass_builder.populate_module_pass_manager(&module_pass_manager);
-    module_pass_manager.run_on(module);
+/// Defines the optimization level during compilation.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OptimizationLevel {
+    None = 0,
+    Less = 1,
+    Default = 2,
+    Aggressive = 3,
 }

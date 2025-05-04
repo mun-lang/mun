@@ -36,13 +36,11 @@ either = { version = "1.13.0", default-features = false }
 ena = { version = "0.14", default-features = false }
 extendhash = { version = "1.0.10", default-features = false }
 heck = "0.4.1"
-inkwell = { version = "0.2.0", default-features = false }
 insta = { version = "1.41.1", default-features = false }
 itertools = { version = "0.12.1", default-features = false }
 la-arena = { version = "0.3.1", default-features = false }
 lazy_static = { version = "1.5.0", default-features = false }
 libloading = { version = "0.8.6", default-features = false }
-lld_rs = { version = "140.0.0", default-features = false }
 lockfile = { version = "0.4.0", default-features = false }
 log = { version = "0.4.22", default-features = false }
 lsp-server = { version = "0.7.7", default-features = false }

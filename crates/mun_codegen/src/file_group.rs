@@ -4,11 +4,9 @@ use mun_hir::{HasVisibility as _, HirDatabase, ModuleDef};
 use rustc_hash::FxHashSet;
 
 use crate::{
-    ir::{
-        dispatch_table::{DispatchTableBuildOutput, DispatchTableBuilder},
-        intrinsics::{self, IntrinsicsSet},
-        ty::HirTypeCache,
-    },
+    dispatch_table::{DispatchTableBuildOutput, DispatchTableBuilder},
+    intrinsics::{self, IntrinsicsSet},
+    ty::HirTypeCache,
     type_table::{TypeTable, TypeTableBuilder},
     CodeGenDatabase, DispatchTable, ModuleGroup, ModuleGroupId,
 };

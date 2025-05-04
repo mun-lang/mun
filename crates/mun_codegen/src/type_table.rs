@@ -5,11 +5,7 @@ use std::{
 
 use mun_hir::{Body, ExprId, HirDatabase, InferenceResult};
 
-use crate::{
-    ir::{dispatch_table::DispatchTable, ty::HirTypeCache},
-    type_info::TypeId,
-    ModuleGroup,
-};
+use crate::{dispatch_table::DispatchTable, ty::HirTypeCache, type_info::TypeId, ModuleGroup};
 
 /// A type table in IR is a list of pointers to unique type information that are
 /// used to generate function and struct information.

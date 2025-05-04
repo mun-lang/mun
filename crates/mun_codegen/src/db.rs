@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{FileGroupData, ModuleGroupId, ModulePartition};
+use crate::{code_gen::OptimizationLevel, FileGroupData, ModuleGroupId, ModulePartition};
 
 /// The `CodeGenDatabase` enables caching of code generation stages.
 /// Inkwell/LLVM objects are not stored in the cache because they are not
@@ -17,7 +17,7 @@ pub trait CodeGenDatabase: mun_hir::HirDatabase + mun_db::Upcast<dyn mun_hir::Hi
 
     /// Set the optimization level used to generate assemblies
     #[salsa::input]
-    fn optimization_level(&self) -> inkwell::OptimizationLevel;
+    fn optimization_level(&self) -> OptimizationLevel;
 
     /// Returns the current module partition
     #[salsa::invoke(crate::module_partition::build_partition)]

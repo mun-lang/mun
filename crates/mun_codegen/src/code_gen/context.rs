@@ -1,4 +1,4 @@
-use crate::ir::ty::HirTypeCache;
+use crate::ty::HirTypeCache;
 
 pub struct CodeGenContext<'db> {
     /// The Salsa HIR database

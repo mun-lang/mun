@@ -23,12 +23,10 @@ either = { workspace = true }
 mun_db = { version = "0.6.0-dev", path = "../mun_db" }
 mun_hir = { version = "0.6.0-dev", path = "../mun_hir" }
 mun_hir_input = { version = "0.6.0-dev", path = "../mun_hir_input" }
-inkwell = { workspace = true, features = ["llvm14-0", "target-x86", "target-aarch64"] }
 itertools = { workspace = true }
 mun_codegen_macros = { version = "0.6.0-dev", path = "../mun_codegen_macros" }
 mun_target = { version = "0.6.0-dev", path = "../mun_target" }
 once_cell = { workspace = true }
-lld_rs = { workspace = true }
 parking_lot = { workspace = true }
 paste = { workspace = true }
 mun_paths = { version = "0.6.0-dev", path = "../mun_paths" }
