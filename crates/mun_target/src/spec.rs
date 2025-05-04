@@ -141,6 +141,7 @@ supported_targets!(
     ("aarch64-apple-darwin", aarch64_apple_darwin),
     ("aarch64-apple-ios", aarch64_apple_ios),
     ("aarch64-apple-ios-sim", aarch64_apple_ios_sim),
+    ("aarch64-unknown-linux-gnu", aarch64_unknown_linux_gnu),
 );
 
 impl Target {
