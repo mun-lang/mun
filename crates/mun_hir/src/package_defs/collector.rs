@@ -5,7 +5,8 @@ use rustc_hash::FxHashMap;
 use super::PackageDefs;
 use crate::{
     ids::{
-        FunctionLoc, ImplLoc, Intern, ItemContainerId, ItemDefinitionId, StructLoc, TypeAliasLoc,
+        ConstLoc, FunctionLoc, ImplLoc, Intern, ItemContainerId, ItemDefinitionId, StructLoc,
+        TypeAliasLoc,
     },
     item_scope::{ImportType, ItemScope, PerNsGlobImports},
     item_tree::{
@@ -525,6 +526,7 @@ impl<'a> ModCollectorContext<'a, '_> {
                     self.collect_impl(id);
                     continue;
                 }
+                ModItem::Const(id) => self.collect_const(id),
             };
 
             self.def_collector.package_defs.modules[self.module_id].add_definition(id);
@@ -600,6 +602,24 @@ impl<'a> ModCollectorContext<'a, '_> {
             name: &adt.name,
             visibility: &self.item_tree[adt.visibility],
             has_constructor: !matches!(adt.fields, Fields::Record(_)),
+        }
+    }
+
+    fn collect_const(&self, id: LocalItemTreeId<item_tree::Const>) -> DefData<'a> {
+        let func = &self.item_tree[id];
+        DefData {
+            id: ConstLoc {
+                container: ItemContainerId::ModuleId(ModuleId {
+                    package: self.def_collector.package_id,
+                    local_id: self.module_id,
+                }),
+                id: ItemTreeId::new(self.file_id, id),
+            }
+            .intern(self.def_collector.db)
+            .into(),
+            name: &func.name,
+            visibility: &self.item_tree[func.visibility],
+            has_constructor: false,
         }
     }
 

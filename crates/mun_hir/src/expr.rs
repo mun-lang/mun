@@ -74,6 +74,7 @@ impl Body {
                 collector = ExprCollector::new(def, src.file_id, db);
                 collector.collect_fn_body(&src.value);
             }
+            DefWithBodyId::ConstId(_const_id) => todo!(),
         }
 
         let (body, source_map) = collector.finish();

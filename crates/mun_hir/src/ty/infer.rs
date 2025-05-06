@@ -115,6 +115,7 @@ pub fn infer_query(db: &dyn HirDatabase, def: DefWithBodyId) -> Arc<InferenceRes
 
     match def {
         DefWithBodyId::FunctionId(_) => ctx.infer_signature(),
+        DefWithBodyId::ConstId(_) => todo!(),
     }
 
     ctx.infer_body();
@@ -204,6 +205,7 @@ impl<'a> InferenceResultBuilder<'a> {
     pub fn module(&self) -> ModuleId {
         match self.body.owner() {
             DefWithBodyId::FunctionId(func) => func.module(self.db),
+            DefWithBodyId::ConstId(_const_id) => todo!(),
         }
     }
 
@@ -954,6 +956,7 @@ impl InferenceResultBuilder<'_> {
                         .type_for_def(TypableDef::Struct(s.into()), Namespace::Values);
                     Some(ty)
                 }
+                ValueNs::ConstId(_const_id) => todo!(),
             }
         } else {
             // If no value was found, try to resolve the path as a type. This will always

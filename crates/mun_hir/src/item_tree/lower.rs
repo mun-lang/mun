@@ -10,9 +10,9 @@ use mun_syntax::ast::{
 use smallvec::SmallVec;
 
 use super::{
-    diagnostics, AssociatedItem, Field, Fields, Function, FunctionFlags, IdRange, Impl, ItemTree,
-    ItemTreeData, ItemTreeNode, ItemVisibilities, LocalItemTreeId, ModItem, Param, ParamAstId,
-    RawVisibilityId, Struct, TypeAlias,
+    diagnostics, AssociatedItem, Const, Field, Fields, Function, FunctionFlags, IdRange, Impl,
+    ItemTree, ItemTreeData, ItemTreeNode, ItemVisibilities, LocalItemTreeId, ModItem, Param,
+    ParamAstId, RawVisibilityId, Struct, TypeAlias,
 };
 use crate::{
     item_tree::Import,
@@ -88,6 +88,7 @@ impl Context {
                             .map_or_else(|| import.path.last_segment(), |alias| alias.as_name())
                     }
                 }
+                ModItem::Const(item) => Some(&self.data.consts[item.index].name),
                 ModItem::Impl(_) => None,
             };
             if let Some(name) = name {
@@ -122,7 +123,25 @@ impl Context {
                 self.lower_use(&ast).into_iter().map(Into::into).collect(),
             )),
             ast::ModuleItemKind::Impl(ast) => self.lower_impl(&ast).map(Into::into),
+            ast::ModuleItemKind::Const(ast) => self.lower_const(ast).map(Into::into),
         }
+    }
+
+    /// Lowers a const
+    fn lower_const(&mut self, ast: ast::Const) -> Option<LocalItemTreeId<Const>> {
+        let name = ast.name()?.as_name();
+        let visibility = lower_visibility(&ast);
+
+        Some(
+            self.data
+                .consts
+                .alloc(Const {
+                    name,
+                    visibility,
+                    ast_id: self.source_ast_id_map.ast_id(&ast),
+                })
+                .into(),
+        )
     }
 
     /// Lowers a `use` statement

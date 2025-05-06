@@ -1,3 +1,4 @@
+mod r#const;
 mod function;
 mod r#impl;
 mod module;
@@ -8,6 +9,8 @@ pub(crate) mod r#struct;
 mod type_alias;
 
 use std::sync::Arc;
+
+use r#const::Const;
 
 pub use self::{
     function::{Function, FunctionData},
@@ -25,6 +28,7 @@ use crate::{expr::BodySourceMap, HirDatabase, Name};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DefWithBody {
     Function(Function),
+    Const(Const),
 }
 impl_froms!(DefWithBody: Function);
 
@@ -32,12 +36,14 @@ impl DefWithBody {
     pub fn module(self, db: &dyn HirDatabase) -> Module {
         match self {
             DefWithBody::Function(f) => f.module(db),
+            DefWithBody::Const(_) => todo!(),
         }
     }
 
     pub fn body_source_map(self, db: &dyn HirDatabase) -> Arc<BodySourceMap> {
         match self {
             DefWithBody::Function(f) => f.body_source_map(db),
+            DefWithBody::Const(_) => todo!(),
         }
     }
 }
