@@ -203,6 +203,7 @@ impl From<ModuleDef> for Option<TypableDef> {
             ModuleDef::Struct(t) => Some(TypableDef::Struct(t)),
             ModuleDef::TypeAlias(t) => Some(TypableDef::TypeAlias(t)),
             ModuleDef::Module(_) => None,
+            ModuleDef::Const(_) => todo!(),
         }
     }
 }

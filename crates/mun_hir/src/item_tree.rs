@@ -118,6 +118,7 @@ struct ItemTreeData {
     fields: Arena<Field>,
     type_aliases: Arena<TypeAlias>,
     impls: Arena<Impl>,
+    consts: Arena<Const>,
 
     visibilities: ItemVisibilities,
 }
@@ -230,6 +231,7 @@ mod_items! {
     TypeAlias in type_aliases -> ast::TypeAliasDef,
     Import in imports -> ast::Use,
     Impl in impls -> ast::Impl,
+    Const in consts -> ast::Const,
 }
 
 macro_rules! impl_index {
@@ -334,6 +336,13 @@ impl FunctionFlags {
     pub fn is_extern(self) -> bool {
         self.contains(Self::IS_EXTERN)
     }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Const {
+    pub name: Name,
+    pub visibility: RawVisibilityId,
+    pub ast_id: FileAstId<ast::Const>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -530,6 +539,7 @@ mod diagnostics {
                         )
                     }
                     ModItem::Impl(_) => unreachable!("impls cannot be duplicated"),
+                    ModItem::Const(_item) => todo!(),
                 }
             }
 

@@ -93,6 +93,7 @@ pub enum SyntaxKind {
     NEVER_KW,
     PUB_KW,
     TYPE_KW,
+    CONST_KW,
     PACKAGE_KW,
     SUPER_KW,
     SELF_KW,
@@ -109,6 +110,7 @@ pub enum SyntaxKind {
     GC_KW,
     VALUE_KW,
     SOURCE_FILE,
+    CONST,
     FUNCTION_DEF,
     EXTERN,
     RET_TYPE,
@@ -377,6 +379,9 @@ macro_rules! T {
     (type) => {
         $crate::SyntaxKind::TYPE_KW
     };
+    (const) => {
+        $crate::SyntaxKind::CONST_KW
+    };
     (package) => {
         $crate::SyntaxKind::PACKAGE_KW
     };
@@ -433,6 +438,7 @@ impl SyntaxKind {
         | NEVER_KW
         | PUB_KW
         | TYPE_KW
+        | CONST_KW
         | PACKAGE_KW
         | SUPER_KW
         | SELF_KW
@@ -575,6 +581,7 @@ impl SyntaxKind {
             NEVER_KW => &SyntaxInfo { name: "NEVER_KW" },
             PUB_KW => &SyntaxInfo { name: "PUB_KW" },
             TYPE_KW => &SyntaxInfo { name: "TYPE_KW" },
+            CONST_KW => &SyntaxInfo { name: "CONST_KW" },
             PACKAGE_KW => &SyntaxInfo { name: "PACKAGE_KW" },
             SUPER_KW => &SyntaxInfo { name: "SUPER_KW" },
             SELF_KW => &SyntaxInfo { name: "SELF_KW" },
@@ -591,6 +598,7 @@ impl SyntaxKind {
             GC_KW => &SyntaxInfo { name: "GC_KW" },
             VALUE_KW => &SyntaxInfo { name: "VALUE_KW" },
             SOURCE_FILE => &SyntaxInfo { name: "SOURCE_FILE" },
+            CONST => &SyntaxInfo { name: "CONST" },
             FUNCTION_DEF => &SyntaxInfo { name: "FUNCTION_DEF" },
             EXTERN => &SyntaxInfo { name: "EXTERN" },
             RET_TYPE => &SyntaxInfo { name: "RET_TYPE" },
@@ -674,6 +682,7 @@ impl SyntaxKind {
             "never" => NEVER_KW,
             "pub" => PUB_KW,
             "type" => TYPE_KW,
+            "const" => CONST_KW,
             "package" => PACKAGE_KW,
             "super" => SUPER_KW,
             "self" => SELF_KW,

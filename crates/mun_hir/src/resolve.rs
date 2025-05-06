@@ -6,8 +6,8 @@ use crate::{
     expr::{scope::LocalScopeId, PatId},
     has_module::HasModule,
     ids::{
-        DefWithBodyId, FunctionId, ImplId, ItemContainerId, ItemDefinitionId, Lookup, StructId,
-        TypeAliasId,
+        ConstId, DefWithBodyId, FunctionId, ImplId, ItemContainerId, ItemDefinitionId, Lookup,
+        StructId, TypeAliasId,
     },
     item_scope::BUILTIN_SCOPE,
     name,
@@ -56,6 +56,7 @@ pub enum ValueNs {
     ImplSelf(ImplId),
     LocalBinding(PatId),
     FunctionId(FunctionId),
+    ConstId(ConstId),
     StructId(StructId),
 }
 
@@ -173,6 +174,7 @@ impl Resolver {
             let (res, vis) = match per_ns.take_values()? {
                 (ItemDefinitionId::FunctionId(id), vis) => (ValueNs::FunctionId(id), vis),
                 (ItemDefinitionId::StructId(id), vis) => (ValueNs::StructId(id), vis),
+                (ItemDefinitionId::ConstId(id), vis) => (ValueNs::ConstId(id), vis),
                 (
                     ItemDefinitionId::ModuleId(_)
                     | ItemDefinitionId::TypeAliasId(_)
@@ -236,7 +238,9 @@ impl Resolver {
                                     TypeNs::PrimitiveType(id)
                                 }
                                 (
-                                    ItemDefinitionId::ModuleId(_) | ItemDefinitionId::FunctionId(_),
+                                    ItemDefinitionId::ModuleId(_)
+                                    | ItemDefinitionId::FunctionId(_)
+                                    | ItemDefinitionId::ConstId(_),
                                     _,
                                 ) => return None,
                             };
@@ -277,7 +281,12 @@ impl Resolver {
                 (ItemDefinitionId::StructId(id), vis) => (TypeNs::StructId(id), vis),
                 (ItemDefinitionId::TypeAliasId(id), vis) => (TypeNs::TypeAliasId(id), vis),
                 (ItemDefinitionId::PrimitiveType(id), vis) => (TypeNs::PrimitiveType(id), vis),
-                (ItemDefinitionId::ModuleId(_) | ItemDefinitionId::FunctionId(_), _) => {
+                (
+                    ItemDefinitionId::ModuleId(_)
+                    | ItemDefinitionId::FunctionId(_)
+                    | ItemDefinitionId::ConstId(_),
+                    _,
+                ) => {
                     return None;
                 }
             };
@@ -437,6 +446,7 @@ impl HasResolver for DefWithBodyId {
     fn resolver(self, db: &dyn DefDatabase) -> Resolver {
         match self {
             DefWithBodyId::FunctionId(f) => f.resolver(db),
+            DefWithBodyId::ConstId(_const_id) => todo!(),
         }
     }
 }

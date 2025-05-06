@@ -587,6 +587,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             }
             ValueNs::StructId(_) => self.gen_unit_struct_lit(expr),
             ValueNs::FunctionId(_) => panic!("unable to generate path expression from a function"),
+            ValueNs::ConstId(_const_id) => todo!(),
         }
     }
 
@@ -624,7 +625,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 .pat_to_local
                 .get(&pat)
                 .expect("unresolved local binding"),
-            ValueNs::FunctionId(_) | ValueNs::StructId(_) => {
+            ValueNs::FunctionId(_) | ValueNs::StructId(_) | ValueNs::ConstId(_) => {
                 panic!("no support for module definitions")
             }
         }

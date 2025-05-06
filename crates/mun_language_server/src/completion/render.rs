@@ -57,7 +57,7 @@ impl<'a> Render<'a> {
         local_name: String,
         resolution: &ScopeDef,
     ) -> Option<CompletionItem> {
-        use mun_hir::ModuleDef::{Function, Module, PrimitiveType, Struct, TypeAlias};
+        use mun_hir::ModuleDef::{Const, Function, Module, PrimitiveType, Struct, TypeAlias};
 
         let kind = match resolution {
             ScopeDef::ModuleDef(Module(_)) => CompletionItemKind::SymbolKind(SymbolKind::Module),
@@ -65,6 +65,7 @@ impl<'a> Render<'a> {
                 return render_fn(self.ctx, Some(local_name), *func)
             }
             ScopeDef::ModuleDef(PrimitiveType(_)) => CompletionItemKind::BuiltinType,
+            ScopeDef::ModuleDef(Const(_)) => CompletionItemKind::SymbolKind(SymbolKind::Const),
             ScopeDef::ModuleDef(Struct(_)) => CompletionItemKind::SymbolKind(SymbolKind::Struct),
             ScopeDef::ModuleDef(TypeAlias(_)) => {
                 CompletionItemKind::SymbolKind(SymbolKind::TypeAlias)
@@ -100,7 +101,10 @@ impl<'a> Render<'a> {
             ScopeDef::ImplSelfType(imp) => set_item_relevance(imp.self_ty(self.ctx.db())),
             ScopeDef::Unknown
             | ScopeDef::ModuleDef(
-                ModuleDef::Module(_) | ModuleDef::Function(_) | ModuleDef::TypeAlias(_),
+                ModuleDef::Module(_)
+                | ModuleDef::Function(_)
+                | ModuleDef::TypeAlias(_)
+                | ModuleDef::Const(_),
             ) => (),
         }
 
