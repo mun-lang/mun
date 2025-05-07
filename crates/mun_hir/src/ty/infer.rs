@@ -156,6 +156,13 @@ enum ActiveLoop {
     For,
 }
 
+#[derive(Clone, Debug)]
+pub(super) struct Cast {
+    expr: ExprId,
+    source_expr: ExprId,
+    cast_ty: Ty,
+}
+
 /// The inference context contains all information needed during type inference.
 struct InferenceResultBuilder<'a> {
     db: &'a dyn HirDatabase,
@@ -180,6 +187,8 @@ struct InferenceResultBuilder<'a> {
 
     /// Stores the resolution of method calls
     method_resolution: FxHashMap<ExprId, FunctionId>,
+
+    deferred_cast: Vec<Cast>,
 }
 
 impl<'a> InferenceResultBuilder<'a> {
@@ -197,6 +206,7 @@ impl<'a> InferenceResultBuilder<'a> {
             resolver,
             return_ty: TyKind::Unknown.intern(), // set in collect_fn_signature
             method_resolution: FxHashMap::default(),
+            deferred_cast: Vec::default(),
         }
     }
 
@@ -378,6 +388,18 @@ impl InferenceResultBuilder<'_> {
                 }
                 _ => error_type(),
             },
+            Expr::Cast { expr, type_ref } => {
+                let cast_ty = self.resolve_type(*type_ref);
+                let _expr_ty = self.infer_expr(*expr, &Expectation::none());
+
+                self.deferred_cast.push(Cast {
+                    expr: tgt_expr,
+                    source_expr: *expr,
+                    cast_ty: cast_ty.clone(),
+                });
+
+                cast_ty
+            }
             Expr::Block { statements, tail } => self.infer_block(statements, *tail, expected),
             Expr::Call { callee: call, args } => self.infer_call(tgt_expr, *call, args, expected),
             Expr::MethodCall {
@@ -1001,6 +1023,7 @@ impl InferenceResultBuilder<'_> {
     fn resolve_all(mut self) -> InferenceResult {
         // FIXME resolve obligations as well (use Guidance if necessary)
         //let mut tv_stack = Vec::new();
+
         let mut expr_types = std::mem::take(&mut self.type_of_expr);
         for (expr, ty) in expr_types.iter_mut() {
             let was_unknown = ty.is_unknown();
@@ -1019,6 +1042,25 @@ impl InferenceResultBuilder<'_> {
             }
             *ty = resolved;
         }
+
+        for cast in self.deferred_cast {
+            let expr_ty = &expr_types[cast.expr];
+
+            match (expr_ty.interned(), cast.cast_ty.interned()) {
+                (_, TyKind::Bool) => {
+                    self.diagnostics.push(InferenceDiagnostic::InvalidCast {
+                        expr: cast.source_expr,
+                        error: diagnostics::CastError::CastToBool,
+                        expr_ty: expr_ty.clone(),
+                        cast_ty: cast.cast_ty,
+                    });
+                }
+                (TyKind::Bool, TyKind::Int(_))
+                | (TyKind::Int(_) | TyKind::Float(_), TyKind::Int(_) | TyKind::Float(_)) => {}
+                (_, _) => {}
+            }
+        }
+
         InferenceResult {
             //            field_resolutions: self.field_resolutions,
             //            variant_resolutions: self.variant_resolutions,
@@ -1265,6 +1307,11 @@ mod diagnostics {
         ExprId, Function, HirDatabase, IntTy, Name, Ty,
     };
 
+    #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+    pub enum CastError {
+        CastToBool,
+    }
+
     #[derive(Debug, PartialEq, Eq, Clone)]
     pub(crate) enum InferenceDiagnostic {
         UnresolvedValue {
@@ -1279,6 +1326,12 @@ mod diagnostics {
         ExpectedFunction {
             id: ExprId,
             found: Ty,
+        },
+        InvalidCast {
+            expr: ExprId,
+            error: CastError,
+            expr_ty: Ty,
+            cast_ty: Ty,
         },
         ParameterCountMismatch {
             id: ExprId,
@@ -1731,6 +1784,12 @@ mod diagnostics {
                         .either(|it| it.syntax_node_ptr(), |it| it.syntax_node_ptr());
                     sink.push(PrivateAccess { file, expr });
                 }
+                InferenceDiagnostic::InvalidCast {
+                    expr: _,
+                    error: _,
+                    expr_ty: _,
+                    cast_ty: _,
+                } => todo!(),
             }
         }
     }
