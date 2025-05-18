@@ -527,7 +527,7 @@ dependencies = [
 [[package]]
 name = "c_codegen"
 version = "0.1.0"
-source = "git+https://github.com/Wodann/c-codegen-rs?rev=15652cb#15652cb8f628f74608da41d1864d967a2e54eba2"
+source = "git+https://github.com/Wodann/c-codegen-rs?rev=9a85273#9a8527386ccf75dfd6cae9c2a11ac6f52d019d1f"
 dependencies = [
  "anyhow",
  "pretty",
