@@ -1,7 +1,7 @@
 use std::{collections::HashMap, io, path::PathBuf, sync::Arc};
 
 use mun_codegen::CodeGenDatabase;
-use mun_codegen_c::{CCodegenDatabase, HeaderAndSourceFiles};
+use mun_codegen_c::CCodegenDatabase;
 use mun_diagnostics_output::{emit_diagnostics_to_string, DisplayColor};
 use mun_hir::{Module, Upcast};
 use mun_hir_input::{FileId, Fixture, PackageSet, SourceDatabase as _, SourceRoot, SourceRootId};
@@ -10,12 +10,11 @@ use mun_paths::{RelativePath, RelativePathBuf};
 use super::{config::Config, db::CompilerDatabase};
 
 pub const WORKSPACE: SourceRootId = SourceRootId(0);
-pub const HEADER_EXTENSION: &str = "h";
 pub const SOURCE_EXTENSION: &str = "c";
 
 pub struct TranspiledFile {
     pub module_path: RelativePathBuf,
-    pub transpiled: Arc<HeaderAndSourceFiles>,
+    pub transpiled: String,
 }
 
 pub struct Driver {
@@ -117,9 +116,7 @@ impl Driver {
         (driver, file_id)
     }
 
-    pub fn transpile_all_packages(
-        &mut self,
-    ) -> anyhow::Result<HashMap<RelativePathBuf, Arc<HeaderAndSourceFiles>>> {
+    pub fn transpile_all_packages(&mut self) -> anyhow::Result<HashMap<RelativePathBuf, String>> {
         let packages = mun_hir::Package::all(self.db.upcast());
         let mut units = HashMap::with_capacity(packages.len());
 
@@ -174,12 +171,9 @@ impl Driver {
         } = self.transpile_module(module);
 
         let output_path = module_path.to_path(&self.out_dir);
-
-        let header_file = output_path.with_extension(HEADER_EXTENSION);
         let source_file = output_path.with_extension(SOURCE_EXTENSION);
 
-        std::fs::write(header_file, &transpiled.header)?;
-        std::fs::write(source_file, &transpiled.source)?;
+        std::fs::write(source_file, transpiled)?;
 
         Ok(())
     }

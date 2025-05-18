@@ -9,16 +9,12 @@ macro_rules! assert_snapshot_of_transpiled_fixture(
         let formatted = transpiled
             .into_iter()
             .map(|(module_path, transpiled)| {
-                let header_file = module_path.with_extension(crate::integration::driver::HEADER_EXTENSION);
                 let source_file = module_path.with_extension(crate::integration::driver::SOURCE_EXTENSION);
 
                 format!("\
-//- {header_file}\n\
-{}\
-\n\
 //- {source_file}\n\
 {}",
-                transpiled.header, transpiled.source)
+                transpiled)
     })
             .join("\n\n");
 
