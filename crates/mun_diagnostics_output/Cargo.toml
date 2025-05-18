@@ -20,3 +20,6 @@ mun_hir_input = { version = "0.6.0-dev", path = "../mun_hir_input" }
 mun_hir = { version = "0.6.0-dev", path = "../mun_hir" }
 mun_paths = { version = "0.6.0-dev", path = "../mun_paths" }
 mun_syntax = { version = "0.6.0-dev", path = "../mun_syntax" }
+
+[target."cfg(target_os=\"windows\")".dependencies]
+yansi-term = { workspace = true }

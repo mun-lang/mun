@@ -2493,6 +2493,7 @@ dependencies = [
  "mun_hir_input",
  "mun_paths",
  "mun_syntax",
+ "yansi-term",
 ]
 
 [[package]]
