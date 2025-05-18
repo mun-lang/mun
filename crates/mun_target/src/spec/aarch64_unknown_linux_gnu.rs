@@ -1,4 +1,4 @@
-use crate::spec::{Target, TargetOptions};
+use crate::spec::{Target};
 
 pub fn target() -> Target {
     Target {
