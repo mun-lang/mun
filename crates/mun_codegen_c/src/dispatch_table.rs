@@ -1,5 +1,4 @@
 use c_codegen::{
-    identifier,
     operator::{ArraySubscript, PrefixOperator, PrefixOperatorKind},
     r#type::{member::Member, structure::Struct, InitializerList},
     variable, Expression, Identifier, Value, Variable,
@@ -8,7 +7,7 @@ use itertools::Either;
 use mun_codegen::{DispatchTable, Intrinsic, ModuleGroup};
 use mun_hir::HirDatabase;
 
-use crate::{function, identifier::generate_function_name};
+use crate::{function, identifier::full_name_to_identifier};
 
 const GLOBAL_DISPATCH_TABLE_NAME: &str = "g_dispatchTable";
 
@@ -30,17 +29,18 @@ pub fn generate_initialization(
         .map(|function| {
             let ty = match &function.mun_hir {
                 Either::Left(function) => function::generate_pointer_type(
+                    db,
                     function.params(db).iter().map(mun_hir::Param::ty),
                     &function.ret_type(db),
                 ),
                 Either::Right(fn_sig) => {
-                    function::generate_pointer_type(fn_sig.params().iter(), fn_sig.ret())
+                    function::generate_pointer_type(db, fn_sig.params().iter(), fn_sig.ret())
                 }
             };
 
             let member = Member {
                 ty,
-                name: generate_function_name(&function.prototype.name),
+                name: full_name_to_identifier(&function.prototype.name),
                 bit_field_size: None,
             };
 
@@ -53,7 +53,7 @@ pub fn generate_initialization(
                     let function_name = function.name(db);
 
                     PrefixOperator {
-                        operand: generate_function_name(&function_name.to_string()).into(),
+                        operand: full_name_to_identifier(&function_name.to_string()).into(),
                         operator: PrefixOperatorKind::Address,
                     }
                     .into()

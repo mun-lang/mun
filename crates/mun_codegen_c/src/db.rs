@@ -1,5 +1,4 @@
-use std::sync::Arc;
-use c_codegen::{function, identifier};
+use c_codegen::identifier;
 use mun_codegen::{CodeGenDatabase, ModuleGroupId};
 use mun_hir::Upcast;
 

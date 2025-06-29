@@ -1,12 +1,14 @@
 use c_codegen::{
-    r#type::{OpaqueType, Pointer, Real, StrongInt},
+    r#type::{structure::Struct, OpaqueType, Pointer, Real, StrongInt},
     ConcreteType,
 };
-use mun_hir::{FloatBitness, IntBitness, Signedness, TyKind};
+use mun_hir::{FloatBitness, HirDatabase, IntBitness, Signedness, StructMemoryKind, TyKind};
 
-pub fn generate(ty: &mun_hir::Ty) -> ConcreteType {
+use crate::identifier::full_name_to_identifier;
+
+pub fn generate(db: &dyn HirDatabase, ty: &mun_hir::Ty) -> ConcreteType {
     match ty.interned() {
-        TyKind::Struct(_) => unimplemented!(),
+        TyKind::Struct(structure) => generate_struct_reference(db, structure),
         TyKind::Float(float_ty) => generate_float(float_ty),
         TyKind::Int(int_ty) => generate_int(int_ty),
         TyKind::Bool => unimplemented!(),
@@ -17,7 +19,7 @@ pub fn generate(ty: &mun_hir::Ty) -> ConcreteType {
         TyKind::Never => unimplemented!(),
         TyKind::FnDef(callable_def, substitution) => unimplemented!(),
         TyKind::Array(ty) => unimplemented!(),
-        TyKind::RawPtr(pointer_ty) => generate_pointer(pointer_ty),
+        TyKind::RawPtr(pointer_ty) => generate_pointer(db, pointer_ty),
         TyKind::Unknown => unimplemented!(),
     }
 }
@@ -46,10 +48,40 @@ fn generate_int(int_ty: &mun_hir::IntTy) -> ConcreteType {
     }
 }
 
-fn generate_pointer(pointer_ty: &mun_hir::PointerTy) -> ConcreteType {
+fn generate_pointer(db: &dyn HirDatabase, pointer_ty: &mun_hir::PointerTy) -> ConcreteType {
     Pointer {
-        pointer_ty: OpaqueType::ConcreteType(generate(&pointer_ty.pointee_ty)),
+        pointer_ty: OpaqueType::ConcreteType(generate(db, &pointer_ty.pointee_ty)),
         is_const: pointer_ty.mutability.is_const(),
     }
     .into()
+}
+
+/// Returns the type of the struct that should be used for variables.
+/// Depending on the memory type of the struct this is either a pointer
+/// to a `GCHandle` which holds a pointer to a struct, or, in case of a
+/// value struct, the struct type itself. Returns the type of the struct
+/// that should be used for variables.
+fn generate_struct_reference(db: &dyn HirDatabase, structure: &mun_hir::Struct) -> ConcreteType {
+    let struct_ty = Struct::Tag {
+        name: full_name_to_identifier(&structure.full_name(db)),
+    };
+
+    match structure.data(db.upcast()).memory_kind {
+        // GC values are pointers to pointers
+        // struct Foo {}
+        // Foo**
+        StructMemoryKind::Gc => Pointer {
+            pointer_ty: OpaqueType::ConcreteType(
+                Pointer {
+                    pointer_ty: struct_ty.into(),
+                    is_const: false,
+                }
+                .into(),
+            ),
+            is_const: false,
+        }
+        .into(),
+        // Value structs are passed as values
+        StructMemoryKind::Value => struct_ty.into(),
+    }
 }

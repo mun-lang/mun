@@ -1,10 +1,9 @@
 use c_codegen::{statement::Include, CFileBuilder};
-use itertools::Itertools;
 use mun_codegen::{FileGroupData, ModuleGroup, ModuleGroupId};
 use mun_hir::{HirDatabase, ModuleDef};
 
-use crate::{db::CCodegenDatabase, dispatch_table, type_table};
 use crate::signatures::function_signature;
+use crate::{db::CCodegenDatabase, dispatch_table, type_table};
 
 /// The context used during C code generation.
 pub struct CCodegenContext<'database> {
@@ -17,11 +16,7 @@ pub(crate) fn build_c_files(db: &dyn CCodegenDatabase, module_group_id: ModuleGr
     let module_group = &module_partition[module_group_id];
 
     let file_group_data = db.file_group(module_group_id);
-
-    let source =
-        generate_source(db, module_group, &file_group_data).expect("Invalid source code");
-
-    source
+    generate_source(db, module_group, &file_group_data).expect("Invalid source code")
 }
 
 fn generate_source(
@@ -46,17 +41,22 @@ fn generate_source(
         .filter_map(|decl| match decl {
             ModuleDef::Function(fun) => Some(fun),
             _ => None,
-        }).collect::<Vec<_>>();
+        })
+        .collect::<Vec<_>>();
 
     let mut builder = CFileBuilder::default();
 
     // Generate function declarations of all the functions in the module group.
-    for &function in &local_functions {
-        builder.add_statement(function_signature(db, function));
+    for function in &local_functions {
+        builder.add_statement(function_signature(db, *function));
     }
 
+    // Generate function definitions for all the functions in the module group.
+    for function in &local_functions {}
+
     // Generate the dispatch table
-    let dispatch_table = dispatch_table::generate_initialization(module_group, dispatch_table, db.upcast());
+    let dispatch_table =
+        dispatch_table::generate_initialization(module_group, dispatch_table, db.upcast());
     builder.add_statement(dispatch_table);
 
     // Generate the type table

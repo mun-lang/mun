@@ -17,3 +17,22 @@ fn bar() -> i32 { 5 }
 pub fn foo() -> i32 { super::bar() }", @""
     );
 }
+
+#[test]
+fn structure() {
+    assert_snapshot_of_transpiled_fixture!("\
+//- /src/mod.mun
+pub fn main() -> i32 { foo::foo().x + bar() }
+
+fn bar() -> i32 { 5 }
+
+//- /src/foo.mun
+pub struct Foo {
+    pub x: i32,
+}
+
+pub fn foo() -> Foo {
+    Foo { x: 1 }
+}", @""
+    );
+}

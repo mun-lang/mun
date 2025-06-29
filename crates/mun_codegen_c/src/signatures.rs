@@ -1,7 +1,7 @@
+use crate::identifier::full_name_to_identifier;
 use crate::CCodegenDatabase;
-use c_codegen::{function, identifier};
 use c_codegen::r#type::Function;
-use crate::identifier::generate_function_name;
+use c_codegen::{function, identifier};
 
 /// Returns the identifier used in the C code for the given function.
 ///
@@ -11,7 +11,7 @@ pub fn function_identifier(
     fun: mun_hir::Function,
 ) -> identifier::Identifier {
     let function_name = fun.full_name(db.upcast());
-    generate_function_name(&function_name)
+    full_name_to_identifier(&function_name)
 }
 
 /// Generates the function signature for the given function.
@@ -26,14 +26,17 @@ pub fn function_signature(
         is_static: false,
         name: db.function_identifier(fun),
         ty: Function {
-            parameters: arg_tys.into_iter().map(|param| {
-                let arg_ty = crate::ty::generate(param.ty());
-                function::FunctionParameter {
-                    ty: arg_ty,
-                    name: None, // Don't generate a name for arguments in the signature
-                }
-            }).collect(),
-            return_ty: crate::ty::generate(&return_ty),
+            parameters: arg_tys
+                .into_iter()
+                .map(|param| {
+                    let arg_ty = crate::ty::generate(db.upcast(), param.ty());
+                    function::FunctionParameter {
+                        ty: arg_ty,
+                        name: None, // Don't generate a name for arguments in the signature
+                    }
+                })
+                .collect(),
+            return_ty: crate::ty::generate(db.upcast(), &return_ty),
         },
     }
 }
