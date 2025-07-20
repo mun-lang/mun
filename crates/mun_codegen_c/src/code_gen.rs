@@ -1,7 +1,6 @@
 use c_codegen::CFileBuilder;
 use mun_codegen::{FileGroupData, ModuleGroup, ModuleGroupId};
 use mun_hir::{ModuleDef, StructMemoryKind};
-use mun_syntax::ast::StructKind;
 
 use crate::signatures::function_signature;
 use crate::structure;
@@ -47,28 +46,27 @@ fn generate_source(
         .collect::<Vec<_>>();
 
     // Collect all the structs defined in the module group.
-    let local_structs = module_group
+    let (local_gc_structs, local_value_structs) = module_group
         .iter()
         .flat_map(|module| module.declarations(db.upcast()))
         .filter_map(|decl| match decl {
             ModuleDef::Struct(s) => Some(s),
             _ => None,
         })
-        .collect::<Vec<_>>();
+        .partition::<Vec<_>, _>(|structure| {
+            structure.data(db.upcast()).memory_kind == StructMemoryKind::Gc
+        });
 
     let mut builder = CFileBuilder::default();
 
-    for structure in &local_structs {
-        match structure.data(db.upcast()).memory_kind {
-            StructMemoryKind::Gc => {
-                // Generate GC struct declarations that can be used as pointers in function declarations.
-                builder.add_statement(structure::declaration(db.upcast(), *structure));
-            }
-            StructMemoryKind::Value => {
-                // Generate value struct definitions that can be used as values in function declarations.
-                builder.add_statement(structure::definition(db.upcast(), *structure));
-            }
-        }
+    // Generate GC struct declarations that can be used as pointers in function and value struct declarations.
+    for structure in &local_gc_structs {
+        builder.add_statement(structure::declaration(db.upcast(), *structure));
+    }
+
+    // Generate value struct definitions that can be used as values in function declarations.
+    for structure in &local_value_structs {
+        builder.add_statement(structure::definition(db.upcast(), *structure));
     }
 
     // Generate function declarations of all the functions in the module group.
@@ -77,10 +75,8 @@ fn generate_source(
     }
 
     // Generate GC struct definitions that are required for the function definitions.
-    for structure in &local_structs {
-        if structure.data(db.upcast()).memory_kind == StructMemoryKind::Gc {
-            builder.add_statement(structure::definition(db.upcast(), *structure));
-        }
+    for structure in &local_gc_structs {
+        builder.add_statement(structure::definition(db.upcast(), *structure));
     }
 
     // Generate function definitions for all the functions in the module group.

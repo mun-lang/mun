@@ -23,7 +23,7 @@ use crate::{
 
 pub(crate) mod validator;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Struct {
     pub(crate) id: StructId,
 }

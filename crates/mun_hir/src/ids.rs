@@ -117,7 +117,7 @@ impl_intern!(
     lookup_intern_function
 );
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct StructId(salsa::InternId);
 
 pub(crate) type StructLoc = ItemLoc<Struct>;
