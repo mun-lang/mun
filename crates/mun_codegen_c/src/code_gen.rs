@@ -3,8 +3,8 @@ use mun_codegen::{FileGroupData, ModuleGroup, ModuleGroupId};
 use mun_hir::{ModuleDef, StructMemoryKind};
 
 use crate::signatures::function_signature;
-use crate::structure;
 use crate::{db::CCodegenDatabase, dispatch_table, type_table};
+use crate::{function, structure};
 
 /// The context used during C code generation.
 pub struct CCodegenContext<'database> {
@@ -80,7 +80,9 @@ fn generate_source(
     }
 
     // Generate function definitions for all the functions in the module group.
-    for function in &local_functions {}
+    for function in &local_functions {
+        builder.add_statement(function::generate_definition(db, *function));
+    }
 
     // Generate the dispatch table
     let dispatch_table =

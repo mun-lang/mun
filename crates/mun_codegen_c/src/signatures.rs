@@ -1,3 +1,4 @@
+use crate::function::generate_parameters;
 use crate::identifier::full_name_to_identifier;
 use crate::CCodegenDatabase;
 use c_codegen::r#type::Function;
@@ -20,22 +21,15 @@ pub fn function_signature(
     fun: mun_hir::Function,
 ) -> function::Declaration {
     let return_ty = fun.ret_type(db.upcast());
-    let arg_tys = fun.params(db.upcast());
+
+    // Don't generate a name for arguments in the signature
+    let parameters = generate_parameters(db.upcast(), fun, false);
 
     function::Declaration {
         is_static: false,
         name: db.function_identifier(fun),
         ty: Function {
-            parameters: arg_tys
-                .into_iter()
-                .map(|param| {
-                    let arg_ty = crate::ty::generate(db.upcast(), param.ty());
-                    function::FunctionParameter {
-                        ty: arg_ty,
-                        name: None, // Don't generate a name for arguments in the signature
-                    }
-                })
-                .collect(),
+            parameters,
             return_ty: crate::ty::generate(db.upcast(), &return_ty),
         },
     }
