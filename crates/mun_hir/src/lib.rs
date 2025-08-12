@@ -22,8 +22,9 @@ pub use crate::{
     diagnostics::{Diagnostic, DiagnosticSink},
     display::HirDisplay,
     expr::{
-        ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, ExprScopes, Literal, LogicOp, Ordering, Pat,
-        PatId, RecordLitField, Statement, UnaryOp,
+        ArithOp, BinaryOp, Body, CmpOp, Expr, ExprId, ExprScopes, Literal, LiteralFloat,
+        LiteralFloatKind, LiteralInt, LiteralIntKind, LogicOp, Ordering, Pat, PatId,
+        RecordLitField, Statement, UnaryOp,
     },
     ids::{AssocItemId, ItemLoc},
     in_file::InFile,
