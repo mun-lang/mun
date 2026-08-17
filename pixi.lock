@@ -76,6 +76,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       osx-64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.7.22-hbd8a1cb_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/macosx_deployment_target_osx-64-15.5-h6502127_7.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/rust-std-x86_64-apple-darwin-1.86.0-h38e4360_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/bzip2-1.0.8-h374f1ed_10.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/c-ares-1.34.8-ha3d0635_1.conda
@@ -110,6 +111,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-hbc1a06c_7.conda
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.7.22-hbd8a1cb_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/macosx_deployment_target_osx-arm64-15.5-hc5fe401_7.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/rust-std-aarch64-apple-darwin-1.86.0-hf6ec828_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/bzip2-1.0.8-h4e30115_10.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/c-ares-1.34.8-h1a92334_1.conda
@@ -815,6 +817,26 @@ packages:
   run_exports: {}
   size: 22519609
   timestamp: 1785375386152
+- conda: https://conda.anaconda.org/conda-forge/noarch/macosx_deployment_target_osx-64-15.5-h6502127_7.conda
+  sha256: 0ef9d542b3d5c697277b671fdb97ad87d8c8390192ff1716a174c20e4f0cbc8d
+  md5: 48e0efe8e8c51f37eae06350e8736e52
+  license: BSD-3-Clause
+  license_family: BSD
+  run_exports:
+    strong:
+    - __osx >=15.5
+  size: 4954
+  timestamp: 1771434196652
+- conda: https://conda.anaconda.org/conda-forge/noarch/macosx_deployment_target_osx-arm64-15.5-hc5fe401_7.conda
+  sha256: 2b0da45a6e7dcd073e1bcb75c08d44573b96e8b90484729adaaa3eede1d5eae8
+  md5: de73789a1dc5215e0f397876ee7ddff3
+  license: BSD-3-Clause
+  license_family: BSD
+  run_exports:
+    strong:
+    - __osx >=15.5
+  size: 4985
+  timestamp: 1771434184428
 - conda: https://conda.anaconda.org/conda-forge/noarch/rust-std-aarch64-apple-darwin-1.86.0-hf6ec828_0.conda
   sha256: 13ece700416fd30628019ee589b8de01a66991c2ff583e876057309cd4a0b59a
   md5: e1a76ff63763cf04e06eca94978b9dd0

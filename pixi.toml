@@ -16,6 +16,12 @@ mdbook = "0.4.43.*"
 cargo-llvm-cov = "0.6.15.*"
 cargo-nextest = "0.9.78.*"
 
+[target.osx-64.dependencies]
+macosx_deployment_target_osx-64 = "15.5.*"
+
+[target.osx-arm64.dependencies]
+macosx_deployment_target_osx-arm64 = "15.5.*"
+
 [tasks]
 build = "cargo build --workspace"
 build-capi = "cargo build -p mun -p mun_runtime_capi"
