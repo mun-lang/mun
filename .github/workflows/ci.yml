@@ -229,15 +229,10 @@ jobs:
           cache: true
           frozen: true
 
-      - name: Install nightly rustfmt
-        uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: rustfmt
-
       - uses: Swatinem/rust-cache@v2
 
       - name: Run cargo fmt
-        run: rustup run nightly cargo fmt --all -- --check
+        run: pixi run -e nightly format-check
 
       - name: Run cargo clippy
         run: pixi run clippy
