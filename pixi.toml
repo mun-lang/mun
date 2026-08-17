@@ -6,9 +6,11 @@ platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
 
 [dependencies]
 llvmdev = "14.*"
+lld = "14.*"
 rust = "1.86.*"
 cmake = ">=3.22"
 ninja = ">=1.10"
+zlib = ">=1.2.13"
 mdbook = "0.4.43.*"
 cargo-llvm-cov = "0.6.15.*"
 cargo-nextest = "0.9.78.*"
