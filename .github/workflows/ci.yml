@@ -47,7 +47,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-22.04", "windows-latest", "macos-15-intel"]
+        os: ["ubuntu-22.04", "windows-latest", "macos-15-intel", "macos-15"]
         include:
           - RUSTFLAGS: "-Dwarnings"
             CARGO_INCREMENTAL: 1
@@ -57,6 +57,8 @@ jobs:
             CARGO_INCREMENTAL: 0
             CARGO_TARGET_DIR: "C:\\cargo-target-dir"
           - os: "macos-15-intel"
+            RUSTFLAGS: "-Dwarnings -Clink-arg=-lclang_rt.osx"
+          - os: "macos-15"
             RUSTFLAGS: "-Dwarnings -Clink-arg=-lclang_rt.osx"
     env:
       RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
@@ -102,7 +104,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-22.04", "windows-latest", "macos-15-intel"]
+        os: ["ubuntu-22.04", "windows-latest", "macos-15-intel", "macos-15"]
         include:
           - RUSTFLAGS: "-Dwarnings"
             CARGO_INCREMENTAL: 1
@@ -110,6 +112,8 @@ jobs:
             RUSTFLAGS: "-Dwarnings"
             CARGO_INCREMENTAL: 0
           - os: "macos-15-intel"
+            RUSTFLAGS: "-Dwarnings -Clink-arg=-lclang_rt.osx"
+          - os: "macos-15"
             RUSTFLAGS: "-Dwarnings -Clink-arg=-lclang_rt.osx"
     env:
       RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
@@ -171,12 +175,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-22.04", "windows-latest", "macos-15-intel"]
+        os: ["ubuntu-22.04", "windows-latest", "macos-15-intel", "macos-15"]
         include:
           - RUSTFLAGS: "-Dwarnings"
           - os: "windows-latest"
             RUSTFLAGS: "-Dwarnings"
           - os: "macos-15-intel"
+            RUSTFLAGS: "-Dwarnings -Clink-arg=-lclang_rt.osx"
+          - os: "macos-15"
             RUSTFLAGS: "-Dwarnings -Clink-arg=-lclang_rt.osx"
     env:
       RUSTFLAGS: ${{ matrix.RUSTFLAGS }}

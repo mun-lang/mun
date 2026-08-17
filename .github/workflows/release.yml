@@ -28,6 +28,10 @@ jobs:
             dir: macos-x86_64
             artifacts: "mun libmun_runtime.dylib"
             RUSTFLAGS: "-Dwarnings -Clink-arg=-lclang_rt.osx"
+          - os: "macos-15"
+            dir: macos-aarch64
+            artifacts: "mun libmun_runtime.dylib"
+            RUSTFLAGS: "-Dwarnings -Clink-arg=-lclang_rt.osx"
     steps:
       - uses: actions/checkout@v4
         with:
