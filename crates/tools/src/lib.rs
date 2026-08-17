@@ -26,7 +26,10 @@ fn update(path: &Path, contents: &str, mode: Mode) -> Result<()> {
     }
 
     if mode == Mode::Verify {
-        let changes = difference::Changeset::new(&old_contents, &contents, "\n");
+        let changes = similar::TextDiff::from_lines(&old_contents, &contents)
+            .unified_diff()
+            .header("current", "generated")
+            .to_string();
         bail!("`{}` is not up-to-date:\n{}", path.display(), changes,);
     }
     eprintln!("updating {}", path.display());

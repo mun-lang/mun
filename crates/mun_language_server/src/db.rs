@@ -4,7 +4,7 @@ use std::panic;
 
 use mun_hir::HirDatabase;
 use mun_target::spec::Target;
-use salsa::{Database, Durability, Snapshot};
+use ra_salsa::{Database, Durability, Snapshot};
 
 use crate::cancelation::Canceled;
 
@@ -20,7 +20,7 @@ use crate::cancelation::Canceled;
 ///
 /// With this struct we can reuse a lot of functionality from the compiler which
 /// should provide a better user experience.
-#[salsa::database(
+#[ra_salsa::database(
     mun_hir_input::SourceDatabaseStorage,
     mun_hir::DefDatabaseStorage,
     mun_hir::HirDatabaseStorage,
@@ -28,13 +28,13 @@ use crate::cancelation::Canceled;
     mun_hir::InternDatabaseStorage
 )]
 pub(crate) struct AnalysisDatabase {
-    storage: salsa::Storage<Self>,
+    storage: ra_salsa::Storage<Self>,
 }
 
 impl Default for AnalysisDatabase {
     fn default() -> Self {
         let mut db = AnalysisDatabase {
-            storage: salsa::Storage::default(),
+            storage: ra_salsa::Storage::default(),
         };
         db.set_target(Target::host_target().expect("could not determine host target spec"));
         db
@@ -45,32 +45,13 @@ impl AnalysisDatabase {
     /// Triggers a simple write on the database which will cancell all
     /// outstanding snapshots.
     pub fn request_cancelation(&mut self) {
-        self.salsa_runtime_mut().synthetic_write(Durability::LOW);
+        self.synthetic_write(Durability::LOW);
     }
 }
 
-impl salsa::Database for AnalysisDatabase {
-    fn on_propagated_panic(&self) -> ! {
-        Canceled::throw()
-    }
-    fn salsa_event(&self, event: salsa::Event) {
-        match event.kind {
-            salsa::EventKind::DidValidateMemoizedValue { .. }
-            | salsa::EventKind::WillExecute { .. } => {
-                self.check_canceled();
-            }
-            salsa::EventKind::WillBlockOn { .. } => (),
-        }
-    }
-}
+impl ra_salsa::Database for AnalysisDatabase {}
 
 impl AnalysisDatabase {
-    fn check_canceled(&self) {
-        if self.salsa_runtime().is_current_revision_canceled() {
-            Canceled::throw()
-        }
-    }
-
     pub fn catch_canceled<F, T>(&self, f: F) -> Result<T, Canceled>
     where
         Self: Sized + panic::RefUnwindSafe,
@@ -78,12 +59,15 @@ impl AnalysisDatabase {
     {
         panic::catch_unwind(|| f(self)).map_err(|err| match err.downcast::<Canceled>() {
             Ok(canceled) => *canceled,
-            Err(payload) => panic::resume_unwind(payload),
+            Err(payload) => match payload.downcast::<ra_salsa::Cancelled>() {
+                Ok(_) => Canceled::new(),
+                Err(payload) => panic::resume_unwind(payload),
+            },
         })
     }
 }
 
-impl salsa::ParallelDatabase for AnalysisDatabase {
+impl ra_salsa::ParallelDatabase for AnalysisDatabase {
     fn snapshot(&self) -> Snapshot<Self> {
         Snapshot::new(AnalysisDatabase {
             storage: self.storage.snapshot(),

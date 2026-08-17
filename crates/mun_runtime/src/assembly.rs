@@ -7,7 +7,6 @@ use std::{
 };
 
 use itertools::Itertools;
-use log::error;
 use mun_abi as abi;
 use mun_libloader::{MunLibrary, TempLibrary};
 use mun_memory::{
@@ -423,9 +422,9 @@ impl Assembly {
             Assembly::link_all_functions(&dispatch_table, &type_table, functions_to_link)?;
 
             // Remove this assembly from the dependencies
-            dependencies
-                .values_mut()
-                .for_each(|dependencies| dependencies.retain(|path| path != &new_path));
+            for dependencies in dependencies.values_mut() {
+                dependencies.retain(|path| path != &new_path);
+            }
 
             // Remove assemblies that no longer have dependencies
             dependencies.retain(|_, dependencies| !dependencies.is_empty());

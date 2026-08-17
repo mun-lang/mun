@@ -17,71 +17,67 @@ categories = ["game-development"]
 
 [workspace.dependencies]
 annotate-snippets = { version = "0.10.2", default-features = false }
-anyhow = { version = "1.0.93", default-features = false }
-apple-codesign = { version = "0.29.0", default-features = false }
+anyhow = { version = "1.0.104", default-features = false }
+arwen-codesign = { version = "0.0.1-alpha.1", default-features = false }
 array-init = { version = "2.1.0", default-features = false }
-bitflags = { version = "2.6.0", default-features = false }
+bitflags = { version = "2.13.1", default-features = false }
 by_address = { version = "1.2.1", default-features = false }
-bytecount = { version = "0.6.8", default-features = false }
-bytemuck = { version = "1.20.0", default-features = false }
-cargo-husky = { version = "1", default-features = false }
-cbindgen = { version = "0.24.5", default-features = false }
-clap = { version = "4.5.21", default-features = false }
-crossbeam-channel = { version = "0.5.13", default-features = false }
-ctrlc = { version = "3.4", default-features = false }
-difference = "2.0"
+bytecount = { version = "0.6.9", default-features = false }
+bytemuck = { version = "1.25.2", default-features = false }
+cargo-husky = { version = "1.5.0", default-features = false }
+cbindgen = { version = "0.29.4", default-features = false }
+clap = { version = "4.6.6", default-features = false }
+crossbeam-channel = { version = "0.5.16", default-features = false }
+ctrlc = { version = "3.5.2", default-features = false }
 drop_bomb = { version = "0.1.5", default-features = false }
-either = { version = "1.13.0", default-features = false }
-ena = { version = "0.14", default-features = false }
-extendhash = { version = "1.0.10", default-features = false }
-heck = "0.4.1"
+either = { version = "1.17.0", default-features = false }
+enable-ansi-support = { version = "0.3.1", default-features = false }
+ena = { version = "0.14.4", default-features = false }
+heck = "0.5.0"
 inkwell = { version = "0.2.0", default-features = false }
-insta = { version = "1.41.1", default-features = false }
-itertools = { version = "0.12.1", default-features = false }
+insta = { version = "1.48.0", default-features = false }
+itertools = { version = "0.15.0", default-features = false, features = ["use_alloc"] }
 la-arena = { version = "0.3.1", default-features = false }
-lazy_static = { version = "1.5.0", default-features = false }
-libloading = { version = "0.8.6", default-features = false }
+libloading = { version = "0.9.0", default-features = false, features = ["std"] }
 lld_rs = { version = "140.0.0", default-features = false }
-lockfile = { version = "0.4.0", default-features = false }
-log = { version = "0.4.22", default-features = false }
-lsp-server = { version = "0.7.7", default-features = false }
-lsp-types = { version = "=0.95.0", default-features = false }
-mdbook = { version = "0.4.43", default-features = false }
-once_cell = { version = "1.20.2", default-features = false }
-parking_lot = { version = "0.12.3", default-features = false }
-paste = { version = "1.0.15", default-features = false }
+log = { version = "0.4.33", default-features = false }
+lsp-server = { version = "0.10.0", default-features = false }
+lsp-types = { version = "0.97.0", default-features = false }
+cthash = { version = "0.9.0", default-features = false }
+mdbook = { version = "0.4.52", default-features = false }
+parking_lot = { version = "0.12.5", default-features = false }
+pastey = { version = "0.2.3", default-features = false }
 pretty_env_logger = { version = "0.5.0", default-features = false }
-proc-macro2 = { version = "1.0", default-features = false }
-pulldown-cmark = { version = "0.9.6", default-features = false }
-quote = { version = "1.0", default-features = false }
-ra_ap_text_edit = { version = "0.0.190", default-features = false }
-relative-path = { version = "1.9", default-features = false }
-ron = "0.8.1"
-rowan = { version = "0.15.16", default-features = false }
-rustc-hash = { version = "1.1.0", default-features = false }
-salsa = { version = "0.16.1", default-features = false }
-semver = { version = "1.0", default-features = false }
-seq-macro = { version = "0.3.5", default-features = false }
-serde = { version = "1.0.215", default-features = false }
-serde_derive = { version = "1.0", default-features = false }
-serde_json = { version = "1.0", default-features = false }
-smallvec = { version = "1.13.2", default-features = false }
-smol_str = { version = "0.2.2", default-features = false }
-syn = { version = "2.0", default-features = false }
-tempdir = { version = "0.3.7", default-features = false }
-tempfile = { version = "3.14", default-features = false }
-tera = { version = "1.20.0", default-features = false }
-termcolor = { version = "1.4", default-features = false }
+proc-macro2 = { version = "1.0.107", default-features = false }
+pulldown-cmark = { version = "0.13.4", default-features = false }
+quote = { version = "1.0.47", default-features = false }
+ra_ap_text_edit = { version = "0.0.241", default-features = false }
+relative-path = { version = "2.0.1", default-features = false, features = ["alloc", "std"] }
+ron = "0.12.2"
+rowan = { version = "0.17.0", default-features = false }
+rustc-hash = { version = "2.1.3", default-features = false }
+ra_salsa = { package = "ra_ap_salsa", version = "0.0.269", default-features = false }
+semver = { version = "1.0.28", default-features = false }
+seq-macro = { version = "0.3.6", default-features = false }
+serde = { version = "1.0.229", default-features = false }
+serde_derive = { version = "1.0.229", default-features = false }
+serde_json = { version = "1.0.151", default-features = false }
+similar = { version = "3.2.0", default-features = false }
+smallvec = { version = "1.15.2", default-features = false }
+smol_str = { version = "0.3.6", default-features = false }
+syn = { version = "2.0.119", default-features = false }
+tempfile = { version = "3.27.0", default-features = false }
+tera = { version = "1.20.1", default-features = false }
 text-size = { version = "1.1.1", default-features = false }
 text_trees = { version = "0.1.2", default-features = false }
-thiserror = { version = "1.0.69", default-features = false }
+thiserror = { version = "2.0.20", default-features = false }
 threadpool = { version = "1.8.1", default-features = false }
-toml = { version = "0.8.19", default-features = false }
+toml = { version = "1.1.4", default-features = false, features = ["std", "serde", "parse"] }
+tracing = { version = "0.1.44", default-features = false, features = ["std"] }
 unicode-xid = { version = "0.2.6", default-features = false }
+url = { version = "2.5.8", default-features = false, features = ["std"] }
 walkdir = { version = "2.5.0", default-features = false }
-yansi-term = { version = "0.1.2", default-features = false }
-notify = { version = "5.2.0" }
-winapi = { version = "0.3.9", default-features = false }
+notify = { version = "8.2.0" }
 
 [profile.dev]
 rpath = true

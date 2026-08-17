@@ -1,8 +1,6 @@
 #![allow(clippy::mutable_key_type)]
 
-use std::{collections::HashMap, ptr::NonNull};
-
-use lazy_static::lazy_static;
+use std::{collections::HashMap, ptr::NonNull, sync::LazyLock};
 
 use crate::{HasStaticType, Type};
 
@@ -17,43 +15,41 @@ macro_rules! insert_cast_fn {
     }
 }
 
-lazy_static! {
-    static ref CAST_FN_TABLE: HashMap<(Type, Type), CastFn> = {
-        let mut table = HashMap::new();
-        insert_cast_fn!(table, f32, f64);
-        insert_cast_fn!(table, i8, i16);
-        insert_cast_fn!(table, i8, i32);
-        insert_cast_fn!(table, i8, i64);
-        insert_cast_fn!(table, i8, i128);
-        insert_cast_fn!(table, i16, i32);
-        insert_cast_fn!(table, i16, i64);
-        insert_cast_fn!(table, i16, i128);
-        insert_cast_fn!(table, i32, i64);
-        insert_cast_fn!(table, i32, i128);
-        insert_cast_fn!(table, i64, i128);
-        insert_cast_fn!(table, u8, i16);
-        insert_cast_fn!(table, u8, u16);
-        insert_cast_fn!(table, u8, i32);
-        insert_cast_fn!(table, u8, u32);
-        insert_cast_fn!(table, u8, i64);
-        insert_cast_fn!(table, u8, u64);
-        insert_cast_fn!(table, u8, i128);
-        insert_cast_fn!(table, u8, u128);
-        insert_cast_fn!(table, u16, i32);
-        insert_cast_fn!(table, u16, u32);
-        insert_cast_fn!(table, u16, i64);
-        insert_cast_fn!(table, u16, u64);
-        insert_cast_fn!(table, u16, i128);
-        insert_cast_fn!(table, u16, u128);
-        insert_cast_fn!(table, u32, i64);
-        insert_cast_fn!(table, u32, u64);
-        insert_cast_fn!(table, u32, i128);
-        insert_cast_fn!(table, u32, u128);
-        insert_cast_fn!(table, u64, i128);
-        insert_cast_fn!(table, u64, u128);
-        table
-    };
-}
+static CAST_FN_TABLE: LazyLock<HashMap<(Type, Type), CastFn>> = LazyLock::new(|| {
+    let mut table = HashMap::new();
+    insert_cast_fn!(table, f32, f64);
+    insert_cast_fn!(table, i8, i16);
+    insert_cast_fn!(table, i8, i32);
+    insert_cast_fn!(table, i8, i64);
+    insert_cast_fn!(table, i8, i128);
+    insert_cast_fn!(table, i16, i32);
+    insert_cast_fn!(table, i16, i64);
+    insert_cast_fn!(table, i16, i128);
+    insert_cast_fn!(table, i32, i64);
+    insert_cast_fn!(table, i32, i128);
+    insert_cast_fn!(table, i64, i128);
+    insert_cast_fn!(table, u8, i16);
+    insert_cast_fn!(table, u8, u16);
+    insert_cast_fn!(table, u8, i32);
+    insert_cast_fn!(table, u8, u32);
+    insert_cast_fn!(table, u8, i64);
+    insert_cast_fn!(table, u8, u64);
+    insert_cast_fn!(table, u8, i128);
+    insert_cast_fn!(table, u8, u128);
+    insert_cast_fn!(table, u16, i32);
+    insert_cast_fn!(table, u16, u32);
+    insert_cast_fn!(table, u16, i64);
+    insert_cast_fn!(table, u16, u64);
+    insert_cast_fn!(table, u16, i128);
+    insert_cast_fn!(table, u16, u128);
+    insert_cast_fn!(table, u32, i64);
+    insert_cast_fn!(table, u32, u64);
+    insert_cast_fn!(table, u32, i128);
+    insert_cast_fn!(table, u32, u128);
+    insert_cast_fn!(table, u64, i128);
+    insert_cast_fn!(table, u64, u128);
+    table
+});
 
 fn cast_from_to<A, B>(src: NonNull<u8>, dest: NonNull<u8>)
 where

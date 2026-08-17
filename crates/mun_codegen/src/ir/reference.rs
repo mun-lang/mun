@@ -73,7 +73,7 @@ impl<'ink> RuntimeReferenceValue<'ink> {
         // data_ptr:*const T: = *data_ptr_ptr;
         // ```
         builder
-            .build_load(self.0, &format!("{}->data", &value_name))
+            .build_load(self.0, &format!("{value_name}->data"))
             .into_pointer_value()
     }
 

@@ -16,13 +16,10 @@ license.workspace = true
 mun_abi = { version = "0.6.0-dev", path = "../mun_abi" }
 mun_capi_utils = { version = "0.6.0-dev", path = "../mun_capi_utils" }
 itertools = { workspace = true }
-lazy_static = { workspace = true }
-once_cell = { workspace = true }
 parking_lot = { workspace = true }
 rustc-hash = { workspace = true, features = ["std"] }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-mun_capi_utils = { version = "0.6.0-dev", path = "../mun_capi_utils", features = ["insta"] }
 insta = { workspace = true, features = ["ron"] }
-paste = { workspace = true }
+mun_capi_utils = { version = "0.6.0-dev", path = "../mun_capi_utils", features = ["insta"] }

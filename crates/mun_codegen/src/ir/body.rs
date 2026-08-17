@@ -1268,7 +1268,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         };
 
         // Replace previous loop info
-        let prev_loop = std::mem::replace(&mut self.active_loop, Some(loop_info));
+        let prev_loop = self.active_loop.replace(loop_info);
 
         // Start generating code inside the loop
         let value = self.gen_expr(block);
@@ -1300,16 +1300,13 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         let condition_ir = self
             .gen_expr(condition_expr)
             .map(|value| self.opt_deref_value(condition_expr, value));
-        if let Some(condition_ir) = condition_ir {
+        {
+            let condition_ir = condition_ir?;
             self.builder.build_conditional_branch(
                 condition_ir.into_int_value(),
                 loop_block,
                 exit_block,
             );
-        } else {
-            // If the condition doesn't return a value, we also immediately return without a
-            // value. This can happen if the expression is a `never` expression.
-            return None;
         }
 
         // Generate loop block

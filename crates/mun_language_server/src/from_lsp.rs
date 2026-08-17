@@ -3,7 +3,7 @@
 
 use std::convert::TryFrom;
 
-use lsp_types::Url;
+use lsp_types::Uri;
 use mun_hir_input::{FileId, LineCol, LineIndex};
 use mun_paths::AbsPathBuf;
 use mun_syntax::{TextRange, TextSize};
@@ -12,24 +12,25 @@ use crate::{state::LanguageServerSnapshot, FilePosition};
 
 /// Converts the specified `uri` to an absolute path. Returns an error if the
 /// url could not be converted to an absolute path.
-pub(crate) fn abs_path(uri: &Url) -> anyhow::Result<AbsPathBuf> {
-    uri.to_file_path()
+pub(crate) fn abs_path(uri: &Uri) -> anyhow::Result<AbsPathBuf> {
+    url::Url::parse(uri.as_str())?
+        .to_file_path()
         .ok()
         .and_then(|path| AbsPathBuf::try_from(path).ok())
-        .ok_or_else(|| anyhow::anyhow!("invalid uri: {}", uri))
+        .ok_or_else(|| anyhow::anyhow!("invalid uri: {}", uri.as_str()))
 }
 
-/// Returns the `mun_hir::FileId` associated with the given `Url`.
+/// Returns the `mun_hir::FileId` associated with the given URI.
 pub(crate) fn file_id(
     snapshot: &LanguageServerSnapshot,
-    url: &lsp_types::Url,
+    url: &lsp_types::Uri,
 ) -> anyhow::Result<FileId> {
     abs_path(url).and_then(|path| {
         snapshot
             .vfs
             .read()
             .file_id(&path)
-            .ok_or_else(|| anyhow::anyhow!("url does not refer to a file: {}", url))
+            .ok_or_else(|| anyhow::anyhow!("URI does not refer to a file: {}", url.as_str()))
             .map(|id| FileId(id.0))
     })
 }

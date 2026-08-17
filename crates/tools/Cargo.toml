@@ -8,7 +8,7 @@ edition.workspace = true
 anyhow = { workspace = true }
 cbindgen = { workspace = true }
 clap = { workspace = true, features = ["derive", "std"] }
-difference = { workspace = true }
+similar = { workspace = true, features = ["text"] }
 heck = { workspace = true }
 ron = { workspace = true }
 tera = { workspace = true }

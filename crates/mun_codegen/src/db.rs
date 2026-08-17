@@ -13,14 +13,14 @@ use crate::{AssemblyIr, ModuleGroupId, ModulePartition, TargetAssembly};
 /// high-level objects based on changes to source files. Although the code
 /// generation cache is pretty granular there is still a benefit to not having
 /// to recompile assemblies if not required.
-#[salsa::query_group(CodeGenDatabaseStorage)]
+#[ra_salsa::query_group(CodeGenDatabaseStorage)]
 pub trait CodeGenDatabase: mun_hir::HirDatabase {
     /// Set the optimization level used to generate assemblies
-    #[salsa::input]
+    #[ra_salsa::input]
     fn optimization_level(&self) -> inkwell::OptimizationLevel;
 
     /// Returns the current module partition
-    #[salsa::invoke(crate::module_partition::build_partition)]
+    #[ra_salsa::invoke(crate::module_partition::build_partition)]
     fn module_partition(&self) -> Arc<ModulePartition>;
 
     /// Returns the inkwell target machine that completely describes the code
@@ -29,11 +29,11 @@ pub trait CodeGenDatabase: mun_hir::HirDatabase {
     fn target_machine(&self) -> ByAddress<Rc<inkwell::targets::TargetMachine>>;
 
     /// Returns a file containing the IR for the specified module.
-    #[salsa::invoke(crate::assembly::build_assembly_ir)]
+    #[ra_salsa::invoke(crate::assembly::build_assembly_ir)]
     fn assembly_ir(&self, module_group: ModuleGroupId) -> Arc<AssemblyIr>;
 
     /// Returns a fully linked shared object for the specified module.
-    #[salsa::invoke(crate::assembly::build_target_assembly)]
+    #[ra_salsa::invoke(crate::assembly::build_target_assembly)]
     fn target_assembly(&self, module_group: ModuleGroupId) -> Arc<TargetAssembly>;
 }
 

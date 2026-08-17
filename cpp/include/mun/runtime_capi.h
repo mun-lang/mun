@@ -8,9 +8,9 @@
  * Types of primitives supported by Mun.
  */
 enum MunPrimitiveType
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint8_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
     MUN_PRIMITIVE_TYPE_BOOL,
     MUN_PRIMITIVE_TYPE_U8,
@@ -29,16 +29,20 @@ enum MunPrimitiveType
     MUN_PRIMITIVE_TYPE_VOID,
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum MunPrimitiveType MunPrimitiveType;
+#else
 typedef uint8_t MunPrimitiveType;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 
 /**
  * Represents the kind of memory management a struct uses.
  */
 enum MunStructMemoryKind
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint8_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
     /**
      * A garbage collected struct is allocated on the heap and uses reference
@@ -56,7 +60,11 @@ enum MunStructMemoryKind
     MUN_STRUCT_MEMORY_KIND_VALUE,
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum MunStructMemoryKind MunStructMemoryKind;
+#else
 typedef uint8_t MunStructMemoryKind;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 
 /**
@@ -207,9 +215,9 @@ typedef struct MunArrayTypeId {
  * [`TypeInfo`].
  */
 enum MunTypeId_Tag
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint8_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
     /**
      * Represents a concrete type with a specific Guid
@@ -225,7 +233,11 @@ enum MunTypeId_Tag
     MUN_TYPE_ID_ARRAY,
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum MunTypeId_Tag MunTypeId_Tag;
+#else
 typedef uint8_t MunTypeId_Tag;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 
 typedef union MunTypeId {
@@ -299,9 +311,9 @@ typedef struct MunArrayInfo {
  * An enum that defines the kind of type.
  */
 enum MunTypeKind_Tag
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint8_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
     MUN_TYPE_KIND_PRIMITIVE,
     MUN_TYPE_KIND_POINTER,
@@ -309,7 +321,11 @@ enum MunTypeKind_Tag
     MUN_TYPE_KIND_ARRAY,
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum MunTypeKind_Tag MunTypeKind_Tag;
+#else
 typedef uint8_t MunTypeKind_Tag;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 
 typedef union MunTypeKind {
@@ -880,7 +896,7 @@ struct MunErrorHandle mun_field_type(struct MunField field, struct MunType *ty);
 struct MunErrorHandle mun_field_offset(struct MunField field, uintptr_t *offset);
 
 #ifdef __cplusplus
-} // extern "C"
-#endif // __cplusplus
+}  // extern "C"
+#endif  // __cplusplus
 
-#endif /* MUN_RUNTIME_BINDINGS_H_ */
+#endif  /* MUN_RUNTIME_BINDINGS_H_ */

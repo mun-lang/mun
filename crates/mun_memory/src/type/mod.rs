@@ -25,18 +25,17 @@ use std::{
     ptr::NonNull,
     sync::{
         atomic::{AtomicUsize, Ordering},
-        Arc, OnceLock,
+        Arc, LazyLock, OnceLock,
     },
 };
 
 use itertools::izip;
 use mun_abi::{self as abi, static_type_map::StaticTypeMap};
-use once_cell::sync::Lazy;
 use parking_lot::{lock_api::MutexGuard, Mutex, RawMutex, RwLock};
 
 use crate::{type_table::TypeTable, TryFromAbiError};
 
-static GLOBAL_TYPE_STORE: Lazy<Arc<TypeDataStore>> = Lazy::new(Default::default);
+static GLOBAL_TYPE_STORE: LazyLock<Arc<TypeDataStore>> = LazyLock::new(Default::default);
 
 /// A type store holds a list of interconnected [`TypeData`]s. Type information
 /// can contain cycles so the `TypeData`s refer to each other via pointers. The
@@ -1233,7 +1232,7 @@ macro_rules! impl_primitive_type {
         $(
             impl HasStaticType for $ty {
                 fn type_info() -> &'static Type {
-                    static TYPE_INFO: once_cell::sync::OnceCell<Type> = once_cell::sync::OnceCell::new();
+                    static TYPE_INFO: OnceLock<Type> = OnceLock::new();
                     TYPE_INFO.get_or_init(|| {
                          GLOBAL_TYPE_STORE.allocate(
                              <$ty as abi::PrimitiveType>::name(),

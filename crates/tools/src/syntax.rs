@@ -37,10 +37,10 @@ fn generate_from_template(template: &Path, src: &Path, mode: Mode) -> anyhow::Re
     };
     let mut tera = create_tera();
     tera.add_raw_template("_src", &template)
-        .map_err(|e| anyhow!("template parsing error: {:?}", e))?;
+        .map_err(|e| anyhow!("template parsing error: {e:?}"))?;
     let content = tera
         .render("_src", &Context::from_serialize(src)?)
-        .map_err(|e| anyhow!("template rendering error: {:?}", e))?;
+        .map_err(|e| anyhow!("template rendering error: {e:?}"))?;
     let content = reformat(content)?;
     update(&tgt, &content, mode)
 }

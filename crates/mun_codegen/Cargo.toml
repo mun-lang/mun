@@ -15,7 +15,7 @@ license.workspace = true
 [dependencies]
 mun_abi = { version = "0.6.0-dev", path = "../mun_abi" }
 anyhow = { workspace = true, features = ["std"] }
-apple-codesign = { workspace = true }
+arwen-codesign = { workspace = true }
 array-init = { workspace = true }
 by_address = { workspace = true }
 bytemuck = { workspace = true }
@@ -25,13 +25,13 @@ inkwell = { workspace = true, features = ["llvm14-0", "target-x86", "target-aarc
 itertools = { workspace = true }
 mun_codegen_macros = { version = "0.6.0-dev", path = "../mun_codegen_macros" }
 mun_target = { version = "0.6.0-dev", path = "../mun_target" }
-once_cell = { workspace = true }
 lld_rs = { workspace = true }
 parking_lot = { workspace = true }
-paste = { workspace = true }
+pastey = { workspace = true }
 mun_paths = { version = "0.6.0-dev", path = "../mun_paths" }
 rustc-hash = { workspace = true }
-salsa = { workspace = true }
+ra_salsa = { workspace = true }
+tracing = { workspace = true }
 smallvec = { workspace = true, features = ["union"] }
 tempfile = { workspace = true }
 thiserror = { workspace = true }
@@ -41,4 +41,3 @@ mun_abi = { path = "../mun_abi", features = ["serde"] }
 insta = { workspace = true, features = ["ron"] }
 mun_libloader = { path = "../mun_libloader" }
 mun_test = { path = "../mun_test" }
-mun_runtime = { path = "../mun_runtime" }

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use mun_hir::AstDatabase;
 use mun_hir_input::{FileId, LineIndex, PackageId, SourceDatabase};
 use mun_syntax::SourceFile;
-use salsa::{ParallelDatabase, Snapshot};
+use ra_salsa::{ParallelDatabase, Snapshot};
 
 use crate::{
     cancelation::Canceled, change::AnalysisChange, completion, db::AnalysisDatabase, diagnostics,

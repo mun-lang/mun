@@ -1,7 +1,7 @@
 use std::{path::Path, sync::Arc};
 
 use anyhow::anyhow;
-use apple_codesign::{SigningSettings, UnifiedSigner};
+use arwen_codesign::{adhoc_sign_file, AdhocSignOptions};
 use inkwell::context::Context;
 use tempfile::NamedTempFile;
 
@@ -40,7 +40,7 @@ impl<'db, 'ink, 'ctx> Assembly<'db, 'ink, 'ctx> {
     pub fn write_ir_to_file(self, output_path: &Path) -> Result<(), anyhow::Error> {
         self.module
             .print_to_file(output_path)
-            .map_err(|e| anyhow!("{}", e))
+            .map_err(|e| anyhow!("{e}"))
     }
 }
 
@@ -112,9 +112,12 @@ pub(crate) fn build_target_assembly(
 
     let target = db.target();
     if target.options.is_like_osx {
-        let signer = UnifiedSigner::new(SigningSettings::default());
-        signer
-            .sign_path_in_place(file.path())
+        let identifier = file
+            .path()
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("mun");
+        adhoc_sign_file(file.path(), &AdhocSignOptions::new(identifier))
             .expect("Failed to sign shared object");
     }
 

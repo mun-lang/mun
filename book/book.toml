@@ -1,7 +1,6 @@
 [book]
 authors = ["The Mun Team <team@mun-lang.org>"]
 language = "en"
-multilingual = false
 src = "src"
 title = "The Mun Programming Language"
 

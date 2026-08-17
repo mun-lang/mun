@@ -1,7 +1,6 @@
-use std::collections::hash_map::Entry;
+use std::{collections::hash_map::Entry, sync::LazyLock};
 
 use mun_hir_input::PackageModuleId;
-use once_cell::sync::Lazy;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -61,8 +60,8 @@ pub(crate) struct AddResolutionFromImportResult {
     pub duplicate: bool,
 }
 
-pub(crate) static BUILTIN_SCOPE: Lazy<FxHashMap<Name, PerNs<(ItemDefinitionId, Visibility)>>> =
-    Lazy::new(|| {
+pub(crate) static BUILTIN_SCOPE: LazyLock<FxHashMap<Name, PerNs<(ItemDefinitionId, Visibility)>>> =
+    LazyLock::new(|| {
         PrimitiveType::ALL
             .iter()
             .map(|(name, ty)| {

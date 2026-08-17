@@ -14,7 +14,6 @@ license.workspace = true
 
 [dependencies]
 mun_abi = { version = "0.6.0-dev", path = "../mun_abi" }
-anyhow = { workspace = true, features = ["std"] }
 libloading = { workspace = true }
 tempfile = { workspace = true }
 thiserror = { workspace = true }
