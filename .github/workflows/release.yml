@@ -23,8 +23,8 @@ jobs:
           - os: "windows-latest"
             dir: windows-x86_64
             artifacts: "mun.exe mun_runtime.dll mun_runtime.dll.lib"
-            RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
-          - os: "macOS-latest"
+            RUSTFLAGS: "-Dwarnings"
+          - os: "macos-13"
             dir: macos-x86_64
             artifacts: "mun libmun_runtime.dylib"
             RUSTFLAGS: "-Dwarnings"

@@ -47,13 +47,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-22.04", "windows-latest", "macOS-latest"]
+        os: ["ubuntu-22.04", "windows-latest", "macos-13"]
         include:
           - RUSTFLAGS: "-Dwarnings"
             CARGO_INCREMENTAL: 1
             CARGO_TARGET_DIR: "target"
           - os: "windows-latest"
-            RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
+            RUSTFLAGS: "-Dwarnings"
             CARGO_INCREMENTAL: 0
             CARGO_TARGET_DIR: "C:\\cargo-target-dir"
     env:
@@ -79,6 +79,11 @@ jobs:
           cache: true
           frozen: true
 
+      - name: Install nightly rustfmt
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+
       - uses: Swatinem/rust-cache@v2
         if: matrix.os != 'windows-latest'
 
@@ -100,12 +105,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-22.04", "windows-latest", "macOS-latest"]
+        os: ["ubuntu-22.04", "windows-latest", "macos-13"]
         include:
           - RUSTFLAGS: "-Dwarnings"
             CARGO_INCREMENTAL: 1
           - os: "windows-latest"
-            RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
+            RUSTFLAGS: "-Dwarnings"
             CARGO_INCREMENTAL: 0
     env:
       RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
@@ -167,11 +172,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-22.04", "windows-latest", "macOS-latest"]
+        os: ["ubuntu-22.04", "windows-latest", "macos-13"]
         include:
           - RUSTFLAGS: "-Dwarnings"
           - os: "windows-latest"
-            RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
+            RUSTFLAGS: "-Dwarnings"
     env:
       RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
     steps:
