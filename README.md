@@ -138,21 +138,33 @@ Windows (64-bit only).
 
 ## Building from Source
 
-Make sure you have the following dependencies installed on you machine:
+### With Pixi (recommended)
 
-* [Rust](https://www.rust-lang.org/tools/install)
-* [LLVM 14](https://docs.mun-lang.org/dev/02-building-llvm.html)
-
-Clone the source code, including all submodules:
+[Pixi](https://pixi.sh) installs the pinned Rust and LLVM toolchains from
+conda-forge on Linux, macOS, and Windows. Clone the source code and run:
 
 ```bash
 git clone https://github.com/mun-lang/mun.git
+cd mun
 git submodule update --init --recursive
+pixi run build-release
 ```
 
-Use `cargo` to build a release version
+Run the test suite with `pixi run test`. The `llvmdev` package contains the
+static LLVM component libraries used by `llvm-sys`.
+
+On Windows, the MSVC linker and Windows SDK from Visual Studio Build Tools are
+still required. On macOS, install the Xcode command line tools.
+
+### With system dependencies
+
+Install [Rust](https://www.rust-lang.org/tools/install) and
+[LLVM 14](https://docs.mun-lang.org/dev/02-building-llvm.html), then run:
 
 ```bash
+git clone https://github.com/mun-lang/mun.git
+cd mun
+git submodule update --init --recursive
 cargo build --release
 ```
 
