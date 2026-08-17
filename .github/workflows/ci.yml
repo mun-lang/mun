@@ -56,9 +56,14 @@ jobs:
             RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
             CARGO_INCREMENTAL: 0
             CARGO_TARGET_DIR: "C:\\cargo-target-dir"
+          - os: "macos-15-intel"
+            MACOSX_DEPLOYMENT_TARGET: "15.5"
+            DYLD_FALLBACK_LIBRARY_PATH: "${{ github.workspace }}/.pixi/envs/default/lib"
     env:
       RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
       CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
+      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.MACOSX_DEPLOYMENT_TARGET }}
+      DYLD_FALLBACK_LIBRARY_PATH: ${{ matrix.DYLD_FALLBACK_LIBRARY_PATH }}
       # Disable generating debug info, we don't need it here anyway and its only using disk space
       CARGO_PROFILE_DEV_DEBUG: 0
       CARGO_TARGET_DIR: ${{ matrix.CARGO_TARGET_DIR }}
@@ -107,9 +112,14 @@ jobs:
           - os: "windows-latest"
             RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
             CARGO_INCREMENTAL: 0
+          - os: "macos-15-intel"
+            MACOSX_DEPLOYMENT_TARGET: "15.5"
+            DYLD_FALLBACK_LIBRARY_PATH: "${{ github.workspace }}/.pixi/envs/default/lib"
     env:
       RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
       CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
+      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.MACOSX_DEPLOYMENT_TARGET }}
+      DYLD_FALLBACK_LIBRARY_PATH: ${{ matrix.DYLD_FALLBACK_LIBRARY_PATH }}
       # Disable generating debug info, we don't need it here anyway and its only using disk space
       CARGO_PROFILE_DEV_DEBUG: 0
     steps:
@@ -172,8 +182,13 @@ jobs:
           - RUSTFLAGS: "-Dwarnings"
           - os: "windows-latest"
             RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
+          - os: "macos-15-intel"
+            MACOSX_DEPLOYMENT_TARGET: "15.5"
+            DYLD_FALLBACK_LIBRARY_PATH: "${{ github.workspace }}/.pixi/envs/default/lib"
     env:
       RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
+      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.MACOSX_DEPLOYMENT_TARGET }}
+      DYLD_FALLBACK_LIBRARY_PATH: ${{ matrix.DYLD_FALLBACK_LIBRARY_PATH }}
     steps:
       - uses: actions/checkout@v4
         with:
