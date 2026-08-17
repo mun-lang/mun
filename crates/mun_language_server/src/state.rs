@@ -167,7 +167,7 @@ impl LanguageServerState {
     /// subscribes to.
     fn handle_event(&mut self, event: Event) -> anyhow::Result<()> {
         let start_time = Instant::now();
-        log::info!("handling event: {:?}", event);
+        log::info!("handling event: {event:?}");
 
         // Process the incoming event
         match event {

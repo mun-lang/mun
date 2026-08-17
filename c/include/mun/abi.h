@@ -12,9 +12,9 @@
  * Represents the kind of memory management a struct uses.
  */
 enum MunStructMemoryKind
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint8_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
     /**
      * A garbage collected struct is allocated on the heap and uses reference
@@ -32,7 +32,11 @@ enum MunStructMemoryKind
     Value,
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum MunStructMemoryKind MunStructMemoryKind;
+#else
 typedef uint8_t MunStructMemoryKind;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 
 /**
@@ -74,9 +78,9 @@ typedef struct MunArrayTypeId {
  * [`TypeInfo`].
  */
 enum MunTypeId_Tag
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint8_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
     /**
      * Represents a concrete type with a specific Guid
@@ -92,7 +96,11 @@ enum MunTypeId_Tag
     Array,
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum MunTypeId_Tag MunTypeId_Tag;
+#else
 typedef uint8_t MunTypeId_Tag;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 
 typedef union MunTypeId {
@@ -196,9 +204,9 @@ typedef struct MunStructDefinition {
  * characteristics.
  */
 enum MunTypeDefinitionData_Tag
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : uint8_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
     /**
      * Struct types (i.e. record, tuple, or unit structs)
@@ -206,7 +214,11 @@ enum MunTypeDefinitionData_Tag
     Struct,
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum MunTypeDefinitionData_Tag MunTypeDefinitionData_Tag;
+#else
 typedef uint8_t MunTypeDefinitionData_Tag;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 
 typedef union MunTypeDefinitionData {
@@ -348,4 +360,4 @@ typedef struct MunAssemblyInfo {
     uint32_t num_dependencies;
 } MunAssemblyInfo;
 
-#endif /* MUN_ABI_H_ */
+#endif  /* MUN_ABI_H_ */

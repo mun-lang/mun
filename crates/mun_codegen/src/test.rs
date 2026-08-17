@@ -300,7 +300,7 @@ macro_rules! test_number_operator_types {
         $ty:ident
      ),+) => {
         $(
-            paste::item! {
+            pastey::item! {
                 #[test]
                 fn [<assignment_op_ $ty>]() {
                     test_snapshot(
@@ -359,7 +359,7 @@ macro_rules! test_compare_operator_types {
         $ty:ident
      ),+) => {
         $(
-            paste::item! {
+            pastey::item! {
                 #[test]
                 fn [<compare_op_ $ty>]() {
                     test_snapshot(
@@ -386,7 +386,7 @@ macro_rules! test_negate_operator_types  {
         $ty:ident
      ),+) => {
         $(
-            paste::item! {
+            pastey::item! {
                 #[test]
                 fn [<negate_op_ $ty>]() {
                     test_snapshot(
@@ -408,7 +408,7 @@ macro_rules! test_bit_operator_types  {
         $ty:ident
      ),+) => {
         $(
-            paste::item! {
+            pastey::item! {
                 #[test]
                 fn [<assign_bit_op_ $ty>]() {
                     test_snapshot(
@@ -454,7 +454,7 @@ macro_rules! test_shift_operator_types  {
         $ty:ident
      ),+) => {
         $(
-            paste::item! {
+            pastey::item! {
                 #[test]
                 fn [<assign_shift_op_ $ty>]() {
                     test_snapshot(

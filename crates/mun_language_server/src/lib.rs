@@ -48,13 +48,12 @@ pub fn from_json<T: DeserializeOwned>(
     what: &'static str,
     json: serde_json::Value,
 ) -> anyhow::Result<T> {
-    T::deserialize(&json)
-        .map_err(|e| anyhow::anyhow!("could not deserialize {}: {}: {}", what, e, json))
+    T::deserialize(&json).map_err(|e| anyhow::anyhow!("could not deserialize {what}: {e}: {json}"))
 }
 
 /// Converts the `T` to a json value
 pub fn to_json<T: Serialize>(value: T) -> anyhow::Result<serde_json::Value> {
-    serde_json::to_value(value).map_err(|e| anyhow::anyhow!("could not serialize to json: {}", e))
+    serde_json::to_value(value).map_err(|e| anyhow::anyhow!("could not serialize to json: {e}"))
 }
 
 /// Main entry point for the language server
@@ -94,10 +93,10 @@ pub fn run_server() -> anyhow::Result<()> {
 
     let config = {
         // Convert the root uri to a PathBuf
+        #[allow(deprecated)]
         let root_dir = if let Some(path) = initialize_params
             .root_uri
-            .and_then(|it| it.to_file_path().ok())
-            .and_then(|path| AbsPathBuf::try_from(path).ok())
+            .and_then(|uri| from_lsp::abs_path(&uri).ok())
         {
             path
         } else {
@@ -125,8 +124,7 @@ pub fn run_server() -> anyhow::Result<()> {
             .map(|workspaces| {
                 workspaces
                     .into_iter()
-                    .filter_map(|it| it.uri.to_file_path().ok())
-                    .filter_map(|path| AbsPathBuf::try_from(path).ok())
+                    .filter_map(|it| from_lsp::abs_path(&it.uri).ok())
                     .collect::<Vec<_>>()
             })
             .filter(|workspaces| !workspaces.is_empty())
@@ -134,9 +132,9 @@ pub fn run_server() -> anyhow::Result<()> {
 
         // Find all the projects in the workspace
         let discovered = ProjectManifest::discover_all(workspace_roots.iter().cloned());
-        log::info!("discovered projects: {:?}", discovered);
+        log::info!("discovered projects: {discovered:?}");
         if discovered.is_empty() {
-            log::error!("failed to find any projects in {:?}", workspace_roots);
+            log::error!("failed to find any projects in {workspace_roots:?}");
         }
         config.discovered_projects = Some(discovered);
 

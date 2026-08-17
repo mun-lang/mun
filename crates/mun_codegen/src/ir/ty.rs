@@ -376,7 +376,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
 
                 let element_type_id = self.type_id(a);
                 let array_type_id = Arc::new(TypeId {
-                    name: format!("[{}]", &element_type_id.name),
+                    name: format!("[{}]", element_type_id.name),
                     data: TypeIdData::Array(element_type_id),
                 });
 
@@ -409,7 +409,7 @@ pub fn guid_from_struct(db: &dyn HirDatabase, s: mun_hir::Struct) -> Guid {
 
     Guid::from_str(&format!(
         "struct {name}{{{fields}}}",
-        name = &name,
+        name = name,
         fields = fields.join(",")
     ))
 }

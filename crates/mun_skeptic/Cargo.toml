@@ -19,4 +19,4 @@ mdbook = { workspace = true }
 pulldown-cmark = { workspace = true }
 mun_compiler = { version = "0.6.0-dev", path = "../mun_compiler" }
 mun_runtime = { version = "0.6.0-dev", path = "../mun_runtime" }
-tempdir = { workspace = true }
+tempfile = { workspace = true }

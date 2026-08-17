@@ -25,5 +25,5 @@ insta = { workspace = true, features = ["ron"] }
 
 [dev-dependencies]
 mun_compiler = { path="../mun_compiler" }
-paste = { workspace = true }
+pastey = { workspace = true }
 tempfile = { workspace = true }

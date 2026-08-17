@@ -1,5 +1,5 @@
 name: Install LLVM
 description: Installs all LLVM binaries required to build Mun.
 runs:
-  using: 'node16'
+  using: 'node24'
   main: 'dist/index.js'

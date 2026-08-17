@@ -902,7 +902,7 @@ pub struct MethodNotFound {
 
 impl Diagnostic for MethodNotFound {
     fn message(&self) -> String {
-        format!("method `{}` does not exist", &self.method_name)
+        format!("method `{}` does not exist", self.method_name)
     }
 
     fn source(&self) -> InFile<SyntaxNodePtr> {

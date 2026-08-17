@@ -38,7 +38,7 @@ macro_rules! impl_primitive_type_id {
         $(
             impl HasStaticTypeId for $ty {
                 fn type_id() -> &'static Arc<TypeId> {
-                    static TYPE_INFO: once_cell::sync::OnceCell<Arc<TypeId>> = once_cell::sync::OnceCell::new();
+                    static TYPE_INFO: OnceLock<Arc<TypeId>> = OnceLock::new();
                     TYPE_INFO.get_or_init(|| {
                         let guid = <$ty as abi::PrimitiveType>::guid().clone();
                         let name = <$ty as abi::PrimitiveType>::name().to_owned();
@@ -77,7 +77,7 @@ impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *const T {
             .call_once::<T, _>(|| {
                 let element_type_id = T::type_id().clone();
                 Arc::new(TypeId {
-                    name: format!("*const {}", &element_type_id.name),
+                    name: format!("*const {}", element_type_id.name),
                     data: TypeIdData::Pointer(PointerTypeId {
                         pointee: element_type_id,
                         mutable: false,
@@ -94,7 +94,7 @@ impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *mut T {
             .call_once::<T, _>(|| {
                 let element_type_id = T::type_id().clone();
                 Arc::new(TypeId {
-                    name: format!("*mut {}", &element_type_id.name),
+                    name: format!("*mut {}", element_type_id.name),
                     data: TypeIdData::Pointer(PointerTypeId {
                         pointee: element_type_id,
                         mutable: true,

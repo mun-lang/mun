@@ -30,6 +30,7 @@ pub fn analyze(
     None
 }
 
+#[allow(clippy::question_mark)]
 fn classify_name_ref(
     sema: &Semantics<'_>,
     original_file: &SyntaxNode,

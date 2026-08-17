@@ -1140,7 +1140,7 @@ impl InferenceResultBuilder<'_> {
     }
 
     fn infer_loop_block(&mut self, body: ExprId, lp: ActiveLoop) -> ActiveLoop {
-        let top_level_loop = std::mem::replace(&mut self.active_loop, Some(lp));
+        let top_level_loop = self.active_loop.replace(lp);
 
         // Infer the body of the loop
         self.infer_expr_coerce(body, &Expectation::has_type(Ty::unit()));

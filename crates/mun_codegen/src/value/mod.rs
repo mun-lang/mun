@@ -489,13 +489,13 @@ mod tests {
     macro_rules! test_as_bytes_and_ptrs_primitive {
         ($($ty:ty),+) => {
             $(
-                paste::item! {
+                pastey::item! {
                     #[test]
                     fn [<test_has_const_value_ $ty>]() {
                         assert_eq!($ty::has_const_value(), true);
                     }
                 }
-                paste::item! {
+                pastey::item! {
                     #[test]
                     fn [<test_as_bytes_and_ptrs_ $ty>]() {
                         let bytes: Vec<u8> = (0..(size_of::<$ty>() as u8)).collect();

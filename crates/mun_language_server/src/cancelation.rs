@@ -7,14 +7,8 @@ pub struct Canceled {
 }
 
 impl Canceled {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Canceled { _private: () }
-    }
-
-    pub fn throw() -> ! {
-        // We use resume and not panic here to avoid running the panic
-        // hook (that is, to avoid collecting and printing backtrace).
-        std::panic::resume_unwind(Box::new(Canceled::new()))
     }
 }
 
@@ -34,5 +28,5 @@ impl std::error::Error for Canceled {}
 
 /// Returns true if the specified error is of type [`Canceled`]
 pub(crate) fn is_canceled(e: &(dyn Error + 'static)) -> bool {
-    e.downcast_ref::<Canceled>().is_some()
+    e.downcast_ref::<Canceled>().is_some() || e.downcast_ref::<ra_salsa::Cancelled>().is_some()
 }

@@ -30,6 +30,7 @@ impl<N: ItemTreeNode> Hash for ItemLoc<N> {
 }
 
 impl<N: ItemTreeNode> Copy for ItemLoc<N> {}
+impl<N: ItemTreeNode + std::fmt::Debug> ra_salsa::InternValueTrivial for ItemLoc<N> {}
 
 #[derive(Clone, Debug)]
 pub struct AssocItemLoc<N: ItemTreeNode> {
@@ -38,6 +39,7 @@ pub struct AssocItemLoc<N: ItemTreeNode> {
 }
 
 impl<N: ItemTreeNode> Copy for AssocItemLoc<N> {}
+impl<N: ItemTreeNode + std::fmt::Debug> ra_salsa::InternValueTrivial for AssocItemLoc<N> {}
 
 impl<N: ItemTreeNode> PartialEq for AssocItemLoc<N> {
     fn eq(&self, other: &Self) -> bool {
@@ -56,11 +58,11 @@ impl<N: ItemTreeNode> Hash for AssocItemLoc<N> {
 
 macro_rules! impl_intern_key {
     ($name:ident) => {
-        impl salsa::InternKey for $name {
-            fn from_intern_id(v: salsa::InternId) -> Self {
+        impl ra_salsa::InternKey for $name {
+            fn from_intern_id(v: ra_salsa::InternId) -> Self {
                 $name(v)
             }
-            fn as_intern_id(&self) -> salsa::InternId {
+            fn as_intern_id(&self) -> ra_salsa::InternId {
                 self.0
             }
         }
@@ -101,13 +103,13 @@ impl From<ModuleId> for ItemContainerId {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
-pub struct ImplId(salsa::InternId);
+pub struct ImplId(ra_salsa::InternId);
 
 pub(crate) type ImplLoc = ItemLoc<Impl>;
 impl_intern!(ImplId, ImplLoc, intern_impl, lookup_intern_impl);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
-pub struct FunctionId(salsa::InternId);
+pub struct FunctionId(ra_salsa::InternId);
 
 pub(crate) type FunctionLoc = AssocItemLoc<Function>;
 impl_intern!(
@@ -118,13 +120,13 @@ impl_intern!(
 );
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct StructId(salsa::InternId);
+pub struct StructId(ra_salsa::InternId);
 
 pub(crate) type StructLoc = ItemLoc<Struct>;
 impl_intern!(StructId, StructLoc, intern_struct, lookup_intern_struct);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct TypeAliasId(salsa::InternId);
+pub struct TypeAliasId(ra_salsa::InternId);
 
 pub(crate) type TypeAliasLoc = ItemLoc<TypeAlias>;
 impl_intern!(

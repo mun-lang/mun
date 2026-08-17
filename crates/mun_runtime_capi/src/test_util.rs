@@ -69,7 +69,7 @@ macro_rules! test_invalid_runtime {
         $name:ident($($arg:expr),*)
     ),+) => {
         $(
-            paste::item! {
+            pastey::item! {
                 #[test]
                 #[allow(clippy::macro_metavars_in_unsafe)]
                 fn [<test_ $name _invalid_runtime>]() {

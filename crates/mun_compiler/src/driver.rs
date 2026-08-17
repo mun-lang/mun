@@ -17,7 +17,8 @@ mod display_color;
 use std::{
     collections::HashMap,
     convert::TryInto,
-    io::Cursor,
+    fs::{self, File, OpenOptions},
+    io::{self, Cursor},
     path::{Path, PathBuf},
     sync::Arc,
     time::Duration,
@@ -30,6 +31,38 @@ pub use self::{config::Config, display_color::DisplayColor};
 use crate::diagnostics_snippets::{emit_hir_diagnostic, emit_syntax_error};
 
 pub const WORKSPACE: SourceRootId = SourceRootId(0);
+
+/// An output-directory lock that removes its marker file when dropped.
+struct OutputLock {
+    file: Option<File>,
+    path: PathBuf,
+}
+
+impl OutputLock {
+    fn create(path: PathBuf) -> io::Result<Self> {
+        let file = OpenOptions::new()
+            .create_new(true)
+            .read(true)
+            .write(true)
+            .open(&path)?;
+        Ok(Self {
+            file: Some(file),
+            path,
+        })
+    }
+}
+
+impl Drop for OutputLock {
+    fn drop(&mut self) {
+        drop(self.file.take());
+        if let Err(error) = fs::remove_file(&self.path) {
+            log::warn!(
+                "could not remove output lock file at '{}': {error}",
+                self.path.display()
+            );
+        }
+    }
+}
 
 pub struct Driver {
     db: CompilerDatabase,
@@ -106,7 +139,7 @@ impl Driver {
 
         // Determine output directory
         let output_dir = ensure_package_output_dir(&package, &config)
-            .map_err(|e| anyhow::anyhow!("could not create package output directory: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("could not create package output directory: {e}"))?;
 
         // Construct the driver
         let mut driver = Driver::with_config(config, output_dir);
@@ -270,10 +303,7 @@ impl Driver {
         let mut compiler_errors: Vec<u8> = Vec::new();
         if self.emit_diagnostics(&mut Cursor::new(&mut compiler_errors), display_color)? {
             Ok(Some(String::from_utf8(compiler_errors).map_err(|e| {
-                anyhow::anyhow!(
-                    "could not convert compiler diagnostics to valid UTF8: {}",
-                    e
-                )
+                anyhow::anyhow!("could not convert compiler diagnostics to valid UTF8: {e}")
             })?))
         } else {
             Ok(None)
@@ -353,10 +383,10 @@ impl Driver {
     /// Acquires a filesystem lock on the output directory. This ensures that
     /// multiple instances cannot write to the same output directory and
     /// that the runtime does not start reading before we finished writing.
-    fn acquire_filesystem_output_lock(&self) -> lockfile::Lockfile {
+    fn acquire_filesystem_output_lock(&self) -> OutputLock {
         loop {
-            match lockfile::Lockfile::create(self.out_dir.join(LOCKFILE_NAME)) {
-                Ok(lockfile) => break lockfile,
+            match OutputLock::create(self.out_dir.join(LOCKFILE_NAME)) {
+                Ok(lock) => break lock,
                 Err(_) => {
                     // TODO(#313): Implement/abstract a better way to emit warnings/errors from the
                     //  driver. Directly writing to stdout accesses global state. The driver is not
@@ -385,7 +415,7 @@ impl Driver {
         module: Module,
         force: bool,
     ) -> Result<bool, anyhow::Error> {
-        log::trace!("writing target assembly for {:?}", module);
+        log::trace!("writing target assembly for {module:?}");
 
         // Find the module group to which the module belongs
         let module_partition = self.db.module_partition();
@@ -427,7 +457,7 @@ impl Driver {
     /// Generates IR for the specified module and stores it in the output
     /// location.
     fn write_assembly_ir(&mut self, module: mun_hir::Module) -> Result<(), anyhow::Error> {
-        log::trace!("writing assembly IR for {:?}", module);
+        log::trace!("writing assembly IR for {module:?}");
 
         // Find the module group to which the module belongs
         let module_partition = self.db.module_partition();

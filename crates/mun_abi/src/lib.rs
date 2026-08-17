@@ -49,12 +49,12 @@ pub struct Guid(pub [u8; 16]);
 impl Guid {
     /// Create a GUID from a string by computing its hash.
     pub const fn from_str(str: &str) -> Guid {
-        Guid(extendhash::md5::compute_hash(str.as_bytes()))
+        Guid(cthash::md5(str.as_bytes()))
     }
 
     /// Create a GUID from a string by computing its hash.
     pub fn from_cstr(str: &CStr) -> Guid {
-        Guid(extendhash::md5::compute_hash(str.to_bytes()))
+        Guid(cthash::md5(str.to_bytes()))
     }
 }
 
@@ -62,10 +62,7 @@ impl fmt::Display for Guid {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         #[inline]
         const fn format_hyphenated(src: &[u8; 16]) -> [u8; 36] {
-            const LUT: [u8; 16] = [
-                b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b'a', b'b', b'c', b'd',
-                b'e', b'f',
-            ];
+            const LUT: [u8; 16] = *b"0123456789abcdef";
 
             let groups = [(0, 8), (9, 13), (14, 18), (19, 23), (24, 36)];
             let mut dst = [0; 36];

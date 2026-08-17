@@ -1,33 +1,18 @@
-//! An owned string backed by a rowan syntax tree token.
+//! Text borrowed from a rowan syntax tree token.
 
 use std::{cmp::Ordering, fmt, ops};
 
-use rowan::GreenToken;
-
-pub struct TokenText<'a>(pub(crate) Inner<'a>);
-
-pub(crate) enum Inner<'a> {
-    Borrowed(&'a str),
-    Owned(GreenToken),
-}
+pub struct TokenText<'a>(&'a str);
 
 impl<'a> TokenText<'a> {
-    /// Creates a new instance where the text is borrowed from a `str`
+    /// Creates a new instance where the text is borrowed from a `str`.
     pub(crate) fn borrowed(text: &'a str) -> Self {
-        TokenText(Inner::Borrowed(text))
+        TokenText(text)
     }
 
-    /// Creates a new instance where the text is borrowed from a syntax node.
-    pub(crate) fn owned(green: GreenToken) -> Self {
-        TokenText(Inner::Owned(green))
-    }
-
-    /// Returns the string representation of this instance
+    /// Returns the string representation of this instance.
     pub fn as_str(&self) -> &str {
-        match &self.0 {
-            &Inner::Borrowed(it) => it,
-            Inner::Owned(green) => green.text(),
-        }
+        self.0
     }
 }
 

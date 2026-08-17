@@ -1,9 +1,8 @@
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 
 use itertools::Itertools;
 use la_arena::{Arena, Idx};
 use mun_paths::RelativePath;
-use rustc_hash::FxHashMap;
 
 use self::diagnostics::ModuleTreeDiagnostic;
 use crate::{FileId, PackageId, SourceDatabase};
@@ -32,7 +31,7 @@ pub struct ModuleTree {
 #[derive(Default, Debug, PartialEq, Eq)]
 pub struct ModuleData {
     pub parent: Option<PackageModuleId>,
-    pub children: FxHashMap<String, PackageModuleId>,
+    pub children: BTreeMap<String, PackageModuleId>,
     pub file: Option<FileId>,
 }
 
@@ -80,7 +79,7 @@ impl ModuleTree {
                 } else {
                     let child_module_id = modules.alloc(ModuleData {
                         parent: Some(module_id),
-                        children: FxHashMap::default(),
+                        children: BTreeMap::default(),
                         file: None,
                     });
 
@@ -209,13 +208,13 @@ mod test {
 
     /// A mock implementation of the IR database. It can be used to set up a
     /// simple test case.
-    #[salsa::database(SourceDatabaseStorage)]
+    #[ra_salsa::database(SourceDatabaseStorage)]
     #[derive(Default)]
     struct MockDatabase {
-        storage: salsa::Storage<Self>,
+        storage: ra_salsa::Storage<Self>,
     }
 
-    impl salsa::Database for MockDatabase {}
+    impl ra_salsa::Database for MockDatabase {}
 
     #[test]
     fn module_tree() {

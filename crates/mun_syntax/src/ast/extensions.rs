@@ -1,12 +1,10 @@
-use std::borrow::Cow;
-
 use mun_abi::StructMemoryKind;
 use rowan::{GreenNodeData, GreenTokenData, NodeOrToken};
 use text_size::TextRange;
 
 use crate::{
     ast::{self, child_opt, AstNode, NameOwner},
-    SyntaxKind, SyntaxNode, TokenText, T,
+    SyntaxKind, SyntaxNode, TokenText,
 };
 
 impl ast::Name {
@@ -72,10 +70,7 @@ fn text_of_first_token(node: &SyntaxNode) -> TokenText<'_> {
             .unwrap()
     }
 
-    match node.green() {
-        Cow::Borrowed(green_ref) => TokenText::borrowed(first_token(green_ref).text()),
-        Cow::Owned(green) => TokenText::owned(first_token(&green).to_owned()),
-    }
+    TokenText::borrowed(first_token(node.green()).text())
 }
 
 impl ast::Path {

@@ -261,6 +261,7 @@ fn tree_for_module(
         .entries()
         .filter_map(|entry| entry.1.take_types().map(|(def, _)| def))
         .collect::<Vec<_>>();
+    let mut declaration_labels = Vec::new();
     for def in local_declarations.iter().chain(
         used_declarations
             .iter()
@@ -276,7 +277,7 @@ fn tree_for_module(
                         .any(|child_id| child_id.id == *m)
                 {
                     let module: Module = (*m).into();
-                    node.push(format!(
+                    declaration_labels.push(format!(
                         "use mod {}",
                         fully_qualified_module_path(db, module)
                     ));
@@ -286,50 +287,56 @@ fn tree_for_module(
                 let func: Function = (*f).into();
                 let name = func.name(db);
                 if is_local {
-                    node.push(format!("fn {name}"));
+                    declaration_labels.push(format!("fn {name}"));
                 } else {
                     let fully_qualified_name = format!(
                         "{}::{}",
                         fully_qualified_module_path(db, func.module(db)),
                         name
                     );
-                    node.push(format!("use fn {fully_qualified_name}"));
+                    declaration_labels.push(format!("use fn {fully_qualified_name}"));
                 }
             }
             ItemDefinitionId::StructId(s) => {
                 let strukt: Struct = (*s).into();
                 let name = strukt.name(db);
                 if is_local {
-                    node.push(format!("struct {name}"));
+                    declaration_labels.push(format!("struct {name}"));
                 } else {
                     let fully_qualified_name = format!(
                         "{}::{}",
                         fully_qualified_module_path(db, strukt.module(db)),
                         name
                     );
-                    node.push(format!("use struct {fully_qualified_name}"));
+                    declaration_labels.push(format!("use struct {fully_qualified_name}"));
                 }
             }
             ItemDefinitionId::TypeAliasId(alias) => {
                 let alias: TypeAlias = (*alias).into();
                 let name = alias.name(db);
                 if is_local {
-                    node.push(format!("type {name}"));
+                    declaration_labels.push(format!("type {name}"));
                 } else {
                     let fully_qualified_name = format!(
                         "{}::{}",
                         fully_qualified_module_path(db, alias.module(db)),
                         name
                     );
-                    node.push(format!("use type {fully_qualified_name}"));
+                    declaration_labels.push(format!("use type {fully_qualified_name}"));
                 }
             }
             ItemDefinitionId::PrimitiveType(_) => {}
         }
     }
+    declaration_labels.sort_by_key(|label| (label.starts_with("use mod "), label.clone()));
+    for label in declaration_labels {
+        node.push(label);
+    }
 
-    // Iterate over all children of this module
-    for child_module in module.children(db) {
+    // Iterate over all children of this module in a stable order.
+    let mut child_modules = module.children(db);
+    child_modules.sort_by_key(|module| module.name(db));
+    for child_module in child_modules {
         node.push_node(tree_for_module(db, package_defs, child_module));
     }
 
