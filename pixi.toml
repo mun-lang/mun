@@ -1,6 +1,5 @@
 [workspace]
 name = "mun"
-version = "0.6.0-dev"
 description = "Development environment for the Mun programming language"
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
@@ -10,9 +9,17 @@ llvmdev = "14.*"
 rust = "1.86.*"
 cmake = ">=3.22"
 ninja = ">=1.10"
+mdbook = "0.4.43.*"
+cargo-llvm-cov = "0.6.15.*"
+cargo-nextest = "0.9.78.*"
 
 [tasks]
 build = "cargo build --workspace"
+build-capi = "cargo build -p mun -p mun_runtime_capi"
 build-release = "cargo build --workspace --release"
+build-runtime = "cargo build -p mun_runtime"
 check = "cargo check --all-targets"
+clippy = "cargo clippy --all-features"
+doctest = "cargo test --doc --all-features"
 test = "cargo test --workspace"
+test-coverage = "cargo llvm-cov nextest --all-features --workspace --lcov --output-path lcov.info --profile ci"
