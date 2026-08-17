@@ -18,9 +18,15 @@ cargo-nextest = "0.9.78.*"
 
 [target.osx-64.dependencies]
 macosx_deployment_target_osx-64 = "15.5.*"
+compiler-rt = "14.*"
 
 [target.osx-arm64.dependencies]
 macosx_deployment_target_osx-arm64 = "15.5.*"
+compiler-rt = "14.*"
+
+[target.osx.activation.env]
+DYLD_FALLBACK_LIBRARY_PATH = "$CONDA_PREFIX/lib"
+LIBRARY_PATH = "$CONDA_PREFIX/lib/clang/14.0.6/lib/darwin"
 
 [tasks]
 build = "cargo build --workspace"

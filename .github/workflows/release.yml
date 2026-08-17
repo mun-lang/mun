@@ -27,8 +27,7 @@ jobs:
           - os: "macos-15-intel"
             dir: macos-x86_64
             artifacts: "mun libmun_runtime.dylib"
-            RUSTFLAGS: "-Dwarnings"
-            DYLD_FALLBACK_LIBRARY_PATH: "${{ github.workspace }}/.pixi/envs/default/lib"
+            RUSTFLAGS: "-Dwarnings -Clink-arg=-lclang_rt.osx"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,7 +42,6 @@ jobs:
       - name: Cargo build
         env:
           RUSTFLAGS: ${{ matrix.config.RUSTFLAGS }}
-          DYLD_FALLBACK_LIBRARY_PATH: ${{ matrix.config.DYLD_FALLBACK_LIBRARY_PATH }}
         run: pixi run build-release
 
       - run: mkdir -p ${{ matrix.config.dir }}
