@@ -53,7 +53,7 @@ jobs:
             CARGO_INCREMENTAL: 1
             CARGO_TARGET_DIR: "target"
           - os: "windows-latest"
-            RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
+            RUSTFLAGS: "-Dwarnings"
             CARGO_INCREMENTAL: 0
             CARGO_TARGET_DIR: "C:\\cargo-target-dir"
           - os: "macos-15-intel"
@@ -107,7 +107,7 @@ jobs:
           - RUSTFLAGS: "-Dwarnings"
             CARGO_INCREMENTAL: 1
           - os: "windows-latest"
-            RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
+            RUSTFLAGS: "-Dwarnings"
             CARGO_INCREMENTAL: 0
           - os: "macos-15-intel"
             RUSTFLAGS: "-Dwarnings -Clink-arg=-lclang_rt.osx"
@@ -175,7 +175,7 @@ jobs:
         include:
           - RUSTFLAGS: "-Dwarnings"
           - os: "windows-latest"
-            RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
+            RUSTFLAGS: "-Dwarnings"
           - os: "macos-15-intel"
             RUSTFLAGS: "-Dwarnings -Clink-arg=-lclang_rt.osx"
     env:
