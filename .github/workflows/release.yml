@@ -24,7 +24,7 @@ jobs:
             dir: windows-x86_64
             artifacts: "mun.exe mun_runtime.dll mun_runtime.dll.lib"
             RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
-          - os: "macOS-latest"
+          - os: "macos-15-intel"
             dir: macos-x86_64
             artifacts: "mun libmun_runtime.dylib"
             RUSTFLAGS: "-Dwarnings"

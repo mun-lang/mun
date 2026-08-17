@@ -47,7 +47,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-22.04", "windows-latest", "macOS-latest"]
+        os: ["ubuntu-22.04", "windows-latest", "macos-15-intel"]
         include:
           - RUSTFLAGS: "-Dwarnings"
             CARGO_INCREMENTAL: 1
@@ -100,7 +100,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-22.04", "windows-latest", "macOS-latest"]
+        os: ["ubuntu-22.04", "windows-latest", "macos-15-intel"]
         include:
           - RUSTFLAGS: "-Dwarnings"
             CARGO_INCREMENTAL: 1
@@ -167,7 +167,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-22.04", "windows-latest", "macOS-latest"]
+        os: ["ubuntu-22.04", "windows-latest", "macos-15-intel"]
         include:
           - RUSTFLAGS: "-Dwarnings"
           - os: "windows-latest"
