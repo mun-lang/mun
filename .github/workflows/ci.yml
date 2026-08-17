@@ -250,3 +250,6 @@ jobs:
 
       - name: Run cargo clippy
         run: pixi run clippy
+
+      - name: Check generated files
+        run: pixi run cargo test -p tools
