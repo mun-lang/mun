@@ -29,22 +29,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install libasound2-dev libudev-dev
 
-      - name: Install Rust (stable)
-        uses: actions-rs/toolchain@v1
+      - name: Set up Pixi
+        uses: prefix-dev/setup-pixi@v0.10.1
         with:
-          profile: minimal
-          override: true
-
-      - name: Install LLVM
-        uses: ./.github/actions/install-llvm
+          cache: true
+          frozen: true
 
       - uses: Swatinem/rust-cache@v2
 
       - name: Cargo check
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all-targets
+        run: pixi run check
 
   test:
     name: Test Rust
@@ -53,15 +47,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-22.04", "windows-latest", "macOS-latest"]
+        os: ["ubuntu-22.04", "windows-latest", "macos-15-intel"]
         include:
           - RUSTFLAGS: "-Dwarnings"
             CARGO_INCREMENTAL: 1
             CARGO_TARGET_DIR: "target"
           - os: "windows-latest"
-            RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
+            RUSTFLAGS: "-Dwarnings"
             CARGO_INCREMENTAL: 0
             CARGO_TARGET_DIR: "C:\\cargo-target-dir"
+          - os: "macos-15-intel"
+            RUSTFLAGS: "-Dwarnings -Clink-arg=-lclang_rt.osx"
     env:
       RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
       CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
@@ -79,37 +75,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install libasound2-dev libudev-dev
 
-      - name: Install LLVM
-        uses: ./.github/actions/install-llvm
-
-      - name: Install nightly rustfmt
-        uses: actions-rs/toolchain@v1
+      - name: Set up Pixi
+        uses: prefix-dev/setup-pixi@v0.10.1
         with:
-          toolchain: nightly
-          profile: minimal
-          components: rustfmt
-
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          override: true
-          components: llvm-tools-preview
+          cache: true
+          frozen: true
 
       - uses: Swatinem/rust-cache@v2
         if: matrix.os != 'windows-latest'
 
-      - name: Install latest llvm-cov release
-        uses: taiki-e/install-action@cargo-llvm-cov
-
-      - name: Install latest nextest release
-        uses: taiki-e/install-action@nextest
-
-      - name: Test with latest nextest release
-        uses: actions-rs/cargo@v1
-        with:
-          command: llvm-cov
-          args: nextest --all-features --workspace --lcov --output-path lcov.info --profile ci
+      - name: Test with coverage
+        run: pixi run test-coverage
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
@@ -126,13 +102,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-22.04", "windows-latest", "macOS-latest"]
+        os: ["ubuntu-22.04", "windows-latest", "macos-15-intel"]
         include:
           - RUSTFLAGS: "-Dwarnings"
             CARGO_INCREMENTAL: 1
           - os: "windows-latest"
-            RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
+            RUSTFLAGS: "-Dwarnings"
             CARGO_INCREMENTAL: 0
+          - os: "macos-15-intel"
+            RUSTFLAGS: "-Dwarnings -Clink-arg=-lclang_rt.osx"
     env:
       RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
       CARGO_INCREMENTAL: ${{ matrix.CARGO_INCREMENTAL }}
@@ -143,27 +121,22 @@ jobs:
         with:
           submodules: true
 
-      - name: Install LLVM
-        uses: ./.github/actions/install-llvm
-
       - name: Install packages
-        if: matrix.os == 'ubuntu-20.04'
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install libasound2-dev libudev-dev
 
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Set up Pixi
+        uses: prefix-dev/setup-pixi@v0.10.1
         with:
-          profile: minimal
+          cache: true
+          frozen: true
 
       - uses: Swatinem/rust-cache@v2
 
       - name: Doctests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --doc --all-features
+        run: pixi run doctest
 
   test-mdbook:
     name: Test mdbook
@@ -174,44 +147,22 @@ jobs:
         with:
           submodules: true
 
-      - name: Install LLVM
-        uses: ./.github/actions/install-llvm
-
-      - name: Install nightly rustfmt
-        uses: actions-rs/toolchain@v1
+      - name: Set up Pixi
+        uses: prefix-dev/setup-pixi@v0.10.1
         with:
-          toolchain: nightly
-          profile: minimal
-          components: rustfmt
-
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          override: true
+          cache: true
+          frozen: true
 
       - uses: Swatinem/rust-cache@v2
 
       - name: Cargo build
-        uses: actions-rs/cargo@v1
-        env:
-          RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
-        with:
-          command: build
-          args: -p mun_runtime
-
-      - name: Install mdbook
-        uses: actions-rs/install@v0.1
-        with:
-          crate: mdbook
-          version: 0.4.21
-          use-tool-cache: true
+        run: pixi run build-runtime
 
       - name: mdbook test
-        run: mdbook test book -L target/debug/deps
+        run: pixi run mdbook test book -L target/debug/deps
 
       - name: mdbook build
-        run: mdbook build book
+        run: pixi run mdbook build book
 
   test-cpp:
     name: Test C++ Runtime
@@ -220,71 +171,48 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-22.04", "windows-latest", "macOS-latest"]
+        os: ["ubuntu-22.04", "windows-latest", "macos-15-intel"]
         include:
           - RUSTFLAGS: "-Dwarnings"
           - os: "windows-latest"
-            RUSTFLAGS: "-Dwarnings -Ctarget-feature=+crt-static"
+            RUSTFLAGS: "-Dwarnings"
+          - os: "macos-15-intel"
+            RUSTFLAGS: "-Dwarnings -Clink-arg=-lclang_rt.osx"
+    env:
+      RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
 
-      - name: Install LLVM
-        uses: ./.github/actions/install-llvm
-
-      - name: Install nightly rustfmt
-        uses: actions-rs/toolchain@v1
+      - name: Set up Pixi
+        uses: prefix-dev/setup-pixi@v0.10.1
         with:
-          toolchain: nightly
-          profile: minimal
-          components: rustfmt
-
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          override: true
+          cache: true
+          frozen: true
 
       - uses: Swatinem/rust-cache@v2
 
       - name: Cargo build
-        uses: actions-rs/cargo@v1
-        env:
-          RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
-        with:
-          command: build
-          args: -p mun -p mun_runtime_capi
+        run: pixi run build-capi
 
-      - name: Create build folder (debug)
-        run: cmake -E make_directory ${{ runner.workspace }}/build/debug
+      - name: Configure CMake (debug)
+        run: pixi run cmake -DCMAKE_BUILD_TYPE=Debug -S . -B "${{ runner.temp }}/build/debug" -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_binaries_path="${{ github.workspace }}/target/debug/" -Dmun_examples_path="${{ github.workspace }}/examples"
 
-      - name: Create build folder (release)
-        run: cmake -E make_directory ${{ runner.workspace }}/build/release
-
-      - name: Configure cmake (debug)
-        working-directory: ${{ runner.workspace }}/build/debug
-        run: cmake -DCMAKE_BUILD_TYPE=Debug -S ${{ github.workspace }} -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_binaries_path=${{ github.workspace }}/target/debug/ -Dmun_examples_path=${{ github.workspace }}/examples
-
-      - name: Configure cmake (release)
-        working-directory: ${{ runner.workspace }}/build/release
-        run: cmake -DCMAKE_BUILD_TYPE=Release -S ${{ github.workspace }} -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_binaries_path=${{ github.workspace }}/target/debug/ -Dmun_examples_path=${{ github.workspace }}/examples
+      - name: Configure CMake (release)
+        run: pixi run cmake -DCMAKE_BUILD_TYPE=Release -S . -B "${{ runner.temp }}/build/release" -Dmun_build_examples=ON -Dmun_build_tests=ON -Dmun_binaries_path="${{ github.workspace }}/target/debug/" -Dmun_examples_path="${{ github.workspace }}/examples"
 
       - name: Build (debug)
-        working-directory: ${{ runner.workspace }}/build/debug
-        run: cmake --build . --config Debug
+        run: pixi run cmake --build "${{ runner.temp }}/build/debug" --config Debug
 
       - name: Build (release)
-        working-directory: ${{ runner.workspace }}/build/release
-        run: cmake --build . --config Release
+        run: pixi run cmake --build "${{ runner.temp }}/build/release" --config Release
 
       - name: Test (debug)
-        working-directory: ${{ runner.workspace }}/build/debug
-        run: ctest -C Debug
+        run: pixi run ctest --test-dir "${{ runner.temp }}/build/debug" -C Debug
 
       - name: Test (release)
-        working-directory: ${{ runner.workspace }}/build/release
-        run: ctest -C Release
+        run: pixi run ctest --test-dir "${{ runner.temp }}/build/release" -C Release
 
   style:
     name: Check Style
@@ -295,34 +223,24 @@ jobs:
         with:
           submodules: true
 
-      - name: Install nightly rustfmt
-        uses: actions-rs/toolchain@v1
+      - name: Set up Pixi
+        uses: prefix-dev/setup-pixi@v0.10.1
         with:
-          toolchain: nightly
-          profile: minimal
-          components: rustfmt
+          cache: true
+          frozen: true
 
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Install nightly rustfmt
+        uses: dtolnay/rust-toolchain@nightly
         with:
-          profile: minimal
-          override: true
-          components: clippy
+          components: rustfmt
 
       - uses: Swatinem/rust-cache@v2
 
       - name: Run cargo fmt
-        uses: actions-rs/cargo@v1
-        with:
-          toolchain: nightly
-          command: fmt
-          args: --all -- --check
-
-      - name: Install LLVM
-        uses: ./.github/actions/install-llvm
+        run: rustup run nightly cargo fmt --all -- --check
 
       - name: Run cargo clippy
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
+        run: pixi run clippy
+
+      - name: Check generated files
+        run: pixi run cargo test -p tools

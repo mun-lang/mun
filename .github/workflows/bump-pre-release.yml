@@ -12,8 +12,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Pixi
+        uses: prefix-dev/setup-pixi@v0.10.1
+        with:
+          cache: true
+          frozen: true
+
       - name: Install cargo-release
-        run: cargo install cargo-release
+        run: pixi run cargo install cargo-release --locked
 
       - name: Setup post-release version bump
         run: |
@@ -23,7 +29,7 @@ jobs:
           git config user.name 'Mun Auto Releaser'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           # Read the current version from Cargo.toml
-          current_version=$(cargo metadata --format-version 1 --no-deps | \
+          current_version=$(pixi run cargo metadata --format-version 1 --no-deps | \
             jq --raw-output '.packages | .[] | select(.name == "mun").version')
           # Sanity check: current version should be 0.X.Y
           if ! grep -q '^0\.[0-9]\+\.[0-9]\+$' <<< "${current_version}"; then
@@ -34,7 +40,7 @@ jobs:
           next_version=0.$((minor_version + 1)).0-dev
           echo "Bumping version to ${next_version}"
           # See release.yml for meaning of these arguments
-          cargo release "${next_version}" \
+          pixi run cargo release "${next_version}" \
             --workspace \
             --no-publish \
             --execute \
