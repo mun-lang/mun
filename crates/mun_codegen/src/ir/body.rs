@@ -4,6 +4,7 @@ use inkwell::{
     basic_block::BasicBlock,
     builder::Builder,
     context::Context,
+    types::BasicTypeEnum,
     values::{
         AggregateValueEnum, BasicMetadataValueEnum, BasicValueEnum, CallSiteValue, FloatValue,
         FunctionValue, GlobalValue, IntValue, PointerValue, StructValue,
@@ -229,6 +230,35 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             Expr::RecordLit { fields, .. } => Some(self.gen_record_lit(expr, fields)),
             Expr::BinaryOp { lhs, rhs, op } => {
                 self.gen_binary_op(expr, *lhs, *rhs, op.expect("missing op"))
+            }
+            &Expr::Cast { expr, type_ref: _ } => {
+                let value = self.gen_expr(expr).expect("no value");
+                let value_ty = &self.infer[expr];
+                let is_signed = value_ty.signedness().is_signed();
+
+                let from_ty = value.get_type();
+                let to_ty = self
+                    .hir_types
+                    .get_basic_type(&self.infer[expr])
+                    .expect("expected basic type");
+
+                Some(match (from_ty, to_ty) {
+                    (BasicTypeEnum::IntType(hg), BasicTypeEnum::IntType(_)) => self
+                        .builder
+                        .build_int_cast_sign_flag(
+                            value.into_int_value(),
+                            to_ty.into_int_type(),
+                            is_signed,
+                            "",
+                        )
+                        .into(),
+                    (BasicTypeEnum::FloatType(_), BasicTypeEnum::FloatType(_)) => {
+                        let src = value_ty.float_width();
+
+                        todo!()
+                    }
+                    (_, _) => unreachable!("unimplemented cast from {from_ty} to {to_ty}"),
+                })
             }
             Expr::UnaryOp { expr, op } => self.gen_unary_op(*expr, *op),
             Expr::MethodCall { .. } => {

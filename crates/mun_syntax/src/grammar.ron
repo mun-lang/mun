@@ -150,6 +150,7 @@ Grammar(
         "PREFIX_EXPR",
         "LITERAL",
         "BIN_EXPR",
+        "CAST_EXPR",
         "PAREN_EXPR",
         "CALL_EXPR",
         "METHOD_CALL_EXPR",
@@ -290,6 +291,9 @@ Grammar(
         "PathExpr": (options: ["Path"]),
         "PrefixExpr": (options: ["Expr"]),
         "BinExpr": (),
+        "CastExpr": (
+            options: [ ["expr", "Expr"], ["ty", "TypeRef"] ]
+        ),
         "Literal": (),
         "ParenExpr": (options: ["Expr"]),
         "CallExpr": (
@@ -326,6 +330,7 @@ Grammar(
                 "PrefixExpr",
                 "PathExpr",
                 "BinExpr",
+                "CastExpr",
                 "ParenExpr",
                 "CallExpr",
                 "MethodCallExpr",
