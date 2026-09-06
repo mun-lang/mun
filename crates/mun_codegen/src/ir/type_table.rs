@@ -81,7 +81,8 @@ impl<'ink> TypeTable<'ink> {
     }
 }
 
-/// Collects the types used by a module group and materializes its runtime lookup table.
+/// Collects the types used by a module group and materializes its runtime
+/// lookup table.
 pub(crate) struct TypeTableBuilder<'db, 'ink, 't> {
     db: &'db dyn HirDatabase,
     module: &'t Module<'ink>,

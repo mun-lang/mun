@@ -16,10 +16,12 @@ use inkwell::{
 };
 use mun_abi as abi;
 
-/// The LLVM types that make up the binary interface between generated code and the runtime.
+/// The LLVM types that make up the binary interface between generated code and
+/// the runtime.
 ///
-/// This registry owns the ABI schema. Callers provide semantic data to its constructors instead
-/// of manufacturing raw LLVM structs, which keeps layout decisions in one place.
+/// This registry owns the ABI schema. Callers provide semantic data to its
+/// constructors instead of manufacturing raw LLVM structs, which keeps layout
+/// decisions in one place.
 pub struct AbiTypes<'ink> {
     context: &'ink Context,
     byte_ordering: ByteOrdering,
@@ -43,8 +45,8 @@ pub struct AbiTypes<'ink> {
 }
 /// Context used while materializing runtime ABI constants in one LLVM module.
 ///
-/// It keeps schema, module ownership, and target layout together so ABI construction does not
-/// depend on unrelated code-generation state.
+/// It keeps schema, module ownership, and target layout together so ABI
+/// construction does not depend on unrelated code-generation state.
 pub struct AbiBuilder<'a, 'ink> {
     pub types: &'a AbiTypes<'ink>,
     pub context: &'ink Context,
@@ -54,7 +56,8 @@ pub struct AbiBuilder<'a, 'ink> {
 
 /// A concrete `MunTypeId` value.
 ///
-/// The newtype prevents other ABI structs from being used where a type identifier is required.
+/// The newtype prevents other ABI structs from being used where a type
+/// identifier is required.
 #[derive(Clone, Copy, Debug)]
 pub struct TypeIdValue<'ink>(StructValue<'ink>);
 
@@ -115,7 +118,8 @@ pub struct DispatchTable<'ink> {
     pub num_entries: u32,
 }
 
-/// Reflection information used to associate type identifiers with runtime type handles.
+/// Reflection information used to associate type identifiers with runtime type
+/// handles.
 pub struct TypeLut<'ink> {
     pub type_ids: PointerValue<'ink>,
     pub type_ptrs: PointerValue<'ink>,

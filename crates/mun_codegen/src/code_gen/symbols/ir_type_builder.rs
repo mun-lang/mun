@@ -7,7 +7,8 @@ use crate::{
     type_info::{TypeId, TypeIdData},
 };
 
-/// Builds runtime type identifiers and interns identifiers referenced by other identifiers.
+/// Builds runtime type identifiers and interns identifiers referenced by other
+/// identifiers.
 pub struct TypeIdBuilder<'a, 'ctx, 'ink> {
     abi: &'a AbiBuilder<'ctx, 'ink>,
     interned_types: RefCell<FxHashMap<Arc<TypeId>, TypeIdGlobal<'ink>>>,
@@ -21,7 +22,8 @@ impl<'a, 'ctx, 'ink> TypeIdBuilder<'a, 'ctx, 'ink> {
         }
     }
 
-    /// Converts the compiler-owned identifier to its concrete runtime ABI representation.
+    /// Converts the compiler-owned identifier to its concrete runtime ABI
+    /// representation.
     pub fn construct_from_type_id(&self, type_id: &Arc<TypeId>) -> TypeIdValue<'ink> {
         match &type_id.data {
             TypeIdData::Concrete(guid) => self.abi.types.concrete_type_id(*guid),
@@ -36,7 +38,8 @@ impl<'a, 'ctx, 'ink> TypeIdBuilder<'a, 'ctx, 'ink> {
         }
     }
 
-    /// Returns a stable global address for an identifier referenced by another identifier.
+    /// Returns a stable global address for an identifier referenced by another
+    /// identifier.
     fn get_global_type_id(&self, type_id: &Arc<TypeId>) -> TypeIdGlobal<'ink> {
         if let Some(value) = self.interned_types.borrow().get(type_id).copied() {
             return value;
