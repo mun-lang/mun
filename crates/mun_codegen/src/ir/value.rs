@@ -31,7 +31,7 @@ impl<'ink> Operand<'ink> {
 }
 
 /// The LLVM address and pointee type required to access a memory location.
-#[derive(Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub(crate) struct PlaceValue<'ink> {
     pointer: PointerValue<'ink>,
     pointee: BasicTypeEnum<'ink>,
@@ -49,6 +49,19 @@ impl<'ink> PlaceValue<'ink> {
     pub(crate) fn pointee(self) -> BasicTypeEnum<'ink> {
         self.pointee
     }
+    pub(crate) fn load(self, builder: &Builder<'ink>, name: &str) -> BasicValueEnum<'ink> {
+        builder.build_load(self.pointer, name)
+    }
+
+    pub(crate) fn store(
+        self,
+        builder: &Builder<'ink>,
+        value: BasicValueEnum<'ink>,
+    ) -> InstructionValue<'ink> {
+        debug_assert_eq!(self.pointee, value.get_type());
+        builder.build_store(self.pointer, value)
+    }
+
 }
 
 /// A writable memory location paired with its Mun type.
@@ -67,15 +80,13 @@ impl<'ink> Place<'ink> {
         self.value
     }
 
+
     pub(crate) fn ty(&self) -> &Ty {
         &self.ty
     }
 
     pub(crate) fn load(&self, builder: &Builder<'ink>, name: &str) -> Operand<'ink> {
-        Operand::new(
-            builder.build_load(self.value.pointer(), name),
-            self.ty.clone(),
-        )
+        Operand::new(self.value.load(builder, name), self.ty.clone())
     }
 
     pub(crate) fn store(
@@ -84,8 +95,7 @@ impl<'ink> Place<'ink> {
         operand: &Operand<'ink>,
     ) -> InstructionValue<'ink> {
         debug_assert_eq!(self.ty(), operand.ty());
-        debug_assert_eq!(self.value.pointee(), operand.value().get_type());
-        builder.build_store(self.value.pointer(), operand.value())
+        self.value.store(builder, operand.value())
     }
 
     pub(crate) fn store_value(
@@ -93,7 +103,6 @@ impl<'ink> Place<'ink> {
         builder: &Builder<'ink>,
         value: BasicValueEnum<'ink>,
     ) -> InstructionValue<'ink> {
-        debug_assert_eq!(self.value.pointee(), value.get_type());
-        builder.build_store(self.value.pointer(), value)
+        self.value.store(builder, value)
     }
 }
