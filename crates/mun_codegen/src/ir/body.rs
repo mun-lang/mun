@@ -1431,8 +1431,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .expect("expected a struct field")
             .index(self.db);
         let receiver = self.gen_place_expr(receiver_expr)?;
-        let receiver_ptr = if hir_struct.data(self.db).memory_kind
-            == mun_hir::StructMemoryKind::Gc
+        let receiver_ptr = if hir_struct.data(self.db).memory_kind == mun_hir::StructMemoryKind::Gc
         {
             let handle_name = format!(
                 "{}->data",
@@ -1591,8 +1590,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .expect("the base of an index expression must be an array")
             .clone();
         let array_ir_ty = self.hir_types.get_array_type(&element_ty);
-        let base =
-            RuntimeArrayValue::new(self.gen_expr(base)?.into_pointer_value(), array_ir_ty);
+        let base = RuntimeArrayValue::new(self.gen_expr(base)?.into_pointer_value(), array_ir_ty);
         let index = self.gen_expr(index)?.into_int_value();
         let elements = base.get_elements(&self.builder);
         let pointer = unsafe {

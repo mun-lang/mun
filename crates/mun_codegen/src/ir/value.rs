@@ -61,7 +61,6 @@ impl<'ink> PlaceValue<'ink> {
         debug_assert_eq!(self.pointee, value.get_type());
         builder.build_store(self.pointer, value)
     }
-
 }
 
 /// A writable memory location paired with its Mun type.
@@ -79,7 +78,6 @@ impl<'ink> Place<'ink> {
     pub(crate) fn value(&self) -> PlaceValue<'ink> {
         self.value
     }
-
 
     pub(crate) fn ty(&self) -> &Ty {
         &self.ty

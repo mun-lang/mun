@@ -1,8 +1,8 @@
 //! Typed projections into heap-allocated Mun arrays.
 //!
-//! A runtime array handle points indirectly to `{ length, capacity, first_element }`. This module
-//! keeps that aggregate type explicit so projections do not depend on LLVM pointer element types.
-
+//! A runtime array handle points indirectly to `{ length, capacity,
+//! first_element }`. This module keeps that aggregate type explicit so
+//! projections do not depend on LLVM pointer element types.
 
 use inkwell::{
     builder::Builder,
@@ -27,7 +27,6 @@ impl<'ink> RuntimeArrayValue<'ink> {
             array_type,
         }
     }
-
 
     fn get_array(&self, builder: &Builder<'ink>) -> PlaceValue<'ink> {
         self.reference.get_data(builder)
