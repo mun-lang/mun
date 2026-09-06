@@ -110,7 +110,6 @@ pub(crate) fn gen_file_group_ir<'ink>(
         code_gen.context,
         &llvm_module,
         &target_data,
-        intrinsics_map.keys(),
         &dispatch_table,
         &code_gen.hir_types,
         module_group,

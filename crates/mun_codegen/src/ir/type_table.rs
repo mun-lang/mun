@@ -15,10 +15,7 @@ use inkwell::{
 use mun_hir::{Body, ExprId, HirDatabase, InferenceResult};
 
 use crate::{
-    ir::{
-        dispatch_table::{DispatchTable, FunctionPrototype},
-        ty::HirTypeCache,
-    },
+    ir::{dispatch_table::DispatchTable, ty::HirTypeCache},
     type_info::TypeId,
     ModuleGroup,
 };
@@ -94,12 +91,11 @@ pub(crate) struct TypeTableBuilder<'db, 'ink, 't> {
 }
 
 impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
-    pub(crate) fn new<'f>(
+    pub(crate) fn new(
         db: &'db dyn HirDatabase,
         context: &'ink Context,
         module: &'t Module<'ink>,
         target_data: &TargetData,
-        _intrinsics: impl Iterator<Item = &'f FunctionPrototype>,
         dispatch_table: &'t DispatchTable<'ink>,
         hir_types: &'t HirTypeCache<'db, 'ink>,
         module_group: &'t ModuleGroup,
