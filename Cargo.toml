@@ -39,7 +39,7 @@ insta = { version = "1.48.0", default-features = false }
 itertools = { version = "0.15.0", default-features = false, features = ["use_alloc"] }
 la-arena = { version = "0.3.1", default-features = false }
 libloading = { version = "0.9.0", default-features = false, features = ["std"] }
-lld_rs = { git = "https://github.com/mun-lang/lld-rs", rev = "1ab70c919a340a553dfb63ae5865814b92684865", default-features = false }
+lld_rs = { git = "https://github.com/mun-lang/lld-rs", rev = "f457599a7971c3346dff13eea649dfc20856e9cf", default-features = false }
 log = { version = "0.4.33", default-features = false }
 lsp-server = { version = "0.10.0", default-features = false }
 lsp-types = { version = "0.97.0", default-features = false }

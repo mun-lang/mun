@@ -1133,7 +1133,7 @@ checksum = "47d9d19d1d6efa0109d2f65ff4c85cddd50bd572e5a00127ab10987290bcefae"
 [[package]]
 name = "lld_rs"
 version = "181.0.0"
-source = "git+https://github.com/mun-lang/lld-rs?rev=1ab70c919a340a553dfb63ae5865814b92684865#1ab70c919a340a553dfb63ae5865814b92684865"
+source = "git+https://github.com/mun-lang/lld-rs?rev=f457599a7971c3346dff13eea649dfc20856e9cf#f457599a7971c3346dff13eea649dfc20856e9cf"
 dependencies = [
  "cc",
  "lazy_static",
