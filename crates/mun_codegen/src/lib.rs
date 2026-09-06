@@ -21,8 +21,6 @@ mod mock;
 #[cfg(test)]
 mod test;
 
-pub mod value;
-
 mod apple;
 pub(crate) mod intrinsics;
 mod linker;

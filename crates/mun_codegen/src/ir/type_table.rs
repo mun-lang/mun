@@ -8,7 +8,8 @@ use inkwell::{
     context::Context,
     module::{Linkage, Module},
     types::ArrayType,
-    values::PointerValue,
+    values::{GlobalValue, PointerValue},
+    AddressSpace,
 };
 use mun_hir::{Body, ExprId, HirDatabase, InferenceResult};
 
@@ -18,12 +19,10 @@ use crate::{
         ty::HirTypeCache,
     },
     type_info::TypeId,
-    value::{Global, IrValueContext, IterAsIrValue, Value},
     ModuleGroup,
 };
 
-/// A type table in IR is a list of pointers to unique type information that are
-/// used to generate function and struct information.
+/// The runtime lookup table for type handles referenced by generated code.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct TypeTable<'ink> {
     entries: Vec<Arc<TypeId>>,
@@ -32,76 +31,60 @@ pub struct TypeTable<'ink> {
 }
 
 impl<'ink> TypeTable<'ink> {
-    /// The name of the `TypeTable`'s LLVM `GlobalValue`.
     pub(crate) const NAME: &'static str = "global_type_lookup_table";
 
-    /// Returns a slice containing all types
     pub fn entries(&self) -> &[Arc<TypeId>] {
         &self.entries
     }
 
-    /// Looks for a global symbol with the name of the `TypeTable` global in the
-    /// specified `module`. Returns the global value if it could be found,
-    /// `None` otherwise.
-    pub fn find_global(module: &Module<'ink>) -> Option<Global<'ink, [*const std::ffi::c_void]>> {
-        module
-            .get_global(Self::NAME)
-            .map(|g| unsafe { Global::from_raw(g) })
+    pub fn find_global(module: &Module<'ink>) -> Option<GlobalValue<'ink>> {
+        module.get_global(Self::NAME)
     }
 
-    /// Generates a `TypeInfo` lookup through the `TypeTable`, equivalent to
-    /// something along the lines of: `type_table[i]`, where `i` is the
-    /// index of the type and `type_table` is an array of `TypeInfo`
-    /// pointers.
+    /// Emits a lookup for the runtime handle associated with `type_info`.
     pub fn gen_type_info_lookup(
         &self,
         context: &'ink Context,
         builder: &inkwell::builder::Builder<'ink>,
         type_info: &Arc<TypeId>,
-        table_ref: Option<Global<'ink, [*const std::ffi::c_void]>>,
+        table_ref: Option<GlobalValue<'ink>>,
     ) -> PointerValue<'ink> {
         let table_ref = table_ref.expect("no type table defined");
-
         let index: u64 = (*self.type_id_to_index.get(type_info).expect("unknown type"))
             .try_into()
             .expect("too many types");
-
         let global_index = context.i64_type().const_zero();
         let array_index = context.i64_type().const_int(index, false);
-
-        let ptr_to_type_info_ptr = unsafe {
+        let pointer = unsafe {
             builder.build_gep(
-                table_ref.into(),
+                table_ref.as_pointer_value(),
                 &[global_index, array_index],
                 &format!("{}_ptr_ptr", type_info.name),
             )
         };
-
         builder
-            .build_load(ptr_to_type_info_ptr, &format!("{}_ptr", type_info.name))
+            .build_load(pointer, &format!("{}_ptr", type_info.name))
             .into_pointer_value()
     }
 
-    /// Returns the number of types in the `TypeTable`.
     pub fn num_types(&self) -> usize {
         self.table_type.len() as usize
     }
 
-    /// Returns whether the type table is empty.
     pub fn is_empty(&self) -> bool {
         self.table_type.len() == 0
     }
 
-    /// Returns the IR type of the type table's global value, if it exists.
     pub fn ty(&self) -> ArrayType<'ink> {
         self.table_type
     }
 }
 
-/// Used to build a `TypeTable` from HIR.
+/// Collects the types used by a module group and materializes its runtime lookup table.
 pub(crate) struct TypeTableBuilder<'db, 'ink, 't> {
     db: &'db dyn HirDatabase,
-    value_context: &'t IrValueContext<'ink, 't, 't>,
+    context: &'ink Context,
+    module: &'t Module<'ink>,
     dispatch_table: &'t DispatchTable<'ink>,
     hir_types: &'t HirTypeCache<'db, 'ink>,
     entries: HashSet<Arc<TypeId>>,
@@ -109,27 +92,19 @@ pub(crate) struct TypeTableBuilder<'db, 'ink, 't> {
 }
 
 impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
-    /// Creates a new `TypeTableBuilder`.
     pub(crate) fn new<'f>(
         db: &'db dyn HirDatabase,
-        value_context: &'t IrValueContext<'ink, '_, '_>,
+        context: &'ink Context,
+        module: &'t Module<'ink>,
         _intrinsics: impl Iterator<Item = &'f FunctionPrototype>,
         dispatch_table: &'t DispatchTable<'ink>,
         hir_types: &'t HirTypeCache<'db, 'ink>,
         module_group: &'t ModuleGroup,
     ) -> Self {
-        // for prototype in intrinsics {
-        //     for arg_type in prototype.arg_types.iter() {
-        //         builder.collect_type(arg_type.clone());
-        //     }
-        //     if let Some(ret_type) = prototype.ret_type.as_ref() {
-        //         builder.collect_type(ret_type.clone());
-        //     }
-        // }
-
         Self {
             db,
-            value_context,
+            context,
+            module,
             dispatch_table,
             hir_types,
             entries: HashSet::default(),
@@ -137,21 +112,16 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
         }
     }
 
-    /// Collects unique `TypeInfo` from the given `Ty`.
     fn collect_type(&mut self, type_info: Arc<TypeId>) {
         self.entries.insert(type_info);
     }
 
-    /// Collects unique `TypeInfo` from the specified expression and its
-    /// sub-expressions.
     fn collect_expr(&mut self, expr_id: ExprId, body: &Arc<Body>, infer: &InferenceResult) {
         let expr = &body[expr_id];
-
-        // If this expression is a call, store it in the dispatch table
         if let mun_hir::Expr::Call { callee, .. } = expr {
             match infer[*callee].as_callable_def() {
-                Some(mun_hir::CallableDef::Function(hir_fn)) => {
-                    self.maybe_collect_fn_signature(hir_fn);
+                Some(mun_hir::CallableDef::Function(function)) => {
+                    self.maybe_collect_fn_signature(function);
                 }
                 Some(mun_hir::CallableDef::Struct(_)) => (),
                 None => panic!("expected a callable expression"),
@@ -159,94 +129,65 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
         } else if let mun_hir::Expr::Array(..) = expr {
             self.collect_type(self.hir_types.type_id(&infer[expr_id]));
         }
-
-        // Recurse further
         expr.walk_child_exprs(|expr_id| self.collect_expr(expr_id, body, infer));
     }
 
-    /// Collects `TypeInfo` from types in the signature of a function
-    pub fn collect_fn_signature(&mut self, hir_fn: mun_hir::Function) {
-        let fn_sig = hir_fn.ty(self.db).callable_sig(self.db).unwrap();
-
-        // Collect argument types
-        for ty in fn_sig.params().iter() {
+    pub fn collect_fn_signature(&mut self, function: mun_hir::Function) {
+        let signature = function.ty(self.db).callable_sig(self.db).unwrap();
+        for ty in signature.params().iter() {
             self.collect_type(self.hir_types.type_id(ty));
         }
-
-        // Collect return type
-        let ret_ty = fn_sig.ret();
-        if !ret_ty.is_empty() {
-            self.collect_type(self.hir_types.type_id(ret_ty));
+        if !signature.ret().is_empty() {
+            self.collect_type(self.hir_types.type_id(signature.ret()));
         }
     }
 
-    /// Collects `TypeInfo` from types in the signature of a function if it's
-    /// exposed externally.
-    pub fn maybe_collect_fn_signature(&mut self, hir_fn: mun_hir::Function) {
-        // If a function is externally visible or contained in the dispatch table,
-        // record the types of the signature
-        if self.module_group.should_export_fn(self.db, hir_fn)
-            || self.dispatch_table.contains(hir_fn)
+    pub fn maybe_collect_fn_signature(&mut self, function: mun_hir::Function) {
+        if self.module_group.should_export_fn(self.db, function)
+            || self.dispatch_table.contains(function)
         {
-            self.collect_fn_signature(hir_fn);
+            self.collect_fn_signature(function);
         }
     }
 
-    /// Collects unique `TypeInfo` from the specified function signature and
-    /// body.
-    pub fn collect_fn(&mut self, hir_fn: mun_hir::Function) {
-        self.maybe_collect_fn_signature(hir_fn);
-
-        // Collect used types from body
-        let body = hir_fn.body(self.db);
-        let infer = hir_fn.infer(self.db);
+    pub fn collect_fn(&mut self, function: mun_hir::Function) {
+        self.maybe_collect_fn_signature(function);
+        let body = function.body(self.db);
+        let infer = function.infer(self.db);
         self.collect_expr(body.body_expr(), &body, &infer);
     }
 
-    /// Collects unique `TypeInfo` from the specified struct type.
-    pub fn collect_struct(&mut self, hir_struct: mun_hir::Struct) {
-        let type_info = self.hir_types.type_id(&hir_struct.ty(self.db));
-        self.collect_type(type_info);
-
-        let fields = hir_struct.fields(self.db);
-        for field in fields {
+    pub fn collect_struct(&mut self, strukt: mun_hir::Struct) {
+        self.collect_type(self.hir_types.type_id(&strukt.ty(self.db)));
+        for field in strukt.fields(self.db) {
             self.collect_type(self.hir_types.type_id(&field.ty(self.db)));
         }
     }
 
-    /// Constructs a `TypeTable` from all *used* types.
     pub fn build(self) -> TypeTable<'ink> {
         let mut entries = Vec::from_iter(self.entries);
-        entries.sort_by(|a, b| a.name.cmp(&b.name));
-
-        let type_info_to_index = entries
+        entries.sort_by(|lhs, rhs| lhs.name.cmp(&rhs.name));
+        let type_id_to_index = entries
             .iter()
             .enumerate()
-            .map(|(idx, type_info)| (type_info.clone(), idx))
+            .map(|(index, type_info)| (type_info.clone(), index))
             .collect();
 
-        // Construct a list of all `ir::TypeInfo`s
-        let type_info_ptrs: Value<'ink, [*const std::ffi::c_void]> = entries
-            .iter()
-            .map(|_| Value::null(self.value_context))
-            .into_value(self.value_context);
-
-        // If there are types, introduce a special global that contains all the
-        // TypeInfos
-        if !type_info_ptrs.is_empty() {
-            let _: Global<'ink, [*const std::ffi::c_void]> = type_info_ptrs.into_global(
-                TypeTable::NAME,
-                self.value_context,
-                false,
-                Linkage::External,
-                None,
-            );
-        };
+        let pointer_type = self.context.i8_type().ptr_type(AddressSpace::default());
+        let values = vec![pointer_type.const_null(); entries.len()];
+        let initializer = pointer_type.const_array(&values);
+        if !values.is_empty() {
+            let global = self
+                .module
+                .add_global(initializer.get_type(), None, TypeTable::NAME);
+            global.set_linkage(Linkage::External);
+            global.set_initializer(&initializer);
+        }
 
         TypeTable {
             entries,
-            type_id_to_index: type_info_to_index,
-            table_type: type_info_ptrs.get_type(),
+            type_id_to_index,
+            table_type: initializer.get_type(),
         }
     }
 }

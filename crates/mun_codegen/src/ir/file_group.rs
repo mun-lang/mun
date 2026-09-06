@@ -9,11 +9,7 @@ use super::{
     intrinsics,
     type_table::{TypeTable, TypeTableBuilder},
 };
-use crate::{
-    code_gen::CodeGenContext,
-    module_group::ModuleGroup,
-    value::{IrTypeContext, IrValueContext},
-};
+use crate::{code_gen::CodeGenContext, module_group::ModuleGroup};
 
 /// The IR generated for a group of files. It is used to generate IR for all of
 /// the group's files and the resulting `Assembly`'s symbols.
@@ -108,20 +104,10 @@ pub(crate) fn gen_file_group_ir<'ink>(
 
     let (dispatch_table, referenced_modules) = dispatch_table_builder.build();
 
-    let target_data = code_gen.target_machine.get_target_data();
-    let type_context = IrTypeContext {
-        context: code_gen.context,
-        target_data: &target_data,
-        struct_types: &code_gen.rust_types,
-    };
-    let value_context = IrValueContext {
-        type_context: &type_context,
-        context: code_gen.context,
-        module: &llvm_module,
-    };
     let mut type_table_builder = TypeTableBuilder::new(
         code_gen.db,
-        &value_context,
+        code_gen.context,
+        &llvm_module,
         intrinsics_map.keys(),
         &dispatch_table,
         &code_gen.hir_types,

@@ -8,7 +8,6 @@ use crate::{
     code_gen::CodeGenContext,
     ir::{body::BodyIrGenerator, file_group::FileGroupIr, function, type_table::TypeTable},
     module_group::ModuleGroup,
-    value::Global,
 };
 
 /// The IR generated for a single source file.
@@ -81,7 +80,7 @@ pub(crate) fn gen_file_ir<'ink>(
         ExternalGlobals {
             alloc_handle,
             dispatch_table,
-            type_table: type_table.map(|g| unsafe { Global::from_raw(g) }),
+            type_table,
         }
     };
 
