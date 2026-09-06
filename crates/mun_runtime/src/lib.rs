@@ -261,7 +261,9 @@ impl Runtime {
         });
 
         let watcher: RecommendedWatcher = notify::recommended_watcher(move |res| {
-            tx.send(res).expect("Failed to send filesystem event.");
+            // The callback can still run while the watcher is shutting down. At that
+            // point the runtime's receiver may already have been dropped.
+            let _ = tx.send(res);
         })?;
         let mut runtime = Runtime {
             assemblies: HashMap::new(),

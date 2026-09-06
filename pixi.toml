@@ -16,6 +16,22 @@ mdbook = "0.4.43.*"
 cargo-llvm-cov = "0.6.15.*"
 cargo-nextest = "0.9.78.*"
 
+[feature.nightly]
+channels = ["conda-forge/label/rust_dev", "conda-forge"]
+channel-priority = "disabled"
+
+[feature.nightly.dependencies]
+rust = { version = "*", channel = "conda-forge/label/rust_dev" }
+
+[feature.nightly.tasks]
+format = "cargo fmt --all"
+format-check = "cargo fmt --all -- --check"
+gen-syntax = "cargo gen-syntax"
+generated-check = "cargo test -p tools"
+
+[environments]
+nightly = { features = ["nightly"], no-default-feature = true }
+
 [target.osx-64.dependencies]
 macosx_deployment_target_osx-64 = "15.5.*"
 compiler-rt = "14.*"
