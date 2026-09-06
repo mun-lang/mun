@@ -35,13 +35,25 @@ fn update(path: &Path, contents: &str, mode: Mode) -> Result<()> {
 }
 
 fn reformat(text: impl std::fmt::Display) -> Result<String> {
-    let mut rustfmt = Command::new("rustup")
-        .args(["run", "nightly", "--", "rustfmt"])
+    let mut rustfmt = Command::new("rustfmt")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()?;
-    write!(rustfmt.stdin.take().unwrap(), "{text}")?;
+    let Some(mut stdin) = rustfmt.stdin.take() else {
+        bail!("failed to open rustfmt stdin");
+    };
+    write!(stdin, "{text}")?;
+    drop(stdin);
+
     let output = rustfmt.wait_with_output()?;
+    if !output.status.success() {
+        bail!(
+            "rustfmt failed:\n{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
     let stdout = String::from_utf8(output.stdout)?;
     let preamble = "Generated file, do not edit by hand, see `crate/ra_tools/src/codegen`";
     Ok(format!("//! {preamble}\n\n{stdout}"))
@@ -62,7 +74,9 @@ mod tests {
     #[test]
     fn grammar_is_fresh() {
         if let Err(error) = super::syntax::generate(Mode::Verify) {
-            panic!("Please update syntax by running `cargo gen-syntax`, its out of date.\n{error}");
+            panic!(
+                "Please update syntax by running `pixi run -e nightly gen-syntax`; it is out of date.\n{error}"
+            );
         }
     }
 

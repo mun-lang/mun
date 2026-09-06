@@ -26,6 +26,8 @@ rust = { version = "*", channel = "conda-forge/label/rust_dev" }
 [feature.nightly.tasks]
 format = "cargo fmt --all"
 format-check = "cargo fmt --all -- --check"
+gen-syntax = "cargo gen-syntax"
+generated-check = "cargo test -p tools"
 
 [environments]
 nightly = { features = ["nightly"], no-default-feature = true }
