@@ -6,35 +6,65 @@ expression: "\n    pub fn add(a: f32, b: f32) -> f32 { a + b }\n    pub fn subtr
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define float @add(float %0, float %1) {
 body:
-  %add = fadd float %0, %1
+  %b = alloca float, align 4
+  store float %1, ptr %b, align 4
+  %a = alloca float, align 4
+  store float %0, ptr %a, align 4
+  %a1 = load float, ptr %a, align 4
+  %b2 = load float, ptr %b, align 4
+  %add = fadd float %a1, %b2
   ret float %add
 }
 
 define float @subtract(float %0, float %1) {
 body:
-  %sub = fsub float %0, %1
+  %b = alloca float, align 4
+  store float %1, ptr %b, align 4
+  %a = alloca float, align 4
+  store float %0, ptr %a, align 4
+  %a1 = load float, ptr %a, align 4
+  %b2 = load float, ptr %b, align 4
+  %sub = fsub float %a1, %b2
   ret float %sub
 }
 
 define float @multiply(float %0, float %1) {
 body:
-  %mul = fmul float %0, %1
+  %b = alloca float, align 4
+  store float %1, ptr %b, align 4
+  %a = alloca float, align 4
+  store float %0, ptr %a, align 4
+  %a1 = load float, ptr %a, align 4
+  %b2 = load float, ptr %b, align 4
+  %mul = fmul float %a1, %b2
   ret float %mul
 }
 
 define float @divide(float %0, float %1) {
 body:
-  %div = fdiv float %0, %1
+  %b = alloca float, align 4
+  store float %1, ptr %b, align 4
+  %a = alloca float, align 4
+  store float %0, ptr %a, align 4
+  %a1 = load float, ptr %a, align 4
+  %b2 = load float, ptr %b, align 4
+  %div = fdiv float %a1, %b2
   ret float %div
 }
 
 define float @remainder(float %0, float %1) {
 body:
-  %rem = frem float %0, %1
+  %b = alloca float, align 4
+  store float %1, ptr %b, align 4
+  %a = alloca float, align 4
+  store float %0, ptr %a, align 4
+  %a1 = load float, ptr %a, align 4
+  %b2 = load float, ptr %b, align 4
+  %rem = frem float %a1, %b2
   ret float %rem
 }
 
@@ -42,5 +72,4 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

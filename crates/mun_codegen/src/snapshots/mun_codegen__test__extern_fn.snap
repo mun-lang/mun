@@ -6,14 +6,14 @@ expression: "\n    extern fn add(a:i32, b:i32) -> i32;\n    pub fn main() {\n   
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-%DispatchTable = type { i32 (i32, i32)* }
+%DispatchTable = type { ptr }
 
 @dispatchTable = external global %DispatchTable
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define void @main() {
 body:
-  %add_ptr = load i32 (i32, i32)*, i32 (i32, i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
+  %add_ptr = load ptr, ptr @dispatchTable, align 8
   %add = call i32 %add_ptr(i32 3, i32 4)
   ret void
 }
@@ -22,8 +22,7 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%DispatchTable = type { i32 (i32, i32)* }
+%DispatchTable = type { ptr }
 
 @dispatchTable = global %DispatchTable zeroinitializer
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

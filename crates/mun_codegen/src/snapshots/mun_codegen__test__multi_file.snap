@@ -6,14 +6,14 @@ expression: "\n    //- /mod.mun\n    pub fn main() -> i32 {\n        foo::get_va
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-%DispatchTable = type { i32 ()* }
+%DispatchTable = type { ptr }
 
 @dispatchTable = external global %DispatchTable
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i32 @main() {
 body:
-  %get_value_ptr = load i32 ()*, i32 ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
+  %get_value_ptr = load ptr, ptr @dispatchTable, align 8
   %get_value = call i32 %get_value_ptr()
   ret i32 %get_value
 }
@@ -22,16 +22,16 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%DispatchTable = type { i32 ()* }
+%DispatchTable = type { ptr }
 
 @dispatchTable = global %DispatchTable zeroinitializer
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
+@global_type_lookup_table = global [1 x ptr] zeroinitializer
 
 ; == FILE IR (foo) =====================================
 ; ModuleID = 'foo'
 source_filename = "foo"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i32 @get_value() {
 body:
@@ -42,5 +42,4 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

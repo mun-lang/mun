@@ -1,115 +1,125 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1080
 expression: "\n    pub struct(gc) GcStruct(f32, f32);\n    pub struct(value) ValueStruct(f32, f32);\n\n    pub struct(gc) GcWrapper(GcStruct, ValueStruct)\n    pub struct(value) ValueWrapper(GcStruct, ValueStruct);\n\n    pub fn new_gc_struct(a: f32, b: f32) -> GcStruct {\n        GcStruct(a, b)\n    }\n\n    pub fn new_value_struct(a: f32, b: f32) -> ValueStruct {\n        ValueStruct(a, b)\n    }\n\n    pub fn new_gc_wrapper(a: GcStruct, b: ValueStruct) -> GcWrapper {\n        GcWrapper(a, b)\n    }\n\n    pub fn new_value_wrapper(a: GcStruct, b: ValueStruct) -> ValueWrapper {\n        ValueWrapper(a, b)\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-%DispatchTable = type { i8** (i8*, i8*)* }
+%DispatchTable = type { ptr }
 %GcStruct = type { float, float }
 %ValueStruct = type { float, float }
-%GcWrapper = type { %GcStruct**, %ValueStruct }
-%ValueWrapper = type { %GcStruct**, %ValueStruct }
+%GcWrapper = type { ptr, %ValueStruct }
+%ValueWrapper = type { ptr, %ValueStruct }
 
-@allocatorHandle = external global i8*
+@allocatorHandle = external global ptr
 @dispatchTable = external global %DispatchTable
-@global_type_lookup_table = external global [5 x i64*]
+@global_type_lookup_table = external global [5 x ptr]
 
-define %GcStruct** @new_gc_struct(float %0, float %1) {
+define ptr @new_gc_struct(float %0, float %1) {
 body:
-  %init = insertvalue %GcStruct undef, float %0, 0
-  %init3 = insertvalue %GcStruct %init, float %1, 1
-  %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
-  %GcStruct_ptr = load i64*, i64** getelementptr inbounds ([5 x i64*], [5 x i64*]* @global_type_lookup_table, i64 0, i64 0), align 8
-  %type_info_ptr_to_i8_ptr = bitcast i64* %GcStruct_ptr to i8*
-  %allocator_handle = load i8*, i8** @allocatorHandle, align 8
-  %ref = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
-  %"ref<GcStruct>" = bitcast i8** %ref to %GcStruct**
-  %"ref<GcStruct>->data" = load %GcStruct*, %GcStruct** %"ref<GcStruct>", align 8
-  store %GcStruct %init3, %GcStruct* %"ref<GcStruct>->data", align 4
-  ret %GcStruct** %"ref<GcStruct>"
+  %b = alloca float, align 4
+  store float %1, ptr %b, align 4
+  %a = alloca float, align 4
+  store float %0, ptr %a, align 4
+  %a1 = load float, ptr %a, align 4
+  %b2 = load float, ptr %b, align 4
+  %init = insertvalue %GcStruct undef, float %a1, 0
+  %init3 = insertvalue %GcStruct %init, float %b2, 1
+  %new_ptr = load ptr, ptr @dispatchTable, align 8
+  %GcStruct_ptr = load ptr, ptr @global_type_lookup_table, align 8
+  %allocator_handle = load ptr, ptr @allocatorHandle, align 8
+  %ref = call ptr %new_ptr(ptr %GcStruct_ptr, ptr %allocator_handle)
+  %"ref->data" = load ptr, ptr %ref, align 8
+  store %GcStruct %init3, ptr %"ref->data", align 4
+  ret ptr %ref
 }
 
 define %ValueStruct @new_value_struct(float %0, float %1) {
 body:
-  %init = insertvalue %ValueStruct undef, float %0, 0
-  %init3 = insertvalue %ValueStruct %init, float %1, 1
+  %b = alloca float, align 4
+  store float %1, ptr %b, align 4
+  %a = alloca float, align 4
+  store float %0, ptr %a, align 4
+  %a1 = load float, ptr %a, align 4
+  %b2 = load float, ptr %b, align 4
+  %init = insertvalue %ValueStruct undef, float %a1, 0
+  %init3 = insertvalue %ValueStruct %init, float %b2, 1
   ret %ValueStruct %init3
 }
 
-define %ValueStruct** @new_value_struct_wrapper(float %0, float %1) {
+define ptr @new_value_struct_wrapper(float %0, float %1) {
 body:
   %new_value_struct = call %ValueStruct @new_value_struct(float %0, float %1)
-  %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
-  %ValueStruct_ptr = load i64*, i64** getelementptr inbounds ([5 x i64*], [5 x i64*]* @global_type_lookup_table, i64 0, i64 2), align 8
-  %type_info_ptr_to_i8_ptr = bitcast i64* %ValueStruct_ptr to i8*
-  %allocator_handle = load i8*, i8** @allocatorHandle, align 8
-  %ref = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
-  %"ref<ValueStruct>" = bitcast i8** %ref to %ValueStruct**
-  %"ref<ValueStruct>->data" = load %ValueStruct*, %ValueStruct** %"ref<ValueStruct>", align 8
-  store %ValueStruct %new_value_struct, %ValueStruct* %"ref<ValueStruct>->data", align 4
-  ret %ValueStruct** %"ref<ValueStruct>"
+  %new_ptr = load ptr, ptr @dispatchTable, align 8
+  %ValueStruct_ptr = load ptr, ptr getelementptr ([5 x ptr], ptr @global_type_lookup_table, i64 0, i64 2), align 8
+  %allocator_handle = load ptr, ptr @allocatorHandle, align 8
+  %ref = call ptr %new_ptr(ptr %ValueStruct_ptr, ptr %allocator_handle)
+  %"ref->data" = load ptr, ptr %ref, align 8
+  store %ValueStruct %new_value_struct, ptr %"ref->data", align 4
+  ret ptr %ref
 }
 
-define %GcWrapper** @new_gc_wrapper(%GcStruct** %0, %ValueStruct %1) {
+define ptr @new_gc_wrapper(ptr %0, %ValueStruct %1) {
 body:
-  %.fca.0.extract = extractvalue %ValueStruct %1, 0
-  %.fca.1.extract = extractvalue %ValueStruct %1, 1
-  %init = insertvalue %GcWrapper undef, %GcStruct** %0, 0
-  %init3 = insertvalue %GcWrapper %init, %ValueStruct %1, 1
-  %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
-  %GcWrapper_ptr = load i64*, i64** getelementptr inbounds ([5 x i64*], [5 x i64*]* @global_type_lookup_table, i64 0, i64 1), align 8
-  %type_info_ptr_to_i8_ptr = bitcast i64* %GcWrapper_ptr to i8*
-  %allocator_handle = load i8*, i8** @allocatorHandle, align 8
-  %ref = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
-  %"ref<GcWrapper>" = bitcast i8** %ref to %GcWrapper**
-  %"ref<GcWrapper>->data" = load %GcWrapper*, %GcWrapper** %"ref<GcWrapper>", align 8
-  store %GcWrapper %init3, %GcWrapper* %"ref<GcWrapper>->data", align 8
-  ret %GcWrapper** %"ref<GcWrapper>"
+  %b = alloca %ValueStruct, align 8
+  store %ValueStruct %1, ptr %b, align 4
+  %a = alloca ptr, align 8
+  store ptr %0, ptr %a, align 8
+  %a1 = load ptr, ptr %a, align 8
+  %b2 = load %ValueStruct, ptr %b, align 4
+  %init = insertvalue %GcWrapper undef, ptr %a1, 0
+  %init3 = insertvalue %GcWrapper %init, %ValueStruct %b2, 1
+  %new_ptr = load ptr, ptr @dispatchTable, align 8
+  %GcWrapper_ptr = load ptr, ptr getelementptr ([5 x ptr], ptr @global_type_lookup_table, i64 0, i64 1), align 8
+  %allocator_handle = load ptr, ptr @allocatorHandle, align 8
+  %ref = call ptr %new_ptr(ptr %GcWrapper_ptr, ptr %allocator_handle)
+  %"ref->data" = load ptr, ptr %ref, align 8
+  store %GcWrapper %init3, ptr %"ref->data", align 8
+  ret ptr %ref
 }
 
-define %GcWrapper** @new_gc_wrapper_wrapper(%GcStruct** %0, %ValueStruct** %1) {
+define ptr @new_gc_wrapper_wrapper(ptr %0, ptr %1) {
 body:
-  %"->data" = load %ValueStruct*, %ValueStruct** %1, align 8
-  %deref = load %ValueStruct, %ValueStruct* %"->data", align 4
-  %new_gc_wrapper = call %GcWrapper** @new_gc_wrapper(%GcStruct** %0, %ValueStruct %deref)
-  ret %GcWrapper** %new_gc_wrapper
+  %"->data" = load ptr, ptr %1, align 8
+  %deref = load %ValueStruct, ptr %"->data", align 4
+  %new_gc_wrapper = call ptr @new_gc_wrapper(ptr %0, %ValueStruct %deref)
+  ret ptr %new_gc_wrapper
 }
 
-define %ValueWrapper @new_value_wrapper(%GcStruct** %0, %ValueStruct %1) {
+define %ValueWrapper @new_value_wrapper(ptr %0, %ValueStruct %1) {
 body:
-  %.fca.0.extract = extractvalue %ValueStruct %1, 0
-  %.fca.1.extract = extractvalue %ValueStruct %1, 1
-  %init = insertvalue %ValueWrapper undef, %GcStruct** %0, 0
-  %init3 = insertvalue %ValueWrapper %init, %ValueStruct %1, 1
+  %b = alloca %ValueStruct, align 8
+  store %ValueStruct %1, ptr %b, align 4
+  %a = alloca ptr, align 8
+  store ptr %0, ptr %a, align 8
+  %a1 = load ptr, ptr %a, align 8
+  %b2 = load %ValueStruct, ptr %b, align 4
+  %init = insertvalue %ValueWrapper undef, ptr %a1, 0
+  %init3 = insertvalue %ValueWrapper %init, %ValueStruct %b2, 1
   ret %ValueWrapper %init3
 }
 
-define %ValueWrapper** @new_value_wrapper_wrapper(%GcStruct** %0, %ValueStruct** %1) {
+define ptr @new_value_wrapper_wrapper(ptr %0, ptr %1) {
 body:
-  %"->data" = load %ValueStruct*, %ValueStruct** %1, align 8
-  %deref = load %ValueStruct, %ValueStruct* %"->data", align 4
-  %new_value_wrapper = call %ValueWrapper @new_value_wrapper(%GcStruct** %0, %ValueStruct %deref)
-  %new_ptr = load i8** (i8*, i8*)*, i8** (i8*, i8*)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
-  %ValueWrapper_ptr = load i64*, i64** getelementptr inbounds ([5 x i64*], [5 x i64*]* @global_type_lookup_table, i64 0, i64 3), align 8
-  %type_info_ptr_to_i8_ptr = bitcast i64* %ValueWrapper_ptr to i8*
-  %allocator_handle = load i8*, i8** @allocatorHandle, align 8
-  %ref = call i8** %new_ptr(i8* %type_info_ptr_to_i8_ptr, i8* %allocator_handle)
-  %"ref<ValueWrapper>" = bitcast i8** %ref to %ValueWrapper**
-  %"ref<ValueWrapper>->data" = load %ValueWrapper*, %ValueWrapper** %"ref<ValueWrapper>", align 8
-  store %ValueWrapper %new_value_wrapper, %ValueWrapper* %"ref<ValueWrapper>->data", align 8
-  ret %ValueWrapper** %"ref<ValueWrapper>"
+  %"->data" = load ptr, ptr %1, align 8
+  %deref = load %ValueStruct, ptr %"->data", align 4
+  %new_value_wrapper = call %ValueWrapper @new_value_wrapper(ptr %0, %ValueStruct %deref)
+  %new_ptr = load ptr, ptr @dispatchTable, align 8
+  %ValueWrapper_ptr = load ptr, ptr getelementptr ([5 x ptr], ptr @global_type_lookup_table, i64 0, i64 3), align 8
+  %allocator_handle = load ptr, ptr @allocatorHandle, align 8
+  %ref = call ptr %new_ptr(ptr %ValueWrapper_ptr, ptr %allocator_handle)
+  %"ref->data" = load ptr, ptr %ref, align 8
+  store %ValueWrapper %new_value_wrapper, ptr %"ref->data", align 8
+  ret ptr %ref
 }
 
 ; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%DispatchTable = type { i8** (i8*, i8*)* }
+%DispatchTable = type { ptr }
 
 @dispatchTable = global %DispatchTable zeroinitializer
-@global_type_lookup_table = global [5 x i64*] zeroinitializer
-@allocatorHandle = unnamed_addr global i8* null
-
+@global_type_lookup_table = global [5 x ptr] zeroinitializer
+@allocatorHandle = unnamed_addr global ptr null

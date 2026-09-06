@@ -1,21 +1,25 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1045
 expression: "\n    fn bar() {\n        let a = 3;\n    }\n    pub fn foo(a:i32) {\n        let c = bar()\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define void @bar() {
 body:
+  %a = alloca i32, align 4
+  store i32 3, ptr %a, align 4
   ret void
 }
 
 define void @foo(i32 %0) {
 body:
+  %c = alloca {}, align 8
+  %a = alloca i32, align 4
+  store i32 %0, ptr %a, align 4
   call void @bar()
   ret void
 }
@@ -24,5 +28,4 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

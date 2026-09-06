@@ -7,7 +7,6 @@ use std::{
 use inkwell::{
     context::Context,
     module::{Linkage, Module},
-    targets::TargetData,
     types::{ArrayType, PointerType},
     values::{GlobalValue, PointerValue},
     AddressSpace,
@@ -54,14 +53,22 @@ impl<'ink> TypeTable<'ink> {
         let global_index = context.i64_type().const_zero();
         let array_index = context.i64_type().const_int(index, false);
         let pointer = unsafe {
-            builder.build_gep(
-                table_ref.as_pointer_value(),
-                &[global_index, array_index],
-                &format!("{}_ptr_ptr", type_info.name),
-            )
+            builder
+                .build_gep(
+                    self.table_type,
+                    table_ref.as_pointer_value(),
+                    &[global_index, array_index],
+                    &format!("{}_ptr_ptr", type_info.name),
+                )
+                .expect("valid type table entry pointer")
         };
         builder
-            .build_load(pointer, &format!("{}_ptr", type_info.name))
+            .build_load(
+                self.table_type.get_element_type(),
+                pointer,
+                &format!("{}_ptr", type_info.name),
+            )
+            .expect("valid type table entry load")
             .into_pointer_value()
     }
 
@@ -95,16 +102,14 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
         db: &'db dyn HirDatabase,
         context: &'ink Context,
         module: &'t Module<'ink>,
-        target_data: &TargetData,
+
         dispatch_table: &'t DispatchTable<'ink>,
         hir_types: &'t HirTypeCache<'db, 'ink>,
         module_group: &'t ModuleGroup,
     ) -> Self {
         Self {
             db,
-            pointer_type: context
-                .ptr_sized_int_type(target_data, None)
-                .ptr_type(AddressSpace::default()),
+            pointer_type: context.ptr_type(AddressSpace::default()),
             module,
             dispatch_table,
             hir_types,

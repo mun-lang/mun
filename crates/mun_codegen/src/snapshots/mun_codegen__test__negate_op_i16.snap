@@ -6,11 +6,14 @@ expression: "\n    pub fn negate(a: i16) -> i16 { -a }\n                        
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i16 @negate(i16 %0) {
 body:
-  %neg = sub i16 0, %0
+  %a = alloca i16, align 2
+  store i16 %0, ptr %a, align 2
+  %a1 = load i16, ptr %a, align 2
+  %neg = sub i16 0, %a1
   ret i16 %neg
 }
 
@@ -18,5 +21,4 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

@@ -15,7 +15,6 @@ use mun_hir::{HirDatabase, TyKind};
 use crate::{
     ir::{
         dispatch_table::{DispatchTable, DispatchableFunction},
-        function,
         ty::{guid_from_struct, HirTypeCache},
         type_table::TypeTable,
         types::{self as ir, AbiBuilder},
@@ -171,7 +170,7 @@ fn gen_struct_info<'ink>(
     let field_names = abi.types.private_pointer_array(
         abi.module,
         &format!("struct_info::<{name}>::field_names"),
-        abi.context.i8_type().ptr_type(AddressSpace::default()),
+        abi.context.ptr_type(AddressSpace::default()),
         &field_names,
         true,
     );
@@ -239,7 +238,7 @@ fn get_function_definition_array<'ink, 'a>(
                 fn_ptr: value
                     .as_global_value()
                     .as_pointer_value()
-                    .const_cast(abi.context.i8_type().ptr_type(AddressSpace::default())),
+                    .const_cast(abi.context.ptr_type(AddressSpace::default())),
             }
         })
         .collect();
@@ -274,7 +273,7 @@ fn gen_type_lut<'ink>(
             )
         })
         .collect();
-    let byte_ptr = abi.context.i8_type().ptr_type(AddressSpace::default());
+    let byte_ptr = abi.context.ptr_type(AddressSpace::default());
     let type_names = abi.types.private_pointer_array(
         abi.module,
         "fn.get_info.typeLut.typeNames",
@@ -283,7 +282,7 @@ fn gen_type_lut<'ink>(
         false,
     );
 
-    let pointer_table_type = byte_ptr.ptr_type(AddressSpace::default());
+    let pointer_table_type = abi.context.ptr_type(AddressSpace::default());
     let type_ptrs = TypeTable::find_global(abi.module).map_or_else(
         || pointer_table_type.const_null(),
         |global| global.as_pointer_value().const_cast(pointer_table_type),
@@ -313,8 +312,7 @@ fn gen_dispatch_table<'ink>(
         &prototypes,
     );
 
-    let byte_ptr = abi.context.i8_type().ptr_type(AddressSpace::default());
-    let pointer_table_type = byte_ptr.ptr_type(AddressSpace::default());
+    let pointer_table_type = abi.context.ptr_type(AddressSpace::default());
     let fn_ptrs = dispatch_table.global_value().map_or_else(
         || pointer_table_type.const_null(),
         |_| {
@@ -347,7 +345,6 @@ pub(super) fn gen_reflection_ir<'db, 'ink>(
     dispatch_table: &DispatchTable<'ink>,
     type_table: &TypeTable<'ink>,
     hir_types: &HirTypeCache<'db, 'ink>,
-    optimization_level: inkwell::OptimizationLevel,
     dependencies: Vec<String>,
 ) {
     let type_ids = TypeIdBuilder::new(abi);
@@ -360,11 +357,9 @@ pub(super) fn gen_reflection_ir<'db, 'ink>(
         hir_types,
         &type_ids,
     );
-    let functions = functions.as_pointer_value().const_cast(
-        abi.types
-            .function_definition_type()
-            .ptr_type(AddressSpace::default()),
-    );
+    let functions = functions
+        .as_pointer_value()
+        .const_cast(abi.context.ptr_type(AddressSpace::default()));
 
     let module_info = ir::ModuleInfo {
         path: abi.types.intern_c_str(
@@ -386,7 +381,6 @@ pub(super) fn gen_reflection_ir<'db, 'ink>(
         &module_info,
         &dispatch_table,
         &type_lut,
-        optimization_level,
         dependencies,
     );
     gen_set_allocator_handle_fn(abi);
@@ -399,7 +393,6 @@ fn gen_get_info_fn<'ink>(
     module_info: &ir::ModuleInfo<'ink>,
     dispatch_table: &ir::DispatchTable<'ink>,
     type_lut: &ir::TypeLut<'ink>,
-    optimization_level: inkwell::OptimizationLevel,
     dependencies: Vec<String>,
 ) {
     let is_windows = db.target().options.is_like_windows;
@@ -429,7 +422,7 @@ fn gen_get_info_fn<'ink>(
             )
         })
         .collect();
-    let byte_ptr = abi.context.i8_type().ptr_type(AddressSpace::default());
+    let byte_ptr = abi.context.ptr_type(AddressSpace::default());
     let dependencies_ptr = abi.types.private_pointer_array(
         abi.module,
         "dependencies",
@@ -452,23 +445,25 @@ fn gen_get_info_fn<'ink>(
     let body = abi.context.append_basic_block(function, "body");
     builder.position_at_end(body);
     if is_windows {
-        builder.build_store(
-            function
-                .get_nth_param(0)
-                .expect("sret function must receive a result pointer")
-                .into_pointer_value(),
-            assembly_info,
-        );
-        builder.build_return(None);
+        builder
+            .build_store(
+                function
+                    .get_nth_param(0)
+                    .expect("sret function must receive a result pointer")
+                    .into_pointer_value(),
+                assembly_info,
+            )
+            .expect("valid store");
+        builder.build_return(None).expect("valid return");
     } else {
-        builder.build_return(Some(&assembly_info));
+        builder
+            .build_return(Some(&assembly_info))
+            .expect("valid return");
     }
-
-    function::create_pass_manager(abi.module, optimization_level).run_on(&function);
 }
 
 fn gen_set_allocator_handle_fn(abi: &AbiBuilder<'_, '_>) {
-    let pointer_type = abi.context.i8_type().ptr_type(AddressSpace::default());
+    let pointer_type = abi.context.ptr_type(AddressSpace::default());
     let function_type = abi
         .context
         .void_type()
@@ -483,14 +478,16 @@ fn gen_set_allocator_handle_fn(abi: &AbiBuilder<'_, '_>) {
     builder.position_at_end(body);
 
     if let Some(global) = abi.module.get_global("allocatorHandle") {
-        builder.build_store(
-            global.as_pointer_value(),
-            function
-                .get_nth_param(0)
-                .expect("allocator setter must receive the allocator handle"),
-        );
+        builder
+            .build_store(
+                global.as_pointer_value(),
+                function
+                    .get_nth_param(0)
+                    .expect("allocator setter must receive the allocator handle"),
+            )
+            .expect("valid store");
     }
-    builder.build_return(None);
+    builder.build_return(None).expect("valid return");
 }
 
 fn gen_get_version_fn(abi: &AbiBuilder<'_, '_>) {
@@ -503,9 +500,11 @@ fn gen_get_version_fn(abi: &AbiBuilder<'_, '_>) {
     let builder = abi.context.create_builder();
     let body = abi.context.append_basic_block(function, "body");
     builder.position_at_end(body);
-    builder.build_return(Some(
-        &abi.context
-            .i32_type()
-            .const_int(u64::from(abi::ABI_VERSION), false),
-    ));
+    builder
+        .build_return(Some(
+            &abi.context
+                .i32_type()
+                .const_int(u64::from(abi::ABI_VERSION), false),
+        ))
+        .expect("valid return");
 }

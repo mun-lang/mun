@@ -160,10 +160,8 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
     /// are always stored on the heap so this will always be a pointer to an
     /// Array<Ty>.
     pub fn get_array_reference_type(&self, element_ty: &Ty) -> PointerType<'ink> {
-        let ir_ty = self.get_array_type(element_ty);
-        ir_ty
-            .ptr_type(AddressSpace::default())
-            .ptr_type(AddressSpace::default())
+        self.get_array_type(element_ty);
+        self.context.ptr_type(AddressSpace::default())
     }
 
     /// Returns the type of the struct that should be used for variables.
@@ -178,10 +176,7 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
                 // GC values are pointers to pointers
                 // struct Foo {}
                 // Foo**
-                ir_ty
-                    .ptr_type(AddressSpace::default())
-                    .ptr_type(AddressSpace::default())
-                    .into()
+                self.context.ptr_type(AddressSpace::default()).into()
             }
             mun_hir::StructMemoryKind::Value => {
                 // Value structs are passed as values
@@ -196,17 +191,14 @@ impl<'db, 'ink> HirTypeCache<'db, 'ink> {
         &self,
         struct_ty: mun_hir::Struct,
     ) -> BasicTypeEnum<'ink> {
-        let ir_ty = self.get_struct_type(struct_ty);
+        self.get_struct_type(struct_ty);
 
         // GC values are pointers to pointers
         // struct Foo {}
         // Foo**
         //
         // Value structs are converted to GC types in the public API.
-        ir_ty
-            .ptr_type(AddressSpace::default())
-            .ptr_type(AddressSpace::default())
-            .into()
+        self.context.ptr_type(AddressSpace::default()).into()
     }
 
     /// Returns the type of the specified function definition

@@ -6,23 +6,38 @@ expression: "\n    pub fn assign_leftshift(a: i128, b: i128) -> i128 {\n        
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i128 @assign_leftshift(i128 %0, i128 %1) {
 body:
-  %left_shift = shl i128 %0, %1
-  ret i128 %left_shift
+  %b = alloca i128, align 8
+  store i128 %1, ptr %b, align 4
+  %a = alloca i128, align 8
+  store i128 %0, ptr %a, align 4
+  %a1 = load i128, ptr %a, align 4
+  %b2 = load i128, ptr %b, align 4
+  %left_shift = shl i128 %a1, %b2
+  store i128 %left_shift, ptr %a, align 4
+  %a3 = load i128, ptr %a, align 4
+  ret i128 %a3
 }
 
 define i128 @assign_rightshift(i128 %0, i128 %1) {
 body:
-  %right_shift = ashr i128 %0, %1
-  ret i128 %right_shift
+  %b = alloca i128, align 8
+  store i128 %1, ptr %b, align 4
+  %a = alloca i128, align 8
+  store i128 %0, ptr %a, align 4
+  %a1 = load i128, ptr %a, align 4
+  %b2 = load i128, ptr %b, align 4
+  %right_shift = ashr i128 %a1, %b2
+  store i128 %right_shift, ptr %a, align 4
+  %a3 = load i128, ptr %a, align 4
+  ret i128 %a3
 }
 
 ; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

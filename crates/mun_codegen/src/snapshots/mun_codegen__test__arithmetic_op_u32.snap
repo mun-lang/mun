@@ -6,35 +6,65 @@ expression: "\n    pub fn add(a: u32, b: u32) -> u32 { a + b }\n    pub fn subtr
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i32 @add(i32 %0, i32 %1) {
 body:
-  %add = add i32 %0, %1
+  %b = alloca i32, align 4
+  store i32 %1, ptr %b, align 4
+  %a = alloca i32, align 4
+  store i32 %0, ptr %a, align 4
+  %a1 = load i32, ptr %a, align 4
+  %b2 = load i32, ptr %b, align 4
+  %add = add i32 %a1, %b2
   ret i32 %add
 }
 
 define i32 @subtract(i32 %0, i32 %1) {
 body:
-  %sub = sub i32 %0, %1
+  %b = alloca i32, align 4
+  store i32 %1, ptr %b, align 4
+  %a = alloca i32, align 4
+  store i32 %0, ptr %a, align 4
+  %a1 = load i32, ptr %a, align 4
+  %b2 = load i32, ptr %b, align 4
+  %sub = sub i32 %a1, %b2
   ret i32 %sub
 }
 
 define i32 @multiply(i32 %0, i32 %1) {
 body:
-  %mul = mul i32 %0, %1
+  %b = alloca i32, align 4
+  store i32 %1, ptr %b, align 4
+  %a = alloca i32, align 4
+  store i32 %0, ptr %a, align 4
+  %a1 = load i32, ptr %a, align 4
+  %b2 = load i32, ptr %b, align 4
+  %mul = mul i32 %a1, %b2
   ret i32 %mul
 }
 
 define i32 @divide(i32 %0, i32 %1) {
 body:
-  %div = udiv i32 %0, %1
+  %b = alloca i32, align 4
+  store i32 %1, ptr %b, align 4
+  %a = alloca i32, align 4
+  store i32 %0, ptr %a, align 4
+  %a1 = load i32, ptr %a, align 4
+  %b2 = load i32, ptr %b, align 4
+  %div = udiv i32 %a1, %b2
   ret i32 %div
 }
 
 define i32 @remainder(i32 %0, i32 %1) {
 body:
-  %rem = urem i32 %0, %1
+  %b = alloca i32, align 4
+  store i32 %1, ptr %b, align 4
+  %a = alloca i32, align 4
+  store i32 %0, ptr %a, align 4
+  %a1 = load i32, ptr %a, align 4
+  %b2 = load i32, ptr %b, align 4
+  %rem = urem i32 %a1, %b2
   ret i32 %rem
 }
 
@@ -42,5 +72,4 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

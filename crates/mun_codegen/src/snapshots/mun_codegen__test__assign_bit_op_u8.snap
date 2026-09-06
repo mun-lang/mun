@@ -6,29 +6,52 @@ expression: "\n    pub fn assign_bitand(a: u8, b: u8) -> u8 {\n        a &= b;\n
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i8 @assign_bitand(i8 %0, i8 %1) {
 body:
-  %bit_and = and i8 %0, %1
-  ret i8 %bit_and
+  %b = alloca i8, align 1
+  store i8 %1, ptr %b, align 1
+  %a = alloca i8, align 1
+  store i8 %0, ptr %a, align 1
+  %a1 = load i8, ptr %a, align 1
+  %b2 = load i8, ptr %b, align 1
+  %bit_and = and i8 %a1, %b2
+  store i8 %bit_and, ptr %a, align 1
+  %a3 = load i8, ptr %a, align 1
+  ret i8 %a3
 }
 
 define i8 @assign_bitor(i8 %0, i8 %1) {
 body:
-  %bit_or = or i8 %0, %1
-  ret i8 %bit_or
+  %b = alloca i8, align 1
+  store i8 %1, ptr %b, align 1
+  %a = alloca i8, align 1
+  store i8 %0, ptr %a, align 1
+  %a1 = load i8, ptr %a, align 1
+  %b2 = load i8, ptr %b, align 1
+  %bit_or = or i8 %a1, %b2
+  store i8 %bit_or, ptr %a, align 1
+  %a3 = load i8, ptr %a, align 1
+  ret i8 %a3
 }
 
 define i8 @assign_bitxor(i8 %0, i8 %1) {
 body:
-  %bit_xor = xor i8 %0, %1
-  ret i8 %bit_xor
+  %b = alloca i8, align 1
+  store i8 %1, ptr %b, align 1
+  %a = alloca i8, align 1
+  store i8 %0, ptr %a, align 1
+  %a1 = load i8, ptr %a, align 1
+  %b2 = load i8, ptr %b, align 1
+  %bit_xor = xor i8 %a1, %b2
+  store i8 %bit_xor, ptr %a, align 1
+  %a3 = load i8, ptr %a, align 1
+  ret i8 %a3
 }
 
 ; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer
