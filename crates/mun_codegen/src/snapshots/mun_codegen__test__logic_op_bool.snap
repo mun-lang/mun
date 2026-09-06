@@ -6,17 +6,29 @@ expression: "\n    pub fn and(a: bool, b: bool) -> bool {\n        a && b\n    }
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i1 @and(i1 %0, i1 %1) {
 body:
-  %and = and i1 %0, %1
+  %b = alloca i1, align 1
+  store i1 %1, ptr %b, align 1
+  %a = alloca i1, align 1
+  store i1 %0, ptr %a, align 1
+  %a1 = load i1, ptr %a, align 1
+  %b2 = load i1, ptr %b, align 1
+  %and = and i1 %a1, %b2
   ret i1 %and
 }
 
 define i1 @or(i1 %0, i1 %1) {
 body:
-  %or = or i1 %0, %1
+  %b = alloca i1, align 1
+  store i1 %1, ptr %b, align 1
+  %a = alloca i1, align 1
+  store i1 %0, ptr %a, align 1
+  %a1 = load i1, ptr %a, align 1
+  %b2 = load i1, ptr %b, align 1
+  %or = or i1 %a1, %b2
   ret i1 %or
 }
 
@@ -24,5 +36,4 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

@@ -1,25 +1,33 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1062
 expression: "\n    pub fn main(a:i32) -> i32 {\n        if a > 4 {\n            return a;\n        } else {\n            return a - 1;\n        }\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i32 @main(i32 %0) {
 body:
-  %greater = icmp sgt i32 %0, 4
-  %sub = sub i32 %0, 1
-  %common.ret.op = select i1 %greater, i32 %0, i32 %sub
-  ret i32 %common.ret.op
+  %a = alloca i32, align 4
+  store i32 %0, ptr %a, align 4
+  %a1 = load i32, ptr %a, align 4
+  %greater = icmp sgt i32 %a1, 4
+  br i1 %greater, label %then, label %else
+
+then:                                             ; preds = %body
+  %a2 = load i32, ptr %a, align 4
+  ret i32 %a2
+
+else:                                             ; preds = %body
+  %a3 = load i32, ptr %a, align 4
+  %sub = sub i32 %a3, 1
+  ret i32 %sub
 }
 
 ; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

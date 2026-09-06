@@ -137,10 +137,10 @@ impl<'ink> AbiTypes<'ink> {
         let byte_type = context.i8_type();
         let u16_type = context.i16_type();
         let u32_type = context.i32_type();
-        let byte_ptr = byte_type.ptr_type(address_space);
+        let byte_ptr = context.ptr_type(address_space);
 
         let type_id = context.opaque_struct_type("mun.abi.TypeId");
-        let type_id_ptr = type_id.ptr_type(address_space);
+        let type_id_ptr = context.ptr_type(address_space);
         let pointer_type_id = context.opaque_struct_type("mun.abi.PointerTypeId");
         pointer_type_id.set_body(&[type_id_ptr.into(), bool_type.into()], false);
         let array_type_id = context.opaque_struct_type("mun.abi.ArrayTypeId");
@@ -165,9 +165,9 @@ impl<'ink> AbiTypes<'ink> {
         struct_definition.set_body(
             &[
                 guid_type.into(),
-                byte_ptr.ptr_type(address_space).into(),
+                context.ptr_type(address_space).into(),
                 type_id_ptr.into(),
-                u16_type.ptr_type(address_space).into(),
+                context.ptr_type(address_space).into(),
                 u16_type.into(),
                 byte_type.into(),
             ],
@@ -216,8 +216,8 @@ impl<'ink> AbiTypes<'ink> {
         module_info.set_body(
             &[
                 byte_ptr.into(),
-                function_definition.ptr_type(address_space).into(),
-                type_definition.ptr_type(address_space).into(),
+                context.ptr_type(address_space).into(),
+                context.ptr_type(address_space).into(),
                 u32_type.into(),
                 u32_type.into(),
             ],
@@ -227,8 +227,8 @@ impl<'ink> AbiTypes<'ink> {
         let dispatch_table = context.opaque_struct_type("mun.abi.DispatchTable");
         dispatch_table.set_body(
             &[
-                function_prototype.ptr_type(address_space).into(),
-                byte_ptr.ptr_type(address_space).into(),
+                context.ptr_type(address_space).into(),
+                context.ptr_type(address_space).into(),
                 u32_type.into(),
             ],
             false,
@@ -238,8 +238,8 @@ impl<'ink> AbiTypes<'ink> {
         type_lut.set_body(
             &[
                 type_id_ptr.into(),
-                byte_ptr.ptr_type(address_space).into(),
-                byte_ptr.ptr_type(address_space).into(),
+                context.ptr_type(address_space).into(),
+                context.ptr_type(address_space).into(),
                 u32_type.into(),
             ],
             false,
@@ -251,7 +251,7 @@ impl<'ink> AbiTypes<'ink> {
                 module_info.into(),
                 dispatch_table.into(),
                 type_lut.into(),
-                byte_ptr.ptr_type(address_space).into(),
+                context.ptr_type(address_space).into(),
                 u32_type.into(),
             ],
             false,
@@ -437,7 +437,7 @@ impl<'ink> AbiTypes<'ink> {
     pub fn get_info_function_type(&self, windows: bool) -> FunctionType<'ink> {
         if windows {
             self.context.void_type().fn_type(
-                &[self.assembly_info.ptr_type(AddressSpace::default()).into()],
+                &[self.context.ptr_type(AddressSpace::default()).into()],
                 false,
             )
         } else {
@@ -493,7 +493,7 @@ impl<'ink> AbiTypes<'ink> {
         self.private_pointer_array(
             module,
             name,
-            self.type_id.ptr_type(AddressSpace::default()),
+            self.context.ptr_type(AddressSpace::default()),
             &values,
             null_if_empty,
         )
@@ -566,7 +566,7 @@ impl<'ink> AbiTypes<'ink> {
         let ty = self.context.i16_type();
         let values: Vec<_> = values.iter().map(|&value| self.u16(value)).collect();
         if null_if_empty && values.is_empty() {
-            return ty.ptr_type(AddressSpace::default()).const_null();
+            return self.context.ptr_type(AddressSpace::default()).const_null();
         }
         self.private_int_array(module, name, ty, &values)
     }
@@ -596,7 +596,7 @@ impl<'ink> AbiTypes<'ink> {
         let global = self.private_global(module, name, initializer.into());
         global
             .as_pointer_value()
-            .const_cast(ty.ptr_type(AddressSpace::default()))
+            .const_cast(self.context.ptr_type(AddressSpace::default()))
     }
 
     fn private_struct_array(
@@ -607,7 +607,7 @@ impl<'ink> AbiTypes<'ink> {
         values: &[StructValue<'ink>],
         null_if_empty: bool,
     ) -> PointerValue<'ink> {
-        let pointer_type = ty.ptr_type(AddressSpace::default());
+        let pointer_type = self.context.ptr_type(AddressSpace::default());
         if null_if_empty && values.is_empty() {
             return pointer_type.const_null();
         }

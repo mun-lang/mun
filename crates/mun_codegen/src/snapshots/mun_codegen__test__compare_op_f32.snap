@@ -6,41 +6,77 @@ expression: "\n    pub fn equals(a: f32, b: f32) -> bool { a == b }\n    pub fn 
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [2 x i64*]
+@global_type_lookup_table = external global [2 x ptr]
 
 define i1 @equals(float %0, float %1) {
 body:
-  %eq = fcmp oeq float %0, %1
+  %b = alloca float, align 4
+  store float %1, ptr %b, align 4
+  %a = alloca float, align 4
+  store float %0, ptr %a, align 4
+  %a1 = load float, ptr %a, align 4
+  %b2 = load float, ptr %b, align 4
+  %eq = fcmp oeq float %a1, %b2
   ret i1 %eq
 }
 
 define i1 @not_equal(float %0, float %1) {
 body:
-  %neq = fcmp one float %0, %1
+  %b = alloca float, align 4
+  store float %1, ptr %b, align 4
+  %a = alloca float, align 4
+  store float %0, ptr %a, align 4
+  %a1 = load float, ptr %a, align 4
+  %b2 = load float, ptr %b, align 4
+  %neq = fcmp one float %a1, %b2
   ret i1 %neq
 }
 
 define i1 @less(float %0, float %1) {
 body:
-  %less = fcmp olt float %0, %1
+  %b = alloca float, align 4
+  store float %1, ptr %b, align 4
+  %a = alloca float, align 4
+  store float %0, ptr %a, align 4
+  %a1 = load float, ptr %a, align 4
+  %b2 = load float, ptr %b, align 4
+  %less = fcmp olt float %a1, %b2
   ret i1 %less
 }
 
 define i1 @less_equal(float %0, float %1) {
 body:
-  %lesseq = fcmp ole float %0, %1
+  %b = alloca float, align 4
+  store float %1, ptr %b, align 4
+  %a = alloca float, align 4
+  store float %0, ptr %a, align 4
+  %a1 = load float, ptr %a, align 4
+  %b2 = load float, ptr %b, align 4
+  %lesseq = fcmp ole float %a1, %b2
   ret i1 %lesseq
 }
 
 define i1 @greater(float %0, float %1) {
 body:
-  %greater = fcmp ogt float %0, %1
+  %b = alloca float, align 4
+  store float %1, ptr %b, align 4
+  %a = alloca float, align 4
+  store float %0, ptr %a, align 4
+  %a1 = load float, ptr %a, align 4
+  %b2 = load float, ptr %b, align 4
+  %greater = fcmp ogt float %a1, %b2
   ret i1 %greater
 }
 
 define i1 @greater_equal(float %0, float %1) {
 body:
-  %greatereq = fcmp oge float %0, %1
+  %b = alloca float, align 4
+  store float %1, ptr %b, align 4
+  %a = alloca float, align 4
+  store float %0, ptr %a, align 4
+  %a1 = load float, ptr %a, align 4
+  %b2 = load float, ptr %b, align 4
+  %greatereq = fcmp oge float %a1, %b2
   ret i1 %greatereq
 }
 
@@ -48,5 +84,4 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [2 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [2 x ptr] zeroinitializer

@@ -2,10 +2,9 @@ use inkwell::{
     builder::Builder,
     types::{BasicTypeEnum, FunctionType},
     values::{
-        BasicMetadataValueEnum, BasicValueEnum, CallSiteValue, CallableValue, FunctionValue,
-        InstructionValue, PointerValue,
+        BasicMetadataValueEnum, BasicValueEnum, CallSiteValue, FunctionValue, InstructionValue,
+        PointerValue,
     },
-    AddressSpace,
 };
 use mun_hir::Ty;
 
@@ -18,10 +17,6 @@ pub(crate) struct Callable<'ink> {
 
 impl<'ink> Callable<'ink> {
     pub(crate) fn new(pointer: PointerValue<'ink>, signature: FunctionType<'ink>) -> Self {
-        debug_assert_eq!(
-            pointer.get_type(),
-            signature.ptr_type(AddressSpace::default())
-        );
         Self { pointer, signature }
     }
 
@@ -38,13 +33,9 @@ impl<'ink> Callable<'ink> {
         args: &[BasicMetadataValueEnum<'ink>],
         name: &str,
     ) -> CallSiteValue<'ink> {
-        debug_assert_eq!(
-            self.pointer.get_type(),
-            self.signature.ptr_type(AddressSpace::default())
-        );
-        let callable = CallableValue::try_from(self.pointer)
-            .expect("callable pointer must have a function signature");
-        builder.build_call(callable, args, name)
+        builder
+            .build_indirect_call(self.signature, self.pointer, args, name)
+            .expect("valid function call")
     }
 }
 
@@ -93,7 +84,9 @@ impl<'ink> PlaceValue<'ink> {
         self.pointee
     }
     pub(crate) fn load(self, builder: &Builder<'ink>, name: &str) -> BasicValueEnum<'ink> {
-        builder.build_load(self.pointer, name)
+        builder
+            .build_load(self.pointee, self.pointer, name)
+            .expect("valid load")
     }
 
     pub(crate) fn store(
@@ -102,7 +95,9 @@ impl<'ink> PlaceValue<'ink> {
         value: BasicValueEnum<'ink>,
     ) -> InstructionValue<'ink> {
         debug_assert_eq!(self.pointee, value.get_type());
-        builder.build_store(self.pointer, value)
+        builder
+            .build_store(self.pointer, value)
+            .expect("valid store")
     }
 }
 

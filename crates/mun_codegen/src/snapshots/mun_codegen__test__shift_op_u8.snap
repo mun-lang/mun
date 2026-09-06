@@ -6,17 +6,29 @@ expression: "\n    pub fn leftshift(a: u8, b: u8) -> u8 { a << b }\n    pub fn r
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i8 @leftshift(i8 %0, i8 %1) {
 body:
-  %left_shift = shl i8 %0, %1
+  %b = alloca i8, align 1
+  store i8 %1, ptr %b, align 1
+  %a = alloca i8, align 1
+  store i8 %0, ptr %a, align 1
+  %a1 = load i8, ptr %a, align 1
+  %b2 = load i8, ptr %b, align 1
+  %left_shift = shl i8 %a1, %b2
   ret i8 %left_shift
 }
 
 define i8 @rightshift(i8 %0, i8 %1) {
 body:
-  %right_shift = lshr i8 %0, %1
+  %b = alloca i8, align 1
+  store i8 %1, ptr %b, align 1
+  %a = alloca i8, align 1
+  store i8 %0, ptr %a, align 1
+  %a1 = load i8, ptr %a, align 1
+  %b2 = load i8, ptr %b, align 1
+  %right_shift = lshr i8 %a1, %b2
   ret i8 %right_shift
 }
 
@@ -24,5 +36,4 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

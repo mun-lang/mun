@@ -1,8 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1045
 expression: "\n    fn private_main() {\n        let a = 1;\n    }\n    "
-
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
@@ -10,10 +8,11 @@ source_filename = "mod"
 
 define void @private_main() {
 body:
+  %a = alloca i32, align 4
+  store i32 1, ptr %a, align 4
   ret void
 }
 
 ; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
-

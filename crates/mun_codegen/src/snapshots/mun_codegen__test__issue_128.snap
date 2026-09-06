@@ -6,20 +6,20 @@ expression: "\n    // resources/script.mun\n    extern fn thing(n: i32);\n    ex
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-%DispatchTable = type { i32 (i32)*, void (i32)* }
+%DispatchTable = type { ptr, ptr }
 
 @dispatchTable = external global %DispatchTable
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define void @main() {
 body:
-  %print_ptr = load i32 (i32)*, i32 (i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
+  %print_ptr = load ptr, ptr @dispatchTable, align 8
   %print = call i32 %print_ptr(i32 1)
-  %thing_ptr = load void (i32)*, void (i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 1), align 8
+  %thing_ptr = load ptr, ptr getelementptr inbounds (%DispatchTable, ptr @dispatchTable, i32 0, i32 1), align 8
   call void %thing_ptr(i32 5)
-  %print_ptr1 = load i32 (i32)*, i32 (i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
+  %print_ptr1 = load ptr, ptr @dispatchTable, align 8
   %print2 = call i32 %print_ptr1(i32 2)
-  %thing_ptr3 = load void (i32)*, void (i32)** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 1), align 8
+  %thing_ptr3 = load ptr, ptr getelementptr inbounds (%DispatchTable, ptr @dispatchTable, i32 0, i32 1), align 8
   call void %thing_ptr3(i32 78)
   ret void
 }
@@ -28,8 +28,7 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%DispatchTable = type { i32 (i32)*, void (i32)* }
+%DispatchTable = type { ptr, ptr }
 
 @dispatchTable = global %DispatchTable zeroinitializer
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

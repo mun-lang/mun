@@ -1,8 +1,6 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1045
 expression: "\n    fn foo() -> i32 {\n        let bar = {\n            let b = 3;\n            return b + 3;\n        };\n\n        // This code will never be executed\n        let a = 3 + 4;\n        a\n    }"
-
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
@@ -10,10 +8,13 @@ source_filename = "mod"
 
 define i32 @foo() {
 body:
-  ret i32 6
+  %b = alloca i32, align 4
+  store i32 3, ptr %b, align 4
+  %b1 = load i32, ptr %b, align 4
+  %add = add i32 %b1, 3
+  ret i32 %add
 }
 
 ; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
-

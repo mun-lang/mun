@@ -6,41 +6,77 @@ expression: "\n    pub fn equals(a: f64, b: f64) -> bool { a == b }\n    pub fn 
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [2 x i64*]
+@global_type_lookup_table = external global [2 x ptr]
 
 define i1 @equals(double %0, double %1) {
 body:
-  %eq = fcmp oeq double %0, %1
+  %b = alloca double, align 8
+  store double %1, ptr %b, align 8
+  %a = alloca double, align 8
+  store double %0, ptr %a, align 8
+  %a1 = load double, ptr %a, align 8
+  %b2 = load double, ptr %b, align 8
+  %eq = fcmp oeq double %a1, %b2
   ret i1 %eq
 }
 
 define i1 @not_equal(double %0, double %1) {
 body:
-  %neq = fcmp one double %0, %1
+  %b = alloca double, align 8
+  store double %1, ptr %b, align 8
+  %a = alloca double, align 8
+  store double %0, ptr %a, align 8
+  %a1 = load double, ptr %a, align 8
+  %b2 = load double, ptr %b, align 8
+  %neq = fcmp one double %a1, %b2
   ret i1 %neq
 }
 
 define i1 @less(double %0, double %1) {
 body:
-  %less = fcmp olt double %0, %1
+  %b = alloca double, align 8
+  store double %1, ptr %b, align 8
+  %a = alloca double, align 8
+  store double %0, ptr %a, align 8
+  %a1 = load double, ptr %a, align 8
+  %b2 = load double, ptr %b, align 8
+  %less = fcmp olt double %a1, %b2
   ret i1 %less
 }
 
 define i1 @less_equal(double %0, double %1) {
 body:
-  %lesseq = fcmp ole double %0, %1
+  %b = alloca double, align 8
+  store double %1, ptr %b, align 8
+  %a = alloca double, align 8
+  store double %0, ptr %a, align 8
+  %a1 = load double, ptr %a, align 8
+  %b2 = load double, ptr %b, align 8
+  %lesseq = fcmp ole double %a1, %b2
   ret i1 %lesseq
 }
 
 define i1 @greater(double %0, double %1) {
 body:
-  %greater = fcmp ogt double %0, %1
+  %b = alloca double, align 8
+  store double %1, ptr %b, align 8
+  %a = alloca double, align 8
+  store double %0, ptr %a, align 8
+  %a1 = load double, ptr %a, align 8
+  %b2 = load double, ptr %b, align 8
+  %greater = fcmp ogt double %a1, %b2
   ret i1 %greater
 }
 
 define i1 @greater_equal(double %0, double %1) {
 body:
-  %greatereq = fcmp oge double %0, %1
+  %b = alloca double, align 8
+  store double %1, ptr %b, align 8
+  %a = alloca double, align 8
+  store double %0, ptr %a, align 8
+  %a1 = load double, ptr %a, align 8
+  %b2 = load double, ptr %b, align 8
+  %greatereq = fcmp oge double %a1, %b2
   ret i1 %greatereq
 }
 
@@ -48,5 +84,4 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [2 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [2 x ptr] zeroinitializer

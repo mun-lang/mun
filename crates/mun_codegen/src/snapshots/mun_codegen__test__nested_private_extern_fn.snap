@@ -6,14 +6,14 @@ expression: "\n    extern fn extern_fn() -> f32;\n\n    fn private_fn() -> f32 {
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-%DispatchTable = type { float ()* }
+%DispatchTable = type { ptr }
 
 @dispatchTable = external global %DispatchTable
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define float @private_fn() {
 body:
-  %extern_fn_ptr = load float ()*, float ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
+  %extern_fn_ptr = load ptr, ptr @dispatchTable, align 8
   %extern_fn = call float %extern_fn_ptr()
   ret float %extern_fn
 }
@@ -28,8 +28,7 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%DispatchTable = type { float ()* }
+%DispatchTable = type { ptr }
 
 @dispatchTable = global %DispatchTable zeroinitializer
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

@@ -103,12 +103,10 @@ pub(crate) fn gen_file_group_ir<'ink>(
 
     let (dispatch_table, referenced_modules) = dispatch_table_builder.build();
 
-    let target_data = code_gen.target_machine.get_target_data();
     let mut type_table_builder = TypeTableBuilder::new(
         code_gen.db,
         code_gen.context,
         &llvm_module,
-        &target_data,
         &dispatch_table,
         &code_gen.hir_types,
         module_group,
@@ -134,7 +132,7 @@ pub(crate) fn gen_file_group_ir<'ink>(
 
     // Create the allocator handle global value
     let allocator_handle_type = if needs_alloc {
-        let allocator_handle_type = code_gen.context.i8_type().ptr_type(AddressSpace::default());
+        let allocator_handle_type = code_gen.context.ptr_type(AddressSpace::default());
         let global = llvm_module.add_global(allocator_handle_type, None, "allocatorHandle");
         global.set_initializer(&allocator_handle_type.const_null());
         global.set_unnamed_address(UnnamedAddress::Global);

@@ -6,16 +6,23 @@ expression: "\n    pub fn assign(a: bool, b: bool) -> bool {\n        a = b;\n  
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i1 @assign(i1 %0, i1 %1) {
 body:
-  ret i1 %1
+  %b = alloca i1, align 1
+  store i1 %1, ptr %b, align 1
+  %a = alloca i1, align 1
+  store i1 %0, ptr %a, align 1
+  %a1 = load i1, ptr %a, align 1
+  %b2 = load i1, ptr %b, align 1
+  store i1 %b2, ptr %a, align 1
+  %a3 = load i1, ptr %a, align 1
+  ret i1 %a3
 }
 
 ; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer
