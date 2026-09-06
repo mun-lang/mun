@@ -20,8 +20,11 @@ use mun_hir::{
 use crate::{
     intrinsics,
     ir::{
-        dispatch_table::DispatchTable, ty::HirTypeCache, type_table::TypeTable, RuntimeArrayValue,
-        RuntimeReferenceValue,
+        dispatch_table::DispatchTable,
+        ty::HirTypeCache,
+        type_table::TypeTable,
+        value::{Operand, Place, PlaceValue},
+        RuntimeArrayValue, RuntimeReferenceValue,
     },
     module_group::ModuleGroup,
 };
@@ -47,8 +50,7 @@ pub(crate) struct BodyIrGenerator<'db, 'ink, 't> {
     infer: Arc<InferenceResult>,
     builder: Builder<'ink>,
     fn_value: FunctionValue<'ink>,
-    pat_to_param: HashMap<PatId, inkwell::values::BasicValueEnum<'ink>>,
-    pat_to_local: HashMap<PatId, inkwell::values::PointerValue<'ink>>,
+    pat_to_local: HashMap<PatId, Place<'ink>>,
     pat_to_name: HashMap<PatId, String>,
     function_map: &'t HashMap<mun_hir::Function, FunctionValue<'ink>>,
     dispatch_table: &'t DispatchTable<'ink>,
@@ -91,7 +93,6 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             infer,
             builder,
             fn_value: ir_function,
-            pat_to_param: HashMap::default(),
             pat_to_local: HashMap::default(),
             pat_to_name: HashMap::default(),
             function_map,
@@ -118,8 +119,11 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     let param = self.fn_value.get_nth_param(i as u32).unwrap();
                     let builder = self.new_alloca_builder();
                     let param_ptr = builder.build_alloca(param.get_type(), &name);
-                    builder.build_store(param_ptr, param);
-                    self.pat_to_local.insert(*pat, param_ptr);
+                    let ty = self.infer[*pat].clone();
+                    let place =
+                        Place::new(PlaceValue::new(param_ptr, param.get_type()), ty.clone());
+                    place.store(&builder, &Operand::new(param, ty));
+                    self.pat_to_local.insert(*pat, place);
                     self.pat_to_name.insert(*pat, name);
                 }
                 Pat::Wild => {
@@ -136,7 +140,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         }
 
         // Generate code for the body of the function
-        let ret_value = self.gen_expr(self.body.body_expr());
+        let ret_value = self.gen_operand(self.body.body_expr());
 
         // Construct a return statement from the returned value of the body if a return
         // is expected in the first place. If the return type of the body is
@@ -152,8 +156,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         if !block_ret_type.is_never() {
             if fn_ret_type.is_empty() {
                 self.builder.build_return(None);
-            } else if let Some(value) = ret_value {
-                self.builder.build_return(Some(&value));
+            } else if let Some(operand) = ret_value {
+                self.builder.build_return(Some(&operand.value()));
             }
         }
     }
@@ -209,6 +213,12 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 self.builder.build_return(Some(&ret_value));
             }
         }
+    }
+
+    /// Generates a typed operand for an expression.
+    fn gen_operand(&mut self, expr: ExprId) -> Option<Operand<'ink>> {
+        let value = self.gen_expr(expr)?;
+        Some(Operand::new(value, self.infer[expr].clone()))
     }
 
     /// Generates IR for the specified expression. Dependending on the type of
@@ -528,8 +538,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
     /// initializer of the statement never returns; `true` otherwise.
     fn gen_let_statement(&mut self, pat: PatId, initializer: Option<ExprId>) -> bool {
         let initializer = match initializer {
-            Some(expr) => match self.gen_expr(expr) {
-                Some(expr) => Some(expr),
+            Some(expr) => match self.gen_operand(expr) {
+                Some(operand) => Some(operand),
                 None => {
                     // If the initializer doesnt return a value it never returns
                     return false;
@@ -546,12 +556,13 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     .hir_types
                     .get_basic_type(&pat_ty)
                     .expect("expected basic type");
-                let ptr = builder.build_alloca(ty, &name.to_string());
-                self.pat_to_local.insert(pat, ptr);
+                let pointer = builder.build_alloca(ty, &name.to_string());
+                let place = Place::new(PlaceValue::new(pointer, ty), pat_ty.clone());
+                self.pat_to_local.insert(pat, place.clone());
                 self.pat_to_name.insert(pat, name.to_string());
                 if !(pat_ty.is_empty() || pat_ty.is_never()) {
-                    if let Some(value) = initializer {
-                        self.builder.build_store(ptr, value);
+                    if let Some(operand) = initializer {
+                        place.store(&self.builder, &operand);
                     };
                 }
             }
@@ -575,11 +586,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         {
             ValueNs::ImplSelf(_) => unimplemented!("no support for self types"),
             ValueNs::LocalBinding(pat) => {
-                if let Some(param) = self.pat_to_param.get(&pat) {
-                    *param
-                } else if let Some(ptr) = self.pat_to_local.get(&pat) {
+                if let Some(place) = self.pat_to_local.get(&pat) {
                     let name = self.pat_to_name.get(&pat).expect("could not find pat name");
-                    self.builder.build_load(*ptr, name)
+                    place.load(&self.builder, name).into_value()
                 } else {
                     unreachable!("could not find the pattern..");
                 }
@@ -619,10 +628,12 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .0
         {
             ValueNs::ImplSelf(_) => unimplemented!("no support for self types"),
-            ValueNs::LocalBinding(pat) => *self
+            ValueNs::LocalBinding(pat) => self
                 .pat_to_local
                 .get(&pat)
-                .expect("unresolved local binding"),
+                .expect("unresolved local binding")
+                .value()
+                .pointer(),
             ValueNs::FunctionId(_) | ValueNs::StructId(_) => {
                 panic!("no support for module definitions")
             }
@@ -745,7 +756,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     None => rhs,
                 };
                 let place = self.gen_place_expr(lhs_expr)?;
-                self.builder.build_store(place, rhs);
+                place.store_value(&self.builder, rhs.into());
                 Some(self.gen_empty())
             }
             BinaryOp::LogicOp(op) => Some(self.gen_logic_bin_op(lhs, rhs, op).into()),
@@ -809,7 +820,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     None => rhs,
                 };
                 let place = self.gen_place_expr(lhs_expr)?;
-                self.builder.build_store(place, rhs);
+                place.store_value(&self.builder, rhs.into());
                 Some(self.gen_empty())
             }
             BinaryOp::LogicOp(_) => {
@@ -847,7 +858,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     None => rhs,
                 };
                 let place = self.gen_place_expr(lhs_expr)?;
-                self.builder.build_store(place, rhs);
+                place.store_value(&self.builder, rhs.into());
                 Some(self.gen_empty())
             }
             BinaryOp::LogicOp(_) => {
@@ -878,7 +889,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     None => rhs,
                 };
                 let place = self.gen_place_expr(lhs_expr)?;
-                self.builder.build_store(place, rhs);
+                place.store_value(&self.builder, rhs.into());
                 Some(self.gen_empty())
             }
             _ => unimplemented!("Operator {:?} is not implemented for struct", op),
@@ -907,7 +918,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     None => rhs,
                 };
                 let place = self.gen_place_expr(lhs_expr)?;
-                self.builder.build_store(place, rhs);
+                place.store_value(&self.builder, rhs.into());
                 Some(self.gen_empty())
             }
             _ => unimplemented!("Operator {:?} is not implemented for struct", op),
@@ -1056,10 +1067,10 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
     /// Given an expression generate code that results in a memory address that
     /// can be used for other place operations.
-    fn gen_place_expr(&mut self, expr: ExprId) -> Option<PointerValue<'ink>> {
+    fn gen_place_expr(&mut self, expr: ExprId) -> Option<Place<'ink>> {
         let body = self.body.clone();
-        match &body[expr] {
-            Expr::Path(ref p) => {
+        let pointer = match &body[expr] {
+            Expr::Path(p) => {
                 let resolver = mun_hir::resolver_for_expr(self.db, self.body.owner(), expr);
                 Some(self.gen_path_place_expr(p, expr, &resolver))
             }
@@ -1069,7 +1080,13 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             } => self.gen_place_field(expr, *receiver_expr, name),
             Expr::Index { base, index } => self.gen_place_index(expr, *base, *index),
             _ => unreachable!("invalid place expression"),
-        }
+        }?;
+        let ty = self.infer[expr].clone();
+        let pointee = self
+            .hir_types
+            .get_basic_type(&ty)
+            .expect("place must have a basic type");
+        Some(Place::new(PlaceValue::new(pointer, pointee), ty))
     }
 
     /// Returns true if the specified expression refers to an expression that
@@ -1384,9 +1401,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
         let field_ir_name = &format!("{hir_struct_name}.{name}");
         if self.is_place_expr(receiver_expr) {
-            let receiver_ptr = self.gen_place_expr(receiver_expr)?;
+            let receiver = self.gen_place_expr(receiver_expr)?;
             let receiver_ptr = self
-                .opt_deref_value(receiver_expr, receiver_ptr.into())
+                .opt_deref_value(receiver_expr, receiver.value().pointer().into())
                 .into_pointer_value();
             let field_ptr = self
                 .builder
@@ -1435,9 +1452,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .expect("expected a struct field")
             .index(self.db);
 
-        let receiver_ptr = self.gen_place_expr(receiver_expr)?;
+        let receiver = self.gen_place_expr(receiver_expr)?;
         let receiver_ptr = self
-            .opt_deref_value(receiver_expr, receiver_ptr.into())
+            .opt_deref_value(receiver_expr, receiver.value().pointer().into())
             .into_pointer_value();
         Some(
             self.builder
