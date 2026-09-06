@@ -66,6 +66,7 @@ macro_rules! register_ast_id_node {
 register_ast_id_node! {
     impl AstIdNode for
     ModuleItem,
+        Const,
         Use,
         FunctionDef,
         StructDef,

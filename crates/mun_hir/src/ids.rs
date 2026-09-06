@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 use mun_hir_input::ModuleId;
 
 use crate::{
-    item_tree::{Function, Impl, ItemTreeId, ItemTreeNode, Struct, TypeAlias},
+    item_tree::{Const, Function, Impl, ItemTreeId, ItemTreeNode, Struct, TypeAlias},
     primitive_type::PrimitiveType,
     DefDatabase,
 };
@@ -123,6 +123,12 @@ pub struct StructId(salsa::InternId);
 pub(crate) type StructLoc = ItemLoc<Struct>;
 impl_intern!(StructId, StructLoc, intern_struct, lookup_intern_struct);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
+pub struct ConstId(salsa::InternId);
+
+pub(crate) type ConstLoc = AssocItemLoc<Const>;
+impl_intern!(ConstId, ConstLoc, intern_const, lookup_intern_const);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TypeAliasId(salsa::InternId);
 
@@ -149,6 +155,7 @@ pub enum ItemDefinitionId {
     ModuleId(ModuleId),
     FunctionId(FunctionId),
     StructId(StructId),
+    ConstId(ConstId),
     TypeAliasId(TypeAliasId),
     PrimitiveType(PrimitiveType),
 }
@@ -168,6 +175,12 @@ impl From<FunctionId> for ItemDefinitionId {
 impl From<StructId> for ItemDefinitionId {
     fn from(id: StructId) -> Self {
         ItemDefinitionId::StructId(id)
+    }
+}
+
+impl From<ConstId> for ItemDefinitionId {
+    fn from(id: ConstId) -> Self {
+        ItemDefinitionId::ConstId(id)
     }
 }
 
@@ -193,6 +206,7 @@ pub enum AssocItemId {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DefWithBodyId {
     FunctionId(FunctionId),
+    ConstId(ConstId),
 }
 
 impl From<FunctionId> for DefWithBodyId {

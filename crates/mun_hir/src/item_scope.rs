@@ -234,6 +234,7 @@ impl PerNs<(ItemDefinitionId, Visibility)> {
                     PerNs::types((def, vis))
                 }
             }
+            ItemDefinitionId::ConstId(_) => PerNs::values((def, vis)),
             ItemDefinitionId::TypeAliasId(_) | ItemDefinitionId::PrimitiveType(_) => {
                 PerNs::types((def, vis))
             }

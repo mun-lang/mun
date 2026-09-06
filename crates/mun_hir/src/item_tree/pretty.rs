@@ -70,6 +70,7 @@ impl Printer<'_> {
             ModItem::TypeAlias(it) => self.print_type_alias(it),
             ModItem::Import(it) => self.print_use(it),
             ModItem::Impl(it) => self.print_impl(it),
+            ModItem::Const(_it) => todo!(),
         }
     }
 

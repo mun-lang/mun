@@ -1,6 +1,9 @@
 use mun_hir_input::{FileId, ModuleId};
 
-use super::{r#impl::Impl, AssocItem, Function, Package, PrimitiveType, Struct, TypeAlias};
+use super::{
+    r#const::Const, r#impl::Impl, AssocItem, DefWithBody, Function, Package, PrimitiveType, Struct,
+    TypeAlias,
+};
 use crate::{ids::ItemDefinitionId, DiagnosticSink, HirDatabase};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
@@ -97,6 +100,7 @@ impl Module {
                 ModuleDef::Function(f) => f.diagnostics(db, sink),
                 ModuleDef::Struct(s) => s.diagnostics(db, sink),
                 ModuleDef::TypeAlias(t) => t.diagnostics(db, sink),
+                ModuleDef::Const(_) => todo!(),
                 _ => (),
             }
         }
@@ -161,9 +165,20 @@ impl Module {
 pub enum ModuleDef {
     Module(Module),
     Function(Function),
+    Const(Const),
     PrimitiveType(PrimitiveType),
     Struct(Struct),
     TypeAlias(TypeAlias),
+}
+
+impl ModuleDef {
+    pub fn as_def_with_body(self) -> Option<DefWithBody> {
+        match self {
+            ModuleDef::Function(f) => Some(DefWithBody::Function(f)),
+            ModuleDef::Const(c) => Some(DefWithBody::Const(c)),
+            _ => None,
+        }
+    }
 }
 
 impl From<Function> for ModuleDef {
@@ -181,6 +196,12 @@ impl From<PrimitiveType> for ModuleDef {
 impl From<Struct> for ModuleDef {
     fn from(t: Struct) -> Self {
         ModuleDef::Struct(t)
+    }
+}
+
+impl From<Const> for ModuleDef {
+    fn from(t: Const) -> Self {
+        ModuleDef::Const(t)
     }
 }
 
@@ -202,6 +223,7 @@ impl From<ItemDefinitionId> for ModuleDef {
             ItemDefinitionId::ModuleId(id) => Module { id }.into(),
             ItemDefinitionId::FunctionId(id) => Function { id }.into(),
             ItemDefinitionId::StructId(id) => Struct { id }.into(),
+            ItemDefinitionId::ConstId(id) => Const { id }.into(),
             ItemDefinitionId::TypeAliasId(id) => TypeAlias { id }.into(),
             ItemDefinitionId::PrimitiveType(ty) => PrimitiveType { inner: ty }.into(),
         }

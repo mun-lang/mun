@@ -347,6 +347,32 @@ impl Condition {
     }
 }
 
+// Const
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Const {
+    pub(crate) syntax: SyntaxNode,
+}
+
+impl AstNode for Const {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, CONST)
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(Const { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+}
+impl ast::NameOwner for Const {}
+impl ast::VisibilityOwner for Const {}
+impl Const {}
+
 // Expr
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -859,7 +885,7 @@ impl AstNode for ModuleItem {
     fn can_cast(kind: SyntaxKind) -> bool {
         matches!(
             kind,
-            USE | FUNCTION_DEF | STRUCT_DEF | TYPE_ALIAS_DEF | IMPL
+            USE | FUNCTION_DEF | STRUCT_DEF | CONST | TYPE_ALIAS_DEF | IMPL
         )
     }
     fn cast(syntax: SyntaxNode) -> Option<Self> {
@@ -878,6 +904,7 @@ pub enum ModuleItemKind {
     Use(Use),
     FunctionDef(FunctionDef),
     StructDef(StructDef),
+    Const(Const),
     TypeAliasDef(TypeAliasDef),
     Impl(Impl),
 }
@@ -893,6 +920,11 @@ impl From<FunctionDef> for ModuleItem {
 }
 impl From<StructDef> for ModuleItem {
     fn from(n: StructDef) -> ModuleItem {
+        ModuleItem { syntax: n.syntax }
+    }
+}
+impl From<Const> for ModuleItem {
+    fn from(n: Const) -> ModuleItem {
         ModuleItem { syntax: n.syntax }
     }
 }
@@ -915,6 +947,7 @@ impl ModuleItem {
                 ModuleItemKind::FunctionDef(FunctionDef::cast(self.syntax.clone()).unwrap())
             }
             STRUCT_DEF => ModuleItemKind::StructDef(StructDef::cast(self.syntax.clone()).unwrap()),
+            CONST => ModuleItemKind::Const(Const::cast(self.syntax.clone()).unwrap()),
             TYPE_ALIAS_DEF => {
                 ModuleItemKind::TypeAliasDef(TypeAliasDef::cast(self.syntax.clone()).unwrap())
             }

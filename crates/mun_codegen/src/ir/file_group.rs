@@ -73,12 +73,12 @@ pub(crate) fn gen_file_group_ir<'ink>(
                     );
                 }
             }
-            // TODO: Extern types for functions?
             ModuleDef::Module(_)
             | ModuleDef::Struct(_)
             | ModuleDef::PrimitiveType(_)
             | ModuleDef::TypeAlias(_)
-            | ModuleDef::Function(_) => (),
+            | ModuleDef::Function(_)
+            | ModuleDef::Const(_) => (),
         }
     }
 
@@ -140,7 +140,10 @@ pub(crate) fn gen_file_group_ir<'ink>(
             ModuleDef::Function(f) => {
                 type_table_builder.collect_fn(f);
             }
-            ModuleDef::PrimitiveType(_) | ModuleDef::TypeAlias(_) | ModuleDef::Module(_) => (),
+            ModuleDef::PrimitiveType(_)
+            | ModuleDef::TypeAlias(_)
+            | ModuleDef::Module(_)
+            | ModuleDef::Const(_) => (),
         }
     }
 

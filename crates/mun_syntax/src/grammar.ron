@@ -94,6 +94,7 @@ Grammar(
         "never",
         "pub",
         "type",
+        "const",
 
         "package",
         "super",
@@ -122,6 +123,7 @@ Grammar(
     nodes: [
         "SOURCE_FILE",
 
+        "CONST",
         "FUNCTION_DEF",
         "EXTERN",
         "RET_TYPE",
@@ -193,7 +195,7 @@ Grammar(
             traits: [ "ModuleItemOwner", "FunctionDefOwner" ],
         ),
         "ModuleItem": (
-            enum: ["Use", "FunctionDef", "StructDef", "TypeAliasDef", "Impl"]
+            enum: ["Use", "FunctionDef", "StructDef", "Const", "TypeAliasDef", "Impl"]
         ),
         "Visibility": (),
         "FunctionDef": (
@@ -229,6 +231,13 @@ Grammar(
                 "NameOwner",
                 "VisibilityOwner",
                 "DocCommentsOwner",
+            ]
+        ),
+        "Const": (
+            options: [],
+            traits: [
+                "NameOwner",
+                "VisibilityOwner"
             ]
         ),
         "TypeAliasDef": (
