@@ -16,4 +16,4 @@ license.workspace = true
 itertools = { workspace = true }
 parking_lot = { workspace = true }
 cthash = { workspace = true }
-serde = { workspace = true, optional = true }
+serde = { workspace = true, features = ["derive"], optional = true }
