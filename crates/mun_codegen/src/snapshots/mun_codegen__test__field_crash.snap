@@ -30,7 +30,7 @@ body:
   store ptr %ref, ptr %b, align 8
   %"b->data" = load ptr, ptr %b, align 8
   %deref = load ptr, ptr %"b->data", align 8
-  %"Foo->a" = getelementptr inbounds %Foo, ptr %deref, i32 0, i32 0
+  %"Foo->a" = getelementptr inbounds nuw %Foo, ptr %deref, i32 0, i32 0
   %Foo.a = load i32, ptr %"Foo->a", align 4
   ret i32 %Foo.a
 }

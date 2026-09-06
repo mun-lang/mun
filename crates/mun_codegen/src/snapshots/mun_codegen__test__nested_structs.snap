@@ -52,7 +52,7 @@ define ptr @new_value_struct_wrapper(float %0, float %1) {
 body:
   %new_value_struct = call %ValueStruct @new_value_struct(float %0, float %1)
   %new_ptr = load ptr, ptr @dispatchTable, align 8
-  %ValueStruct_ptr = load ptr, ptr getelementptr inbounds ([5 x ptr], ptr @global_type_lookup_table, i64 0, i64 2), align 8
+  %ValueStruct_ptr = load ptr, ptr getelementptr ([5 x ptr], ptr @global_type_lookup_table, i64 0, i64 2), align 8
   %allocator_handle = load ptr, ptr @allocatorHandle, align 8
   %ref = call ptr %new_ptr(ptr %ValueStruct_ptr, ptr %allocator_handle)
   %"ref->data" = load ptr, ptr %ref, align 8
@@ -71,7 +71,7 @@ body:
   %init = insertvalue %GcWrapper undef, ptr %a1, 0
   %init3 = insertvalue %GcWrapper %init, %ValueStruct %b2, 1
   %new_ptr = load ptr, ptr @dispatchTable, align 8
-  %GcWrapper_ptr = load ptr, ptr getelementptr inbounds ([5 x ptr], ptr @global_type_lookup_table, i64 0, i64 1), align 8
+  %GcWrapper_ptr = load ptr, ptr getelementptr ([5 x ptr], ptr @global_type_lookup_table, i64 0, i64 1), align 8
   %allocator_handle = load ptr, ptr @allocatorHandle, align 8
   %ref = call ptr %new_ptr(ptr %GcWrapper_ptr, ptr %allocator_handle)
   %"ref->data" = load ptr, ptr %ref, align 8
@@ -106,7 +106,7 @@ body:
   %deref = load %ValueStruct, ptr %"->data", align 4
   %new_value_wrapper = call %ValueWrapper @new_value_wrapper(ptr %0, %ValueStruct %deref)
   %new_ptr = load ptr, ptr @dispatchTable, align 8
-  %ValueWrapper_ptr = load ptr, ptr getelementptr inbounds ([5 x ptr], ptr @global_type_lookup_table, i64 0, i64 3), align 8
+  %ValueWrapper_ptr = load ptr, ptr getelementptr ([5 x ptr], ptr @global_type_lookup_table, i64 0, i64 3), align 8
   %allocator_handle = load ptr, ptr @allocatorHandle, align 8
   %ref = call ptr %new_ptr(ptr %ValueWrapper_ptr, ptr %allocator_handle)
   %"ref->data" = load ptr, ptr %ref, align 8

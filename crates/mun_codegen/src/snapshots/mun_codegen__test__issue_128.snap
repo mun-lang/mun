@@ -15,11 +15,11 @@ define void @main() {
 body:
   %print_ptr = load ptr, ptr @dispatchTable, align 8
   %print = call i32 %print_ptr(i32 1)
-  %thing_ptr = load ptr, ptr getelementptr inbounds (%DispatchTable, ptr @dispatchTable, i32 0, i32 1), align 8
+  %thing_ptr = load ptr, ptr getelementptr inbounds nuw (%DispatchTable, ptr @dispatchTable, i32 0, i32 1), align 8
   call void %thing_ptr(i32 5)
   %print_ptr1 = load ptr, ptr @dispatchTable, align 8
   %print2 = call i32 %print_ptr1(i32 2)
-  %thing_ptr3 = load ptr, ptr getelementptr inbounds (%DispatchTable, ptr @dispatchTable, i32 0, i32 1), align 8
+  %thing_ptr3 = load ptr, ptr getelementptr inbounds nuw (%DispatchTable, ptr @dispatchTable, i32 0, i32 1), align 8
   call void %thing_ptr3(i32 78)
   ret void
 }

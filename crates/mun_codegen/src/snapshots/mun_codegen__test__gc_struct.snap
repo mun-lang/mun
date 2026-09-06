@@ -26,12 +26,12 @@ body:
   store ptr %ref, ptr %a, align 8
   %"a->data" = load ptr, ptr %a, align 8
   %deref = load ptr, ptr %"a->data", align 8
-  %"Foo->b" = getelementptr inbounds %Foo, ptr %deref, i32 0, i32 1
+  %"Foo->b" = getelementptr inbounds nuw %Foo, ptr %deref, i32 0, i32 1
   %Foo.b = load i32, ptr %"Foo->b", align 4
   %add = add i32 %Foo.b, 3
   %"a->data1" = load ptr, ptr %a, align 8
   %deref2 = load ptr, ptr %"a->data1", align 8
-  %"Foo->b3" = getelementptr inbounds %Foo, ptr %deref2, i32 0, i32 1
+  %"Foo->b3" = getelementptr inbounds nuw %Foo, ptr %deref2, i32 0, i32 1
   store i32 %add, ptr %"Foo->b3", align 4
   %a4 = load ptr, ptr %a, align 8
   store ptr %a4, ptr %b, align 8

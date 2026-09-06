@@ -18,7 +18,7 @@ define %Foo @bar_1(%Bar %0) {
 body:
   %bar = alloca %Bar, align 8
   store %Bar %0, ptr %bar, align 8
-  %"Bar->1" = getelementptr inbounds %Bar, ptr %bar, i32 0, i32 1
+  %"Bar->1" = getelementptr inbounds nuw %Bar, ptr %bar, i32 0, i32 1
   %Bar.1 = load %Foo, ptr %"Bar->1", align 4
   ret %Foo %Bar.1
 }
@@ -27,7 +27,7 @@ define i32 @foo_a(%Foo %0) {
 body:
   %foo = alloca %Foo, align 8
   store %Foo %0, ptr %foo, align 4
-  %"Foo->a" = getelementptr inbounds %Foo, ptr %foo, i32 0, i32 0
+  %"Foo->a" = getelementptr inbounds nuw %Foo, ptr %foo, i32 0, i32 0
   %Foo.a = load i32, ptr %"Foo->a", align 4
   ret i32 %Foo.a
 }
@@ -60,11 +60,11 @@ body:
   %a1 = load %Foo, ptr %a, align 4
   %init = insertvalue %Bar { double 1.230000e+00, %Foo undef }, %Foo %a1, 1
   store %Bar %init, ptr %b, align 8
-  %"Foo->a" = getelementptr inbounds %Foo, ptr %a, i32 0, i32 0
+  %"Foo->a" = getelementptr inbounds nuw %Foo, ptr %a, i32 0, i32 0
   %Foo.a = load i32, ptr %"Foo->a", align 4
   %add = add i32 %Foo.a, 2
   store i32 %add, ptr %aa_lhs, align 4
-  %"Foo->a2" = getelementptr inbounds %Foo, ptr %a, i32 0, i32 0
+  %"Foo->a2" = getelementptr inbounds nuw %Foo, ptr %a, i32 0, i32 0
   %Foo.a3 = load i32, ptr %"Foo->a2", align 4
   %add4 = add i32 2, %Foo.a3
   store i32 %add4, ptr %aa_rhs, align 4

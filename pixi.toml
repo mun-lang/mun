@@ -5,8 +5,8 @@ channels = ["conda-forge"]
 platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
 
 [dependencies]
-llvmdev = "18.1.*"
-lld = "18.1.*"
+llvmdev = "22.1.*"
+lld = "22.1.*"
 libffi = ">=3.4"
 libxml2-devel = "2.15.*"
 rust = "1.97.*"
@@ -36,15 +36,15 @@ nightly = { features = ["nightly"], no-default-feature = true }
 
 [target.osx-64.dependencies]
 macosx_deployment_target_osx-64 = "15.5.*"
-compiler-rt = "18.1.*"
+compiler-rt = "22.1.*"
 
 [target.osx-arm64.dependencies]
 macosx_deployment_target_osx-arm64 = "15.5.*"
-compiler-rt = "18.1.*"
+compiler-rt = "22.1.*"
 
 [target.osx.activation.env]
 DYLD_FALLBACK_LIBRARY_PATH = "$CONDA_PREFIX/lib"
-LIBRARY_PATH = "$CONDA_PREFIX/lib/clang/18/lib/darwin"
+LIBRARY_PATH = "$CONDA_PREFIX/lib/clang/22/lib/darwin"
 
 [tasks]
 build = "cargo build --workspace"
