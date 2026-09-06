@@ -93,7 +93,10 @@ pub fn run_server() -> anyhow::Result<()> {
 
     let config = {
         // Convert the root uri to a PathBuf
-        #[allow(deprecated)]
+        #[expect(
+            deprecated,
+            reason = "root_uri is the fallback for clients that omit workspace folders"
+        )]
         let root_dir = if let Some(path) = initialize_params
             .root_uri
             .and_then(|uri| from_lsp::abs_path(&uri).ok())

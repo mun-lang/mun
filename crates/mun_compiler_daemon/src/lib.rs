@@ -24,7 +24,9 @@ pub fn compile_and_watch_manifest(
     // Start watching the source directory
     let (watcher_tx, watcher_rx) = channel();
     let mut watcher: RecommendedWatcher = notify::recommended_watcher(move |event| {
-        let _ = watcher_tx.send(event);
+        if let Err(error) = watcher_tx.send(event) {
+            log::debug!("failed to forward filesystem watcher event to compiler: {error}");
+        }
     })?;
     let source_directory = package.source_directory();
 

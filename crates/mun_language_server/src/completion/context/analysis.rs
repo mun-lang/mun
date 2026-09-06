@@ -30,7 +30,10 @@ pub fn analyze(
     None
 }
 
-#[allow(clippy::question_mark)]
+#[expect(
+    clippy::question_mark,
+    reason = "explicit match arms document the supported completion contexts"
+)]
 fn classify_name_ref(
     sema: &Semantics<'_>,
     original_file: &SyntaxNode,
