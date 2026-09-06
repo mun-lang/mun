@@ -6,16 +6,15 @@ use std::{
 use inkwell::{
     context::Context,
     module::Module,
-    targets::TargetData,
     types::{BasicTypeEnum, FunctionType},
-    values::{BasicValueEnum, CallableValue},
+    values::BasicValueEnum,
 };
 use mun_hir::{Body, Expr, ExprId, HirDatabase, InferenceResult};
 use rustc_hash::FxHashSet;
 
 use crate::{
     intrinsics::Intrinsic,
-    ir::{function, ty::HirTypeCache},
+    ir::{function, ty::HirTypeCache, value::Callable},
     module_group::ModuleGroup,
     type_info::{HasStaticTypeId, TypeId},
 };
@@ -35,16 +34,14 @@ use crate::{
 /// hot reloading within Mun.
 #[derive(Debug, Eq, PartialEq)]
 pub struct DispatchTable<'ink> {
-    // The LLVM context in which all LLVM types live
-    context: &'ink Context,
-    // The target for which to create the dispatch table
-    target: TargetData,
     // This contains the function that map to the DispatchTable struct fields
     function_to_idx: HashMap<mun_hir::Function, usize>,
     // Prototype to function index
     prototype_to_idx: HashMap<FunctionPrototype, usize>,
     // This contains an ordered list of all the function in the dispatch table
     entries: Vec<DispatchableFunction>,
+    // LLVM signatures for entries at the same index.
+    signatures: Vec<FunctionType<'ink>>,
     // Contains a reference to the global value containing the DispatchTable
     table_ref: Option<inkwell::values::GlobalValue<'ink>>,
     //
@@ -88,7 +85,7 @@ impl<'ink> DispatchTable<'ink> {
         table_ref: Option<inkwell::values::GlobalValue<'ink>>,
         builder: &inkwell::builder::Builder<'ink>,
         function: mun_hir::Function,
-    ) -> CallableValue<'ink> {
+    ) -> Callable<'ink> {
         let function_name = function.name(db).to_string();
 
         // Get the index of the function
@@ -97,7 +94,13 @@ impl<'ink> DispatchTable<'ink> {
             .get(&function)
             .expect("unknown function");
 
-        Self::gen_function_lookup_by_index(table_ref, builder, &function_name, index)
+        Self::gen_function_lookup_by_index(
+            table_ref,
+            builder,
+            &function_name,
+            index,
+            self.signatures[index],
+        )
     }
 
     /// Generates a function lookup through the `DispatchTable`, equivalent to
@@ -108,7 +111,7 @@ impl<'ink> DispatchTable<'ink> {
         table_ref: Option<inkwell::values::GlobalValue<'ink>>,
         builder: &inkwell::builder::Builder<'ink>,
         intrinsic: &impl Intrinsic,
-    ) -> CallableValue<'ink> {
+    ) -> Callable<'ink> {
         let prototype = intrinsic.prototype();
 
         // Get the index of the intrinsic
@@ -117,7 +120,13 @@ impl<'ink> DispatchTable<'ink> {
             .get(&prototype)
             .expect("unknown function");
 
-        Self::gen_function_lookup_by_index(table_ref, builder, &prototype.name, index)
+        Self::gen_function_lookup_by_index(
+            table_ref,
+            builder,
+            &prototype.name,
+            index,
+            self.signatures[index],
+        )
     }
 
     /// Generates a function lookup through the `DispatchTable`, equivalent to
@@ -128,7 +137,8 @@ impl<'ink> DispatchTable<'ink> {
         builder: &inkwell::builder::Builder<'ink>,
         function_name: &str,
         index: usize,
-    ) -> CallableValue<'ink> {
+        signature: FunctionType<'ink>,
+    ) -> Callable<'ink> {
         // Get the internal table reference
         let table_ref = table_ref.expect("no dispatch table defined");
 
@@ -144,11 +154,10 @@ impl<'ink> DispatchTable<'ink> {
                 panic!("could not get {function_name} (index: {index}) from dispatch table")
             });
 
-        builder
+        let pointer = builder
             .build_load(ptr_to_function_ptr, &format!("{function_name}_ptr"))
-            .into_pointer_value()
-            .try_into()
-            .expect("Pointer value is not a valid function pointer.")
+            .into_pointer_value();
+        Callable::new(pointer, signature)
     }
 
     /// Returns the value that represents the dispatch table in IR or `None` if
@@ -166,12 +175,8 @@ impl<'ink> DispatchTable<'ink> {
 /// A struct that can be used to build the dispatch table from HIR.
 pub(crate) struct DispatchTableBuilder<'db, 'ink, 't> {
     db: &'db dyn HirDatabase,
-    // The LLVM context in which all LLVM types live
-    context: &'ink Context,
-    // The module in which all values live
+    // Module that owns the dispatch table global.
     module: &'t Module<'ink>,
-    // The target for which to create the dispatch table
-    target_data: TargetData,
     // Converts HIR ty's to inkwell types
     hir_types: &'t HirTypeCache<'db, 'ink>,
     // This contains the functions that map to the DispatchTable struct fields
@@ -199,7 +204,6 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
     /// Creates a new builder that can generate a dispatch function.
     pub fn new(
         context: &'ink Context,
-        target_data: TargetData,
         db: &'db dyn HirDatabase,
         module: &'t Module<'ink>,
         intrinsics: &BTreeMap<FunctionPrototype, FunctionType<'ink>>,
@@ -208,9 +212,7 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
     ) -> Self {
         let mut table = Self {
             db,
-            context,
             module,
-            target_data,
             function_to_idx: HashMap::default(),
             prototype_to_idx: HashMap::default(),
             entries: Vec::default(),
@@ -332,6 +334,8 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
     ///
     /// Returns the `DispatchTable` and a set of dependencies for the module.
     pub fn build(self) -> (DispatchTable<'ink>, FxHashSet<mun_hir::Module>) {
+        let signatures = self.entries.iter().map(|entry| entry.ir_type).collect();
+
         // Construct the table body from all the entries in the dispatch table
         let table_body: Vec<BasicTypeEnum<'ink>> = self
             .entries
@@ -383,12 +387,11 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
 
         (
             DispatchTable {
-                context: self.context,
-                target: self.target_data,
                 function_to_idx: self.function_to_idx,
                 prototype_to_idx: self.prototype_to_idx,
                 table_ref: self.table_ref,
                 table_type,
+                signatures,
                 entries: self
                     .entries
                     .into_iter()

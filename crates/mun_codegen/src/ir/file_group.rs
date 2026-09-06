@@ -81,7 +81,6 @@ pub(crate) fn gen_file_group_ir<'ink>(
     // Collect all exposed functions' bodies.
     let mut dispatch_table_builder = DispatchTableBuilder::new(
         code_gen.context,
-        code_gen.target_machine.get_target_data(),
         code_gen.db,
         &llvm_module,
         &intrinsics_map,
