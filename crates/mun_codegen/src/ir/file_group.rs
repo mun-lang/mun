@@ -104,10 +104,12 @@ pub(crate) fn gen_file_group_ir<'ink>(
 
     let (dispatch_table, referenced_modules) = dispatch_table_builder.build();
 
+    let target_data = code_gen.target_machine.get_target_data();
     let mut type_table_builder = TypeTableBuilder::new(
         code_gen.db,
         code_gen.context,
         &llvm_module,
+        &target_data,
         intrinsics_map.keys(),
         &dispatch_table,
         &code_gen.hir_types,

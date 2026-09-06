@@ -7,7 +7,8 @@ use std::{
 use inkwell::{
     context::Context,
     module::{Linkage, Module},
-    types::ArrayType,
+    targets::TargetData,
+    types::{ArrayType, PointerType},
     values::{GlobalValue, PointerValue},
     AddressSpace,
 };
@@ -83,8 +84,8 @@ impl<'ink> TypeTable<'ink> {
 /// Collects the types used by a module group and materializes its runtime lookup table.
 pub(crate) struct TypeTableBuilder<'db, 'ink, 't> {
     db: &'db dyn HirDatabase,
-    context: &'ink Context,
     module: &'t Module<'ink>,
+    pointer_type: PointerType<'ink>,
     dispatch_table: &'t DispatchTable<'ink>,
     hir_types: &'t HirTypeCache<'db, 'ink>,
     entries: HashSet<Arc<TypeId>>,
@@ -96,6 +97,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
         db: &'db dyn HirDatabase,
         context: &'ink Context,
         module: &'t Module<'ink>,
+        target_data: &TargetData,
         _intrinsics: impl Iterator<Item = &'f FunctionPrototype>,
         dispatch_table: &'t DispatchTable<'ink>,
         hir_types: &'t HirTypeCache<'db, 'ink>,
@@ -103,7 +105,9 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
     ) -> Self {
         Self {
             db,
-            context,
+            pointer_type: context
+                .ptr_sized_int_type(target_data, None)
+                .ptr_type(AddressSpace::default()),
             module,
             dispatch_table,
             hir_types,
@@ -173,7 +177,7 @@ impl<'db, 'ink, 't> TypeTableBuilder<'db, 'ink, 't> {
             .map(|(index, type_info)| (type_info.clone(), index))
             .collect();
 
-        let pointer_type = self.context.i8_type().ptr_type(AddressSpace::default());
+        let pointer_type = self.pointer_type;
         let values = vec![pointer_type.const_null(); entries.len()];
         let initializer = pointer_type.const_array(&values);
         if !values.is_empty() {
