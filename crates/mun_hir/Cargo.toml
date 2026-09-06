@@ -16,20 +16,17 @@ license.workspace = true
 la-arena = { workspace = true }
 mun_syntax = { version = "0.6.0-dev", path = "../mun_syntax" }
 mun_target = { version = "0.6.0-dev", path = "../mun_target" }
-mun_paths = { version = "0.6.0-dev", path="../mun_paths" }
 mun_hir_input = { version = "0.6.0-dev", path="../mun_hir_input" }
-drop_bomb = { workspace = true }
 either = { workspace = true }
 ena = { workspace = true }
 itertools = { workspace = true }
-once_cell = { workspace = true }
 rustc-hash = { workspace = true }
-salsa = { workspace = true }
+ra_salsa = { workspace = true }
+tracing = { workspace = true }
 smallvec = { workspace = true, features = ["union"] }
 bitflags = { workspace = true }
 
 [dev-dependencies]
-mun_test = { path = "../mun_test" }
 insta = { workspace = true }
 parking_lot = { workspace = true }
 text_trees = { workspace = true }

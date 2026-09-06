@@ -29,16 +29,15 @@ lsp-server = { workspace = true }
 parking_lot = { workspace = true }
 ra_ap_text_edit = { workspace = true }
 rustc-hash = { workspace = true }
-salsa = { workspace = true }
+ra_salsa = { workspace = true }
+tracing = { workspace = true }
 serde = { workspace = true }
-serde_derive = { workspace = true }
 serde_json = { workspace = true }
-thiserror = { workspace = true }
 threadpool = { workspace = true }
+url = { workspace = true }
 
 [dev-dependencies]
-mun_test = { path = "../mun_test"}
 insta = { workspace = true }
 itertools = { workspace = true }
-tempdir = { workspace = true }
+tempfile = { workspace = true }
 text_trees = { workspace = true }

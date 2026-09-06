@@ -108,7 +108,7 @@ impl<'a> RequestDispatcher<'a> {
     /// that this is an unknown request.
     pub fn finish(&mut self) {
         if let Some(req) = self.request.take() {
-            log::error!("unknown request: {:?}", req);
+            log::error!("unknown request: {req:?}");
             let response = lsp_server::Response::new_err(
                 req.id,
                 lsp_server::ErrorCode::MethodNotFound as i32,
@@ -165,7 +165,7 @@ impl<'a> NotificationDispatcher<'a> {
     pub fn finish(&mut self) {
         if let Some(notification) = &self.notification {
             if !notification.method.starts_with("$/") {
-                log::error!("unhandled notification: {:?}", notification);
+                log::error!("unhandled notification: {notification:?}");
             }
         }
     }

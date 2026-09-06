@@ -174,8 +174,10 @@ impl Linker for Ld64Linker {
             .to_str()
             .ok_or_else(|| LinkerError::PathError(path.to_owned()))?;
 
-        // Link as dynamic library
+        // Link as a dynamic library with a signature slot that can be refreshed after
+        // linking. Ad-hoc signatures are required for loading arm64 Mach-O binaries.
         self.args.push("-dylib".to_owned());
+        self.args.push("-adhoc_codesign".to_owned());
 
         self.add_apple_sdk()?;
         self.args.push("-lSystem".to_owned());

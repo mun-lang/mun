@@ -286,7 +286,7 @@ fn read(path: impl AsRef<AbsPath>) -> Option<Vec<u8>> {
 
 /// A helper function to load a warning for a "notify" error.
 fn log_notify_error<T>(res: notify::Result<T>) -> Option<T> {
-    res.map_err(|err| log::warn!("notify error: {}", err)).ok()
+    res.map_err(|err| log::warn!("notify error: {err}")).ok()
 }
 
 #[cfg(test)]

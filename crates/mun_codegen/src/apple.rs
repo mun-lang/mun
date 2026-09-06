@@ -3,16 +3,16 @@ use std::{
     env, io,
     path::{Path, PathBuf},
     process::Command,
+    sync::LazyLock,
 };
 
-use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 
 /// Finds the Apple SDK root directory by checking the `SDKROOT` environment
 /// variable or running `xcrun --show-sdk-path`. The result is cached so
 /// multiple calls to this function should be fast.
 pub fn get_apple_sdk_root(sdk_name: &str) -> Result<PathBuf, String> {
-    static SDK_PATH: Lazy<Mutex<HashMap<String, PathBuf>>> = Lazy::new(Default::default);
+    static SDK_PATH: LazyLock<Mutex<HashMap<String, PathBuf>>> = LazyLock::new(Default::default);
 
     let mut lock = SDK_PATH.lock();
     if let Some(path) = lock.get(sdk_name) {
@@ -75,7 +75,7 @@ fn find_apple_sdk_root(sdk_name: &str) -> Result<PathBuf, String> {
             } else {
                 let error = String::from_utf8(output.stderr);
                 let error = format!("process exit with error: {}", error.unwrap());
-                Err(io::Error::new(io::ErrorKind::Other, &error[..]))
+                Err(io::Error::other(&error[..]))
             }
         });
 

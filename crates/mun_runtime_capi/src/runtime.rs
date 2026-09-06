@@ -38,7 +38,7 @@ impl Runtime {
     ///
     /// The caller must ensure that the internal pointers point to a valid
     /// [`mun_runtime::Runtime`].
-    pub unsafe fn inner_mut(&self) -> Result<&mut mun_runtime::Runtime, &'static str> {
+    pub unsafe fn inner_mut(&mut self) -> Result<&mut mun_runtime::Runtime, &'static str> {
         self.0
             .cast::<mun_runtime::Runtime>()
             .as_mut()
@@ -341,7 +341,10 @@ pub unsafe extern "C" fn mun_runtime_get_type_info_by_id(
 /// is a null pointer, an error will be returned. Passing pointers to invalid
 /// data, will lead to undefined behavior.
 #[no_mangle]
-pub unsafe extern "C" fn mun_runtime_update(runtime: Runtime, updated: *mut bool) -> ErrorHandle {
+pub unsafe extern "C" fn mun_runtime_update(
+    mut runtime: Runtime,
+    updated: *mut bool,
+) -> ErrorHandle {
     let runtime = mun_error_try!(runtime
         .inner_mut()
         .map_err(|e| format!("invalid argument 'runtime': {e}")));

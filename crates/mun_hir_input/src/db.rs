@@ -6,34 +6,34 @@ use crate::{FileId, LineIndex, ModuleTree, PackageId, PackageSet, SourceRoot, So
 
 /// Database which stores all significant input facts: source code and project
 /// model.
-#[salsa::query_group(SourceDatabaseStorage)]
+#[ra_salsa::query_group(SourceDatabaseStorage)]
 #[allow(clippy::trait_duplication_in_bounds)]
-pub trait SourceDatabase: salsa::Database {
+pub trait SourceDatabase: ra_salsa::Database {
     /// Text of the file.
-    #[salsa::input]
+    #[ra_salsa::input]
     fn file_text(&self, file_id: FileId) -> Arc<str>;
 
     /// Source root of a file
-    #[salsa::input]
+    #[ra_salsa::input]
     fn file_source_root(&self, file_id: FileId) -> SourceRootId;
 
     /// Returns the set of packages
-    #[salsa::input]
+    #[ra_salsa::input]
     fn packages(&self) -> Arc<PackageSet>;
 
     /// Contents of the source root
-    #[salsa::input]
+    #[ra_salsa::input]
     fn source_root(&self, id: SourceRootId) -> Arc<SourceRoot>;
 
     /// Returns the relative path of a file
     fn file_relative_path(&self, file_id: FileId) -> RelativePathBuf;
 
     /// For a package, returns its hierarchy of modules.
-    #[salsa::invoke(ModuleTree::module_tree_query)]
+    #[ra_salsa::invoke(ModuleTree::module_tree_query)]
     fn module_tree(&self, package: PackageId) -> Arc<ModuleTree>;
 
     /// Returns the line index of a file
-    #[salsa::invoke(line_index_query)]
+    #[ra_salsa::invoke(line_index_query)]
     fn line_index(&self, file_id: FileId) -> Arc<LineIndex>;
 }
 

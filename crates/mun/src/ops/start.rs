@@ -27,7 +27,7 @@ pub fn start(args: Args) -> anyhow::Result<ExitStatus> {
         .ok_or_else(|| {
             std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
-                format!("Failed to obtain entry point '{}'", &args.entry),
+                format!("Failed to obtain entry point '{}'", args.entry),
             )
         })?;
 
@@ -35,19 +35,19 @@ pub fn start(args: Args) -> anyhow::Result<ExitStatus> {
     if return_type.equals::<bool>() {
         let result: bool = runtime
             .invoke(&args.entry, ())
-            .map_err(|e| anyhow!("{}", e))?;
+            .map_err(|e| anyhow!("{e}"))?;
 
         println!("{result}");
     } else if return_type.equals::<f64>() {
         let result: f64 = runtime
             .invoke(&args.entry, ())
-            .map_err(|e| anyhow!("{}", e))?;
+            .map_err(|e| anyhow!("{e}"))?;
 
         println!("{result}");
     } else if return_type.equals::<i64>() {
         let result: i64 = runtime
             .invoke(&args.entry, ())
-            .map_err(|e| anyhow!("{}", e))?;
+            .map_err(|e| anyhow!("{e}"))?;
 
         println!("{result}");
     } else if return_type.equals::<()>() {
@@ -55,7 +55,7 @@ pub fn start(args: Args) -> anyhow::Result<ExitStatus> {
         runtime
             .invoke(&args.entry, ())
             .map(|_: ()| ExitStatus::Success)
-            .map_err(|e| anyhow!("{}", e))?;
+            .map_err(|e| anyhow!("{e}"))?;
     } else {
         return Err(anyhow!(
             "Only native Mun return types are supported for entry points. Found: {}",

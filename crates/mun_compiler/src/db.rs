@@ -1,10 +1,10 @@
 use mun_codegen::{CodeGenDatabase, CodeGenDatabaseStorage};
-use mun_hir::{salsa, HirDatabase};
+use mun_hir::HirDatabase;
 
 use crate::Config;
 
 /// A compiler database is a salsa database that enables increment compilation.
-#[salsa::database(
+#[ra_salsa::database(
     mun_hir_input::SourceDatabaseStorage,
     mun_hir::InternDatabaseStorage,
     mun_hir::AstDatabaseStorage,
@@ -13,14 +13,14 @@ use crate::Config;
     CodeGenDatabaseStorage
 )]
 pub struct CompilerDatabase {
-    storage: salsa::Storage<Self>,
+    storage: ra_salsa::Storage<Self>,
 }
 
 impl CompilerDatabase {
     /// Constructs a new database
     pub fn new(config: &Config) -> Self {
         let mut db = CompilerDatabase {
-            storage: salsa::Storage::default(),
+            storage: ra_salsa::Storage::default(),
         };
 
         // Set the initial configuration
@@ -36,4 +36,4 @@ impl CompilerDatabase {
     }
 }
 
-impl salsa::Database for CompilerDatabase {}
+impl ra_salsa::Database for CompilerDatabase {}

@@ -2,13 +2,14 @@ use std::{
     cell::{Cell, RefCell},
     convert::TryInto,
     fs,
+    str::FromStr,
     time::Duration,
 };
 
 use crossbeam_channel::{after, select};
 use lsp_server::{Connection, Message, Notification, Request};
 use lsp_types::{
-    notification::Exit, request::Shutdown, ProgressParams, ProgressParamsValue, Url,
+    notification::Exit, request::Shutdown, ProgressParams, ProgressParamsValue, Uri,
     WorkDoneProgress,
 };
 use mun_hir_input::Fixture;
@@ -23,7 +24,7 @@ use serde_json::Value;
 /// information about the project.
 pub struct Project<'a> {
     fixture: &'a str,
-    tmp_dir: Option<tempdir::TempDir>,
+    tmp_dir: Option<tempfile::TempDir>,
 }
 
 impl Project<'_> {
@@ -38,9 +39,12 @@ impl Project<'_> {
     /// Instantiates a language server for this project.
     pub fn server(self) -> Server {
         // Get or create a temporary directory
-        let tmp_dir = self
-            .tmp_dir
-            .unwrap_or_else(|| tempdir::TempDir::new("testdir").unwrap());
+        let tmp_dir = self.tmp_dir.unwrap_or_else(|| {
+            tempfile::Builder::new()
+                .prefix("testdir")
+                .tempdir()
+                .unwrap()
+        });
 
         // Write all fixtures to a folder
         for entry in Fixture::parse(self.fixture) {
@@ -78,12 +82,12 @@ pub struct Server {
     messages: RefCell<Vec<Message>>,
     worker: Option<std::thread::JoinHandle<()>>,
     client: Connection,
-    tmp_dir: tempdir::TempDir,
+    tmp_dir: tempfile::TempDir,
 }
 
 impl Server {
     /// Constructs and initializes a new `Server`
-    pub fn new(tmp_dir: tempdir::TempDir, config: Config) -> Self {
+    pub fn new(tmp_dir: tempfile::TempDir, config: Config) -> Self {
         let (connection, client) = Connection::memory();
 
         let worker = std::thread::spawn(move || {
@@ -103,7 +107,7 @@ impl Server {
     pub fn doc_id(&self, rel_path: &str) -> lsp_types::TextDocumentIdentifier {
         let path = self.tmp_dir.path().join(rel_path);
         lsp_types::TextDocumentIdentifier {
-            uri: Url::from_file_path(path).unwrap(),
+            uri: Uri::from_str(url::Url::from_file_path(path).unwrap().as_str()).unwrap(),
         }
     }
 
@@ -195,10 +199,9 @@ impl Server {
                 Message::Notification(_) => (),
                 Message::Response(res) => {
                     assert_eq!(res.id, id);
-                    if let Some(err) = res.error {
-                        panic!("received error response as a response to a request: {err:#?}");
-                    }
-                    return res.result.unwrap();
+                    return res.response_result.unwrap_or_else(|err| {
+                        panic!("received error response as a response to a request: {err:#?}")
+                    });
                 }
             }
         }

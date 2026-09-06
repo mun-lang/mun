@@ -33,7 +33,9 @@ impl TestMode {
 #[allow(clippy::let_unit_value)]
 pub fn run_test(code: &str, mode: TestMode) {
     // Construct a temporary path to store the output files
-    let out_dir = tempdir::TempDir::new("mun_test_")
+    let out_dir = tempfile::Builder::new()
+        .prefix("mun_test_")
+        .tempdir()
         .expect("could not create temporary directory for test output");
 
     // Construct a driver to compile the code with

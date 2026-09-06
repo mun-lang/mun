@@ -380,7 +380,10 @@ impl Runtime {
                     None
                 }
             })
-            .min_by(|(_, dist1), (_, dist2)| dist1.cmp(dist2));
+            // Resolve equal distances independently of the dispatch table's iteration order.
+            .min_by(|(name1, distance1), (name2, distance2)| {
+                distance1.cmp(distance2).then_with(|| name2.cmp(name1))
+            });
         found_match.map(|(closest_name, _)| closest_name)
     }
 
@@ -662,13 +665,13 @@ pub struct InvokeErr<'name, T> {
 
 impl<T> Debug for InvokeErr<'_, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.msg)
+        write!(f, "{}", self.msg)
     }
 }
 
 impl<T> Display for InvokeErr<'_, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.msg)
+        write!(f, "{}", self.msg)
     }
 }
 
@@ -840,7 +843,7 @@ impl Runtime {
             return Err(InvokeErr {
                 msg: format!(
                     "unexpected return type, got '{}', expected '{}",
-                    &function_info.prototype.signature.return_type.name(),
+                    function_info.prototype.signature.return_type.name(),
                     ReturnType::type_hint()
                 ),
                 function_name,

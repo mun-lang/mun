@@ -3,9 +3,10 @@ use std::{
     str::FromStr,
 };
 
-use lsp_types::Url;
+use lsp_types::Uri;
 use mun_hir_input::{FileId, LineIndex};
 use mun_syntax::{TextRange, TextSize};
+use url::Url;
 
 use crate::{
     completion::{CompletionItem, CompletionItemKind},
@@ -84,12 +85,12 @@ pub(crate) fn symbol_kind(symbol_kind: SymbolKind) -> lsp_types::SymbolKind {
     }
 }
 
-/// Returns the `Url` associated with the specified `FileId`.
-pub(crate) fn url(snapshot: &LanguageServerSnapshot, file_id: FileId) -> anyhow::Result<Url> {
+/// Returns the URI associated with the specified `FileId`.
+pub(crate) fn url(snapshot: &LanguageServerSnapshot, file_id: FileId) -> anyhow::Result<Uri> {
     let vfs = snapshot.vfs.read();
     let path = vfs.file_path(mun_vfs::FileId(file_id.0));
     let url = url_from_path_with_drive_lowercasing(path)?;
-    Ok(url)
+    Uri::from_str(url.as_str()).map_err(Into::into)
 }
 
 /// Converts from a list of our `CompletionItem` to an LSP `CompletionItem`

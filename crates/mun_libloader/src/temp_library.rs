@@ -53,7 +53,7 @@ impl TempLibrary {
             .map_err(InitError::CreateTempFile)?
             .into_temp_path();
         fs::copy(path, &tmp_path).map_err(InitError::CopyLibrary)?;
-        let library = Library::new(&tmp_path)?;
+        let library = Library::new(tmp_path.as_os_str())?;
         Ok(TempLibrary {
             _tmp_path: tmp_path,
             library,

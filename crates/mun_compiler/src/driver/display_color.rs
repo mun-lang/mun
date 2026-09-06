@@ -49,11 +49,11 @@ fn cmd_supports_ansi() -> bool {
     Command::new("cmd")
         .args(["/C", "ver"])
         .output()
-        .map_or(false, |output| {
-            String::from_utf8(output.stdout).map_or(false, |windows_version| {
+        .is_ok_and(|output| {
+            String::from_utf8(output.stdout).is_ok_and(|windows_version| {
                 let windows_version = windows_version
                     .split(' ') // split to drop "Microsoft", "Windows" and "[Version" from string
-                    .last() // latest element contains Windows version with noisy ']' char
+                    .next_back() // latest element contains Windows version with noisy ']' char
                     .map(|window_version| {
                         let mut window_version: String = window_version.trim().to_string();
 
@@ -73,7 +73,7 @@ fn cmd_supports_ansi() -> bool {
                     // From Windows 10.0.10586 version and higher ANSI escape codes work in `cmd`
                     let windows_support_ansi = major >= 10 && (patch >= 10586 || minor > 0);
                     if windows_support_ansi {
-                        let _ = yansi_term::enable_ansi_support();
+                        let _ = enable_ansi_support::enable_ansi_support();
                     }
                     windows_support_ansi
                 } else {

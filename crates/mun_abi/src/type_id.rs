@@ -1,6 +1,4 @@
-use std::fmt;
-
-use once_cell::sync::OnceCell;
+use std::{fmt, sync::OnceLock};
 
 use crate::{static_type_map::StaticTypeMap, Guid};
 
@@ -83,7 +81,7 @@ impl fmt::Display for PointerTypeId<'_> {
 
 impl fmt::Display for ArrayTypeId<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[{}]", &self.element)
+        write!(f, "[{}]", self.element)
     }
 }
 
@@ -95,7 +93,7 @@ pub trait HasStaticTypeId {
 
 impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *const T {
     fn type_id() -> &'static TypeId<'static> {
-        static VALUE: OnceCell<StaticTypeMap<TypeId<'static>>> = OnceCell::new();
+        static VALUE: OnceLock<StaticTypeMap<TypeId<'static>>> = OnceLock::new();
         let map = VALUE.get_or_init(Default::default);
         map.call_once::<T, _>(|| {
             PointerTypeId {
@@ -109,7 +107,7 @@ impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *const T {
 
 impl<T: HasStaticTypeId + 'static> HasStaticTypeId for *mut T {
     fn type_id() -> &'static TypeId<'static> {
-        static VALUE: OnceCell<StaticTypeMap<TypeId<'static>>> = OnceCell::new();
+        static VALUE: OnceLock<StaticTypeMap<TypeId<'static>>> = OnceLock::new();
         let map = VALUE.get_or_init(Default::default);
         map.call_once::<T, _>(|| {
             PointerTypeId {

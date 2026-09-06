@@ -61,7 +61,7 @@ impl<'ink> RuntimeArrayValue<'ink> {
         let array_ptr = self.get_array_ptr(builder);
         let value_name = array_ptr.get_name().to_string_lossy();
         builder
-            .build_struct_gep(array_ptr, 0, &format!("{}->length", &value_name))
+            .build_struct_gep(array_ptr, 0, &format!("{value_name}->length"))
             .expect("could not get `length` from array struct")
     }
 
@@ -70,10 +70,10 @@ impl<'ink> RuntimeArrayValue<'ink> {
         let array_ptr = self.get_array_ptr(builder);
         let value_name = array_ptr.get_name().to_string_lossy();
         let length_ptr = builder
-            .build_struct_gep(array_ptr, 1, &format!("{}->capacity", &value_name))
+            .build_struct_gep(array_ptr, 1, &format!("{value_name}->capacity"))
             .expect("could not get `length` from array struct");
         builder
-            .build_load(length_ptr, &format!("{}.capacity", &value_name))
+            .build_load(length_ptr, &format!("{value_name}.capacity"))
             .into_int_value()
     }
 
@@ -82,7 +82,7 @@ impl<'ink> RuntimeArrayValue<'ink> {
         let array_ptr = self.get_array_ptr(builder);
         let value_name = array_ptr.get_name().to_string_lossy();
         builder
-            .build_struct_gep(array_ptr, 2, &format!("{}->elements", &value_name))
+            .build_struct_gep(array_ptr, 2, &format!("{value_name}->elements"))
             .expect("could not get `elements` from array struct")
     }
 

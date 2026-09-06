@@ -16,7 +16,7 @@ use std::{
 };
 
 use mdbook::renderer::RenderContext;
-use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag};
+use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
 
 #[derive(Default)]
 struct BookStore {
@@ -104,7 +104,10 @@ struct Test {
 fn extract_tests_from_string(markdown: &str, file_stem: &str) -> Vec<Test> {
     enum Block {
         None,
-        Code(Vec<String>),
+        Code {
+            text: Vec<String>,
+            info: CodeBlockInfo,
+        },
         Header(String),
     }
 
@@ -116,10 +119,10 @@ fn extract_tests_from_string(markdown: &str, file_stem: &str) -> Vec<Test> {
     for (event, range) in Parser::new(markdown).into_offset_iter() {
         let line_number = bytecount::count(&markdown.as_bytes()[0..range.end], b'\n');
         match event {
-            Event::Start(Tag::Heading(level, _, _)) if (level as i32) < 3 => {
+            Event::Start(Tag::Heading { level, .. }) if (level as i32) < 3 => {
                 block = Block::Header(String::new());
             }
-            Event::End(Tag::Heading(level, _, _)) if (level as i32) < 3 => {
+            Event::End(TagEnd::Heading(level)) if (level as i32) < 3 => {
                 let cur_buffer = mem::replace(&mut block, Block::None);
                 if let Block::Header(sect) = cur_buffer {
                     section = Some(sanitize_test_name(&sect));
@@ -128,12 +131,18 @@ fn extract_tests_from_string(markdown: &str, file_stem: &str) -> Vec<Test> {
             Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(ref info))) => {
                 let code_block_info = parse_code_block_info(info);
                 if code_block_info.is_mun {
-                    block = Block::Code(Vec::new());
+                    block = Block::Code {
+                        text: Vec::new(),
+                        info: code_block_info,
+                    };
                 }
             }
-            Event::End(Tag::CodeBlock(CodeBlockKind::Fenced(ref info))) => {
-                let code_block_info = parse_code_block_info(info);
-                if let Block::Code(buf) = mem::replace(&mut block, Block::None) {
+            Event::End(TagEnd::CodeBlock) => {
+                if let Block::Code {
+                    text: buf,
+                    info: code_block_info,
+                } = mem::replace(&mut block, Block::None)
+                {
                     let name = if let Some(ref section) = section {
                         format!("{file_stem}_sect_{section}_line_{code_block_start}")
                     } else {
@@ -149,7 +158,10 @@ fn extract_tests_from_string(markdown: &str, file_stem: &str) -> Vec<Test> {
                 }
             }
             Event::Text(text) => {
-                if let Block::Code(ref mut buf) = block {
+                if let Block::Code {
+                    text: ref mut buf, ..
+                } = block
+                {
                     if buf.is_empty() {
                         code_block_start = line_number;
                     }

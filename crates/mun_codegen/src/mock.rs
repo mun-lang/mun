@@ -13,7 +13,7 @@ use crate::{
 
 /// A mock implementation of the IR database. It can be used to set up a simple
 /// test case.
-#[salsa::database(
+#[ra_salsa::database(
     mun_hir_input::SourceDatabaseStorage,
     mun_hir::AstDatabaseStorage,
     mun_hir::InternDatabaseStorage,
@@ -22,12 +22,12 @@ use crate::{
     CodeGenDatabaseStorage
 )]
 pub(crate) struct MockDatabase {
-    storage: salsa::Storage<Self>,
-    events: Mutex<Option<Vec<salsa::Event>>>,
+    storage: ra_salsa::Storage<Self>,
+    events: Mutex<Option<Vec<ra_salsa::Event>>>,
 }
 
-impl salsa::Database for MockDatabase {
-    fn salsa_event(&self, event: salsa::Event) {
+impl ra_salsa::Database for MockDatabase {
+    fn salsa_event(&self, event: ra_salsa::Event) {
         let mut events = self.events.lock();
         if let Some(events) = &mut *events {
             events.push(event);
@@ -38,7 +38,7 @@ impl salsa::Database for MockDatabase {
 impl Default for MockDatabase {
     fn default() -> Self {
         let mut db = MockDatabase {
-            storage: salsa::Storage::default(),
+            storage: ra_salsa::Storage::default(),
             events: Mutex::default(),
         };
         db.set_optimization_level(OptimizationLevel::Default);
@@ -72,7 +72,7 @@ impl MockDatabase {
         (db, file_id)
     }
 
-    pub fn log(&self, f: impl FnOnce()) -> Vec<salsa::Event> {
+    pub fn log(&self, f: impl FnOnce()) -> Vec<ra_salsa::Event> {
         *self.events.lock() = Some(Vec::new());
         f();
         self.events.lock().take().unwrap()
@@ -85,7 +85,7 @@ impl MockDatabase {
             .filter_map(|e| match e.kind {
                 // This pretty horrible, but `Debug` is the only way to inspect
                 // QueryDescriptor at the moment.
-                salsa::EventKind::WillExecute { database_key } => {
+                ra_salsa::EventKind::WillExecute { database_key } => {
                     Some(format!("{:?}", database_key.debug(self)))
                 }
                 _ => None,

@@ -28,7 +28,7 @@ impl Manifest {
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Manifest, anyhow::Error> {
         // Load the contents of the file
         let file_contents = std::fs::read_to_string(path)
-            .map_err(|e| anyhow::anyhow!("could not read manifest file: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("could not read manifest file: {e}"))?;
         Self::from_str(&file_contents)
     }
 
@@ -78,7 +78,7 @@ impl std::str::FromStr for Manifest {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // Parse the contents of the file to toml manifest
         let manifest = ::toml::from_str::<toml::TomlManifest>(s)
-            .map_err(|e| anyhow::anyhow!("could not parse manifest: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("could not parse manifest: {e}"))?;
         manifest.into_real_manifest()
     }
 }

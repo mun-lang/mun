@@ -35,7 +35,7 @@ fn gen_prototype_from_function<'ink>(
     // Internalize the name of the function prototype
     let name_str = CString::new(name.clone())
         .expect("function prototype name is not a valid CString")
-        .intern(format!("fn_sig::<{}>::name", &name), context);
+        .intern(format!("fn_sig::<{name}>::name"), context);
 
     // Get the `ir::TypeInfo` pointer for the return type of the function
     let fn_sig = function.ty(db).callable_sig(db).unwrap();
@@ -51,7 +51,7 @@ fn gen_prototype_from_function<'ink>(
         .params()
         .iter()
         .map(|ty| ir_type_builder.construct_from_type_id(&hir_types.type_id(ty)))
-        .into_const_private_pointer_or_null(format!("fn_sig::<{}>::arg_types", &name), context);
+        .into_const_private_pointer_or_null(format!("fn_sig::<{name}>::arg_types"), context);
 
     ir::FunctionPrototype {
         name: name_str.as_value(context),

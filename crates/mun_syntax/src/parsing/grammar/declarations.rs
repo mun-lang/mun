@@ -3,7 +3,7 @@ use super::{
     types, Marker, Parser, TokenSet, EOF, ERROR, EXTERN, FUNCTION_DEF, RENAME, RET_TYPE, USE,
     USE_TREE, USE_TREE_LIST,
 };
-use crate::{parsing::grammar::paths::is_use_path_start, T};
+use crate::parsing::grammar::paths::is_use_path_start;
 
 pub(super) const DECLARATION_RECOVERY_SET: TokenSet =
     TokenSet::new(&[T![fn], T![pub], T![struct], T![use], T![;], T![impl]]);

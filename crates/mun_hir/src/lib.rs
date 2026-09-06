@@ -7,7 +7,7 @@
 #![allow(dead_code)]
 
 pub use mun_hir_input::ModuleId;
-pub use salsa;
+pub use ra_salsa;
 
 pub use self::code_model::{
     Field, Function, FunctionData, HasSource, Module, ModuleDef, Package, PrimitiveType, Struct,
