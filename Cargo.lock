@@ -87,12 +87,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
-name = "array-init"
-version = "2.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d62b7694a562cdf5a74227903507c56ab2cc8bdd1f781ed5cb4cf9c9f810bfc"
-
-[[package]]
 name = "arwen-codesign"
 version = "0.0.1-alpha.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -181,12 +175,6 @@ name = "bytecount"
 version = "0.6.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "175812e0be2bccb6abe50bb8d566126198344f707e304f45c648fd8f2cc0365e"
-
-[[package]]
-name = "bytemuck"
-version = "1.25.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95832e849adfb21180ccb6826a99da14e5d266ae5c2e668e1602cf234f153797"
 
 [[package]]
 name = "bytes"
@@ -1304,16 +1292,13 @@ name = "mun_codegen"
 version = "0.6.0-dev"
 dependencies = [
  "anyhow",
- "array-init",
  "arwen-codesign",
  "by_address",
- "bytemuck",
  "inkwell",
  "insta",
  "itertools 0.15.0",
  "lld_rs",
  "mun_abi",
- "mun_codegen_macros",
  "mun_hir",
  "mun_hir_input",
  "mun_libloader",
@@ -1328,15 +1313,6 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tracing",
-]
-
-[[package]]
-name = "mun_codegen_macros"
-version = "0.6.0-dev"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
 ]
 
 [[package]]

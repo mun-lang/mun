@@ -1,8 +1,11 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::rc::Rc;
 
-use inkwell::{context::Context, module::Module, targets::TargetMachine, types::StructType};
+use inkwell::{context::Context, module::Module, targets::TargetMachine};
 
-use crate::{ir::ty::HirTypeCache, CodeGenDatabase};
+use crate::{
+    ir::{ty::HirTypeCache, types::AbiTypes},
+    CodeGenDatabase,
+};
 
 pub struct CodeGenContext<'db, 'ink> {
     /// The current LLVM context
@@ -11,8 +14,8 @@ pub struct CodeGenContext<'db, 'ink> {
     /// The Salsa HIR database
     pub db: &'db dyn mun_hir::HirDatabase,
 
-    /// A mapping from Rust types' full path (without lifetime) to inkwell types
-    pub rust_types: RefCell<HashMap<&'static str, StructType<'ink>>>,
+    /// The LLVM representation of the runtime ABI.
+    pub abi_types: AbiTypes<'ink>,
 
     /// A mapping from HIR types to LLVM struct types
     pub hir_types: HirTypeCache<'db, 'ink>,
@@ -29,10 +32,11 @@ impl<'db, 'ink> CodeGenContext<'db, 'ink> {
     /// `CodeGenDatabase`.
     pub fn new(context: &'ink Context, db: &'db dyn CodeGenDatabase) -> Self {
         let target_machine = db.target_machine().0;
+        let target_data = target_machine.get_target_data();
         Self {
             context,
-            rust_types: RefCell::new(HashMap::default()),
-            hir_types: HirTypeCache::new(context, db, target_machine.get_target_data()),
+            abi_types: AbiTypes::new(context, &target_data),
+            hir_types: HirTypeCache::new(context, db, target_data),
             optimization_level: db.optimization_level(),
             target_machine,
             db,
