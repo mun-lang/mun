@@ -24,7 +24,7 @@ use crate::{
         dispatch_table::DispatchTable,
         ty::HirTypeCache,
         type_table::TypeTable,
-        value::{Operand, Place, PlaceValue},
+        value::{Callable, Operand, Place, PlaceValue},
         RuntimeArrayValue, RuntimeReferenceValue,
     },
     module_group::ModuleGroup,
@@ -422,10 +422,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         let allocator_handle = self.get_allocator_handle_ptr();
 
         // Safety: we can be sure that the new intrinsic returns a reference.
-        let untyped_reference = self
-            .builder
-            .build_call(
-                new_fn_ptr,
+        let untyped_reference = new_fn_ptr
+            .call(
+                &self.builder,
                 &[type_info_ptr.into(), allocator_handle.into()],
                 "ref",
             )
@@ -1118,8 +1117,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 &self.builder,
                 function,
             );
-            self.builder
-                .build_call(ptr_value, args, &function.name(self.db).to_string())
+            ptr_value.call(&self.builder, args, &function.name(self.db).to_string())
         } else {
             let llvm_function = self.function_map.get(&function).unwrap_or_else(|| {
                 panic!(
@@ -1127,8 +1125,11 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     function.name(self.db),
                 )
             });
-            self.builder
-                .build_call(*llvm_function, args, &function.name(self.db).to_string())
+            Callable::from_function(*llvm_function).call(
+                &self.builder,
+                args,
+                &function.name(self.db).to_string(),
+            )
         }
     }
 
@@ -1507,10 +1508,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         // An object pointer adds an extra layer of indirection to allow for hot
         // reloading. To make it struct type agnostic, it is stored in a `*const
         // *mut std::ffi::c_void`.
-        let untyped_array_ptr = self
-            .builder
-            .build_call(
-                new_array_fn_ptr,
+        let untyped_array_ptr = new_array_fn_ptr
+            .call(
+                &self.builder,
                 &[
                     type_info_ptr.into(),
                     length_value.into(),

@@ -1,9 +1,52 @@
 use inkwell::{
     builder::Builder,
-    types::BasicTypeEnum,
-    values::{BasicValueEnum, InstructionValue, PointerValue},
+    types::{BasicTypeEnum, FunctionType},
+    values::{
+        BasicMetadataValueEnum, BasicValueEnum, CallSiteValue, CallableValue, FunctionValue,
+        InstructionValue, PointerValue,
+    },
+    AddressSpace,
 };
 use mun_hir::Ty;
+
+/// A function pointer paired with the signature required to call it.
+#[derive(Clone, Copy)]
+pub(crate) struct Callable<'ink> {
+    pointer: PointerValue<'ink>,
+    signature: FunctionType<'ink>,
+}
+
+impl<'ink> Callable<'ink> {
+    pub(crate) fn new(pointer: PointerValue<'ink>, signature: FunctionType<'ink>) -> Self {
+        debug_assert_eq!(
+            pointer.get_type(),
+            signature.ptr_type(AddressSpace::default())
+        );
+        Self { pointer, signature }
+    }
+
+    pub(crate) fn from_function(function: FunctionValue<'ink>) -> Self {
+        Self::new(
+            function.as_global_value().as_pointer_value(),
+            function.get_type(),
+        )
+    }
+
+    pub(crate) fn call(
+        self,
+        builder: &Builder<'ink>,
+        args: &[BasicMetadataValueEnum<'ink>],
+        name: &str,
+    ) -> CallSiteValue<'ink> {
+        debug_assert_eq!(
+            self.pointer.get_type(),
+            self.signature.ptr_type(AddressSpace::default())
+        );
+        let callable = CallableValue::try_from(self.pointer)
+            .expect("callable pointer must have a function signature");
+        builder.build_call(callable, args, name)
+    }
+}
 
 /// An SSA value paired with the Mun type that gives the value its meaning.
 #[derive(Clone)]
