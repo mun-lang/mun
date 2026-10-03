@@ -20,6 +20,7 @@ mod reference;
 pub mod ty;
 pub(crate) mod type_table;
 pub mod types;
+mod value;
 
 use array::RuntimeArrayValue;
 use reference::RuntimeReferenceValue;
