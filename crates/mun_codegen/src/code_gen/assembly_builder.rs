@@ -4,8 +4,7 @@ use rustc_hash::FxHashSet;
 use crate::{
     assembly::Assembly,
     code_gen::{optimize_module, symbols, CodeGenContext, CodeGenerationError},
-    ir::{file::gen_file_ir, file_group::gen_file_group_ir},
-    value::{IrTypeContext, IrValueContext},
+    ir::{file::gen_file_ir, file_group::gen_file_group_ir, types::AbiBuilder},
     ModuleGroupId, ModulePartition,
 };
 
@@ -63,16 +62,11 @@ impl<'db, 'ink, 'ctx, 't> AssemblyBuilder<'db, 'ink, 'ctx, 't> {
         }
 
         let target_data = self.code_gen.target_machine.get_target_data();
-        let type_context = IrTypeContext {
+        let abi = AbiBuilder {
+            types: &self.code_gen.abi_types,
             context: self.code_gen.context,
-            target_data: &target_data,
-            struct_types: &self.code_gen.rust_types,
-        };
-
-        let value_context = IrValueContext {
-            type_context: &type_context,
-            context: type_context.context,
             module: &self.assembly_module,
+            target_data: &target_data,
         };
 
         // Build the set of dependencies
@@ -96,7 +90,7 @@ impl<'db, 'ink, 'ctx, 't> AssemblyBuilder<'db, 'ink, 'ctx, 't> {
         // Generate the `get_info` method.
         symbols::gen_reflection_ir(
             self.code_gen.db,
-            &value_context,
+            &abi,
             &module_group.name,
             &file.function_definitions,
             &file.type_definitions,

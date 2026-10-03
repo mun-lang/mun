@@ -1,47 +1,52 @@
-use std::{cell::RefCell, mem};
+use std::mem;
 
 use inkwell::types::AnyType;
 use mun_abi as abi;
 
-use crate::{
-    ir::types as ir,
-    value::{IrTypeContext, SizedValueType},
-};
+use super::AbiTypes;
 
 #[test]
 fn abi_struct_sizes() {
-    fn test_type_size<'ink, A: Sized, T: SizedValueType<'ink>>(context: &IrTypeContext<'ink, '_>) {
-        let ir_type = T::get_ir_type(context);
-        println!("{}", ir_type.print_to_string().to_string());
-        let ir_size = context.target_data.get_abi_size(&ir_type);
-        assert_eq!(mem::size_of::<A>(), ir_size as usize);
+    fn assert_layout<'ink, A, T: AnyType<'ink>>(
+        target_data: &inkwell::targets::TargetData,
+        llvm_type: &T,
+    ) {
+        assert_eq!(
+            mem::size_of::<A>(),
+            target_data.get_abi_size(llvm_type) as usize,
+            "size mismatch for {}",
+            std::any::type_name::<A>(),
+        );
+        assert_eq!(
+            mem::align_of::<A>(),
+            target_data.get_abi_alignment(llvm_type) as usize,
+            "alignment mismatch for {}",
+            std::any::type_name::<A>(),
+        );
     }
 
-    // Get target data for the current host
     let target = mun_target::spec::Target::host_target().expect("unable to determine host target");
     let target_data = inkwell::targets::TargetData::create(&target.data_layout);
-
-    // Create an LLVM context and type context to work with.
     let context = inkwell::context::Context::create();
-    let type_context = IrTypeContext {
-        context: &context,
-        target_data: &target_data,
-        struct_types: &RefCell::default(),
-    };
+    let types = AbiTypes::new(&context, &target_data);
 
-    test_type_size::<abi::Guid, abi::Guid>(&type_context);
-    test_type_size::<abi::Privacy, abi::Privacy>(&type_context);
-    test_type_size::<abi::StructMemoryKind, abi::StructMemoryKind>(&type_context);
-    test_type_size::<abi::TypeId<'_>, ir::TypeId<'_>>(&type_context);
-    test_type_size::<abi::PointerTypeId<'_>, ir::PointerTypeId<'_>>(&type_context);
-    test_type_size::<abi::ArrayTypeId<'_>, ir::ArrayTypeId<'_>>(&type_context);
-    test_type_size::<abi::TypeDefinitionData<'_>, ir::TypeDefinitionData<'_>>(&type_context);
-    test_type_size::<abi::StructDefinition<'_>, ir::StructDefinition<'_>>(&type_context);
-    test_type_size::<abi::TypeDefinition<'_>, ir::TypeDefinition<'_>>(&type_context);
-    test_type_size::<abi::FunctionSignature<'_>, ir::FunctionSignature<'_>>(&type_context);
-    test_type_size::<abi::FunctionPrototype<'_>, ir::FunctionPrototype<'_>>(&type_context);
-    test_type_size::<abi::ModuleInfo<'_>, ir::ModuleInfo<'_>>(&type_context);
-    test_type_size::<abi::DispatchTable<'_>, ir::DispatchTable<'_>>(&type_context);
-    test_type_size::<abi::TypeLut<'_>, ir::TypeLut<'_>>(&type_context);
-    test_type_size::<abi::AssemblyInfo<'_>, ir::AssemblyInfo<'_>>(&type_context);
+    let guid = context
+        .i8_type()
+        .array_type(mem::size_of::<abi::Guid>() as u32);
+    assert_layout::<abi::Guid, _>(&target_data, &guid);
+    assert_layout::<abi::Privacy, _>(&target_data, &context.i8_type());
+    assert_layout::<abi::StructMemoryKind, _>(&target_data, &context.i8_type());
+    assert_layout::<abi::TypeId<'_>, _>(&target_data, &types.type_id);
+    assert_layout::<abi::PointerTypeId<'_>, _>(&target_data, &types.pointer_type_id_type());
+    assert_layout::<abi::ArrayTypeId<'_>, _>(&target_data, &types.array_type_id_type());
+    assert_layout::<abi::TypeDefinitionData<'_>, _>(&target_data, &types.type_definition_data);
+    assert_layout::<abi::StructDefinition<'_>, _>(&target_data, &types.struct_definition);
+    assert_layout::<abi::TypeDefinition<'_>, _>(&target_data, &types.type_definition);
+    assert_layout::<abi::FunctionSignature<'_>, _>(&target_data, &types.function_signature);
+    assert_layout::<abi::FunctionPrototype<'_>, _>(&target_data, &types.function_prototype);
+    assert_layout::<abi::FunctionDefinition<'_>, _>(&target_data, &types.function_definition);
+    assert_layout::<abi::ModuleInfo<'_>, _>(&target_data, &types.module_info);
+    assert_layout::<abi::DispatchTable<'_>, _>(&target_data, &types.dispatch_table);
+    assert_layout::<abi::TypeLut<'_>, _>(&target_data, &types.type_lut);
+    assert_layout::<abi::AssemblyInfo<'_>, _>(&target_data, &types.assembly_info);
 }

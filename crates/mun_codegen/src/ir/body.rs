@@ -24,7 +24,6 @@ use crate::{
         RuntimeReferenceValue,
     },
     module_group::ModuleGroup,
-    value::Global,
 };
 
 type BreakSources<'ink> = Vec<Option<(BasicValueEnum<'ink>, BasicBlock<'ink>)>>;
@@ -38,7 +37,7 @@ struct LoopInfo<'ink> {
 pub(crate) struct ExternalGlobals<'ink> {
     pub alloc_handle: Option<GlobalValue<'ink>>,
     pub dispatch_table: Option<GlobalValue<'ink>>,
-    pub type_table: Option<Global<'ink, [*const std::ffi::c_void]>>,
+    pub type_table: Option<GlobalValue<'ink>>,
 }
 
 pub(crate) struct BodyIrGenerator<'db, 'ink, 't> {
