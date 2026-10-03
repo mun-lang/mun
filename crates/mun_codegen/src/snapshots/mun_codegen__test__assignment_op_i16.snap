@@ -6,46 +6,93 @@ expression: "\n    pub fn assign(a: i16, b: i16) -> i16 {\n        a = b;\n     
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i16 @assign(i16 %0, i16 %1) {
 body:
-  ret i16 %1
+  %b = alloca i16, align 2
+  store i16 %1, ptr %b, align 2
+  %a = alloca i16, align 2
+  store i16 %0, ptr %a, align 2
+  %a1 = load i16, ptr %a, align 2
+  %b2 = load i16, ptr %b, align 2
+  store i16 %b2, ptr %a, align 2
+  %a3 = load i16, ptr %a, align 2
+  ret i16 %a3
 }
 
 define i16 @assign_add(i16 %0, i16 %1) {
 body:
-  %add = add i16 %0, %1
-  ret i16 %add
+  %b = alloca i16, align 2
+  store i16 %1, ptr %b, align 2
+  %a = alloca i16, align 2
+  store i16 %0, ptr %a, align 2
+  %a1 = load i16, ptr %a, align 2
+  %b2 = load i16, ptr %b, align 2
+  %add = add i16 %a1, %b2
+  store i16 %add, ptr %a, align 2
+  %a3 = load i16, ptr %a, align 2
+  ret i16 %a3
 }
 
 define i16 @assign_subtract(i16 %0, i16 %1) {
 body:
-  %sub = sub i16 %0, %1
-  ret i16 %sub
+  %b = alloca i16, align 2
+  store i16 %1, ptr %b, align 2
+  %a = alloca i16, align 2
+  store i16 %0, ptr %a, align 2
+  %a1 = load i16, ptr %a, align 2
+  %b2 = load i16, ptr %b, align 2
+  %sub = sub i16 %a1, %b2
+  store i16 %sub, ptr %a, align 2
+  %a3 = load i16, ptr %a, align 2
+  ret i16 %a3
 }
 
 define i16 @assign_multiply(i16 %0, i16 %1) {
 body:
-  %mul = mul i16 %0, %1
-  ret i16 %mul
+  %b = alloca i16, align 2
+  store i16 %1, ptr %b, align 2
+  %a = alloca i16, align 2
+  store i16 %0, ptr %a, align 2
+  %a1 = load i16, ptr %a, align 2
+  %b2 = load i16, ptr %b, align 2
+  %mul = mul i16 %a1, %b2
+  store i16 %mul, ptr %a, align 2
+  %a3 = load i16, ptr %a, align 2
+  ret i16 %a3
 }
 
 define i16 @assign_divide(i16 %0, i16 %1) {
 body:
-  %div = sdiv i16 %0, %1
-  ret i16 %div
+  %b = alloca i16, align 2
+  store i16 %1, ptr %b, align 2
+  %a = alloca i16, align 2
+  store i16 %0, ptr %a, align 2
+  %a1 = load i16, ptr %a, align 2
+  %b2 = load i16, ptr %b, align 2
+  %div = sdiv i16 %a1, %b2
+  store i16 %div, ptr %a, align 2
+  %a3 = load i16, ptr %a, align 2
+  ret i16 %a3
 }
 
 define i16 @assign_remainder(i16 %0, i16 %1) {
 body:
-  %rem = srem i16 %0, %1
-  ret i16 %rem
+  %b = alloca i16, align 2
+  store i16 %1, ptr %b, align 2
+  %a = alloca i16, align 2
+  store i16 %0, ptr %a, align 2
+  %a1 = load i16, ptr %a, align 2
+  %b2 = load i16, ptr %b, align 2
+  %rem = srem i16 %a1, %b2
+  store i16 %rem, ptr %a, align 2
+  %a3 = load i16, ptr %a, align 2
+  ret i16 %a3
 }
 
 ; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

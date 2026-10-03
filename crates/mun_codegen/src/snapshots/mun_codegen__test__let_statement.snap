@@ -6,17 +6,22 @@ expression: "\n    pub fn main(a:i32) -> i32 {\n      let b = a+1\n      b\n    
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i32 @main(i32 %0) {
 body:
-  %add = add i32 %0, 1
-  ret i32 %add
+  %b = alloca i32, align 4
+  %a = alloca i32, align 4
+  store i32 %0, ptr %a, align 4
+  %a1 = load i32, ptr %a, align 4
+  %add = add i32 %a1, 1
+  store i32 %add, ptr %b, align 4
+  %b2 = load i32, ptr %b, align 4
+  ret i32 %b2
 }
 
 ; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

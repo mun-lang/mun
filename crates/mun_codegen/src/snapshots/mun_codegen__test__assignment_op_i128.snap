@@ -6,46 +6,93 @@ expression: "\n    pub fn assign(a: i128, b: i128) -> i128 {\n        a = b;\n  
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i128 @assign(i128 %0, i128 %1) {
 body:
-  ret i128 %1
+  %b = alloca i128, align 8
+  store i128 %1, ptr %b, align 4
+  %a = alloca i128, align 8
+  store i128 %0, ptr %a, align 4
+  %a1 = load i128, ptr %a, align 4
+  %b2 = load i128, ptr %b, align 4
+  store i128 %b2, ptr %a, align 4
+  %a3 = load i128, ptr %a, align 4
+  ret i128 %a3
 }
 
 define i128 @assign_add(i128 %0, i128 %1) {
 body:
-  %add = add i128 %0, %1
-  ret i128 %add
+  %b = alloca i128, align 8
+  store i128 %1, ptr %b, align 4
+  %a = alloca i128, align 8
+  store i128 %0, ptr %a, align 4
+  %a1 = load i128, ptr %a, align 4
+  %b2 = load i128, ptr %b, align 4
+  %add = add i128 %a1, %b2
+  store i128 %add, ptr %a, align 4
+  %a3 = load i128, ptr %a, align 4
+  ret i128 %a3
 }
 
 define i128 @assign_subtract(i128 %0, i128 %1) {
 body:
-  %sub = sub i128 %0, %1
-  ret i128 %sub
+  %b = alloca i128, align 8
+  store i128 %1, ptr %b, align 4
+  %a = alloca i128, align 8
+  store i128 %0, ptr %a, align 4
+  %a1 = load i128, ptr %a, align 4
+  %b2 = load i128, ptr %b, align 4
+  %sub = sub i128 %a1, %b2
+  store i128 %sub, ptr %a, align 4
+  %a3 = load i128, ptr %a, align 4
+  ret i128 %a3
 }
 
 define i128 @assign_multiply(i128 %0, i128 %1) {
 body:
-  %mul = mul i128 %0, %1
-  ret i128 %mul
+  %b = alloca i128, align 8
+  store i128 %1, ptr %b, align 4
+  %a = alloca i128, align 8
+  store i128 %0, ptr %a, align 4
+  %a1 = load i128, ptr %a, align 4
+  %b2 = load i128, ptr %b, align 4
+  %mul = mul i128 %a1, %b2
+  store i128 %mul, ptr %a, align 4
+  %a3 = load i128, ptr %a, align 4
+  ret i128 %a3
 }
 
 define i128 @assign_divide(i128 %0, i128 %1) {
 body:
-  %div = sdiv i128 %0, %1
-  ret i128 %div
+  %b = alloca i128, align 8
+  store i128 %1, ptr %b, align 4
+  %a = alloca i128, align 8
+  store i128 %0, ptr %a, align 4
+  %a1 = load i128, ptr %a, align 4
+  %b2 = load i128, ptr %b, align 4
+  %div = sdiv i128 %a1, %b2
+  store i128 %div, ptr %a, align 4
+  %a3 = load i128, ptr %a, align 4
+  ret i128 %a3
 }
 
 define i128 @assign_remainder(i128 %0, i128 %1) {
 body:
-  %rem = srem i128 %0, %1
-  ret i128 %rem
+  %b = alloca i128, align 8
+  store i128 %1, ptr %b, align 4
+  %a = alloca i128, align 8
+  store i128 %0, ptr %a, align 4
+  %a1 = load i128, ptr %a, align 4
+  %b2 = load i128, ptr %b, align 4
+  %rem = srem i128 %a1, %b2
+  store i128 %rem, ptr %a, align 4
+  %a3 = load i128, ptr %a, align 4
+  ret i128 %a3
 }
 
 ; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

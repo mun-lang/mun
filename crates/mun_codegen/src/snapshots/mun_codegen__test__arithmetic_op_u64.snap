@@ -6,35 +6,65 @@ expression: "\n    pub fn add(a: u64, b: u64) -> u64 { a + b }\n    pub fn subtr
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i64 @add(i64 %0, i64 %1) {
 body:
-  %add = add i64 %0, %1
+  %b = alloca i64, align 8
+  store i64 %1, ptr %b, align 4
+  %a = alloca i64, align 8
+  store i64 %0, ptr %a, align 4
+  %a1 = load i64, ptr %a, align 4
+  %b2 = load i64, ptr %b, align 4
+  %add = add i64 %a1, %b2
   ret i64 %add
 }
 
 define i64 @subtract(i64 %0, i64 %1) {
 body:
-  %sub = sub i64 %0, %1
+  %b = alloca i64, align 8
+  store i64 %1, ptr %b, align 4
+  %a = alloca i64, align 8
+  store i64 %0, ptr %a, align 4
+  %a1 = load i64, ptr %a, align 4
+  %b2 = load i64, ptr %b, align 4
+  %sub = sub i64 %a1, %b2
   ret i64 %sub
 }
 
 define i64 @multiply(i64 %0, i64 %1) {
 body:
-  %mul = mul i64 %0, %1
+  %b = alloca i64, align 8
+  store i64 %1, ptr %b, align 4
+  %a = alloca i64, align 8
+  store i64 %0, ptr %a, align 4
+  %a1 = load i64, ptr %a, align 4
+  %b2 = load i64, ptr %b, align 4
+  %mul = mul i64 %a1, %b2
   ret i64 %mul
 }
 
 define i64 @divide(i64 %0, i64 %1) {
 body:
-  %div = udiv i64 %0, %1
+  %b = alloca i64, align 8
+  store i64 %1, ptr %b, align 4
+  %a = alloca i64, align 8
+  store i64 %0, ptr %a, align 4
+  %a1 = load i64, ptr %a, align 4
+  %b2 = load i64, ptr %b, align 4
+  %div = udiv i64 %a1, %b2
   ret i64 %div
 }
 
 define i64 @remainder(i64 %0, i64 %1) {
 body:
-  %rem = urem i64 %0, %1
+  %b = alloca i64, align 8
+  store i64 %1, ptr %b, align 4
+  %a = alloca i64, align 8
+  store i64 %0, ptr %a, align 4
+  %a1 = load i64, ptr %a, align 4
+  %b2 = load i64, ptr %b, align 4
+  %rem = urem i64 %a1, %b2
   ret i64 %rem
 }
 
@@ -42,5 +72,4 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

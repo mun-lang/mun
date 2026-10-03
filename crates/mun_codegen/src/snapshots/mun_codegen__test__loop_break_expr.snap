@@ -6,30 +6,39 @@ expression: "\n    pub fn foo(n:i32) -> i32 {\n        loop {\n            if n 
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i32 @foo(i32 %0) {
 body:
+  %n = alloca i32, align 4
+  store i32 %0, ptr %n, align 4
   br label %loop
 
 loop:                                             ; preds = %if_merge6, %body
-  %n.0 = phi i32 [ %0, %body ], [ %add, %if_merge6 ]
-  %greater = icmp sgt i32 %n.0, 5
+  %n1 = load i32, ptr %n, align 4
+  %greater = icmp sgt i32 %n1, 5
   br i1 %greater, label %then, label %if_merge
 
-exit:                                             ; preds = %if_merge, %then
-  %exit8 = phi i32 [ %n.0, %then ], [ 10, %if_merge ]
+exit:                                             ; preds = %then5, %then
+  %exit8 = phi i32 [ %n2, %then ], [ 10, %then5 ]
   ret i32 %exit8
 
 then:                                             ; preds = %loop
+  %n2 = load i32, ptr %n, align 4
   br label %exit
 
 if_merge:                                         ; preds = %loop
-  %greater4 = icmp sgt i32 %n.0, 10
-  br i1 %greater4, label %exit, label %if_merge6
+  %n3 = load i32, ptr %n, align 4
+  %greater4 = icmp sgt i32 %n3, 10
+  br i1 %greater4, label %then5, label %if_merge6
+
+then5:                                            ; preds = %if_merge
+  br label %exit
 
 if_merge6:                                        ; preds = %if_merge
-  %add = add i32 %n.0, 1
+  %n7 = load i32, ptr %n, align 4
+  %add = add i32 %n7, 1
+  store i32 %add, ptr %n, align 4
   br label %loop
 }
 
@@ -37,5 +46,4 @@ if_merge6:                                        ; preds = %if_merge
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

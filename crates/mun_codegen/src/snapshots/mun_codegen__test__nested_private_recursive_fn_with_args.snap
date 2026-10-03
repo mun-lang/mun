@@ -6,20 +6,23 @@ expression: "\n    extern fn other() -> i32;\n\n    fn private_fn(a: i32) -> f32
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-%DispatchTable = type { i32 ()* }
+%DispatchTable = type { ptr }
 
 @dispatchTable = external global %DispatchTable
-@global_type_lookup_table = external global [2 x i64*]
+@global_type_lookup_table = external global [2 x ptr]
 
 define float @private_fn(i32 %0) {
 body:
-  %private_fn = call float @private_fn(i32 %0)
+  %a = alloca i32, align 4
+  store i32 %0, ptr %a, align 4
+  %a1 = load i32, ptr %a, align 4
+  %private_fn = call float @private_fn(i32 %a1)
   ret float %private_fn
 }
 
 define float @main() {
 body:
-  %other_ptr = load i32 ()*, i32 ()** getelementptr inbounds (%DispatchTable, %DispatchTable* @dispatchTable, i32 0, i32 0), align 8
+  %other_ptr = load ptr, ptr @dispatchTable, align 8
   %other = call i32 %other_ptr()
   %private_fn = call float @private_fn(i32 %other)
   ret float %private_fn
@@ -29,8 +32,7 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%DispatchTable = type { i32 ()* }
+%DispatchTable = type { ptr }
 
 @dispatchTable = global %DispatchTable zeroinitializer
-@global_type_lookup_table = global [2 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [2 x ptr] zeroinitializer

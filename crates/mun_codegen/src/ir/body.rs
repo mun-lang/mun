@@ -9,7 +9,7 @@ use inkwell::{
         AggregateValueEnum, BasicMetadataValueEnum, BasicValueEnum, CallSiteValue, FloatValue,
         FunctionValue, GlobalValue, IntValue, PointerValue, StructValue,
     },
-    AddressSpace, FloatPredicate, IntPredicate,
+    FloatPredicate, IntPredicate,
 };
 use mun_abi as abi;
 use mun_hir::{
@@ -119,7 +119,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     let name = name.to_string();
                     let param = self.fn_value.get_nth_param(i as u32).unwrap();
                     let builder = self.new_alloca_builder();
-                    let param_ptr = builder.build_alloca(param.get_type(), &name);
+                    let param_ptr = builder
+                        .build_alloca(param.get_type(), &name)
+                        .expect("valid alloca");
                     let ty = self.infer[*pat].clone();
                     let place =
                         Place::new(PlaceValue::new(param_ptr, param.get_type()), ty.clone());
@@ -156,9 +158,11 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .clone();
         if !block_ret_type.is_never() {
             if fn_ret_type.is_empty() {
-                self.builder.build_return(None);
+                self.builder.build_return(None).expect("valid return");
             } else if let Some(operand) = ret_value {
-                self.builder.build_return(Some(&operand.value()));
+                self.builder
+                    .build_return(Some(&operand.value()))
+                    .expect("valid return");
             }
         }
     }
@@ -191,7 +195,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         let ret_value = self
             .gen_call(self.hir_function, &args)
             .try_as_basic_value()
-            .left();
+            .basic();
 
         let call_return_type = &self.infer[self.body.body_expr()];
         if !call_return_type.is_never() {
@@ -204,7 +208,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 .clone();
 
             if fn_ret_type.is_empty() {
-                self.builder.build_return(None);
+                self.builder.build_return(None).expect("valid return");
             } else if let Some(value) = ret_value {
                 let ret_value = if let Some(hir_struct) = fn_ret_type.as_struct() {
                     if hir_struct.data(self.db).memory_kind == mun_hir::StructMemoryKind::Value {
@@ -215,7 +219,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 } else {
                     value
                 };
-                self.builder.build_return(Some(&ret_value));
+                self.builder
+                    .build_return(Some(&ret_value))
+                    .expect("valid return");
             }
         }
     }
@@ -263,7 +269,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
                         self.gen_call(def, &args)
                             .try_as_basic_value()
-                            .left()
+                            .basic()
                             // If the called function is a void function it doesn't return anything.
                             // If this method (`gen_expr`) returns None we assume the return value
                             // is `never`. We return a const unit struct here to ensure that at
@@ -411,14 +417,6 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             self.external_globals.type_table,
         );
 
-        // HACK: We should be able to use pointers for built-in struct types like
-        // `TypeInfo` in intrinsics
-        let type_info_ptr = self.builder.build_bitcast(
-            type_info_ptr,
-            self.context.i8_type().ptr_type(AddressSpace::default()),
-            "type_info_ptr_to_i8_ptr",
-        );
-
         let allocator_handle = self.get_allocator_handle_ptr();
 
         // Safety: we can be sure that the new intrinsic returns a reference.
@@ -429,21 +427,11 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 "ref",
             )
             .try_as_basic_value()
-            .left()
+            .basic()
             .unwrap()
             .into_pointer_value();
 
-        // Cast the object pointer to the struct type
-        let typed_reference = self
-            .builder
-            .build_bitcast(
-                untyped_reference,
-                struct_ir_ty
-                    .ptr_type(AddressSpace::default())
-                    .ptr_type(AddressSpace::default()),
-                &format!("ref<{}>", hir_struct.name(self.db)),
-            )
-            .into_pointer_value();
+        let typed_reference = untyped_reference;
 
         // Construct a reference of the object
         let reference = RuntimeReferenceValue::new(typed_reference, struct_ir_ty.into());
@@ -560,7 +548,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     .hir_types
                     .get_basic_type(&pat_ty)
                     .expect("expected basic type");
-                let pointer = builder.build_alloca(ty, &name.to_string());
+                let pointer = builder
+                    .build_alloca(ty, &name.to_string())
+                    .expect("valid alloca");
                 let place = Place::new(PlaceValue::new(pointer, ty), pat_ty.clone());
                 self.pat_to_local.insert(pat, place.clone());
                 self.pat_to_name.insert(pat, name.to_string());
@@ -692,7 +682,12 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .expect("no value")
             .into_float_value();
         match op {
-            UnaryOp::Neg => Some(self.builder.build_float_neg(value, "neg").into()),
+            UnaryOp::Neg => Some(
+                self.builder
+                    .build_float_neg(value, "neg")
+                    .expect("valid float negation")
+                    .into(),
+            ),
             UnaryOp::Not => unimplemented!("Operator {:?} is not implemented for float", op),
         }
     }
@@ -712,12 +707,22 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         match op {
             UnaryOp::Neg => {
                 if signedness == mun_hir::Signedness::Signed {
-                    Some(self.builder.build_int_neg(value, "neg").into())
+                    Some(
+                        self.builder
+                            .build_int_neg(value, "neg")
+                            .expect("valid integer negation")
+                            .into(),
+                    )
                 } else {
                     unimplemented!("Operator {:?} is not implemented for unsigned integer", op)
                 }
             }
-            UnaryOp::Not => Some(self.builder.build_not(value, "not").into()),
+            UnaryOp::Not => Some(
+                self.builder
+                    .build_not(value, "not")
+                    .expect("valid bitwise negation")
+                    .into(),
+            ),
             //_ => unimplemented!("Operator {:?} is not implemented for integer", op),
         }
     }
@@ -730,7 +735,12 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .expect("no value")
             .into_int_value();
         match op {
-            UnaryOp::Not => Some(self.builder.build_not(value, "not").into()),
+            UnaryOp::Not => Some(
+                self.builder
+                    .build_not(value, "not")
+                    .expect("valid bitwise negation")
+                    .into(),
+            ),
             UnaryOp::Neg => unimplemented!("Operator {:?} is not implemented for boolean", op),
         }
     }
@@ -813,6 +823,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 Some(
                     self.builder
                         .build_float_compare(predicate, lhs, rhs, name)
+                        .expect("valid float comparison")
                         .into(),
                 )
             }
@@ -934,9 +945,18 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         op: ArithOp,
     ) -> IntValue<'ink> {
         match op {
-            ArithOp::BitAnd => self.builder.build_and(lhs, rhs, "bit_and"),
-            ArithOp::BitOr => self.builder.build_or(lhs, rhs, "bit_or"),
-            ArithOp::BitXor => self.builder.build_xor(lhs, rhs, "bit_xor"),
+            ArithOp::BitAnd => self
+                .builder
+                .build_and(lhs, rhs, "bit_and")
+                .expect("valid bitwise and"),
+            ArithOp::BitOr => self
+                .builder
+                .build_or(lhs, rhs, "bit_or")
+                .expect("valid bitwise or"),
+            ArithOp::BitXor => self
+                .builder
+                .build_xor(lhs, rhs, "bit_xor")
+                .expect("valid bitwise xor"),
             _ => unimplemented!(
                 "Assignment with {:?} operator is not implemented for boolean",
                 op
@@ -996,7 +1016,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             ),
         };
 
-        self.builder.build_int_compare(predicate, lhs, rhs, name)
+        self.builder
+            .build_int_compare(predicate, lhs, rhs, name)
+            .expect("valid integer comparison")
     }
 
     fn gen_arith_bin_op_int(
@@ -1007,29 +1029,58 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         signedness: mun_hir::Signedness,
     ) -> IntValue<'ink> {
         match op {
-            ArithOp::Add => self.builder.build_int_add(lhs, rhs, "add"),
-            ArithOp::Subtract => self.builder.build_int_sub(lhs, rhs, "sub"),
+            ArithOp::Add => self
+                .builder
+                .build_int_add(lhs, rhs, "add")
+                .expect("valid integer addition"),
+            ArithOp::Subtract => self
+                .builder
+                .build_int_sub(lhs, rhs, "sub")
+                .expect("valid integer subtraction"),
             ArithOp::Divide => match signedness {
-                mun_hir::Signedness::Signed => self.builder.build_int_signed_div(lhs, rhs, "div"),
-                mun_hir::Signedness::Unsigned => {
-                    self.builder.build_int_unsigned_div(lhs, rhs, "div")
-                }
+                mun_hir::Signedness::Signed => self
+                    .builder
+                    .build_int_signed_div(lhs, rhs, "div")
+                    .expect("valid signed division"),
+                mun_hir::Signedness::Unsigned => self
+                    .builder
+                    .build_int_unsigned_div(lhs, rhs, "div")
+                    .expect("valid unsigned division"),
             },
-            ArithOp::Multiply => self.builder.build_int_mul(lhs, rhs, "mul"),
+            ArithOp::Multiply => self
+                .builder
+                .build_int_mul(lhs, rhs, "mul")
+                .expect("valid integer multiplication"),
             ArithOp::Remainder => match signedness {
-                mun_hir::Signedness::Signed => self.builder.build_int_signed_rem(lhs, rhs, "rem"),
-                mun_hir::Signedness::Unsigned => {
-                    self.builder.build_int_unsigned_rem(lhs, rhs, "rem")
-                }
+                mun_hir::Signedness::Signed => self
+                    .builder
+                    .build_int_signed_rem(lhs, rhs, "rem")
+                    .expect("valid signed remainder"),
+                mun_hir::Signedness::Unsigned => self
+                    .builder
+                    .build_int_unsigned_rem(lhs, rhs, "rem")
+                    .expect("valid unsigned remainder"),
             },
-            ArithOp::LeftShift => self.builder.build_left_shift(lhs, rhs, "left_shift"),
-            ArithOp::RightShift => {
-                self.builder
-                    .build_right_shift(lhs, rhs, signedness.is_signed(), "right_shift")
-            }
-            ArithOp::BitAnd => self.builder.build_and(lhs, rhs, "bit_and"),
-            ArithOp::BitOr => self.builder.build_or(lhs, rhs, "bit_or"),
-            ArithOp::BitXor => self.builder.build_xor(lhs, rhs, "bit_xor"),
+            ArithOp::LeftShift => self
+                .builder
+                .build_left_shift(lhs, rhs, "left_shift")
+                .expect("valid left shift"),
+            ArithOp::RightShift => self
+                .builder
+                .build_right_shift(lhs, rhs, signedness.is_signed(), "right_shift")
+                .expect("valid right shift"),
+            ArithOp::BitAnd => self
+                .builder
+                .build_and(lhs, rhs, "bit_and")
+                .expect("valid bitwise and"),
+            ArithOp::BitOr => self
+                .builder
+                .build_or(lhs, rhs, "bit_or")
+                .expect("valid bitwise or"),
+            ArithOp::BitXor => self
+                .builder
+                .build_xor(lhs, rhs, "bit_xor")
+                .expect("valid bitwise xor"),
         }
     }
 
@@ -1040,11 +1091,26 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         op: ArithOp,
     ) -> FloatValue<'ink> {
         match op {
-            ArithOp::Add => self.builder.build_float_add(lhs, rhs, "add"),
-            ArithOp::Subtract => self.builder.build_float_sub(lhs, rhs, "sub"),
-            ArithOp::Divide => self.builder.build_float_div(lhs, rhs, "div"),
-            ArithOp::Multiply => self.builder.build_float_mul(lhs, rhs, "mul"),
-            ArithOp::Remainder => self.builder.build_float_rem(lhs, rhs, "rem"),
+            ArithOp::Add => self
+                .builder
+                .build_float_add(lhs, rhs, "add")
+                .expect("valid float addition"),
+            ArithOp::Subtract => self
+                .builder
+                .build_float_sub(lhs, rhs, "sub")
+                .expect("valid float subtraction"),
+            ArithOp::Divide => self
+                .builder
+                .build_float_div(lhs, rhs, "div")
+                .expect("valid float division"),
+            ArithOp::Multiply => self
+                .builder
+                .build_float_mul(lhs, rhs, "mul")
+                .expect("valid float multiplication"),
+            ArithOp::Remainder => self
+                .builder
+                .build_float_rem(lhs, rhs, "rem")
+                .expect("valid float remainder"),
             ArithOp::LeftShift
             | ArithOp::RightShift
             | ArithOp::BitAnd
@@ -1062,8 +1128,14 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         op: LogicOp,
     ) -> IntValue<'ink> {
         match op {
-            LogicOp::And => self.builder.build_and(lhs, rhs, "and"),
-            LogicOp::Or => self.builder.build_or(lhs, rhs, "or"),
+            LogicOp::And => self
+                .builder
+                .build_and(lhs, rhs, "and")
+                .expect("valid bitwise and"),
+            LogicOp::Or => self
+                .builder
+                .build_or(lhs, rhs, "or")
+                .expect("valid bitwise or"),
         }
     }
 
@@ -1161,13 +1233,16 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         // Build the actual branching IR for the if statement
         let else_block = else_block_and_expr.map_or(merge_block, |e| e.0);
         self.builder
-            .build_conditional_branch(condition_ir, then_block, else_block);
+            .build_conditional_branch(condition_ir, then_block, else_block)
+            .expect("valid conditional branch");
 
         // Fill the then block
         self.builder.position_at_end(then_block);
         let then_block_ir = self.gen_expr(then_branch);
         if !self.infer[then_branch].is_never() {
-            self.builder.build_unconditional_branch(merge_block);
+            self.builder
+                .build_unconditional_branch(merge_block)
+                .expect("valid branch");
         }
         then_block = self.builder.get_insert_block().unwrap();
 
@@ -1179,7 +1254,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             self.builder.position_at_end(else_block);
             let result_ir = self.gen_expr(*else_branch);
             if result_ir.is_some() {
-                self.builder.build_unconditional_branch(merge_block);
+                self.builder
+                    .build_unconditional_branch(merge_block)
+                    .expect("valid branch");
             }
             Some((result_ir, self.builder.get_insert_block().unwrap()))
         } else {
@@ -1194,7 +1271,10 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         // Construct phi block if a value was returned
         if let Some(then_block_ir) = then_block_ir {
             if let Some((Some(else_block_ir), else_block)) = else_ir_and_block {
-                let phi = self.builder.build_phi(then_block_ir.get_type(), "iftmp");
+                let phi = self
+                    .builder
+                    .build_phi(then_block_ir.get_type(), "iftmp")
+                    .expect("valid phi node");
                 phi.add_incoming(&[(&then_block_ir, then_block), (&else_block_ir, else_block)]);
                 Some(phi.as_basic_value())
             } else {
@@ -1224,9 +1304,11 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
 
         // Construct a return statement from the returned value of the body
         if let Some(value) = ret_value {
-            self.builder.build_return(Some(&value));
+            self.builder
+                .build_return(Some(&value))
+                .expect("valid return");
         } else {
-            self.builder.build_return(None);
+            self.builder.build_return(None).expect("valid return");
         }
 
         None
@@ -1251,7 +1333,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                     self.builder.get_insert_block().unwrap(),
                 )));
                 self.builder
-                    .build_unconditional_branch(loop_info.exit_block);
+                    .build_unconditional_branch(loop_info.exit_block)
+                    .expect("valid branch");
             }
         } else {
             // If the break expression doesnt contain a break statement. Add a none to the
@@ -1259,7 +1342,8 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             let loop_info = self.active_loop.as_mut().unwrap();
             loop_info.break_values.push(None);
             self.builder
-                .build_unconditional_branch(loop_info.exit_block);
+                .build_unconditional_branch(loop_info.exit_block)
+                .expect("valid branch");
         };
 
         None
@@ -1306,7 +1390,9 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         let exit_block = context.append_basic_block(self.fn_value, "afterwhile");
 
         // Insert an explicit fall through from the current block to the condition check
-        self.builder.build_unconditional_branch(cond_block);
+        self.builder
+            .build_unconditional_branch(cond_block)
+            .expect("valid branch");
 
         // Generate condition block
         self.builder.position_at_end(cond_block);
@@ -1315,18 +1401,18 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             .map(|value| self.opt_deref_value(condition_expr, value));
         {
             let condition_ir = condition_ir?;
-            self.builder.build_conditional_branch(
-                condition_ir.into_int_value(),
-                loop_block,
-                exit_block,
-            );
+            self.builder
+                .build_conditional_branch(condition_ir.into_int_value(), loop_block, exit_block)
+                .expect("valid conditional branch");
         }
 
         // Generate loop block
         self.builder.position_at_end(loop_block);
         let (exit_block, _, value) = self.gen_loop_block_expr(body_expr, exit_block);
         if value.is_some() {
-            self.builder.build_unconditional_branch(cond_block);
+            self.builder
+                .build_unconditional_branch(cond_block)
+                .expect("valid branch");
         }
 
         // Generate exit block
@@ -1341,13 +1427,17 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         let exit_block = context.append_basic_block(self.fn_value, "exit");
 
         // Insert an explicit fall through from the current block to the loop
-        self.builder.build_unconditional_branch(loop_block);
+        self.builder
+            .build_unconditional_branch(loop_block)
+            .expect("valid branch");
 
         // Generate the body of the loop
         self.builder.position_at_end(loop_block);
         let (exit_block, break_values, value) = self.gen_loop_block_expr(body_expr, exit_block);
         if value.is_some() {
-            self.builder.build_unconditional_branch(loop_block);
+            self.builder
+                .build_unconditional_branch(loop_block)
+                .expect("valid branch");
         }
 
         if break_values.is_empty() {
@@ -1366,7 +1456,10 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             // generate a phi value. This then assumes that all breaks had
             // values.
             if let Some(Some((value, _))) = break_values.first() {
-                let phi = self.builder.build_phi(value.get_type(), "exit");
+                let phi = self
+                    .builder
+                    .build_phi(value.get_type(), "exit")
+                    .expect("valid phi node");
                 for (value, block) in break_values.into_iter().map(Option::unwrap) {
                     phi.add_incoming(&[(&value, block)]);
                 }
@@ -1408,7 +1501,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             Some(
                 self.builder
                     .build_extract_value(receiver_struct, field_idx, field_ir_name)
-                    .unwrap_or_else(|| {
+                    .unwrap_or_else(|_| {
                         panic!(
                             "could not extract field {name} (index: {field_idx}) from struct {hir_struct_name}"
                         )
@@ -1451,6 +1544,7 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         let pointer = self
             .builder
             .build_struct_gep(
+                self.hir_types.get_struct_type(hir_struct),
                 receiver_ptr,
                 field_idx,
                 &format!("{hir_struct_name}->{name}"),
@@ -1490,14 +1584,6 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
             self.external_globals.type_table,
         );
 
-        // HACK: We should be able to use pointers for built-in struct types like
-        // `TypeInfo` in intrinsics
-        let type_info_ptr = self.builder.build_bitcast(
-            type_info_ptr,
-            self.context.i8_type().ptr_type(AddressSpace::default()),
-            "type_info_ptr_to_i8_ptr",
-        );
-
         let allocator_handle = self.get_allocator_handle_ptr();
 
         let length_value = self
@@ -1519,36 +1605,29 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
                 "ref",
             )
             .try_as_basic_value()
-            .left()
+            .basic()
             .unwrap()
             .into_pointer_value();
 
-        // Cast the object pointer to the array struct type
-        let array_ty = self.hir_types.get_array_type(&element_ty);
-        let array_ptr = self
-            .builder
-            .build_bitcast(
-                untyped_array_ptr,
-                array_ty
-                    .ptr_type(AddressSpace::default())
-                    .ptr_type(AddressSpace::default()),
-                &format!("ref<[{}]>", element_ty.display(self.db)),
-            )
-            .into_pointer_value();
+        let array_ir_ty = self.hir_types.get_array_type(&element_ty);
+        let array_ptr = untyped_array_ptr;
 
-        let array = RuntimeArrayValue::new(array_ptr, array_ty);
+        let array = RuntimeArrayValue::new(array_ptr, array_ir_ty);
         let array_elements = array.get_elements(&self.builder);
         for (idx, expr) in exprs.iter().enumerate() {
             let pointer = unsafe {
-                self.builder.build_gep(
-                    array_elements.pointer(),
-                    &[self.context.i64_type().const_int(idx as u64, false)],
-                    &format!(
-                        "{}[{}]",
-                        array_elements.pointer().get_name().to_string_lossy(),
-                        idx
-                    ),
-                )
+                self.builder
+                    .build_gep(
+                        array_elements.pointee(),
+                        array_elements.pointer(),
+                        &[self.context.i64_type().const_int(idx as u64, false)],
+                        &format!(
+                            "{}[{}]",
+                            array_elements.pointer().get_name().to_string_lossy(),
+                            idx
+                        ),
+                    )
+                    .expect("valid array element pointer")
             };
             let place = Place::new(
                 PlaceValue::new(pointer, array_elements.pointee()),
@@ -1594,11 +1673,14 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
         let index = self.gen_expr(index)?.into_int_value();
         let elements = base.get_elements(&self.builder);
         let pointer = unsafe {
-            self.builder.build_gep(
-                elements.pointer(),
-                &[index],
-                &format!("{}+index", elements.pointer().get_name().to_string_lossy()),
-            )
+            self.builder
+                .build_gep(
+                    elements.pointee(),
+                    elements.pointer(),
+                    &[index],
+                    &format!("{}+index", elements.pointer().get_name().to_string_lossy()),
+                )
+                .expect("valid array element pointer")
         };
         Some(Place::new(
             PlaceValue::new(pointer, elements.pointee()),
@@ -1610,12 +1692,14 @@ impl<'db, 'ink, 't> BodyIrGenerator<'db, 'ink, 't> {
     fn get_allocator_handle_ptr(&self) -> PointerValue<'ink> {
         self.builder
             .build_load(
+                self.context.ptr_type(inkwell::AddressSpace::default()),
                 self.external_globals
                     .alloc_handle
                     .expect("no allocator handle was specified, this is required for structs")
                     .as_pointer_value(),
                 "allocator_handle",
             )
+            .expect("valid allocator handle load")
             .into_pointer_value()
     }
 }

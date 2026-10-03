@@ -6,29 +6,52 @@ expression: "\n    pub fn assign_bitand(a: i32, b: i32) -> i32 {\n        a &= b
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i32 @assign_bitand(i32 %0, i32 %1) {
 body:
-  %bit_and = and i32 %0, %1
-  ret i32 %bit_and
+  %b = alloca i32, align 4
+  store i32 %1, ptr %b, align 4
+  %a = alloca i32, align 4
+  store i32 %0, ptr %a, align 4
+  %a1 = load i32, ptr %a, align 4
+  %b2 = load i32, ptr %b, align 4
+  %bit_and = and i32 %a1, %b2
+  store i32 %bit_and, ptr %a, align 4
+  %a3 = load i32, ptr %a, align 4
+  ret i32 %a3
 }
 
 define i32 @assign_bitor(i32 %0, i32 %1) {
 body:
-  %bit_or = or i32 %0, %1
-  ret i32 %bit_or
+  %b = alloca i32, align 4
+  store i32 %1, ptr %b, align 4
+  %a = alloca i32, align 4
+  store i32 %0, ptr %a, align 4
+  %a1 = load i32, ptr %a, align 4
+  %b2 = load i32, ptr %b, align 4
+  %bit_or = or i32 %a1, %b2
+  store i32 %bit_or, ptr %a, align 4
+  %a3 = load i32, ptr %a, align 4
+  ret i32 %a3
 }
 
 define i32 @assign_bitxor(i32 %0, i32 %1) {
 body:
-  %bit_xor = xor i32 %0, %1
-  ret i32 %bit_xor
+  %b = alloca i32, align 4
+  store i32 %1, ptr %b, align 4
+  %a = alloca i32, align 4
+  store i32 %0, ptr %a, align 4
+  %a1 = load i32, ptr %a, align 4
+  %b2 = load i32, ptr %b, align 4
+  %bit_xor = xor i32 %a1, %b2
+  store i32 %bit_xor, ptr %a, align 4
+  %a3 = load i32, ptr %a, align 4
+  ret i32 %a3
 }
 
 ; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

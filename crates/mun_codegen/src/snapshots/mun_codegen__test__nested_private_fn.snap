@@ -1,13 +1,12 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1045
 expression: "\n    fn nested_private_fn() -> i32 {\n        1\n    }\n\n    fn private_fn() -> i32 {\n        nested_private_fn()\n    }\n\n    pub fn main() -> i32 {\n        private_fn()\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i32 @nested_private_fn() {
 body:
@@ -30,5 +29,4 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

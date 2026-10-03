@@ -1,28 +1,42 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1045
 expression: "\n    pub fn foo(n:i32) {\n        while n<3 {\n            n += 1;\n        };\n\n        // This will be completely optimized out\n        while n<4 {\n            break;\n        };\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define void @foo(i32 %0) {
 body:
+  %n = alloca i32, align 4
+  store i32 %0, ptr %n, align 4
   br label %whilecond
 
 whilecond:                                        ; preds = %while, %body
-  %n.0 = phi i32 [ %0, %body ], [ %add, %while ]
-  %less = icmp slt i32 %n.0, 3
-  br i1 %less, label %while, label %whilecond3
+  %n1 = load i32, ptr %n, align 4
+  %less = icmp slt i32 %n1, 3
+  br i1 %less, label %while, label %afterwhile
 
 while:                                            ; preds = %whilecond
-  %add = add i32 %n.0, 1
+  %n2 = load i32, ptr %n, align 4
+  %add = add i32 %n2, 1
+  store i32 %add, ptr %n, align 4
   br label %whilecond
 
-whilecond3:                                       ; preds = %whilecond
+afterwhile:                                       ; preds = %whilecond
+  br label %whilecond3
+
+whilecond3:                                       ; preds = %afterwhile
+  %n6 = load i32, ptr %n, align 4
+  %less7 = icmp slt i32 %n6, 4
+  br i1 %less7, label %while4, label %afterwhile5
+
+while4:                                           ; preds = %whilecond3
+  br label %afterwhile5
+
+afterwhile5:                                      ; preds = %while4, %whilecond3
   ret void
 }
 
@@ -30,5 +44,4 @@ whilecond3:                                       ; preds = %whilecond
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

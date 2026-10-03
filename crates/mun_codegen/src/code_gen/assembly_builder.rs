@@ -97,12 +97,15 @@ impl<'db, 'ink, 'ctx, 't> AssemblyBuilder<'db, 'ink, 'ctx, 't> {
             &group_ir.dispatch_table,
             &group_ir.type_table,
             &self.code_gen.hir_types,
-            self.code_gen.optimization_level,
             dependencies,
         );
 
         // Optimize the assembly module
-        optimize_module(&self.assembly_module, self.code_gen.optimization_level);
+        optimize_module(
+            &self.assembly_module,
+            &self.code_gen.target_machine,
+            self.code_gen.optimization_level,
+        );
 
         // Debug print the IR
         //println!("{}", assembly_module.print_to_string().to_string());

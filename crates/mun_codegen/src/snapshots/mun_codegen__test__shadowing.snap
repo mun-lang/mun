@@ -6,20 +6,42 @@ expression: "\n    pub fn foo(a:i32) -> i32 {\n        let a = a+1;\n        {\n
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i32 @foo(i32 %0) {
 body:
-  %add = add i32 %0, 1
-  %add7 = add i32 %add, 3
+  %a5 = alloca i32, align 4
+  %a2 = alloca i32, align 4
+  %a = alloca i32, align 4
+  store i32 %0, ptr %a, align 4
+  %a1 = load i32, ptr %a, align 4
+  %add = add i32 %a1, 1
+  store i32 %add, ptr %a2, align 4
+  %a3 = load i32, ptr %a2, align 4
+  %add4 = add i32 %a3, 2
+  store i32 %add4, ptr %a5, align 4
+  %a6 = load i32, ptr %a2, align 4
+  %add7 = add i32 %a6, 3
   ret i32 %add7
 }
 
 define i32 @bar(i32 %0) {
 body:
-  %add = add i32 %0, 1
-  %add4 = add i32 %add, 2
-  %add9 = add i32 %add4, 3
+  %a7 = alloca i32, align 4
+  %a5 = alloca i32, align 4
+  %a2 = alloca i32, align 4
+  %a = alloca i32, align 4
+  store i32 %0, ptr %a, align 4
+  %a1 = load i32, ptr %a, align 4
+  %add = add i32 %a1, 1
+  store i32 %add, ptr %a2, align 4
+  %a3 = load i32, ptr %a2, align 4
+  %add4 = add i32 %a3, 2
+  store i32 %add4, ptr %a5, align 4
+  %a6 = load i32, ptr %a5, align 4
+  store i32 %a6, ptr %a7, align 4
+  %a8 = load i32, ptr %a7, align 4
+  %add9 = add i32 %a8, 3
   ret i32 %add9
 }
 
@@ -27,5 +49,4 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

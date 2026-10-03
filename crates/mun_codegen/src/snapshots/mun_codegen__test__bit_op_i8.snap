@@ -6,29 +6,50 @@ expression: "\n    pub fn not(a: i8) -> i8 { !a }\n    pub fn bitand(a: i8, b: i
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i8 @not(i8 %0) {
 body:
-  %not = xor i8 %0, -1
+  %a = alloca i8, align 1
+  store i8 %0, ptr %a, align 1
+  %a1 = load i8, ptr %a, align 1
+  %not = xor i8 %a1, -1
   ret i8 %not
 }
 
 define i8 @bitand(i8 %0, i8 %1) {
 body:
-  %bit_and = and i8 %0, %1
+  %b = alloca i8, align 1
+  store i8 %1, ptr %b, align 1
+  %a = alloca i8, align 1
+  store i8 %0, ptr %a, align 1
+  %a1 = load i8, ptr %a, align 1
+  %b2 = load i8, ptr %b, align 1
+  %bit_and = and i8 %a1, %b2
   ret i8 %bit_and
 }
 
 define i8 @bitor(i8 %0, i8 %1) {
 body:
-  %bit_or = or i8 %0, %1
+  %b = alloca i8, align 1
+  store i8 %1, ptr %b, align 1
+  %a = alloca i8, align 1
+  store i8 %0, ptr %a, align 1
+  %a1 = load i8, ptr %a, align 1
+  %b2 = load i8, ptr %b, align 1
+  %bit_or = or i8 %a1, %b2
   ret i8 %bit_or
 }
 
 define i8 @bitxor(i8 %0, i8 %1) {
 body:
-  %bit_xor = xor i8 %0, %1
+  %b = alloca i8, align 1
+  store i8 %1, ptr %b, align 1
+  %a = alloca i8, align 1
+  store i8 %0, ptr %a, align 1
+  %a1 = load i8, ptr %a, align 1
+  %b2 = load i8, ptr %b, align 1
+  %bit_xor = xor i8 %a1, %b2
   ret i8 %bit_xor
 }
 
@@ -36,5 +57,4 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

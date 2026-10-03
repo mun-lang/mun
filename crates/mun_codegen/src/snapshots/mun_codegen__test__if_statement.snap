@@ -6,32 +6,53 @@ expression: "\n    pub fn foo(a:i32) -> i32 {\n        let b = if a > 3 {\n     
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i32 @foo(i32 %0) {
 body:
-  %greater = icmp sgt i32 %0, 3
+  %b = alloca i32, align 4
+  %c = alloca i32, align 4
+  %a = alloca i32, align 4
+  store i32 %0, ptr %a, align 4
+  %a1 = load i32, ptr %a, align 4
+  %greater = icmp sgt i32 %a1, 3
   br i1 %greater, label %then, label %else
 
 then:                                             ; preds = %body
-  %greater3 = icmp sgt i32 %0, 4
-  %add = add i32 %0, 1
-  %add9 = add i32 %0, 3
-  %iftmp = select i1 %greater3, i32 %add, i32 %add9
+  %a2 = load i32, ptr %a, align 4
+  %greater3 = icmp sgt i32 %a2, 4
+  br i1 %greater3, label %then4, label %else5
+
+then4:                                            ; preds = %then
+  %a7 = load i32, ptr %a, align 4
+  %add = add i32 %a7, 1
+  br label %if_merge6
+
+else5:                                            ; preds = %then
+  %a8 = load i32, ptr %a, align 4
+  %add9 = add i32 %a8, 3
+  br label %if_merge6
+
+if_merge6:                                        ; preds = %else5, %then4
+  %iftmp = phi i32 [ %add, %then4 ], [ %add9, %else5 ]
+  store i32 %iftmp, ptr %c, align 4
+  %c10 = load i32, ptr %c, align 4
   br label %if_merge
 
 else:                                             ; preds = %body
-  %sub = sub i32 %0, 1
+  %a11 = load i32, ptr %a, align 4
+  %sub = sub i32 %a11, 1
   br label %if_merge
 
-if_merge:                                         ; preds = %else, %then
-  %iftmp12 = phi i32 [ %iftmp, %then ], [ %sub, %else ]
-  ret i32 %iftmp12
+if_merge:                                         ; preds = %else, %if_merge6
+  %iftmp12 = phi i32 [ %c10, %if_merge6 ], [ %sub, %else ]
+  store i32 %iftmp12, ptr %b, align 4
+  %b13 = load i32, ptr %b, align 4
+  ret i32 %b13
 }
 
 ; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

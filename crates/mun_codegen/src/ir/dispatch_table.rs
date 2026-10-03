@@ -94,7 +94,7 @@ impl<'ink> DispatchTable<'ink> {
             .get(&function)
             .expect("unknown function");
 
-        Self::gen_function_lookup_by_index(
+        self.gen_function_lookup_by_index(
             table_ref,
             builder,
             &function_name,
@@ -120,7 +120,7 @@ impl<'ink> DispatchTable<'ink> {
             .get(&prototype)
             .expect("unknown function");
 
-        Self::gen_function_lookup_by_index(
+        self.gen_function_lookup_by_index(
             table_ref,
             builder,
             &prototype.name,
@@ -133,6 +133,7 @@ impl<'ink> DispatchTable<'ink> {
     /// something along the lines of: `dispatchTable[i]`, where i is the
     /// index and `dispatchTable` is a struct
     fn gen_function_lookup_by_index(
+        &self,
         table_ref: Option<inkwell::values::GlobalValue<'ink>>,
         builder: &inkwell::builder::Builder<'ink>,
         function_name: &str,
@@ -146,6 +147,7 @@ impl<'ink> DispatchTable<'ink> {
         // this as a pointer access
         let ptr_to_function_ptr = builder
             .build_struct_gep(
+                self.table_type.expect("no dispatch table type defined"),
                 table_ref.as_pointer_value(),
                 index as u32,
                 &format!("{function_name}_ptr_ptr"),
@@ -155,7 +157,12 @@ impl<'ink> DispatchTable<'ink> {
             });
 
         let pointer = builder
-            .build_load(ptr_to_function_ptr, &format!("{function_name}_ptr"))
+            .build_load(
+                ptr_to_function_ptr.get_type(),
+                ptr_to_function_ptr,
+                &format!("{function_name}_ptr"),
+            )
+            .expect("valid dispatch table entry load")
             .into_pointer_value();
         Callable::new(pointer, signature)
     }
@@ -189,6 +196,8 @@ pub(crate) struct DispatchTableBuilder<'db, 'ink, 't> {
     table_ref: Option<inkwell::values::GlobalValue<'ink>>,
     // This is the actual DispatchTable type
     table_type: inkwell::types::StructType<'ink>,
+    // Opaque pointer type used for every dispatch-table entry.
+    pointer_type: inkwell::types::PointerType<'ink>,
     // The group of modules for which the dispatch table is being build
     module_group: &'t ModuleGroup,
     // The set of modules that is referenced
@@ -218,6 +227,7 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
             entries: Vec::default(),
             table_ref: None,
             table_type: context.opaque_struct_type("DispatchTable"),
+            pointer_type: context.ptr_type(inkwell::AddressSpace::default()),
             hir_types,
             module_group,
             referenced_modules: FxHashSet::default(),
@@ -340,7 +350,7 @@ impl<'db, 'ink, 't> DispatchTableBuilder<'db, 'ink, 't> {
         let table_body: Vec<BasicTypeEnum<'ink>> = self
             .entries
             .iter()
-            .map(|f| f.ir_type.ptr_type(inkwell::AddressSpace::default()).into())
+            .map(|_| self.pointer_type.into())
             .collect();
 
         // We can fill in the DispatchTable body, i.e: struct DispatchTable { <this

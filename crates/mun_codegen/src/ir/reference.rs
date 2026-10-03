@@ -1,8 +1,7 @@
 use inkwell::{
     builder::Builder,
-    types::{BasicType, BasicTypeEnum},
+    types::BasicTypeEnum,
     values::{BasicValueEnum, PointerValue},
-    AddressSpace,
 };
 
 use crate::ir::value::PlaceValue;
@@ -21,12 +20,6 @@ pub(crate) struct RuntimeReferenceValue<'ink> {
 impl<'ink> RuntimeReferenceValue<'ink> {
     /// Associates a runtime handle with the object type it addresses.
     pub(crate) fn new(pointer: PointerValue<'ink>, object_type: BasicTypeEnum<'ink>) -> Self {
-        debug_assert_eq!(
-            pointer.get_type(),
-            object_type
-                .ptr_type(AddressSpace::default())
-                .ptr_type(AddressSpace::default())
-        );
         Self {
             pointer,
             object_type,
@@ -41,7 +34,10 @@ impl<'ink> RuntimeReferenceValue<'ink> {
 
     /// Emits the runtime indirection with an explicit result name.
     pub(crate) fn get_data_named(&self, builder: &Builder<'ink>, name: &str) -> PlaceValue<'ink> {
-        let pointer = builder.build_load(self.pointer, name).into_pointer_value();
+        let pointer = builder
+            .build_load(self.pointer.get_type(), self.pointer, name)
+            .expect("valid runtime handle load")
+            .into_pointer_value();
         PlaceValue::new(pointer, self.object_type)
     }
 }

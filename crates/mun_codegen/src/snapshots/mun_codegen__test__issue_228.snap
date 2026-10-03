@@ -1,26 +1,37 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1062
 expression: "\n    pub  fn fact(n: usize) -> usize {\n   \t    if n == 0 {return 1} else {n * (n-1)}\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i64 @fact(i64 %0) {
 body:
-  %eq = icmp eq i64 %0, 0
-  %sub = sub i64 %0, 1
-  %mul = mul i64 %0, %sub
-  %common.ret.op = select i1 %eq, i64 1, i64 %mul
-  ret i64 %common.ret.op
+  %n = alloca i64, align 8
+  store i64 %0, ptr %n, align 4
+  %n1 = load i64, ptr %n, align 4
+  %eq = icmp eq i64 %n1, 0
+  br i1 %eq, label %then, label %else
+
+then:                                             ; preds = %body
+  ret i64 1
+
+else:                                             ; preds = %body
+  %n2 = load i64, ptr %n, align 4
+  %n3 = load i64, ptr %n, align 4
+  %sub = sub i64 %n3, 1
+  %mul = mul i64 %n2, %sub
+  br label %if_merge
+
+if_merge:                                         ; preds = %else
+  ret i64 %mul
 }
 
 ; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

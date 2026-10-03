@@ -6,7 +6,7 @@ expression: "\n    pub fn main(){\n        let a = 123;\n        let a = 123u8;\
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define void @main() {
 body:
@@ -26,30 +26,30 @@ body:
   %a2 = alloca i16, align 2
   %a1 = alloca i8, align 1
   %a = alloca i32, align 4
-  store i32 123, i32* %a, align 4
-  store i8 123, i8* %a1, align 1
-  store i16 123, i16* %a2, align 2
-  store i32 123, i32* %a3, align 4
-  store i64 123, i64* %a4, align 4
-  store i128 123, i128* %a5, align 4
-  store i32 1000000, i32* %a6, align 4
-  store i8 123, i8* %a7, align 1
-  store i16 123, i16* %a8, align 2
-  store i32 123, i32* %a9, align 4
-  store i64 123, i64* %a10, align 4
-  store i128 123123123123123123123123123123123, i128* %a11, align 4
-  store i32 1000000, i32* %a12, align 4
-  store double 0x40C3889D70A3D70A, double* %a13, align 8
-  store float 0x40C3889D80000000, float* %a14, align 4
-  store double 0x40C3889D70A3D70A, double* %a15, align 8
+  store i32 123, ptr %a, align 4
+  store i8 123, ptr %a1, align 1
+  store i16 123, ptr %a2, align 2
+  store i32 123, ptr %a3, align 4
+  store i64 123, ptr %a4, align 4
+  store i128 123, ptr %a5, align 4
+  store i32 1000000, ptr %a6, align 4
+  store i8 123, ptr %a7, align 1
+  store i16 123, ptr %a8, align 2
+  store i32 123, ptr %a9, align 4
+  store i64 123, ptr %a10, align 4
+  store i128 123123123123123123123123123123123, ptr %a11, align 4
+  store i32 1000000, ptr %a12, align 4
+  store double 0x40C3889D70A3D70A, ptr %a13, align 8
+  store float 0x40C3889D80000000, ptr %a14, align 4
+  store double 0x40C3889D70A3D70A, ptr %a15, align 8
   ret void
 }
 
 define i32 @add(i32 %0) {
 body:
   %a = alloca i32, align 4
-  store i32 %0, i32* %a, align 4
-  %a1 = load i32, i32* %a, align 4
+  store i32 %0, ptr %a, align 4
+  %a1 = load i32, ptr %a, align 4
   %add = add i32 %a1, 12
   ret i32 %add
 }
@@ -58,5 +58,4 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

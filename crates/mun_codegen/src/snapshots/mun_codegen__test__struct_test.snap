@@ -1,35 +1,34 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1080
 expression: "\n    struct(value) Bar(f64, i32, bool, Foo);\n    struct(value) Foo { a: i32 };\n    struct(value) Baz;\n    pub fn foo() {\n        let a: Foo = Foo { a: 5 };\n        let b: Bar = Bar(1.23, a.a, true, a);\n        let c: Baz = Baz;\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-%DispatchTable = type { i8** (i8*, i8*)* }
+%DispatchTable = type { ptr }
 %Baz = type {}
 %Bar = type { double, i32, i1, %Foo }
 %Foo = type { i32 }
 
-@allocatorHandle = external global i8*
+@allocatorHandle = external global ptr
 @dispatchTable = external global %DispatchTable
-@global_type_lookup_table = external global [6 x i64*]
+@global_type_lookup_table = external global [6 x ptr]
 
 define void @foo() {
 body:
   %c = alloca %Baz, align 8
   %b = alloca %Bar, align 8
   %a = alloca %Foo, align 8
-  store %Foo { i32 5 }, %Foo* %a, align 4
-  %"Foo->a" = getelementptr inbounds %Foo, %Foo* %a, i32 0, i32 0
-  %Foo.a = load i32, i32* %"Foo->a", align 4
-  %a1 = load %Foo, %Foo* %a, align 4
+  store %Foo { i32 5 }, ptr %a, align 4
+  %"Foo->a" = getelementptr inbounds nuw %Foo, ptr %a, i32 0, i32 0
+  %Foo.a = load i32, ptr %"Foo->a", align 4
+  %a1 = load %Foo, ptr %a, align 4
   %init = insertvalue %Bar { double 1.230000e+00, i32 undef, i1 undef, %Foo undef }, i32 %Foo.a, 1
   %init2 = insertvalue %Bar %init, i1 true, 2
   %init3 = insertvalue %Bar %init2, %Foo %a1, 3
-  store %Bar %init3, %Bar* %b, align 8
-  store %Baz undef, %Baz* %c, align 1
+  store %Bar %init3, ptr %b, align 8
+  store %Baz undef, ptr %c, align 1
   ret void
 }
 
@@ -37,9 +36,8 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%DispatchTable = type { i8** (i8*, i8*)* }
+%DispatchTable = type { ptr }
 
 @dispatchTable = global %DispatchTable zeroinitializer
-@global_type_lookup_table = global [6 x i64*] zeroinitializer
-@allocatorHandle = unnamed_addr global i8* null
-
+@global_type_lookup_table = global [6 x ptr] zeroinitializer
+@allocatorHandle = unnamed_addr global ptr null

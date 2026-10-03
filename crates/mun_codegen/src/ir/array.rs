@@ -38,7 +38,12 @@ impl<'ink> RuntimeArrayValue<'ink> {
         let pointer = array.pointer();
         let value_name = pointer.get_name().to_string_lossy();
         let pointer = builder
-            .build_struct_gep(pointer, 0, &format!("{value_name}->length"))
+            .build_struct_gep(
+                self.array_type,
+                pointer,
+                0,
+                &format!("{value_name}->length"),
+            )
             .expect("could not get `length` from array struct");
         PlaceValue::new(pointer, self.length_ty().into())
     }
@@ -49,7 +54,12 @@ impl<'ink> RuntimeArrayValue<'ink> {
         let pointer = array.pointer();
         let value_name = pointer.get_name().to_string_lossy();
         let pointer = builder
-            .build_struct_gep(pointer, 2, &format!("{value_name}->elements"))
+            .build_struct_gep(
+                self.array_type,
+                pointer,
+                2,
+                &format!("{value_name}->elements"),
+            )
             .expect("could not get `elements` from array struct");
         PlaceValue::new(pointer, self.element_ty())
     }

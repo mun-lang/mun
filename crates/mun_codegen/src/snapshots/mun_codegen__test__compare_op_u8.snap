@@ -6,41 +6,77 @@ expression: "\n    pub fn equals(a: u8, b: u8) -> bool { a == b }\n    pub fn no
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [2 x i64*]
+@global_type_lookup_table = external global [2 x ptr]
 
 define i1 @equals(i8 %0, i8 %1) {
 body:
-  %eq = icmp eq i8 %0, %1
+  %b = alloca i8, align 1
+  store i8 %1, ptr %b, align 1
+  %a = alloca i8, align 1
+  store i8 %0, ptr %a, align 1
+  %a1 = load i8, ptr %a, align 1
+  %b2 = load i8, ptr %b, align 1
+  %eq = icmp eq i8 %a1, %b2
   ret i1 %eq
 }
 
 define i1 @not_equal(i8 %0, i8 %1) {
 body:
-  %neq = icmp ne i8 %0, %1
+  %b = alloca i8, align 1
+  store i8 %1, ptr %b, align 1
+  %a = alloca i8, align 1
+  store i8 %0, ptr %a, align 1
+  %a1 = load i8, ptr %a, align 1
+  %b2 = load i8, ptr %b, align 1
+  %neq = icmp ne i8 %a1, %b2
   ret i1 %neq
 }
 
 define i1 @less(i8 %0, i8 %1) {
 body:
-  %less = icmp ult i8 %0, %1
+  %b = alloca i8, align 1
+  store i8 %1, ptr %b, align 1
+  %a = alloca i8, align 1
+  store i8 %0, ptr %a, align 1
+  %a1 = load i8, ptr %a, align 1
+  %b2 = load i8, ptr %b, align 1
+  %less = icmp ult i8 %a1, %b2
   ret i1 %less
 }
 
 define i1 @less_equal(i8 %0, i8 %1) {
 body:
-  %lesseq = icmp ule i8 %0, %1
+  %b = alloca i8, align 1
+  store i8 %1, ptr %b, align 1
+  %a = alloca i8, align 1
+  store i8 %0, ptr %a, align 1
+  %a1 = load i8, ptr %a, align 1
+  %b2 = load i8, ptr %b, align 1
+  %lesseq = icmp ule i8 %a1, %b2
   ret i1 %lesseq
 }
 
 define i1 @greater(i8 %0, i8 %1) {
 body:
-  %greater = icmp ugt i8 %0, %1
+  %b = alloca i8, align 1
+  store i8 %1, ptr %b, align 1
+  %a = alloca i8, align 1
+  store i8 %0, ptr %a, align 1
+  %a1 = load i8, ptr %a, align 1
+  %b2 = load i8, ptr %b, align 1
+  %greater = icmp ugt i8 %a1, %b2
   ret i1 %greater
 }
 
 define i1 @greater_equal(i8 %0, i8 %1) {
 body:
-  %greatereq = icmp uge i8 %0, %1
+  %b = alloca i8, align 1
+  store i8 %1, ptr %b, align 1
+  %a = alloca i8, align 1
+  store i8 %0, ptr %a, align 1
+  %a1 = load i8, ptr %a, align 1
+  %b2 = load i8, ptr %b, align 1
+  %greatereq = icmp uge i8 %a1, %b2
   ret i1 %greatereq
 }
 
@@ -48,5 +84,4 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [2 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [2 x ptr] zeroinitializer

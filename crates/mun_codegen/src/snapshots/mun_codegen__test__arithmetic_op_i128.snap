@@ -6,35 +6,65 @@ expression: "\n    pub fn add(a: i128, b: i128) -> i128 { a + b }\n    pub fn su
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define i128 @add(i128 %0, i128 %1) {
 body:
-  %add = add i128 %0, %1
+  %b = alloca i128, align 8
+  store i128 %1, ptr %b, align 4
+  %a = alloca i128, align 8
+  store i128 %0, ptr %a, align 4
+  %a1 = load i128, ptr %a, align 4
+  %b2 = load i128, ptr %b, align 4
+  %add = add i128 %a1, %b2
   ret i128 %add
 }
 
 define i128 @subtract(i128 %0, i128 %1) {
 body:
-  %sub = sub i128 %0, %1
+  %b = alloca i128, align 8
+  store i128 %1, ptr %b, align 4
+  %a = alloca i128, align 8
+  store i128 %0, ptr %a, align 4
+  %a1 = load i128, ptr %a, align 4
+  %b2 = load i128, ptr %b, align 4
+  %sub = sub i128 %a1, %b2
   ret i128 %sub
 }
 
 define i128 @multiply(i128 %0, i128 %1) {
 body:
-  %mul = mul i128 %0, %1
+  %b = alloca i128, align 8
+  store i128 %1, ptr %b, align 4
+  %a = alloca i128, align 8
+  store i128 %0, ptr %a, align 4
+  %a1 = load i128, ptr %a, align 4
+  %b2 = load i128, ptr %b, align 4
+  %mul = mul i128 %a1, %b2
   ret i128 %mul
 }
 
 define i128 @divide(i128 %0, i128 %1) {
 body:
-  %div = sdiv i128 %0, %1
+  %b = alloca i128, align 8
+  store i128 %1, ptr %b, align 4
+  %a = alloca i128, align 8
+  store i128 %0, ptr %a, align 4
+  %a1 = load i128, ptr %a, align 4
+  %b2 = load i128, ptr %b, align 4
+  %div = sdiv i128 %a1, %b2
   ret i128 %div
 }
 
 define i128 @remainder(i128 %0, i128 %1) {
 body:
-  %rem = srem i128 %0, %1
+  %b = alloca i128, align 8
+  store i128 %1, ptr %b, align 4
+  %a = alloca i128, align 8
+  store i128 %0, ptr %a, align 4
+  %a1 = load i128, ptr %a, align 4
+  %b2 = load i128, ptr %b, align 4
+  %rem = srem i128 %a1, %b2
   ret i128 %rem
 }
 
@@ -42,5 +72,4 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

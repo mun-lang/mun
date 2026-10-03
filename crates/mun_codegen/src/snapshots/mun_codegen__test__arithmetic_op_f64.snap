@@ -6,35 +6,65 @@ expression: "\n    pub fn add(a: f64, b: f64) -> f64 { a + b }\n    pub fn subtr
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-@global_type_lookup_table = external global [1 x i64*]
+@global_type_lookup_table = external global [1 x ptr]
 
 define double @add(double %0, double %1) {
 body:
-  %add = fadd double %0, %1
+  %b = alloca double, align 8
+  store double %1, ptr %b, align 8
+  %a = alloca double, align 8
+  store double %0, ptr %a, align 8
+  %a1 = load double, ptr %a, align 8
+  %b2 = load double, ptr %b, align 8
+  %add = fadd double %a1, %b2
   ret double %add
 }
 
 define double @subtract(double %0, double %1) {
 body:
-  %sub = fsub double %0, %1
+  %b = alloca double, align 8
+  store double %1, ptr %b, align 8
+  %a = alloca double, align 8
+  store double %0, ptr %a, align 8
+  %a1 = load double, ptr %a, align 8
+  %b2 = load double, ptr %b, align 8
+  %sub = fsub double %a1, %b2
   ret double %sub
 }
 
 define double @multiply(double %0, double %1) {
 body:
-  %mul = fmul double %0, %1
+  %b = alloca double, align 8
+  store double %1, ptr %b, align 8
+  %a = alloca double, align 8
+  store double %0, ptr %a, align 8
+  %a1 = load double, ptr %a, align 8
+  %b2 = load double, ptr %b, align 8
+  %mul = fmul double %a1, %b2
   ret double %mul
 }
 
 define double @divide(double %0, double %1) {
 body:
-  %div = fdiv double %0, %1
+  %b = alloca double, align 8
+  store double %1, ptr %b, align 8
+  %a = alloca double, align 8
+  store double %0, ptr %a, align 8
+  %a1 = load double, ptr %a, align 8
+  %b2 = load double, ptr %b, align 8
+  %div = fdiv double %a1, %b2
   ret double %div
 }
 
 define double @remainder(double %0, double %1) {
 body:
-  %rem = frem double %0, %1
+  %b = alloca double, align 8
+  store double %1, ptr %b, align 8
+  %a = alloca double, align 8
+  store double %0, ptr %a, align 8
+  %a1 = load double, ptr %a, align 8
+  %b2 = load double, ptr %b, align 8
+  %rem = frem double %a1, %b2
   ret double %rem
 }
 
@@ -42,5 +72,4 @@ body:
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-@global_type_lookup_table = global [1 x i64*] zeroinitializer
-
+@global_type_lookup_table = global [1 x ptr] zeroinitializer

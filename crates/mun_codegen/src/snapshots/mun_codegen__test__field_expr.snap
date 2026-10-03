@@ -1,62 +1,85 @@
 ---
 source: crates/mun_codegen/src/test.rs
-assertion_line: 1153
 expression: "\n    pub struct(value) Bar(f64, Foo);\n    pub struct(value) Foo { a: i32 };\n\n    fn bar_1(bar: Bar) -> Foo {\n        bar.1\n    }\n\n    fn foo_a(foo: Foo) -> i32 {\n        foo.a\n    }\n\n    pub fn bar_1_foo_a(bar: Bar) -> i32 {\n        foo_a(bar_1(bar))\n    }\n\n    pub fn main() -> i32 {\n        let a: Foo = Foo { a: 5 };\n        let b: Bar = Bar(1.23, a);\n        let aa_lhs = a.a + 2;\n        let aa_rhs = 2 + a.a;\n        aa_lhs + aa_rhs\n    }\n    "
 ---
 ; == FILE IR (mod) =====================================
 ; ModuleID = 'mod'
 source_filename = "mod"
 
-%DispatchTable = type { i8** (i8*, i8*)* }
+%DispatchTable = type { ptr }
 %Foo = type { i32 }
 %Bar = type { double, %Foo }
 
-@allocatorHandle = external global i8*
+@allocatorHandle = external global ptr
 @dispatchTable = external global %DispatchTable
-@global_type_lookup_table = external global [4 x i64*]
+@global_type_lookup_table = external global [4 x ptr]
 
 define %Foo @bar_1(%Bar %0) {
 body:
-  %.fca.1.0.extract = extractvalue %Bar %0, 1, 0
-  %Bar.1.fca.0.insert = insertvalue %Foo poison, i32 %.fca.1.0.extract, 0
-  ret %Foo %Bar.1.fca.0.insert
+  %bar = alloca %Bar, align 8
+  store %Bar %0, ptr %bar, align 8
+  %"Bar->1" = getelementptr inbounds nuw %Bar, ptr %bar, i32 0, i32 1
+  %Bar.1 = load %Foo, ptr %"Bar->1", align 4
+  ret %Foo %Bar.1
 }
 
 define i32 @foo_a(%Foo %0) {
 body:
-  %.fca.0.extract = extractvalue %Foo %0, 0
-  ret i32 %.fca.0.extract
+  %foo = alloca %Foo, align 8
+  store %Foo %0, ptr %foo, align 4
+  %"Foo->a" = getelementptr inbounds nuw %Foo, ptr %foo, i32 0, i32 0
+  %Foo.a = load i32, ptr %"Foo->a", align 4
+  ret i32 %Foo.a
 }
 
 define i32 @bar_1_foo_a(%Bar %0) {
 body:
-  %.fca.0.extract = extractvalue %Bar %0, 0
-  %.fca.1.0.extract = extractvalue %Bar %0, 1, 0
-  %bar_1 = call %Foo @bar_1(%Bar %0)
+  %bar = alloca %Bar, align 8
+  store %Bar %0, ptr %bar, align 8
+  %bar1 = load %Bar, ptr %bar, align 8
+  %bar_1 = call %Foo @bar_1(%Bar %bar1)
   %foo_a = call i32 @foo_a(%Foo %bar_1)
   ret i32 %foo_a
 }
 
-define i32 @bar_1_foo_a_wrapper(%Bar** %0) {
+define i32 @bar_1_foo_a_wrapper(ptr %0) {
 body:
-  %"->data" = load %Bar*, %Bar** %0, align 8
-  %deref = load %Bar, %Bar* %"->data", align 8
+  %"->data" = load ptr, ptr %0, align 8
+  %deref = load %Bar, ptr %"->data", align 8
   %bar_1_foo_a = call i32 @bar_1_foo_a(%Bar %deref)
   ret i32 %bar_1_foo_a
 }
 
 define i32 @main() {
 body:
-  ret i32 14
+  %aa_rhs = alloca i32, align 4
+  %aa_lhs = alloca i32, align 4
+  %b = alloca %Bar, align 8
+  %a = alloca %Foo, align 8
+  store %Foo { i32 5 }, ptr %a, align 4
+  %a1 = load %Foo, ptr %a, align 4
+  %init = insertvalue %Bar { double 1.230000e+00, %Foo undef }, %Foo %a1, 1
+  store %Bar %init, ptr %b, align 8
+  %"Foo->a" = getelementptr inbounds nuw %Foo, ptr %a, i32 0, i32 0
+  %Foo.a = load i32, ptr %"Foo->a", align 4
+  %add = add i32 %Foo.a, 2
+  store i32 %add, ptr %aa_lhs, align 4
+  %"Foo->a2" = getelementptr inbounds nuw %Foo, ptr %a, i32 0, i32 0
+  %Foo.a3 = load i32, ptr %"Foo->a2", align 4
+  %add4 = add i32 2, %Foo.a3
+  store i32 %add4, ptr %aa_rhs, align 4
+  %aa_lhs5 = load i32, ptr %aa_lhs, align 4
+  %aa_rhs6 = load i32, ptr %aa_rhs, align 4
+  %add7 = add i32 %aa_lhs5, %aa_rhs6
+  ret i32 %add7
 }
 
 ; == GROUP IR (mod) ====================================
 ; ModuleID = 'group_name'
 source_filename = "group_name"
 
-%DispatchTable = type { i8** (i8*, i8*)* }
+%DispatchTable = type { ptr }
 
 @dispatchTable = global %DispatchTable zeroinitializer
-@global_type_lookup_table = global [4 x i64*] zeroinitializer
-@allocatorHandle = unnamed_addr global i8* null
-
+@global_type_lookup_table = global [4 x ptr] zeroinitializer
+@allocatorHandle = unnamed_addr global ptr null

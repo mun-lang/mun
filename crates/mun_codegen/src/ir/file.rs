@@ -84,9 +84,6 @@ pub(crate) fn gen_file_ir<'ink>(
         }
     };
 
-    // Construct requirements for generating the bodies
-    let fn_pass_manager = function::create_pass_manager(&llvm_module, code_gen.optimization_level);
-
     // Generate the function bodies
     for (hir_function, llvm_function) in functions.iter() {
         let mut code_gen = BodyIrGenerator::new(
@@ -102,7 +99,6 @@ pub(crate) fn gen_file_ir<'ink>(
         );
 
         code_gen.gen_fn_body();
-        fn_pass_manager.run_on(llvm_function);
     }
 
     for (hir_function, llvm_function) in wrapper_functions.iter() {
@@ -119,7 +115,6 @@ pub(crate) fn gen_file_ir<'ink>(
         );
 
         code_gen.gen_fn_wrapper();
-        fn_pass_manager.run_on(llvm_function);
     }
 
     // Filter private methods
