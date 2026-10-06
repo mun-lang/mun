@@ -19,7 +19,8 @@ use smallvec::SmallVec;
 use crate::{
     display::{HirDisplay, HirFormatter},
     ty::{infer::InferTy, lower::fn_sig_for_struct_constructor},
-    HasVisibility, HirDatabase, Struct, StructMemoryKind, TypeAlias, Visibility,
+    FloatBitness, HasVisibility, HirDatabase, Signedness, Struct, StructMemoryKind, TypeAlias,
+    Visibility,
 };
 
 #[cfg(test)]
@@ -128,6 +129,25 @@ impl Ty {
     /// Constructs an instance of the unit type `()`
     pub fn unit() -> Self {
         TyKind::Tuple(0, Substitution::empty()).intern()
+    }
+
+    pub fn signedness(&self) -> Signedness {
+        match self.interned() {
+            TyKind::Int(ty) => ty.signedness,
+            _ => unreachable!("expected signedness for int type, got {self:?}"),
+        }
+    }
+
+    pub fn float_width(&self) -> usize {
+        match self.interned() {
+            TyKind::Float(FloatTy {
+                bitness: FloatBitness::X32,
+            }) => 32,
+            TyKind::Float(FloatTy {
+                bitness: FloatBitness::X64,
+            }) => 64,
+            _ => unreachable!("expected float width for float type, got {self:?}"),
+        }
     }
 
     /// Constructs a new struct type

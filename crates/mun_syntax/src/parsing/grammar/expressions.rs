@@ -1,10 +1,10 @@
 use super::{
     error_block, expressions, name_ref, name_ref_or_index, paths, patterns, types, BlockLike,
     CompletedMarker, Marker, Parser, SyntaxKind, TokenSet, ARG_LIST, ARRAY_EXPR, BIN_EXPR,
-    BLOCK_EXPR, BREAK_EXPR, CALL_EXPR, CONDITION, EOF, ERROR, EXPR_STMT, FIELD_EXPR, FLOAT_NUMBER,
-    IDENT, IF_EXPR, INDEX, INDEX_EXPR, INT_NUMBER, LET_STMT, LITERAL, LOOP_EXPR, PAREN_EXPR,
-    PATH_EXPR, PATH_TYPE, PREFIX_EXPR, RECORD_FIELD, RECORD_FIELD_LIST, RECORD_LIT, RETURN_EXPR,
-    STRING, WHILE_EXPR,
+    BLOCK_EXPR, BREAK_EXPR, CALL_EXPR, CAST_EXPR, CONDITION, EOF, ERROR, EXPR_STMT, FIELD_EXPR,
+    FLOAT_NUMBER, IDENT, IF_EXPR, INDEX, INDEX_EXPR, INT_NUMBER, LET_STMT, LITERAL, LOOP_EXPR,
+    PAREN_EXPR, PATH_EXPR, PATH_TYPE, PREFIX_EXPR, RECORD_FIELD, RECORD_FIELD_LIST, RECORD_LIT,
+    RETURN_EXPR, STRING, WHILE_EXPR,
 };
 use crate::{parsing::grammar::paths::PATH_FIRST, SyntaxKind::METHOD_CALL_EXPR};
 
@@ -153,6 +153,11 @@ fn expr_bp(p: &mut Parser<'_>, r: Restrictions, bp: u8) -> (Option<CompletedMark
             break;
         }
 
+        if p.at(T![as]) {
+            lhs = cast_expr(p, lhs);
+            continue;
+        }
+
         let m = lhs.precede(p);
         p.bump(op);
 
@@ -161,6 +166,14 @@ fn expr_bp(p: &mut Parser<'_>, r: Restrictions, bp: u8) -> (Option<CompletedMark
     }
 
     (Some(lhs), BlockLike::NotBlock)
+}
+
+fn cast_expr(p: &mut Parser<'_>, lhs: CompletedMarker) -> CompletedMarker {
+    assert!(p.at(T![as]));
+    let m = lhs.precede(p);
+    p.bump(T![as]);
+    types::type_(p);
+    m.complete(p, CAST_EXPR)
 }
 
 fn current_op(p: &Parser<'_>) -> (u8, SyntaxKind) {
@@ -194,6 +207,7 @@ fn current_op(p: &Parser<'_>) -> (u8, SyntaxKind) {
         T![<] if p.at(T![<<=]) => (1, T![<<=]),
         T![<] if p.at(T![<<]) => (9, T![<<]),
         T![<] => (5, T![<]),
+        T![as] => (12, T![as]),
         _ => (0, T![_]),
     }
 }

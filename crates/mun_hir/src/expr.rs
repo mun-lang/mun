@@ -305,6 +305,10 @@ pub enum Expr {
         rhs: ExprId,
         op: Option<BinaryOp>,
     },
+    Cast {
+        expr: ExprId,
+        type_ref: LocalTypeRefId,
+    },
     Index {
         base: ExprId,
         index: ExprId,
@@ -456,6 +460,9 @@ impl Expr {
                 for expr in exprs {
                     f(*expr);
                 }
+            }
+            Expr::Cast { expr, type_ref: _ } => {
+                f(*expr);
             }
         }
     }
@@ -914,6 +921,12 @@ impl<'a> ExprCollector<'a> {
                 let base = self.collect_expr_opt(e.base());
                 let index = self.collect_expr_opt(e.index());
                 self.alloc_expr(Expr::Index { base, index }, syntax_ptr)
+            }
+            ast::ExprKind::CastExpr(e) => {
+                let expr = self.collect_expr_opt(e.expr());
+                let type_ref = self.type_ref_builder.alloc_from_node_opt(e.ty().as_ref());
+
+                self.alloc_expr(Expr::Cast { expr, type_ref }, syntax_ptr)
             }
         }
     }

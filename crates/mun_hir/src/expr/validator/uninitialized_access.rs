@@ -122,6 +122,9 @@ impl ExprValidator<'_> {
                 self.validate_expr_access(sink, initialized_patterns, *lhs, lhs_expr_kind);
                 self.validate_expr_access(sink, initialized_patterns, *rhs, ExprKind::Normal);
             }
+            Expr::Cast { expr, type_ref: _ } => {
+                self.validate_expr_access(sink, initialized_patterns, *expr, expr_side)
+            }
             Expr::Block { statements, tail } => {
                 for statement in statements.iter() {
                     match statement {
